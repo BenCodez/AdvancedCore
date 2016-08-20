@@ -1,0 +1,14 @@
+# Config.yml
+
+Debug: false
+
+Format:
+      
+  # Message when player tries to run command without required permissions
+  NoPerms: '&cYou do not have enough permission!'
+  
+  # Message when player types a command but does not input a number where needed
+  NotNumber: '&cError on &6%arg%&c, number expected!'
+  
+  # CommandHandler help message
+  HelpLine: '&3&l%Command% - &3%HelpMessage%'
