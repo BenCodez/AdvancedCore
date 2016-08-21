@@ -104,7 +104,8 @@ public class User {
 		boolean isSection = Data.getInstance().getData(this)
 				.isConfigurationSection(plugin.getName());
 		if (!isSection) {
-			return Data.getInstance().getData(this).createSection(plugin.getName());
+			return Data.getInstance().getData(this)
+					.createSection(plugin.getName());
 		}
 		return Data.getInstance().getData(this)
 				.getConfigurationSection(plugin.getName());
@@ -399,8 +400,11 @@ public class User {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
 			if (msg != "") {
-				player.sendMessage(Utils.getInstance().colorize(
-						Utils.getInstance().replacePlaceHolders(player, msg)));
+				for (String str : msg.split("%NewLine%")) {
+					player.sendMessage(Utils.getInstance().colorize(
+							Utils.getInstance()
+									.replacePlaceHolders(player, str)));
+				}
 			}
 		}
 	}
