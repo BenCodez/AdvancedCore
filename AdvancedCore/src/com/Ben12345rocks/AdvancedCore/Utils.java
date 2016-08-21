@@ -115,6 +115,13 @@ public class Utils {
 		return item;
 	}
 
+	public double roundDecimals(double num, int decimals) {
+		num = num * Math.pow(10, decimals);
+		num = Math.round(num);
+		num = num / Math.pow(10, decimals);
+		return num;
+	}
+
 	/**
 	 * Colorize.
 	 *

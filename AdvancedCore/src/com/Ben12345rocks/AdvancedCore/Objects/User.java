@@ -268,6 +268,23 @@ public class User {
 	 * Give user money, needs vault installed
 	 * @param money		Amount of money to give
 	 */
+	public void giveMoney(double money) {
+		String playerName = getPlayerName();
+		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null) {
+			if (money > 0) {
+				Main.plugin.econ.depositPlayer(playerName, money);
+			} else if (money < 0) {
+				money = money * -1;
+				Main.plugin.econ.withdrawPlayer(playerName, money);
+			}
+		}
+	}
+	
+	@SuppressWarnings("deprecation")
+	/**
+	 * Give user money, needs vault installed
+	 * @param money		Amount of money to give
+	 */
 	public void giveMoney(int money) {
 		String playerName = getPlayerName();
 		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null) {

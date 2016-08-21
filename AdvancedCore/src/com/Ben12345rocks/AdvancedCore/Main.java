@@ -114,7 +114,8 @@ public class Main extends JavaPlugin {
 		FilesManager.getInstance().loadFileEditngThread();
 		setupFiles();
 		setupEconomy();
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
+		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this),
+				this);
 
 		try {
 			Metrics metrics = new Metrics(this);
@@ -122,6 +123,5 @@ public class Main extends JavaPlugin {
 		} catch (IOException e) {
 			debug("Failed to load metrics");
 		}
-
 	}
 }
