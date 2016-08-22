@@ -1,3 +1,6 @@
 name: AdvancedCore
 version: 1.0
 main: com.Ben12345rocks.AdvancedCore.Main
+commands:
+  advancedcore:
+    description: Plugin command

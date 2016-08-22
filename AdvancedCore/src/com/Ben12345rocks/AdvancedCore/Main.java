@@ -4,6 +4,7 @@
 package com.Ben12345rocks.AdvancedCore;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -11,8 +12,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.Ben12345rocks.AdvancedCore.Commands.CommandLoader;
+import com.Ben12345rocks.AdvancedCore.Commands.Executor.CommandAdvancedCore;
+import com.Ben12345rocks.AdvancedCore.Commands.TabComplete.AdvancedCoreTabCompleter;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
+import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
 
@@ -21,6 +26,8 @@ import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
  * The Class Main.
  */
 public class Main extends JavaPlugin {
+
+	public ArrayList<CommandHandler> advancedCoreCommands;
 
 	/** The plugin. */
 	public static Main plugin;
@@ -111,6 +118,7 @@ public class Main extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		plugin = this;
+		loadCommands();
 		FilesManager.getInstance().loadFileEditngThread();
 		setupFiles();
 		setupEconomy();
@@ -123,5 +131,13 @@ public class Main extends JavaPlugin {
 		} catch (IOException e) {
 			debug("Failed to load metrics");
 		}
+	}
+
+	public void loadCommands() {
+		new CommandLoader().loadCommands();
+		Bukkit.getPluginCommand("advancedcore").setExecutor(
+				new CommandAdvancedCore(plugin));
+		Bukkit.getPluginCommand("advancedcore").setTabCompleter(
+				new AdvancedCoreTabCompleter());
 	}
 }

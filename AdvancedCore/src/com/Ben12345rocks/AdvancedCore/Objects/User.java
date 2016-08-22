@@ -279,7 +279,11 @@ public class User {
 			}
 		}
 	}
-	
+
+	public boolean isOnline() {
+		return Utils.getInstance().isPlayerOnline(getPlayerName());
+	}
+
 	@SuppressWarnings("deprecation")
 	/**
 	 * Give user money, needs vault installed
@@ -500,6 +504,10 @@ public class User {
 				Main.plugin.debug("Invalid sound: " + soundName);
 			}
 		}
+	}
+
+	public void sendMessage(ArrayList<String> msg) {
+		sendMessage(Utils.getInstance().convertArray(msg));
 	}
 
 }
