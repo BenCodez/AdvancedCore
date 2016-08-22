@@ -16,7 +16,7 @@ import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class VoteTabCompleter.
+ * The Class AdvancedCoreTabCompleter.
  */
 public class AdvancedCoreTabCompleter implements TabCompleter {
 
@@ -88,7 +88,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.bukkit.command.TabCompleter#onTabComplete(org.bukkit.command.
 	 * CommandSender, org.bukkit.command.Command, java.lang.String,
 	 * java.lang.String[])

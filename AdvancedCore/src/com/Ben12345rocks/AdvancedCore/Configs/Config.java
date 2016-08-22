@@ -1,5 +1,5 @@
 /*
- * 
+ *
  */
 package com.Ben12345rocks.AdvancedCore.Configs;
 
@@ -76,19 +76,34 @@ public class Config {
 		return getData().getBoolean("Debug");
 	}
 
+	/**
+	 * Gets the format help line.
+	 *
+	 * @return the format help line
+	 */
+	public String getFormatHelpLine() {
+		return getData().getString("Format.HelpLine",
+				"&3&l%Command% - &3%HelpMessage%");
+	}
+
+	/**
+	 * Gets the format no perms.
+	 *
+	 * @return the format no perms
+	 */
 	public String getFormatNoPerms() {
 		return getData().getString("Format.NoPerms",
 				"&cYou do not have enough permission!");
 	}
 
+	/**
+	 * Gets the format not number.
+	 *
+	 * @return the format not number
+	 */
 	public String getFormatNotNumber() {
 		return getData().getString("Format.NotNumber",
 				"&cError on &6%arg%&c, number expected!");
-	}
-
-	public String getFormatHelpLine() {
-		return getData().getString("Format.HelpLine",
-				"&3&l%Command% - &3%HelpMessage%");
 	}
 
 	/**
@@ -126,7 +141,7 @@ public class Config {
 				plugin.saveResource("Config.yml", true);
 			} catch (IOException e) {
 				Bukkit.getServer().getLogger()
-						.severe(ChatColor.RED + "Could not create Config.yml!");
+				.severe(ChatColor.RED + "Could not create Config.yml!");
 			}
 		}
 

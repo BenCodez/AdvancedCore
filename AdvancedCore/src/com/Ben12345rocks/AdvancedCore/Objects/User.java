@@ -41,6 +41,8 @@ public class User {
 	/**
 	 * Instantiates a new user.
 	 *
+	 * @param plugin
+	 *            the plugin
 	 * @param player
 	 *            the player
 	 */
@@ -53,6 +55,8 @@ public class User {
 	/**
 	 * Instantiates a new user.
 	 *
+	 * @param plugin
+	 *            the plugin
 	 * @param playerName
 	 *            the player name
 	 */
@@ -66,6 +70,8 @@ public class User {
 	/**
 	 * Instantiates a new user.
 	 *
+	 * @param plugin
+	 *            the plugin
 	 * @param uuid
 	 *            the uuid
 	 */
@@ -79,6 +85,8 @@ public class User {
 	/**
 	 * Instantiates a new user.
 	 *
+	 * @param plugin
+	 *            the plugin
 	 * @param uuid
 	 *            the uuid
 	 * @param loadName
@@ -92,14 +100,29 @@ public class User {
 		}
 	}
 
+	/**
+	 * Gets the player.
+	 *
+	 * @return the player
+	 */
+	public Player getPlayer() {
+		return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+	}
+
+	/**
+	 * Gets the player name.
+	 *
+	 * @return the player name
+	 */
 	public String getPlayerName() {
 		return playerName;
 	}
 
-	public String getUUID() {
-		return uuid;
-	}
-
+	/**
+	 * Gets the plugin data.
+	 *
+	 * @return the plugin data
+	 */
 	public ConfigurationSection getPluginData() {
 		boolean isSection = Data.getInstance().getData(this)
 				.isConfigurationSection(plugin.getName());
@@ -111,33 +134,22 @@ public class User {
 				.getConfigurationSection(plugin.getName());
 	}
 
+	/**
+	 * Gets the raw data.
+	 *
+	 * @return the raw data
+	 */
 	public FileConfiguration getRawData() {
 		return Data.getInstance().getData(this);
 	}
 
-	public void setPluginData(String path, Object value) {
-		Data.getInstance().set(this, plugin.getName() + "." + path, value);
-	}
-
-	public void setRawData(String path, Object value) {
-		Data.getInstance().set(this, path, value);
-	}
-
 	/**
-	 * Gets the player.
+	 * Gets the uuid.
 	 *
-	 * @return the player
+	 * @return the uuid
 	 */
-	public Player getPlayer() {
-		return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
-	}
-
-	public void setPlayerName(String playerName) {
-		this.playerName = playerName;
-	}
-
-	public void setUUID(String uuid) {
-		this.uuid = uuid;
+	public String getUUID() {
+		return uuid;
 	}
 
 	/**
@@ -214,23 +226,6 @@ public class User {
 	}
 
 	/**
-	 * Sets the player name.
-	 */
-	public void setPlayerName() {
-		User user = this;
-		Data.getInstance().setPlayerName(user);
-	}
-
-	/**
-	 * Checks for joined before.
-	 *
-	 * @return true, if successful
-	 */
-	public boolean hasJoinedBefore() {
-		return Data.getInstance().hasJoinedBefore(this);
-	}
-
-	/**
 	 * Give item.
 	 *
 	 * @param item
@@ -263,6 +258,12 @@ public class User {
 
 	}
 
+	/**
+	 * Give money.
+	 *
+	 * @param money
+	 *            the money
+	 */
 	@SuppressWarnings("deprecation")
 	/**
 	 * Give user money, needs vault installed
@@ -280,10 +281,12 @@ public class User {
 		}
 	}
 
-	public boolean isOnline() {
-		return Utils.getInstance().isPlayerOnline(getPlayerName());
-	}
-
+	/**
+	 * Give money.
+	 *
+	 * @param money
+	 *            the money
+	 */
 	@SuppressWarnings("deprecation")
 	/**
 	 * Give user money, needs vault installed
@@ -301,6 +304,36 @@ public class User {
 		}
 	}
 
+	/**
+	 * Checks for joined before.
+	 *
+	 * @return true, if successful
+	 */
+	public boolean hasJoinedBefore() {
+		return Data.getInstance().hasJoinedBefore(this);
+	}
+
+	/**
+	 * Checks if is online.
+	 *
+	 * @return true, if is online
+	 */
+	public boolean isOnline() {
+		return Utils.getInstance().isPlayerOnline(getPlayerName());
+	}
+
+	/**
+	 * Play particle effect.
+	 *
+	 * @param effectName
+	 *            the effect name
+	 * @param data
+	 *            the data
+	 * @param particles
+	 *            the particles
+	 * @param radius
+	 *            the radius
+	 */
 	@SuppressWarnings("deprecation")
 	public synchronized void playParticleEffect(String effectName, int data,
 			int particles, int radius) {
@@ -311,6 +344,29 @@ public class User {
 					effect.getId(), data, 0f, 0f, 0f, 1f, particles, radius);
 			// player.getWorld().spigot().playEffect(player.getLocation(),
 			// effect);
+		}
+	}
+
+	/**
+	 * Play sound.
+	 *
+	 * @param soundName
+	 *            the sound name
+	 * @param volume
+	 *            the volume
+	 * @param pitch
+	 *            the pitch
+	 */
+	public synchronized void playSound(String soundName, float volume,
+			float pitch) {
+		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		if (player != null) {
+			Sound sound = Sound.valueOf(soundName);
+			if (sound != null) {
+				player.playSound(player.getLocation(), sound, volume, pitch);
+			} else {
+				Main.plugin.debug("Invalid sound: " + soundName);
+			}
 		}
 	}
 
@@ -333,7 +389,7 @@ public class User {
 					actionBar.send(player);
 				} catch (Exception ex) {
 					Main.plugin
-							.debug("Failed to send ActionBar, turn debug on to see stack trace");
+					.debug("Failed to send ActionBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -367,7 +423,7 @@ public class User {
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
 					Main.plugin
-							.debug("Failed to send BossBar, turn debug on to see stack trace");
+					.debug("Failed to send BossBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -417,6 +473,16 @@ public class User {
 	 * @param msg
 	 *            the msg
 	 */
+	public void sendMessage(ArrayList<String> msg) {
+		sendMessage(Utils.getInstance().convertArray(msg));
+	}
+
+	/**
+	 * Send message.
+	 *
+	 * @param msg
+	 *            the msg
+	 */
 	public void sendMessage(String msg) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
@@ -424,7 +490,7 @@ public class User {
 				for (String str : msg.split("%NewLine%")) {
 					player.sendMessage(Utils.getInstance().colorize(
 							Utils.getInstance()
-									.replacePlaceHolders(player, str)));
+							.replacePlaceHolders(player, str)));
 				}
 			}
 		}
@@ -475,7 +541,7 @@ public class User {
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger()
-						.info("Failed to send Title, turn debug on to see stack trace");
+				.info("Failed to send Title, turn debug on to see stack trace");
 				if (Config.getInstance().getDebugEnabled()) {
 					ex.printStackTrace();
 				}
@@ -484,30 +550,55 @@ public class User {
 	}
 
 	/**
-	 * Play sound.
-	 *
-	 * @param soundName
-	 *            the sound name
-	 * @param volume
-	 *            the volume
-	 * @param pitch
-	 *            the pitch
+	 * Sets the player name.
 	 */
-	public synchronized void playSound(String soundName, float volume,
-			float pitch) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
-		if (player != null) {
-			Sound sound = Sound.valueOf(soundName);
-			if (sound != null) {
-				player.playSound(player.getLocation(), sound, volume, pitch);
-			} else {
-				Main.plugin.debug("Invalid sound: " + soundName);
-			}
-		}
+	public void setPlayerName() {
+		User user = this;
+		Data.getInstance().setPlayerName(user);
 	}
 
-	public void sendMessage(ArrayList<String> msg) {
-		sendMessage(Utils.getInstance().convertArray(msg));
+	/**
+	 * Sets the player name.
+	 *
+	 * @param playerName
+	 *            the new player name
+	 */
+	public void setPlayerName(String playerName) {
+		this.playerName = playerName;
+	}
+
+	/**
+	 * Sets the plugin data.
+	 *
+	 * @param path
+	 *            the path
+	 * @param value
+	 *            the value
+	 */
+	public void setPluginData(String path, Object value) {
+		Data.getInstance().set(this, plugin.getName() + "." + path, value);
+	}
+
+	/**
+	 * Sets the raw data.
+	 *
+	 * @param path
+	 *            the path
+	 * @param value
+	 *            the value
+	 */
+	public void setRawData(String path, Object value) {
+		Data.getInstance().set(this, path, value);
+	}
+
+	/**
+	 * Sets the uuid.
+	 *
+	 * @param uuid
+	 *            the new uuid
+	 */
+	public void setUUID(String uuid) {
+		this.uuid = uuid;
 	}
 
 }

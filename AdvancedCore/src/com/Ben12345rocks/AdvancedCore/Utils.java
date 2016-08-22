@@ -115,13 +115,6 @@ public class Utils {
 		return item;
 	}
 
-	public double roundDecimals(double num, int decimals) {
-		num = num * Math.pow(10, decimals);
-		num = Math.round(num);
-		num = num / Math.pow(10, decimals);
-		return num;
-	}
-
 	/**
 	 * Colorize.
 	 *
@@ -653,8 +646,8 @@ public class Utils {
 	/**
 	 * Prints the map.
 	 *
-	 * @param topVoterMonthly
-	 *            the top voter monthly
+	 * @param map
+	 *            the map
 	 */
 	public void printMap(HashMap<? extends User, Integer> map) {
 		for (Entry<? extends User, Integer> entry : map.entrySet()) {
@@ -760,6 +753,22 @@ public class Utils {
 	}
 
 	/**
+	 * Round decimals.
+	 *
+	 * @param num
+	 *            the num
+	 * @param decimals
+	 *            the decimals
+	 * @return the double
+	 */
+	public double roundDecimals(double num, int decimals) {
+		num = num * Math.pow(10, decimals);
+		num = Math.round(num);
+		num = num / Math.pow(10, decimals);
+		return num;
+	}
+
+	/**
 	 * Sets the durabilty.
 	 *
 	 * @param item
@@ -828,7 +837,7 @@ public class Utils {
 	 *            the unsort map
 	 * @param order
 	 *            the order
-	 * @return the hash map
+	 * @return hasmap sorted by values
 	 */
 	public HashMap<? extends User, Integer> sortByValues(
 			HashMap<? extends User, Integer> unsortMap, final boolean order) {
@@ -839,17 +848,17 @@ public class Utils {
 		// Sorting the list based on values
 		Collections.sort(list,
 				new Comparator<Entry<? extends User, Integer>>() {
-					@Override
-					public int compare(Entry<? extends User, Integer> o1,
-							Entry<? extends User, Integer> o2) {
-						if (order) {
-							return o1.getValue().compareTo(o2.getValue());
-						} else {
-							return o2.getValue().compareTo(o1.getValue());
+			@Override
+			public int compare(Entry<? extends User, Integer> o1,
+					Entry<? extends User, Integer> o2) {
+				if (order) {
+					return o1.getValue().compareTo(o2.getValue());
+				} else {
+					return o2.getValue().compareTo(o1.getValue());
 
-						}
-					}
-				});
+				}
+			}
+		});
 
 		// Maintaining insertion order with the help of LinkedList
 		HashMap<User, Integer> sortedMap = new LinkedHashMap<User, Integer>();

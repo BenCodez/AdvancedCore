@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class BossBar.
  */

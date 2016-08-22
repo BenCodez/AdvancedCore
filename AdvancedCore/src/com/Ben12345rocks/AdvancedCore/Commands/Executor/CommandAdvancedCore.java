@@ -10,7 +10,7 @@ import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class CommandVote.
+ * The Class CommandAdvancedCore.
  */
 public class CommandAdvancedCore implements CommandExecutor {
 
@@ -21,22 +21,22 @@ public class CommandAdvancedCore implements CommandExecutor {
 	private static Main plugin;
 
 	/**
-	 * Gets the single instance of CommandVote.
+	 * Gets the single instance of CommandAdvancedCore.
 	 *
-	 * @return single instance of CommandVote
+	 * @return single instance of CommandAdvancedCore
 	 */
 	public static CommandAdvancedCore getInstance() {
 		return instance;
 	}
 
 	/**
-	 * Instantiates a new command vote.
+	 * Instantiates a new command advanced core.
 	 */
 	private CommandAdvancedCore() {
 	}
 
 	/**
-	 * Instantiates a new command vote.
+	 * Instantiates a new command advanced core.
 	 *
 	 * @param plugin
 	 *            the plugin
@@ -47,7 +47,7 @@ public class CommandAdvancedCore implements CommandExecutor {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.bukkit.command.CommandExecutor#onCommand(org.bukkit.command.CommandSender
 	 * , org.bukkit.command.Command, java.lang.String, java.lang.String[])

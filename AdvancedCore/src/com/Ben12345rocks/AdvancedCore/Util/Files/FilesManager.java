@@ -11,7 +11,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class Files.
+ * The Class FilesManager.
  */
 public class FilesManager {
 
@@ -33,15 +33,15 @@ public class FilesManager {
 				data.save(file);
 			} catch (IOException e) {
 				Bukkit.getServer()
-						.getLogger()
-						.severe(ChatColor.RED + "Could not save "
-								+ file.getName());
+				.getLogger()
+				.severe(ChatColor.RED + "Could not save "
+						+ file.getName());
 			}
 		}
 
 		/*
 		 * (non-Javadoc)
-		 * 
+		 *
 		 * @see java.lang.Thread#run()
 		 */
 		@Override
@@ -57,9 +57,9 @@ public class FilesManager {
 	static Main plugin = Main.plugin;
 
 	/**
-	 * Gets the single instance of Files.
+	 * Gets the single instance of FilesManager.
 	 *
-	 * @return single instance of Files
+	 * @return single instance of FilesManager
 	 */
 	public static FilesManager getInstance() {
 		return instance;
@@ -69,13 +69,13 @@ public class FilesManager {
 	public ReadThread thread;
 
 	/**
-	 * Instantiates a new files.
+	 * Instantiates a new files manager.
 	 */
 	private FilesManager() {
 	}
 
 	/**
-	 * Instantiates a new files.
+	 * Instantiates a new files manager.
 	 *
 	 * @param plugin
 	 *            the plugin

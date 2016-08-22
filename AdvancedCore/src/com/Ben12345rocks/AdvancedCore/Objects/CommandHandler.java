@@ -35,6 +35,7 @@ public abstract class CommandHandler {
 	/** The help message. */
 	private String helpMessage;
 
+	/** The tab complete options. */
 	public HashMap<String, ArrayList<String>> tabCompleteOptions;
 
 	/**
@@ -68,6 +69,60 @@ public abstract class CommandHandler {
 		this.helpMessage = helpMessage;
 		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
 	}
+
+	/**
+	 * Args match.
+	 *
+	 * @param arg
+	 *            the arg
+	 * @param i
+	 *            the i
+	 * @return true, if successful
+	 */
+	public boolean argsMatch(String arg, int i) {
+		if (i < args.length) {
+			String[] cmdArgs = args[i].split("&");
+			for (String cmdArg : cmdArgs) {
+				if (cmdArg.equalsIgnoreCase("(player)")
+						|| cmdArg.equalsIgnoreCase("(SITENAME)")
+						|| cmdArg.equalsIgnoreCase("(reward)")
+						|| cmdArg.equalsIgnoreCase("(entity)")
+						|| cmdArg.equalsIgnoreCase("(entitydamagecause)")
+						|| cmdArg.equalsIgnoreCase("(entityspawnreason)")
+						|| cmdArg.equalsIgnoreCase("(number)")
+						|| cmdArg.equalsIgnoreCase("(string)")
+						|| cmdArg.equalsIgnoreCase("(boolean)")
+						|| cmdArg.equalsIgnoreCase("(list)")
+						|| arg.equalsIgnoreCase(cmdArg)) {
+					return true;
+				}
+			}
+			/*
+			 * if (args[i].split("|").length <= 1) { if
+			 * (args[i].equalsIgnoreCase("player") ||
+			 * args[i].equalsIgnoreCase("SITENAME") ||
+			 * args[i].equalsIgnoreCase("number") ||
+			 * args[i].equalsIgnoreCase("string") ||
+			 * args[i].equalsIgnoreCase("boolean") ||
+			 * args[i].equalsIgnoreCase("list") ||
+			 * arg.equalsIgnoreCase(args[i])) { return true; } } else {
+			 *
+			 * }
+			 */
+			return false;
+		}
+		return false;
+	}
+
+	/**
+	 * Execute.
+	 *
+	 * @param sender
+	 *            the sender
+	 * @param args
+	 *            the args
+	 */
+	public abstract void execute(CommandSender sender, String[] args);
 
 	/**
 	 * Gets the admin tab complete options.
@@ -122,60 +177,6 @@ public abstract class CommandHandler {
 	}
 
 	/**
-	 * Args match.
-	 *
-	 * @param arg
-	 *            the arg
-	 * @param i
-	 *            the i
-	 * @return true, if successful
-	 */
-	public boolean argsMatch(String arg, int i) {
-		if (i < args.length) {
-			String[] cmdArgs = args[i].split("&");
-			for (String cmdArg : cmdArgs) {
-				if (cmdArg.equalsIgnoreCase("(player)")
-						|| cmdArg.equalsIgnoreCase("(SITENAME)")
-						|| cmdArg.equalsIgnoreCase("(reward)")
-						|| cmdArg.equalsIgnoreCase("(entity)")
-						|| cmdArg.equalsIgnoreCase("(entitydamagecause)")
-						|| cmdArg.equalsIgnoreCase("(entityspawnreason)")
-						|| cmdArg.equalsIgnoreCase("(number)")
-						|| cmdArg.equalsIgnoreCase("(string)")
-						|| cmdArg.equalsIgnoreCase("(boolean)")
-						|| cmdArg.equalsIgnoreCase("(list)")
-						|| arg.equalsIgnoreCase(cmdArg)) {
-					return true;
-				}
-			}
-			/*
-			 * if (args[i].split("|").length <= 1) { if
-			 * (args[i].equalsIgnoreCase("player") ||
-			 * args[i].equalsIgnoreCase("SITENAME") ||
-			 * args[i].equalsIgnoreCase("number") ||
-			 * args[i].equalsIgnoreCase("string") ||
-			 * args[i].equalsIgnoreCase("boolean") ||
-			 * args[i].equalsIgnoreCase("list") ||
-			 * arg.equalsIgnoreCase(args[i])) { return true; } } else {
-			 * 
-			 * }
-			 */
-			return false;
-		}
-		return false;
-	}
-
-	/**
-	 * Execute.
-	 *
-	 * @param sender
-	 *            the sender
-	 * @param args
-	 *            the args
-	 */
-	public abstract void execute(CommandSender sender, String[] args);
-
-	/**
 	 * Gets the args.
 	 *
 	 * @return the args
@@ -204,7 +205,7 @@ public abstract class CommandHandler {
 				commandText));
 		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA)
-						.create()));
+				.create()));
 		return txt;
 
 	}
@@ -297,7 +298,7 @@ public abstract class CommandHandler {
 					if (!Utils.getInstance().isInt(args[i])) {
 						sender.sendMessage(Utils.getInstance().colorize(
 								Config.getInstance().getFormatNotNumber()
-										.replace("%arg%", args[i])));
+								.replace("%arg%", args[i])));
 						return true;
 					}
 				}

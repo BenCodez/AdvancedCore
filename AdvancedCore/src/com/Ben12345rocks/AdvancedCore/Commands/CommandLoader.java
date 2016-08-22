@@ -12,10 +12,18 @@ import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
+// TODO: Auto-generated Javadoc
+/**
+ * The Class CommandLoader.
+ */
 public class CommandLoader {
 
+	/** The plugin. */
 	Main plugin = Main.plugin;
 
+	/**
+	 * Load commands.
+	 */
 	public void loadCommands() {
 		plugin.advancedCoreCommands = new ArrayList<CommandHandler>();
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
@@ -31,27 +39,27 @@ public class CommandLoader {
 			}
 		});
 		plugin.advancedCoreCommands
-				.add(new CommandHandler(new String[] { "Help" },
-						"AdvancedCore.Help", "View this page") {
+		.add(new CommandHandler(new String[] { "Help" },
+				"AdvancedCore.Help", "View this page") {
 
-					@Override
-					public void execute(CommandSender sender, String[] args) {
-						ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
-						msg.add(Utils.getInstance().stringToComp(
-								"&c" + plugin.getName() + " help"));
-						for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
-							msg.add(cmdHandle.getHelpLine("/advancedcore"));
-						}
-						if (sender instanceof Player) {
-							new User(plugin, (Player) sender).sendJson(msg);
-						} else {
-							sender.sendMessage(Utils.getInstance()
-									.convertArray(
-											Utils.getInstance().comptoString(
-													msg)));
-						}
-					}
-				});
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
+				msg.add(Utils.getInstance().stringToComp(
+						"&c" + plugin.getName() + " help"));
+				for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
+					msg.add(cmdHandle.getHelpLine("/advancedcore"));
+				}
+				if (sender instanceof Player) {
+					new User(plugin, (Player) sender).sendJson(msg);
+				} else {
+					sender.sendMessage(Utils.getInstance()
+							.convertArray(
+									Utils.getInstance().comptoString(
+											msg)));
+				}
+			}
+		});
 		plugin.advancedCoreCommands.add(new CommandHandler(
 				new String[] { "Perms" }, "AdvancedCore.Perms",
 				"View permissions list") {
