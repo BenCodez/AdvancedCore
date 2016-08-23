@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore;
 
 import java.text.DateFormatSymbols;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -761,11 +762,12 @@ public class Utils {
 	 *            the decimals
 	 * @return the double
 	 */
-	public double roundDecimals(double num, int decimals) {
+	public String roundDecimals(double num, int decimals) {
 		num = num * Math.pow(10, decimals);
 		num = Math.round(num);
 		num = num / Math.pow(10, decimals);
-		return num;
+		DecimalFormat df = new DecimalFormat("#.00");
+		return df.format(num);
 	}
 
 	/**
@@ -848,17 +850,17 @@ public class Utils {
 		// Sorting the list based on values
 		Collections.sort(list,
 				new Comparator<Entry<? extends User, Integer>>() {
-			@Override
-			public int compare(Entry<? extends User, Integer> o1,
-					Entry<? extends User, Integer> o2) {
-				if (order) {
-					return o1.getValue().compareTo(o2.getValue());
-				} else {
-					return o2.getValue().compareTo(o1.getValue());
+					@Override
+					public int compare(Entry<? extends User, Integer> o1,
+							Entry<? extends User, Integer> o2) {
+						if (order) {
+							return o1.getValue().compareTo(o2.getValue());
+						} else {
+							return o2.getValue().compareTo(o1.getValue());
 
-				}
-			}
-		});
+						}
+					}
+				});
 
 		// Maintaining insertion order with the help of LinkedList
 		HashMap<User, Integer> sortedMap = new LinkedHashMap<User, Integer>();
