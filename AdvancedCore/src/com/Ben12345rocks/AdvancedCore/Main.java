@@ -20,6 +20,7 @@ import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
+import com.Ben12345rocks.AdvancedCore.Util.Updater.Updater;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -39,6 +40,8 @@ public class Main extends JavaPlugin {
 	/** The econ. */
 	public Economy econ = null;
 
+	public Updater updater;
+
 	/**
 	 * Check place holder API.
 	 */
@@ -49,6 +52,35 @@ public class Main extends JavaPlugin {
 		} else {
 			placeHolderAPIEnabled = false;
 			plugin.debug("PlaceholderAPI not found, PlaceholderAPI placeholders will not work");
+		}
+	}
+
+	public void checkUpdate() {
+		plugin.updater = new Updater(plugin, 28295, false);
+		final Updater.UpdateResult result = plugin.updater.getResult();
+		switch (result) {
+		case FAIL_SPIGOT: {
+			plugin.getLogger().info(
+					"Failed to check for update for " + plugin.getName() + "!");
+			break;
+		}
+		case NO_UPDATE: {
+			plugin.getLogger().info(
+					plugin.getName() + " is up to date! Version: "
+							+ plugin.updater.getVersion());
+			break;
+		}
+		case UPDATE_AVAILABLE: {
+			plugin.getLogger().info(
+					plugin.getName()
+							+ " has an update available! Your Version: "
+							+ plugin.getDescription().getVersion()
+							+ " New Version: " + plugin.updater.getVersion());
+			break;
+		}
+		default: {
+			break;
+		}
 		}
 	}
 
@@ -86,7 +118,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.plugin.java.JavaPlugin#onDisable()
 	 */
 	@Override
@@ -95,7 +127,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.plugin.java.JavaPlugin#onEnable()
 	 */
 	@Override
@@ -114,6 +146,15 @@ public class Main extends JavaPlugin {
 		} catch (IOException e) {
 			debug("Failed to load metrics");
 		}
+
+		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
+				new Runnable() {
+
+					@Override
+					public void run() {
+						checkUpdate();
+					}
+				}, 10l);
 	}
 
 	/**
