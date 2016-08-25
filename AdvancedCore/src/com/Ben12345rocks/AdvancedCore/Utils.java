@@ -92,6 +92,8 @@ public class Utils {
 	public Utils(Main plugin) {
 		Utils.plugin = plugin;
 	}
+	
+	
 
 	/**
 	 * Adds the enchants.
@@ -136,6 +138,34 @@ public class Utils {
 
 		ItemMeta meta = item.getItemMeta();
 		meta.setLore(colorize(lore));
+		item.setItemMeta(meta);
+		return item;
+	}
+	
+	public ItemStack addLore(ItemStack item, ArrayList<String> lore) {
+		if (lore == null) {
+			return item;
+		}
+		if (item == null) {
+			return null;
+		}
+
+		ItemMeta meta = item.getItemMeta();
+		meta.setLore(colorize(lore));
+		item.setItemMeta(meta);
+		return item;
+	}
+	
+	public ItemStack setName(ItemStack item, String name) {
+		if (name == null) {
+			return item;
+		}
+		if (item == null) {
+			return null;
+		}
+
+		ItemMeta meta = item.getItemMeta();
+		meta.setDisplayName(colorize(name));
 		item.setItemMeta(meta);
 		return item;
 	}

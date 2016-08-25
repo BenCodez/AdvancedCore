@@ -2,7 +2,6 @@ package com.Ben12345rocks.AdvancedCore.Util.AnvilInventory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 
@@ -21,6 +20,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 
+/**
+* Created by chasechocolate.
+*/
 public class AInventory {
 	private Player player;
 	@SuppressWarnings("unused")
@@ -44,10 +46,10 @@ public class AInventory {
 		ChatMessage = NMSManager.get().getNMSClass("ChatMessage");
 	}
 
-	public AInventory(final Player player, final AnvilClickEventHandler handler) {
+	public AInventory(final Player player, final AnvilClickEventHandler anvilClickEventHandler) {
 		loadClasses();
 		this.player = player;
-		this.handler = handler;
+		this.handler = anvilClickEventHandler;
 
 		this.listener = new Listener() {
 			@EventHandler
@@ -74,7 +76,7 @@ public class AInventory {
 						AnvilClickEvent clickEvent = new AnvilClickEvent(
 								AnvilSlot.bySlot(slot), name);
 
-						handler.onAnvilClick(clickEvent);
+						anvilClickEventHandler.onAnvilClick(clickEvent);
 
 						if (clickEvent.getWillClose()) {
 							event.getWhoClicked().closeInventory();
@@ -119,8 +121,7 @@ public class AInventory {
 		items.put(slot, item);
 	}
 
-	public void open() throws IllegalAccessException,
-			InvocationTargetException, InstantiationException {
+	public void open() {
 		player.setLevel(player.getLevel() + 1);
 
 		try {

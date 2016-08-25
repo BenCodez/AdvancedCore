@@ -62,6 +62,32 @@ public class BInventory implements Listener {
 		player.openInventory(inv);
 	}
 
+	public void openInventory(Player player) {
+		BInventory inventory = this;
+		Inventory inv = Bukkit.createInventory(player,
+				inventory.getInventorySize(), inventory.getInventoryName());
+		Iterator<Entry<Integer, BInventoryButton>> it = inventory.getButtons()
+				.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<Integer, BInventoryButton> pair = it.next();
+			{
+				ItemStack item = pair.getValue().getItem();
+				ItemMeta meta = item.getItemMeta();
+				if (pair.getValue().getName() != null) {
+					meta.setDisplayName(pair.getValue().getName());
+				}
+				if (pair.getValue().getLore() != null) {
+					meta.setLore(new ArrayList<String>(Arrays.asList(pair
+							.getValue().getLore())));
+				}
+				item.setItemMeta(meta);
+				inv.setItem(pair.getKey(), item);
+			}
+			inv.setItem(pair.getKey(), pair.getValue().getItem());
+		}
+		player.openInventory(inv);
+	}
+
 	/** The inventory name. */
 	private String inventoryName;
 
