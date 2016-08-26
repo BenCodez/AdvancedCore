@@ -120,8 +120,6 @@ public class Utils {
 	public Utils(Main plugin) {
 		Utils.plugin = plugin;
 	}
-	
-	
 
 	/**
 	 * Adds the enchants.
@@ -169,7 +167,7 @@ public class Utils {
 		item.setItemMeta(meta);
 		return item;
 	}
-	
+
 	/**
 	 * Adds the lore.
 	 *
@@ -192,7 +190,7 @@ public class Utils {
 		item.setItemMeta(meta);
 		return item;
 	}
-	
+
 	/**
 	 * Sets the name.
 	 *
@@ -1196,5 +1194,16 @@ public class Utils {
 		newTC.setObfuscated(magic);
 		base.addExtra(newTC);
 		return base;
+	}
+
+	public boolean setContainsIgnoreCase(Set<String> set, String str) {
+		str = str.toLowerCase();
+		for (String text : set) {
+			text = text.toLowerCase();
+			if (text.equals(str)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
