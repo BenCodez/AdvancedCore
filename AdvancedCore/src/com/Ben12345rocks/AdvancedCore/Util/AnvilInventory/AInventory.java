@@ -21,8 +21,8 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 
 /**
-* Created by chasechocolate.
-*/
+ * Created by chasechocolate.
+ */
 public class AInventory {
 	private Player player;
 	@SuppressWarnings("unused")
@@ -46,7 +46,8 @@ public class AInventory {
 		ChatMessage = NMSManager.get().getNMSClass("ChatMessage");
 	}
 
-	public AInventory(final Player player, final AnvilClickEventHandler anvilClickEventHandler) {
+	public AInventory(final Player player,
+			final AnvilClickEventHandler anvilClickEventHandler) {
 		loadClasses();
 		this.player = player;
 		this.handler = anvilClickEventHandler;
@@ -74,7 +75,8 @@ public class AInventory {
 						}
 
 						AnvilClickEvent clickEvent = new AnvilClickEvent(
-								AnvilSlot.bySlot(slot), name);
+								AnvilSlot.bySlot(slot), name,
+								(Player) event.getWhoClicked());
 
 						anvilClickEventHandler.onAnvilClick(clickEvent);
 
@@ -243,7 +245,9 @@ public class AInventory {
 		private boolean close = true;
 		private boolean destroy = true;
 
-		public AnvilClickEvent(AnvilSlot slot, String name) {
+		private Player player;
+
+		public AnvilClickEvent(AnvilSlot slot, String name, Player player) {
 			this.slot = slot;
 			this.name = name;
 		}
@@ -254,6 +258,10 @@ public class AInventory {
 
 		public String getName() {
 			return name;
+		}
+
+		public Player getPlayer() {
+			return player;
 		}
 
 		public boolean getWillClose() {
