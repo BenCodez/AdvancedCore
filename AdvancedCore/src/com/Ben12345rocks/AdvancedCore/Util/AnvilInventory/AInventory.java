@@ -360,6 +360,7 @@ public class AInventory {
 		public AnvilClickEvent(AnvilSlot slot, String name, Player player) {
 			this.slot = slot;
 			this.name = name;
+			this.player = player;
 		}
 
 		/**

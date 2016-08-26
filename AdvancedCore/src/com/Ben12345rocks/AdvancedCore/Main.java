@@ -152,13 +152,20 @@ public class Main extends JavaPlugin {
 			debug("Failed to load metrics");
 		}
 
-		run(new Runnable() {
-
+		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+			
 			@Override
 			public void run() {
-				checkUpdate();
+				plugin.run(new Runnable() {
+
+					@Override
+					public void run() {
+						checkUpdate();
+					}
+				});
 			}
-		});
+		}, 10l);
+		
 	}
 
 	public void run(Runnable run) {

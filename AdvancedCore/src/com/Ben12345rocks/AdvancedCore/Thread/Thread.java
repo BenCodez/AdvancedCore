@@ -7,6 +7,7 @@ public class Thread {
 	 * The Class ReadThread.
 	 */
 	public class ReadThread extends java.lang.Thread {
+
 		public void run(Runnable run) {
 			run.run();
 		}
