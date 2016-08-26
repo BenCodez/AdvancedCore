@@ -62,6 +62,15 @@ public class Utils {
 	private Utils() {
 	}
 
+	/**
+	 * Gets the NMS class.
+	 *
+	 * @param nmsClassString
+	 *            the nms class string
+	 * @return the NMS class
+	 * @throws ClassNotFoundException
+	 *             the class not found exception
+	 */
 	public Class<?> getNMSClass(String nmsClassString)
 			throws ClassNotFoundException {
 		String version = Bukkit.getServer().getClass().getPackage().getName()
@@ -72,6 +81,25 @@ public class Utils {
 		return nmsClass;
 	}
 
+	/**
+	 * Gets the connection.
+	 *
+	 * @param player
+	 *            the player
+	 * @return the connection
+	 * @throws SecurityException
+	 *             the security exception
+	 * @throws NoSuchMethodException
+	 *             the no such method exception
+	 * @throws NoSuchFieldException
+	 *             the no such field exception
+	 * @throws IllegalArgumentException
+	 *             the illegal argument exception
+	 * @throws IllegalAccessException
+	 *             the illegal access exception
+	 * @throws InvocationTargetException
+	 *             the invocation target exception
+	 */
 	public Object getConnection(Player player) throws SecurityException,
 			NoSuchMethodException, NoSuchFieldException,
 			IllegalArgumentException, IllegalAccessException,
@@ -142,6 +170,15 @@ public class Utils {
 		return item;
 	}
 	
+	/**
+	 * Adds the lore.
+	 *
+	 * @param item
+	 *            the item
+	 * @param lore
+	 *            the lore
+	 * @return the item stack
+	 */
 	public ItemStack addLore(ItemStack item, ArrayList<String> lore) {
 		if (lore == null) {
 			return item;
@@ -156,6 +193,15 @@ public class Utils {
 		return item;
 	}
 	
+	/**
+	 * Sets the name.
+	 *
+	 * @param item
+	 *            the item
+	 * @param name
+	 *            the name
+	 * @return the item stack
+	 */
 	public ItemStack setName(ItemStack item, String name) {
 		if (name == null) {
 			return item;
@@ -814,7 +860,7 @@ public class Utils {
 	 *            the num
 	 * @param decimals
 	 *            the decimals
-	 * @return the double
+	 * @return the string
 	 */
 	public String roundDecimals(double num, int decimals) {
 		num = num * Math.pow(10, decimals);
@@ -893,7 +939,7 @@ public class Utils {
 	 *            the unsort map
 	 * @param order
 	 *            the order
-	 * @return hasmap sorted by values
+	 * @return the hash map<? extends user, integer>
 	 */
 	public HashMap<? extends User, Integer> sortByValues(
 			HashMap<? extends User, Integer> unsortMap, final boolean order) {

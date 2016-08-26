@@ -21,21 +21,44 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 
 /**
- * Created by chasechocolate.
+ * The Class AInventory.
  */
 public class AInventory {
+	
+	/** The player. */
 	private Player player;
+	
+	/** The handler. */
 	@SuppressWarnings("unused")
 	private AnvilClickEventHandler handler;
+	
+	/** The Block position. */
 	private static Class<?> BlockPosition;
+	
+	/** The Packet play out open window. */
 	private static Class<?> PacketPlayOutOpenWindow;
+	
+	/** The Container anvil. */
 	private static Class<?> ContainerAnvil;
+	
+	/** The Chat message. */
 	private static Class<?> ChatMessage;
+	
+	/** The Entity human. */
 	private static Class<?> EntityHuman;
+	
+	/** The items. */
 	private HashMap<AnvilSlot, ItemStack> items = new HashMap<AnvilSlot, ItemStack>();
+	
+	/** The inv. */
 	private Inventory inv;
+	
+	/** The listener. */
 	private Listener listener;
 
+	/**
+	 * Load classes.
+	 */
 	private void loadClasses() {
 		BlockPosition = com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager
 				.get().getNMSClass("BlockPosition");
@@ -46,6 +69,14 @@ public class AInventory {
 		ChatMessage = NMSManager.get().getNMSClass("ChatMessage");
 	}
 
+	/**
+	 * Instantiates a new a inventory.
+	 *
+	 * @param player
+	 *            the player
+	 * @param anvilClickEventHandler
+	 *            the anvil click event handler
+	 */
 	public AInventory(final Player player,
 			final AnvilClickEventHandler anvilClickEventHandler) {
 		loadClasses();
@@ -115,14 +146,30 @@ public class AInventory {
 		Bukkit.getPluginManager().registerEvents(listener, Main.plugin);
 	}
 
+	/**
+	 * Gets the player.
+	 *
+	 * @return the player
+	 */
 	public Player getPlayer() {
 		return player;
 	}
 
+	/**
+	 * Sets the slot.
+	 *
+	 * @param slot
+	 *            the slot
+	 * @param item
+	 *            the item
+	 */
 	public void setSlot(AnvilSlot slot, ItemStack item) {
 		items.put(slot, item);
 	}
 
+	/**
+	 * Open.
+	 */
 	public void open() {
 		player.setLevel(player.getLevel() + 1);
 
@@ -199,6 +246,9 @@ public class AInventory {
 		}
 	}
 
+	/**
+	 * Destroy.
+	 */
 	public void destroy() {
 		player = null;
 		handler = null;
@@ -209,15 +259,40 @@ public class AInventory {
 		listener = null;
 	}
 
+	/**
+	 * The Enum AnvilSlot.
+	 */
 	public enum AnvilSlot {
-		INPUT_LEFT(0), INPUT_RIGHT(1), OUTPUT(2);
+		
+		/** The input left. */
+		INPUT_LEFT(0), 
+ 
+ /** The input right. */
+ INPUT_RIGHT(1), 
+ 
+ /** The output. */
+ OUTPUT(2);
 
+		/** The slot. */
 		private int slot;
 
+		/**
+		 * Instantiates a new anvil slot.
+		 *
+		 * @param slot
+		 *            the slot
+		 */
 		private AnvilSlot(int slot) {
 			this.slot = slot;
 		}
 
+		/**
+		 * By slot.
+		 *
+		 * @param slot
+		 *            the slot
+		 * @return the anvil slot
+		 */
 		public static AnvilSlot bySlot(int slot) {
 			for (AnvilSlot anvilSlot : values()) {
 				if (anvilSlot.getSlot() == slot) {
@@ -228,54 +303,126 @@ public class AInventory {
 			return null;
 		}
 
+		/**
+		 * Gets the slot.
+		 *
+		 * @return the slot
+		 */
 		public int getSlot() {
 			return slot;
 		}
 	}
 
+	/**
+	 * The Interface AnvilClickEventHandler.
+	 */
 	public interface AnvilClickEventHandler {
+		
+		/**
+		 * On anvil click.
+		 *
+		 * @param event
+		 *            the event
+		 */
 		void onAnvilClick(AnvilClickEvent event);
 	}
 
+	/**
+	 * The Class AnvilClickEvent.
+	 */
 	public class AnvilClickEvent {
+		
+		/** The slot. */
 		private AnvilSlot slot;
 
+		/** The name. */
 		private String name;
 
+		/** The close. */
 		private boolean close = true;
+		
+		/** The destroy. */
 		private boolean destroy = true;
 
+		/** The player. */
 		private Player player;
 
+		/**
+		 * Instantiates a new anvil click event.
+		 *
+		 * @param slot
+		 *            the slot
+		 * @param name
+		 *            the name
+		 * @param player
+		 *            the player
+		 */
 		public AnvilClickEvent(AnvilSlot slot, String name, Player player) {
 			this.slot = slot;
 			this.name = name;
 		}
 
+		/**
+		 * Gets the slot.
+		 *
+		 * @return the slot
+		 */
 		public AnvilSlot getSlot() {
 			return slot;
 		}
 
+		/**
+		 * Gets the name.
+		 *
+		 * @return the name
+		 */
 		public String getName() {
 			return name;
 		}
 
+		/**
+		 * Gets the player.
+		 *
+		 * @return the player
+		 */
 		public Player getPlayer() {
 			return player;
 		}
 
+		/**
+		 * Gets the will close.
+		 *
+		 * @return the will close
+		 */
 		public boolean getWillClose() {
 			return close;
 		}
 
+		/**
+		 * Sets the will close.
+		 *
+		 * @param close
+		 *            the new will close
+		 */
 		public void setWillClose(boolean close) {
 			this.close = close;
 		}
 
+		/**
+		 * Gets the will destroy.
+		 *
+		 * @return the will destroy
+		 */
 		public boolean getWillDestroy() {
 			return destroy;
 		}
 
+		/**
+		 * Sets the will destroy.
+		 *
+		 * @param destroy
+		 *            the new will destroy
+		 */
 		public void setWillDestroy(boolean destroy) {
 			this.destroy = destroy;
 		}

@@ -40,6 +40,7 @@ public class Main extends JavaPlugin {
 	/** The econ. */
 	public Economy econ = null;
 
+	/** The updater. */
 	public Updater updater;
 
 	/**
@@ -55,6 +56,9 @@ public class Main extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Check update.
+	 */
 	public void checkUpdate() {
 		plugin.updater = new Updater(plugin, 28295, false);
 		final Updater.UpdateResult result = plugin.updater.getResult();

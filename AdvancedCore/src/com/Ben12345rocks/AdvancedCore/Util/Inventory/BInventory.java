@@ -62,6 +62,12 @@ public class BInventory implements Listener {
 		player.openInventory(inv);
 	}
 
+	/**
+	 * Open inventory.
+	 *
+	 * @param player
+	 *            the player
+	 */
 	public void openInventory(Player player) {
 		BInventory inventory = this;
 		Inventory inv = Bukkit.createInventory(player,
@@ -206,6 +212,9 @@ public class BInventory implements Listener {
 		}
 	}
 
+	/**
+	 * Destroy.
+	 */
 	public void destroy() {
 		HandlerList.unregisterAll(this);
 	}
