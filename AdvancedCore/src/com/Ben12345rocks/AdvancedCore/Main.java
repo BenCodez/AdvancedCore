@@ -139,6 +139,7 @@ public class Main extends JavaPlugin {
 		plugin = this;
 		loadCommands();
 		FilesManager.getInstance().loadFileEditngThread();
+		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().loadThread();
 		setupFiles();
 		setupEconomy();
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this),
@@ -151,14 +152,17 @@ public class Main extends JavaPlugin {
 			debug("Failed to load metrics");
 		}
 
-		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
-				new Runnable() {
+		run(new Runnable() {
 
-					@Override
-					public void run() {
-						checkUpdate();
-					}
-				}, 10l);
+			@Override
+			public void run() {
+				checkUpdate();
+			}
+		});
+	}
+
+	public void run(Runnable run) {
+		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
 	}
 
 	/**
