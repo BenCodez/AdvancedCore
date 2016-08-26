@@ -14,6 +14,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -37,6 +38,32 @@ public class BInventory implements Listener {
 	 *            the inventory
 	 */
 	public static void openInventory(Player player, BInventory inventory) {
+		Inventory inv = Bukkit.createInventory(player,
+				inventory.getInventorySize(), inventory.getInventoryName());
+		Iterator<Entry<Integer, BInventoryButton>> it = inventory.getButtons()
+				.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<Integer, BInventoryButton> pair = it.next();
+			{
+				ItemStack item = pair.getValue().getItem();
+				ItemMeta meta = item.getItemMeta();
+				if (pair.getValue().getName() != null) {
+					meta.setDisplayName(pair.getValue().getName());
+				}
+				if (pair.getValue().getLore() != null) {
+					meta.setLore(new ArrayList<String>(Arrays.asList(pair
+							.getValue().getLore())));
+				}
+				item.setItemMeta(meta);
+				inv.setItem(pair.getKey(), item);
+			}
+			inv.setItem(pair.getKey(), pair.getValue().getItem());
+		}
+		player.openInventory(inv);
+	}
+
+	public void openInventory(Player player) {
+		BInventory inventory = this;
 		Inventory inv = Bukkit.createInventory(player,
 				inventory.getInventorySize(), inventory.getInventoryName());
 		Iterator<Entry<Integer, BInventoryButton>> it = inventory.getButtons()
@@ -171,12 +198,16 @@ public class BInventory implements Listener {
 					// Main.plugin.debug("Running onclick");
 					button.onClick(event);
 					event.setCancelled(true);
-
+					destroy();
 					return;
 				}
 
 			}
 		}
+	}
+
+	public void destroy() {
+		HandlerList.unregisterAll(this);
 	}
 
 	/**

@@ -1,5 +1,8 @@
 package com.Ben12345rocks.AdvancedCore;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.DateFormatSymbols;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -59,6 +62,27 @@ public class Utils {
 	private Utils() {
 	}
 
+	public Class<?> getNMSClass(String nmsClassString)
+			throws ClassNotFoundException {
+		String version = Bukkit.getServer().getClass().getPackage().getName()
+				.replace(".", ",").split(",")[3]
+				+ ".";
+		String name = "net.minecraft.server." + version + nmsClassString;
+		Class<?> nmsClass = Class.forName(name);
+		return nmsClass;
+	}
+
+	public Object getConnection(Player player) throws SecurityException,
+			NoSuchMethodException, NoSuchFieldException,
+			IllegalArgumentException, IllegalAccessException,
+			InvocationTargetException {
+		Method getHandle = player.getClass().getMethod("getHandle");
+		Object nmsPlayer = getHandle.invoke(player);
+		Field conField = nmsPlayer.getClass().getField("playerConnection");
+		Object con = conField.get(nmsPlayer);
+		return con;
+	}
+
 	/**
 	 * Instantiates a new utils.
 	 *
@@ -68,6 +92,8 @@ public class Utils {
 	public Utils(Main plugin) {
 		Utils.plugin = plugin;
 	}
+	
+	
 
 	/**
 	 * Adds the enchants.
@@ -112,6 +138,34 @@ public class Utils {
 
 		ItemMeta meta = item.getItemMeta();
 		meta.setLore(colorize(lore));
+		item.setItemMeta(meta);
+		return item;
+	}
+	
+	public ItemStack addLore(ItemStack item, ArrayList<String> lore) {
+		if (lore == null) {
+			return item;
+		}
+		if (item == null) {
+			return null;
+		}
+
+		ItemMeta meta = item.getItemMeta();
+		meta.setLore(colorize(lore));
+		item.setItemMeta(meta);
+		return item;
+	}
+	
+	public ItemStack setName(ItemStack item, String name) {
+		if (name == null) {
+			return item;
+		}
+		if (item == null) {
+			return null;
+		}
+
+		ItemMeta meta = item.getItemMeta();
+		meta.setDisplayName(colorize(name));
 		item.setItemMeta(meta);
 		return item;
 	}
