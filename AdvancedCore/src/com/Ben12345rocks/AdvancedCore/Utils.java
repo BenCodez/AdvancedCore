@@ -904,7 +904,10 @@ public class Utils {
 			return item;
 		}
 		ItemMeta meta = item.getItemMeta();
-		((SkullMeta) meta).setOwner(playerName);
+		try {
+			((SkullMeta) meta).setOwner(playerName);
+		} catch (Exception ex) {
+		}
 		return item;
 	}
 
@@ -946,19 +949,17 @@ public class Utils {
 				unsortMap.entrySet());
 
 		// Sorting the list based on values
-		Collections.sort(list,
-				new Comparator<Entry<User, Integer>>() {
-					@Override
-					public int compare(Entry<User, Integer> o1,
-							Entry<User, Integer> o2) {
-						if (order) {
-							return o1.getValue().compareTo(o2.getValue());
-						} else {
-							return o2.getValue().compareTo(o1.getValue());
+		Collections.sort(list, new Comparator<Entry<User, Integer>>() {
+			@Override
+			public int compare(Entry<User, Integer> o1, Entry<User, Integer> o2) {
+				if (order) {
+					return o1.getValue().compareTo(o2.getValue());
+				} else {
+					return o2.getValue().compareTo(o1.getValue());
 
-						}
-					}
-				});
+				}
+			}
+		});
 
 		// Maintaining insertion order with the help of LinkedList
 		HashMap<User, Integer> sortedMap = new LinkedHashMap<User, Integer>();
