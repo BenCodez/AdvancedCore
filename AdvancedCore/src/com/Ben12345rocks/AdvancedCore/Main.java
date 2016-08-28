@@ -151,6 +151,7 @@ public class Main extends JavaPlugin {
 		} catch (IOException e) {
 			debug("Failed to load metrics");
 		}
+		
 
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 			
