@@ -169,6 +169,12 @@ public class Main extends JavaPlugin {
 		
 	}
 
+	/**
+	 * Run.
+	 *
+	 * @param run
+	 *            the run
+	 */
 	public void run(Runnable run) {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
 	}

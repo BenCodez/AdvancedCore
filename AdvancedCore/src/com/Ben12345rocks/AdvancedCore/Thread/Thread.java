@@ -2,12 +2,22 @@ package com.Ben12345rocks.AdvancedCore.Thread;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 
+/**
+ * The Class Thread.
+ */
 public class Thread {
+	
 	/**
 	 * The Class ReadThread.
 	 */
 	public class ReadThread extends java.lang.Thread {
 
+		/**
+		 * Run.
+		 *
+		 * @param run
+		 *            the run
+		 */
 		public void run(Runnable run) {
 			run.run();
 		}
@@ -42,13 +52,13 @@ public class Thread {
 	public ReadThread thread;
 
 	/**
-	 * Instantiates a new files manager.
+	 * Instantiates a new thread.
 	 */
 	private Thread() {
 	}
 
 	/**
-	 * Instantiates a new files manager.
+	 * Instantiates a new thread.
 	 *
 	 * @param plugin
 	 *            the plugin
@@ -58,19 +68,17 @@ public class Thread {
 	}
 
 	/**
-	 * Edits the file.
+	 * Run.
 	 *
-	 * @param file
-	 *            the file
-	 * @param data
-	 *            the data
+	 * @param run
+	 *            the run
 	 */
 	public void run(Runnable run) {
 		thread.run(run);
 	}
 
 	/**
-	 * Load file editng thread.
+	 * Load thread.
 	 */
 	public void loadThread() {
 		thread = new ReadThread();
