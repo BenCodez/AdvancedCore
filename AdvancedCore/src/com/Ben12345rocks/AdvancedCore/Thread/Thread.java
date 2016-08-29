@@ -18,7 +18,7 @@ public class Thread {
 		 * @param run
 		 *            the run
 		 */
-		public void run(Runnable run) {
+		public synchronized void run(Runnable run) {
 			run.run();
 		}
 
