@@ -202,8 +202,11 @@ public class BInventory implements Listener {
 				BInventoryButton button = getButtons().get(buttonSlot);
 				if (event.getSlot() == buttonSlot) {
 					// Main.plugin.debug("Running onclick");
+					Player player = (Player) event.getWhoClicked();
+					player.closeInventory();
 					button.onClick(event);
 					event.setCancelled(true);
+
 					destroy();
 					return;
 				}
