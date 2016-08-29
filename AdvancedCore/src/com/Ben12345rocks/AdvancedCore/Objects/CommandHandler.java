@@ -89,6 +89,7 @@ public abstract class CommandHandler {
 						|| cmdArg.equalsIgnoreCase("(entity)")
 						|| cmdArg.equalsIgnoreCase("(entitydamagecause)")
 						|| cmdArg.equalsIgnoreCase("(entityspawnreason)")
+						|| cmdArg.equalsIgnoreCase("(RequestMethod)")
 						|| cmdArg.equalsIgnoreCase("(number)")
 						|| cmdArg.equalsIgnoreCase("(string)")
 						|| cmdArg.equalsIgnoreCase("(boolean)")

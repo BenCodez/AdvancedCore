@@ -121,6 +121,9 @@ public class BInventory implements Listener {
 	 *            the button
 	 */
 	public void addButton(int position, BInventoryButton button) {
+		if (position >= 54) {
+			position = 53;
+		}
 		getButtons().put(position, button);
 	}
 
@@ -155,6 +158,15 @@ public class BInventory implements Listener {
 	 */
 	public String getInventoryName() {
 		return inventoryName;
+	}
+	
+	/**
+	 * Gets the next slot.
+	 *
+	 * @return the next slot
+	 */
+	public int getNextSlot() {
+		return getHighestSlot()+1;
 	}
 
 	/**
@@ -202,8 +214,11 @@ public class BInventory implements Listener {
 				BInventoryButton button = getButtons().get(buttonSlot);
 				if (event.getSlot() == buttonSlot) {
 					// Main.plugin.debug("Running onclick");
+					Player player = (Player) event.getWhoClicked();
+					player.closeInventory();
 					button.onClick(event);
 					event.setCancelled(true);
+
 					destroy();
 					return;
 				}
