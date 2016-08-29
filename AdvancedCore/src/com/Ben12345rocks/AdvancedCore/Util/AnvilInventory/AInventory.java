@@ -24,35 +24,35 @@ import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
  * The Class AInventory.
  */
 public class AInventory {
-	
+
 	/** The player. */
 	private Player player;
-	
+
 	/** The handler. */
 	@SuppressWarnings("unused")
 	private AnvilClickEventHandler handler;
-	
+
 	/** The Block position. */
 	private static Class<?> BlockPosition;
-	
+
 	/** The Packet play out open window. */
 	private static Class<?> PacketPlayOutOpenWindow;
-	
+
 	/** The Container anvil. */
 	private static Class<?> ContainerAnvil;
-	
+
 	/** The Chat message. */
 	private static Class<?> ChatMessage;
-	
+
 	/** The Entity human. */
 	private static Class<?> EntityHuman;
-	
+
 	/** The items. */
 	private HashMap<AnvilSlot, ItemStack> items = new HashMap<AnvilSlot, ItemStack>();
-	
+
 	/** The inv. */
 	private Inventory inv;
-	
+
 	/** The listener. */
 	private Listener listener;
 
@@ -109,15 +109,12 @@ public class AInventory {
 								AnvilSlot.bySlot(slot), name,
 								(Player) event.getWhoClicked());
 
-						anvilClickEventHandler.onAnvilClick(clickEvent);
-
-						if (clickEvent.getWillClose()) {
+						if (clickEvent.getSlot() == AnvilSlot.OUTPUT) {
 							event.getWhoClicked().closeInventory();
-						}
-
-						if (clickEvent.getWillDestroy()) {
+							anvilClickEventHandler.onAnvilClick(clickEvent);
 							destroy();
 						}
+
 					}
 				}
 			}
@@ -263,15 +260,15 @@ public class AInventory {
 	 * The Enum AnvilSlot.
 	 */
 	public enum AnvilSlot {
-		
+
 		/** The input left. */
-		INPUT_LEFT(0), 
- 
- /** The input right. */
- INPUT_RIGHT(1), 
- 
- /** The output. */
- OUTPUT(2);
+		INPUT_LEFT(0),
+
+		/** The input right. */
+		INPUT_RIGHT(1),
+
+		/** The output. */
+		OUTPUT(2);
 
 		/** The slot. */
 		private int slot;
@@ -317,7 +314,7 @@ public class AInventory {
 	 * The Interface AnvilClickEventHandler.
 	 */
 	public interface AnvilClickEventHandler {
-		
+
 		/**
 		 * On anvil click.
 		 *
@@ -331,7 +328,7 @@ public class AInventory {
 	 * The Class AnvilClickEvent.
 	 */
 	public class AnvilClickEvent {
-		
+
 		/** The slot. */
 		private AnvilSlot slot;
 
@@ -340,7 +337,7 @@ public class AInventory {
 
 		/** The close. */
 		private boolean close = true;
-		
+
 		/** The destroy. */
 		private boolean destroy = true;
 
