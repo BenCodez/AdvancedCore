@@ -100,11 +100,22 @@ public class User {
 		}
 	}
 
+	/**
+	 * Gets the input method.
+	 *
+	 * @return the input method
+	 */
 	public RequestManager.InputMethod getInputMethod() {
 		return RequestManager.InputMethod.valueOf(getRawData().getString(
 				"InputMethod", RequestManager.InputMethod.Anvil.toString()));
 	}
 
+	/**
+	 * Sets the input method.
+	 *
+	 * @param method
+	 *            the new input method
+	 */
 	public void setInputMethod(RequestManager.InputMethod method) {
 		setRawData("InputMethod", method.toString());
 	}

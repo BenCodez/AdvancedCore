@@ -16,8 +16,25 @@ import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickE
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptManager;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
 
+/**
+ * The Class RequestManager.
+ */
 public class RequestManager {
 
+	/**
+	 * Instantiates a new request manager.
+	 *
+	 * @param conversable
+	 *            the conversable
+	 * @param method
+	 *            the method
+	 * @param listener
+	 *            the listener
+	 * @param promptText
+	 *            the prompt text
+	 * @param currentValue
+	 *            the current value
+	 */
 	public RequestManager(Conversable conversable, InputMethod method,
 			final InputListener listener, String promptText, String currentValue) {
 		if (method.equals(InputMethod.Anvil)) {
@@ -74,9 +91,15 @@ public class RequestManager {
 		}
 	}
 
+	/**
+	 * The Enum InputMethod.
+	 */
 	public enum InputMethod {
+		
+		/** The Anvil. */
 		Anvil,
 
+		/** The Conversable. */
 		Conversable;
 	}
 

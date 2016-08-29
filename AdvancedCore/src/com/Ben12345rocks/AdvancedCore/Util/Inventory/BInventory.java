@@ -160,6 +160,11 @@ public class BInventory implements Listener {
 		return inventoryName;
 	}
 	
+	/**
+	 * Gets the next slot.
+	 *
+	 * @return the next slot
+	 */
 	public int getNextSlot() {
 		return getHighestSlot()+1;
 	}
