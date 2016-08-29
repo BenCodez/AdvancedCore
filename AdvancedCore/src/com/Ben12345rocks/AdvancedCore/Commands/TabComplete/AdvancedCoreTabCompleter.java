@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -69,6 +70,13 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 								if (!cmds.contains("False")) {
 									cmds.add("False");
 								}
+							} else if (arg.equalsIgnoreCase("(requestmethod)")) {
+								for (RequestManager.InputMethod method : RequestManager.InputMethod
+										.values()) {
+									if (!cmds.contains(method.toString())) {
+										cmds.add(method.toString());
+									}
+								}
 							} else if (arg.equalsIgnoreCase("(number)")) {
 
 							} else if (!cmds.contains(arg)) {
@@ -88,7 +96,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.command.TabCompleter#onTabComplete(org.bukkit.command.
 	 * CommandSender, org.bukkit.command.Command, java.lang.String,
 	 * java.lang.String[])
