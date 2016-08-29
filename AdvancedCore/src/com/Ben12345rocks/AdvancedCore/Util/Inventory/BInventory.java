@@ -121,6 +121,9 @@ public class BInventory implements Listener {
 	 *            the button
 	 */
 	public void addButton(int position, BInventoryButton button) {
+		if (position >= 54) {
+			position = 53;
+		}
 		getButtons().put(position, button);
 	}
 
@@ -155,6 +158,10 @@ public class BInventory implements Listener {
 	 */
 	public String getInventoryName() {
 		return inventoryName;
+	}
+	
+	public int getNextSlot() {
+		return getHighestSlot()+1;
 	}
 
 	/**
