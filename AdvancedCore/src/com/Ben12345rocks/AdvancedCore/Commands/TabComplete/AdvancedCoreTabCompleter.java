@@ -109,7 +109,11 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 
 		ArrayList<String> cmds = new ArrayList<String>();
 
-		cmds.addAll(getTabCompleteOptions(sender, args, args.length - 1));
+		for (CommandHandler commandHandler : plugin.advancedCoreCommands) {
+			commandHandler.updateTabComplete();
+			cmds.addAll(commandHandler.getTabCompleteOptions(sender, args,
+					args.length - 1));
+		}
 
 		for (int i = 0; i < cmds.size(); i++) {
 			if (Utils.getInstance().startsWithIgnoreCase(cmds.get(i),

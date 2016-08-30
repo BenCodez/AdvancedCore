@@ -11,6 +11,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
 import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager.InputMethod;
 
 // TODO: Auto-generated Javadoc
@@ -92,6 +93,19 @@ public class CommandLoader {
 				}
 			}
 		});
+
+		loadTabComplete();
+	}
+
+	public void loadTabComplete() {
+		ArrayList<String> method = new ArrayList<String>();
+		for (InputMethod me : RequestManager.InputMethod.values()) {
+			method.add(me.toString());
+		}
+		for (int i = 0; i < plugin.advancedCoreCommands.size(); i++) {
+			plugin.advancedCoreCommands.get(i).addTabCompleteOption(
+					"(RequestMethod)", method);
+		}
 	}
 
 }

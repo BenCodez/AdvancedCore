@@ -11,7 +11,9 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
@@ -51,6 +53,7 @@ public abstract class CommandHandler {
 		this.perm = perm;
 		helpMessage = "Unknown Help Message";
 		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
+		loadTabComplete();
 	}
 
 	/**
@@ -68,6 +71,7 @@ public abstract class CommandHandler {
 		this.perm = perm;
 		this.helpMessage = helpMessage;
 		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
+		loadTabComplete();
 	}
 
 	/**
@@ -83,7 +87,7 @@ public abstract class CommandHandler {
 		if (i < args.length) {
 			String[] cmdArgs = args[i].split("&");
 			for (String cmdArg : cmdArgs) {
-				if (cmdArg.equalsIgnoreCase("(player)")
+				if (tabCompleteOptions.keySet().contains(cmdArg)
 						|| cmdArg.equalsIgnoreCase("(SITENAME)")
 						|| cmdArg.equalsIgnoreCase("(reward)")
 						|| cmdArg.equalsIgnoreCase("(entity)")
@@ -98,21 +102,87 @@ public abstract class CommandHandler {
 					return true;
 				}
 			}
-			/*
-			 * if (args[i].split("|").length <= 1) { if
-			 * (args[i].equalsIgnoreCase("player") ||
-			 * args[i].equalsIgnoreCase("SITENAME") ||
-			 * args[i].equalsIgnoreCase("number") ||
-			 * args[i].equalsIgnoreCase("string") ||
-			 * args[i].equalsIgnoreCase("boolean") ||
-			 * args[i].equalsIgnoreCase("list") ||
-			 * arg.equalsIgnoreCase(args[i])) { return true; } } else {
-			 *
-			 * }
-			 */
 			return false;
 		}
 		return false;
+	}
+
+	public void loadTabComplete() {
+		ArrayList<String> players = new ArrayList<String>();
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			players.add(player.getName());
+		}
+		addTabCompleteOption("(Player)", players);
+		ArrayList<String> options = new ArrayList<String>();
+		options.add("True");
+		options.add("False");
+		addTabCompleteOption("(boolean)", options);
+		options = new ArrayList<String>();
+		addTabCompleteOption("(list)", options);
+		addTabCompleteOption("(String)", options);
+		addTabCompleteOption("(number)", options);
+	}
+
+	public void updateTabComplete() {
+		ArrayList<String> players = new ArrayList<String>();
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			players.add(player.getName());
+		}
+		addTabCompleteOption("(Player)", players);
+	}
+
+	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
+		ArrayList<String> replace = new ArrayList<String>();
+		for (String str : options) {
+			replace.add(str);
+		}
+		tabCompleteOptions.put(toReplace, replace);
+	}
+
+	public ArrayList<String> getTabCompleteOptions(CommandSender sender,
+			String[] args, int argNum) {
+		CommandHandler commandHandler = this;
+		updateTabComplete();
+		ArrayList<String> cmds = new ArrayList<String>();
+
+		if (sender.hasPermission(commandHandler.getPerm())) {
+			String[] cmdArgs = commandHandler.getArgs();
+			if (cmdArgs.length > argNum) {
+				boolean argsMatch = true;
+				for (int i = 0; i < argNum; i++) {
+					if (args.length >= i) {
+						if (!commandHandler.argsMatch(args[i], i)) {
+							argsMatch = false;
+						}
+					}
+				}
+
+				if (argsMatch) {
+					String[] cmdArgsList = cmdArgs[argNum].split("&");
+					for (String arg : cmdArgsList) {
+						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions
+								.entrySet()) {
+							if (arg.equalsIgnoreCase(entry.getKey())) {
+								for (String str : entry.getValue()) {
+									if (!cmds.contains(str)) {
+										cmds.add(str);
+									}
+								}
+							}
+						}
+						if (!cmds.contains(arg)) {
+							cmds.add(arg);
+						}
+					}
+
+				}
+
+			}
+		}
+
+		Collections.sort(cmds, String.CASE_INSENSITIVE_ORDER);
+
+		return cmds;
 	}
 
 	/**
@@ -206,7 +276,7 @@ public abstract class CommandHandler {
 				commandText));
 		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA)
-				.create()));
+						.create()));
 		return txt;
 
 	}
@@ -299,7 +369,7 @@ public abstract class CommandHandler {
 					if (!Utils.getInstance().isInt(args[i])) {
 						sender.sendMessage(Utils.getInstance().colorize(
 								Config.getInstance().getFormatNotNumber()
-								.replace("%arg%", args[i])));
+										.replace("%arg%", args[i])));
 						return true;
 					}
 				}
