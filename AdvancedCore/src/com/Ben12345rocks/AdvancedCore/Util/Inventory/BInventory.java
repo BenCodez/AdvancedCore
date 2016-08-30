@@ -21,6 +21,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 
 // TODO: Auto-generated Javadoc
@@ -205,19 +206,19 @@ public class BInventory implements Listener {
 			return;
 		}
 
-		// Main.plugin.debug("Event ran");
+		Main.plugin.debug("Event ran");
 
 		Inventory inv = event.getInventory();
 		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
-			// Main.plugin.debug("Iventory equal");
+			Main.plugin.debug("Iventory equal");
 			for (int buttonSlot : getButtons().keySet()) {
 				BInventoryButton button = getButtons().get(buttonSlot);
 				if (event.getSlot() == buttonSlot) {
 					// Main.plugin.debug("Running onclick");
 					Player player = (Player) event.getWhoClicked();
+					event.setCancelled(true);
 					player.closeInventory();
 					button.onClick(event);
-					event.setCancelled(true);
 
 					destroy();
 					return;

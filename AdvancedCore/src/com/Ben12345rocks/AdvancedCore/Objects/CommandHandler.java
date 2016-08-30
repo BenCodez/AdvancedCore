@@ -160,9 +160,11 @@ public abstract class CommandHandler {
 				if (argsMatch) {
 					String[] cmdArgsList = cmdArgs[argNum].split("&");
 					for (String arg : cmdArgsList) {
+						boolean add = true;
 						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions
 								.entrySet()) {
 							if (arg.equalsIgnoreCase(entry.getKey())) {
+								add = false;
 								for (String str : entry.getValue()) {
 									if (!cmds.contains(str)) {
 										cmds.add(str);
@@ -170,7 +172,7 @@ public abstract class CommandHandler {
 								}
 							}
 						}
-						if (!cmds.contains(arg)) {
+						if (!cmds.contains(arg) && add) {
 							cmds.add(arg);
 						}
 					}
