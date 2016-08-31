@@ -52,8 +52,7 @@ public class RequestManager {
 								event.setWillClose(true);
 								event.setWillDestroy(true);
 
-								listener.onInput(player,
-										event.getName());
+								listener.onInput(player, event.getName());
 
 							} else {
 								event.setWillClose(false);

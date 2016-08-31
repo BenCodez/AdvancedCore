@@ -5,5 +5,6 @@
 	<classpathentry kind="lib" path="D:/Horizon/buildtools/spigot-1.10.2.jar"/>
 	<classpathentry kind="lib" path="D:/programming/Liabaries/PlaceholderAPI.jar"/>
 	<classpathentry kind="lib" path="D:/Horizon/Test Server/plugins/Vault.jar"/>
+	<classpathentry kind="lib" path="D:/Horizon/Test Server/plugins/ProtocolLib.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

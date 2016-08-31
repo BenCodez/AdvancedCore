@@ -151,22 +151,22 @@ public class Main extends JavaPlugin {
 		} catch (IOException e) {
 			debug("Failed to load metrics");
 		}
-		
 
-		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
-			
-			@Override
-			public void run() {
-				plugin.run(new Runnable() {
+		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
+				new Runnable() {
 
 					@Override
 					public void run() {
-						checkUpdate();
+						plugin.run(new Runnable() {
+
+							@Override
+							public void run() {
+								checkUpdate();
+							}
+						});
 					}
-				});
-			}
-		}, 10l);
-		
+				}, 10l);
+
 	}
 
 	/**

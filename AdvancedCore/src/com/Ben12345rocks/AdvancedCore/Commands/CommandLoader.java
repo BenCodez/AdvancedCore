@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -94,7 +95,20 @@ public class CommandLoader {
 			}
 		});
 
-		loadTabComplete();
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(
+						new Runnable() {
+
+							@Override
+							public void run() {
+								loadTabComplete();
+							}
+						});
+			}
+		});
 	}
 
 	public void loadTabComplete() {

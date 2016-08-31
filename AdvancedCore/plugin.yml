@@ -1,6 +1,7 @@
 name: AdvancedCore
 version: 1.2
 main: com.Ben12345rocks.AdvancedCore.Main
+softdepend: [ProtocolLib]
 commands:
   advancedcore:
     description: Plugin command
