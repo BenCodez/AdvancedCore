@@ -2,6 +2,16 @@
 
 Debug: false
 
+# Options for request api
+# Current methods
+# ANVIL
+# BOOK
+# CHAT
+# This can be used in other plugins to recieve user input
+RequestAPI:
+  DefaultMethod: 'ANVIL'
+  DisabledMethods: []
+
 Format:
       
   # Message when player tries to run command without required permissions

@@ -11,6 +11,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Book.BookManager;
@@ -39,7 +40,9 @@ public class RequestManager {
 	 */
 	public RequestManager(Player player, InputMethod method,
 			final InputListener listener, String promptText, String currentValue) {
-		if (method.equals(InputMethod.Anvil)) {
+		if (method.equals(InputMethod.Anvil)
+				&& !Config.getInstance().getRequestAPIDisabledMethods()
+						.contains(InputMethod.Anvil.toString())) {
 
 			AInventory inv = new AInventory(player,
 					new AInventory.AnvilClickEventHandler() {
@@ -72,7 +75,9 @@ public class RequestManager {
 
 			inv.open();
 
-		} else if (method.equals(InputMethod.Chat)) {
+		} else if (method.equals(InputMethod.Chat)
+				&& !Config.getInstance().getRequestAPIDisabledMethods()
+						.contains(InputMethod.Chat.toString())) {
 			ConversationFactory convoFactory = new ConversationFactory(
 					Main.plugin).withModality(true)
 					.withEscapeSequence("cancel").withTimeout(30);
@@ -86,7 +91,9 @@ public class RequestManager {
 					listener.onInput((Player) conversable, input);
 				}
 			});
-		} else if (method.equals(InputMethod.Book)) {
+		} else if (method.equals(InputMethod.Book)
+				&& !Config.getInstance().getRequestAPIDisabledMethods()
+						.contains(InputMethod.Book.toString())) {
 
 			new BookManager(player, currentValue, new BookSign() {
 
@@ -96,6 +103,8 @@ public class RequestManager {
 
 				}
 			});
+		} else {
+			player.sendMessage("Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
 		}
 	}
 

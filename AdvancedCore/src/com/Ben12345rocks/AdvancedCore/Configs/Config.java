@@ -5,6 +5,7 @@ package com.Ben12345rocks.AdvancedCore.Configs;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -106,6 +107,15 @@ public class Config {
 				"&cError on &6%arg%&c, number expected!");
 	}
 
+	public String getRequestAPIDefaultMethod() {
+		return getData().getString("RequestAPI.DefaultMethod", "ANVIL");
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getRequestAPIDisabledMethods() {
+		return (ArrayList<String>) getData().getList("RequestAPI.DisabledMethods",new ArrayList<String>());
+	}
+
 	/**
 	 * Reload data.
 	 */
@@ -141,7 +151,7 @@ public class Config {
 				plugin.saveResource("Config.yml", true);
 			} catch (IOException e) {
 				Bukkit.getServer().getLogger()
-				.severe(ChatColor.RED + "Could not create Config.yml!");
+						.severe(ChatColor.RED + "Could not create Config.yml!");
 			}
 		}
 

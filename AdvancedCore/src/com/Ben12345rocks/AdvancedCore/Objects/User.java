@@ -107,7 +107,8 @@ public class User {
 	 */
 	public RequestManager.InputMethod getInputMethod() {
 		return RequestManager.InputMethod.valueOf(getRawData().getString(
-				"InputMethod", RequestManager.InputMethod.Anvil.toString()));
+				"InputMethod",
+				Config.getInstance().getRequestAPIDefaultMethod()));
 	}
 
 	/**
