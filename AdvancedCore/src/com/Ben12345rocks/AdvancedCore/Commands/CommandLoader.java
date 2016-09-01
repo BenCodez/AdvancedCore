@@ -111,6 +111,9 @@ public class CommandLoader {
 		});
 	}
 
+	/**
+	 * Load tab complete.
+	 */
 	public void loadTabComplete() {
 		ArrayList<String> method = new ArrayList<String>();
 		for (InputMethod me : RequestManager.InputMethod.values()) {

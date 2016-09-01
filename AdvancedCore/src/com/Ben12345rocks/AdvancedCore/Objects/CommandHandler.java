@@ -107,6 +107,9 @@ public abstract class CommandHandler {
 		return false;
 	}
 
+	/**
+	 * Load tab complete.
+	 */
 	public void loadTabComplete() {
 		ArrayList<String> players = new ArrayList<String>();
 		for (Player player : Bukkit.getOnlinePlayers()) {
@@ -123,6 +126,9 @@ public abstract class CommandHandler {
 		addTabCompleteOption("(number)", options);
 	}
 
+	/**
+	 * Update tab complete.
+	 */
 	public void updateTabComplete() {
 		ArrayList<String> players = new ArrayList<String>();
 		for (Player player : Bukkit.getOnlinePlayers()) {
@@ -131,6 +137,14 @@ public abstract class CommandHandler {
 		addTabCompleteOption("(Player)", players);
 	}
 
+	/**
+	 * Adds the tab complete option.
+	 *
+	 * @param toReplace
+	 *            the to replace
+	 * @param options
+	 *            the options
+	 */
 	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
 		ArrayList<String> replace = new ArrayList<String>();
 		for (String str : options) {
@@ -139,6 +153,17 @@ public abstract class CommandHandler {
 		tabCompleteOptions.put(toReplace, replace);
 	}
 
+	/**
+	 * Gets the tab complete options.
+	 *
+	 * @param sender
+	 *            the sender
+	 * @param args
+	 *            the args
+	 * @param argNum
+	 *            the arg num
+	 * @return the tab complete options
+	 */
 	public ArrayList<String> getTabCompleteOptions(CommandSender sender,
 			String[] args, int argNum) {
 		CommandHandler commandHandler = this;

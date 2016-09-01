@@ -16,10 +16,24 @@ import org.bukkit.plugin.Plugin;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
+/**
+ * The Class BookManager.
+ */
 public class BookManager implements Listener {
 
+	/** The listener. */
 	public Listener listener;
 
+	/**
+	 * Instantiates a new book manager.
+	 *
+	 * @param player
+	 *            the player
+	 * @param start
+	 *            the start
+	 * @param listener
+	 *            the listener
+	 */
 	public BookManager(Player player, String start, BookSign listener) {
 		User user = new User(Main.plugin, player);
 		ItemStack item = new ItemStack(Material.BOOK_AND_QUILL);
@@ -123,6 +137,9 @@ public class BookManager implements Listener {
 		Bukkit.getPluginManager().registerEvents(this.listener, Main.plugin);
 	}
 
+	/**
+	 * Destroy.
+	 */
 	public void destroy() {
 		HandlerList.unregisterAll(this.listener);
 	}

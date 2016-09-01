@@ -27,8 +27,8 @@ public class RequestManager {
 	/**
 	 * Instantiates a new request manager.
 	 *
-	 * @param conversable
-	 *            the conversable
+	 * @param player
+	 *            the player
 	 * @param method
 	 *            the method
 	 * @param listener
@@ -116,8 +116,10 @@ public class RequestManager {
 		/** The Anvil. */
 		Anvil,
 
+		/** The Chat. */
 		Chat,
 
+		/** The Book. */
 		Book;
 	}
 

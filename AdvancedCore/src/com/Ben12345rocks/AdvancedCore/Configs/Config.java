@@ -107,10 +107,20 @@ public class Config {
 				"&cError on &6%arg%&c, number expected!");
 	}
 
+	/**
+	 * Gets the request API default method.
+	 *
+	 * @return the request API default method
+	 */
 	public String getRequestAPIDefaultMethod() {
 		return getData().getString("RequestAPI.DefaultMethod", "ANVIL");
 	}
 
+	/**
+	 * Gets the request API disabled methods.
+	 *
+	 * @return the request API disabled methods
+	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getRequestAPIDisabledMethods() {
 		return (ArrayList<String>) getData().getList("RequestAPI.DisabledMethods",new ArrayList<String>());
