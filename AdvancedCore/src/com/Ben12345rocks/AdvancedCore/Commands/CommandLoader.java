@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -11,6 +12,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
 import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager.InputMethod;
 
 // TODO: Auto-generated Javadoc
@@ -28,7 +30,7 @@ public class CommandLoader {
 	public void loadCommands() {
 		plugin.advancedCoreCommands = new ArrayList<CommandHandler>();
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
-				"Reload", "AdvancedCore.Reload" }, "Reload the plugin") {
+				"Reload"}, "AdvancedCore.Reload" , "Reload the plugin") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -92,6 +94,35 @@ public class CommandLoader {
 				}
 			}
 		});
+
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(
+						new Runnable() {
+
+							@Override
+							public void run() {
+								loadTabComplete();
+							}
+						});
+			}
+		});
+	}
+
+	/**
+	 * Load tab complete.
+	 */
+	public void loadTabComplete() {
+		ArrayList<String> method = new ArrayList<String>();
+		for (InputMethod me : RequestManager.InputMethod.values()) {
+			method.add(me.toString());
+		}
+		for (int i = 0; i < plugin.advancedCoreCommands.size(); i++) {
+			plugin.advancedCoreCommands.get(i).addTabCompleteOption(
+					"(RequestMethod)", method);
+		}
 	}
 
 }

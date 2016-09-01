@@ -11,18 +11,6 @@ public class PromptManager {
 	/** The conversation factory. */
 	ConversationFactory conversationFactory;
 
-	/**
-	 * Prompt Listener
-	 */
-	public abstract class PromptListener {
-
-		/**
-		 * On input.
-		 */
-		public abstract void onInput();
-
-	}
-
 	/** The prompt text. */
 	String promptText;
 
@@ -48,20 +36,6 @@ public class PromptManager {
 	 *            the prompt
 	 */
 	public void stringPrompt(Conversable conversable, PromptReturnString prompt) {
-		prompt.promptText = this.promptText;
-		conversationFactory.withFirstPrompt(prompt)
-				.buildConversation(conversable).begin();
-	}
-
-	/**
-	 * Number prompt.
-	 *
-	 * @param conversable
-	 *            the conversable
-	 * @param prompt
-	 *            the prompt
-	 */
-	public void numberPrompt(Conversable conversable, PromptReturnNumber prompt) {
 		prompt.promptText = this.promptText;
 		conversationFactory.withFirstPrompt(prompt)
 				.buildConversation(conversable).begin();

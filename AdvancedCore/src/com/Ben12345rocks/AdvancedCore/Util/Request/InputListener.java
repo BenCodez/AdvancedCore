@@ -1,19 +1,21 @@
 package com.Ben12345rocks.AdvancedCore.Util.Request;
 
-import org.bukkit.conversations.Conversable;
+import org.bukkit.entity.Player;
 
 /**
- * Input listener
+ * 
+ * InPutListener Class
+ * 
  */
 public abstract class InputListener {
 	
 	/**
 	 * On input.
 	 *
-	 * @param conversable
-	 *            the conversable
+	 * @param player
+	 *            the player
 	 * @param input
 	 *            the input
 	 */
-	public abstract void onInput(Conversable conversable, String input);
+	public abstract void onInput(Player player, String input);
 }

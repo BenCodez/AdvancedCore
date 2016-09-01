@@ -107,7 +107,8 @@ public class User {
 	 */
 	public RequestManager.InputMethod getInputMethod() {
 		return RequestManager.InputMethod.valueOf(getRawData().getString(
-				"InputMethod", RequestManager.InputMethod.Anvil.toString()));
+				"InputMethod",
+				Config.getInstance().getRequestAPIDefaultMethod()));
 	}
 
 	/**
@@ -314,7 +315,8 @@ public class User {
 	 */
 	public void giveMoney(int money) {
 		String playerName = getPlayerName();
-		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null) {
+		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null
+				&& Main.plugin.econ != null) {
 			if (money > 0) {
 				Main.plugin.econ.depositPlayer(playerName, money);
 			} else if (money < 0) {
