@@ -136,9 +136,6 @@ public class User {
 	 * @return the player name
 	 */
 	public String getPlayerName() {
-		if (playerName == null) {
-			setPlayerName(Utils.getInstance().getPlayerName(getUUID()));
-		}
 		return playerName;
 	}
 
