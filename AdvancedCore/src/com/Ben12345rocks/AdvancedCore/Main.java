@@ -141,7 +141,11 @@ public class Main extends JavaPlugin {
 		FilesManager.getInstance().loadFileEditngThread();
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().loadThread();
 		setupFiles();
-		setupEconomy();
+		if (setupEconomy()) {
+			plugin.getLogger().info("Successfully hooked into Vault!");
+		} else {
+			plugin.getLogger().warning("Failed to hook into Vault");
+		}
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this),
 				this);
 
