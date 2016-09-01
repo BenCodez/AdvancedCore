@@ -3,7 +3,9 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -87,18 +89,24 @@ public abstract class CommandHandler {
 		if (i < args.length) {
 			String[] cmdArgs = args[i].split("&");
 			for (String cmdArg : cmdArgs) {
-				if (tabCompleteOptions.keySet().contains(cmdArg)
-						|| cmdArg.equalsIgnoreCase("(SITENAME)")
-						|| cmdArg.equalsIgnoreCase("(reward)")
-						|| cmdArg.equalsIgnoreCase("(entity)")
-						|| cmdArg.equalsIgnoreCase("(entitydamagecause)")
-						|| cmdArg.equalsIgnoreCase("(entityspawnreason)")
-						|| cmdArg.equalsIgnoreCase("(RequestMethod)")
-						|| cmdArg.equalsIgnoreCase("(number)")
-						|| cmdArg.equalsIgnoreCase("(string)")
-						|| cmdArg.equalsIgnoreCase("(boolean)")
-						|| cmdArg.equalsIgnoreCase("(list)")
-						|| arg.equalsIgnoreCase(cmdArg)) {
+				// plugin.debug(cmdArg);
+				if (arg.equalsIgnoreCase(cmdArg)) {
+					return true;
+				}
+
+				for (String str : tabCompleteOptions.keySet()) {
+					if (str.equalsIgnoreCase(cmdArg)) {
+						return true;
+					}
+				}
+			}
+			// plugin.debug("Tab: "
+			// + Utils.getInstance().makeStringList(
+			// Utils.getInstance().convert(
+			// tabCompleteOptions.keySet())) + " "
+			// + args[i]);
+			for (String str : tabCompleteOptions.keySet()) {
+				if (str.equalsIgnoreCase(args[i])) {
 					return true;
 				}
 			}
@@ -168,7 +176,7 @@ public abstract class CommandHandler {
 			String[] args, int argNum) {
 		CommandHandler commandHandler = this;
 		updateTabComplete();
-		ArrayList<String> cmds = new ArrayList<String>();
+		Set<String> cmds = new HashSet<String>();
 
 		if (sender.hasPermission(commandHandler.getPerm())) {
 			String[] cmdArgs = commandHandler.getArgs();
@@ -176,25 +184,33 @@ public abstract class CommandHandler {
 				boolean argsMatch = true;
 				for (int i = 0; i < argNum; i++) {
 					if (args.length >= i) {
+
 						if (!commandHandler.argsMatch(args[i], i)) {
 							argsMatch = false;
+							// plugin.debug(args[i] + " " + i);
 						}
 					}
 				}
 
+				// plugin.debug(Boolean.toString(argsMatch)
+				// + " "
+				// + Utils.getInstance().makeStringList(
+				// Utils.getInstance()
+				// .convertArray(this.getArgs())));
+
 				if (argsMatch) {
 					String[] cmdArgsList = cmdArgs[argNum].split("&");
+
 					for (String arg : cmdArgsList) {
+						// plugin.debug(arg);
 						boolean add = true;
 						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions
 								.entrySet()) {
 							if (arg.equalsIgnoreCase(entry.getKey())) {
 								add = false;
-								for (String str : entry.getValue()) {
-									if (!cmds.contains(str)) {
-										cmds.add(str);
-									}
-								}
+								cmds.addAll(entry.getValue());
+								// plugin.debug(Utils.getInstance()
+								// .makeStringList(entry.getValue()));
 							}
 						}
 						if (!cmds.contains(arg) && add) {
@@ -207,9 +223,11 @@ public abstract class CommandHandler {
 			}
 		}
 
-		Collections.sort(cmds, String.CASE_INSENSITIVE_ORDER);
+		ArrayList<String> options = Utils.getInstance().convert(cmds);
 
-		return cmds;
+		Collections.sort(options, String.CASE_INSENSITIVE_ORDER);
+
+		return options;
 	}
 
 	/**
@@ -221,58 +239,6 @@ public abstract class CommandHandler {
 	 *            the args
 	 */
 	public abstract void execute(CommandSender sender, String[] args);
-
-	/**
-	 * Gets the admin tab complete options.
-	 *
-	 * @param sender
-	 *            the sender
-	 * @param args
-	 *            the args
-	 * @param argNum
-	 *            the arg num
-	 * @return the admin tab complete options
-	 */
-	public ArrayList<String> getAdminTabCompleteOptions(CommandSender sender,
-			String[] args, int argNum) {
-		ArrayList<String> cmds = new ArrayList<String>();
-		CommandHandler commandHandler = this;
-		if (sender.hasPermission(commandHandler.getPerm())) {
-			String[] cmdArgs = commandHandler.getArgs();
-			if (cmdArgs.length > argNum) {
-				boolean argsMatch = true;
-				for (int i = 0; i < argNum; i++) {
-					if (args.length >= i) {
-						if (!commandHandler.argsMatch(args[i], i)) {
-							argsMatch = false;
-						}
-					}
-				}
-
-				if (argsMatch) {
-					String[] cmdArgsList = cmdArgs[argNum].split("&");
-					for (String arg : cmdArgsList) {
-						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions
-								.entrySet()) {
-							if (arg.equalsIgnoreCase(entry.getKey())) {
-								for (String str : entry.getValue()) {
-									if (!cmds.contains(str)) {
-										cmds.add(str);
-									}
-								}
-							}
-						}
-
-					}
-				}
-
-			}
-		}
-
-		Collections.sort(cmds, String.CASE_INSENSITIVE_ORDER);
-
-		return cmds;
-	}
 
 	/**
 	 * Gets the args.

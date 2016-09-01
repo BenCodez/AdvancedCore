@@ -30,7 +30,7 @@ public class CommandLoader {
 	public void loadCommands() {
 		plugin.advancedCoreCommands = new ArrayList<CommandHandler>();
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
-				"Reload", "AdvancedCore.Reload" }, "Reload the plugin") {
+				"Reload"}, "AdvancedCore.Reload" , "Reload the plugin") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {

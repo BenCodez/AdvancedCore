@@ -64,7 +64,7 @@ public class CommandAdvancedCore implements CommandExecutor {
 
 		// invalid command
 		sender.sendMessage(ChatColor.RED
-				+ "No valid arguments, see /vote help!");
+				+ "No valid arguments, see /advancedcore help!");
 		return true;
 	}
 
