@@ -123,7 +123,12 @@ public class Config {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getRequestAPIDisabledMethods() {
-		return (ArrayList<String>) getData().getList("RequestAPI.DisabledMethods",new ArrayList<String>());
+		return (ArrayList<String>) getData().getList(
+				"RequestAPI.DisabledMethods", new ArrayList<String>());
+	}
+
+	public String getFormatDefaultRewardMsg() {
+		return getData().getString("Format.DefaultRewardMsg", "");
 	}
 
 	/**

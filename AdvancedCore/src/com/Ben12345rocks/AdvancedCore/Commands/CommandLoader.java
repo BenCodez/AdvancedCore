@@ -29,8 +29,9 @@ public class CommandLoader {
 	 */
 	public void loadCommands() {
 		plugin.advancedCoreCommands = new ArrayList<CommandHandler>();
-		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
-				"Reload"}, "AdvancedCore.Reload" , "Reload the plugin") {
+		plugin.advancedCoreCommands.add(new CommandHandler(
+				new String[] { "Reload" }, "AdvancedCore.Reload",
+				"Reload the plugin") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -92,6 +93,35 @@ public class CommandLoader {
 				} else {
 					sender.sendMessage(Utils.getInstance().convertArray(msg));
 				}
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(
+				new String[] { "GUI" }, "AdvancedCore.GUI", "Open GUI", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Commands.getInstance().openGUI((Player) sender);
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(
+				new String[] { "Rewards" }, "AdvancedCore.GUI",
+				"Open GUI Rewards", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Commands.getInstance().openRewardsGUI((Player) sender);
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"Rewards", "(Reward)" }, "AdvancedCore.GUI", "Open GUI Reward",
+				false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Commands.getInstance().openRewardGUI((Player) sender, args[1]);
 			}
 		});
 

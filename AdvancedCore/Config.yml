@@ -22,3 +22,9 @@ Format:
   
   # CommandHandler help message
   HelpLine: '&3&l%Command% - &3%HelpMessage%'
+  
+  # Reward file message if none is set
+  # PlaceHolders:
+  # %money% = amount of money given for votesite
+  # %items% = string list of items
+  DefaultRewardMsg: '&aYou were given rewards!'

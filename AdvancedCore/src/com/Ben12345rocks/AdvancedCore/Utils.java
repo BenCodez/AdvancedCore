@@ -31,6 +31,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.metadata.MetadataValue;
+import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
@@ -931,6 +933,83 @@ public class Utils {
 		} else {
 			return array;
 		}
+	}
+
+	public void setPlayerMeta(Player player, String str, Object value) {
+		player.setMetadata(str, new MetadataValue() {
+
+			@Override
+			public Object value() {
+				return value;
+			}
+
+			@Override
+			public void invalidate() {
+			}
+
+			@Override
+			public Plugin getOwningPlugin() {
+				return Main.plugin;
+			}
+
+			@Override
+			public boolean asBoolean() {
+
+				return false;
+			}
+
+			@Override
+			public byte asByte() {
+
+				return 0;
+			}
+
+			@Override
+			public double asDouble() {
+
+				return 0;
+			}
+
+			@Override
+			public float asFloat() {
+
+				return 0;
+			}
+
+			@Override
+			public int asInt() {
+
+				return 0;
+			}
+
+			@Override
+			public long asLong() {
+
+				return 0;
+			}
+
+			@Override
+			public short asShort() {
+
+				return 0;
+			}
+
+			@Override
+			public String asString() {
+
+				return null;
+			}
+
+		});
+	}
+	
+	public Object getPlayerMeta(Player player, String str) {
+		for (MetadataValue meta : player.getMetadata(str)) {
+			if (meta.getOwningPlugin().equals(Main.plugin)) {
+				return meta.value();
+			}
+		}
+		return null;
 	}
 
 	/**

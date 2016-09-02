@@ -5,6 +5,8 @@ package com.Ben12345rocks.AdvancedCore;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -16,8 +18,10 @@ import com.Ben12345rocks.AdvancedCore.Commands.CommandLoader;
 import com.Ben12345rocks.AdvancedCore.Commands.Executor.CommandAdvancedCore;
 import com.Ben12345rocks.AdvancedCore.Commands.TabComplete.AdvancedCoreTabCompleter;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.Updater;
@@ -127,6 +131,7 @@ public class Main extends JavaPlugin {
 	 */
 	@Override
 	public void onDisable() {
+		plugin = null;
 	}
 
 	/*
@@ -148,6 +153,8 @@ public class Main extends JavaPlugin {
 		}
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this),
 				this);
+
+		loadRewards();
 
 		try {
 			Metrics metrics = new Metrics(this);
@@ -171,6 +178,35 @@ public class Main extends JavaPlugin {
 					}
 				}, 10l);
 
+		new Timer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				if (plugin != null) {
+					update();
+				} else {
+					cancel();
+				}
+
+			}
+		}, 1 * 60 * 1000, 5 * 60 * 1000);
+
+	}
+
+	/** The rewards. */
+	public ArrayList<Reward> rewards;
+
+	/**
+	 * Load rewards.
+	 */
+	public void loadRewards() {
+		ConfigRewards.getInstance().setupExample();
+		rewards = new ArrayList<Reward>();
+		for (String reward : ConfigRewards.getInstance().getRewardNames()) {
+			rewards.add(new Reward(reward));
+		}
+		plugin.debug("Loaded rewards");
+
 	}
 
 	/**
@@ -188,7 +224,7 @@ public class Main extends JavaPlugin {
 	 */
 	public void reload() {
 		Config.getInstance().reloadData();
-
+		loadRewards();
 	}
 
 	/**
@@ -215,5 +251,9 @@ public class Main extends JavaPlugin {
 	private void setupFiles() {
 		Config.getInstance().setup(this);
 
+	}
+
+	public void update() {
+		ConfigRewards.getInstance().checkDelayedTimedRewards();
 	}
 }

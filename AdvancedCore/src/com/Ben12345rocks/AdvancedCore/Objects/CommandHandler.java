@@ -42,6 +42,8 @@ public abstract class CommandHandler {
 	/** The tab complete options. */
 	public HashMap<String, ArrayList<String>> tabCompleteOptions;
 
+	private boolean allowConsole = true;
+
 	/**
 	 * Instantiates a new command handler.
 	 *
@@ -73,6 +75,26 @@ public abstract class CommandHandler {
 		this.perm = perm;
 		this.helpMessage = helpMessage;
 		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
+		loadTabComplete();
+	}
+
+	/**
+	 * Instantiates a new command handler.
+	 *
+	 * @param args
+	 *            the args
+	 * @param perm
+	 *            the perm
+	 * @param helpMessage
+	 *            the help message
+	 */
+	public CommandHandler(String[] args, String perm, String helpMessage,
+			boolean allowConsole) {
+		this.args = args;
+		this.perm = perm;
+		this.helpMessage = helpMessage;
+		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
+		this.allowConsole = allowConsole;
 		loadTabComplete();
 	}
 
@@ -132,6 +154,7 @@ public abstract class CommandHandler {
 		addTabCompleteOption("(list)", options);
 		addTabCompleteOption("(String)", options);
 		addTabCompleteOption("(number)", options);
+
 	}
 
 	/**
@@ -143,6 +166,11 @@ public abstract class CommandHandler {
 			players.add(player.getName());
 		}
 		addTabCompleteOption("(Player)", players);
+		ArrayList<String> rewards = new ArrayList<String>();
+		for (Reward reward : plugin.rewards) {
+			rewards.add(reward.getRewardName());
+		}
+		addTabCompleteOption("(reward)", rewards);
 	}
 
 	/**
@@ -366,6 +394,11 @@ public abstract class CommandHandler {
 						return true;
 					}
 				}
+			}
+			if (!(sender instanceof Player) && !allowConsole) {
+				sender.sendMessage(Utils.getInstance().colorize(
+						"&cMust be a player to do this"));
+				return true;
 			}
 
 			if (perm != "") {

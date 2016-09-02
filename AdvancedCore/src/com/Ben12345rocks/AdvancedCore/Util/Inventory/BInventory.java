@@ -219,7 +219,6 @@ public class BInventory implements Listener {
 					event.setCancelled(true);
 					player.closeInventory();
 					button.onClick(event);
-
 					destroy();
 					return;
 				}
