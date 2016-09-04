@@ -209,7 +209,7 @@ public class BInventory implements Listener {
 			return;
 		}
 
-		Main.plugin.debug("Event ran");
+		//Main.plugin.debug("Event ran");
 
 		Inventory inv = event.getInventory();
 		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
