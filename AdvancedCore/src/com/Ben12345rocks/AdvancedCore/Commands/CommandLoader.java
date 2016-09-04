@@ -108,7 +108,7 @@ public class CommandLoader {
 
 		plugin.advancedCoreCommands.add(new CommandHandler(
 				new String[] { "Report" }, "AdvancedCore.Report",
-				"Create Report File", false) {
+				"Create Report File") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
