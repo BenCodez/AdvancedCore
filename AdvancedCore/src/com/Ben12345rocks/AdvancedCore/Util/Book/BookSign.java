@@ -6,7 +6,7 @@ import org.bukkit.entity.Player;
  * The Class BookSign.
  */
 public abstract class BookSign {
-	
+
 	/**
 	 * On book sign.
 	 *

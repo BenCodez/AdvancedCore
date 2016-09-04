@@ -6,11 +6,21 @@ import com.Ben12345rocks.AdvancedCore.Main;
  * The Class Thread.
  */
 public class Thread {
-	
+
 	/**
 	 * The Class ReadThread.
 	 */
 	public class ReadThread extends java.lang.Thread {
+
+		/*
+		 * (non-Javadoc)
+		 *
+		 * @see java.lang.Thread#run()
+		 */
+		@Override
+		public void run() {
+			// plugin.getLogger().info("File Editing Thread Loaded!");
+		}
 
 		/**
 		 * Run.
@@ -20,16 +30,6 @@ public class Thread {
 		 */
 		public synchronized void run(Runnable run) {
 			run.run();
-		}
-
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.lang.Thread#run()
-		 */
-		@Override
-		public void run() {
-			// plugin.getLogger().info("File Editing Thread Loaded!");
 		}
 	}
 
@@ -68,6 +68,14 @@ public class Thread {
 	}
 
 	/**
+	 * Load thread.
+	 */
+	public void loadThread() {
+		thread = new ReadThread();
+		thread.start();
+	}
+
+	/**
 	 * Run.
 	 *
 	 * @param run
@@ -75,13 +83,5 @@ public class Thread {
 	 */
 	public void run(Runnable run) {
 		thread.run(run);
-	}
-
-	/**
-	 * Load thread.
-	 */
-	public void loadThread() {
-		thread = new ReadThread();
-		thread.start();
 	}
 }

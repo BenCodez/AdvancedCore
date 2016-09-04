@@ -874,7 +874,7 @@ public class Reward {
 		for (String potionName : getPotions()) {
 			user.givePotionEffect(potionName,
 					getPotionsDuration().get(potionName), getPotionsAmplifier()
-							.get(potionName));
+					.get(potionName));
 		}
 	}
 
@@ -895,7 +895,7 @@ public class Reward {
 							* rewards.size());
 					if (reward.equalsIgnoreCase("")) {
 						ConfigRewards.getInstance().getReward(reward)
-								.giveReward(user, online);
+						.giveReward(user, online);
 					}
 				}
 			}
@@ -1192,9 +1192,9 @@ public class Reward {
 		if (ConfigRewards.getInstance().getTitleEnabled(name)) {
 			user.sendTitle(ConfigRewards.getInstance().getTitleTitle(name),
 
-			ConfigRewards.getInstance().getTitleSubTitle(name),
+					ConfigRewards.getInstance().getTitleSubTitle(name),
 
-			ConfigRewards.getInstance().getTitleFadeIn(name), ConfigRewards
+					ConfigRewards.getInstance().getTitleFadeIn(name), ConfigRewards
 					.getInstance().getTitleShowTime(name), ConfigRewards
 					.getInstance().getTitleFadeOut(name));
 		}

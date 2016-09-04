@@ -33,8 +33,6 @@ public class Report {
 	/**
 	 * Adds the to zip.
 	 *
-	 * @param directoryToZip
-	 *            the directory to zip
 	 * @param file
 	 *            the file
 	 * @param zos
@@ -98,52 +96,6 @@ public class Report {
 	}
 
 	/**
-	 * Creates the.
-	 */
-	public void create(File directory, String zipFileName) {
-		File directoryToZip = directory;
-
-		List<File> fileList = new ArrayList<File>();
-		try {
-			plugin.getLogger().info(
-					"---Getting references to all files in: "
-							+ directoryToZip.getCanonicalPath());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		addAllFiles(directoryToZip, fileList);
-		plugin.getLogger().info("---Creating zip file");
-		writeZipFile(fileList, zipFileName);
-		plugin.getLogger().info("---Done");
-	}
-
-	/**
-	 * Creates the.
-	 */
-	public void create() {
-		long time = Calendar.getInstance().getTime().getTime();
-		String zipFileName = "Reports." + Long.toString(time);
-		List<File> fileList = new ArrayList<File>();
-		ArrayList<Plugin> plugins = Main.plugin.getHooks();
-		plugins.add(Main.plugin);
-		for (Plugin plugin : plugins) {
-			File directoryToZip = plugin.getDataFolder();
-
-			try {
-				plugin.getLogger().info(
-						"---Getting references to all files in: "
-								+ directoryToZip.getCanonicalPath());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			addAllFiles(directoryToZip, fileList);
-		}
-		plugin.getLogger().info("---Creating zip file");
-		writeZipFile(fileList, zipFileName);
-		plugin.getLogger().info("---Done");
-	}
-
-	/**
 	 * Adds the all files.
 	 *
 	 * @param dir
@@ -173,6 +125,57 @@ public class Report {
 	}
 
 	/**
+	 * Creates the.
+	 */
+	public void create() {
+		long time = Calendar.getInstance().getTime().getTime();
+		String zipFileName = "Reports." + Long.toString(time);
+		List<File> fileList = new ArrayList<File>();
+		ArrayList<Plugin> plugins = Main.plugin.getHooks();
+		plugins.add(Main.plugin);
+		for (Plugin plugin : plugins) {
+			File directoryToZip = plugin.getDataFolder();
+
+			try {
+				plugin.getLogger().info(
+						"---Getting references to all files in: "
+								+ directoryToZip.getCanonicalPath());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			addAllFiles(directoryToZip, fileList);
+		}
+		plugin.getLogger().info("---Creating zip file");
+		writeZipFile(fileList, zipFileName);
+		plugin.getLogger().info("---Done");
+	}
+
+	/**
+	 * Creates the.
+	 *
+	 * @param directory
+	 *            the directory
+	 * @param zipFileName
+	 *            the zip file name
+	 */
+	public void create(File directory, String zipFileName) {
+		File directoryToZip = directory;
+
+		List<File> fileList = new ArrayList<File>();
+		try {
+			plugin.getLogger().info(
+					"---Getting references to all files in: "
+							+ directoryToZip.getCanonicalPath());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		addAllFiles(directoryToZip, fileList);
+		plugin.getLogger().info("---Creating zip file");
+		writeZipFile(fileList, zipFileName);
+		plugin.getLogger().info("---Done");
+	}
+
+	/**
 	 * Gets the data.
 	 *
 	 * @return the data
@@ -198,10 +201,10 @@ public class Report {
 	/**
 	 * Write zip file.
 	 *
-	 * @param directoryToZip
-	 *            the directory to zip
 	 * @param fileList
 	 *            the file list
+	 * @param zipFileName
+	 *            the zip file name
 	 */
 	public void writeZipFile(List<File> fileList, String zipFileName) {
 

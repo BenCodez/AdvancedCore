@@ -24,7 +24,7 @@ public class PromptManager {
 	 */
 	public PromptManager(String promptText, ConversationFactory convoFactory) {
 		this.promptText = promptText;
-		this.conversationFactory = convoFactory;
+		conversationFactory = convoFactory;
 	}
 
 	/**
@@ -36,9 +36,9 @@ public class PromptManager {
 	 *            the prompt
 	 */
 	public void stringPrompt(Conversable conversable, PromptReturnString prompt) {
-		prompt.promptText = this.promptText;
+		prompt.promptText = promptText;
 		conversationFactory.withFirstPrompt(prompt)
-				.buildConversation(conversable).begin();
+		.buildConversation(conversable).begin();
 	}
 
 }

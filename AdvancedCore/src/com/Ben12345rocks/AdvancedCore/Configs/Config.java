@@ -77,17 +77,22 @@ public class Config {
 		return getData().getBoolean("Debug");
 	}
 
-	public void setDebugEnabled(boolean value) {
-		getData().set("Debug", value);
-		saveData();
-	}
-
-	public void setDebugInfoIngame(boolean value) {
-		getData().set("DebugInfoIngame", value);
-	}
-
+	/**
+	 * Gets the debug info ingame.
+	 *
+	 * @return the debug info ingame
+	 */
 	public boolean getDebugInfoIngame() {
 		return getData().getBoolean("DebugInfoIngame");
+	}
+
+	/**
+	 * Gets the format default reward msg.
+	 *
+	 * @return the format default reward msg
+	 */
+	public String getFormatDefaultRewardMsg() {
+		return getData().getString("Format.DefaultRewardMsg", "");
 	}
 
 	/**
@@ -140,10 +145,6 @@ public class Config {
 				"RequestAPI.DisabledMethods", new ArrayList<String>());
 	}
 
-	public String getFormatDefaultRewardMsg() {
-		return getData().getString("Format.DefaultRewardMsg", "");
-	}
-
 	/**
 	 * Reload data.
 	 */
@@ -158,6 +159,27 @@ public class Config {
 
 		FilesManager.getInstance().editFile(dFile, data);
 
+	}
+
+	/**
+	 * Sets the debug enabled.
+	 *
+	 * @param value
+	 *            the new debug enabled
+	 */
+	public void setDebugEnabled(boolean value) {
+		getData().set("Debug", value);
+		saveData();
+	}
+
+	/**
+	 * Sets the debug info ingame.
+	 *
+	 * @param value
+	 *            the new debug info ingame
+	 */
+	public void setDebugInfoIngame(boolean value) {
+		getData().set("DebugInfoIngame", value);
 	}
 
 	/**
@@ -179,7 +201,7 @@ public class Config {
 				plugin.saveResource("Config.yml", true);
 			} catch (IOException e) {
 				Bukkit.getServer().getLogger()
-						.severe(ChatColor.RED + "Could not create Config.yml!");
+				.severe(ChatColor.RED + "Could not create Config.yml!");
 			}
 		}
 

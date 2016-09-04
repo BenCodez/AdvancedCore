@@ -40,46 +40,13 @@ public class BookManager implements Listener {
 		player.setMetadata("BookManager", new MetadataValue() {
 
 			@Override
-			public Object value() {
-				return listener;
-			}
-
-			@Override
-			public void invalidate() {
-
-			}
-
-			@Override
-			public Plugin getOwningPlugin() {
-				return Main.plugin;
-			}
-
-			@Override
-			public String asString() {
+			public boolean asBoolean() {
 				// TODO Auto-generated method stub
-				return null;
+				return false;
 			}
 
 			@Override
-			public short asShort() {
-				// TODO Auto-generated method stub
-				return 0;
-			}
-
-			@Override
-			public long asLong() {
-				// TODO Auto-generated method stub
-				return 0;
-			}
-
-			@Override
-			public int asInt() {
-				// TODO Auto-generated method stub
-				return 0;
-			}
-
-			@Override
-			public float asFloat() {
+			public byte asByte() {
 				// TODO Auto-generated method stub
 				return 0;
 			}
@@ -91,15 +58,48 @@ public class BookManager implements Listener {
 			}
 
 			@Override
-			public byte asByte() {
+			public float asFloat() {
 				// TODO Auto-generated method stub
 				return 0;
 			}
 
 			@Override
-			public boolean asBoolean() {
+			public int asInt() {
 				// TODO Auto-generated method stub
-				return false;
+				return 0;
+			}
+
+			@Override
+			public long asLong() {
+				// TODO Auto-generated method stub
+				return 0;
+			}
+
+			@Override
+			public short asShort() {
+				// TODO Auto-generated method stub
+				return 0;
+			}
+
+			@Override
+			public String asString() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+
+			@Override
+			public Plugin getOwningPlugin() {
+				return Main.plugin;
+			}
+
+			@Override
+			public void invalidate() {
+
+			}
+
+			@Override
+			public Object value() {
+				return listener;
 			}
 		});
 		user.giveItem(item);
@@ -119,7 +119,7 @@ public class BookManager implements Listener {
 						BookSign listener = (BookSign) meta.value();
 						listener.onBookSign(player, input);
 						player.getInventory().getItem(event.getSlot())
-								.setType(Material.AIR);
+						.setType(Material.AIR);
 						player.getInventory().setItem(event.getSlot(),
 								new ItemStack(Material.AIR));
 						player.removeMetadata("BookManager", Main.plugin);
@@ -141,6 +141,6 @@ public class BookManager implements Listener {
 	 * Destroy.
 	 */
 	public void destroy() {
-		HandlerList.unregisterAll(this.listener);
+		HandlerList.unregisterAll(listener);
 	}
 }

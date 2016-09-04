@@ -25,6 +25,21 @@ import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
 public class RequestManager {
 
 	/**
+	 * The Enum InputMethod.
+	 */
+	public enum InputMethod {
+
+		/** The Anvil. */
+		Anvil,
+
+		/** The Chat. */
+		Chat,
+
+		/** The Book. */
+		Book;
+	}
+
+	/**
 	 * Instantiates a new request manager.
 	 *
 	 * @param player
@@ -42,27 +57,27 @@ public class RequestManager {
 			final InputListener listener, String promptText, String currentValue) {
 		if (method.equals(InputMethod.Anvil)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.Anvil.toString())) {
+				.contains(InputMethod.Anvil.toString())) {
 
 			AInventory inv = new AInventory(player,
 					new AInventory.AnvilClickEventHandler() {
 
-						@Override
-						public void onAnvilClick(AnvilClickEvent event) {
-							Player player = event.getPlayer();
-							if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
+				@Override
+				public void onAnvilClick(AnvilClickEvent event) {
+					Player player = event.getPlayer();
+					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
 
-								event.setWillClose(true);
-								event.setWillDestroy(true);
+						event.setWillClose(true);
+						event.setWillDestroy(true);
 
-								listener.onInput(player, event.getName());
+						listener.onInput(player, event.getName());
 
-							} else {
-								event.setWillClose(false);
-								event.setWillDestroy(false);
-							}
-						}
-					});
+					} else {
+						event.setWillClose(false);
+						event.setWillDestroy(false);
+					}
+				}
+			});
 
 			ItemStack item = new ItemStack(Material.NAME_TAG);
 			item = Utils.getInstance().setName(item, "" + currentValue);
@@ -77,13 +92,13 @@ public class RequestManager {
 
 		} else if (method.equals(InputMethod.Chat)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.Chat.toString())) {
+				.contains(InputMethod.Chat.toString())) {
 			ConversationFactory convoFactory = new ConversationFactory(
 					Main.plugin).withModality(true)
 					.withEscapeSequence("cancel").withTimeout(60);
 			PromptManager prompt = new PromptManager(promptText
 					+ " Current value: " + currentValue, convoFactory);
-			prompt.stringPrompt((Conversable) player, new PromptReturnString() {
+			prompt.stringPrompt(player, new PromptReturnString() {
 
 				@Override
 				public void onInput(ConversationContext context,
@@ -93,7 +108,7 @@ public class RequestManager {
 			});
 		} else if (method.equals(InputMethod.Book)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.Book.toString())) {
+				.contains(InputMethod.Book.toString())) {
 
 			new BookManager(player, currentValue, new BookSign() {
 
@@ -106,21 +121,6 @@ public class RequestManager {
 		} else {
 			player.sendMessage("Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
 		}
-	}
-
-	/**
-	 * The Enum InputMethod.
-	 */
-	public enum InputMethod {
-
-		/** The Anvil. */
-		Anvil,
-
-		/** The Chat. */
-		Chat,
-
-		/** The Book. */
-		Book;
 	}
 
 }

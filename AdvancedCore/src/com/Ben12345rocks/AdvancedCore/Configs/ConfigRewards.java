@@ -543,30 +543,6 @@ public class ConfigRewards {
 	}
 
 	/**
-	 * Sets the min exp.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
-	public void setMinExp(String reward, int value) {
-		set(reward, "MinEXP", value);
-	}
-
-	/**
-	 * Sets the max exp.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
-	public void setMaxExp(String reward, int value) {
-		set(reward, "MaxEXP", value);
-	}
-
-	/**
 	 * Gets the min money.
 	 *
 	 * @param reward
@@ -731,25 +707,12 @@ public class ConfigRewards {
 			} catch (IOException e) {
 				plugin.getLogger().severe(
 						ChatColor.RED + "Could not create Rewards/" + reward
-								+ ".yml!");
+						+ ".yml!");
 
 			}
 		}
 		return dFile;
 
-	}
-
-	/**
-	 * Checks if is reward valid.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return true, if is reward valid
-	 */
-	public boolean isRewardValid(String reward) {
-		File dFile = new File(plugin.getDataFolder() + File.separator
-				+ "Rewards", reward + ".yml");
-		return dFile.exists();
 	}
 
 	/**
@@ -963,6 +926,19 @@ public class ConfigRewards {
 	}
 
 	/**
+	 * Checks if is reward valid.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return true, if is reward valid
+	 */
+	public boolean isRewardValid(String reward) {
+		File dFile = new File(plugin.getDataFolder() + File.separator
+				+ "Rewards", reward + ".yml");
+		return dFile.exists();
+	}
+
+	/**
 	 * Rename reward.
 	 *
 	 * @param reward
@@ -1028,6 +1004,18 @@ public class ConfigRewards {
 	 */
 	public void setCommandsPlayer(String reward, ArrayList<String> value) {
 		set(reward, "Commands.Player", value);
+	}
+
+	/**
+	 * Sets the EXP.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
+	public void setEXP(String reward, int value) {
+		set(reward, "EXP", value);
 	}
 
 	/**
@@ -1172,6 +1160,18 @@ public class ConfigRewards {
 	}
 
 	/**
+	 * Sets the max exp.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
+	public void setMaxExp(String reward, int value) {
+		set(reward, "MaxEXP", value);
+	}
+
+	/**
 	 * Sets the max money.
 	 *
 	 * @param reward
@@ -1196,6 +1196,18 @@ public class ConfigRewards {
 	}
 
 	/**
+	 * Sets the min exp.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
+	public void setMinExp(String reward, int value) {
+		set(reward, "MinEXP", value);
+	}
+
+	/**
 	 * Sets the min money.
 	 *
 	 * @param reward
@@ -1217,18 +1229,6 @@ public class ConfigRewards {
 	 */
 	public void setMoney(String reward, int value) {
 		set(reward, "Money", value);
-	}
-
-	/**
-	 * Sets the EXP.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
-	public void setEXP(String reward, int value) {
-		set(reward, "EXP", value);
 	}
 
 	/**

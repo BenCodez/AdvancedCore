@@ -65,55 +65,6 @@ public class Utils {
 	}
 
 	/**
-	 * Gets the NMS class.
-	 *
-	 * @param nmsClassString
-	 *            the nms class string
-	 * @return the NMS class
-	 * @throws ClassNotFoundException
-	 *             the class not found exception
-	 */
-	public Class<?> getNMSClass(String nmsClassString)
-			throws ClassNotFoundException {
-		String version = Bukkit.getServer().getClass().getPackage().getName()
-				.replace(".", ",").split(",")[3]
-				+ ".";
-		String name = "net.minecraft.server." + version + nmsClassString;
-		Class<?> nmsClass = Class.forName(name);
-		return nmsClass;
-	}
-
-	/**
-	 * Gets the connection.
-	 *
-	 * @param player
-	 *            the player
-	 * @return the connection
-	 * @throws SecurityException
-	 *             the security exception
-	 * @throws NoSuchMethodException
-	 *             the no such method exception
-	 * @throws NoSuchFieldException
-	 *             the no such field exception
-	 * @throws IllegalArgumentException
-	 *             the illegal argument exception
-	 * @throws IllegalAccessException
-	 *             the illegal access exception
-	 * @throws InvocationTargetException
-	 *             the invocation target exception
-	 */
-	public Object getConnection(Player player) throws SecurityException,
-			NoSuchMethodException, NoSuchFieldException,
-			IllegalArgumentException, IllegalAccessException,
-			InvocationTargetException {
-		Method getHandle = player.getClass().getMethod("getHandle");
-		Object nmsPlayer = getHandle.invoke(player);
-		Field conField = nmsPlayer.getClass().getField("playerConnection");
-		Object con = conField.get(nmsPlayer);
-		return con;
-	}
-
-	/**
 	 * Instantiates a new utils.
 	 *
 	 * @param plugin
@@ -156,7 +107,7 @@ public class Utils {
 	 *            the lore
 	 * @return the item stack
 	 */
-	public ItemStack addLore(ItemStack item, List<String> lore) {
+	public ItemStack addLore(ItemStack item, ArrayList<String> lore) {
 		if (lore == null) {
 			return item;
 		}
@@ -179,7 +130,7 @@ public class Utils {
 	 *            the lore
 	 * @return the item stack
 	 */
-	public ItemStack addLore(ItemStack item, ArrayList<String> lore) {
+	public ItemStack addLore(ItemStack item, List<String> lore) {
 		if (lore == null) {
 			return item;
 		}
@@ -189,29 +140,6 @@ public class Utils {
 
 		ItemMeta meta = item.getItemMeta();
 		meta.setLore(colorize(lore));
-		item.setItemMeta(meta);
-		return item;
-	}
-
-	/**
-	 * Sets the name.
-	 *
-	 * @param item
-	 *            the item
-	 * @param name
-	 *            the name
-	 * @return the item stack
-	 */
-	public ItemStack setName(ItemStack item, String name) {
-		if (name == null) {
-			return item;
-		}
-		if (item == null) {
-			return null;
-		}
-
-		ItemMeta meta = item.getItemMeta();
-		meta.setDisplayName(colorize(name));
 		item.setItemMeta(meta);
 		return item;
 	}
@@ -422,6 +350,36 @@ public class Utils {
 	}
 
 	/**
+	 * Gets the connection.
+	 *
+	 * @param player
+	 *            the player
+	 * @return the connection
+	 * @throws SecurityException
+	 *             the security exception
+	 * @throws NoSuchMethodException
+	 *             the no such method exception
+	 * @throws NoSuchFieldException
+	 *             the no such field exception
+	 * @throws IllegalArgumentException
+	 *             the illegal argument exception
+	 * @throws IllegalAccessException
+	 *             the illegal access exception
+	 * @throws InvocationTargetException
+	 *             the invocation target exception
+	 */
+	public Object getConnection(Player player) throws SecurityException,
+	NoSuchMethodException, NoSuchFieldException,
+	IllegalArgumentException, IllegalAccessException,
+	InvocationTargetException {
+		Method getHandle = player.getClass().getMethod("getHandle");
+		Object nmsPlayer = getHandle.invoke(player);
+		Field conField = nmsPlayer.getClass().getField("playerConnection");
+		Object con = conField.get(nmsPlayer);
+		return con;
+	}
+
+	/**
 	 * Gets the day from mili.
 	 *
 	 * @param time
@@ -485,6 +443,43 @@ public class Utils {
 			month++;
 		}
 		return new DateFormatSymbols().getMonths()[month - 1];
+	}
+
+	/**
+	 * Gets the NMS class.
+	 *
+	 * @param nmsClassString
+	 *            the nms class string
+	 * @return the NMS class
+	 * @throws ClassNotFoundException
+	 *             the class not found exception
+	 */
+	public Class<?> getNMSClass(String nmsClassString)
+			throws ClassNotFoundException {
+		String version = Bukkit.getServer().getClass().getPackage().getName()
+				.replace(".", ",").split(",")[3]
+						+ ".";
+		String name = "net.minecraft.server." + version + nmsClassString;
+		Class<?> nmsClass = Class.forName(name);
+		return nmsClass;
+	}
+
+	/**
+	 * Gets the player meta.
+	 *
+	 * @param player
+	 *            the player
+	 * @param str
+	 *            the str
+	 * @return the player meta
+	 */
+	public Object getPlayerMeta(Player player, String str) {
+		for (MetadataValue meta : player.getMetadata(str)) {
+			if (meta.getOwningPlugin().equals(Main.plugin)) {
+				return meta.value();
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -871,6 +866,26 @@ public class Utils {
 	}
 
 	/**
+	 * Sets the contains ignore case.
+	 *
+	 * @param set
+	 *            the set
+	 * @param str
+	 *            the str
+	 * @return true, if successful
+	 */
+	public boolean setContainsIgnoreCase(Set<String> set, String str) {
+		str = str.toLowerCase();
+		for (String text : set) {
+			text = text.toLowerCase();
+			if (text.equals(str)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Sets the durabilty.
 	 *
 	 * @param item
@@ -890,67 +905,40 @@ public class Utils {
 	}
 
 	/**
-	 * Sets the skull owner.
+	 * Sets the name.
 	 *
 	 * @param item
 	 *            the item
-	 * @param playerName
-	 *            the player name
+	 * @param name
+	 *            the name
 	 * @return the item stack
 	 */
-	public ItemStack setSkullOwner(ItemStack item, String playerName) {
+	public ItemStack setName(ItemStack item, String name) {
+		if (name == null) {
+			return item;
+		}
 		if (item == null) {
 			return null;
 		}
-		if (playerName == null || playerName.equalsIgnoreCase("")) {
-			return item;
-		}
+
 		ItemMeta meta = item.getItemMeta();
-		try {
-			((SkullMeta) meta).setOwner(playerName);
-		} catch (Exception ex) {
-		}
+		meta.setDisplayName(colorize(name));
+		item.setItemMeta(meta);
 		return item;
 	}
 
 	/**
-	 * Sets the to array.
+	 * Sets the player meta.
 	 *
-	 * @param set
-	 *            the set
-	 * @return the string[]
+	 * @param player
+	 *            the player
+	 * @param str
+	 *            the str
+	 * @param value
+	 *            the value
 	 */
-	@SuppressWarnings("unused")
-	public String[] setToArray(Set<String> set) {
-		String[] array = new String[set.size()];
-		int i = 0;
-		for (String item : set) {
-			array[i] = item;
-			i++;
-		}
-		if (array == null) {
-			return null;
-		} else {
-			return array;
-		}
-	}
-
 	public void setPlayerMeta(Player player, String str, Object value) {
 		player.setMetadata(str, new MetadataValue() {
-
-			@Override
-			public Object value() {
-				return value;
-			}
-
-			@Override
-			public void invalidate() {
-			}
-
-			@Override
-			public Plugin getOwningPlugin() {
-				return Main.plugin;
-			}
 
 			@Override
 			public boolean asBoolean() {
@@ -1000,16 +988,67 @@ public class Utils {
 				return null;
 			}
 
+			@Override
+			public Plugin getOwningPlugin() {
+				return Main.plugin;
+			}
+
+			@Override
+			public void invalidate() {
+			}
+
+			@Override
+			public Object value() {
+				return value;
+			}
+
 		});
 	}
-	
-	public Object getPlayerMeta(Player player, String str) {
-		for (MetadataValue meta : player.getMetadata(str)) {
-			if (meta.getOwningPlugin().equals(Main.plugin)) {
-				return meta.value();
-			}
+
+	/**
+	 * Sets the skull owner.
+	 *
+	 * @param item
+	 *            the item
+	 * @param playerName
+	 *            the player name
+	 * @return the item stack
+	 */
+	public ItemStack setSkullOwner(ItemStack item, String playerName) {
+		if (item == null) {
+			return null;
 		}
-		return null;
+		if (playerName == null || playerName.equalsIgnoreCase("")) {
+			return item;
+		}
+		ItemMeta meta = item.getItemMeta();
+		try {
+			((SkullMeta) meta).setOwner(playerName);
+		} catch (Exception ex) {
+		}
+		return item;
+	}
+
+	/**
+	 * Sets the to array.
+	 *
+	 * @param set
+	 *            the set
+	 * @return the string[]
+	 */
+	@SuppressWarnings("unused")
+	public String[] setToArray(Set<String> set) {
+		String[] array = new String[set.size()];
+		int i = 0;
+		for (String item : set) {
+			array[i] = item;
+			i++;
+		}
+		if (array == null) {
+			return null;
+		} else {
+			return array;
+		}
 	}
 
 	/**
@@ -1274,25 +1313,5 @@ public class Utils {
 		newTC.setObfuscated(magic);
 		base.addExtra(newTC);
 		return base;
-	}
-
-	/**
-	 * Sets the contains ignore case.
-	 *
-	 * @param set
-	 *            the set
-	 * @param str
-	 *            the str
-	 * @return true, if successful
-	 */
-	public boolean setContainsIgnoreCase(Set<String> set, String str) {
-		str = str.toLowerCase();
-		for (String text : set) {
-			text = text.toLowerCase();
-			if (text.equals(str)) {
-				return true;
-			}
-		}
-		return false;
 	}
 }

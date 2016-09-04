@@ -49,7 +49,11 @@ public class Main extends JavaPlugin {
 	/** The updater. */
 	public Updater updater;
 
+	/** The plugins. */
 	private ArrayList<Plugin> plugins;
+
+	/** The rewards. */
+	public ArrayList<Reward> rewards;
 
 	/**
 	 * Check place holder API.
@@ -85,9 +89,9 @@ public class Main extends JavaPlugin {
 		case UPDATE_AVAILABLE: {
 			plugin.getLogger().info(
 					plugin.getName()
-							+ " has an update available! Your Version: "
-							+ plugin.getDescription().getVersion()
-							+ " New Version: " + plugin.updater.getVersion());
+					+ " has an update available! Your Version: "
+					+ plugin.getDescription().getVersion()
+					+ " New Version: " + plugin.updater.getVersion());
 			break;
 		}
 		default: {
@@ -99,13 +103,11 @@ public class Main extends JavaPlugin {
 	/**
 	 * Debug.
 	 *
+	 * @param plug
+	 *            the plug
 	 * @param msg
 	 *            the msg
 	 */
-	public void debug(String msg) {
-		debug(this, msg);
-	}
-
 	public void debug(Plugin plug, String msg) {
 		if (Config.getInstance().getDebugEnabled()) {
 			plug.getLogger().info("Debug: " + msg);
@@ -121,6 +123,25 @@ public class Main extends JavaPlugin {
 	}
 
 	/**
+	 * Debug.
+	 *
+	 * @param msg
+	 *            the msg
+	 */
+	public void debug(String msg) {
+		debug(this, msg);
+	}
+
+	/**
+	 * Gets the hooks.
+	 *
+	 * @return the hooks
+	 */
+	public ArrayList<Plugin> getHooks() {
+		return plugins;
+	}
+
+	/**
 	 * Load commands.
 	 */
 	public void loadCommands() {
@@ -131,9 +152,22 @@ public class Main extends JavaPlugin {
 				new AdvancedCoreTabCompleter());
 	}
 
+	/**
+	 * Load rewards.
+	 */
+	public void loadRewards() {
+		ConfigRewards.getInstance().setupExample();
+		rewards = new ArrayList<Reward>();
+		for (String reward : ConfigRewards.getInstance().getRewardNames()) {
+			rewards.add(new Reward(reward));
+		}
+		plugin.debug("Loaded rewards");
+
+	}
+
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.bukkit.plugin.java.JavaPlugin#onDisable()
 	 */
 	@Override
@@ -143,7 +177,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.bukkit.plugin.java.JavaPlugin#onEnable()
 	 */
 	@Override
@@ -174,17 +208,17 @@ public class Main extends JavaPlugin {
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
 				new Runnable() {
 
+			@Override
+			public void run() {
+				plugin.run(new Runnable() {
+
 					@Override
 					public void run() {
-						plugin.run(new Runnable() {
-
-							@Override
-							public void run() {
-								checkUpdate();
-							}
-						});
+						checkUpdate();
 					}
-				}, 10l);
+				});
+			}
+		}, 10l);
 
 		new Timer().schedule(new TimerTask() {
 
@@ -201,25 +235,23 @@ public class Main extends JavaPlugin {
 
 	}
 
+	/**
+	 * Register hook.
+	 *
+	 * @param plugin
+	 *            the plugin
+	 */
 	public void registerHook(Plugin plugin) {
 		plugins.add(plugin);
 		Main.plugin.getLogger().info("Registered hook for " + plugin.getName());
 	}
 
-	/** The rewards. */
-	public ArrayList<Reward> rewards;
-
 	/**
-	 * Load rewards.
+	 * Reload.
 	 */
-	public void loadRewards() {
-		ConfigRewards.getInstance().setupExample();
-		rewards = new ArrayList<Reward>();
-		for (String reward : ConfigRewards.getInstance().getRewardNames()) {
-			rewards.add(new Reward(reward));
-		}
-		plugin.debug("Loaded rewards");
-
+	public void reload() {
+		Config.getInstance().reloadData();
+		loadRewards();
 	}
 
 	/**
@@ -230,14 +262,6 @@ public class Main extends JavaPlugin {
 	 */
 	public void run(Runnable run) {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
-	}
-
-	/**
-	 * Reload.
-	 */
-	public void reload() {
-		Config.getInstance().reloadData();
-		loadRewards();
 	}
 
 	/**
@@ -266,11 +290,10 @@ public class Main extends JavaPlugin {
 
 	}
 
+	/**
+	 * Update.
+	 */
 	public void update() {
 		ConfigRewards.getInstance().checkDelayedTimedRewards();
-	}
-
-	public ArrayList<Plugin> getHooks() {
-		return plugins;
 	}
 }

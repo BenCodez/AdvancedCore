@@ -9,20 +9,16 @@ import org.bukkit.conversations.StringPrompt;
  * The Class PromptReturnString.
  */
 public abstract class PromptReturnString extends StringPrompt {
-	
+
 	/** The prompt text. */
 	public String promptText;
 
-	/* (non-Javadoc)
-	 * @see org.bukkit.conversations.Prompt#getPromptText(org.bukkit.conversations.ConversationContext)
-	 */
-	@Override
-	public String getPromptText(ConversationContext context) {
-		return promptText;
-	}
-
-	/* (non-Javadoc)
-	 * @see org.bukkit.conversations.Prompt#acceptInput(org.bukkit.conversations.ConversationContext, java.lang.String)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.bukkit.conversations.Prompt#acceptInput(org.bukkit.conversations.
+	 * ConversationContext, java.lang.String)
 	 */
 	@Override
 	public Prompt acceptInput(ConversationContext context, String input) {
@@ -30,6 +26,18 @@ public abstract class PromptReturnString extends StringPrompt {
 		context.setSessionData("Input", input);
 		onInput(context, context.getForWhom(), input);
 		return Prompt.END_OF_CONVERSATION;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.bukkit.conversations.Prompt#getPromptText(org.bukkit.conversations
+	 * .ConversationContext)
+	 */
+	@Override
+	public String getPromptText(ConversationContext context) {
+		return promptText;
 	}
 
 	/**
@@ -42,7 +50,7 @@ public abstract class PromptReturnString extends StringPrompt {
 	 * @param input
 	 *            the input
 	 */
-	public abstract void onInput(ConversationContext context, Conversable conversable,
-			String input);
+	public abstract void onInput(ConversationContext context,
+			Conversable conversable, String input);
 
 }

@@ -4,11 +4,9 @@ import org.bukkit.entity.Player;
 
 /**
  * 
- * InPutListener Class
- * 
  */
 public abstract class InputListener {
-	
+
 	/**
 	 * On input.
 	 *
