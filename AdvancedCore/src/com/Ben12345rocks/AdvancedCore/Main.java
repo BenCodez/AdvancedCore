@@ -199,7 +199,7 @@ public class Main extends JavaPlugin {
 
 	public void registerHook(Plugin plugin) {
 		plugins.add(plugin);
-		plugin.getLogger().info("Registered hook for " + plugin.getName());
+		Main.plugin.getLogger().info("Registered hook for " + plugin.getName());
 	}
 
 	/** The rewards. */

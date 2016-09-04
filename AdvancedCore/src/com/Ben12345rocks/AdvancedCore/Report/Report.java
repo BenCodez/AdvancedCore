@@ -44,8 +44,8 @@ public class Report {
 	 * @throws IOException
 	 *             Signals that an I/O exception has occurred.
 	 */
-	public static void addToZip(File directoryToZip, File file,
-			ZipOutputStream zos) throws FileNotFoundException, IOException {
+	public static void addToZip(File file, ZipOutputStream zos)
+			throws FileNotFoundException, IOException {
 
 		FileInputStream fis = new FileInputStream(file);
 
@@ -113,7 +113,7 @@ public class Report {
 		}
 		addAllFiles(directoryToZip, fileList);
 		plugin.getLogger().info("---Creating zip file");
-		writeZipFile(directoryToZip, fileList, zipFileName);
+		writeZipFile(fileList, zipFileName);
 		plugin.getLogger().info("---Done");
 	}
 
@@ -123,9 +123,24 @@ public class Report {
 	public void create() {
 		long time = Calendar.getInstance().getTime().getTime();
 		String zipFileName = "Reports." + Long.toString(time);
-		for (Plugin plugin : Main.plugin.getHooks()) {
-			create(plugin.getDataFolder(), zipFileName);
+		List<File> fileList = new ArrayList<File>();
+		ArrayList<Plugin> plugins = Main.plugin.getHooks();
+		plugins.add(Main.plugin);
+		for (Plugin plugin : plugins) {
+			File directoryToZip = plugin.getDataFolder();
+
+			try {
+				plugin.getLogger().info(
+						"---Getting references to all files in: "
+								+ directoryToZip.getCanonicalPath());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			addAllFiles(directoryToZip, fileList);
 		}
+		plugin.getLogger().info("---Creating zip file");
+		writeZipFile(fileList, zipFileName);
+		plugin.getLogger().info("---Done");
 	}
 
 	/**
@@ -188,8 +203,7 @@ public class Report {
 	 * @param fileList
 	 *            the file list
 	 */
-	public void writeZipFile(File directoryToZip, List<File> fileList,
-			String zipFileName) {
+	public void writeZipFile(List<File> fileList, String zipFileName) {
 
 		try {
 			File fileZipFolder = new File(plugin.getDataFolder()
@@ -207,7 +221,7 @@ public class Report {
 
 			for (File file : fileList) {
 				if (!file.isDirectory()) { // we only zip files, not directories
-					addToZip(directoryToZip, file, zos);
+					addToZip(file, zos);
 				}
 			}
 

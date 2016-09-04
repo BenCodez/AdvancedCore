@@ -5,4 +5,4 @@ softdepend: [ProtocolLib, Vault]
 commands:
   advancedcore:
     description: Plugin command
-    aliases: core
+    aliases: acore
