@@ -126,7 +126,7 @@ public class Config {
 	 * @return the request API default method
 	 */
 	public String getRequestAPIDefaultMethod() {
-		return getData().getString("RequestAPI.DefaultMethod", "ANVIL");
+		return getData().getString("RequestAPI.DefaultMethod", "Anvil");
 	}
 
 	/**

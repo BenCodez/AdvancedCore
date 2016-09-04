@@ -106,27 +106,18 @@ public class Main extends JavaPlugin {
 		debug(this, msg);
 	}
 
-	public void debug(Plugin plugin, String msg) {
+	public void debug(Plugin plug, String msg) {
 		if (Config.getInstance().getDebugEnabled()) {
-			plugin.getLogger().info("Debug: " + msg);
+			plug.getLogger().info("Debug: " + msg);
 			if (Config.getInstance().getDebugInfoIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (player.hasPermission("AdvancedCore.Debug")) {
 						player.sendMessage(Utils.getInstance().colorize(
-								"&c" + plugin.getName() + " Debug: " + msg));
+								"&c" + plug.getName() + " Debug: " + msg));
 					}
 				}
 			}
 		}
-	}
-
-	/**
-	 * Gets the main.
-	 *
-	 * @return the main
-	 */
-	public Main getMain() {
-		return this;
 	}
 
 	/**

@@ -405,7 +405,7 @@ public abstract class CommandHandler {
 				if (!sender.hasPermission(perm)) {
 					sender.sendMessage(Utils.getInstance().colorize(
 							Config.getInstance().getFormatNoPerms()));
-					plugin.debug(sender.getName()
+					Main.plugin.debug(Main.plugin, sender.getName()
 							+ " was denied access to command");
 					return true;
 				}
