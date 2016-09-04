@@ -80,7 +80,7 @@ public class RequestManager {
 						.contains(InputMethod.Chat.toString())) {
 			ConversationFactory convoFactory = new ConversationFactory(
 					Main.plugin).withModality(true)
-					.withEscapeSequence("cancel").withTimeout(30);
+					.withEscapeSequence("cancel").withTimeout(60);
 			PromptManager prompt = new PromptManager(promptText
 					+ " Current value: " + currentValue, convoFactory);
 			prompt.stringPrompt((Conversable) player, new PromptReturnString() {

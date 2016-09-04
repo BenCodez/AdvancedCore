@@ -167,6 +167,9 @@ public class BInventory implements Listener {
 	 * @return the next slot
 	 */
 	public int getNextSlot() {
+		if (buttons.keySet().size() == 0) {
+			return 0;
+		}
 		return getHighestSlot()+1;
 	}
 
@@ -210,7 +213,7 @@ public class BInventory implements Listener {
 
 		Inventory inv = event.getInventory();
 		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
-			Main.plugin.debug("Iventory equal");
+			Main.plugin.debug("Inventory equal");
 			for (int buttonSlot : getButtons().keySet()) {
 				BInventoryButton button = getButtons().get(buttonSlot);
 				if (event.getSlot() == buttonSlot) {

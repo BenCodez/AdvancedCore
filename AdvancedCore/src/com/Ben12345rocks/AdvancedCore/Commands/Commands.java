@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
@@ -67,7 +68,28 @@ public class Commands {
 			@Override
 			public void onClick(InventoryClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
-				openRewardsGUI(player);
+				if (event.getClick().equals(ClickType.MIDDLE)) {
+					User user = new User(Main.plugin, player);
+					new RequestManager(
+							player,
+							user.getInputMethod(),
+							new InputListener() {
+
+								@Override
+								public void onInput(Player player, String input) {
+									ConfigRewards.getInstance().getData(input);
+									player.sendMessage("Reward file created");
+									plugin.reload();
+
+								}
+							}
+
+							,
+							"Type value in chat to send, cancel by typing cancel",
+							"");
+				} else {
+					openRewardsGUI(player);
+				}
 			}
 		});
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("&cConfig",
@@ -81,6 +103,7 @@ public class Commands {
 			}
 
 		});
+		inv.openInventory(player);
 	}
 
 	/**
@@ -274,7 +297,9 @@ public class Commands {
 			@Override
 			public void onClick(InventoryClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
-				new RequestManager(player, user.getInputMethod(),
+				new RequestManager(
+						player,
+						user.getInputMethod(),
 						new InputListener() {
 
 							@Override
@@ -285,9 +310,10 @@ public class Commands {
 								ConfigRewards
 										.getInstance()
 										.getReward(reward.getRewardName())
-										.runCommands(
-												new User(Main.plugin,
-														(Player) player));
+										.giveReward(
+												new User(Main.plugin, input),
+												Utils.getInstance()
+														.isPlayerOnline(input));
 								player.sendMessage("Ran Reward file");
 								plugin.reload();
 
