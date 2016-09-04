@@ -51,6 +51,9 @@ public class PlayerJoinEvent implements Listener {
 
 				User user = new User(plugin, player);
 				user.setPlayerName();
+
+				user.checkOfflineRewards();
+				user.offVoteWorld(player.getWorld().getName());
 			}
 		}, 20L);
 

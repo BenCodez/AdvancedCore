@@ -1,6 +1,12 @@
 # Config.yml
 
+# Display debug messages in console
 Debug: false
+
+# Display debug messages ingame
+# Requires Debug to be set to true
+# Permission: AdvancedCore.Debug
+DebugInfoIngame: false
 
 # Options for request api
 # Current methods
@@ -22,3 +28,9 @@ Format:
   
   # CommandHandler help message
   HelpLine: '&3&l%Command% - &3%HelpMessage%'
+  
+  # Reward file message if none is set
+  # PlaceHolders:
+  # %money% = amount of money given for votesite
+  # %items% = string list of items
+  DefaultRewardMsg: '&aYou were given rewards!'

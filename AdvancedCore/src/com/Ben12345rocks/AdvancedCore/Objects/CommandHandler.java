@@ -42,6 +42,9 @@ public abstract class CommandHandler {
 	/** The tab complete options. */
 	public HashMap<String, ArrayList<String>> tabCompleteOptions;
 
+	/** The allow console. */
+	private boolean allowConsole = true;
+
 	/**
 	 * Instantiates a new command handler.
 	 *
@@ -74,6 +77,44 @@ public abstract class CommandHandler {
 		this.helpMessage = helpMessage;
 		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
 		loadTabComplete();
+	}
+
+	/**
+	 * Instantiates a new command handler.
+	 *
+	 * @param args
+	 *            the args
+	 * @param perm
+	 *            the perm
+	 * @param helpMessage
+	 *            the help message
+	 * @param allowConsole
+	 *            the allow console
+	 */
+	public CommandHandler(String[] args, String perm, String helpMessage,
+			boolean allowConsole) {
+		this.args = args;
+		this.perm = perm;
+		this.helpMessage = helpMessage;
+		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
+		this.allowConsole = allowConsole;
+		loadTabComplete();
+	}
+
+	/**
+	 * Adds the tab complete option.
+	 *
+	 * @param toReplace
+	 *            the to replace
+	 * @param options
+	 *            the options
+	 */
+	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
+		ArrayList<String> replace = new ArrayList<String>();
+		for (String str : options) {
+			replace.add(str);
+		}
+		tabCompleteOptions.put(toReplace, replace);
 	}
 
 	/**
@@ -116,121 +157,6 @@ public abstract class CommandHandler {
 	}
 
 	/**
-	 * Load tab complete.
-	 */
-	public void loadTabComplete() {
-		ArrayList<String> players = new ArrayList<String>();
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			players.add(player.getName());
-		}
-		addTabCompleteOption("(Player)", players);
-		ArrayList<String> options = new ArrayList<String>();
-		options.add("True");
-		options.add("False");
-		addTabCompleteOption("(boolean)", options);
-		options = new ArrayList<String>();
-		addTabCompleteOption("(list)", options);
-		addTabCompleteOption("(String)", options);
-		addTabCompleteOption("(number)", options);
-	}
-
-	/**
-	 * Update tab complete.
-	 */
-	public void updateTabComplete() {
-		ArrayList<String> players = new ArrayList<String>();
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			players.add(player.getName());
-		}
-		addTabCompleteOption("(Player)", players);
-	}
-
-	/**
-	 * Adds the tab complete option.
-	 *
-	 * @param toReplace
-	 *            the to replace
-	 * @param options
-	 *            the options
-	 */
-	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
-		ArrayList<String> replace = new ArrayList<String>();
-		for (String str : options) {
-			replace.add(str);
-		}
-		tabCompleteOptions.put(toReplace, replace);
-	}
-
-	/**
-	 * Gets the tab complete options.
-	 *
-	 * @param sender
-	 *            the sender
-	 * @param args
-	 *            the args
-	 * @param argNum
-	 *            the arg num
-	 * @return the tab complete options
-	 */
-	public ArrayList<String> getTabCompleteOptions(CommandSender sender,
-			String[] args, int argNum) {
-		CommandHandler commandHandler = this;
-		updateTabComplete();
-		Set<String> cmds = new HashSet<String>();
-
-		if (sender.hasPermission(commandHandler.getPerm())) {
-			String[] cmdArgs = commandHandler.getArgs();
-			if (cmdArgs.length > argNum) {
-				boolean argsMatch = true;
-				for (int i = 0; i < argNum; i++) {
-					if (args.length >= i) {
-
-						if (!commandHandler.argsMatch(args[i], i)) {
-							argsMatch = false;
-							// plugin.debug(args[i] + " " + i);
-						}
-					}
-				}
-
-				// plugin.debug(Boolean.toString(argsMatch)
-				// + " "
-				// + Utils.getInstance().makeStringList(
-				// Utils.getInstance()
-				// .convertArray(this.getArgs())));
-
-				if (argsMatch) {
-					String[] cmdArgsList = cmdArgs[argNum].split("&");
-
-					for (String arg : cmdArgsList) {
-						// plugin.debug(arg);
-						boolean add = true;
-						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions
-								.entrySet()) {
-							if (arg.equalsIgnoreCase(entry.getKey())) {
-								add = false;
-								cmds.addAll(entry.getValue());
-								// plugin.debug(Utils.getInstance()
-								// .makeStringList(entry.getValue()));
-							}
-						}
-						if (!cmds.contains(arg) && add) {
-							cmds.add(arg);
-						}
-					}
-
-				}
-
-			}
-		}
-
-		ArrayList<String> options = Utils.getInstance().convert(cmds);
-
-		Collections.sort(options, String.CASE_INSENSITIVE_ORDER);
-
-		return options;
-	}
-
-	/**
 	 * Execute.
 	 *
 	 * @param sender
@@ -269,7 +195,7 @@ public abstract class CommandHandler {
 				commandText));
 		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA)
-						.create()));
+				.create()));
 		return txt;
 
 	}
@@ -344,6 +270,95 @@ public abstract class CommandHandler {
 	}
 
 	/**
+	 * Gets the tab complete options.
+	 *
+	 * @param sender
+	 *            the sender
+	 * @param args
+	 *            the args
+	 * @param argNum
+	 *            the arg num
+	 * @return the tab complete options
+	 */
+	public ArrayList<String> getTabCompleteOptions(CommandSender sender,
+			String[] args, int argNum) {
+		CommandHandler commandHandler = this;
+		updateTabComplete();
+		Set<String> cmds = new HashSet<String>();
+
+		if (sender.hasPermission(commandHandler.getPerm())) {
+			String[] cmdArgs = commandHandler.getArgs();
+			if (cmdArgs.length > argNum) {
+				boolean argsMatch = true;
+				for (int i = 0; i < argNum; i++) {
+					if (args.length >= i) {
+
+						if (!commandHandler.argsMatch(args[i], i)) {
+							argsMatch = false;
+							// plugin.debug(args[i] + " " + i);
+						}
+					}
+				}
+
+				// plugin.debug(Boolean.toString(argsMatch)
+				// + " "
+				// + Utils.getInstance().makeStringList(
+				// Utils.getInstance()
+				// .convertArray(this.getArgs())));
+
+				if (argsMatch) {
+					String[] cmdArgsList = cmdArgs[argNum].split("&");
+
+					for (String arg : cmdArgsList) {
+						// plugin.debug(arg);
+						boolean add = true;
+						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions
+								.entrySet()) {
+							if (arg.equalsIgnoreCase(entry.getKey())) {
+								add = false;
+								cmds.addAll(entry.getValue());
+								// plugin.debug(Utils.getInstance()
+								// .makeStringList(entry.getValue()));
+							}
+						}
+						if (!cmds.contains(arg) && add) {
+							cmds.add(arg);
+						}
+					}
+
+				}
+
+			}
+		}
+
+		ArrayList<String> options = Utils.getInstance().convert(cmds);
+
+		Collections.sort(options, String.CASE_INSENSITIVE_ORDER);
+
+		return options;
+	}
+
+	/**
+	 * Load tab complete.
+	 */
+	public void loadTabComplete() {
+		ArrayList<String> players = new ArrayList<String>();
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			players.add(player.getName());
+		}
+		addTabCompleteOption("(Player)", players);
+		ArrayList<String> options = new ArrayList<String>();
+		options.add("True");
+		options.add("False");
+		addTabCompleteOption("(boolean)", options);
+		options = new ArrayList<String>();
+		addTabCompleteOption("(list)", options);
+		addTabCompleteOption("(String)", options);
+		addTabCompleteOption("(number)", options);
+
+	}
+
+	/**
 	 * Run command.
 	 *
 	 * @param sender
@@ -362,17 +377,22 @@ public abstract class CommandHandler {
 					if (!Utils.getInstance().isInt(args[i])) {
 						sender.sendMessage(Utils.getInstance().colorize(
 								Config.getInstance().getFormatNotNumber()
-										.replace("%arg%", args[i])));
+								.replace("%arg%", args[i])));
 						return true;
 					}
 				}
+			}
+			if (!(sender instanceof Player) && !allowConsole) {
+				sender.sendMessage(Utils.getInstance().colorize(
+						"&cMust be a player to do this"));
+				return true;
 			}
 
 			if (perm != "") {
 				if (!sender.hasPermission(perm)) {
 					sender.sendMessage(Utils.getInstance().colorize(
 							Config.getInstance().getFormatNoPerms()));
-					plugin.debug(sender.getName()
+					Main.plugin.debug(Main.plugin, sender.getName()
 							+ " was denied access to command");
 					return true;
 				}
@@ -402,6 +422,22 @@ public abstract class CommandHandler {
 	 */
 	public void setPerm(String perm) {
 		this.perm = perm;
+	}
+
+	/**
+	 * Update tab complete.
+	 */
+	public void updateTabComplete() {
+		ArrayList<String> players = new ArrayList<String>();
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			players.add(player.getName());
+		}
+		addTabCompleteOption("(Player)", players);
+		ArrayList<String> rewards = new ArrayList<String>();
+		for (Reward reward : plugin.rewards) {
+			rewards.add(reward.getRewardName());
+		}
+		addTabCompleteOption("(reward)", rewards);
 	}
 
 }

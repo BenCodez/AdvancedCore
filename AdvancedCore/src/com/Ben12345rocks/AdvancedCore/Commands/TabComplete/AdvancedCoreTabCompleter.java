@@ -98,7 +98,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.bukkit.command.TabCompleter#onTabComplete(org.bukkit.command.
 	 * CommandSender, org.bukkit.command.Command, java.lang.String,
 	 * java.lang.String[])
@@ -122,7 +122,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 				tab.add(str);
 			}
 		}
-		
+
 		Collections.sort(tab, String.CASE_INSENSITIVE_ORDER);
 
 		return tab;

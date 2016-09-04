@@ -15,6 +15,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
@@ -101,6 +103,19 @@ public class User {
 	}
 
 	/**
+	 * Check offline rewards.
+	 */
+	public void checkOfflineRewards() {
+		for (Reward reward : Main.plugin.rewards) {
+			int offVotes = getOfflineRewards(reward);
+			for (int i = 0; i < offVotes; i++) {
+				giveReward(reward, false);
+			}
+			setOfflineRewards(reward, 0);
+		}
+	}
+
+	/**
 	 * Gets the input method.
 	 *
 	 * @return the input method
@@ -112,13 +127,32 @@ public class User {
 	}
 
 	/**
-	 * Sets the input method.
+	 * Gets the offline rewards.
 	 *
-	 * @param method
-	 *            the new input method
+	 * @param reward
+	 *            the reward
+	 * @return the offline rewards
 	 */
-	public void setInputMethod(RequestManager.InputMethod method) {
-		setRawData("InputMethod", method.toString());
+	public int getOfflineRewards(Reward reward) {
+		return getPluginData()
+				.getInt("OfflineReward." + reward.getRewardName());
+	}
+
+	/**
+	 * Gets the offline reward world.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param world
+	 *            the world
+	 * @return the offline reward world
+	 */
+	public int getOfflineRewardWorld(String reward, String world) {
+		if (world == null) {
+			world = "AllTheWorlds";
+		}
+		return getPluginData().getInt(
+				"OfflineVotesWorld." + reward + "." + world);
 	}
 
 	/**
@@ -162,6 +196,17 @@ public class User {
 	 */
 	public FileConfiguration getRawData() {
 		return Data.getInstance().getData(this);
+	}
+
+	/**
+	 * Gets the timed reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the timed reward
+	 */
+	public long getTimedReward(Reward reward) {
+		return getPluginData().getLong("Timed." + reward.getRewardName());
 	}
 
 	/**
@@ -327,6 +372,45 @@ public class User {
 	}
 
 	/**
+	 * Give potion effect.
+	 *
+	 * @param potionName
+	 *            the potion name
+	 * @param duration
+	 *            the duration
+	 * @param amplifier
+	 *            the amplifier
+	 */
+	public void givePotionEffect(String potionName, int duration, int amplifier) {
+		Player player = Bukkit.getPlayer(java.util.UUID.fromString(getUUID()));
+		if (player != null) {
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					player.addPotionEffect(
+							new PotionEffect(PotionEffectType
+									.getByName(potionName), 20 * duration,
+									amplifier), true);
+				}
+			});
+
+		}
+	}
+
+	/**
+	 * Give reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param online
+	 *            the online
+	 */
+	public void giveReward(Reward reward, boolean online) {
+		reward.giveReward(this, online);
+	}
+
+	/**
 	 * Checks for joined before.
 	 *
 	 * @return true, if successful
@@ -342,6 +426,62 @@ public class User {
 	 */
 	public boolean isOnline() {
 		return Utils.getInstance().isPlayerOnline(getPlayerName());
+	}
+
+	/**
+	 * Off vote world.
+	 *
+	 * @param world
+	 *            the world
+	 */
+	public void offVoteWorld(String world) {
+
+		for (Reward reward : Main.plugin.rewards) {
+			ArrayList<String> worlds = reward.getWorlds();
+			if ((world != null) && (worlds != null)) {
+				if (reward.isGiveInEachWorld()) {
+					for (String worldName : worlds) {
+
+						Main.plugin.debug("Checking world: " + worldName
+								+ ", reard: " + reward);
+
+						if (worldName != "") {
+							if (worldName.equals(world)) {
+
+								Main.plugin.debug("Giving reward...");
+
+								int worldRewards =
+
+										getOfflineRewardWorld(reward.getRewardName(),
+												worldName);
+
+								while (worldRewards > 0) {
+									reward.giveRewardUser(this);
+									worldRewards--;
+								}
+
+								setOfflineRewardWorld(reward.getRewardName(),
+										worldName, 0);
+							}
+						}
+
+					}
+				} else {
+					if (worlds.contains(world)) {
+						int worldRewards = getOfflineRewardWorld(
+								reward.getRewardName(), world);
+
+						while (worldRewards > 0) {
+							reward.giveRewardUser(this);
+							worldRewards--;
+						}
+
+						setOfflineRewardWorld(reward.getRewardName(), world, 0);
+					}
+				}
+			}
+		}
+
 	}
 
 	/**
@@ -411,7 +551,7 @@ public class User {
 					actionBar.send(player);
 				} catch (Exception ex) {
 					Main.plugin
-							.debug("Failed to send ActionBar, turn debug on to see stack trace");
+					.debug("Failed to send ActionBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -445,7 +585,7 @@ public class User {
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
 					Main.plugin
-							.debug("Failed to send BossBar, turn debug on to see stack trace");
+					.debug("Failed to send BossBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -512,7 +652,7 @@ public class User {
 				for (String str : msg.split("%NewLine%")) {
 					player.sendMessage(Utils.getInstance().colorize(
 							Utils.getInstance()
-									.replacePlaceHolders(player, str)));
+							.replacePlaceHolders(player, str)));
 				}
 			}
 		}
@@ -563,12 +703,51 @@ public class User {
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger()
-						.info("Failed to send Title, turn debug on to see stack trace");
+				.info("Failed to send Title, turn debug on to see stack trace");
 				if (Config.getInstance().getDebugEnabled()) {
 					ex.printStackTrace();
 				}
 			}
 		}
+	}
+
+	/**
+	 * Sets the input method.
+	 *
+	 * @param method
+	 *            the new input method
+	 */
+	public void setInputMethod(RequestManager.InputMethod method) {
+		setRawData("InputMethod", method.toString());
+	}
+
+	/**
+	 * Sets the offline rewards.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
+	public void setOfflineRewards(Reward reward, int value) {
+		setPluginData("OfflineReward." + reward.getRewardName(), value);
+	}
+
+	/**
+	 * Sets the offline reward world.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param world
+	 *            the world
+	 * @param value
+	 *            the value
+	 */
+	public void setOfflineRewardWorld(String reward, String world, int value) {
+		if (world == null) {
+			world = "AllTheWorlds";
+		}
+		setPluginData("OfflineVotesWorld." + reward + "." + world, value);
 	}
 
 	/**
@@ -611,6 +790,18 @@ public class User {
 	 */
 	public void setRawData(String path, Object value) {
 		Data.getInstance().set(this, path, value);
+	}
+
+	/**
+	 * Sets the timed reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
+	public void setTimedReward(Reward reward, long value) {
+		setPluginData("Timed." + reward.getRewardName(), value);
 	}
 
 	/**

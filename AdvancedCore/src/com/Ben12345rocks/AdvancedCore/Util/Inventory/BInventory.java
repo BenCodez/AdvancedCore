@@ -63,38 +63,6 @@ public class BInventory implements Listener {
 		player.openInventory(inv);
 	}
 
-	/**
-	 * Open inventory.
-	 *
-	 * @param player
-	 *            the player
-	 */
-	public void openInventory(Player player) {
-		BInventory inventory = this;
-		Inventory inv = Bukkit.createInventory(player,
-				inventory.getInventorySize(), inventory.getInventoryName());
-		Iterator<Entry<Integer, BInventoryButton>> it = inventory.getButtons()
-				.entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry<Integer, BInventoryButton> pair = it.next();
-			{
-				ItemStack item = pair.getValue().getItem();
-				ItemMeta meta = item.getItemMeta();
-				if (pair.getValue().getName() != null) {
-					meta.setDisplayName(pair.getValue().getName());
-				}
-				if (pair.getValue().getLore() != null) {
-					meta.setLore(new ArrayList<String>(Arrays.asList(pair
-							.getValue().getLore())));
-				}
-				item.setItemMeta(meta);
-				inv.setItem(pair.getKey(), item);
-			}
-			inv.setItem(pair.getKey(), pair.getValue().getItem());
-		}
-		player.openInventory(inv);
-	}
-
 	/** The inventory name. */
 	private String inventoryName;
 
@@ -129,6 +97,13 @@ public class BInventory implements Listener {
 	}
 
 	/**
+	 * Destroy.
+	 */
+	public void destroy() {
+		HandlerList.unregisterAll(this);
+	}
+
+	/**
 	 * Gets the buttons.
 	 *
 	 * @return the buttons
@@ -160,15 +135,6 @@ public class BInventory implements Listener {
 	public String getInventoryName() {
 		return inventoryName;
 	}
-	
-	/**
-	 * Gets the next slot.
-	 *
-	 * @return the next slot
-	 */
-	public int getNextSlot() {
-		return getHighestSlot()+1;
-	}
 
 	/**
 	 * Gets the inventory size.
@@ -192,6 +158,18 @@ public class BInventory implements Listener {
 		}
 	}
 
+	/**
+	 * Gets the next slot.
+	 *
+	 * @return the next slot
+	 */
+	public int getNextSlot() {
+		if (buttons.keySet().size() == 0) {
+			return 0;
+		}
+		return getHighestSlot() + 1;
+	}
+
 	// event handling
 
 	/**
@@ -206,11 +184,11 @@ public class BInventory implements Listener {
 			return;
 		}
 
-		Main.plugin.debug("Event ran");
+		// Main.plugin.debug("Event ran");
 
 		Inventory inv = event.getInventory();
 		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
-			Main.plugin.debug("Iventory equal");
+			Main.plugin.debug("Inventory equal");
 			for (int buttonSlot : getButtons().keySet()) {
 				BInventoryButton button = getButtons().get(buttonSlot);
 				if (event.getSlot() == buttonSlot) {
@@ -219,7 +197,6 @@ public class BInventory implements Listener {
 					event.setCancelled(true);
 					player.closeInventory();
 					button.onClick(event);
-
 					destroy();
 					return;
 				}
@@ -229,10 +206,35 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * Destroy.
+	 * Open inventory.
+	 *
+	 * @param player
+	 *            the player
 	 */
-	public void destroy() {
-		HandlerList.unregisterAll(this);
+	public void openInventory(Player player) {
+		BInventory inventory = this;
+		Inventory inv = Bukkit.createInventory(player,
+				inventory.getInventorySize(), inventory.getInventoryName());
+		Iterator<Entry<Integer, BInventoryButton>> it = inventory.getButtons()
+				.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<Integer, BInventoryButton> pair = it.next();
+			{
+				ItemStack item = pair.getValue().getItem();
+				ItemMeta meta = item.getItemMeta();
+				if (pair.getValue().getName() != null) {
+					meta.setDisplayName(pair.getValue().getName());
+				}
+				if (pair.getValue().getLore() != null) {
+					meta.setLore(new ArrayList<String>(Arrays.asList(pair
+							.getValue().getLore())));
+				}
+				item.setItemMeta(meta);
+				inv.setItem(pair.getKey(), item);
+			}
+			inv.setItem(pair.getKey(), pair.getValue().getItem());
+		}
+		player.openInventory(inv);
 	}
 
 	/**
