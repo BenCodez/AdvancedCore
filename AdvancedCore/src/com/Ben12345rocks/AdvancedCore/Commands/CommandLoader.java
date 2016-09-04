@@ -12,6 +12,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
 import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager.InputMethod;
 
@@ -102,6 +103,17 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				Commands.getInstance().openGUI((Player) sender);
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(
+				new String[] { "Report" }, "AdvancedCore.Report",
+				"Create Report File", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Report.getInstance().create();
+				sender.sendMessage("Created zip file");
 			}
 		});
 

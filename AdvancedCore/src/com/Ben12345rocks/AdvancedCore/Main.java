@@ -11,6 +11,7 @@ import java.util.TimerTask;
 import net.milkbowl.vault.economy.Economy;
 
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -46,6 +47,8 @@ public class Main extends JavaPlugin {
 
 	/** The updater. */
 	public Updater updater;
+
+	private ArrayList<Plugin> plugins;
 
 	/**
 	 * Check place holder API.
@@ -142,6 +145,7 @@ public class Main extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		plugin = this;
+		plugins = new ArrayList<Plugin>();
 		loadCommands();
 		FilesManager.getInstance().loadFileEditngThread();
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().loadThread();
@@ -191,6 +195,11 @@ public class Main extends JavaPlugin {
 			}
 		}, 1 * 60 * 1000, 5 * 60 * 1000);
 
+	}
+
+	public void registerHook(Plugin plugin) {
+		plugins.add(plugin);
+		plugin.getLogger().info("Registered hook for " + plugin.getName());
 	}
 
 	/** The rewards. */
@@ -255,5 +264,9 @@ public class Main extends JavaPlugin {
 
 	public void update() {
 		ConfigRewards.getInstance().checkDelayedTimedRewards();
+	}
+
+	public ArrayList<Plugin> getHooks() {
+		return plugins;
 	}
 }
