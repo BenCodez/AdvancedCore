@@ -11,6 +11,7 @@ import java.util.TimerTask;
 import net.milkbowl.vault.economy.Economy;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -102,8 +103,20 @@ public class Main extends JavaPlugin {
 	 *            the msg
 	 */
 	public void debug(String msg) {
+		debug(this, msg);
+	}
+
+	public void debug(Plugin plugin, String msg) {
 		if (Config.getInstance().getDebugEnabled()) {
 			plugin.getLogger().info("Debug: " + msg);
+			if (Config.getInstance().getDebugInfoIngame()) {
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					if (player.hasPermission("AdvancedCore.Debug")) {
+						player.sendMessage(Utils.getInstance().colorize(
+								"&c" + plugin.getName() + " Debug: " + msg));
+					}
+				}
+			}
 		}
 	}
 

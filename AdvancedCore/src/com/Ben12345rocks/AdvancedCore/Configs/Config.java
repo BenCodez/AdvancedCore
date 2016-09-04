@@ -77,6 +77,19 @@ public class Config {
 		return getData().getBoolean("Debug");
 	}
 
+	public void setDebugEnabled(boolean value) {
+		getData().set("Debug", value);
+		saveData();
+	}
+
+	public void setDebugInfoIngame(boolean value) {
+		getData().set("DebugInfoIngame", value);
+	}
+
+	public boolean getDebugInfoIngame() {
+		return getData().getBoolean("DebugInfoIngame");
+	}
+
 	/**
 	 * Gets the format help line.
 	 *

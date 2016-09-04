@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
@@ -889,7 +890,8 @@ public class Commands {
 
 			@Override
 			public void onClick(InventoryClickEvent event) {
-
+				Player player = (Player) event.getWhoClicked();
+				User user = new User(Main.plugin, player);
 				new RequestManager(player, user.getInputMethod(),
 						new InputListener() {
 
@@ -920,6 +922,61 @@ public class Commands {
 	}
 
 	public void openConfigGUI(Player player) {
+		BInventory inv = new BInventory("Config");
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Debug",
+				new String[] { "Currently: "
+						+ Config.getInstance().getDebugEnabled() },
+				new ItemStack(Material.STONE)) {
 
+			@Override
+			public void onClick(InventoryClickEvent event) {
+				Player player = (Player) event.getWhoClicked();
+				User user = new User(Main.plugin, player);
+				new RequestManager(player, user.getInputMethod(),
+						new InputListener() {
+
+							@Override
+							public void onInput(Player player, String input) {
+								Config.getInstance().setDebugEnabled(
+										Boolean.valueOf(input));
+								player.sendMessage("Value set");
+
+							}
+						}
+
+						,
+						"Type value in chat to send, cancel by typing cancel",
+						"" + Config.getInstance().getDebugEnabled());
+
+			}
+		});
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("DebugInGame",
+				new String[] { "Currently: "
+						+ Config.getInstance().getDebugInfoIngame() },
+				new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(InventoryClickEvent event) {
+				Player player = (Player) event.getWhoClicked();
+				User user = new User(Main.plugin, player);
+				new RequestManager(player, user.getInputMethod(),
+						new InputListener() {
+
+							@Override
+							public void onInput(Player player, String input) {
+								Config.getInstance().setDebugInfoIngame(
+										Boolean.valueOf(input));
+								player.sendMessage("Value set");
+
+							}
+						}
+
+						,
+						"Type value in chat to send, cancel by typing cancel",
+						"" + Config.getInstance().getDebugInfoIngame());
+
+			}
+		});
+		inv.openInventory(player);
 	}
 }
