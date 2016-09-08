@@ -21,7 +21,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 
 // TODO: Auto-generated Javadoc
@@ -39,28 +38,7 @@ public class BInventory implements Listener {
 	 *            the inventory
 	 */
 	public static void openInventory(Player player, BInventory inventory) {
-		Inventory inv = Bukkit.createInventory(player,
-				inventory.getInventorySize(), inventory.getInventoryName());
-		Iterator<Entry<Integer, BInventoryButton>> it = inventory.getButtons()
-				.entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry<Integer, BInventoryButton> pair = it.next();
-			{
-				ItemStack item = pair.getValue().getItem();
-				ItemMeta meta = item.getItemMeta();
-				if (pair.getValue().getName() != null) {
-					meta.setDisplayName(pair.getValue().getName());
-				}
-				if (pair.getValue().getLore() != null) {
-					meta.setLore(new ArrayList<String>(Arrays.asList(pair
-							.getValue().getLore())));
-				}
-				item.setItemMeta(meta);
-				inv.setItem(pair.getKey(), item);
-			}
-			inv.setItem(pair.getKey(), pair.getValue().getItem());
-		}
-		player.openInventory(inv);
+		inventory.openInventory(player);
 	}
 
 	/** The inventory name. */
@@ -188,7 +166,7 @@ public class BInventory implements Listener {
 
 		Inventory inv = event.getInventory();
 		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
-			Main.plugin.debug("Inventory equal");
+			//Main.plugin.debug("Inventory equal");
 			for (int buttonSlot : getButtons().keySet()) {
 				BInventoryButton button = getButtons().get(buttonSlot);
 				if (event.getSlot() == buttonSlot) {

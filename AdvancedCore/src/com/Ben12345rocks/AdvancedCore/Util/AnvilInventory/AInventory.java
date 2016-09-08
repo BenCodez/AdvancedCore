@@ -214,7 +214,6 @@ public class AInventory {
 	private Player player;
 
 	/** The handler. */
-	@SuppressWarnings("unused")
 	private AnvilClickEventHandler handler;
 
 	/** The items. */
@@ -268,7 +267,7 @@ public class AInventory {
 
 						if (clickEvent.getSlot() == AnvilSlot.OUTPUT) {
 							event.getWhoClicked().closeInventory();
-							anvilClickEventHandler.onAnvilClick(clickEvent);
+							handler.onAnvilClick(clickEvent);
 							destroy();
 						}
 
