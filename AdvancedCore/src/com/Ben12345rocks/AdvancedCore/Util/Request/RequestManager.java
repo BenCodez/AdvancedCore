@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Book.BookManager;
@@ -37,6 +38,33 @@ public class RequestManager {
 
 		/** The Book. */
 		Book;
+
+		public static InputMethod getMethod(String method) {
+			for (InputMethod input : values()) {
+				if (method.equalsIgnoreCase(input.toString())) {
+					return input;
+				}
+			}
+			try {
+				return valueOf(Config.getInstance()
+						.getRequestAPIDefaultMethod());
+			} catch (Exception ex) {
+				return Chat;
+			}
+
+		}
+	}
+
+	public RequestManager(Player player, final InputListener listener,
+			String currentValue) {
+		request(player, new User(Main.plugin, player).getInputMethod(),
+				listener, "Type value in chat, type cancel to cancel",
+				currentValue);
+	}
+
+	public RequestManager(Player player, final InputListener listener) {
+		request(player, new User(Main.plugin, player).getInputMethod(),
+				listener, "Type value in chat, type cancel to cancel", "");
 	}
 
 	/**
@@ -55,29 +83,34 @@ public class RequestManager {
 	 */
 	public RequestManager(Player player, InputMethod method,
 			final InputListener listener, String promptText, String currentValue) {
+		request(player, method, listener, promptText, currentValue);
+	}
+
+	public void request(Player player, InputMethod method,
+			final InputListener listener, String promptText, String currentValue) {
 		if (method.equals(InputMethod.Anvil)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.Anvil.toString())) {
+						.contains(InputMethod.Anvil.toString())) {
 
 			AInventory inv = new AInventory(player,
 					new AInventory.AnvilClickEventHandler() {
 
-				@Override
-				public void onAnvilClick(AnvilClickEvent event) {
-					Player player = event.getPlayer();
-					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
+						@Override
+						public void onAnvilClick(AnvilClickEvent event) {
+							Player player = event.getPlayer();
+							if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
 
-						event.setWillClose(true);
-						event.setWillDestroy(true);
+								event.setWillClose(true);
+								event.setWillDestroy(true);
 
-						listener.onInput(player, event.getName());
+								listener.onInput(player, event.getName());
 
-					} else {
-						event.setWillClose(false);
-						event.setWillDestroy(false);
-					}
-				}
-			});
+							} else {
+								event.setWillClose(false);
+								event.setWillDestroy(false);
+							}
+						}
+					});
 
 			ItemStack item = new ItemStack(Material.NAME_TAG);
 			item = Utils.getInstance().setName(item, "" + currentValue);
@@ -92,7 +125,7 @@ public class RequestManager {
 
 		} else if (method.equals(InputMethod.Chat)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.Chat.toString())) {
+						.contains(InputMethod.Chat.toString())) {
 			ConversationFactory convoFactory = new ConversationFactory(
 					Main.plugin).withModality(true)
 					.withEscapeSequence("cancel").withTimeout(60);
@@ -108,7 +141,7 @@ public class RequestManager {
 			});
 		} else if (method.equals(InputMethod.Book)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.Book.toString())) {
+						.contains(InputMethod.Book.toString())) {
 
 			new BookManager(player, currentValue, new BookSign() {
 
