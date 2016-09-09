@@ -74,6 +74,10 @@ public class BInventory implements Listener {
 		}
 		getButtons().put(position, button);
 	}
+	
+	public void setMeta(Player player, String str, Object ob) {
+		Utils.getInstance().setPlayerMeta(player, str, ob);
+	}
 
 	/**
 	 * Destroy.
@@ -189,36 +193,27 @@ public class BInventory implements Listener {
 		private InventoryClickEvent event;
 		private ClickType clickType;
 		private Inventory inventory;
+		private int slot;
 		public Player getPlayer() {
 			return player;
 		}
-		public void setPlayer(Player player) {
-			this.player = player;
-		}
+		
 		public InventoryClickEvent getEvent() {
 			return event;
 		}
-		public void setEvent(InventoryClickEvent event) {
-			this.event = event;
-		}
+		
 		public ClickType getClickType() {
 			return clickType;
 		}
-		public void setClickType(ClickType clickType) {
-			this.clickType = clickType;
-		}
+		
 		public Inventory getInventory() {
 			return inventory;
 		}
-		public void setInventory(Inventory inventory) {
-			this.inventory = inventory;
-		}
+		
 		public ItemStack getClickedItem() {
 			return clickedItem;
 		}
-		public void setClickedItem(ItemStack clickedItem) {
-			this.clickedItem = clickedItem;
-		}
+		
 		private ItemStack clickedItem;
 		public ClickEvent(InventoryClickEvent event) {
 			this.event = event;
@@ -226,6 +221,7 @@ public class BInventory implements Listener {
 			clickType = event.getClick();
 			inventory = event.getInventory();
 			clickedItem = event.getCurrentItem();
+			slot = event.getSlot();
 		}
 		
 		public Player getWhoClicked() {
@@ -238,6 +234,18 @@ public class BInventory implements Listener {
 		
 		public ItemStack getCurrentItem() {
 			return clickedItem;
+		}
+		
+		public int getSlot() {
+			return slot;
+		}
+		
+		public Object getMeta(Player player, String str) {
+			return Utils.getInstance().getPlayerMeta(player, str);
+		}
+
+		public Object getMeta(String str) {
+			return Utils.getInstance().getPlayerMeta(player, str);
 		}
 	}
 
