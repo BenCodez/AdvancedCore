@@ -5,7 +5,9 @@ package com.Ben12345rocks.AdvancedCore;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -115,8 +117,12 @@ public class Main extends JavaPlugin {
 	public void debug(Plugin plug, String msg) {
 		if (Config.getInstance().getDebugEnabled()) {
 			plug.getLogger().info("Debug: " + msg);
-			if (logger != null && Config.getInstance().getLogDebugToFile())
-				logger.logToFile("[" + plug.getName() + "] Debug: " + msg);
+			if (logger != null && Config.getInstance().getLogDebugToFile()) {
+				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm")
+						.format(Calendar.getInstance().getTime());
+				logger.logToFile(str + " [" + plug.getName() + "] Debug: "
+						+ msg);
+			}
 			if (Config.getInstance().getDebugInfoIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (player.hasPermission("AdvancedCore.Debug")) {
