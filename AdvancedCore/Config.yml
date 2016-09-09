@@ -8,6 +8,10 @@ Debug: false
 # Permission: AdvancedCore.Debug
 DebugInfoIngame: false
 
+# Will log debug messages to AdvancedCore/Log/log.txt
+# Requires Debug to be on
+LogDebugToFile: true
+
 # Options for request api
 # Current methods
 # ANVIL

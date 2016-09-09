@@ -3,6 +3,7 @@
  */
 package com.Ben12345rocks.AdvancedCore;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Timer;
@@ -25,6 +26,7 @@ import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
+import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.Updater;
 
@@ -54,6 +56,8 @@ public class Main extends JavaPlugin {
 
 	/** The rewards. */
 	public ArrayList<Reward> rewards;
+
+	private Logger logger;
 
 	/**
 	 * Check place holder API.
@@ -89,9 +93,9 @@ public class Main extends JavaPlugin {
 		case UPDATE_AVAILABLE: {
 			plugin.getLogger().info(
 					plugin.getName()
-					+ " has an update available! Your Version: "
-					+ plugin.getDescription().getVersion()
-					+ " New Version: " + plugin.updater.getVersion());
+							+ " has an update available! Your Version: "
+							+ plugin.getDescription().getVersion()
+							+ " New Version: " + plugin.updater.getVersion());
 			break;
 		}
 		default: {
@@ -111,6 +115,8 @@ public class Main extends JavaPlugin {
 	public void debug(Plugin plug, String msg) {
 		if (Config.getInstance().getDebugEnabled()) {
 			plug.getLogger().info("Debug: " + msg);
+			if (logger != null && Config.getInstance().getLogDebugToFile())
+				logger.logToFile("[" + plug.getName() + "] Debug: " + msg);
 			if (Config.getInstance().getDebugInfoIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (player.hasPermission("AdvancedCore.Debug")) {
@@ -167,7 +173,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.plugin.java.JavaPlugin#onDisable()
 	 */
 	@Override
@@ -177,7 +183,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.plugin.java.JavaPlugin#onEnable()
 	 */
 	@Override
@@ -208,17 +214,17 @@ public class Main extends JavaPlugin {
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
 				new Runnable() {
 
-			@Override
-			public void run() {
-				plugin.run(new Runnable() {
-
 					@Override
 					public void run() {
-						checkUpdate();
+						plugin.run(new Runnable() {
+
+							@Override
+							public void run() {
+								checkUpdate();
+							}
+						});
 					}
-				});
-			}
-		}, 10l);
+				}, 10l);
 
 		new Timer().schedule(new TimerTask() {
 
@@ -233,6 +239,8 @@ public class Main extends JavaPlugin {
 			}
 		}, 1 * 60 * 1000, 5 * 60 * 1000);
 
+		logger = new Logger(this, new File(getDataFolder(), "Log"
+				+ File.pathSeparator + "Log.txt"));
 	}
 
 	/**
