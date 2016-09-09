@@ -8,7 +8,6 @@ import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
@@ -18,6 +17,7 @@ import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
+import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
 import com.Ben12345rocks.AdvancedCore.Util.Request.InputListener;
 import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
@@ -73,7 +73,7 @@ public class Commands {
 				new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 				User user = new User(Main.plugin, player);
 				new RequestManager(player, user.getInputMethod(),
@@ -100,7 +100,7 @@ public class Commands {
 				new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 				User user = new User(Main.plugin, player);
 				new RequestManager(player, user.getInputMethod(),
@@ -137,7 +137,7 @@ public class Commands {
 						Material.DIAMOND)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 				if (event.getClick().equals(ClickType.MIDDLE)) {
 					User user = new User(Main.plugin, player);
@@ -167,7 +167,7 @@ public class Commands {
 				new String[] {}, new ItemStack(Material.PAPER)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 				openConfigGUI(player);
 
@@ -197,7 +197,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 				new RequestManager(
 						player,
@@ -237,7 +237,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 
 				new RequestManager(player, user.getInputMethod(),
@@ -272,7 +272,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 
 				Player player = (Player) event.getWhoClicked();
 
@@ -308,7 +308,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 
 				Player player = (Player) event.getWhoClicked();
 
@@ -344,7 +344,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 
 				Player player = (Player) event.getWhoClicked();
 
@@ -380,7 +380,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 
 				Player player = (Player) event.getWhoClicked();
 
@@ -416,7 +416,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 
 				Player player = (Player) event.getWhoClicked();
 
@@ -452,7 +452,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 
 				Player player = (Player) event.getWhoClicked();
 
@@ -491,7 +491,7 @@ public class Commands {
 				new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
 						player, "Reward");
 				Player player = (Player) event.getWhoClicked();
@@ -540,7 +540,7 @@ public class Commands {
 						Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
 						player, "Reward");
 				Player player = (Player) event.getWhoClicked();
@@ -580,7 +580,7 @@ public class Commands {
 							new String[0], itemStack) {
 
 						@Override
-						public void onClick(InventoryClickEvent event) {
+						public void onClick(ClickEvent event) {
 							if (event.getWhoClicked() instanceof Player) {
 								Player player = (Player) event.getWhoClicked();
 								String item = event.getCurrentItem()
@@ -611,7 +611,7 @@ public class Commands {
 				new String[0], new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 				new RequestManager(player, user.getInputMethod(),
 						new InputListener() {
@@ -642,7 +642,7 @@ public class Commands {
 						Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 				new RequestManager(player, user.getInputMethod(),
 						new InputListener() {
@@ -678,7 +678,7 @@ public class Commands {
 				new ItemStack(Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 
 				Player player = (Player) event.getWhoClicked();
 
@@ -716,7 +716,7 @@ public class Commands {
 						Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
 						player, "Reward");
 				Player player = (Player) event.getWhoClicked();
@@ -730,7 +730,7 @@ public class Commands {
 							new String[0], new ItemStack(Material.STONE)) {
 
 						@Override
-						public void onClick(InventoryClickEvent event) {
+						public void onClick(ClickEvent event) {
 							Reward reward = (Reward) Utils.getInstance()
 									.getPlayerMeta(player, "Reward");
 							Player player = (Player) event.getWhoClicked();
@@ -767,7 +767,7 @@ public class Commands {
 						Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
 						player, "Reward");
 				Player player = (Player) event.getWhoClicked();
@@ -781,7 +781,7 @@ public class Commands {
 							new String[0], new ItemStack(Material.STONE)) {
 
 						@Override
-						public void onClick(InventoryClickEvent event) {
+						public void onClick(ClickEvent event) {
 							if (event.getWhoClicked() instanceof Player) {
 								Player player = (Player) event.getWhoClicked();
 								Reward reward = (Reward) Utils.getInstance()
@@ -820,7 +820,7 @@ public class Commands {
 						Material.STONE)) {
 
 			@Override
-			public void onClick(InventoryClickEvent event) {
+			public void onClick(ClickEvent event) {
 				Player player = (Player) event.getWhoClicked();
 				User user = new User(Main.plugin, player);
 				new RequestManager(player, user.getInputMethod(),
@@ -1007,7 +1007,7 @@ public class Commands {
 							Material.STONE)) {
 
 				@Override
-				public void onClick(InventoryClickEvent event) {
+				public void onClick(ClickEvent event) {
 					if (event.getWhoClicked() instanceof Player) {
 						Player player = (Player) event.getWhoClicked();
 						openRewardGUI(player, event.getCurrentItem()

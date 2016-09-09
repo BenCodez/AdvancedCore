@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -174,12 +175,69 @@ public class BInventory implements Listener {
 					Player player = (Player) event.getWhoClicked();
 					event.setCancelled(true);
 					player.closeInventory();
-					button.onClick(event);
+					button.onClick(new ClickEvent(event));
 					destroy();
 					return;
 				}
 
 			}
+		}
+	}
+	
+	public class ClickEvent {
+		private Player player;
+		private InventoryClickEvent event;
+		private ClickType clickType;
+		private Inventory inventory;
+		public Player getPlayer() {
+			return player;
+		}
+		public void setPlayer(Player player) {
+			this.player = player;
+		}
+		public InventoryClickEvent getEvent() {
+			return event;
+		}
+		public void setEvent(InventoryClickEvent event) {
+			this.event = event;
+		}
+		public ClickType getClickType() {
+			return clickType;
+		}
+		public void setClickType(ClickType clickType) {
+			this.clickType = clickType;
+		}
+		public Inventory getInventory() {
+			return inventory;
+		}
+		public void setInventory(Inventory inventory) {
+			this.inventory = inventory;
+		}
+		public ItemStack getClickedItem() {
+			return clickedItem;
+		}
+		public void setClickedItem(ItemStack clickedItem) {
+			this.clickedItem = clickedItem;
+		}
+		private ItemStack clickedItem;
+		public ClickEvent(InventoryClickEvent event) {
+			this.event = event;
+			player = (Player) event.getWhoClicked();
+			clickType = event.getClick();
+			inventory = event.getInventory();
+			clickedItem = event.getCurrentItem();
+		}
+		
+		public Player getWhoClicked() {
+			return player;
+		}
+		
+		public ClickType getClick() {
+			return clickType;
+		}
+		
+		public ItemStack getCurrentItem() {
+			return clickedItem;
 		}
 	}
 
