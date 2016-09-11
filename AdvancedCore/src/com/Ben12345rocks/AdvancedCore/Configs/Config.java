@@ -126,6 +126,15 @@ public class Config {
 	}
 
 	/**
+	 * Gets the log debug to file.
+	 *
+	 * @return the log debug to file
+	 */
+	public boolean getLogDebugToFile() {
+		return getData().getBoolean("LogDebugToFile", true);
+	}
+
+	/**
 	 * Gets the request API default method.
 	 *
 	 * @return the request API default method

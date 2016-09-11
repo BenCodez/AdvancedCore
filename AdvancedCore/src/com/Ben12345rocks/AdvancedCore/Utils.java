@@ -369,9 +369,9 @@ public class Utils {
 	 *             the invocation target exception
 	 */
 	public Object getConnection(Player player) throws SecurityException,
-	NoSuchMethodException, NoSuchFieldException,
-	IllegalArgumentException, IllegalAccessException,
-	InvocationTargetException {
+			NoSuchMethodException, NoSuchFieldException,
+			IllegalArgumentException, IllegalAccessException,
+			InvocationTargetException {
 		Method getHandle = player.getClass().getMethod("getHandle");
 		Object nmsPlayer = getHandle.invoke(player);
 		Field conField = nmsPlayer.getClass().getField("playerConnection");
@@ -458,7 +458,7 @@ public class Utils {
 			throws ClassNotFoundException {
 		String version = Bukkit.getServer().getClass().getPackage().getName()
 				.replace(".", ",").split(",")[3]
-						+ ".";
+				+ ".";
 		String name = "net.minecraft.server." + version + nmsClassString;
 		Class<?> nmsClass = Class.forName(name);
 		return nmsClass;

@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Book.BookManager;
@@ -37,6 +38,58 @@ public class RequestManager {
 
 		/** The Book. */
 		Book;
+
+		/**
+		 * Gets the method.
+		 *
+		 * @param method
+		 *            the method
+		 * @return the method
+		 */
+		public static InputMethod getMethod(String method) {
+			for (InputMethod input : values()) {
+				if (method.equalsIgnoreCase(input.toString())) {
+					return input;
+				}
+			}
+			try {
+				return valueOf(Config.getInstance()
+						.getRequestAPIDefaultMethod());
+			} catch (Exception ex) {
+				return Chat;
+			}
+
+		}
+	}
+
+	/**
+	 * Instantiates a new request manager.
+	 *
+	 * @param player
+	 *            the player
+	 * @param listener
+	 *            the listener
+	 */
+	public RequestManager(Player player, final InputListener listener) {
+		request(player, new User(Main.plugin, player).getInputMethod(),
+				listener, "Type value in chat, type cancel to cancel", "");
+	}
+
+	/**
+	 * Instantiates a new request manager.
+	 *
+	 * @param player
+	 *            the player
+	 * @param listener
+	 *            the listener
+	 * @param currentValue
+	 *            the current value
+	 */
+	public RequestManager(Player player, final InputListener listener,
+			String currentValue) {
+		request(player, new User(Main.plugin, player).getInputMethod(),
+				listener, "Type value in chat, type cancel to cancel",
+				currentValue);
 	}
 
 	/**
@@ -54,6 +107,25 @@ public class RequestManager {
 	 *            the current value
 	 */
 	public RequestManager(Player player, InputMethod method,
+			final InputListener listener, String promptText, String currentValue) {
+		request(player, method, listener, promptText, currentValue);
+	}
+
+	/**
+	 * Request.
+	 *
+	 * @param player
+	 *            the player
+	 * @param method
+	 *            the method
+	 * @param listener
+	 *            the listener
+	 * @param promptText
+	 *            the prompt text
+	 * @param currentValue
+	 *            the current value
+	 */
+	public void request(Player player, InputMethod method,
 			final InputListener listener, String promptText, String currentValue) {
 		if (method.equals(InputMethod.Anvil)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()

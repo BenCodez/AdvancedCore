@@ -14,7 +14,7 @@ public class Thread {
 
 		/*
 		 * (non-Javadoc)
-		 *
+		 * 
 		 * @see java.lang.Thread#run()
 		 */
 		@Override

@@ -38,7 +38,7 @@ public class PromptManager {
 	public void stringPrompt(Conversable conversable, PromptReturnString prompt) {
 		prompt.promptText = promptText;
 		conversationFactory.withFirstPrompt(prompt)
-		.buildConversation(conversable).begin();
+				.buildConversation(conversable).begin();
 	}
 
 }

@@ -121,7 +121,7 @@ public class User {
 	 * @return the input method
 	 */
 	public RequestManager.InputMethod getInputMethod() {
-		return RequestManager.InputMethod.valueOf(getRawData().getString(
+		return RequestManager.InputMethod.getMethod(getRawData().getString(
 				"InputMethod",
 				Config.getInstance().getRequestAPIDefaultMethod()));
 	}

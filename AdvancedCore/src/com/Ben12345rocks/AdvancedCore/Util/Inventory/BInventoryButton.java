@@ -3,10 +3,10 @@
 
 package com.Ben12345rocks.AdvancedCore.Util.Inventory;
 
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -81,10 +81,10 @@ public abstract class BInventoryButton {
 	/**
 	 * On click.
 	 *
-	 * @param event
-	 *            the event
+	 * @param clickEvent
+	 *            the click event
 	 */
-	public abstract void onClick(InventoryClickEvent event);
+	public abstract void onClick(ClickEvent clickEvent);
 
 	/**
 	 * Sets the item.

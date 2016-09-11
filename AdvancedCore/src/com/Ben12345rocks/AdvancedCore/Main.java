@@ -3,8 +3,11 @@
  */
 package com.Ben12345rocks.AdvancedCore;
 
+import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -25,6 +28,7 @@ import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
+import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.Updater;
 
@@ -54,6 +58,9 @@ public class Main extends JavaPlugin {
 
 	/** The rewards. */
 	public ArrayList<Reward> rewards;
+
+	/** The logger. */
+	private Logger logger;
 
 	/**
 	 * Check place holder API.
@@ -111,6 +118,12 @@ public class Main extends JavaPlugin {
 	public void debug(Plugin plug, String msg) {
 		if (Config.getInstance().getDebugEnabled()) {
 			plug.getLogger().info("Debug: " + msg);
+			if (logger != null && Config.getInstance().getLogDebugToFile()) {
+				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm")
+				.format(Calendar.getInstance().getTime());
+				logger.logToFile(str + " [" + plug.getName() + "] Debug: "
+						+ msg);
+			}
 			if (Config.getInstance().getDebugInfoIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (player.hasPermission("AdvancedCore.Debug")) {
@@ -233,6 +246,8 @@ public class Main extends JavaPlugin {
 			}
 		}, 1 * 60 * 1000, 5 * 60 * 1000);
 
+		logger = new Logger(this, new File(getDataFolder(), "Log"
+				+ File.pathSeparator + "Log.txt"));
 	}
 
 	/**

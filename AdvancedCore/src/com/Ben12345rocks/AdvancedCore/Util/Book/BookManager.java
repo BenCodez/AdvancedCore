@@ -119,7 +119,7 @@ public class BookManager implements Listener {
 						BookSign listener = (BookSign) meta.value();
 						listener.onBookSign(player, input);
 						player.getInventory().getItem(event.getSlot())
-						.setType(Material.AIR);
+								.setType(Material.AIR);
 						player.getInventory().setItem(event.getSlot(),
 								new ItemStack(Material.AIR));
 						player.removeMetadata("BookManager", Main.plugin);
