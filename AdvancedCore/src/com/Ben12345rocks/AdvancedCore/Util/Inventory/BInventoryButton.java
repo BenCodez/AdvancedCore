@@ -82,7 +82,7 @@ public abstract class BInventoryButton {
 	 * On click.
 	 *
 	 * @param clickEvent
-	 *            the event
+	 *            the click event
 	 */
 	public abstract void onClick(ClickEvent clickEvent);
 

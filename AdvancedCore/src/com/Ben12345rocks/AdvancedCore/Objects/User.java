@@ -452,8 +452,8 @@ public class User {
 
 								int worldRewards =
 
-								getOfflineRewardWorld(reward.getRewardName(),
-										worldName);
+										getOfflineRewardWorld(reward.getRewardName(),
+												worldName);
 
 								while (worldRewards > 0) {
 									reward.giveRewardUser(this);
@@ -551,7 +551,7 @@ public class User {
 					actionBar.send(player);
 				} catch (Exception ex) {
 					Main.plugin
-							.debug("Failed to send ActionBar, turn debug on to see stack trace");
+					.debug("Failed to send ActionBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -585,7 +585,7 @@ public class User {
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
 					Main.plugin
-							.debug("Failed to send BossBar, turn debug on to see stack trace");
+					.debug("Failed to send BossBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -652,7 +652,7 @@ public class User {
 				for (String str : msg.split("%NewLine%")) {
 					player.sendMessage(Utils.getInstance().colorize(
 							Utils.getInstance()
-									.replacePlaceHolders(player, str)));
+							.replacePlaceHolders(player, str)));
 				}
 			}
 		}
@@ -703,7 +703,7 @@ public class User {
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger()
-						.info("Failed to send Title, turn debug on to see stack trace");
+				.info("Failed to send Title, turn debug on to see stack trace");
 				if (Config.getInstance().getDebugEnabled()) {
 					ex.printStackTrace();
 				}

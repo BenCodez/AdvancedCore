@@ -59,6 +59,7 @@ public class Main extends JavaPlugin {
 	/** The rewards. */
 	public ArrayList<Reward> rewards;
 
+	/** The logger. */
 	private Logger logger;
 
 	/**
@@ -95,9 +96,9 @@ public class Main extends JavaPlugin {
 		case UPDATE_AVAILABLE: {
 			plugin.getLogger().info(
 					plugin.getName()
-							+ " has an update available! Your Version: "
-							+ plugin.getDescription().getVersion()
-							+ " New Version: " + plugin.updater.getVersion());
+					+ " has an update available! Your Version: "
+					+ plugin.getDescription().getVersion()
+					+ " New Version: " + plugin.updater.getVersion());
 			break;
 		}
 		default: {
@@ -119,7 +120,7 @@ public class Main extends JavaPlugin {
 			plug.getLogger().info("Debug: " + msg);
 			if (logger != null && Config.getInstance().getLogDebugToFile()) {
 				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm")
-						.format(Calendar.getInstance().getTime());
+				.format(Calendar.getInstance().getTime());
 				logger.logToFile(str + " [" + plug.getName() + "] Debug: "
 						+ msg);
 			}
@@ -179,7 +180,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.bukkit.plugin.java.JavaPlugin#onDisable()
 	 */
 	@Override
@@ -189,7 +190,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.bukkit.plugin.java.JavaPlugin#onEnable()
 	 */
 	@Override
@@ -220,17 +221,17 @@ public class Main extends JavaPlugin {
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
 				new Runnable() {
 
+			@Override
+			public void run() {
+				plugin.run(new Runnable() {
+
 					@Override
 					public void run() {
-						plugin.run(new Runnable() {
-
-							@Override
-							public void run() {
-								checkUpdate();
-							}
-						});
+						checkUpdate();
 					}
-				}, 10l);
+				});
+			}
+		}, 10l);
 
 		new Timer().schedule(new TimerTask() {
 

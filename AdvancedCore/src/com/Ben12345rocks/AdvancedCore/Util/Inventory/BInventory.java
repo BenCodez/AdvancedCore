@@ -31,6 +31,150 @@ import com.Ben12345rocks.AdvancedCore.Utils;
 public class BInventory implements Listener {
 
 	/**
+	 * The Class ClickEvent.
+	 */
+	public class ClickEvent {
+		
+		/** The player. */
+		private Player player;
+		
+		/** The event. */
+		private InventoryClickEvent event;
+		
+		/** The click type. */
+		private ClickType clickType;
+		
+		/** The inventory. */
+		private Inventory inventory;
+		
+		/** The slot. */
+		private int slot;
+		
+		/** The clicked item. */
+		private ItemStack clickedItem;
+
+		/**
+		 * Instantiates a new click event.
+		 *
+		 * @param event
+		 *            the event
+		 */
+		public ClickEvent(InventoryClickEvent event) {
+			this.event = event;
+			player = (Player) event.getWhoClicked();
+			clickType = event.getClick();
+			inventory = event.getInventory();
+			clickedItem = event.getCurrentItem();
+			slot = event.getSlot();
+		}
+
+		/**
+		 * Gets the click.
+		 *
+		 * @return the click
+		 */
+		public ClickType getClick() {
+			return clickType;
+		}
+
+		/**
+		 * Gets the clicked item.
+		 *
+		 * @return the clicked item
+		 */
+		public ItemStack getClickedItem() {
+			return clickedItem;
+		}
+
+		/**
+		 * Gets the click type.
+		 *
+		 * @return the click type
+		 */
+		public ClickType getClickType() {
+			return clickType;
+		}
+
+		/**
+		 * Gets the current item.
+		 *
+		 * @return the current item
+		 */
+		public ItemStack getCurrentItem() {
+			return clickedItem;
+		}
+
+		/**
+		 * Gets the event.
+		 *
+		 * @return the event
+		 */
+		public InventoryClickEvent getEvent() {
+			return event;
+		}
+
+		/**
+		 * Gets the inventory.
+		 *
+		 * @return the inventory
+		 */
+		public Inventory getInventory() {
+			return inventory;
+		}
+
+		/**
+		 * Gets the meta.
+		 *
+		 * @param player
+		 *            the player
+		 * @param str
+		 *            the str
+		 * @return the meta
+		 */
+		public Object getMeta(Player player, String str) {
+			return Utils.getInstance().getPlayerMeta(player, str);
+		}
+
+		/**
+		 * Gets the meta.
+		 *
+		 * @param str
+		 *            the str
+		 * @return the meta
+		 */
+		public Object getMeta(String str) {
+			return Utils.getInstance().getPlayerMeta(player, str);
+		}
+
+		/**
+		 * Gets the player.
+		 *
+		 * @return the player
+		 */
+		public Player getPlayer() {
+			return player;
+		}
+
+		/**
+		 * Gets the slot.
+		 *
+		 * @return the slot
+		 */
+		public int getSlot() {
+			return slot;
+		}
+
+		/**
+		 * Gets the who clicked.
+		 *
+		 * @return the who clicked
+		 */
+		public Player getWhoClicked() {
+			return player;
+		}
+	}
+
+	/**
 	 * Open inventory.
 	 *
 	 * @param player
@@ -73,10 +217,6 @@ public class BInventory implements Listener {
 			position = 53;
 		}
 		getButtons().put(position, button);
-	}
-	
-	public void setMeta(Player player, String str, Object ob) {
-		Utils.getInstance().setPlayerMeta(player, str, ob);
 	}
 
 	/**
@@ -171,7 +311,7 @@ public class BInventory implements Listener {
 
 		Inventory inv = event.getInventory();
 		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
-			//Main.plugin.debug("Inventory equal");
+			// Main.plugin.debug("Inventory equal");
 			for (int buttonSlot : getButtons().keySet()) {
 				BInventoryButton button = getButtons().get(buttonSlot);
 				if (event.getSlot() == buttonSlot) {
@@ -185,67 +325,6 @@ public class BInventory implements Listener {
 				}
 
 			}
-		}
-	}
-	
-	public class ClickEvent {
-		private Player player;
-		private InventoryClickEvent event;
-		private ClickType clickType;
-		private Inventory inventory;
-		private int slot;
-		public Player getPlayer() {
-			return player;
-		}
-		
-		public InventoryClickEvent getEvent() {
-			return event;
-		}
-		
-		public ClickType getClickType() {
-			return clickType;
-		}
-		
-		public Inventory getInventory() {
-			return inventory;
-		}
-		
-		public ItemStack getClickedItem() {
-			return clickedItem;
-		}
-		
-		private ItemStack clickedItem;
-		public ClickEvent(InventoryClickEvent event) {
-			this.event = event;
-			player = (Player) event.getWhoClicked();
-			clickType = event.getClick();
-			inventory = event.getInventory();
-			clickedItem = event.getCurrentItem();
-			slot = event.getSlot();
-		}
-		
-		public Player getWhoClicked() {
-			return player;
-		}
-		
-		public ClickType getClick() {
-			return clickType;
-		}
-		
-		public ItemStack getCurrentItem() {
-			return clickedItem;
-		}
-		
-		public int getSlot() {
-			return slot;
-		}
-		
-		public Object getMeta(Player player, String str) {
-			return Utils.getInstance().getPlayerMeta(player, str);
-		}
-
-		public Object getMeta(String str) {
-			return Utils.getInstance().getPlayerMeta(player, str);
 		}
 	}
 
@@ -289,6 +368,20 @@ public class BInventory implements Listener {
 	 */
 	public void setInventoryName(String inventoryName) {
 		this.inventoryName = Utils.getInstance().colorize(inventoryName);
+	}
+
+	/**
+	 * Sets the meta.
+	 *
+	 * @param player
+	 *            the player
+	 * @param str
+	 *            the str
+	 * @param ob
+	 *            the ob
+	 */
+	public void setMeta(Player player, String str, Object ob) {
+		Utils.getInstance().setPlayerMeta(player, str, ob);
 	}
 
 }

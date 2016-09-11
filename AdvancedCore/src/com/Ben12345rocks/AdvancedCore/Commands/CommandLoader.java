@@ -44,27 +44,27 @@ public class CommandLoader {
 			}
 		});
 		plugin.advancedCoreCommands
-		.add(new CommandHandler(new String[] { "Help" },
-				"AdvancedCore.Help", "View this page") {
+				.add(new CommandHandler(new String[] { "Help" },
+						"AdvancedCore.Help", "View this page") {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
-				msg.add(Utils.getInstance().stringToComp(
-						"&c" + plugin.getName() + " help"));
-				for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
-					msg.add(cmdHandle.getHelpLine("/advancedcore"));
-				}
-				if (sender instanceof Player) {
-					new User(plugin, (Player) sender).sendJson(msg);
-				} else {
-					sender.sendMessage(Utils.getInstance()
-							.convertArray(
-									Utils.getInstance().comptoString(
-											msg)));
-				}
-			}
-		});
+					@Override
+					public void execute(CommandSender sender, String[] args) {
+						ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
+						msg.add(Utils.getInstance().stringToComp(
+								"&c" + plugin.getName() + " help"));
+						for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
+							msg.add(cmdHandle.getHelpLine("/advancedcore"));
+						}
+						if (sender instanceof Player) {
+							new User(plugin, (Player) sender).sendJson(msg);
+						} else {
+							sender.sendMessage(Utils.getInstance()
+									.convertArray(
+											Utils.getInstance().comptoString(
+													msg)));
+						}
+					}
+				});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"SetRequestMethod", "(RequestMethod)" },

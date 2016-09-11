@@ -126,6 +126,15 @@ public class Config {
 	}
 
 	/**
+	 * Gets the log debug to file.
+	 *
+	 * @return the log debug to file
+	 */
+	public boolean getLogDebugToFile() {
+		return getData().getBoolean("LogDebugToFile", true);
+	}
+
+	/**
 	 * Gets the request API default method.
 	 *
 	 * @return the request API default method
@@ -143,10 +152,6 @@ public class Config {
 	public ArrayList<String> getRequestAPIDisabledMethods() {
 		return (ArrayList<String>) getData().getList(
 				"RequestAPI.DisabledMethods", new ArrayList<String>());
-	}
-
-	public boolean getLogDebugToFile() {
-		return getData().getBoolean("LogDebugToFile", true);
 	}
 
 	/**
@@ -205,7 +210,7 @@ public class Config {
 				plugin.saveResource("Config.yml", true);
 			} catch (IOException e) {
 				Bukkit.getServer().getLogger()
-						.severe(ChatColor.RED + "Could not create Config.yml!");
+				.severe(ChatColor.RED + "Could not create Config.yml!");
 			}
 		}
 

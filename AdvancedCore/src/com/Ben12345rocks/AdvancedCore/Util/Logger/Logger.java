@@ -7,15 +7,36 @@ import java.io.PrintWriter;
 
 import org.bukkit.plugin.Plugin;
 
+/**
+ * The Class Logger.
+ */
 public class Logger {
+	
+	/** The plugin. */
 	Plugin plugin;
+	
+	/** The location. */
 	File location;
 
+	/**
+	 * Instantiates a new logger.
+	 *
+	 * @param plugin
+	 *            the plugin
+	 * @param location
+	 *            the location
+	 */
 	public Logger(Plugin plugin, File location) {
 		this.plugin = plugin;
 		this.location = location;
 	}
 
+	/**
+	 * Log to file.
+	 *
+	 * @param message
+	 *            the message
+	 */
 	public void logToFile(String message) {
 		try {
 			File dataFolder = plugin.getDataFolder();
