@@ -266,7 +266,7 @@ public class BInventory implements Listener {
 	 */
 	public int getInventorySize() {
 		int highestSlot = getHighestSlot();
-		if (highestSlot <= 9) {
+		if (highestSlot < 9) {
 			return 9;
 		} else if (highestSlot < 18) {
 			return 18;
