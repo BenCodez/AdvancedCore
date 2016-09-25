@@ -565,17 +565,6 @@ public class ConfigRewards {
 	}
 
 	/**
-	 * Gets the permission.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the permission
-	 */
-	public String getPermission(String reward) {
-		return "VotingPlugin.Reward." + reward;
-	}
-
-	/**
 	 * Gets the potions.
 	 *
 	 * @param reward
@@ -1299,11 +1288,15 @@ public class ConfigRewards {
 	public void setWorlds(String reward, ArrayList<String> value) {
 		set(reward, "Worlds", value);
 	}
-	
+
+	public String getPermission(String reward) {
+		return getData(reward).getString("Permission", "AdvancedCore.Reward."+ reward);
+	}
+
 	public String getMessagesBroadcast(String reward) {
 		return getData(reward).getString("Messages.Broadcast");
 	}
-	
+
 	public void setMessagesBroadcast(String reward, String value) {
 		set(reward, "Messages.Broadcast", value);
 	}

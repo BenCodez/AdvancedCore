@@ -166,6 +166,8 @@ public class Reward {
 
 	private String broadcastMsg;
 
+	private String permission;
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -283,6 +285,24 @@ public class Reward {
 
 		broadcastMsg = ConfigRewards.getInstance().getMessagesBroadcast(reward);
 
+		permission = ConfigRewards.getInstance().getPermission(reward);
+
+	}
+
+	public String getBroadcastMsg() {
+		return broadcastMsg;
+	}
+
+	public void setBroadcastMsg(String broadcastMsg) {
+		this.broadcastMsg = broadcastMsg;
+	}
+
+	public String getPermission() {
+		return permission;
+	}
+
+	public void setPermission(String permission) {
+		this.permission = permission;
 	}
 
 	/**
@@ -1014,8 +1034,7 @@ public class Reward {
 	public void giveRewardUser(User user) {
 		Player player = Bukkit.getPlayer(user.getPlayerName());
 		if (player != null) {
-			if (!isRequirePermission()
-					|| player.hasPermission("VotingPlugin.Reward." + name)) {
+			if (hasPermission(user)) {
 				giveMoney(user);
 				giveItems(user);
 				giveExp(user);
@@ -1032,6 +1051,14 @@ public class Reward {
 
 			}
 		}
+	}
+
+	public boolean hasPermission(User user) {
+		if (!isRequirePermission()) {
+			return true;
+		}
+		return Utils.getInstance().hasPermission(user.getPlayerName(),
+				permission);
 	}
 
 	/**
@@ -1185,7 +1212,6 @@ public class Reward {
 		} else {
 			user.sendMessage(Config.getInstance().getFormatDefaultRewardMsg());
 		}
-		
 
 	}
 

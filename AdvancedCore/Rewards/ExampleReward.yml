@@ -49,9 +49,14 @@ Random:
   FallBack: [] 
 
 # Require permission to give this reward file
-# Permission is VotingPlugin.Reward.(REWARDNAME)
-# E.g: VotingPlugin.Reward.ExampleReward
+# Permission is AdvancedCore.Reward.(REWARDNAME) by default
+# E.g: AdvancedCore.Reward.ExampleReward
 RequirePermission: false
+
+# Permission required
+# If none is set, default permission is
+# AdvancedCore.Reward.(REWARDNAME)
+Permission: 'AdvancedCore.Reward.ExampleReward'
 
 # Worlds to give this reward in
 # Player will be given this world once he is in this world
