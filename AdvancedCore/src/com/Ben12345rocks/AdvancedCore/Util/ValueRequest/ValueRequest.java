@@ -52,7 +52,7 @@ public class ValueRequest {
 	}
 
 	public void requestBoolean(Player player, String currentValue,
-			String[] options, BooleanListener listener) {
+			BooleanListener listener) {
 		new BooleanRequester().request(player,
 				new User(Main.plugin, player).getUserInputMethod(),
 				currentValue, "Type cancel to cancel", listener);

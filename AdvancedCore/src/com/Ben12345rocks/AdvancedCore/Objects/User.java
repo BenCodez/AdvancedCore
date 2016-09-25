@@ -121,6 +121,7 @@ public class User {
 	 *
 	 * @return the input method
 	 */
+	@Deprecated
 	public RequestManager.InputMethod getInputMethod() {
 		return RequestManager.InputMethod.getMethod(getRawData().getString(
 				"InputMethod",
@@ -723,7 +724,12 @@ public class User {
 	 * @param method
 	 *            the new input method
 	 */
+	@Deprecated
 	public void setInputMethod(RequestManager.InputMethod method) {
+		setRawData("InputMethod", method.toString());
+	}
+
+	public void setUserInputMethod(InputMethod method) {
 		setRawData("InputMethod", method.toString());
 	}
 

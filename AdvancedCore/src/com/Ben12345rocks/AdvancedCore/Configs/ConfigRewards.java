@@ -1299,5 +1299,13 @@ public class ConfigRewards {
 	public void setWorlds(String reward, ArrayList<String> value) {
 		set(reward, "Worlds", value);
 	}
+	
+	public String getMessagesBroadcast(String reward) {
+		return getData(reward).getString("Messages.Broadcast");
+	}
+	
+	public void setMessagesBroadcast(String reward, String value) {
+		set(reward, "Messages.Broadcast", value);
+	}
 
 }

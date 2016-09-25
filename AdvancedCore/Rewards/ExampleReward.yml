@@ -215,4 +215,5 @@ ActionBar:
 # If no value is set, default in Format.yml is used
 Messages:
   Reward: '&aMessage on reward'
+  Broadcast: '&aThis is a broadcast'
   

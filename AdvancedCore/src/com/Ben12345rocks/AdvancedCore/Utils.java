@@ -1314,4 +1314,19 @@ public class Utils {
 		base.addExtra(newTC);
 		return base;
 	}
+
+	public void broadcast(String broadcastMsg) {
+		if (broadcastMsg != null) {
+			if (!broadcastMsg.equals("")) {
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
+					
+					@Override
+					public void run() {
+						Bukkit.broadcastMessage(broadcastMsg);
+					}
+				});
+			}
+		}
+		
+	}
 }

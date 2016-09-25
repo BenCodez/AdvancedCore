@@ -164,6 +164,8 @@ public class Reward {
 	/** The boss bar progress. */
 	private double bossBarProgress;
 
+	private String broadcastMsg;
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -278,6 +280,8 @@ public class Reward {
 		setBossBarProgress(ConfigRewards.getInstance().getBossBarProgress(
 				reward));
 		setBossBarDelay(ConfigRewards.getInstance().getBossBarDelay(reward));
+
+		broadcastMsg = ConfigRewards.getInstance().getMessagesBroadcast(reward);
 
 	}
 
@@ -1175,11 +1179,14 @@ public class Reward {
 	 *            the user
 	 */
 	public void sendMessage(User user) {
+		Utils.getInstance().broadcast(broadcastMsg);
 		if (rewardMsg != null) {
 			user.sendMessage(rewardMsg);
 		} else {
 			user.sendMessage(Config.getInstance().getFormatDefaultRewardMsg());
 		}
+		
+
 	}
 
 	/**
