@@ -22,6 +22,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptManager;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
 
 public class NumberRequester {
@@ -62,6 +63,17 @@ public class NumberRequester {
 							}
 						});
 			}
+			
+			inv.addButton(inv.getNextSlot(), new BInventoryButton(
+					"&cClick to enter custom value", new String[] {},
+					new ItemStack(Material.ANVIL)) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					new ValueRequest().requestNumber(clickEvent.getPlayer(), listener);
+				}
+			});
+			
 			inv.openInventory(player);
 
 		} else if (method.equals(InputMethod.ANVIL)
