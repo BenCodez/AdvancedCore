@@ -23,6 +23,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
 /**
  * The Class RequestManager.
  */
+@Deprecated
 public class RequestManager {
 
 	/**

@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 /**
  * InputListener
  */
+@Deprecated
 public abstract class InputListener {
 
 	/**
