@@ -1,14 +1,15 @@
 # This is a reward file
 # Define rewards in here (Items, commands, etc)
-# Go to votesites and Rewards.yml to configure when to give
-# reward files.
 # File name is the reward name, without file extention
 # This reward is named "ExampleReward"
 # DO NOT HAVE DUPLICATE NAMES!!
 
 # Reward are run top to bottom (For the most part)
 # You can just remove values you don't want (just delete it)
-# If you just want money just have a reward file containg "Money: 100", for example
+# If you just want money just have a reward file containg only "Money: 100", for example
+
+# Wiki Page: 
+# https://github.com/Ben12345rocks/AdvancedCore/wiki/Reward-files
 
 # NOTE: Do not use this reward file in more than one place if
 # delayed or timed is enabled! They will interfer with each other.
@@ -58,6 +59,25 @@ RequirePermission: false
 # AdvancedCore.Reward.(REWARDNAME)
 Permission: 'AdvancedCore.Reward.ExampleReward'
 
+# Javascript
+# Do not use this unless you know what you are doing
+# 
+# Bukkit API placeholders:
+# Using "BukkitServer" in your javascript will return Bukkit.getServer()
+# You can use any methods inside of the Server class
+# Example: BukkitServer.getBannedPlayers().size().toFixed()
+#
+# "BukkitPlayer" in your javascript will return the Player object of the player getting the reward
+# You can use any methods inside of the Player class
+# Example: BukkitPlayer.hasPermission("some.permission")
+Javascript:
+  Enabled: false
+  Expression: ''
+  # Reward files to run if expression is true
+  TrueRewards: []
+  # Reward files to run if expression is false
+  FalseRewards: []
+
 # Worlds to give this reward in
 # Player will be given this world once he is in this world
 # This may not work with money
@@ -75,7 +95,6 @@ GiveInEachWorld: false
 # Make this reward file only give rewards depending 
 # if player was online/offline when the reward attempted to give
 RewardType: 'BOTH'
-
 
 # Items to give to user
 Items:

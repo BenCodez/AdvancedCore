@@ -73,6 +73,24 @@ public class ConfigRewards {
 			}
 		}
 	}
+	
+	public boolean getJavascriptEnabled(String reward) {
+		return getData(reward).getBoolean("Javascript.Enabled");
+	}
+	
+	public String getJavascriptExpression(String reward) {
+		return getData(reward).getString("Javascript.Expression","");
+	}
+	
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getJavascriptTrueRewards(String reward) {
+		return (ArrayList<String>) getData(reward).getList("Javascript.TrueRewards",new ArrayList<String>());
+	}
+	
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getJavascriptFalseRewards(String reward) {
+		return (ArrayList<String>) getData(reward).getList("Javascript.FalseRewards",new ArrayList<String>());
+	}
 
 	/**
 	 * Gets the action bar delay.

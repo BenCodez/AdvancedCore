@@ -16,6 +16,7 @@ import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -168,6 +169,14 @@ public class Reward {
 
 	private String permission;
 
+	private boolean javascriptEnabled;
+
+	private String javascriptExpression;
+
+	private ArrayList<String> javascriptTrueRewards;
+
+	private ArrayList<String> javascriptFalseRewards;
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -287,6 +296,15 @@ public class Reward {
 
 		permission = ConfigRewards.getInstance().getPermission(reward);
 
+		setJavascriptEnabled(ConfigRewards.getInstance().getJavascriptEnabled(
+				reward));
+		setJavascriptExpression(ConfigRewards.getInstance()
+				.getJavascriptExpression(reward));
+		setJavascriptTrueRewards(ConfigRewards.getInstance()
+				.getJavascriptTrueRewards(reward));
+		setJavascriptFalseRewards(ConfigRewards.getInstance()
+				.getJavascriptFalseRewards(reward));
+
 	}
 
 	public String getBroadcastMsg() {
@@ -373,6 +391,11 @@ public class Reward {
 		} else {
 			return false;
 		}
+	}
+
+	public void runJavascript(User user, boolean online) {
+		new JavascriptHandler(user, online, getJavascriptExpression(),
+				getJavascriptTrueRewards(), getJavascriptFalseRewards());
 	}
 
 	/**
@@ -1023,6 +1046,7 @@ public class Reward {
 			}
 		}
 		giveRandom(user, online);
+		runJavascript(user, online);
 	}
 
 	/**
@@ -1040,12 +1064,12 @@ public class Reward {
 				giveExp(user);
 				runCommands(user);
 				givePotions(user);
-				sendMessage(user);
 				sendTitle(user);
 				sendActionBar(user);
 				playSound(user);
 				playEffect(user);
 				sendBossBar(user);
+				sendMessage(user);
 
 				plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 
@@ -1682,6 +1706,39 @@ public class Reward {
 	 */
 	public void setWorlds(ArrayList<String> worlds) {
 		this.worlds = worlds;
+	}
+
+	public boolean isJavascriptEnabled() {
+		return javascriptEnabled;
+	}
+
+	public void setJavascriptEnabled(boolean javascriptEnabled) {
+		this.javascriptEnabled = javascriptEnabled;
+	}
+
+	public String getJavascriptExpression() {
+		return javascriptExpression;
+	}
+
+	public void setJavascriptExpression(String javascriptExpression) {
+		this.javascriptExpression = javascriptExpression;
+	}
+
+	public ArrayList<String> getJavascriptTrueRewards() {
+		return javascriptTrueRewards;
+	}
+
+	public void setJavascriptTrueRewards(ArrayList<String> javascriptTrueRewards) {
+		this.javascriptTrueRewards = javascriptTrueRewards;
+	}
+
+	public ArrayList<String> getJavascriptFalseRewards() {
+		return javascriptFalseRewards;
+	}
+
+	public void setJavascriptFalseRewards(
+			ArrayList<String> javascriptFalseRewards) {
+		this.javascriptFalseRewards = javascriptFalseRewards;
 	}
 
 }
