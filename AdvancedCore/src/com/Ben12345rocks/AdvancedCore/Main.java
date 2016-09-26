@@ -25,6 +25,7 @@ import com.Ben12345rocks.AdvancedCore.Commands.TabComplete.AdvancedCoreTabComple
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
+import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
@@ -96,9 +97,9 @@ public class Main extends JavaPlugin {
 		case UPDATE_AVAILABLE: {
 			plugin.getLogger().info(
 					plugin.getName()
-					+ " has an update available! Your Version: "
-					+ plugin.getDescription().getVersion()
-					+ " New Version: " + plugin.updater.getVersion());
+							+ " has an update available! Your Version: "
+							+ plugin.getDescription().getVersion()
+							+ " New Version: " + plugin.updater.getVersion());
 			break;
 		}
 		default: {
@@ -120,7 +121,7 @@ public class Main extends JavaPlugin {
 			plug.getLogger().info("Debug: " + msg);
 			if (logger != null && Config.getInstance().getLogDebugToFile()) {
 				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm")
-				.format(Calendar.getInstance().getTime());
+						.format(Calendar.getInstance().getTime());
 				logger.logToFile(str + " [" + plug.getName() + "] Debug: "
 						+ msg);
 			}
@@ -180,7 +181,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.plugin.java.JavaPlugin#onDisable()
 	 */
 	@Override
@@ -190,7 +191,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.plugin.java.JavaPlugin#onEnable()
 	 */
 	@Override
@@ -208,6 +209,8 @@ public class Main extends JavaPlugin {
 		}
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this),
 				this);
+		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this),
+				this);
 
 		loadRewards();
 
@@ -221,17 +224,17 @@ public class Main extends JavaPlugin {
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
 				new Runnable() {
 
-			@Override
-			public void run() {
-				plugin.run(new Runnable() {
-
 					@Override
 					public void run() {
-						checkUpdate();
+						plugin.run(new Runnable() {
+
+							@Override
+							public void run() {
+								checkUpdate();
+							}
+						});
 					}
-				});
-			}
-		}, 10l);
+				}, 10l);
 
 		new Timer().schedule(new TimerTask() {
 
