@@ -24,7 +24,9 @@ import com.Ben12345rocks.AdvancedCore.Commands.Executor.CommandAdvancedCore;
 import com.Ben12345rocks.AdvancedCore.Commands.TabComplete.AdvancedCoreTabCompleter;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
+import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
+import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
@@ -261,6 +263,26 @@ public class Main extends JavaPlugin {
 	 */
 	public void registerHook(Plugin plugin) {
 		plugins.add(plugin);
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				String oldVersion = ServerData.getInstance().getPluginVersion(
+						plugin);
+				if (!plugin.getDescription().getVersion().equals(oldVersion)) {
+					ServerData.getInstance().setPluginVersion(plugin);
+					PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(
+							plugin, oldVersion);
+					getLogger().info(
+							plugin.getDescription().getName()
+									+ " has updated from " + oldVersion
+									+ " to "
+									+ plugin.getDescription().getVersion());
+					Bukkit.getPluginManager().callEvent(event);
+				}
+			}
+		});
+
 		Main.plugin.getLogger().info("Registered hook for " + plugin.getName());
 	}
 
