@@ -236,6 +236,23 @@ Effect:
   Particles: 10
   Radius: 5
   
+Firework:
+  Enabled: false
+  Power: 2
+  # Colors can be found here:
+  # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html
+  Colors:
+  - GRAY
+  - SILVER
+  FadeOutColor: 
+  - RED
+  Trail: true
+  Flicker: true
+  # Types can be found here:
+  # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html
+  Types:
+  - BALL_LARGE
+  
 # Send action bar
 ActionBar:
   Message: '&cThanks for Voting!'

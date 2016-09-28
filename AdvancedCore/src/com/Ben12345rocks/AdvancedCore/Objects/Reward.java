@@ -182,7 +182,71 @@ public class Reward {
 
 	private ArrayList<String> choiceRewardsRewards;
 
+	public boolean isFireworkEnabled() {
+		return fireworkEnabled;
+	}
+
+	public void setFireworkEnabled(boolean fireworkEnabled) {
+		this.fireworkEnabled = fireworkEnabled;
+	}
+
+	public boolean isFireworkFlicker() {
+		return fireworkFlicker;
+	}
+
+	public void setFireworkFlicker(boolean fireworkFlicker) {
+		this.fireworkFlicker = fireworkFlicker;
+	}
+
+	public boolean isFireworkTrail() {
+		return fireworkTrail;
+	}
+
+	public void setFireworkTrail(boolean fireworkTrail) {
+		this.fireworkTrail = fireworkTrail;
+	}
+
+	public int getFireworkPower() {
+		return fireworkPower;
+	}
+
+	public void setFireworkPower(int fireworkPower) {
+		this.fireworkPower = fireworkPower;
+	}
+
+	public ArrayList<String> getFireworkColors() {
+		return fireworkColors;
+	}
+
+	public void setFireworkColors(ArrayList<String> fireworkColors) {
+		this.fireworkColors = fireworkColors;
+	}
+
+	public ArrayList<String> getFireworkFadeOutColors() {
+		return fireworkFadeOutColors;
+	}
+
+	public void setFireworkFadeOutColors(ArrayList<String> fireworkFadeOutColors) {
+		this.fireworkFadeOutColors = fireworkFadeOutColors;
+	}
+
+	public ArrayList<String> getFireworkTypes() {
+		return fireworkTypes;
+	}
+
+	public void setFireworkTypes(ArrayList<String> fireworkTypes) {
+		this.fireworkTypes = fireworkTypes;
+	}
+
 	private boolean choiceRewardsEnabled;
+
+	private boolean fireworkEnabled;
+	private boolean fireworkFlicker;
+	private boolean fireworkTrail;
+	private int fireworkPower;
+	private ArrayList<String> fireworkColors;
+	private ArrayList<String> fireworkFadeOutColors;
+	private ArrayList<String> fireworkTypes;
 
 	/**
 	 * Instantiates a new reward.
@@ -315,6 +379,21 @@ public class Reward {
 				.getChoiceRewardsEnabled(reward));
 		this.setChoiceRewardsRewards(ConfigRewards.getInstance()
 				.getChoiceRewardsRewards(reward));
+
+		this.fireworkEnabled = ConfigRewards.getInstance().getFireworkEnabled(
+				reward);
+		this.fireworkColors = ConfigRewards.getInstance().getFireworkColors(
+				reward);
+		this.fireworkFadeOutColors = ConfigRewards.getInstance()
+				.getFireworkColorsFadeOut(reward);
+		this.fireworkPower = ConfigRewards.getInstance().getFireworkPower(
+				reward);
+		this.fireworkTypes = ConfigRewards.getInstance().getFireworkTypes(
+				reward);
+		this.fireworkTrail = ConfigRewards.getInstance().getFireworkTrail(
+				reward);
+		this.fireworkFlicker = ConfigRewards.getInstance().getFireworkFlicker(
+				reward);
 
 	}
 
@@ -1082,6 +1161,7 @@ public class Reward {
 				sendBossBar(user);
 				sendMessage(user);
 				checkChoiceRewards(user);
+				sendFirework(user);
 
 				plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 
@@ -1089,13 +1169,25 @@ public class Reward {
 		}
 	}
 
+	public void sendFirework(User user) {
+		if (isFireworkEnabled()) {
+			Utils.getInstance().launchFirework(user.getPlayer().getLocation(),
+					getFireworkPower(), getFireworkColors(),
+					getFireworkFadeOutColors(), isFireworkTrail(),
+					isFireworkFlicker(), getFireworkTypes());
+		}
+	}
+
 	public void checkChoiceRewards(User user) {
 		if (isChoiceRewardsEnabled()) {
 			Player player = user.getPlayer();
 			if (player != null) {
-				new ValueRequest(InputMethod.INVENTORY).requestString(player, "", Utils
-						.getInstance().convertArray(getChoiceRewardsRewards()),
-						false, new StringListener() {
+				new ValueRequest(InputMethod.INVENTORY).requestString(
+						player,
+						"",
+						Utils.getInstance().convertArray(
+								getChoiceRewardsRewards()), false,
+						new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {
