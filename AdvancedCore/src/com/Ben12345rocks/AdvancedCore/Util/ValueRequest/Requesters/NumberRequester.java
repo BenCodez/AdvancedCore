@@ -2,6 +2,9 @@ package com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters;
 
 import java.util.ArrayList;
 
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.chat.ClickEvent.Action;
+
 import org.bukkit.Material;
 import org.bukkit.conversations.Conversable;
 import org.bukkit.conversations.ConversationContext;
@@ -12,6 +15,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Book.BookManager;
@@ -32,7 +36,8 @@ public class NumberRequester {
 	}
 
 	public void request(Player player, InputMethod method, String currentValue,
-			String promptText, Number[] options, NumberListener listener) {
+			String promptText, Number[] options, boolean allowCustomOption,
+			NumberListener listener) {
 		if (method.equals(InputMethod.INVENTORY)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
 						.contains(InputMethod.ANVIL.toString())) {
@@ -63,17 +68,20 @@ public class NumberRequester {
 							}
 						});
 			}
-			
-			inv.addButton(inv.getNextSlot(), new BInventoryButton(
-					"&cClick to enter custom value", new String[] {},
-					new ItemStack(Material.ANVIL)) {
 
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					new ValueRequest().requestNumber(clickEvent.getPlayer(), listener);
-				}
-			});
-			
+			if (allowCustomOption) {
+				inv.addButton(inv.getNextSlot(), new BInventoryButton(
+						"&cClick to enter custom value", new String[] {},
+						new ItemStack(Material.ANVIL)) {
+
+					@Override
+					public void onClick(ClickEvent clickEvent) {
+						new ValueRequest().requestNumber(
+								clickEvent.getPlayer(), listener);
+					}
+				});
+			}
+
 			inv.openInventory(player);
 
 		} else if (method.equals(InputMethod.ANVIL)
@@ -121,6 +129,30 @@ public class NumberRequester {
 		} else if (method.equals(InputMethod.CHAT)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
 						.contains(InputMethod.CHAT.toString())) {
+			if (options != null) {
+				User user = new User(Main.plugin, player);
+				user.sendMessage("&cClick one of the following options below:");
+				for (Number num : options) {
+					String option = num.toString();
+					TextComponent comp = new TextComponent(option);
+					Utils.getInstance().setPlayerMeta(player,
+							"ValueRequestNumber", listener);
+					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+							Action.RUN_COMMAND,
+							"advancedcore ValueRequestNumber " + option));
+					user.sendJson(comp);
+				}
+				if (allowCustomOption) {
+					String option = "CustomValue";
+					TextComponent comp = new TextComponent(option);
+					Utils.getInstance().setPlayerMeta(player,
+							"ValueRequestNumber", listener);
+					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+							Action.RUN_COMMAND,
+							"advancedcore ValueRequestNumber " + option));
+					user.sendJson(comp);
+				}
+			}
 			ConversationFactory convoFactory = new ConversationFactory(
 					Main.plugin).withModality(true)
 					.withEscapeSequence("cancel").withTimeout(60);

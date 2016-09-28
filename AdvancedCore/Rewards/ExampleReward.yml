@@ -77,6 +77,14 @@ Javascript:
   TrueRewards: []
   # Reward files to run if expression is false
   FalseRewards: []
+  
+# Let the user pick a reward file to get
+# User can only pick one
+ChoiceRewards:
+  Enabled: false
+  Rewards:
+  - Iron
+  - Gold
 
 # Worlds to give this reward in
 # Player will be given this world once he is in this world

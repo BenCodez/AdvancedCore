@@ -17,6 +17,9 @@ import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -177,6 +180,10 @@ public class Reward {
 
 	private ArrayList<String> javascriptFalseRewards;
 
+	private ArrayList<String> choiceRewardsRewards;
+
+	private boolean choiceRewardsEnabled;
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -304,6 +311,10 @@ public class Reward {
 				.getJavascriptTrueRewards(reward));
 		setJavascriptFalseRewards(ConfigRewards.getInstance()
 				.getJavascriptFalseRewards(reward));
+		this.setChoiceRewardsEnabled(ConfigRewards.getInstance()
+				.getChoiceRewardsEnabled(reward));
+		this.setChoiceRewardsRewards(ConfigRewards.getInstance()
+				.getChoiceRewardsRewards(reward));
 
 	}
 
@@ -1070,9 +1081,33 @@ public class Reward {
 				playEffect(user);
 				sendBossBar(user);
 				sendMessage(user);
+				checkChoiceRewards(user);
 
 				plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 
+			}
+		}
+	}
+
+	public void checkChoiceRewards(User user) {
+		if (isChoiceRewardsEnabled()) {
+			Player player = user.getPlayer();
+			if (player != null) {
+				new ValueRequest(InputMethod.INVENTORY).requestString(player, "", Utils
+						.getInstance().convertArray(getChoiceRewardsRewards()),
+						false, new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								ConfigRewards
+										.getInstance()
+										.getReward(value)
+										.giveReward(
+												new User(Main.plugin, player),
+												true);
+
+							}
+						});
 			}
 		}
 	}
@@ -1739,6 +1774,22 @@ public class Reward {
 	public void setJavascriptFalseRewards(
 			ArrayList<String> javascriptFalseRewards) {
 		this.javascriptFalseRewards = javascriptFalseRewards;
+	}
+
+	public ArrayList<String> getChoiceRewardsRewards() {
+		return choiceRewardsRewards;
+	}
+
+	public void setChoiceRewardsRewards(ArrayList<String> choiceRewardsRewards) {
+		this.choiceRewardsRewards = choiceRewardsRewards;
+	}
+
+	public boolean isChoiceRewardsEnabled() {
+		return choiceRewardsEnabled;
+	}
+
+	public void setChoiceRewardsEnabled(boolean choiceRewardsEnabled) {
+		this.choiceRewardsEnabled = choiceRewardsEnabled;
 	}
 
 }

@@ -73,23 +73,35 @@ public class ConfigRewards {
 			}
 		}
 	}
-	
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getChoiceRewardsRewards(String reward) {
+		return (ArrayList<String>) getData(reward).getList(
+				"ChoiceRewards.Rewards", new ArrayList<String>());
+	}
+
+	public boolean getChoiceRewardsEnabled(String reward) {
+		return getData(reward).getBoolean("ChoiceRewards.Enabled");
+	}
+
 	public boolean getJavascriptEnabled(String reward) {
 		return getData(reward).getBoolean("Javascript.Enabled");
 	}
-	
+
 	public String getJavascriptExpression(String reward) {
-		return getData(reward).getString("Javascript.Expression","");
+		return getData(reward).getString("Javascript.Expression", "");
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getJavascriptTrueRewards(String reward) {
-		return (ArrayList<String>) getData(reward).getList("Javascript.TrueRewards",new ArrayList<String>());
+		return (ArrayList<String>) getData(reward).getList(
+				"Javascript.TrueRewards", new ArrayList<String>());
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getJavascriptFalseRewards(String reward) {
-		return (ArrayList<String>) getData(reward).getList("Javascript.FalseRewards",new ArrayList<String>());
+		return (ArrayList<String>) getData(reward).getList(
+				"Javascript.FalseRewards", new ArrayList<String>());
 	}
 
 	/**
@@ -1308,7 +1320,8 @@ public class ConfigRewards {
 	}
 
 	public String getPermission(String reward) {
-		return getData(reward).getString("Permission", "AdvancedCore.Reward."+ reward);
+		return getData(reward).getString("Permission",
+				"AdvancedCore.Reward." + reward);
 	}
 
 	public String getMessagesBroadcast(String reward) {

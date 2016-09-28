@@ -14,6 +14,11 @@ import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class CommandLoader.
@@ -135,6 +140,69 @@ public class CommandLoader {
 			}
 		});
 
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"ValueRequestString", "(String)" },
+				"AdvancedCore.ValueRequest", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					StringListener listener = (StringListener) Utils
+							.getInstance().getPlayerMeta(player,
+									"ValueRequestString");
+					if (args[1].equals("CustomValue")) {
+						new ValueRequest().requestString(player, listener);
+					} else {
+						listener.onInput(player, args[1]);
+					}
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value");
+				}
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"ValueRequestNumber", "(Number)" },
+				"AdvancedCore.ValueRequest", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					NumberListener listener = (NumberListener) Utils
+							.getInstance().getPlayerMeta(player,
+									"ValueRequestNumber");
+					if (args[1].equals("CustomValue")) {
+						new ValueRequest().requestNumber(player, listener);
+					} else {
+						Number number = (Double) Double.valueOf(args[1]);
+						listener.onInput(player, number);
+					}
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value");
+				}
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"ValueRequestBoolean", "(Boolean)" },
+				"AdvancedCore.ValueRequest", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					BooleanListener listener = (BooleanListener) Utils
+							.getInstance().getPlayerMeta(player,
+									"ValueRequestBoolean");
+					listener.onInput(player, Boolean.valueOf(args[1]));
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value");
+				}
+			}
+		});
+
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
@@ -149,6 +217,7 @@ public class CommandLoader {
 						});
 			}
 		});
+
 	}
 
 	/**

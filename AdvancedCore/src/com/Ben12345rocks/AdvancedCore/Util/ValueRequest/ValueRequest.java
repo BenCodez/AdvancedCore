@@ -15,47 +15,90 @@ public class ValueRequest {
 	/** The plugin. */
 	static Main plugin = Main.plugin;
 
-	public ValueRequest() {
+	private InputMethod method = null;
 
+	public ValueRequest() {
+	}
+
+	public ValueRequest(InputMethod method) {
+		this.method = method;
 	}
 
 	public void requestString(Player player, StringListener listener) {
-		new StringRequester().request(player,
-				new User(Main.plugin, player).getUserInputMethod(), "",
-				"Type cancel to cancel", null, listener);
+		InputMethod input = method;
+		if (input == null) {
+			input = new User(Main.plugin, player).getUserInputMethod();
+		}
+		new StringRequester().request(player, input, "",
+				"Type cancel to cancel", null, true, listener);
 	}
 
 	public void requestString(Player player, String currentValue,
 			String[] options, StringListener listener) {
-		new StringRequester().request(player,
-				new User(Main.plugin, player).getUserInputMethod(),
-				currentValue, "Type cancel to cancel", options, listener);
+		InputMethod input = method;
+		if (input == null) {
+			input = new User(Main.plugin, player).getUserInputMethod();
+		}
+		new StringRequester().request(player, input, currentValue,
+				"Type cancel to cancel", options, true, listener);
+	}
+
+	public void requestString(Player player, String currentValue,
+			String[] options, boolean allowCustomOption, StringListener listener) {
+		InputMethod input = method;
+		if (input == null) {
+			input = new User(Main.plugin, player).getUserInputMethod();
+		}
+		new StringRequester().request(player, input, currentValue,
+				"Type cancel to cancel", options, allowCustomOption, listener);
 	}
 
 	public void requestNumber(Player player, NumberListener listener) {
-		new NumberRequester().request(player,
-				new User(Main.plugin, player).getUserInputMethod(), "",
-				"Type cancel to cancel", null, listener);
+		InputMethod input = method;
+		if (input == null) {
+			input = new User(Main.plugin, player).getUserInputMethod();
+		}
+		new NumberRequester().request(player, input, "",
+				"Type cancel to cancel", null, true, listener);
 	}
 
 	public void requestNumber(Player player, String currentValue,
 			Number[] options, NumberListener listener) {
-		new NumberRequester().request(player,
-				new User(Main.plugin, player).getUserInputMethod(),
-				currentValue, "Type cancel to cancel", options, listener);
+		InputMethod input = method;
+		if (input == null) {
+			input = new User(Main.plugin, player).getUserInputMethod();
+		}
+		new NumberRequester().request(player, input, currentValue,
+				"Type cancel to cancel", options, true, listener);
+	}
+
+	public void requestNumber(Player player, String currentValue,
+			Number[] options, boolean allowCustomOption, NumberListener listener) {
+		InputMethod input = method;
+		if (input == null) {
+			input = new User(Main.plugin, player).getUserInputMethod();
+		}
+		new NumberRequester().request(player, input, currentValue,
+				"Type cancel to cancel", options, allowCustomOption, listener);
 	}
 
 	public void requestBoolean(Player player, BooleanListener listener) {
-		new BooleanRequester().request(player,
-				new User(Main.plugin, player).getUserInputMethod(), "",
+		InputMethod input = method;
+		if (input == null) {
+			input = new User(Main.plugin, player).getUserInputMethod();
+		}
+		new BooleanRequester().request(player, input, "",
 				"Type cancel to cancel", listener);
 	}
 
 	public void requestBoolean(Player player, String currentValue,
 			BooleanListener listener) {
-		new BooleanRequester().request(player,
-				new User(Main.plugin, player).getUserInputMethod(),
-				currentValue, "Type cancel to cancel", listener);
+		InputMethod input = method;
+		if (input == null) {
+			input = new User(Main.plugin, player).getUserInputMethod();
+		}
+		new BooleanRequester().request(player, input, currentValue,
+				"Type cancel to cancel", listener);
 	}
 
 }

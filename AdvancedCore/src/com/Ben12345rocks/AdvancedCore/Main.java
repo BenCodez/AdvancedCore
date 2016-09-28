@@ -25,6 +25,7 @@ import com.Ben12345rocks.AdvancedCore.Commands.TabComplete.AdvancedCoreTabComple
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
+import com.Ben12345rocks.AdvancedCore.Listeners.AdvancedCoreUpdateEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
@@ -213,6 +214,8 @@ public class Main extends JavaPlugin {
 				this);
 		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this),
 				this);
+		Bukkit.getPluginManager().registerEvents(
+				new AdvancedCoreUpdateEvent(this), this);
 
 		loadRewards();
 
