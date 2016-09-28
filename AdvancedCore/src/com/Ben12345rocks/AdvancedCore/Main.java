@@ -330,6 +330,7 @@ public class Main extends JavaPlugin {
 	 */
 	private void setupFiles() {
 		Config.getInstance().setup(this);
+		ServerData.getInstance().setup(this);
 
 	}
 

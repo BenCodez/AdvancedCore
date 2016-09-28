@@ -1336,13 +1336,16 @@ public class ConfigRewards {
 			plugin.getDataFolder().mkdir();
 		}
 
-		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator
-				+ "ExampleReward.yml");
-		if (!file.exists()) {
-			plugin.saveResource("Rewards" + File.separator
-					+ "ExampleReward.yml", true);
-		}
+		copyFile("ExampleBasic.yml");
+		copyFile("ExampleAdvanced.yml");
+	}
 
+	private void copyFile(String fileName) {
+		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator
+				+ fileName);
+		if (!file.exists()) {
+			plugin.saveResource("Rewards" + File.separator + fileName, true);
+		}
 	}
 
 	/**
