@@ -81,41 +81,37 @@ public class ConfigRewards {
 	}
 
 	public boolean getFireworkEnabled(String reward) {
-		return getData(reward).getConfigurationSection("Firework").getBoolean(
-				"Enabled");
+		return getData(reward).getBoolean("Firework.Enabled");
 	}
 
 	public boolean getFireworkFlicker(String reward) {
-		return getData(reward).getConfigurationSection("Firework").getBoolean(
-				"Flicker");
+		return getData(reward).getBoolean("Firework.Flicker");
 	}
 
 	public boolean getFireworkTrail(String reward) {
-		return getData(reward).getConfigurationSection("Firework").getBoolean(
-				"Trail");
+		return getData(reward).getBoolean("Firework.Trail");
 	}
 
 	public int getFireworkPower(String reward) {
-		return getData(reward).getConfigurationSection("Firework").getInt(
-				"Power");
+		return getData(reward).getInt("Firework.Power");
 	}
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkColors(String reward) {
-		return (ArrayList<String>) getData(reward).getConfigurationSection(
-				"Firework").getList("Colors", new ArrayList<String>());
+		return (ArrayList<String>) getData(reward).getList("Firework.Colors",
+				new ArrayList<String>());
 	}
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkColorsFadeOut(String reward) {
-		return (ArrayList<String>) getData(reward).getConfigurationSection(
-				"Firework").getList("FadeOutColor", new ArrayList<String>());
+		return (ArrayList<String>) getData(reward).getList(
+				"Firework.FadeOutColor", new ArrayList<String>());
 	}
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkTypes(String reward) {
-		return (ArrayList<String>) getData(reward).getConfigurationSection(
-				"Firework").getList("Types", new ArrayList<String>());
+		return (ArrayList<String>) getData(reward).getList("Firework.Types",
+				new ArrayList<String>());
 	}
 
 	public boolean getChoiceRewardsEnabled(String reward) {

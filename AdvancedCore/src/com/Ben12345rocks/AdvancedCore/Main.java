@@ -255,7 +255,7 @@ public class Main extends JavaPlugin {
 		}, 1 * 60 * 1000, 5 * 60 * 1000);
 
 		logger = new Logger(this, new File(getDataFolder(), "Log"
-				+ File.pathSeparator + "Log.txt"));
+				+ File.separator + "Log.txt"));
 	}
 
 	/**
