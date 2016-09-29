@@ -848,7 +848,8 @@ public class Utils {
 	 */
 	public String replacePlaceHolders(Player player, String text) {
 		if (plugin.placeHolderAPIEnabled) {
-			return PlaceholderAPI.setBracketPlaceholders(player, text);
+			return PlaceholderAPI.setBracketPlaceholders(player,
+					PlaceholderAPI.setPlaceholders(player, text));
 		} else {
 			return text;
 		}
