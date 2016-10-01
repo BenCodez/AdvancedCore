@@ -38,9 +38,16 @@ public class StringRequester {
 	public void request(Player player, InputMethod method, String currentValue,
 			String promptText, String[] options, boolean allowCustomOption,
 			StringListener listener) {
+		if (options == null && method.equals(InputMethod.INVENTORY)
+				&& allowCustomOption) {
+			method = InputMethod.ANVIL;
+		}
+		if (options != null && method.equals(InputMethod.ANVIL)) {
+			method = InputMethod.INVENTORY;
+		}
 		if (method.equals(InputMethod.INVENTORY)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.ANVIL.toString())) {
+						.contains(InputMethod.INVENTORY.toString())) {
 			if (options == null) {
 				player.sendMessage("There are no choices to choice from to use this method");
 				return;

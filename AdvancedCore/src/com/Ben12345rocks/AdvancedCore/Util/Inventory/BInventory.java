@@ -22,6 +22,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 
 // TODO: Auto-generated Javadoc
@@ -33,6 +34,8 @@ public class BInventory implements Listener {
 	private boolean pages = false;
 
 	private int page = 1;
+	
+	private int maxPage = 1;
 
 	/**
 	 * The Class ClickEvent.
@@ -217,9 +220,6 @@ public class BInventory implements Listener {
 	 *            the button
 	 */
 	public void addButton(int position, BInventoryButton button) {
-		if (position >= 54) {
-			position = 53;
-		}
 		getButtons().put(position, button);
 	}
 
@@ -345,22 +345,20 @@ public class BInventory implements Listener {
 						return;
 					}
 
-				} else
-
-				if (event.getSlot() == 45) {
-					event.setCancelled(true);
+				} else if (slot == 45) {
 					if (page > 1) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
 						openInventory(player, page--);
 					}
-				} else if (event.getSlot() == 53) {
-
-					event.setCancelled(true);
-					if (getButtons().size() / 45 > page ) {
+				} else if (slot == 53) {
+					Main.plugin.debug(maxPage + " " + page);
+					if (maxPage > page ) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
-						openInventory(player, page++);
+						int nextPage = page+1;
+						openInventory(player, nextPage);
+						Main.plugin.debug("Opening inv");
 					}
 
 				}
@@ -378,7 +376,7 @@ public class BInventory implements Listener {
 		BInventory inventory = this;
 
 		pages = false;
-		if (inventory.getHighestSlot() > 45) {
+		if (inventory.getHighestSlot() > 53) {
 			this.pages = true;
 		}
 		if (!pages) {
@@ -400,6 +398,10 @@ public class BInventory implements Listener {
 			}
 			player.openInventory(inv);
 		} else {
+			this.maxPage = getHighestSlot()/45;
+			if (getHighestSlot()%45 != 0) {
+				this.maxPage++;
+			}
 			openInventory(player, 1);
 		}
 
@@ -414,6 +416,7 @@ public class BInventory implements Listener {
 		if (startSlot != 0) {
 			startSlot--;
 		}
+		int maxSlot = getHighestSlot();
 		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
 				.entrySet()) {
 			int slot = pair.getKey();
@@ -421,7 +424,7 @@ public class BInventory implements Listener {
 				slot -= startSlot;
 			}
 
-			if (slot < 45) {
+			if (slot < 45 && maxSlot <= pair.getKey()) {
 				ItemStack item = pair.getValue().getItem();
 				ItemMeta meta = item.getItemMeta();
 				if (pair.getValue().getName() != null) {

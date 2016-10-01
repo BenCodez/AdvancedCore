@@ -38,6 +38,13 @@ public class NumberRequester {
 	public void request(Player player, InputMethod method, String currentValue,
 			String promptText, Number[] options, boolean allowCustomOption,
 			NumberListener listener) {
+		if (options == null && method.equals(InputMethod.INVENTORY)
+				&& allowCustomOption) {
+			method = InputMethod.ANVIL;
+		}
+		if (options != null && method.equals(InputMethod.ANVIL)) {
+			method = InputMethod.INVENTORY;
+		}
 		if (method.equals(InputMethod.INVENTORY)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
 						.contains(InputMethod.ANVIL.toString())) {
