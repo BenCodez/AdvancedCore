@@ -62,7 +62,7 @@ RequirePermission: false
 # Permission required
 # If none is set, default permission is
 # AdvancedCore.Reward.(REWARDNAME)
-Permission: 'AdvancedCore.Reward.ExampleReward'
+Permission: 'AdvancedCore.Reward.ExampleAdvanced'
 
 # Javascript
 # Do not use this unless you know what you are doing

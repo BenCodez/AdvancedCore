@@ -6,11 +6,11 @@ package com.Ben12345rocks.AdvancedCore.Util.Inventory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -30,26 +30,30 @@ import com.Ben12345rocks.AdvancedCore.Utils;
  */
 public class BInventory implements Listener {
 
+	private boolean pages = false;
+
+	private int page = 1;
+
 	/**
 	 * The Class ClickEvent.
 	 */
 	public class ClickEvent {
-		
+
 		/** The player. */
 		private Player player;
-		
+
 		/** The event. */
 		private InventoryClickEvent event;
-		
+
 		/** The click type. */
 		private ClickType clickType;
-		
+
 		/** The inventory. */
 		private Inventory inventory;
-		
+
 		/** The slot. */
 		private int slot;
-		
+
 		/** The clicked item. */
 		private ItemStack clickedItem;
 
@@ -312,18 +316,54 @@ public class BInventory implements Listener {
 		Inventory inv = event.getInventory();
 		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
 			// Main.plugin.debug("Inventory equal");
-			for (int buttonSlot : getButtons().keySet()) {
-				BInventoryButton button = getButtons().get(buttonSlot);
-				if (event.getSlot() == buttonSlot) {
-					// Main.plugin.debug("Running onclick");
-					Player player = (Player) event.getWhoClicked();
-					event.setCancelled(true);
-					player.closeInventory();
-					button.onClick(new ClickEvent(event));
-					destroy();
-					return;
-				}
 
+			if (!pages) {
+				for (int buttonSlot : getButtons().keySet()) {
+					BInventoryButton button = getButtons().get(buttonSlot);
+					if (event.getSlot() == buttonSlot) {
+						// Main.plugin.debug("Running onclick");
+						Player player = (Player) event.getWhoClicked();
+						event.setCancelled(true);
+						player.closeInventory();
+						button.onClick(new ClickEvent(event));
+						destroy();
+						return;
+					}
+
+				}
+			} else {
+				event.setCancelled(true);
+				int slot = event.getSlot();
+				if (slot < 45) {
+					int buttonSlot = (page - 1) * 45 + event.getSlot();
+					BInventoryButton button = getButtons().get(buttonSlot);
+					if (button != null) {
+						Player player = (Player) event.getWhoClicked();
+						player.closeInventory();
+						button.onClick(new ClickEvent(event));
+						destroy();
+						return;
+					}
+
+				} else
+
+				if (event.getSlot() == 45) {
+					event.setCancelled(true);
+					if (page > 1) {
+						Player player = (Player) event.getWhoClicked();
+						player.closeInventory();
+						openInventory(player, page--);
+					}
+				} else if (event.getSlot() == 53) {
+
+					event.setCancelled(true);
+					if (getButtons().size() / 45 > page ) {
+						Player player = (Player) event.getWhoClicked();
+						player.closeInventory();
+						openInventory(player, page++);
+					}
+
+				}
 			}
 		}
 	}
@@ -336,13 +376,16 @@ public class BInventory implements Listener {
 	 */
 	public void openInventory(Player player) {
 		BInventory inventory = this;
-		Inventory inv = Bukkit.createInventory(player,
-				inventory.getInventorySize(), inventory.getInventoryName());
-		Iterator<Entry<Integer, BInventoryButton>> it = inventory.getButtons()
-				.entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry<Integer, BInventoryButton> pair = it.next();
-			{
+
+		pages = false;
+		if (inventory.getHighestSlot() > 45) {
+			this.pages = true;
+		}
+		if (!pages) {
+			Inventory inv = Bukkit.createInventory(player,
+					inventory.getInventorySize(), inventory.getInventoryName());
+			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
+					.entrySet()) {
 				ItemStack item = pair.getValue().getItem();
 				ItemMeta meta = item.getItemMeta();
 				if (pair.getValue().getName() != null) {
@@ -355,8 +398,49 @@ public class BInventory implements Listener {
 				item.setItemMeta(meta);
 				inv.setItem(pair.getKey(), item);
 			}
-			inv.setItem(pair.getKey(), pair.getValue().getItem());
+			player.openInventory(inv);
+		} else {
+			openInventory(player, 1);
 		}
+
+	}
+
+	private void openInventory(Player player, int page) {
+		BInventory inventory = this;
+		Inventory inv = Bukkit.createInventory(player, 54,
+				inventory.getInventoryName());
+		this.page = page;
+		int startSlot = (page - 1) * 45;
+		if (startSlot != 0) {
+			startSlot--;
+		}
+		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
+				.entrySet()) {
+			int slot = pair.getKey();
+			if (slot > startSlot) {
+				slot -= startSlot;
+			}
+
+			if (slot < 45) {
+				ItemStack item = pair.getValue().getItem();
+				ItemMeta meta = item.getItemMeta();
+				if (pair.getValue().getName() != null) {
+					meta.setDisplayName(pair.getValue().getName());
+				}
+				if (pair.getValue().getLore() != null) {
+					meta.setLore(new ArrayList<String>(Arrays.asList(pair
+							.getValue().getLore())));
+				}
+				item.setItemMeta(meta);
+				inv.setItem(slot, item);
+			}
+
+		}
+		inv.setItem(45, new ItemStack(Material.STAINED_GLASS_PANE, 1,
+				(short) 15));
+		inv.setItem(53, new ItemStack(Material.STAINED_GLASS_PANE, 1,
+				(short) 15));
+
 		player.openInventory(inv);
 	}
 

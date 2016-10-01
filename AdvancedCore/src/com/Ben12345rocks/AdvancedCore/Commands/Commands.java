@@ -223,8 +223,12 @@ public class Commands {
 
 				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
 						player, "Reward");
+				Number[] nums = new Number[101];
+				for (int i = 0; i < nums.length; i++) {
+					nums[i] = i;
+				}
 				new ValueRequest().requestNumber(player,
-						Double.toString(reward.getChance()), null,
+						Double.toString(reward.getChance()), nums,
 						new NumberListener() {
 
 							@Override
@@ -660,6 +664,37 @@ public class Commands {
 				BInventory inv = new BInventory("RemoveConsoleCommand: "
 						+ reward.getRewardName());
 				int count = 0;
+				new ValueRequest().requestString(
+						player,
+						"",
+						Utils.getInstance().convertArray(
+								ConfigRewards.getInstance().getCommandsConsole(
+										reward.getRewardName())), false,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+								ArrayList<String> commands = ConfigRewards
+										.getInstance().getCommandsConsole(
+												reward.getRewardName());
+								if (event.getCurrentItem() != null
+										&& !event.getCurrentItem().getType()
+												.equals(Material.AIR)) {
+									commands.remove(event.getCurrentItem()
+											.getItemMeta().getDisplayName());
+									ConfigRewards.getInstance()
+											.setCommandsConsole(
+													reward.getRewardName(),
+													commands);
+
+								}
+								player.closeInventory();
+								player.sendMessage("Removed command");
+								plugin.reload();
+							}
+						});
 				for (String cmd : ConfigRewards.getInstance()
 						.getCommandsConsole(reward.getRewardName())) {
 					inv.addButton(count, new BInventoryButton(cmd,
@@ -805,8 +840,28 @@ public class Commands {
 				lore.add("Timed: " + reward.getTimedHour() + ":"
 						+ reward.getTimedMinute());
 			}
+			if (reward.getChance() != 0 && reward.getChance() != 100) {
+				lore.add("Chance: " + reward.getChance());
+			}
 			if (reward.isRequirePermission()) {
 				lore.add("RequirePermission: true");
+				lore.add("Permssion: " + reward.getPermission());
+			}
+			if (reward.isJavascriptEnabled()) {
+				lore.add("Javascript: true");
+				lore.add("Expression: " + reward.getJavascriptExpression());
+				lore.add("TrueRewards: "
+						+ Utils.getInstance().makeStringList(
+								reward.getJavascriptTrueRewards()));
+				lore.add("FalseRewards: "
+						+ Utils.getInstance().makeStringList(
+								reward.getJavascriptFalseRewards()));
+			}
+			if (reward.isChoiceRewardsEnabled()) {
+				lore.add("ChoiceRewards: true");
+				lore.add("Rewards: "
+						+ Utils.getInstance().makeStringList(
+								reward.getChoiceRewardsRewards()));
 			}
 			if (reward.getWorlds().size() > 0) {
 				lore.add("Worlds: "
@@ -927,6 +982,22 @@ public class Commands {
 								reward.getRewardName()));
 			}
 
+			if (reward.isFireworkEnabled()) {
+				lore.add("Firework: true");
+				lore.add("Power: " + reward.getFireworkPower());
+				lore.add("Colors: "
+						+ Utils.getInstance().makeStringList(
+								reward.getFireworkColors()));
+				lore.add("FadeOutColors: "
+						+ Utils.getInstance().makeStringList(
+								reward.getFireworkFadeOutColors()));
+				lore.add("Types: "
+						+ Utils.getInstance().makeStringList(
+								reward.getFireworkTypes()));
+				lore.add("Trail: " + reward.isFireworkTrail());
+				lore.add("Flicker: " + reward.isFireworkFlicker());
+			}
+
 			if (reward.getActionBarMsg() != null) {
 				lore.add("ActioBarMessage/Delay: " + reward.getActionBarMsg()
 						+ "/" + reward.getActionBarDelay());
@@ -940,11 +1011,11 @@ public class Commands {
 
 				@Override
 				public void onClick(ClickEvent event) {
-					if (event.getWhoClicked() instanceof Player) {
-						Player player = event.getWhoClicked();
-						openRewardGUI(player, event.getCurrentItem()
-								.getItemMeta().getDisplayName());
-					}
+
+					Player player = event.getWhoClicked();
+					openRewardGUI(player, event.getCurrentItem().getItemMeta()
+							.getDisplayName());
+
 				}
 			});
 			count++;
