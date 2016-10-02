@@ -29,12 +29,36 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
 
+/**
+ * The Class NumberRequester.
+ */
 public class NumberRequester {
 
+	/**
+	 * Instantiates a new number requester.
+	 */
 	public NumberRequester() {
 
 	}
 
+	/**
+	 * Request.
+	 *
+	 * @param player
+	 *            the player
+	 * @param method
+	 *            the method
+	 * @param currentValue
+	 *            the current value
+	 * @param promptText
+	 *            the prompt text
+	 * @param options
+	 *            the options
+	 * @param allowCustomOption
+	 *            the allow custom option
+	 * @param listener
+	 *            the listener
+	 */
 	public void request(Player player, InputMethod method, String currentValue,
 			String promptText, Number[] options, boolean allowCustomOption,
 			NumberListener listener) {

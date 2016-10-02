@@ -256,6 +256,8 @@ public class Main extends JavaPlugin {
 
 		logger = new Logger(this, new File(getDataFolder(), "Log"
 				+ File.separator + "Log.txt"));
+		
+		checkUpdateEvent(plugin);
 	}
 
 	/**
@@ -266,6 +268,18 @@ public class Main extends JavaPlugin {
 	 */
 	public void registerHook(Plugin plugin) {
 		plugins.add(plugin);
+		checkUpdateEvent(plugin);
+
+		Main.plugin.getLogger().info("Registered hook for " + plugin.getName());
+	}
+	
+	/**
+	 * Check update event.
+	 *
+	 * @param plugin
+	 *            the plugin
+	 */
+	public void checkUpdateEvent(Plugin plugin) {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
@@ -285,8 +299,6 @@ public class Main extends JavaPlugin {
 				}
 			}
 		});
-
-		Main.plugin.getLogger().info("Registered hook for " + plugin.getName());
 	}
 
 	/**

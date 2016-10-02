@@ -31,10 +31,13 @@ import com.Ben12345rocks.AdvancedCore.Utils;
  */
 public class BInventory implements Listener {
 
+	/** The pages. */
 	private boolean pages = false;
 
+	/** The page. */
 	private int page = 1;
 	
+	/** The max page. */
 	private int maxPage = 1;
 
 	/**
@@ -408,6 +411,14 @@ public class BInventory implements Listener {
 
 	}
 
+	/**
+	 * Open inventory.
+	 *
+	 * @param player
+	 *            the player
+	 * @param page
+	 *            the page
+	 */
 	private void openInventory(Player player, int page) {
 		BInventory inventory = this;
 		Inventory inv = Bukkit.createInventory(player, 54,

@@ -4,6 +4,9 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 
+/**
+ * The Class PluginUpdateVersionEvent.
+ */
 public class PluginUpdateVersionEvent extends Event {
 
 	/** The Constant handlers. */
@@ -18,19 +21,20 @@ public class PluginUpdateVersionEvent extends Event {
 		return handlers;
 	}
 
-	/** The cancelled. */
-	private boolean cancelled;
 
+	/** The plugin. */
 	private Plugin plugin;
+	
+	/** The old version. */
 	private String oldVersion;
 
 	/**
-	 * Instantiates a new player reward event.
+	 * Instantiates a new plugin update version event.
 	 *
-	 * @param reward
-	 *            the reward
-	 * @param player
-	 *            the player
+	 * @param plugin
+	 *            the plugin
+	 * @param oldVersion
+	 *            the old version
 	 */
 	public PluginUpdateVersionEvent(Plugin plugin, String oldVersion) {
 		super();
@@ -38,18 +42,40 @@ public class PluginUpdateVersionEvent extends Event {
 		this.oldVersion = oldVersion;
 	}
 
+	/**
+	 * Gets the plugin.
+	 *
+	 * @return the plugin
+	 */
 	public Plugin getPlugin() {
 		return plugin;
 	}
 
+	/**
+	 * Sets the plugin.
+	 *
+	 * @param plugin
+	 *            the new plugin
+	 */
 	public void setPlugin(Plugin plugin) {
 		this.plugin = plugin;
 	}
 
+	/**
+	 * Gets the old version.
+	 *
+	 * @return the old version
+	 */
 	public String getOldVersion() {
 		return oldVersion;
 	}
 
+	/**
+	 * Sets the old version.
+	 *
+	 * @param oldVersion
+	 *            the new old version
+	 */
 	public void setOldVersion(String oldVersion) {
 		this.oldVersion = oldVersion;
 	}
@@ -62,25 +88,6 @@ public class PluginUpdateVersionEvent extends Event {
 	@Override
 	public HandlerList getHandlers() {
 		return handlers;
-	}
-
-	/**
-	 * Checks if is cancelled.
-	 *
-	 * @return true, if is cancelled
-	 */
-	public boolean isCancelled() {
-		return cancelled;
-	}
-
-	/**
-	 * Sets the cancelled.
-	 *
-	 * @param bln
-	 *            the new cancelled
-	 */
-	public void setCancelled(boolean bln) {
-		cancelled = bln;
 	}
 
 }

@@ -15,8 +15,25 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
+/**
+ * The Class JavascriptHandler.
+ */
 public class JavascriptHandler {
 
+	/**
+	 * Instantiates a new javascript handler.
+	 *
+	 * @param user
+	 *            the user
+	 * @param online
+	 *            the online
+	 * @param expression
+	 *            the expression
+	 * @param trueRewards
+	 *            the true rewards
+	 * @param falseRewards
+	 *            the false rewards
+	 */
 	public JavascriptHandler(User user, boolean online, String expression,
 			ArrayList<String> trueRewards, ArrayList<String> falseRewards) {
 		ScriptEngine engine = null;

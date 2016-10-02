@@ -102,14 +102,35 @@ public class User {
 		}
 	}
 
+	/**
+	 * Adds the choice reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 */
 	public void addChoiceReward(Reward reward) {
 		setChoiceReward(reward, getChoiceReward(reward) + 1);
 	}
 
+	/**
+	 * Sets the choice reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
 	public void setChoiceReward(Reward reward, int value) {
 		setPluginData("ChoiceRewards." + reward.name, value);
 	}
 
+	/**
+	 * Gets the choice reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the choice reward
+	 */
 	public int getChoiceReward(Reward reward) {
 		return getPluginData().getInt("ChoiceRewards." + reward.name);
 	}
@@ -139,6 +160,11 @@ public class User {
 				Config.getInstance().getRequestAPIDefaultMethod()));
 	}
 
+	/**
+	 * Gets the user input method.
+	 *
+	 * @return the user input method
+	 */
 	public InputMethod getUserInputMethod() {
 		return InputMethod.getMethod(getRawData().getString("InputMethod",
 				Config.getInstance().getRequestAPIDefaultMethod()));
@@ -740,6 +766,12 @@ public class User {
 		setRawData("InputMethod", method.toString());
 	}
 
+	/**
+	 * Sets the user input method.
+	 *
+	 * @param method
+	 *            the new user input method
+	 */
 	public void setUserInputMethod(InputMethod method) {
 		setRawData("InputMethod", method.toString());
 	}

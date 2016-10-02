@@ -2,17 +2,21 @@ package com.Ben12345rocks.AdvancedCore.Util.ValueRequest;
 
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 
+/**
+ * The Enum InputMethod.
+ */
 public enum InputMethod {
 
-	/** The Anvil. */
+	/** The anvil. */
 	ANVIL,
 
-	/** The Chat. */
+	/** The chat. */
 	CHAT,
 
-	/** The Book. */
+	/** The book. */
 	BOOK,
 	
+	/** The inventory. */
 	INVENTORY;
 
 	/**

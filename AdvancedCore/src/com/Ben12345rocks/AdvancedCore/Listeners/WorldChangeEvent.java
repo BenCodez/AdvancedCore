@@ -9,13 +9,16 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
+/**
+ * The Class WorldChangeEvent.
+ */
 public class WorldChangeEvent implements Listener {
 
 	/** The plugin. */
 	private static Main plugin;
 
 	/**
-	 * Instantiates a new player join event.
+	 * Instantiates a new world change event.
 	 *
 	 * @param plugin
 	 *            the plugin
@@ -25,7 +28,7 @@ public class WorldChangeEvent implements Listener {
 	}
 
 	/**
-	 * On player login.
+	 * On world change.
 	 *
 	 * @param event
 	 *            the event

@@ -29,12 +29,36 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
+/**
+ * The Class StringRequester.
+ */
 public class StringRequester {
 
+	/**
+	 * Instantiates a new string requester.
+	 */
 	public StringRequester() {
 
 	}
 
+	/**
+	 * Request.
+	 *
+	 * @param player
+	 *            the player
+	 * @param method
+	 *            the method
+	 * @param currentValue
+	 *            the current value
+	 * @param promptText
+	 *            the prompt text
+	 * @param options
+	 *            the options
+	 * @param allowCustomOption
+	 *            the allow custom option
+	 * @param listener
+	 *            the listener
+	 */
 	public void request(Player player, InputMethod method, String currentValue,
 			String promptText, String[] options, boolean allowCustomOption,
 			StringListener listener) {

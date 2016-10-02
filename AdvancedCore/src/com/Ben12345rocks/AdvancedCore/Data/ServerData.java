@@ -71,10 +71,23 @@ public class ServerData {
 		data = YamlConfiguration.loadConfiguration(dFile);
 	}
 
+	/**
+	 * Gets the plugin version.
+	 *
+	 * @param plugin
+	 *            the plugin
+	 * @return the plugin version
+	 */
 	public String getPluginVersion(Plugin plugin) {
 		return getData().getString("PluginVersions." + plugin.getName(), "");
 	}
 
+	/**
+	 * Sets the plugin version.
+	 *
+	 * @param plugin
+	 *            the new plugin version
+	 */
 	public void setPluginVersion(Plugin plugin) {
 		getData().set("PluginVersions." + plugin.getName(),
 				plugin.getDescription().getVersion());

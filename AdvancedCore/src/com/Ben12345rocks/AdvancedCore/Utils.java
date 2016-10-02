@@ -1316,6 +1316,12 @@ public class Utils {
 		return base;
 	}
 
+	/**
+	 * Broadcast.
+	 *
+	 * @param broadcastMsg
+	 *            the broadcast msg
+	 */
 	public void broadcast(String broadcastMsg) {
 		if (broadcastMsg != null) {
 			if (!broadcastMsg.equals("")) {
@@ -1331,6 +1337,24 @@ public class Utils {
 
 	}
 
+	/**
+	 * Launch firework.
+	 *
+	 * @param loc
+	 *            the loc
+	 * @param power
+	 *            the power
+	 * @param colors
+	 *            the colors
+	 * @param fadeOutColor
+	 *            the fade out color
+	 * @param trail
+	 *            the trail
+	 * @param flicker
+	 *            the flicker
+	 * @param types
+	 *            the types
+	 */
 	public void launchFirework(Location loc, int power,
 			ArrayList<String> colors, ArrayList<String> fadeOutColor,
 			boolean trail, boolean flicker, ArrayList<String> types) {

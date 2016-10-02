@@ -23,12 +23,32 @@ import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 
+/**
+ * The Class BooleanRequester.
+ */
 public class BooleanRequester {
 
+	/**
+	 * Instantiates a new boolean requester.
+	 */
 	public BooleanRequester() {
 
 	}
 
+	/**
+	 * Request.
+	 *
+	 * @param player
+	 *            the player
+	 * @param method
+	 *            the method
+	 * @param currentValue
+	 *            the current value
+	 * @param promptText
+	 *            the prompt text
+	 * @param listener
+	 *            the listener
+	 */
 	public void request(Player player, InputMethod method, String currentValue,
 			String promptText, BooleanListener listener) {
 		if (method.equals(InputMethod.INVENTORY)

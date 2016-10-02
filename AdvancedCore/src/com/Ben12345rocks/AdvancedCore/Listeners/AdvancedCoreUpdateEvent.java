@@ -8,7 +8,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class PlayerJoinEvent.
+ * The Class AdvancedCoreUpdateEvent.
  */
 public class AdvancedCoreUpdateEvent implements Listener {
 
@@ -16,7 +16,7 @@ public class AdvancedCoreUpdateEvent implements Listener {
 	private static Main plugin;
 
 	/**
-	 * Instantiates a new player join event.
+	 * Instantiates a new advanced core update event.
 	 *
 	 * @param plugin
 	 *            the plugin
@@ -26,26 +26,22 @@ public class AdvancedCoreUpdateEvent implements Listener {
 	}
 
 	/**
-	 * On player login.
+	 * On plugin update.
 	 *
 	 * @param event
 	 *            the event
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPluginUpdate(PluginUpdateVersionEvent event) {
-		plugin.getServer().getScheduler().runTaskLater(plugin, new Runnable() {
 
-			@Override
-			public void run() {
-				if (event.getOldVersion().equals("")) {
-					plugin.getLogger().info("First load of AdvancedCore");
-				}
-				if (event.getPlugin().getName()
-						.equals(plugin.getDescription().getName())) {
-					plugin.getLogger().info("Updated AdvancedCore");
-				}
+		if (event.getPlugin().getName()
+				.equals(plugin.getDescription().getName())) {
+			if (event.getOldVersion().equals("")) {
+				plugin.getLogger().info("First load of AdvancedCore");
+			} else {
+				plugin.getLogger().info("Updated AdvancedCore");
 			}
-		}, 20L);
-
+		}
 	}
+
 }
