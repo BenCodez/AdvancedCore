@@ -17,9 +17,6 @@ import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
-import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
-import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
-import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -1124,6 +1121,7 @@ public class Reward {
 				} else {
 					if (worlds.contains(player.getWorld().getName())) {
 						giveRewardUser(user);
+						
 					} else {
 						user.setOfflineRewardWorld(getRewardName(), null,
 								user.getOfflineRewardWorld(getRewardName(),
@@ -1133,10 +1131,10 @@ public class Reward {
 				}
 			} else {
 				giveRewardUser(user);
+				
+				
 			}
 		}
-		giveRandom(user, online);
-		runJavascript(user, online);
 	}
 
 	/**
@@ -1149,6 +1147,8 @@ public class Reward {
 		Player player = Bukkit.getPlayer(user.getPlayerName());
 		if (player != null) {
 			if (hasPermission(user)) {
+				giveRandom(user, true);
+				runJavascript(user, true);
 				giveMoney(user);
 				giveItems(user);
 				giveExp(user);
@@ -1182,24 +1182,7 @@ public class Reward {
 		if (isChoiceRewardsEnabled()) {
 			Player player = user.getPlayer();
 			if (player != null) {
-				new ValueRequest(InputMethod.INVENTORY).requestString(
-						player,
-						"",
-						Utils.getInstance().convertArray(
-								getChoiceRewardsRewards()), false,
-						new StringListener() {
-
-							@Override
-							public void onInput(Player player, String value) {
-								ConfigRewards
-										.getInstance()
-										.getReward(value)
-										.giveReward(
-												new User(Main.plugin, player),
-												true);
-
-							}
-						});
+				user.addChoiceReward(this);
 			}
 		}
 	}

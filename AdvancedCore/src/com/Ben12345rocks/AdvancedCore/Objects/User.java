@@ -68,7 +68,6 @@ public class User {
 		this.plugin = plugin;
 		this.playerName = playerName;
 		uuid = Utils.getInstance().getUUID(playerName);
-
 	}
 
 	/**
@@ -101,6 +100,18 @@ public class User {
 		if (loadName) {
 			playerName = Utils.getInstance().getPlayerName(this.uuid);
 		}
+	}
+
+	public void addChoiceReward(Reward reward) {
+		setChoiceReward(reward, getChoiceReward(reward) + 1);
+	}
+
+	public void setChoiceReward(Reward reward, int value) {
+		setPluginData("ChoiceRewards." + reward.name, value);
+	}
+
+	public int getChoiceReward(Reward reward) {
+		return getPluginData().getInt("ChoiceRewards." + reward.name);
 	}
 
 	/**

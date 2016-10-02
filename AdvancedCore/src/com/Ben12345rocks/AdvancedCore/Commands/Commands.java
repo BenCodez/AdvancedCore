@@ -238,7 +238,7 @@ public class Commands {
 
 								ConfigRewards.getInstance().setChance(
 										reward.getRewardName(),
-										value.intValue());
+										value.doubleValue());
 								player.sendMessage("Set chance");
 								plugin.reload();
 
@@ -1003,7 +1003,12 @@ public class Commands {
 						+ "/" + reward.getActionBarDelay());
 			}
 
-			lore.add("MessagesReward: " + reward.getRewardMsg());
+			if (!reward.getRewardMsg().equals("")) {
+				lore.add("MessagesReward: " + reward.getRewardMsg());
+			}
+			if (!reward.getBroadcastMsg().equals("")) {
+				lore.add("Broadcast: " + reward.getBroadcastMsg());
+			}
 
 			inv.addButton(count, new BInventoryButton(reward.getRewardName(),
 					Utils.getInstance().convertArray(lore), new ItemStack(

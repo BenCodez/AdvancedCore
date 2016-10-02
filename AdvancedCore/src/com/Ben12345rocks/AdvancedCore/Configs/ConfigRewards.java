@@ -1028,11 +1028,11 @@ public class ConfigRewards {
 	 *
 	 * @param reward
 	 *            the reward
-	 * @param value
+	 * @param d
 	 *            the value
 	 */
-	public void setChance(String reward, int value) {
-		set(reward, "Chance", value);
+	public void setChance(String reward, double d) {
+		set(reward, "Chance", d);
 	}
 
 	/**
@@ -1362,7 +1362,7 @@ public class ConfigRewards {
 	}
 
 	public String getMessagesBroadcast(String reward) {
-		return getData(reward).getString("Messages.Broadcast");
+		return getData(reward).getString("Messages.Broadcast","");
 	}
 
 	public void setMessagesBroadcast(String reward, String value) {

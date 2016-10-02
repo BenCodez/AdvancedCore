@@ -139,46 +139,45 @@ public class NumberRequester {
 			if (options != null) {
 				User user = new User(Main.plugin, player);
 				user.sendMessage("&cClick one of the following options below:");
+				Utils.getInstance().setPlayerMeta(player,
+						"ValueRequestNumber", listener);
 				for (Number num : options) {
 					String option = num.toString();
 					TextComponent comp = new TextComponent(option);
-					Utils.getInstance().setPlayerMeta(player,
-							"ValueRequestNumber", listener);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
 							Action.RUN_COMMAND,
-							"advancedcore ValueRequestNumber " + option));
+							"/advancedcore ValueRequestNumber " + option));
 					user.sendJson(comp);
 				}
 				if (allowCustomOption) {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
-					Utils.getInstance().setPlayerMeta(player,
-							"ValueRequestNumber", listener);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
 							Action.RUN_COMMAND,
-							"advancedcore ValueRequestNumber " + option));
+							"/advancedcore ValueRequestNumber " + option));
 					user.sendJson(comp);
 				}
-			}
-			ConversationFactory convoFactory = new ConversationFactory(
-					Main.plugin).withModality(true)
-					.withEscapeSequence("cancel").withTimeout(60);
-			PromptManager prompt = new PromptManager(promptText
-					+ " Current value: " + currentValue, convoFactory);
-			prompt.stringPrompt(player, new PromptReturnString() {
+			} else {
+				ConversationFactory convoFactory = new ConversationFactory(
+						Main.plugin).withModality(true)
+						.withEscapeSequence("cancel").withTimeout(60);
+				PromptManager prompt = new PromptManager(promptText
+						+ " Current value: " + currentValue, convoFactory);
+				prompt.stringPrompt(player, new PromptReturnString() {
 
-				@Override
-				public void onInput(ConversationContext context,
-						Conversable conversable, String input) {
-					String num = input;
-					try {
-						Number number = (Double) Double.valueOf(num);
-						listener.onInput((Player) conversable, number);
-					} catch (NumberFormatException ex) {
-						ex.printStackTrace();
+					@Override
+					public void onInput(ConversationContext context,
+							Conversable conversable, String input) {
+						String num = input;
+						try {
+							Number number = (Double) Double.valueOf(num);
+							listener.onInput((Player) conversable, number);
+						} catch (NumberFormatException ex) {
+							ex.printStackTrace();
+						}
 					}
-				}
-			});
+				});
+			}
 		} else if (method.equals(InputMethod.BOOK)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
 						.contains(InputMethod.BOOK.toString())) {

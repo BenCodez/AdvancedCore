@@ -106,40 +106,20 @@ public class BooleanRequester {
 
 			User user = new User(Main.plugin, player);
 			user.sendMessage("&cClick one of the following options below:");
-			String num = "True";
-			String option = num.toString();
+			String option = "True";
 			TextComponent comp = new TextComponent(option);
 			Utils.getInstance().setPlayerMeta(player, "ValueRequestBoolean",
 					listener);
 			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
-					Action.RUN_COMMAND, "advancedcore ValueRequestBoolean "
+					Action.RUN_COMMAND, "/advancedcore ValueRequestBoolean "
 							+ option));
 			user.sendJson(comp);
-			num = "False";
-			 comp = new TextComponent(option);
-			Utils.getInstance().setPlayerMeta(player, "ValueRequestBoolean",
-					listener);
+			option = "False";
+			comp = new TextComponent(option);
 			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
-					Action.RUN_COMMAND, "advancedcore ValueRequestBoolean "
+					Action.RUN_COMMAND, "/advancedcore ValueRequestBoolean "
 							+ option));
 			user.sendJson(comp);
-
-			/*
-			ConversationFactory convoFactory = new ConversationFactory(
-					Main.plugin).withModality(true)
-					.withEscapeSequence("cancel").withTimeout(60);
-			PromptManager prompt = new PromptManager(promptText
-					+ " Current value: " + currentValue, convoFactory);
-			prompt.stringPrompt(player, new PromptReturnString() {
-
-				@Override
-				public void onInput(ConversationContext context,
-						Conversable conversable, String input) {
-					listener.onInput((Player) conversable,
-							Boolean.valueOf(input));
-				}
-			});
-			*/
 		} else if (method.equals(InputMethod.BOOK)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
 						.contains(InputMethod.BOOK.toString())) {

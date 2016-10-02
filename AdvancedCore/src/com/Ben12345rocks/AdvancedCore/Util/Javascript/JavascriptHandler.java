@@ -11,6 +11,7 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
+import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
@@ -32,6 +33,7 @@ public class JavascriptHandler {
 		String exp = PlaceholderAPI.setPlaceholders(player, expression);
 
 		engine.put("BukkitPlayer", player);
+		//Main.plugin.debug("Trying");
 
 		try {
 			engine.put("BukkitPlayer", player);
@@ -39,11 +41,21 @@ public class JavascriptHandler {
 			Object result = engine.eval(exp);
 
 			if (!(result instanceof Boolean)) {
+				//Main.plugin.debug("Not boolean");
 				return;
 			}
 
 			if (((Boolean) result).booleanValue()) {
+				Main.plugin.debug("javascript true");
 				for (String reward : trueRewards) {
+					if (!reward.equals("")) {
+						ConfigRewards.getInstance().getReward(reward)
+								.giveReward(user, online);
+					}
+				}
+			} else {
+				Main.plugin.debug("javascript false");
+				for (String reward : falseRewards) {
 					if (!reward.equals("")) {
 						ConfigRewards.getInstance().getReward(reward)
 								.giveReward(user, online);

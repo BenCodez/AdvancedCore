@@ -10,7 +10,9 @@ import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
@@ -141,6 +143,39 @@ public class CommandLoader {
 		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"SelectChoiceReward", "(Reward)" },
+				"AdvancedCore.SelectChoiceReward",
+				"Let user select his choice reward", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Reward reward = ConfigRewards.getInstance().getReward(args[1]);
+				User user = new User(Main.plugin, (Player) sender);
+				if (user.getChoiceReward(reward) != 0) {
+					new ValueRequest(InputMethod.INVENTORY).requestString(
+							(Player) sender,
+							"",
+							Utils.getInstance().convertArray(
+									reward.getChoiceRewardsRewards()), false,
+							new StringListener() {
+
+								@Override
+								public void onInput(Player player, String value) {
+									User user = new User(Main.plugin, player);
+									ConfigRewards.getInstance()
+											.getReward(value)
+											.giveReward(user, true);
+									user.setChoiceReward(reward,
+											user.getChoiceReward(reward) - 1);
+								}
+							});
+				} else {
+					sender.sendMessage("No rewards to choose");
+				}
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"ValueRequestString", "(String)" },
 				"AdvancedCore.ValueRequest", "Command to Input value", false) {
 
@@ -157,7 +192,7 @@ public class CommandLoader {
 						listener.onInput(player, args[1]);
 					}
 				} catch (Exception ex) {
-					player.sendMessage("No where to input value");
+					player.sendMessage("No where to input value or error occured");
 				}
 			}
 		});
@@ -180,7 +215,7 @@ public class CommandLoader {
 						listener.onInput(player, number);
 					}
 				} catch (Exception ex) {
-					player.sendMessage("No where to input value");
+					player.sendMessage("No where to input value or error occured");
 				}
 			}
 		});

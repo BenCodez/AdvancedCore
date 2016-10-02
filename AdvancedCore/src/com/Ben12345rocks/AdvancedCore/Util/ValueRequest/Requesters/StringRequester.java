@@ -125,40 +125,38 @@ public class StringRequester {
 			if (options != null) {
 				User user = new User(Main.plugin, player);
 				user.sendMessage("&cClick one of the following options below:");
+				Utils.getInstance().setPlayerMeta(player,
+						"ValueRequestString", listener);
 				for (String option : options) {
 					TextComponent comp = new TextComponent(option);
-					Utils.getInstance().setPlayerMeta(player,
-							"ValueRequestString", listener);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
 							Action.RUN_COMMAND,
-							"advancedcore ValueRequestString " + option));
+							"/advancedcore ValueRequestString " + option));
 					user.sendJson(comp);
 				}
 				if (allowCustomOption) {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
-					Utils.getInstance().setPlayerMeta(player,
-							"ValueRequestString", listener);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
 							Action.RUN_COMMAND,
-							"advancedcore ValueRequestString " + option));
+							"/advancedcore ValueRequestString " + option));
 					user.sendJson(comp);
 				}
+			} else {
+				ConversationFactory convoFactory = new ConversationFactory(
+						Main.plugin).withModality(true)
+						.withEscapeSequence("cancel").withTimeout(60);
+				PromptManager prompt = new PromptManager(promptText
+						+ " Current value: " + currentValue, convoFactory);
+				prompt.stringPrompt(player, new PromptReturnString() {
+
+					@Override
+					public void onInput(ConversationContext context,
+							Conversable conversable, String input) {
+						listener.onInput((Player) conversable, input);
+					}
+				});
 			}
-
-			ConversationFactory convoFactory = new ConversationFactory(
-					Main.plugin).withModality(true)
-					.withEscapeSequence("cancel").withTimeout(60);
-			PromptManager prompt = new PromptManager(promptText
-					+ " Current value: " + currentValue, convoFactory);
-			prompt.stringPrompt(player, new PromptReturnString() {
-
-				@Override
-				public void onInput(ConversationContext context,
-						Conversable conversable, String input) {
-					listener.onInput((Player) conversable, input);
-				}
-			});
 		} else if (method.equals(InputMethod.BOOK)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
 						.contains(InputMethod.BOOK.toString())) {

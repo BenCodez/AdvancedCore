@@ -349,7 +349,8 @@ public class BInventory implements Listener {
 					if (page > 1) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
-						openInventory(player, page--);
+						int nextPage = page-1;
+						openInventory(player, nextPage);
 					}
 				} else if (slot == 53) {
 					Main.plugin.debug(maxPage + " " + page);
@@ -413,29 +414,24 @@ public class BInventory implements Listener {
 				inventory.getInventoryName());
 		this.page = page;
 		int startSlot = (page - 1) * 45;
-		if (startSlot != 0) {
-			startSlot--;
-		}
-		int maxSlot = getHighestSlot();
 		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
 				.entrySet()) {
 			int slot = pair.getKey();
-			if (slot > startSlot) {
+			if (slot >= startSlot) {
 				slot -= startSlot;
-			}
-
-			if (slot < 45 && maxSlot <= pair.getKey()) {
-				ItemStack item = pair.getValue().getItem();
-				ItemMeta meta = item.getItemMeta();
-				if (pair.getValue().getName() != null) {
-					meta.setDisplayName(pair.getValue().getName());
+				if (slot < 45 && pair.getKey() < inventory.getButtons().size()) {
+					ItemStack item = pair.getValue().getItem();
+					ItemMeta meta = item.getItemMeta();
+					if (pair.getValue().getName() != null) {
+						meta.setDisplayName(pair.getValue().getName());
+					}
+					if (pair.getValue().getLore() != null) {
+						meta.setLore(new ArrayList<String>(Arrays.asList(pair
+								.getValue().getLore())));
+					}
+					item.setItemMeta(meta);
+					inv.setItem(slot, item);
 				}
-				if (pair.getValue().getLore() != null) {
-					meta.setLore(new ArrayList<String>(Arrays.asList(pair
-							.getValue().getLore())));
-				}
-				item.setItemMeta(meta);
-				inv.setItem(slot, item);
 			}
 
 		}

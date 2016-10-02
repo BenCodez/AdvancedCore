@@ -735,13 +735,7 @@ public class Utils {
 	 * @return the item stack
 	 */
 	public ItemStack nameItem(ItemStack item, String name) {
-		if (name == null) {
-			return item;
-		}
-		ItemMeta meta = item.getItemMeta();
-		meta.setDisplayName(name);
-		item.setItemMeta(meta);
-		return item;
+		return setName(item, name);
 
 	}
 
@@ -1329,7 +1323,7 @@ public class Utils {
 
 					@Override
 					public void run() {
-						Bukkit.broadcastMessage(broadcastMsg);
+						Bukkit.broadcastMessage(colorize(broadcastMsg));
 					}
 				});
 			}
@@ -1384,6 +1378,7 @@ public class Utils {
 				fwmeta.addEffects(builder.build());
 				fwmeta.setPower(power);
 				fw.setFireworkMeta(fwmeta);
+				//plugin.debug("Launched firework");
 			}
 		});
 
