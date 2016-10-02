@@ -435,10 +435,10 @@ public class BInventory implements Listener {
 			}
 
 		}
-		inv.setItem(45, new ItemStack(Material.STAINED_GLASS_PANE, 1,
-				(short) 15));
-		inv.setItem(53, new ItemStack(Material.STAINED_GLASS_PANE, 1,
-				(short) 15));
+		inv.setItem(45, Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1,
+				(short) 15),"&aPrevious Page"));
+		inv.setItem(53, Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1,
+				(short) 15),"&aNext Page"));
 
 		player.openInventory(inv);
 	}
