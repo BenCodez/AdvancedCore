@@ -26,6 +26,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
 import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 /**
  * The Class User.
@@ -67,7 +68,6 @@ public class User {
 		this.plugin = plugin;
 		this.playerName = playerName;
 		uuid = Utils.getInstance().getUUID(playerName);
-
 	}
 
 	/**
@@ -103,6 +103,39 @@ public class User {
 	}
 
 	/**
+	 * Adds the choice reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 */
+	public void addChoiceReward(Reward reward) {
+		setChoiceReward(reward, getChoiceReward(reward) + 1);
+	}
+
+	/**
+	 * Sets the choice reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
+	public void setChoiceReward(Reward reward, int value) {
+		setPluginData("ChoiceRewards." + reward.name, value);
+	}
+
+	/**
+	 * Gets the choice reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the choice reward
+	 */
+	public int getChoiceReward(Reward reward) {
+		return getPluginData().getInt("ChoiceRewards." + reward.name);
+	}
+
+	/**
 	 * Check offline rewards.
 	 */
 	public void checkOfflineRewards() {
@@ -120,9 +153,20 @@ public class User {
 	 *
 	 * @return the input method
 	 */
+	@Deprecated
 	public RequestManager.InputMethod getInputMethod() {
 		return RequestManager.InputMethod.getMethod(getRawData().getString(
 				"InputMethod",
+				Config.getInstance().getRequestAPIDefaultMethod()));
+	}
+
+	/**
+	 * Gets the user input method.
+	 *
+	 * @return the user input method
+	 */
+	public InputMethod getUserInputMethod() {
+		return InputMethod.getMethod(getRawData().getString("InputMethod",
 				Config.getInstance().getRequestAPIDefaultMethod()));
 	}
 
@@ -452,8 +496,8 @@ public class User {
 
 								int worldRewards =
 
-										getOfflineRewardWorld(reward.getRewardName(),
-												worldName);
+								getOfflineRewardWorld(reward.getRewardName(),
+										worldName);
 
 								while (worldRewards > 0) {
 									reward.giveRewardUser(this);
@@ -551,7 +595,7 @@ public class User {
 					actionBar.send(player);
 				} catch (Exception ex) {
 					Main.plugin
-					.debug("Failed to send ActionBar, turn debug on to see stack trace");
+							.debug("Failed to send ActionBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -585,7 +629,7 @@ public class User {
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
 					Main.plugin
-					.debug("Failed to send BossBar, turn debug on to see stack trace");
+							.debug("Failed to send BossBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -652,7 +696,7 @@ public class User {
 				for (String str : msg.split("%NewLine%")) {
 					player.sendMessage(Utils.getInstance().colorize(
 							Utils.getInstance()
-							.replacePlaceHolders(player, str)));
+									.replacePlaceHolders(player, str)));
 				}
 			}
 		}
@@ -703,7 +747,7 @@ public class User {
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger()
-				.info("Failed to send Title, turn debug on to see stack trace");
+						.info("Failed to send Title, turn debug on to see stack trace");
 				if (Config.getInstance().getDebugEnabled()) {
 					ex.printStackTrace();
 				}
@@ -717,7 +761,18 @@ public class User {
 	 * @param method
 	 *            the new input method
 	 */
+	@Deprecated
 	public void setInputMethod(RequestManager.InputMethod method) {
+		setRawData("InputMethod", method.toString());
+	}
+
+	/**
+	 * Sets the user input method.
+	 *
+	 * @param method
+	 *            the new user input method
+	 */
+	public void setUserInputMethod(InputMethod method) {
 		setRawData("InputMethod", method.toString());
 	}
 

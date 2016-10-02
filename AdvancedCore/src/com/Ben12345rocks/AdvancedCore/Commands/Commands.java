@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -19,8 +20,10 @@ import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
-import com.Ben12345rocks.AdvancedCore.Util.Request.InputListener;
-import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -75,22 +78,17 @@ public class Commands {
 			@Override
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
-				User user = new User(Main.plugin, player);
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				new ValueRequest().requestBoolean(player, Boolean
+						.toString(Config.getInstance().getDebugEnabled()),
+						new BooleanListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
-								Config.getInstance().setDebugEnabled(
-										Boolean.valueOf(input));
+							public void onInput(Player player, boolean value) {
+								Config.getInstance().setDebugEnabled(value);
 								player.sendMessage("Value set");
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + Config.getInstance().getDebugEnabled());
+						});
 
 			}
 		});
@@ -102,22 +100,17 @@ public class Commands {
 			@Override
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
-				User user = new User(Main.plugin, player);
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				new ValueRequest().requestBoolean(player, Boolean
+						.toString(Config.getInstance().getDebugInfoIngame()),
+						new BooleanListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
-								Config.getInstance().setDebugInfoIngame(
-										Boolean.valueOf(input));
+							public void onInput(Player player, boolean value) {
+								Config.getInstance().setDebugInfoIngame(value);
 								player.sendMessage("Value set");
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + Config.getInstance().getDebugInfoIngame());
+						});
 
 			}
 		});
@@ -140,24 +133,17 @@ public class Commands {
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
 				if (event.getClick().equals(ClickType.MIDDLE)) {
-					User user = new User(Main.plugin, player);
-					new RequestManager(
-							player,
-							user.getInputMethod(),
-							new InputListener() {
+					new ValueRequest().requestString(player,
+							new StringListener() {
 
 								@Override
-								public void onInput(Player player, String input) {
-									ConfigRewards.getInstance().getData(input);
+								public void onInput(Player player, String value) {
+									ConfigRewards.getInstance().getData(value);
 									player.sendMessage("Reward file created");
 									plugin.reload();
 
 								}
-							}
-
-							,
-							"Type value in chat to send, cancel by typing cancel",
-							"");
+							});
 				} else {
 					openRewardsGUI(player);
 				}
@@ -198,13 +184,16 @@ public class Commands {
 			@Override
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
-				new RequestManager(
-						player,
-						user.getInputMethod(),
-						new InputListener() {
+				ArrayList<String> players = new ArrayList<String>();
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					players.add(p.getName());
+				}
+				new ValueRequest().requestString(player, "", Utils
+						.getInstance().convertArray(players),
+						new StringListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, String value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
 
@@ -212,18 +201,14 @@ public class Commands {
 										.getInstance()
 										.getReward(reward.getRewardName())
 										.giveReward(
-												new User(Main.plugin, input),
+												new User(Main.plugin, value),
 												Utils.getInstance()
-														.isPlayerOnline(input));
+														.isPlayerOnline(value));
 								player.sendMessage("Ran Reward file");
 								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"");
+						});
 
 			}
 
@@ -236,29 +221,29 @@ public class Commands {
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
 
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				Number[] nums = new Number[101];
+				for (int i = 0; i < nums.length; i++) {
+					nums[i] = i;
+				}
+				new ValueRequest().requestNumber(player,
+						Double.toString(reward.getChance()), nums,
+						new NumberListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, Number value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
-								if (Utils.getInstance().isInt(input)) {
-									ConfigRewards.getInstance().setChance(
-											reward.getRewardName(),
-											Integer.parseInt(input));
-									player.sendMessage("Set Chance");
-									plugin.reload();
-								} else {
-									player.sendMessage("Must be an interger");
-								}
+
+								ConfigRewards.getInstance().setChance(
+										reward.getRewardName(),
+										value.doubleValue());
+								player.sendMessage("Set chance");
+								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.getChance());
+						});
 
 			}
 
@@ -272,29 +257,25 @@ public class Commands {
 
 				Player player = event.getWhoClicked();
 
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestNumber(player,
+						Integer.toString(reward.getMoney()), null,
+						new NumberListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, Number value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
-								if (Utils.getInstance().isInt(input)) {
-									ConfigRewards.getInstance().setMoney(
-											reward.getRewardName(),
-											Integer.parseInt(input));
-									player.sendMessage("Set money");
-									plugin.reload();
-								} else {
-									player.sendMessage("Must be an interger");
-								}
+
+								ConfigRewards.getInstance().setMoney(
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set money");
+								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.getMoney());
+						});
 
 			}
 
@@ -308,29 +289,25 @@ public class Commands {
 
 				Player player = event.getWhoClicked();
 
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestNumber(player,
+						Integer.toString(reward.getMinMoney()), null,
+						new NumberListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, Number value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
-								if (Utils.getInstance().isInt(input)) {
-									ConfigRewards.getInstance().setMinMoney(
-											reward.getRewardName(),
-											Integer.parseInt(input));
-									player.sendMessage("Set minmoney");
-									plugin.reload();
-								} else {
-									player.sendMessage("Must be an interger");
-								}
+
+								ConfigRewards.getInstance().setMinMoney(
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set minmoney");
+								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.getMinMoney());
+						});
 
 			}
 
@@ -344,29 +321,25 @@ public class Commands {
 
 				Player player = event.getWhoClicked();
 
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestNumber(player,
+						Integer.toString(reward.getMaxMoney()), null,
+						new NumberListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, Number value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
-								if (Utils.getInstance().isInt(input)) {
-									ConfigRewards.getInstance().setMaxMoney(
-											reward.getRewardName(),
-											Integer.parseInt(input));
-									player.sendMessage("Set maxmoney");
-									plugin.reload();
-								} else {
-									player.sendMessage("Must be an interger");
-								}
+
+								ConfigRewards.getInstance().setMaxMoney(
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set maxmoney");
+								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.getMaxMoney());
+						});
 
 			}
 
@@ -380,29 +353,25 @@ public class Commands {
 
 				Player player = event.getWhoClicked();
 
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestNumber(player,
+						Integer.toString(reward.getExp()), null,
+						new NumberListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, Number value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
-								if (Utils.getInstance().isInt(input)) {
-									ConfigRewards.getInstance().setEXP(
-											reward.getRewardName(),
-											Integer.parseInt(input));
-									player.sendMessage("Set Exp");
-									plugin.reload();
-								} else {
-									player.sendMessage("Must be an interger");
-								}
+
+								ConfigRewards.getInstance().setEXP(
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set Exp");
+								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.getExp());
+						});
 
 			}
 
@@ -416,29 +385,25 @@ public class Commands {
 
 				Player player = event.getWhoClicked();
 
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestNumber(player,
+						Integer.toString(reward.getMinExp()), null,
+						new NumberListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, Number value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
-								if (Utils.getInstance().isInt(input)) {
-									ConfigRewards.getInstance().setMinExp(
-											reward.getRewardName(),
-											Integer.parseInt(input));
-									player.sendMessage("Set minExp");
-									plugin.reload();
-								} else {
-									player.sendMessage("Must be an interger");
-								}
+
+								ConfigRewards.getInstance().setMinExp(
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set minExp");
+								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.getMaxExp());
+						});
 
 			}
 
@@ -451,30 +416,25 @@ public class Commands {
 			public void onClick(ClickEvent event) {
 
 				Player player = event.getWhoClicked();
-
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestNumber(player,
+						Integer.toString(reward.getMaxExp()), null,
+						new NumberListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, Number value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
-								if (Utils.getInstance().isInt(input)) {
-									ConfigRewards.getInstance().setMaxExp(
-											reward.getRewardName(),
-											Integer.parseInt(input));
-									player.sendMessage("Set maxExp");
-									plugin.reload();
-								} else {
-									player.sendMessage("Must be an interger");
-								}
+
+								ConfigRewards.getInstance().setMaxExp(
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set maxExp");
+								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.getMinExp());
+						});
 
 			}
 
@@ -609,25 +569,20 @@ public class Commands {
 			@Override
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				new ValueRequest().requestString(player, new StringListener() {
 
-							@Override
-							public void onInput(Player player, String input) {
-								Reward reward = (Reward) Utils.getInstance()
-										.getPlayerMeta(player, "Reward");
+					@Override
+					public void onInput(Player player, String value) {
+						Reward reward = (Reward) Utils.getInstance()
+								.getPlayerMeta(player, "Reward");
 
-								ConfigRewards.getInstance().setMessagesReward(
-										reward.getRewardName(), input);
-								player.sendMessage("Set message");
-								plugin.reload();
+						ConfigRewards.getInstance().setMessagesReward(
+								reward.getRewardName(), value);
+						player.sendMessage("Set message");
+						plugin.reload();
 
-							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.getRewardMsg());
+					}
+				});
 
 			}
 
@@ -640,30 +595,25 @@ public class Commands {
 			@Override
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				new ValueRequest().requestString(player, new StringListener() {
 
-							@Override
-							public void onInput(Player player, String input) {
-								Reward reward = (Reward) Utils.getInstance()
-										.getPlayerMeta(player, "Reward");
+					@Override
+					public void onInput(Player player, String value) {
+						Reward reward = (Reward) Utils.getInstance()
+								.getPlayerMeta(player, "Reward");
 
-								ArrayList<String> commands = ConfigRewards
-										.getInstance().getCommandsConsole(
-												reward.getRewardName());
-								commands.add(input);
+						ArrayList<String> commands = ConfigRewards
+								.getInstance().getCommandsConsole(
+										reward.getRewardName());
+						commands.add(value);
 
-								ConfigRewards.getInstance().setCommandsConsole(
-										reward.getRewardName(), commands);
-								player.sendMessage("Added console command");
-								plugin.reload();
+						ConfigRewards.getInstance().setCommandsConsole(
+								reward.getRewardName(), commands);
+						player.sendMessage("Added console command");
+						plugin.reload();
 
-							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"");
+					}
+				});
 
 			}
 
@@ -677,31 +627,25 @@ public class Commands {
 			public void onClick(ClickEvent event) {
 
 				Player player = event.getWhoClicked();
+				new ValueRequest().requestString(player, new StringListener() {
 
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+					@Override
+					public void onInput(Player player, String value) {
+						Reward reward = (Reward) Utils.getInstance()
+								.getPlayerMeta(player, "Reward");
 
-							@Override
-							public void onInput(Player player, String input) {
-								Reward reward = (Reward) Utils.getInstance()
-										.getPlayerMeta(player, "Reward");
+						ArrayList<String> commands = ConfigRewards
+								.getInstance().getCommandsPlayer(
+										reward.getRewardName());
+						commands.add(value);
 
-								ArrayList<String> commands = ConfigRewards
-										.getInstance().getCommandsPlayer(
-												reward.getRewardName());
-								commands.add(input);
+						ConfigRewards.getInstance().setCommandsPlayer(
+								reward.getRewardName(), commands);
+						player.sendMessage("Added player command");
+						plugin.reload();
 
-								ConfigRewards.getInstance().setCommandsPlayer(
-										reward.getRewardName(), commands);
-								player.sendMessage("Added player command");
-								plugin.reload();
-
-							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"");
+					}
+				});
 
 			}
 
@@ -720,6 +664,37 @@ public class Commands {
 				BInventory inv = new BInventory("RemoveConsoleCommand: "
 						+ reward.getRewardName());
 				int count = 0;
+				new ValueRequest().requestString(
+						player,
+						"",
+						Utils.getInstance().convertArray(
+								ConfigRewards.getInstance().getCommandsConsole(
+										reward.getRewardName())), false,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+								ArrayList<String> commands = ConfigRewards
+										.getInstance().getCommandsConsole(
+												reward.getRewardName());
+								if (event.getCurrentItem() != null
+										&& !event.getCurrentItem().getType()
+												.equals(Material.AIR)) {
+									commands.remove(event.getCurrentItem()
+											.getItemMeta().getDisplayName());
+									ConfigRewards.getInstance()
+											.setCommandsConsole(
+													reward.getRewardName(),
+													commands);
+
+								}
+								player.closeInventory();
+								player.sendMessage("Removed command");
+								plugin.reload();
+							}
+						});
 				for (String cmd : ConfigRewards.getInstance()
 						.getCommandsConsole(reward.getRewardName())) {
 					inv.addButton(count, new BInventoryButton(cmd,
@@ -818,29 +793,25 @@ public class Commands {
 			@Override
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
-				User user = new User(Main.plugin, player);
-				new RequestManager(player, user.getInputMethod(),
-						new InputListener() {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestBoolean(player,
+						Boolean.toString(reward.isRequirePermission()),
+						new BooleanListener() {
 
 							@Override
-							public void onInput(Player player, String input) {
+							public void onInput(Player player, boolean value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
 
 								ConfigRewards.getInstance()
 										.setRequirePermission(
-												reward.getRewardName(),
-												Boolean.valueOf(input));
-								player.sendMessage("Set require permission");
+												reward.getRewardName(), value);
+								player.sendMessage("Value set");
 								plugin.reload();
 
 							}
-						}
-
-						,
-						"Type value in chat to send, cancel by typing cancel",
-						"" + reward.isRequirePermission());
-
+						});
 			}
 
 		});
@@ -869,8 +840,28 @@ public class Commands {
 				lore.add("Timed: " + reward.getTimedHour() + ":"
 						+ reward.getTimedMinute());
 			}
+			if (reward.getChance() != 0 && reward.getChance() != 100) {
+				lore.add("Chance: " + reward.getChance());
+			}
 			if (reward.isRequirePermission()) {
 				lore.add("RequirePermission: true");
+				lore.add("Permssion: " + reward.getPermission());
+			}
+			if (reward.isJavascriptEnabled()) {
+				lore.add("Javascript: true");
+				lore.add("Expression: " + reward.getJavascriptExpression());
+				lore.add("TrueRewards: "
+						+ Utils.getInstance().makeStringList(
+								reward.getJavascriptTrueRewards()));
+				lore.add("FalseRewards: "
+						+ Utils.getInstance().makeStringList(
+								reward.getJavascriptFalseRewards()));
+			}
+			if (reward.isChoiceRewardsEnabled()) {
+				lore.add("ChoiceRewards: true");
+				lore.add("Rewards: "
+						+ Utils.getInstance().makeStringList(
+								reward.getChoiceRewardsRewards()));
 			}
 			if (reward.getWorlds().size() > 0) {
 				lore.add("Worlds: "
@@ -991,12 +982,33 @@ public class Commands {
 								reward.getRewardName()));
 			}
 
+			if (reward.isFireworkEnabled()) {
+				lore.add("Firework: true");
+				lore.add("Power: " + reward.getFireworkPower());
+				lore.add("Colors: "
+						+ Utils.getInstance().makeStringList(
+								reward.getFireworkColors()));
+				lore.add("FadeOutColors: "
+						+ Utils.getInstance().makeStringList(
+								reward.getFireworkFadeOutColors()));
+				lore.add("Types: "
+						+ Utils.getInstance().makeStringList(
+								reward.getFireworkTypes()));
+				lore.add("Trail: " + reward.isFireworkTrail());
+				lore.add("Flicker: " + reward.isFireworkFlicker());
+			}
+
 			if (reward.getActionBarMsg() != null) {
 				lore.add("ActioBarMessage/Delay: " + reward.getActionBarMsg()
 						+ "/" + reward.getActionBarDelay());
 			}
 
-			lore.add("MessagesReward: " + reward.getRewardMsg());
+			if (!reward.getRewardMsg().equals("")) {
+				lore.add("MessagesReward: " + reward.getRewardMsg());
+			}
+			if (!reward.getBroadcastMsg().equals("")) {
+				lore.add("Broadcast: " + reward.getBroadcastMsg());
+			}
 
 			inv.addButton(count, new BInventoryButton(reward.getRewardName(),
 					Utils.getInstance().convertArray(lore), new ItemStack(
@@ -1004,11 +1016,11 @@ public class Commands {
 
 				@Override
 				public void onClick(ClickEvent event) {
-					if (event.getWhoClicked() instanceof Player) {
-						Player player = event.getWhoClicked();
-						openRewardGUI(player, event.getCurrentItem()
-								.getItemMeta().getDisplayName());
-					}
+
+					Player player = event.getWhoClicked();
+					openRewardGUI(player, event.getCurrentItem().getItemMeta()
+							.getDisplayName());
+
 				}
 			});
 			count++;

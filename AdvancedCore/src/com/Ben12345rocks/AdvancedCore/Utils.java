@@ -22,13 +22,19 @@ import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.TextComponent;
 
 import org.bukkit.Bukkit;
+import org.bukkit.DyeColor;
+import org.bukkit.FireworkEffect;
+import org.bukkit.FireworkEffect.Type;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.metadata.MetadataValue;
@@ -729,13 +735,7 @@ public class Utils {
 	 * @return the item stack
 	 */
 	public ItemStack nameItem(ItemStack item, String name) {
-		if (name == null) {
-			return item;
-		}
-		ItemMeta meta = item.getItemMeta();
-		meta.setDisplayName(name);
-		item.setItemMeta(meta);
-		return item;
+		return setName(item, name);
 
 	}
 
@@ -842,7 +842,8 @@ public class Utils {
 	 */
 	public String replacePlaceHolders(Player player, String text) {
 		if (plugin.placeHolderAPIEnabled) {
-			return PlaceholderAPI.setBracketPlaceholders(player, text);
+			return PlaceholderAPI.setBracketPlaceholders(player,
+					PlaceholderAPI.setPlaceholders(player, text));
 		} else {
 			return text;
 		}
@@ -1313,5 +1314,97 @@ public class Utils {
 		newTC.setObfuscated(magic);
 		base.addExtra(newTC);
 		return base;
+	}
+
+	/**
+	 * Broadcast.
+	 *
+	 * @param broadcastMsg
+	 *            the broadcast msg
+	 */
+	public void broadcast(String broadcastMsg) {
+		if (broadcastMsg != null) {
+			if (!broadcastMsg.equals("")) {
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+					@Override
+					public void run() {
+						Bukkit.broadcastMessage(colorize(broadcastMsg));
+					}
+				});
+			}
+		}
+
+	}
+
+	/**
+	 * Launch firework.
+	 *
+	 * @param loc
+	 *            the loc
+	 * @param power
+	 *            the power
+	 * @param colors
+	 *            the colors
+	 * @param fadeOutColor
+	 *            the fade out color
+	 * @param trail
+	 *            the trail
+	 * @param flicker
+	 *            the flicker
+	 * @param types
+	 *            the types
+	 */
+	public void launchFirework(Location loc, int power,
+			ArrayList<String> colors, ArrayList<String> fadeOutColor,
+			boolean trail, boolean flicker, ArrayList<String> types) {
+		Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				Firework fw = (Firework) loc.getWorld().spawnEntity(loc,
+						EntityType.FIREWORK);
+				FireworkMeta fwmeta = fw.getFireworkMeta();
+				FireworkEffect.Builder builder = FireworkEffect.builder();
+				if (trail) {
+					builder.withTrail();
+				}
+				if (flicker) {
+					builder.withFlicker();
+				}
+				for (String color : colors) {
+					try {
+						builder.withColor(DyeColor.valueOf(color).getColor());
+					} catch (Exception ex) {
+						plugin.getLogger()
+								.info(color
+										+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+					}
+				}
+				for (String color : fadeOutColor) {
+					try {
+						builder.withFade(DyeColor.valueOf(color).getColor());
+					} catch (Exception ex) {
+						plugin.getLogger()
+								.info(color
+										+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+					}
+				}
+				for (String type : types) {
+					try {
+						builder.with(Type.valueOf(type));
+					} catch (Exception ex) {
+						plugin.getLogger()
+								.info(type
+										+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
+					}
+				}
+				fwmeta.addEffects(builder.build());
+				fwmeta.setPower(power);
+				fw.setFireworkMeta(fwmeta);
+				//plugin.debug("Launched firework");
+			}
+		});
+
 	}
 }

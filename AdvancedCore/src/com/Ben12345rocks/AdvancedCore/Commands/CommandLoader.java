@@ -10,11 +10,16 @@ import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
-import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
-import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager.InputMethod;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -74,7 +79,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				if (sender instanceof Player) {
 					User user = new User(Main.plugin, (Player) sender);
-					user.setInputMethod(InputMethod.valueOf(args[1]));
+					user.setUserInputMethod(InputMethod.valueOf(args[1]));
 				}
 			}
 		});
@@ -137,6 +142,102 @@ public class CommandLoader {
 			}
 		});
 
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"SelectChoiceReward", "(Reward)" },
+				"AdvancedCore.SelectChoiceReward",
+				"Let user select his choice reward", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Reward reward = ConfigRewards.getInstance().getReward(args[1]);
+				User user = new User(Main.plugin, (Player) sender);
+				if (user.getChoiceReward(reward) != 0) {
+					new ValueRequest(InputMethod.INVENTORY).requestString(
+							(Player) sender,
+							"",
+							Utils.getInstance().convertArray(
+									reward.getChoiceRewardsRewards()), false,
+							new StringListener() {
+
+								@Override
+								public void onInput(Player player, String value) {
+									User user = new User(Main.plugin, player);
+									ConfigRewards.getInstance()
+											.getReward(value)
+											.giveReward(user, true);
+									user.setChoiceReward(reward,
+											user.getChoiceReward(reward) - 1);
+								}
+							});
+				} else {
+					sender.sendMessage("No rewards to choose");
+				}
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"ValueRequestString", "(String)" },
+				"AdvancedCore.ValueRequest", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					StringListener listener = (StringListener) Utils
+							.getInstance().getPlayerMeta(player,
+									"ValueRequestString");
+					if (args[1].equals("CustomValue")) {
+						new ValueRequest().requestString(player, listener);
+					} else {
+						listener.onInput(player, args[1]);
+					}
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value or error occured");
+				}
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"ValueRequestNumber", "(Number)" },
+				"AdvancedCore.ValueRequest", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					NumberListener listener = (NumberListener) Utils
+							.getInstance().getPlayerMeta(player,
+									"ValueRequestNumber");
+					if (args[1].equals("CustomValue")) {
+						new ValueRequest().requestNumber(player, listener);
+					} else {
+						Number number = (Double) Double.valueOf(args[1]);
+						listener.onInput(player, number);
+					}
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value or error occured");
+				}
+			}
+		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
+				"ValueRequestBoolean", "(Boolean)" },
+				"AdvancedCore.ValueRequest", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					BooleanListener listener = (BooleanListener) Utils
+							.getInstance().getPlayerMeta(player,
+									"ValueRequestBoolean");
+					listener.onInput(player, Boolean.valueOf(args[1]));
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value");
+				}
+			}
+		});
+
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
@@ -151,6 +252,7 @@ public class CommandLoader {
 						});
 			}
 		});
+
 	}
 
 	/**
@@ -158,7 +260,7 @@ public class CommandLoader {
 	 */
 	public void loadTabComplete() {
 		ArrayList<String> method = new ArrayList<String>();
-		for (InputMethod me : RequestManager.InputMethod.values()) {
+		for (InputMethod me : InputMethod.values()) {
 			method.add(me.toString());
 		}
 		for (int i = 0; i < plugin.advancedCoreCommands.size(); i++) {

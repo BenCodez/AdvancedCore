@@ -16,6 +16,7 @@ import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -164,6 +165,184 @@ public class Reward {
 	/** The boss bar progress. */
 	private double bossBarProgress;
 
+	/** The broadcast msg. */
+	private String broadcastMsg;
+
+	/** The permission. */
+	private String permission;
+
+	/** The javascript enabled. */
+	private boolean javascriptEnabled;
+
+	/** The javascript expression. */
+	private String javascriptExpression;
+
+	/** The javascript true rewards. */
+	private ArrayList<String> javascriptTrueRewards;
+
+	/** The javascript false rewards. */
+	private ArrayList<String> javascriptFalseRewards;
+
+	/** The choice rewards rewards. */
+	private ArrayList<String> choiceRewardsRewards;
+
+	/**
+	 * Checks if is firework enabled.
+	 *
+	 * @return true, if is firework enabled
+	 */
+	public boolean isFireworkEnabled() {
+		return fireworkEnabled;
+	}
+
+	/**
+	 * Sets the firework enabled.
+	 *
+	 * @param fireworkEnabled
+	 *            the new firework enabled
+	 */
+	public void setFireworkEnabled(boolean fireworkEnabled) {
+		this.fireworkEnabled = fireworkEnabled;
+	}
+
+	/**
+	 * Checks if is firework flicker.
+	 *
+	 * @return true, if is firework flicker
+	 */
+	public boolean isFireworkFlicker() {
+		return fireworkFlicker;
+	}
+
+	/**
+	 * Sets the firework flicker.
+	 *
+	 * @param fireworkFlicker
+	 *            the new firework flicker
+	 */
+	public void setFireworkFlicker(boolean fireworkFlicker) {
+		this.fireworkFlicker = fireworkFlicker;
+	}
+
+	/**
+	 * Checks if is firework trail.
+	 *
+	 * @return true, if is firework trail
+	 */
+	public boolean isFireworkTrail() {
+		return fireworkTrail;
+	}
+
+	/**
+	 * Sets the firework trail.
+	 *
+	 * @param fireworkTrail
+	 *            the new firework trail
+	 */
+	public void setFireworkTrail(boolean fireworkTrail) {
+		this.fireworkTrail = fireworkTrail;
+	}
+
+	/**
+	 * Gets the firework power.
+	 *
+	 * @return the firework power
+	 */
+	public int getFireworkPower() {
+		return fireworkPower;
+	}
+
+	/**
+	 * Sets the firework power.
+	 *
+	 * @param fireworkPower
+	 *            the new firework power
+	 */
+	public void setFireworkPower(int fireworkPower) {
+		this.fireworkPower = fireworkPower;
+	}
+
+	/**
+	 * Gets the firework colors.
+	 *
+	 * @return the firework colors
+	 */
+	public ArrayList<String> getFireworkColors() {
+		return fireworkColors;
+	}
+
+	/**
+	 * Sets the firework colors.
+	 *
+	 * @param fireworkColors
+	 *            the new firework colors
+	 */
+	public void setFireworkColors(ArrayList<String> fireworkColors) {
+		this.fireworkColors = fireworkColors;
+	}
+
+	/**
+	 * Gets the firework fade out colors.
+	 *
+	 * @return the firework fade out colors
+	 */
+	public ArrayList<String> getFireworkFadeOutColors() {
+		return fireworkFadeOutColors;
+	}
+
+	/**
+	 * Sets the firework fade out colors.
+	 *
+	 * @param fireworkFadeOutColors
+	 *            the new firework fade out colors
+	 */
+	public void setFireworkFadeOutColors(ArrayList<String> fireworkFadeOutColors) {
+		this.fireworkFadeOutColors = fireworkFadeOutColors;
+	}
+
+	/**
+	 * Gets the firework types.
+	 *
+	 * @return the firework types
+	 */
+	public ArrayList<String> getFireworkTypes() {
+		return fireworkTypes;
+	}
+
+	/**
+	 * Sets the firework types.
+	 *
+	 * @param fireworkTypes
+	 *            the new firework types
+	 */
+	public void setFireworkTypes(ArrayList<String> fireworkTypes) {
+		this.fireworkTypes = fireworkTypes;
+	}
+
+	/** The choice rewards enabled. */
+	private boolean choiceRewardsEnabled;
+
+	/** The firework enabled. */
+	private boolean fireworkEnabled;
+	
+	/** The firework flicker. */
+	private boolean fireworkFlicker;
+	
+	/** The firework trail. */
+	private boolean fireworkTrail;
+	
+	/** The firework power. */
+	private int fireworkPower;
+	
+	/** The firework colors. */
+	private ArrayList<String> fireworkColors;
+	
+	/** The firework fade out colors. */
+	private ArrayList<String> fireworkFadeOutColors;
+	
+	/** The firework types. */
+	private ArrayList<String> fireworkTypes;
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -279,6 +458,76 @@ public class Reward {
 				reward));
 		setBossBarDelay(ConfigRewards.getInstance().getBossBarDelay(reward));
 
+		broadcastMsg = ConfigRewards.getInstance().getMessagesBroadcast(reward);
+
+		permission = ConfigRewards.getInstance().getPermission(reward);
+
+		setJavascriptEnabled(ConfigRewards.getInstance().getJavascriptEnabled(
+				reward));
+		setJavascriptExpression(ConfigRewards.getInstance()
+				.getJavascriptExpression(reward));
+		setJavascriptTrueRewards(ConfigRewards.getInstance()
+				.getJavascriptTrueRewards(reward));
+		setJavascriptFalseRewards(ConfigRewards.getInstance()
+				.getJavascriptFalseRewards(reward));
+		this.setChoiceRewardsEnabled(ConfigRewards.getInstance()
+				.getChoiceRewardsEnabled(reward));
+		this.setChoiceRewardsRewards(ConfigRewards.getInstance()
+				.getChoiceRewardsRewards(reward));
+
+		this.fireworkEnabled = ConfigRewards.getInstance().getFireworkEnabled(
+				reward);
+		this.fireworkColors = ConfigRewards.getInstance().getFireworkColors(
+				reward);
+		this.fireworkFadeOutColors = ConfigRewards.getInstance()
+				.getFireworkColorsFadeOut(reward);
+		this.fireworkPower = ConfigRewards.getInstance().getFireworkPower(
+				reward);
+		this.fireworkTypes = ConfigRewards.getInstance().getFireworkTypes(
+				reward);
+		this.fireworkTrail = ConfigRewards.getInstance().getFireworkTrail(
+				reward);
+		this.fireworkFlicker = ConfigRewards.getInstance().getFireworkFlicker(
+				reward);
+
+	}
+
+	/**
+	 * Gets the broadcast msg.
+	 *
+	 * @return the broadcast msg
+	 */
+	public String getBroadcastMsg() {
+		return broadcastMsg;
+	}
+
+	/**
+	 * Sets the broadcast msg.
+	 *
+	 * @param broadcastMsg
+	 *            the new broadcast msg
+	 */
+	public void setBroadcastMsg(String broadcastMsg) {
+		this.broadcastMsg = broadcastMsg;
+	}
+
+	/**
+	 * Gets the permission.
+	 *
+	 * @return the permission
+	 */
+	public String getPermission() {
+		return permission;
+	}
+
+	/**
+	 * Sets the permission.
+	 *
+	 * @param permission
+	 *            the new permission
+	 */
+	public void setPermission(String permission) {
+		this.permission = permission;
 	}
 
 	/**
@@ -349,6 +598,19 @@ public class Reward {
 		} else {
 			return false;
 		}
+	}
+
+	/**
+	 * Run javascript.
+	 *
+	 * @param user
+	 *            the user
+	 * @param online
+	 *            the online
+	 */
+	public void runJavascript(User user, boolean online) {
+		new JavascriptHandler(user, online, getJavascriptExpression(),
+				getJavascriptTrueRewards(), getJavascriptFalseRewards());
 	}
 
 	/**
@@ -987,6 +1249,7 @@ public class Reward {
 				} else {
 					if (worlds.contains(player.getWorld().getName())) {
 						giveRewardUser(user);
+						
 					} else {
 						user.setOfflineRewardWorld(getRewardName(), null,
 								user.getOfflineRewardWorld(getRewardName(),
@@ -996,9 +1259,10 @@ public class Reward {
 				}
 			} else {
 				giveRewardUser(user);
+				
+				
 			}
 		}
-		giveRandom(user, online);
 	}
 
 	/**
@@ -1010,24 +1274,72 @@ public class Reward {
 	public void giveRewardUser(User user) {
 		Player player = Bukkit.getPlayer(user.getPlayerName());
 		if (player != null) {
-			if (!isRequirePermission()
-					|| player.hasPermission("VotingPlugin.Reward." + name)) {
+			if (hasPermission(user)) {
+				giveRandom(user, true);
+				runJavascript(user, true);
 				giveMoney(user);
 				giveItems(user);
 				giveExp(user);
 				runCommands(user);
 				givePotions(user);
-				sendMessage(user);
 				sendTitle(user);
 				sendActionBar(user);
 				playSound(user);
 				playEffect(user);
 				sendBossBar(user);
+				sendMessage(user);
+				checkChoiceRewards(user);
+				sendFirework(user);
 
 				plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 
 			}
 		}
+	}
+
+	/**
+	 * Send firework.
+	 *
+	 * @param user
+	 *            the user
+	 */
+	public void sendFirework(User user) {
+		if (isFireworkEnabled()) {
+			Utils.getInstance().launchFirework(user.getPlayer().getLocation(),
+					getFireworkPower(), getFireworkColors(),
+					getFireworkFadeOutColors(), isFireworkTrail(),
+					isFireworkFlicker(), getFireworkTypes());
+		}
+	}
+
+	/**
+	 * Check choice rewards.
+	 *
+	 * @param user
+	 *            the user
+	 */
+	public void checkChoiceRewards(User user) {
+		if (isChoiceRewardsEnabled()) {
+			Player player = user.getPlayer();
+			if (player != null) {
+				user.addChoiceReward(this);
+			}
+		}
+	}
+
+	/**
+	 * Checks for permission.
+	 *
+	 * @param user
+	 *            the user
+	 * @return true, if successful
+	 */
+	public boolean hasPermission(User user) {
+		if (!isRequirePermission()) {
+			return true;
+		}
+		return Utils.getInstance().hasPermission(user.getPlayerName(),
+				permission);
 	}
 
 	/**
@@ -1175,11 +1487,13 @@ public class Reward {
 	 *            the user
 	 */
 	public void sendMessage(User user) {
+		Utils.getInstance().broadcast(broadcastMsg);
 		if (rewardMsg != null) {
 			user.sendMessage(rewardMsg);
 		} else {
 			user.sendMessage(Config.getInstance().getFormatDefaultRewardMsg());
 		}
+
 	}
 
 	/**
@@ -1649,6 +1963,121 @@ public class Reward {
 	 */
 	public void setWorlds(ArrayList<String> worlds) {
 		this.worlds = worlds;
+	}
+
+	/**
+	 * Checks if is javascript enabled.
+	 *
+	 * @return true, if is javascript enabled
+	 */
+	public boolean isJavascriptEnabled() {
+		return javascriptEnabled;
+	}
+
+	/**
+	 * Sets the javascript enabled.
+	 *
+	 * @param javascriptEnabled
+	 *            the new javascript enabled
+	 */
+	public void setJavascriptEnabled(boolean javascriptEnabled) {
+		this.javascriptEnabled = javascriptEnabled;
+	}
+
+	/**
+	 * Gets the javascript expression.
+	 *
+	 * @return the javascript expression
+	 */
+	public String getJavascriptExpression() {
+		return javascriptExpression;
+	}
+
+	/**
+	 * Sets the javascript expression.
+	 *
+	 * @param javascriptExpression
+	 *            the new javascript expression
+	 */
+	public void setJavascriptExpression(String javascriptExpression) {
+		this.javascriptExpression = javascriptExpression;
+	}
+
+	/**
+	 * Gets the javascript true rewards.
+	 *
+	 * @return the javascript true rewards
+	 */
+	public ArrayList<String> getJavascriptTrueRewards() {
+		return javascriptTrueRewards;
+	}
+
+	/**
+	 * Sets the javascript true rewards.
+	 *
+	 * @param javascriptTrueRewards
+	 *            the new javascript true rewards
+	 */
+	public void setJavascriptTrueRewards(ArrayList<String> javascriptTrueRewards) {
+		this.javascriptTrueRewards = javascriptTrueRewards;
+	}
+
+	/**
+	 * Gets the javascript false rewards.
+	 *
+	 * @return the javascript false rewards
+	 */
+	public ArrayList<String> getJavascriptFalseRewards() {
+		return javascriptFalseRewards;
+	}
+
+	/**
+	 * Sets the javascript false rewards.
+	 *
+	 * @param javascriptFalseRewards
+	 *            the new javascript false rewards
+	 */
+	public void setJavascriptFalseRewards(
+			ArrayList<String> javascriptFalseRewards) {
+		this.javascriptFalseRewards = javascriptFalseRewards;
+	}
+
+	/**
+	 * Gets the choice rewards rewards.
+	 *
+	 * @return the choice rewards rewards
+	 */
+	public ArrayList<String> getChoiceRewardsRewards() {
+		return choiceRewardsRewards;
+	}
+
+	/**
+	 * Sets the choice rewards rewards.
+	 *
+	 * @param choiceRewardsRewards
+	 *            the new choice rewards rewards
+	 */
+	public void setChoiceRewardsRewards(ArrayList<String> choiceRewardsRewards) {
+		this.choiceRewardsRewards = choiceRewardsRewards;
+	}
+
+	/**
+	 * Checks if is choice rewards enabled.
+	 *
+	 * @return true, if is choice rewards enabled
+	 */
+	public boolean isChoiceRewardsEnabled() {
+		return choiceRewardsEnabled;
+	}
+
+	/**
+	 * Sets the choice rewards enabled.
+	 *
+	 * @param choiceRewardsEnabled
+	 *            the new choice rewards enabled
+	 */
+	public void setChoiceRewardsEnabled(boolean choiceRewardsEnabled) {
+		this.choiceRewardsEnabled = choiceRewardsEnabled;
 	}
 
 }

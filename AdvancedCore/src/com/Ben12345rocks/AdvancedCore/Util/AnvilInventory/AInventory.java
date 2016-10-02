@@ -18,6 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 
 /**
@@ -238,6 +239,8 @@ public class AInventory {
 		loadClasses();
 		this.player = player;
 		handler = anvilClickEventHandler;
+		Utils.getInstance().setPlayerMeta(player, "AInventory",
+				anvilClickEventHandler);
 
 		listener = new Listener() {
 			@EventHandler
@@ -267,7 +270,16 @@ public class AInventory {
 
 						if (clickEvent.getSlot() == AnvilSlot.OUTPUT) {
 							event.getWhoClicked().closeInventory();
+							if (handler == null) {
+								handler = (AnvilClickEventHandler) Utils
+										.getInstance().getPlayerMeta(player,
+												"AInventory");
+								Main.plugin
+										.debug("Anvil handler was null, fixing...");
+							}
+
 							handler.onAnvilClick(clickEvent);
+
 							destroy();
 						}
 

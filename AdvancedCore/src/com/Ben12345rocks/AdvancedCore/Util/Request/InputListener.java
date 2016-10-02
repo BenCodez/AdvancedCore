@@ -3,8 +3,9 @@ package com.Ben12345rocks.AdvancedCore.Util.Request;
 import org.bukkit.entity.Player;
 
 /**
- * InputListener
+ * 
  */
+@Deprecated
 public abstract class InputListener {
 
 	/**

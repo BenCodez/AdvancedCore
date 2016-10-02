@@ -6,11 +6,11 @@ package com.Ben12345rocks.AdvancedCore.Util.Inventory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -22,6 +22,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 
 // TODO: Auto-generated Javadoc
@@ -30,26 +31,35 @@ import com.Ben12345rocks.AdvancedCore.Utils;
  */
 public class BInventory implements Listener {
 
+	/** The pages. */
+	private boolean pages = false;
+
+	/** The page. */
+	private int page = 1;
+	
+	/** The max page. */
+	private int maxPage = 1;
+
 	/**
 	 * The Class ClickEvent.
 	 */
 	public class ClickEvent {
-		
+
 		/** The player. */
 		private Player player;
-		
+
 		/** The event. */
 		private InventoryClickEvent event;
-		
+
 		/** The click type. */
 		private ClickType clickType;
-		
+
 		/** The inventory. */
 		private Inventory inventory;
-		
+
 		/** The slot. */
 		private int slot;
-		
+
 		/** The clicked item. */
 		private ItemStack clickedItem;
 
@@ -213,9 +223,6 @@ public class BInventory implements Listener {
 	 *            the button
 	 */
 	public void addButton(int position, BInventoryButton button) {
-		if (position >= 54) {
-			position = 53;
-		}
 		getButtons().put(position, button);
 	}
 
@@ -312,18 +319,53 @@ public class BInventory implements Listener {
 		Inventory inv = event.getInventory();
 		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
 			// Main.plugin.debug("Inventory equal");
-			for (int buttonSlot : getButtons().keySet()) {
-				BInventoryButton button = getButtons().get(buttonSlot);
-				if (event.getSlot() == buttonSlot) {
-					// Main.plugin.debug("Running onclick");
-					Player player = (Player) event.getWhoClicked();
-					event.setCancelled(true);
-					player.closeInventory();
-					button.onClick(new ClickEvent(event));
-					destroy();
-					return;
-				}
 
+			if (!pages) {
+				for (int buttonSlot : getButtons().keySet()) {
+					BInventoryButton button = getButtons().get(buttonSlot);
+					if (event.getSlot() == buttonSlot) {
+						// Main.plugin.debug("Running onclick");
+						Player player = (Player) event.getWhoClicked();
+						event.setCancelled(true);
+						player.closeInventory();
+						button.onClick(new ClickEvent(event));
+						destroy();
+						return;
+					}
+
+				}
+			} else {
+				event.setCancelled(true);
+				int slot = event.getSlot();
+				if (slot < 45) {
+					int buttonSlot = (page - 1) * 45 + event.getSlot();
+					BInventoryButton button = getButtons().get(buttonSlot);
+					if (button != null) {
+						Player player = (Player) event.getWhoClicked();
+						player.closeInventory();
+						button.onClick(new ClickEvent(event));
+						destroy();
+						return;
+					}
+
+				} else if (slot == 45) {
+					if (page > 1) {
+						Player player = (Player) event.getWhoClicked();
+						player.closeInventory();
+						int nextPage = page-1;
+						openInventory(player, nextPage);
+					}
+				} else if (slot == 53) {
+					Main.plugin.debug(maxPage + " " + page);
+					if (maxPage > page ) {
+						Player player = (Player) event.getWhoClicked();
+						player.closeInventory();
+						int nextPage = page+1;
+						openInventory(player, nextPage);
+						Main.plugin.debug("Opening inv");
+					}
+
+				}
 			}
 		}
 	}
@@ -336,13 +378,16 @@ public class BInventory implements Listener {
 	 */
 	public void openInventory(Player player) {
 		BInventory inventory = this;
-		Inventory inv = Bukkit.createInventory(player,
-				inventory.getInventorySize(), inventory.getInventoryName());
-		Iterator<Entry<Integer, BInventoryButton>> it = inventory.getButtons()
-				.entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry<Integer, BInventoryButton> pair = it.next();
-			{
+
+		pages = false;
+		if (inventory.getHighestSlot() > 53) {
+			this.pages = true;
+		}
+		if (!pages) {
+			Inventory inv = Bukkit.createInventory(player,
+					inventory.getInventorySize(), inventory.getInventoryName());
+			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
+					.entrySet()) {
 				ItemStack item = pair.getValue().getItem();
 				ItemMeta meta = item.getItemMeta();
 				if (pair.getValue().getName() != null) {
@@ -355,8 +400,57 @@ public class BInventory implements Listener {
 				item.setItemMeta(meta);
 				inv.setItem(pair.getKey(), item);
 			}
-			inv.setItem(pair.getKey(), pair.getValue().getItem());
+			player.openInventory(inv);
+		} else {
+			this.maxPage = getHighestSlot()/45;
+			if (getHighestSlot()%45 != 0) {
+				this.maxPage++;
+			}
+			openInventory(player, 1);
 		}
+
+	}
+
+	/**
+	 * Open inventory.
+	 *
+	 * @param player
+	 *            the player
+	 * @param page
+	 *            the page
+	 */
+	private void openInventory(Player player, int page) {
+		BInventory inventory = this;
+		Inventory inv = Bukkit.createInventory(player, 54,
+				inventory.getInventoryName());
+		this.page = page;
+		int startSlot = (page - 1) * 45;
+		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
+				.entrySet()) {
+			int slot = pair.getKey();
+			if (slot >= startSlot) {
+				slot -= startSlot;
+				if (slot < 45 && pair.getKey() < inventory.getButtons().size()) {
+					ItemStack item = pair.getValue().getItem();
+					ItemMeta meta = item.getItemMeta();
+					if (pair.getValue().getName() != null) {
+						meta.setDisplayName(pair.getValue().getName());
+					}
+					if (pair.getValue().getLore() != null) {
+						meta.setLore(new ArrayList<String>(Arrays.asList(pair
+								.getValue().getLore())));
+					}
+					item.setItemMeta(meta);
+					inv.setItem(slot, item);
+				}
+			}
+
+		}
+		inv.setItem(45, Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1,
+				(short) 15),"&aPrevious Page"));
+		inv.setItem(53, Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1,
+				(short) 15),"&aNext Page"));
+
 		player.openInventory(inv);
 	}
 

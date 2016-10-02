@@ -23,11 +23,13 @@ import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
 /**
  * The Class RequestManager.
  */
+
 public class RequestManager {
 
 	/**
 	 * The Enum InputMethod.
 	 */
+	@Deprecated
 	public enum InputMethod {
 
 		/** The Anvil. */
@@ -70,6 +72,7 @@ public class RequestManager {
 	 * @param listener
 	 *            the listener
 	 */
+	@Deprecated
 	public RequestManager(Player player, final InputListener listener) {
 		request(player, new User(Main.plugin, player).getInputMethod(),
 				listener, "Type value in chat, type cancel to cancel", "");
@@ -85,6 +88,7 @@ public class RequestManager {
 	 * @param currentValue
 	 *            the current value
 	 */
+	@Deprecated
 	public RequestManager(Player player, final InputListener listener,
 			String currentValue) {
 		request(player, new User(Main.plugin, player).getInputMethod(),
@@ -106,6 +110,7 @@ public class RequestManager {
 	 * @param currentValue
 	 *            the current value
 	 */
+	@Deprecated
 	public RequestManager(Player player, InputMethod method,
 			final InputListener listener, String promptText, String currentValue) {
 		request(player, method, listener, promptText, currentValue);
@@ -125,6 +130,7 @@ public class RequestManager {
 	 * @param currentValue
 	 *            the current value
 	 */
+	@Deprecated
 	public void request(Player player, InputMethod method,
 			final InputListener listener, String promptText, String currentValue) {
 		if (method.equals(InputMethod.Anvil)

@@ -15,7 +15,7 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
-import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -73,7 +73,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 									cmds.add("False");
 								}
 							} else if (arg.equalsIgnoreCase("(requestmethod)")) {
-								for (RequestManager.InputMethod method : RequestManager.InputMethod
+								for (InputMethod method : InputMethod
 										.values()) {
 									if (!cmds.contains(method.toString())) {
 										cmds.add(method.toString());

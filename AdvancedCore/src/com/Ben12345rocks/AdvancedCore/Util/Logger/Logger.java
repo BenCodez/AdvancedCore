@@ -11,10 +11,10 @@ import org.bukkit.plugin.Plugin;
  * The Class Logger.
  */
 public class Logger {
-	
+
 	/** The plugin. */
 	Plugin plugin;
-	
+
 	/** The location. */
 	File location;
 
@@ -42,6 +42,10 @@ public class Logger {
 			File dataFolder = plugin.getDataFolder();
 			if (!dataFolder.exists()) {
 				dataFolder.mkdir();
+			}
+			
+			if (!location.getParentFile().exists()) {
+				location.getParentFile().mkdirs();
 			}
 
 			File saveTo = location;
