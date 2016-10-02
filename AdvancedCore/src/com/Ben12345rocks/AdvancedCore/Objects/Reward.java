@@ -324,22 +324,22 @@ public class Reward {
 
 	/** The firework enabled. */
 	private boolean fireworkEnabled;
-	
+
 	/** The firework flicker. */
 	private boolean fireworkFlicker;
-	
+
 	/** The firework trail. */
 	private boolean fireworkTrail;
-	
+
 	/** The firework power. */
 	private int fireworkPower;
-	
+
 	/** The firework colors. */
 	private ArrayList<String> fireworkColors;
-	
+
 	/** The firework fade out colors. */
 	private ArrayList<String> fireworkFadeOutColors;
-	
+
 	/** The firework types. */
 	private ArrayList<String> fireworkTypes;
 
@@ -1249,7 +1249,7 @@ public class Reward {
 				} else {
 					if (worlds.contains(player.getWorld().getName())) {
 						giveRewardUser(user);
-						
+
 					} else {
 						user.setOfflineRewardWorld(getRewardName(), null,
 								user.getOfflineRewardWorld(getRewardName(),
@@ -1259,8 +1259,7 @@ public class Reward {
 				}
 			} else {
 				giveRewardUser(user);
-				
-				
+
 			}
 		}
 	}
@@ -1487,7 +1486,11 @@ public class Reward {
 	 *            the user
 	 */
 	public void sendMessage(User user) {
-		Utils.getInstance().broadcast(broadcastMsg);
+		Utils.getInstance().broadcast(
+				Utils.getInstance().replacePlaceHolders(
+						user.getPlayer(),
+						broadcastMsg.replaceAll("%player%",
+								user.getPlayerName())));
 		if (rewardMsg != null) {
 			user.sendMessage(rewardMsg);
 		} else {
