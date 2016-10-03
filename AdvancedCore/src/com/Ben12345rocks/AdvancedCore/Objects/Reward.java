@@ -609,8 +609,10 @@ public class Reward {
 	 *            the online
 	 */
 	public void runJavascript(User user, boolean online) {
-		new JavascriptHandler(user, online, getJavascriptExpression(),
-				getJavascriptTrueRewards(), getJavascriptFalseRewards());
+		if (isJavascriptEnabled()) {
+			new JavascriptHandler(user, online, getJavascriptExpression(),
+					getJavascriptTrueRewards(), getJavascriptFalseRewards());
+		}
 	}
 
 	/**
