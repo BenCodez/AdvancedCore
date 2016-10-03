@@ -1155,7 +1155,7 @@ public class Reward {
 				if (rewards.size() > 0) {
 					String reward = rewards.get((int) Math.random()
 							* rewards.size());
-					if (reward.equalsIgnoreCase("")) {
+					if (!reward.equals("")) {
 						ConfigRewards.getInstance().getReward(reward)
 								.giveReward(user, online);
 					}
@@ -1163,7 +1163,7 @@ public class Reward {
 			}
 		} else {
 			for (String reward : getRandomFallBack()) {
-				if (reward.equalsIgnoreCase("")) {
+				if (!reward.equals("")) {
 					user.giveReward(
 							ConfigRewards.getInstance().getReward(reward),
 							online);
