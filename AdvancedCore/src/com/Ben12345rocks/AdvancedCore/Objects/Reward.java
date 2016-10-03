@@ -1337,7 +1337,7 @@ public class Reward {
 		if (!isRequirePermission()) {
 			return true;
 		}
-		return Utils.getInstance().hasPermission(user.getPlayerName(),
+		return Utils.getInstance().hasServerPermission(user.getPlayerName(),
 				permission);
 	}
 

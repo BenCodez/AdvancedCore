@@ -626,6 +626,17 @@ public class Utils {
 		}
 		return false;
 	}
+	
+	public boolean hasServerPermission(String playerName, String perm) {
+		if (playerName == null) {
+			return false;
+		}
+		Player player = Bukkit.getPlayer(playerName);
+		if (player != null) {
+			return player.hasPermission( perm);
+		}
+		return false;
+	}
 
 	/**
 	 * Checks if is int.

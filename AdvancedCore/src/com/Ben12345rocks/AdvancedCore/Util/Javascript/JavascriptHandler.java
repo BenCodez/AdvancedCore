@@ -6,12 +6,11 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import me.clip.placeholderapi.PlaceholderAPI;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
@@ -38,7 +37,7 @@ public class JavascriptHandler {
 			ArrayList<String> trueRewards, ArrayList<String> falseRewards) {
 		ScriptEngine engine = null;
 		Player player = user.getPlayer();
-		if (player == null) {
+		if (player == null || expression.equals("")) {
 			return;
 		}
 
@@ -47,10 +46,11 @@ public class JavascriptHandler {
 			engine.put("BukkitServer", Bukkit.getServer());
 		}
 
-		String exp = PlaceholderAPI.setPlaceholders(player, expression);
+		String exp = Utils.getInstance()
+				.replacePlaceHolders(player, expression);
 
 		engine.put("BukkitPlayer", player);
-		//Main.plugin.debug("Trying");
+		// Main.plugin.debug("Trying");
 
 		try {
 			engine.put("BukkitPlayer", player);
@@ -58,7 +58,7 @@ public class JavascriptHandler {
 			Object result = engine.eval(exp);
 
 			if (!(result instanceof Boolean)) {
-				//Main.plugin.debug("Not boolean");
+				// Main.plugin.debug("Not boolean");
 				return;
 			}
 
