@@ -1438,8 +1438,16 @@ public class Reward {
 			for (String consolecmd : consolecmds) {
 				if (consolecmd.length() > 0) {
 					consolecmd = consolecmd.replace("%player%", playerName);
-					Bukkit.getServer().dispatchCommand(
-							Bukkit.getConsoleSender(), consolecmd);
+					final String cmd = consolecmd;
+					Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+						@Override
+						public void run() {
+							Bukkit.getServer().dispatchCommand(
+									Bukkit.getConsoleSender(), cmd);
+						}
+					});
+
 				}
 			}
 		}
@@ -1452,7 +1460,15 @@ public class Reward {
 			for (String playercmd : playercmds) {
 				if ((player != null) && (playercmd.length() > 0)) {
 					playercmd = playercmd.replace("%player%", playerName);
-					player.performCommand(playercmd);
+					final String cmd = playercmd;
+					Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+						@Override
+						public void run() {
+							player.performCommand(cmd);
+						}
+					});
+
 				}
 			}
 		}
