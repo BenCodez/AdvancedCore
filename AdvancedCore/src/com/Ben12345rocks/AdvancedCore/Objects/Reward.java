@@ -13,7 +13,6 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
-import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
@@ -1080,8 +1079,8 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 */
-	public void giveExp(User user) {
-		user.giveExp(getExpToGive());
+	public void giveExp(User user, int exp) {
+		user.giveExp(exp);
 	}
 
 	/**
@@ -1124,8 +1123,8 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 */
-	public void giveMoney(User user) {
-		user.giveMoney(getMoneyToGive());
+	public void giveMoney(User user, int money) {
+		user.giveMoney(money);
 	}
 
 	/**
@@ -1278,9 +1277,11 @@ public class Reward {
 			if (hasPermission(user)) {
 				giveRandom(user, true);
 				runJavascript(user, true);
-				giveMoney(user);
+				int money = getMoneyToGive();
+				giveMoney(user, money);
 				giveItems(user);
-				giveExp(user);
+				int exp = getExpToGive();
+				giveExp(user, exp);
 				runCommands(user);
 				givePotions(user);
 				sendTitle(user);
@@ -1288,7 +1289,7 @@ public class Reward {
 				playSound(user);
 				playEffect(user);
 				sendBossBar(user);
-				sendMessage(user);
+				sendMessage(user, money, exp);
 				checkChoiceRewards(user);
 				sendFirework(user);
 
@@ -1503,17 +1504,17 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 */
-	public void sendMessage(User user) {
+	public void sendMessage(User user, int money, int exp) {
 		Utils.getInstance().broadcast(
 				Utils.getInstance().replacePlaceHolders(
 						user.getPlayer(),
-						broadcastMsg.replaceAll("%player%",
-								user.getPlayerName())));
-		if (rewardMsg != null) {
-			user.sendMessage(rewardMsg);
-		} else {
-			user.sendMessage(Config.getInstance().getFormatDefaultRewardMsg());
-		}
+						broadcastMsg
+								.replaceAll("%player%", user.getPlayerName())
+								.replaceAll("%money%", "" + money)
+								.replaceAll("%exp%", "" + exp)));
+
+		user.sendMessage(rewardMsg.replaceAll("%money%", "" + money)
+				.replaceAll("%exp%", "" + exp));
 
 	}
 

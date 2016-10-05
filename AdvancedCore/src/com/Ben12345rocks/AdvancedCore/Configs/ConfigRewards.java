@@ -681,7 +681,7 @@ public class ConfigRewards {
 	 */
 	public String getMessagesReward(String reward) {
 		String msg = getData(reward).getString("Messages.Reward",
-				Config.getInstance().getFormatDefaultRewardMsg());
+				"");
 		return msg;
 
 	}

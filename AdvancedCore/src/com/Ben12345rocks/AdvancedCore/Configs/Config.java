@@ -87,15 +87,6 @@ public class Config {
 	}
 
 	/**
-	 * Gets the format default reward msg.
-	 *
-	 * @return the format default reward msg
-	 */
-	public String getFormatDefaultRewardMsg() {
-		return getData().getString("Format.DefaultRewardMsg", "");
-	}
-
-	/**
 	 * Gets the format help line.
 	 *
 	 * @return the format help line
