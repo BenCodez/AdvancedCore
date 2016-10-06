@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardGUI;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
@@ -128,7 +129,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				Commands.getInstance().openRewardsGUI((Player) sender);
+				new RewardGUI().openRewardsGUI((Player) sender);
 			}
 		});
 
@@ -138,7 +139,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				Commands.getInstance().openRewardGUI((Player) sender, args[1]);
+				new RewardGUI().openRewardGUI((Player) sender, args[1]);
 			}
 		});
 

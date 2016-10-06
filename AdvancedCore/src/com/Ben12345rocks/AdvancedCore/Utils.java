@@ -953,6 +953,7 @@ public class Utils {
 	 *            the value
 	 */
 	public void setPlayerMeta(Player player, String str, Object value) {
+		player.removeMetadata(str, plugin);
 		player.setMetadata(str, new MetadataValue() {
 
 			@Override

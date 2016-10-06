@@ -1509,12 +1509,12 @@ public class Reward {
 				Utils.getInstance().replacePlaceHolders(
 						user.getPlayer(),
 						broadcastMsg
-								.replaceAll("%player%", user.getPlayerName())
-								.replaceAll("%money%", "" + money)
-								.replaceAll("%exp%", "" + exp)));
+								.replace("%player%", user.getPlayerName())
+								.replace("%money%", "" + money)
+								.replace("%exp%", "" + exp)));
 
-		user.sendMessage(rewardMsg.replaceAll("%money%", "" + money)
-				.replaceAll("%exp%", "" + exp));
+		user.sendMessage(rewardMsg.replace("%money%", "" + money)
+				.replace("%exp%", "" + exp));
 
 	}
 
