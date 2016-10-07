@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.commons.lang3.time.DateUtils;
@@ -1095,6 +1096,8 @@ public class Reward {
 					Material.valueOf(getItemMaterial().get(item)),
 					getItemAmount(item), Short.valueOf(Integer
 							.toString(getItemData().get(item))));
+			
+			setItemAmount(item, itemStack.getAmount());
 			String name = getItemName().get(item);
 			if (name != null) {
 				itemStack = Utils.getInstance().nameItem(itemStack,
@@ -1289,7 +1292,8 @@ public class Reward {
 				playSound(user);
 				playEffect(user);
 				sendBossBar(user);
-				sendMessage(user, money, exp);
+				HashMap<String, Integer> items = getItemAmount();
+				sendMessage(user, money, exp, items);
 				checkChoiceRewards(user);
 				sendFirework(user);
 
@@ -1504,11 +1508,23 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 */
-	public void sendMessage(User user, int money, int exp) {
+	public void sendMessage(User user, int money, int exp, HashMap<String, Integer> items) {
+		String itemsAndAmounts = "";
+		Set<String> keySet = items.keySet();
+		Iterator<String> iter = keySet.iterator();
+		while (iter.hasNext()) {
+			if (!itemsAndAmounts.equals("")) {
+				itemsAndAmounts = itemsAndAmounts + ", ";
+			}
+			String item = iter.next();
+			Integer value = items.get(item);
+			itemsAndAmounts = itemsAndAmounts + value + " " + item;
+		}
 		Utils.getInstance().broadcast(
 				Utils.getInstance().replacePlaceHolders(
 						user.getPlayer(),
 						broadcastMsg
+								.replace("%ItemsAndAmounts%", itemsAndAmounts)
 								.replace("%player%", user.getPlayerName())
 								.replace("%money%", "" + money)
 								.replace("%exp%", "" + exp)
@@ -1704,6 +1720,10 @@ public class Reward {
 	 */
 	public void setItemAmount(HashMap<String, Integer> itemAmount) {
 		this.itemAmount = itemAmount;
+	}
+	
+	public void setItemAmount(String item, Integer amount) {
+		this.itemAmount.put(item, amount);
 	}
 
 	/**
