@@ -13,7 +13,6 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
-import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
@@ -24,7 +23,25 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener
 
 public class RewardGUI {
 
+	static RewardGUI instance = new RewardGUI();
+
+	/** The plugin. */
 	Main plugin = Main.plugin;
+
+	/**
+	 * Gets the single instance of Commands.
+	 *
+	 * @return single instance of Commands
+	 */
+	public static RewardGUI getInstance() {
+		return instance;
+	}
+
+	/**
+	 * Instantiates a new commands.
+	 */
+	private RewardGUI() {
+	}
 
 	public void openRewardGUIExp(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
@@ -239,92 +256,8 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
-	public void openRewardGUIBasic(Player player, Reward reward) {
+	public void openRewardGUIItems(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
-
-		inv.addButton(inv.getNextSlot(), new BInventoryButton(
-				"Set Give Chance", new String[] {}, new ItemStack(
-						Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Player player = event.getWhoClicked();
-
-				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
-						player, "Reward");
-				Number[] nums = new Number[101];
-				for (int i = 0; i < nums.length; i++) {
-					nums[i] = i;
-				}
-				new ValueRequest().requestNumber(player,
-						Double.toString(reward.getChance()), nums,
-						new NumberListener() {
-
-							@Override
-							public void onInput(Player player, Number value) {
-								Reward reward = (Reward) Utils.getInstance()
-										.getPlayerMeta(player, "Reward");
-
-								ConfigRewards.getInstance().setChance(
-										reward.getRewardName(),
-										value.doubleValue());
-								player.sendMessage("Chance set to "
-										+ value.doubleValue() + " on "
-										+ reward.getRewardName());
-								plugin.reload();
-
-							}
-						});
-
-			}
-
-		});
-
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Money",
-				new String[] {}, new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				openRewardGUIMoney(clickEvent.getPlayer(), reward);
-			}
-		});
-
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Exp",
-				new String[] {}, new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				openRewardGUIExp(clickEvent.getPlayer(), reward);
-			}
-		});
-
-		inv.openInventory(player);
-	}
-
-	/**
-	 * Open reward GUI.
-	 *
-	 * @param player
-	 *            the player
-	 * @param rewardName
-	 *            the reward name
-	 */
-	public void openRewardGUI(Player player, String rewardName) {
-		Reward reward = ConfigRewards.getInstance().getReward(rewardName);
-		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
-		User user = new User(Main.plugin, player);
-
-		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
-
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Basic Values",
-				new String[] {}, new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				openRewardGUIBasic(player, (Reward) Utils.getInstance()
-						.getPlayerMeta(player, "Reward"));
-			}
-		});
 
 		ArrayList<String> lore = new ArrayList<String>();
 		lore.add("&cAdd current item inhand");
@@ -399,24 +332,22 @@ public class RewardGUI {
 					String name = reward.getItemName().get(item);
 					if (name != null) {
 						itemStack = Utils.getInstance().nameItem(itemStack,
-								name.replace("%Player%", user.getPlayerName()));
+								name.replace("%Player%", player.getName()));
 					}
 					itemStack = Utils.getInstance().addLore(
 							itemStack,
 							Utils.getInstance().replace(
 									reward.getItemLore().get(item), "%Player%",
-									user.getPlayerName()));
+									player.getName()));
 					itemStack = Utils.getInstance().addEnchants(itemStack,
 							reward.getItemEnchants().get(item));
 					itemStack = Utils.getInstance().setDurabilty(itemStack,
 							reward.getItemDurabilty().get(item));
 					String skull = reward.getItemSkull().get(item);
 					if (skull != null) {
-						itemStack = Utils.getInstance()
-								.setSkullOwner(
-										itemStack,
-										skull.replace("%Player%",
-												user.getPlayerName()));
+						itemStack = Utils.getInstance().setSkullOwner(
+								itemStack,
+								skull.replace("%Player%", player.getName()));
 					}
 					inv.addButton(slot, new BInventoryButton(item,
 							new String[0], itemStack) {
@@ -447,6 +378,113 @@ public class RewardGUI {
 
 			}
 
+		});
+
+		inv.openInventory(player);
+	}
+
+	public void openRewardGUIBasic(Player player, Reward reward) {
+		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+
+		// edit chance
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Set Give Chance", new String[] {}, new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				Player player = event.getWhoClicked();
+
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				Number[] nums = new Number[101];
+				for (int i = 0; i < nums.length; i++) {
+					nums[i] = i;
+				}
+				new ValueRequest().requestNumber(player,
+						Double.toString(reward.getChance()), nums,
+						new NumberListener() {
+
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+
+								ConfigRewards.getInstance().setChance(
+										reward.getRewardName(),
+										value.doubleValue());
+								player.sendMessage("Chance set to "
+										+ value.doubleValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
+
+							}
+						});
+
+			}
+
+		});
+
+		// edit min/max/money
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Money",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUIMoney(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		// edit min/max/exp
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Exp",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUIExp(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Items",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUIItems(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		inv.openInventory(player);
+	}
+
+	/**
+	 * Open reward GUI.
+	 *
+	 * @param player
+	 *            the player
+	 * @param rewardName
+	 *            the reward name
+	 */
+	public void openRewardGUI(Player player, String rewardName) {
+		Reward reward = ConfigRewards.getInstance().getReward(rewardName);
+		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Basic Values",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIBasic(player, (Reward) Utils.getInstance()
+						.getPlayerMeta(player, "Reward"));
+			}
 		});
 
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("SetMessage",

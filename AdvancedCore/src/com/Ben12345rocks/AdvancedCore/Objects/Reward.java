@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.lang3.time.DateUtils;
@@ -184,6 +185,8 @@ public class Reward {
 
 	/** The choice rewards rewards. */
 	private ArrayList<String> choiceRewardsRewards;
+
+	private HashMap<String, Integer> itemsAndAmountsGiven;
 
 	/**
 	 * Checks if is firework enabled.
@@ -1090,11 +1093,13 @@ public class Reward {
 	 *            the user
 	 */
 	public void giveItems(User user) {
+		itemsAndAmountsGiven = new HashMap<String, Integer>();
 		for (String item : getItems()) {
 			ItemStack itemStack = new ItemStack(
 					Material.valueOf(getItemMaterial().get(item)),
 					getItemAmount(item), Short.valueOf(Integer
 							.toString(getItemData().get(item))));
+			itemsAndAmountsGiven.put(item, itemStack.getAmount());
 			String name = getItemName().get(item);
 			if (name != null) {
 				itemStack = Utils.getInstance().nameItem(itemStack,
@@ -1505,22 +1510,36 @@ public class Reward {
 	 *            the user
 	 */
 	public void sendMessage(User user, int money, int exp) {
-		Utils.getInstance().broadcast(
-				Utils.getInstance().replacePlaceHolders(
-						user.getPlayer(),
-						broadcastMsg
-								.replace("%player%", user.getPlayerName())
-								.replace("%money%", "" + money)
-								.replace("%exp%", "" + exp)
-								.replace(
-										"%items%",
-										Utils.getInstance().makeStringList(
-												Utils.getInstance().convert(
-														getItems())))));
+		ArrayList<String> itemsAndAmounts = new ArrayList<String>();
+		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
+			itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
+		}
+		String itemsAndAmountsMsg = Utils.getInstance().makeStringList(
+				itemsAndAmounts);
+		Utils.getInstance()
+				.broadcast(
+						Utils.getInstance()
+								.replacePlaceHolders(
+										user.getPlayer(),
+										broadcastMsg
+												.replace("%player%",
+														user.getPlayerName())
+												.replace("%money%", "" + money)
+												.replace("%exp%", "" + exp)
+												.replace("%itemandamounts%",
+														itemsAndAmountsMsg)
+												.replace(
+														"%items%",
+														Utils.getInstance()
+																.makeStringList(
+																		Utils.getInstance()
+																				.convert(
+																						getItems())))));
 
 		user.sendMessage(rewardMsg
 				.replace("%money%", "" + money)
 				.replace("%exp%", "" + exp)
+				.replace("%itemandamounts%", itemsAndAmountsMsg)
 				.replace(
 						"%items%",
 						Utils.getInstance().makeStringList(

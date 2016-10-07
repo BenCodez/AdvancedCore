@@ -129,7 +129,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				new RewardGUI().openRewardsGUI((Player) sender);
+				RewardGUI.getInstance().openRewardsGUI((Player) sender);
 			}
 		});
 
@@ -139,7 +139,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				new RewardGUI().openRewardGUI((Player) sender, args[1]);
+				RewardGUI.getInstance().openRewardGUI((Player) sender, args[1]);
 			}
 		});
 

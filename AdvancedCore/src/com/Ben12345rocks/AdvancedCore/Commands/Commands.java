@@ -136,7 +136,7 @@ public class Commands {
 								}
 							});
 				} else {
-					new RewardGUI().openRewardsGUI(player);
+					RewardGUI.getInstance().openRewardsGUI(player);
 				}
 			}
 		});
