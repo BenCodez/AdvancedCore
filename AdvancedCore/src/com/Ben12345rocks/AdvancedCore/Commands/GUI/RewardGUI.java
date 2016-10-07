@@ -51,7 +51,9 @@ public class RewardGUI {
 								ConfigRewards.getInstance().setEXP(
 										reward.getRewardName(),
 										value.intValue());
-								player.sendMessage("Set Exp");
+								player.sendMessage("Set Exp to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
 								plugin.reload();
 
 							}
@@ -83,7 +85,9 @@ public class RewardGUI {
 								ConfigRewards.getInstance().setMinExp(
 										reward.getRewardName(),
 										value.intValue());
-								player.sendMessage("Set minExp");
+								player.sendMessage("Set MinExp to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
 								plugin.reload();
 
 							}
@@ -114,7 +118,9 @@ public class RewardGUI {
 								ConfigRewards.getInstance().setMaxExp(
 										reward.getRewardName(),
 										value.intValue());
-								player.sendMessage("Set maxExp");
+								player.sendMessage("Set MaxExp to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
 								plugin.reload();
 
 							}
@@ -151,7 +157,9 @@ public class RewardGUI {
 								ConfigRewards.getInstance().setMoney(
 										reward.getRewardName(),
 										value.intValue());
-								player.sendMessage("Set money");
+								player.sendMessage("Set oney to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
 								plugin.reload();
 
 							}
@@ -183,7 +191,9 @@ public class RewardGUI {
 								ConfigRewards.getInstance().setMinMoney(
 										reward.getRewardName(),
 										value.intValue());
-								player.sendMessage("Set minmoney");
+								player.sendMessage("Set MinMoney to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
 								plugin.reload();
 
 							}
@@ -215,7 +225,9 @@ public class RewardGUI {
 								ConfigRewards.getInstance().setMaxMoney(
 										reward.getRewardName(),
 										value.intValue());
-								player.sendMessage("Set maxmoney");
+								player.sendMessage("Set MaxMoney to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
 								plugin.reload();
 
 							}
@@ -229,6 +241,44 @@ public class RewardGUI {
 
 	public void openRewardGUIBasic(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Set Give Chance", new String[] {}, new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				Player player = event.getWhoClicked();
+
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				Number[] nums = new Number[101];
+				for (int i = 0; i < nums.length; i++) {
+					nums[i] = i;
+				}
+				new ValueRequest().requestNumber(player,
+						Double.toString(reward.getChance()), nums,
+						new NumberListener() {
+
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+
+								ConfigRewards.getInstance().setChance(
+										reward.getRewardName(),
+										value.doubleValue());
+								player.sendMessage("Chance set to "
+										+ value.doubleValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
+
+							}
+						});
+
+			}
+
+		});
 
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Money",
 				new String[] {}, new ItemStack(Material.STONE)) {
@@ -274,41 +324,6 @@ public class RewardGUI {
 				openRewardGUIBasic(player, (Reward) Utils.getInstance()
 						.getPlayerMeta(player, "Reward"));
 			}
-		});
-
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("SetChance",
-				new String[] {}, new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Player player = event.getWhoClicked();
-
-				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
-						player, "Reward");
-				Number[] nums = new Number[101];
-				for (int i = 0; i < nums.length; i++) {
-					nums[i] = i;
-				}
-				new ValueRequest().requestNumber(player,
-						Double.toString(reward.getChance()), nums,
-						new NumberListener() {
-
-							@Override
-							public void onInput(Player player, Number value) {
-								Reward reward = (Reward) Utils.getInstance()
-										.getPlayerMeta(player, "Reward");
-
-								ConfigRewards.getInstance().setChance(
-										reward.getRewardName(),
-										value.doubleValue());
-								player.sendMessage("Set chance");
-								plugin.reload();
-
-							}
-						});
-
-			}
-
 		});
 
 		ArrayList<String> lore = new ArrayList<String>();

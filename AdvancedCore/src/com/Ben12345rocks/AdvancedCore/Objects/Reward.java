@@ -1511,10 +1511,20 @@ public class Reward {
 						broadcastMsg
 								.replace("%player%", user.getPlayerName())
 								.replace("%money%", "" + money)
-								.replace("%exp%", "" + exp)));
+								.replace("%exp%", "" + exp)
+								.replace(
+										"%items%",
+										Utils.getInstance().makeStringList(
+												Utils.getInstance().convert(
+														getItems())))));
 
-		user.sendMessage(rewardMsg.replace("%money%", "" + money)
-				.replace("%exp%", "" + exp));
+		user.sendMessage(rewardMsg
+				.replace("%money%", "" + money)
+				.replace("%exp%", "" + exp)
+				.replace(
+						"%items%",
+						Utils.getInstance().makeStringList(
+								Utils.getInstance().convert(getItems()))));
 
 	}
 
