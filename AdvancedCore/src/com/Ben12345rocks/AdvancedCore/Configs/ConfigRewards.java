@@ -680,8 +680,7 @@ public class ConfigRewards {
 	 * @return the messages reward
 	 */
 	public String getMessagesReward(String reward) {
-		String msg = getData(reward).getString("Messages.Reward",
-				"");
+		String msg = getData(reward).getString("Messages.Reward", "");
 		return msg;
 
 	}
@@ -1465,6 +1464,10 @@ public class ConfigRewards {
 				"AdvancedCore.Reward." + reward);
 	}
 
+	public void setPermission(String reward, String perm) {
+		set(reward, "Permission", perm);
+	}
+
 	/**
 	 * Gets the messages broadcast.
 	 *
@@ -1473,7 +1476,7 @@ public class ConfigRewards {
 	 * @return the messages broadcast
 	 */
 	public String getMessagesBroadcast(String reward) {
-		return getData(reward).getString("Messages.Broadcast","");
+		return getData(reward).getString("Messages.Broadcast", "");
 	}
 
 	/**

@@ -45,7 +45,7 @@ public class RewardGUI {
 
 	public void openRewardGUIExp(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
-
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("SetExp",
 				new String[0], new ItemStack(Material.STONE)) {
 
@@ -152,6 +152,7 @@ public class RewardGUI {
 
 	public void openRewardGUIMoney(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("SetMoney",
 				new String[0], new ItemStack(Material.STONE)) {
 
@@ -258,7 +259,7 @@ public class RewardGUI {
 
 	public void openRewardGUIItems(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
-
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
 		ArrayList<String> lore = new ArrayList<String>();
 		lore.add("&cAdd current item inhand");
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("Add item", Utils
@@ -383,135 +384,9 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
-	public void openRewardGUIBasic(Player player, Reward reward) {
+	public void openRewardGUICommands(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
-
-		// edit chance
-		inv.addButton(inv.getNextSlot(), new BInventoryButton(
-				"Set Give Chance", new String[] {}, new ItemStack(
-						Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Player player = event.getWhoClicked();
-
-				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
-						player, "Reward");
-				Number[] nums = new Number[101];
-				for (int i = 0; i < nums.length; i++) {
-					nums[i] = i;
-				}
-				new ValueRequest().requestNumber(player,
-						Double.toString(reward.getChance()), nums,
-						new NumberListener() {
-
-							@Override
-							public void onInput(Player player, Number value) {
-								Reward reward = (Reward) Utils.getInstance()
-										.getPlayerMeta(player, "Reward");
-
-								ConfigRewards.getInstance().setChance(
-										reward.getRewardName(),
-										value.doubleValue());
-								player.sendMessage("Chance set to "
-										+ value.doubleValue() + " on "
-										+ reward.getRewardName());
-								plugin.reload();
-
-							}
-						});
-
-			}
-
-		});
-
-		// edit min/max/money
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Money",
-				new String[] {}, new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
-						player, "Reward");
-				openRewardGUIMoney(clickEvent.getPlayer(), reward);
-			}
-		});
-
-		// edit min/max/exp
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Exp",
-				new String[] {}, new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
-						player, "Reward");
-				openRewardGUIExp(clickEvent.getPlayer(), reward);
-			}
-		});
-
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Items",
-				new String[] {}, new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
-						player, "Reward");
-				openRewardGUIItems(clickEvent.getPlayer(), reward);
-			}
-		});
-
-		inv.openInventory(player);
-	}
-
-	/**
-	 * Open reward GUI.
-	 *
-	 * @param player
-	 *            the player
-	 * @param rewardName
-	 *            the reward name
-	 */
-	public void openRewardGUI(Player player, String rewardName) {
-		Reward reward = ConfigRewards.getInstance().getReward(rewardName);
-		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
-
 		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
-
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Basic Values",
-				new String[] {}, new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				openRewardGUIBasic(player, (Reward) Utils.getInstance()
-						.getPlayerMeta(player, "Reward"));
-			}
-		});
-
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("SetMessage",
-				new String[0], new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Player player = event.getWhoClicked();
-				new ValueRequest().requestString(player, new StringListener() {
-
-					@Override
-					public void onInput(Player player, String value) {
-						Reward reward = (Reward) Utils.getInstance()
-								.getPlayerMeta(player, "Reward");
-
-						ConfigRewards.getInstance().setMessagesReward(
-								reward.getRewardName(), value);
-						player.sendMessage("Set message");
-						plugin.reload();
-
-					}
-				});
-
-			}
-
-		});
-
 		inv.addButton(inv.getNextSlot(), new BInventoryButton(
 				"AddConsoleCommand", new String[0], new ItemStack(
 						Material.STONE)) {
@@ -710,8 +585,14 @@ public class RewardGUI {
 
 		});
 
+		inv.openInventory(player);
+	}
+
+	public void openRewardGUIPermission(Player player, Reward reward) {
+		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
 		inv.addButton(inv.getNextSlot(), new BInventoryButton(
-				"SetRequirePermission", new String[0], new ItemStack(
+				"Set Permission Required", new String[0], new ItemStack(
 						Material.STONE)) {
 
 			@Override
@@ -731,13 +612,245 @@ public class RewardGUI {
 								ConfigRewards.getInstance()
 										.setRequirePermission(
 												reward.getRewardName(), value);
-								player.sendMessage("Value set");
+								player.sendMessage("Permission Required set to "
+										+ String.valueOf(value)
+										+ " on "
+										+ reward.getRewardName());
 								plugin.reload();
 
 							}
 						});
 			}
 
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Set Permssion",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Player player = clickEvent.getWhoClicked();
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestString(
+						player,
+						reward.getPermission(),
+						new String[] { "AdvancedCore.Reward."
+								+ reward.getRewardName() }, true,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+								ConfigRewards.getInstance().setPermission(
+										reward.getRewardName(), value);
+								player.sendMessage("Permission set to " + value
+										+ " on " + reward.getRewardName());
+								plugin.reload();
+
+							}
+						});
+			}
+		});
+
+		inv.openInventory(player);
+	}
+
+	public void openRewardGUIMessages(Player player, Reward reward) {
+		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Set Reward Message", new String[0], new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				Player player = event.getWhoClicked();
+				new ValueRequest().requestString(player, new StringListener() {
+
+					@Override
+					public void onInput(Player player, String value) {
+						Reward reward = (Reward) Utils.getInstance()
+								.getPlayerMeta(player, "Reward");
+
+						ConfigRewards.getInstance().setMessagesReward(
+								reward.getRewardName(), value);
+						player.sendMessage("Reward message set to " + value
+								+ " on " + reward);
+						plugin.reload();
+
+					}
+				});
+
+			}
+
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Set Broadcast Message", new String[0], new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				Player player = event.getWhoClicked();
+				new ValueRequest().requestString(player, new StringListener() {
+
+					@Override
+					public void onInput(Player player, String value) {
+						Reward reward = (Reward) Utils.getInstance()
+								.getPlayerMeta(player, "Reward");
+
+						ConfigRewards.getInstance().setMessagesBroadcast(
+								reward.getRewardName(), value);
+						player.sendMessage("Broadcast message set to " + value
+								+ " on " + reward);
+						plugin.reload();
+
+					}
+				});
+
+			}
+
+		});
+		inv.openInventory(player);
+	}
+
+	public void openRewardGUIBasic(Player player, Reward reward) {
+		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
+		// edit chance
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Set Give Chance", new String[] {}, new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				Player player = event.getWhoClicked();
+
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				Number[] nums = new Number[101];
+				for (int i = 0; i < nums.length; i++) {
+					nums[i] = i;
+				}
+				new ValueRequest().requestNumber(player,
+						Double.toString(reward.getChance()), nums,
+						new NumberListener() {
+
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+
+								ConfigRewards.getInstance().setChance(
+										reward.getRewardName(),
+										value.doubleValue());
+								player.sendMessage("Chance set to "
+										+ value.doubleValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
+
+							}
+						});
+
+			}
+
+		});
+
+		// edit min/max/money
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Money",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUIMoney(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		// edit min/max/exp
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Exp",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUIExp(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Items",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUIItems(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Commands",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUICommands(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Messages",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUIMessages(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Messages",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				openRewardGUIPermission(clickEvent.getPlayer(), reward);
+			}
+		});
+
+		inv.openInventory(player);
+	}
+
+	/**
+	 * Open reward GUI.
+	 *
+	 * @param player
+	 *            the player
+	 * @param rewardName
+	 *            the reward name
+	 */
+	public void openRewardGUI(Player player, String rewardName) {
+		Reward reward = ConfigRewards.getInstance().getReward(rewardName);
+		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Basic Values",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIBasic(player, (Reward) Utils.getInstance()
+						.getPlayerMeta(player, "Reward"));
+			}
 		});
 
 		inv.openInventory(player);
