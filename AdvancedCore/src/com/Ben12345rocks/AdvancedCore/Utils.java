@@ -626,14 +626,14 @@ public class Utils {
 		}
 		return false;
 	}
-	
+
 	public boolean hasServerPermission(String playerName, String perm) {
 		if (playerName == null) {
 			return false;
 		}
 		Player player = Bukkit.getPlayer(playerName);
 		if (player != null) {
-			return player.hasPermission( perm);
+			return player.hasPermission(perm);
 		}
 		return false;
 	}
@@ -840,6 +840,13 @@ public class Utils {
 			return str;
 		}
 		return str.replaceAll("(?i)" + toReplace, replaceWith);
+	}
+
+	public String replacePlaceHolder(String str, String toReplace,
+			String replaceWith) {
+		return replaceIgnoreCase(
+				replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "{"
+						+ toReplace + "}", replaceWith);
 	}
 
 	/**
@@ -1417,7 +1424,7 @@ public class Utils {
 				fwmeta.addEffects(builder.build());
 				fwmeta.setPower(power);
 				fw.setFireworkMeta(fwmeta);
-				//plugin.debug("Launched firework");
+				// plugin.debug("Launched firework");
 			}
 		});
 

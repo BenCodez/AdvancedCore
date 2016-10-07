@@ -1516,34 +1516,41 @@ public class Reward {
 		}
 		String itemsAndAmountsMsg = Utils.getInstance().makeStringList(
 				itemsAndAmounts);
-		Utils.getInstance()
-				.broadcast(
-						Utils.getInstance()
-								.replacePlaceHolders(
-										user.getPlayer(),
-										broadcastMsg
-												.replace("%player%",
-														user.getPlayerName())
-												.replace("%money%", "" + money)
-												.replace("%exp%", "" + exp)
-												.replace("%itemandamounts%",
-														itemsAndAmountsMsg)
-												.replace(
-														"%items%",
-														Utils.getInstance()
-																.makeStringList(
-																		Utils.getInstance()
-																				.convert(
-																						getItems())))));
 
-		user.sendMessage(rewardMsg
-				.replace("%money%", "" + money)
-				.replace("%exp%", "" + exp)
-				.replace("%itemandamounts%", itemsAndAmountsMsg)
-				.replace(
-						"%items%",
-						Utils.getInstance().makeStringList(
-								Utils.getInstance().convert(getItems()))));
+		String broadcastMsg = this.broadcastMsg;
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(rewardMsg,
+				"player", user.getPlayerName());
+
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
+				"money", "" + money);
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
+				"exp", "" + exp);
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
+				"itemsandamount", itemsAndAmountsMsg);
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(
+				broadcastMsg,
+				"items",
+				Utils.getInstance().makeStringList(
+						Utils.getInstance().convert(getItems())));
+
+		Utils.getInstance().broadcast(
+				Utils.getInstance().replacePlaceHolders(user.getPlayer(),
+						broadcastMsg));
+
+		String msg = Utils.getInstance().replacePlaceHolder(rewardMsg,
+				"player", user.getPlayerName());
+
+		msg = Utils.getInstance().replacePlaceHolder(msg, "money", "" + money);
+		msg = Utils.getInstance().replacePlaceHolder(msg, "exp", "" + exp);
+		msg = Utils.getInstance().replacePlaceHolder(msg, "itemsandamount",
+				itemsAndAmountsMsg);
+		msg = Utils.getInstance().replacePlaceHolder(
+				msg,
+				"items",
+				Utils.getInstance().makeStringList(
+						Utils.getInstance().convert(getItems())));
+
+		user.sendMessage(msg);
 
 	}
 
