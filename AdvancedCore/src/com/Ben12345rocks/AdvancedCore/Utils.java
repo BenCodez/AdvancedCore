@@ -16,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatColor;
@@ -839,7 +840,8 @@ public class Utils {
 		if ((toReplace == null) || (replaceWith == null)) {
 			return str;
 		}
-		return str.replaceAll("(?i)" + toReplace, replaceWith);
+		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE)
+				.matcher(str).replaceAll(replaceWith);
 	}
 
 	public String replacePlaceHolder(String str, String toReplace,

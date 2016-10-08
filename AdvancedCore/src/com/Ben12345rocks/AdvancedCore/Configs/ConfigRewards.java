@@ -897,7 +897,7 @@ public class ConfigRewards {
 	 * @return the reward type
 	 */
 	public String getRewardType(String reward) {
-		String str = getData(reward).getString("RewardType");
+		String str = getData(reward).getString("RewardType", "BOTH");
 		if (str != null) {
 			if (str.equalsIgnoreCase("online")) {
 				return "ONLINE";
@@ -1462,6 +1462,10 @@ public class ConfigRewards {
 	public String getPermission(String reward) {
 		return getData(reward).getString("Permission",
 				"AdvancedCore.Reward." + reward);
+	}
+
+	public void setRewardType(String reward, String value) {
+		set(reward, "RewardType", value);
 	}
 
 	public void setPermission(String reward, String perm) {

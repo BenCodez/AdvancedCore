@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -850,6 +852,170 @@ public class RewardGUI {
 			public void onClick(ClickEvent clickEvent) {
 				openRewardGUIBasic(player, (Reward) Utils.getInstance()
 						.getPlayerMeta(player, "Reward"));
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Advanced Values", new String[] {}, new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIAdvanced(player, (Reward) Utils.getInstance()
+						.getPlayerMeta(player, "Reward"));
+			}
+		});
+
+		inv.openInventory(player);
+	}
+
+	public void openRewardGUIAdvanced(Player player, Reward reward) {
+		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Worlds",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIWorlds(player, (Reward) Utils.getInstance()
+						.getPlayerMeta(player, "Reward"));
+
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Set Reward Type", new String[] {}, new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				new ValueRequest().requestString(clickEvent.getPlayer(),
+						reward.getRewardType(), new String[] { "BOTH",
+								"OFFLINE", "ONLINE" }, false,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+								ConfigRewards.getInstance().setRewardType(
+										reward.getRewardName(), value);
+								player.sendMessage("Set rewward type to "
+										+ value + " on "
+										+ reward.getRewardName());
+								plugin.reload();
+							}
+						});
+			}
+		});
+
+		inv.openInventory(player);
+	}
+
+	public void openRewardGUIWorlds(Player player, Reward reward) {
+		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
+		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Set GiveInEachWorld", new String[] {}, new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Player player = clickEvent.getWhoClicked();
+
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+
+				new ValueRequest().requestBoolean(player,
+						"" + reward.isGiveInEachWorld(), new BooleanListener() {
+
+							@Override
+							public void onInput(Player player, boolean value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+								ConfigRewards.getInstance().setGiveInEachWorld(
+										reward.getRewardName(), value);
+								player.sendMessage("GiveInEachWorld set to "
+										+ value + " on "
+										+ reward.getRewardName());
+								plugin.reload();
+							}
+						});
+
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Add world",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Player player = clickEvent.getWhoClicked();
+
+				ArrayList<String> worlds = new ArrayList<String>();
+				for (World world : Bukkit.getWorlds()) {
+					worlds.add(world.getName());
+				}
+				new ValueRequest().requestString(player, "", Utils
+						.getInstance().convertArray(worlds), true,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+								ArrayList<String> worlds = ConfigRewards
+										.getInstance().getWorlds(
+												reward.getRewardName());
+								worlds.add(value);
+								ConfigRewards.getInstance().setWorlds(
+										reward.getRewardName(), worlds);
+
+								player.sendMessage("Added world " + value
+										+ " on " + reward.getRewardName());
+
+								plugin.reload();
+							}
+						});
+			}
+		});
+
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Remove world",
+				new String[] {}, new ItemStack(Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Player player = clickEvent.getWhoClicked();
+				Reward reward = (Reward) Utils.getInstance().getPlayerMeta(
+						player, "Reward");
+				ArrayList<String> worlds = ConfigRewards.getInstance()
+						.getWorlds(reward.getRewardName());
+
+				new ValueRequest().requestString(player, "", Utils
+						.getInstance().convertArray(worlds), true,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+								ArrayList<String> worlds = ConfigRewards
+										.getInstance().getWorlds(
+												reward.getRewardName());
+								worlds.remove(value);
+								ConfigRewards.getInstance().setWorlds(
+										reward.getRewardName(), worlds);
+
+								player.sendMessage("Removed world " + value
+										+ " on " + reward.getRewardName());
+
+								plugin.reload();
+							}
+						});
 			}
 		});
 
