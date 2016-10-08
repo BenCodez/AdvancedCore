@@ -143,6 +143,25 @@ public class CommandLoader {
 			}
 		});
 
+		plugin.advancedCoreCommands
+				.add(new CommandHandler(new String[] { "GiveReward",
+						"(Reward)", "(Player)" }, "AdvancedCore.GiveReward",
+						"Give a player a reward file", true) {
+
+					@Override
+					public void execute(CommandSender sender, String[] args) {
+						ConfigRewards
+								.getInstance()
+								.getReward(args[1])
+								.giveReward(
+										new User(plugin, args[2]),
+										Utils.getInstance().isPlayerOnline(
+												args[2]));
+						sender.sendMessage("Gave " + args[2]
+								+ " the reward file " + args[1]);
+					}
+				});
+
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"SelectChoiceReward", "(Reward)" },
 				"AdvancedCore.SelectChoiceReward",
