@@ -7,6 +7,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardGUI;
+import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
@@ -147,6 +148,18 @@ public class Commands {
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
 				openConfigGUI(player);
+
+			}
+
+		});
+		
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("&cUsers",
+				new String[] {}, new ItemStack(Material.PAPER)) {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				Player player = event.getWhoClicked();
+				UserGUI.getInstance().openUsersGUI(player);
 
 			}
 

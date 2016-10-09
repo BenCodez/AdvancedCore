@@ -801,7 +801,7 @@ public class RewardGUI {
 			}
 		});
 
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Messages",
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Permissions",
 				new String[] {}, new ItemStack(Material.STONE)) {
 
 			@Override
