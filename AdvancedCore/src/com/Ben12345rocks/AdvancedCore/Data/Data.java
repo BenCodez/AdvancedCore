@@ -113,9 +113,9 @@ public class Data {
 
 			} catch (IOException e) {
 				Bukkit.getServer()
-				.getLogger()
-				.severe(ChatColor.RED + "Could not create " + uuid
-						+ ".yml! Name: " + playerName);
+						.getLogger()
+						.severe(ChatColor.RED + "Could not create " + uuid
+								+ ".yml! Name: " + playerName);
 
 			}
 		}
@@ -224,9 +224,9 @@ public class Data {
 			data.save(dFile);
 		} catch (IOException e) {
 			Bukkit.getServer()
-			.getLogger()
-			.severe(ChatColor.RED + "Could not save "
-					+ Utils.getInstance().getUUID(playerName) + ".yml!");
+					.getLogger()
+					.severe(ChatColor.RED + "Could not save "
+							+ Utils.getInstance().getUUID(playerName) + ".yml!");
 		}
 
 	}
@@ -242,10 +242,15 @@ public class Data {
 	 *            the value
 	 */
 	public void set(User user, String path, Object value) {
-		File dFile = getPlayerFile(user);
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		data.set(path, value);
-		FilesManager.getInstance().editFile(dFile, data);
+		try {
+			File dFile = getPlayerFile(user);
+			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+			data.set(path, value);
+			FilesManager.getInstance().editFile(dFile, data);
+		} catch (IllegalArgumentException ex) {
+			plugin.debug("Tried to set an empty path for a user. Name: "
+					+ user.getPlayerName() + " Path: " + path);
+		}
 	}
 
 	/**
@@ -293,7 +298,7 @@ public class Data {
 			} catch (IOException e) {
 				plugin.getLogger().severe(
 						ChatColor.RED + "Could not create " + uuid
-						+ ".yml! Name: " + playerName);
+								+ ".yml! Name: " + playerName);
 
 			}
 		}

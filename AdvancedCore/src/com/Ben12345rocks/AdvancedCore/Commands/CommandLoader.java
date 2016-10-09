@@ -310,8 +310,10 @@ public class CommandLoader {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				ArrayList<String> rewards = ConfigRewards.getInstance()
-						.getRewardNames();
+				ArrayList<String> rewards = new ArrayList<String>();
+				for (Reward reward : plugin.rewards) {
+					rewards.add(reward.getRewardName());
+				}
 
 				new ValueRequest().requestString(clickEvent.getPlayer(), "",
 						Utils.getInstance().convertArray(rewards), true,
