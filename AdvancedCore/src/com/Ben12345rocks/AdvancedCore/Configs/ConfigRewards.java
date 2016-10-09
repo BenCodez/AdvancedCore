@@ -830,6 +830,13 @@ public class ConfigRewards {
 				}
 			}
 		}
+		if (reward.equals("")) {
+			plugin.getLogger()
+					.warning(
+							"Tried to get any empty reward file name, renaming to EmptyName");
+			reward = "EmptyName";
+		}
+
 		return new Reward(reward);
 	}
 

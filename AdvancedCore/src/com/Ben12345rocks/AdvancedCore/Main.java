@@ -176,7 +176,9 @@ public class Main extends JavaPlugin {
 		ConfigRewards.getInstance().setupExample();
 		rewards = new ArrayList<Reward>();
 		for (String reward : ConfigRewards.getInstance().getRewardNames()) {
-			rewards.add(new Reward(reward));
+			if (!reward.equals("")) {
+				rewards.add(new Reward(reward));
+			}
 		}
 		plugin.debug("Loaded rewards");
 
@@ -256,7 +258,7 @@ public class Main extends JavaPlugin {
 
 		logger = new Logger(this, new File(getDataFolder(), "Log"
 				+ File.separator + "Log.txt"));
-		
+
 		checkUpdateEvent(plugin);
 	}
 
@@ -272,7 +274,7 @@ public class Main extends JavaPlugin {
 
 		Main.plugin.getLogger().info("Registered hook for " + plugin.getName());
 	}
-	
+
 	/**
 	 * Check update event.
 	 *
