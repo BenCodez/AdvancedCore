@@ -847,8 +847,8 @@ public class Utils {
 	public String replacePlaceHolder(String str, String toReplace,
 			String replaceWith) {
 		return replaceIgnoreCase(
-				replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "{"
-						+ toReplace + "}", replaceWith);
+				replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "\\{"
+						+ toReplace + "\\}", replaceWith);
 	}
 
 	/**
