@@ -680,8 +680,7 @@ public class ConfigRewards {
 	 * @return the messages reward
 	 */
 	public String getMessagesReward(String reward) {
-		String msg = getData(reward).getString("Messages.Reward",
-				Config.getInstance().getFormatDefaultRewardMsg());
+		String msg = getData(reward).getString("Messages.Reward", "");
 		return msg;
 
 	}
@@ -831,6 +830,13 @@ public class ConfigRewards {
 				}
 			}
 		}
+		if (reward.equals("")) {
+			plugin.getLogger()
+					.warning(
+							"Tried to get any empty reward file name, renaming to EmptyName");
+			reward = "EmptyName";
+		}
+
 		return new Reward(reward);
 	}
 
@@ -898,7 +904,7 @@ public class ConfigRewards {
 	 * @return the reward type
 	 */
 	public String getRewardType(String reward) {
-		String str = getData(reward).getString("RewardType");
+		String str = getData(reward).getString("RewardType", "BOTH");
 		if (str != null) {
 			if (str.equalsIgnoreCase("online")) {
 				return "ONLINE";
@@ -1465,6 +1471,14 @@ public class ConfigRewards {
 				"AdvancedCore.Reward." + reward);
 	}
 
+	public void setRewardType(String reward, String value) {
+		set(reward, "RewardType", value);
+	}
+
+	public void setPermission(String reward, String perm) {
+		set(reward, "Permission", perm);
+	}
+
 	/**
 	 * Gets the messages broadcast.
 	 *
@@ -1473,7 +1487,7 @@ public class ConfigRewards {
 	 * @return the messages broadcast
 	 */
 	public String getMessagesBroadcast(String reward) {
-		return getData(reward).getString("Messages.Broadcast","");
+		return getData(reward).getString("Messages.Broadcast", "");
 	}
 
 	/**

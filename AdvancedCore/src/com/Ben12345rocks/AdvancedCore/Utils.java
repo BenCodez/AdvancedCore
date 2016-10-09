@@ -16,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatColor;
@@ -626,14 +627,14 @@ public class Utils {
 		}
 		return false;
 	}
-	
+
 	public boolean hasServerPermission(String playerName, String perm) {
 		if (playerName == null) {
 			return false;
 		}
 		Player player = Bukkit.getPlayer(playerName);
 		if (player != null) {
-			return player.hasPermission( perm);
+			return player.hasPermission(perm);
 		}
 		return false;
 	}
@@ -839,7 +840,15 @@ public class Utils {
 		if ((toReplace == null) || (replaceWith == null)) {
 			return str;
 		}
-		return str.replaceAll("(?i)" + toReplace, replaceWith);
+		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE)
+				.matcher(str).replaceAll(replaceWith);
+	}
+
+	public String replacePlaceHolder(String str, String toReplace,
+			String replaceWith) {
+		return replaceIgnoreCase(
+				replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "{"
+						+ toReplace + "}", replaceWith);
 	}
 
 	/**
@@ -953,6 +962,7 @@ public class Utils {
 	 *            the value
 	 */
 	public void setPlayerMeta(Player player, String str, Object value) {
+		player.removeMetadata(str, plugin);
 		player.setMetadata(str, new MetadataValue() {
 
 			@Override
@@ -1416,7 +1426,7 @@ public class Utils {
 				fwmeta.addEffects(builder.build());
 				fwmeta.setPower(power);
 				fw.setFireworkMeta(fwmeta);
-				//plugin.debug("Launched firework");
+				// plugin.debug("Launched firework");
 			}
 		});
 
