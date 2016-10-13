@@ -222,7 +222,7 @@ public class User {
 	 *
 	 * @return the plugin data
 	 */
-	public ConfigurationSection getPluginData() {
+	public synchronized ConfigurationSection getPluginData() {
 		boolean isSection = Data.getInstance().getData(this)
 				.isConfigurationSection(plugin.getName());
 		if (!isSection) {
@@ -238,7 +238,7 @@ public class User {
 	 *
 	 * @return the raw data
 	 */
-	public FileConfiguration getRawData() {
+	public synchronized FileConfiguration getRawData() {
 		return Data.getInstance().getData(this);
 	}
 
@@ -831,7 +831,7 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
-	public void setPluginData(String path, Object value) {
+	public synchronized void setPluginData(String path, Object value) {
 		Data.getInstance().set(this, plugin.getName() + "." + path, value);
 	}
 
@@ -843,7 +843,7 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
-	public void setRawData(String path, Object value) {
+	public synchronized void setRawData(String path, Object value) {
 		Data.getInstance().set(this, path, value);
 	}
 
