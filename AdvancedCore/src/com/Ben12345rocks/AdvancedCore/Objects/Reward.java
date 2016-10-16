@@ -345,6 +345,8 @@ public class Reward {
 	/** The firework types. */
 	private ArrayList<String> fireworkTypes;
 
+	private boolean usesWorlds;
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -492,6 +494,19 @@ public class Reward {
 		this.fireworkFlicker = ConfigRewards.getInstance().getFireworkFlicker(
 				reward);
 
+		if (getWorlds().size() == 0) {
+			usesWorlds = false;
+		} else {
+			usesWorlds = true;
+		}
+	}
+
+	public boolean isUsesWorlds() {
+		return usesWorlds;
+	}
+
+	public void setUsesWorlds(boolean usesWorlds) {
+		this.usesWorlds = usesWorlds;
 	}
 
 	/**

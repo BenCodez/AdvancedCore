@@ -141,10 +141,12 @@ public class User {
 	public void checkOfflineRewards() {
 		for (Reward reward : Main.plugin.rewards) {
 			int offVotes = getOfflineRewards(reward);
-			for (int i = 0; i < offVotes; i++) {
-				giveReward(reward, false);
+			if (offVotes > 0) {
+				for (int i = 0; i < offVotes; i++) {
+					giveReward(reward, false);
+				}
+				setOfflineRewards(reward, 0);
 			}
-			setOfflineRewards(reward, 0);
 		}
 	}
 
@@ -481,46 +483,50 @@ public class User {
 	public void offVoteWorld(String world) {
 
 		for (Reward reward : Main.plugin.rewards) {
-			ArrayList<String> worlds = reward.getWorlds();
-			if ((world != null) && (worlds != null)) {
-				if (reward.isGiveInEachWorld()) {
-					for (String worldName : worlds) {
+			if (reward.isUsesWorlds()) {
+				ArrayList<String> worlds = reward.getWorlds();
+				if ((world != null) && (worlds != null)) {
+					if (reward.isGiveInEachWorld()) {
+						for (String worldName : worlds) {
 
-						Main.plugin.debug("Checking world: " + worldName
-								+ ", reard: " + reward);
+							Main.plugin.debug("Checking world: " + worldName
+									+ ", reard: " + reward);
 
-						if (worldName != "") {
-							if (worldName.equals(world)) {
+							if (worldName != "") {
+								if (worldName.equals(world)) {
 
-								Main.plugin.debug("Giving reward...");
+									Main.plugin.debug("Giving reward...");
 
-								int worldRewards =
+									int worldRewards =
 
-								getOfflineRewardWorld(reward.getRewardName(),
-										worldName);
+									getOfflineRewardWorld(
+											reward.getRewardName(), worldName);
 
-								while (worldRewards > 0) {
-									reward.giveRewardUser(this);
-									worldRewards--;
+									while (worldRewards > 0) {
+										reward.giveRewardUser(this);
+										worldRewards--;
+									}
+
+									setOfflineRewardWorld(
+											reward.getRewardName(), worldName,
+											0);
 								}
-
-								setOfflineRewardWorld(reward.getRewardName(),
-										worldName, 0);
 							}
+
 						}
+					} else {
+						if (worlds.contains(world)) {
+							int worldRewards = getOfflineRewardWorld(
+									reward.getRewardName(), world);
 
-					}
-				} else {
-					if (worlds.contains(world)) {
-						int worldRewards = getOfflineRewardWorld(
-								reward.getRewardName(), world);
+							while (worldRewards > 0) {
+								reward.giveRewardUser(this);
+								worldRewards--;
+							}
 
-						while (worldRewards > 0) {
-							reward.giveRewardUser(this);
-							worldRewards--;
+							setOfflineRewardWorld(reward.getRewardName(),
+									world, 0);
 						}
-
-						setOfflineRewardWorld(reward.getRewardName(), world, 0);
 					}
 				}
 			}
