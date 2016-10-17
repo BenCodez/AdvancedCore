@@ -19,6 +19,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 
 /**
@@ -421,7 +422,11 @@ public class AInventory {
 						.invoke(activeContainerField.get(p), p);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			if (Config.getInstance().getDebugEnabled()) {
+				e.printStackTrace();
+			}
+			Main.plugin.debug("Failed to use AnvilGUI");
+			
 		}
 	}
 

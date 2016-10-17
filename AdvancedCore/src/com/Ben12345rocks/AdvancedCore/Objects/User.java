@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
@@ -22,6 +23,8 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
+import com.Ben12345rocks.AdvancedCore.UserManager.SaveMethod;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
@@ -42,6 +45,55 @@ public class User {
 	/** The uuid. */
 	private String uuid;
 
+	private HashMap<String, Object> values;
+
+	public void save() {
+		if (UserManager.getInstance().getSaveMethod().equals(SaveMethod.File)) {
+			for (Entry<String, Object> entry : values.entrySet()) {
+				setRawData(entry.getKey(), entry.getValue());
+			}
+		} else if (UserManager.getInstance().getSaveMethod()
+				.equals(SaveMethod.SQL)) {
+
+		}
+	}
+
+	private void load() {
+		values = new HashMap<String, Object>();
+		if (UserManager.getInstance().getSaveMethod().equals(SaveMethod.File)) {
+			FileConfiguration data = getRawData();
+			for (String string : data.getConfigurationSection("")
+					.getKeys(false)) {
+				values.put(string, data.get(string));
+			}
+		} else if (UserManager.getInstance().getSaveMethod()
+				.equals(SaveMethod.SQL)) {
+
+		}
+	}
+
+	public void set(String path, Object value) {
+		path = path.replace(".", "-");
+		values.put(path, value);
+	}
+
+	public Object get(String path, Object value) {
+		path = path.replace(".", "-");
+		if (values.containsKey(path)) {
+			return values.get(path);
+		}
+		return null;
+	}
+
+	public int getInt(String path, int fallBack) {
+		Object value = values.get(path);
+		if (value != null && value instanceof Integer) {
+			return (int) value;
+		} else {
+			return fallBack;
+		}
+	}
+
 	/**
 	 * Instantiates a new user.
 	 *
@@ -54,6 +106,7 @@ public class User {
 		this.plugin = plugin;
 		playerName = player.getName();
 		uuid = player.getUniqueId().toString();
+		load();
 	}
 
 	/**
@@ -68,6 +121,7 @@ public class User {
 		this.plugin = plugin;
 		this.playerName = playerName;
 		uuid = Utils.getInstance().getUUID(playerName);
+		load();
 	}
 
 	/**
@@ -82,6 +136,7 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		playerName = Utils.getInstance().getPlayerName(this.uuid);
+		load();
 	}
 
 	/**
@@ -100,6 +155,7 @@ public class User {
 		if (loadName) {
 			playerName = Utils.getInstance().getPlayerName(this.uuid);
 		}
+		load();
 	}
 
 	/**
@@ -224,6 +280,7 @@ public class User {
 	 *
 	 * @return the plugin data
 	 */
+	@Deprecated
 	public synchronized ConfigurationSection getPluginData() {
 		boolean isSection = Data.getInstance().getData(this)
 				.isConfigurationSection(plugin.getName());
@@ -240,6 +297,7 @@ public class User {
 	 *
 	 * @return the raw data
 	 */
+	@Deprecated
 	public synchronized FileConfiguration getRawData() {
 		return Data.getInstance().getData(this);
 	}
@@ -837,6 +895,7 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
+	@Deprecated
 	public synchronized void setPluginData(String path, Object value) {
 		Data.getInstance().set(this, plugin.getName() + "." + path, value);
 	}
@@ -849,6 +908,7 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
+	@Deprecated
 	public synchronized void setRawData(String path, Object value) {
 		Data.getInstance().set(this, path, value);
 	}
