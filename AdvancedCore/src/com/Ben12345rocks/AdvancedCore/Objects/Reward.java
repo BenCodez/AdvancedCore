@@ -1532,8 +1532,9 @@ public class Reward {
 		String itemsAndAmountsMsg = Utils.getInstance().makeStringList(
 				itemsAndAmounts);
 
+		
 		String broadcastMsg = this.broadcastMsg;
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(rewardMsg,
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
 				"player", user.getPlayerName());
 
 		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
