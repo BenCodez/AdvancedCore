@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,9 +13,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
-import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
-import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 // TODO: Auto-generated Javadoc
@@ -56,23 +54,7 @@ public class ConfigRewards {
 		ConfigRewards.plugin = plugin;
 	}
 
-	/**
-	 * Check delayed timed rewards.
-	 */
-	public void checkDelayedTimedRewards() {
-		for (User user : Data.getInstance().getUsers()) {
-			for (Reward reward : plugin.rewards) {
-				long time = user.getTimedReward(reward);
-				if (time != 0) {
-					Date timeDate = new Date(time);
-					if (new Date().after(timeDate)) {
-						reward.giveRewardReward(user, true);
-						user.setTimedReward(reward, 0);
-					}
-				}
-			}
-		}
-	}
+	
 
 	/**
 	 * Gets the choice rewards rewards.
@@ -821,23 +803,9 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the reward
 	 */
+	@Deprecated
 	public Reward getReward(String reward) {
-		reward = reward.replace(" ", "_");
-		if (plugin.rewards != null) {
-			for (Reward rewardFile : plugin.rewards) {
-				if (rewardFile.name.equals(reward)) {
-					return rewardFile;
-				}
-			}
-		}
-		if (reward.equals("")) {
-			plugin.getLogger()
-					.warning(
-							"Tried to get any empty reward file name, renaming to EmptyName");
-			reward = "EmptyName";
-		}
-
-		return new Reward(reward);
+		return RewardHandler.getInstance().getReward(reward);
 	}
 
 	/**

@@ -1177,20 +1177,23 @@ public class Reward {
 					String reward = rewards.get((int) Math.random()
 							* rewards.size());
 					if (!reward.equals("")) {
-						ConfigRewards.getInstance().getReward(reward)
-								.giveReward(user, online);
+						RewardHandler.getInstance().giveReward(user, reward,
+								online);
 					}
 				}
 			}
 		} else {
 			for (String reward : getRandomFallBack()) {
 				if (!reward.equals("")) {
-					user.giveReward(
-							ConfigRewards.getInstance().getReward(reward),
-							online);
+					RewardHandler.getInstance()
+							.giveReward(user, reward, online);
 				}
 			}
 		}
+	}
+
+	public void giveReward(User user, boolean online) {
+		giveReward(user, online, true);
 	}
 
 	/**
@@ -1201,7 +1204,7 @@ public class Reward {
 	 * @param online
 	 *            the online
 	 */
-	public void giveReward(User user, boolean online) {
+	public void giveReward(User user, boolean online, boolean giveOffline) {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user);
 		Bukkit.getPluginManager().callEvent(event);
@@ -1211,9 +1214,10 @@ public class Reward {
 			return;
 		}
 
-		if (!online
-				&& !Utils.getInstance().isPlayerOnline(user.getPlayerName())) {
-			user.setOfflineRewards(this, user.getOfflineRewards(this) + 1);
+		if (!online && !user.isOnline()) {
+			if (giveOffline) {
+				user.setOfflineRewards(this, user.getOfflineRewards(this) + 1);
+			}
 			return;
 		}
 

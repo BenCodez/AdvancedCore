@@ -15,6 +15,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
+import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
@@ -98,7 +99,7 @@ public class RewardGUI {
 				Player player = event.getWhoClicked();
 
 				Reward reward = getCurrentReward(player);
-						
+
 				new ValueRequest().requestNumber(player,
 						Integer.toString(reward.getMinExp()), null,
 						new NumberListener() {
@@ -801,8 +802,9 @@ public class RewardGUI {
 			}
 		});
 
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Edit Permissions",
-				new String[] {}, new ItemStack(Material.STONE)) {
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Edit Permissions", new String[] {}, new ItemStack(
+						Material.STONE)) {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
@@ -823,7 +825,7 @@ public class RewardGUI {
 	 *            the reward name
 	 */
 	public void openRewardGUI(Player player, String rewardName) {
-		Reward reward = ConfigRewards.getInstance().getReward(rewardName);
+		Reward reward = RewardHandler.getInstance().getReward(rewardName);
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 
 		setCurrentReward(player, reward);
@@ -1008,7 +1010,7 @@ public class RewardGUI {
 	public void openRewardsGUI(Player player) {
 		BInventory inv = new BInventory("Rewards");
 		int count = 0;
-		for (Reward reward : com.Ben12345rocks.AdvancedCore.Main.plugin.rewards) {
+		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			ArrayList<String> lore = new ArrayList<String>();
 			if (reward.isDelayEnabled()) {
 				lore.add("DelayEnabled: true");

@@ -23,14 +23,13 @@ import com.Ben12345rocks.AdvancedCore.Commands.CommandLoader;
 import com.Ben12345rocks.AdvancedCore.Commands.Executor.CommandAdvancedCore;
 import com.Ben12345rocks.AdvancedCore.Commands.TabComplete.AdvancedCoreTabCompleter;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
-import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.AdvancedCoreUpdateEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
-import com.Ben12345rocks.AdvancedCore.Objects.Reward;
+import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
@@ -60,8 +59,7 @@ public class Main extends JavaPlugin {
 	/** The plugins. */
 	private ArrayList<Plugin> plugins;
 
-	/** The rewards. */
-	public ArrayList<Reward> rewards;
+	
 
 	/** The logger. */
 	private Logger logger;
@@ -169,20 +167,7 @@ public class Main extends JavaPlugin {
 				new AdvancedCoreTabCompleter());
 	}
 
-	/**
-	 * Load rewards.
-	 */
-	public void loadRewards() {
-		ConfigRewards.getInstance().setupExample();
-		rewards = new ArrayList<Reward>();
-		for (String reward : ConfigRewards.getInstance().getRewardNames()) {
-			if (!reward.equals("")) {
-				rewards.add(new Reward(reward));
-			}
-		}
-		plugin.debug("Loaded rewards");
-
-	}
+	
 
 	/*
 	 * (non-Javadoc)
@@ -219,7 +204,7 @@ public class Main extends JavaPlugin {
 		Bukkit.getPluginManager().registerEvents(
 				new AdvancedCoreUpdateEvent(this), this);
 
-		loadRewards();
+		RewardHandler.getInstance().loadRewards();
 
 		try {
 			Metrics metrics = new Metrics(this);
@@ -308,7 +293,7 @@ public class Main extends JavaPlugin {
 	 */
 	public void reload() {
 		Config.getInstance().reloadData();
-		loadRewards();
+		RewardHandler.getInstance().loadRewards();
 	}
 
 	/**
@@ -352,6 +337,6 @@ public class Main extends JavaPlugin {
 	 * Update.
 	 */
 	public void update() {
-		ConfigRewards.getInstance().checkDelayedTimedRewards();
+		RewardHandler.getInstance().checkDelayedTimedRewards();
 	}
 }

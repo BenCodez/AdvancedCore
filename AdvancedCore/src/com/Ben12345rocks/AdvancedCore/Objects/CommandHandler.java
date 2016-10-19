@@ -434,7 +434,7 @@ public abstract class CommandHandler {
 		}
 		addTabCompleteOption("(Player)", players);
 		ArrayList<String> rewards = new ArrayList<String>();
-		for (Reward reward : plugin.rewards) {
+		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			rewards.add(reward.getRewardName());
 		}
 		addTabCompleteOption("(reward)", rewards);

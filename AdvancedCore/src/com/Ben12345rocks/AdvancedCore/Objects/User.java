@@ -195,7 +195,7 @@ public class User {
 	 * Check offline rewards.
 	 */
 	public void checkOfflineRewards() {
-		for (Reward reward : Main.plugin.rewards) {
+		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			int offVotes = getOfflineRewards(reward);
 			if (offVotes > 0) {
 				for (int i = 0; i < offVotes; i++) {
@@ -540,7 +540,7 @@ public class User {
 	 */
 	public void offVoteWorld(String world) {
 
-		for (Reward reward : Main.plugin.rewards) {
+		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			if (reward.isUsesWorlds()) {
 				ArrayList<String> worlds = reward.getWorlds();
 				if ((world != null) && (worlds != null)) {

@@ -14,9 +14,9 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
-import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
+import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
@@ -176,13 +176,10 @@ public class CommandLoader {
 
 					@Override
 					public void execute(CommandSender sender, String[] args) {
-						ConfigRewards
-								.getInstance()
-								.getReward(args[1])
-								.giveReward(
-										new User(plugin, args[2]),
-										Utils.getInstance().isPlayerOnline(
-												args[2]));
+						User user = new User(plugin, args[2]);
+						RewardHandler.getInstance().giveReward(user, args[1],
+								user.isOnline());
+
 						sender.sendMessage("Gave " + args[2]
 								+ " the reward file " + args[1]);
 					}
@@ -195,7 +192,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				Reward reward = ConfigRewards.getInstance().getReward(args[1]);
+				Reward reward = RewardHandler.getInstance().getReward(args[1]);
 				User user = new User(Main.plugin, (Player) sender);
 				if (user.getChoiceReward(reward) != 0) {
 					new ValueRequest(InputMethod.INVENTORY).requestString(
@@ -208,9 +205,8 @@ public class CommandLoader {
 								@Override
 								public void onInput(Player player, String value) {
 									User user = new User(Main.plugin, player);
-									ConfigRewards.getInstance()
-											.getReward(value)
-											.giveReward(user, true);
+									RewardHandler.getInstance().giveReward(
+											user, value, true);
 									user.setChoiceReward(reward,
 											user.getChoiceReward(reward) - 1);
 								}
@@ -311,7 +307,7 @@ public class CommandLoader {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				ArrayList<String> rewards = new ArrayList<String>();
-				for (Reward reward : plugin.rewards) {
+				for (Reward reward : RewardHandler.getInstance().getRewards()) {
 					rewards.add(reward.getRewardName());
 				}
 
@@ -323,8 +319,8 @@ public class CommandLoader {
 							public void onInput(Player player, String value) {
 								User user = new User(Main.plugin, UserGUI
 										.getInstance().getCurrentPlayer(player));
-								ConfigRewards.getInstance().getReward(value)
-										.giveReward(user, user.isOnline());
+								RewardHandler.getInstance().giveReward(user,
+										value, user.isOnline());
 								player.sendMessage("Given "
 										+ user.getPlayerName()
 										+ " reward file " + value);
