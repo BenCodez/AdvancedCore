@@ -16,6 +16,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Book.BookManager;
@@ -147,7 +148,7 @@ public class StringRequester {
 						.contains(InputMethod.CHAT.toString())) {
 
 			if (options != null) {
-				User user = new User(Main.plugin, player);
+				User user = UserManager.getInstance().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
 				Utils.getInstance().setPlayerMeta(player,
 						"ValueRequestString", listener);

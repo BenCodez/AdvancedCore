@@ -504,6 +504,7 @@ public class Utils {
 			return null;
 		}
 
+		@SuppressWarnings("deprecation")
 		User user = new User(plugin,
 				new com.Ben12345rocks.AdvancedCore.Objects.UUID(uuid), false);
 		String playerName = Data.getInstance().getName(user);

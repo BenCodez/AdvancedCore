@@ -8,6 +8,7 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 /**
  * The Class WorldChangeEvent.
@@ -48,7 +49,7 @@ public class WorldChangeEvent implements Listener {
 					plugin.getDataFolder().mkdir();
 				}
 
-				User user = new User(plugin, player);
+				User user = UserManager.getInstance().getUser(player);
 
 				user.checkOfflineRewards();
 				user.offVoteWorld(player.getWorld().getName());

@@ -9,10 +9,10 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Book.BookManager;
@@ -124,7 +124,7 @@ public class BooleanRequester {
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
 						.contains(InputMethod.CHAT.toString())) {
 
-			User user = new User(Main.plugin, player);
+			User user = UserManager.getInstance().getUser(player);
 			user.sendMessage("&cClick one of the following options below:");
 			String option = "True";
 			TextComponent comp = new TextComponent(option);

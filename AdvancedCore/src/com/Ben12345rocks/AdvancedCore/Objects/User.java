@@ -77,21 +77,16 @@ public class User {
 		values.put(path, value);
 	}
 
-	public Object get(String path, Object value) {
+	public Object get(String path, Object value, Object fallBack) {
 		path = path.replace(".", "-");
 		if (values.containsKey(path)) {
 			return values.get(path);
 		}
-		return null;
+		return fallBack;
 	}
 
-	public int getInt(String path, int fallBack) {
-		Object value = values.get(path);
-		if (value != null && value instanceof Integer) {
-			return (int) value;
-		} else {
-			return fallBack;
-		}
+	public Object get(String path, Object value) {
+		return get(path, value, null);
 	}
 
 	/**
@@ -102,6 +97,7 @@ public class User {
 	 * @param player
 	 *            the player
 	 */
+	@Deprecated
 	public User(Plugin plugin, Player player) {
 		this.plugin = plugin;
 		playerName = player.getName();
@@ -117,6 +113,7 @@ public class User {
 	 * @param playerName
 	 *            the player name
 	 */
+	@Deprecated
 	public User(Plugin plugin, String playerName) {
 		this.plugin = plugin;
 		this.playerName = playerName;
@@ -132,6 +129,7 @@ public class User {
 	 * @param uuid
 	 *            the uuid
 	 */
+	@Deprecated
 	public User(Plugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
@@ -149,6 +147,7 @@ public class User {
 	 * @param loadName
 	 *            the load name
 	 */
+	@Deprecated
 	public User(Plugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();

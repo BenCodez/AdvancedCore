@@ -14,6 +14,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 // TODO: Auto-generated Javadoc
@@ -183,16 +184,13 @@ public class Data {
 	 */
 	public Set<User> getUsers() {
 		Set<User> users = new HashSet<User>();
-		ArrayList<String> players = getPlayerNames();
-		if (players != null) {
-			for (String playerName : players) {
-				User user = new User(plugin, playerName);
-				users.add(user);
-			}
-			return users;
-		} else {
-			return new HashSet<User>();
+		ArrayList<User> players = UserManager.getInstance().getUsers();
+
+		for (User user : players) {
+			users.add(user);
+
 		}
+		return users;
 	}
 
 	/**

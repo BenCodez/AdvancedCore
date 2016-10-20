@@ -8,6 +8,7 @@ import org.bukkit.event.player.PlayerLoginEvent;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -49,7 +50,7 @@ public class PlayerJoinEvent implements Listener {
 					plugin.getDataFolder().mkdir();
 				}
 
-				User user = new User(plugin, player);
+				User user = UserManager.getInstance().getUser(player);
 				user.setPlayerName();
 
 				user.checkOfflineRewards();

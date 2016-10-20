@@ -19,6 +19,7 @@ import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
@@ -68,7 +69,8 @@ public class CommandLoader {
 							msg.add(cmdHandle.getHelpLine("/advancedcore"));
 						}
 						if (sender instanceof Player) {
-							new User(plugin, (Player) sender).sendJson(msg);
+							UserManager.getInstance().getUser((Player) sender)
+									.sendJson(msg);
 						} else {
 							sender.sendMessage(Utils.getInstance()
 									.convertArray(
@@ -85,7 +87,8 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				if (sender instanceof Player) {
-					User user = new User(Main.plugin, (Player) sender);
+					User user = UserManager.getInstance().getUser(
+							(Player) sender);
 					user.setUserInputMethod(InputMethod.valueOf(args[1]));
 				}
 			}
@@ -102,7 +105,8 @@ public class CommandLoader {
 					msg.add(cmdHandle.getPerm());
 				}
 				if (sender instanceof Player) {
-					new User(plugin, (Player) sender).sendMessage(msg);
+					UserManager.getInstance().getUser((Player) sender)
+							.sendMessage(msg);
 				} else {
 					sender.sendMessage(Utils.getInstance().convertArray(msg));
 				}
@@ -176,7 +180,7 @@ public class CommandLoader {
 
 					@Override
 					public void execute(CommandSender sender, String[] args) {
-						User user = new User(plugin, args[2]);
+						User user = UserManager.getInstance().getUser(args[2]);
 						RewardHandler.getInstance().giveReward(user, args[1],
 								user.isOnline());
 
@@ -193,7 +197,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
-				User user = new User(Main.plugin, (Player) sender);
+				User user = UserManager.getInstance().getUser((Player) sender);
 				if (user.getChoiceReward(reward) != 0) {
 					new ValueRequest(InputMethod.INVENTORY).requestString(
 							(Player) sender,
@@ -204,7 +208,8 @@ public class CommandLoader {
 
 								@Override
 								public void onInput(Player player, String value) {
-									User user = new User(Main.plugin, player);
+									User user = UserManager.getInstance()
+											.getUser(player);
 									RewardHandler.getInstance().giveReward(
 											user, value, true);
 									user.setChoiceReward(reward,
@@ -317,8 +322,9 @@ public class CommandLoader {
 
 							@Override
 							public void onInput(Player player, String value) {
-								User user = new User(Main.plugin, UserGUI
-										.getInstance().getCurrentPlayer(player));
+								User user = UserManager.getInstance().getUser(
+										UserGUI.getInstance().getCurrentPlayer(
+												player));
 								RewardHandler.getInstance().giveReward(user,
 										value, user.isOnline());
 								player.sendMessage("Given "

@@ -34,9 +34,20 @@ public class UserManager {
 	}
 
 	private ArrayList<User> users;
-	
+
+	public ArrayList<User> getUsers() {
+		return users;
+	}
+
 	private SaveMethod saveMethod;
 
+	public void saveUsers() {
+		for (User user : users) {
+			user.save();
+		}
+	}
+
+	@SuppressWarnings("deprecation")
 	public void loadUsers() {
 		setSaveMethod(SaveMethod.File);
 		users = new ArrayList<User>();
@@ -45,11 +56,11 @@ public class UserManager {
 			users.add(user);
 		}
 	}
-	
+
 	public User getUser(Player player) {
 		return getUser(player.getName());
 	}
-	
+
 	public User getUser(OfflinePlayer player) {
 		return getUser(player.getName());
 	}
@@ -58,6 +69,7 @@ public class UserManager {
 		return getUser(new UUID(Utils.getInstance().getUUID(playerName)));
 	}
 
+	@SuppressWarnings("deprecation")
 	public User getUser(UUID uuid) {
 		for (User user : users) {
 			if (user.getUUID().equals(uuid.getUUID())) {
