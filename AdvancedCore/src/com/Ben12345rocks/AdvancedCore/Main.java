@@ -30,6 +30,7 @@ import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
@@ -58,8 +59,6 @@ public class Main extends JavaPlugin {
 
 	/** The plugins. */
 	private ArrayList<Plugin> plugins;
-
-	
 
 	/** The logger. */
 	private Logger logger;
@@ -166,8 +165,6 @@ public class Main extends JavaPlugin {
 		Bukkit.getPluginCommand("advancedcore").setTabCompleter(
 				new AdvancedCoreTabCompleter());
 	}
-
-	
 
 	/*
 	 * (non-Javadoc)
@@ -338,5 +335,6 @@ public class Main extends JavaPlugin {
 	 */
 	public void update() {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
+		TimeChecker.getInstance().update();
 	}
 }

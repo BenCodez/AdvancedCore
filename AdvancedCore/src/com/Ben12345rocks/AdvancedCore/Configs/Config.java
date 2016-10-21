@@ -85,6 +85,19 @@ public class Config {
 	public boolean getDebugInfoIngame() {
 		return getData().getBoolean("DebugInfoIngame");
 	}
+	
+	/**
+	 * Gets the time zone.
+	 *
+	 * @return the time zone
+	 */
+	public String getTimeZone() {
+		String str = getData().getString("TimeZone");
+		if (str != null) {
+			return str;
+		}
+		return "UTC";
+	}
 
 	/**
 	 * Gets the format help line.

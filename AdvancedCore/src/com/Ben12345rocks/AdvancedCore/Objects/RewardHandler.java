@@ -94,11 +94,15 @@ public class RewardHandler {
 	}
 
 	public void giveReward(User user, String reward) {
-		giveReward(user, getReward(reward), user.isOnline());
+		if (!reward.equals("")) {
+			giveReward(user, getReward(reward), user.isOnline());
+		}
 	}
-	
+
 	public void giveReward(User user, String reward, boolean online) {
-		giveReward(user, getReward(reward), online);
+		if (!reward.equals("")) {
+			giveReward(user, getReward(reward), online);
+		}
 	}
 
 	public void giveReward(User user, Reward reward, boolean online) {

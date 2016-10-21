@@ -48,45 +48,21 @@ public class User {
 	private HashMap<String, Object> values;
 
 	public void save() {
-		if (UserManager.getInstance().getSaveMethod().equals(SaveMethod.File)) {
-			for (Entry<String, Object> entry : values.entrySet()) {
-				setRawData(entry.getKey(), entry.getValue());
-			}
-		} else if (UserManager.getInstance().getSaveMethod()
-				.equals(SaveMethod.SQL)) {
 
+		for (Entry<String, Object> entry : values.entrySet()) {
+			setRawData(entry.getKey(), entry.getValue());
 		}
+
 	}
 
 	private void load() {
 		values = new HashMap<String, Object>();
-		if (UserManager.getInstance().getSaveMethod().equals(SaveMethod.File)) {
-			FileConfiguration data = getRawData();
-			for (String string : data.getConfigurationSection("")
-					.getKeys(false)) {
-				values.put(string, data.get(string));
-			}
-		} else if (UserManager.getInstance().getSaveMethod()
-				.equals(SaveMethod.SQL)) {
 
+		FileConfiguration data = getRawData();
+		for (String string : data.getConfigurationSection("").getKeys(false)) {
+			values.put(string, data.get(string));
 		}
-	}
 
-	public void set(String path, Object value) {
-		path = path.replace(".", "-");
-		values.put(path, value);
-	}
-
-	public Object get(String path, Object value, Object fallBack) {
-		path = path.replace(".", "-");
-		if (values.containsKey(path)) {
-			return values.get(path);
-		}
-		return fallBack;
-	}
-
-	public Object get(String path, Object value) {
-		return get(path, value, null);
 	}
 
 	/**
@@ -97,7 +73,7 @@ public class User {
 	 * @param player
 	 *            the player
 	 */
-	@Deprecated
+
 	public User(Plugin plugin, Player player) {
 		this.plugin = plugin;
 		playerName = player.getName();
@@ -113,7 +89,7 @@ public class User {
 	 * @param playerName
 	 *            the player name
 	 */
-	@Deprecated
+
 	public User(Plugin plugin, String playerName) {
 		this.plugin = plugin;
 		this.playerName = playerName;
@@ -129,7 +105,7 @@ public class User {
 	 * @param uuid
 	 *            the uuid
 	 */
-	@Deprecated
+
 	public User(Plugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
@@ -147,7 +123,7 @@ public class User {
 	 * @param loadName
 	 *            the load name
 	 */
-	@Deprecated
+
 	public User(Plugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
@@ -203,18 +179,6 @@ public class User {
 				setOfflineRewards(reward, 0);
 			}
 		}
-	}
-
-	/**
-	 * Gets the input method.
-	 *
-	 * @return the input method
-	 */
-	@Deprecated
-	public RequestManager.InputMethod getInputMethod() {
-		return RequestManager.InputMethod.getMethod(getRawData().getString(
-				"InputMethod",
-				Config.getInstance().getRequestAPIDefaultMethod()));
 	}
 
 	/**
@@ -279,7 +243,6 @@ public class User {
 	 *
 	 * @return the plugin data
 	 */
-	@Deprecated
 	public synchronized ConfigurationSection getPluginData() {
 		boolean isSection = Data.getInstance().getData(this)
 				.isConfigurationSection(plugin.getName());
@@ -296,7 +259,6 @@ public class User {
 	 *
 	 * @return the raw data
 	 */
-	@Deprecated
 	public synchronized FileConfiguration getRawData() {
 		return Data.getInstance().getData(this);
 	}
@@ -824,7 +786,6 @@ public class User {
 	 * @param method
 	 *            the new input method
 	 */
-	@Deprecated
 	public void setInputMethod(RequestManager.InputMethod method) {
 		setRawData("InputMethod", method.toString());
 	}
@@ -894,7 +855,6 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
-	@Deprecated
 	public synchronized void setPluginData(String path, Object value) {
 		Data.getInstance().set(this, plugin.getName() + "." + path, value);
 	}
@@ -907,7 +867,6 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
-	@Deprecated
 	public synchronized void setRawData(String path, Object value) {
 		Data.getInstance().set(this, path, value);
 	}
