@@ -21,10 +21,9 @@ public class PluginUpdateVersionEvent extends Event {
 		return handlers;
 	}
 
-
 	/** The plugin. */
 	private Plugin plugin;
-	
+
 	/** The old version. */
 	private String oldVersion;
 
@@ -42,23 +41,14 @@ public class PluginUpdateVersionEvent extends Event {
 		this.oldVersion = oldVersion;
 	}
 
-	/**
-	 * Gets the plugin.
+	/*
+	 * (non-Javadoc)
 	 *
-	 * @return the plugin
+	 * @see org.bukkit.event.Event#getHandlers()
 	 */
-	public Plugin getPlugin() {
-		return plugin;
-	}
-
-	/**
-	 * Sets the plugin.
-	 *
-	 * @param plugin
-	 *            the new plugin
-	 */
-	public void setPlugin(Plugin plugin) {
-		this.plugin = plugin;
+	@Override
+	public HandlerList getHandlers() {
+		return handlers;
 	}
 
 	/**
@@ -71,6 +61,15 @@ public class PluginUpdateVersionEvent extends Event {
 	}
 
 	/**
+	 * Gets the plugin.
+	 *
+	 * @return the plugin
+	 */
+	public Plugin getPlugin() {
+		return plugin;
+	}
+
+	/**
 	 * Sets the old version.
 	 *
 	 * @param oldVersion
@@ -80,14 +79,14 @@ public class PluginUpdateVersionEvent extends Event {
 		this.oldVersion = oldVersion;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.bukkit.event.Event#getHandlers()
+	/**
+	 * Sets the plugin.
+	 *
+	 * @param plugin
+	 *            the new plugin
 	 */
-	@Override
-	public HandlerList getHandlers() {
-		return handlers;
+	public void setPlugin(Plugin plugin) {
+		this.plugin = plugin;
 	}
 
 }

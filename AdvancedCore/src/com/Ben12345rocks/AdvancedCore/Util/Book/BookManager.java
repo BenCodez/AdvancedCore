@@ -53,7 +53,7 @@ public class BookManager implements Listener {
 						.getPlayerMeta(player, "BookManager");
 				listener.onBookSign(player, input);
 				player.getInventory().getItem(event.getSlot())
-						.setType(Material.AIR);
+				.setType(Material.AIR);
 				player.getInventory().setItem(event.getSlot(),
 						new ItemStack(Material.AIR));
 				destory = true;

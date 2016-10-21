@@ -6,7 +6,7 @@ import org.bukkit.entity.Player;
  * String Input
  */
 public abstract class StringListener {
-	
+
 	/**
 	 * On input.
 	 *

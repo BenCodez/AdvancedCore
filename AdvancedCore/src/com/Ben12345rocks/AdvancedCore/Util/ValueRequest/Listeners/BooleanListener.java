@@ -6,7 +6,7 @@ import org.bukkit.entity.Player;
  * Boolean input listener
  */
 public abstract class BooleanListener {
-	
+
 	/**
 	 * On input.
 	 *

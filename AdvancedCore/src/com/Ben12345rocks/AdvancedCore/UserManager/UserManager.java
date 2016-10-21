@@ -27,41 +27,19 @@ public class UserManager {
 		return instance;
 	}
 
+	private ArrayList<User> users;
+
 	/**
 	 * Instantiates a new utils.
 	 */
 	private UserManager() {
 	}
 
-	private ArrayList<User> users;
-
-	public ArrayList<User> getUsers() {
-		return users;
-	}
-
-	private SaveMethod saveMethod;
-
-	public void saveUsers() {
-		for (User user : users) {
-			user.save();
-		}
-	}
-
-	@SuppressWarnings("deprecation")
-	public void loadUsers() {
-		setSaveMethod(SaveMethod.File);
-		users = new ArrayList<User>();
-		for (String name : Data.getInstance().getPlayerNames()) {
-			User user = new User(plugin, name);
-			users.add(user);
-		}
-	}
-
-	public User getUser(Player player) {
+	public User getUser(OfflinePlayer player) {
 		return getUser(player.getName());
 	}
 
-	public User getUser(OfflinePlayer player) {
+	public User getUser(Player player) {
 		return getUser(player.getName());
 	}
 
@@ -81,11 +59,23 @@ public class UserManager {
 		return user;
 	}
 
-	public SaveMethod getSaveMethod() {
-		return saveMethod;
+	public ArrayList<User> getUsers() {
+		return users;
 	}
 
-	public void setSaveMethod(SaveMethod saveMethod) {
-		this.saveMethod = saveMethod;
+	@SuppressWarnings("deprecation")
+	public void loadUsers() {
+		users = new ArrayList<User>();
+		for (String name : Data.getInstance().getPlayerNames()) {
+			User user = new User(plugin, name);
+			users.add(user);
+		}
 	}
+
+	public void saveUsers() {
+		for (User user : users) {
+			user.save();
+		}
+	}
+
 }

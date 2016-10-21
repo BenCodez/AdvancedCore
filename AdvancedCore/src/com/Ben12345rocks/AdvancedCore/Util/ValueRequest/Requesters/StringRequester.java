@@ -72,7 +72,7 @@ public class StringRequester {
 		}
 		if (method.equals(InputMethod.INVENTORY)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.INVENTORY.toString())) {
+				.contains(InputMethod.INVENTORY.toString())) {
 			if (options == null) {
 				player.sendMessage("There are no choices to choice from to use this method");
 				return;
@@ -110,27 +110,27 @@ public class StringRequester {
 
 		} else if (method.equals(InputMethod.ANVIL)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.ANVIL.toString())) {
+				.contains(InputMethod.ANVIL.toString())) {
 
 			AInventory inv = new AInventory(player,
 					new AInventory.AnvilClickEventHandler() {
 
-						@Override
-						public void onAnvilClick(AnvilClickEvent event) {
-							Player player = event.getPlayer();
-							if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
+				@Override
+				public void onAnvilClick(AnvilClickEvent event) {
+					Player player = event.getPlayer();
+					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
 
-								event.setWillClose(true);
-								event.setWillDestroy(true);
+						event.setWillClose(true);
+						event.setWillDestroy(true);
 
-								listener.onInput(player, event.getName());
+						listener.onInput(player, event.getName());
 
-							} else {
-								event.setWillClose(false);
-								event.setWillDestroy(false);
-							}
-						}
-					});
+					} else {
+						event.setWillClose(false);
+						event.setWillDestroy(false);
+					}
+				}
+			});
 
 			ItemStack item = new ItemStack(Material.NAME_TAG);
 			item = Utils.getInstance().setName(item, "" + currentValue);
@@ -145,13 +145,13 @@ public class StringRequester {
 
 		} else if (method.equals(InputMethod.CHAT)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.CHAT.toString())) {
+				.contains(InputMethod.CHAT.toString())) {
 
 			if (options != null) {
 				User user = UserManager.getInstance().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
-				Utils.getInstance().setPlayerMeta(player,
-						"ValueRequestString", listener);
+				Utils.getInstance().setPlayerMeta(player, "ValueRequestString",
+						listener);
 				for (String option : options) {
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
@@ -184,7 +184,7 @@ public class StringRequester {
 			}
 		} else if (method.equals(InputMethod.BOOK)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.BOOK.toString())) {
+				.contains(InputMethod.BOOK.toString())) {
 
 			new BookManager(player, currentValue, new BookSign() {
 

@@ -46,6 +46,89 @@ public class ServerData {
 	}
 
 	/**
+	 * Instantiates a new server data.
+	 *
+	 * @param plugin
+	 *            the plugin
+	 */
+	public ServerData(Main plugin) {
+		ServerData.plugin = plugin;
+	}
+
+	/**
+	 * Gets the data.
+	 *
+	 * @return the data
+	 */
+	public FileConfiguration getData() {
+		return data;
+	}
+
+	/**
+	 * Gets the plugin version.
+	 *
+	 * @param plugin
+	 *            the plugin
+	 * @return the plugin version
+	 */
+	public String getPluginVersion(Plugin plugin) {
+		return getData().getString("PluginVersions." + plugin.getName(), "");
+	}
+
+	/**
+	 * Gets the prev day.
+	 *
+	 * @return the prev day
+	 */
+	public int getPrevDay() {
+		return getData().getInt("PrevDay", -1);
+	}
+
+	/**
+	 * Gets the prev month.
+	 *
+	 * @return the prev month
+	 */
+	public int getPrevMonth() {
+		return getData().getInt("PrevMonth", -1);
+	}
+
+	/**
+	 * Gets the prev week day.
+	 *
+	 * @return the prev week day
+	 */
+	public int getPrevWeekDay() {
+		return getData().getInt("PrevWeek", -1);
+	}
+
+	/**
+	 * Reload data.
+	 */
+	public void reloadData() {
+		data = YamlConfiguration.loadConfiguration(dFile);
+	}
+
+	/**
+	 * Save data.
+	 */
+	public void saveData() {
+		FilesManager.getInstance().editFile(dFile, data);
+	}
+
+	/**
+	 * Sets the plugin version.
+	 *
+	 * @param plugin
+	 *            the new plugin version
+	 */
+	public void setPluginVersion(Plugin plugin) {
+		getData().set("PluginVersions." + plugin.getName(),
+				plugin.getDescription().getVersion());
+		saveData();
+	}
+
+	/**
 	 * Sets the prev day.
 	 *
 	 * @param day
@@ -79,89 +162,6 @@ public class ServerData {
 	}
 
 	/**
-	 * Gets the prev day.
-	 *
-	 * @return the prev day
-	 */
-	public int getPrevDay() {
-		return getData().getInt("PrevDay",-1);
-	}
-
-	/**
-	 * Gets the prev month.
-	 *
-	 * @return the prev month
-	 */
-	public int getPrevMonth() {
-		return getData().getInt("PrevMonth",-1);
-	}
-
-	/**
-	 * Gets the prev week day.
-	 *
-	 * @return the prev week day
-	 */
-	public int getPrevWeekDay() {
-		return getData().getInt("PrevWeek",-1);
-	}
-
-	/**
-	 * Instantiates a new server data.
-	 *
-	 * @param plugin
-	 *            the plugin
-	 */
-	public ServerData(Main plugin) {
-		ServerData.plugin = plugin;
-	}
-
-	/**
-	 * Gets the data.
-	 *
-	 * @return the data
-	 */
-	public FileConfiguration getData() {
-		return data;
-	}
-
-	/**
-	 * Reload data.
-	 */
-	public void reloadData() {
-		data = YamlConfiguration.loadConfiguration(dFile);
-	}
-
-	/**
-	 * Gets the plugin version.
-	 *
-	 * @param plugin
-	 *            the plugin
-	 * @return the plugin version
-	 */
-	public String getPluginVersion(Plugin plugin) {
-		return getData().getString("PluginVersions." + plugin.getName(), "");
-	}
-
-	/**
-	 * Sets the plugin version.
-	 *
-	 * @param plugin
-	 *            the new plugin version
-	 */
-	public void setPluginVersion(Plugin plugin) {
-		getData().set("PluginVersions." + plugin.getName(),
-				plugin.getDescription().getVersion());
-		saveData();
-	}
-
-	/**
-	 * Save data.
-	 */
-	public void saveData() {
-		FilesManager.getInstance().editFile(dFile, data);
-	}
-
-	/**
 	 * Sets the up.
 	 *
 	 * @param p
@@ -179,9 +179,9 @@ public class ServerData {
 				dFile.createNewFile();
 			} catch (IOException e) {
 				Bukkit.getServer()
-						.getLogger()
-						.severe(ChatColor.RED
-								+ "Could not create ServerData.yml!");
+				.getLogger()
+				.severe(ChatColor.RED
+						+ "Could not create ServerData.yml!");
 			}
 		}
 

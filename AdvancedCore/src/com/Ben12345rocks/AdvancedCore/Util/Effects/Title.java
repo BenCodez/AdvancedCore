@@ -460,9 +460,9 @@ public class Title {
 				Object packet = packetTitle.getConstructor(packetActions,
 						chatBaseComponent, Integer.TYPE, Integer.TYPE,
 						Integer.TYPE).newInstance(actions[2], null,
-						fadeInTime * (ticks ? 1 : 20),
-						stayTime * (ticks ? 1 : 20),
-						fadeOutTime * (ticks ? 1 : 20));
+								fadeInTime * (ticks ? 1 : 20),
+								stayTime * (ticks ? 1 : 20),
+								fadeOutTime * (ticks ? 1 : 20));
 				// Send if set
 				if (fadeInTime != -1 && fadeOutTime != -1 && stayTime != -1) {
 					sendPacket.invoke(connection, packet);
@@ -471,7 +471,7 @@ public class Title {
 				// Send title
 				Object serialized = nmsChatSerializer.getConstructor(
 						String.class).newInstance(
-						ChatColor.translateAlternateColorCodes('&', title));
+								ChatColor.translateAlternateColorCodes('&', title));
 				packet = packetTitle.getConstructor(packetActions,
 						chatBaseComponent).newInstance(actions[0], serialized);
 				sendPacket.invoke(connection, packet);
@@ -483,7 +483,7 @@ public class Title {
 											subtitle));
 					packet = packetTitle.getConstructor(packetActions,
 							chatBaseComponent).newInstance(actions[1],
-							serialized);
+									serialized);
 					sendPacket.invoke(connection, packet);
 				}
 			} catch (Exception e) {
@@ -609,7 +609,7 @@ public class Title {
 						"sendPacket");
 				Object serialized = nmsChatSerializer.getConstructor(
 						String.class).newInstance(
-						ChatColor.translateAlternateColorCodes('&', subtitle));
+								ChatColor.translateAlternateColorCodes('&', subtitle));
 				Object packet = Title.packetTitle.getConstructor(
 						new Class[] { Title.packetActions, chatBaseComponent })
 						.newInstance(new Object[] { actions[1], serialized });
@@ -638,16 +638,16 @@ public class Title {
 				Object packet = Title.packetTitle.getConstructor(
 						new Class[] { Title.packetActions, chatBaseComponent,
 								Integer.TYPE, Integer.TYPE, Integer.TYPE })
-						.newInstance(
-								new Object[] {
-										actions[2],
-										null,
-										Integer.valueOf(fadeInTime
-												* (ticks ? 1 : 20)),
-										Integer.valueOf(stayTime
-												* (ticks ? 1 : 20)),
-										Integer.valueOf(fadeOutTime
-												* (ticks ? 1 : 20)) });
+								.newInstance(
+										new Object[] {
+												actions[2],
+												null,
+												Integer.valueOf(fadeInTime
+														* (ticks ? 1 : 20)),
+														Integer.valueOf(stayTime
+																* (ticks ? 1 : 20)),
+																Integer.valueOf(fadeOutTime
+																		* (ticks ? 1 : 20)) });
 				if ((fadeInTime != -1) && (fadeOutTime != -1)
 						&& (stayTime != -1)) {
 					sendPacket.invoke(connection, packet);
@@ -675,7 +675,7 @@ public class Title {
 						"sendPacket");
 				Object serialized = nmsChatSerializer.getConstructor(
 						String.class).newInstance(
-								ChatColor.translateAlternateColorCodes('&', title));
+						ChatColor.translateAlternateColorCodes('&', title));
 				Object packet = Title.packetTitle.getConstructor(
 						new Class[] { Title.packetActions, chatBaseComponent })
 						.newInstance(new Object[] { actions[0], serialized });

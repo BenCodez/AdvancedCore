@@ -1,7 +1,5 @@
 package com.Ben12345rocks.AdvancedCore.Listeners;
 
-import java.util.Date;
-
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
@@ -37,7 +35,7 @@ public class WeekChangeEvent extends Event {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.bukkit.event.Event#getHandlers()
 	 */
 	@Override

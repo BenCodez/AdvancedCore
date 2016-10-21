@@ -24,47 +24,13 @@ public class RewardHandler {
 		return instance;
 	}
 
+	/** The rewards. */
+	private ArrayList<Reward> rewards;
+
 	/**
 	 * Instantiates a new RewardHandler.
 	 */
 	private RewardHandler() {
-	}
-
-	/** The rewards. */
-	private ArrayList<Reward> rewards;
-
-	public Reward getReward(String reward) {
-		reward = reward.replace(" ", "_");
-
-		for (Reward rewardFile : getRewards()) {
-			if (rewardFile.name.equals(reward)) {
-				return rewardFile;
-			}
-		}
-
-		if (reward.equals("")) {
-			plugin.getLogger()
-					.warning(
-							"Tried to get any empty reward file name, renaming to EmptyName");
-			reward = "EmptyName";
-		}
-
-		return new Reward(reward);
-	}
-
-	/**
-	 * Load rewards.
-	 */
-	public void loadRewards() {
-		ConfigRewards.getInstance().setupExample();
-		rewards = new ArrayList<Reward>();
-		for (String reward : ConfigRewards.getInstance().getRewardNames()) {
-			if (!reward.equals("")) {
-				rewards.add(new Reward(reward));
-			}
-		}
-		plugin.debug("Loaded rewards");
-
 	}
 
 	/**
@@ -85,12 +51,35 @@ public class RewardHandler {
 		}
 	}
 
+	public Reward getReward(String reward) {
+		reward = reward.replace(" ", "_");
+
+		for (Reward rewardFile : getRewards()) {
+			if (rewardFile.name.equals(reward)) {
+				return rewardFile;
+			}
+		}
+
+		if (reward.equals("")) {
+			plugin.getLogger()
+			.warning(
+					"Tried to get any empty reward file name, renaming to EmptyName");
+			reward = "EmptyName";
+		}
+
+		return new Reward(reward);
+	}
+
 	public ArrayList<Reward> getRewards() {
 		return rewards;
 	}
 
 	public void giveReward(User user, Reward reward) {
 		giveReward(user, reward, user.isOnline());
+	}
+
+	public void giveReward(User user, Reward reward, boolean online) {
+		reward.giveReward(user, online);
 	}
 
 	public void giveReward(User user, String reward) {
@@ -105,8 +94,19 @@ public class RewardHandler {
 		}
 	}
 
-	public void giveReward(User user, Reward reward, boolean online) {
-		reward.giveReward(user, online);
+	/**
+	 * Load rewards.
+	 */
+	public void loadRewards() {
+		ConfigRewards.getInstance().setupExample();
+		rewards = new ArrayList<Reward>();
+		for (String reward : ConfigRewards.getInstance().getRewardNames()) {
+			if (!reward.equals("")) {
+				rewards.add(new Reward(reward));
+			}
+		}
+		plugin.debug("Loaded rewards");
+
 	}
 
 }

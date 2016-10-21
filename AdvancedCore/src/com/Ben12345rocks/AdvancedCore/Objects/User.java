@@ -23,12 +23,9 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
-import com.Ben12345rocks.AdvancedCore.UserManager.SaveMethod;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
-import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 /**
@@ -47,24 +44,6 @@ public class User {
 
 	private HashMap<String, Object> values;
 
-	public void save() {
-
-		for (Entry<String, Object> entry : values.entrySet()) {
-			setRawData(entry.getKey(), entry.getValue());
-		}
-
-	}
-
-	private void load() {
-		values = new HashMap<String, Object>();
-
-		FileConfiguration data = getRawData();
-		for (String string : data.getConfigurationSection("").getKeys(false)) {
-			values.put(string, data.get(string));
-		}
-
-	}
-
 	/**
 	 * Instantiates a new user.
 	 *
@@ -73,7 +52,7 @@ public class User {
 	 * @param player
 	 *            the player
 	 */
-
+	@Deprecated
 	public User(Plugin plugin, Player player) {
 		this.plugin = plugin;
 		playerName = player.getName();
@@ -89,7 +68,7 @@ public class User {
 	 * @param playerName
 	 *            the player name
 	 */
-
+	@Deprecated
 	public User(Plugin plugin, String playerName) {
 		this.plugin = plugin;
 		this.playerName = playerName;
@@ -105,7 +84,7 @@ public class User {
 	 * @param uuid
 	 *            the uuid
 	 */
-
+	@Deprecated
 	public User(Plugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
@@ -123,7 +102,7 @@ public class User {
 	 * @param loadName
 	 *            the load name
 	 */
-
+	@Deprecated
 	public User(Plugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
@@ -144,29 +123,6 @@ public class User {
 	}
 
 	/**
-	 * Sets the choice reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
-	public void setChoiceReward(Reward reward, int value) {
-		setPluginData("ChoiceRewards." + reward.name, value);
-	}
-
-	/**
-	 * Gets the choice reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the choice reward
-	 */
-	public int getChoiceReward(Reward reward) {
-		return getPluginData().getInt("ChoiceRewards." + reward.name);
-	}
-
-	/**
 	 * Check offline rewards.
 	 */
 	public void checkOfflineRewards() {
@@ -182,13 +138,14 @@ public class User {
 	}
 
 	/**
-	 * Gets the user input method.
+	 * Gets the choice reward.
 	 *
-	 * @return the user input method
+	 * @param reward
+	 *            the reward
+	 * @return the choice reward
 	 */
-	public InputMethod getUserInputMethod() {
-		return InputMethod.getMethod(getRawData().getString("InputMethod",
-				Config.getInstance().getRequestAPIDefaultMethod()));
+	public int getChoiceReward(Reward reward) {
+		return getPluginData().getInt("ChoiceRewards." + reward.name);
 	}
 
 	/**
@@ -272,6 +229,16 @@ public class User {
 	 */
 	public long getTimedReward(Reward reward) {
 		return getPluginData().getLong("Timed." + reward.getRewardName());
+	}
+
+	/**
+	 * Gets the user input method.
+	 *
+	 * @return the user input method
+	 */
+	public InputMethod getUserInputMethod() {
+		return InputMethod.getMethod(getRawData().getString("InputMethod",
+				Config.getInstance().getRequestAPIDefaultMethod()));
 	}
 
 	/**
@@ -493,6 +460,16 @@ public class User {
 		return Utils.getInstance().isPlayerOnline(getPlayerName());
 	}
 
+	private void load() {
+		values = new HashMap<String, Object>();
+
+		FileConfiguration data = getRawData();
+		for (String string : data.getConfigurationSection("").getKeys(false)) {
+			values.put(string, data.get(string));
+		}
+
+	}
+
 	/**
 	 * Off vote world.
 	 *
@@ -518,8 +495,8 @@ public class User {
 
 									int worldRewards =
 
-									getOfflineRewardWorld(
-											reward.getRewardName(), worldName);
+											getOfflineRewardWorld(
+													reward.getRewardName(), worldName);
 
 									while (worldRewards > 0) {
 										reward.giveRewardUser(this);
@@ -601,6 +578,14 @@ public class User {
 		}
 	}
 
+	public void save() {
+
+		for (Entry<String, Object> entry : values.entrySet()) {
+			setRawData(entry.getKey(), entry.getValue());
+		}
+
+	}
+
 	/**
 	 * Send action bar.
 	 *
@@ -620,7 +605,7 @@ public class User {
 					actionBar.send(player);
 				} catch (Exception ex) {
 					Main.plugin
-							.debug("Failed to send ActionBar, turn debug on to see stack trace");
+					.debug("Failed to send ActionBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -654,7 +639,7 @@ public class User {
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
 					Main.plugin
-							.debug("Failed to send BossBar, turn debug on to see stack trace");
+					.debug("Failed to send BossBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -721,7 +706,7 @@ public class User {
 				for (String str : msg.split("%NewLine%")) {
 					player.sendMessage(Utils.getInstance().colorize(
 							Utils.getInstance()
-									.replacePlaceHolders(player, str)));
+							.replacePlaceHolders(player, str)));
 				}
 			}
 		}
@@ -772,7 +757,7 @@ public class User {
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger()
-						.info("Failed to send Title, turn debug on to see stack trace");
+				.info("Failed to send Title, turn debug on to see stack trace");
 				if (Config.getInstance().getDebugEnabled()) {
 					ex.printStackTrace();
 				}
@@ -781,23 +766,15 @@ public class User {
 	}
 
 	/**
-	 * Sets the input method.
+	 * Sets the choice reward.
 	 *
-	 * @param method
-	 *            the new input method
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
 	 */
-	public void setInputMethod(RequestManager.InputMethod method) {
-		setRawData("InputMethod", method.toString());
-	}
-
-	/**
-	 * Sets the user input method.
-	 *
-	 * @param method
-	 *            the new user input method
-	 */
-	public void setUserInputMethod(InputMethod method) {
-		setRawData("InputMethod", method.toString());
+	public void setChoiceReward(Reward reward, int value) {
+		setPluginData("ChoiceRewards." + reward.name, value);
 	}
 
 	/**
@@ -881,6 +858,16 @@ public class User {
 	 */
 	public void setTimedReward(Reward reward, long value) {
 		setPluginData("Timed." + reward.getRewardName(), value);
+	}
+
+	/**
+	 * Sets the user input method.
+	 *
+	 * @param method
+	 *            the new user input method
+	 */
+	public void setUserInputMethod(InputMethod method) {
+		setRawData("InputMethod", method.toString());
 	}
 
 	/**

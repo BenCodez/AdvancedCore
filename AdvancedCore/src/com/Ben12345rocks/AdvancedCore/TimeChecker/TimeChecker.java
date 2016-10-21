@@ -1,7 +1,5 @@
 package com.Ben12345rocks.AdvancedCore.TimeChecker;
 
-import org.bukkit.event.Event;
-
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
@@ -30,24 +28,6 @@ public class TimeChecker {
 	 * Instantiates a new RewardHandler.
 	 */
 	private TimeChecker() {
-	}
-
-	public void update() {
-		if (hasDayChanged()) {
-			plugin.debug("Day changed");
-			DayChangeEvent dayChange = new DayChangeEvent();
-			plugin.getServer().getPluginManager().callEvent(dayChange);
-		}
-		if (hasMonthChanged()) {
-			plugin.debug("Month Changed");
-			MonthChangeEvent dayChange = new MonthChangeEvent();
-			plugin.getServer().getPluginManager().callEvent(dayChange);
-		}
-		if (hasWeekChanged()) {
-			plugin.debug("Week Changed");
-			WeekChangeEvent dayChange = new WeekChangeEvent();
-			plugin.getServer().getPluginManager().callEvent(dayChange);
-		}
 	}
 
 	@SuppressWarnings("deprecation")
@@ -110,5 +90,23 @@ public class TimeChecker {
 			return true;
 		}
 		return false;
+	}
+
+	public void update() {
+		if (hasDayChanged()) {
+			plugin.debug("Day changed");
+			DayChangeEvent dayChange = new DayChangeEvent();
+			plugin.getServer().getPluginManager().callEvent(dayChange);
+		}
+		if (hasMonthChanged()) {
+			plugin.debug("Month Changed");
+			MonthChangeEvent dayChange = new MonthChangeEvent();
+			plugin.getServer().getPluginManager().callEvent(dayChange);
+		}
+		if (hasWeekChanged()) {
+			plugin.debug("Week Changed");
+			WeekChangeEvent dayChange = new WeekChangeEvent();
+			plugin.getServer().getPluginManager().callEvent(dayChange);
+		}
 	}
 }

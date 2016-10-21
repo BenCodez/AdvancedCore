@@ -66,14 +66,16 @@ public class JavascriptHandler {
 				Main.plugin.debug("javascript true");
 				for (String reward : trueRewards) {
 					if (!reward.equals("")) {
-						RewardHandler.getInstance().giveReward(user, reward, online);
+						RewardHandler.getInstance().giveReward(user, reward,
+								online);
 					}
 				}
 			} else {
 				Main.plugin.debug("javascript false");
 				for (String reward : falseRewards) {
 					if (!reward.equals("")) {
-						RewardHandler.getInstance().giveReward(user, reward, online);
+						RewardHandler.getInstance().giveReward(user, reward,
+								online);
 					}
 				}
 			}

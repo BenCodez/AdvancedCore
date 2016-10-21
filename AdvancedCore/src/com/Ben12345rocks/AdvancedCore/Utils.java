@@ -152,6 +152,27 @@ public class Utils {
 	}
 
 	/**
+	 * Broadcast.
+	 *
+	 * @param broadcastMsg
+	 *            the broadcast msg
+	 */
+	public void broadcast(String broadcastMsg) {
+		if (broadcastMsg != null) {
+			if (!broadcastMsg.equals("")) {
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+					@Override
+					public void run() {
+						Bukkit.broadcastMessage(colorize(broadcastMsg));
+					}
+				});
+			}
+		}
+
+	}
+
+	/**
 	 * Colorize.
 	 *
 	 * @param list
@@ -376,9 +397,9 @@ public class Utils {
 	 *             the invocation target exception
 	 */
 	public Object getConnection(Player player) throws SecurityException,
-			NoSuchMethodException, NoSuchFieldException,
-			IllegalArgumentException, IllegalAccessException,
-			InvocationTargetException {
+	NoSuchMethodException, NoSuchFieldException,
+	IllegalArgumentException, IllegalAccessException,
+	InvocationTargetException {
 		Method getHandle = player.getClass().getMethod("getHandle");
 		Object nmsPlayer = getHandle.invoke(player);
 		Field conField = nmsPlayer.getClass().getField("playerConnection");
@@ -465,7 +486,7 @@ public class Utils {
 			throws ClassNotFoundException {
 		String version = Bukkit.getServer().getClass().getPackage().getName()
 				.replace(".", ",").split(",")[3]
-				+ ".";
+						+ ".";
 		String name = "net.minecraft.server." + version + nmsClassString;
 		Class<?> nmsClass = Class.forName(name);
 		return nmsClass;
@@ -691,6 +712,77 @@ public class Utils {
 	}
 
 	/**
+	 * Launch firework.
+	 *
+	 * @param loc
+	 *            the loc
+	 * @param power
+	 *            the power
+	 * @param colors
+	 *            the colors
+	 * @param fadeOutColor
+	 *            the fade out color
+	 * @param trail
+	 *            the trail
+	 * @param flicker
+	 *            the flicker
+	 * @param types
+	 *            the types
+	 */
+	public void launchFirework(Location loc, int power,
+			ArrayList<String> colors, ArrayList<String> fadeOutColor,
+			boolean trail, boolean flicker, ArrayList<String> types) {
+		Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				Firework fw = (Firework) loc.getWorld().spawnEntity(loc,
+						EntityType.FIREWORK);
+				FireworkMeta fwmeta = fw.getFireworkMeta();
+				FireworkEffect.Builder builder = FireworkEffect.builder();
+				if (trail) {
+					builder.withTrail();
+				}
+				if (flicker) {
+					builder.withFlicker();
+				}
+				for (String color : colors) {
+					try {
+						builder.withColor(DyeColor.valueOf(color).getColor());
+					} catch (Exception ex) {
+						plugin.getLogger()
+						.info(color
+								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+					}
+				}
+				for (String color : fadeOutColor) {
+					try {
+						builder.withFade(DyeColor.valueOf(color).getColor());
+					} catch (Exception ex) {
+						plugin.getLogger()
+						.info(color
+								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+					}
+				}
+				for (String type : types) {
+					try {
+						builder.with(Type.valueOf(type));
+					} catch (Exception ex) {
+						plugin.getLogger()
+						.info(type
+								+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
+					}
+				}
+				fwmeta.addEffects(builder.build());
+				fwmeta.setPower(power);
+				fw.setFireworkMeta(fwmeta);
+				// plugin.debug("Launched firework");
+			}
+		});
+
+	}
+
+	/**
 	 * Make string.
 	 *
 	 * @param startIndex
@@ -848,8 +940,8 @@ public class Utils {
 	public String replacePlaceHolder(String str, String toReplace,
 			String replaceWith) {
 		return replaceIgnoreCase(
-				replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "\\{"
-						+ toReplace + "\\}", replaceWith);
+				replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith),
+				"\\{" + toReplace + "\\}", replaceWith);
 	}
 
 	/**
@@ -1339,97 +1431,5 @@ public class Utils {
 		newTC.setObfuscated(magic);
 		base.addExtra(newTC);
 		return base;
-	}
-
-	/**
-	 * Broadcast.
-	 *
-	 * @param broadcastMsg
-	 *            the broadcast msg
-	 */
-	public void broadcast(String broadcastMsg) {
-		if (broadcastMsg != null) {
-			if (!broadcastMsg.equals("")) {
-				Bukkit.getScheduler().runTask(plugin, new Runnable() {
-
-					@Override
-					public void run() {
-						Bukkit.broadcastMessage(colorize(broadcastMsg));
-					}
-				});
-			}
-		}
-
-	}
-
-	/**
-	 * Launch firework.
-	 *
-	 * @param loc
-	 *            the loc
-	 * @param power
-	 *            the power
-	 * @param colors
-	 *            the colors
-	 * @param fadeOutColor
-	 *            the fade out color
-	 * @param trail
-	 *            the trail
-	 * @param flicker
-	 *            the flicker
-	 * @param types
-	 *            the types
-	 */
-	public void launchFirework(Location loc, int power,
-			ArrayList<String> colors, ArrayList<String> fadeOutColor,
-			boolean trail, boolean flicker, ArrayList<String> types) {
-		Bukkit.getScheduler().runTask(plugin, new Runnable() {
-
-			@Override
-			public void run() {
-				Firework fw = (Firework) loc.getWorld().spawnEntity(loc,
-						EntityType.FIREWORK);
-				FireworkMeta fwmeta = fw.getFireworkMeta();
-				FireworkEffect.Builder builder = FireworkEffect.builder();
-				if (trail) {
-					builder.withTrail();
-				}
-				if (flicker) {
-					builder.withFlicker();
-				}
-				for (String color : colors) {
-					try {
-						builder.withColor(DyeColor.valueOf(color).getColor());
-					} catch (Exception ex) {
-						plugin.getLogger()
-								.info(color
-										+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
-					}
-				}
-				for (String color : fadeOutColor) {
-					try {
-						builder.withFade(DyeColor.valueOf(color).getColor());
-					} catch (Exception ex) {
-						plugin.getLogger()
-								.info(color
-										+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
-					}
-				}
-				for (String type : types) {
-					try {
-						builder.with(Type.valueOf(type));
-					} catch (Exception ex) {
-						plugin.getLogger()
-								.info(type
-										+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
-					}
-				}
-				fwmeta.addEffects(builder.build());
-				fwmeta.setPower(power);
-				fw.setFireworkMeta(fwmeta);
-				// plugin.debug("Launched firework");
-			}
-		});
-
 	}
 }

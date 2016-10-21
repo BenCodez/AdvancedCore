@@ -39,138 +39,6 @@ public class ValueRequest {
 	}
 
 	/**
-	 * Request string.
-	 *
-	 * @param player
-	 *            the player
-	 * @param listener
-	 *            the listener
-	 */
-	public void requestString(Player player, StringListener listener) {
-		InputMethod input = method;
-		if (input == null) {
-			input = UserManager.getInstance().getUser(player)
-					.getUserInputMethod();
-		}
-		new StringRequester().request(player, input, "",
-				"Type cancel to cancel", null, true, listener);
-	}
-
-	/**
-	 * Request string.
-	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param options
-	 *            the options
-	 * @param listener
-	 *            the listener
-	 */
-	public void requestString(Player player, String currentValue,
-			String[] options, StringListener listener) {
-		InputMethod input = method;
-		if (input == null) {
-			input = UserManager.getInstance().getUser(player)
-					.getUserInputMethod();
-		}
-		new StringRequester().request(player, input, currentValue,
-				"Type cancel to cancel", options, true, listener);
-	}
-
-	/**
-	 * Request string.
-	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param options
-	 *            the options
-	 * @param allowCustomOption
-	 *            the allow custom option
-	 * @param listener
-	 *            the listener
-	 */
-	public void requestString(Player player, String currentValue,
-			String[] options, boolean allowCustomOption, StringListener listener) {
-		InputMethod input = method;
-		if (input == null) {
-			input = UserManager.getInstance().getUser(player)
-					.getUserInputMethod();
-		}
-		new StringRequester().request(player, input, currentValue,
-				"Type cancel to cancel", options, allowCustomOption, listener);
-	}
-
-	/**
-	 * Request number.
-	 *
-	 * @param player
-	 *            the player
-	 * @param listener
-	 *            the listener
-	 */
-	public void requestNumber(Player player, NumberListener listener) {
-		InputMethod input = method;
-		if (input == null) {
-			input = UserManager.getInstance().getUser(player)
-					.getUserInputMethod();
-		}
-		new NumberRequester().request(player, input, "",
-				"Type cancel to cancel", null, true, listener);
-	}
-
-	/**
-	 * Request number.
-	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param options
-	 *            the options
-	 * @param listener
-	 *            the listener
-	 */
-	public void requestNumber(Player player, String currentValue,
-			Number[] options, NumberListener listener) {
-		InputMethod input = method;
-		if (input == null) {
-			input = UserManager.getInstance().getUser(player)
-					.getUserInputMethod();
-		}
-		new NumberRequester().request(player, input, currentValue,
-				"Type cancel to cancel", options, true, listener);
-	}
-
-	/**
-	 * Request number.
-	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param options
-	 *            the options
-	 * @param allowCustomOption
-	 *            the allow custom option
-	 * @param listener
-	 *            the listener
-	 */
-	public void requestNumber(Player player, String currentValue,
-			Number[] options, boolean allowCustomOption, NumberListener listener) {
-		InputMethod input = method;
-		if (input == null) {
-			input = UserManager.getInstance().getUser(player)
-					.getUserInputMethod();
-		}
-		new NumberRequester().request(player, input, currentValue,
-				"Type cancel to cancel", options, allowCustomOption, listener);
-	}
-
-	/**
 	 * Request boolean.
 	 *
 	 * @param player
@@ -207,6 +75,138 @@ public class ValueRequest {
 		}
 		new BooleanRequester().request(player, input, currentValue,
 				"Type cancel to cancel", listener);
+	}
+
+	/**
+	 * Request number.
+	 *
+	 * @param player
+	 *            the player
+	 * @param listener
+	 *            the listener
+	 */
+	public void requestNumber(Player player, NumberListener listener) {
+		InputMethod input = method;
+		if (input == null) {
+			input = UserManager.getInstance().getUser(player)
+					.getUserInputMethod();
+		}
+		new NumberRequester().request(player, input, "",
+				"Type cancel to cancel", null, true, listener);
+	}
+
+	/**
+	 * Request number.
+	 *
+	 * @param player
+	 *            the player
+	 * @param currentValue
+	 *            the current value
+	 * @param options
+	 *            the options
+	 * @param allowCustomOption
+	 *            the allow custom option
+	 * @param listener
+	 *            the listener
+	 */
+	public void requestNumber(Player player, String currentValue,
+			Number[] options, boolean allowCustomOption, NumberListener listener) {
+		InputMethod input = method;
+		if (input == null) {
+			input = UserManager.getInstance().getUser(player)
+					.getUserInputMethod();
+		}
+		new NumberRequester().request(player, input, currentValue,
+				"Type cancel to cancel", options, allowCustomOption, listener);
+	}
+
+	/**
+	 * Request number.
+	 *
+	 * @param player
+	 *            the player
+	 * @param currentValue
+	 *            the current value
+	 * @param options
+	 *            the options
+	 * @param listener
+	 *            the listener
+	 */
+	public void requestNumber(Player player, String currentValue,
+			Number[] options, NumberListener listener) {
+		InputMethod input = method;
+		if (input == null) {
+			input = UserManager.getInstance().getUser(player)
+					.getUserInputMethod();
+		}
+		new NumberRequester().request(player, input, currentValue,
+				"Type cancel to cancel", options, true, listener);
+	}
+
+	/**
+	 * Request string.
+	 *
+	 * @param player
+	 *            the player
+	 * @param currentValue
+	 *            the current value
+	 * @param options
+	 *            the options
+	 * @param allowCustomOption
+	 *            the allow custom option
+	 * @param listener
+	 *            the listener
+	 */
+	public void requestString(Player player, String currentValue,
+			String[] options, boolean allowCustomOption, StringListener listener) {
+		InputMethod input = method;
+		if (input == null) {
+			input = UserManager.getInstance().getUser(player)
+					.getUserInputMethod();
+		}
+		new StringRequester().request(player, input, currentValue,
+				"Type cancel to cancel", options, allowCustomOption, listener);
+	}
+
+	/**
+	 * Request string.
+	 *
+	 * @param player
+	 *            the player
+	 * @param currentValue
+	 *            the current value
+	 * @param options
+	 *            the options
+	 * @param listener
+	 *            the listener
+	 */
+	public void requestString(Player player, String currentValue,
+			String[] options, StringListener listener) {
+		InputMethod input = method;
+		if (input == null) {
+			input = UserManager.getInstance().getUser(player)
+					.getUserInputMethod();
+		}
+		new StringRequester().request(player, input, currentValue,
+				"Type cancel to cancel", options, true, listener);
+	}
+
+	/**
+	 * Request string.
+	 *
+	 * @param player
+	 *            the player
+	 * @param listener
+	 *            the listener
+	 */
+	public void requestString(Player player, StringListener listener) {
+		InputMethod input = method;
+		if (input == null) {
+			input = UserManager.getInstance().getUser(player)
+					.getUserInputMethod();
+		}
+		new StringRequester().request(player, input, "",
+				"Type cancel to cancel", null, true, listener);
 	}
 
 }

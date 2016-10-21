@@ -22,19 +22,6 @@ public class UserGUI {
 
 	static UserGUI instance = new UserGUI();
 
-	/** The plugin. */
-	Main plugin = Main.plugin;
-
-	private HashMap<Plugin, BInventory> pluginButtons = new HashMap<Plugin, BInventory>();
-
-	private void setCurrentPlayer(Player player, String playerName) {
-		Utils.getInstance().setPlayerMeta(player, "UserGUI", playerName);
-	}
-
-	public String getCurrentPlayer(Player player) {
-		return (String) Utils.getInstance().getPlayerMeta(player, "UserGUI");
-	}
-
 	/**
 	 * Gets the single instance of Commands.
 	 *
@@ -44,10 +31,48 @@ public class UserGUI {
 		return instance;
 	}
 
+	/** The plugin. */
+	Main plugin = Main.plugin;
+
+	private HashMap<Plugin, BInventory> pluginButtons = new HashMap<Plugin, BInventory>();
+
 	/**
 	 * Instantiates a new commands.
 	 */
 	private UserGUI() {
+	}
+
+	public synchronized void addPluginButton(Plugin plugin, BInventory inv) {
+		pluginButtons.put(plugin, inv);
+	}
+
+	public String getCurrentPlayer(Player player) {
+		return (String) Utils.getInstance().getPlayerMeta(player, "UserGUI");
+	}
+
+	public void openUserGUI(Player player, String playerName) {
+		BInventory inv = new BInventory("UserGUI: " + playerName);
+
+		for (Entry<Plugin, BInventory> entry : pluginButtons.entrySet()) {
+			inv.addButton(inv.getNextSlot(), new BInventoryButton(entry
+					.getKey().getName(), new String[] {}, new ItemStack(
+							Material.STONE)) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					for (Plugin p : pluginButtons.keySet()) {
+						if (p.getName().equals(
+								clickEvent.getClickedItem().getItemMeta()
+								.getDisplayName())) {
+							pluginButtons.get(p).openInventory(player);
+							return;
+						}
+					}
+				}
+			});
+		}
+
+		inv.openInventory(player);
 	}
 
 	public void openUsersGUI(Player player) {
@@ -66,32 +91,7 @@ public class UserGUI {
 		});
 	}
 
-	public void openUserGUI(Player player, String playerName) {
-		BInventory inv = new BInventory("UserGUI: " + playerName);
-
-		for (Entry<Plugin, BInventory> entry : pluginButtons.entrySet()) {
-			inv.addButton(inv.getNextSlot(), new BInventoryButton(entry
-					.getKey().getName(), new String[] {}, new ItemStack(
-					Material.STONE)) {
-
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					for (Plugin p : pluginButtons.keySet()) {
-						if (p.getName().equals(
-								clickEvent.getClickedItem().getItemMeta()
-										.getDisplayName())) {
-							pluginButtons.get(p).openInventory(player);
-							return;
-						}
-					}
-				}
-			});
-		}
-
-		inv.openInventory(player);
-	}
-
-	public synchronized void addPluginButton(Plugin plugin, BInventory inv) {
-		pluginButtons.put(plugin, inv);
+	private void setCurrentPlayer(Player player, String playerName) {
+		Utils.getInstance().setPlayerMeta(player, "UserGUI", playerName);
 	}
 }

@@ -43,7 +43,7 @@ public class Logger {
 			if (!dataFolder.exists()) {
 				dataFolder.mkdir();
 			}
-			
+
 			if (!location.getParentFile().exists()) {
 				location.getParentFile().mkdirs();
 			}

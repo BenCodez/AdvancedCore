@@ -276,7 +276,7 @@ public class AInventory {
 										.getInstance().getPlayerMeta(player,
 												"AInventory");
 								Main.plugin
-										.debug("Anvil handler was null, fixing...");
+								.debug("Anvil handler was null, fixing...");
 							}
 
 							handler.onAnvilClick(clickEvent);
@@ -360,14 +360,14 @@ public class AInventory {
 					NMSManager.get().getNMSClass("PlayerInventory"),
 					NMSManager.get().getNMSClass("World"), BlockPosition,
 					EntityHuman).newInstance(
-					NMSManager.get().getPlayerField(player, "inventory"),
-					NMSManager.get().getPlayerField(player, "world"),
-					BlockPosition.getConstructor(int.class, int.class,
-							int.class).newInstance(0, 0, 0), p);
+							NMSManager.get().getPlayerField(player, "inventory"),
+							NMSManager.get().getPlayerField(player, "world"),
+							BlockPosition.getConstructor(int.class, int.class,
+									int.class).newInstance(0, 0, 0), p);
 			NMSManager
-					.get()
-					.getField(NMSManager.get().getNMSClass("Container"),
-							"checkReachable").set(container, false);
+			.get()
+			.getField(NMSManager.get().getNMSClass("Container"),
+					"checkReachable").set(container, false);
 
 			// Set the items to the items from the inventory given
 			Object bukkitView = NMSManager.get().invokeMethod("getBukkitView",
@@ -392,10 +392,10 @@ public class AInventory {
 					String.class,
 					NMSManager.get().getNMSClass("IChatBaseComponent"),
 					int.class).newInstance(
-					c,
-					"minecraft:anvil",
-					chatMessageConstructor.newInstance("Repairing",
-							new Object[] {}), 0);
+							c,
+							"minecraft:anvil",
+							chatMessageConstructor.newInstance("Repairing",
+									new Object[] {}), 0);
 
 			Method sendPacket = NMSManager.get().getMethod("sendPacket",
 					playerConnection.getClass(), PacketPlayOutOpenWindow);
@@ -409,16 +409,16 @@ public class AInventory {
 
 				// Set their active container window id to that counter stuff
 				NMSManager
-						.get()
-						.getField(NMSManager.get().getNMSClass("Container"),
-								"windowId").set(activeContainerField.get(p), c);
+				.get()
+				.getField(NMSManager.get().getNMSClass("Container"),
+						"windowId").set(activeContainerField.get(p), c);
 
 				// Add the slot listener
 				NMSManager
-						.get()
-						.getMethod("addSlotListener",
-								activeContainerField.get(p).getClass(),
-								p.getClass())
+				.get()
+				.getMethod("addSlotListener",
+						activeContainerField.get(p).getClass(),
+						p.getClass())
 						.invoke(activeContainerField.get(p), p);
 			}
 		} catch (Exception e) {
@@ -426,7 +426,7 @@ public class AInventory {
 				e.printStackTrace();
 			}
 			Main.plugin.debug("Failed to use AnvilGUI");
-			
+
 		}
 	}
 

@@ -54,161 +54,18 @@ public class ConfigRewards {
 		ConfigRewards.plugin = plugin;
 	}
 
-	
-
 	/**
-	 * Gets the choice rewards rewards.
+	 * Copy file.
 	 *
-	 * @param reward
-	 *            the reward
-	 * @return the choice rewards rewards
+	 * @param fileName
+	 *            the file name
 	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getChoiceRewardsRewards(String reward) {
-		return (ArrayList<String>) getData(reward).getList(
-				"ChoiceRewards.Rewards", new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the firework enabled.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the firework enabled
-	 */
-	public boolean getFireworkEnabled(String reward) {
-		return getData(reward).getBoolean("Firework.Enabled");
-	}
-
-	/**
-	 * Gets the firework flicker.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the firework flicker
-	 */
-	public boolean getFireworkFlicker(String reward) {
-		return getData(reward).getBoolean("Firework.Flicker");
-	}
-
-	/**
-	 * Gets the firework trail.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the firework trail
-	 */
-	public boolean getFireworkTrail(String reward) {
-		return getData(reward).getBoolean("Firework.Trail");
-	}
-
-	/**
-	 * Gets the firework power.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the firework power
-	 */
-	public int getFireworkPower(String reward) {
-		return getData(reward).getInt("Firework.Power");
-	}
-
-	/**
-	 * Gets the firework colors.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the firework colors
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkColors(String reward) {
-		return (ArrayList<String>) getData(reward).getList("Firework.Colors",
-				new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the firework colors fade out.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the firework colors fade out
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkColorsFadeOut(String reward) {
-		return (ArrayList<String>) getData(reward).getList(
-				"Firework.FadeOutColor", new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the firework types.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the firework types
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkTypes(String reward) {
-		return (ArrayList<String>) getData(reward).getList("Firework.Types",
-				new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the choice rewards enabled.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the choice rewards enabled
-	 */
-	public boolean getChoiceRewardsEnabled(String reward) {
-		return getData(reward).getBoolean("ChoiceRewards.Enabled");
-	}
-
-	/**
-	 * Gets the javascript enabled.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the javascript enabled
-	 */
-	public boolean getJavascriptEnabled(String reward) {
-		return getData(reward).getBoolean("Javascript.Enabled");
-	}
-
-	/**
-	 * Gets the javascript expression.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the javascript expression
-	 */
-	public String getJavascriptExpression(String reward) {
-		return getData(reward).getString("Javascript.Expression", "");
-	}
-
-	/**
-	 * Gets the javascript true rewards.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the javascript true rewards
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getJavascriptTrueRewards(String reward) {
-		return (ArrayList<String>) getData(reward).getList(
-				"Javascript.TrueRewards", new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the javascript false rewards.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the javascript false rewards
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getJavascriptFalseRewards(String reward) {
-		return (ArrayList<String>) getData(reward).getList(
-				"Javascript.FalseRewards", new ArrayList<String>());
+	private void copyFile(String fileName) {
+		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator
+				+ fileName);
+		if (!file.exists()) {
+			plugin.saveResource("Rewards" + File.separator + fileName, true);
+		}
 	}
 
 	/**
@@ -308,6 +165,30 @@ public class ConfigRewards {
 	 */
 	public double getChance(String reward) {
 		return getData(reward).getDouble("Chance");
+	}
+
+	/**
+	 * Gets the choice rewards enabled.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the choice rewards enabled
+	 */
+	public boolean getChoiceRewardsEnabled(String reward) {
+		return getData(reward).getBoolean("ChoiceRewards.Enabled");
+	}
+
+	/**
+	 * Gets the choice rewards rewards.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the choice rewards rewards
+	 */
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getChoiceRewardsRewards(String reward) {
+		return (ArrayList<String>) getData(reward).getList(
+				"ChoiceRewards.Rewards", new ArrayList<String>());
 	}
 
 	/**
@@ -451,6 +332,89 @@ public class ConfigRewards {
 	 */
 	public int getEXP(String reward) {
 		return getData(reward).getInt("EXP");
+	}
+
+	/**
+	 * Gets the firework colors.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the firework colors
+	 */
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getFireworkColors(String reward) {
+		return (ArrayList<String>) getData(reward).getList("Firework.Colors",
+				new ArrayList<String>());
+	}
+
+	/**
+	 * Gets the firework colors fade out.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the firework colors fade out
+	 */
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getFireworkColorsFadeOut(String reward) {
+		return (ArrayList<String>) getData(reward).getList(
+				"Firework.FadeOutColor", new ArrayList<String>());
+	}
+
+	/**
+	 * Gets the firework enabled.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the firework enabled
+	 */
+	public boolean getFireworkEnabled(String reward) {
+		return getData(reward).getBoolean("Firework.Enabled");
+	}
+
+	/**
+	 * Gets the firework flicker.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the firework flicker
+	 */
+	public boolean getFireworkFlicker(String reward) {
+		return getData(reward).getBoolean("Firework.Flicker");
+	}
+
+	/**
+	 * Gets the firework power.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the firework power
+	 */
+	public int getFireworkPower(String reward) {
+		return getData(reward).getInt("Firework.Power");
+	}
+
+	/**
+	 * Gets the firework trail.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the firework trail
+	 */
+	public boolean getFireworkTrail(String reward) {
+		return getData(reward).getBoolean("Firework.Trail");
+	}
+
+	/**
+	 * Gets the firework types.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the firework types
+	 */
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getFireworkTypes(String reward) {
+		return (ArrayList<String>) getData(reward).getList("Firework.Types",
+				new ArrayList<String>());
 	}
 
 	/**
@@ -633,6 +597,54 @@ public class ConfigRewards {
 	}
 
 	/**
+	 * Gets the javascript enabled.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the javascript enabled
+	 */
+	public boolean getJavascriptEnabled(String reward) {
+		return getData(reward).getBoolean("Javascript.Enabled");
+	}
+
+	/**
+	 * Gets the javascript expression.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the javascript expression
+	 */
+	public String getJavascriptExpression(String reward) {
+		return getData(reward).getString("Javascript.Expression", "");
+	}
+
+	/**
+	 * Gets the javascript false rewards.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the javascript false rewards
+	 */
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getJavascriptFalseRewards(String reward) {
+		return (ArrayList<String>) getData(reward).getList(
+				"Javascript.FalseRewards", new ArrayList<String>());
+	}
+
+	/**
+	 * Gets the javascript true rewards.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the javascript true rewards
+	 */
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getJavascriptTrueRewards(String reward) {
+		return (ArrayList<String>) getData(reward).getList(
+				"Javascript.TrueRewards", new ArrayList<String>());
+	}
+
+	/**
 	 * Gets the max exp.
 	 *
 	 * @param reward
@@ -652,6 +664,17 @@ public class ConfigRewards {
 	 */
 	public int getMaxMoney(String reward) {
 		return getData(reward).getInt("MaxMoney");
+	}
+
+	/**
+	 * Gets the messages broadcast.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the messages broadcast
+	 */
+	public String getMessagesBroadcast(String reward) {
+		return getData(reward).getString("Messages.Broadcast", "");
 	}
 
 	/**
@@ -698,6 +721,18 @@ public class ConfigRewards {
 	 */
 	public int getMoney(String reward) {
 		return getData(reward).getInt("Money");
+	}
+
+	/**
+	 * Gets the permission.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the permission
+	 */
+	public String getPermission(String reward) {
+		return getData(reward).getString("Permission",
+				"AdvancedCore.Reward." + reward);
 	}
 
 	/**
@@ -825,7 +860,7 @@ public class ConfigRewards {
 			} catch (IOException e) {
 				plugin.getLogger().severe(
 						ChatColor.RED + "Could not create Rewards/" + reward
-								+ ".yml!");
+						+ ".yml!");
 
 			}
 		}
@@ -1302,6 +1337,18 @@ public class ConfigRewards {
 	}
 
 	/**
+	 * Sets the messages broadcast.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
+	public void setMessagesBroadcast(String reward, String value) {
+		set(reward, "Messages.Broadcast", value);
+	}
+
+	/**
 	 * Sets the messages reward.
 	 *
 	 * @param reward
@@ -1349,6 +1396,10 @@ public class ConfigRewards {
 		set(reward, "Money", value);
 	}
 
+	public void setPermission(String reward, String perm) {
+		set(reward, "Permission", perm);
+	}
+
 	/**
 	 * Sets the potions amplifier.
 	 *
@@ -1389,6 +1440,10 @@ public class ConfigRewards {
 		set(reward, "RequirePermission", value);
 	}
 
+	public void setRewardType(String reward, String value) {
+		set(reward, "RewardType", value);
+	}
+
 	/**
 	 * Setup example.
 	 */
@@ -1402,20 +1457,6 @@ public class ConfigRewards {
 	}
 
 	/**
-	 * Copy file.
-	 *
-	 * @param fileName
-	 *            the file name
-	 */
-	private void copyFile(String fileName) {
-		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator
-				+ fileName);
-		if (!file.exists()) {
-			plugin.saveResource("Rewards" + File.separator + fileName, true);
-		}
-	}
-
-	/**
 	 * Sets the worlds.
 	 *
 	 * @param reward
@@ -1425,49 +1466,6 @@ public class ConfigRewards {
 	 */
 	public void setWorlds(String reward, ArrayList<String> value) {
 		set(reward, "Worlds", value);
-	}
-
-	/**
-	 * Gets the permission.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the permission
-	 */
-	public String getPermission(String reward) {
-		return getData(reward).getString("Permission",
-				"AdvancedCore.Reward." + reward);
-	}
-
-	public void setRewardType(String reward, String value) {
-		set(reward, "RewardType", value);
-	}
-
-	public void setPermission(String reward, String perm) {
-		set(reward, "Permission", perm);
-	}
-
-	/**
-	 * Gets the messages broadcast.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the messages broadcast
-	 */
-	public String getMessagesBroadcast(String reward) {
-		return getData(reward).getString("Messages.Broadcast", "");
-	}
-
-	/**
-	 * Sets the messages broadcast.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
-	public void setMessagesBroadcast(String reward, String value) {
-		set(reward, "Messages.Broadcast", value);
 	}
 
 }

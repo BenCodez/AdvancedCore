@@ -57,28 +57,28 @@ public class CommandLoader {
 			}
 		});
 		plugin.advancedCoreCommands
-				.add(new CommandHandler(new String[] { "Help" },
-						"AdvancedCore.Help", "View this page") {
+		.add(new CommandHandler(new String[] { "Help" },
+				"AdvancedCore.Help", "View this page") {
 
-					@Override
-					public void execute(CommandSender sender, String[] args) {
-						ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
-						msg.add(Utils.getInstance().stringToComp(
-								"&c" + plugin.getName() + " help"));
-						for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
-							msg.add(cmdHandle.getHelpLine("/advancedcore"));
-						}
-						if (sender instanceof Player) {
-							UserManager.getInstance().getUser((Player) sender)
-									.sendJson(msg);
-						} else {
-							sender.sendMessage(Utils.getInstance()
-									.convertArray(
-											Utils.getInstance().comptoString(
-													msg)));
-						}
-					}
-				});
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
+				msg.add(Utils.getInstance().stringToComp(
+						"&c" + plugin.getName() + " help"));
+				for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
+					msg.add(cmdHandle.getHelpLine("/advancedcore"));
+				}
+				if (sender instanceof Player) {
+					UserManager.getInstance().getUser((Player) sender)
+					.sendJson(msg);
+				} else {
+					sender.sendMessage(Utils.getInstance()
+							.convertArray(
+									Utils.getInstance().comptoString(
+											msg)));
+				}
+			}
+		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"SetRequestMethod", "(RequestMethod)" },
@@ -106,7 +106,7 @@ public class CommandLoader {
 				}
 				if (sender instanceof Player) {
 					UserManager.getInstance().getUser((Player) sender)
-							.sendMessage(msg);
+					.sendMessage(msg);
 				} else {
 					sender.sendMessage(Utils.getInstance().convertArray(msg));
 				}
@@ -174,20 +174,20 @@ public class CommandLoader {
 		});
 
 		plugin.advancedCoreCommands
-				.add(new CommandHandler(new String[] { "GiveReward",
-						"(Reward)", "(Player)" }, "AdvancedCore.GiveReward",
-						"Give a player a reward file", true) {
+		.add(new CommandHandler(new String[] { "GiveReward",
+				"(Reward)", "(Player)" }, "AdvancedCore.GiveReward",
+				"Give a player a reward file", true) {
 
-					@Override
-					public void execute(CommandSender sender, String[] args) {
-						User user = UserManager.getInstance().getUser(args[2]);
-						RewardHandler.getInstance().giveReward(user, args[1],
-								user.isOnline());
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				User user = UserManager.getInstance().getUser(args[2]);
+				RewardHandler.getInstance().giveReward(user, args[1],
+						user.isOnline());
 
-						sender.sendMessage("Gave " + args[2]
-								+ " the reward file " + args[1]);
-					}
-				});
+				sender.sendMessage("Gave " + args[2]
+						+ " the reward file " + args[1]);
+			}
+		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"SelectChoiceReward", "(Reward)" },
@@ -204,7 +204,7 @@ public class CommandLoader {
 							"",
 							Utils.getInstance().convertArray(
 									reward.getChoiceRewardsRewards()), false,
-							new StringListener() {
+									new StringListener() {
 
 								@Override
 								public void onInput(Player player, String value) {
@@ -258,7 +258,7 @@ public class CommandLoader {
 					if (args[1].equals("CustomValue")) {
 						new ValueRequest().requestNumber(player, listener);
 					} else {
-						Number number = (Double) Double.valueOf(args[1]);
+						Number number = Double.valueOf(args[1]);
 						listener.onInput(player, number);
 					}
 				} catch (Exception ex) {
@@ -303,6 +303,20 @@ public class CommandLoader {
 
 	}
 
+	/**
+	 * Load tab complete.
+	 */
+	public void loadTabComplete() {
+		ArrayList<String> method = new ArrayList<String>();
+		for (InputMethod me : InputMethod.values()) {
+			method.add(me.toString());
+		}
+		for (int i = 0; i < plugin.advancedCoreCommands.size(); i++) {
+			plugin.advancedCoreCommands.get(i).addTabCompleteOption(
+					"(RequestMethod)", method);
+		}
+	}
+
 	private void loadUserGUI() {
 		BInventory inv = new BInventory("AdvancedCore UserGUI");
 		inv.addButton(inv.getNextSlot(), new BInventoryButton(
@@ -320,37 +334,23 @@ public class CommandLoader {
 						Utils.getInstance().convertArray(rewards), true,
 						new StringListener() {
 
-							@Override
-							public void onInput(Player player, String value) {
-								User user = UserManager.getInstance().getUser(
-										UserGUI.getInstance().getCurrentPlayer(
-												player));
-								RewardHandler.getInstance().giveReward(user,
-										value, user.isOnline());
-								player.sendMessage("Given "
-										+ user.getPlayerName()
-										+ " reward file " + value);
+					@Override
+					public void onInput(Player player, String value) {
+						User user = UserManager.getInstance().getUser(
+								UserGUI.getInstance().getCurrentPlayer(
+										player));
+						RewardHandler.getInstance().giveReward(user,
+								value, user.isOnline());
+						player.sendMessage("Given "
+								+ user.getPlayerName()
+								+ " reward file " + value);
 
-							}
-						});
+					}
+				});
 
 			}
 		});
 		UserGUI.getInstance().addPluginButton(plugin, inv);
-	}
-
-	/**
-	 * Load tab complete.
-	 */
-	public void loadTabComplete() {
-		ArrayList<String> method = new ArrayList<String>();
-		for (InputMethod me : InputMethod.values()) {
-			method.add(me.toString());
-		}
-		for (int i = 0; i < plugin.advancedCoreCommands.size(); i++) {
-			plugin.advancedCoreCommands.get(i).addTabCompleteOption(
-					"(RequestMethod)", method);
-		}
 	}
 
 }
