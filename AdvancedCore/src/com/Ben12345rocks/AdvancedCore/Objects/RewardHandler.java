@@ -62,8 +62,8 @@ public class RewardHandler {
 
 		if (reward.equals("")) {
 			plugin.getLogger()
-			.warning(
-					"Tried to get any empty reward file name, renaming to EmptyName");
+					.warning(
+							"Tried to get any empty reward file name, renaming to EmptyName");
 			reward = "EmptyName";
 		}
 
@@ -91,6 +91,18 @@ public class RewardHandler {
 	public void giveReward(User user, String reward, boolean online) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), online);
+		}
+	}
+
+	public void giveReward(User user, Reward reward, boolean online,
+			boolean giveOffline) {
+		reward.giveReward(user, online, giveOffline);
+	}
+
+	public void giveReward(User user, String reward, boolean online,
+			boolean giveOffline) {
+		if (!reward.equals("")) {
+			giveReward(user, getReward(reward), online, giveOffline);
 		}
 	}
 
