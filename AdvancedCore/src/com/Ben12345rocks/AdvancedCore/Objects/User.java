@@ -128,12 +128,13 @@ public class User {
 	public void checkOfflineRewards() {
 		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			int offVotes = getOfflineRewards(reward);
-			if (offVotes > 0) {
-				for (int i = 0; i < offVotes; i++) {
-					giveReward(reward, false);
-				}
-				setOfflineRewards(reward, 0);
+			while (offVotes > 0 && isOnline()) {
+				giveReward(reward, false);
+				offVotes--;
+				setOfflineRewards(reward, offVotes);
+
 			}
+
 		}
 	}
 
@@ -513,14 +514,13 @@ public class User {
 									getOfflineRewardWorld(
 											reward.getRewardName(), worldName);
 
-									while (worldRewards > 0) {
+									while (worldRewards > 0 && isOnline()) {
 										reward.giveRewardUser(this);
 										worldRewards--;
+										setOfflineRewardWorld(
+												reward.getRewardName(), world,
+												worldRewards);
 									}
-
-									setOfflineRewardWorld(
-											reward.getRewardName(), worldName,
-											0);
 								}
 							}
 
@@ -530,13 +530,13 @@ public class User {
 							int worldRewards = getOfflineRewardWorld(
 									reward.getRewardName(), world);
 
-							while (worldRewards > 0) {
+							while (worldRewards > 0 && isOnline()) {
 								reward.giveRewardUser(this);
 								worldRewards--;
+								setOfflineRewardWorld(reward.getRewardName(),
+										world, worldRewards);
 							}
 
-							setOfflineRewardWorld(reward.getRewardName(),
-									world, 0);
 						}
 					}
 				}

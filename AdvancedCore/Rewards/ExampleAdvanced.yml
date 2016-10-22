@@ -15,10 +15,6 @@
 # at the basic example, you can simply copy and paste from here what you want
 # in other reward files, that is the way they are designed
 
-
-# NOTE: Do not use this reward file in more than one place if
-# delayed or timed is enabled! They will interfer with each other.
-
 # This will delay the reward file from running
 Delayed:
   Enabled: false
