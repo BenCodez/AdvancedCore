@@ -417,7 +417,7 @@ public class Reward {
 		Date time = new Date();
 		time = DateUtils.addHours(time, getDelayHours());
 		time = DateUtils.addMinutes(time, getDelayMinutes());
-		user.setTimedReward(this, time.getTime());
+		user.addTimedReward(this, time.getTime());
 
 		plugin.debug("Giving reward " + name + " in " + getDelayHours()
 				+ " hours " + getDelayMinutes() + " minutes ("
@@ -468,7 +468,7 @@ public class Reward {
 		if (new Date().after(time)) {
 			time = DateUtils.addDays(time, 1);
 		}
-		user.setTimedReward(this, time.getTime());
+		user.addTimedReward(this, time.getTime());
 
 		plugin.debug("Giving reward " + name + " at " + time.toString());
 		return true;
@@ -1064,7 +1064,7 @@ public class Reward {
 		for (String potionName : getPotions()) {
 			user.givePotionEffect(potionName,
 					getPotionsDuration().get(potionName), getPotionsAmplifier()
-					.get(potionName));
+							.get(potionName));
 		}
 	}
 
@@ -1093,7 +1093,7 @@ public class Reward {
 			for (String reward : getRandomFallBack()) {
 				if (!reward.equals("")) {
 					RewardHandler.getInstance()
-					.giveReward(user, reward, online);
+							.giveReward(user, reward, online);
 				}
 			}
 		}
@@ -1539,9 +1539,9 @@ public class Reward {
 		if (ConfigRewards.getInstance().getTitleEnabled(name)) {
 			user.sendTitle(ConfigRewards.getInstance().getTitleTitle(name),
 
-					ConfigRewards.getInstance().getTitleSubTitle(name),
+			ConfigRewards.getInstance().getTitleSubTitle(name),
 
-					ConfigRewards.getInstance().getTitleFadeIn(name), ConfigRewards
+			ConfigRewards.getInstance().getTitleFadeIn(name), ConfigRewards
 					.getInstance().getTitleShowTime(name), ConfigRewards
 					.getInstance().getTitleFadeOut(name));
 		}

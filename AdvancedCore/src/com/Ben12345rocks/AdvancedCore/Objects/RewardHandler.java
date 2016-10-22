@@ -39,12 +39,15 @@ public class RewardHandler {
 	public void checkDelayedTimedRewards() {
 		for (User user : UserManager.getInstance().getUsers()) {
 			for (Reward reward : getRewards()) {
-				long time = user.getTimedReward(reward);
-				if (time != 0) {
-					Date timeDate = new Date(time);
-					if (new Date().after(timeDate)) {
-						reward.giveRewardReward(user, true);
-						user.setTimedReward(reward, 0);
+				ArrayList<Long> times = user.getTimedReward(reward);
+				for (Long t : times) {
+					long time = t.longValue();
+					if (time != 0) {
+						Date timeDate = new Date(time);
+						if (new Date().after(timeDate)) {
+							reward.giveRewardReward(user, true);
+							user.removeTimedReward(reward, time);
+						}
 					}
 				}
 			}
