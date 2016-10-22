@@ -182,6 +182,7 @@ public class Data {
 	 *
 	 * @return the users
 	 */
+	@Deprecated
 	public Set<User> getUsers() {
 		Set<User> users = new HashSet<User>();
 		ArrayList<User> players = UserManager.getInstance().getUsers();

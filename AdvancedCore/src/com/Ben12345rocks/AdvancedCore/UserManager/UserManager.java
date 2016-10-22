@@ -32,7 +32,7 @@ public class UserManager {
 	/**
 	 * Instantiates a new utils.
 	 */
-	private UserManager() {
+	public UserManager() {
 	}
 
 	public User getUser(OfflinePlayer player) {

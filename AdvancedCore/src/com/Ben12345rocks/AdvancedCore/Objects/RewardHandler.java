@@ -5,7 +5,7 @@ import java.util.Date;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
-import com.Ben12345rocks.AdvancedCore.Data.Data;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 public class RewardHandler {
 
@@ -37,7 +37,7 @@ public class RewardHandler {
 	 * Check delayed timed rewards.
 	 */
 	public void checkDelayedTimedRewards() {
-		for (User user : Data.getInstance().getUsers()) {
+		for (User user : UserManager.getInstance().getUsers()) {
 			for (Reward reward : getRewards()) {
 				long time = user.getTimedReward(reward);
 				if (time != 0) {
