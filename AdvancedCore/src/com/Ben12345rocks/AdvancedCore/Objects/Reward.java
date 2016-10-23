@@ -998,12 +998,6 @@ public class Reward {
 		return worlds;
 	}
 
-	/**
-	 * Give exp.
-	 *
-	 * @param user
-	 *            the user
-	 */
 	public void giveExp(User user, int exp) {
 		user.giveExp(exp);
 	}
@@ -1044,12 +1038,6 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * Give money.
-	 *
-	 * @param user
-	 *            the user
-	 */
 	public void giveMoney(User user, int money) {
 		user.giveMoney(money);
 	}
@@ -1103,14 +1091,6 @@ public class Reward {
 		giveReward(user, online, true);
 	}
 
-	/**
-	 * Give reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 */
 	public void giveReward(User user, boolean online, boolean giveOffline) {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user);
@@ -1478,12 +1458,6 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * Send message.
-	 *
-	 * @param user
-	 *            the user
-	 */
 	public void sendMessage(User user, int money, int exp) {
 		ArrayList<String> itemsAndAmounts = new ArrayList<String>();
 		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {

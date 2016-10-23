@@ -21,14 +21,6 @@ public class WeekChangeEvent extends Event {
 		return handlers;
 	}
 
-	/**
-	 * Instantiates a new player reward event.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param player
-	 *            the player
-	 */
 	public WeekChangeEvent() {
 		super();
 	}
