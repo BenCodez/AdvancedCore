@@ -295,6 +295,7 @@ public class Main extends JavaPlugin {
 		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		update();
+		UserManager.getInstance().loadUsers();
 	}
 
 	/**

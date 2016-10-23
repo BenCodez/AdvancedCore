@@ -141,7 +141,7 @@ public class User {
 	 * @return the choice reward
 	 */
 	public int getChoiceReward(Reward reward) {
-		return getPluginData().getInt("ChoiceRewards." + reward.name);
+		return getRawData().getInt("ChoiceRewards." + reward.name);
 	}
 
 	/**
@@ -152,7 +152,7 @@ public class User {
 	 * @return the offline rewards
 	 */
 	public int getOfflineRewards(Reward reward) {
-		return getPluginData()
+		return getRawData()
 				.getInt("OfflineReward." + reward.getRewardName());
 	}
 
@@ -169,7 +169,7 @@ public class User {
 		if (world == null) {
 			world = "AllTheWorlds";
 		}
-		return getPluginData().getInt(
+		return getRawData().getInt(
 				"OfflineVotesWorld." + reward + "." + world);
 	}
 
@@ -225,7 +225,7 @@ public class User {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<Long> getTimedReward(Reward reward) {
-		return (ArrayList<Long>) getPluginData()
+		return (ArrayList<Long>) getRawData()
 				.getList("TimedRewards." + reward.getRewardName(),
 						new ArrayList<Long>());
 	}
@@ -766,7 +766,7 @@ public class User {
 	 *            the value
 	 */
 	public void setChoiceReward(Reward reward, int value) {
-		setPluginData("ChoiceRewards." + reward.name, value);
+		setRawData("ChoiceRewards." + reward.name, value);
 	}
 
 	/**
@@ -778,7 +778,7 @@ public class User {
 	 *            the value
 	 */
 	public void setOfflineRewards(Reward reward, int value) {
-		setPluginData("OfflineReward." + reward.getRewardName(), value);
+		setRawData("OfflineReward." + reward.getRewardName(), value);
 	}
 
 	/**
@@ -795,7 +795,7 @@ public class User {
 		if (world == null) {
 			world = "AllTheWorlds";
 		}
-		setPluginData("OfflineVotesWorld." + reward + "." + world, value);
+		setRawData("OfflineVotesWorld." + reward + "." + world, value);
 	}
 
 	/**
@@ -849,7 +849,7 @@ public class User {
 	 *            the value
 	 */
 	public void setTimedReward(Reward reward, ArrayList<Long> value) {
-		setPluginData("TimedRewards." + reward.getRewardName(), value);
+		setRawData("TimedRewards." + reward.getRewardName(), value);
 	}
 
 	/**
