@@ -36,22 +36,31 @@ public class RewardHandler {
 	/**
 	 * Check delayed timed rewards.
 	 */
-	public void checkDelayedTimedRewards() {
-		for (User user : UserManager.getInstance().getUsers()) {
-			for (Reward reward : getRewards()) {
-				ArrayList<Long> times = user.getTimedReward(reward);
-				for (Long t : times) {
-					long time = t.longValue();
-					if (time != 0) {
-						Date timeDate = new Date(time);
-						if (new Date().after(timeDate)) {
-							reward.giveRewardReward(user, true);
-							user.removeTimedReward(reward, time);
+	public synchronized void checkDelayedTimedRewards() {
+		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(
+				new Runnable() {
+
+					@Override
+					public void run() {
+						for (User user : UserManager.getInstance().getUsers()) {
+							for (Reward reward : getRewards()) {
+								ArrayList<Long> times = user
+										.getTimedReward(reward);
+								for (Long t : times) {
+									long time = t.longValue();
+									if (time != 0) {
+										Date timeDate = new Date(time);
+										if (new Date().after(timeDate)) {
+											reward.giveRewardReward(user, true);
+											user.removeTimedReward(reward, time);
+										}
+									}
+								}
+							}
 						}
 					}
-				}
-			}
-		}
+				});
+
 	}
 
 	public Reward getReward(String reward) {

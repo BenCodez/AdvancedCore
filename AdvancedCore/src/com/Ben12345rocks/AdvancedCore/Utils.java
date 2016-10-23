@@ -397,9 +397,9 @@ public class Utils {
 	 *             the invocation target exception
 	 */
 	public Object getConnection(Player player) throws SecurityException,
-	NoSuchMethodException, NoSuchFieldException,
-	IllegalArgumentException, IllegalAccessException,
-	InvocationTargetException {
+			NoSuchMethodException, NoSuchFieldException,
+			IllegalArgumentException, IllegalAccessException,
+			InvocationTargetException {
 		Method getHandle = player.getClass().getMethod("getHandle");
 		Object nmsPlayer = getHandle.invoke(player);
 		Field conField = nmsPlayer.getClass().getField("playerConnection");
@@ -486,7 +486,7 @@ public class Utils {
 			throws ClassNotFoundException {
 		String version = Bukkit.getServer().getClass().getPackage().getName()
 				.replace(".", ",").split(",")[3]
-						+ ".";
+				+ ".";
 		String name = "net.minecraft.server." + version + nmsClassString;
 		Class<?> nmsClass = Class.forName(name);
 		return nmsClass;
@@ -530,7 +530,7 @@ public class Utils {
 				new com.Ben12345rocks.AdvancedCore.Objects.UUID(uuid), false);
 		String playerName = Data.getInstance().getName(user);
 
-		if (playerName != null) {
+		if (playerName != null && !playerName.equals("null")) {
 			return playerName;
 		}
 
@@ -751,8 +751,8 @@ public class Utils {
 						builder.withColor(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
 						plugin.getLogger()
-						.info(color
-								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+								.info(color
+										+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
 					}
 				}
 				for (String color : fadeOutColor) {
@@ -760,8 +760,8 @@ public class Utils {
 						builder.withFade(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
 						plugin.getLogger()
-						.info(color
-								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+								.info(color
+										+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
 					}
 				}
 				for (String type : types) {
@@ -769,8 +769,8 @@ public class Utils {
 						builder.with(Type.valueOf(type));
 					} catch (Exception ex) {
 						plugin.getLogger()
-						.info(type
-								+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
+								.info(type
+										+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
 					}
 				}
 				fwmeta.addEffects(builder.build());

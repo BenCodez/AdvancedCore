@@ -1,9 +1,12 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
@@ -152,8 +155,7 @@ public class User {
 	 * @return the offline rewards
 	 */
 	public int getOfflineRewards(Reward reward) {
-		return getRawData()
-				.getInt("OfflineReward." + reward.getRewardName());
+		return getRawData().getInt("OfflineReward." + reward.getRewardName());
 	}
 
 	/**
@@ -169,8 +171,7 @@ public class User {
 		if (world == null) {
 			world = "AllTheWorlds";
 		}
-		return getRawData().getInt(
-				"OfflineVotesWorld." + reward + "." + world);
+		return getRawData().getInt("OfflineVotesWorld." + reward + "." + world);
 	}
 
 	/**
@@ -234,6 +235,14 @@ public class User {
 		ArrayList<Long> times = getTimedReward(reward);
 		times.add(Long.valueOf(time));
 		setTimedReward(reward, times);
+		new Timer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				RewardHandler.getInstance().checkDelayedTimedRewards();
+
+			}
+		}, new Date(time));
 	}
 
 	public void removeTimedReward(Reward reward, long time) {
