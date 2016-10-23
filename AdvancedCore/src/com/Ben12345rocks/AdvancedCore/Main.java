@@ -292,6 +292,7 @@ public class Main extends JavaPlugin {
 	 */
 	public void reload() {
 		Config.getInstance().reloadData();
+		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		update();
 	}
