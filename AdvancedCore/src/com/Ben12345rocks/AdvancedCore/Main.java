@@ -31,6 +31,7 @@ import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
@@ -97,9 +98,9 @@ public class Main extends JavaPlugin {
 		case UPDATE_AVAILABLE: {
 			plugin.getLogger().info(
 					plugin.getName()
-					+ " has an update available! Your Version: "
-					+ plugin.getDescription().getVersion()
-					+ " New Version: " + plugin.updater.getVersion());
+							+ " has an update available! Your Version: "
+							+ plugin.getDescription().getVersion()
+							+ " New Version: " + plugin.updater.getVersion());
 			break;
 		}
 		default: {
@@ -127,9 +128,9 @@ public class Main extends JavaPlugin {
 							plugin, oldVersion);
 					getLogger().info(
 							plugin.getDescription().getName()
-							+ " has updated from " + oldVersion
-							+ " to "
-							+ plugin.getDescription().getVersion());
+									+ " has updated from " + oldVersion
+									+ " to "
+									+ plugin.getDescription().getVersion());
 					Bukkit.getPluginManager().callEvent(event);
 				}
 			}
@@ -149,7 +150,7 @@ public class Main extends JavaPlugin {
 			plug.getLogger().info("Debug: " + msg);
 			if (logger != null && Config.getInstance().getLogDebugToFile()) {
 				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm")
-				.format(Calendar.getInstance().getTime());
+						.format(Calendar.getInstance().getTime());
 				logger.logToFile(str + " [" + plug.getName() + "] Debug: "
 						+ msg);
 			}
@@ -196,7 +197,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.plugin.java.JavaPlugin#onDisable()
 	 */
 	@Override
@@ -206,7 +207,7 @@ public class Main extends JavaPlugin {
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see org.bukkit.plugin.java.JavaPlugin#onEnable()
 	 */
 	@Override
@@ -230,6 +231,7 @@ public class Main extends JavaPlugin {
 				new AdvancedCoreUpdateEvent(this), this);
 
 		RewardHandler.getInstance().loadRewards();
+		UserManager.getInstance().loadUsers();
 
 		try {
 			Metrics metrics = new Metrics(this);
@@ -241,17 +243,17 @@ public class Main extends JavaPlugin {
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
 				new Runnable() {
 
-			@Override
-			public void run() {
-				plugin.run(new Runnable() {
-
 					@Override
 					public void run() {
-						checkUpdate();
+						plugin.run(new Runnable() {
+
+							@Override
+							public void run() {
+								checkUpdate();
+							}
+						});
 					}
-				});
-			}
-		}, 10l);
+				}, 10l);
 
 		new Timer().schedule(new TimerTask() {
 

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
@@ -42,8 +41,6 @@ public class User {
 	/** The uuid. */
 	private String uuid;
 
-	private HashMap<String, Object> values;
-
 	/**
 	 * Instantiates a new user.
 	 *
@@ -57,7 +54,6 @@ public class User {
 		this.plugin = plugin;
 		playerName = player.getName();
 		uuid = player.getUniqueId().toString();
-		load();
 	}
 
 	/**
@@ -73,7 +69,6 @@ public class User {
 		this.plugin = plugin;
 		this.playerName = playerName;
 		uuid = Utils.getInstance().getUUID(playerName);
-		load();
 	}
 
 	/**
@@ -89,7 +84,7 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		playerName = Utils.getInstance().getPlayerName(this.uuid);
-		load();
+
 	}
 
 	/**
@@ -109,7 +104,7 @@ public class User {
 		if (loadName) {
 			playerName = Utils.getInstance().getPlayerName(this.uuid);
 		}
-		load();
+
 	}
 
 	/**
@@ -476,16 +471,6 @@ public class User {
 		return Utils.getInstance().isPlayerOnline(getPlayerName());
 	}
 
-	private void load() {
-		values = new HashMap<String, Object>();
-
-		FileConfiguration data = getRawData();
-		for (String string : data.getConfigurationSection("").getKeys(false)) {
-			values.put(string, data.get(string));
-		}
-
-	}
-
 	/**
 	 * Off vote world.
 	 *
@@ -591,14 +576,6 @@ public class User {
 				Main.plugin.debug("Invalid sound: " + soundName);
 			}
 		}
-	}
-
-	public void save() {
-
-		for (Entry<String, Object> entry : values.entrySet()) {
-			setRawData(entry.getKey(), entry.getValue());
-		}
-
 	}
 
 	/**
@@ -882,6 +859,9 @@ public class User {
 	 *            the new user input method
 	 */
 	public void setUserInputMethod(InputMethod method) {
+		if (method == null) {
+			method = InputMethod.ANVIL;
+		}
 		setRawData("InputMethod", method.toString());
 	}
 

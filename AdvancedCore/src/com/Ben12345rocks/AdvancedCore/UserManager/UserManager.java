@@ -72,10 +72,4 @@ public class UserManager {
 		}
 	}
 
-	public void saveUsers() {
-		for (User user : users) {
-			user.save();
-		}
-	}
-
 }

@@ -57,42 +57,77 @@ public class CommandLoader {
 			}
 		});
 		plugin.advancedCoreCommands
-		.add(new CommandHandler(new String[] { "Help" },
-				"AdvancedCore.Help", "View this page") {
+				.add(new CommandHandler(new String[] { "Help" },
+						"AdvancedCore.Help", "View this page") {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
-				msg.add(Utils.getInstance().stringToComp(
-						"&c" + plugin.getName() + " help"));
-				for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
-					msg.add(cmdHandle.getHelpLine("/advancedcore"));
-				}
-				if (sender instanceof Player) {
-					UserManager.getInstance().getUser((Player) sender)
-					.sendJson(msg);
-				} else {
-					sender.sendMessage(Utils.getInstance()
-							.convertArray(
-									Utils.getInstance().comptoString(
-											msg)));
-				}
-			}
-		});
+					@Override
+					public void execute(CommandSender sender, String[] args) {
+						ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
+						msg.add(Utils.getInstance().stringToComp(
+								"&c" + plugin.getName() + " help"));
+						for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
+							msg.add(cmdHandle.getHelpLine("/advancedcore"));
+						}
+						if (sender instanceof Player) {
+							UserManager.getInstance().getUser((Player) sender)
+									.sendJson(msg);
+						} else {
+							sender.sendMessage(Utils.getInstance()
+									.convertArray(
+											Utils.getInstance().comptoString(
+													msg)));
+						}
+					}
+				});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"SetRequestMethod", "(RequestMethod)" },
-				"AdvancedCore.SetRequestMethod", "SetRequestMethod") {
+				"AdvancedCore.SetRequestMethod", "SetRequestMethod", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				if (sender instanceof Player) {
-					User user = UserManager.getInstance().getUser(
-							(Player) sender);
-					user.setUserInputMethod(InputMethod.valueOf(args[1]));
+
+				User user = UserManager.getInstance().getUser((Player) sender);
+				InputMethod method = InputMethod.valueOf(args[1]);
+				if (method == null) {
+					user.sendMessage("&cInvalid request method: " + args[1]);
+				} else {
+					user.setUserInputMethod(method);
+					user.sendMessage("&cRequest method set to "
+							+ method.toString());
 				}
+
 			}
 		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(
+				new String[] { "SetRequestMethod" },
+				"AdvancedCore.SetRequestMethod", "SetRequestMethod", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				ArrayList<String> methods = new ArrayList<String>();
+				for (InputMethod method : InputMethod.values()) {
+					methods.add(method.toString());
+				}
+				new ValueRequest(InputMethod.INVENTORY).requestString(
+						(Player) sender, "",
+						Utils.getInstance().convertArray(methods), false,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								User user = UserManager.getInstance().getUser(
+										player);
+								user.setUserInputMethod(InputMethod
+										.valueOf(value));
+
+							}
+						});
+
+			}
+		});
+
 		plugin.advancedCoreCommands.add(new CommandHandler(
 				new String[] { "Perms" }, "AdvancedCore.Perms",
 				"View permissions list") {
@@ -106,7 +141,7 @@ public class CommandLoader {
 				}
 				if (sender instanceof Player) {
 					UserManager.getInstance().getUser((Player) sender)
-					.sendMessage(msg);
+							.sendMessage(msg);
 				} else {
 					sender.sendMessage(Utils.getInstance().convertArray(msg));
 				}
@@ -174,20 +209,20 @@ public class CommandLoader {
 		});
 
 		plugin.advancedCoreCommands
-		.add(new CommandHandler(new String[] { "GiveReward",
-				"(Reward)", "(Player)" }, "AdvancedCore.GiveReward",
-				"Give a player a reward file", true) {
+				.add(new CommandHandler(new String[] { "GiveReward",
+						"(Reward)", "(Player)" }, "AdvancedCore.GiveReward",
+						"Give a player a reward file", true) {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				User user = UserManager.getInstance().getUser(args[2]);
-				RewardHandler.getInstance().giveReward(user, args[1],
-						user.isOnline());
+					@Override
+					public void execute(CommandSender sender, String[] args) {
+						User user = UserManager.getInstance().getUser(args[2]);
+						RewardHandler.getInstance().giveReward(user, args[1],
+								user.isOnline());
 
-				sender.sendMessage("Gave " + args[2]
-						+ " the reward file " + args[1]);
-			}
-		});
+						sender.sendMessage("Gave " + args[2]
+								+ " the reward file " + args[1]);
+					}
+				});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"SelectChoiceReward", "(Reward)" },
@@ -204,7 +239,7 @@ public class CommandLoader {
 							"",
 							Utils.getInstance().convertArray(
 									reward.getChoiceRewardsRewards()), false,
-									new StringListener() {
+							new StringListener() {
 
 								@Override
 								public void onInput(Player player, String value) {
@@ -334,19 +369,19 @@ public class CommandLoader {
 						Utils.getInstance().convertArray(rewards), true,
 						new StringListener() {
 
-					@Override
-					public void onInput(Player player, String value) {
-						User user = UserManager.getInstance().getUser(
-								UserGUI.getInstance().getCurrentPlayer(
-										player));
-						RewardHandler.getInstance().giveReward(user,
-								value, user.isOnline());
-						player.sendMessage("Given "
-								+ user.getPlayerName()
-								+ " reward file " + value);
+							@Override
+							public void onInput(Player player, String value) {
+								User user = UserManager.getInstance().getUser(
+										UserGUI.getInstance().getCurrentPlayer(
+												player));
+								RewardHandler.getInstance().giveReward(user,
+										value, user.isOnline());
+								player.sendMessage("Given "
+										+ user.getPlayerName()
+										+ " reward file " + value);
 
-					}
-				});
+							}
+						});
 
 			}
 		});
