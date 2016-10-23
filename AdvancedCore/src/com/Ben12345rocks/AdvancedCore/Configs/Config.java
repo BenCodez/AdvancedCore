@@ -146,6 +146,19 @@ public class Config {
 	}
 
 	/**
+	 * Gets the time zone.
+	 *
+	 * @return the time zone
+	 */
+	public String getTimeZone() {
+		String str = getData().getString("TimeZone");
+		if (str != null) {
+			return str;
+		}
+		return "UTC";
+	}
+
+	/**
 	 * Reload data.
 	 */
 	public void reloadData() {
@@ -201,7 +214,7 @@ public class Config {
 				plugin.saveResource("Config.yml", true);
 			} catch (IOException e) {
 				Bukkit.getServer().getLogger()
-				.severe(ChatColor.RED + "Could not create Config.yml!");
+						.severe(ChatColor.RED + "Could not create Config.yml!");
 			}
 		}
 

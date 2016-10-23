@@ -6,7 +6,7 @@ import org.bukkit.entity.Player;
  * Number input listener
  */
 public abstract class NumberListener {
-	
+
 	/**
 	 * On input.
 	 *

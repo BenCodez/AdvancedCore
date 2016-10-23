@@ -14,11 +14,12 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
-import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
+import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
@@ -68,7 +69,8 @@ public class CommandLoader {
 							msg.add(cmdHandle.getHelpLine("/advancedcore"));
 						}
 						if (sender instanceof Player) {
-							new User(plugin, (Player) sender).sendJson(msg);
+							UserManager.getInstance().getUser((Player) sender)
+									.sendJson(msg);
 						} else {
 							sender.sendMessage(Utils.getInstance()
 									.convertArray(
@@ -80,16 +82,52 @@ public class CommandLoader {
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"SetRequestMethod", "(RequestMethod)" },
-				"AdvancedCore.SetRequestMethod", "SetRequestMethod") {
+				"AdvancedCore.SetRequestMethod", "SetRequestMethod", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				if (sender instanceof Player) {
-					User user = new User(Main.plugin, (Player) sender);
-					user.setUserInputMethod(InputMethod.valueOf(args[1]));
+
+				User user = UserManager.getInstance().getUser((Player) sender);
+				InputMethod method = InputMethod.valueOf(args[1]);
+				if (method == null) {
+					user.sendMessage("&cInvalid request method: " + args[1]);
+				} else {
+					user.setUserInputMethod(method);
+					user.sendMessage("&cRequest method set to "
+							+ method.toString());
 				}
+
 			}
 		});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(
+				new String[] { "SetRequestMethod" },
+				"AdvancedCore.SetRequestMethod", "SetRequestMethod", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				ArrayList<String> methods = new ArrayList<String>();
+				for (InputMethod method : InputMethod.values()) {
+					methods.add(method.toString());
+				}
+				new ValueRequest(InputMethod.INVENTORY).requestString(
+						(Player) sender, "",
+						Utils.getInstance().convertArray(methods), false,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								User user = UserManager.getInstance().getUser(
+										player);
+								user.setUserInputMethod(InputMethod
+										.valueOf(value));
+
+							}
+						});
+
+			}
+		});
+
 		plugin.advancedCoreCommands.add(new CommandHandler(
 				new String[] { "Perms" }, "AdvancedCore.Perms",
 				"View permissions list") {
@@ -102,7 +140,8 @@ public class CommandLoader {
 					msg.add(cmdHandle.getPerm());
 				}
 				if (sender instanceof Player) {
-					new User(plugin, (Player) sender).sendMessage(msg);
+					UserManager.getInstance().getUser((Player) sender)
+							.sendMessage(msg);
 				} else {
 					sender.sendMessage(Utils.getInstance().convertArray(msg));
 				}
@@ -176,13 +215,10 @@ public class CommandLoader {
 
 					@Override
 					public void execute(CommandSender sender, String[] args) {
-						ConfigRewards
-								.getInstance()
-								.getReward(args[1])
-								.giveReward(
-										new User(plugin, args[2]),
-										Utils.getInstance().isPlayerOnline(
-												args[2]));
+						User user = UserManager.getInstance().getUser(args[2]);
+						RewardHandler.getInstance().giveReward(user, args[1],
+								user.isOnline());
+
 						sender.sendMessage("Gave " + args[2]
 								+ " the reward file " + args[1]);
 					}
@@ -195,8 +231,8 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				Reward reward = ConfigRewards.getInstance().getReward(args[1]);
-				User user = new User(Main.plugin, (Player) sender);
+				Reward reward = RewardHandler.getInstance().getReward(args[1]);
+				User user = UserManager.getInstance().getUser((Player) sender);
 				if (user.getChoiceReward(reward) != 0) {
 					new ValueRequest(InputMethod.INVENTORY).requestString(
 							(Player) sender,
@@ -207,10 +243,10 @@ public class CommandLoader {
 
 								@Override
 								public void onInput(Player player, String value) {
-									User user = new User(Main.plugin, player);
-									ConfigRewards.getInstance()
-											.getReward(value)
-											.giveReward(user, true);
+									User user = UserManager.getInstance()
+											.getUser(player);
+									RewardHandler.getInstance().giveReward(
+											user, value, true);
 									user.setChoiceReward(reward,
 											user.getChoiceReward(reward) - 1);
 								}
@@ -257,7 +293,7 @@ public class CommandLoader {
 					if (args[1].equals("CustomValue")) {
 						new ValueRequest().requestNumber(player, listener);
 					} else {
-						Number number = (Double) Double.valueOf(args[1]);
+						Number number = Double.valueOf(args[1]);
 						listener.onInput(player, number);
 					}
 				} catch (Exception ex) {
@@ -302,41 +338,6 @@ public class CommandLoader {
 
 	}
 
-	private void loadUserGUI() {
-		BInventory inv = new BInventory("AdvancedCore UserGUI");
-		inv.addButton(inv.getNextSlot(), new BInventoryButton(
-				"Give Reward File", new String[] {}, new ItemStack(
-						Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				ArrayList<String> rewards = new ArrayList<String>();
-				for (Reward reward : plugin.rewards) {
-					rewards.add(reward.getRewardName());
-				}
-
-				new ValueRequest().requestString(clickEvent.getPlayer(), "",
-						Utils.getInstance().convertArray(rewards), true,
-						new StringListener() {
-
-							@Override
-							public void onInput(Player player, String value) {
-								User user = new User(Main.plugin, UserGUI
-										.getInstance().getCurrentPlayer(player));
-								ConfigRewards.getInstance().getReward(value)
-										.giveReward(user, user.isOnline());
-								player.sendMessage("Given "
-										+ user.getPlayerName()
-										+ " reward file " + value);
-
-							}
-						});
-
-			}
-		});
-		UserGUI.getInstance().addPluginButton(plugin, inv);
-	}
-
 	/**
 	 * Load tab complete.
 	 */
@@ -349,6 +350,42 @@ public class CommandLoader {
 			plugin.advancedCoreCommands.get(i).addTabCompleteOption(
 					"(RequestMethod)", method);
 		}
+	}
+
+	private void loadUserGUI() {
+		BInventory inv = new BInventory("AdvancedCore UserGUI");
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(
+				"Give Reward File", new String[] {}, new ItemStack(
+						Material.STONE)) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				ArrayList<String> rewards = new ArrayList<String>();
+				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+					rewards.add(reward.getRewardName());
+				}
+
+				new ValueRequest().requestString(clickEvent.getPlayer(), "",
+						Utils.getInstance().convertArray(rewards), true,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								User user = UserManager.getInstance().getUser(
+										UserGUI.getInstance().getCurrentPlayer(
+												player));
+								RewardHandler.getInstance().giveReward(user,
+										value, user.isOnline());
+								player.sendMessage("Given "
+										+ user.getPlayerName()
+										+ " reward file " + value);
+
+							}
+						});
+
+			}
+		});
+		UserGUI.getInstance().addPluginButton(plugin, inv);
 	}
 
 }

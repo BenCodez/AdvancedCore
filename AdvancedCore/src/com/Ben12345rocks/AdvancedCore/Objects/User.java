@@ -1,9 +1,12 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
@@ -25,7 +28,6 @@ import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
-import com.Ben12345rocks.AdvancedCore.Util.Request.RequestManager;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 /**
@@ -50,6 +52,7 @@ public class User {
 	 * @param player
 	 *            the player
 	 */
+	@Deprecated
 	public User(Plugin plugin, Player player) {
 		this.plugin = plugin;
 		playerName = player.getName();
@@ -64,6 +67,7 @@ public class User {
 	 * @param playerName
 	 *            the player name
 	 */
+	@Deprecated
 	public User(Plugin plugin, String playerName) {
 		this.plugin = plugin;
 		this.playerName = playerName;
@@ -78,10 +82,12 @@ public class User {
 	 * @param uuid
 	 *            the uuid
 	 */
+	@Deprecated
 	public User(Plugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		playerName = Utils.getInstance().getPlayerName(this.uuid);
+
 	}
 
 	/**
@@ -94,12 +100,14 @@ public class User {
 	 * @param loadName
 	 *            the load name
 	 */
+	@Deprecated
 	public User(Plugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		if (loadName) {
 			playerName = Utils.getInstance().getPlayerName(this.uuid);
 		}
+
 	}
 
 	/**
@@ -113,15 +121,19 @@ public class User {
 	}
 
 	/**
-	 * Sets the choice reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
+	 * Check offline rewards.
 	 */
-	public void setChoiceReward(Reward reward, int value) {
-		setPluginData("ChoiceRewards." + reward.name, value);
+	public void checkOfflineRewards() {
+		for (Reward reward : RewardHandler.getInstance().getRewards()) {
+			int offVotes = getOfflineRewards(reward);
+			while (offVotes > 0 && isOnline()) {
+				giveReward(reward, false);
+				offVotes--;
+				setOfflineRewards(reward, offVotes);
+
+			}
+
+		}
 	}
 
 	/**
@@ -132,44 +144,7 @@ public class User {
 	 * @return the choice reward
 	 */
 	public int getChoiceReward(Reward reward) {
-		return getPluginData().getInt("ChoiceRewards." + reward.name);
-	}
-
-	/**
-	 * Check offline rewards.
-	 */
-	public void checkOfflineRewards() {
-		for (Reward reward : Main.plugin.rewards) {
-			int offVotes = getOfflineRewards(reward);
-			if (offVotes > 0) {
-				for (int i = 0; i < offVotes; i++) {
-					giveReward(reward, false);
-				}
-				setOfflineRewards(reward, 0);
-			}
-		}
-	}
-
-	/**
-	 * Gets the input method.
-	 *
-	 * @return the input method
-	 */
-	@Deprecated
-	public RequestManager.InputMethod getInputMethod() {
-		return RequestManager.InputMethod.getMethod(getRawData().getString(
-				"InputMethod",
-				Config.getInstance().getRequestAPIDefaultMethod()));
-	}
-
-	/**
-	 * Gets the user input method.
-	 *
-	 * @return the user input method
-	 */
-	public InputMethod getUserInputMethod() {
-		return InputMethod.getMethod(getRawData().getString("InputMethod",
-				Config.getInstance().getRequestAPIDefaultMethod()));
+		return getRawData().getInt("ChoiceRewards." + reward.name);
 	}
 
 	/**
@@ -180,8 +155,7 @@ public class User {
 	 * @return the offline rewards
 	 */
 	public int getOfflineRewards(Reward reward) {
-		return getPluginData()
-				.getInt("OfflineReward." + reward.getRewardName());
+		return getRawData().getInt("OfflineReward." + reward.getRewardName());
 	}
 
 	/**
@@ -197,8 +171,7 @@ public class User {
 		if (world == null) {
 			world = "AllTheWorlds";
 		}
-		return getPluginData().getInt(
-				"OfflineVotesWorld." + reward + "." + world);
+		return getRawData().getInt("OfflineVotesWorld." + reward + "." + world);
 	}
 
 	/**
@@ -251,8 +224,41 @@ public class User {
 	 *            the reward
 	 * @return the timed reward
 	 */
-	public long getTimedReward(Reward reward) {
-		return getPluginData().getLong("Timed." + reward.getRewardName());
+	@SuppressWarnings("unchecked")
+	public ArrayList<Long> getTimedReward(Reward reward) {
+		return (ArrayList<Long>) getRawData()
+				.getList("TimedRewards." + reward.getRewardName(),
+						new ArrayList<Long>());
+	}
+
+	public void addTimedReward(Reward reward, long time) {
+		ArrayList<Long> times = getTimedReward(reward);
+		times.add(Long.valueOf(time));
+		setTimedReward(reward, times);
+		new Timer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				RewardHandler.getInstance().checkDelayedTimedRewards();
+
+			}
+		}, new Date(time));
+	}
+
+	public void removeTimedReward(Reward reward, long time) {
+		ArrayList<Long> times = getTimedReward(reward);
+		times.remove(Long.valueOf(time));
+		setTimedReward(reward, times);
+	}
+
+	/**
+	 * Gets the user input method.
+	 *
+	 * @return the user input method
+	 */
+	public InputMethod getUserInputMethod() {
+		return InputMethod.getMethod(getRawData().getString("InputMethod",
+				Config.getInstance().getRequestAPIDefaultMethod()));
 	}
 
 	/**
@@ -482,7 +488,7 @@ public class User {
 	 */
 	public void offVoteWorld(String world) {
 
-		for (Reward reward : Main.plugin.rewards) {
+		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			if (reward.isUsesWorlds()) {
 				ArrayList<String> worlds = reward.getWorlds();
 				if ((world != null) && (worlds != null)) {
@@ -502,14 +508,13 @@ public class User {
 									getOfflineRewardWorld(
 											reward.getRewardName(), worldName);
 
-									while (worldRewards > 0) {
+									while (worldRewards > 0 && isOnline()) {
 										reward.giveRewardUser(this);
 										worldRewards--;
+										setOfflineRewardWorld(
+												reward.getRewardName(), world,
+												worldRewards);
 									}
-
-									setOfflineRewardWorld(
-											reward.getRewardName(), worldName,
-											0);
 								}
 							}
 
@@ -519,13 +524,13 @@ public class User {
 							int worldRewards = getOfflineRewardWorld(
 									reward.getRewardName(), world);
 
-							while (worldRewards > 0) {
+							while (worldRewards > 0 && isOnline()) {
 								reward.giveRewardUser(this);
 								worldRewards--;
+								setOfflineRewardWorld(reward.getRewardName(),
+										world, worldRewards);
 							}
 
-							setOfflineRewardWorld(reward.getRewardName(),
-									world, 0);
 						}
 					}
 				}
@@ -762,24 +767,15 @@ public class User {
 	}
 
 	/**
-	 * Sets the input method.
+	 * Sets the choice reward.
 	 *
-	 * @param method
-	 *            the new input method
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
 	 */
-	@Deprecated
-	public void setInputMethod(RequestManager.InputMethod method) {
-		setRawData("InputMethod", method.toString());
-	}
-
-	/**
-	 * Sets the user input method.
-	 *
-	 * @param method
-	 *            the new user input method
-	 */
-	public void setUserInputMethod(InputMethod method) {
-		setRawData("InputMethod", method.toString());
+	public void setChoiceReward(Reward reward, int value) {
+		setRawData("ChoiceRewards." + reward.name, value);
 	}
 
 	/**
@@ -791,7 +787,7 @@ public class User {
 	 *            the value
 	 */
 	public void setOfflineRewards(Reward reward, int value) {
-		setPluginData("OfflineReward." + reward.getRewardName(), value);
+		setRawData("OfflineReward." + reward.getRewardName(), value);
 	}
 
 	/**
@@ -808,7 +804,7 @@ public class User {
 		if (world == null) {
 			world = "AllTheWorlds";
 		}
-		setPluginData("OfflineVotesWorld." + reward + "." + world, value);
+		setRawData("OfflineVotesWorld." + reward + "." + world, value);
 	}
 
 	/**
@@ -861,8 +857,21 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
-	public void setTimedReward(Reward reward, long value) {
-		setPluginData("Timed." + reward.getRewardName(), value);
+	public void setTimedReward(Reward reward, ArrayList<Long> value) {
+		setRawData("TimedRewards." + reward.getRewardName(), value);
+	}
+
+	/**
+	 * Sets the user input method.
+	 *
+	 * @param method
+	 *            the new user input method
+	 */
+	public void setUserInputMethod(InputMethod method) {
+		if (method == null) {
+			method = InputMethod.ANVIL;
+		}
+		setRawData("InputMethod", method.toString());
 	}
 
 	/**

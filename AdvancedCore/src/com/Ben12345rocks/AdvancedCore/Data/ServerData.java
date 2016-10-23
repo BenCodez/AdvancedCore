@@ -65,13 +65,6 @@ public class ServerData {
 	}
 
 	/**
-	 * Reload data.
-	 */
-	public void reloadData() {
-		data = YamlConfiguration.loadConfiguration(dFile);
-	}
-
-	/**
 	 * Gets the plugin version.
 	 *
 	 * @param plugin
@@ -80,6 +73,47 @@ public class ServerData {
 	 */
 	public String getPluginVersion(Plugin plugin) {
 		return getData().getString("PluginVersions." + plugin.getName(), "");
+	}
+
+	/**
+	 * Gets the prev day.
+	 *
+	 * @return the prev day
+	 */
+	public int getPrevDay() {
+		return getData().getInt("PrevDay", -1);
+	}
+
+	/**
+	 * Gets the prev month.
+	 *
+	 * @return the prev month
+	 */
+	public int getPrevMonth() {
+		return getData().getInt("PrevMonth", -1);
+	}
+
+	/**
+	 * Gets the prev week day.
+	 *
+	 * @return the prev week day
+	 */
+	public int getPrevWeekDay() {
+		return getData().getInt("PrevWeek", -1);
+	}
+
+	/**
+	 * Reload data.
+	 */
+	public void reloadData() {
+		data = YamlConfiguration.loadConfiguration(dFile);
+	}
+
+	/**
+	 * Save data.
+	 */
+	public void saveData() {
+		FilesManager.getInstance().editFile(dFile, data);
 	}
 
 	/**
@@ -95,10 +129,36 @@ public class ServerData {
 	}
 
 	/**
-	 * Save data.
+	 * Sets the prev day.
+	 *
+	 * @param day
+	 *            the new prev day
 	 */
-	public void saveData() {
-		FilesManager.getInstance().editFile(dFile, data);
+	public void setPrevDay(int day) {
+		getData().set("PrevDay", day);
+		saveData();
+	}
+
+	/**
+	 * Sets the prev month.
+	 *
+	 * @param value
+	 *            the new prev month
+	 */
+	public void setPrevMonth(int value) {
+		getData().set("PrevMonth", value);
+		saveData();
+	}
+
+	/**
+	 * Sets the prev week day.
+	 *
+	 * @param week
+	 *            the new prev week day
+	 */
+	public void setPrevWeekDay(int week) {
+		getData().set("PrevWeek", week);
+		saveData();
 	}
 
 	/**
@@ -119,9 +179,9 @@ public class ServerData {
 				dFile.createNewFile();
 			} catch (IOException e) {
 				Bukkit.getServer()
-						.getLogger()
-						.severe(ChatColor.RED
-								+ "Could not create ServerData.yml!");
+				.getLogger()
+				.severe(ChatColor.RED
+						+ "Could not create ServerData.yml!");
 			}
 		}
 

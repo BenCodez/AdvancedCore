@@ -2,8 +2,8 @@ package com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters;
 
 import java.util.ArrayList;
 
-import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.chat.ClickEvent.Action;
+import net.md_5.bungee.api.chat.TextComponent;
 
 import org.bukkit.Material;
 import org.bukkit.conversations.Conversable;
@@ -16,6 +16,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Book.BookManager;
@@ -71,7 +72,7 @@ public class NumberRequester {
 		}
 		if (method.equals(InputMethod.INVENTORY)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.ANVIL.toString())) {
+				.contains(InputMethod.ANVIL.toString())) {
 			if (options == null) {
 				player.sendMessage("There are no choices to choice from to use this method");
 				return;
@@ -83,21 +84,20 @@ public class NumberRequester {
 						new BInventoryButton(str.toString(), new String[] {},
 								new ItemStack(Material.STONE)) {
 
-							@Override
-							public void onClick(ClickEvent clickEvent) {
-								String num = clickEvent.getClickedItem()
-										.getItemMeta().getDisplayName();
-								try {
-									Number number = (Double) Double
-											.valueOf(num);
-									listener.onInput(clickEvent.getPlayer(),
-											number);
-								} catch (NumberFormatException ex) {
-									ex.printStackTrace();
-								}
+					@Override
+					public void onClick(ClickEvent clickEvent) {
+						String num = clickEvent.getClickedItem()
+								.getItemMeta().getDisplayName();
+						try {
+							Number number = Double.valueOf(num);
+							listener.onInput(clickEvent.getPlayer(),
+									number);
+						} catch (NumberFormatException ex) {
+							ex.printStackTrace();
+						}
 
-							}
-						});
+					}
+				});
 			}
 
 			if (allowCustomOption) {
@@ -117,34 +117,33 @@ public class NumberRequester {
 
 		} else if (method.equals(InputMethod.ANVIL)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.ANVIL.toString())) {
+				.contains(InputMethod.ANVIL.toString())) {
 
 			AInventory inv = new AInventory(player,
 					new AInventory.AnvilClickEventHandler() {
 
-						@Override
-						public void onAnvilClick(AnvilClickEvent event) {
-							Player player = event.getPlayer();
-							if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
+				@Override
+				public void onAnvilClick(AnvilClickEvent event) {
+					Player player = event.getPlayer();
+					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
 
-								event.setWillClose(true);
-								event.setWillDestroy(true);
+						event.setWillClose(true);
+						event.setWillDestroy(true);
 
-								String num = event.getName();
-								try {
-									Number number = (Double) Double
-											.valueOf(num);
-									listener.onInput(player, number);
-								} catch (NumberFormatException ex) {
-									ex.printStackTrace();
-								}
-
-							} else {
-								event.setWillClose(false);
-								event.setWillDestroy(false);
-							}
+						String num = event.getName();
+						try {
+							Number number = Double.valueOf(num);
+							listener.onInput(player, number);
+						} catch (NumberFormatException ex) {
+							ex.printStackTrace();
 						}
-					});
+
+					} else {
+						event.setWillClose(false);
+						event.setWillDestroy(false);
+					}
+				}
+			});
 
 			ItemStack item = new ItemStack(Material.NAME_TAG);
 			item = Utils.getInstance().setName(item, "" + currentValue);
@@ -159,12 +158,12 @@ public class NumberRequester {
 
 		} else if (method.equals(InputMethod.CHAT)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.CHAT.toString())) {
+				.contains(InputMethod.CHAT.toString())) {
 			if (options != null) {
-				User user = new User(Main.plugin, player);
+				User user = UserManager.getInstance().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
-				Utils.getInstance().setPlayerMeta(player,
-						"ValueRequestNumber", listener);
+				Utils.getInstance().setPlayerMeta(player, "ValueRequestNumber",
+						listener);
 				for (Number num : options) {
 					String option = num.toString();
 					TextComponent comp = new TextComponent(option);
@@ -194,7 +193,7 @@ public class NumberRequester {
 							Conversable conversable, String input) {
 						String num = input;
 						try {
-							Number number = (Double) Double.valueOf(num);
+							Number number = Double.valueOf(num);
 							listener.onInput((Player) conversable, number);
 						} catch (NumberFormatException ex) {
 							ex.printStackTrace();
@@ -204,7 +203,7 @@ public class NumberRequester {
 			}
 		} else if (method.equals(InputMethod.BOOK)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.BOOK.toString())) {
+				.contains(InputMethod.BOOK.toString())) {
 
 			new BookManager(player, currentValue.toString(), new BookSign() {
 
@@ -212,7 +211,7 @@ public class NumberRequester {
 				public void onBookSign(Player player, String input) {
 					String num = input;
 					try {
-						Number number = (Double) Double.valueOf(num);
+						Number number = Double.valueOf(num);
 						listener.onInput(player, number);
 					} catch (NumberFormatException ex) {
 						ex.printStackTrace();

@@ -188,139 +188,6 @@ public class Reward {
 
 	private HashMap<String, Integer> itemsAndAmountsGiven;
 
-	/**
-	 * Checks if is firework enabled.
-	 *
-	 * @return true, if is firework enabled
-	 */
-	public boolean isFireworkEnabled() {
-		return fireworkEnabled;
-	}
-
-	/**
-	 * Sets the firework enabled.
-	 *
-	 * @param fireworkEnabled
-	 *            the new firework enabled
-	 */
-	public void setFireworkEnabled(boolean fireworkEnabled) {
-		this.fireworkEnabled = fireworkEnabled;
-	}
-
-	/**
-	 * Checks if is firework flicker.
-	 *
-	 * @return true, if is firework flicker
-	 */
-	public boolean isFireworkFlicker() {
-		return fireworkFlicker;
-	}
-
-	/**
-	 * Sets the firework flicker.
-	 *
-	 * @param fireworkFlicker
-	 *            the new firework flicker
-	 */
-	public void setFireworkFlicker(boolean fireworkFlicker) {
-		this.fireworkFlicker = fireworkFlicker;
-	}
-
-	/**
-	 * Checks if is firework trail.
-	 *
-	 * @return true, if is firework trail
-	 */
-	public boolean isFireworkTrail() {
-		return fireworkTrail;
-	}
-
-	/**
-	 * Sets the firework trail.
-	 *
-	 * @param fireworkTrail
-	 *            the new firework trail
-	 */
-	public void setFireworkTrail(boolean fireworkTrail) {
-		this.fireworkTrail = fireworkTrail;
-	}
-
-	/**
-	 * Gets the firework power.
-	 *
-	 * @return the firework power
-	 */
-	public int getFireworkPower() {
-		return fireworkPower;
-	}
-
-	/**
-	 * Sets the firework power.
-	 *
-	 * @param fireworkPower
-	 *            the new firework power
-	 */
-	public void setFireworkPower(int fireworkPower) {
-		this.fireworkPower = fireworkPower;
-	}
-
-	/**
-	 * Gets the firework colors.
-	 *
-	 * @return the firework colors
-	 */
-	public ArrayList<String> getFireworkColors() {
-		return fireworkColors;
-	}
-
-	/**
-	 * Sets the firework colors.
-	 *
-	 * @param fireworkColors
-	 *            the new firework colors
-	 */
-	public void setFireworkColors(ArrayList<String> fireworkColors) {
-		this.fireworkColors = fireworkColors;
-	}
-
-	/**
-	 * Gets the firework fade out colors.
-	 *
-	 * @return the firework fade out colors
-	 */
-	public ArrayList<String> getFireworkFadeOutColors() {
-		return fireworkFadeOutColors;
-	}
-
-	/**
-	 * Sets the firework fade out colors.
-	 *
-	 * @param fireworkFadeOutColors
-	 *            the new firework fade out colors
-	 */
-	public void setFireworkFadeOutColors(ArrayList<String> fireworkFadeOutColors) {
-		this.fireworkFadeOutColors = fireworkFadeOutColors;
-	}
-
-	/**
-	 * Gets the firework types.
-	 *
-	 * @return the firework types
-	 */
-	public ArrayList<String> getFireworkTypes() {
-		return fireworkTypes;
-	}
-
-	/**
-	 * Sets the firework types.
-	 *
-	 * @param fireworkTypes
-	 *            the new firework types
-	 */
-	public void setFireworkTypes(ArrayList<String> fireworkTypes) {
-		this.fireworkTypes = fireworkTypes;
-	}
-
 	/** The choice rewards enabled. */
 	private boolean choiceRewardsEnabled;
 
@@ -474,77 +341,27 @@ public class Reward {
 				.getJavascriptTrueRewards(reward));
 		setJavascriptFalseRewards(ConfigRewards.getInstance()
 				.getJavascriptFalseRewards(reward));
-		this.setChoiceRewardsEnabled(ConfigRewards.getInstance()
+		setChoiceRewardsEnabled(ConfigRewards.getInstance()
 				.getChoiceRewardsEnabled(reward));
-		this.setChoiceRewardsRewards(ConfigRewards.getInstance()
+		setChoiceRewardsRewards(ConfigRewards.getInstance()
 				.getChoiceRewardsRewards(reward));
 
-		this.fireworkEnabled = ConfigRewards.getInstance().getFireworkEnabled(
-				reward);
-		this.fireworkColors = ConfigRewards.getInstance().getFireworkColors(
-				reward);
-		this.fireworkFadeOutColors = ConfigRewards.getInstance()
+		fireworkEnabled = ConfigRewards.getInstance()
+				.getFireworkEnabled(reward);
+		fireworkColors = ConfigRewards.getInstance().getFireworkColors(reward);
+		fireworkFadeOutColors = ConfigRewards.getInstance()
 				.getFireworkColorsFadeOut(reward);
-		this.fireworkPower = ConfigRewards.getInstance().getFireworkPower(
-				reward);
-		this.fireworkTypes = ConfigRewards.getInstance().getFireworkTypes(
-				reward);
-		this.fireworkTrail = ConfigRewards.getInstance().getFireworkTrail(
-				reward);
-		this.fireworkFlicker = ConfigRewards.getInstance().getFireworkFlicker(
-				reward);
+		fireworkPower = ConfigRewards.getInstance().getFireworkPower(reward);
+		fireworkTypes = ConfigRewards.getInstance().getFireworkTypes(reward);
+		fireworkTrail = ConfigRewards.getInstance().getFireworkTrail(reward);
+		fireworkFlicker = ConfigRewards.getInstance()
+				.getFireworkFlicker(reward);
 
 		if (getWorlds().size() == 0) {
 			usesWorlds = false;
 		} else {
 			usesWorlds = true;
 		}
-	}
-
-	public boolean isUsesWorlds() {
-		return usesWorlds;
-	}
-
-	public void setUsesWorlds(boolean usesWorlds) {
-		this.usesWorlds = usesWorlds;
-	}
-
-	/**
-	 * Gets the broadcast msg.
-	 *
-	 * @return the broadcast msg
-	 */
-	public String getBroadcastMsg() {
-		return broadcastMsg;
-	}
-
-	/**
-	 * Sets the broadcast msg.
-	 *
-	 * @param broadcastMsg
-	 *            the new broadcast msg
-	 */
-	public void setBroadcastMsg(String broadcastMsg) {
-		this.broadcastMsg = broadcastMsg;
-	}
-
-	/**
-	 * Gets the permission.
-	 *
-	 * @return the permission
-	 */
-	public String getPermission() {
-		return permission;
-	}
-
-	/**
-	 * Sets the permission.
-	 *
-	 * @param permission
-	 *            the new permission
-	 */
-	public void setPermission(String permission) {
-		this.permission = permission;
 	}
 
 	/**
@@ -571,6 +388,21 @@ public class Reward {
 	}
 
 	/**
+	 * Check choice rewards.
+	 *
+	 * @param user
+	 *            the user
+	 */
+	public void checkChoiceRewards(User user) {
+		if (isChoiceRewardsEnabled()) {
+			Player player = user.getPlayer();
+			if (player != null) {
+				user.addChoiceReward(this);
+			}
+		}
+	}
+
+	/**
 	 * Check delayed.
 	 *
 	 * @param user
@@ -585,7 +417,7 @@ public class Reward {
 		Date time = new Date();
 		time = DateUtils.addHours(time, getDelayHours());
 		time = DateUtils.addMinutes(time, getDelayMinutes());
-		user.setTimedReward(this, time.getTime());
+		user.addTimedReward(this, time.getTime());
 
 		plugin.debug("Giving reward " + name + " in " + getDelayHours()
 				+ " hours " + getDelayMinutes() + " minutes ("
@@ -618,21 +450,6 @@ public class Reward {
 	}
 
 	/**
-	 * Run javascript.
-	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 */
-	public void runJavascript(User user, boolean online) {
-		if (isJavascriptEnabled()) {
-			new JavascriptHandler(user, online, getJavascriptExpression(),
-					getJavascriptTrueRewards(), getJavascriptFalseRewards());
-		}
-	}
-
-	/**
 	 * Check timed.
 	 *
 	 * @param user
@@ -651,7 +468,7 @@ public class Reward {
 		if (new Date().after(time)) {
 			time = DateUtils.addDays(time, 1);
 		}
-		user.setTimedReward(this, time.getTime());
+		user.addTimedReward(this, time.getTime());
 
 		plugin.debug("Giving reward " + name + " at " + time.toString());
 		return true;
@@ -721,12 +538,30 @@ public class Reward {
 	}
 
 	/**
+	 * Gets the broadcast msg.
+	 *
+	 * @return the broadcast msg
+	 */
+	public String getBroadcastMsg() {
+		return broadcastMsg;
+	}
+
+	/**
 	 * Gets the chance.
 	 *
 	 * @return the chance
 	 */
 	public double getChance() {
 		return chance;
+	}
+
+	/**
+	 * Gets the choice rewards rewards.
+	 *
+	 * @return the choice rewards rewards
+	 */
+	public ArrayList<String> getChoiceRewardsRewards() {
+		return choiceRewardsRewards;
 	}
 
 	/**
@@ -784,6 +619,42 @@ public class Reward {
 			}
 			return num;
 		}
+	}
+
+	/**
+	 * Gets the firework colors.
+	 *
+	 * @return the firework colors
+	 */
+	public ArrayList<String> getFireworkColors() {
+		return fireworkColors;
+	}
+
+	/**
+	 * Gets the firework fade out colors.
+	 *
+	 * @return the firework fade out colors
+	 */
+	public ArrayList<String> getFireworkFadeOutColors() {
+		return fireworkFadeOutColors;
+	}
+
+	/**
+	 * Gets the firework power.
+	 *
+	 * @return the firework power
+	 */
+	public int getFireworkPower() {
+		return fireworkPower;
+	}
+
+	/**
+	 * Gets the firework types.
+	 *
+	 * @return the firework types
+	 */
+	public ArrayList<String> getFireworkTypes() {
+		return fireworkTypes;
 	}
 
 	/**
@@ -909,6 +780,33 @@ public class Reward {
 	}
 
 	/**
+	 * Gets the javascript expression.
+	 *
+	 * @return the javascript expression
+	 */
+	public String getJavascriptExpression() {
+		return javascriptExpression;
+	}
+
+	/**
+	 * Gets the javascript false rewards.
+	 *
+	 * @return the javascript false rewards
+	 */
+	public ArrayList<String> getJavascriptFalseRewards() {
+		return javascriptFalseRewards;
+	}
+
+	/**
+	 * Gets the javascript true rewards.
+	 *
+	 * @return the javascript true rewards
+	 */
+	public ArrayList<String> getJavascriptTrueRewards() {
+		return javascriptTrueRewards;
+	}
+
+	/**
 	 * Gets the max exp.
 	 *
 	 * @return the max exp
@@ -972,6 +870,15 @@ public class Reward {
 			}
 			return num;
 		}
+	}
+
+	/**
+	 * Gets the permission.
+	 *
+	 * @return the permission
+	 */
+	public String getPermission() {
+		return permission;
 	}
 
 	/**
@@ -1091,12 +998,6 @@ public class Reward {
 		return worlds;
 	}
 
-	/**
-	 * Give exp.
-	 *
-	 * @param user
-	 *            the user
-	 */
 	public void giveExp(User user, int exp) {
 		user.giveExp(exp);
 	}
@@ -1137,12 +1038,6 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * Give money.
-	 *
-	 * @param user
-	 *            the user
-	 */
 	public void giveMoney(User user, int money) {
 		user.giveMoney(money);
 	}
@@ -1177,31 +1072,26 @@ public class Reward {
 					String reward = rewards.get((int) Math.random()
 							* rewards.size());
 					if (!reward.equals("")) {
-						ConfigRewards.getInstance().getReward(reward)
-								.giveReward(user, online);
+						RewardHandler.getInstance().giveReward(user, reward,
+								online);
 					}
 				}
 			}
 		} else {
 			for (String reward : getRandomFallBack()) {
 				if (!reward.equals("")) {
-					user.giveReward(
-							ConfigRewards.getInstance().getReward(reward),
-							online);
+					RewardHandler.getInstance()
+							.giveReward(user, reward, online);
 				}
 			}
 		}
 	}
 
-	/**
-	 * Give reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 */
 	public void giveReward(User user, boolean online) {
+		giveReward(user, online, true);
+	}
+
+	public void giveReward(User user, boolean online, boolean giveOffline) {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user);
 		Bukkit.getPluginManager().callEvent(event);
@@ -1211,9 +1101,10 @@ public class Reward {
 			return;
 		}
 
-		if (!online
-				&& !Utils.getInstance().isPlayerOnline(user.getPlayerName())) {
-			user.setOfflineRewards(this, user.getOfflineRewards(this) + 1);
+		if (!online && !user.isOnline()) {
+			if (giveOffline) {
+				user.setOfflineRewards(this, user.getOfflineRewards(this) + 1);
+			}
 			return;
 		}
 
@@ -1320,36 +1211,6 @@ public class Reward {
 	}
 
 	/**
-	 * Send firework.
-	 *
-	 * @param user
-	 *            the user
-	 */
-	public void sendFirework(User user) {
-		if (isFireworkEnabled()) {
-			Utils.getInstance().launchFirework(user.getPlayer().getLocation(),
-					getFireworkPower(), getFireworkColors(),
-					getFireworkFadeOutColors(), isFireworkTrail(),
-					isFireworkFlicker(), getFireworkTypes());
-		}
-	}
-
-	/**
-	 * Check choice rewards.
-	 *
-	 * @param user
-	 *            the user
-	 */
-	public void checkChoiceRewards(User user) {
-		if (isChoiceRewardsEnabled()) {
-			Player player = user.getPlayer();
-			if (player != null) {
-				user.addChoiceReward(this);
-			}
-		}
-	}
-
-	/**
 	 * Checks for permission.
 	 *
 	 * @param user
@@ -1374,6 +1235,15 @@ public class Reward {
 	}
 
 	/**
+	 * Checks if is choice rewards enabled.
+	 *
+	 * @return true, if is choice rewards enabled
+	 */
+	public boolean isChoiceRewardsEnabled() {
+		return choiceRewardsEnabled;
+	}
+
+	/**
 	 * Checks if is delay enabled.
 	 *
 	 * @return true, if is delay enabled
@@ -1383,12 +1253,48 @@ public class Reward {
 	}
 
 	/**
+	 * Checks if is firework enabled.
+	 *
+	 * @return true, if is firework enabled
+	 */
+	public boolean isFireworkEnabled() {
+		return fireworkEnabled;
+	}
+
+	/**
+	 * Checks if is firework flicker.
+	 *
+	 * @return true, if is firework flicker
+	 */
+	public boolean isFireworkFlicker() {
+		return fireworkFlicker;
+	}
+
+	/**
+	 * Checks if is firework trail.
+	 *
+	 * @return true, if is firework trail
+	 */
+	public boolean isFireworkTrail() {
+		return fireworkTrail;
+	}
+
+	/**
 	 * Checks if is give in each world.
 	 *
 	 * @return true, if is give in each world
 	 */
 	public boolean isGiveInEachWorld() {
 		return giveInEachWorld;
+	}
+
+	/**
+	 * Checks if is javascript enabled.
+	 *
+	 * @return true, if is javascript enabled
+	 */
+	public boolean isJavascriptEnabled() {
+		return javascriptEnabled;
 	}
 
 	/**
@@ -1407,6 +1313,10 @@ public class Reward {
 	 */
 	public boolean isTimedEnabled() {
 		return timedEnabled;
+	}
+
+	public boolean isUsesWorlds() {
+		return usesWorlds;
 	}
 
 	/**
@@ -1496,6 +1406,21 @@ public class Reward {
 	}
 
 	/**
+	 * Run javascript.
+	 *
+	 * @param user
+	 *            the user
+	 * @param online
+	 *            the online
+	 */
+	public void runJavascript(User user, boolean online) {
+		if (isJavascriptEnabled()) {
+			new JavascriptHandler(user, online, getJavascriptExpression(),
+					getJavascriptTrueRewards(), getJavascriptFalseRewards());
+		}
+	}
+
+	/**
 	 * Send action bar.
 	 *
 	 * @param user
@@ -1519,11 +1444,20 @@ public class Reward {
 	}
 
 	/**
-	 * Send message.
+	 * Send firework.
 	 *
 	 * @param user
 	 *            the user
 	 */
+	public void sendFirework(User user) {
+		if (isFireworkEnabled()) {
+			Utils.getInstance().launchFirework(user.getPlayer().getLocation(),
+					getFireworkPower(), getFireworkColors(),
+					getFireworkFadeOutColors(), isFireworkTrail(),
+					isFireworkFlicker(), getFireworkTypes());
+		}
+	}
+
 	public void sendMessage(User user, int money, int exp) {
 		ArrayList<String> itemsAndAmounts = new ArrayList<String>();
 		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
@@ -1669,6 +1603,16 @@ public class Reward {
 	}
 
 	/**
+	 * Sets the broadcast msg.
+	 *
+	 * @param broadcastMsg
+	 *            the new broadcast msg
+	 */
+	public void setBroadcastMsg(String broadcastMsg) {
+		this.broadcastMsg = broadcastMsg;
+	}
+
+	/**
 	 * Sets the chance.
 	 *
 	 * @param chance
@@ -1676,6 +1620,26 @@ public class Reward {
 	 */
 	public void setChance(double chance) {
 		this.chance = chance;
+	}
+
+	/**
+	 * Sets the choice rewards enabled.
+	 *
+	 * @param choiceRewardsEnabled
+	 *            the new choice rewards enabled
+	 */
+	public void setChoiceRewardsEnabled(boolean choiceRewardsEnabled) {
+		this.choiceRewardsEnabled = choiceRewardsEnabled;
+	}
+
+	/**
+	 * Sets the choice rewards rewards.
+	 *
+	 * @param choiceRewardsRewards
+	 *            the new choice rewards rewards
+	 */
+	public void setChoiceRewardsRewards(ArrayList<String> choiceRewardsRewards) {
+		this.choiceRewardsRewards = choiceRewardsRewards;
 	}
 
 	/**
@@ -1726,6 +1690,76 @@ public class Reward {
 	 */
 	public void setExp(int exp) {
 		this.exp = exp;
+	}
+
+	/**
+	 * Sets the firework colors.
+	 *
+	 * @param fireworkColors
+	 *            the new firework colors
+	 */
+	public void setFireworkColors(ArrayList<String> fireworkColors) {
+		this.fireworkColors = fireworkColors;
+	}
+
+	/**
+	 * Sets the firework enabled.
+	 *
+	 * @param fireworkEnabled
+	 *            the new firework enabled
+	 */
+	public void setFireworkEnabled(boolean fireworkEnabled) {
+		this.fireworkEnabled = fireworkEnabled;
+	}
+
+	/**
+	 * Sets the firework fade out colors.
+	 *
+	 * @param fireworkFadeOutColors
+	 *            the new firework fade out colors
+	 */
+	public void setFireworkFadeOutColors(ArrayList<String> fireworkFadeOutColors) {
+		this.fireworkFadeOutColors = fireworkFadeOutColors;
+	}
+
+	/**
+	 * Sets the firework flicker.
+	 *
+	 * @param fireworkFlicker
+	 *            the new firework flicker
+	 */
+	public void setFireworkFlicker(boolean fireworkFlicker) {
+		this.fireworkFlicker = fireworkFlicker;
+	}
+
+	/**
+	 * Sets the firework power.
+	 *
+	 * @param fireworkPower
+	 *            the new firework power
+	 */
+	public void setFireworkPower(int fireworkPower) {
+		this.fireworkPower = fireworkPower;
+	}
+
+	/**
+	 * Sets the firework trail.
+	 *
+	 * @param fireworkTrail
+	 *            the new firework trail
+	 */
+	public void setFireworkTrail(boolean fireworkTrail) {
+		this.fireworkTrail = fireworkTrail;
+	}
+
+	/**
+	 * Sets the firework types.
+	 *
+	 * @param fireworkTypes
+	 *            the new firework types
+	 */
+	public void setFireworkTypes(ArrayList<String> fireworkTypes) {
+		this.fireworkTypes = fireworkTypes;
 	}
 
 	/**
@@ -1850,6 +1884,47 @@ public class Reward {
 	}
 
 	/**
+	 * Sets the javascript enabled.
+	 *
+	 * @param javascriptEnabled
+	 *            the new javascript enabled
+	 */
+	public void setJavascriptEnabled(boolean javascriptEnabled) {
+		this.javascriptEnabled = javascriptEnabled;
+	}
+
+	/**
+	 * Sets the javascript expression.
+	 *
+	 * @param javascriptExpression
+	 *            the new javascript expression
+	 */
+	public void setJavascriptExpression(String javascriptExpression) {
+		this.javascriptExpression = javascriptExpression;
+	}
+
+	/**
+	 * Sets the javascript false rewards.
+	 *
+	 * @param javascriptFalseRewards
+	 *            the new javascript false rewards
+	 */
+	public void setJavascriptFalseRewards(
+			ArrayList<String> javascriptFalseRewards) {
+		this.javascriptFalseRewards = javascriptFalseRewards;
+	}
+
+	/**
+	 * Sets the javascript true rewards.
+	 *
+	 * @param javascriptTrueRewards
+	 *            the new javascript true rewards
+	 */
+	public void setJavascriptTrueRewards(ArrayList<String> javascriptTrueRewards) {
+		this.javascriptTrueRewards = javascriptTrueRewards;
+	}
+
+	/**
 	 * Sets the max exp.
 	 *
 	 * @param maxExp
@@ -1897,6 +1972,16 @@ public class Reward {
 	 */
 	public void setMoney(int money) {
 		this.money = money;
+	}
+
+	/**
+	 * Sets the permission.
+	 *
+	 * @param permission
+	 *            the new permission
+	 */
+	public void setPermission(String permission) {
+		this.permission = permission;
 	}
 
 	/**
@@ -2029,6 +2114,10 @@ public class Reward {
 		this.timedMinute = timedMinute;
 	}
 
+	public void setUsesWorlds(boolean usesWorlds) {
+		this.usesWorlds = usesWorlds;
+	}
+
 	/**
 	 * Sets the worlds.
 	 *
@@ -2037,121 +2126,6 @@ public class Reward {
 	 */
 	public void setWorlds(ArrayList<String> worlds) {
 		this.worlds = worlds;
-	}
-
-	/**
-	 * Checks if is javascript enabled.
-	 *
-	 * @return true, if is javascript enabled
-	 */
-	public boolean isJavascriptEnabled() {
-		return javascriptEnabled;
-	}
-
-	/**
-	 * Sets the javascript enabled.
-	 *
-	 * @param javascriptEnabled
-	 *            the new javascript enabled
-	 */
-	public void setJavascriptEnabled(boolean javascriptEnabled) {
-		this.javascriptEnabled = javascriptEnabled;
-	}
-
-	/**
-	 * Gets the javascript expression.
-	 *
-	 * @return the javascript expression
-	 */
-	public String getJavascriptExpression() {
-		return javascriptExpression;
-	}
-
-	/**
-	 * Sets the javascript expression.
-	 *
-	 * @param javascriptExpression
-	 *            the new javascript expression
-	 */
-	public void setJavascriptExpression(String javascriptExpression) {
-		this.javascriptExpression = javascriptExpression;
-	}
-
-	/**
-	 * Gets the javascript true rewards.
-	 *
-	 * @return the javascript true rewards
-	 */
-	public ArrayList<String> getJavascriptTrueRewards() {
-		return javascriptTrueRewards;
-	}
-
-	/**
-	 * Sets the javascript true rewards.
-	 *
-	 * @param javascriptTrueRewards
-	 *            the new javascript true rewards
-	 */
-	public void setJavascriptTrueRewards(ArrayList<String> javascriptTrueRewards) {
-		this.javascriptTrueRewards = javascriptTrueRewards;
-	}
-
-	/**
-	 * Gets the javascript false rewards.
-	 *
-	 * @return the javascript false rewards
-	 */
-	public ArrayList<String> getJavascriptFalseRewards() {
-		return javascriptFalseRewards;
-	}
-
-	/**
-	 * Sets the javascript false rewards.
-	 *
-	 * @param javascriptFalseRewards
-	 *            the new javascript false rewards
-	 */
-	public void setJavascriptFalseRewards(
-			ArrayList<String> javascriptFalseRewards) {
-		this.javascriptFalseRewards = javascriptFalseRewards;
-	}
-
-	/**
-	 * Gets the choice rewards rewards.
-	 *
-	 * @return the choice rewards rewards
-	 */
-	public ArrayList<String> getChoiceRewardsRewards() {
-		return choiceRewardsRewards;
-	}
-
-	/**
-	 * Sets the choice rewards rewards.
-	 *
-	 * @param choiceRewardsRewards
-	 *            the new choice rewards rewards
-	 */
-	public void setChoiceRewardsRewards(ArrayList<String> choiceRewardsRewards) {
-		this.choiceRewardsRewards = choiceRewardsRewards;
-	}
-
-	/**
-	 * Checks if is choice rewards enabled.
-	 *
-	 * @return true, if is choice rewards enabled
-	 */
-	public boolean isChoiceRewardsEnabled() {
-		return choiceRewardsEnabled;
-	}
-
-	/**
-	 * Sets the choice rewards enabled.
-	 *
-	 * @param choiceRewardsEnabled
-	 *            the new choice rewards enabled
-	 */
-	public void setChoiceRewardsEnabled(boolean choiceRewardsEnabled) {
-		this.choiceRewardsEnabled = choiceRewardsEnabled;
 	}
 
 }

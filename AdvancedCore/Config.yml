@@ -21,6 +21,9 @@ LogDebugToFile: true
 RequestAPI:
   DefaultMethod: 'Anvil'
   DisabledMethods: []
+  
+# TimeZone
+TimeZone: 'UTC'
 
 Format:
       

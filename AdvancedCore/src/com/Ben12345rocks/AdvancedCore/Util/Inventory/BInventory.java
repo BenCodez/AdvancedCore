@@ -31,15 +31,6 @@ import com.Ben12345rocks.AdvancedCore.Utils;
  */
 public class BInventory implements Listener {
 
-	/** The pages. */
-	private boolean pages = false;
-
-	/** The page. */
-	private int page = 1;
-	
-	/** The max page. */
-	private int maxPage = 1;
-
 	/**
 	 * The Class ClickEvent.
 	 */
@@ -195,6 +186,15 @@ public class BInventory implements Listener {
 	public static void openInventory(Player player, BInventory inventory) {
 		inventory.openInventory(player);
 	}
+
+	/** The pages. */
+	private boolean pages = false;
+
+	/** The page. */
+	private int page = 1;
+
+	/** The max page. */
+	private int maxPage = 1;
 
 	/** The inventory name. */
 	private String inventoryName;
@@ -352,15 +352,15 @@ public class BInventory implements Listener {
 					if (page > 1) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
-						int nextPage = page-1;
+						int nextPage = page - 1;
 						openInventory(player, nextPage);
 					}
 				} else if (slot == 53) {
 					Main.plugin.debug(maxPage + " " + page);
-					if (maxPage > page ) {
+					if (maxPage > page) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
-						int nextPage = page+1;
+						int nextPage = page + 1;
 						openInventory(player, nextPage);
 						Main.plugin.debug("Opening inv");
 					}
@@ -381,7 +381,7 @@ public class BInventory implements Listener {
 
 		pages = false;
 		if (inventory.getHighestSlot() > 53) {
-			this.pages = true;
+			pages = true;
 		}
 		if (!pages) {
 			Inventory inv = Bukkit.createInventory(player,
@@ -402,9 +402,9 @@ public class BInventory implements Listener {
 			}
 			player.openInventory(inv);
 		} else {
-			this.maxPage = getHighestSlot()/45;
-			if (getHighestSlot()%45 != 0) {
-				this.maxPage++;
+			maxPage = getHighestSlot() / 45;
+			if (getHighestSlot() % 45 != 0) {
+				maxPage++;
 			}
 			openInventory(player, 1);
 		}
@@ -446,10 +446,16 @@ public class BInventory implements Listener {
 			}
 
 		}
-		inv.setItem(45, Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1,
-				(short) 15),"&aPrevious Page"));
-		inv.setItem(53, Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1,
-				(short) 15),"&aNext Page"));
+		inv.setItem(
+				45,
+				Utils.getInstance().setName(
+						new ItemStack(Material.STAINED_GLASS_PANE, 1,
+								(short) 15), "&aPrevious Page"));
+		inv.setItem(
+				53,
+				Utils.getInstance().setName(
+						new ItemStack(Material.STAINED_GLASS_PANE, 1,
+								(short) 15), "&aNext Page"));
 
 		player.openInventory(inv);
 	}

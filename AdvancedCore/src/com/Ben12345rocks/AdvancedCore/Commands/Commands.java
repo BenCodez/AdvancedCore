@@ -65,7 +65,7 @@ public class Commands {
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("Debug",
 				new String[] { "Currently: "
 						+ Config.getInstance().getDebugEnabled() },
-				new ItemStack(Material.STONE)) {
+						new ItemStack(Material.STONE)) {
 
 			@Override
 			public void onClick(ClickEvent event) {
@@ -74,20 +74,20 @@ public class Commands {
 						.toString(Config.getInstance().getDebugEnabled()),
 						new BooleanListener() {
 
-							@Override
-							public void onInput(Player player, boolean value) {
-								Config.getInstance().setDebugEnabled(value);
-								player.sendMessage("Value set");
+					@Override
+					public void onInput(Player player, boolean value) {
+						Config.getInstance().setDebugEnabled(value);
+						player.sendMessage("Value set");
 
-							}
-						});
+					}
+				});
 
 			}
 		});
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("DebugInGame",
 				new String[] { "Currently: "
 						+ Config.getInstance().getDebugInfoIngame() },
-				new ItemStack(Material.STONE)) {
+						new ItemStack(Material.STONE)) {
 
 			@Override
 			public void onClick(ClickEvent event) {
@@ -96,13 +96,13 @@ public class Commands {
 						.toString(Config.getInstance().getDebugInfoIngame()),
 						new BooleanListener() {
 
-							@Override
-							public void onInput(Player player, boolean value) {
-								Config.getInstance().setDebugInfoIngame(value);
-								player.sendMessage("Value set");
+					@Override
+					public void onInput(Player player, boolean value) {
+						Config.getInstance().setDebugInfoIngame(value);
+						player.sendMessage("Value set");
 
-							}
-						});
+					}
+				});
 
 			}
 		});
@@ -128,14 +128,14 @@ public class Commands {
 					new ValueRequest().requestString(player,
 							new StringListener() {
 
-								@Override
-								public void onInput(Player player, String value) {
-									ConfigRewards.getInstance().getData(value);
-									player.sendMessage("Reward file created");
-									plugin.reload();
+						@Override
+						public void onInput(Player player, String value) {
+							ConfigRewards.getInstance().getData(value);
+							player.sendMessage("Reward file created");
+							plugin.reload();
 
-								}
-							});
+						}
+					});
 				} else {
 					RewardGUI.getInstance().openRewardsGUI(player);
 				}
@@ -152,7 +152,7 @@ public class Commands {
 			}
 
 		});
-		
+
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("&cUsers",
 				new String[] {}, new ItemStack(Material.PAPER)) {
 

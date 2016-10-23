@@ -15,7 +15,7 @@ public enum InputMethod {
 
 	/** The book. */
 	BOOK,
-	
+
 	/** The inventory. */
 	INVENTORY;
 

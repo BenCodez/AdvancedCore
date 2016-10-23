@@ -9,10 +9,10 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Book.BookManager;
@@ -53,7 +53,7 @@ public class BooleanRequester {
 			String promptText, BooleanListener listener) {
 		if (method.equals(InputMethod.INVENTORY)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.ANVIL.toString())) {
+				.contains(InputMethod.ANVIL.toString())) {
 
 			BInventory inv = new BInventory("Click one of the following:");
 
@@ -86,28 +86,28 @@ public class BooleanRequester {
 
 		} else if (method.equals(InputMethod.ANVIL)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.ANVIL.toString())) {
+				.contains(InputMethod.ANVIL.toString())) {
 
 			AInventory inv = new AInventory(player,
 					new AInventory.AnvilClickEventHandler() {
 
-						@Override
-						public void onAnvilClick(AnvilClickEvent event) {
-							Player player = event.getPlayer();
-							if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
+				@Override
+				public void onAnvilClick(AnvilClickEvent event) {
+					Player player = event.getPlayer();
+					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
 
-								event.setWillClose(true);
-								event.setWillDestroy(true);
+						event.setWillClose(true);
+						event.setWillDestroy(true);
 
-								listener.onInput(player,
-										Boolean.valueOf(event.getName()));
+						listener.onInput(player,
+								Boolean.valueOf(event.getName()));
 
-							} else {
-								event.setWillClose(false);
-								event.setWillDestroy(false);
-							}
-						}
-					});
+					} else {
+						event.setWillClose(false);
+						event.setWillDestroy(false);
+					}
+				}
+			});
 
 			ItemStack item = new ItemStack(Material.NAME_TAG);
 			item = Utils.getInstance().setName(item, "" + currentValue);
@@ -122,9 +122,9 @@ public class BooleanRequester {
 
 		} else if (method.equals(InputMethod.CHAT)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.CHAT.toString())) {
+				.contains(InputMethod.CHAT.toString())) {
 
-			User user = new User(Main.plugin, player);
+			User user = UserManager.getInstance().getUser(player);
 			user.sendMessage("&cClick one of the following options below:");
 			String option = "True";
 			TextComponent comp = new TextComponent(option);
@@ -142,7 +142,7 @@ public class BooleanRequester {
 			user.sendJson(comp);
 		} else if (method.equals(InputMethod.BOOK)
 				&& !Config.getInstance().getRequestAPIDisabledMethods()
-						.contains(InputMethod.BOOK.toString())) {
+				.contains(InputMethod.BOOK.toString())) {
 
 			new BookManager(player, currentValue, new BookSign() {
 

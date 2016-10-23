@@ -14,6 +14,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 // TODO: Auto-generated Javadoc
@@ -113,9 +114,9 @@ public class Data {
 
 			} catch (IOException e) {
 				Bukkit.getServer()
-						.getLogger()
-						.severe(ChatColor.RED + "Could not create " + uuid
-								+ ".yml! Name: " + playerName);
+				.getLogger()
+				.severe(ChatColor.RED + "Could not create " + uuid
+						+ ".yml! Name: " + playerName);
 
 			}
 		}
@@ -181,18 +182,16 @@ public class Data {
 	 *
 	 * @return the users
 	 */
+	@Deprecated
 	public Set<User> getUsers() {
 		Set<User> users = new HashSet<User>();
-		ArrayList<String> players = getPlayerNames();
-		if (players != null) {
-			for (String playerName : players) {
-				User user = new User(plugin, playerName);
-				users.add(user);
-			}
-			return users;
-		} else {
-			return new HashSet<User>();
+		ArrayList<User> players = UserManager.getInstance().getUsers();
+
+		for (User user : players) {
+			users.add(user);
+
 		}
+		return users;
 	}
 
 	/**
@@ -224,9 +223,9 @@ public class Data {
 			data.save(dFile);
 		} catch (IOException e) {
 			Bukkit.getServer()
-					.getLogger()
-					.severe(ChatColor.RED + "Could not save "
-							+ Utils.getInstance().getUUID(playerName) + ".yml!");
+			.getLogger()
+			.severe(ChatColor.RED + "Could not save "
+					+ Utils.getInstance().getUUID(playerName) + ".yml!");
 		}
 
 	}
@@ -298,7 +297,7 @@ public class Data {
 			} catch (IOException e) {
 				plugin.getLogger().severe(
 						ChatColor.RED + "Could not create " + uuid
-								+ ".yml! Name: " + playerName);
+						+ ".yml! Name: " + playerName);
 
 			}
 		}

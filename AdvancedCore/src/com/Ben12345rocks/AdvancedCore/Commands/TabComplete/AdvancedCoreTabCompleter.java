@@ -73,8 +73,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 									cmds.add("False");
 								}
 							} else if (arg.equalsIgnoreCase("(requestmethod)")) {
-								for (InputMethod method : InputMethod
-										.values()) {
+								for (InputMethod method : InputMethod.values()) {
 									if (!cmds.contains(method.toString())) {
 										cmds.add(method.toString());
 									}
@@ -98,7 +97,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.bukkit.command.TabCompleter#onTabComplete(org.bukkit.command.
 	 * CommandSender, org.bukkit.command.Command, java.lang.String,
 	 * java.lang.String[])
