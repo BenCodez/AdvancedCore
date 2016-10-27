@@ -115,7 +115,7 @@ public class Main extends JavaPlugin {
 	 * @param plugin
 	 *            the plugin
 	 */
-	public void checkUpdateEvent(Plugin plugin) {
+	public void checkUpdateEvent(JavaPlugin plugin) {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
@@ -230,7 +230,8 @@ public class Main extends JavaPlugin {
 		Bukkit.getPluginManager().registerEvents(
 				new AdvancedCoreUpdateEvent(this), this);
 
-		RewardHandler.getInstance().loadRewards();
+		RewardHandler.getInstance().addRewardFolder(
+				new File(plugin.getDataFolder(), "Rewards"));
 		UserManager.getInstance().loadUsers();
 
 		try {
@@ -282,7 +283,6 @@ public class Main extends JavaPlugin {
 	 */
 	public void registerHook(Plugin plugin) {
 		plugins.add(plugin);
-		checkUpdateEvent(plugin);
 
 		Main.plugin.getLogger().info("Registered hook for " + plugin.getName());
 	}

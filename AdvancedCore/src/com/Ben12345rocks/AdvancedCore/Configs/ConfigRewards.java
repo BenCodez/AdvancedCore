@@ -75,8 +75,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the action bar delay
 	 */
-	public int getActionBarDelay(String reward) {
-		return getData(reward).getInt("ActionBar.Delay");
+	public int getActionBarDelay(File file, String reward) {
+		return getData(file, reward).getInt("ActionBar.Delay");
 	}
 
 	/**
@@ -86,8 +86,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the action bar message
 	 */
-	public String getActionBarMessage(String reward) {
-		return getData(reward).getString("ActionBar.Message");
+	public String getActionBarMessage(File file, String reward) {
+		return getData(file, reward).getString("ActionBar.Message");
 	}
 
 	/**
@@ -97,8 +97,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the boss bar color
 	 */
-	public String getBossBarColor(String reward) {
-		return getData(reward).getString("BossBar.Color");
+	public String getBossBarColor(File file, String reward) {
+		return getData(file, reward).getString("BossBar.Color");
 	}
 
 	/**
@@ -108,8 +108,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the boss bar delay
 	 */
-	public int getBossBarDelay(String reward) {
-		return getData(reward).getInt("BossBar.Delay");
+	public int getBossBarDelay(File file, String reward) {
+		return getData(file, reward).getInt("BossBar.Delay");
 	}
 
 	/**
@@ -119,8 +119,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the boss bar enabled
 	 */
-	public boolean getBossBarEnabled(String reward) {
-		return getData(reward).getBoolean("BossBar.Enabled");
+	public boolean getBossBarEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("BossBar.Enabled");
 	}
 
 	/**
@@ -130,8 +130,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the boss bar message
 	 */
-	public String getBossBarMessage(String reward) {
-		return getData(reward).getString("BossBar.Message");
+	public String getBossBarMessage(File file, String reward) {
+		return getData(file, reward).getString("BossBar.Message");
 	}
 
 	/**
@@ -141,8 +141,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the boss bar progress
 	 */
-	public double getBossBarProgress(String reward) {
-		return getData(reward).getDouble("BossBar.Progress");
+	public double getBossBarProgress(File file, String reward) {
+		return getData(file, reward).getDouble("BossBar.Progress");
 	}
 
 	/**
@@ -152,8 +152,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the boss bar style
 	 */
-	public String getBossBarStyle(String reward) {
-		return getData(reward).getString("BossBar.Style");
+	public String getBossBarStyle(File file, String reward) {
+		return getData(file, reward).getString("BossBar.Style");
 	}
 
 	/**
@@ -163,8 +163,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the chance
 	 */
-	public double getChance(String reward) {
-		return getData(reward).getDouble("Chance");
+	public double getChance(File file, String reward) {
+		return getData(file, reward).getDouble("Chance");
 	}
 
 	/**
@@ -174,8 +174,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the choice rewards enabled
 	 */
-	public boolean getChoiceRewardsEnabled(String reward) {
-		return getData(reward).getBoolean("ChoiceRewards.Enabled");
+	public boolean getChoiceRewardsEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("ChoiceRewards.Enabled");
 	}
 
 	/**
@@ -186,8 +186,8 @@ public class ConfigRewards {
 	 * @return the choice rewards rewards
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getChoiceRewardsRewards(String reward) {
-		return (ArrayList<String>) getData(reward).getList(
+	public ArrayList<String> getChoiceRewardsRewards(File file, String reward) {
+		return (ArrayList<String>) getData(file, reward).getList(
 				"ChoiceRewards.Rewards", new ArrayList<String>());
 	}
 
@@ -199,10 +199,10 @@ public class ConfigRewards {
 	 * @return the commands console
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getCommandsConsole(String reward) {
+	public ArrayList<String> getCommandsConsole(File file, String reward) {
 
-		return (ArrayList<String>) getData(reward).getList("Commands.Console",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData(file, reward).getList(
+				"Commands.Console", new ArrayList<String>());
 
 	}
 
@@ -214,10 +214,10 @@ public class ConfigRewards {
 	 * @return the commands player
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getCommandsPlayer(String reward) {
+	public ArrayList<String> getCommandsPlayer(File file, String reward) {
 
-		return (ArrayList<String>) getData(reward).getList("Commands.Player",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData(file, reward).getList(
+				"Commands.Player", new ArrayList<String>());
 
 	}
 
@@ -229,7 +229,11 @@ public class ConfigRewards {
 	 * @return the data
 	 */
 	public FileConfiguration getData(String reward) {
-		File dFile = getRewardFile(reward);
+		return getData(new File(plugin.getDataFolder(), "Rewards"), reward);
+	}
+
+	public FileConfiguration getData(File file, String reward) {
+		File dFile = getRewardFile(file, reward);
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		return data;
 	}
@@ -241,8 +245,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the delayed enabled
 	 */
-	public boolean getDelayedEnabled(String reward) {
-		return getData(reward).getBoolean("Delayed.Enabled");
+	public boolean getDelayedEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("Delayed.Enabled");
 	}
 
 	/**
@@ -252,8 +256,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the delayed hours
 	 */
-	public int getDelayedHours(String reward) {
-		return getData(reward).getInt("Delayed.Hours");
+	public int getDelayedHours(File file, String reward) {
+		return getData(file, reward).getInt("Delayed.Hours");
 	}
 
 	/**
@@ -263,8 +267,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the delayed minutes
 	 */
-	public int getDelayedMinutes(String reward) {
-		return getData(reward).getInt("Delayed.Minutes");
+	public int getDelayedMinutes(File file, String reward) {
+		return getData(file, reward).getInt("Delayed.Minutes");
 	}
 
 	/**
@@ -274,8 +278,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the effect data
 	 */
-	public int getEffectData(String reward) {
-		return getData(reward).getInt("Effect.Data");
+	public int getEffectData(File file, String reward) {
+		return getData(file, reward).getInt("Effect.Data");
 	}
 
 	/**
@@ -285,8 +289,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the effect effect
 	 */
-	public String getEffectEffect(String reward) {
-		return getData(reward).getString("Effect.Effect", "");
+	public String getEffectEffect(File file, String reward) {
+		return getData(file, reward).getString("Effect.Effect", "");
 
 	}
 
@@ -297,8 +301,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the effect enabled
 	 */
-	public boolean getEffectEnabled(String reward) {
-		return getData(reward).getBoolean("Effect.Enabled");
+	public boolean getEffectEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("Effect.Enabled");
 	}
 
 	/**
@@ -308,8 +312,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the effect particles
 	 */
-	public int getEffectParticles(String reward) {
-		return getData(reward).getInt("Effect.Particles");
+	public int getEffectParticles(File file, String reward) {
+		return getData(file, reward).getInt("Effect.Particles");
 	}
 
 	/**
@@ -319,8 +323,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the effect radius
 	 */
-	public int getEffectRadius(String reward) {
-		return getData(reward).getInt("Effect.Radius");
+	public int getEffectRadius(File file, String reward) {
+		return getData(file, reward).getInt("Effect.Radius");
 	}
 
 	/**
@@ -330,8 +334,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the exp
 	 */
-	public int getEXP(String reward) {
-		return getData(reward).getInt("EXP");
+	public int getEXP(File file, String reward) {
+		return getData(file, reward).getInt("EXP");
 	}
 
 	/**
@@ -342,9 +346,9 @@ public class ConfigRewards {
 	 * @return the firework colors
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkColors(String reward) {
-		return (ArrayList<String>) getData(reward).getList("Firework.Colors",
-				new ArrayList<String>());
+	public ArrayList<String> getFireworkColors(File file, String reward) {
+		return (ArrayList<String>) getData(file, reward).getList(
+				"Firework.Colors", new ArrayList<String>());
 	}
 
 	/**
@@ -355,8 +359,8 @@ public class ConfigRewards {
 	 * @return the firework colors fade out
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkColorsFadeOut(String reward) {
-		return (ArrayList<String>) getData(reward).getList(
+	public ArrayList<String> getFireworkColorsFadeOut(File file, String reward) {
+		return (ArrayList<String>) getData(file, reward).getList(
 				"Firework.FadeOutColor", new ArrayList<String>());
 	}
 
@@ -367,8 +371,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the firework enabled
 	 */
-	public boolean getFireworkEnabled(String reward) {
-		return getData(reward).getBoolean("Firework.Enabled");
+	public boolean getFireworkEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("Firework.Enabled");
 	}
 
 	/**
@@ -378,8 +382,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the firework flicker
 	 */
-	public boolean getFireworkFlicker(String reward) {
-		return getData(reward).getBoolean("Firework.Flicker");
+	public boolean getFireworkFlicker(File file, String reward) {
+		return getData(file, reward).getBoolean("Firework.Flicker");
 	}
 
 	/**
@@ -389,8 +393,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the firework power
 	 */
-	public int getFireworkPower(String reward) {
-		return getData(reward).getInt("Firework.Power");
+	public int getFireworkPower(File file, String reward) {
+		return getData(file, reward).getInt("Firework.Power");
 	}
 
 	/**
@@ -400,8 +404,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the firework trail
 	 */
-	public boolean getFireworkTrail(String reward) {
-		return getData(reward).getBoolean("Firework.Trail");
+	public boolean getFireworkTrail(File file, String reward) {
+		return getData(file, reward).getBoolean("Firework.Trail");
 	}
 
 	/**
@@ -412,9 +416,9 @@ public class ConfigRewards {
 	 * @return the firework types
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkTypes(String reward) {
-		return (ArrayList<String>) getData(reward).getList("Firework.Types",
-				new ArrayList<String>());
+	public ArrayList<String> getFireworkTypes(File file, String reward) {
+		return (ArrayList<String>) getData(file, reward).getList(
+				"Firework.Types", new ArrayList<String>());
 	}
 
 	/**
@@ -424,8 +428,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the give in each world
 	 */
-	public boolean getGiveInEachWorld(String reward) {
-		return getData(reward).getBoolean("GiveInEachWorld");
+	public boolean getGiveInEachWorld(File file, String reward) {
+		return getData(file, reward).getBoolean("GiveInEachWorld");
 	}
 
 	/**
@@ -437,8 +441,8 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item amount
 	 */
-	public int getItemAmount(String reward, String item) {
-		return getData(reward).getInt("Items." + item + ".Amount");
+	public int getItemAmount(File file, String reward, String item) {
+		return getData(file, reward).getInt("Items." + item + ".Amount");
 	}
 
 	/**
@@ -450,8 +454,8 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item data
 	 */
-	public int getItemData(String reward, String item) {
-		return getData(reward).getInt("Items." + item + ".Data");
+	public int getItemData(File file, String reward, String item) {
+		return getData(file, reward).getInt("Items." + item + ".Data");
 	}
 
 	/**
@@ -463,8 +467,8 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item durability
 	 */
-	public int getItemDurability(String reward, String item) {
-		return getData(reward).getInt("Items." + item + ".Durability");
+	public int getItemDurability(File file, String reward, String item) {
+		return getData(file, reward).getInt("Items." + item + ".Durability");
 	}
 
 	/**
@@ -476,9 +480,9 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item enchants
 	 */
-	public Set<String> getItemEnchants(String reward, String item) {
+	public Set<String> getItemEnchants(File file, String reward, String item) {
 		try {
-			return getData(reward).getConfigurationSection(
+			return getData(file, reward).getConfigurationSection(
 					"Items." + item + ".Enchants").getKeys(false);
 		} catch (Exception ex) {
 			return new HashSet<String>();
@@ -496,8 +500,10 @@ public class ConfigRewards {
 	 *            the enchant
 	 * @return the item enchants level
 	 */
-	public int getItemEnchantsLevel(String reward, String item, String enchant) {
-		return getData(reward).getInt("Items." + item + ".Enchants." + enchant);
+	public int getItemEnchantsLevel(File file, String reward, String item,
+			String enchant) {
+		return getData(file, reward).getInt(
+				"Items." + item + ".Enchants." + enchant);
 	}
 
 	/**
@@ -510,8 +516,8 @@ public class ConfigRewards {
 	 * @return the item lore
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getItemLore(String reward, String item) {
-		return (ArrayList<String>) getData(reward).getList(
+	public ArrayList<String> getItemLore(File file, String reward, String item) {
+		return (ArrayList<String>) getData(file, reward).getList(
 				"Items." + item + ".Lore");
 	}
 
@@ -524,8 +530,8 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item material
 	 */
-	public String getItemMaterial(String reward, String item) {
-		return getData(reward).getString("Items." + item + ".Material");
+	public String getItemMaterial(File file, String reward, String item) {
+		return getData(file, reward).getString("Items." + item + ".Material");
 	}
 
 	/**
@@ -537,8 +543,8 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item max amount
 	 */
-	public int getItemMaxAmount(String reward, String item) {
-		return getData(reward).getInt("Items." + item + ".MaxAmount");
+	public int getItemMaxAmount(File file, String reward, String item) {
+		return getData(file, reward).getInt("Items." + item + ".MaxAmount");
 	}
 
 	/**
@@ -550,8 +556,8 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item min amount
 	 */
-	public int getItemMinAmount(String reward, String item) {
-		return getData(reward).getInt("Items." + item + ".MinAmount");
+	public int getItemMinAmount(File file, String reward, String item) {
+		return getData(file, reward).getInt("Items." + item + ".MinAmount");
 	}
 
 	/**
@@ -563,8 +569,8 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item name
 	 */
-	public String getItemName(String reward, String item) {
-		return getData(reward).getString("Items." + item + ".Name");
+	public String getItemName(File file, String reward, String item) {
+		return getData(file, reward).getString("Items." + item + ".Name");
 	}
 
 	/**
@@ -574,10 +580,10 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the items
 	 */
-	public Set<String> getItems(String reward) {
+	public Set<String> getItems(File file, String reward) {
 		try {
-			return getData(reward).getConfigurationSection("Items").getKeys(
-					false);
+			return getData(file, reward).getConfigurationSection("Items")
+					.getKeys(false);
 		} catch (Exception ex) {
 			return new HashSet<String>();
 		}
@@ -592,8 +598,8 @@ public class ConfigRewards {
 	 *            the item
 	 * @return the item skull
 	 */
-	public String getItemSkull(String reward, String item) {
-		return getData(reward).getString("Items." + item + ".Skull");
+	public String getItemSkull(File file, String reward, String item) {
+		return getData(file, reward).getString("Items." + item + ".Skull");
 	}
 
 	/**
@@ -603,8 +609,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the javascript enabled
 	 */
-	public boolean getJavascriptEnabled(String reward) {
-		return getData(reward).getBoolean("Javascript.Enabled");
+	public boolean getJavascriptEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("Javascript.Enabled");
 	}
 
 	/**
@@ -614,8 +620,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the javascript expression
 	 */
-	public String getJavascriptExpression(String reward) {
-		return getData(reward).getString("Javascript.Expression", "");
+	public String getJavascriptExpression(File file, String reward) {
+		return getData(file, reward).getString("Javascript.Expression", "");
 	}
 
 	/**
@@ -626,8 +632,8 @@ public class ConfigRewards {
 	 * @return the javascript false rewards
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getJavascriptFalseRewards(String reward) {
-		return (ArrayList<String>) getData(reward).getList(
+	public ArrayList<String> getJavascriptFalseRewards(File file, String reward) {
+		return (ArrayList<String>) getData(file, reward).getList(
 				"Javascript.FalseRewards", new ArrayList<String>());
 	}
 
@@ -639,8 +645,8 @@ public class ConfigRewards {
 	 * @return the javascript true rewards
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getJavascriptTrueRewards(String reward) {
-		return (ArrayList<String>) getData(reward).getList(
+	public ArrayList<String> getJavascriptTrueRewards(File file, String reward) {
+		return (ArrayList<String>) getData(file, reward).getList(
 				"Javascript.TrueRewards", new ArrayList<String>());
 	}
 
@@ -651,8 +657,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the max exp
 	 */
-	public int getMaxExp(String reward) {
-		return getData(reward).getInt("MaxEXP");
+	public int getMaxExp(File file, String reward) {
+		return getData(file, reward).getInt("MaxEXP");
 	}
 
 	/**
@@ -662,8 +668,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the max money
 	 */
-	public int getMaxMoney(String reward) {
-		return getData(reward).getInt("MaxMoney");
+	public int getMaxMoney(File file, String reward) {
+		return getData(file, reward).getInt("MaxMoney");
 	}
 
 	/**
@@ -673,8 +679,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the messages broadcast
 	 */
-	public String getMessagesBroadcast(String reward) {
-		return getData(reward).getString("Messages.Broadcast", "");
+	public String getMessagesBroadcast(File file, String reward) {
+		return getData(file, reward).getString("Messages.Broadcast", "");
 	}
 
 	/**
@@ -684,8 +690,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the messages reward
 	 */
-	public String getMessagesReward(String reward) {
-		String msg = getData(reward).getString("Messages.Reward", "");
+	public String getMessagesReward(File file, String reward) {
+		String msg = getData(file, reward).getString("Messages.Reward", "");
 		return msg;
 
 	}
@@ -697,8 +703,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the min exp
 	 */
-	public int getMinExp(String reward) {
-		return getData(reward).getInt("MinEXP");
+	public int getMinExp(File file, String reward) {
+		return getData(file, reward).getInt("MinEXP");
 	}
 
 	/**
@@ -708,8 +714,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the min money
 	 */
-	public int getMinMoney(String reward) {
-		return getData(reward).getInt("MinMoney");
+	public int getMinMoney(File file, String reward) {
+		return getData(file, reward).getInt("MinMoney");
 	}
 
 	/**
@@ -719,8 +725,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the money
 	 */
-	public int getMoney(String reward) {
-		return getData(reward).getInt("Money");
+	public int getMoney(File file, String reward) {
+		return getData(file, reward).getInt("Money");
 	}
 
 	/**
@@ -730,8 +736,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the permission
 	 */
-	public String getPermission(String reward) {
-		return getData(reward).getString("Permission",
+	public String getPermission(File file, String reward) {
+		return getData(file, reward).getString("Permission",
 				"AdvancedCore.Reward." + reward);
 	}
 
@@ -742,10 +748,10 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the potions
 	 */
-	public Set<String> getPotions(String reward) {
+	public Set<String> getPotions(File file, String reward) {
 		try {
-			return getData(reward).getConfigurationSection("Potions").getKeys(
-					false);
+			return getData(file, reward).getConfigurationSection("Potions")
+					.getKeys(false);
 		} catch (Exception ex) {
 			return new HashSet<String>();
 		}
@@ -760,8 +766,8 @@ public class ConfigRewards {
 	 *            the potion
 	 * @return the potions amplifier
 	 */
-	public int getPotionsAmplifier(String reward, String potion) {
-		return getData(reward).getInt("Potions." + potion + ".Amplifier");
+	public int getPotionsAmplifier(File file, String reward, String potion) {
+		return getData(file, reward).getInt("Potions." + potion + ".Amplifier");
 	}
 
 	/**
@@ -773,8 +779,8 @@ public class ConfigRewards {
 	 *            the potion
 	 * @return the potions duration
 	 */
-	public int getPotionsDuration(String reward, String potion) {
-		return getData(reward).getInt("Potions." + potion + ".Duration");
+	public int getPotionsDuration(File file, String reward, String potion) {
+		return getData(file, reward).getInt("Potions." + potion + ".Duration");
 	}
 
 	/**
@@ -784,8 +790,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the random chance
 	 */
-	public double getRandomChance(String reward) {
-		return getData(reward).getDouble("Random.Chance");
+	public double getRandomChance(File file, String reward) {
+		return getData(file, reward).getDouble("Random.Chance");
 	}
 
 	/**
@@ -796,9 +802,9 @@ public class ConfigRewards {
 	 * @return the random fall back
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getRandomFallBack(String reward) {
+	public ArrayList<String> getRandomFallBack(File file, String reward) {
 		try {
-			return (ArrayList<String>) getData(reward).getList(
+			return (ArrayList<String>) getData(file, reward).getList(
 					"Random.FallBack");
 		} catch (Exception ex) {
 			return new ArrayList<String>();
@@ -813,10 +819,10 @@ public class ConfigRewards {
 	 * @return the random rewards
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getRandomRewards(String reward) {
+	public ArrayList<String> getRandomRewards(File file, String reward) {
 
-		return (ArrayList<String>) getData(reward).getList("Random.Rewards",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData(file, reward).getList(
+				"Random.Rewards", new ArrayList<String>());
 
 	}
 
@@ -827,8 +833,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the require permission
 	 */
-	public boolean getRequirePermission(String reward) {
-		return getData(reward).getBoolean("RequirePermission");
+	public boolean getRequirePermission(File file, String reward) {
+		return getData(file, reward).getBoolean("RequirePermission");
 	}
 
 	/**
@@ -839,7 +845,7 @@ public class ConfigRewards {
 	 * @return the reward
 	 */
 	@Deprecated
-	public Reward getReward(String reward) {
+	public Reward getReward(File file, String reward) {
 		return RewardHandler.getInstance().getReward(reward);
 	}
 
@@ -850,9 +856,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the reward file
 	 */
-	public File getRewardFile(String reward) {
-		File dFile = new File(plugin.getDataFolder() + File.separator
-				+ "Rewards", reward + ".yml");
+	public File getRewardFile(File file, String reward) {
+		File dFile = new File(file, reward + ".yml");
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
 			try {
@@ -860,7 +865,7 @@ public class ConfigRewards {
 			} catch (IOException e) {
 				plugin.getLogger().severe(
 						ChatColor.RED + "Could not create Rewards/" + reward
-						+ ".yml!");
+								+ ".yml!");
 
 			}
 		}
@@ -873,11 +878,14 @@ public class ConfigRewards {
 	 *
 	 * @return the reward files
 	 */
-	public ArrayList<String> getRewardFiles() {
-		File folder = new File(plugin.getDataFolder() + File.separator
-				+ "Rewards");
+	public ArrayList<String> getRewardFiles(File folder) {
 		String[] fileNames = folder.list();
 		return Utils.getInstance().convertArray(fileNames);
+	}
+
+	@Deprecated
+	public ArrayList<String> getRewardNames() {
+		return getRewardFiles(new File(plugin.getDataFolder(), "Rewards"));
 	}
 
 	/**
@@ -885,8 +893,8 @@ public class ConfigRewards {
 	 *
 	 * @return the reward names
 	 */
-	public ArrayList<String> getRewardNames() {
-		ArrayList<String> rewardFiles = getRewardFiles();
+	public ArrayList<String> getRewardNames(File file) {
+		ArrayList<String> rewardFiles = getRewardFiles(file);
 		if (rewardFiles == null) {
 			return new ArrayList<String>();
 		}
@@ -906,8 +914,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the reward type
 	 */
-	public String getRewardType(String reward) {
-		String str = getData(reward).getString("RewardType", "BOTH");
+	public String getRewardType(File file, String reward) {
+		String str = getData(file, reward).getString("RewardType", "BOTH");
 		if (str != null) {
 			if (str.equalsIgnoreCase("online")) {
 				return "ONLINE";
@@ -927,8 +935,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the sound enabled
 	 */
-	public boolean getSoundEnabled(String reward) {
-		return getData(reward).getBoolean("Sound.Enabled");
+	public boolean getSoundEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("Sound.Enabled");
 	}
 
 	/**
@@ -938,8 +946,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the sound pitch
 	 */
-	public float getSoundPitch(String reward) {
-		return (float) getData(reward).getDouble("Sound.Pitch");
+	public float getSoundPitch(File file, String reward) {
+		return (float) getData(file, reward).getDouble("Sound.Pitch");
 	}
 
 	/**
@@ -949,8 +957,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the sound sound
 	 */
-	public String getSoundSound(String reward) {
-		return getData(reward).getString("Sound.Sound");
+	public String getSoundSound(File file, String reward) {
+		return getData(file, reward).getString("Sound.Sound");
 	}
 
 	/**
@@ -960,8 +968,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the sound volume
 	 */
-	public float getSoundVolume(String reward) {
-		return (float) getData(reward).getDouble("Sound.Volume");
+	public float getSoundVolume(File file, String reward) {
+		return (float) getData(file, reward).getDouble("Sound.Volume");
 	}
 
 	/**
@@ -971,8 +979,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the timed enabled
 	 */
-	public boolean getTimedEnabled(String reward) {
-		return getData(reward).getBoolean("Timed.Enabled");
+	public boolean getTimedEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("Timed.Enabled");
 	}
 
 	/**
@@ -982,8 +990,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the timed hour
 	 */
-	public int getTimedHour(String reward) {
-		return getData(reward).getInt("Timed.Hour");
+	public int getTimedHour(File file, String reward) {
+		return getData(file, reward).getInt("Timed.Hour");
 	}
 
 	/**
@@ -993,8 +1001,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the timed minute
 	 */
-	public int getTimedMinute(String reward) {
-		return getData(reward).getInt("Timed.Minute");
+	public int getTimedMinute(File file, String reward) {
+		return getData(file, reward).getInt("Timed.Minute");
 	}
 
 	/**
@@ -1004,8 +1012,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the title enabled
 	 */
-	public boolean getTitleEnabled(String reward) {
-		return getData(reward).getBoolean("Title.Enabled");
+	public boolean getTitleEnabled(File file, String reward) {
+		return getData(file, reward).getBoolean("Title.Enabled");
 	}
 
 	/**
@@ -1015,8 +1023,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the title fade in
 	 */
-	public int getTitleFadeIn(String reward) {
-		return getData(reward).getInt("Title.FadeIn");
+	public int getTitleFadeIn(File file, String reward) {
+		return getData(file, reward).getInt("Title.FadeIn");
 	}
 
 	/**
@@ -1026,8 +1034,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the title fade out
 	 */
-	public int getTitleFadeOut(String reward) {
-		return getData(reward).getInt("Title.FadeOut");
+	public int getTitleFadeOut(File file, String reward) {
+		return getData(file, reward).getInt("Title.FadeOut");
 	}
 
 	/**
@@ -1037,8 +1045,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the title show time
 	 */
-	public int getTitleShowTime(String reward) {
-		return getData(reward).getInt("Title.ShowTime");
+	public int getTitleShowTime(File file, String reward) {
+		return getData(file, reward).getInt("Title.ShowTime");
 	}
 
 	/**
@@ -1048,8 +1056,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the title sub title
 	 */
-	public String getTitleSubTitle(String reward) {
-		return getData(reward).getString("Title.SubTitle");
+	public String getTitleSubTitle(File file, String reward) {
+		return getData(file, reward).getString("Title.SubTitle");
 	}
 
 	/**
@@ -1059,8 +1067,8 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return the title title
 	 */
-	public String getTitleTitle(String reward) {
-		return getData(reward).getString("Title.Title");
+	public String getTitleTitle(File file, String reward) {
+		return getData(file, reward).getString("Title.Title");
 	}
 
 	/**
@@ -1071,11 +1079,16 @@ public class ConfigRewards {
 	 * @return the worlds
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getWorlds(String reward) {
+	public ArrayList<String> getWorlds(File file, String reward) {
 
-		return (ArrayList<String>) getData(reward).getList("Worlds",
+		return (ArrayList<String>) getData(file, reward).getList("Worlds",
 				new ArrayList<String>());
 
+	}
+
+	@Deprecated
+	public boolean isRewardValid(String reward) {
+		return RewardHandler.getInstance().rewardExist(reward);
 	}
 
 	/**
@@ -1085,25 +1098,10 @@ public class ConfigRewards {
 	 *            the reward
 	 * @return true, if is reward valid
 	 */
-	public boolean isRewardValid(String reward) {
+	public boolean isRewardValid(File file, String reward) {
 		File dFile = new File(plugin.getDataFolder() + File.separator
 				+ "Rewards", reward + ".yml");
 		return dFile.exists();
-	}
-
-	/**
-	 * Rename reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param newName
-	 *            the new name
-	 * @return true, if successful
-	 */
-	public boolean renameReward(String reward, String newName) {
-		return getRewardFile(reward).renameTo(
-				new File(plugin.getDataFolder() + File.separator + "Rewards",
-						newName + ".yml"));
 	}
 
 	/**
@@ -1116,11 +1114,15 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void set(String reward, String path, Object value) {
-		File dFile = getRewardFile(reward);
+	public void set(File file, String reward, String path, Object value) {
+		File dFile = getRewardFile(file, reward);
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		data.set(path, value);
 		FilesManager.getInstance().editFile(dFile, data);
+	}
+
+	public void set(String reward, String path, Object value) {
+		set(new File(plugin.getDataFolder(), "Rewards"), reward, path, value);
 	}
 
 	/**
@@ -1131,7 +1133,7 @@ public class ConfigRewards {
 	 * @param d
 	 *            the d
 	 */
-	public void setChance(String reward, double d) {
+	public void setChance(File file, String reward, double d) {
 		set(reward, "Chance", d);
 	}
 
@@ -1143,7 +1145,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setCommandsConsole(String reward, ArrayList<String> value) {
+	public void setCommandsConsole(File file, String reward,
+			ArrayList<String> value) {
 		set(reward, "Commands.Console", value);
 	}
 
@@ -1155,7 +1158,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setCommandsPlayer(String reward, ArrayList<String> value) {
+	public void setCommandsPlayer(File file, String reward,
+			ArrayList<String> value) {
 		set(reward, "Commands.Player", value);
 	}
 
@@ -1167,7 +1171,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setEXP(String reward, int value) {
+	public void setEXP(File file, String reward, int value) {
 		set(reward, "EXP", value);
 	}
 
@@ -1179,7 +1183,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setGiveInEachWorld(String reward, boolean value) {
+	public void setGiveInEachWorld(File file, String reward, boolean value) {
 		set(reward, "GiveInEachWorld", value);
 	}
 
@@ -1193,7 +1197,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemAmount(String reward, String item, int value) {
+	public void setItemAmount(File file, String reward, String item, int value) {
 		set(reward, "Items." + item + ".Amount", value);
 	}
 
@@ -1207,7 +1211,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemData(String reward, String item, int value) {
+	public void setItemData(File file, String reward, String item, int value) {
 		set(reward, "Items." + item + ".Data", value);
 	}
 
@@ -1221,7 +1225,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemDurability(String reward, String item, int value) {
+	public void setItemDurability(File file, String reward, String item,
+			int value) {
 		set(reward, "Items." + item + ".Durability", value);
 	}
 
@@ -1237,8 +1242,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemEnchant(String reward, String item, String enchant,
-			int value) {
+	public void setItemEnchant(File file, String reward, String item,
+			String enchant, int value) {
 		set(reward, "Items." + item + ".Enchants." + enchant, value);
 	}
 
@@ -1252,7 +1257,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemLore(String reward, String item, ArrayList<String> value) {
+	public void setItemLore(File file, String reward, String item,
+			ArrayList<String> value) {
 		set(reward, "Items." + item + ".Lore", value);
 	}
 
@@ -1266,7 +1272,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemMaterial(String reward, String item, String value) {
+	public void setItemMaterial(File file, String reward, String item,
+			String value) {
 		set(reward, "Items." + item + ".Material", value);
 	}
 
@@ -1280,7 +1287,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemMaxAmount(String reward, String item, int value) {
+	public void setItemMaxAmount(File file, String reward, String item,
+			int value) {
 		set(reward, "Items." + item + ".MaxAmount", value);
 	}
 
@@ -1294,7 +1302,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemMinAmount(String reward, String item, int value) {
+	public void setItemMinAmount(File file, String reward, String item,
+			int value) {
 		set(reward, "Items." + item + ".MinAmount", value);
 	}
 
@@ -1308,7 +1317,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setItemName(String reward, String item, String value) {
+	public void setItemName(File file, String reward, String item, String value) {
 		set(reward, "Items." + item + ".Name", value);
 	}
 
@@ -1320,7 +1329,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setMaxExp(String reward, int value) {
+	public void setMaxExp(File file, String reward, int value) {
 		set(reward, "MaxEXP", value);
 	}
 
@@ -1332,7 +1341,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setMaxMoney(String reward, int value) {
+	public void setMaxMoney(File file, String reward, int value) {
 		set(reward, "MaxMoney", value);
 	}
 
@@ -1344,7 +1353,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setMessagesBroadcast(String reward, String value) {
+	public void setMessagesBroadcast(File file, String reward, String value) {
 		set(reward, "Messages.Broadcast", value);
 	}
 
@@ -1356,7 +1365,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setMessagesReward(String reward, String value) {
+	public void setMessagesReward(File file, String reward, String value) {
 		set(reward, "Messages.Reward", value);
 	}
 
@@ -1368,7 +1377,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setMinExp(String reward, int value) {
+	public void setMinExp(File file, String reward, int value) {
 		set(reward, "MinEXP", value);
 	}
 
@@ -1380,7 +1389,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setMinMoney(String reward, int value) {
+	public void setMinMoney(File file, String reward, int value) {
 		set(reward, "MinMoney", value);
 	}
 
@@ -1392,11 +1401,11 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setMoney(String reward, int value) {
+	public void setMoney(File file, String reward, int value) {
 		set(reward, "Money", value);
 	}
 
-	public void setPermission(String reward, String perm) {
+	public void setPermission(File file, String reward, String perm) {
 		set(reward, "Permission", perm);
 	}
 
@@ -1410,7 +1419,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setPotionsAmplifier(String reward, String potion, int value) {
+	public void setPotionsAmplifier(File file, String reward, String potion,
+			int value) {
 		set(reward, "Potions." + potion + ".Amplifier", value);
 	}
 
@@ -1424,7 +1434,8 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setPotionsDuration(String reward, String potion, int value) {
+	public void setPotionsDuration(File file, String reward, String potion,
+			int value) {
 		set(reward, "Potions." + potion + ".Duration", value);
 	}
 
@@ -1436,11 +1447,11 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setRequirePermission(String reward, boolean value) {
+	public void setRequirePermission(File file, String reward, boolean value) {
 		set(reward, "RequirePermission", value);
 	}
 
-	public void setRewardType(String reward, String value) {
+	public void setRewardType(File file, String reward, String value) {
 		set(reward, "RewardType", value);
 	}
 
@@ -1464,7 +1475,7 @@ public class ConfigRewards {
 	 * @param value
 	 *            the value
 	 */
-	public void setWorlds(String reward, ArrayList<String> value) {
+	public void setWorlds(File file, String reward, ArrayList<String> value) {
 		set(reward, "Worlds", value);
 	}
 

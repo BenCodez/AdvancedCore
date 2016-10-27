@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -214,47 +215,43 @@ public class Reward {
 
 	private boolean usesWorlds;
 
-	/**
-	 * Instantiates a new reward.
-	 *
-	 * @param plugin
-	 *            the plugin
-	 */
-	public Reward(Main plugin) {
-		Reward.plugin = plugin;
+	private File file;
+
+	public Reward(File file, String reward) {
+		load(file, reward);
 	}
 
-	/**
-	 * Instantiates a new reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 */
-	public Reward(String reward) {
+	public void load(File file, String reward) {
 		name = reward;
+		this.file = file;
+		setRewardType(ConfigRewards.getInstance().getRewardType(file, reward));
 
-		setRewardType(ConfigRewards.getInstance().getRewardType(reward));
+		setDelayEnabled(ConfigRewards.getInstance().getDelayedEnabled(file,
+				reward));
+		setDelayHours(ConfigRewards.getInstance().getDelayedHours(file, reward));
+		setDelayMinutes(ConfigRewards.getInstance().getDelayedMinutes(file,
+				reward));
 
-		setDelayEnabled(ConfigRewards.getInstance().getDelayedEnabled(reward));
-		setDelayHours(ConfigRewards.getInstance().getDelayedHours(reward));
-		setDelayMinutes(ConfigRewards.getInstance().getDelayedMinutes(reward));
+		setTimedEnabled(ConfigRewards.getInstance().getTimedEnabled(file,
+				reward));
+		setTimedHour(ConfigRewards.getInstance().getTimedHour(file, reward));
+		setTimedMinute(ConfigRewards.getInstance().getTimedMinute(file, reward));
 
-		setTimedEnabled(ConfigRewards.getInstance().getTimedEnabled(reward));
-		setTimedHour(ConfigRewards.getInstance().getTimedHour(reward));
-		setTimedMinute(ConfigRewards.getInstance().getTimedMinute(reward));
-
-		setChance(ConfigRewards.getInstance().getChance(reward));
-		setRandomChance(ConfigRewards.getInstance().getRandomChance(reward));
-		setRandomRewards(ConfigRewards.getInstance().getRandomRewards(reward));
-		setRandomFallBack(ConfigRewards.getInstance().getRandomFallBack(reward));
+		setChance(ConfigRewards.getInstance().getChance(file, reward));
+		setRandomChance(ConfigRewards.getInstance().getRandomChance(file,
+				reward));
+		setRandomRewards(ConfigRewards.getInstance().getRandomRewards(file,
+				reward));
+		setRandomFallBack(ConfigRewards.getInstance().getRandomFallBack(file,
+				reward));
 
 		setRequirePermission(ConfigRewards.getInstance().getRequirePermission(
-				reward));
-		setWorlds(ConfigRewards.getInstance().getWorlds(reward));
-		setGiveInEachWorld(ConfigRewards.getInstance().getGiveInEachWorld(
+				file, reward));
+		setWorlds(ConfigRewards.getInstance().getWorlds(file, reward));
+		setGiveInEachWorld(ConfigRewards.getInstance().getGiveInEachWorld(file,
 				reward));
 
-		setItems(ConfigRewards.getInstance().getItems(reward));
+		setItems(ConfigRewards.getInstance().getItems(file, reward));
 		itemMaterial = new HashMap<String, String>();
 		itemData = new HashMap<String, Integer>();
 		itemSkull = new HashMap<String, String>();
@@ -266,102 +263,131 @@ public class Reward {
 		itemLore = new HashMap<String, ArrayList<String>>();
 		itemName = new HashMap<String, String>();
 		itemEnchants = new HashMap<String, HashMap<String, Integer>>();
-		for (String item : ConfigRewards.getInstance().getItems(reward)) {
-			itemMaterial.put(item,
-					ConfigRewards.getInstance().getItemMaterial(reward, item));
+		for (String item : ConfigRewards.getInstance().getItems(file, reward)) {
+			itemMaterial.put(
+					item,
+					ConfigRewards.getInstance().getItemMaterial(file, reward,
+							item));
 			itemData.put(item,
-					ConfigRewards.getInstance().getItemData(reward, item));
-			itemAmount.put(item,
-					ConfigRewards.getInstance().getItemAmount(reward, item));
+					ConfigRewards.getInstance().getItemData(file, reward, item));
+			itemAmount.put(
+					item,
+					ConfigRewards.getInstance().getItemAmount(file, reward,
+							item));
 			itemMinAmount.put(item, ConfigRewards.getInstance()
-					.getItemMinAmount(reward, item));
+					.getItemMinAmount(file, reward, item));
 			itemMaxAmount.put(item, ConfigRewards.getInstance()
-					.getItemMaxAmount(reward, item));
+					.getItemMaxAmount(file, reward, item));
 			itemName.put(item,
-					ConfigRewards.getInstance().getItemName(reward, item));
+					ConfigRewards.getInstance().getItemName(file, reward, item));
 			itemLore.put(item,
-					ConfigRewards.getInstance().getItemLore(reward, item));
+					ConfigRewards.getInstance().getItemLore(file, reward, item));
 			itemDurabilty.put(item, ConfigRewards.getInstance()
-					.getItemDurability(reward, item));
+					.getItemDurability(file, reward, item));
 			itemSkull.put(item,
-					ConfigRewards.getInstance().getItemSkull(reward, item));
+					ConfigRewards.getInstance()
+							.getItemSkull(file, reward, item));
 			HashMap<String, Integer> enchants = new HashMap<String, Integer>();
 			for (String enchant : ConfigRewards.getInstance().getItemEnchants(
-					reward, item)) {
+					file, reward, item)) {
 				enchants.put(enchant, ConfigRewards.getInstance()
-						.getItemEnchantsLevel(reward, item, enchant));
+						.getItemEnchantsLevel(file, reward, item, enchant));
 
 			}
 			itemEnchants.put(item, enchants);
 		}
 
-		setMoney(ConfigRewards.getInstance().getMoney(reward));
-		setMinMoney(ConfigRewards.getInstance().getMinMoney(reward));
-		setMaxMoney(ConfigRewards.getInstance().getMaxMoney(reward));
+		setMoney(ConfigRewards.getInstance().getMoney(file, reward));
+		setMinMoney(ConfigRewards.getInstance().getMinMoney(file, reward));
+		setMaxMoney(ConfigRewards.getInstance().getMaxMoney(file, reward));
 
-		setExp(ConfigRewards.getInstance().getEXP(reward));
-		setMinExp(ConfigRewards.getInstance().getMinExp(reward));
-		setMaxExp(ConfigRewards.getInstance().getMaxExp(reward));
+		setExp(ConfigRewards.getInstance().getEXP(file, reward));
+		setMinExp(ConfigRewards.getInstance().getMinExp(file, reward));
+		setMaxExp(ConfigRewards.getInstance().getMaxExp(file, reward));
 
-		setConsoleCommands(ConfigRewards.getInstance().getCommandsConsole(
+		setConsoleCommands(ConfigRewards.getInstance().getCommandsConsole(file,
 				reward));
-		setPlayerCommands(ConfigRewards.getInstance().getCommandsPlayer(reward));
+		setPlayerCommands(ConfigRewards.getInstance().getCommandsPlayer(file,
+				reward));
 
-		potions = ConfigRewards.getInstance().getPotions(reward);
+		potions = ConfigRewards.getInstance().getPotions(file, reward);
 		potionsDuration = new HashMap<String, Integer>();
 		potionsAmplifier = new HashMap<String, Integer>();
 		for (String potion : potions) {
 			potionsDuration.put(potion, ConfigRewards.getInstance()
-					.getPotionsDuration(reward, potion));
+					.getPotionsDuration(file, reward, potion));
 			potionsAmplifier.put(potion, ConfigRewards.getInstance()
-					.getPotionsAmplifier(reward, potion));
+					.getPotionsAmplifier(file, reward, potion));
 		}
 
-		setRewardMsg(ConfigRewards.getInstance().getMessagesReward(reward));
-		setActionBarMsg(ConfigRewards.getInstance().getActionBarMessage(reward));
-		setActionBarDelay(ConfigRewards.getInstance().getActionBarDelay(reward));
-
-		setBossBarEnabled(ConfigRewards.getInstance().getBossBarEnabled(reward));
-		setBossBarMessage(ConfigRewards.getInstance().getBossBarMessage(reward));
-		setBossBarColor(ConfigRewards.getInstance().getBossBarColor(reward));
-		setBossBarStyle(ConfigRewards.getInstance().getBossBarStyle(reward));
-		setBossBarProgress(ConfigRewards.getInstance().getBossBarProgress(
+		setRewardMsg(ConfigRewards.getInstance()
+				.getMessagesReward(file, reward));
+		setActionBarMsg(ConfigRewards.getInstance().getActionBarMessage(file,
 				reward));
-		setBossBarDelay(ConfigRewards.getInstance().getBossBarDelay(reward));
+		setActionBarDelay(ConfigRewards.getInstance().getActionBarDelay(file,
+				reward));
 
-		broadcastMsg = ConfigRewards.getInstance().getMessagesBroadcast(reward);
+		setBossBarEnabled(ConfigRewards.getInstance().getBossBarEnabled(file,
+				reward));
+		setBossBarMessage(ConfigRewards.getInstance().getBossBarMessage(file,
+				reward));
+		setBossBarColor(ConfigRewards.getInstance().getBossBarColor(file,
+				reward));
+		setBossBarStyle(ConfigRewards.getInstance().getBossBarStyle(file,
+				reward));
+		setBossBarProgress(ConfigRewards.getInstance().getBossBarProgress(file,
+				reward));
+		setBossBarDelay(ConfigRewards.getInstance().getBossBarDelay(file,
+				reward));
 
-		permission = ConfigRewards.getInstance().getPermission(reward);
+		broadcastMsg = ConfigRewards.getInstance().getMessagesBroadcast(file,
+				reward);
+
+		permission = ConfigRewards.getInstance().getPermission(file, reward);
 
 		setJavascriptEnabled(ConfigRewards.getInstance().getJavascriptEnabled(
-				reward));
+				file, reward));
 		setJavascriptExpression(ConfigRewards.getInstance()
-				.getJavascriptExpression(reward));
+				.getJavascriptExpression(file, reward));
 		setJavascriptTrueRewards(ConfigRewards.getInstance()
-				.getJavascriptTrueRewards(reward));
+				.getJavascriptTrueRewards(file, reward));
 		setJavascriptFalseRewards(ConfigRewards.getInstance()
-				.getJavascriptFalseRewards(reward));
+				.getJavascriptFalseRewards(file, reward));
 		setChoiceRewardsEnabled(ConfigRewards.getInstance()
-				.getChoiceRewardsEnabled(reward));
+				.getChoiceRewardsEnabled(file, reward));
 		setChoiceRewardsRewards(ConfigRewards.getInstance()
-				.getChoiceRewardsRewards(reward));
+				.getChoiceRewardsRewards(file, reward));
 
-		fireworkEnabled = ConfigRewards.getInstance()
-				.getFireworkEnabled(reward);
-		fireworkColors = ConfigRewards.getInstance().getFireworkColors(reward);
+		fireworkEnabled = ConfigRewards.getInstance().getFireworkEnabled(file,
+				reward);
+		fireworkColors = ConfigRewards.getInstance().getFireworkColors(file,
+				reward);
 		fireworkFadeOutColors = ConfigRewards.getInstance()
-				.getFireworkColorsFadeOut(reward);
-		fireworkPower = ConfigRewards.getInstance().getFireworkPower(reward);
-		fireworkTypes = ConfigRewards.getInstance().getFireworkTypes(reward);
-		fireworkTrail = ConfigRewards.getInstance().getFireworkTrail(reward);
-		fireworkFlicker = ConfigRewards.getInstance()
-				.getFireworkFlicker(reward);
+				.getFireworkColorsFadeOut(file, reward);
+		fireworkPower = ConfigRewards.getInstance().getFireworkPower(file,
+				reward);
+		fireworkTypes = ConfigRewards.getInstance().getFireworkTypes(file,
+				reward);
+		fireworkTrail = ConfigRewards.getInstance().getFireworkTrail(file,
+				reward);
+		fireworkFlicker = ConfigRewards.getInstance().getFireworkFlicker(file,
+				reward);
 
 		if (getWorlds().size() == 0) {
 			usesWorlds = false;
 		} else {
 			usesWorlds = true;
 		}
+	}
+
+	/**
+	 * Instantiates a new reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 */
+	public Reward(String reward) {
+		load(new File(plugin.getDataFolder(), "Rewards"), reward);
 	}
 
 	/**
@@ -1326,12 +1352,12 @@ public class Reward {
 	 *            the user
 	 */
 	public void playEffect(User user) {
-		if (ConfigRewards.getInstance().getEffectEnabled(name)) {
+		if (ConfigRewards.getInstance().getEffectEnabled(file, name)) {
 			user.playParticleEffect(ConfigRewards.getInstance()
-					.getEffectEffect(name), ConfigRewards.getInstance()
-					.getEffectData(name), ConfigRewards.getInstance()
-					.getEffectParticles(name), ConfigRewards.getInstance()
-					.getEffectRadius(name));
+					.getEffectEffect(file, name), ConfigRewards.getInstance()
+					.getEffectData(file, name), ConfigRewards.getInstance()
+					.getEffectParticles(file, name), ConfigRewards
+					.getInstance().getEffectRadius(file, name));
 		}
 	}
 
@@ -1342,11 +1368,12 @@ public class Reward {
 	 *            the user
 	 */
 	public void playSound(User user) {
-		if (ConfigRewards.getInstance().getSoundEnabled(name)) {
+		if (ConfigRewards.getInstance().getSoundEnabled(file, name)) {
 			try {
-				user.playSound(ConfigRewards.getInstance().getSoundSound(name),
-						ConfigRewards.getInstance().getSoundVolume(name),
-						ConfigRewards.getInstance().getSoundPitch(name));
+				user.playSound(
+						ConfigRewards.getInstance().getSoundSound(file, name),
+						ConfigRewards.getInstance().getSoundVolume(file, name),
+						ConfigRewards.getInstance().getSoundPitch(file, name));
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}
@@ -1466,7 +1493,6 @@ public class Reward {
 		String itemsAndAmountsMsg = Utils.getInstance().makeStringList(
 				itemsAndAmounts);
 
-		
 		String broadcastMsg = this.broadcastMsg;
 		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
 				"player", user.getPlayerName());
@@ -1511,15 +1537,20 @@ public class Reward {
 	 *            the user
 	 */
 	public void sendTitle(User user) {
-		if (ConfigRewards.getInstance().getTitleEnabled(name)) {
-			user.sendTitle(ConfigRewards.getInstance().getTitleTitle(name),
+		if (ConfigRewards.getInstance().getTitleEnabled(file, name)) {
+			user.sendTitle(ConfigRewards.getInstance()
+					.getTitleTitle(file, name),
 
-			ConfigRewards.getInstance().getTitleSubTitle(name),
+			ConfigRewards.getInstance().getTitleSubTitle(file, name),
 
-			ConfigRewards.getInstance().getTitleFadeIn(name), ConfigRewards
-					.getInstance().getTitleShowTime(name), ConfigRewards
-					.getInstance().getTitleFadeOut(name));
+			ConfigRewards.getInstance().getTitleFadeIn(file, name),
+					ConfigRewards.getInstance().getTitleShowTime(file, name),
+					ConfigRewards.getInstance().getTitleFadeOut(file, name));
 		}
+	}
+
+	public File getFile() {
+		return file;
 	}
 
 	/**

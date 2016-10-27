@@ -112,20 +112,21 @@ public class RewardGUI {
 				Reward reward = getCurrentReward(player);
 				new ValueRequest().requestString(clickEvent.getPlayer(),
 						reward.getRewardType(), new String[] { "BOTH",
-					"OFFLINE", "ONLINE" }, false,
-					new StringListener() {
+								"OFFLINE", "ONLINE" }, false,
+						new StringListener() {
 
-					@Override
-					public void onInput(Player player, String value) {
-						Reward reward = getCurrentReward(player);
-						ConfigRewards.getInstance().setRewardType(
-								reward.getRewardName(), value);
-						player.sendMessage("Set rewward type to "
-								+ value + " on "
-								+ reward.getRewardName());
-						plugin.reload();
-					}
-				});
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = getCurrentReward(player);
+								ConfigRewards.getInstance().setRewardType(
+										reward.getFile(),
+										reward.getRewardName(), value);
+								player.sendMessage("Set rewward type to "
+										+ value + " on "
+										+ reward.getRewardName());
+								plugin.reload();
+							}
+						});
 			}
 		});
 
@@ -153,21 +154,22 @@ public class RewardGUI {
 						Double.toString(reward.getChance()), nums,
 						new NumberListener() {
 
-					@Override
-					public void onInput(Player player, Number value) {
-						Reward reward = (Reward) Utils.getInstance()
-								.getPlayerMeta(player, "Reward");
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
 
-						ConfigRewards.getInstance().setChance(
-								reward.getRewardName(),
-								value.doubleValue());
-						player.sendMessage("Chance set to "
-								+ value.doubleValue() + " on "
-								+ reward.getRewardName());
-						plugin.reload();
+								ConfigRewards.getInstance().setChance(
+										reward.getFile(),
+										reward.getRewardName(),
+										value.doubleValue());
+								player.sendMessage("Chance set to "
+										+ value.doubleValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
 
-					}
-				});
+							}
+						});
 
 			}
 
@@ -257,11 +259,13 @@ public class RewardGUI {
 
 						ArrayList<String> commands = ConfigRewards
 								.getInstance().getCommandsConsole(
+										reward.getFile(),
 										reward.getRewardName());
 						commands.add(value);
 
 						ConfigRewards.getInstance().setCommandsConsole(
-								reward.getRewardName(), commands);
+								reward.getFile(), reward.getRewardName(),
+								commands);
 						player.sendMessage("Added console command");
 						plugin.reload();
 
@@ -288,11 +292,13 @@ public class RewardGUI {
 
 						ArrayList<String> commands = ConfigRewards
 								.getInstance().getCommandsPlayer(
+										reward.getFile(),
 										reward.getRewardName());
 						commands.add(value);
 
 						ConfigRewards.getInstance().setCommandsPlayer(
-								reward.getRewardName(), commands);
+								reward.getFile(), reward.getRewardName(),
+								commands);
 						player.sendMessage("Added player command");
 						plugin.reload();
 
@@ -320,8 +326,9 @@ public class RewardGUI {
 						"",
 						Utils.getInstance().convertArray(
 								ConfigRewards.getInstance().getCommandsConsole(
+										reward.getFile(),
 										reward.getRewardName())), false,
-										new StringListener() {
+						new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {
@@ -329,16 +336,18 @@ public class RewardGUI {
 										.getPlayerMeta(player, "Reward");
 								ArrayList<String> commands = ConfigRewards
 										.getInstance().getCommandsConsole(
+												reward.getFile(),
 												reward.getRewardName());
 								if (event.getCurrentItem() != null
 										&& !event.getCurrentItem().getType()
-										.equals(Material.AIR)) {
+												.equals(Material.AIR)) {
 									commands.remove(event.getCurrentItem()
 											.getItemMeta().getDisplayName());
 									ConfigRewards.getInstance()
-									.setCommandsConsole(
-											reward.getRewardName(),
-											commands);
+											.setCommandsConsole(
+													reward.getFile(),
+													reward.getRewardName(),
+													commands);
 
 								}
 								player.closeInventory();
@@ -347,7 +356,8 @@ public class RewardGUI {
 							}
 						});
 				for (String cmd : ConfigRewards.getInstance()
-						.getCommandsConsole(reward.getRewardName())) {
+						.getCommandsConsole(reward.getFile(),
+								reward.getRewardName())) {
 					inv.addButton(count, new BInventoryButton(cmd,
 							new String[0], new ItemStack(Material.STONE)) {
 
@@ -359,13 +369,15 @@ public class RewardGUI {
 
 							ArrayList<String> commands = ConfigRewards
 									.getInstance().getCommandsConsole(
+											reward.getFile(),
 											reward.getRewardName());
 							if (event.getCurrentItem() != null
 									&& !event.getCurrentItem().getType()
-									.equals(Material.AIR)) {
+											.equals(Material.AIR)) {
 								commands.remove(event.getCurrentItem()
 										.getItemMeta().getDisplayName());
 								ConfigRewards.getInstance().setCommandsConsole(
+										reward.getFile(),
 										reward.getRewardName(), commands);
 
 							}
@@ -397,7 +409,8 @@ public class RewardGUI {
 						+ reward.getRewardName());
 				int count = 0;
 				for (String cmd : ConfigRewards.getInstance()
-						.getCommandsPlayer(reward.getRewardName())) {
+						.getCommandsPlayer(reward.getFile(),
+								reward.getRewardName())) {
 					inv.addButton(count, new BInventoryButton(cmd,
 							new String[0], new ItemStack(Material.STONE)) {
 
@@ -409,16 +422,18 @@ public class RewardGUI {
 										.getPlayerMeta(player, "Reward");
 								ArrayList<String> commands = ConfigRewards
 										.getInstance().getCommandsPlayer(
+												reward.getFile(),
 												reward.getRewardName());
 								if (event.getCurrentItem() != null
 										&& !event.getCurrentItem().getType()
-										.equals(Material.AIR)) {
+												.equals(Material.AIR)) {
 									commands.remove(event.getCurrentItem()
 											.getItemMeta().getDisplayName());
 									ConfigRewards.getInstance()
-									.setCommandsPlayer(
-											reward.getRewardName(),
-											commands);
+											.setCommandsPlayer(
+													reward.getFile(),
+													reward.getRewardName(),
+													commands);
 
 								}
 								player.closeInventory();
@@ -455,21 +470,22 @@ public class RewardGUI {
 						Integer.toString(reward.getExp()), null,
 						new NumberListener() {
 
-					@Override
-					public void onInput(Player player, Number value) {
-						Reward reward = (Reward) Utils.getInstance()
-								.getPlayerMeta(player, "Reward");
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
 
-						ConfigRewards.getInstance().setEXP(
-								reward.getRewardName(),
-								value.intValue());
-						player.sendMessage("Set Exp to "
-								+ value.intValue() + " on "
-								+ reward.getRewardName());
-						plugin.reload();
+								ConfigRewards.getInstance().setEXP(
+										reward.getFile(),
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set Exp to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
 
-					}
-				});
+							}
+						});
 
 			}
 
@@ -489,20 +505,21 @@ public class RewardGUI {
 						Integer.toString(reward.getMinExp()), null,
 						new NumberListener() {
 
-					@Override
-					public void onInput(Player player, Number value) {
-						Reward reward = getCurrentReward(player);
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = getCurrentReward(player);
 
-						ConfigRewards.getInstance().setMinExp(
-								reward.getRewardName(),
-								value.intValue());
-						player.sendMessage("Set MinExp to "
-								+ value.intValue() + " on "
-								+ reward.getRewardName());
-						plugin.reload();
+								ConfigRewards.getInstance().setMinExp(
+										reward.getFile(),
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set MinExp to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
 
-					}
-				});
+							}
+						});
 
 			}
 
@@ -521,20 +538,21 @@ public class RewardGUI {
 						Integer.toString(reward.getMaxExp()), null,
 						new NumberListener() {
 
-					@Override
-					public void onInput(Player player, Number value) {
-						Reward reward = getCurrentReward(player);
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = getCurrentReward(player);
 
-						ConfigRewards.getInstance().setMaxExp(
-								reward.getRewardName(),
-								value.intValue());
-						player.sendMessage("Set MaxExp to "
-								+ value.intValue() + " on "
-								+ reward.getRewardName());
-						plugin.reload();
+								ConfigRewards.getInstance().setMaxExp(
+										reward.getFile(),
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set MaxExp to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
 
-					}
-				});
+							}
+						});
 
 			}
 
@@ -571,22 +589,24 @@ public class RewardGUI {
 							.getItemMeta().getLore();
 					Map<Enchantment, Integer> enchants = item.getEnchantments();
 					String itemStack = material;
-					ConfigRewards.getInstance().setItemAmount(rewardName,
-							itemStack, amount);
-					ConfigRewards.getInstance().setItemData(rewardName,
-							itemStack, data);
-					ConfigRewards.getInstance().setItemMaterial(rewardName,
-							itemStack, material);
-					ConfigRewards.getInstance().setItemName(rewardName,
-							itemStack, name);
-					ConfigRewards.getInstance().setItemLore(rewardName,
-							itemStack, lore);
-					ConfigRewards.getInstance().setItemDurability(rewardName,
-							itemStack, durability);
+					ConfigRewards.getInstance().setItemAmount(reward.getFile(),
+							rewardName, itemStack, amount);
+					ConfigRewards.getInstance().setItemData(reward.getFile(),
+							rewardName, itemStack, data);
+					ConfigRewards.getInstance().setItemMaterial(
+							reward.getFile(), rewardName, itemStack, material);
+					ConfigRewards.getInstance().setItemName(reward.getFile(),
+							rewardName, itemStack, name);
+					ConfigRewards.getInstance().setItemLore(reward.getFile(),
+							rewardName, itemStack, lore);
+					ConfigRewards.getInstance()
+							.setItemDurability(reward.getFile(), rewardName,
+									itemStack, durability);
 					for (Entry<Enchantment, Integer> entry : enchants
 							.entrySet()) {
-						ConfigRewards.getInstance().setItemEnchant(rewardName,
-								itemStack, entry.getKey().getName(),
+						ConfigRewards.getInstance().setItemEnchant(
+								reward.getFile(), rewardName, itemStack,
+								entry.getKey().getName(),
 								entry.getValue().intValue());
 					}
 					plugin.reload();
@@ -613,7 +633,7 @@ public class RewardGUI {
 					ItemStack itemStack = new ItemStack(Material.valueOf(reward
 							.getItemMaterial().get(item)), reward
 							.getItemAmount(item), Short.valueOf(Integer
-									.toString(reward.getItemData().get(item))));
+							.toString(reward.getItemData().get(item))));
 					String name = reward.getItemName().get(item);
 					if (name != null) {
 						itemStack = Utils.getInstance().nameItem(itemStack,
@@ -684,8 +704,9 @@ public class RewardGUI {
 					public void onInput(Player player, String value) {
 						Reward reward = getCurrentReward(player);
 
-						ConfigRewards.getInstance().setMessagesReward(
-								reward.getRewardName(), value);
+						ConfigRewards.getInstance()
+								.setMessagesReward(reward.getFile(),
+										reward.getRewardName(), value);
 						player.sendMessage("Reward message set to " + value
 								+ " on " + reward);
 						plugin.reload();
@@ -710,8 +731,9 @@ public class RewardGUI {
 					public void onInput(Player player, String value) {
 						Reward reward = getCurrentReward(player);
 
-						ConfigRewards.getInstance().setMessagesBroadcast(
-								reward.getRewardName(), value);
+						ConfigRewards.getInstance()
+								.setMessagesBroadcast(reward.getFile(),
+										reward.getRewardName(), value);
 						player.sendMessage("Broadcast message set to " + value
 								+ " on " + reward);
 						plugin.reload();
@@ -742,20 +764,21 @@ public class RewardGUI {
 						Integer.toString(reward.getMoney()), null,
 						new NumberListener() {
 
-					@Override
-					public void onInput(Player player, Number value) {
-						Reward reward = getCurrentReward(player);
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = getCurrentReward(player);
 
-						ConfigRewards.getInstance().setMoney(
-								reward.getRewardName(),
-								value.intValue());
-						player.sendMessage("Set oney to "
-								+ value.intValue() + " on "
-								+ reward.getRewardName());
-						plugin.reload();
+								ConfigRewards.getInstance().setMoney(
+										reward.getFile(),
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set oney to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
 
-					}
-				});
+							}
+						});
 
 			}
 
@@ -774,20 +797,21 @@ public class RewardGUI {
 						Integer.toString(reward.getMinMoney()), null,
 						new NumberListener() {
 
-					@Override
-					public void onInput(Player player, Number value) {
-						Reward reward = getCurrentReward(player);
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = getCurrentReward(player);
 
-						ConfigRewards.getInstance().setMinMoney(
-								reward.getRewardName(),
-								value.intValue());
-						player.sendMessage("Set MinMoney to "
-								+ value.intValue() + " on "
-								+ reward.getRewardName());
-						plugin.reload();
+								ConfigRewards.getInstance().setMinMoney(
+										reward.getFile(),
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set MinMoney to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
 
-					}
-				});
+							}
+						});
 
 			}
 
@@ -806,20 +830,21 @@ public class RewardGUI {
 						Integer.toString(reward.getMaxMoney()), null,
 						new NumberListener() {
 
-					@Override
-					public void onInput(Player player, Number value) {
-						Reward reward = getCurrentReward(player);
+							@Override
+							public void onInput(Player player, Number value) {
+								Reward reward = getCurrentReward(player);
 
-						ConfigRewards.getInstance().setMaxMoney(
-								reward.getRewardName(),
-								value.intValue());
-						player.sendMessage("Set MaxMoney to "
-								+ value.intValue() + " on "
-								+ reward.getRewardName());
-						plugin.reload();
+								ConfigRewards.getInstance().setMaxMoney(
+										reward.getFile(),
+										reward.getRewardName(),
+										value.intValue());
+								player.sendMessage("Set MaxMoney to "
+										+ value.intValue() + " on "
+										+ reward.getRewardName());
+								plugin.reload();
 
-					}
-				});
+							}
+						});
 
 			}
 
@@ -842,22 +867,22 @@ public class RewardGUI {
 						Boolean.toString(reward.isRequirePermission()),
 						new BooleanListener() {
 
-					@Override
-					public void onInput(Player player, boolean value) {
-						Reward reward = (Reward) Utils.getInstance()
-								.getPlayerMeta(player, "Reward");
+							@Override
+							public void onInput(Player player, boolean value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
 
-						ConfigRewards.getInstance()
-						.setRequirePermission(
-								reward.getRewardName(), value);
-						player.sendMessage("Permission Required set to "
-								+ String.valueOf(value)
-								+ " on "
-								+ reward.getRewardName());
-						plugin.reload();
+								ConfigRewards.getInstance()
+										.setRequirePermission(reward.getFile(),
+												reward.getRewardName(), value);
+								player.sendMessage("Permission Required set to "
+										+ String.valueOf(value)
+										+ " on "
+										+ reward.getRewardName());
+								plugin.reload();
 
-					}
-				});
+							}
+						});
 			}
 
 		});
@@ -874,13 +899,14 @@ public class RewardGUI {
 						reward.getPermission(),
 						new String[] { "AdvancedCore.Reward."
 								+ reward.getRewardName() }, true,
-								new StringListener() {
+						new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {
 								Reward reward = (Reward) Utils.getInstance()
 										.getPlayerMeta(player, "Reward");
 								ConfigRewards.getInstance().setPermission(
+										reward.getFile(),
 										reward.getRewardName(), value);
 								player.sendMessage("Permission set to " + value
 										+ " on " + reward.getRewardName());
@@ -911,18 +937,19 @@ public class RewardGUI {
 				new ValueRequest().requestBoolean(player,
 						"" + reward.isGiveInEachWorld(), new BooleanListener() {
 
-					@Override
-					public void onInput(Player player, boolean value) {
-						Reward reward = (Reward) Utils.getInstance()
-								.getPlayerMeta(player, "Reward");
-						ConfigRewards.getInstance().setGiveInEachWorld(
-								reward.getRewardName(), value);
-						player.sendMessage("GiveInEachWorld set to "
-								+ value + " on "
-								+ reward.getRewardName());
-						plugin.reload();
-					}
-				});
+							@Override
+							public void onInput(Player player, boolean value) {
+								Reward reward = (Reward) Utils.getInstance()
+										.getPlayerMeta(player, "Reward");
+								ConfigRewards.getInstance().setGiveInEachWorld(
+										reward.getFile(),
+										reward.getRewardName(), value);
+								player.sendMessage("GiveInEachWorld set to "
+										+ value + " on "
+										+ reward.getRewardName());
+								plugin.reload();
+							}
+						});
 
 			}
 		});
@@ -942,22 +969,24 @@ public class RewardGUI {
 						.getInstance().convertArray(worlds), true,
 						new StringListener() {
 
-					@Override
-					public void onInput(Player player, String value) {
-						Reward reward = getCurrentReward(player);
-						ArrayList<String> worlds = ConfigRewards
-								.getInstance().getWorlds(
-										reward.getRewardName());
-						worlds.add(value);
-						ConfigRewards.getInstance().setWorlds(
-								reward.getRewardName(), worlds);
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = getCurrentReward(player);
+								ArrayList<String> worlds = ConfigRewards
+										.getInstance().getWorlds(
+												reward.getFile(),
+												reward.getRewardName());
+								worlds.add(value);
+								ConfigRewards.getInstance().setWorlds(
+										reward.getFile(),
+										reward.getRewardName(), worlds);
 
-						player.sendMessage("Added world " + value
-								+ " on " + reward.getRewardName());
+								player.sendMessage("Added world " + value
+										+ " on " + reward.getRewardName());
 
-						plugin.reload();
-					}
-				});
+								plugin.reload();
+							}
+						});
 			}
 		});
 
@@ -969,28 +998,30 @@ public class RewardGUI {
 				Player player = clickEvent.getWhoClicked();
 				Reward reward = getCurrentReward(player);
 				ArrayList<String> worlds = ConfigRewards.getInstance()
-						.getWorlds(reward.getRewardName());
+						.getWorlds(reward.getFile(), reward.getRewardName());
 
 				new ValueRequest().requestString(player, "", Utils
 						.getInstance().convertArray(worlds), true,
 						new StringListener() {
 
-					@Override
-					public void onInput(Player player, String value) {
-						Reward reward = getCurrentReward(player);
-						ArrayList<String> worlds = ConfigRewards
-								.getInstance().getWorlds(
-										reward.getRewardName());
-						worlds.remove(value);
-						ConfigRewards.getInstance().setWorlds(
-								reward.getRewardName(), worlds);
+							@Override
+							public void onInput(Player player, String value) {
+								Reward reward = getCurrentReward(player);
+								ArrayList<String> worlds = ConfigRewards
+										.getInstance().getWorlds(
+												reward.getFile(),
+												reward.getRewardName());
+								worlds.remove(value);
+								ConfigRewards.getInstance().setWorlds(
+										reward.getFile(),
+										reward.getRewardName(), worlds);
 
-						player.sendMessage("Removed world " + value
-								+ " on " + reward.getRewardName());
+								player.sendMessage("Removed world " + value
+										+ " on " + reward.getRewardName());
 
-						plugin.reload();
-					}
-				});
+								plugin.reload();
+							}
+						});
 			}
 		});
 
@@ -1044,7 +1075,7 @@ public class RewardGUI {
 			if (reward.getWorlds().size() > 0) {
 				lore.add("Worlds: "
 						+ Utils.getInstance()
-						.makeStringList(reward.getWorlds()));
+								.makeStringList(reward.getWorlds()));
 				lore.add("GiveInEachWorld: " + reward.isGiveInEachWorld());
 			}
 			if (!reward.getRewardType().equals("BOTH")) {
@@ -1100,24 +1131,24 @@ public class RewardGUI {
 				}
 			}
 
-			if (ConfigRewards.getInstance().getTitleEnabled(
+			if (ConfigRewards.getInstance().getTitleEnabled(reward.getFile(),
 					reward.getRewardName())) {
 				lore.add("TitleEnabled: true");
 				lore.add("TitleTitle: "
 						+ ConfigRewards.getInstance().getTitleTitle(
-								reward.getRewardName()));
+								reward.getFile(), reward.getRewardName()));
 				lore.add("TitleSubTitle: "
 						+ ConfigRewards.getInstance().getTitleSubTitle(
-								reward.getRewardName()));
+								reward.getFile(), reward.getRewardName()));
 				lore.add("Timings: "
 						+ ConfigRewards.getInstance().getTitleFadeIn(
-								reward.getRewardName())
-								+ " "
-								+ ConfigRewards.getInstance().getTitleShowTime(
-										reward.getRewardName())
-										+ " "
-										+ ConfigRewards.getInstance().getTitleFadeOut(
-												reward.getRewardName()));
+								reward.getFile(), reward.getRewardName())
+						+ " "
+						+ ConfigRewards.getInstance().getTitleShowTime(
+								reward.getFile(), reward.getRewardName())
+						+ " "
+						+ ConfigRewards.getInstance().getTitleFadeOut(
+								reward.getFile(), reward.getRewardName()));
 			}
 
 			if (reward.isBossBarEnabled()) {
@@ -1129,35 +1160,35 @@ public class RewardGUI {
 						+ reward.getBossBarProgress() + "/"
 						+ reward.getBossBarDelay());
 			}
-			if (ConfigRewards.getInstance().getSoundEnabled(
+			if (ConfigRewards.getInstance().getSoundEnabled(reward.getFile(),
 					reward.getRewardName())) {
 				lore.add("SoundEnabled: true");
 				lore.add("Sound/Volume/Pitch: "
 						+ ConfigRewards.getInstance().getSoundSound(
-								reward.getRewardName())
-								+ "/"
-								+ ConfigRewards.getInstance().getSoundVolume(
-										reward.getRewardName())
-										+ "/"
-										+ ConfigRewards.getInstance().getSoundPitch(
-												reward.getRewardName()));
+								reward.getFile(), reward.getRewardName())
+						+ "/"
+						+ ConfigRewards.getInstance().getSoundVolume(
+								reward.getFile(), reward.getRewardName())
+						+ "/"
+						+ ConfigRewards.getInstance().getSoundPitch(
+								reward.getFile(), reward.getRewardName()));
 			}
 
-			if (ConfigRewards.getInstance().getEffectEnabled(
+			if (ConfigRewards.getInstance().getEffectEnabled(reward.getFile(),
 					reward.getRewardName())) {
 				lore.add("EffectEnabled: true");
 				lore.add("Effect/Data/Particles/Radius: "
 						+ ConfigRewards.getInstance().getEffectEffect(
-								reward.getRewardName())
-								+ "/"
-								+ ConfigRewards.getInstance().getEffectData(
-										reward.getRewardName())
-										+ "/"
-										+ ConfigRewards.getInstance().getEffectParticles(
-												reward.getRewardName())
-												+ "/"
-												+ ConfigRewards.getInstance().getEffectRadius(
-														reward.getRewardName()));
+								reward.getFile(), reward.getRewardName())
+						+ "/"
+						+ ConfigRewards.getInstance().getEffectData(
+								reward.getFile(), reward.getRewardName())
+						+ "/"
+						+ ConfigRewards.getInstance().getEffectParticles(
+								reward.getFile(), reward.getRewardName())
+						+ "/"
+						+ ConfigRewards.getInstance().getEffectRadius(
+								reward.getFile(), reward.getRewardName()));
 			}
 
 			if (reward.isFireworkEnabled()) {

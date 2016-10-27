@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -31,6 +32,15 @@ public class RewardHandler {
 	 * Instantiates a new RewardHandler.
 	 */
 	private RewardHandler() {
+	}
+
+	private ArrayList<File> rewardFolders;
+
+	public void addRewardFolder(File file) {
+		if (file.isDirectory()) {
+			rewardFolders.add(file);
+			loadRewards();
+		}
 	}
 
 	/**
@@ -122,15 +132,40 @@ public class RewardHandler {
 	 * Load rewards.
 	 */
 	public void loadRewards() {
-		ConfigRewards.getInstance().setupExample();
 		rewards = new ArrayList<Reward>();
-		for (String reward : ConfigRewards.getInstance().getRewardNames()) {
-			if (!reward.equals("")) {
-				rewards.add(new Reward(reward));
+		ConfigRewards.getInstance().setupExample();
+		for (File file : rewardFolders) {
+			for (String reward : ConfigRewards.getInstance().getRewardNames(
+					file)) {
+				if (!reward.equals("")) {
+					if (!rewardExist(reward)) {
+						rewards.add(new Reward(reward));
+					} else {
+						plugin.getLogger().warning(
+								"Detected that " + reward
+										+ " already exists, cannot load file "
+										+ file.getName() + "/" + reward);
+					}
+				} else {
+					plugin.getLogger()
+							.warning(
+									"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
+				}
 			}
 		}
 		plugin.debug("Loaded rewards");
 
 	}
 
+	public boolean rewardExist(String reward) {
+		if (reward.equals("")) {
+			return false;
+		}
+		for (Reward rewardName : getRewards()) {
+			if (rewardName.getRewardName().equals(reward)) {
+				return true;
+			}
+		}
+		return false;
+	}
 }
