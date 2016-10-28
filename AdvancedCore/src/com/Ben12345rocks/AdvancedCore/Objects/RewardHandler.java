@@ -2,10 +2,11 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
+import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 public class RewardHandler {
@@ -32,7 +33,10 @@ public class RewardHandler {
 	 * Instantiates a new RewardHandler.
 	 */
 	private RewardHandler() {
+		setDefaultFolder(new File(plugin.getDataFolder(), "Rewards"));
 	}
+
+	private File defaultFolder;
 
 	private ArrayList<File> rewardFolders;
 
@@ -89,7 +93,7 @@ public class RewardHandler {
 			reward = "EmptyName";
 		}
 
-		return new Reward(reward);
+		return new Reward(defaultFolder, reward);
 	}
 
 	public ArrayList<Reward> getRewards() {
@@ -133,13 +137,12 @@ public class RewardHandler {
 	 */
 	public void loadRewards() {
 		rewards = new ArrayList<Reward>();
-		ConfigRewards.getInstance().setupExample();
+		setupExample();
 		for (File file : rewardFolders) {
-			for (String reward : ConfigRewards.getInstance().getRewardNames(
-					file)) {
+			for (String reward : getRewardNames(file)) {
 				if (!reward.equals("")) {
 					if (!rewardExist(reward)) {
-						rewards.add(new Reward(reward));
+						rewards.add(new Reward(file, reward));
 					} else {
 						plugin.getLogger().warning(
 								"Detected that " + reward
@@ -157,6 +160,32 @@ public class RewardHandler {
 
 	}
 
+	/**
+	 * Copy file.
+	 *
+	 * @param fileName
+	 *            the file name
+	 */
+	private void copyFile(String fileName) {
+		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator
+				+ fileName);
+		if (!file.exists()) {
+			plugin.saveResource("Rewards" + File.separator + fileName, true);
+		}
+	}
+
+	/**
+	 * Setup example.
+	 */
+	public void setupExample() {
+		if (!plugin.getDataFolder().exists()) {
+			plugin.getDataFolder().mkdir();
+		}
+
+		copyFile("ExampleBasic.yml");
+		copyFile("ExampleAdvanced.yml");
+	}
+
 	public boolean rewardExist(String reward) {
 		if (reward.equals("")) {
 			return false;
@@ -167,5 +196,42 @@ public class RewardHandler {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Gets the reward files.
+	 *
+	 * @return the reward files
+	 */
+	public ArrayList<String> getRewardFiles(File folder) {
+		String[] fileNames = folder.list();
+		return Utils.getInstance().convertArray(fileNames);
+	}
+
+	/**
+	 * Gets the reward names.
+	 *
+	 * @return the reward names
+	 */
+	public ArrayList<String> getRewardNames(File file) {
+		ArrayList<String> rewardFiles = getRewardFiles(file);
+		if (rewardFiles == null) {
+			return new ArrayList<String>();
+		}
+		for (int i = 0; i < rewardFiles.size(); i++) {
+			rewardFiles.set(i, rewardFiles.get(i).replace(".yml", ""));
+		}
+
+		Collections.sort(rewardFiles, String.CASE_INSENSITIVE_ORDER);
+
+		return rewardFiles;
+	}
+
+	public File getDefaultFolder() {
+		return defaultFolder;
+	}
+
+	public void setDefaultFolder(File defaultFolder) {
+		this.defaultFolder = defaultFolder;
 	}
 }

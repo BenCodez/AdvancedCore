@@ -15,7 +15,6 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
-import com.Ben12345rocks.AdvancedCore.Configs.ConfigRewards;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
 
@@ -30,6 +29,8 @@ public class Reward {
 
 	/** The name. */
 	public String name;
+
+	private RewardFileData fileData;
 
 	/** The reward type. */
 	private String rewardType;
@@ -215,43 +216,188 @@ public class Reward {
 
 	private boolean usesWorlds;
 
+	private boolean titleEnabled;
+	private String titleTitle;
+	private String titleSubTitle;
+	private int titleFadeIn;
+	private int titleShowTime;
+	private int titleFadeOut;
+
+	private boolean soundEnabled;
+	private String soundSound;
+	private float soundVolume;
+	private float soundPitch;
+
+	private boolean effectEnabled;
+	private String effectEffect;
+
+	public HashMap<String, Integer> getItemsAndAmountsGiven() {
+		return itemsAndAmountsGiven;
+	}
+
+	public void setItemsAndAmountsGiven(
+			HashMap<String, Integer> itemsAndAmountsGiven) {
+		this.itemsAndAmountsGiven = itemsAndAmountsGiven;
+	}
+
+	public boolean isTitleEnabled() {
+		return titleEnabled;
+	}
+
+	public void setTitleEnabled(boolean titleEnabled) {
+		this.titleEnabled = titleEnabled;
+	}
+
+	public String getTitleTitle() {
+		return titleTitle;
+	}
+
+	public void setTitleTitle(String titleTitle) {
+		this.titleTitle = titleTitle;
+	}
+
+	public String getTitleSubTitle() {
+		return titleSubTitle;
+	}
+
+	public void setTitleSubTitle(String titleSubTitle) {
+		this.titleSubTitle = titleSubTitle;
+	}
+
+	public int getTitleFadeIn() {
+		return titleFadeIn;
+	}
+
+	public void setTitleFadeIn(int titleFadeIn) {
+		this.titleFadeIn = titleFadeIn;
+	}
+
+	public int getTitleShowTime() {
+		return titleShowTime;
+	}
+
+	public void setTitleShowTime(int titleShowTime) {
+		this.titleShowTime = titleShowTime;
+	}
+
+	public int getTitleFadeOut() {
+		return titleFadeOut;
+	}
+
+	public void setTitleFadeOut(int titleFadeOut) {
+		this.titleFadeOut = titleFadeOut;
+	}
+
+	public boolean isSoundEnabled() {
+		return soundEnabled;
+	}
+
+	public void setSoundEnabled(boolean soundEnabled) {
+		this.soundEnabled = soundEnabled;
+	}
+
+	public String getSoundSound() {
+		return soundSound;
+	}
+
+	public void setSoundSound(String soundSound) {
+		this.soundSound = soundSound;
+	}
+
+	public double getSoundVolume() {
+		return soundVolume;
+	}
+
+	public void setSoundVolume(float soundVolume) {
+		this.soundVolume = soundVolume;
+	}
+
+	public double getSoundPitch() {
+		return soundPitch;
+	}
+
+	public void setSoundPitch(float soundPitch) {
+		this.soundPitch = soundPitch;
+	}
+
+	public boolean isEffectEnabled() {
+		return effectEnabled;
+	}
+
+	public void setEffectEnabled(boolean effectEnabled) {
+		this.effectEnabled = effectEnabled;
+	}
+
+	public String getEffectEffect() {
+		return effectEffect;
+	}
+
+	public void setEffectEffect(String effectEffect) {
+		this.effectEffect = effectEffect;
+	}
+
+	public int getEffectData() {
+		return effectData;
+	}
+
+	public void setEffectData(int effectData) {
+		this.effectData = effectData;
+	}
+
+	public int getEffectParticles() {
+		return effectParticles;
+	}
+
+	public void setEffectParticles(int effectParticles) {
+		this.effectParticles = effectParticles;
+	}
+
+	public int getEffectRadius() {
+		return effectRadius;
+	}
+
+	public void setEffectRadius(int effectRadius) {
+		this.effectRadius = effectRadius;
+	}
+
+	public void setFile(File file) {
+		this.file = file;
+	}
+
+	private int effectData;
+	private int effectParticles;
+	private int effectRadius;
+
 	private File file;
 
 	public Reward(File file, String reward) {
 		load(file, reward);
 	}
 
-	public void load(File file, String reward) {
+	public void load(File folder, String reward) {
 		name = reward;
-		this.file = file;
-		setRewardType(ConfigRewards.getInstance().getRewardType(file, reward));
+		this.file = folder;
+		fileData = new RewardFileData(this, getFile());
+		setRewardType(getConfig().getRewardType());
 
-		setDelayEnabled(ConfigRewards.getInstance().getDelayedEnabled(file,
-				reward));
-		setDelayHours(ConfigRewards.getInstance().getDelayedHours(file, reward));
-		setDelayMinutes(ConfigRewards.getInstance().getDelayedMinutes(file,
-				reward));
+		setDelayEnabled(getConfig().getDelayedEnabled());
+		setDelayHours(getConfig().getDelayedHours());
+		setDelayMinutes(getConfig().getDelayedMinutes());
 
-		setTimedEnabled(ConfigRewards.getInstance().getTimedEnabled(file,
-				reward));
-		setTimedHour(ConfigRewards.getInstance().getTimedHour(file, reward));
-		setTimedMinute(ConfigRewards.getInstance().getTimedMinute(file, reward));
+		setTimedEnabled(getConfig().getTimedEnabled());
+		setTimedHour(getConfig().getTimedHour());
+		setTimedMinute(getConfig().getTimedMinute());
 
-		setChance(ConfigRewards.getInstance().getChance(file, reward));
-		setRandomChance(ConfigRewards.getInstance().getRandomChance(file,
-				reward));
-		setRandomRewards(ConfigRewards.getInstance().getRandomRewards(file,
-				reward));
-		setRandomFallBack(ConfigRewards.getInstance().getRandomFallBack(file,
-				reward));
+		setChance(getConfig().getChance());
+		setRandomChance(getConfig().getRandomChance());
+		setRandomRewards(getConfig().getRandomRewards());
+		setRandomFallBack(getConfig().getRandomFallBack());
 
-		setRequirePermission(ConfigRewards.getInstance().getRequirePermission(
-				file, reward));
-		setWorlds(ConfigRewards.getInstance().getWorlds(file, reward));
-		setGiveInEachWorld(ConfigRewards.getInstance().getGiveInEachWorld(file,
-				reward));
+		setRequirePermission(getConfig().getRequirePermission());
+		setWorlds(getConfig().getWorlds());
+		setGiveInEachWorld(getConfig().getGiveInEachWorld());
 
-		setItems(ConfigRewards.getInstance().getItems(file, reward));
+		setItems(getConfig().getItems());
 		itemMaterial = new HashMap<String, String>();
 		itemData = new HashMap<String, Integer>();
 		itemSkull = new HashMap<String, String>();
@@ -263,121 +409,99 @@ public class Reward {
 		itemLore = new HashMap<String, ArrayList<String>>();
 		itemName = new HashMap<String, String>();
 		itemEnchants = new HashMap<String, HashMap<String, Integer>>();
-		for (String item : ConfigRewards.getInstance().getItems(file, reward)) {
-			itemMaterial.put(
-					item,
-					ConfigRewards.getInstance().getItemMaterial(file, reward,
-							item));
-			itemData.put(item,
-					ConfigRewards.getInstance().getItemData(file, reward, item));
-			itemAmount.put(
-					item,
-					ConfigRewards.getInstance().getItemAmount(file, reward,
-							item));
-			itemMinAmount.put(item, ConfigRewards.getInstance()
-					.getItemMinAmount(file, reward, item));
-			itemMaxAmount.put(item, ConfigRewards.getInstance()
-					.getItemMaxAmount(file, reward, item));
-			itemName.put(item,
-					ConfigRewards.getInstance().getItemName(file, reward, item));
-			itemLore.put(item,
-					ConfigRewards.getInstance().getItemLore(file, reward, item));
-			itemDurabilty.put(item, ConfigRewards.getInstance()
-					.getItemDurability(file, reward, item));
-			itemSkull.put(item,
-					ConfigRewards.getInstance()
-							.getItemSkull(file, reward, item));
+		for (String item : getConfig().getItems()) {
+			itemMaterial.put(item, getConfig().getItemMaterial(item));
+			itemData.put(item, getConfig().getItemData(item));
+			itemAmount.put(item, getConfig().getItemAmount(item));
+			itemMinAmount.put(item, getConfig().getItemMinAmount(item));
+			itemMaxAmount.put(item, getConfig().getItemMaxAmount(item));
+			itemName.put(item, getConfig().getItemName(item));
+			itemLore.put(item, getConfig().getItemLore(item));
+			itemDurabilty.put(item, getConfig().getItemDurability(item));
+			itemSkull.put(item, getConfig().getItemSkull(item));
 			HashMap<String, Integer> enchants = new HashMap<String, Integer>();
-			for (String enchant : ConfigRewards.getInstance().getItemEnchants(
-					file, reward, item)) {
-				enchants.put(enchant, ConfigRewards.getInstance()
-						.getItemEnchantsLevel(file, reward, item, enchant));
+			for (String enchant : getConfig().getItemEnchants(item)) {
+				enchants.put(enchant,
+						getConfig().getItemEnchantsLevel(item, enchant));
 
 			}
 			itemEnchants.put(item, enchants);
 		}
 
-		setMoney(ConfigRewards.getInstance().getMoney(file, reward));
-		setMinMoney(ConfigRewards.getInstance().getMinMoney(file, reward));
-		setMaxMoney(ConfigRewards.getInstance().getMaxMoney(file, reward));
+		setMoney(getConfig().getMoney());
+		setMinMoney(getConfig().getMinMoney());
+		setMaxMoney(getConfig().getMaxMoney());
 
-		setExp(ConfigRewards.getInstance().getEXP(file, reward));
-		setMinExp(ConfigRewards.getInstance().getMinExp(file, reward));
-		setMaxExp(ConfigRewards.getInstance().getMaxExp(file, reward));
+		setExp(getConfig().getEXP());
+		setMinExp(getConfig().getMinExp());
+		setMaxExp(getConfig().getMaxExp());
 
-		setConsoleCommands(ConfigRewards.getInstance().getCommandsConsole(file,
-				reward));
-		setPlayerCommands(ConfigRewards.getInstance().getCommandsPlayer(file,
-				reward));
+		setConsoleCommands(getConfig().getCommandsConsole());
+		setPlayerCommands(getConfig().getCommandsPlayer());
 
-		potions = ConfigRewards.getInstance().getPotions(file, reward);
+		potions = getConfig().getPotions();
 		potionsDuration = new HashMap<String, Integer>();
 		potionsAmplifier = new HashMap<String, Integer>();
 		for (String potion : potions) {
-			potionsDuration.put(potion, ConfigRewards.getInstance()
-					.getPotionsDuration(file, reward, potion));
-			potionsAmplifier.put(potion, ConfigRewards.getInstance()
-					.getPotionsAmplifier(file, reward, potion));
+			potionsDuration.put(potion, getConfig().getPotionsDuration(potion));
+			potionsAmplifier.put(potion, getConfig()
+					.getPotionsAmplifier(potion));
 		}
 
-		setRewardMsg(ConfigRewards.getInstance()
-				.getMessagesReward(file, reward));
-		setActionBarMsg(ConfigRewards.getInstance().getActionBarMessage(file,
-				reward));
-		setActionBarDelay(ConfigRewards.getInstance().getActionBarDelay(file,
-				reward));
+		setRewardMsg(getConfig().getMessagesReward());
+		setActionBarMsg(getConfig().getActionBarMessage());
+		setActionBarDelay(getConfig().getActionBarDelay());
 
-		setBossBarEnabled(ConfigRewards.getInstance().getBossBarEnabled(file,
-				reward));
-		setBossBarMessage(ConfigRewards.getInstance().getBossBarMessage(file,
-				reward));
-		setBossBarColor(ConfigRewards.getInstance().getBossBarColor(file,
-				reward));
-		setBossBarStyle(ConfigRewards.getInstance().getBossBarStyle(file,
-				reward));
-		setBossBarProgress(ConfigRewards.getInstance().getBossBarProgress(file,
-				reward));
-		setBossBarDelay(ConfigRewards.getInstance().getBossBarDelay(file,
-				reward));
+		setBossBarEnabled(getConfig().getBossBarEnabled());
+		setBossBarMessage(getConfig().getBossBarMessage());
+		setBossBarColor(getConfig().getBossBarColor());
+		setBossBarStyle(getConfig().getBossBarStyle());
+		setBossBarProgress(getConfig().getBossBarProgress());
+		setBossBarDelay(getConfig().getBossBarDelay());
 
-		broadcastMsg = ConfigRewards.getInstance().getMessagesBroadcast(file,
-				reward);
+		broadcastMsg = getConfig().getMessagesBroadcast();
 
-		permission = ConfigRewards.getInstance().getPermission(file, reward);
+		permission = getConfig().getPermission();
 
-		setJavascriptEnabled(ConfigRewards.getInstance().getJavascriptEnabled(
-				file, reward));
-		setJavascriptExpression(ConfigRewards.getInstance()
-				.getJavascriptExpression(file, reward));
-		setJavascriptTrueRewards(ConfigRewards.getInstance()
-				.getJavascriptTrueRewards(file, reward));
-		setJavascriptFalseRewards(ConfigRewards.getInstance()
-				.getJavascriptFalseRewards(file, reward));
-		setChoiceRewardsEnabled(ConfigRewards.getInstance()
-				.getChoiceRewardsEnabled(file, reward));
-		setChoiceRewardsRewards(ConfigRewards.getInstance()
-				.getChoiceRewardsRewards(file, reward));
+		setJavascriptEnabled(getConfig().getJavascriptEnabled());
+		setJavascriptExpression(getConfig().getJavascriptExpression());
+		setJavascriptTrueRewards(getConfig().getJavascriptTrueRewards());
+		setJavascriptFalseRewards(getConfig().getJavascriptFalseRewards());
+		setChoiceRewardsEnabled(getConfig().getChoiceRewardsEnabled());
+		setChoiceRewardsRewards(getConfig().getChoiceRewardsRewards());
 
-		fireworkEnabled = ConfigRewards.getInstance().getFireworkEnabled(file,
-				reward);
-		fireworkColors = ConfigRewards.getInstance().getFireworkColors(file,
-				reward);
-		fireworkFadeOutColors = ConfigRewards.getInstance()
-				.getFireworkColorsFadeOut(file, reward);
-		fireworkPower = ConfigRewards.getInstance().getFireworkPower(file,
-				reward);
-		fireworkTypes = ConfigRewards.getInstance().getFireworkTypes(file,
-				reward);
-		fireworkTrail = ConfigRewards.getInstance().getFireworkTrail(file,
-				reward);
-		fireworkFlicker = ConfigRewards.getInstance().getFireworkFlicker(file,
-				reward);
+		fireworkEnabled = getConfig().getFireworkEnabled();
+		fireworkColors = getConfig().getFireworkColors();
+		fireworkFadeOutColors = getConfig().getFireworkColorsFadeOut();
+		fireworkPower = getConfig().getFireworkPower();
+		fireworkTypes = getConfig().getFireworkTypes();
+		fireworkTrail = getConfig().getFireworkTrail();
+		fireworkFlicker = getConfig().getFireworkFlicker();
 
 		if (getWorlds().size() == 0) {
 			usesWorlds = false;
 		} else {
 			usesWorlds = true;
 		}
+
+		titleEnabled = getConfig().getTitleEnabled();
+		titleTitle = getConfig().getTitleTitle();
+		titleSubTitle = getConfig().getTitleSubTitle();
+		titleFadeIn = getConfig().getTitleFadeIn();
+		titleShowTime = getConfig().getTitleShowTime();
+		titleFadeOut = getConfig().getTitleFadeOut();
+
+		soundEnabled = getConfig().getSoundEnabled();
+		soundSound = getConfig().getSoundSound();
+		soundPitch = getConfig().getSoundPitch();
+		soundVolume = getConfig().getSoundVolume();
+
+		effectEnabled = getConfig().getEffectEnabled();
+		effectEffect = getConfig().getEffectEffect();
+		effectData = getConfig().getEffectData();
+		effectParticles = getConfig().getEffectParticles();
+		effectRadius = getConfig().getEffectRadius();
+
 	}
 
 	/**
@@ -386,6 +510,7 @@ public class Reward {
 	 * @param reward
 	 *            the reward
 	 */
+	@Deprecated
 	public Reward(String reward) {
 		load(new File(plugin.getDataFolder(), "Rewards"), reward);
 	}
@@ -1352,12 +1477,9 @@ public class Reward {
 	 *            the user
 	 */
 	public void playEffect(User user) {
-		if (ConfigRewards.getInstance().getEffectEnabled(file, name)) {
-			user.playParticleEffect(ConfigRewards.getInstance()
-					.getEffectEffect(file, name), ConfigRewards.getInstance()
-					.getEffectData(file, name), ConfigRewards.getInstance()
-					.getEffectParticles(file, name), ConfigRewards
-					.getInstance().getEffectRadius(file, name));
+		if (effectEnabled) {
+			user.playParticleEffect(effectEffect, effectData, effectParticles,
+					effectRadius);
 		}
 	}
 
@@ -1368,12 +1490,9 @@ public class Reward {
 	 *            the user
 	 */
 	public void playSound(User user) {
-		if (ConfigRewards.getInstance().getSoundEnabled(file, name)) {
+		if (soundEnabled) {
 			try {
-				user.playSound(
-						ConfigRewards.getInstance().getSoundSound(file, name),
-						ConfigRewards.getInstance().getSoundVolume(file, name),
-						ConfigRewards.getInstance().getSoundPitch(file, name));
+				user.playSound(soundSound, soundVolume, soundPitch);
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}
@@ -1537,15 +1656,12 @@ public class Reward {
 	 *            the user
 	 */
 	public void sendTitle(User user) {
-		if (ConfigRewards.getInstance().getTitleEnabled(file, name)) {
-			user.sendTitle(ConfigRewards.getInstance()
-					.getTitleTitle(file, name),
+		if (titleEnabled) {
+			user.sendTitle(titleTitle,
 
-			ConfigRewards.getInstance().getTitleSubTitle(file, name),
+			titleSubTitle,
 
-			ConfigRewards.getInstance().getTitleFadeIn(file, name),
-					ConfigRewards.getInstance().getTitleShowTime(file, name),
-					ConfigRewards.getInstance().getTitleFadeOut(file, name));
+			titleFadeIn, titleShowTime, titleFadeOut);
 		}
 	}
 
@@ -2145,10 +2261,6 @@ public class Reward {
 		this.timedMinute = timedMinute;
 	}
 
-	public void setUsesWorlds(boolean usesWorlds) {
-		this.usesWorlds = usesWorlds;
-	}
-
 	/**
 	 * Sets the worlds.
 	 *
@@ -2157,6 +2269,10 @@ public class Reward {
 	 */
 	public void setWorlds(ArrayList<String> worlds) {
 		this.worlds = worlds;
+	}
+
+	public RewardFileData getConfig() {
+		return fileData;
 	}
 
 }

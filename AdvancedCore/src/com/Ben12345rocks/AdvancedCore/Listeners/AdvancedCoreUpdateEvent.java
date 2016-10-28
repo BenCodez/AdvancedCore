@@ -36,9 +36,7 @@ public class AdvancedCoreUpdateEvent implements Listener {
 
 		if (event.getPlugin().getName()
 				.equals(plugin.getDescription().getName())) {
-			if (event.getOldVersion().equals("")) {
-				plugin.getLogger().info("First load of AdvancedCore");
-			} else {
+			if (!event.getOldVersion().equals("")) {
 				plugin.getLogger().info("Updated AdvancedCore");
 			}
 		}

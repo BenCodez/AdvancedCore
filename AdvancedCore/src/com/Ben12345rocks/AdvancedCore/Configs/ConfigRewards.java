@@ -21,6 +21,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 /**
  * The Class ConfigRewards.
  */
+@Deprecated
 public class ConfigRewards {
 
 	/** The instance. */
