@@ -33,7 +33,8 @@ public class RewardHandler {
 	 * Instantiates a new RewardHandler.
 	 */
 	private RewardHandler() {
-		setDefaultFolder(new File(plugin.getDataFolder(), "Rewards"));
+		rewardFolders = new ArrayList<File>();
+		setDefaultFolder(new File(Main.plugin.getDataFolder(), "Rewards"));
 	}
 
 	private File defaultFolder;
@@ -144,10 +145,13 @@ public class RewardHandler {
 					if (!rewardExist(reward)) {
 						rewards.add(new Reward(file, reward));
 					} else {
-						plugin.getLogger().warning(
-								"Detected that " + reward
-										+ " already exists, cannot load file "
-										+ file.getName() + "/" + reward);
+						plugin.getLogger()
+								.warning(
+										"Detected that "
+												+ reward
+												+ " already exists, cannot load file "
+												+ file.getAbsolutePath() + "/"
+												+ reward);
 					}
 				} else {
 					plugin.getLogger()

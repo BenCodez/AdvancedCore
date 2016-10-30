@@ -34,7 +34,7 @@ public class Config extends YMLFile {
 	 * Instantiates a new config.
 	 */
 	public Config() {
-		super(new File(plugin.getDataFolder(), "Config.yml"));
+		super(new File(Main.plugin.getDataFolder(), "Config.yml"));
 	}
 
 	/**
@@ -151,6 +151,5 @@ public class Config extends YMLFile {
 	@Override
 	public void onFileCreation() {
 		plugin.saveResource("Config.yml", true);
-
 	}
 }

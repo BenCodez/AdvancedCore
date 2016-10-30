@@ -32,7 +32,7 @@ public class ServerData extends YMLFile {
 	 * Instantiates a new server data.
 	 */
 	public ServerData() {
-		super(new File(plugin.getDataFolder(), "ServerData.yml"));
+		super(new File(Main.plugin.getDataFolder(), "ServerData.yml"));
 	}
 
 	/**

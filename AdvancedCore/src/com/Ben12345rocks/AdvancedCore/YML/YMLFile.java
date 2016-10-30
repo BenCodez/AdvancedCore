@@ -15,9 +15,15 @@ public abstract class YMLFile {
 		return dFile;
 	}
 
+	public YMLFile(File file, boolean setup) {
+		dFile = file;
+		if (setup) {
+			setup();
+		}
+	}
+
 	public YMLFile(File file) {
 		dFile = file;
-		setup();
 	}
 
 	/** The data. */
@@ -54,7 +60,7 @@ public abstract class YMLFile {
 	public abstract void onFileCreation();
 
 	public void setup() {
-		getdFile().mkdirs();
+		getdFile().getParentFile().mkdirs();
 
 		if (!dFile.exists()) {
 			try {
