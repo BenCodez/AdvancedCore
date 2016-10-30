@@ -55,6 +55,7 @@ public class UserManager {
 			}
 		}
 		User user = new User(plugin, uuid);
+		user.setPlayerName();
 		users.add(user);
 		return user;
 	}

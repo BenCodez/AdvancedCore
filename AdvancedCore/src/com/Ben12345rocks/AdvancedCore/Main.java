@@ -338,8 +338,15 @@ public class Main extends JavaPlugin {
 	/**
 	 * Update.
 	 */
-	public void update() {
-		RewardHandler.getInstance().checkDelayedTimedRewards();
-		TimeChecker.getInstance().update();
+	public synchronized void update() {
+		run(new Runnable() {
+
+			@Override
+			public void run() {
+				RewardHandler.getInstance().checkDelayedTimedRewards();
+				TimeChecker.getInstance().update();
+			}
+		});
+
 	}
 }
