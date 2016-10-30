@@ -27,6 +27,7 @@ import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -650,6 +651,15 @@ public class Utils {
 		return false;
 	}
 
+	/**
+	 * Checks for server permission.
+	 *
+	 * @param playerName
+	 *            the player name
+	 * @param perm
+	 *            the perm
+	 * @return true, if successful
+	 */
 	public boolean hasServerPermission(String playerName, String perm) {
 		if (playerName == null) {
 			return false;
@@ -937,6 +947,17 @@ public class Utils {
 				.matcher(str).replaceAll(replaceWith);
 	}
 
+	/**
+	 * Replace place holder.
+	 *
+	 * @param str
+	 *            the str
+	 * @param toReplace
+	 *            the to replace
+	 * @param replaceWith
+	 *            the replace with
+	 * @return the string
+	 */
 	public String replacePlaceHolder(String str, String toReplace,
 			String replaceWith) {
 		return replaceIgnoreCase(
@@ -1145,6 +1166,18 @@ public class Utils {
 		} catch (Exception ex) {
 		}
 		return item;
+	}
+
+	/**
+	 * Sets the skull owner.
+	 *
+	 * @param playerName
+	 *            the player name
+	 * @return the item stack
+	 */
+	public ItemStack setSkullOwner(String playerName) {
+		return setSkullOwner(new ItemStack(Material.SKULL_ITEM, 1, (short) 3),
+				playerName);
 	}
 
 	/**

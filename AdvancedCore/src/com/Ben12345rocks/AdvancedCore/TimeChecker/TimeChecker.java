@@ -7,6 +7,9 @@ import com.Ben12345rocks.AdvancedCore.Listeners.DayChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.MonthChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WeekChangeEvent;
 
+/**
+ * The Class TimeChecker.
+ */
 public class TimeChecker {
 
 	/** The instance. */
@@ -16,20 +19,25 @@ public class TimeChecker {
 	static Main plugin = Main.plugin;
 
 	/**
-	 * Gets the single instance of RewardHandler.
+	 * Gets the single instance of TimeChecker.
 	 *
-	 * @return single instance of RewardHandler
+	 * @return single instance of TimeChecker
 	 */
 	public static TimeChecker getInstance() {
 		return instance;
 	}
 
 	/**
-	 * Instantiates a new RewardHandler.
+	 * Instantiates a new time checker.
 	 */
 	private TimeChecker() {
 	}
 
+	/**
+	 * Checks for day changed.
+	 *
+	 * @return true, if successful
+	 */
 	@SuppressWarnings("deprecation")
 	public boolean hasDayChanged() {
 		int prevDay = ServerData.getInstance().getPrevDay();
@@ -92,6 +100,9 @@ public class TimeChecker {
 		return false;
 	}
 
+	/**
+	 * Update.
+	 */
 	public void update() {
 		if (hasDayChanged()) {
 			plugin.debug("Day changed");

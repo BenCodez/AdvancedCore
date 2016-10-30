@@ -16,6 +16,9 @@ import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEventHandler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilSlot;
 
+/**
+ * The Class AInventoryReflectionHandler.
+ */
 public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/** The Block position. */
@@ -37,7 +40,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 	private Inventory inv;
 
 	/**
-	 * Instantiates a new a inventory.
+	 * Instantiates a new a inventory reflection handler.
 	 *
 	 * @param player
 	 *            the player
@@ -51,8 +54,8 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 				anvilClickEventHandler);
 	}
 
-	/**
-	 * Load classes.
+	/* (non-Javadoc)
+	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler#loadClasses()
 	 */
 	@Override
 	public void loadClasses() {
@@ -65,8 +68,8 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 		ChatMessage = NMSManager.get().getNMSClass("ChatMessage");
 	}
 
-	/**
-	 * Open.
+	/* (non-Javadoc)
+	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler#open(org.bukkit.entity.Player, java.util.HashMap)
 	 */
 	@Override
 	public void open(Player player, HashMap<AnvilSlot, ItemStack> items) {
@@ -149,6 +152,9 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler#getInventory()
+	 */
 	@Override
 	public Inventory getInventory() {
 		return inv;

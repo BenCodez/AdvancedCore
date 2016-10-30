@@ -196,6 +196,7 @@ public class AInventory {
 		}
 	}
 
+	/** The version handle. */
 	private AInventoryVersionHandler versionHandle;
 
 	/** The player. */
@@ -210,6 +211,11 @@ public class AInventory {
 	/** The listener. */
 	private Listener listener;
 
+	/**
+	 * Gets the version.
+	 *
+	 * @return the version
+	 */
 	public static String getVersion() {
 		Server server = Bukkit.getServer();
 		final String packageName = server.getClass().getPackage().getName();

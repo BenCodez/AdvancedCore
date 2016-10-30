@@ -5,7 +5,7 @@ import org.bukkit.event.HandlerList;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class PlayerRewardEvent.
+ * The Class MonthChangeEvent.
  */
 public class MonthChangeEvent extends Event {
 
@@ -21,6 +21,9 @@ public class MonthChangeEvent extends Event {
 		return handlers;
 	}
 
+	/**
+	 * Instantiates a new month change event.
+	 */
 	public MonthChangeEvent() {
 		super();
 	}
