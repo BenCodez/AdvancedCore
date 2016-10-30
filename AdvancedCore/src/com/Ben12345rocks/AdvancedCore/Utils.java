@@ -27,6 +27,7 @@ import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -1145,6 +1146,11 @@ public class Utils {
 		} catch (Exception ex) {
 		}
 		return item;
+	}
+
+	public ItemStack setSkullOwner(String playerName) {
+		return setSkullOwner(new ItemStack(Material.SKULL_ITEM, 1, (short) 3),
+				playerName);
 	}
 
 	/**
