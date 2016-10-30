@@ -2,9 +2,6 @@ package com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners;
 
 import org.bukkit.entity.Player;
 
-/**
- * Boolean input listener
- */
 public abstract class BooleanListener {
 
 	/**

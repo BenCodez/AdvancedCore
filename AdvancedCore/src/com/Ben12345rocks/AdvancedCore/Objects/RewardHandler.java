@@ -9,6 +9,9 @@ import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
+/**
+ * The Class RewardHandler.
+ */
 public class RewardHandler {
 
 	/** The instance. */
@@ -30,17 +33,25 @@ public class RewardHandler {
 	private ArrayList<Reward> rewards;
 
 	/**
-	 * Instantiates a new RewardHandler.
+	 * Instantiates a new reward handler.
 	 */
 	private RewardHandler() {
 		rewardFolders = new ArrayList<File>();
 		setDefaultFolder(new File(Main.plugin.getDataFolder(), "Rewards"));
 	}
 
+	/** The default folder. */
 	private File defaultFolder;
 
+	/** The reward folders. */
 	private ArrayList<File> rewardFolders;
 
+	/**
+	 * Adds the reward folder.
+	 *
+	 * @param file
+	 *            the file
+	 */
 	public void addRewardFolder(File file) {
 		if (file.isDirectory()) {
 			rewardFolders.add(file);
@@ -78,6 +89,13 @@ public class RewardHandler {
 
 	}
 
+	/**
+	 * Gets the reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return the reward
+	 */
 	public Reward getReward(String reward) {
 		reward = reward.replace(" ", "_");
 
@@ -97,35 +115,100 @@ public class RewardHandler {
 		return new Reward(defaultFolder, reward);
 	}
 
+	/**
+	 * Gets the rewards.
+	 *
+	 * @return the rewards
+	 */
 	public ArrayList<Reward> getRewards() {
 		return rewards;
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param reward
+	 *            the reward
+	 */
 	public void giveReward(User user, Reward reward) {
 		giveReward(user, reward, user.isOnline());
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param reward
+	 *            the reward
+	 * @param online
+	 *            the online
+	 */
 	public void giveReward(User user, Reward reward, boolean online) {
 		reward.giveReward(user, online);
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param reward
+	 *            the reward
+	 */
 	public void giveReward(User user, String reward) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), user.isOnline());
 		}
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param reward
+	 *            the reward
+	 * @param online
+	 *            the online
+	 */
 	public void giveReward(User user, String reward, boolean online) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), online);
 		}
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param reward
+	 *            the reward
+	 * @param online
+	 *            the online
+	 * @param giveOffline
+	 *            the give offline
+	 */
 	public void giveReward(User user, Reward reward, boolean online,
 			boolean giveOffline) {
 		reward.giveReward(user, online, giveOffline);
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param reward
+	 *            the reward
+	 * @param online
+	 *            the online
+	 * @param giveOffline
+	 *            the give offline
+	 */
 	public void giveReward(User user, String reward, boolean online,
 			boolean giveOffline) {
 		if (!reward.equals("")) {
@@ -190,6 +273,13 @@ public class RewardHandler {
 		copyFile("ExampleAdvanced.yml");
 	}
 
+	/**
+	 * Reward exist.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return true, if successful
+	 */
 	public boolean rewardExist(String reward) {
 		if (reward.equals("")) {
 			return false;
@@ -205,6 +295,8 @@ public class RewardHandler {
 	/**
 	 * Gets the reward files.
 	 *
+	 * @param folder
+	 *            the folder
 	 * @return the reward files
 	 */
 	public ArrayList<String> getRewardFiles(File folder) {
@@ -215,6 +307,8 @@ public class RewardHandler {
 	/**
 	 * Gets the reward names.
 	 *
+	 * @param file
+	 *            the file
 	 * @return the reward names
 	 */
 	public ArrayList<String> getRewardNames(File file) {
@@ -231,10 +325,21 @@ public class RewardHandler {
 		return rewardFiles;
 	}
 
+	/**
+	 * Gets the default folder.
+	 *
+	 * @return the default folder
+	 */
 	public File getDefaultFolder() {
 		return defaultFolder;
 	}
 
+	/**
+	 * Sets the default folder.
+	 *
+	 * @param defaultFolder
+	 *            the new default folder
+	 */
 	public void setDefaultFolder(File defaultFolder) {
 		this.defaultFolder = defaultFolder;
 	}

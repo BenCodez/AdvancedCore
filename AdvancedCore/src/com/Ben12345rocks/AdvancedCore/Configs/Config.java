@@ -148,6 +148,9 @@ public class Config extends YMLFile {
 		getData().set("DebugInfoIngame", value);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.Ben12345rocks.AdvancedCore.YML.YMLFile#onFileCreation()
+	 */
 	@Override
 	public void onFileCreation() {
 		plugin.saveResource("Config.yml", true);

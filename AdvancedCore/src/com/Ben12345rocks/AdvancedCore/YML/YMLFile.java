@@ -10,11 +10,28 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
+/**
+ * The Class YMLFile.
+ */
 public abstract class YMLFile {
+	
+	/**
+	 * Gets the d file.
+	 *
+	 * @return the d file
+	 */
 	public File getdFile() {
 		return dFile;
 	}
 
+	/**
+	 * Instantiates a new YML file.
+	 *
+	 * @param file
+	 *            the file
+	 * @param setup
+	 *            the setup
+	 */
 	public YMLFile(File file, boolean setup) {
 		dFile = file;
 		if (setup) {
@@ -22,6 +39,12 @@ public abstract class YMLFile {
 		}
 	}
 
+	/**
+	 * Instantiates a new YML file.
+	 *
+	 * @param file
+	 *            the file
+	 */
 	public YMLFile(File file) {
 		dFile = file;
 	}
@@ -57,8 +80,14 @@ public abstract class YMLFile {
 
 	}
 
+	/**
+	 * On file creation.
+	 */
 	public abstract void onFileCreation();
 
+	/**
+	 * Setup.
+	 */
 	public void setup() {
 		getdFile().getParentFile().mkdirs();
 

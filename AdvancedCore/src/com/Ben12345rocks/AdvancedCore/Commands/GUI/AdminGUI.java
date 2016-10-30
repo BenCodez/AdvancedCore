@@ -17,13 +17,18 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
+/**
+ * The Class AdminGUI.
+ */
 public class AdminGUI {
+	
+	/** The instance. */
 	static AdminGUI instance = new AdminGUI();
 
 	/**
-	 * Gets the single instance of Commands.
+	 * Gets the single instance of AdminGUI.
 	 *
-	 * @return single instance of Commands
+	 * @return single instance of AdminGUI
 	 */
 	public static AdminGUI getInstance() {
 		return instance;
@@ -33,13 +38,20 @@ public class AdminGUI {
 	Main plugin = Main.plugin;
 
 	/**
-	 * Instantiates a new commands.
+	 * Instantiates a new admin GUI.
 	 */
 	private AdminGUI() {
 	}
 
+	/** The plugin GU is. */
 	private ArrayList<BInventoryButton> pluginGUIs;
 
+	/**
+	 * Adds the button.
+	 *
+	 * @param b
+	 *            the b
+	 */
 	public void addButton(BInventoryButton b) {
 		if (pluginGUIs == null) {
 			pluginGUIs = new ArrayList<BInventoryButton>();

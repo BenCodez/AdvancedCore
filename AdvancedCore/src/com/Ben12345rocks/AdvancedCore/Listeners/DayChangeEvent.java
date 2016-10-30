@@ -5,7 +5,7 @@ import org.bukkit.event.HandlerList;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class PlayerRewardEvent.
+ * The Class DayChangeEvent.
  */
 public class DayChangeEvent extends Event {
 
@@ -21,6 +21,9 @@ public class DayChangeEvent extends Event {
 		return handlers;
 	}
 
+	/**
+	 * Instantiates a new day change event.
+	 */
 	public DayChangeEvent() {
 		super();
 	}

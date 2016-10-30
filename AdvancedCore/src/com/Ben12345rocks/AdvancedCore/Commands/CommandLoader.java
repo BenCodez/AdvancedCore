@@ -353,6 +353,9 @@ public class CommandLoader {
 		}
 	}
 
+	/**
+	 * Load user GUI.
+	 */
 	private void loadUserGUI() {
 		BInventory inv = new BInventory("AdvancedCore UserGUI");
 		inv.addButton(inv.getNextSlot(), new BInventoryButton(

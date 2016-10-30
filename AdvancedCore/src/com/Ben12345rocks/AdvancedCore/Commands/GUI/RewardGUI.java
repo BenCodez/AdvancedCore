@@ -23,14 +23,18 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListene
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
+/**
+ * The Class RewardGUI.
+ */
 public class RewardGUI {
 
+	/** The instance. */
 	static RewardGUI instance = new RewardGUI();
 
 	/**
-	 * Gets the single instance of Commands.
+	 * Gets the single instance of RewardGUI.
 	 *
-	 * @return single instance of Commands
+	 * @return single instance of RewardGUI
 	 */
 	public static RewardGUI getInstance() {
 		return instance;
@@ -40,11 +44,18 @@ public class RewardGUI {
 	Main plugin = Main.plugin;
 
 	/**
-	 * Instantiates a new commands.
+	 * Instantiates a new reward GUI.
 	 */
 	private RewardGUI() {
 	}
 
+	/**
+	 * Gets the current reward.
+	 *
+	 * @param player
+	 *            the player
+	 * @return the current reward
+	 */
 	public Reward getCurrentReward(Player player) {
 		return (Reward) Utils.getInstance().getPlayerMeta(player, "Reward");
 	}
@@ -87,6 +98,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI advanced.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUIAdvanced(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -132,6 +151,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI basic.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUIBasic(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -239,6 +266,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI commands.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUICommands(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -397,6 +432,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI exp.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUIExp(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -498,6 +541,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI items.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUIItems(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -614,6 +665,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI messages.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUIMessages(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -669,6 +728,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI money.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUIMoney(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -771,6 +838,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI permission.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUIPermission(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -839,6 +914,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open reward GUI worlds.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	public void openRewardGUIWorlds(Player player, Reward reward) {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
@@ -1118,6 +1201,14 @@ public class RewardGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Sets the current reward.
+	 *
+	 * @param player
+	 *            the player
+	 * @param reward
+	 *            the reward
+	 */
 	private void setCurrentReward(Player player, Reward reward) {
 		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
 	}

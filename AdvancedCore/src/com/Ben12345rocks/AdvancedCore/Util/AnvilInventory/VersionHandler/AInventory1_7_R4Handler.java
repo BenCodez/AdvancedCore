@@ -16,32 +16,63 @@ import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEventHandler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilSlot;
 
+/**
+ * The Class AInventory1_7_R4Handler.
+ */
 public class AInventory1_7_R4Handler implements AInventoryVersionHandler {
 
+	/**
+	 * Instantiates a new a inventory 1 7 R 4 handler.
+	 *
+	 * @param player
+	 *            the player
+	 * @param anvilClickEventHandler
+	 *            the anvil click event handler
+	 */
 	public AInventory1_7_R4Handler(final Player player,
 			AnvilClickEventHandler anvilClickEventHandler) {
 		Utils.getInstance().setPlayerMeta(player, "AInventory",
 				anvilClickEventHandler);
 	}
 
+	/**
+	 * The Class AnvilContainer.
+	 */
 	private class AnvilContainer extends ContainerAnvil {
+		
+		/**
+		 * Instantiates a new anvil container.
+		 *
+		 * @param entity
+		 *            the entity
+		 */
 		public AnvilContainer(EntityHuman entity) {
 			super(entity.inventory, entity.world, 0, 0, 0, entity);
 		}
 
+		/* (non-Javadoc)
+		 * @see net.minecraft.server.v1_7_R4.ContainerAnvil#a(net.minecraft.server.v1_7_R4.EntityHuman)
+		 */
 		@Override
 		public boolean a(EntityHuman entityhuman) {
 			return true;
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler#loadClasses()
+	 */
 	@Override
 	public void loadClasses() {
 
 	}
 
+	/** The inv. */
 	private Inventory inv;
 
+	/* (non-Javadoc)
+	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler#open(org.bukkit.entity.Player, java.util.HashMap)
+	 */
 	@Override
 	public void open(Player player, HashMap<AnvilSlot, ItemStack> items) {
 		EntityPlayer p = ((CraftPlayer) player).getHandle();
@@ -73,6 +104,9 @@ public class AInventory1_7_R4Handler implements AInventoryVersionHandler {
 
 	}
 
+	/* (non-Javadoc)
+	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler#getInventory()
+	 */
 	@Override
 	public Inventory getInventory() {
 

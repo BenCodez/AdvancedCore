@@ -72,6 +72,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the action bar delay.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the action bar delay
@@ -83,6 +85,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the action bar message.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the action bar message
@@ -94,6 +98,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the boss bar color.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the boss bar color
@@ -105,6 +111,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the boss bar delay.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the boss bar delay
@@ -116,6 +124,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the boss bar enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the boss bar enabled
@@ -127,6 +137,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the boss bar message.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the boss bar message
@@ -138,6 +150,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the boss bar progress.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the boss bar progress
@@ -149,6 +163,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the boss bar style.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the boss bar style
@@ -160,6 +176,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the chance.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the chance
@@ -171,6 +189,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the choice rewards enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the choice rewards enabled
@@ -182,6 +202,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the choice rewards rewards.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the choice rewards rewards
@@ -195,6 +217,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the commands console.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the commands console
@@ -210,6 +234,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the commands player.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the commands player
@@ -233,6 +259,15 @@ public class ConfigRewards {
 		return getData(new File(plugin.getDataFolder(), "Rewards"), reward);
 	}
 
+	/**
+	 * Gets the data.
+	 *
+	 * @param file
+	 *            the file
+	 * @param reward
+	 *            the reward
+	 * @return the data
+	 */
 	public FileConfiguration getData(File file, String reward) {
 		File dFile = getRewardFile(file, reward);
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
@@ -242,6 +277,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the delayed enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the delayed enabled
@@ -253,6 +290,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the delayed hours.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the delayed hours
@@ -264,6 +303,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the delayed minutes.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the delayed minutes
@@ -275,6 +316,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the effect data.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the effect data
@@ -286,6 +329,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the effect effect.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the effect effect
@@ -298,6 +343,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the effect enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the effect enabled
@@ -309,6 +356,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the effect particles.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the effect particles
@@ -320,6 +369,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the effect radius.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the effect radius
@@ -331,6 +382,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the exp.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the exp
@@ -342,6 +395,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the firework colors.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the firework colors
@@ -355,6 +410,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the firework colors fade out.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the firework colors fade out
@@ -368,6 +425,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the firework enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the firework enabled
@@ -379,6 +438,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the firework flicker.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the firework flicker
@@ -390,6 +451,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the firework power.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the firework power
@@ -401,6 +464,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the firework trail.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the firework trail
@@ -412,6 +477,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the firework types.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the firework types
@@ -425,6 +492,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the give in each world.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the give in each world
@@ -436,6 +505,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item amount.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -449,6 +520,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item data.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -462,6 +535,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item durability.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -475,6 +550,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item enchants.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -493,6 +570,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item enchants level.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -510,6 +589,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item lore.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -525,6 +606,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item material.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -538,6 +621,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item max amount.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -551,6 +636,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item min amount.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -564,6 +651,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item name.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -577,6 +666,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the items.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the items
@@ -593,6 +684,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the item skull.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -606,6 +699,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the javascript enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the javascript enabled
@@ -617,6 +712,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the javascript expression.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the javascript expression
@@ -628,6 +725,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the javascript false rewards.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the javascript false rewards
@@ -641,6 +740,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the javascript true rewards.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the javascript true rewards
@@ -654,6 +755,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the max exp.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the max exp
@@ -665,6 +768,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the max money.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the max money
@@ -676,6 +781,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the messages broadcast.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the messages broadcast
@@ -687,6 +794,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the messages reward.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the messages reward
@@ -700,6 +809,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the min exp.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the min exp
@@ -711,6 +822,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the min money.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the min money
@@ -722,6 +835,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the money.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the money
@@ -733,6 +848,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the permission.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the permission
@@ -745,6 +862,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the potions.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the potions
@@ -761,6 +880,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the potions amplifier.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param potion
@@ -774,6 +895,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the potions duration.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param potion
@@ -787,6 +910,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the random chance.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the random chance
@@ -798,6 +923,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the random fall back.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the random fall back
@@ -815,6 +942,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the random rewards.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the random rewards
@@ -830,6 +959,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the require permission.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the require permission
@@ -841,6 +972,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the reward.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the reward
@@ -853,6 +986,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the reward file.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the reward file
@@ -877,6 +1012,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the reward files.
 	 *
+	 * @param folder
+	 *            the folder
 	 * @return the reward files
 	 */
 	public ArrayList<String> getRewardFiles(File folder) {
@@ -884,6 +1021,11 @@ public class ConfigRewards {
 		return Utils.getInstance().convertArray(fileNames);
 	}
 
+	/**
+	 * Gets the reward names.
+	 *
+	 * @return the reward names
+	 */
 	@Deprecated
 	public ArrayList<String> getRewardNames() {
 		return getRewardFiles(new File(plugin.getDataFolder(), "Rewards"));
@@ -892,6 +1034,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the reward names.
 	 *
+	 * @param file
+	 *            the file
 	 * @return the reward names
 	 */
 	public ArrayList<String> getRewardNames(File file) {
@@ -911,6 +1055,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the reward type.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the reward type
@@ -932,6 +1078,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the sound enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the sound enabled
@@ -943,6 +1091,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the sound pitch.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the sound pitch
@@ -954,6 +1104,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the sound sound.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the sound sound
@@ -965,6 +1117,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the sound volume.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the sound volume
@@ -976,6 +1130,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the timed enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the timed enabled
@@ -987,6 +1143,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the timed hour.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the timed hour
@@ -998,6 +1156,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the timed minute.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the timed minute
@@ -1009,6 +1169,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the title enabled.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the title enabled
@@ -1020,6 +1182,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the title fade in.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the title fade in
@@ -1031,6 +1195,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the title fade out.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the title fade out
@@ -1042,6 +1208,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the title show time.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the title show time
@@ -1053,6 +1221,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the title sub title.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the title sub title
@@ -1064,6 +1234,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the title title.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the title title
@@ -1075,6 +1247,8 @@ public class ConfigRewards {
 	/**
 	 * Gets the worlds.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return the worlds
@@ -1087,6 +1261,13 @@ public class ConfigRewards {
 
 	}
 
+	/**
+	 * Checks if is reward valid.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return true, if is reward valid
+	 */
 	@Deprecated
 	public boolean isRewardValid(String reward) {
 		return RewardHandler.getInstance().rewardExist(reward);
@@ -1095,6 +1276,8 @@ public class ConfigRewards {
 	/**
 	 * Checks if is reward valid.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @return true, if is reward valid
@@ -1108,6 +1291,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param path
@@ -1122,6 +1307,16 @@ public class ConfigRewards {
 		FilesManager.getInstance().editFile(dFile, data);
 	}
 
+	/**
+	 * Sets the.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param path
+	 *            the path
+	 * @param value
+	 *            the value
+	 */
 	public void set(String reward, String path, Object value) {
 		set(new File(plugin.getDataFolder(), "Rewards"), reward, path, value);
 	}
@@ -1129,6 +1324,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the chance.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param d
@@ -1141,6 +1338,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the commands console.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1154,6 +1353,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the commands player.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1167,6 +1368,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the EXP.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1179,6 +1382,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the give in each world.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1191,6 +1396,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item amount.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1205,6 +1412,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item data.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1219,6 +1428,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item durability.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1234,6 +1445,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item enchant.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1251,6 +1464,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item lore.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1266,6 +1481,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item material.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1281,6 +1498,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item max amount.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1296,6 +1515,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item min amount.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1311,6 +1532,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the item name.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param item
@@ -1325,6 +1548,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the max exp.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1337,6 +1562,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the max money.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1349,6 +1576,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the messages broadcast.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1361,6 +1590,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the messages reward.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1373,6 +1604,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the min exp.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1385,6 +1618,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the min money.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1397,6 +1632,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the money.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1406,6 +1643,16 @@ public class ConfigRewards {
 		set(reward, "Money", value);
 	}
 
+	/**
+	 * Sets the permission.
+	 *
+	 * @param file
+	 *            the file
+	 * @param reward
+	 *            the reward
+	 * @param perm
+	 *            the perm
+	 */
 	public void setPermission(File file, String reward, String perm) {
 		set(reward, "Permission", perm);
 	}
@@ -1413,6 +1660,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the potions amplifier.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param potion
@@ -1428,6 +1677,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the potions duration.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param potion
@@ -1443,6 +1694,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the require permission.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value
@@ -1452,6 +1705,16 @@ public class ConfigRewards {
 		set(reward, "RequirePermission", value);
 	}
 
+	/**
+	 * Sets the reward type.
+	 *
+	 * @param file
+	 *            the file
+	 * @param reward
+	 *            the reward
+	 * @param value
+	 *            the value
+	 */
 	public void setRewardType(File file, String reward, String value) {
 		set(reward, "RewardType", value);
 	}
@@ -1471,6 +1734,8 @@ public class ConfigRewards {
 	/**
 	 * Sets the worlds.
 	 *
+	 * @param file
+	 *            the file
 	 * @param reward
 	 *            the reward
 	 * @param value

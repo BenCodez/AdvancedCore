@@ -5,7 +5,7 @@ import org.bukkit.event.HandlerList;
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class PlayerRewardEvent.
+ * The Class WeekChangeEvent.
  */
 public class WeekChangeEvent extends Event {
 
@@ -21,6 +21,9 @@ public class WeekChangeEvent extends Event {
 		return handlers;
 	}
 
+	/**
+	 * Instantiates a new week change event.
+	 */
 	public WeekChangeEvent() {
 		super();
 	}

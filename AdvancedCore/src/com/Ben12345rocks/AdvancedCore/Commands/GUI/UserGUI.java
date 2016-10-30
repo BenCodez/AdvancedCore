@@ -18,14 +18,18 @@ import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
+/**
+ * The Class UserGUI.
+ */
 public class UserGUI {
 
+	/** The instance. */
 	static UserGUI instance = new UserGUI();
 
 	/**
-	 * Gets the single instance of Commands.
+	 * Gets the single instance of UserGUI.
 	 *
-	 * @return single instance of Commands
+	 * @return single instance of UserGUI
 	 */
 	public static UserGUI getInstance() {
 		return instance;
@@ -34,22 +38,46 @@ public class UserGUI {
 	/** The plugin. */
 	Main plugin = Main.plugin;
 
+	/** The plugin buttons. */
 	private HashMap<Plugin, BInventory> pluginButtons = new HashMap<Plugin, BInventory>();
 
 	/**
-	 * Instantiates a new commands.
+	 * Instantiates a new user GUI.
 	 */
 	private UserGUI() {
 	}
 
+	/**
+	 * Adds the plugin button.
+	 *
+	 * @param plugin
+	 *            the plugin
+	 * @param inv
+	 *            the inv
+	 */
 	public synchronized void addPluginButton(Plugin plugin, BInventory inv) {
 		pluginButtons.put(plugin, inv);
 	}
 
+	/**
+	 * Gets the current player.
+	 *
+	 * @param player
+	 *            the player
+	 * @return the current player
+	 */
 	public String getCurrentPlayer(Player player) {
 		return (String) Utils.getInstance().getPlayerMeta(player, "UserGUI");
 	}
 
+	/**
+	 * Open user GUI.
+	 *
+	 * @param player
+	 *            the player
+	 * @param playerName
+	 *            the player name
+	 */
 	public void openUserGUI(Player player, String playerName) {
 		BInventory inv = new BInventory("UserGUI: " + playerName);
 
@@ -75,6 +103,12 @@ public class UserGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Open users GUI.
+	 *
+	 * @param player
+	 *            the player
+	 */
 	public void openUsersGUI(Player player) {
 		ArrayList<String> players = new ArrayList<String>();
 		for (Player p : Bukkit.getOnlinePlayers()) {
@@ -91,6 +125,14 @@ public class UserGUI {
 		});
 	}
 
+	/**
+	 * Sets the current player.
+	 *
+	 * @param player
+	 *            the player
+	 * @param playerName
+	 *            the player name
+	 */
 	private void setCurrentPlayer(Player player, String playerName) {
 		Utils.getInstance().setPlayerMeta(player, "UserGUI", playerName);
 	}

@@ -231,6 +231,14 @@ public class User {
 						new ArrayList<Long>());
 	}
 
+	/**
+	 * Adds the timed reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param time
+	 *            the time
+	 */
 	public void addTimedReward(Reward reward, long time) {
 		ArrayList<Long> times = getTimedReward(reward);
 		times.add(Long.valueOf(time));
@@ -245,6 +253,14 @@ public class User {
 		}, new Date(time));
 	}
 
+	/**
+	 * Removes the timed reward.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param time
+	 *            the time
+	 */
 	public void removeTimedReward(Reward reward, long time) {
 		ArrayList<Long> times = getTimedReward(reward);
 		times.remove(Long.valueOf(time));

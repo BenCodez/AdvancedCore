@@ -13,14 +13,34 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
+/**
+ * The Class RewardFileData.
+ */
 public class RewardFileData {
+	
+	/** The plugin. */
 	Main plugin = Main.plugin;
 
+	/** The reward. */
 	private Reward reward;
+	
+	/** The reward folder. */
 	private File rewardFolder;
+	
+	/** The d file. */
 	private File dFile;
+	
+	/** The data. */
 	private FileConfiguration data;
 
+	/**
+	 * Instantiates a new reward file data.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @param rewardFolder
+	 *            the reward folder
+	 */
 	public RewardFileData(Reward reward, File rewardFolder) {
 		this.reward = reward;
 		if (!rewardFolder.isDirectory()) {
@@ -33,8 +53,6 @@ public class RewardFileData {
 	/**
 	 * Gets the action bar delay.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the action bar delay
 	 */
 	public int getActionBarDelay() {
@@ -44,8 +62,6 @@ public class RewardFileData {
 	/**
 	 * Gets the action bar message.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the action bar message
 	 */
 	public String getActionBarMessage() {
@@ -55,8 +71,6 @@ public class RewardFileData {
 	/**
 	 * Gets the boss bar color.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the boss bar color
 	 */
 	public String getBossBarColor() {
@@ -66,8 +80,6 @@ public class RewardFileData {
 	/**
 	 * Gets the boss bar delay.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the boss bar delay
 	 */
 	public int getBossBarDelay() {
@@ -77,8 +89,6 @@ public class RewardFileData {
 	/**
 	 * Gets the boss bar enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the boss bar enabled
 	 */
 	public boolean getBossBarEnabled() {
@@ -88,8 +98,6 @@ public class RewardFileData {
 	/**
 	 * Gets the boss bar message.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the boss bar message
 	 */
 	public String getBossBarMessage() {
@@ -99,8 +107,6 @@ public class RewardFileData {
 	/**
 	 * Gets the boss bar progress.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the boss bar progress
 	 */
 	public double getBossBarProgress() {
@@ -110,8 +116,6 @@ public class RewardFileData {
 	/**
 	 * Gets the boss bar style.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the boss bar style
 	 */
 	public String getBossBarStyle() {
@@ -121,8 +125,6 @@ public class RewardFileData {
 	/**
 	 * Gets the chance.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the chance
 	 */
 	public double getChance() {
@@ -132,8 +134,6 @@ public class RewardFileData {
 	/**
 	 * Gets the choice rewards enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the choice rewards enabled
 	 */
 	public boolean getChoiceRewardsEnabled() {
@@ -143,8 +143,6 @@ public class RewardFileData {
 	/**
 	 * Gets the choice rewards rewards.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the choice rewards rewards
 	 */
 	@SuppressWarnings("unchecked")
@@ -156,8 +154,6 @@ public class RewardFileData {
 	/**
 	 * Gets the commands console.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the commands console
 	 */
 	@SuppressWarnings("unchecked")
@@ -171,8 +167,6 @@ public class RewardFileData {
 	/**
 	 * Gets the commands player.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the commands player
 	 */
 	@SuppressWarnings("unchecked")
@@ -183,6 +177,11 @@ public class RewardFileData {
 
 	}
 
+	/**
+	 * Gets the data.
+	 *
+	 * @return the data
+	 */
 	public FileConfiguration getData() {
 		return data;
 	}
@@ -190,8 +189,6 @@ public class RewardFileData {
 	/**
 	 * Gets the delayed enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the delayed enabled
 	 */
 	public boolean getDelayedEnabled() {
@@ -201,8 +198,6 @@ public class RewardFileData {
 	/**
 	 * Gets the delayed hours.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the delayed hours
 	 */
 	public int getDelayedHours() {
@@ -212,8 +207,6 @@ public class RewardFileData {
 	/**
 	 * Gets the delayed minutes.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the delayed minutes
 	 */
 	public int getDelayedMinutes() {
@@ -223,8 +216,6 @@ public class RewardFileData {
 	/**
 	 * Gets the effect data.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the effect data
 	 */
 	public int getEffectData() {
@@ -234,8 +225,6 @@ public class RewardFileData {
 	/**
 	 * Gets the effect effect.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the effect effect
 	 */
 	public String getEffectEffect() {
@@ -246,8 +235,6 @@ public class RewardFileData {
 	/**
 	 * Gets the effect enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the effect enabled
 	 */
 	public boolean getEffectEnabled() {
@@ -257,8 +244,6 @@ public class RewardFileData {
 	/**
 	 * Gets the effect particles.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the effect particles
 	 */
 	public int getEffectParticles() {
@@ -268,8 +253,6 @@ public class RewardFileData {
 	/**
 	 * Gets the effect radius.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the effect radius
 	 */
 	public int getEffectRadius() {
@@ -279,8 +262,6 @@ public class RewardFileData {
 	/**
 	 * Gets the exp.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the exp
 	 */
 	public int getEXP() {
@@ -290,8 +271,6 @@ public class RewardFileData {
 	/**
 	 * Gets the firework colors.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the firework colors
 	 */
 	@SuppressWarnings("unchecked")
@@ -303,8 +282,6 @@ public class RewardFileData {
 	/**
 	 * Gets the firework colors fade out.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the firework colors fade out
 	 */
 	@SuppressWarnings("unchecked")
@@ -316,8 +293,6 @@ public class RewardFileData {
 	/**
 	 * Gets the firework enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the firework enabled
 	 */
 	public boolean getFireworkEnabled() {
@@ -327,8 +302,6 @@ public class RewardFileData {
 	/**
 	 * Gets the firework flicker.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the firework flicker
 	 */
 	public boolean getFireworkFlicker() {
@@ -338,8 +311,6 @@ public class RewardFileData {
 	/**
 	 * Gets the firework power.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the firework power
 	 */
 	public int getFireworkPower() {
@@ -349,8 +320,6 @@ public class RewardFileData {
 	/**
 	 * Gets the firework trail.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the firework trail
 	 */
 	public boolean getFireworkTrail() {
@@ -360,8 +329,6 @@ public class RewardFileData {
 	/**
 	 * Gets the firework types.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the firework types
 	 */
 	@SuppressWarnings("unchecked")
@@ -373,8 +340,6 @@ public class RewardFileData {
 	/**
 	 * Gets the give in each world.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the give in each world
 	 */
 	public boolean getGiveInEachWorld() {
@@ -384,8 +349,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item amount.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item amount
@@ -397,8 +360,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item data.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item data
@@ -410,8 +371,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item durability.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item durability
@@ -423,8 +382,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item enchants.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item enchants
@@ -441,8 +398,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item enchants level.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param enchant
@@ -456,8 +411,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item lore.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item lore
@@ -470,8 +423,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item material.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item material
@@ -483,8 +434,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item max amount.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item max amount
@@ -496,8 +445,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item min amount.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item min amount
@@ -509,8 +456,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item name.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item name
@@ -522,8 +467,6 @@ public class RewardFileData {
 	/**
 	 * Gets the items.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the items
 	 */
 	public Set<String> getItems() {
@@ -537,8 +480,6 @@ public class RewardFileData {
 	/**
 	 * Gets the item skull.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @return the item skull
@@ -550,8 +491,6 @@ public class RewardFileData {
 	/**
 	 * Gets the javascript enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the javascript enabled
 	 */
 	public boolean getJavascriptEnabled() {
@@ -561,8 +500,6 @@ public class RewardFileData {
 	/**
 	 * Gets the javascript expression.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the javascript expression
 	 */
 	public String getJavascriptExpression() {
@@ -572,8 +509,6 @@ public class RewardFileData {
 	/**
 	 * Gets the javascript false rewards.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the javascript false rewards
 	 */
 	@SuppressWarnings("unchecked")
@@ -585,8 +520,6 @@ public class RewardFileData {
 	/**
 	 * Gets the javascript true rewards.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the javascript true rewards
 	 */
 	@SuppressWarnings("unchecked")
@@ -598,8 +531,6 @@ public class RewardFileData {
 	/**
 	 * Gets the max exp.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the max exp
 	 */
 	public int getMaxExp() {
@@ -609,8 +540,6 @@ public class RewardFileData {
 	/**
 	 * Gets the max money.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the max money
 	 */
 	public int getMaxMoney() {
@@ -620,8 +549,6 @@ public class RewardFileData {
 	/**
 	 * Gets the messages broadcast.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the messages broadcast
 	 */
 	public String getMessagesBroadcast() {
@@ -631,8 +558,6 @@ public class RewardFileData {
 	/**
 	 * Gets the messages reward.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the messages reward
 	 */
 	public String getMessagesReward() {
@@ -644,8 +569,6 @@ public class RewardFileData {
 	/**
 	 * Gets the min exp.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the min exp
 	 */
 	public int getMinExp() {
@@ -655,8 +578,6 @@ public class RewardFileData {
 	/**
 	 * Gets the min money.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the min money
 	 */
 	public int getMinMoney() {
@@ -666,8 +587,6 @@ public class RewardFileData {
 	/**
 	 * Gets the money.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the money
 	 */
 	public int getMoney() {
@@ -677,8 +596,6 @@ public class RewardFileData {
 	/**
 	 * Gets the permission.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the permission
 	 */
 	public String getPermission() {
@@ -689,8 +606,6 @@ public class RewardFileData {
 	/**
 	 * Gets the potions.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the potions
 	 */
 	public Set<String> getPotions() {
@@ -704,8 +619,6 @@ public class RewardFileData {
 	/**
 	 * Gets the potions amplifier.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param potion
 	 *            the potion
 	 * @return the potions amplifier
@@ -717,8 +630,6 @@ public class RewardFileData {
 	/**
 	 * Gets the potions duration.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param potion
 	 *            the potion
 	 * @return the potions duration
@@ -730,8 +641,6 @@ public class RewardFileData {
 	/**
 	 * Gets the random chance.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the random chance
 	 */
 	public double getRandomChance() {
@@ -741,8 +650,6 @@ public class RewardFileData {
 	/**
 	 * Gets the random fall back.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the random fall back
 	 */
 	@SuppressWarnings("unchecked")
@@ -757,8 +664,6 @@ public class RewardFileData {
 	/**
 	 * Gets the random rewards.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the random rewards
 	 */
 	@SuppressWarnings("unchecked")
@@ -772,14 +677,15 @@ public class RewardFileData {
 	/**
 	 * Gets the require permission.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the require permission
 	 */
 	public boolean getRequirePermission() {
 		return getData().getBoolean("RequirePermission");
 	}
 
+	/**
+	 * Setup.
+	 */
 	public void setup() {
 		if (dFile == null) {
 			dFile = new File(rewardFolder, reward.getRewardName() + ".yml");
@@ -798,6 +704,9 @@ public class RewardFileData {
 
 	}
 
+	/**
+	 * Reload.
+	 */
 	public void reload() {
 		data = YamlConfiguration.loadConfiguration(dFile);
 	}
@@ -805,8 +714,6 @@ public class RewardFileData {
 	/**
 	 * Gets the reward type.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the reward type
 	 */
 	public String getRewardType() {
@@ -826,8 +733,6 @@ public class RewardFileData {
 	/**
 	 * Gets the sound enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the sound enabled
 	 */
 	public boolean getSoundEnabled() {
@@ -837,8 +742,6 @@ public class RewardFileData {
 	/**
 	 * Gets the sound pitch.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the sound pitch
 	 */
 	public float getSoundPitch() {
@@ -848,8 +751,6 @@ public class RewardFileData {
 	/**
 	 * Gets the sound sound.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the sound sound
 	 */
 	public String getSoundSound() {
@@ -859,8 +760,6 @@ public class RewardFileData {
 	/**
 	 * Gets the sound volume.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the sound volume
 	 */
 	public float getSoundVolume() {
@@ -870,8 +769,6 @@ public class RewardFileData {
 	/**
 	 * Gets the timed enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the timed enabled
 	 */
 	public boolean getTimedEnabled() {
@@ -881,8 +778,6 @@ public class RewardFileData {
 	/**
 	 * Gets the timed hour.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the timed hour
 	 */
 	public int getTimedHour() {
@@ -892,8 +787,6 @@ public class RewardFileData {
 	/**
 	 * Gets the timed minute.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the timed minute
 	 */
 	public int getTimedMinute() {
@@ -903,8 +796,6 @@ public class RewardFileData {
 	/**
 	 * Gets the title enabled.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the title enabled
 	 */
 	public boolean getTitleEnabled() {
@@ -914,8 +805,6 @@ public class RewardFileData {
 	/**
 	 * Gets the title fade in.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the title fade in
 	 */
 	public int getTitleFadeIn() {
@@ -925,8 +814,6 @@ public class RewardFileData {
 	/**
 	 * Gets the title fade out.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the title fade out
 	 */
 	public int getTitleFadeOut() {
@@ -936,8 +823,6 @@ public class RewardFileData {
 	/**
 	 * Gets the title show time.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the title show time
 	 */
 	public int getTitleShowTime() {
@@ -947,8 +832,6 @@ public class RewardFileData {
 	/**
 	 * Gets the title sub title.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the title sub title
 	 */
 	public String getTitleSubTitle() {
@@ -958,8 +841,6 @@ public class RewardFileData {
 	/**
 	 * Gets the title title.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the title title
 	 */
 	public String getTitleTitle() {
@@ -969,8 +850,6 @@ public class RewardFileData {
 	/**
 	 * Gets the worlds.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the worlds
 	 */
 	@SuppressWarnings("unchecked")
@@ -981,6 +860,14 @@ public class RewardFileData {
 
 	}
 
+	/**
+	 * Sets the.
+	 *
+	 * @param path
+	 *            the path
+	 * @param value
+	 *            the value
+	 */
 	public void set(String path, Object value) {
 		data.set(path, value);
 		FilesManager.getInstance().editFile(dFile, data);
@@ -990,10 +877,8 @@ public class RewardFileData {
 	/**
 	 * Sets the chance.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param d
-	 *            the d
+	 *            the new chance
 	 */
 	public void setChance(double d) {
 		set("Chance", d);
@@ -1002,10 +887,8 @@ public class RewardFileData {
 	/**
 	 * Sets the commands console.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new commands console
 	 */
 	public void setCommandsConsole(ArrayList<String> value) {
 		set("Commands.Console", value);
@@ -1014,22 +897,18 @@ public class RewardFileData {
 	/**
 	 * Sets the commands player.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new commands player
 	 */
 	public void setCommandsPlayer(ArrayList<String> value) {
 		set("Commands.Player", value);
 	}
 
 	/**
-	 * Sets the EXP.
+	 * Sets the exp.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new exp
 	 */
 	public void setEXP(int value) {
 		set("EXP", value);
@@ -1038,10 +917,8 @@ public class RewardFileData {
 	/**
 	 * Sets the give in each world.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new give in each world
 	 */
 	public void setGiveInEachWorld(boolean value) {
 		set("GiveInEachWorld", value);
@@ -1050,8 +927,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item amount.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param value
@@ -1064,8 +939,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item data.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param value
@@ -1078,8 +951,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item durability.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param value
@@ -1092,8 +963,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item enchant.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param enchant
@@ -1108,8 +977,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item lore.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param value
@@ -1122,8 +989,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item material.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param value
@@ -1136,8 +1001,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item max amount.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param value
@@ -1150,8 +1013,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item min amount.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param value
@@ -1164,8 +1025,6 @@ public class RewardFileData {
 	/**
 	 * Sets the item name.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param item
 	 *            the item
 	 * @param value
@@ -1178,10 +1037,8 @@ public class RewardFileData {
 	/**
 	 * Sets the max exp.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new max exp
 	 */
 	public void setMaxExp(int value) {
 		set("MaxEXP", value);
@@ -1190,10 +1047,8 @@ public class RewardFileData {
 	/**
 	 * Sets the max money.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new max money
 	 */
 	public void setMaxMoney(int value) {
 		set("MaxMoney", value);
@@ -1202,10 +1057,8 @@ public class RewardFileData {
 	/**
 	 * Sets the messages broadcast.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new messages broadcast
 	 */
 	public void setMessagesBroadcast(String value) {
 		set("Messages.Broadcast", value);
@@ -1214,10 +1067,8 @@ public class RewardFileData {
 	/**
 	 * Sets the messages reward.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new messages reward
 	 */
 	public void setMessagesReward(String value) {
 		set("Messages.Reward", value);
@@ -1226,10 +1077,8 @@ public class RewardFileData {
 	/**
 	 * Sets the min exp.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new min exp
 	 */
 	public void setMinExp(int value) {
 		set("MinEXP", value);
@@ -1238,10 +1087,8 @@ public class RewardFileData {
 	/**
 	 * Sets the min money.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new min money
 	 */
 	public void setMinMoney(int value) {
 		set("MinMoney", value);
@@ -1250,15 +1097,19 @@ public class RewardFileData {
 	/**
 	 * Sets the money.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new money
 	 */
 	public void setMoney(int value) {
 		set("Money", value);
 	}
 
+	/**
+	 * Sets the permission.
+	 *
+	 * @param perm
+	 *            the new permission
+	 */
 	public void setPermission(String perm) {
 		set("Permission", perm);
 	}
@@ -1266,8 +1117,6 @@ public class RewardFileData {
 	/**
 	 * Sets the potions amplifier.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param potion
 	 *            the potion
 	 * @param value
@@ -1280,8 +1129,6 @@ public class RewardFileData {
 	/**
 	 * Sets the potions duration.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param potion
 	 *            the potion
 	 * @param value
@@ -1294,15 +1141,19 @@ public class RewardFileData {
 	/**
 	 * Sets the require permission.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new require permission
 	 */
 	public void setRequirePermission(boolean value) {
 		set("RequirePermission", value);
 	}
 
+	/**
+	 * Sets the reward type.
+	 *
+	 * @param value
+	 *            the new reward type
+	 */
 	public void setRewardType(String value) {
 		set("RewardType", value);
 	}
@@ -1310,10 +1161,8 @@ public class RewardFileData {
 	/**
 	 * Sets the worlds.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @param value
-	 *            the value
+	 *            the new worlds
 	 */
 	public void setWorlds(ArrayList<String> value) {
 		set("Worlds", value);

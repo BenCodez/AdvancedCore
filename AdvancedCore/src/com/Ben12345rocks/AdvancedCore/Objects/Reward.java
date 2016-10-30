@@ -30,6 +30,7 @@ public class Reward {
 	/** The name. */
 	public String name;
 
+	/** The file data. */
 	private RewardFileData fileData;
 
 	/** The reward type. */
@@ -188,6 +189,7 @@ public class Reward {
 	/** The choice rewards rewards. */
 	private ArrayList<String> choiceRewardsRewards;
 
+	/** The items and amounts given. */
 	private HashMap<String, Integer> itemsAndAmountsGiven;
 
 	/** The choice rewards enabled. */
@@ -214,166 +216,392 @@ public class Reward {
 	/** The firework types. */
 	private ArrayList<String> fireworkTypes;
 
+	/** The uses worlds. */
 	private boolean usesWorlds;
 
+	/** The title enabled. */
 	private boolean titleEnabled;
+	
+	/** The title title. */
 	private String titleTitle;
+	
+	/** The title sub title. */
 	private String titleSubTitle;
+	
+	/** The title fade in. */
 	private int titleFadeIn;
+	
+	/** The title show time. */
 	private int titleShowTime;
+	
+	/** The title fade out. */
 	private int titleFadeOut;
 
+	/** The sound enabled. */
 	private boolean soundEnabled;
+	
+	/** The sound sound. */
 	private String soundSound;
+	
+	/** The sound volume. */
 	private float soundVolume;
+	
+	/** The sound pitch. */
 	private float soundPitch;
 
+	/** The effect enabled. */
 	private boolean effectEnabled;
+	
+	/** The effect effect. */
 	private String effectEffect;
 
+	/**
+	 * Gets the items and amounts given.
+	 *
+	 * @return the items and amounts given
+	 */
 	public HashMap<String, Integer> getItemsAndAmountsGiven() {
 		return itemsAndAmountsGiven;
 	}
 
+	/**
+	 * Sets the items and amounts given.
+	 *
+	 * @param itemsAndAmountsGiven
+	 *            the items and amounts given
+	 */
 	public void setItemsAndAmountsGiven(
 			HashMap<String, Integer> itemsAndAmountsGiven) {
 		this.itemsAndAmountsGiven = itemsAndAmountsGiven;
 	}
 
+	/**
+	 * Checks if is title enabled.
+	 *
+	 * @return true, if is title enabled
+	 */
 	public boolean isTitleEnabled() {
 		return titleEnabled;
 	}
 
+	/**
+	 * Sets the title enabled.
+	 *
+	 * @param titleEnabled
+	 *            the new title enabled
+	 */
 	public void setTitleEnabled(boolean titleEnabled) {
 		this.titleEnabled = titleEnabled;
 	}
 
+	/**
+	 * Gets the title title.
+	 *
+	 * @return the title title
+	 */
 	public String getTitleTitle() {
 		return titleTitle;
 	}
 
+	/**
+	 * Sets the title title.
+	 *
+	 * @param titleTitle
+	 *            the new title title
+	 */
 	public void setTitleTitle(String titleTitle) {
 		this.titleTitle = titleTitle;
 	}
 
+	/**
+	 * Gets the title sub title.
+	 *
+	 * @return the title sub title
+	 */
 	public String getTitleSubTitle() {
 		return titleSubTitle;
 	}
 
+	/**
+	 * Sets the title sub title.
+	 *
+	 * @param titleSubTitle
+	 *            the new title sub title
+	 */
 	public void setTitleSubTitle(String titleSubTitle) {
 		this.titleSubTitle = titleSubTitle;
 	}
 
+	/**
+	 * Gets the title fade in.
+	 *
+	 * @return the title fade in
+	 */
 	public int getTitleFadeIn() {
 		return titleFadeIn;
 	}
 
+	/**
+	 * Sets the title fade in.
+	 *
+	 * @param titleFadeIn
+	 *            the new title fade in
+	 */
 	public void setTitleFadeIn(int titleFadeIn) {
 		this.titleFadeIn = titleFadeIn;
 	}
 
+	/**
+	 * Gets the title show time.
+	 *
+	 * @return the title show time
+	 */
 	public int getTitleShowTime() {
 		return titleShowTime;
 	}
 
+	/**
+	 * Sets the title show time.
+	 *
+	 * @param titleShowTime
+	 *            the new title show time
+	 */
 	public void setTitleShowTime(int titleShowTime) {
 		this.titleShowTime = titleShowTime;
 	}
 
+	/**
+	 * Gets the title fade out.
+	 *
+	 * @return the title fade out
+	 */
 	public int getTitleFadeOut() {
 		return titleFadeOut;
 	}
 
+	/**
+	 * Sets the title fade out.
+	 *
+	 * @param titleFadeOut
+	 *            the new title fade out
+	 */
 	public void setTitleFadeOut(int titleFadeOut) {
 		this.titleFadeOut = titleFadeOut;
 	}
 
+	/**
+	 * Checks if is sound enabled.
+	 *
+	 * @return true, if is sound enabled
+	 */
 	public boolean isSoundEnabled() {
 		return soundEnabled;
 	}
 
+	/**
+	 * Sets the sound enabled.
+	 *
+	 * @param soundEnabled
+	 *            the new sound enabled
+	 */
 	public void setSoundEnabled(boolean soundEnabled) {
 		this.soundEnabled = soundEnabled;
 	}
 
+	/**
+	 * Gets the sound sound.
+	 *
+	 * @return the sound sound
+	 */
 	public String getSoundSound() {
 		return soundSound;
 	}
 
+	/**
+	 * Sets the sound sound.
+	 *
+	 * @param soundSound
+	 *            the new sound sound
+	 */
 	public void setSoundSound(String soundSound) {
 		this.soundSound = soundSound;
 	}
 
+	/**
+	 * Gets the sound volume.
+	 *
+	 * @return the sound volume
+	 */
 	public double getSoundVolume() {
 		return soundVolume;
 	}
 
+	/**
+	 * Sets the sound volume.
+	 *
+	 * @param soundVolume
+	 *            the new sound volume
+	 */
 	public void setSoundVolume(float soundVolume) {
 		this.soundVolume = soundVolume;
 	}
 
+	/**
+	 * Gets the sound pitch.
+	 *
+	 * @return the sound pitch
+	 */
 	public double getSoundPitch() {
 		return soundPitch;
 	}
 
+	/**
+	 * Sets the sound pitch.
+	 *
+	 * @param soundPitch
+	 *            the new sound pitch
+	 */
 	public void setSoundPitch(float soundPitch) {
 		this.soundPitch = soundPitch;
 	}
 
+	/**
+	 * Checks if is effect enabled.
+	 *
+	 * @return true, if is effect enabled
+	 */
 	public boolean isEffectEnabled() {
 		return effectEnabled;
 	}
 
+	/**
+	 * Sets the effect enabled.
+	 *
+	 * @param effectEnabled
+	 *            the new effect enabled
+	 */
 	public void setEffectEnabled(boolean effectEnabled) {
 		this.effectEnabled = effectEnabled;
 	}
 
+	/**
+	 * Gets the effect effect.
+	 *
+	 * @return the effect effect
+	 */
 	public String getEffectEffect() {
 		return effectEffect;
 	}
 
+	/**
+	 * Sets the effect effect.
+	 *
+	 * @param effectEffect
+	 *            the new effect effect
+	 */
 	public void setEffectEffect(String effectEffect) {
 		this.effectEffect = effectEffect;
 	}
 
+	/**
+	 * Gets the effect data.
+	 *
+	 * @return the effect data
+	 */
 	public int getEffectData() {
 		return effectData;
 	}
 
+	/**
+	 * Sets the effect data.
+	 *
+	 * @param effectData
+	 *            the new effect data
+	 */
 	public void setEffectData(int effectData) {
 		this.effectData = effectData;
 	}
 
+	/**
+	 * Gets the effect particles.
+	 *
+	 * @return the effect particles
+	 */
 	public int getEffectParticles() {
 		return effectParticles;
 	}
 
+	/**
+	 * Sets the effect particles.
+	 *
+	 * @param effectParticles
+	 *            the new effect particles
+	 */
 	public void setEffectParticles(int effectParticles) {
 		this.effectParticles = effectParticles;
 	}
 
+	/**
+	 * Gets the effect radius.
+	 *
+	 * @return the effect radius
+	 */
 	public int getEffectRadius() {
 		return effectRadius;
 	}
 
+	/**
+	 * Sets the effect radius.
+	 *
+	 * @param effectRadius
+	 *            the new effect radius
+	 */
 	public void setEffectRadius(int effectRadius) {
 		this.effectRadius = effectRadius;
 	}
 
+	/**
+	 * Sets the file.
+	 *
+	 * @param file
+	 *            the new file
+	 */
 	public void setFile(File file) {
 		this.file = file;
 	}
 
+	/** The effect data. */
 	private int effectData;
+	
+	/** The effect particles. */
 	private int effectParticles;
+	
+	/** The effect radius. */
 	private int effectRadius;
 
+	/** The file. */
 	private File file;
 
+	/**
+	 * Instantiates a new reward.
+	 *
+	 * @param file
+	 *            the file
+	 * @param reward
+	 *            the reward
+	 */
 	public Reward(File file, String reward) {
 		load(file, reward);
 	}
 
+	/**
+	 * Load.
+	 *
+	 * @param folder
+	 *            the folder
+	 * @param reward
+	 *            the reward
+	 */
 	public void load(File folder, String reward) {
 		name = reward;
 		this.file = folder;
@@ -1149,6 +1377,14 @@ public class Reward {
 		return worlds;
 	}
 
+	/**
+	 * Give exp.
+	 *
+	 * @param user
+	 *            the user
+	 * @param exp
+	 *            the exp
+	 */
 	public void giveExp(User user, int exp) {
 		user.giveExp(exp);
 	}
@@ -1189,6 +1425,14 @@ public class Reward {
 		}
 	}
 
+	/**
+	 * Give money.
+	 *
+	 * @param user
+	 *            the user
+	 * @param money
+	 *            the money
+	 */
 	public void giveMoney(User user, int money) {
 		user.giveMoney(money);
 	}
@@ -1238,10 +1482,28 @@ public class Reward {
 		}
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param online
+	 *            the online
+	 */
 	public void giveReward(User user, boolean online) {
 		giveReward(user, online, true);
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param online
+	 *            the online
+	 * @param giveOffline
+	 *            the give offline
+	 */
 	public void giveReward(User user, boolean online, boolean giveOffline) {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user);
@@ -1466,6 +1728,11 @@ public class Reward {
 		return timedEnabled;
 	}
 
+	/**
+	 * Checks if is uses worlds.
+	 *
+	 * @return true, if is uses worlds
+	 */
 	public boolean isUsesWorlds() {
 		return usesWorlds;
 	}
@@ -1604,6 +1871,16 @@ public class Reward {
 		}
 	}
 
+	/**
+	 * Send message.
+	 *
+	 * @param user
+	 *            the user
+	 * @param money
+	 *            the money
+	 * @param exp
+	 *            the exp
+	 */
 	public void sendMessage(User user, int money, int exp) {
 		ArrayList<String> itemsAndAmounts = new ArrayList<String>();
 		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
@@ -1665,6 +1942,11 @@ public class Reward {
 		}
 	}
 
+	/**
+	 * Gets the file.
+	 *
+	 * @return the file
+	 */
 	public File getFile() {
 		return file;
 	}
@@ -2271,6 +2553,11 @@ public class Reward {
 		this.worlds = worlds;
 	}
 
+	/**
+	 * Gets the config.
+	 *
+	 * @return the config
+	 */
 	public RewardFileData getConfig() {
 		return fileData;
 	}
