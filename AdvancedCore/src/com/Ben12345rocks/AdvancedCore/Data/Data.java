@@ -75,7 +75,11 @@ public class Data {
 	public ArrayList<String> getFiles() {
 		File folder = new File(plugin.getDataFolder() + File.separator + "Data");
 		String[] fileNames = folder.list();
-		return Utils.getInstance().convertArray(fileNames);
+		if (fileNames != null) {
+			return Utils.getInstance().convertArray(fileNames);
+		} else {
+			return new ArrayList<String>();
+		}
 	}
 
 	/**
@@ -114,9 +118,9 @@ public class Data {
 
 			} catch (IOException e) {
 				Bukkit.getServer()
-				.getLogger()
-				.severe(ChatColor.RED + "Could not create " + uuid
-						+ ".yml! Name: " + playerName);
+						.getLogger()
+						.severe(ChatColor.RED + "Could not create " + uuid
+								+ ".yml! Name: " + playerName);
 
 			}
 		}
@@ -142,13 +146,9 @@ public class Data {
 			}
 			Set<String> namesSet = new HashSet<String>(names);
 			names = Utils.getInstance().convert(namesSet);
-			if (names == null) {
-				return null;
-			} else {
-				return names;
-			}
+			return names;
 		}
-		return null;
+		return new ArrayList<String>();
 	}
 
 	/**
@@ -223,9 +223,9 @@ public class Data {
 			data.save(dFile);
 		} catch (IOException e) {
 			Bukkit.getServer()
-			.getLogger()
-			.severe(ChatColor.RED + "Could not save "
-					+ Utils.getInstance().getUUID(playerName) + ".yml!");
+					.getLogger()
+					.severe(ChatColor.RED + "Could not save "
+							+ Utils.getInstance().getUUID(playerName) + ".yml!");
 		}
 
 	}
@@ -297,7 +297,7 @@ public class Data {
 			} catch (IOException e) {
 				plugin.getLogger().severe(
 						ChatColor.RED + "Could not create " + uuid
-						+ ".yml! Name: " + playerName);
+								+ ".yml! Name: " + playerName);
 
 			}
 		}
