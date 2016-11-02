@@ -121,6 +121,9 @@ public class RewardHandler {
 	 * @return the rewards
 	 */
 	public ArrayList<Reward> getRewards() {
+		if (rewards == null) {
+			rewards = new ArrayList<Reward>();
+		}
 		return rewards;
 	}
 
@@ -230,9 +233,9 @@ public class RewardHandler {
 					} else {
 						plugin.getLogger()
 								.warning(
-										"Detected that "
+										"Detected that a reward file named "
 												+ reward
-												+ " already exists, cannot load file "
+												+ " already exists, cannot load reward file "
 												+ file.getAbsolutePath() + "/"
 												+ reward);
 					}
