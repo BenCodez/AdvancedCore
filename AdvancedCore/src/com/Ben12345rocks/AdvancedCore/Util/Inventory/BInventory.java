@@ -18,6 +18,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -233,6 +234,8 @@ public class BInventory implements Listener {
 		HandlerList.unregisterAll(this);
 	}
 
+	private Inventory inv;
+
 	/**
 	 * Gets the buttons.
 	 *
@@ -301,6 +304,14 @@ public class BInventory implements Listener {
 	}
 
 	// event handling
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+	public void onInventoryClick(InventoryCloseEvent event) {
+		if (!(event.getPlayer() instanceof Player)) {
+			return;
+		}
+		destroy();
+		return;
+	}
 
 	/**
 	 * On inventory click.
@@ -317,7 +328,7 @@ public class BInventory implements Listener {
 		// Main.plugin.debug("Event ran");
 
 		Inventory inv = event.getInventory();
-		if (inv.getName().equalsIgnoreCase(getInventoryName())) {
+		if (inv.equals(inv)) {
 			// Main.plugin.debug("Inventory equal");
 
 			if (!pages) {
@@ -384,8 +395,8 @@ public class BInventory implements Listener {
 			pages = true;
 		}
 		if (!pages) {
-			Inventory inv = Bukkit.createInventory(player,
-					inventory.getInventorySize(), inventory.getInventoryName());
+			inv = Bukkit.createInventory(player, inventory.getInventorySize(),
+					inventory.getInventoryName());
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
 					.entrySet()) {
 				ItemStack item = pair.getValue().getItem();
@@ -421,8 +432,7 @@ public class BInventory implements Listener {
 	 */
 	private void openInventory(Player player, int page) {
 		BInventory inventory = this;
-		Inventory inv = Bukkit.createInventory(player, 54,
-				inventory.getInventoryName());
+		inv = Bukkit.createInventory(player, 54, inventory.getInventoryName());
 		this.page = page;
 		int startSlot = (page - 1) * 45;
 		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()

@@ -188,7 +188,7 @@ public class Main extends JavaPlugin {
 	 * Load commands.
 	 */
 	public void loadCommands() {
-		new CommandLoader().loadCommands();
+		CommandLoader.getInstance().loadCommands();
 		Bukkit.getPluginCommand("advancedcore").setExecutor(
 				new CommandAdvancedCore(plugin));
 		Bukkit.getPluginCommand("advancedcore").setTabCompleter(

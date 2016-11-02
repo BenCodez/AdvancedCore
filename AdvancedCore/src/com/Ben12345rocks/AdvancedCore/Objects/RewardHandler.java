@@ -100,7 +100,7 @@ public class RewardHandler {
 		reward = reward.replace(" ", "_");
 
 		for (Reward rewardFile : getRewards()) {
-			if (rewardFile.name.equals(reward)) {
+			if (rewardFile.name.equalsIgnoreCase(reward)) {
 				return rewardFile;
 			}
 		}
@@ -288,7 +288,7 @@ public class RewardHandler {
 			return false;
 		}
 		for (Reward rewardName : getRewards()) {
-			if (rewardName.getRewardName().equals(reward)) {
+			if (rewardName.getRewardName().equalsIgnoreCase(reward)) {
 				return true;
 			}
 		}

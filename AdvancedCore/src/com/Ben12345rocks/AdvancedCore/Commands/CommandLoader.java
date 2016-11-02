@@ -39,6 +39,24 @@ public class CommandLoader {
 	/** The plugin. */
 	Main plugin = Main.plugin;
 
+	/** The instance. */
+	static CommandLoader instance = new CommandLoader();
+
+	/**
+	 * Gets the single instance of CommandLoader.
+	 *
+	 * @return single instance of CommandLoader
+	 */
+	public static CommandLoader getInstance() {
+		return instance;
+	}
+
+	/**
+	 * Instantiates a new command loader.
+	 */
+	private CommandLoader() {
+	}
+
 	/**
 	 * Load commands.
 	 */
@@ -224,6 +242,32 @@ public class CommandLoader {
 								+ " the reward file " + args[1]);
 					}
 				});
+
+		plugin.advancedCoreCommands.add(new CommandHandler(
+				new String[] { "SelectChoiceReward" },
+				"AdvancedCore.SelectChoiceReward",
+				"Let user select his choice reward", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				new ValueRequest().requestString(
+						(Player) sender,
+						"",
+						Utils.getInstance().convertArray(
+								Utils.getInstance().convert(
+										UserManager.getInstance()
+												.getUser(sender.getName())
+												.getChoiceRewards())), true,
+						new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								player.performCommand("advancedcore selectchoicereward "
+										+ value);
+							}
+						});
+			}
+		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
 				"SelectChoiceReward", "(Reward)" },
