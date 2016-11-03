@@ -195,7 +195,7 @@ public abstract class CommandHandler {
 				commandText));
 		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA)
-				.create()));
+						.create()));
 		return txt;
 
 	}
@@ -355,6 +355,11 @@ public abstract class CommandHandler {
 		addTabCompleteOption("(list)", options);
 		addTabCompleteOption("(String)", options);
 		addTabCompleteOption("(number)", options);
+		ArrayList<String> rewards = new ArrayList<String>();
+		for (Reward reward : RewardHandler.getInstance().getRewards()) {
+			rewards.add(reward.getRewardName());
+		}
+		addTabCompleteOption("(reward)", rewards);
 
 	}
 
@@ -377,7 +382,7 @@ public abstract class CommandHandler {
 					if (!Utils.getInstance().isInt(args[i])) {
 						sender.sendMessage(Utils.getInstance().colorize(
 								Config.getInstance().getFormatNotNumber()
-								.replace("%arg%", args[i])));
+										.replace("%arg%", args[i])));
 						return true;
 					}
 				}
