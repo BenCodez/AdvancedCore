@@ -1,4 +1,5 @@
 /* Obtained from https://www.spigotmc.org/threads/libish-inventory-api-kinda.49339/
+ * and modified
  */
 
 package com.Ben12345rocks.AdvancedCore.Util.Inventory;
@@ -328,7 +329,8 @@ public class BInventory implements Listener {
 		// Main.plugin.debug("Event ran");
 
 		Inventory inv = event.getInventory();
-		if (inv.equals(inv)) {
+
+		if (this.inv != null && inv.equals(this.inv)) {
 			// Main.plugin.debug("Inventory equal");
 
 			if (!pages) {
