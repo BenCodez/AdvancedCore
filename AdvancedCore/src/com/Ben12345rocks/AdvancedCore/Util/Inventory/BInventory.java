@@ -237,6 +237,8 @@ public class BInventory implements Listener {
 
 	private Inventory inv;
 
+	private Player player;
+
 	/**
 	 * Gets the buttons.
 	 *
@@ -310,7 +312,11 @@ public class BInventory implements Listener {
 		if (!(event.getPlayer() instanceof Player)) {
 			return;
 		}
-		if (this.inv != null && inv.equals(this.inv)) {
+		if (this.inv != null
+				&& inv.equals(this.inv)
+				&& this.player != null
+				&& this.player.getUniqueId().equals(
+						((Player) event.getPlayer()).getUniqueId())) {
 			destroy();
 		}
 		return;
@@ -332,8 +338,11 @@ public class BInventory implements Listener {
 
 		Inventory inv = event.getInventory();
 
-		if (this.inv != null && inv.equals(this.inv)) {
-			// Main.plugin.debug("Inventory equal");
+		if (this.inv != null
+				&& inv.equals(this.inv)
+				&& this.player != null
+				&& this.player.getUniqueId().equals(
+						((Player) event.getWhoClicked()).getUniqueId())) {
 
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
@@ -393,6 +402,7 @@ public class BInventory implements Listener {
 	 */
 	public void openInventory(Player player) {
 		BInventory inventory = this;
+		this.player = player;
 
 		pages = false;
 		if (inventory.getHighestSlot() > 53) {
@@ -436,6 +446,7 @@ public class BInventory implements Listener {
 	 */
 	private void openInventory(Player player, int page) {
 		BInventory inventory = this;
+		this.player = player;
 		inv = Bukkit.createInventory(player, 54, inventory.getInventoryName());
 		this.page = page;
 		int startSlot = (page - 1) * 45;
