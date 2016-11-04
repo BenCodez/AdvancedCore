@@ -310,7 +310,9 @@ public class BInventory implements Listener {
 		if (!(event.getPlayer() instanceof Player)) {
 			return;
 		}
-		destroy();
+		if (this.inv != null && inv.equals(this.inv)) {
+			destroy();
+		}
 		return;
 	}
 
