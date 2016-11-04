@@ -3,7 +3,6 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -149,12 +148,20 @@ public class User {
 		return getRawData().getInt("ChoiceRewards." + reward.name);
 	}
 
-	public Set<String> getChoiceRewards() {
+	public ArrayList<String> getChoiceRewards() {
 		if (getRawData().isConfigurationSection("ChoiceRewards")) {
-			return getRawData().getConfigurationSection("ChoiceRewards")
-					.getKeys(false);
+			Set<String> set = getRawData().getConfigurationSection(
+					"ChoiceRewards").getKeys(false);
+			ArrayList<String> rewards = new ArrayList<String>();
+			for (String reward : set) {
+				if (getChoiceReward(RewardHandler.getInstance().getReward(
+						reward)) != 0) {
+					rewards.add(reward);
+				}
+			}
+			return rewards;
 		}
-		return new HashSet<String>();
+		return new ArrayList<String>();
 	}
 
 	/**

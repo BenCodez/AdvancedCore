@@ -254,10 +254,10 @@ public class CommandLoader {
 						(Player) sender,
 						"",
 						Utils.getInstance().convertArray(
-								Utils.getInstance().convert(
-										UserManager.getInstance()
-												.getUser(sender.getName())
-												.getChoiceRewards())), true,
+
+								UserManager.getInstance()
+										.getUser(sender.getName())
+										.getChoiceRewards()), true,
 						new StringListener() {
 
 							@Override
