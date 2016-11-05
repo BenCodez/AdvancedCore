@@ -54,6 +54,7 @@ public class RewardHandler {
 	 */
 	public void addRewardFolder(File file) {
 		if (file.isDirectory()) {
+			file.mkdirs();
 			rewardFolders.add(file);
 			loadRewards();
 		}
