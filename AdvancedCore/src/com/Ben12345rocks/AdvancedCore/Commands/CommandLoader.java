@@ -13,7 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.AdminGUI;
-import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardGUI;
+import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardEditGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
@@ -42,6 +42,8 @@ public class CommandLoader {
 	/** The instance. */
 	static CommandLoader instance = new CommandLoader();
 
+	private ArrayList<String> perms = new ArrayList<String>();
+
 	/**
 	 * Gets the single instance of CommandLoader.
 	 *
@@ -49,6 +51,12 @@ public class CommandLoader {
 	 */
 	public static CommandLoader getInstance() {
 		return instance;
+	}
+
+	public void addPermission(String perm) {
+		if (!perms.contains(perm)) {
+			perms.add(perm);
+		}
 	}
 
 	/**
@@ -61,6 +69,9 @@ public class CommandLoader {
 	 * Load commands.
 	 */
 	public void loadCommands() {
+		addPermission("AdvancedCore.RewardEdit");
+		addPermission("AdvancedCore.UserEdit");
+		addPermission("AdvancedCore.AdminEdit");
 		plugin.advancedCoreCommands = new ArrayList<CommandHandler>();
 		plugin.advancedCoreCommands.add(new CommandHandler(
 				new String[] { "Reload" }, "AdvancedCore.Reload",
@@ -85,7 +96,9 @@ public class CommandLoader {
 						msg.add(Utils.getInstance().stringToComp(
 								"&c" + plugin.getName() + " help"));
 						for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
-							msg.add(cmdHandle.getHelpLine("/advancedcore"));
+							if (sender.hasPermission(cmdHandle.getPerm())) {
+								msg.add(cmdHandle.getHelpLine("/advancedcore"));
+							}
 						}
 						if (sender instanceof Player) {
 							UserManager.getInstance().getUser((Player) sender)
@@ -158,6 +171,11 @@ public class CommandLoader {
 				for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
 					msg.add(cmdHandle.getPerm());
 				}
+				for (String perm : perms) {
+					if (!msg.contains(perm)) {
+						msg.add(perm);
+					}
+				}
 				if (sender instanceof Player) {
 					UserManager.getInstance().getUser((Player) sender)
 							.sendMessage(msg);
@@ -168,7 +186,8 @@ public class CommandLoader {
 		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(
-				new String[] { "GUI" }, "AdvancedCore.GUI", "Open GUI", false) {
+				new String[] { "GUI" }, "AdvancedCore.AdminGUI",
+				"Open AdminGUI", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -188,18 +207,18 @@ public class CommandLoader {
 		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(
-				new String[] { "Rewards" }, "AdvancedCore.GUI",
+				new String[] { "Rewards" }, "AdvancedCore.RewardEdit",
 				"Open RewardGUI", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				RewardGUI.getInstance().openRewardsGUI((Player) sender);
+				RewardEditGUI.getInstance().openRewardsGUI((Player) sender);
 			}
 		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(
-				new String[] { "Users" }, "AdvancedCore.GUI", "Open UserGUI",
-				false) {
+				new String[] { "Users" }, "AdvancedCore.UserEdit",
+				"Open UserGUI", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -208,7 +227,7 @@ public class CommandLoader {
 		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
-				"Users", "(Player)" }, "AdvancedCore.GUI", "Open UserGUI",
+				"Users", "(Player)" }, "AdvancedCore.UserEdit", "Open UserGUI",
 				false) {
 
 			@Override
@@ -218,12 +237,13 @@ public class CommandLoader {
 		});
 
 		plugin.advancedCoreCommands.add(new CommandHandler(new String[] {
-				"Rewards", "(Reward)" }, "AdvancedCore.GUI", "Open GUI Reward",
-				false) {
+				"Rewards", "(Reward)" }, "AdvancedCore.RewardEdit",
+				"Open GUI Reward", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				RewardGUI.getInstance().openRewardGUI((Player) sender, args[1]);
+				RewardEditGUI.getInstance().openRewardGUI((Player) sender,
+						args[1]);
 			}
 		});
 

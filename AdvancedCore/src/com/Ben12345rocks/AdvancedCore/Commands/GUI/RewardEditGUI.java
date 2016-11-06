@@ -26,17 +26,17 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener
 /**
  * The Class RewardGUI.
  */
-public class RewardGUI {
+public class RewardEditGUI {
 
 	/** The instance. */
-	static RewardGUI instance = new RewardGUI();
+	static RewardEditGUI instance = new RewardEditGUI();
 
 	/**
 	 * Gets the single instance of RewardGUI.
 	 *
 	 * @return single instance of RewardGUI
 	 */
-	public static RewardGUI getInstance() {
+	public static RewardEditGUI getInstance() {
 		return instance;
 	}
 
@@ -46,7 +46,7 @@ public class RewardGUI {
 	/**
 	 * Instantiates a new reward GUI.
 	 */
-	private RewardGUI() {
+	private RewardEditGUI() {
 	}
 
 	/**
@@ -69,6 +69,10 @@ public class RewardGUI {
 	 *            the reward name
 	 */
 	public void openRewardGUI(Player player, String rewardName) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		Reward reward = RewardHandler.getInstance().getReward(rewardName);
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 
@@ -107,6 +111,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIAdvanced(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 
@@ -160,6 +168,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIBasic(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 		// edit chance
@@ -275,6 +287,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUICommands(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 		inv.addButton(inv.getNextSlot(), new BInventoryButton(
@@ -441,6 +457,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIExp(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("SetExp",
@@ -550,6 +570,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIItems(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 		ArrayList<String> lore = new ArrayList<String>();
@@ -674,6 +698,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIMessages(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 		inv.addButton(inv.getNextSlot(), new BInventoryButton(
@@ -737,6 +765,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIMoney(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("SetMoney",
@@ -847,6 +879,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIPermission(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 		inv.addButton(inv.getNextSlot(), new BInventoryButton(
@@ -923,6 +959,10 @@ public class RewardGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIWorlds(Player player, Reward reward) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 
@@ -1026,6 +1066,10 @@ public class RewardGUI {
 	 *            the player
 	 */
 	public void openRewardsGUI(Player player) {
+		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
 		BInventory inv = new BInventory("Rewards");
 		int count = 0;
 		for (Reward reward : RewardHandler.getInstance().getRewards()) {

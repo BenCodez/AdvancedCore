@@ -221,37 +221,37 @@ public class Reward {
 
 	/** The title enabled. */
 	private boolean titleEnabled;
-	
+
 	/** The title title. */
 	private String titleTitle;
-	
+
 	/** The title sub title. */
 	private String titleSubTitle;
-	
+
 	/** The title fade in. */
 	private int titleFadeIn;
-	
+
 	/** The title show time. */
 	private int titleShowTime;
-	
+
 	/** The title fade out. */
 	private int titleFadeOut;
 
 	/** The sound enabled. */
 	private boolean soundEnabled;
-	
+
 	/** The sound sound. */
 	private String soundSound;
-	
+
 	/** The sound volume. */
 	private float soundVolume;
-	
+
 	/** The sound pitch. */
 	private float soundPitch;
 
 	/** The effect enabled. */
 	private boolean effectEnabled;
-	
+
 	/** The effect effect. */
 	private String effectEffect;
 
@@ -572,10 +572,10 @@ public class Reward {
 
 	/** The effect data. */
 	private int effectData;
-	
+
 	/** The effect particles. */
 	private int effectParticles;
-	
+
 	/** The effect radius. */
 	private int effectRadius;
 

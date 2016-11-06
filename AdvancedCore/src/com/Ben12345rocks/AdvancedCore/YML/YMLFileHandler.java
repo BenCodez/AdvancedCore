@@ -1,18 +1,16 @@
 package com.Ben12345rocks.AdvancedCore.YML;
 
 import java.io.File;
-import java.io.IOException;
 
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 
 public class YMLFileHandler extends YMLFile {
+	@SuppressWarnings("unused")
 	private File file;
-	private boolean create;
 
-	public YMLFileHandler(File file, boolean create) {
+	public YMLFileHandler(File file) {
 		super(file);
 		this.file = file;
-		this.create = create;
 		if (file.isDirectory()) {
 			try {
 				throw new FileDirectoryException(file.getAbsolutePath()
@@ -25,15 +23,6 @@ public class YMLFileHandler extends YMLFile {
 
 	@Override
 	public void onFileCreation() {
-		if (create) {
-			file.getParentFile().mkdirs();
-			if (!file.exists()) {
-				try {
-					file.createNewFile();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
+
 	}
 }

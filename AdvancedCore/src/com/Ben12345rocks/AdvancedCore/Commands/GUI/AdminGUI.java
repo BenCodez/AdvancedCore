@@ -21,7 +21,7 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener
  * The Class AdminGUI.
  */
 public class AdminGUI {
-	
+
 	/** The instance. */
 	static AdminGUI instance = new AdminGUI();
 
@@ -66,6 +66,10 @@ public class AdminGUI {
 	 *            the player
 	 */
 	public void openGUI(Player player) {
+		if (!player.hasPermission("AdvancedCore.AdminEdit")) {
+			player.sendMessage("Not enough permissions");
+			return;
+		}
 		BInventory inv = new BInventory("AdminGUI");
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("&cRewards",
 				new String[] { "&cMiddle click to create" }, new ItemStack(
@@ -88,7 +92,7 @@ public class AdminGUI {
 								}
 							});
 				} else {
-					RewardGUI.getInstance().openRewardsGUI(player);
+					RewardEditGUI.getInstance().openRewardsGUI(player);
 				}
 			}
 		});
@@ -133,6 +137,10 @@ public class AdminGUI {
 	 *            the player
 	 */
 	public void openConfigGUI(Player player) {
+		if (!player.hasPermission("AdvancedCore.AdminEdit")) {
+			player.sendMessage("Not enough permissions");
+			return;
+		}
 		BInventory inv = new BInventory("Config");
 		inv.addButton(inv.getNextSlot(), new BInventoryButton("Debug",
 				new String[] { "Currently: "

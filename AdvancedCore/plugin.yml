@@ -6,3 +6,12 @@ commands:
   advancedcore:
     description: Plugin command
     aliases: acore
+permissions:
+  AdvancedCore.Player:
+    description: Allows basic access player commands
+    default: true
+    children:
+      AdvancedCore.ValueRequest: true
+      AdvancedCore.SelectChoiceReward: true
+      AdvancedCore.SetRequestMethod: true
+      AdvancedCore.Help: true

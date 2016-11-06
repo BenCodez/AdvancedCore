@@ -17,19 +17,19 @@ import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
  * The Class RewardFileData.
  */
 public class RewardFileData {
-	
+
 	/** The plugin. */
 	Main plugin = Main.plugin;
 
 	/** The reward. */
 	private Reward reward;
-	
+
 	/** The reward folder. */
 	private File rewardFolder;
-	
+
 	/** The d file. */
 	private File dFile;
-	
+
 	/** The data. */
 	private FileConfiguration data;
 
