@@ -743,6 +743,10 @@ public class Reward {
 		load(new File(plugin.getDataFolder(), "Rewards"), reward);
 	}
 
+	public ItemStack getItem() {
+		return new ItemStack(Material.STONE);
+	}
+
 	/**
 	 * Check chance.
 	 *
@@ -1389,6 +1393,32 @@ public class Reward {
 		user.giveExp(exp);
 	}
 
+	public ItemStack getItemStack(User user, String item) {
+		ItemStack itemStack = new ItemStack(Material.valueOf(getItemMaterial()
+				.get(item)), getItemAmount(item), Short.valueOf(Integer
+				.toString(getItemData().get(item))));
+		itemsAndAmountsGiven.put(item, itemStack.getAmount());
+		String name = getItemName().get(item);
+		if (name != null) {
+			itemStack = Utils.getInstance().nameItem(itemStack,
+					name.replace("%Player%", user.getPlayerName()));
+		}
+		itemStack = Utils.getInstance().addLore(
+				itemStack,
+				Utils.getInstance().replace(getItemLore().get(item),
+						"%Player%", user.getPlayerName()));
+		itemStack = Utils.getInstance().addEnchants(itemStack,
+				getItemEnchants().get(item));
+		itemStack = Utils.getInstance().setDurabilty(itemStack,
+				getItemDurabilty().get(item));
+		String skull = getItemSkull().get(item);
+		if (skull != null) {
+			itemStack = Utils.getInstance().setSkullOwner(itemStack,
+					skull.replace("%Player%", user.getPlayerName()));
+		}
+		return itemStack;
+	}
+
 	/**
 	 * Give items.
 	 *
@@ -1398,30 +1428,7 @@ public class Reward {
 	public void giveItems(User user) {
 		itemsAndAmountsGiven = new HashMap<String, Integer>();
 		for (String item : getItems()) {
-			ItemStack itemStack = new ItemStack(
-					Material.valueOf(getItemMaterial().get(item)),
-					getItemAmount(item), Short.valueOf(Integer
-							.toString(getItemData().get(item))));
-			itemsAndAmountsGiven.put(item, itemStack.getAmount());
-			String name = getItemName().get(item);
-			if (name != null) {
-				itemStack = Utils.getInstance().nameItem(itemStack,
-						name.replace("%Player%", user.getPlayerName()));
-			}
-			itemStack = Utils.getInstance().addLore(
-					itemStack,
-					Utils.getInstance().replace(getItemLore().get(item),
-							"%Player%", user.getPlayerName()));
-			itemStack = Utils.getInstance().addEnchants(itemStack,
-					getItemEnchants().get(item));
-			itemStack = Utils.getInstance().setDurabilty(itemStack,
-					getItemDurabilty().get(item));
-			String skull = getItemSkull().get(item);
-			if (skull != null) {
-				itemStack = Utils.getInstance().setSkullOwner(itemStack,
-						skull.replace("%Player%", user.getPlayerName()));
-			}
-			user.giveItem(itemStack);
+			user.giveItem(getItemStack(user, item));
 		}
 	}
 
