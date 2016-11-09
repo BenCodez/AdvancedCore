@@ -54,12 +54,12 @@ public class RewardHandler {
 	 *            the file
 	 */
 	public void addRewardFolder(File file) {
+		file.mkdirs();
 		if (file.isDirectory()) {
-			file.mkdirs();
-			file.mkdir();
 			rewardFolders.add(file);
 			loadRewards();
 		} else {
+			plugin.debug(file.getAbsolutePath());
 			try {
 				throw new FileDirectoryException("File is not a directory");
 			} catch (FileDirectoryException e) {
