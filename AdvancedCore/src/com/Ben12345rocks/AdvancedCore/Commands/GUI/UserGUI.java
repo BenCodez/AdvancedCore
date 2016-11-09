@@ -79,19 +79,23 @@ public class UserGUI {
 	 *            the player name
 	 */
 	public void openUserGUI(Player player, String playerName) {
+		if (!player.hasPermission("AdvancedCore.UserEdit")) {
+			player.sendMessage("Not enough permissions");
+			return;
+		}
 		BInventory inv = new BInventory("UserGUI: " + playerName);
 
 		for (Entry<Plugin, BInventory> entry : pluginButtons.entrySet()) {
 			inv.addButton(inv.getNextSlot(), new BInventoryButton(entry
 					.getKey().getName(), new String[] {}, new ItemStack(
-							Material.STONE)) {
+					Material.STONE)) {
 
 				@Override
 				public void onClick(ClickEvent clickEvent) {
 					for (Plugin p : pluginButtons.keySet()) {
 						if (p.getName().equals(
 								clickEvent.getClickedItem().getItemMeta()
-								.getDisplayName())) {
+										.getDisplayName())) {
 							pluginButtons.get(p).openInventory(player);
 							return;
 						}
@@ -110,6 +114,11 @@ public class UserGUI {
 	 *            the player
 	 */
 	public void openUsersGUI(Player player) {
+		if (!player.hasPermission("AdvancedCore.UserEdit")) {
+			player.sendMessage("Not enough permissions");
+			return;
+		}
+
 		ArrayList<String> players = new ArrayList<String>();
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			players.add(p.getName());

@@ -1,8 +1,17 @@
 name: AdvancedCore
-version: 1.8.6
+version: 1.9
 main: com.Ben12345rocks.AdvancedCore.Main
 softdepend: [ProtocolLib, Vault]
 commands:
   advancedcore:
     description: Plugin command
     aliases: acore
+permissions:
+  AdvancedCore.Player:
+    description: Allows basic access player commands
+    default: true
+    children:
+      AdvancedCore.ValueRequest: true
+      AdvancedCore.SelectChoiceReward: true
+      AdvancedCore.SetRequestMethod: true
+      AdvancedCore.Help: true

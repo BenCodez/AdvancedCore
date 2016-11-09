@@ -7,6 +7,7 @@ import java.util.Date;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 /**
@@ -53,10 +54,17 @@ public class RewardHandler {
 	 *            the file
 	 */
 	public void addRewardFolder(File file) {
+		file.mkdirs();
 		if (file.isDirectory()) {
-			file.mkdirs();
 			rewardFolders.add(file);
 			loadRewards();
+		} else {
+			plugin.debug(file.getAbsolutePath());
+			try {
+				throw new FileDirectoryException("File is not a directory");
+			} catch (FileDirectoryException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
