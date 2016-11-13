@@ -270,8 +270,7 @@ public class Reward {
 	 * @param itemsAndAmountsGiven
 	 *            the items and amounts given
 	 */
-	public void setItemsAndAmountsGiven(
-			HashMap<String, Integer> itemsAndAmountsGiven) {
+	public void setItemsAndAmountsGiven(HashMap<String, Integer> itemsAndAmountsGiven) {
 		this.itemsAndAmountsGiven = itemsAndAmountsGiven;
 	}
 
@@ -649,8 +648,7 @@ public class Reward {
 			itemSkull.put(item, getConfig().getItemSkull(item));
 			HashMap<String, Integer> enchants = new HashMap<String, Integer>();
 			for (String enchant : getConfig().getItemEnchants(item)) {
-				enchants.put(enchant,
-						getConfig().getItemEnchantsLevel(item, enchant));
+				enchants.put(enchant, getConfig().getItemEnchantsLevel(item, enchant));
 
 			}
 			itemEnchants.put(item, enchants);
@@ -672,8 +670,7 @@ public class Reward {
 		potionsAmplifier = new HashMap<String, Integer>();
 		for (String potion : potions) {
 			potionsDuration.put(potion, getConfig().getPotionsDuration(potion));
-			potionsAmplifier.put(potion, getConfig()
-					.getPotionsAmplifier(potion));
+			potionsAmplifier.put(potion, getConfig().getPotionsAmplifier(potion));
 		}
 
 		setRewardMsg(getConfig().getMessagesReward());
@@ -802,8 +799,7 @@ public class Reward {
 		time = DateUtils.addMinutes(time, getDelayMinutes());
 		user.addTimedReward(this, time.getTime());
 
-		plugin.debug("Giving reward " + name + " in " + getDelayHours()
-				+ " hours " + getDelayMinutes() + " minutes ("
+		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours " + getDelayMinutes() + " minutes ("
 				+ time.toString() + ")");
 		return true;
 
@@ -1394,27 +1390,20 @@ public class Reward {
 	}
 
 	public ItemStack getItemStack(User user, String item) {
-		ItemStack itemStack = new ItemStack(Material.valueOf(getItemMaterial()
-				.get(item)), getItemAmount(item), Short.valueOf(Integer
-				.toString(getItemData().get(item))));
+		ItemStack itemStack = new ItemStack(Material.valueOf(getItemMaterial().get(item)), getItemAmount(item),
+				Short.valueOf(Integer.toString(getItemData().get(item))));
 		itemsAndAmountsGiven.put(item, itemStack.getAmount());
 		String name = getItemName().get(item);
 		if (name != null) {
-			itemStack = Utils.getInstance().nameItem(itemStack,
-					name.replace("%Player%", user.getPlayerName()));
+			itemStack = Utils.getInstance().nameItem(itemStack, name.replace("%Player%", user.getPlayerName()));
 		}
-		itemStack = Utils.getInstance().addLore(
-				itemStack,
-				Utils.getInstance().replace(getItemLore().get(item),
-						"%Player%", user.getPlayerName()));
-		itemStack = Utils.getInstance().addEnchants(itemStack,
-				getItemEnchants().get(item));
-		itemStack = Utils.getInstance().setDurabilty(itemStack,
-				getItemDurabilty().get(item));
+		itemStack = Utils.getInstance().addLore(itemStack,
+				Utils.getInstance().replace(getItemLore().get(item), "%Player%", user.getPlayerName()));
+		itemStack = Utils.getInstance().addEnchants(itemStack, getItemEnchants().get(item));
+		itemStack = Utils.getInstance().setDurabilty(itemStack, getItemDurabilty().get(item));
 		String skull = getItemSkull().get(item);
 		if (skull != null) {
-			itemStack = Utils.getInstance().setSkullOwner(itemStack,
-					skull.replace("%Player%", user.getPlayerName()));
+			itemStack = Utils.getInstance().setSkullOwner(itemStack, skull.replace("%Player%", user.getPlayerName()));
 		}
 		return itemStack;
 	}
@@ -1452,9 +1441,8 @@ public class Reward {
 	 */
 	public void givePotions(User user) {
 		for (String potionName : getPotions()) {
-			user.givePotionEffect(potionName,
-					getPotionsDuration().get(potionName), getPotionsAmplifier()
-							.get(potionName));
+			user.givePotionEffect(potionName, getPotionsDuration().get(potionName),
+					getPotionsAmplifier().get(potionName));
 		}
 	}
 
@@ -1471,19 +1459,16 @@ public class Reward {
 			ArrayList<String> rewards = getRandomRewards();
 			if (rewards != null) {
 				if (rewards.size() > 0) {
-					String reward = rewards.get((int) Math.random()
-							* rewards.size());
+					String reward = rewards.get((int) Math.random() * rewards.size());
 					if (!reward.equals("")) {
-						RewardHandler.getInstance().giveReward(user, reward,
-								online);
+						RewardHandler.getInstance().giveReward(user, reward, online);
 					}
 				}
 			}
 		} else {
 			for (String reward : getRandomFallBack()) {
 				if (!reward.equals("")) {
-					RewardHandler.getInstance()
-							.giveReward(user, reward, online);
+					RewardHandler.getInstance().giveReward(user, reward, online);
 				}
 			}
 		}
@@ -1548,8 +1533,7 @@ public class Reward {
 	 *            the online
 	 */
 	public void giveRewardReward(User user, boolean online) {
-		plugin.debug("Attempting to give " + user.getPlayerName() + " reward "
-				+ name);
+		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 
 		String type = getRewardType();
 		if (online) {
@@ -1574,8 +1558,7 @@ public class Reward {
 							giveRewardUser(user);
 						} else {
 							user.setOfflineRewardWorld(getRewardName(), world,
-									user.getOfflineRewardWorld(getRewardName(),
-											world) + 1);
+									user.getOfflineRewardWorld(getRewardName(), world) + 1);
 						}
 					}
 				} else {
@@ -1584,8 +1567,7 @@ public class Reward {
 
 					} else {
 						user.setOfflineRewardWorld(getRewardName(), null,
-								user.getOfflineRewardWorld(getRewardName(),
-										null) + 1);
+								user.getOfflineRewardWorld(getRewardName(), null) + 1);
 
 					}
 				}
@@ -1641,8 +1623,7 @@ public class Reward {
 		if (!isRequirePermission()) {
 			return true;
 		}
-		return Utils.getInstance().hasServerPermission(user.getPlayerName(),
-				permission);
+		return Utils.getInstance().hasServerPermission(user.getPlayerName(), permission);
 	}
 
 	/**
@@ -1752,8 +1733,7 @@ public class Reward {
 	 */
 	public void playEffect(User user) {
 		if (effectEnabled) {
-			user.playParticleEffect(effectEffect, effectData, effectParticles,
-					effectRadius);
+			user.playParticleEffect(effectEffect, effectData, effectParticles, effectRadius);
 		}
 	}
 
@@ -1794,8 +1774,7 @@ public class Reward {
 
 						@Override
 						public void run() {
-							Bukkit.getServer().dispatchCommand(
-									Bukkit.getConsoleSender(), cmd);
+							Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
 						}
 					});
 
@@ -1835,8 +1814,15 @@ public class Reward {
 	 */
 	public void runJavascript(User user, boolean online) {
 		if (isJavascriptEnabled()) {
-			new JavascriptHandler(user, online, getJavascriptExpression(),
-					getJavascriptTrueRewards(), getJavascriptFalseRewards());
+			if (JavascriptHandler.getInstance().evalute(user, getJavascriptExpression())) {
+				for (String reward : getJavascriptTrueRewards()) {
+					RewardHandler.getInstance().giveReward(user, reward, online);
+				}
+			} else {
+				for (String reward : getJavascriptFalseRewards()) {
+					RewardHandler.getInstance().giveReward(user, reward, online);
+				}
+			}
 		}
 	}
 
@@ -1858,8 +1844,8 @@ public class Reward {
 	 */
 	public void sendBossBar(User user) {
 		if (isBossBarEnabled()) {
-			user.sendBossBar(getBossBarMessage(), getBossBarColor(),
-					getBossBarStyle(), getBossBarProgress(), getBossBarDelay());
+			user.sendBossBar(getBossBarMessage(), getBossBarColor(), getBossBarStyle(), getBossBarProgress(),
+					getBossBarDelay());
 		}
 	}
 
@@ -1871,10 +1857,8 @@ public class Reward {
 	 */
 	public void sendFirework(User user) {
 		if (isFireworkEnabled()) {
-			Utils.getInstance().launchFirework(user.getPlayer().getLocation(),
-					getFireworkPower(), getFireworkColors(),
-					getFireworkFadeOutColors(), isFireworkTrail(),
-					isFireworkFlicker(), getFireworkTypes());
+			Utils.getInstance().launchFirework(user.getPlayer().getLocation(), getFireworkPower(), getFireworkColors(),
+					getFireworkFadeOutColors(), isFireworkTrail(), isFireworkFlicker(), getFireworkTypes());
 		}
 	}
 
@@ -1893,41 +1877,26 @@ public class Reward {
 		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
 			itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
 		}
-		String itemsAndAmountsMsg = Utils.getInstance().makeStringList(
-				itemsAndAmounts);
+		String itemsAndAmountsMsg = Utils.getInstance().makeStringList(itemsAndAmounts);
 
 		String broadcastMsg = this.broadcastMsg;
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
-				"player", user.getPlayerName());
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "player", user.getPlayerName());
 
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
-				"money", "" + money);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
-				"exp", "" + exp);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
-				"itemsandamount", itemsAndAmountsMsg);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(
-				broadcastMsg,
-				"items",
-				Utils.getInstance().makeStringList(
-						Utils.getInstance().convert(getItems())));
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "money", "" + money);
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "exp", "" + exp);
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "itemsandamount", itemsAndAmountsMsg);
+		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "items",
+				Utils.getInstance().makeStringList(Utils.getInstance().convert(getItems())));
 
-		Utils.getInstance().broadcast(
-				Utils.getInstance().replacePlaceHolders(user.getPlayer(),
-						broadcastMsg));
+		Utils.getInstance().broadcast(Utils.getInstance().replacePlaceHolders(user.getPlayer(), broadcastMsg));
 
-		String msg = Utils.getInstance().replacePlaceHolder(rewardMsg,
-				"player", user.getPlayerName());
+		String msg = Utils.getInstance().replacePlaceHolder(rewardMsg, "player", user.getPlayerName());
 
 		msg = Utils.getInstance().replacePlaceHolder(msg, "money", "" + money);
 		msg = Utils.getInstance().replacePlaceHolder(msg, "exp", "" + exp);
-		msg = Utils.getInstance().replacePlaceHolder(msg, "itemsandamount",
-				itemsAndAmountsMsg);
-		msg = Utils.getInstance().replacePlaceHolder(
-				msg,
-				"items",
-				Utils.getInstance().makeStringList(
-						Utils.getInstance().convert(getItems())));
+		msg = Utils.getInstance().replacePlaceHolder(msg, "itemsandamount", itemsAndAmountsMsg);
+		msg = Utils.getInstance().replacePlaceHolder(msg, "items",
+				Utils.getInstance().makeStringList(Utils.getInstance().convert(getItems())));
 
 		user.sendMessage(msg);
 
@@ -1943,9 +1912,9 @@ public class Reward {
 		if (titleEnabled) {
 			user.sendTitle(titleTitle,
 
-			titleSubTitle,
+					titleSubTitle,
 
-			titleFadeIn, titleShowTime, titleFadeOut);
+					titleFadeIn, titleShowTime, titleFadeOut);
 		}
 	}
 
@@ -2244,8 +2213,7 @@ public class Reward {
 	 * @param itemEnchants
 	 *            the item enchants
 	 */
-	public void setItemEnchants(
-			HashMap<String, HashMap<String, Integer>> itemEnchants) {
+	public void setItemEnchants(HashMap<String, HashMap<String, Integer>> itemEnchants) {
 		this.itemEnchants = itemEnchants;
 	}
 
@@ -2345,8 +2313,7 @@ public class Reward {
 	 * @param javascriptFalseRewards
 	 *            the new javascript false rewards
 	 */
-	public void setJavascriptFalseRewards(
-			ArrayList<String> javascriptFalseRewards) {
+	public void setJavascriptFalseRewards(ArrayList<String> javascriptFalseRewards) {
 		this.javascriptFalseRewards = javascriptFalseRewards;
 	}
 

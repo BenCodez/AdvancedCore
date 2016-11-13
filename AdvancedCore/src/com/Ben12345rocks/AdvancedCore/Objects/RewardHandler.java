@@ -72,29 +72,27 @@ public class RewardHandler {
 	 * Check delayed timed rewards.
 	 */
 	public synchronized void checkDelayedTimedRewards() {
-		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(
-				new Runnable() {
+		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(new Runnable() {
 
-					@Override
-					public void run() {
-						for (User user : UserManager.getInstance().getUsers()) {
-							for (Reward reward : getRewards()) {
-								ArrayList<Long> times = user
-										.getTimedReward(reward);
-								for (Long t : times) {
-									long time = t.longValue();
-									if (time != 0) {
-										Date timeDate = new Date(time);
-										if (new Date().after(timeDate)) {
-											reward.giveRewardReward(user, true);
-											user.removeTimedReward(reward, time);
-										}
-									}
+			@Override
+			public void run() {
+				for (User user : UserManager.getInstance().getUsers()) {
+					for (Reward reward : getRewards()) {
+						ArrayList<Long> times = user.getTimedReward(reward);
+						for (Long t : times) {
+							long time = t.longValue();
+							if (time != 0) {
+								Date timeDate = new Date(time);
+								if (new Date().after(timeDate)) {
+									reward.giveRewardReward(user, true);
+									user.removeTimedReward(reward, time);
 								}
 							}
 						}
 					}
-				});
+				}
+			}
+		});
 
 	}
 
@@ -115,9 +113,7 @@ public class RewardHandler {
 		}
 
 		if (reward.equals("")) {
-			plugin.getLogger()
-					.warning(
-							"Tried to get any empty reward file name, renaming to EmptyName");
+			plugin.getLogger().warning("Tried to get any empty reward file name, renaming to EmptyName");
 			reward = "EmptyName";
 		}
 
@@ -137,7 +133,7 @@ public class RewardHandler {
 	}
 
 	/**
-	 * Give reward.
+	 * Give a user reward file
 	 *
 	 * @param user
 	 *            the user
@@ -149,7 +145,41 @@ public class RewardHandler {
 	}
 
 	/**
-	 * Give reward.
+	 * Give a user multiple rewards
+	 * 
+	 * @param user
+	 *            the user
+	 * @param rewards
+	 *            rewards
+	 */
+	public void giveReward(User user, Reward... rewards) {
+		for (Reward reward : rewards) {
+			giveReward(user, reward);
+		}
+	}
+
+	/**
+	 * Give a user multiple rewards
+	 * 
+	 * @param user
+	 *            the user
+	 * @param rewards
+	 *            rewards
+	 */
+	public void giveReward(User user, String... rewards) {
+		for (String reward : rewards) {
+			giveReward(user, reward);
+		}
+	}
+
+	public void giveReward(User user, boolean online, String... rewards) {
+		for (String reward : rewards) {
+			giveReward(user, reward, online);
+		}
+	}
+
+	/**
+	 * Give reward
 	 *
 	 * @param user
 	 *            the user
@@ -204,8 +234,7 @@ public class RewardHandler {
 	 * @param giveOffline
 	 *            the give offline
 	 */
-	public void giveReward(User user, Reward reward, boolean online,
-			boolean giveOffline) {
+	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline) {
 		reward.giveReward(user, online, giveOffline);
 	}
 
@@ -221,8 +250,7 @@ public class RewardHandler {
 	 * @param giveOffline
 	 *            the give offline
 	 */
-	public void giveReward(User user, String reward, boolean online,
-			boolean giveOffline) {
+	public void giveReward(User user, String reward, boolean online, boolean giveOffline) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), online, giveOffline);
 		}
@@ -240,18 +268,12 @@ public class RewardHandler {
 					if (!rewardExist(reward)) {
 						rewards.add(new Reward(file, reward));
 					} else {
-						plugin.getLogger()
-								.warning(
-										"Detected that a reward file named "
-												+ reward
-												+ " already exists, cannot load reward file "
-												+ file.getAbsolutePath() + "/"
-												+ reward);
+						plugin.getLogger().warning("Detected that a reward file named " + reward
+								+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
 					}
 				} else {
-					plugin.getLogger()
-							.warning(
-									"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
+					plugin.getLogger().warning(
+							"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
 				}
 			}
 		}
@@ -266,8 +288,7 @@ public class RewardHandler {
 	 *            the file name
 	 */
 	private void copyFile(String fileName) {
-		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator
-				+ fileName);
+		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator + fileName);
 		if (!file.exists()) {
 			plugin.saveResource("Rewards" + File.separator + fileName, true);
 		}

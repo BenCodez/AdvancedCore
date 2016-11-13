@@ -1,7 +1,5 @@
 package com.Ben12345rocks.AdvancedCore.Util.Javascript;
 
-import java.util.ArrayList;
-
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
@@ -11,34 +9,44 @@ import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
-import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 /**
  * The Class JavascriptHandler.
  */
 public class JavascriptHandler {
 
+	/** The instance. */
+	static JavascriptHandler instance = new JavascriptHandler();
+
+	/** The plugin. */
+	@SuppressWarnings("unused")
+	private Main plugin = Main.plugin;
+
 	/**
-	 * Instantiates a new javascript handler.
+	 * Gets the single instance of JavascriptHandler.
 	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 * @param expression
-	 *            the expression
-	 * @param trueRewards
-	 *            the true rewards
-	 * @param falseRewards
-	 *            the false rewards
+	 * @return single instance of JavascriptHandler
 	 */
-	public JavascriptHandler(User user, boolean online, String expression,
-			ArrayList<String> trueRewards, ArrayList<String> falseRewards) {
+	public static JavascriptHandler getInstance() {
+		return instance;
+	}
+
+	/**
+	 * Instantiates a new JavascriptHandler.
+	 */
+	private JavascriptHandler() {
+	}
+
+	public boolean evalute(User user, String expression) {
+		return evalute(user.getPlayer(), expression);
+	}
+
+	public boolean evalute(Player player, String expression) {
 		ScriptEngine engine = null;
-		Player player = user.getPlayer();
 		if (player == null || expression.equals("")) {
-			return;
+			return false;
 		}
 
 		if (engine == null) {
@@ -46,43 +54,20 @@ public class JavascriptHandler {
 			engine.put("BukkitServer", Bukkit.getServer());
 		}
 
-		String exp = Utils.getInstance()
-				.replacePlaceHolders(player, expression);
+		String exp = Utils.getInstance().replacePlaceHolders(player, expression);
 
 		engine.put("BukkitPlayer", player);
-		// Main.plugin.debug("Trying");
+		engine.put("User", UserManager.getInstance().getUser(player));
 
 		try {
-			engine.put("BukkitPlayer", player);
-
 			Object result = engine.eval(exp);
 
-			if (!(result instanceof Boolean)) {
-				// Main.plugin.debug("Not boolean");
-				return;
-			}
-
-			if (((Boolean) result).booleanValue()) {
-				Main.plugin.debug("javascript true");
-				for (String reward : trueRewards) {
-					if (!reward.equals("")) {
-						RewardHandler.getInstance().giveReward(user, reward,
-								online);
-					}
-				}
-			} else {
-				Main.plugin.debug("javascript false");
-				for (String reward : falseRewards) {
-					if (!reward.equals("")) {
-						RewardHandler.getInstance().giveReward(user, reward,
-								online);
-					}
-				}
+			if (result instanceof Boolean) {
+				return ((Boolean) result).booleanValue();
 			}
 		} catch (ScriptException e) {
 			e.printStackTrace();
 		}
-
+		return false;
 	}
-
 }
