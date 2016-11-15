@@ -1,13 +1,12 @@
 package com.Ben12345rocks.AdvancedCore.Util.Effects;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -29,30 +28,6 @@ public class Title {
 
 	/** The chat base component. */
 	private static Class<?> chatBaseComponent;
-
-	/** The Constant CORRESPONDING_TYPES. */
-	private static final Map<Class<?>, Class<?>> CORRESPONDING_TYPES = new HashMap<Class<?>, Class<?>>();
-
-	/**
-	 * Equals type array.
-	 *
-	 * @param a
-	 *            the a
-	 * @param o
-	 *            the o
-	 * @return true, if successful
-	 */
-	private static boolean equalsTypeArray(Class<?>[] a, Class<?>[] o) {
-		if (a.length != o.length) {
-			return false;
-		}
-		for (int i = 0; i < a.length; i++) {
-			if (!a[i].equals(o[i]) && !a[i].isAssignableFrom(o[i])) {
-				return false;
-			}
-		}
-		return true;
-	}
 
 	/** The title. */
 	/* Title text and color */
@@ -127,8 +102,7 @@ public class Title {
 	 * @param fadeOutTime
 	 *            the fade out time
 	 */
-	public Title(String title, String subtitle, int fadeInTime, int stayTime,
-			int fadeOutTime) {
+	public Title(String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
 		this.title = title;
 		this.subtitle = subtitle;
 		this.fadeInTime = fadeInTime;
@@ -157,35 +131,12 @@ public class Title {
 	}
 
 	/**
-	 * Broadcast.
+	 * Send title to all players
 	 */
 	public void broadcast() {
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			send(p);
 		}
-	}
-
-	/**
-	 * Class list equal.
-	 *
-	 * @param l1
-	 *            the l 1
-	 * @param l2
-	 *            the l 2
-	 * @return true, if successful
-	 */
-	private boolean ClassListEqual(Class<?>[] l1, Class<?>[] l2) {
-		boolean equal = true;
-		if (l1.length != l2.length) {
-			return false;
-		}
-		for (int i = 0; i < l1.length; i++) {
-			if (l1[i] != l2[i]) {
-				equal = false;
-				break;
-			}
-		}
-		return equal;
 	}
 
 	/**
@@ -197,13 +148,11 @@ public class Title {
 	public void clearTitle(Player player) {
 		try {
 			// Send timings first
-			Object handle = getHandle(player);
-			Object connection = getField(handle.getClass(), "playerConnection")
-					.get(handle);
+			Object handle = NMSManager.getInstance().getHandle(player);
+			Object connection = NMSManager.getInstance().getField(handle.getClass(), "playerConnection").get(handle);
 			Object[] actions = packetActions.getEnumConstants();
-			Method sendPacket = getMethod(connection.getClass(), "sendPacket");
-			Object packet = packetTitle.getConstructor(packetActions,
-					chatBaseComponent).newInstance(actions[3], null);
+			Method sendPacket = NMSManager.getInstance().getMethod(connection.getClass(), "sendPacket");
+			Object packet = packetTitle.getConstructor(packetActions, chatBaseComponent).newInstance(actions[3], null);
 			sendPacket.invoke(connection, packet);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -226,118 +175,6 @@ public class Title {
 	 */
 	public int getFadeOutTime() {
 		return fadeOutTime;
-	}
-
-	/**
-	 * Gets the field.
-	 *
-	 * @param clazz
-	 *            the clazz
-	 * @param name
-	 *            the name
-	 * @return the field
-	 */
-	private Field getField(Class<?> clazz, String name) {
-		try {
-			Field field = clazz.getDeclaredField(name);
-			field.setAccessible(true);
-			return field;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
-	/**
-	 * Gets the handle.
-	 *
-	 * @param obj
-	 *            the obj
-	 * @return the handle
-	 */
-	private Object getHandle(Object obj) {
-		try {
-			return getMethod("getHandle", obj.getClass()).invoke(obj);
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
-	/**
-	 * Gets the method.
-	 *
-	 * @param clazz
-	 *            the clazz
-	 * @param name
-	 *            the name
-	 * @param args
-	 *            the args
-	 * @return the method
-	 */
-	private Method getMethod(Class<?> clazz, String name, Class<?>... args) {
-		for (Method m : clazz.getMethods()) {
-			if (m.getName().equals(name)
-					&& (args.length == 0 || ClassListEqual(args,
-							m.getParameterTypes()))) {
-				m.setAccessible(true);
-				return m;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Gets the method.
-	 *
-	 * @param name
-	 *            the name
-	 * @param clazz
-	 *            the clazz
-	 * @param paramTypes
-	 *            the param types
-	 * @return the method
-	 */
-	private Method getMethod(String name, Class<?> clazz,
-			Class<?>... paramTypes) {
-		Class<?>[] t = toPrimitiveTypeArray(paramTypes);
-		for (Method m : clazz.getMethods()) {
-			Class<?>[] types = toPrimitiveTypeArray(m.getParameterTypes());
-			if (m.getName().equals(name) && equalsTypeArray(types, t)) {
-				return m;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Gets the NMS class.
-	 *
-	 * @param className
-	 *            the class name
-	 * @return the NMS class
-	 */
-	private Class<?> getNMSClass(String className) {
-		String fullName = "net.minecraft.server." + getVersion() + className;
-		Class<?> clazz = null;
-		try {
-			clazz = Class.forName(fullName);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return clazz;
-	}
-
-	/**
-	 * Gets the primitive type.
-	 *
-	 * @param clazz
-	 *            the clazz
-	 * @return the primitive type
-	 */
-	private Class<?> getPrimitiveType(Class<?> clazz) {
-		return CORRESPONDING_TYPES.containsKey(clazz) ? CORRESPONDING_TYPES
-				.get(clazz) : clazz;
 	}
 
 	/**
@@ -386,17 +223,6 @@ public class Title {
 	}
 
 	/**
-	 * Gets the version.
-	 *
-	 * @return the version
-	 */
-	private String getVersion() {
-		String name = Bukkit.getServer().getClass().getPackage().getName();
-		String version = name.substring(name.lastIndexOf('.') + 1) + ".";
-		return version;
-	}
-
-	/**
 	 * Checks if is ticks.
 	 *
 	 * @return true, if is ticks
@@ -410,10 +236,10 @@ public class Title {
 	 */
 	private void loadClasses() {
 		if (packetTitle == null) {
-			packetTitle = getNMSClass("PacketPlayOutTitle");
-			packetActions = getNMSClass("PacketPlayOutTitle$EnumTitleAction");
-			chatBaseComponent = getNMSClass("IChatBaseComponent");
-			nmsChatSerializer = getNMSClass("ChatComponentText");
+			packetTitle = NMSManager.getInstance().getNMSClass("PacketPlayOutTitle");
+			packetActions = NMSManager.getInstance().getNMSClass("PacketPlayOutTitle$EnumTitleAction");
+			chatBaseComponent = NMSManager.getInstance().getNMSClass("IChatBaseComponent");
+			nmsChatSerializer = NMSManager.getInstance().getNMSClass("ChatComponentText");
 		}
 	}
 
@@ -426,13 +252,11 @@ public class Title {
 	public void resetTitle(Player player) {
 		try {
 			// Send timings first
-			Object handle = getHandle(player);
-			Object connection = getField(handle.getClass(), "playerConnection")
-					.get(handle);
+			Object handle = NMSManager.getInstance().getHandle(player);
+			Object connection = NMSManager.getInstance().getField(handle.getClass(), "playerConnection").get(handle);
 			Object[] actions = packetActions.getEnumConstants();
-			Method sendPacket = getMethod(connection.getClass(), "sendPacket");
-			Object packet = packetTitle.getConstructor(packetActions,
-					chatBaseComponent).newInstance(actions[4], null);
+			Method sendPacket = NMSManager.getInstance().getMethod(connection.getClass(), "sendPacket");
+			Object packet = packetTitle.getConstructor(packetActions, chatBaseComponent).newInstance(actions[4], null);
 			sendPacket.invoke(connection, packet);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -451,17 +275,14 @@ public class Title {
 			resetTitle(player);
 			try {
 				// Send timings first
-				Object handle = getHandle(player);
-				Object connection = getField(handle.getClass(),
-						"playerConnection").get(handle);
+				Object handle = NMSManager.getInstance().getHandle(player);
+				Object connection = NMSManager.getInstance().getField(handle.getClass(), "playerConnection")
+						.get(handle);
 				Object[] actions = packetActions.getEnumConstants();
-				Method sendPacket = getMethod(connection.getClass(),
-						"sendPacket");
-				Object packet = packetTitle.getConstructor(packetActions,
-						chatBaseComponent, Integer.TYPE, Integer.TYPE,
-						Integer.TYPE).newInstance(actions[2], null,
-								fadeInTime * (ticks ? 1 : 20),
-								stayTime * (ticks ? 1 : 20),
+				Method sendPacket = NMSManager.getInstance().getMethod(connection.getClass(), "sendPacket");
+				Object packet = packetTitle
+						.getConstructor(packetActions, chatBaseComponent, Integer.TYPE, Integer.TYPE, Integer.TYPE)
+						.newInstance(actions[2], null, fadeInTime * (ticks ? 1 : 20), stayTime * (ticks ? 1 : 20),
 								fadeOutTime * (ticks ? 1 : 20));
 				// Send if set
 				if (fadeInTime != -1 && fadeOutTime != -1 && stayTime != -1) {
@@ -469,21 +290,17 @@ public class Title {
 				}
 
 				// Send title
-				Object serialized = nmsChatSerializer.getConstructor(
-						String.class).newInstance(
-								ChatColor.translateAlternateColorCodes('&', title));
-				packet = packetTitle.getConstructor(packetActions,
-						chatBaseComponent).newInstance(actions[0], serialized);
+				Object serialized = nmsChatSerializer.getConstructor(String.class)
+						.newInstance(ChatColor.translateAlternateColorCodes('&', title));
+				packet = packetTitle.getConstructor(packetActions, chatBaseComponent).newInstance(actions[0],
+						serialized);
 				sendPacket.invoke(connection, packet);
 				if (subtitle != "") {
 					// Send subtitle if present
 					serialized = nmsChatSerializer.getConstructor(String.class)
-							.newInstance(
-									ChatColor.translateAlternateColorCodes('&',
-											subtitle));
-					packet = packetTitle.getConstructor(packetActions,
-							chatBaseComponent).newInstance(actions[1],
-									serialized);
+							.newInstance(ChatColor.translateAlternateColorCodes('&', subtitle));
+					packet = packetTitle.getConstructor(packetActions, chatBaseComponent).newInstance(actions[1],
+							serialized);
 					sendPacket.invoke(connection, packet);
 				}
 			} catch (Exception e) {
@@ -577,22 +394,6 @@ public class Title {
 	}
 
 	/**
-	 * To primitive type array.
-	 *
-	 * @param classes
-	 *            the classes
-	 * @return the class[]
-	 */
-	private Class<?>[] toPrimitiveTypeArray(Class<?>[] classes) {
-		int a = classes != null ? classes.length : 0;
-		Class<?>[] types = new Class<?>[a];
-		for (int i = 0; i < a; i++) {
-			types[i] = getPrimitiveType(classes[i]);
-		}
-		return types;
-	}
-
-	/**
 	 * Update subtitle.
 	 *
 	 * @param player
@@ -601,17 +402,14 @@ public class Title {
 	public void updateSubtitle(Player player) {
 		if (Title.packetTitle != null) {
 			try {
-				Object handle = getHandle(player);
-				Object connection = getField(handle.getClass(),
-						"playerConnection").get(handle);
+				Object handle = NMSManager.getInstance().getHandle(player);
+				Object connection = NMSManager.getInstance().getField(handle.getClass(), "playerConnection")
+						.get(handle);
 				Object[] actions = Title.packetActions.getEnumConstants();
-				Method sendPacket = getMethod(connection.getClass(),
-						"sendPacket");
-				Object serialized = nmsChatSerializer.getConstructor(
-						String.class).newInstance(
-								ChatColor.translateAlternateColorCodes('&', subtitle));
-				Object packet = Title.packetTitle.getConstructor(
-						new Class[] { Title.packetActions, chatBaseComponent })
+				Method sendPacket = NMSManager.getInstance().getMethod(connection.getClass(), "sendPacket");
+				Object serialized = nmsChatSerializer.getConstructor(String.class)
+						.newInstance(ChatColor.translateAlternateColorCodes('&', subtitle));
+				Object packet = Title.packetTitle.getConstructor(new Class[] { Title.packetActions, chatBaseComponent })
 						.newInstance(new Object[] { actions[1], serialized });
 				sendPacket.invoke(connection, packet);
 			} catch (Exception e) {
@@ -629,27 +427,18 @@ public class Title {
 	public void updateTimes(Player player) {
 		if (Title.packetTitle != null) {
 			try {
-				Object handle = getHandle(player);
-				Object connection = getField(handle.getClass(),
-						"playerConnection").get(handle);
+				Object handle = NMSManager.getInstance().getHandle(player);
+				Object connection = NMSManager.getInstance().getField(handle.getClass(), "playerConnection")
+						.get(handle);
 				Object[] actions = Title.packetActions.getEnumConstants();
-				Method sendPacket = getMethod(connection.getClass(),
-						"sendPacket");
-				Object packet = Title.packetTitle.getConstructor(
-						new Class[] { Title.packetActions, chatBaseComponent,
-								Integer.TYPE, Integer.TYPE, Integer.TYPE })
-								.newInstance(
-										new Object[] {
-												actions[2],
-												null,
-												Integer.valueOf(fadeInTime
-														* (ticks ? 1 : 20)),
-														Integer.valueOf(stayTime
-																* (ticks ? 1 : 20)),
-																Integer.valueOf(fadeOutTime
-																		* (ticks ? 1 : 20)) });
-				if ((fadeInTime != -1) && (fadeOutTime != -1)
-						&& (stayTime != -1)) {
+				Method sendPacket = NMSManager.getInstance().getMethod(connection.getClass(), "sendPacket");
+				Object packet = Title.packetTitle
+						.getConstructor(new Class[] { Title.packetActions, chatBaseComponent, Integer.TYPE,
+								Integer.TYPE, Integer.TYPE })
+						.newInstance(new Object[] { actions[2], null, Integer.valueOf(fadeInTime * (ticks ? 1 : 20)),
+								Integer.valueOf(stayTime * (ticks ? 1 : 20)),
+								Integer.valueOf(fadeOutTime * (ticks ? 1 : 20)) });
+				if ((fadeInTime != -1) && (fadeOutTime != -1) && (stayTime != -1)) {
 					sendPacket.invoke(connection, packet);
 				}
 			} catch (Exception e) {
@@ -667,17 +456,14 @@ public class Title {
 	public void updateTitle(Player player) {
 		if (Title.packetTitle != null) {
 			try {
-				Object handle = getHandle(player);
-				Object connection = getField(handle.getClass(),
-						"playerConnection").get(handle);
+				Object handle = NMSManager.getInstance().getHandle(player);
+				Object connection = NMSManager.getInstance().getField(handle.getClass(), "playerConnection")
+						.get(handle);
 				Object[] actions = Title.packetActions.getEnumConstants();
-				Method sendPacket = getMethod(connection.getClass(),
-						"sendPacket");
-				Object serialized = nmsChatSerializer.getConstructor(
-						String.class).newInstance(
-						ChatColor.translateAlternateColorCodes('&', title));
-				Object packet = Title.packetTitle.getConstructor(
-						new Class[] { Title.packetActions, chatBaseComponent })
+				Method sendPacket = NMSManager.getInstance().getMethod(connection.getClass(), "sendPacket");
+				Object serialized = nmsChatSerializer.getConstructor(String.class)
+						.newInstance(ChatColor.translateAlternateColorCodes('&', title));
+				Object packet = Title.packetTitle.getConstructor(new Class[] { Title.packetActions, chatBaseComponent })
 						.newInstance(new Object[] { actions[0], serialized });
 				sendPacket.invoke(connection, packet);
 			} catch (Exception e) {
