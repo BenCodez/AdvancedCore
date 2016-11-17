@@ -281,7 +281,7 @@ public class ItemBuilder {
 	 */
 	@SuppressWarnings("deprecation")
 	public ItemBuilder setDyeColor(DyeColor color) {
-		this.is.setDurability(color.getData());
+		this.is.setDurability(color.getDyeData());
 		return this;
 	}
 
