@@ -18,10 +18,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import me.clip.placeholderapi.PlaceholderAPI;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.TextComponent;
-
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
@@ -44,6 +40,10 @@ import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+
+import me.clip.placeholderapi.PlaceholderAPI;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.TextComponent;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -91,15 +91,13 @@ public class Utils {
 	 *            the enchants
 	 * @return the item stack
 	 */
-	public ItemStack addEnchants(ItemStack item,
-			HashMap<String, Integer> enchants) {
+	public ItemStack addEnchants(ItemStack item, HashMap<String, Integer> enchants) {
 		if ((enchants == null) || (enchants.size() == 0)) {
 			return item;
 		}
 		ItemMeta meta = item.getItemMeta();
 		for (String enchant : enchants.keySet()) {
-			meta.addEnchant(Enchantment.getByName(enchant),
-					enchants.get(enchant), false);
+			meta.addEnchant(Enchantment.getByName(enchant), enchants.get(enchant), false);
 		}
 		item.setItemMeta(meta);
 		return item;
@@ -220,17 +218,13 @@ public class Utils {
 		if (format == null) {
 			return null;
 		}
-		format = format.replace("{AQUA}", "§b").replace("{BLACK}", "§0")
-				.replace("{BLUE}", "§9").replace("{DARK_AQUA}", "§3")
-				.replace("{DARK_BLUE}", "§1").replace("{DARK_GRAY}", "§8")
-				.replace("{DARK_GREEN}", "§2").replace("{DARK_PURPLE}", "§5")
-				.replace("{DARK_RED}", "§4").replace("{GOLD}", "§6")
-				.replace("{GRAY}", "§7").replace("{GREEN}", "§a")
-				.replace("{LIGHT_PURPLE}", "§d").replace("{RED}", "§c")
-				.replace("{WHITE}", "§f").replace("{YELLOW}", "§e")
-				.replace("{BOLD}", "§l").replace("{ITALIC}", "§o")
-				.replace("{MAGIC}", "§k").replace("{RESET}", "§r")
-				.replace("{STRIKE}", "§m").replace("{STRIKETHROUGH}", "§m")
+		format = format.replace("{AQUA}", "§b").replace("{BLACK}", "§0").replace("{BLUE}", "§9")
+				.replace("{DARK_AQUA}", "§3").replace("{DARK_BLUE}", "§1").replace("{DARK_GRAY}", "§8")
+				.replace("{DARK_GREEN}", "§2").replace("{DARK_PURPLE}", "§5").replace("{DARK_RED}", "§4")
+				.replace("{GOLD}", "§6").replace("{GRAY}", "§7").replace("{GREEN}", "§a")
+				.replace("{LIGHT_PURPLE}", "§d").replace("{RED}", "§c").replace("{WHITE}", "§f")
+				.replace("{YELLOW}", "§e").replace("{BOLD}", "§l").replace("{ITALIC}", "§o").replace("{MAGIC}", "§k")
+				.replace("{RESET}", "§r").replace("{STRIKE}", "§m").replace("{STRIKETHROUGH}", "§m")
 				.replace("{UNDERLINE}", "§n");
 
 		return ChatColor.translateAlternateColorCodes('&', format);
@@ -397,10 +391,8 @@ public class Utils {
 	 * @throws InvocationTargetException
 	 *             the invocation target exception
 	 */
-	public Object getConnection(Player player) throws SecurityException,
-			NoSuchMethodException, NoSuchFieldException,
-			IllegalArgumentException, IllegalAccessException,
-			InvocationTargetException {
+	public Object getConnection(Player player) throws SecurityException, NoSuchMethodException, NoSuchFieldException,
+			IllegalArgumentException, IllegalAccessException, InvocationTargetException {
 		Method getHandle = player.getClass().getMethod("getHandle");
 		Object nmsPlayer = getHandle.invoke(player);
 		Field conField = nmsPlayer.getClass().getField("playerConnection");
@@ -483,11 +475,8 @@ public class Utils {
 	 * @throws ClassNotFoundException
 	 *             the class not found exception
 	 */
-	public Class<?> getNMSClass(String nmsClassString)
-			throws ClassNotFoundException {
-		String version = Bukkit.getServer().getClass().getPackage().getName()
-				.replace(".", ",").split(",")[3]
-				+ ".";
+	public Class<?> getNMSClass(String nmsClassString) throws ClassNotFoundException {
+		String version = Bukkit.getServer().getClass().getPackage().getName().replace(".", ",").split(",")[3] + ".";
 		String name = "net.minecraft.server." + version + nmsClassString;
 		Class<?> nmsClass = Class.forName(name);
 		return nmsClass;
@@ -527,8 +516,7 @@ public class Utils {
 		}
 
 		@SuppressWarnings("deprecation")
-		User user = new User(plugin,
-				new com.Ben12345rocks.AdvancedCore.Objects.UUID(uuid), false);
+		User user = new User(plugin, new com.Ben12345rocks.AdvancedCore.Objects.UUID(uuid), false);
 		String playerName = Data.getInstance().getName(user);
 
 		if (playerName != null && !playerName.equals("null")) {
@@ -537,8 +525,7 @@ public class Utils {
 
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player == null) {
-			playerName = Bukkit.getOfflinePlayer(
-					java.util.UUID.fromString(uuid)).getName();
+			playerName = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid)).getName();
 			return playerName;
 		} else {
 			return player.getName();
@@ -739,15 +726,13 @@ public class Utils {
 	 * @param types
 	 *            the types
 	 */
-	public void launchFirework(Location loc, int power,
-			ArrayList<String> colors, ArrayList<String> fadeOutColor,
+	public void launchFirework(Location loc, int power, ArrayList<String> colors, ArrayList<String> fadeOutColor,
 			boolean trail, boolean flicker, ArrayList<String> types) {
 		Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 			@Override
 			public void run() {
-				Firework fw = (Firework) loc.getWorld().spawnEntity(loc,
-						EntityType.FIREWORK);
+				Firework fw = (Firework) loc.getWorld().spawnEntity(loc, EntityType.FIREWORK);
 				FireworkMeta fwmeta = fw.getFireworkMeta();
 				FireworkEffect.Builder builder = FireworkEffect.builder();
 				if (trail) {
@@ -760,27 +745,24 @@ public class Utils {
 					try {
 						builder.withColor(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
-						plugin.getLogger()
-								.info(color
-										+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+						plugin.getLogger().info(color
+								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
 					}
 				}
 				for (String color : fadeOutColor) {
 					try {
 						builder.withFade(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
-						plugin.getLogger()
-								.info(color
-										+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+						plugin.getLogger().info(color
+								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
 					}
 				}
 				for (String type : types) {
 					try {
 						builder.with(Type.valueOf(type));
 					} catch (Exception ex) {
-						plugin.getLogger()
-								.info(type
-										+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
+						plugin.getLogger().info(type
+								+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
 					}
 				}
 				fwmeta.addEffects(builder.build());
@@ -862,8 +844,7 @@ public class Utils {
 	 */
 	public void printMap(HashMap<? extends User, Integer> map) {
 		for (Entry<? extends User, Integer> entry : map.entrySet()) {
-			plugin.debug("Key : " + entry.getKey().getPlayerName()
-					+ " Value : " + entry.getValue());
+			plugin.debug("Key : " + entry.getKey().getPlayerName() + " Value : " + entry.getValue());
 		}
 	}
 
@@ -890,8 +871,7 @@ public class Utils {
 	 *            the replace with
 	 * @return the list
 	 */
-	public List<String> replace(List<String> list, String toReplace,
-			String replaceWith) {
+	public List<String> replace(List<String> list, String toReplace, String replaceWith) {
 		if (list == null) {
 			return null;
 		}
@@ -915,8 +895,7 @@ public class Utils {
 	 *            the replace with
 	 * @return the array list
 	 */
-	public ArrayList<String> replaceIgnoreCase(ArrayList<String> list,
-			String toReplace, String replaceWith) {
+	public ArrayList<String> replaceIgnoreCase(ArrayList<String> list, String toReplace, String replaceWith) {
 		ArrayList<String> newList = new ArrayList<String>();
 		for (String msg : list) {
 			newList.add(replaceIgnoreCase(msg, toReplace, replaceWith));
@@ -935,16 +914,14 @@ public class Utils {
 	 *            the replace with
 	 * @return the string
 	 */
-	public String replaceIgnoreCase(String str, String toReplace,
-			String replaceWith) {
+	public String replaceIgnoreCase(String str, String toReplace, String replaceWith) {
 		if (str == null) {
 			return "";
 		}
 		if ((toReplace == null) || (replaceWith == null)) {
 			return str;
 		}
-		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE)
-				.matcher(str).replaceAll(replaceWith);
+		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
 
 	/**
@@ -958,11 +935,9 @@ public class Utils {
 	 *            the replace with
 	 * @return the string
 	 */
-	public String replacePlaceHolder(String str, String toReplace,
-			String replaceWith) {
-		return replaceIgnoreCase(
-				replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith),
-				"\\{" + toReplace + "\\}", replaceWith);
+	public String replacePlaceHolder(String str, String toReplace, String replaceWith) {
+		return replaceIgnoreCase(replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "\\{" + toReplace + "\\}",
+				replaceWith);
 	}
 
 	/**
@@ -979,8 +954,7 @@ public class Utils {
 			return text;
 		}
 		if (plugin.placeHolderAPIEnabled) {
-			return PlaceholderAPI.setBracketPlaceholders(player,
-					PlaceholderAPI.setPlaceholders(player, text));
+			return PlaceholderAPI.setBracketPlaceholders(player, PlaceholderAPI.setPlaceholders(player, text));
 		} else {
 			return text;
 		}
@@ -1176,8 +1150,7 @@ public class Utils {
 	 * @return the item stack
 	 */
 	public ItemStack setSkullOwner(String playerName) {
-		return setSkullOwner(new ItemStack(Material.SKULL_ITEM, 1, (short) 3),
-				playerName);
+		return setSkullOwner(new ItemStack(Material.SKULL_ITEM, 1, (short) 3), playerName);
 	}
 
 	/**
@@ -1211,11 +1184,9 @@ public class Utils {
 	 *            the order
 	 * @return the hash map
 	 */
-	public HashMap<User, Integer> sortByValues(
-			HashMap<User, Integer> unsortMap, final boolean order) {
+	public HashMap<User, Integer> sortByValues(HashMap<User, Integer> unsortMap, final boolean order) {
 
-		List<Entry<User, Integer>> list = new LinkedList<Entry<User, Integer>>(
-				unsortMap.entrySet());
+		List<Entry<User, Integer>> list = new LinkedList<Entry<User, Integer>>(unsortMap.entrySet());
 
 		// Sorting the list based on values
 		Collections.sort(list, new Comparator<Entry<User, Integer>>() {
@@ -1434,14 +1405,12 @@ public class Utils {
 						underline = false;
 						strike = false;
 						magic = false;
-						currentColor = ChatColor
-								.getByChar(string.charAt(i + 1));
+						currentColor = ChatColor.getByChar(string.charAt(i + 1));
 						currentstring = "";
 						i++;
 						previousLetter = false;
 					} else {
-						currentColor = ChatColor
-								.getByChar(string.charAt(i + 1));
+						currentColor = ChatColor.getByChar(string.charAt(i + 1));
 						i++;
 					}
 				} else {

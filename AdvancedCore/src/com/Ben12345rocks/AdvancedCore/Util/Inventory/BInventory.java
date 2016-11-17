@@ -212,8 +212,6 @@ public class BInventory implements Listener {
 	 */
 	public BInventory(String name) {
 		setInventoryName(name);
-		Bukkit.getPluginManager().registerEvents(this,
-				Bukkit.getPluginManager().getPlugins()[0]);
 	}
 
 	/**
@@ -312,11 +310,8 @@ public class BInventory implements Listener {
 		if (!(event.getPlayer() instanceof Player)) {
 			return;
 		}
-		if (this.inv != null
-				&& inv.equals(this.inv)
-				&& this.player != null
-				&& this.player.getUniqueId().equals(
-						((Player) event.getPlayer()).getUniqueId())) {
+		if (this.inv != null && inv.equals(this.inv) && this.player != null
+				&& this.player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId())) {
 			destroy();
 		}
 		return;
@@ -338,11 +333,8 @@ public class BInventory implements Listener {
 
 		Inventory inv = event.getInventory();
 
-		if (this.inv != null
-				&& inv.equals(this.inv)
-				&& this.player != null
-				&& this.player.getUniqueId().equals(
-						((Player) event.getWhoClicked()).getUniqueId())) {
+		if (this.inv != null && inv.equals(this.inv) && this.player != null
+				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
@@ -401,6 +393,7 @@ public class BInventory implements Listener {
 	 *            the player
 	 */
 	public void openInventory(Player player) {
+		Bukkit.getPluginManager().registerEvents(this, Bukkit.getPluginManager().getPlugins()[0]);
 		BInventory inventory = this;
 		this.player = player;
 
@@ -409,18 +402,15 @@ public class BInventory implements Listener {
 			pages = true;
 		}
 		if (!pages) {
-			inv = Bukkit.createInventory(player, inventory.getInventorySize(),
-					inventory.getInventoryName());
-			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
-					.entrySet()) {
+			inv = Bukkit.createInventory(player, inventory.getInventorySize(), inventory.getInventoryName());
+			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem();
 				ItemMeta meta = item.getItemMeta();
 				if (pair.getValue().getName() != null) {
 					meta.setDisplayName(pair.getValue().getName());
 				}
 				if (pair.getValue().getLore() != null) {
-					meta.setLore(new ArrayList<String>(Arrays.asList(pair
-							.getValue().getLore())));
+					meta.setLore(new ArrayList<String>(Arrays.asList(pair.getValue().getLore())));
 				}
 				item.setItemMeta(meta);
 				inv.setItem(pair.getKey(), item);
@@ -445,13 +435,13 @@ public class BInventory implements Listener {
 	 *            the page
 	 */
 	private void openInventory(Player player, int page) {
+		Bukkit.getPluginManager().registerEvents(this, Bukkit.getPluginManager().getPlugins()[0]);
 		BInventory inventory = this;
 		this.player = player;
 		inv = Bukkit.createInventory(player, 54, inventory.getInventoryName());
 		this.page = page;
 		int startSlot = (page - 1) * 45;
-		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
-				.entrySet()) {
+		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 			int slot = pair.getKey();
 			if (slot >= startSlot) {
 				slot -= startSlot;
@@ -462,8 +452,7 @@ public class BInventory implements Listener {
 						meta.setDisplayName(pair.getValue().getName());
 					}
 					if (pair.getValue().getLore() != null) {
-						meta.setLore(new ArrayList<String>(Arrays.asList(pair
-								.getValue().getLore())));
+						meta.setLore(new ArrayList<String>(Arrays.asList(pair.getValue().getLore())));
 					}
 					item.setItemMeta(meta);
 					inv.setItem(slot, item);
@@ -471,16 +460,10 @@ public class BInventory implements Listener {
 			}
 
 		}
-		inv.setItem(
-				45,
-				Utils.getInstance().setName(
-						new ItemStack(Material.STAINED_GLASS_PANE, 1,
-								(short) 15), "&aPrevious Page"));
-		inv.setItem(
-				53,
-				Utils.getInstance().setName(
-						new ItemStack(Material.STAINED_GLASS_PANE, 1,
-								(short) 15), "&aNext Page"));
+		inv.setItem(45, Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 15),
+				"&aPrevious Page"));
+		inv.setItem(53,
+				Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 15), "&aNext Page"));
 
 		player.openInventory(inv);
 	}
