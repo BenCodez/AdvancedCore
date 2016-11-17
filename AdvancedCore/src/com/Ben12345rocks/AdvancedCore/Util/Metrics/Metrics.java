@@ -154,8 +154,7 @@ public class Metrics {
 			}
 
 			final Plotter plotter = (Plotter) object;
-			return plotter.name.equals(name)
-					&& (plotter.getValue() == getValue());
+			return plotter.name.equals(name) && (plotter.getValue() == getValue());
 		}
 
 		/**
@@ -219,8 +218,7 @@ public class Metrics {
 	 * @throws UnsupportedEncodingException
 	 *             the unsupported encoding exception
 	 */
-	private static String encode(final String text)
-			throws UnsupportedEncodingException {
+	private static String encode(final String text) throws UnsupportedEncodingException {
 		return URLEncoder.encode(text, "UTF-8");
 	}
 
@@ -236,11 +234,9 @@ public class Metrics {
 	 * @throws UnsupportedEncodingException
 	 *             the unsupported encoding exception
 	 */
-	private static void encodeDataPair(final StringBuilder buffer,
-			final String key, final String value)
+	private static void encodeDataPair(final StringBuilder buffer, final String key, final String value)
 			throws UnsupportedEncodingException {
-		buffer.append('&').append(encode(key)).append('=')
-				.append(encode(value));
+		buffer.append('&').append(encode(key)).append('=').append(encode(value));
 	}
 
 	/** The configuration. */
@@ -253,8 +249,7 @@ public class Metrics {
 	private final Graph defaultGraph = new Graph("Default");
 
 	/** The graphs. */
-	private final Set<Graph> graphs = Collections
-			.synchronizedSet(new HashSet<Graph>());
+	private final Set<Graph> graphs = Collections.synchronizedSet(new HashSet<Graph>());
 
 	/** The guid. */
 	private final String guid;
@@ -293,8 +288,7 @@ public class Metrics {
 
 		// Do we need to create the file?
 		if (configuration.get("guid", null) == null) {
-			configuration.options().header("http://mcstats.org")
-					.copyDefaults(true);
+			configuration.options().header("http://mcstats.org").copyDefaults(true);
 			configuration.save(configurationFile);
 		}
 
@@ -447,8 +441,8 @@ public class Metrics {
 		data.append(encode("guid")).append('=').append(encode(guid));
 		encodeDataPair(data, "version", description.getVersion());
 		encodeDataPair(data, "server", Bukkit.getVersion());
-		encodeDataPair(data, "players",
-				Integer.toString(Bukkit.getServer().getOnlinePlayers().size()));
+		encodeDataPair(data, "players", Integer.toString(Bukkit.getOnlinePlayers().size()));
+
 		encodeDataPair(data, "revision", String.valueOf(REVISION));
 
 		// If we're pinging, append it
@@ -471,8 +465,7 @@ public class Metrics {
 					// is defined at the top
 					// Legacy (R4) submitters use the format Custom%s, or
 					// CustomPLOTTERNAME
-					final String key = String.format("C%s%s%s%s",
-							CUSTOM_DATA_SEPARATOR, graph.getName(),
+					final String key = String.format("C%s%s%s%s", CUSTOM_DATA_SEPARATOR, graph.getName(),
 							CUSTOM_DATA_SEPARATOR, plotter.getColumnName());
 
 					// The value to send, which for the foreseeable future is
@@ -487,9 +480,7 @@ public class Metrics {
 		}
 
 		// Create the url
-		URL url = new URL(BASE_URL
-				+ String.format(REPORT_URL, encode(plugin.getDescription()
-						.getName())));
+		URL url = new URL(BASE_URL + String.format(REPORT_URL, encode(plugin.getDescription().getName())));
 
 		// Connect to the website
 		URLConnection connection;
@@ -505,14 +496,12 @@ public class Metrics {
 		connection.setDoOutput(true);
 
 		// Write the data
-		final OutputStreamWriter writer = new OutputStreamWriter(
-				connection.getOutputStream());
+		final OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
 		writer.write(data.toString());
 		writer.flush();
 
 		// Now read the response
-		final BufferedReader reader = new BufferedReader(new InputStreamReader(
-				connection.getInputStream()));
+		final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 		final String response = reader.readLine();
 
 		// close resources
@@ -558,45 +547,43 @@ public class Metrics {
 			}
 
 			// Begin hitting the server with glorious data
-			taskId = plugin.getServer().getScheduler()
-					.scheduleAsyncRepeatingTask(plugin, new Runnable() {
+			taskId = plugin.getServer().getScheduler().scheduleAsyncRepeatingTask(plugin, new Runnable() {
 
-						private boolean firstPost = true;
+				private boolean firstPost = true;
 
-						@Override
-						public void run() {
-							try {
-								// This has to be synchronized or it can collide
-								// with the disable method.
-								synchronized (optOutLock) {
-									// Disable Task, if it is running and the
-									// server owner decided to opt-out
-									if (isOptOut() && (taskId > 0)) {
-										plugin.getServer().getScheduler()
-												.cancelTask(taskId);
-										taskId = -1;
-									}
-								}
-
-								// We use the inverse of firstPost because if it
-								// is the first time we are posting,
-								// it is not a interval ping, so it evaluates to
-								// FALSE
-								// Each time thereafter it will evaluate to
-								// TRUE, i.e PING!
-								postPlugin(!firstPost);
-
-								// After the first post we set firstPost to
-								// false
-								// Each post thereafter will be a ping
-								firstPost = false;
-							} catch (IOException e) {
-
-								Main.plugin.debug("[Metrics] " + e.getMessage());
-
+				@Override
+				public void run() {
+					try {
+						// This has to be synchronized or it can collide
+						// with the disable method.
+						synchronized (optOutLock) {
+							// Disable Task, if it is running and the
+							// server owner decided to opt-out
+							if (isOptOut() && (taskId > 0)) {
+								plugin.getServer().getScheduler().cancelTask(taskId);
+								taskId = -1;
 							}
 						}
-					}, 0, PING_INTERVAL * 1200);
+
+						// We use the inverse of firstPost because if it
+						// is the first time we are posting,
+						// it is not a interval ping, so it evaluates to
+						// FALSE
+						// Each time thereafter it will evaluate to
+						// TRUE, i.e PING!
+						postPlugin(!firstPost);
+
+						// After the first post we set firstPost to
+						// false
+						// Each post thereafter will be a ping
+						firstPost = false;
+					} catch (IOException e) {
+
+						Main.plugin.debug("[Metrics] " + e.getMessage());
+
+					}
+				}
+			}, 0, PING_INTERVAL * 1200);
 
 			return true;
 		}
