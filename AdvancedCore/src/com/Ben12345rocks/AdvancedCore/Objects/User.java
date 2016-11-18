@@ -9,8 +9,6 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import net.md_5.bungee.api.chat.TextComponent;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Sound;
@@ -29,7 +27,12 @@ import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
+
+import net.md_5.bungee.api.chat.TextComponent;
 
 /**
  * The Class User.
@@ -510,7 +513,7 @@ public class User {
 	 * @return true, if is online
 	 */
 	public boolean isOnline() {
-		return Utils.getInstance().isPlayerOnline(getPlayerName());
+		return PlayerUtils.getInstance().isPlayerOnline(getPlayerName());
 	}
 
 	/**
@@ -724,7 +727,7 @@ public class User {
 	 *            the msg
 	 */
 	public void sendMessage(ArrayList<String> msg) {
-		sendMessage(Utils.getInstance().convertArray(msg));
+		sendMessage(ArrayUtils.getInstance().convert(msg));
 	}
 
 	/**
@@ -738,8 +741,8 @@ public class User {
 		if ((player != null) && (msg != null)) {
 			if (msg != "") {
 				for (String str : msg.split("%NewLine%")) {
-					player.sendMessage(Utils.getInstance().colorize(
-							Utils.getInstance()
+					player.sendMessage(StringUtils.getInstance().colorize(
+							StringUtils.getInstance()
 									.replacePlaceHolders(player, str)));
 				}
 			}
@@ -757,10 +760,10 @@ public class User {
 		if ((player != null) && (msg != null)) {
 
 			for (int i = 0; i < msg.length; i++) {
-				msg[i] = Utils.getInstance()
+				msg[i] = StringUtils.getInstance()
 						.replacePlaceHolders(player, msg[i]);
 			}
-			player.sendMessage(Utils.getInstance().colorize(msg));
+			player.sendMessage(ArrayUtils.getInstance().colorize(msg));
 
 		}
 	}

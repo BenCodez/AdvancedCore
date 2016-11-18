@@ -34,6 +34,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.BStatsMetrics;
 import com.Ben12345rocks.AdvancedCore.Util.Metrics.MCStatsMetrics;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.Updater;
 
 import net.milkbowl.vault.economy.Economy;
@@ -145,7 +146,7 @@ public class Main extends JavaPlugin {
 			if (Config.getInstance().getDebugInfoIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (player.hasPermission("AdvancedCore.Debug")) {
-						player.sendMessage(Utils.getInstance().colorize("&c" + plug.getName() + " Debug: " + msg));
+						player.sendMessage(StringUtils.getInstance().colorize("&c" + plug.getName() + " Debug: " + msg));
 					}
 				}
 			}

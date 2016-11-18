@@ -12,10 +12,11 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -76,7 +77,7 @@ public class Data {
 		File folder = new File(plugin.getDataFolder() + File.separator + "Data");
 		String[] fileNames = folder.list();
 		if (fileNames != null) {
-			return Utils.getInstance().convertArray(fileNames);
+			return ArrayUtils.getInstance().convert(fileNames);
 		} else {
 			return new ArrayList<String>();
 		}
@@ -139,13 +140,13 @@ public class Data {
 		if (files != null) {
 			for (String playerFile : files) {
 				String uuid = playerFile.replace(".yml", "");
-				String playerName = Utils.getInstance().getPlayerName(uuid);
+				String playerName = PlayerUtils.getInstance().getPlayerName(uuid);
 				if (playerName != null) {
 					names.add(playerName);
 				}
 			}
 			Set<String> namesSet = new HashSet<String>(names);
-			names = Utils.getInstance().convert(namesSet);
+			names = ArrayUtils.getInstance().convert(namesSet);
 			return names;
 		}
 		return new ArrayList<String>();
@@ -225,7 +226,7 @@ public class Data {
 			Bukkit.getServer()
 					.getLogger()
 					.severe(ChatColor.RED + "Could not save "
-							+ Utils.getInstance().getUUID(playerName) + ".yml!");
+							+ PlayerUtils.getInstance().getUUID(playerName) + ".yml!");
 		}
 
 	}
@@ -276,7 +277,7 @@ public class Data {
 		String uuid = user.getUUID();
 		String playerName = user.getPlayerName();
 		if (playerName == null) {
-			Utils.getInstance().getPlayerName(uuid);
+			PlayerUtils.getInstance().getPlayerName(uuid);
 		}
 
 		if (playerName == null) {

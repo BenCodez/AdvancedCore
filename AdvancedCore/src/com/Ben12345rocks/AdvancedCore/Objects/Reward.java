@@ -14,10 +14,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
+import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -1438,7 +1442,7 @@ public class Reward {
 		if (!isRequirePermission()) {
 			return true;
 		}
-		return Utils.getInstance().hasServerPermission(user.getPlayerName(), permission);
+		return PlayerUtils.getInstance().hasServerPermission(user.getPlayerName(), permission);
 	}
 
 	/**
@@ -1672,7 +1676,7 @@ public class Reward {
 	 */
 	public void sendFirework(User user) {
 		if (isFireworkEnabled()) {
-			Utils.getInstance().launchFirework(user.getPlayer().getLocation(), getFireworkPower(), getFireworkColors(),
+			FireworkHandler.getInstance().launchFirework(user.getPlayer().getLocation(), getFireworkPower(), getFireworkColors(),
 					getFireworkFadeOutColors(), isFireworkTrail(), isFireworkFlicker(), getFireworkTypes());
 		}
 	}
@@ -1692,26 +1696,26 @@ public class Reward {
 		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
 			itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
 		}
-		String itemsAndAmountsMsg = Utils.getInstance().makeStringList(itemsAndAmounts);
+		String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
 
 		String broadcastMsg = this.broadcastMsg;
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "player", user.getPlayerName());
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "player", user.getPlayerName());
 
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "money", "" + money);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "exp", "" + exp);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "itemsandamount", itemsAndAmountsMsg);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg, "items",
-				Utils.getInstance().makeStringList(Utils.getInstance().convert(getItems())));
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "money", "" + money);
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "exp", "" + exp);
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "itemsandamount", itemsAndAmountsMsg);
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "items",
+				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-		Utils.getInstance().broadcast(Utils.getInstance().replacePlaceHolders(user.getPlayer(), broadcastMsg));
+		MiscUtils.getInstance().broadcast(StringUtils.getInstance().replacePlaceHolders(user.getPlayer(), broadcastMsg));
 
-		String msg = Utils.getInstance().replacePlaceHolder(rewardMsg, "player", user.getPlayerName());
+		String msg = StringUtils.getInstance().replacePlaceHolder(rewardMsg, "player", user.getPlayerName());
 
-		msg = Utils.getInstance().replacePlaceHolder(msg, "money", "" + money);
-		msg = Utils.getInstance().replacePlaceHolder(msg, "exp", "" + exp);
-		msg = Utils.getInstance().replacePlaceHolder(msg, "itemsandamount", itemsAndAmountsMsg);
-		msg = Utils.getInstance().replacePlaceHolder(msg, "items",
-				Utils.getInstance().makeStringList(Utils.getInstance().convert(getItems())));
+		msg = StringUtils.getInstance().replacePlaceHolder(msg, "money", "" + money);
+		msg = StringUtils.getInstance().replacePlaceHolder(msg, "exp", "" + exp);
+		msg = StringUtils.getInstance().replacePlaceHolder(msg, "itemsandamount", itemsAndAmountsMsg);
+		msg = StringUtils.getInstance().replacePlaceHolder(msg, "items",
+				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
 		user.sendMessage(msg);
 

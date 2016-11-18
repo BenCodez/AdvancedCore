@@ -16,8 +16,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import com.Ben12345rocks.AdvancedCore.Utils;
-
 /**
  * Easily create itemstacks, without messing your hands.
  * 
@@ -31,7 +29,9 @@ public class ItemBuilder {
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
-	 * @param data	ConfigurationSection
+	 * 
+	 * @param data
+	 *            ConfigurationSection
 	 */
 	public ItemBuilder(ConfigurationSection data) {
 		if (data == null) {
@@ -68,11 +68,11 @@ public class ItemBuilder {
 			}
 
 			if (data.isConfigurationSection("Enchants")) {
-				HashMap<String,Integer> enchants = new HashMap<String,Integer>();
+				HashMap<String, Integer> enchants = new HashMap<String, Integer>();
 				for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
 					enchants.put(enchant, data.getInt("Enchants." + enchant));
 				}
-				is = Utils.getInstance().addEnchants(is, enchants);
+				addEnchantments(enchants);
 			}
 
 		}
@@ -117,11 +117,11 @@ public class ItemBuilder {
 	 *            The material of the item.
 	 * @param amount
 	 *            The amount of the item.
-	 * @param durability
+	 * @param s
 	 *            The durability of the item.
 	 */
-	public ItemBuilder(Material m, int amount, byte durability) {
-		is = new ItemStack(m, amount, durability);
+	public ItemBuilder(Material m, int amount, short s) {
+		is = new ItemStack(m, amount, s);
 	}
 
 	/**
@@ -220,6 +220,24 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder addEnchantments(Map<Enchantment, Integer> enchantments) {
 		is.addEnchantments(enchantments);
+		return this;
+	}
+
+	/**
+	 * Add multiple enchants at once.
+	 * 
+	 * @param enchantments
+	 *            The enchants to add.
+	 */
+	public ItemBuilder addEnchantments(HashMap<String, Integer> enchants) {
+		if ((enchants == null) || (enchants.size() == 0)) {
+			return this;
+		}
+		ItemMeta meta = is.getItemMeta();
+		for (String enchant : enchants.keySet()) {
+			meta.addEnchant(Enchantment.getByName(enchant), enchants.get(enchant), false);
+		}
+		is.setItemMeta(meta);
 		return this;
 	}
 

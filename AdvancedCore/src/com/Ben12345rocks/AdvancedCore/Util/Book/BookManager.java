@@ -10,9 +10,9 @@ import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 /**
  * The Class BookManager.
@@ -35,7 +35,7 @@ public class BookManager implements Listener {
 	public BookManager(Player player, String start, BookSign listener) {
 		User user = UserManager.getInstance().getUser(player);
 		ItemStack item = new ItemStack(Material.BOOK_AND_QUILL);
-		Utils.getInstance().setPlayerMeta(player, "BookManager", listener);
+		PlayerUtils.getInstance().setPlayerMeta(player, "BookManager", listener);
 
 		user.giveItem(item);
 
@@ -49,7 +49,7 @@ public class BookManager implements Listener {
 				for (String str : event.getNewBookMeta().getPages()) {
 					input += str;
 				}
-				BookSign listener = (BookSign) Utils.getInstance()
+				BookSign listener = (BookSign) PlayerUtils.getInstance()
 						.getPlayerMeta(player, "BookManager");
 				listener.onBookSign(player, input);
 				player.getInventory().getItem(event.getSlot())

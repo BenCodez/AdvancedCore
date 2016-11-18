@@ -19,6 +19,8 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
@@ -58,7 +60,7 @@ public class RewardEditGUI {
 	 * @return the current reward
 	 */
 	public Reward getCurrentReward(Player player) {
-		return (Reward) Utils.getInstance().getPlayerMeta(player, "Reward");
+		return (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 	}
 
 	/**
@@ -188,7 +190,7 @@ public class RewardEditGUI {
 
 									@Override
 									public void onInput(Player player, Number value) {
-										Reward reward = (Reward) Utils.getInstance().getPlayerMeta(player, "Reward");
+										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 
 										reward.getConfig().setChance(
 
@@ -354,7 +356,7 @@ public class RewardEditGUI {
 
 										@Override
 										public void onClick(ClickEvent event) {
-											Reward reward = (Reward) Utils.getInstance().getPlayerMeta(player,
+											Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player,
 													"Reward");
 											Player player = event.getWhoClicked();
 
@@ -397,7 +399,7 @@ public class RewardEditGUI {
 										public void onClick(ClickEvent event) {
 											if (event.getWhoClicked() instanceof Player) {
 												Player player = event.getWhoClicked();
-												Reward reward = (Reward) Utils.getInstance().getPlayerMeta(player,
+												Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player,
 														"Reward");
 												ArrayList<String> commands = reward.getPlayerCommands();
 												if (event.getCurrentItem() != null
@@ -548,7 +550,7 @@ public class RewardEditGUI {
 		setCurrentReward(player, reward);
 		ArrayList<String> lore = new ArrayList<String>();
 		lore.add("&cAdd current item inhand");
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Add item", Utils.getInstance().convertArray(lore),
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Add item", ArrayUtils.getInstance().convert(lore),
 				new ItemStack(Material.STONE)) {
 
 			@Override
@@ -585,7 +587,7 @@ public class RewardEditGUI {
 		});
 
 		lore = new ArrayList<String>();
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Remove item", Utils.getInstance().convertArray(lore),
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("Remove item", ArrayUtils.getInstance().convert(lore),
 				new ItemStack(Material.STONE)) {
 
 			@Override
@@ -605,7 +607,7 @@ public class RewardEditGUI {
 							if (event.getWhoClicked() instanceof Player) {
 								Player player = event.getWhoClicked();
 								String item = event.getCurrentItem().getItemMeta().getDisplayName();
-								Reward reward = (Reward) Utils.getInstance().getPlayerMeta(player, "Reward");
+								Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 								reward.getConfig().set("Items." + item, null);
 								player.closeInventory();
 								player.sendMessage("Removed item");
@@ -825,7 +827,7 @@ public class RewardEditGUI {
 
 									@Override
 									public void onInput(Player player, boolean value) {
-										Reward reward = (Reward) Utils.getInstance().getPlayerMeta(player, "Reward");
+										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 
 										reward.getConfig().setRequirePermission(
 
@@ -853,7 +855,7 @@ public class RewardEditGUI {
 
 									@Override
 									public void onInput(Player player, String value) {
-										Reward reward = (Reward) Utils.getInstance().getPlayerMeta(player, "Reward");
+										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 										reward.getConfig().setPermission(
 
 												value);
@@ -899,7 +901,7 @@ public class RewardEditGUI {
 
 									@Override
 									public void onInput(Player player, boolean value) {
-										Reward reward = (Reward) Utils.getInstance().getPlayerMeta(player, "Reward");
+										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 										reward.getConfig().setGiveInEachWorld(
 
 												value);
@@ -923,7 +925,7 @@ public class RewardEditGUI {
 						for (World world : Bukkit.getWorlds()) {
 							worlds.add(world.getName());
 						}
-						new ValueRequest().requestString(player, "", Utils.getInstance().convertArray(worlds), true,
+						new ValueRequest().requestString(player, "", ArrayUtils.getInstance().convert(worlds), true,
 								new StringListener() {
 
 									@Override
@@ -950,7 +952,7 @@ public class RewardEditGUI {
 						Reward reward = getCurrentReward(player);
 						ArrayList<String> worlds = reward.getWorlds();
 
-						new ValueRequest().requestString(player, "", Utils.getInstance().convertArray(worlds), true,
+						new ValueRequest().requestString(player, "", ArrayUtils.getInstance().convert(worlds), true,
 								new StringListener() {
 
 									@Override
@@ -1138,7 +1140,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	private void setCurrentReward(Player player, Reward reward) {
-		Utils.getInstance().setPlayerMeta(player, "Reward", reward);
+		PlayerUtils.getInstance().setPlayerMeta(player, "Reward", reward);
 	}
 
 }

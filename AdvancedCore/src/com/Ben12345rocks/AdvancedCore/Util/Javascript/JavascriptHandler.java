@@ -8,9 +8,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 /**
  * The Class JavascriptHandler.
@@ -54,7 +54,7 @@ public class JavascriptHandler {
 			engine.put("BukkitServer", Bukkit.getServer());
 		}
 
-		String exp = Utils.getInstance().replacePlaceHolders(player, expression);
+		String exp = StringUtils.getInstance().replacePlaceHolders(player, expression);
 
 		engine.put("BukkitPlayer", player);
 		engine.put("User", UserManager.getInstance().getUser(player));

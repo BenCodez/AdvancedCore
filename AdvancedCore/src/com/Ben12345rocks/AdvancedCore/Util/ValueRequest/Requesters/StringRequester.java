@@ -2,9 +2,6 @@ package com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters;
 
 import java.util.ArrayList;
 
-import net.md_5.bungee.api.chat.ClickEvent.Action;
-import net.md_5.bungee.api.chat.TextComponent;
-
 import org.bukkit.Material;
 import org.bukkit.conversations.Conversable;
 import org.bukkit.conversations.ConversationContext;
@@ -13,7 +10,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -24,11 +20,16 @@ import com.Ben12345rocks.AdvancedCore.Util.Book.BookSign;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptManager;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
+
+import net.md_5.bungee.api.chat.ClickEvent.Action;
+import net.md_5.bungee.api.chat.TextComponent;
 
 /**
  * The Class StringRequester.
@@ -132,14 +133,15 @@ public class StringRequester {
 				}
 			});
 
-			ItemStack item = new ItemStack(Material.NAME_TAG);
-			item = Utils.getInstance().setName(item, "" + currentValue);
+			ItemBuilder builder = new ItemBuilder(Material.NAME_TAG);
+			builder.setName(currentValue);
+
 			ArrayList<String> lore = new ArrayList<String>();
 			lore.add("&cRename item and take out to set value");
 			lore.add("&cDoes not cost exp");
-			item = Utils.getInstance().addLore(item, lore);
+			builder.setLore(lore);
 
-			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, item);
+			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack());
 
 			inv.open();
 
@@ -150,7 +152,7 @@ public class StringRequester {
 			if (options != null) {
 				User user = UserManager.getInstance().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
-				Utils.getInstance().setPlayerMeta(player, "ValueRequestString",
+				PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestString",
 						listener);
 				for (String option : options) {
 					TextComponent comp = new TextComponent(option);

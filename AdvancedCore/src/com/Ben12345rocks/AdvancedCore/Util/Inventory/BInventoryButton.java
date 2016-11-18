@@ -7,6 +7,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -95,6 +96,10 @@ public abstract class BInventoryButton {
 	public void setItem(ItemStack item) {
 		this.item = item;
 	}
+	
+	public void setItem(ItemBuilder builder) {
+		this.item = builder.toItemStack();
+	}
 
 	/**
 	 * Sets the lore.
@@ -102,6 +107,7 @@ public abstract class BInventoryButton {
 	 * @param lore
 	 *            the new lore
 	 */
+	@Deprecated
 	public void setLore(String[] lore) {
 		this.lore = Utils.getInstance().colorize(lore);
 	}
@@ -112,6 +118,7 @@ public abstract class BInventoryButton {
 	 * @param name
 	 *            the new name
 	 */
+	@Deprecated
 	public void setName(String name) {
 		this.name = Utils.getInstance().colorize(name);
 	}

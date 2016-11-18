@@ -2,8 +2,6 @@ package com.Ben12345rocks.AdvancedCore.Commands;
 
 import java.util.ArrayList;
 
-import net.md_5.bungee.api.chat.TextComponent;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
@@ -11,7 +9,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.AdminGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardEditGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
@@ -24,11 +21,16 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
+
+import net.md_5.bungee.api.chat.TextComponent;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -79,7 +81,7 @@ public class CommandLoader {
 					@Override
 					public void execute(CommandSender sender, String[] args) {
 						plugin.reload();
-						sender.sendMessage(Utils.getInstance().colorize(
+						sender.sendMessage(StringUtils.getInstance().colorize(
 								"&c" + plugin.getName() + " v" + plugin.getDescription().getVersion() + " reloaded"));
 					}
 				});
@@ -89,7 +91,7 @@ public class CommandLoader {
 					@Override
 					public void execute(CommandSender sender, String[] args) {
 						ArrayList<TextComponent> msg = new ArrayList<TextComponent>();
-						msg.add(Utils.getInstance().stringToComp("&c" + plugin.getName() + " help"));
+						msg.add(StringUtils.getInstance().stringToComp("&c" + plugin.getName() + " help"));
 						for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
 							if (sender.hasPermission(cmdHandle.getPerm())) {
 								msg.add(cmdHandle.getHelpLine("/advancedcore"));
@@ -98,7 +100,7 @@ public class CommandLoader {
 						if (sender instanceof Player) {
 							UserManager.getInstance().getUser((Player) sender).sendJson(msg);
 						} else {
-							sender.sendMessage(Utils.getInstance().convertArray(Utils.getInstance().comptoString(msg)));
+							sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(msg)));
 						}
 					}
 				});
@@ -131,7 +133,7 @@ public class CommandLoader {
 					methods.add(method.toString());
 				}
 				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-						Utils.getInstance().convertArray(methods), false, new StringListener() {
+						ArrayUtils.getInstance().convert(methods), false, new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {
@@ -162,7 +164,7 @@ public class CommandLoader {
 						if (sender instanceof Player) {
 							UserManager.getInstance().getUser((Player) sender).sendMessage(msg);
 						} else {
-							sender.sendMessage(Utils.getInstance().convertArray(msg));
+							sender.sendMessage(ArrayUtils.getInstance().convert(msg));
 						}
 					}
 				});
@@ -219,7 +221,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Player player = (Player) sender;
 				try {
-					StringListener listener = (StringListener) Utils.getInstance().getPlayerMeta(player,
+					StringListener listener = (StringListener) PlayerUtils.getInstance().getPlayerMeta(player,
 							"ValueRequestString");
 					if (args[1].equals("CustomValue")) {
 						new ValueRequest().requestString(player, listener);
@@ -239,7 +241,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Player player = (Player) sender;
 				try {
-					NumberListener listener = (NumberListener) Utils.getInstance().getPlayerMeta(player,
+					NumberListener listener = (NumberListener) PlayerUtils.getInstance().getPlayerMeta(player,
 							"ValueRequestNumber");
 					if (args[1].equals("CustomValue")) {
 						new ValueRequest().requestNumber(player, listener);
@@ -260,7 +262,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Player player = (Player) sender;
 				try {
-					BooleanListener listener = (BooleanListener) Utils.getInstance().getPlayerMeta(player,
+					BooleanListener listener = (BooleanListener) PlayerUtils.getInstance().getPlayerMeta(player,
 							"ValueRequestBoolean");
 					listener.onInput(player, Boolean.valueOf(args[1]));
 				} catch (Exception ex) {
@@ -268,7 +270,7 @@ public class CommandLoader {
 				}
 			}
 		});
-		
+
 		plugin.advancedCoreCommands.addAll(getBasicCommands());
 
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
@@ -317,7 +319,7 @@ public class CommandLoader {
 						}
 
 						new ValueRequest().requestString(clickEvent.getPlayer(), "",
-								Utils.getInstance().convertArray(rewards), true, new StringListener() {
+								ArrayUtils.getInstance().convert(rewards), true, new StringListener() {
 
 									@Override
 									public void onInput(Player player, String value) {
@@ -353,7 +355,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				new ValueRequest().requestString((Player) sender, "", Utils.getInstance().convertArray(
+				new ValueRequest().requestString((Player) sender, "", ArrayUtils.getInstance().convert(
 
 						UserManager.getInstance().getUser(sender.getName()).getChoiceRewards()), true,
 						new StringListener() {
@@ -375,7 +377,7 @@ public class CommandLoader {
 				User user = UserManager.getInstance().getUser((Player) sender);
 				if (user.getChoiceReward(reward) != 0) {
 					new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-							Utils.getInstance().convertArray(reward.getChoiceRewardsRewards()), false,
+							ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false,
 							new StringListener() {
 
 								@Override

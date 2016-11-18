@@ -25,7 +25,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -135,7 +137,7 @@ public class BInventory implements Listener {
 		 * @return the meta
 		 */
 		public Object getMeta(Player player, String str) {
-			return Utils.getInstance().getPlayerMeta(player, str);
+			return PlayerUtils.getInstance().getPlayerMeta(player, str);
 		}
 
 		/**
@@ -146,7 +148,7 @@ public class BInventory implements Listener {
 		 * @return the meta
 		 */
 		public Object getMeta(String str) {
-			return Utils.getInstance().getPlayerMeta(player, str);
+			return PlayerUtils.getInstance().getPlayerMeta(player, str);
 		}
 
 		/**
@@ -212,8 +214,7 @@ public class BInventory implements Listener {
 	 */
 	public BInventory(String name) {
 		setInventoryName(name);
-		Bukkit.getPluginManager().registerEvents(this,
-				Bukkit.getPluginManager().getPlugins()[0]);
+		Bukkit.getPluginManager().registerEvents(this, Bukkit.getPluginManager().getPlugins()[0]);
 	}
 
 	/**
@@ -312,11 +313,8 @@ public class BInventory implements Listener {
 		if (!(event.getPlayer() instanceof Player)) {
 			return;
 		}
-		if (this.inv != null
-				&& inv.equals(this.inv)
-				&& this.player != null
-				&& this.player.getUniqueId().equals(
-						((Player) event.getPlayer()).getUniqueId())) {
+		if (this.inv != null && inv.equals(this.inv) && this.player != null
+				&& this.player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId())) {
 			destroy();
 		}
 		return;
@@ -338,11 +336,8 @@ public class BInventory implements Listener {
 
 		Inventory inv = event.getInventory();
 
-		if (this.inv != null
-				&& inv.equals(this.inv)
-				&& this.player != null
-				&& this.player.getUniqueId().equals(
-						((Player) event.getWhoClicked()).getUniqueId())) {
+		if (this.inv != null && inv.equals(this.inv) && this.player != null
+				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
@@ -409,18 +404,15 @@ public class BInventory implements Listener {
 			pages = true;
 		}
 		if (!pages) {
-			inv = Bukkit.createInventory(player, inventory.getInventorySize(),
-					inventory.getInventoryName());
-			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
-					.entrySet()) {
+			inv = Bukkit.createInventory(player, inventory.getInventorySize(), inventory.getInventoryName());
+			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem();
 				ItemMeta meta = item.getItemMeta();
 				if (pair.getValue().getName() != null) {
 					meta.setDisplayName(pair.getValue().getName());
 				}
 				if (pair.getValue().getLore() != null) {
-					meta.setLore(new ArrayList<String>(Arrays.asList(pair
-							.getValue().getLore())));
+					meta.setLore(new ArrayList<String>(Arrays.asList(pair.getValue().getLore())));
 				}
 				item.setItemMeta(meta);
 				inv.setItem(pair.getKey(), item);
@@ -450,8 +442,7 @@ public class BInventory implements Listener {
 		inv = Bukkit.createInventory(player, 54, inventory.getInventoryName());
 		this.page = page;
 		int startSlot = (page - 1) * 45;
-		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons()
-				.entrySet()) {
+		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 			int slot = pair.getKey();
 			if (slot >= startSlot) {
 				slot -= startSlot;
@@ -462,8 +453,7 @@ public class BInventory implements Listener {
 						meta.setDisplayName(pair.getValue().getName());
 					}
 					if (pair.getValue().getLore() != null) {
-						meta.setLore(new ArrayList<String>(Arrays.asList(pair
-								.getValue().getLore())));
+						meta.setLore(new ArrayList<String>(Arrays.asList(pair.getValue().getLore())));
 					}
 					item.setItemMeta(meta);
 					inv.setItem(slot, item);
@@ -471,16 +461,11 @@ public class BInventory implements Listener {
 			}
 
 		}
-		inv.setItem(
-				45,
-				Utils.getInstance().setName(
-						new ItemStack(Material.STAINED_GLASS_PANE, 1,
-								(short) 15), "&aPrevious Page"));
-		inv.setItem(
-				53,
-				Utils.getInstance().setName(
-						new ItemStack(Material.STAINED_GLASS_PANE, 1,
-								(short) 15), "&aNext Page"));
+		inv.setItem(45,
+				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aPrevious Page").toItemStack());
+
+		inv.setItem(53,
+				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aNext Page").toItemStack());
 
 		player.openInventory(inv);
 	}
@@ -492,7 +477,7 @@ public class BInventory implements Listener {
 	 *            the new inventory name
 	 */
 	public void setInventoryName(String inventoryName) {
-		this.inventoryName = Utils.getInstance().colorize(inventoryName);
+		this.inventoryName = StringUtils.getInstance().colorize(inventoryName);
 	}
 
 	/**
@@ -506,7 +491,7 @@ public class BInventory implements Listener {
 	 *            the ob
 	 */
 	public void setMeta(Player player, String str, Object ob) {
-		Utils.getInstance().setPlayerMeta(player, str, ob);
+		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
 	}
 
 }

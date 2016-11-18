@@ -6,9 +6,9 @@ import java.util.Collections;
 import java.util.Date;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
 /**
  * The Class RewardHandler.
@@ -334,7 +334,7 @@ public class RewardHandler {
 	 */
 	public ArrayList<String> getRewardFiles(File folder) {
 		String[] fileNames = folder.list();
-		return Utils.getInstance().convertArray(fileNames);
+		return ArrayUtils.getInstance().convert(fileNames);
 	}
 
 	/**
