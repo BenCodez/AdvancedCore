@@ -16,6 +16,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import com.Ben12345rocks.AdvancedCore.Main;
+
 /**
  * Easily create itemstacks, without messing your hands.
  * 
@@ -37,7 +39,13 @@ public class ItemBuilder {
 		if (data == null) {
 			throw new IllegalArgumentException("Data can not be null!");
 		} else {
-			String material = data.getString("Material");
+			Material material = Material.STONE;
+			try {
+				material = Material.valueOf(data.getString("Material"));
+			} catch (Exception e) {
+				Main.plugin.debug(e);
+			}
+			
 			int amount = data.getInt("Amount");
 			int minAmount = data.getInt("MinAmount");
 			int maxAmount = data.getInt("MaxAmount");
@@ -53,7 +61,7 @@ public class ItemBuilder {
 			}
 
 			int dat = data.getInt("Data");
-			is = new ItemStack(Material.valueOf(material), currentAmount, (short) dat);
+			is = new ItemStack(material, currentAmount, (short) dat);
 			String name = data.getString("Name");
 			List<String> lore = data.getStringList("Lore");
 			if (name != null && !name.equals("")) {

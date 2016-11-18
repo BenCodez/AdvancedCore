@@ -5,9 +5,10 @@ package com.Ben12345rocks.AdvancedCore.Util.Inventory;
 
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -40,6 +41,14 @@ public abstract class BInventoryButton {
 	public BInventoryButton(String name, String[] lore, ItemStack item) {
 		setName(name);
 		setLore(lore);
+		setItem(item);
+	}
+
+	public BInventoryButton(ItemStack item) {
+		setItem(item);
+	}
+
+	public BInventoryButton(ItemBuilder item) {
 		setItem(item);
 	}
 
@@ -96,7 +105,7 @@ public abstract class BInventoryButton {
 	public void setItem(ItemStack item) {
 		this.item = item;
 	}
-	
+
 	public void setItem(ItemBuilder builder) {
 		this.item = builder.toItemStack();
 	}
@@ -107,9 +116,8 @@ public abstract class BInventoryButton {
 	 * @param lore
 	 *            the new lore
 	 */
-	@Deprecated
 	public void setLore(String[] lore) {
-		this.lore = Utils.getInstance().colorize(lore);
+		this.lore = ArrayUtils.getInstance().colorize(lore);
 	}
 
 	/**
@@ -118,9 +126,8 @@ public abstract class BInventoryButton {
 	 * @param name
 	 *            the new name
 	 */
-	@Deprecated
 	public void setName(String name) {
-		this.name = Utils.getInstance().colorize(name);
+		this.name = StringUtils.getInstance().colorize(name);
 	}
 
 	/**
