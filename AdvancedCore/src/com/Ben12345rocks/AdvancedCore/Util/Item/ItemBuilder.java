@@ -2,27 +2,81 @@ package com.Ben12345rocks.AdvancedCore.Util.Item;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import com.Ben12345rocks.AdvancedCore.Utils;
+
 /**
- * Easily create itemstacks, without messing your hands. <i>Note that if you do
- * use this in one of your projects, leave this notice.</i> <i>Please do credit
- * me if you do use this in one of your projects.</i>
+ * Easily create itemstacks, without messing your hands.
  * 
- * @author NonameSL
+ * Credit to NonameSL for creating this
+ * 
+ * Modified by Ben12345rocks
+ * 
  */
 public class ItemBuilder {
 	private ItemStack is;
+
+	/**
+	 * Create ItemBuilder from a ConfigurationSection
+	 * @param data	ConfigurationSection
+	 */
+	public ItemBuilder(ConfigurationSection data) {
+		if (data == null) {
+			throw new IllegalArgumentException("Data can not be null!");
+		} else {
+			String material = data.getString("Material");
+			int amount = data.getInt("Amount");
+			int minAmount = data.getInt("MinAmount");
+			int maxAmount = data.getInt("MaxAmount");
+
+			int currentAmount = 0;
+			if (amount > 0) {
+				currentAmount = amount;
+			} else {
+				currentAmount = (int) ((Math.random() * maxAmount) + 1);
+				if (currentAmount < minAmount) {
+					currentAmount = minAmount;
+				}
+			}
+
+			int dat = data.getInt("Data");
+			is = new ItemStack(Material.valueOf(material), currentAmount, (short) dat);
+			String name = data.getString("Name");
+			List<String> lore = data.getStringList("Lore");
+			if (name != null && !name.equals("")) {
+				is.getItemMeta().setDisplayName(name);
+			}
+			if (lore != null && lore.size() > 0) {
+				is.getItemMeta().setLore(lore);
+			}
+			int durability = data.getInt("Durability");
+			if (durability > 0) {
+				is.setDurability((short) durability);
+			}
+
+			if (data.isConfigurationSection("Enchants")) {
+				HashMap<String,Integer> enchants = new HashMap<String,Integer>();
+				for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
+					enchants.put(enchant, data.getInt("Enchants." + enchant));
+				}
+				is = Utils.getInstance().addEnchants(is, enchants);
+			}
+
+		}
+	}
 
 	/**
 	 * Create a new ItemBuilder from scratch.

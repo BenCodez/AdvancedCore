@@ -16,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
 
 // TODO: Auto-generated Javadoc
@@ -77,36 +78,6 @@ public class Reward {
 
 	/** The items. */
 	private Set<String> items;
-
-	/** The item material. */
-	private HashMap<String, String> itemMaterial;
-
-	/** The item skull. */
-	private HashMap<String, String> itemSkull;
-
-	/** The item data. */
-	private HashMap<String, Integer> itemData;
-
-	/** The item durabilty. */
-	private HashMap<String, Integer> itemDurabilty;
-
-	/** The item amount. */
-	private HashMap<String, Integer> itemAmount;
-
-	/** The item min amount. */
-	private HashMap<String, Integer> itemMinAmount;
-
-	/** The item max amount. */
-	private HashMap<String, Integer> itemMaxAmount;
-
-	/** The item name. */
-	private HashMap<String, String> itemName;
-
-	/** The item lore. */
-	private HashMap<String, ArrayList<String>> itemLore;
-
-	/** The item enchants. */
-	private HashMap<String, HashMap<String, Integer>> itemEnchants;
 
 	/** The money. */
 	private int money;
@@ -625,34 +596,6 @@ public class Reward {
 		setGiveInEachWorld(getConfig().getGiveInEachWorld());
 
 		setItems(getConfig().getItems());
-		itemMaterial = new HashMap<String, String>();
-		itemData = new HashMap<String, Integer>();
-		itemSkull = new HashMap<String, String>();
-		itemDurabilty = new HashMap<String, Integer>();
-		itemAmount = new HashMap<String, Integer>();
-		itemMinAmount = new HashMap<String, Integer>();
-		itemMaxAmount = new HashMap<String, Integer>();
-		itemName = new HashMap<String, String>();
-		itemLore = new HashMap<String, ArrayList<String>>();
-		itemName = new HashMap<String, String>();
-		itemEnchants = new HashMap<String, HashMap<String, Integer>>();
-		for (String item : getConfig().getItems()) {
-			itemMaterial.put(item, getConfig().getItemMaterial(item));
-			itemData.put(item, getConfig().getItemData(item));
-			itemAmount.put(item, getConfig().getItemAmount(item));
-			itemMinAmount.put(item, getConfig().getItemMinAmount(item));
-			itemMaxAmount.put(item, getConfig().getItemMaxAmount(item));
-			itemName.put(item, getConfig().getItemName(item));
-			itemLore.put(item, getConfig().getItemLore(item));
-			itemDurabilty.put(item, getConfig().getItemDurability(item));
-			itemSkull.put(item, getConfig().getItemSkull(item));
-			HashMap<String, Integer> enchants = new HashMap<String, Integer>();
-			for (String enchant : getConfig().getItemEnchants(item)) {
-				enchants.put(enchant, getConfig().getItemEnchantsLevel(item, enchant));
-
-			}
-			itemEnchants.put(item, enchants);
-		}
 
 		setMoney(getConfig().getMoney());
 		setMinMoney(getConfig().getMinMoney());
@@ -1037,125 +980,12 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the item amount.
-	 *
-	 * @return the item amount
-	 */
-	public HashMap<String, Integer> getItemAmount() {
-		return itemAmount;
-	}
-
-	/**
-	 * Gets the item amount.
-	 *
-	 * @param item
-	 *            the item
-	 * @return the item amount
-	 */
-	public int getItemAmount(String item) {
-		int amount = getItemAmount().get(item);
-		int maxAmount = getItemMaxAmount().get(item);
-		int minAmount = getItemMinAmount().get(item);
-		if ((maxAmount == 0) && (minAmount == 0)) {
-			return amount;
-		} else {
-			int num = (int) (Math.random() * maxAmount);
-			num++;
-			if (num < minAmount) {
-				num = minAmount;
-			}
-			return num;
-		}
-	}
-
-	/**
-	 * Gets the item data.
-	 *
-	 * @return the item data
-	 */
-	public HashMap<String, Integer> getItemData() {
-		return itemData;
-	}
-
-	/**
-	 * Gets the item durabilty.
-	 *
-	 * @return the item durabilty
-	 */
-	public HashMap<String, Integer> getItemDurabilty() {
-		return itemDurabilty;
-	}
-
-	/**
-	 * Gets the item enchants.
-	 *
-	 * @return the item enchants
-	 */
-	public HashMap<String, HashMap<String, Integer>> getItemEnchants() {
-		return itemEnchants;
-	}
-
-	/**
-	 * Gets the item lore.
-	 *
-	 * @return the item lore
-	 */
-	public HashMap<String, ArrayList<String>> getItemLore() {
-		return itemLore;
-	}
-
-	/**
-	 * Gets the item material.
-	 *
-	 * @return the item material
-	 */
-	public HashMap<String, String> getItemMaterial() {
-		return itemMaterial;
-	}
-
-	/**
-	 * Gets the item max amount.
-	 *
-	 * @return the item max amount
-	 */
-	public HashMap<String, Integer> getItemMaxAmount() {
-		return itemMaxAmount;
-	}
-
-	/**
-	 * Gets the item min amount.
-	 *
-	 * @return the item min amount
-	 */
-	public HashMap<String, Integer> getItemMinAmount() {
-		return itemMinAmount;
-	}
-
-	/**
-	 * Gets the item name.
-	 *
-	 * @return the item name
-	 */
-	public HashMap<String, String> getItemName() {
-		return itemName;
-	}
-
-	/**
 	 * Gets the items.
 	 *
 	 * @return the items
 	 */
 	public Set<String> getItems() {
 		return items;
-	}
-
-	/**
-	 * Gets the item skull.
-	 *
-	 * @return the item skull
-	 */
-	public HashMap<String, String> getItemSkull() {
-		return itemSkull;
 	}
 
 	/**
@@ -1390,22 +1220,7 @@ public class Reward {
 	}
 
 	public ItemStack getItemStack(User user, String item) {
-		ItemStack itemStack = new ItemStack(Material.valueOf(getItemMaterial().get(item)), getItemAmount(item),
-				Short.valueOf(Integer.toString(getItemData().get(item))));
-		itemsAndAmountsGiven.put(item, itemStack.getAmount());
-		String name = getItemName().get(item);
-		if (name != null) {
-			itemStack = Utils.getInstance().nameItem(itemStack, name.replace("%Player%", user.getPlayerName()));
-		}
-		itemStack = Utils.getInstance().addLore(itemStack,
-				Utils.getInstance().replace(getItemLore().get(item), "%Player%", user.getPlayerName()));
-		itemStack = Utils.getInstance().addEnchants(itemStack, getItemEnchants().get(item));
-		itemStack = Utils.getInstance().setDurabilty(itemStack, getItemDurabilty().get(item));
-		String skull = getItemSkull().get(item);
-		if (skull != null) {
-			itemStack = Utils.getInstance().setSkullOwner(itemStack, skull.replace("%Player%", user.getPlayerName()));
-		}
-		return itemStack;
+		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getPlayerName()).toItemStack();
 	}
 
 	/**
@@ -2178,96 +1993,6 @@ public class Reward {
 	}
 
 	/**
-	 * Sets the item amount.
-	 *
-	 * @param itemAmount
-	 *            the item amount
-	 */
-	public void setItemAmount(HashMap<String, Integer> itemAmount) {
-		this.itemAmount = itemAmount;
-	}
-
-	/**
-	 * Sets the item data.
-	 *
-	 * @param itemData
-	 *            the item data
-	 */
-	public void setItemData(HashMap<String, Integer> itemData) {
-		this.itemData = itemData;
-	}
-
-	/**
-	 * Sets the item durabilty.
-	 *
-	 * @param itemDurabilty
-	 *            the item durabilty
-	 */
-	public void setItemDurabilty(HashMap<String, Integer> itemDurabilty) {
-		this.itemDurabilty = itemDurabilty;
-	}
-
-	/**
-	 * Sets the item enchants.
-	 *
-	 * @param itemEnchants
-	 *            the item enchants
-	 */
-	public void setItemEnchants(HashMap<String, HashMap<String, Integer>> itemEnchants) {
-		this.itemEnchants = itemEnchants;
-	}
-
-	/**
-	 * Sets the item lore.
-	 *
-	 * @param itemLore
-	 *            the item lore
-	 */
-	public void setItemLore(HashMap<String, ArrayList<String>> itemLore) {
-		this.itemLore = itemLore;
-	}
-
-	/**
-	 * Sets the item material.
-	 *
-	 * @param itemMaterial
-	 *            the item material
-	 */
-	public void setItemMaterial(HashMap<String, String> itemMaterial) {
-		this.itemMaterial = itemMaterial;
-	}
-
-	/**
-	 * Sets the item max amount.
-	 *
-	 * @param itemMaxAmount
-	 *            the item max amount
-	 */
-	public void setItemMaxAmount(HashMap<String, Integer> itemMaxAmount) {
-		this.itemMaxAmount = itemMaxAmount;
-	}
-
-	/**
-	 * Sets the item min amount.
-	 *
-	 * @param itemMinAmount
-	 *            the item min amount
-	 */
-	public void setItemMinAmount(HashMap<String, Integer> itemMinAmount) {
-		this.itemMinAmount = itemMinAmount;
-	}
-
-	/**
-	 * Sets the item name.
-	 *
-	 * @param itemName
-	 *            the item name
-	 */
-	public void setItemName(HashMap<String, String> itemName) {
-		this.itemName = itemName;
-	}
-
-	/**
 	 * Sets the items.
 	 *
 	 * @param items
@@ -2275,16 +2000,6 @@ public class Reward {
 	 */
 	public void setItems(Set<String> items) {
 		this.items = items;
-	}
-
-	/**
-	 * Sets the item skull.
-	 *
-	 * @param itemSkull
-	 *            the item skull
-	 */
-	public void setItemSkull(HashMap<String, String> itemSkull) {
-		this.itemSkull = itemSkull;
 	}
 
 	/**
