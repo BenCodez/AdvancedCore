@@ -1,5 +1,5 @@
 name: AdvancedCore
-version: 1.9
+version: 1.10
 main: com.Ben12345rocks.AdvancedCore.Main
 softdepend: [ProtocolLib, Vault]
 commands:
