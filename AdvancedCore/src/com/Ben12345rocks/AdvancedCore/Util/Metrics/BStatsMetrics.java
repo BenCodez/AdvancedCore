@@ -26,6 +26,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import com.Ben12345rocks.AdvancedCore.Main;
+
 /**
  * bStats collects some data for plugin authors.
  *
@@ -261,8 +263,8 @@ public class BStatsMetrics {
 				} catch (Exception e) {
 					// Something went wrong! :(
 					if (logFailedRequests) {
-						plugin.getLogger().log(Level.WARNING, "Could not submit plugin stats of " + plugin.getName(),
-								e);
+						Main.plugin.debug("Could not submit plugin stats of " + plugin.getName());
+						Main.plugin.debug(e);
 					}
 				}
 			}
@@ -370,9 +372,10 @@ public class BStatsMetrics {
 					return null;
 				}
 				chart.put("data", data);
-			} catch (Throwable t) {
+			} catch (Exception e) {
 				if (logFailedRequests) {
-					Bukkit.getLogger().log(Level.WARNING, "Failed to get data for custom chart with id " + chartId, t);
+					Main.plugin.debug("Failed to get data for custom chart with id " + chartId);
+					Main.plugin.debug(e);
 				}
 				return null;
 			}

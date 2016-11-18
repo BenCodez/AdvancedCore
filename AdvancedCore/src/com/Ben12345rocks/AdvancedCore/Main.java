@@ -161,6 +161,12 @@ public class Main extends JavaPlugin {
 	public void debug(String msg) {
 		debug(this, msg);
 	}
+	
+	public void debug(Exception e) {
+		if (Config.getInstance().getDebugEnabled()) {
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * Gets the hooks.
