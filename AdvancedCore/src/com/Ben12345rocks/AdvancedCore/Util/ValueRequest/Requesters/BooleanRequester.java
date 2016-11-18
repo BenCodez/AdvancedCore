@@ -58,7 +58,7 @@ public class BooleanRequester {
 			BInventory inv = new BInventory("Click one of the following:");
 
 			inv.addButton(inv.getNextSlot(),
-					new BInventoryButton("True", new String[] {}, new ItemStack(Material.STONE)) {
+					new BInventoryButton("True", new String[] {}, new ItemStack(Material.REDSTONE_LAMP_ON)) {
 
 						@Override
 						public void onClick(ClickEvent clickEvent) {
@@ -68,7 +68,7 @@ public class BooleanRequester {
 						}
 					});
 			inv.addButton(inv.getNextSlot(),
-					new BInventoryButton("False", new String[] {}, new ItemStack(Material.STONE)) {
+					new BInventoryButton("False", new String[] {}, new ItemStack(Material.REDSTONE_LAMP_OFF)) {
 
 						@Override
 						public void onClick(ClickEvent clickEvent) {
