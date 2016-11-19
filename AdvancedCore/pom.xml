@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>AdvancedCore</groupId>
 	<artifactId>AdvancedCore</artifactId>
-	<version>1.10</version>
+	<version>2.0</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
 	<properties>
