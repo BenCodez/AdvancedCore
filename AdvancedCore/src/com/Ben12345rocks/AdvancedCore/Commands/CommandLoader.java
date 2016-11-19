@@ -100,7 +100,8 @@ public class CommandLoader {
 						if (sender instanceof Player) {
 							UserManager.getInstance().getUser((Player) sender).sendJson(msg);
 						} else {
-							sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(msg)));
+							sender.sendMessage(
+									ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(msg)));
 						}
 					}
 				});
@@ -271,6 +272,16 @@ public class CommandLoader {
 			}
 		});
 
+		plugin.advancedCoreCommands
+				.add(new CommandHandler(new String[] { "Report" }, "AdvancedCore.Report", "Create Report File") {
+
+					@Override
+					public void execute(CommandSender sender, String[] args) {
+						Report.getInstance().create();
+						sender.sendMessage("Created zip file");
+					}
+				});
+
 		plugin.advancedCoreCommands.addAll(getBasicCommands());
 
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
@@ -392,14 +403,7 @@ public class CommandLoader {
 				}
 			}
 		});
-		cmds.add(new CommandHandler(new String[] { "Report" }, "AdvancedCore.Report", "Create Report File") {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				Report.getInstance().create();
-				sender.sendMessage("Created zip file");
-			}
-		});
 		return cmds;
 	}
 
