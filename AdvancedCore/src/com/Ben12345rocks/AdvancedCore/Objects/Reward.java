@@ -1351,6 +1351,7 @@ public class Reward {
 	 * @param online
 	 *            the online
 	 */
+	@SuppressWarnings("deprecation")
 	public void giveRewardReward(User user, boolean online) {
 		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 
@@ -1403,6 +1404,7 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 */
+	@SuppressWarnings("deprecation")
 	public void giveRewardUser(User user) {
 		Player player = Bukkit.getPlayer(user.getPlayerName());
 		if (player != null) {
@@ -1578,6 +1580,7 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 */
+	@SuppressWarnings("deprecation")
 	public void runCommands(User user) {
 		String playerName = user.getPlayerName();
 
