@@ -1351,7 +1351,6 @@ public class Reward {
 	 * @param online
 	 *            the online
 	 */
-	@SuppressWarnings("deprecation")
 	public void giveRewardReward(User user, boolean online) {
 		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 
@@ -1404,7 +1403,6 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 */
-	@SuppressWarnings("deprecation")
 	public void giveRewardUser(User user) {
 		Player player = Bukkit.getPlayer(user.getPlayerName());
 		if (player != null) {
@@ -1580,7 +1578,6 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 */
-	@SuppressWarnings("deprecation")
 	public void runCommands(User user) {
 		String playerName = user.getPlayerName();
 
@@ -1679,8 +1676,9 @@ public class Reward {
 	 */
 	public void sendFirework(User user) {
 		if (isFireworkEnabled()) {
-			FireworkHandler.getInstance().launchFirework(user.getPlayer().getLocation(), getFireworkPower(), getFireworkColors(),
-					getFireworkFadeOutColors(), isFireworkTrail(), isFireworkFlicker(), getFireworkTypes());
+			FireworkHandler.getInstance().launchFirework(user.getPlayer().getLocation(), getFireworkPower(),
+					getFireworkColors(), getFireworkFadeOutColors(), isFireworkTrail(), isFireworkFlicker(),
+					getFireworkTypes());
 		}
 	}
 
@@ -1710,7 +1708,8 @@ public class Reward {
 		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "items",
 				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-		MiscUtils.getInstance().broadcast(StringUtils.getInstance().replacePlaceHolders(user.getPlayer(), broadcastMsg));
+		MiscUtils.getInstance()
+				.broadcast(StringUtils.getInstance().replacePlaceHolders(user.getPlayer(), broadcastMsg));
 
 		String msg = StringUtils.getInstance().replacePlaceHolder(rewardMsg, "player", user.getPlayerName());
 

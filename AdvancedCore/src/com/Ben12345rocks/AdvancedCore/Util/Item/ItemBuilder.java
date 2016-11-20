@@ -45,7 +45,7 @@ public class ItemBuilder {
 			} catch (Exception e) {
 				Main.plugin.debug(e);
 			}
-			
+
 			int amount = data.getInt("Amount");
 			int minAmount = data.getInt("MinAmount");
 			int maxAmount = data.getInt("MaxAmount");
@@ -146,6 +146,8 @@ public class ItemBuilder {
 	 * 
 	 * @param dur
 	 *            The durability to set it to.
+	 * 
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder setDurability(short dur) {
 		is.setDurability(dur);
@@ -157,6 +159,7 @@ public class ItemBuilder {
 	 * 
 	 * @param name
 	 *            The name to change it to.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder setName(String name) {
 		ItemMeta im = is.getItemMeta();
@@ -172,6 +175,7 @@ public class ItemBuilder {
 	 *            The enchantment to add.
 	 * @param level
 	 *            The level to put the enchant on.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder addUnsafeEnchantment(Enchantment ench, int level) {
 		is.addUnsafeEnchantment(ench, level);
@@ -183,6 +187,7 @@ public class ItemBuilder {
 	 * 
 	 * @param ench
 	 *            The enchantment to remove
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder removeEnchantment(Enchantment ench) {
 		is.removeEnchantment(ench);
@@ -194,6 +199,7 @@ public class ItemBuilder {
 	 * 
 	 * @param owner
 	 *            The name of the skull's owner.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder setSkullOwner(String owner) {
 		try {
@@ -212,6 +218,7 @@ public class ItemBuilder {
 	 *            The enchant to add
 	 * @param level
 	 *            The level
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchant(Enchantment ench, int level) {
 		ItemMeta im = is.getItemMeta();
@@ -225,6 +232,7 @@ public class ItemBuilder {
 	 * 
 	 * @param enchantments
 	 *            The enchants to add.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchantments(Map<Enchantment, Integer> enchantments) {
 		is.addEnchantments(enchantments);
@@ -234,8 +242,9 @@ public class ItemBuilder {
 	/**
 	 * Add multiple enchants at once.
 	 * 
-	 * @param enchantments
+	 * @param enchants
 	 *            The enchants to add.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchantments(HashMap<String, Integer> enchants) {
 		if ((enchants == null) || (enchants.size() == 0)) {
@@ -252,6 +261,8 @@ public class ItemBuilder {
 	/**
 	 * Sets infinity durability on the item by setting the durability to
 	 * Short.MAX_VALUE.
+	 * 
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder setInfinityDurability() {
 		is.setDurability(Short.MAX_VALUE);
@@ -263,6 +274,7 @@ public class ItemBuilder {
 	 * 
 	 * @param lore
 	 *            The lore to set it to.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLore(String... lore) {
 		ItemMeta im = is.getItemMeta();
@@ -276,6 +288,8 @@ public class ItemBuilder {
 	 * 
 	 * @param lore
 	 *            The lore to set it to.
+	 * 
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLore(List<String> lore) {
 		ItemMeta im = is.getItemMeta();
@@ -287,8 +301,9 @@ public class ItemBuilder {
 	/**
 	 * Remove a lore line.
 	 * 
-	 * @param lore
+	 * @param line
 	 *            The lore to remove.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder removeLoreLine(String line) {
 		ItemMeta im = is.getItemMeta();
@@ -306,6 +321,7 @@ public class ItemBuilder {
 	 * 
 	 * @param index
 	 *            The index of the lore line to remove.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder removeLoreLine(int index) {
 		ItemMeta im = is.getItemMeta();
@@ -323,6 +339,7 @@ public class ItemBuilder {
 	 * 
 	 * @param line
 	 *            The lore line to add.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder addLoreLine(String line) {
 		ItemMeta im = is.getItemMeta();
@@ -342,6 +359,7 @@ public class ItemBuilder {
 	 *            The lore line to add.
 	 * @param pos
 	 *            The index of where to put it.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder addLoreLine(String line, int pos) {
 		ItemMeta im = is.getItemMeta();
@@ -358,6 +376,7 @@ public class ItemBuilder {
 	 * 
 	 * @param color
 	 *            The color to put.
+	 * @return ItemBuilder
 	 */
 	@SuppressWarnings("deprecation")
 	public ItemBuilder setDyeColor(DyeColor color) {
@@ -371,6 +390,7 @@ public class ItemBuilder {
 	 * 
 	 * @param color
 	 *            The color to set it to.
+	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLeatherArmorColor(Color color) {
 		try {

@@ -33,7 +33,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 import net.md_5.bungee.api.chat.TextComponent;
-import net.pl3x.bukkit.chatapi.ComponentSender;
 
 /**
  * The Class User.
@@ -384,7 +383,6 @@ public class User {
 	 * @param item
 	 *            the item
 	 */
-	@SuppressWarnings("deprecation")
 	public void giveItem(ItemStack item) {
 		if (item.getAmount() == 0) {
 			return;
@@ -410,12 +408,6 @@ public class User {
 
 	}
 
-	/**
-	 * Give money.
-	 *
-	 * @param money
-	 *            the money
-	 */
 	@SuppressWarnings("deprecation")
 	/**
 	 * Give user money, needs vault installed
@@ -689,7 +681,7 @@ public class User {
 			 * msg.addExtra(newLine); } } player.spigot().sendMessage(msg);
 			 */
 			for (TextComponent txt : messages) {
-				ComponentSender.sendMessage(player, txt);
+				player.spigot().sendMessage(txt);
 			}
 		}
 	}
@@ -703,7 +695,7 @@ public class User {
 	public void sendJson(TextComponent message) {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
-			ComponentSender.sendMessage(player, message);
+			player.spigot().sendMessage(message);
 		}
 	}
 

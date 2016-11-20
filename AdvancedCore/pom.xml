@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>AdvancedCore</groupId>
+	<groupId>com.Ben12345rocks</groupId>
 	<artifactId>AdvancedCore</artifactId>
 	<version>2.0</version>
 	<packaging>jar</packaging>
@@ -9,7 +9,6 @@
 	<properties>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	<build>
 		<resources>
@@ -34,7 +33,7 @@
 				<configuration>
 					<source>1.8</source>
 					<target>1.8</target>
-					<finalName>AdvancedCore</finalName>
+					<finalName>${project.name}</finalName>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -42,30 +41,7 @@
 				<artifactId>maven-shade-plugin</artifactId>
 				<version>2.4.3</version>
 				<configuration>
-					<filters>
-						<filter>
-							<!-- this filter will remove en_US.properties from your jar. You want 
-								this filter if you dont use the TranslatableComponent so you can keep your 
-								jar file size down. -->
-							<artifact>net.md-5:bungeecord-chat</artifact>
-							<excludes>
-								<exclude>*/*en_US.properties</exclude>
-								<exclude>META-INF/maven/**</exclude>
-							</excludes>
-						</filter>
-					</filters>
-					<relocations>
-						<!-- Lets relocate the shaded API so we dont cause any conflicts with 
-							other plugins -->
-						<relocation>
-							<pattern>net.md_5.bungee</pattern>
-							<shadedPattern>${groupId}</shadedPattern>
-						</relocation>
-						<relocation>
-							<pattern>net.pl3x.bukkit.chatapi</pattern>
-							<shadedPattern>${groupId}</shadedPattern>
-						</relocation>
-					</relocations>
+					<shadedArtifactAttached>false</shadedArtifactAttached>
 				</configuration>
 				<executions>
 					<execution>
@@ -86,6 +62,19 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.4</version>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 	<repositories>
@@ -97,22 +86,11 @@
 			<id>vault-repo</id>
 			<url>http://nexus.hc.to/content/repositories/pub_releases</url>
 		</repository>
-		<repository>
-			<id>dwd-repo</id>
-			<url>http://ci.dwdg.net/plugin/repository/everything/</url>
-		</repository>
 	</repositories>
 	<dependencies>
 		<dependency>
-			<groupId>net.pl3x.bukkit.chatapi</groupId>
-			<artifactId>ChatComponentAPI</artifactId>
-			<version>1.2</version>
-			<scope>compile</scope>
-		</dependency>
-		<!--Bukkit API -->
-		<dependency>
-			<groupId>org.bukkit</groupId>
-			<artifactId>bukkit</artifactId>
+			<groupId>org.spigotmc</groupId>
+			<artifactId>spigot-api</artifactId>
 			<version>1.11-R0.1-SNAPSHOT</version>
 			<scope>provided</scope>
 		</dependency>
