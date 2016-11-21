@@ -14,9 +14,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
+import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -77,36 +82,6 @@ public class Reward {
 
 	/** The items. */
 	private Set<String> items;
-
-	/** The item material. */
-	private HashMap<String, String> itemMaterial;
-
-	/** The item skull. */
-	private HashMap<String, String> itemSkull;
-
-	/** The item data. */
-	private HashMap<String, Integer> itemData;
-
-	/** The item durabilty. */
-	private HashMap<String, Integer> itemDurabilty;
-
-	/** The item amount. */
-	private HashMap<String, Integer> itemAmount;
-
-	/** The item min amount. */
-	private HashMap<String, Integer> itemMinAmount;
-
-	/** The item max amount. */
-	private HashMap<String, Integer> itemMaxAmount;
-
-	/** The item name. */
-	private HashMap<String, String> itemName;
-
-	/** The item lore. */
-	private HashMap<String, ArrayList<String>> itemLore;
-
-	/** The item enchants. */
-	private HashMap<String, HashMap<String, Integer>> itemEnchants;
 
 	/** The money. */
 	private int money;
@@ -270,8 +245,7 @@ public class Reward {
 	 * @param itemsAndAmountsGiven
 	 *            the items and amounts given
 	 */
-	public void setItemsAndAmountsGiven(
-			HashMap<String, Integer> itemsAndAmountsGiven) {
+	public void setItemsAndAmountsGiven(HashMap<String, Integer> itemsAndAmountsGiven) {
 		this.itemsAndAmountsGiven = itemsAndAmountsGiven;
 	}
 
@@ -626,35 +600,6 @@ public class Reward {
 		setGiveInEachWorld(getConfig().getGiveInEachWorld());
 
 		setItems(getConfig().getItems());
-		itemMaterial = new HashMap<String, String>();
-		itemData = new HashMap<String, Integer>();
-		itemSkull = new HashMap<String, String>();
-		itemDurabilty = new HashMap<String, Integer>();
-		itemAmount = new HashMap<String, Integer>();
-		itemMinAmount = new HashMap<String, Integer>();
-		itemMaxAmount = new HashMap<String, Integer>();
-		itemName = new HashMap<String, String>();
-		itemLore = new HashMap<String, ArrayList<String>>();
-		itemName = new HashMap<String, String>();
-		itemEnchants = new HashMap<String, HashMap<String, Integer>>();
-		for (String item : getConfig().getItems()) {
-			itemMaterial.put(item, getConfig().getItemMaterial(item));
-			itemData.put(item, getConfig().getItemData(item));
-			itemAmount.put(item, getConfig().getItemAmount(item));
-			itemMinAmount.put(item, getConfig().getItemMinAmount(item));
-			itemMaxAmount.put(item, getConfig().getItemMaxAmount(item));
-			itemName.put(item, getConfig().getItemName(item));
-			itemLore.put(item, getConfig().getItemLore(item));
-			itemDurabilty.put(item, getConfig().getItemDurability(item));
-			itemSkull.put(item, getConfig().getItemSkull(item));
-			HashMap<String, Integer> enchants = new HashMap<String, Integer>();
-			for (String enchant : getConfig().getItemEnchants(item)) {
-				enchants.put(enchant,
-						getConfig().getItemEnchantsLevel(item, enchant));
-
-			}
-			itemEnchants.put(item, enchants);
-		}
 
 		setMoney(getConfig().getMoney());
 		setMinMoney(getConfig().getMinMoney());
@@ -672,8 +617,7 @@ public class Reward {
 		potionsAmplifier = new HashMap<String, Integer>();
 		for (String potion : potions) {
 			potionsDuration.put(potion, getConfig().getPotionsDuration(potion));
-			potionsAmplifier.put(potion, getConfig()
-					.getPotionsAmplifier(potion));
+			potionsAmplifier.put(potion, getConfig().getPotionsAmplifier(potion));
 		}
 
 		setRewardMsg(getConfig().getMessagesReward());
@@ -802,8 +746,7 @@ public class Reward {
 		time = DateUtils.addMinutes(time, getDelayMinutes());
 		user.addTimedReward(this, time.getTime());
 
-		plugin.debug("Giving reward " + name + " in " + getDelayHours()
-				+ " hours " + getDelayMinutes() + " minutes ("
+		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours " + getDelayMinutes() + " minutes ("
 				+ time.toString() + ")");
 		return true;
 
@@ -1041,125 +984,12 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the item amount.
-	 *
-	 * @return the item amount
-	 */
-	public HashMap<String, Integer> getItemAmount() {
-		return itemAmount;
-	}
-
-	/**
-	 * Gets the item amount.
-	 *
-	 * @param item
-	 *            the item
-	 * @return the item amount
-	 */
-	public int getItemAmount(String item) {
-		int amount = getItemAmount().get(item);
-		int maxAmount = getItemMaxAmount().get(item);
-		int minAmount = getItemMinAmount().get(item);
-		if ((maxAmount == 0) && (minAmount == 0)) {
-			return amount;
-		} else {
-			int num = (int) (Math.random() * maxAmount);
-			num++;
-			if (num < minAmount) {
-				num = minAmount;
-			}
-			return num;
-		}
-	}
-
-	/**
-	 * Gets the item data.
-	 *
-	 * @return the item data
-	 */
-	public HashMap<String, Integer> getItemData() {
-		return itemData;
-	}
-
-	/**
-	 * Gets the item durabilty.
-	 *
-	 * @return the item durabilty
-	 */
-	public HashMap<String, Integer> getItemDurabilty() {
-		return itemDurabilty;
-	}
-
-	/**
-	 * Gets the item enchants.
-	 *
-	 * @return the item enchants
-	 */
-	public HashMap<String, HashMap<String, Integer>> getItemEnchants() {
-		return itemEnchants;
-	}
-
-	/**
-	 * Gets the item lore.
-	 *
-	 * @return the item lore
-	 */
-	public HashMap<String, ArrayList<String>> getItemLore() {
-		return itemLore;
-	}
-
-	/**
-	 * Gets the item material.
-	 *
-	 * @return the item material
-	 */
-	public HashMap<String, String> getItemMaterial() {
-		return itemMaterial;
-	}
-
-	/**
-	 * Gets the item max amount.
-	 *
-	 * @return the item max amount
-	 */
-	public HashMap<String, Integer> getItemMaxAmount() {
-		return itemMaxAmount;
-	}
-
-	/**
-	 * Gets the item min amount.
-	 *
-	 * @return the item min amount
-	 */
-	public HashMap<String, Integer> getItemMinAmount() {
-		return itemMinAmount;
-	}
-
-	/**
-	 * Gets the item name.
-	 *
-	 * @return the item name
-	 */
-	public HashMap<String, String> getItemName() {
-		return itemName;
-	}
-
-	/**
 	 * Gets the items.
 	 *
 	 * @return the items
 	 */
 	public Set<String> getItems() {
 		return items;
-	}
-
-	/**
-	 * Gets the item skull.
-	 *
-	 * @return the item skull
-	 */
-	public HashMap<String, String> getItemSkull() {
-		return itemSkull;
 	}
 
 	/**
@@ -1394,29 +1224,7 @@ public class Reward {
 	}
 
 	public ItemStack getItemStack(User user, String item) {
-		ItemStack itemStack = new ItemStack(Material.valueOf(getItemMaterial()
-				.get(item)), getItemAmount(item), Short.valueOf(Integer
-				.toString(getItemData().get(item))));
-		itemsAndAmountsGiven.put(item, itemStack.getAmount());
-		String name = getItemName().get(item);
-		if (name != null) {
-			itemStack = Utils.getInstance().nameItem(itemStack,
-					name.replace("%Player%", user.getPlayerName()));
-		}
-		itemStack = Utils.getInstance().addLore(
-				itemStack,
-				Utils.getInstance().replace(getItemLore().get(item),
-						"%Player%", user.getPlayerName()));
-		itemStack = Utils.getInstance().addEnchants(itemStack,
-				getItemEnchants().get(item));
-		itemStack = Utils.getInstance().setDurabilty(itemStack,
-				getItemDurabilty().get(item));
-		String skull = getItemSkull().get(item);
-		if (skull != null) {
-			itemStack = Utils.getInstance().setSkullOwner(itemStack,
-					skull.replace("%Player%", user.getPlayerName()));
-		}
-		return itemStack;
+		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getPlayerName()).toItemStack();
 	}
 
 	/**
@@ -1452,9 +1260,8 @@ public class Reward {
 	 */
 	public void givePotions(User user) {
 		for (String potionName : getPotions()) {
-			user.givePotionEffect(potionName,
-					getPotionsDuration().get(potionName), getPotionsAmplifier()
-							.get(potionName));
+			user.givePotionEffect(potionName, getPotionsDuration().get(potionName),
+					getPotionsAmplifier().get(potionName));
 		}
 	}
 
@@ -1471,19 +1278,16 @@ public class Reward {
 			ArrayList<String> rewards = getRandomRewards();
 			if (rewards != null) {
 				if (rewards.size() > 0) {
-					String reward = rewards.get((int) Math.random()
-							* rewards.size());
+					String reward = rewards.get((int) Math.random() * rewards.size());
 					if (!reward.equals("")) {
-						RewardHandler.getInstance().giveReward(user, reward,
-								online);
+						RewardHandler.getInstance().giveReward(user, reward, online);
 					}
 				}
 			}
 		} else {
 			for (String reward : getRandomFallBack()) {
 				if (!reward.equals("")) {
-					RewardHandler.getInstance()
-							.giveReward(user, reward, online);
+					RewardHandler.getInstance().giveReward(user, reward, online);
 				}
 			}
 		}
@@ -1548,8 +1352,7 @@ public class Reward {
 	 *            the online
 	 */
 	public void giveRewardReward(User user, boolean online) {
-		plugin.debug("Attempting to give " + user.getPlayerName() + " reward "
-				+ name);
+		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 
 		String type = getRewardType();
 		if (online) {
@@ -1574,8 +1377,7 @@ public class Reward {
 							giveRewardUser(user);
 						} else {
 							user.setOfflineRewardWorld(getRewardName(), world,
-									user.getOfflineRewardWorld(getRewardName(),
-											world) + 1);
+									user.getOfflineRewardWorld(getRewardName(), world) + 1);
 						}
 					}
 				} else {
@@ -1584,8 +1386,7 @@ public class Reward {
 
 					} else {
 						user.setOfflineRewardWorld(getRewardName(), null,
-								user.getOfflineRewardWorld(getRewardName(),
-										null) + 1);
+								user.getOfflineRewardWorld(getRewardName(), null) + 1);
 
 					}
 				}
@@ -1641,8 +1442,7 @@ public class Reward {
 		if (!isRequirePermission()) {
 			return true;
 		}
-		return Utils.getInstance().hasServerPermission(user.getPlayerName(),
-				permission);
+		return PlayerUtils.getInstance().hasServerPermission(user.getPlayerName(), permission);
 	}
 
 	/**
@@ -1752,8 +1552,7 @@ public class Reward {
 	 */
 	public void playEffect(User user) {
 		if (effectEnabled) {
-			user.playParticleEffect(effectEffect, effectData, effectParticles,
-					effectRadius);
+			user.playParticleEffect(effectEffect, effectData, effectParticles, effectRadius);
 		}
 	}
 
@@ -1794,8 +1593,7 @@ public class Reward {
 
 						@Override
 						public void run() {
-							Bukkit.getServer().dispatchCommand(
-									Bukkit.getConsoleSender(), cmd);
+							Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
 						}
 					});
 
@@ -1835,8 +1633,15 @@ public class Reward {
 	 */
 	public void runJavascript(User user, boolean online) {
 		if (isJavascriptEnabled()) {
-			new JavascriptHandler(user, online, getJavascriptExpression(),
-					getJavascriptTrueRewards(), getJavascriptFalseRewards());
+			if (JavascriptHandler.getInstance().evalute(user, getJavascriptExpression())) {
+				for (String reward : getJavascriptTrueRewards()) {
+					RewardHandler.getInstance().giveReward(user, reward, online);
+				}
+			} else {
+				for (String reward : getJavascriptFalseRewards()) {
+					RewardHandler.getInstance().giveReward(user, reward, online);
+				}
+			}
 		}
 	}
 
@@ -1858,8 +1663,8 @@ public class Reward {
 	 */
 	public void sendBossBar(User user) {
 		if (isBossBarEnabled()) {
-			user.sendBossBar(getBossBarMessage(), getBossBarColor(),
-					getBossBarStyle(), getBossBarProgress(), getBossBarDelay());
+			user.sendBossBar(getBossBarMessage(), getBossBarColor(), getBossBarStyle(), getBossBarProgress(),
+					getBossBarDelay());
 		}
 	}
 
@@ -1871,10 +1676,9 @@ public class Reward {
 	 */
 	public void sendFirework(User user) {
 		if (isFireworkEnabled()) {
-			Utils.getInstance().launchFirework(user.getPlayer().getLocation(),
-					getFireworkPower(), getFireworkColors(),
-					getFireworkFadeOutColors(), isFireworkTrail(),
-					isFireworkFlicker(), getFireworkTypes());
+			FireworkHandler.getInstance().launchFirework(user.getPlayer().getLocation(), getFireworkPower(),
+					getFireworkColors(), getFireworkFadeOutColors(), isFireworkTrail(), isFireworkFlicker(),
+					getFireworkTypes());
 		}
 	}
 
@@ -1893,41 +1697,27 @@ public class Reward {
 		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
 			itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
 		}
-		String itemsAndAmountsMsg = Utils.getInstance().makeStringList(
-				itemsAndAmounts);
+		String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
 
 		String broadcastMsg = this.broadcastMsg;
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
-				"player", user.getPlayerName());
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "player", user.getPlayerName());
 
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
-				"money", "" + money);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
-				"exp", "" + exp);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(broadcastMsg,
-				"itemsandamount", itemsAndAmountsMsg);
-		broadcastMsg = Utils.getInstance().replacePlaceHolder(
-				broadcastMsg,
-				"items",
-				Utils.getInstance().makeStringList(
-						Utils.getInstance().convert(getItems())));
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "money", "" + money);
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "exp", "" + exp);
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "itemsandamount", itemsAndAmountsMsg);
+		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "items",
+				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-		Utils.getInstance().broadcast(
-				Utils.getInstance().replacePlaceHolders(user.getPlayer(),
-						broadcastMsg));
+		MiscUtils.getInstance()
+				.broadcast(StringUtils.getInstance().replacePlaceHolders(user.getPlayer(), broadcastMsg));
 
-		String msg = Utils.getInstance().replacePlaceHolder(rewardMsg,
-				"player", user.getPlayerName());
+		String msg = StringUtils.getInstance().replacePlaceHolder(rewardMsg, "player", user.getPlayerName());
 
-		msg = Utils.getInstance().replacePlaceHolder(msg, "money", "" + money);
-		msg = Utils.getInstance().replacePlaceHolder(msg, "exp", "" + exp);
-		msg = Utils.getInstance().replacePlaceHolder(msg, "itemsandamount",
-				itemsAndAmountsMsg);
-		msg = Utils.getInstance().replacePlaceHolder(
-				msg,
-				"items",
-				Utils.getInstance().makeStringList(
-						Utils.getInstance().convert(getItems())));
+		msg = StringUtils.getInstance().replacePlaceHolder(msg, "money", "" + money);
+		msg = StringUtils.getInstance().replacePlaceHolder(msg, "exp", "" + exp);
+		msg = StringUtils.getInstance().replacePlaceHolder(msg, "itemsandamount", itemsAndAmountsMsg);
+		msg = StringUtils.getInstance().replacePlaceHolder(msg, "items",
+				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
 		user.sendMessage(msg);
 
@@ -1943,9 +1733,9 @@ public class Reward {
 		if (titleEnabled) {
 			user.sendTitle(titleTitle,
 
-			titleSubTitle,
+					titleSubTitle,
 
-			titleFadeIn, titleShowTime, titleFadeOut);
+					titleFadeIn, titleShowTime, titleFadeOut);
 		}
 	}
 
@@ -2209,97 +1999,6 @@ public class Reward {
 	}
 
 	/**
-	 * Sets the item amount.
-	 *
-	 * @param itemAmount
-	 *            the item amount
-	 */
-	public void setItemAmount(HashMap<String, Integer> itemAmount) {
-		this.itemAmount = itemAmount;
-	}
-
-	/**
-	 * Sets the item data.
-	 *
-	 * @param itemData
-	 *            the item data
-	 */
-	public void setItemData(HashMap<String, Integer> itemData) {
-		this.itemData = itemData;
-	}
-
-	/**
-	 * Sets the item durabilty.
-	 *
-	 * @param itemDurabilty
-	 *            the item durabilty
-	 */
-	public void setItemDurabilty(HashMap<String, Integer> itemDurabilty) {
-		this.itemDurabilty = itemDurabilty;
-	}
-
-	/**
-	 * Sets the item enchants.
-	 *
-	 * @param itemEnchants
-	 *            the item enchants
-	 */
-	public void setItemEnchants(
-			HashMap<String, HashMap<String, Integer>> itemEnchants) {
-		this.itemEnchants = itemEnchants;
-	}
-
-	/**
-	 * Sets the item lore.
-	 *
-	 * @param itemLore
-	 *            the item lore
-	 */
-	public void setItemLore(HashMap<String, ArrayList<String>> itemLore) {
-		this.itemLore = itemLore;
-	}
-
-	/**
-	 * Sets the item material.
-	 *
-	 * @param itemMaterial
-	 *            the item material
-	 */
-	public void setItemMaterial(HashMap<String, String> itemMaterial) {
-		this.itemMaterial = itemMaterial;
-	}
-
-	/**
-	 * Sets the item max amount.
-	 *
-	 * @param itemMaxAmount
-	 *            the item max amount
-	 */
-	public void setItemMaxAmount(HashMap<String, Integer> itemMaxAmount) {
-		this.itemMaxAmount = itemMaxAmount;
-	}
-
-	/**
-	 * Sets the item min amount.
-	 *
-	 * @param itemMinAmount
-	 *            the item min amount
-	 */
-	public void setItemMinAmount(HashMap<String, Integer> itemMinAmount) {
-		this.itemMinAmount = itemMinAmount;
-	}
-
-	/**
-	 * Sets the item name.
-	 *
-	 * @param itemName
-	 *            the item name
-	 */
-	public void setItemName(HashMap<String, String> itemName) {
-		this.itemName = itemName;
-	}
-
-	/**
 	 * Sets the items.
 	 *
 	 * @param items
@@ -2307,16 +2006,6 @@ public class Reward {
 	 */
 	public void setItems(Set<String> items) {
 		this.items = items;
-	}
-
-	/**
-	 * Sets the item skull.
-	 *
-	 * @param itemSkull
-	 *            the item skull
-	 */
-	public void setItemSkull(HashMap<String, String> itemSkull) {
-		this.itemSkull = itemSkull;
 	}
 
 	/**
@@ -2345,8 +2034,7 @@ public class Reward {
 	 * @param javascriptFalseRewards
 	 *            the new javascript false rewards
 	 */
-	public void setJavascriptFalseRewards(
-			ArrayList<String> javascriptFalseRewards) {
+	public void setJavascriptFalseRewards(ArrayList<String> javascriptFalseRewards) {
 		this.javascriptFalseRewards = javascriptFalseRewards;
 	}
 

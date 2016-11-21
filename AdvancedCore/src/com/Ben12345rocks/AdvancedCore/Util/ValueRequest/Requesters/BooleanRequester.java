@@ -2,14 +2,10 @@ package com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters;
 
 import java.util.ArrayList;
 
-import net.md_5.bungee.api.chat.ClickEvent.Action;
-import net.md_5.bungee.api.chat.TextComponent;
-
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -20,8 +16,13 @@ import com.Ben12345rocks.AdvancedCore.Util.Book.BookSign;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
+
+import net.md_5.bungee.api.chat.ClickEvent.Action;
+import net.md_5.bungee.api.chat.TextComponent;
 
 /**
  * The Class BooleanRequester.
@@ -49,47 +50,40 @@ public class BooleanRequester {
 	 * @param listener
 	 *            the listener
 	 */
-	public void request(Player player, InputMethod method, String currentValue,
-			String promptText, BooleanListener listener) {
+	public void request(Player player, InputMethod method, String currentValue, String promptText,
+			BooleanListener listener) {
 		if (method.equals(InputMethod.INVENTORY)
-				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.ANVIL.toString())) {
+				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.ANVIL.toString())) {
 
 			BInventory inv = new BInventory("Click one of the following:");
 
-			inv.addButton(inv.getNextSlot(), new BInventoryButton("True",
-					new String[] {}, new ItemStack(Material.STONE)) {
+			inv.addButton(inv.getNextSlot(),
+					new BInventoryButton("True", new String[] {}, new ItemStack(Material.REDSTONE_LAMP_ON)) {
 
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					listener.onInput(
-							clickEvent.getPlayer(),
-							Boolean.valueOf(clickEvent.getClickedItem()
-									.getItemMeta().getDisplayName()));
+						@Override
+						public void onClick(ClickEvent clickEvent) {
+							listener.onInput(clickEvent.getPlayer(),
+									Boolean.valueOf(clickEvent.getClickedItem().getItemMeta().getDisplayName()));
 
-				}
-			});
-			inv.addButton(inv.getNextSlot(), new BInventoryButton("False",
-					new String[] {}, new ItemStack(Material.STONE)) {
+						}
+					});
+			inv.addButton(inv.getNextSlot(),
+					new BInventoryButton("False", new String[] {}, new ItemStack(Material.REDSTONE_LAMP_OFF)) {
 
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					listener.onInput(
-							clickEvent.getPlayer(),
-							Boolean.valueOf(clickEvent.getClickedItem()
-									.getItemMeta().getDisplayName()));
+						@Override
+						public void onClick(ClickEvent clickEvent) {
+							listener.onInput(clickEvent.getPlayer(),
+									Boolean.valueOf(clickEvent.getClickedItem().getItemMeta().getDisplayName()));
 
-				}
-			});
+						}
+					});
 
 			inv.openInventory(player);
 
 		} else if (method.equals(InputMethod.ANVIL)
-				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.ANVIL.toString())) {
+				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.ANVIL.toString())) {
 
-			AInventory inv = new AInventory(player,
-					new AInventory.AnvilClickEventHandler() {
+			AInventory inv = new AInventory(player, new AInventory.AnvilClickEventHandler() {
 
 				@Override
 				public void onAnvilClick(AnvilClickEvent event) {
@@ -99,8 +93,7 @@ public class BooleanRequester {
 						event.setWillClose(true);
 						event.setWillDestroy(true);
 
-						listener.onInput(player,
-								Boolean.valueOf(event.getName()));
+						listener.onInput(player, Boolean.valueOf(event.getName()));
 
 					} else {
 						event.setWillClose(false);
@@ -109,40 +102,36 @@ public class BooleanRequester {
 				}
 			});
 
-			ItemStack item = new ItemStack(Material.NAME_TAG);
-			item = Utils.getInstance().setName(item, "" + currentValue);
+			ItemBuilder builder = new ItemBuilder(Material.NAME_TAG);
+			builder.setName(currentValue);
+
 			ArrayList<String> lore = new ArrayList<String>();
 			lore.add("&cRename item and take out to set value");
 			lore.add("&cDoes not cost exp");
-			item = Utils.getInstance().addLore(item, lore);
+			builder.setLore(lore);
 
-			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, item);
+			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack());
 
 			inv.open();
 
 		} else if (method.equals(InputMethod.CHAT)
-				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.CHAT.toString())) {
+				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.CHAT.toString())) {
 
 			User user = UserManager.getInstance().getUser(player);
 			user.sendMessage("&cClick one of the following options below:");
 			String option = "True";
 			TextComponent comp = new TextComponent(option);
-			Utils.getInstance().setPlayerMeta(player, "ValueRequestBoolean",
-					listener);
-			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
-					Action.RUN_COMMAND, "/advancedcore ValueRequestBoolean "
-							+ option));
+			PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestBoolean", listener);
+			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
+					"/advancedcore ValueRequestBoolean " + option));
 			user.sendJson(comp);
 			option = "False";
 			comp = new TextComponent(option);
-			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
-					Action.RUN_COMMAND, "/advancedcore ValueRequestBoolean "
-							+ option));
+			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
+					"/advancedcore ValueRequestBoolean " + option));
 			user.sendJson(comp);
 		} else if (method.equals(InputMethod.BOOK)
-				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.BOOK.toString())) {
+				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.BOOK.toString())) {
 
 			new BookManager(player, currentValue, new BookSign() {
 
@@ -153,7 +142,8 @@ public class BooleanRequester {
 				}
 			});
 		} else {
-			player.sendMessage("Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
+			player.sendMessage(
+					"Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
 		}
 	}
 }

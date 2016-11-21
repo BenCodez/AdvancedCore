@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -353,6 +354,7 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item amount
 	 */
+	@Deprecated
 	public int getItemAmount(String item) {
 		return getData().getInt("Items." + item + ".Amount");
 	}
@@ -364,8 +366,13 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item data
 	 */
+	@Deprecated
 	public int getItemData(String item) {
 		return getData().getInt("Items." + item + ".Data");
+	}
+	
+	public ConfigurationSection getItemSection(String item) {
+		return getData().getConfigurationSection("Items." + item);
 	}
 
 	/**
@@ -375,6 +382,7 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item durability
 	 */
+	@Deprecated
 	public int getItemDurability(String item) {
 		return getData().getInt("Items." + item + ".Durability");
 	}
@@ -386,6 +394,7 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item enchants
 	 */
+	@Deprecated
 	public Set<String> getItemEnchants(String item) {
 		try {
 			return getData().getConfigurationSection(
@@ -404,6 +413,7 @@ public class RewardFileData {
 	 *            the enchant
 	 * @return the item enchants level
 	 */
+	@Deprecated
 	public int getItemEnchantsLevel(String item, String enchant) {
 		return getData().getInt("Items." + item + ".Enchants." + enchant);
 	}
@@ -416,6 +426,7 @@ public class RewardFileData {
 	 * @return the item lore
 	 */
 	@SuppressWarnings("unchecked")
+	@Deprecated
 	public ArrayList<String> getItemLore(String item) {
 		return (ArrayList<String>) getData().getList("Items." + item + ".Lore");
 	}
@@ -427,6 +438,7 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item material
 	 */
+	@Deprecated
 	public String getItemMaterial(String item) {
 		return getData().getString("Items." + item + ".Material");
 	}
@@ -438,6 +450,7 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item max amount
 	 */
+	@Deprecated
 	public int getItemMaxAmount(String item) {
 		return getData().getInt("Items." + item + ".MaxAmount");
 	}
@@ -449,6 +462,7 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item min amount
 	 */
+	@Deprecated
 	public int getItemMinAmount(String item) {
 		return getData().getInt("Items." + item + ".MinAmount");
 	}
@@ -460,6 +474,7 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item name
 	 */
+	@Deprecated
 	public String getItemName(String item) {
 		return getData().getString("Items." + item + ".Name");
 	}
@@ -484,6 +499,7 @@ public class RewardFileData {
 	 *            the item
 	 * @return the item skull
 	 */
+	@Deprecated
 	public String getItemSkull(String item) {
 		return getData().getString("Items." + item + ".Skull");
 	}

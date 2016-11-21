@@ -10,11 +10,11 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEventHandler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilSlot;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 /**
  * The Class AInventoryReflectionHandler.
@@ -50,7 +50,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 	public AInventoryReflectionHandler(final Player player,
 			final AnvilClickEventHandler anvilClickEventHandler) {
 		loadClasses();
-		Utils.getInstance().setPlayerMeta(player, "AInventory",
+		PlayerUtils.getInstance().setPlayerMeta(player, "AInventory",
 				anvilClickEventHandler);
 	}
 

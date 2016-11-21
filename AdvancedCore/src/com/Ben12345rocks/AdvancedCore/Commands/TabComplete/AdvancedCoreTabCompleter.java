@@ -13,8 +13,8 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 // TODO: Auto-generated Javadoc
@@ -37,8 +37,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 	 *            the arg num
 	 * @return the tab complete options
 	 */
-	public ArrayList<String> getTabCompleteOptions(CommandSender sender,
-			String[] args, int argNum) {
+	public ArrayList<String> getTabCompleteOptions(CommandSender sender, String[] args, int argNum) {
 		ArrayList<String> cmds = new ArrayList<String>();
 		for (CommandHandler commandHandler : plugin.advancedCoreCommands) {
 
@@ -58,8 +57,7 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 						String[] cmdArgsList = cmdArgs[argNum].split("&");
 						for (String arg : cmdArgsList) {
 							if (arg.equalsIgnoreCase("(player)")) {
-								for (Object playerOb : Bukkit
-										.getOnlinePlayers().toArray()) {
+								for (Object playerOb : Bukkit.getOnlinePlayers().toArray()) {
 									Player player = (Player) playerOb;
 									if (!cmds.contains(player.getName())) {
 										cmds.add(player.getName());
@@ -103,21 +101,18 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 	 * java.lang.String[])
 	 */
 	@Override
-	public List<String> onTabComplete(CommandSender sender, Command cmd,
-			String alias, String[] args) {
+	public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
 
 		ArrayList<String> tab = new ArrayList<String>();
 
 		Set<String> cmds = new HashSet<String>();
 
 		for (CommandHandler commandHandler : plugin.advancedCoreCommands) {
-			cmds.addAll(commandHandler.getTabCompleteOptions(sender, args,
-					args.length - 1));
+			cmds.addAll(commandHandler.getTabCompleteOptions(sender, args, args.length - 1));
 		}
 
 		for (String str : cmds) {
-			if (Utils.getInstance().startsWithIgnoreCase(str,
-					args[args.length - 1])) {
+			if (StringUtils.getInstance().startsWithIgnoreCase(str, args[args.length - 1])) {
 				tab.add(str);
 			}
 		}

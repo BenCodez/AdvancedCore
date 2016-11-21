@@ -11,8 +11,6 @@ import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import net.milkbowl.vault.economy.Economy;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -34,8 +32,12 @@ import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
-import com.Ben12345rocks.AdvancedCore.Util.Metrics.Metrics;
+import com.Ben12345rocks.AdvancedCore.Util.Metrics.BStatsMetrics;
+import com.Ben12345rocks.AdvancedCore.Util.Metrics.MCStatsMetrics;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.Updater;
+
+import net.milkbowl.vault.economy.Economy;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -85,22 +87,16 @@ public class Main extends JavaPlugin {
 		final Updater.UpdateResult result = plugin.updater.getResult();
 		switch (result) {
 		case FAIL_SPIGOT: {
-			plugin.getLogger().info(
-					"Failed to check for update for " + plugin.getName() + "!");
+			plugin.getLogger().info("Failed to check for update for " + plugin.getName() + "!");
 			break;
 		}
 		case NO_UPDATE: {
-			plugin.getLogger().info(
-					plugin.getName() + " is up to date! Version: "
-							+ plugin.updater.getVersion());
+			plugin.getLogger().info(plugin.getName() + " is up to date! Version: " + plugin.updater.getVersion());
 			break;
 		}
 		case UPDATE_AVAILABLE: {
-			plugin.getLogger().info(
-					plugin.getName()
-							+ " has an update available! Your Version: "
-							+ plugin.getDescription().getVersion()
-							+ " New Version: " + plugin.updater.getVersion());
+			plugin.getLogger().info(plugin.getName() + " has an update available! Your Version: "
+					+ plugin.getDescription().getVersion() + " New Version: " + plugin.updater.getVersion());
 			break;
 		}
 		default: {
@@ -120,17 +116,12 @@ public class Main extends JavaPlugin {
 
 			@Override
 			public void run() {
-				String oldVersion = ServerData.getInstance().getPluginVersion(
-						plugin);
+				String oldVersion = ServerData.getInstance().getPluginVersion(plugin);
 				if (!plugin.getDescription().getVersion().equals(oldVersion)) {
 					ServerData.getInstance().setPluginVersion(plugin);
-					PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(
-							plugin, oldVersion);
-					getLogger().info(
-							plugin.getDescription().getName()
-									+ " has updated from " + oldVersion
-									+ " to "
-									+ plugin.getDescription().getVersion());
+					PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, oldVersion);
+					getLogger().info(plugin.getDescription().getName() + " has updated from " + oldVersion + " to "
+							+ plugin.getDescription().getVersion());
 					Bukkit.getPluginManager().callEvent(event);
 				}
 			}
@@ -149,16 +140,13 @@ public class Main extends JavaPlugin {
 		if (Config.getInstance().getDebugEnabled()) {
 			plug.getLogger().info("Debug: " + msg);
 			if (logger != null && Config.getInstance().getLogDebugToFile()) {
-				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm")
-						.format(Calendar.getInstance().getTime());
-				logger.logToFile(str + " [" + plug.getName() + "] Debug: "
-						+ msg);
+				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
+				logger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
 			}
 			if (Config.getInstance().getDebugInfoIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (player.hasPermission("AdvancedCore.Debug")) {
-						player.sendMessage(Utils.getInstance().colorize(
-								"&c" + plug.getName() + " Debug: " + msg));
+						player.sendMessage(StringUtils.getInstance().colorize("&c" + plug.getName() + " Debug: " + msg));
 					}
 				}
 			}
@@ -173,6 +161,12 @@ public class Main extends JavaPlugin {
 	 */
 	public void debug(String msg) {
 		debug(this, msg);
+	}
+	
+	public void debug(Exception e) {
+		if (Config.getInstance().getDebugEnabled()) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -189,10 +183,8 @@ public class Main extends JavaPlugin {
 	 */
 	public void loadCommands() {
 		CommandLoader.getInstance().loadCommands();
-		Bukkit.getPluginCommand("advancedcore").setExecutor(
-				new CommandAdvancedCore(plugin));
-		Bukkit.getPluginCommand("advancedcore").setTabCompleter(
-				new AdvancedCoreTabCompleter());
+		Bukkit.getPluginCommand("advancedcore").setExecutor(new CommandAdvancedCore(plugin));
+		Bukkit.getPluginCommand("advancedcore").setTabCompleter(new AdvancedCoreTabCompleter());
 	}
 
 	/*
@@ -223,38 +215,35 @@ public class Main extends JavaPlugin {
 		} else {
 			plugin.getLogger().warning("Failed to hook into Vault");
 		}
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this),
-				this);
-		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this),
-				this);
-		Bukkit.getPluginManager().registerEvents(
-				new AdvancedCoreUpdateEvent(this), this);
+		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
+		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
+		Bukkit.getPluginManager().registerEvents(new AdvancedCoreUpdateEvent(this), this);
 
-		RewardHandler.getInstance().addRewardFolder(
-				new File(plugin.getDataFolder(), "Rewards"));
+		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
 		UserManager.getInstance().loadUsers();
 
 		try {
-			Metrics metrics = new Metrics(this);
+			MCStatsMetrics metrics = new MCStatsMetrics(this);
 			metrics.start();
 		} catch (IOException e) {
 			debug("Failed to load metrics");
 		}
 
-		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin,
-				new Runnable() {
+		new BStatsMetrics(this);
+
+		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				plugin.run(new Runnable() {
 
 					@Override
 					public void run() {
-						plugin.run(new Runnable() {
-
-							@Override
-							public void run() {
-								checkUpdate();
-							}
-						});
+						checkUpdate();
 					}
-				}, 10l);
+				});
+			}
+		}, 10l);
 
 		new Timer().schedule(new TimerTask() {
 
@@ -269,8 +258,7 @@ public class Main extends JavaPlugin {
 			}
 		}, 1 * 60 * 1000, 5 * 60 * 1000);
 
-		logger = new Logger(this, new File(getDataFolder(), "Log"
-				+ File.separator + "Log.txt"));
+		logger = new Logger(this, new File(getDataFolder(), "Log" + File.separator + "Log.txt"));
 
 		checkUpdateEvent(plugin);
 	}
@@ -317,8 +305,7 @@ public class Main extends JavaPlugin {
 		if (getServer().getPluginManager().getPlugin("Vault") == null) {
 			return false;
 		}
-		RegisteredServiceProvider<Economy> rsp = getServer()
-				.getServicesManager().getRegistration(Economy.class);
+		RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
 		if (rsp == null) {
 			return false;
 		}

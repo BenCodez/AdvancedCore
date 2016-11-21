@@ -9,8 +9,6 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import net.md_5.bungee.api.chat.TextComponent;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Sound;
@@ -29,7 +27,12 @@ import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
+
+import net.md_5.bungee.api.chat.TextComponent;
 
 /**
  * The Class User.
@@ -150,12 +153,10 @@ public class User {
 
 	public ArrayList<String> getChoiceRewards() {
 		if (getRawData().isConfigurationSection("ChoiceRewards")) {
-			Set<String> set = getRawData().getConfigurationSection(
-					"ChoiceRewards").getKeys(false);
+			Set<String> set = getRawData().getConfigurationSection("ChoiceRewards").getKeys(false);
 			ArrayList<String> rewards = new ArrayList<String>();
 			for (String reward : set) {
-				if (getChoiceReward(RewardHandler.getInstance().getReward(
-						reward)) != 0) {
+				if (getChoiceReward(RewardHandler.getInstance().getReward(reward)) != 0) {
 					rewards.add(reward);
 				}
 			}
@@ -215,14 +216,11 @@ public class User {
 	 * @return the plugin data
 	 */
 	public synchronized ConfigurationSection getPluginData() {
-		boolean isSection = Data.getInstance().getData(this)
-				.isConfigurationSection(plugin.getName());
+		boolean isSection = Data.getInstance().getData(this).isConfigurationSection(plugin.getName());
 		if (!isSection) {
-			return Data.getInstance().getData(this)
-					.createSection(plugin.getName());
+			return Data.getInstance().getData(this).createSection(plugin.getName());
 		}
-		return Data.getInstance().getData(this)
-				.getConfigurationSection(plugin.getName());
+		return Data.getInstance().getData(this).getConfigurationSection(plugin.getName());
 	}
 
 	/**
@@ -243,9 +241,7 @@ public class User {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<Long> getTimedReward(Reward reward) {
-		return (ArrayList<Long>) getRawData()
-				.getList("TimedRewards." + reward.getRewardName(),
-						new ArrayList<Long>());
+		return (ArrayList<Long>) getRawData().getList("TimedRewards." + reward.getRewardName(), new ArrayList<Long>());
 	}
 
 	/**
@@ -290,8 +286,8 @@ public class User {
 	 * @return the user input method
 	 */
 	public InputMethod getUserInputMethod() {
-		return InputMethod.getMethod(getRawData().getString("InputMethod",
-				Config.getInstance().getRequestAPIDefaultMethod()));
+		return InputMethod
+				.getMethod(getRawData().getString("InputMethod", Config.getInstance().getRequestAPIDefaultMethod()));
 	}
 
 	/**
@@ -335,15 +331,22 @@ public class User {
 	@SuppressWarnings("deprecation")
 	/**
 	 * Give the user an item
-	 * @param id	Item id
-	 * @param amount	Item amount
-	 * @param data		Item data
-	 * @param itemName	Item name
-	 * @param lore		Item lore
-	 * @param enchants	Item enchants
+	 * 
+	 * @param id
+	 *            Item id
+	 * @param amount
+	 *            Item amount
+	 * @param data
+	 *            Item data
+	 * @param itemName
+	 *            Item name
+	 * @param lore
+	 *            Item lore
+	 * @param enchants
+	 *            Item enchants
 	 */
-	public void giveItem(int id, int amount, int data, String itemName,
-			List<String> lore, HashMap<String, Integer> enchants) {
+	public void giveItem(int id, int amount, int data, String itemName, List<String> lore,
+			HashMap<String, Integer> enchants) {
 
 		if (amount == 0) {
 			return;
@@ -359,15 +362,13 @@ public class User {
 
 		item = Utils.getInstance().addEnchants(item, enchants);
 
-		HashMap<Integer, ItemStack> excess = player.getInventory()
-				.addItem(item);
+		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
 		for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
-					player.getWorld().dropItem(player.getLocation(),
-							me.getValue());
+					player.getWorld().dropItem(player.getLocation(), me.getValue());
 				}
 			});
 		}
@@ -391,15 +392,13 @@ public class User {
 
 		Player player = Bukkit.getPlayer(playerName);
 
-		HashMap<Integer, ItemStack> excess = player.getInventory()
-				.addItem(item);
+		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
 		for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
-					player.getWorld().dropItem(player.getLocation(),
-							me.getValue());
+					player.getWorld().dropItem(player.getLocation(), me.getValue());
 				}
 			});
 
@@ -409,16 +408,12 @@ public class User {
 
 	}
 
-	/**
-	 * Give money.
-	 *
-	 * @param money
-	 *            the money
-	 */
 	@SuppressWarnings("deprecation")
 	/**
 	 * Give user money, needs vault installed
-	 * @param money		Amount of money to give
+	 * 
+	 * @param money
+	 *            Amount of money to give
 	 */
 	public void giveMoney(double money) {
 		String playerName = getPlayerName();
@@ -441,12 +436,13 @@ public class User {
 	@SuppressWarnings("deprecation")
 	/**
 	 * Give user money, needs vault installed
-	 * @param money		Amount of money to give
+	 * 
+	 * @param money
+	 *            Amount of money to give
 	 */
 	public void giveMoney(int money) {
 		String playerName = getPlayerName();
-		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null
-				&& Main.plugin.econ != null) {
+		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null && Main.plugin.econ != null) {
 			if (money > 0) {
 				Main.plugin.econ.depositPlayer(playerName, money);
 			} else if (money < 0) {
@@ -474,9 +470,7 @@ public class User {
 				@Override
 				public void run() {
 					player.addPotionEffect(
-							new PotionEffect(PotionEffectType
-									.getByName(potionName), 20 * duration,
-									amplifier), true);
+							new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier), true);
 				}
 			});
 
@@ -510,7 +504,7 @@ public class User {
 	 * @return true, if is online
 	 */
 	public boolean isOnline() {
-		return Utils.getInstance().isPlayerOnline(getPlayerName());
+		return PlayerUtils.getInstance().isPlayerOnline(getPlayerName());
 	}
 
 	/**
@@ -528,8 +522,7 @@ public class User {
 					if (reward.isGiveInEachWorld()) {
 						for (String worldName : worlds) {
 
-							Main.plugin.debug("Checking world: " + worldName
-									+ ", reard: " + reward);
+							Main.plugin.debug("Checking world: " + worldName + ", reard: " + reward);
 
 							if (worldName != "") {
 								if (worldName.equals(world)) {
@@ -538,15 +531,12 @@ public class User {
 
 									int worldRewards =
 
-									getOfflineRewardWorld(
-											reward.getRewardName(), worldName);
+											getOfflineRewardWorld(reward.getRewardName(), worldName);
 
 									while (worldRewards > 0 && isOnline()) {
 										reward.giveRewardUser(this);
 										worldRewards--;
-										setOfflineRewardWorld(
-												reward.getRewardName(), world,
-												worldRewards);
+										setOfflineRewardWorld(reward.getRewardName(), world, worldRewards);
 									}
 								}
 							}
@@ -554,14 +544,12 @@ public class User {
 						}
 					} else {
 						if (worlds.contains(world)) {
-							int worldRewards = getOfflineRewardWorld(
-									reward.getRewardName(), world);
+							int worldRewards = getOfflineRewardWorld(reward.getRewardName(), world);
 
 							while (worldRewards > 0 && isOnline()) {
 								reward.giveRewardUser(this);
 								worldRewards--;
-								setOfflineRewardWorld(reward.getRewardName(),
-										world, worldRewards);
+								setOfflineRewardWorld(reward.getRewardName(), world, worldRewards);
 							}
 
 						}
@@ -584,16 +572,14 @@ public class User {
 	 * @param radius
 	 *            the radius
 	 */
-	@SuppressWarnings("deprecation")
-	public synchronized void playParticleEffect(String effectName, int data,
-			int particles, int radius) {
+	public synchronized void playParticleEffect(String effectName, int data, int particles, int radius) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (effectName != null)) {
 			Effect effect = Effect.valueOf(effectName);
-			player.spigot().playEffect(player.getLocation(), effect,
-					effect.getId(), data, 0f, 0f, 0f, 1f, particles, radius);
-			// player.getWorld().spigot().playEffect(player.getLocation(),
-			// effect);
+			for (int i = 0; i < particles; i++) {
+				player.getWorld().playEffect(player.getLocation(), effect, data, radius);
+			}
+
 		}
 	}
 
@@ -607,8 +593,7 @@ public class User {
 	 * @param pitch
 	 *            the pitch
 	 */
-	public synchronized void playSound(String soundName, float volume,
-			float pitch) {
+	public synchronized void playSound(String soundName, float volume, float pitch) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			Sound sound = Sound.valueOf(soundName);
@@ -638,8 +623,7 @@ public class User {
 					ActionBar actionBar = new ActionBar(msg, delay);
 					actionBar.send(player);
 				} catch (Exception ex) {
-					Main.plugin
-							.debug("Failed to send ActionBar, turn debug on to see stack trace");
+					Main.plugin.debug("Failed to send ActionBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -662,8 +646,7 @@ public class User {
 	 * @param delay
 	 *            the delay
 	 */
-	public void sendBossBar(String msg, String color, String style,
-			double progress, int delay) {
+	public void sendBossBar(String msg, String color, String style, double progress, int delay) {
 		// plugin.debug("attempting to send action bar");
 		if (msg != null && msg != "") {
 			Player player = getPlayer();
@@ -672,8 +655,7 @@ public class User {
 					BossBar bossBar = new BossBar(msg, color, style, progress);
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
-					Main.plugin
-							.debug("Failed to send BossBar, turn debug on to see stack trace");
+					Main.plugin.debug("Failed to send BossBar, turn debug on to see stack trace");
 					if (Config.getInstance().getDebugEnabled()) {
 						ex.printStackTrace();
 					}
@@ -689,7 +671,7 @@ public class User {
 	 *            the messages
 	 */
 	public void sendJson(ArrayList<TextComponent> messages) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		Player player = getPlayer();
 		if ((player != null) && (messages != null)) {
 			/*
 			 * TextComponent msg = new TextComponent(); TextComponent newLine =
@@ -711,7 +693,7 @@ public class User {
 	 *            the message
 	 */
 	public void sendJson(TextComponent message) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
 			player.spigot().sendMessage(message);
 		}
@@ -724,7 +706,7 @@ public class User {
 	 *            the msg
 	 */
 	public void sendMessage(ArrayList<String> msg) {
-		sendMessage(Utils.getInstance().convertArray(msg));
+		sendMessage(ArrayUtils.getInstance().convert(msg));
 	}
 
 	/**
@@ -738,9 +720,8 @@ public class User {
 		if ((player != null) && (msg != null)) {
 			if (msg != "") {
 				for (String str : msg.split("%NewLine%")) {
-					player.sendMessage(Utils.getInstance().colorize(
-							Utils.getInstance()
-									.replacePlaceHolders(player, str)));
+					player.sendMessage(StringUtils.getInstance()
+							.colorize(StringUtils.getInstance().replacePlaceHolders(player, str)));
 				}
 			}
 		}
@@ -757,10 +738,9 @@ public class User {
 		if ((player != null) && (msg != null)) {
 
 			for (int i = 0; i < msg.length; i++) {
-				msg[i] = Utils.getInstance()
-						.replacePlaceHolders(player, msg[i]);
+				msg[i] = StringUtils.getInstance().replacePlaceHolders(player, msg[i]);
 			}
-			player.sendMessage(Utils.getInstance().colorize(msg));
+			player.sendMessage(ArrayUtils.getInstance().colorize(msg));
 
 		}
 	}
@@ -779,19 +759,16 @@ public class User {
 	 * @param fadeOut
 	 *            the fade out
 	 */
-	public void sendTitle(String title, String subTitle, int fadeIn,
-			int showTime, int fadeOut) {
+	public void sendTitle(String title, String subTitle, int fadeIn, int showTime, int fadeOut) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			// Title.getInstance().sendTitle(player, title, subTitle, fadeIn,
 			// showTime, fadeOut);
 			try {
-				Title titleObject = new Title(title, subTitle, fadeIn,
-						showTime, fadeOut);
+				Title titleObject = new Title(title, subTitle, fadeIn, showTime, fadeOut);
 				titleObject.send(player);
 			} catch (Exception ex) {
-				plugin.getLogger()
-						.info("Failed to send Title, turn debug on to see stack trace");
+				plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");
 				if (Config.getInstance().getDebugEnabled()) {
 					ex.printStackTrace();
 				}

@@ -25,7 +25,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -135,7 +137,7 @@ public class BInventory implements Listener {
 		 * @return the meta
 		 */
 		public Object getMeta(Player player, String str) {
-			return Utils.getInstance().getPlayerMeta(player, str);
+			return PlayerUtils.getInstance().getPlayerMeta(player, str);
 		}
 
 		/**
@@ -146,7 +148,7 @@ public class BInventory implements Listener {
 		 * @return the meta
 		 */
 		public Object getMeta(String str) {
-			return Utils.getInstance().getPlayerMeta(player, str);
+			return PlayerUtils.getInstance().getPlayerMeta(player, str);
 		}
 
 		/**
@@ -212,6 +214,7 @@ public class BInventory implements Listener {
 	 */
 	public BInventory(String name) {
 		setInventoryName(name);
+		Bukkit.getPluginManager().registerEvents(this, Bukkit.getPluginManager().getPlugins()[0]);
 	}
 
 	/**
@@ -393,7 +396,6 @@ public class BInventory implements Listener {
 	 *            the player
 	 */
 	public void openInventory(Player player) {
-		Bukkit.getPluginManager().registerEvents(this, Bukkit.getPluginManager().getPlugins()[0]);
 		BInventory inventory = this;
 		this.player = player;
 
@@ -435,7 +437,6 @@ public class BInventory implements Listener {
 	 *            the page
 	 */
 	private void openInventory(Player player, int page) {
-		Bukkit.getPluginManager().registerEvents(this, Bukkit.getPluginManager().getPlugins()[0]);
 		BInventory inventory = this;
 		this.player = player;
 		inv = Bukkit.createInventory(player, 54, inventory.getInventoryName());
@@ -460,10 +461,11 @@ public class BInventory implements Listener {
 			}
 
 		}
-		inv.setItem(45, Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 15),
-				"&aPrevious Page"));
+		inv.setItem(45,
+				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aPrevious Page").toItemStack());
+
 		inv.setItem(53,
-				Utils.getInstance().setName(new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 15), "&aNext Page"));
+				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aNext Page").toItemStack());
 
 		player.openInventory(inv);
 	}
@@ -475,7 +477,7 @@ public class BInventory implements Listener {
 	 *            the new inventory name
 	 */
 	public void setInventoryName(String inventoryName) {
-		this.inventoryName = Utils.getInstance().colorize(inventoryName);
+		this.inventoryName = StringUtils.getInstance().colorize(inventoryName);
 	}
 
 	/**
@@ -489,7 +491,7 @@ public class BInventory implements Listener {
 	 *            the ob
 	 */
 	public void setMeta(Player player, String str, Object ob) {
-		Utils.getInstance().setPlayerMeta(player, str, ob);
+		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
 	}
 
 }

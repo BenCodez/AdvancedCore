@@ -29,8 +29,7 @@ import com.Ben12345rocks.AdvancedCore.Main;
 /**
  * The Class Metrics.
  */
-@Deprecated
-public class Metrics {
+public class MCStatsMetrics {
 
 	/**
 	 * The Class Graph.
@@ -272,7 +271,7 @@ public class Metrics {
 	 * @throws IOException
 	 *             Signals that an I/O exception has occurred.
 	 */
-	public Metrics(final Plugin plugin) throws IOException {
+	public MCStatsMetrics(final Plugin plugin) throws IOException {
 		if (plugin == null) {
 			throw new IllegalArgumentException("Plugin cannot be null");
 		}
@@ -534,6 +533,7 @@ public class Metrics {
 	 *
 	 * @return true, if successful
 	 */
+	@SuppressWarnings("deprecation")
 	public boolean start() {
 		synchronized (optOutLock) {
 			// Did we opt out?

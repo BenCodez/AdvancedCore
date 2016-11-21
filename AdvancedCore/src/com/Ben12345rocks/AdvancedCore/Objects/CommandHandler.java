@@ -6,20 +6,22 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -91,8 +93,7 @@ public abstract class CommandHandler {
 	 * @param allowConsole
 	 *            the allow console
 	 */
-	public CommandHandler(String[] args, String perm, String helpMessage,
-			boolean allowConsole) {
+	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole) {
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
@@ -190,12 +191,10 @@ public abstract class CommandHandler {
 		if (getHelpMessage() != "") {
 			line = line.replace("%HelpMessage%", getHelpMessage());
 		}
-		TextComponent txt = Utils.getInstance().stringToComp(line);
-		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
-				commandText));
+		TextComponent txt = StringUtils.getInstance().stringToComp(line);
+		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
 		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA)
-						.create()));
+				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA).create()));
 		return txt;
 
 	}
@@ -280,8 +279,7 @@ public abstract class CommandHandler {
 	 *            the arg num
 	 * @return the tab complete options
 	 */
-	public ArrayList<String> getTabCompleteOptions(CommandSender sender,
-			String[] args, int argNum) {
+	public ArrayList<String> getTabCompleteOptions(CommandSender sender, String[] args, int argNum) {
 		CommandHandler commandHandler = this;
 		updateTabComplete();
 		Set<String> cmds = new HashSet<String>();
@@ -312,8 +310,7 @@ public abstract class CommandHandler {
 					for (String arg : cmdArgsList) {
 						// plugin.debug(arg);
 						boolean add = true;
-						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions
-								.entrySet()) {
+						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions.entrySet()) {
 							if (arg.equalsIgnoreCase(entry.getKey())) {
 								add = false;
 								cmds.addAll(entry.getValue());
@@ -331,7 +328,7 @@ public abstract class CommandHandler {
 			}
 		}
 
-		ArrayList<String> options = Utils.getInstance().convert(cmds);
+		ArrayList<String> options = ArrayUtils.getInstance().convert(cmds);
 
 		Collections.sort(options, String.CASE_INSENSITIVE_ORDER);
 
@@ -379,26 +376,23 @@ public abstract class CommandHandler {
 					return false;
 				}
 				if (this.args[i].equalsIgnoreCase("(number)")) {
-					if (!Utils.getInstance().isInt(args[i])) {
-						sender.sendMessage(Utils.getInstance().colorize(
-								Config.getInstance().getFormatNotNumber()
-										.replace("%arg%", args[i])));
+					if (!StringUtils.getInstance().isInt(args[i])) {
+						sender.sendMessage(StringUtils.getInstance()
+								.colorize(Config.getInstance().getFormatNotNumber().replace("%arg%", args[i])));
 						return true;
 					}
 				}
 			}
 			if (!(sender instanceof Player) && !allowConsole) {
-				sender.sendMessage(Utils.getInstance().colorize(
-						"&cMust be a player to do this"));
+				sender.sendMessage(StringUtils.getInstance().colorize("&cMust be a player to do this"));
 				return true;
 			}
 
 			if (perm != "") {
 				if (!sender.hasPermission(perm)) {
-					sender.sendMessage(Utils.getInstance().colorize(
-							Config.getInstance().getFormatNoPerms()));
-					Main.plugin.debug(Main.plugin, sender.getName()
-							+ " was denied access to command");
+					sender.sendMessage(StringUtils.getInstance().colorize(Config.getInstance().getFormatNoPerms()));
+					Main.plugin.getLogger().log(Level.INFO,
+							sender.getName() + " was denied access to command, required permission: " + perm);
 					return true;
 				}
 			}

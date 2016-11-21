@@ -1,9 +1,8 @@
 package com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters;
 
 import java.util.ArrayList;
-
-import net.md_5.bungee.api.chat.ClickEvent.Action;
-import net.md_5.bungee.api.chat.TextComponent;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.bukkit.Material;
 import org.bukkit.conversations.Conversable;
@@ -13,7 +12,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Configs.Config;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -24,11 +22,16 @@ import com.Ben12345rocks.AdvancedCore.Util.Book.BookSign;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptManager;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
+
+import net.md_5.bungee.api.chat.ClickEvent.Action;
+import net.md_5.bungee.api.chat.TextComponent;
 
 /**
  * The Class StringRequester.
@@ -40,6 +43,17 @@ public class StringRequester {
 	 */
 	public StringRequester() {
 
+	}
+
+	public void request(Player player, InputMethod method, String currentValue, String promptText, String[] options,
+			boolean allowCustomOption, StringListener listener) {
+		HashMap<String, ItemStack> items = new HashMap<String, ItemStack>();
+		if (options != null) {
+			for (String option : options) {
+				items.put(option, new ItemStack(Material.STONE, 1));
+			}
+		}
+		request(player, method, currentValue,items, promptText, allowCustomOption, listener);
 	}
 
 	/**
@@ -60,48 +74,42 @@ public class StringRequester {
 	 * @param listener
 	 *            the listener
 	 */
-	public void request(Player player, InputMethod method, String currentValue,
-			String promptText, String[] options, boolean allowCustomOption,
-			StringListener listener) {
-		if (options == null && method.equals(InputMethod.INVENTORY)
-				&& allowCustomOption) {
+	public void request(Player player, InputMethod method, String currentValue, HashMap<String, ItemStack> options,
+			String promptText, boolean allowCustomOption, StringListener listener) {
+		if (options == null && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
 			method = InputMethod.ANVIL;
 		}
 		if (options != null && method.equals(InputMethod.ANVIL)) {
 			method = InputMethod.INVENTORY;
 		}
 		if (method.equals(InputMethod.INVENTORY)
-				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.INVENTORY.toString())) {
+				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.INVENTORY.toString())) {
 			if (options == null) {
 				player.sendMessage("There are no choices to choice from to use this method");
 				return;
 			}
 
 			BInventory inv = new BInventory("Click one of the following:");
-			for (String str : options) {
-				inv.addButton(inv.getNextSlot(), new BInventoryButton(str,
-						new String[] {}, new ItemStack(Material.STONE)) {
+			for (Entry<String, ItemStack> entry : options.entrySet()) {
+				inv.addButton(inv.getNextSlot(),
+						new BInventoryButton(entry.getKey(), new String[] {}, entry.getValue()) {
 
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						listener.onInput(clickEvent.getPlayer(), clickEvent
-								.getClickedItem().getItemMeta()
-								.getDisplayName());
+							@Override
+							public void onClick(ClickEvent clickEvent) {
+								listener.onInput(clickEvent.getPlayer(),
+										clickEvent.getClickedItem().getItemMeta().getDisplayName());
 
-					}
-				});
+							}
+						});
 			}
 
 			if (allowCustomOption) {
-				inv.addButton(inv.getNextSlot(), new BInventoryButton(
-						"&cClick to enter custom value", new String[] {},
+				inv.addButton(inv.getNextSlot(), new BInventoryButton("&cClick to enter custom value", new String[] {},
 						new ItemStack(Material.ANVIL)) {
 
 					@Override
 					public void onClick(ClickEvent clickEvent) {
-						new ValueRequest().requestString(
-								clickEvent.getPlayer(), listener);
+						new ValueRequest().requestString(clickEvent.getPlayer(), listener);
 					}
 				});
 			}
@@ -109,11 +117,9 @@ public class StringRequester {
 			inv.openInventory(player);
 
 		} else if (method.equals(InputMethod.ANVIL)
-				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.ANVIL.toString())) {
+				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.ANVIL.toString())) {
 
-			AInventory inv = new AInventory(player,
-					new AInventory.AnvilClickEventHandler() {
+			AInventory inv = new AInventory(player, new AInventory.AnvilClickEventHandler() {
 
 				@Override
 				public void onAnvilClick(AnvilClickEvent event) {
@@ -132,59 +138,52 @@ public class StringRequester {
 				}
 			});
 
-			ItemStack item = new ItemStack(Material.NAME_TAG);
-			item = Utils.getInstance().setName(item, "" + currentValue);
+			ItemBuilder builder = new ItemBuilder(Material.NAME_TAG);
+			builder.setName(currentValue);
+
 			ArrayList<String> lore = new ArrayList<String>();
 			lore.add("&cRename item and take out to set value");
 			lore.add("&cDoes not cost exp");
-			item = Utils.getInstance().addLore(item, lore);
+			builder.setLore(lore);
 
-			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, item);
+			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack());
 
 			inv.open();
 
 		} else if (method.equals(InputMethod.CHAT)
-				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.CHAT.toString())) {
+				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.CHAT.toString())) {
 
 			if (options != null) {
 				User user = UserManager.getInstance().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
-				Utils.getInstance().setPlayerMeta(player, "ValueRequestString",
-						listener);
-				for (String option : options) {
+				PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestString", listener);
+				for (String option : options.keySet()) {
 					TextComponent comp = new TextComponent(option);
-					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
-							Action.RUN_COMMAND,
+					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
 							"/advancedcore ValueRequestString " + option));
 					user.sendJson(comp);
 				}
 				if (allowCustomOption) {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
-					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
-							Action.RUN_COMMAND,
+					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
 							"/advancedcore ValueRequestString " + option));
 					user.sendJson(comp);
 				}
 			} else {
-				ConversationFactory convoFactory = new ConversationFactory(
-						Main.plugin).withModality(true)
+				ConversationFactory convoFactory = new ConversationFactory(Main.plugin).withModality(true)
 						.withEscapeSequence("cancel").withTimeout(60);
-				PromptManager prompt = new PromptManager(promptText
-						+ " Current value: " + currentValue, convoFactory);
+				PromptManager prompt = new PromptManager(promptText + " Current value: " + currentValue, convoFactory);
 				prompt.stringPrompt(player, new PromptReturnString() {
 
 					@Override
-					public void onInput(ConversationContext context,
-							Conversable conversable, String input) {
+					public void onInput(ConversationContext context, Conversable conversable, String input) {
 						listener.onInput((Player) conversable, input);
 					}
 				});
 			}
 		} else if (method.equals(InputMethod.BOOK)
-				&& !Config.getInstance().getRequestAPIDisabledMethods()
-				.contains(InputMethod.BOOK.toString())) {
+				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.BOOK.toString())) {
 
 			new BookManager(player, currentValue, new BookSign() {
 
@@ -195,7 +194,8 @@ public class StringRequester {
 				}
 			});
 		} else {
-			player.sendMessage("Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
+			player.sendMessage(
+					"Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
 		}
 	}
 }

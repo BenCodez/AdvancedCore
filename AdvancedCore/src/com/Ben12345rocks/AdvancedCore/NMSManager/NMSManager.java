@@ -54,6 +54,18 @@ public class NMSManager {
 	}
 
 	/**
+	 * Gets the.
+	 *
+	 * @return the NMS manager
+	 */
+	public static NMSManager getInstance() {
+		if (instance == null) {
+			instance = new NMSManager();
+		}
+		return instance;
+	}
+
+	/**
 	 * Sets the.
 	 *
 	 * @param object
@@ -153,9 +165,7 @@ public class NMSManager {
 	 */
 	public Method getMethod(Class<?> clazz, String name, Class<?>... args) {
 		for (Method m : clazz.getMethods()) {
-			if (m.getName().equals(name)
-					&& (args.length == 0 || ClassListEqual(args,
-							m.getParameterTypes()))) {
+			if (m.getName().equals(name) && (args.length == 0 || ClassListEqual(args, m.getParameterTypes()))) {
 				m.setAccessible(true);
 				return m;
 			}
@@ -224,10 +234,8 @@ public class NMSManager {
 	 * @throws InvocationTargetException
 	 *             the invocation target exception
 	 */
-	public Object getPlayerField(Player player, String name)
-			throws SecurityException, NoSuchMethodException,
-			NoSuchFieldException, IllegalArgumentException,
-			IllegalAccessException, InvocationTargetException {
+	public Object getPlayerField(Player player, String name) throws SecurityException, NoSuchMethodException,
+			NoSuchFieldException, IllegalArgumentException, IllegalAccessException, InvocationTargetException {
 		Method getHandle = player.getClass().getMethod("getHandle");
 		Object nmsPlayer = getHandle.invoke(player);
 		Field field = nmsPlayer.getClass().getField(name);
@@ -242,8 +250,7 @@ public class NMSManager {
 	 * @return the primitive type
 	 */
 	public Class<?> getPrimitiveType(Class<?> clazz) {
-		return CORRESPONDING_TYPES.containsKey(clazz) ? CORRESPONDING_TYPES
-				.get(clazz) : clazz;
+		return CORRESPONDING_TYPES.containsKey(clazz) ? CORRESPONDING_TYPES.get(clazz) : clazz;
 	}
 
 	/**
@@ -285,8 +292,7 @@ public class NMSManager {
 	 *            the args
 	 * @return the object
 	 */
-	public Object invokeMethodWithArgs(String method, Object obj,
-			Object... args) {
+	public Object invokeMethodWithArgs(String method, Object obj, Object... args) {
 		try {
 			return getMethod(method, obj.getClass()).invoke(obj, args);
 		} catch (Exception e) {

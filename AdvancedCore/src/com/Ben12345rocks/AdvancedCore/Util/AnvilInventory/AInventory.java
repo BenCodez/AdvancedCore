@@ -16,10 +16,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventory1_7_R4Handler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryReflectionHandler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 /**
  * The Class AInventory.
@@ -242,7 +242,7 @@ public class AInventory {
 		}
 		this.player = player;
 		handler = anvilClickEventHandler;
-		Utils.getInstance().setPlayerMeta(player, "AInventory",
+		PlayerUtils.getInstance().setPlayerMeta(player, "AInventory",
 				anvilClickEventHandler);
 
 		listener = new Listener() {
@@ -275,7 +275,7 @@ public class AInventory {
 						if (clickEvent.getSlot() == AnvilSlot.OUTPUT) {
 							event.getWhoClicked().closeInventory();
 							if (handler == null) {
-								handler = (AnvilClickEventHandler) Utils
+								handler = (AnvilClickEventHandler) PlayerUtils
 										.getInstance().getPlayerMeta(player,
 												"AInventory");
 								Main.plugin
