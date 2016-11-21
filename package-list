@@ -5,6 +5,7 @@ com.Ben12345rocks.AdvancedCore.Commands.GUI
 com.Ben12345rocks.AdvancedCore.Commands.TabComplete
 com.Ben12345rocks.AdvancedCore.Configs
 com.Ben12345rocks.AdvancedCore.Data
+com.Ben12345rocks.AdvancedCore.Exceptions
 com.Ben12345rocks.AdvancedCore.Listeners
 com.Ben12345rocks.AdvancedCore.NMSManager
 com.Ben12345rocks.AdvancedCore.Objects
@@ -18,9 +19,11 @@ com.Ben12345rocks.AdvancedCore.Util.Book
 com.Ben12345rocks.AdvancedCore.Util.Effects
 com.Ben12345rocks.AdvancedCore.Util.Files
 com.Ben12345rocks.AdvancedCore.Util.Inventory
+com.Ben12345rocks.AdvancedCore.Util.Item
 com.Ben12345rocks.AdvancedCore.Util.Javascript
 com.Ben12345rocks.AdvancedCore.Util.Logger
 com.Ben12345rocks.AdvancedCore.Util.Metrics
+com.Ben12345rocks.AdvancedCore.Util.Misc
 com.Ben12345rocks.AdvancedCore.Util.Prompt
 com.Ben12345rocks.AdvancedCore.Util.Scoreboards
 com.Ben12345rocks.AdvancedCore.Util.Updater
