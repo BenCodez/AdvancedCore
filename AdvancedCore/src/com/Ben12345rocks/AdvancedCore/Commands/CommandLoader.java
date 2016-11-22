@@ -155,10 +155,10 @@ public class CommandLoader {
 						ArrayList<String> msg = new ArrayList<String>();
 						msg.add("&c" + plugin.getName() + " permissions");
 						for (CommandHandler cmdHandle : plugin.advancedCoreCommands) {
-							msg.add(cmdHandle.getPerm());
+							msg.add(cmdHandle.getHelpLineCommand("/av") + " : " + cmdHandle.getPerm());
 						}
 						for (String perm : perms) {
-							if (!msg.contains(perm)) {
+							if (!perm.contains(perm)) {
 								msg.add(perm);
 							}
 						}
@@ -283,6 +283,7 @@ public class CommandLoader {
 				});
 
 		plugin.advancedCoreCommands.addAll(getBasicCommands());
+		plugin.advancedCoreCommands.addAll(getBasicAdminCommands());
 
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
@@ -347,7 +348,7 @@ public class CommandLoader {
 		UserGUI.getInstance().addPluginButton(plugin, inv);
 	}
 
-	public ArrayList<CommandHandler> getBasicCommands() {
+	public ArrayList<CommandHandler> getBasicAdminCommands() {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
 		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)" }, "AdvancedCore.GiveReward",
 				"Give a player a reward file", true) {
@@ -360,6 +361,11 @@ public class CommandLoader {
 				sender.sendMessage("Gave " + args[2] + " the reward file " + args[1]);
 			}
 		});
+		return cmds;
+	}
+
+	public ArrayList<CommandHandler> getBasicCommands() {
+		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
 
 		cmds.add(new CommandHandler(new String[] { "SelectChoiceReward" }, "AdvancedCore.SelectChoiceReward",
 				"Let user select his choice reward", false) {

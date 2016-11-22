@@ -388,12 +388,14 @@ public abstract class CommandHandler {
 				return true;
 			}
 
-			if (perm != "") {
-				if (!sender.hasPermission(perm)) {
-					sender.sendMessage(StringUtils.getInstance().colorize(Config.getInstance().getFormatNoPerms()));
-					Main.plugin.getLogger().log(Level.INFO,
-							sender.getName() + " was denied access to command, required permission: " + perm);
-					return true;
+			if (!perm.equals("")) {
+				for (String perm : this.perm.split("|")) {
+					if (!sender.hasPermission(perm)) {
+						sender.sendMessage(StringUtils.getInstance().colorize(Config.getInstance().getFormatNoPerms()));
+						Main.plugin.getLogger().log(Level.INFO,
+								sender.getName() + " was denied access to command, required permission: " + perm);
+						return true;
+					}
 				}
 			}
 
