@@ -284,7 +284,8 @@ public abstract class CommandHandler {
 		updateTabComplete();
 		Set<String> cmds = new HashSet<String>();
 
-		if (sender.hasPermission(commandHandler.getPerm())) {
+		
+		if (hasPerm(sender)) {
 			String[] cmdArgs = commandHandler.getArgs();
 			if (cmdArgs.length > argNum) {
 				boolean argsMatch = true;
@@ -359,6 +360,21 @@ public abstract class CommandHandler {
 		addTabCompleteOption("(reward)", rewards);
 
 	}
+	
+	public boolean hasPerm(CommandSender sender) {
+		boolean hasPerm = false;
+
+		if (!perm.equals("")) {
+			for (String perm : this.perm.split("|")) {
+				if (sender.hasPermission(perm)) {
+					hasPerm = true;
+				}
+			}
+		} else {
+			hasPerm = true;
+		}
+		return hasPerm;
+	}
 
 	/**
 	 * Run command.
@@ -387,16 +403,14 @@ public abstract class CommandHandler {
 				sender.sendMessage(StringUtils.getInstance().colorize("&cMust be a player to do this"));
 				return true;
 			}
-
-			if (!perm.equals("")) {
-				for (String perm : this.perm.split("|")) {
-					if (!sender.hasPermission(perm)) {
-						sender.sendMessage(StringUtils.getInstance().colorize(Config.getInstance().getFormatNoPerms()));
-						Main.plugin.getLogger().log(Level.INFO,
-								sender.getName() + " was denied access to command, required permission: " + perm);
-						return true;
-					}
-				}
+			
+			
+			
+			if (!hasPerm(sender)) {
+				sender.sendMessage(StringUtils.getInstance().colorize(Config.getInstance().getFormatNoPerms()));
+				Main.plugin.getLogger().log(Level.INFO,
+						sender.getName() + " was denied access to command, required permission: " + perm);
+				return true;
 			}
 
 			execute(sender, args);
