@@ -17,6 +17,8 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 /**
  * Easily create itemstacks, without messing your hands.
@@ -65,14 +67,14 @@ public class ItemBuilder {
 			String name = data.getString("Name");
 			List<String> lore = data.getStringList("Lore");
 			if (name != null && !name.equals("")) {
-				is.getItemMeta().setDisplayName(name);
+				setName(name);
 			}
 			if (lore != null && lore.size() > 0) {
-				is.getItemMeta().setLore(lore);
+				setLore(lore);
 			}
 			int durability = data.getInt("Durability");
 			if (durability > 0) {
-				is.setDurability((short) durability);
+				setDurability((short) durability);
 			}
 
 			if (data.isConfigurationSection("Enchants")) {
@@ -163,7 +165,7 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder setName(String name) {
 		ItemMeta im = is.getItemMeta();
-		im.setDisplayName(name);
+		im.setDisplayName(StringUtils.getInstance().colorize(name));
 		is.setItemMeta(im);
 		return this;
 	}
@@ -293,7 +295,7 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder setLore(List<String> lore) {
 		ItemMeta im = is.getItemMeta();
-		im.setLore(lore);
+		im.setLore(ArrayUtils.getInstance().colorize(lore));
 		is.setItemMeta(im);
 		return this;
 	}
