@@ -365,7 +365,7 @@ public abstract class CommandHandler {
 		boolean hasPerm = false;
 
 		if (!perm.equals("")) {
-			for (String perm : this.perm.split("|")) {
+			for (String perm : this.perm.split("\\|")) {
 				if (sender.hasPermission(perm)) {
 					hasPerm = true;
 				}
