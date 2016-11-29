@@ -5,8 +5,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
@@ -17,7 +17,7 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 public class PlayerJoinEvent implements Listener {
 
 	/** The plugin. */
-	private static Main plugin;
+	private static Plugin plugin;
 
 	/**
 	 * Instantiates a new player join event.
@@ -25,7 +25,7 @@ public class PlayerJoinEvent implements Listener {
 	 * @param plugin
 	 *            the plugin
 	 */
-	public PlayerJoinEvent(Main plugin) {
+	public PlayerJoinEvent(Plugin plugin) {
 		PlayerJoinEvent.plugin = plugin;
 	}
 

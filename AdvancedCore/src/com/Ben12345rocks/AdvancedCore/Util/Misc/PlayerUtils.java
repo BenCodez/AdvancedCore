@@ -6,7 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
@@ -15,7 +15,7 @@ public class PlayerUtils {
 	static PlayerUtils instance = new PlayerUtils();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	public static PlayerUtils getInstance() {
 		return instance;
@@ -35,7 +35,7 @@ public class PlayerUtils {
 	 */
 	public Object getPlayerMeta(Player player, String str) {
 		for (MetadataValue meta : player.getMetadata(str)) {
-			if (meta.getOwningPlugin().equals(Main.plugin)) {
+			if (meta.getOwningPlugin().equals(plugin.getPlugin())) {
 				return meta.value();
 			}
 		}
@@ -58,7 +58,7 @@ public class PlayerUtils {
 		}
 
 		@SuppressWarnings("deprecation")
-		User user = new User(plugin, new com.Ben12345rocks.AdvancedCore.Objects.UUID(uuid), false);
+		User user = new User(plugin.getPlugin(), new com.Ben12345rocks.AdvancedCore.Objects.UUID(uuid), false);
 		String playerName = Data.getInstance().getName(user);
 
 		if (playerName != null && !playerName.equals("null")) {
@@ -105,7 +105,7 @@ public class PlayerUtils {
 	 * @return true, if successful
 	 */
 	public boolean hasPermission(CommandSender sender, String perm) {
-		return sender.hasPermission(plugin.getName() + "." + perm);
+		return sender.hasPermission(plugin.getPlugin().getName() + "." + perm);
 	}
 
 	/**
@@ -118,7 +118,7 @@ public class PlayerUtils {
 	 * @return true, if successful
 	 */
 	public boolean hasPermission(Player player, String perm) {
-		return player.hasPermission(plugin.getName() + "." + perm);
+		return player.hasPermission(plugin.getPlugin().getName() + "." + perm);
 	}
 
 	/**
@@ -136,7 +136,7 @@ public class PlayerUtils {
 		}
 		Player player = Bukkit.getPlayer(playerName);
 		if (player != null) {
-			return player.hasPermission(plugin.getName() + "." + perm);
+			return player.hasPermission(plugin.getPlugin().getName() + "." + perm);
 		}
 		return false;
 	}
@@ -204,7 +204,7 @@ public class PlayerUtils {
 	 *            the value
 	 */
 	public void setPlayerMeta(Player player, String str, Object value) {
-		player.removeMetadata(str, plugin);
+		player.removeMetadata(str, plugin.getPlugin());
 		player.setMetadata(str, new MetadataValue() {
 
 			@Override
@@ -257,7 +257,7 @@ public class PlayerUtils {
 
 			@Override
 			public Plugin getOwningPlugin() {
-				return Main.plugin;
+				return plugin.getPlugin();
 			}
 
 			@Override

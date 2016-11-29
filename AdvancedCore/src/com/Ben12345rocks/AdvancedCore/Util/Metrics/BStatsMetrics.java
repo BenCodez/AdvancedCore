@@ -20,12 +20,12 @@ import javax.net.ssl.HttpsURLConnection;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
 /**
  * bStats collects some data for plugin authors.
@@ -33,6 +33,8 @@ import com.Ben12345rocks.AdvancedCore.Main;
  * Check out https://bStats.org/ to learn more about bStats!
  */
 public class BStatsMetrics {
+	
+	static AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
 
 	// The version of this bStats class
 	public static final int B_STATS_VERSION = 1;
@@ -47,7 +49,7 @@ public class BStatsMetrics {
 	private static String serverUUID;
 
 	// The plugin
-	private final JavaPlugin plugin;
+	private final Plugin plugin;
 
 	// A list with all custom charts
 	private final List<CustomChart> charts = new ArrayList<>();
@@ -58,7 +60,7 @@ public class BStatsMetrics {
 	 * @param plugin
 	 *            The plugin which stats should be submitted.
 	 */
-	public BStatsMetrics(JavaPlugin plugin) {
+	public BStatsMetrics(Plugin plugin) {
 		if (plugin == null) {
 			throw new IllegalArgumentException("Plugin cannot be null!");
 		}
@@ -262,8 +264,8 @@ public class BStatsMetrics {
 				} catch (Exception e) {
 					// Something went wrong! :(
 					if (logFailedRequests) {
-						Main.plugin.debug("Could not submit plugin stats of " + plugin.getName());
-						Main.plugin.debug(e);
+						hook.debug("Could not submit plugin stats of " + plugin.getName());
+						hook.debug(e);
 					}
 				}
 			}
@@ -373,8 +375,8 @@ public class BStatsMetrics {
 				chart.put("data", data);
 			} catch (Exception e) {
 				if (logFailedRequests) {
-					Main.plugin.debug("Failed to get data for custom chart with id " + chartId);
-					Main.plugin.debug(e);
+					hook.debug("Failed to get data for custom chart with id " + chartId);
+					hook.debug(e);
 				}
 				return null;
 			}

@@ -8,10 +8,10 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
 import net.md_5.bungee.api.chat.TextComponent;
@@ -21,7 +21,7 @@ public class ArrayUtils {
 	static ArrayUtils instance = new ArrayUtils();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	public static ArrayUtils getInstance() {
 		return instance;

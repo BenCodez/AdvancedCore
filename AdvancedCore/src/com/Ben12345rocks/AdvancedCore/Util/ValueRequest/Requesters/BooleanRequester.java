@@ -6,7 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
@@ -52,8 +52,10 @@ public class BooleanRequester {
 	 */
 	public void request(Player player, InputMethod method, String currentValue, String promptText,
 			BooleanListener listener) {
-		if (method.equals(InputMethod.INVENTORY)
-				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.ANVIL.toString())) {
+		if (AdvancedCoreHook.getInstance().getDisabledRequestMethods().contains(method.toString())) {
+			player.sendMessage("Disabled method: " + method.toString());
+		}
+		if (method.equals(InputMethod.INVENTORY)) {
 
 			BInventory inv = new BInventory("Click one of the following:");
 
@@ -80,8 +82,7 @@ public class BooleanRequester {
 
 			inv.openInventory(player);
 
-		} else if (method.equals(InputMethod.ANVIL)
-				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.ANVIL.toString())) {
+		} else if (method.equals(InputMethod.ANVIL)) {
 
 			AInventory inv = new AInventory(player, new AInventory.AnvilClickEventHandler() {
 
@@ -114,8 +115,7 @@ public class BooleanRequester {
 
 			inv.open();
 
-		} else if (method.equals(InputMethod.CHAT)
-				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.CHAT.toString())) {
+		} else if (method.equals(InputMethod.CHAT)) {
 
 			User user = UserManager.getInstance().getUser(player);
 			user.sendMessage("&cClick one of the following options below:");
@@ -130,8 +130,7 @@ public class BooleanRequester {
 			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
 					"/advancedcore ValueRequestBoolean " + option));
 			user.sendJson(comp);
-		} else if (method.equals(InputMethod.BOOK)
-				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.BOOK.toString())) {
+		} else if (method.equals(InputMethod.BOOK)) {
 
 			new BookManager(player, currentValue, new BookSign() {
 

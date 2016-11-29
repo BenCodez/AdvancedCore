@@ -11,8 +11,7 @@ import org.bukkit.conversations.ConversationFactory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
@@ -53,7 +52,7 @@ public class StringRequester {
 				items.put(option, new ItemStack(Material.STONE, 1));
 			}
 		}
-		request(player, method, currentValue,items, promptText, allowCustomOption, listener);
+		request(player, method, currentValue, items, promptText, allowCustomOption, listener);
 	}
 
 	/**
@@ -82,8 +81,10 @@ public class StringRequester {
 		if (options != null && method.equals(InputMethod.ANVIL)) {
 			method = InputMethod.INVENTORY;
 		}
-		if (method.equals(InputMethod.INVENTORY)
-				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.INVENTORY.toString())) {
+		if (AdvancedCoreHook.getInstance().getDisabledRequestMethods().contains(method.toString())) {
+			player.sendMessage("Disabled method: " + method.toString());
+		}
+		if (method.equals(InputMethod.INVENTORY)) {
 			if (options == null) {
 				player.sendMessage("There are no choices to choice from to use this method");
 				return;
@@ -116,8 +117,7 @@ public class StringRequester {
 
 			inv.openInventory(player);
 
-		} else if (method.equals(InputMethod.ANVIL)
-				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.ANVIL.toString())) {
+		} else if (method.equals(InputMethod.ANVIL)) {
 
 			AInventory inv = new AInventory(player, new AInventory.AnvilClickEventHandler() {
 
@@ -150,8 +150,7 @@ public class StringRequester {
 
 			inv.open();
 
-		} else if (method.equals(InputMethod.CHAT)
-				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.CHAT.toString())) {
+		} else if (method.equals(InputMethod.CHAT)) {
 
 			if (options != null) {
 				User user = UserManager.getInstance().getUser(player);
@@ -171,8 +170,8 @@ public class StringRequester {
 					user.sendJson(comp);
 				}
 			} else {
-				ConversationFactory convoFactory = new ConversationFactory(Main.plugin).withModality(true)
-						.withEscapeSequence("cancel").withTimeout(60);
+				ConversationFactory convoFactory = new ConversationFactory(AdvancedCoreHook.getInstance().getPlugin())
+						.withModality(true).withEscapeSequence("cancel").withTimeout(60);
 				PromptManager prompt = new PromptManager(promptText + " Current value: " + currentValue, convoFactory);
 				prompt.stringPrompt(player, new PromptReturnString() {
 
@@ -182,8 +181,7 @@ public class StringRequester {
 					}
 				});
 			}
-		} else if (method.equals(InputMethod.BOOK)
-				&& !Config.getInstance().getRequestAPIDisabledMethods().contains(InputMethod.BOOK.toString())) {
+		} else if (method.equals(InputMethod.BOOK)) {
 
 			new BookManager(player, currentValue, new BookSign() {
 

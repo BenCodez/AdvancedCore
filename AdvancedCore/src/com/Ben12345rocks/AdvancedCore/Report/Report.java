@@ -15,7 +15,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 // TODO: Auto-generated Javadoc
@@ -28,7 +28,7 @@ public class Report {
 	static Report instance = new Report();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Adds the to zip.
@@ -42,8 +42,7 @@ public class Report {
 	 * @throws IOException
 	 *             Signals that an I/O exception has occurred.
 	 */
-	public static void addToZip(File file, ZipOutputStream zos)
-			throws FileNotFoundException, IOException {
+	public void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
 
 		FileInputStream fis = new FileInputStream(file);
 
@@ -86,16 +85,6 @@ public class Report {
 	}
 
 	/**
-	 * Instantiates a new report.
-	 *
-	 * @param plugin
-	 *            the plugin
-	 */
-	public Report(Main plugin) {
-		Report.plugin = plugin;
-	}
-
-	/**
 	 * Adds the all files.
 	 *
 	 * @param dir
@@ -131,23 +120,22 @@ public class Report {
 		long time = Calendar.getInstance().getTime().getTime();
 		String zipFileName = "Reports." + Long.toString(time);
 		List<File> fileList = new ArrayList<File>();
-		ArrayList<Plugin> plugins = Main.plugin.getHooks();
-		plugins.add(Main.plugin);
+		ArrayList<Plugin> plugins = new ArrayList<Plugin>();
+		plugins.add(plugin.getPlugin());
 		for (Plugin plugin : plugins) {
 			File directoryToZip = plugin.getDataFolder();
 
 			try {
-				plugin.getLogger().info(
-						"---Getting references to all files in: "
-								+ directoryToZip.getCanonicalPath());
+				this.plugin.getPlugin().getLogger()
+						.info("---Getting references to all files in: " + directoryToZip.getCanonicalPath());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			addAllFiles(directoryToZip, fileList);
 		}
-		plugin.getLogger().info("---Creating zip file");
+		plugin.getPlugin().getLogger().info("---Creating zip file");
 		writeZipFile(fileList, zipFileName);
-		plugin.getLogger().info("---Done");
+		plugin.getPlugin().getLogger().info("---Done");
 	}
 
 	/**
@@ -163,16 +151,15 @@ public class Report {
 
 		List<File> fileList = new ArrayList<File>();
 		try {
-			plugin.getLogger().info(
-					"---Getting references to all files in: "
-							+ directoryToZip.getCanonicalPath());
+			plugin.getPlugin().getLogger()
+					.info("---Getting references to all files in: " + directoryToZip.getCanonicalPath());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		addAllFiles(directoryToZip, fileList);
-		plugin.getLogger().info("---Creating zip file");
+		plugin.getPlugin().getLogger().info("---Creating zip file");
 		writeZipFile(fileList, zipFileName);
-		plugin.getLogger().info("---Done");
+		plugin.getPlugin().getLogger().info("---Done");
 	}
 
 	/**
@@ -209,17 +196,14 @@ public class Report {
 	public void writeZipFile(List<File> fileList, String zipFileName) {
 
 		try {
-			File fileZipFolder = new File(plugin.getDataFolder()
-					.getAbsolutePath() + File.separator + "Reports");
+			File fileZipFolder = new File(
+					plugin.getPlugin().getDataFolder().getAbsolutePath() + File.separator + "Reports");
 			if (!fileZipFolder.exists()) {
 				fileZipFolder.mkdirs();
 			}
 
-			FileOutputStream fos = new FileOutputStream(plugin.getDataFolder()
-					.getAbsolutePath()
-					+ File.separator
-					+ "Reports"
-					+ File.separator + zipFileName + ".zip");
+			FileOutputStream fos = new FileOutputStream(plugin.getPlugin().getDataFolder().getAbsolutePath()
+					+ File.separator + "Reports" + File.separator + zipFileName + ".zip");
 			ZipOutputStream zos = new ZipOutputStream(fos);
 
 			for (File file : fileList) {

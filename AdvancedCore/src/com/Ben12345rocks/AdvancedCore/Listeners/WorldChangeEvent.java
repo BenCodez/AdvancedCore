@@ -5,8 +5,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
@@ -16,15 +16,15 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 public class WorldChangeEvent implements Listener {
 
 	/** The plugin. */
-	private static Main plugin;
+	private static Plugin plugin;
 
 	/**
 	 * Instantiates a new world change event.
 	 *
-	 * @param plugin
+	 * @param plugin2
 	 *            the plugin
 	 */
-	public WorldChangeEvent(Main plugin) {
+	public WorldChangeEvent(Plugin plugin) {
 		WorldChangeEvent.plugin = plugin;
 	}
 

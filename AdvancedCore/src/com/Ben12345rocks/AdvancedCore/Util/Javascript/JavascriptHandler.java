@@ -7,7 +7,6 @@ import javax.script.ScriptException;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.Main;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -19,10 +18,6 @@ public class JavascriptHandler {
 
 	/** The instance. */
 	static JavascriptHandler instance = new JavascriptHandler();
-
-	/** The plugin. */
-	@SuppressWarnings("unused")
-	private Main plugin = Main.plugin;
 
 	/**
 	 * Gets the single instance of JavascriptHandler.

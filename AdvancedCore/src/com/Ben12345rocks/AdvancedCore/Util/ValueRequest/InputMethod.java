@@ -1,6 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.ValueRequest;
 
-import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
 /**
  * The Enum InputMethod.
@@ -33,7 +33,7 @@ public enum InputMethod {
 			}
 		}
 		try {
-			return valueOf(Config.getInstance().getRequestAPIDefaultMethod());
+			return valueOf(AdvancedCoreHook.getInstance().getDefaultRequestMethod());
 		} catch (Exception ex) {
 			return CHAT;
 		}

@@ -7,14 +7,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
-import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
 /**
@@ -34,8 +33,7 @@ public class AdminGUI {
 		return instance;
 	}
 
-	/** The plugin. */
-	Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Instantiates a new admin GUI.
@@ -66,60 +64,45 @@ public class AdminGUI {
 	 *            the player
 	 */
 	public void openGUI(Player player) {
-		if (!player.hasPermission("AdvancedCore.AdminEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".AdminEdit")) {
 			player.sendMessage("Not enough permissions");
 			return;
 		}
 		BInventory inv = new BInventory("AdminGUI");
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("&cRewards",
-				new String[] { "&cMiddle click to create" }, new ItemStack(
-						Material.DIAMOND)) {
+		inv.addButton(inv.getNextSlot(), new BInventoryButton("&cRewards", new String[] { "&cMiddle click to create" },
+				new ItemStack(Material.DIAMOND)) {
 
 			@Override
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
 				if (event.getClick().equals(ClickType.MIDDLE)) {
-					new ValueRequest().requestString(player,
-							new StringListener() {
+					new ValueRequest().requestString(player, new StringListener() {
 
-								@Override
-								public void onInput(Player player, String value) {
-									RewardHandler.getInstance()
-											.getReward(value);
-									player.sendMessage("Reward file created");
-									plugin.reload();
+						@Override
+						public void onInput(Player player, String value) {
+							RewardHandler.getInstance().getReward(value);
+							player.sendMessage("Reward file created");
+							plugin.reload();
 
-								}
-							});
+						}
+					});
 				} else {
 					RewardEditGUI.getInstance().openRewardsGUI(player);
 				}
 			}
 		});
-		inv.addButton(inv.getNextSlot(), new BInventoryButton(
-				"&cAdvancedCore/Config", new String[] {}, new ItemStack(
-						Material.PAPER)) {
 
-			@Override
-			public void onClick(ClickEvent event) {
-				Player player = event.getWhoClicked();
-				openConfigGUI(player);
+		inv.addButton(inv.getNextSlot(),
+				new BInventoryButton(new ItemBuilder(Material.SKULL_ITEM, 1, (short) 3).setName("&cUsers")) {
 
-			}
+					@Override
+					public void onClick(ClickEvent event) {
+						Player player = event.getWhoClicked();
+						UserGUI.getInstance().openUsersGUI(player);
 
-		});
+					}
 
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("&cUsers",
-				new String[] {}, new ItemStack(Material.SKULL_ITEM)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Player player = event.getWhoClicked();
-				UserGUI.getInstance().openUsersGUI(player);
-
-			}
-
-		});
+				});
 
 		if (pluginGUIs != null) {
 			for (BInventoryButton b : pluginGUIs) {
@@ -127,65 +110,6 @@ public class AdminGUI {
 			}
 		}
 
-		inv.openInventory(player);
-	}
-
-	/**
-	 * Open config GUI.
-	 *
-	 * @param player
-	 *            the player
-	 */
-	public void openConfigGUI(Player player) {
-		if (!player.hasPermission("AdvancedCore.AdminEdit")) {
-			player.sendMessage("Not enough permissions");
-			return;
-		}
-		BInventory inv = new BInventory("Config");
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Debug",
-				new String[] { "Currently: "
-						+ Config.getInstance().getDebugEnabled() },
-				new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Player player = event.getWhoClicked();
-				new ValueRequest().requestBoolean(player, Boolean
-						.toString(Config.getInstance().getDebugEnabled()),
-						new BooleanListener() {
-
-							@Override
-							public void onInput(Player player, boolean value) {
-								Config.getInstance().setDebugEnabled(value);
-								player.sendMessage("Value set");
-
-							}
-						});
-
-			}
-		});
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("DebugInGame",
-				new String[] { "Currently: "
-						+ Config.getInstance().getDebugInfoIngame() },
-				new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Player player = event.getWhoClicked();
-				new ValueRequest().requestBoolean(player, Boolean
-						.toString(Config.getInstance().getDebugInfoIngame()),
-						new BooleanListener() {
-
-							@Override
-							public void onInput(Player player, boolean value) {
-								Config.getInstance().setDebugInfoIngame(value);
-								player.sendMessage("Value set");
-
-							}
-						});
-
-			}
-		});
 		inv.openInventory(player);
 	}
 }

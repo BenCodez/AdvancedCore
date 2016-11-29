@@ -2,7 +2,6 @@ package com.Ben12345rocks.AdvancedCore.Commands.GUI;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -10,7 +9,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Objects.Reward;
+import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
@@ -36,11 +39,10 @@ public class UserGUI {
 		return instance;
 	}
 
-	/** The plugin. */
-	Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The plugin buttons. */
-	private HashMap<Plugin, BInventory> pluginButtons = new HashMap<Plugin, BInventory>();
+	private HashMap<Plugin, BInventoryButton> extraButtons = new HashMap<Plugin, BInventoryButton>();
 
 	/**
 	 * Instantiates a new user GUI.
@@ -56,8 +58,8 @@ public class UserGUI {
 	 * @param inv
 	 *            the inv
 	 */
-	public synchronized void addPluginButton(Plugin plugin, BInventory inv) {
-		pluginButtons.put(plugin, inv);
+	public synchronized void addPluginButton(Plugin plugin, BInventoryButton inv) {
+		extraButtons.put(plugin, inv);
 	}
 
 	/**
@@ -85,21 +87,34 @@ public class UserGUI {
 			return;
 		}
 		BInventory inv = new BInventory("UserGUI: " + playerName);
+		inv.addButton(inv.getNextSlot(),
+				new BInventoryButton("Give Reward File", new String[] {}, new ItemStack(Material.STONE)) {
 
-		for (Entry<Plugin, BInventory> entry : pluginButtons.entrySet()) {
-			inv.addButton(inv.getNextSlot(),
-					new BInventoryButton(entry.getKey().getName(), new String[] {}, new ItemStack(Material.STONE)) {
-
-						@Override
-						public void onClick(ClickEvent clickEvent) {
-							for (Plugin p : pluginButtons.keySet()) {
-								if (p.getName().equals(clickEvent.getClickedItem().getItemMeta().getDisplayName())) {
-									pluginButtons.get(p).openInventory(player);
-									return;
-								}
-							}
+					@Override
+					public void onClick(ClickEvent clickEvent) {
+						ArrayList<String> rewards = new ArrayList<String>();
+						for (Reward reward : RewardHandler.getInstance().getRewards()) {
+							rewards.add(reward.getRewardName());
 						}
-					});
+
+						new ValueRequest().requestString(clickEvent.getPlayer(), "",
+								ArrayUtils.getInstance().convert(rewards), true, new StringListener() {
+
+									@Override
+									public void onInput(Player player, String value) {
+										User user = UserManager.getInstance()
+												.getUser(UserGUI.getInstance().getCurrentPlayer(player));
+										RewardHandler.getInstance().giveReward(user, value, user.isOnline());
+										player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
+
+									}
+								});
+
+					}
+				});
+
+		for (BInventoryButton button : extraButtons.values()) {
+			inv.addButton(button);
 		}
 
 		inv.openInventory(player);

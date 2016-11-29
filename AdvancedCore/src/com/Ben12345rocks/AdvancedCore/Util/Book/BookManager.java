@@ -9,7 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -49,13 +49,10 @@ public class BookManager implements Listener {
 				for (String str : event.getNewBookMeta().getPages()) {
 					input += str;
 				}
-				BookSign listener = (BookSign) PlayerUtils.getInstance()
-						.getPlayerMeta(player, "BookManager");
+				BookSign listener = (BookSign) PlayerUtils.getInstance().getPlayerMeta(player, "BookManager");
 				listener.onBookSign(player, input);
-				player.getInventory().getItem(event.getSlot())
-				.setType(Material.AIR);
-				player.getInventory().setItem(event.getSlot(),
-						new ItemStack(Material.AIR));
+				player.getInventory().getItem(event.getSlot()).setType(Material.AIR);
+				player.getInventory().setItem(event.getSlot(), new ItemStack(Material.AIR));
 				destory = true;
 
 				if (destory) {
@@ -65,7 +62,7 @@ public class BookManager implements Listener {
 			}
 
 		};
-		Bukkit.getPluginManager().registerEvents(this.listener, Main.plugin);
+		Bukkit.getPluginManager().registerEvents(this.listener, AdvancedCoreHook.getInstance().getPlugin());
 	}
 
 	/**

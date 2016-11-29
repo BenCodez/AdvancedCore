@@ -11,7 +11,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
@@ -28,7 +28,7 @@ public class Data {
 	static Data instance = new Data();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of Data.
@@ -43,16 +43,6 @@ public class Data {
 	 * Instantiates a new data.
 	 */
 	private Data() {
-	}
-
-	/**
-	 * Instantiates a new data.
-	 *
-	 * @param plugin
-	 *            the plugin
-	 */
-	public Data(Main plugin) {
-		Data.plugin = plugin;
 	}
 
 	/**
@@ -74,7 +64,7 @@ public class Data {
 	 * @return the files
 	 */
 	public ArrayList<String> getFiles() {
-		File folder = new File(plugin.getDataFolder() + File.separator + "Data");
+		File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
 		String[] fileNames = folder.list();
 		if (fileNames != null) {
 			return ArrayUtils.getInstance().convert(fileNames);
@@ -106,7 +96,7 @@ public class Data {
 		String uuid = user.getUUID();
 		// plugin.debug(playerName + ":" + uuid);
 		// plugin.debug(plugin.toString());
-		File dFile = new File(plugin.getDataFolder() + File.separator + "Data",
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data",
 				uuid + ".yml");
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
@@ -270,8 +260,8 @@ public class Data {
 	 *            the new up
 	 */
 	public void setup(User user) {
-		if (!plugin.getDataFolder().exists()) {
-			plugin.getDataFolder().mkdir();
+		if (!plugin.getPlugin().getDataFolder().exists()) {
+			plugin.getPlugin().getDataFolder().mkdir();
 		}
 
 		String uuid = user.getUUID();
@@ -284,7 +274,7 @@ public class Data {
 			return;
 		}
 
-		File dFile = new File(plugin.getDataFolder() + File.separator + "Data",
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data",
 				uuid + ".yml");
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
@@ -296,7 +286,7 @@ public class Data {
 						+ playerName);
 
 			} catch (IOException e) {
-				plugin.getLogger().severe(
+				plugin.getPlugin().getLogger().severe(
 						ChatColor.RED + "Could not create " + uuid
 								+ ".yml! Name: " + playerName);
 

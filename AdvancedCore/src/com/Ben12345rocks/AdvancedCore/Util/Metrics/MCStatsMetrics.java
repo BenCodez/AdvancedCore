@@ -23,13 +23,15 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
 // TODO: Auto-generated Javadoc
 /**
  * The Class Metrics.
  */
 public class MCStatsMetrics {
+
+	AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
 
 	/**
 	 * The Class Graph.
@@ -411,11 +413,11 @@ public class MCStatsMetrics {
 				configuration.load(CONFIG_FILE);
 			} catch (IOException ex) {
 
-				Main.plugin.debug("[Metrics] " + ex.getMessage());
+				hook.debug("[Metrics] " + ex.getMessage());
 
 				return true;
 			} catch (InvalidConfigurationException ex) {
-				Main.plugin.debug("[Metrics] " + ex.getMessage());
+				hook.debug("[Metrics] " + ex.getMessage());
 
 				return true;
 			}
@@ -579,7 +581,7 @@ public class MCStatsMetrics {
 						firstPost = false;
 					} catch (IOException e) {
 
-						Main.plugin.debug("[Metrics] " + e.getMessage());
+						hook.debug("[Metrics] " + e.getMessage());
 
 					}
 				}

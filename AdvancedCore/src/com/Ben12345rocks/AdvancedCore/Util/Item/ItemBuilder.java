@@ -16,7 +16,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
@@ -45,7 +45,7 @@ public class ItemBuilder {
 			try {
 				material = Material.valueOf(data.getString("Material"));
 			} catch (Exception e) {
-				Main.plugin.debug(e);
+				AdvancedCoreHook.getInstance().debug(e);
 			}
 
 			int amount = data.getInt("Amount");

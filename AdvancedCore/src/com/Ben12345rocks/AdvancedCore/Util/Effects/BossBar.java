@@ -6,7 +6,7 @@ import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
@@ -31,9 +31,8 @@ public class BossBar {
 	 *            the progress
 	 */
 	public BossBar(String msg, String barColor, String barStyle, double progress) {
-		bossBar = Bukkit.createBossBar(StringUtils.getInstance().colorize(msg),
-				BarColor.valueOf(barColor), BarStyle.valueOf(barStyle),
-				BarFlag.DARKEN_SKY);
+		bossBar = Bukkit.createBossBar(StringUtils.getInstance().colorize(msg), BarColor.valueOf(barColor),
+				BarStyle.valueOf(barStyle), BarFlag.DARKEN_SKY);
 		bossBar.setProgress(progress);
 
 	}
@@ -60,7 +59,7 @@ public class BossBar {
 	public void send(Player player, int delay) {
 		bossBar.addPlayer(player);
 		bossBar.setVisible(true);
-		Bukkit.getScheduler().runTaskLater(Main.plugin, new Runnable() {
+		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
 			@Override
 			public void run() {

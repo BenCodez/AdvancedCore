@@ -11,8 +11,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -43,8 +42,7 @@ public class RewardEditGUI {
 		return instance;
 	}
 
-	/** The plugin. */
-	Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Instantiates a new reward GUI.
@@ -72,7 +70,7 @@ public class RewardEditGUI {
 	 *            the reward name
 	 */
 	public void openRewardGUI(Player player, String rewardName) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -113,7 +111,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIAdvanced(Player player, Reward reward) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -166,7 +164,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIBasic(Player player, Reward reward) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -190,7 +188,8 @@ public class RewardEditGUI {
 
 									@Override
 									public void onInput(Player player, Number value) {
-										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
+										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player,
+												"Reward");
 
 										reward.getConfig().setChance(
 
@@ -280,7 +279,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUICommands(Player player, Reward reward) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -438,7 +437,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIExp(Player player, Reward reward) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -542,7 +541,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIItems(Player player, Reward reward) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -638,7 +637,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIMessages(Player player, Reward reward) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -809,7 +808,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIPermission(Player player, Reward reward) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -827,7 +826,8 @@ public class RewardEditGUI {
 
 									@Override
 									public void onInput(Player player, boolean value) {
-										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
+										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player,
+												"Reward");
 
 										reward.getConfig().setRequirePermission(
 
@@ -855,7 +855,8 @@ public class RewardEditGUI {
 
 									@Override
 									public void onInput(Player player, String value) {
-										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
+										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player,
+												"Reward");
 										reward.getConfig().setPermission(
 
 												value);
@@ -880,7 +881,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIWorlds(Player player, Reward reward) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -901,7 +902,8 @@ public class RewardEditGUI {
 
 									@Override
 									public void onInput(Player player, boolean value) {
-										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
+										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player,
+												"Reward");
 										reward.getConfig().setGiveInEachWorld(
 
 												value);
@@ -981,7 +983,7 @@ public class RewardEditGUI {
 	 */
 	@SuppressWarnings("deprecation")
 	public void openRewardsGUI(Player player) {
-		if (!player.hasPermission("AdvancedCore.RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -1007,15 +1009,16 @@ public class RewardEditGUI {
 			if (reward.isJavascriptEnabled()) {
 				lore.add("Javascript: true");
 				lore.add("Expression: " + reward.getJavascriptExpression());
-				lore.add("TrueRewards: " + Utils.getInstance().makeStringList(reward.getJavascriptTrueRewards()));
-				lore.add("FalseRewards: " + Utils.getInstance().makeStringList(reward.getJavascriptFalseRewards()));
+				lore.add("TrueRewards: " + ArrayUtils.getInstance().makeStringList(reward.getJavascriptTrueRewards()));
+				lore.add(
+						"FalseRewards: " + ArrayUtils.getInstance().makeStringList(reward.getJavascriptFalseRewards()));
 			}
 			if (reward.isChoiceRewardsEnabled()) {
 				lore.add("ChoiceRewards: true");
-				lore.add("Rewards: " + Utils.getInstance().makeStringList(reward.getChoiceRewardsRewards()));
+				lore.add("Rewards: " + ArrayUtils.getInstance().makeStringList(reward.getChoiceRewardsRewards()));
 			}
 			if (reward.getWorlds().size() > 0) {
-				lore.add("Worlds: " + Utils.getInstance().makeStringList(reward.getWorlds()));
+				lore.add("Worlds: " + ArrayUtils.getInstance().makeStringList(reward.getWorlds()));
 				lore.add("GiveInEachWorld: " + reward.isGiveInEachWorld());
 			}
 			if (!reward.getRewardType().equals("BOTH")) {
@@ -1098,9 +1101,10 @@ public class RewardEditGUI {
 			if (reward.isFireworkEnabled()) {
 				lore.add("Firework: true");
 				lore.add("Power: " + reward.getFireworkPower());
-				lore.add("Colors: " + Utils.getInstance().makeStringList(reward.getFireworkColors()));
-				lore.add("FadeOutColors: " + Utils.getInstance().makeStringList(reward.getFireworkFadeOutColors()));
-				lore.add("Types: " + Utils.getInstance().makeStringList(reward.getFireworkTypes()));
+				lore.add("Colors: " + ArrayUtils.getInstance().makeStringList(reward.getFireworkColors()));
+				lore.add(
+						"FadeOutColors: " + ArrayUtils.getInstance().makeStringList(reward.getFireworkFadeOutColors()));
+				lore.add("Types: " + ArrayUtils.getInstance().makeStringList(reward.getFireworkTypes()));
 				lore.add("Trail: " + reward.isFireworkTrail());
 				lore.add("Flicker: " + reward.isFireworkFlicker());
 			}
@@ -1116,7 +1120,7 @@ public class RewardEditGUI {
 				lore.add("Broadcast: " + reward.getBroadcastMsg());
 			}
 
-			inv.addButton(count, new BInventoryButton(reward.getRewardName(), Utils.getInstance().convertArray(lore),
+			inv.addButton(count, new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),
 					new ItemStack(Material.STONE)) {
 
 				@Override

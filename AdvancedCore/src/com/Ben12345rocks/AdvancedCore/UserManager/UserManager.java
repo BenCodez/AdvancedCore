@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
@@ -15,12 +15,12 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
  * The Class UserManager.
  */
 public class UserManager {
-	
+
 	/** The instance. */
 	static UserManager instance = new UserManager();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of UserManager.
@@ -87,7 +87,7 @@ public class UserManager {
 				return user;
 			}
 		}
-		User user = new User(plugin, uuid);
+		User user = new User(plugin.getPlugin(), uuid);
 		user.setPlayerName();
 		users.add(user);
 		return user;
@@ -109,7 +109,7 @@ public class UserManager {
 	public void loadUsers() {
 		users = new ArrayList<User>();
 		for (String name : Data.getInstance().getPlayerNames()) {
-			User user = new User(plugin, name);
+			User user = new User(plugin.getPlugin(), name);
 			users.add(user);
 		}
 	}
