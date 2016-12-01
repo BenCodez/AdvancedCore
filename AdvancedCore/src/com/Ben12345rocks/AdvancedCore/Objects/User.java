@@ -668,7 +668,7 @@ public class User {
 			 * msg.addExtra(newLine); } } player.spigot().sendMessage(msg);
 			 */
 			for (TextComponent txt : messages) {
-				player.spigot().sendMessage(txt);
+				AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, txt);
 			}
 		}
 	}
@@ -682,7 +682,7 @@ public class User {
 	public void sendJson(TextComponent message) {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
-			player.spigot().sendMessage(message);
+			AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, message);
 		}
 	}
 

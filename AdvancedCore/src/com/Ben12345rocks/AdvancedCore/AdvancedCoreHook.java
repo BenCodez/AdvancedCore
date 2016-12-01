@@ -16,6 +16,9 @@ import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
+import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
+import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
@@ -27,6 +30,7 @@ public class AdvancedCoreHook {
 	private Plugin plugin;
 	private boolean placeHolderAPIEnabled;
 
+	private boolean timerLoaded = false;
 	private boolean debug = false;
 	private boolean debugIngame = false;
 	private boolean logDebugToFile = true;
@@ -37,6 +41,7 @@ public class AdvancedCoreHook {
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	private String permPrefix;
+	private IServerHandle serverHandle;
 
 	public String getPermPrefix() {
 		return permPrefix;
@@ -155,10 +160,42 @@ public class AdvancedCoreHook {
 		ServerData.getInstance().setup();
 		loadRewards();
 		loadUsers();
+		loadBackgroundTimer(5);
+	}
+
+	public boolean isTimerLoaded() {
+		return timerLoaded;
+	}
+
+	public IServerHandle getServerHandle() {
+		return serverHandle;
+	}
+
+	public void loadBasicHook(Plugin plugin) {
+		this.plugin = plugin;
+		this.permPrefix = plugin.getName();
+		checkPlaceHolderAPI();
+		if (setupEconomy()) {
+			plugin.getLogger().info("Successfully hooked into Vault!");
+		} else {
+			plugin.getLogger().warning("Failed to hook into Vault");
+		}
+		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
+		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
+		ServerData.getInstance().setup();
+		loadRewards();
+		loadUsers();
 	}
 
 	private AdvancedCoreHook() {
-
+		try {
+			Class.forName("org.spigotmc.SpigotConfig");
+			serverHandle = new SpigotHandle();
+			debug("Detected using spigot");
+		} catch (Exception ex) {
+			serverHandle = new CraftBukkitHandle();
+			debug("Detected using craftbukkit");
+		}
 	}
 
 	public void loadRewards() {
@@ -177,22 +214,29 @@ public class AdvancedCoreHook {
 	}
 
 	public void loadLogger() {
-		logger = new Logger(plugin, new File(plugin.getDataFolder(), "Log" + File.separator + "Log.txt"));
+		if (logDebugToFile && logger == null)
+			logger = new Logger(plugin, new File(plugin.getDataFolder(), "Log" + File.separator + "Log.txt"));
 	}
 
 	public void loadBackgroundTimer(int minutes) {
-		new Timer().schedule(new TimerTask() {
+		if (!timerLoaded) {
+			timerLoaded = true;
+			new Timer().schedule(new TimerTask() {
 
-			@Override
-			public void run() {
-				if (plugin != null) {
-					update();
-				} else {
-					cancel();
+				@Override
+				public void run() {
+					if (plugin != null) {
+						update();
+					} else {
+						cancel();
+					}
+
 				}
+			}, 60 * 1000, minutes * 60 * 1000);
+		} else {
+			debug("Timer is already loaded");
+		}
 
-			}
-		}, 60 * 1000, minutes * 60 * 1000);
 	}
 
 	private void checkPlaceHolderAPI() {
@@ -260,6 +304,7 @@ public class AdvancedCoreHook {
 	 */
 	public void debug(Plugin plug, String msg) {
 		if (debug) {
+			loadLogger();
 			plug.getLogger().info("Debug: " + msg);
 			if (logger != null && logDebugToFile) {
 				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
@@ -289,6 +334,10 @@ public class AdvancedCoreHook {
 	public void debug(Exception e) {
 		if (debug) {
 			e.printStackTrace();
+			loadLogger();
+			if (logger != null && logDebugToFile) {
+				logger.logToFile(e.toString());
+			}
 		}
 	}
 }

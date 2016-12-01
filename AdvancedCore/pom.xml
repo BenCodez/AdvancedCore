@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.Ben12345rocks</groupId>
 	<artifactId>AdvancedCore</artifactId>
-	<version>2.0.1</version>
+	<version>2.1</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
 	<properties>
@@ -67,6 +67,30 @@
 								</excludes>
 							</artifactSet>
 							<createDependencyReducedPom>false</createDependencyReducedPom>
+							<filters>
+								<filter>
+									<!-- this filter will remove en_US.properties from your jar. You 
+										want this filter if you dont use the TranslatableComponent so you can keep 
+										your jar file size down. -->
+									<artifact>net.md-5:bungeecord-chat</artifact>
+									<excludes>
+										<exclude>*/*en_US.properties</exclude>
+										<exclude>META-INF/maven/**</exclude>
+									</excludes>
+								</filter>
+							</filters>
+							<relocations>
+								<!-- Lets relocate the shaded API so we dont cause any conflicts 
+									with other plugins -->
+								<relocation>
+									<pattern>net.md_5.bungee</pattern>
+									<shadedPattern>${groupId}</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>net.pl3x.bukkit.chatapi</pattern>
+									<shadedPattern>${groupId}</shadedPattern>
+								</relocation>
+							</relocations>
 						</configuration>
 					</execution>
 				</executions>
@@ -162,6 +186,10 @@
 			<id>placeholderapi</id>
 			<url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
 		</repository>
+		<repository>
+			<id>dwd-repo</id>
+			<url>http://ci.dwdg.net/plugin/repository/everything/</url>
+		</repository>
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -187,6 +215,12 @@
 			<artifactId>placeholderapi</artifactId>
 			<version>2.6.0</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.pl3x.bukkit.chatapi</groupId>
+			<artifactId>ChatComponentAPI</artifactId>
+			<version>1.2</version>
+			<scope>compile</scope>
 		</dependency>
 	</dependencies>
 </project>
