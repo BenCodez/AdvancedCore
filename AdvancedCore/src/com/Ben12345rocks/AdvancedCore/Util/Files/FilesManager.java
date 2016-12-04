@@ -7,7 +7,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -15,46 +16,11 @@ import com.Ben12345rocks.AdvancedCore.Main;
  */
 public class FilesManager {
 
-	/**
-	 * The Class ReadThread.
-	 */
-	public class ReadThread extends Thread {
-
-		/**
-		 * Edits the file.
-		 *
-		 * @param file
-		 *            the file
-		 * @param data
-		 *            the data
-		 */
-		public void editFile(File file, FileConfiguration data) {
-			try {
-				data.save(file);
-			} catch (IOException e) {
-				Bukkit.getServer()
-						.getLogger()
-						.severe(ChatColor.RED + "Could not save "
-								+ file.getName());
-			}
-		}
-
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.lang.Thread#run()
-		 */
-		@Override
-		public void run() {
-			// plugin.getLogger().info("File Editing Thread Loaded!");
-		}
-	}
-
 	/** The instance. */
 	static FilesManager instance = new FilesManager();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of FilesManager.
@@ -65,23 +31,10 @@ public class FilesManager {
 		return instance;
 	}
 
-	/** The thread. */
-	public ReadThread thread;
-
 	/**
 	 * Instantiates a new files manager.
 	 */
 	private FilesManager() {
-	}
-
-	/**
-	 * Instantiates a new files manager.
-	 *
-	 * @param plugin
-	 *            the plugin
-	 */
-	public FilesManager(Main plugin) {
-		FilesManager.plugin = plugin;
 	}
 
 	/**
@@ -93,14 +46,17 @@ public class FilesManager {
 	 *            the data
 	 */
 	public void editFile(File file, FileConfiguration data) {
-		thread.editFile(file, data);
-	}
+		Thread.getInstance().run(new Runnable() {
 
-	/**
-	 * Load file editng thread.
-	 */
-	public void loadFileEditngThread() {
-		thread = new ReadThread();
-		thread.start();
+			@Override
+			public void run() {
+				try {
+					data.save(file);
+				} catch (IOException e) {
+					Bukkit.getServer().getLogger().severe(ChatColor.RED + "Could not save " + file.getName());
+				}
+
+			}
+		});
 	}
 }

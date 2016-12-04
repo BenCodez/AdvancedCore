@@ -39,11 +39,6 @@ public class Logger {
 	 */
 	public void logToFile(String message) {
 		try {
-			File dataFolder = plugin.getDataFolder();
-			if (!dataFolder.exists()) {
-				dataFolder.mkdir();
-			}
-
 			if (!location.getParentFile().exists()) {
 				location.getParentFile().mkdirs();
 			}

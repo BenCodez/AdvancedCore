@@ -11,6 +11,7 @@ import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,13 +21,12 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Utils;
-import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -47,6 +47,10 @@ public class User {
 
 	/** The uuid. */
 	private String uuid;
+
+	private AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
+
+	private boolean loadName = true;
 
 	/**
 	 * Instantiates a new user.
@@ -75,7 +79,7 @@ public class User {
 	public User(Plugin plugin, String playerName) {
 		this.plugin = plugin;
 		this.playerName = playerName;
-		uuid = Utils.getInstance().getUUID(playerName);
+		uuid = PlayerUtils.getInstance().getUUID(playerName);
 	}
 
 	/**
@@ -90,7 +94,7 @@ public class User {
 	public User(Plugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
-		playerName = Utils.getInstance().getPlayerName(this.uuid);
+		playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
 
 	}
 
@@ -108,8 +112,9 @@ public class User {
 	public User(Plugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
-		if (loadName) {
-			playerName = Utils.getInstance().getPlayerName(this.uuid);
+		this.loadName = loadName;
+		if (this.loadName) {
+			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
 		}
 
 	}
@@ -207,6 +212,9 @@ public class User {
 	 * @return the player name
 	 */
 	public String getPlayerName() {
+		if ((playerName == null || playerName.equalsIgnoreCase("null")) && loadName) {
+			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
+		}
 		return playerName;
 	}
 
@@ -286,8 +294,7 @@ public class User {
 	 * @return the user input method
 	 */
 	public InputMethod getUserInputMethod() {
-		return InputMethod
-				.getMethod(getRawData().getString("InputMethod", Config.getInstance().getRequestAPIDefaultMethod()));
+		return InputMethod.getMethod(getRawData().getString("InputMethod", hook.getDefaultRequestMethod()));
 	}
 
 	/**
@@ -352,17 +359,13 @@ public class User {
 			return;
 		}
 
-		String playerName = getPlayerName();
+		ItemBuilder builder = new ItemBuilder(Material.getMaterial(id), amount, (short) data);
+		builder.setLore(lore);
+		builder.setName(itemName);
+		builder.addEnchantments(enchants);
 
-		ItemStack item = new ItemStack(id, amount, (short) data);
-		item = Utils.getInstance().nameItem(item, itemName);
-		item = Utils.getInstance().addLore(item, lore);
-		Player player = Bukkit.getPlayer(playerName);
-		// player.getInventory().addItem(item);
-
-		item = Utils.getInstance().addEnchants(item, enchants);
-
-		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+		Player player = getPlayer();
+		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(builder.toItemStack());
 		for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
@@ -419,10 +422,10 @@ public class User {
 		String playerName = getPlayerName();
 		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null) {
 			if (money > 0) {
-				Main.plugin.econ.depositPlayer(playerName, money);
+				hook.getEcon().depositPlayer(playerName, money);
 			} else if (money < 0) {
 				money = money * -1;
-				Main.plugin.econ.withdrawPlayer(playerName, money);
+				hook.getEcon().withdrawPlayer(playerName, money);
 			}
 		}
 	}
@@ -434,20 +437,14 @@ public class User {
 	 *            the money
 	 */
 	@SuppressWarnings("deprecation")
-	/**
-	 * Give user money, needs vault installed
-	 * 
-	 * @param money
-	 *            Amount of money to give
-	 */
 	public void giveMoney(int money) {
 		String playerName = getPlayerName();
-		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null && Main.plugin.econ != null) {
+		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null && hook.getEcon() != null) {
 			if (money > 0) {
-				Main.plugin.econ.depositPlayer(playerName, money);
+				hook.getEcon().depositPlayer(playerName, money);
 			} else if (money < 0) {
 				money = money * -1;
-				Main.plugin.econ.withdrawPlayer(playerName, money);
+				hook.getEcon().withdrawPlayer(playerName, money);
 			}
 		}
 	}
@@ -522,12 +519,12 @@ public class User {
 					if (reward.isGiveInEachWorld()) {
 						for (String worldName : worlds) {
 
-							Main.plugin.debug("Checking world: " + worldName + ", reard: " + reward);
+							hook.debug("Checking world: " + worldName + ", reard: " + reward);
 
 							if (worldName != "") {
 								if (worldName.equals(world)) {
 
-									Main.plugin.debug("Giving reward...");
+									hook.debug("Giving reward...");
 
 									int worldRewards =
 
@@ -600,7 +597,7 @@ public class User {
 			if (sound != null) {
 				player.playSound(player.getLocation(), sound, volume, pitch);
 			} else {
-				Main.plugin.debug("Invalid sound: " + soundName);
+				hook.debug("Invalid sound: " + soundName);
 			}
 		}
 	}
@@ -623,10 +620,8 @@ public class User {
 					ActionBar actionBar = new ActionBar(msg, delay);
 					actionBar.send(player);
 				} catch (Exception ex) {
-					Main.plugin.debug("Failed to send ActionBar, turn debug on to see stack trace");
-					if (Config.getInstance().getDebugEnabled()) {
-						ex.printStackTrace();
-					}
+					hook.debug("Failed to send ActionBar, turn debug on to see stack trace");
+					hook.debug(ex);
 				}
 			}
 		}
@@ -655,10 +650,8 @@ public class User {
 					BossBar bossBar = new BossBar(msg, color, style, progress);
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
-					Main.plugin.debug("Failed to send BossBar, turn debug on to see stack trace");
-					if (Config.getInstance().getDebugEnabled()) {
-						ex.printStackTrace();
-					}
+					hook.debug("Failed to send BossBar, turn debug on to see stack trace");
+					hook.debug(ex);
 				}
 			}
 		}
@@ -681,7 +674,7 @@ public class User {
 			 * msg.addExtra(newLine); } } player.spigot().sendMessage(msg);
 			 */
 			for (TextComponent txt : messages) {
-				player.spigot().sendMessage(txt);
+				AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, txt);
 			}
 		}
 	}
@@ -695,7 +688,7 @@ public class User {
 	public void sendJson(TextComponent message) {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
-			player.spigot().sendMessage(message);
+			AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, message);
 		}
 	}
 
@@ -769,9 +762,7 @@ public class User {
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");
-				if (Config.getInstance().getDebugEnabled()) {
-					ex.printStackTrace();
-				}
+				hook.debug(ex);
 			}
 		}
 	}

@@ -1,6 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Thread;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
 /**
  * The Class Thread.
@@ -37,7 +37,7 @@ public class Thread {
 	static Thread instance = new Thread();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of Thread.
@@ -58,16 +58,6 @@ public class Thread {
 	}
 
 	/**
-	 * Instantiates a new thread.
-	 *
-	 * @param plugin
-	 *            the plugin
-	 */
-	public Thread(Main plugin) {
-		Thread.plugin = plugin;
-	}
-
-	/**
 	 * Load thread.
 	 */
 	public void loadThread() {
@@ -82,6 +72,9 @@ public class Thread {
 	 *            the run
 	 */
 	public void run(Runnable run) {
+		if (thread == null || !thread.isAlive()) {
+			loadThread();
+		}
 		thread.run(run);
 	}
 }

@@ -11,7 +11,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.inventory.meta.FireworkMeta;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
 public class FireworkHandler {
 
@@ -19,7 +19,7 @@ public class FireworkHandler {
 	static FireworkHandler instance = new FireworkHandler();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of FireworkHandler.
@@ -35,7 +35,7 @@ public class FireworkHandler {
 	 */
 	private FireworkHandler() {
 	}
-	
+
 	/**
 	 * Launch firework.
 	 *
@@ -56,7 +56,7 @@ public class FireworkHandler {
 	 */
 	public void launchFirework(Location loc, int power, ArrayList<String> colors, ArrayList<String> fadeOutColor,
 			boolean trail, boolean flicker, ArrayList<String> types) {
-		Bukkit.getScheduler().runTask(plugin, new Runnable() {
+		Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 			@Override
 			public void run() {
@@ -73,7 +73,7 @@ public class FireworkHandler {
 					try {
 						builder.withColor(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
-						plugin.getLogger().info(color
+						plugin.getPlugin().getLogger().info(color
 								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
 					}
 				}
@@ -81,7 +81,7 @@ public class FireworkHandler {
 					try {
 						builder.withFade(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
-						plugin.getLogger().info(color
+						plugin.getPlugin().getLogger().info(color
 								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
 					}
 				}
@@ -89,7 +89,7 @@ public class FireworkHandler {
 					try {
 						builder.with(Type.valueOf(type));
 					} catch (Exception ex) {
-						plugin.getLogger().info(type
+						plugin.getPlugin().getLogger().info(type
 								+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
 					}
 				}

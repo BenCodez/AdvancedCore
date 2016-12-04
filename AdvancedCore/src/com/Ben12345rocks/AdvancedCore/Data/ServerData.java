@@ -4,7 +4,7 @@ import java.io.File;
 
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.YML.YMLFile;
 
 // TODO: Auto-generated Javadoc
@@ -17,7 +17,7 @@ public class ServerData extends YMLFile {
 	static ServerData instance = new ServerData();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of ServerData.
@@ -32,7 +32,7 @@ public class ServerData extends YMLFile {
 	 * Instantiates a new server data.
 	 */
 	public ServerData() {
-		super(new File(Main.plugin.getDataFolder(), "ServerData.yml"));
+		super(new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "ServerData.yml"));
 	}
 
 	/**

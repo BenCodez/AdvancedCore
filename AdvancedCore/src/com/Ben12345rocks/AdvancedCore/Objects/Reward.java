@@ -13,7 +13,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
@@ -30,7 +30,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 public class Reward {
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The name. */
 	public String name;
@@ -684,7 +684,7 @@ public class Reward {
 	 */
 	@Deprecated
 	public Reward(String reward) {
-		load(new File(plugin.getDataFolder(), "Rewards"), reward);
+		load(new File(plugin.getPlugin().getDataFolder(), "Rewards"), reward);
 	}
 
 	public ItemStack getItem() {
@@ -1589,7 +1589,7 @@ public class Reward {
 				if (consolecmd.length() > 0) {
 					consolecmd = consolecmd.replace("%player%", playerName);
 					final String cmd = consolecmd;
-					Bukkit.getScheduler().runTask(plugin, new Runnable() {
+					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 						@Override
 						public void run() {
@@ -1610,7 +1610,7 @@ public class Reward {
 				if ((player != null) && (playercmd.length() > 0)) {
 					playercmd = playercmd.replace("%player%", playerName);
 					final String cmd = playercmd;
-					Bukkit.getScheduler().runTask(plugin, new Runnable() {
+					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 						@Override
 						public void run() {

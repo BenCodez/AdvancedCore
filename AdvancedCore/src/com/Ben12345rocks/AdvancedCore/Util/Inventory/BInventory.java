@@ -24,12 +24,11 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class BInventory.
  */
@@ -230,6 +229,16 @@ public class BInventory implements Listener {
 	}
 
 	/**
+	 * Adds the button.
+	 *
+	 * @param button
+	 *            the button
+	 */
+	public void addButton(BInventoryButton button) {
+		getButtons().put(getNextSlot(), button);
+	}
+
+	/**
 	 * Destroy.
 	 */
 	public void destroy() {
@@ -375,13 +384,13 @@ public class BInventory implements Listener {
 						openInventory(player, nextPage);
 					}
 				} else if (slot == 53) {
-					Main.plugin.debug(maxPage + " " + page);
+					AdvancedCoreHook.getInstance().debug(maxPage + " " + page);
 					if (maxPage > page) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
 						int nextPage = page + 1;
 						openInventory(player, nextPage);
-						Main.plugin.debug("Opening inv");
+						AdvancedCoreHook.getInstance().debug("Opening inv");
 					}
 
 				}

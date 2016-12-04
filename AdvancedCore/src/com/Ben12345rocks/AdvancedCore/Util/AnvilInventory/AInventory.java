@@ -15,7 +15,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventory1_7_R4Handler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryReflectionHandler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler;
@@ -231,27 +231,22 @@ public class AInventory {
 	 * @param anvilClickEventHandler
 	 *            the anvil click event handler
 	 */
-	public AInventory(final Player player,
-			final AnvilClickEventHandler anvilClickEventHandler) {
+	public AInventory(final Player player, final AnvilClickEventHandler anvilClickEventHandler) {
 		if (getVersion().contains("1_7_R4")) {
-			versionHandle = new AInventory1_7_R4Handler(player,
-					anvilClickEventHandler);
+			versionHandle = new AInventory1_7_R4Handler(player, anvilClickEventHandler);
 		} else {
-			versionHandle = new AInventoryReflectionHandler(player,
-					anvilClickEventHandler);
+			versionHandle = new AInventoryReflectionHandler(player, anvilClickEventHandler);
 		}
 		this.player = player;
 		handler = anvilClickEventHandler;
-		PlayerUtils.getInstance().setPlayerMeta(player, "AInventory",
-				anvilClickEventHandler);
+		PlayerUtils.getInstance().setPlayerMeta(player, "AInventory", anvilClickEventHandler);
 
 		listener = new Listener() {
 			@EventHandler
 			public void onInventoryClick(InventoryClickEvent event) {
 				if (event.getWhoClicked() instanceof Player) {
 
-					if (event.getInventory().equals(
-							versionHandle.getInventory())) {
+					if (event.getInventory().equals(versionHandle.getInventory())) {
 						event.setCancelled(true);
 
 						ItemStack item = event.getCurrentItem();
@@ -268,18 +263,15 @@ public class AInventory {
 							}
 						}
 
-						AnvilClickEvent clickEvent = new AnvilClickEvent(
-								AnvilSlot.bySlot(slot), name,
+						AnvilClickEvent clickEvent = new AnvilClickEvent(AnvilSlot.bySlot(slot), name,
 								(Player) event.getWhoClicked());
 
 						if (clickEvent.getSlot() == AnvilSlot.OUTPUT) {
 							event.getWhoClicked().closeInventory();
 							if (handler == null) {
-								handler = (AnvilClickEventHandler) PlayerUtils
-										.getInstance().getPlayerMeta(player,
-												"AInventory");
-								Main.plugin
-										.debug("Anvil handler was null, fixing...");
+								handler = (AnvilClickEventHandler) PlayerUtils.getInstance().getPlayerMeta(player,
+										"AInventory");
+								AdvancedCoreHook.getInstance().debug("Anvil handler was null, fixing...");
 							}
 
 							handler.onAnvilClick(clickEvent);
@@ -312,7 +304,7 @@ public class AInventory {
 			}
 		};
 
-		Bukkit.getPluginManager().registerEvents(listener, Main.plugin);
+		Bukkit.getPluginManager().registerEvents(listener, AdvancedCoreHook.getInstance().getPlugin());
 	}
 
 	/**

@@ -11,9 +11,8 @@ import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -28,7 +27,7 @@ public class Data {
 	static Data instance = new Data();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of Data.
@@ -43,16 +42,6 @@ public class Data {
 	 * Instantiates a new data.
 	 */
 	private Data() {
-	}
-
-	/**
-	 * Instantiates a new data.
-	 *
-	 * @param plugin
-	 *            the plugin
-	 */
-	public Data(Main plugin) {
-		Data.plugin = plugin;
 	}
 
 	/**
@@ -74,7 +63,7 @@ public class Data {
 	 * @return the files
 	 */
 	public ArrayList<String> getFiles() {
-		File folder = new File(plugin.getDataFolder() + File.separator + "Data");
+		File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
 		String[] fileNames = folder.list();
 		if (fileNames != null) {
 			return ArrayUtils.getInstance().convert(fileNames);
@@ -94,6 +83,11 @@ public class Data {
 		return getData(user).getString("Name");
 	}
 
+	public void deletePlayerFile(String uuid) {
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
+		dFile.delete();
+	}
+
 	/**
 	 * Gets the player file.
 	 *
@@ -106,22 +100,18 @@ public class Data {
 		String uuid = user.getUUID();
 		// plugin.debug(playerName + ":" + uuid);
 		// plugin.debug(plugin.toString());
-		File dFile = new File(plugin.getDataFolder() + File.separator + "Data",
-				uuid + ".yml");
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
 			try {
 				data.save(dFile);
 				setPlayerName(user);
 
-				plugin.debug("Created file: " + uuid + ".yml from player: "
-						+ playerName);
+				plugin.debug("Created file: " + uuid + ".yml from player: " + playerName);
 
 			} catch (IOException e) {
-				Bukkit.getServer()
-						.getLogger()
-						.severe(ChatColor.RED + "Could not create " + uuid
-								+ ".yml! Name: " + playerName);
+				Bukkit.getServer().getLogger()
+						.severe(ChatColor.RED + "Could not create " + uuid + ".yml! Name: " + playerName);
 
 			}
 		}
@@ -157,7 +147,6 @@ public class Data {
 	 *
 	 * @return the players UUI ds
 	 */
-	@SuppressWarnings("unused")
 	public ArrayList<String> getPlayersUUIDs() {
 		ArrayList<String> files = getFiles();
 		if (files != null) {
@@ -167,32 +156,11 @@ public class Data {
 					String uuid = playerFile.replace(".yml", "");
 					uuids.add(uuid);
 				}
-				if (uuids == null) {
-					return null;
-				} else {
-					return uuids;
-				}
+				return uuids;
 			}
 		}
-		return null;
+		return new ArrayList<String>();
 
-	}
-
-	/**
-	 * Gets the users.
-	 *
-	 * @return the users
-	 */
-	@Deprecated
-	public Set<User> getUsers() {
-		Set<User> users = new HashSet<User>();
-		ArrayList<User> players = UserManager.getInstance().getUsers();
-
-		for (User user : players) {
-			users.add(user);
-
-		}
-		return users;
 	}
 
 	/**
@@ -223,10 +191,8 @@ public class Data {
 		try {
 			data.save(dFile);
 		} catch (IOException e) {
-			Bukkit.getServer()
-					.getLogger()
-					.severe(ChatColor.RED + "Could not save "
-							+ PlayerUtils.getInstance().getUUID(playerName) + ".yml!");
+			Bukkit.getServer().getLogger().severe(
+					ChatColor.RED + "Could not save " + PlayerUtils.getInstance().getUUID(playerName) + ".yml!");
 		}
 
 	}
@@ -248,8 +214,7 @@ public class Data {
 			data.set(path, value);
 			FilesManager.getInstance().editFile(dFile, data);
 		} catch (IllegalArgumentException ex) {
-			plugin.debug("Tried to set an empty path for a user. Name: "
-					+ user.getPlayerName() + " Path: " + path);
+			plugin.debug("Tried to set an empty path for a user. Name: " + user.getPlayerName() + " Path: " + path);
 		}
 	}
 
@@ -270,8 +235,8 @@ public class Data {
 	 *            the new up
 	 */
 	public void setup(User user) {
-		if (!plugin.getDataFolder().exists()) {
-			plugin.getDataFolder().mkdir();
+		if (!plugin.getPlugin().getDataFolder().exists()) {
+			plugin.getPlugin().getDataFolder().mkdir();
 		}
 
 		String uuid = user.getUUID();
@@ -284,21 +249,18 @@ public class Data {
 			return;
 		}
 
-		File dFile = new File(plugin.getDataFolder() + File.separator + "Data",
-				uuid + ".yml");
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
 			try {
 				data.save(dFile);
 				setPlayerName(user);
 
-				plugin.debug("Created file: " + uuid + ".yml from player: "
-						+ playerName);
+				plugin.debug("Created file: " + uuid + ".yml from player: " + playerName);
 
 			} catch (IOException e) {
-				plugin.getLogger().severe(
-						ChatColor.RED + "Could not create " + uuid
-								+ ".yml! Name: " + playerName);
+				plugin.getPlugin().getLogger()
+						.severe(ChatColor.RED + "Could not create " + uuid + ".yml! Name: " + playerName);
 
 			}
 		}

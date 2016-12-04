@@ -7,15 +7,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class ActionBar.
  */
 public class ActionBar {
+
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The works. */
 	public boolean works = true;
@@ -47,7 +48,7 @@ public class ActionBar {
 		nmsver = NMSManager.getInstance().getVersion();
 
 		if (nmsver.contains("1_8") || nmsver.contains("1_7")) { // Not sure if
-																	// 1_7 works
+																// 1_7 works
 			// // for the protocol
 			// // hack?
 			useOldMethods = true;
@@ -144,7 +145,7 @@ public class ActionBar {
 				public void run() {
 					sendActionBar(player, "");
 				}
-			}.runTaskLater(Main.plugin, duration + 1);
+			}.runTaskLater(plugin.getPlugin(), duration + 1);
 		}
 
 		// Re-sends the messages every 3 seconds so it doesn't go away from the
@@ -157,7 +158,7 @@ public class ActionBar {
 				public void run() {
 					sendActionBar(player, message);
 				}
-			}.runTaskLater(Main.plugin, sched);
+			}.runTaskLater(plugin.getPlugin(), sched);
 		}
 	}
 

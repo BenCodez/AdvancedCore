@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatColor;
@@ -16,7 +16,7 @@ public class StringUtils {
 	static StringUtils instance = new StringUtils();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	public static StringUtils getInstance() {
 		return instance;
@@ -127,7 +127,7 @@ public class StringUtils {
 		if (player == null) {
 			return text;
 		}
-		if (plugin.placeHolderAPIEnabled) {
+		if (plugin.isPlaceHolderAPIEnabled()) {
 			return PlaceholderAPI.setBracketPlaceholders(player, PlaceholderAPI.setPlaceholders(player, text));
 		} else {
 			return text;

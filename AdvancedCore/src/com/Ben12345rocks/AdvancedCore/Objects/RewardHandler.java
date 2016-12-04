@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
@@ -19,7 +19,7 @@ public class RewardHandler {
 	static RewardHandler instance = new RewardHandler();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of RewardHandler.
@@ -38,7 +38,7 @@ public class RewardHandler {
 	 */
 	private RewardHandler() {
 		rewardFolders = new ArrayList<File>();
-		setDefaultFolder(new File(Main.plugin.getDataFolder(), "Rewards"));
+		setDefaultFolder(new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Rewards"));
 	}
 
 	/** The default folder. */
@@ -56,8 +56,10 @@ public class RewardHandler {
 	public void addRewardFolder(File file) {
 		file.mkdirs();
 		if (file.isDirectory()) {
-			rewardFolders.add(file);
-			loadRewards();
+			if (!rewardFolders.contains(file)) {
+				rewardFolders.add(file);
+				loadRewards();
+			}
 		} else {
 			plugin.debug(file.getAbsolutePath());
 			try {
@@ -76,7 +78,8 @@ public class RewardHandler {
 
 			@Override
 			public void run() {
-				for (User user : UserManager.getInstance().getUsers()) {
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
 					for (Reward reward : getRewards()) {
 						ArrayList<Long> times = user.getTimedReward(reward);
 						for (Long t : times) {
@@ -113,7 +116,7 @@ public class RewardHandler {
 		}
 
 		if (reward.equals("")) {
-			plugin.getLogger().warning("Tried to get any empty reward file name, renaming to EmptyName");
+			plugin.getPlugin().getLogger().warning("Tried to get any empty reward file name, renaming to EmptyName");
 			reward = "EmptyName";
 		}
 
@@ -267,12 +270,13 @@ public class RewardHandler {
 				if (!reward.equals("")) {
 					if (!rewardExist(reward)) {
 						rewards.add(new Reward(file, reward));
+						plugin.debug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
 					} else {
-						plugin.getLogger().warning("Detected that a reward file named " + reward
+						plugin.getPlugin().getLogger().warning("Detected that a reward file named " + reward
 								+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
 					}
 				} else {
-					plugin.getLogger().warning(
+					plugin.getPlugin().getLogger().warning(
 							"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
 				}
 			}
@@ -288,9 +292,9 @@ public class RewardHandler {
 	 *            the file name
 	 */
 	private void copyFile(String fileName) {
-		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator + fileName);
+		File file = new File(plugin.getPlugin().getDataFolder(), "Rewards" + File.separator + fileName);
 		if (!file.exists()) {
-			plugin.saveResource("Rewards" + File.separator + fileName, true);
+			plugin.getPlugin().saveResource("Rewards" + File.separator + fileName, true);
 		}
 	}
 
@@ -298,8 +302,8 @@ public class RewardHandler {
 	 * Setup example.
 	 */
 	public void setupExample() {
-		if (!plugin.getDataFolder().exists()) {
-			plugin.getDataFolder().mkdir();
+		if (!plugin.getPlugin().getDataFolder().exists()) {
+			plugin.getPlugin().getDataFolder().mkdir();
 		}
 
 		copyFile("ExampleBasic.yml");

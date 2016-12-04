@@ -12,10 +12,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.Main;
-import com.Ben12345rocks.AdvancedCore.Configs.Config;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -30,7 +30,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 public abstract class CommandHandler {
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The args. */
 	private String[] args;
@@ -184,7 +184,7 @@ public abstract class CommandHandler {
 	 * @return the help line
 	 */
 	public TextComponent getHelpLine(String command) {
-		String line = Config.getInstance().getFormatHelpLine();
+		String line = plugin.getHelpLine();
 
 		String commandText = getHelpLineCommand(command);
 		line = line.replace("%Command%", commandText);
@@ -284,7 +284,6 @@ public abstract class CommandHandler {
 		updateTabComplete();
 		Set<String> cmds = new HashSet<String>();
 
-		
 		if (hasPerm(sender)) {
 			String[] cmdArgs = commandHandler.getArgs();
 			if (cmdArgs.length > argNum) {
@@ -348,19 +347,24 @@ public abstract class CommandHandler {
 		ArrayList<String> options = new ArrayList<String>();
 		options.add("True");
 		options.add("False");
-		addTabCompleteOption("(boolean)", options);
+		addTabCompleteOption("(Boolean)", options);
 		options = new ArrayList<String>();
-		addTabCompleteOption("(list)", options);
+		addTabCompleteOption("(List)", options);
 		addTabCompleteOption("(String)", options);
-		addTabCompleteOption("(number)", options);
+		addTabCompleteOption("(Number)", options);
 		ArrayList<String> rewards = new ArrayList<String>();
 		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			rewards.add(reward.getRewardName());
 		}
-		addTabCompleteOption("(reward)", rewards);
+		addTabCompleteOption("(Reward)", rewards);
+		ArrayList<String> method = new ArrayList<String>();
+		for (InputMethod me : InputMethod.values()) {
+			method.add(me.toString());
+		}
+		addTabCompleteOption("(RequestMethod)", method);
 
 	}
-	
+
 	public boolean hasPerm(CommandSender sender) {
 		boolean hasPerm = false;
 
@@ -394,7 +398,7 @@ public abstract class CommandHandler {
 				if (this.args[i].equalsIgnoreCase("(number)")) {
 					if (!StringUtils.getInstance().isInt(args[i])) {
 						sender.sendMessage(StringUtils.getInstance()
-								.colorize(Config.getInstance().getFormatNotNumber().replace("%arg%", args[i])));
+								.colorize(plugin.getFormatNotNumber().replace("%arg%", args[i])));
 						return true;
 					}
 				}
@@ -403,12 +407,10 @@ public abstract class CommandHandler {
 				sender.sendMessage(StringUtils.getInstance().colorize("&cMust be a player to do this"));
 				return true;
 			}
-			
-			
-			
+
 			if (!hasPerm(sender)) {
-				sender.sendMessage(StringUtils.getInstance().colorize(Config.getInstance().getFormatNoPerms()));
-				Main.plugin.getLogger().log(Level.INFO,
+				sender.sendMessage(StringUtils.getInstance().colorize(plugin.getFormatNoPerms()));
+				plugin.getPlugin().getLogger().log(Level.INFO,
 						sender.getName() + " was denied access to command, required permission: " + perm);
 				return true;
 			}

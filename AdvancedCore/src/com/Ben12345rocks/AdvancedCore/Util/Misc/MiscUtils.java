@@ -16,7 +16,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.Main;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 
 public class MiscUtils {
@@ -24,7 +24,7 @@ public class MiscUtils {
 	static MiscUtils instance = new MiscUtils();
 
 	/** The plugin. */
-	static Main plugin = Main.plugin;
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	public static MiscUtils getInstance() {
 		return instance;
@@ -131,7 +131,7 @@ public class MiscUtils {
 	public void broadcast(String broadcastMsg) {
 		if (broadcastMsg != null) {
 			if (!broadcastMsg.equals("")) {
-				Bukkit.getScheduler().runTask(plugin, new Runnable() {
+				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -142,7 +142,7 @@ public class MiscUtils {
 		}
 
 	}
-	
+
 	/**
 	 * Gets the year from mili.
 	 *
@@ -184,7 +184,6 @@ public class MiscUtils {
 		return con;
 	}
 
-
 	/**
 	 * Sets the skull owner.
 	 *
@@ -193,7 +192,8 @@ public class MiscUtils {
 	 * @return the item stack
 	 */
 	public ItemStack setSkullOwner(String playerName) {
-		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName).toItemStack();
+		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
+				.toItemStack();
 	}
 
 }
