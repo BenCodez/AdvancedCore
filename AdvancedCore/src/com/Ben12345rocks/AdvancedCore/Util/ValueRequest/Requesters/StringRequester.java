@@ -75,10 +75,10 @@ public class StringRequester {
 	 */
 	public void request(Player player, InputMethod method, String currentValue, HashMap<String, ItemStack> options,
 			String promptText, boolean allowCustomOption, StringListener listener) {
-		if (options == null && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
+		if ((options == null || options.size() == 0) && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
 			method = InputMethod.ANVIL;
 		}
-		if (options != null && method.equals(InputMethod.ANVIL)) {
+		if ((options != null && options.size() != 0) && method.equals(InputMethod.ANVIL)) {
 			method = InputMethod.INVENTORY;
 		}
 		if (AdvancedCoreHook.getInstance().getDisabledRequestMethods().contains(method.toString())) {
@@ -152,21 +152,23 @@ public class StringRequester {
 
 		} else if (method.equals(InputMethod.CHAT)) {
 
-			if (options != null) {
+			if (options != null && options.size() != 0) {
 				User user = UserManager.getInstance().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
 				PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestString", listener);
 				for (String option : options.keySet()) {
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/advancedcore ValueRequestString " + option));
+							"/" + AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput String "
+									+ option));
 					user.sendJson(comp);
 				}
 				if (allowCustomOption) {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/advancedcore ValueRequestString " + option));
+							"/" + AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput String "
+									+ option));
 					user.sendJson(comp);
 				}
 			} else {

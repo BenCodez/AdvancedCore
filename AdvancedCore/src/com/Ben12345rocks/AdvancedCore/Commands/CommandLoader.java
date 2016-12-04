@@ -61,6 +61,64 @@ public class CommandLoader {
 
 	}
 
+	public ArrayList<CommandHandler> getValueReqestCommands() {
+		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
+		cmds.add(new CommandHandler(new String[] { "String", "(String)" }, "", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					StringListener listener = (StringListener) PlayerUtils.getInstance().getPlayerMeta(player,
+							"ValueRequestString");
+					if (args[1].equals("CustomValue")) {
+						new ValueRequest().requestString(player, listener);
+					} else {
+						listener.onInput(player, args[1]);
+					}
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value or error occured");
+				}
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "Number", "(Number)" }, "", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					NumberListener listener = (NumberListener) PlayerUtils.getInstance().getPlayerMeta(player,
+							"ValueRequestNumber");
+					if (args[1].equals("CustomValue")) {
+						new ValueRequest().requestNumber(player, listener);
+					} else {
+						Number number = Double.valueOf(args[1]);
+						listener.onInput(player, number);
+					}
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value or error occured");
+				}
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "Boolean", "(Boolean)" }, "", "Command to Input value", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				try {
+					BooleanListener listener = (BooleanListener) PlayerUtils.getInstance().getPlayerMeta(player,
+							"ValueRequestBoolean");
+					listener.onInput(player, Boolean.valueOf(args[1]));
+				} catch (Exception ex) {
+					player.sendMessage("No where to input value");
+				}
+			}
+		});
+		return cmds;
+	}
+
 	public ArrayList<CommandHandler> getBasicAdminCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
 		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)" }, permPrefix + ".GiveReward",
@@ -211,63 +269,6 @@ public class CommandLoader {
 							}
 						});
 
-			}
-		});
-
-		cmds.add(new CommandHandler(new String[] { "ValueRequestString", "(String)" }, permPrefix + ".ValueRequest",
-				"Command to Input value", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				Player player = (Player) sender;
-				try {
-					StringListener listener = (StringListener) PlayerUtils.getInstance().getPlayerMeta(player,
-							"ValueRequestString");
-					if (args[1].equals("CustomValue")) {
-						new ValueRequest().requestString(player, listener);
-					} else {
-						listener.onInput(player, args[1]);
-					}
-				} catch (Exception ex) {
-					player.sendMessage("No where to input value or error occured");
-				}
-			}
-		});
-
-		cmds.add(new CommandHandler(new String[] { "ValueRequestNumber", "(Number)" }, permPrefix + ".ValueRequest",
-				"Command to Input value", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				Player player = (Player) sender;
-				try {
-					NumberListener listener = (NumberListener) PlayerUtils.getInstance().getPlayerMeta(player,
-							"ValueRequestNumber");
-					if (args[1].equals("CustomValue")) {
-						new ValueRequest().requestNumber(player, listener);
-					} else {
-						Number number = Double.valueOf(args[1]);
-						listener.onInput(player, number);
-					}
-				} catch (Exception ex) {
-					player.sendMessage("No where to input value or error occured");
-				}
-			}
-		});
-
-		cmds.add(new CommandHandler(new String[] { "ValueRequestBoolean", "(Boolean)" }, permPrefix + ".ValueRequest",
-				"Command to Input value", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				Player player = (Player) sender;
-				try {
-					BooleanListener listener = (BooleanListener) PlayerUtils.getInstance().getPlayerMeta(player,
-							"ValueRequestBoolean");
-					listener.onInput(player, Boolean.valueOf(args[1]));
-				} catch (Exception ex) {
-					player.sendMessage("No where to input value");
-				}
 			}
 		});
 

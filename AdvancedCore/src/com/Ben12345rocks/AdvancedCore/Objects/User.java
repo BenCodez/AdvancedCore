@@ -50,6 +50,8 @@ public class User {
 
 	private AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
 
+	private boolean loadName = true;
+
 	/**
 	 * Instantiates a new user.
 	 *
@@ -110,7 +112,8 @@ public class User {
 	public User(Plugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
-		if (loadName) {
+		this.loadName = loadName;
+		if (this.loadName) {
 			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
 		}
 
@@ -209,7 +212,7 @@ public class User {
 	 * @return the player name
 	 */
 	public String getPlayerName() {
-		if (playerName == null || playerName.equalsIgnoreCase("null")) {
+		if ((playerName == null || playerName.equalsIgnoreCase("null")) && loadName) {
 			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
 		}
 		return playerName;

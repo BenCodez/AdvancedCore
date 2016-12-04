@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -8,10 +9,12 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+import com.Ben12345rocks.AdvancedCore.Commands.Executor.ValueRequestInputCommand;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
@@ -109,6 +112,20 @@ public class AdvancedCoreHook {
 					}
 				}
 			}
+		}
+	}
+
+	public void loadValueRequestInputCommands() {
+		try {
+			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+
+			bukkitCommandMap.setAccessible(true);
+			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
+
+			commandMap.register(plugin.getName() + "valuerequestinput",
+					new ValueRequestInputCommand(plugin.getName() + "valuerequestinput"));
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -268,6 +285,7 @@ public class AdvancedCoreHook {
 		loadRewards();
 		loadUsers();
 		loadBackgroundTimer(5);
+		loadValueRequestInputCommands();
 	}
 
 	/**
