@@ -21,8 +21,8 @@ public class WorldChangeEvent implements Listener {
 	/**
 	 * Instantiates a new world change event.
 	 *
-	 * @param plugin2
-	 *            the plugin
+	 * @param plugin
+	 *            Plugin
 	 */
 	public WorldChangeEvent(Plugin plugin) {
 		WorldChangeEvent.plugin = plugin;

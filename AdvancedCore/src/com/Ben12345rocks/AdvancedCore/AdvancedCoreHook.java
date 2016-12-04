@@ -206,7 +206,7 @@ public class AdvancedCoreHook {
 	/**
 	 * Load background
 	 *
-	 * @param minutes
+	 * @param minutes Minutes
 	 */
 	public void loadBackgroundTimer(int minutes) {
 		if (!timerLoaded) {
