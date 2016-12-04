@@ -96,22 +96,18 @@ public class Data {
 		String uuid = user.getUUID();
 		// plugin.debug(playerName + ":" + uuid);
 		// plugin.debug(plugin.toString());
-		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data",
-				uuid + ".yml");
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
 			try {
 				data.save(dFile);
 				setPlayerName(user);
 
-				plugin.debug("Created file: " + uuid + ".yml from player: "
-						+ playerName);
+				plugin.debug("Created file: " + uuid + ".yml from player: " + playerName);
 
 			} catch (IOException e) {
-				Bukkit.getServer()
-						.getLogger()
-						.severe(ChatColor.RED + "Could not create " + uuid
-								+ ".yml! Name: " + playerName);
+				Bukkit.getServer().getLogger()
+						.severe(ChatColor.RED + "Could not create " + uuid + ".yml! Name: " + playerName);
 
 			}
 		}
@@ -213,10 +209,8 @@ public class Data {
 		try {
 			data.save(dFile);
 		} catch (IOException e) {
-			Bukkit.getServer()
-					.getLogger()
-					.severe(ChatColor.RED + "Could not save "
-							+ PlayerUtils.getInstance().getUUID(playerName) + ".yml!");
+			Bukkit.getServer().getLogger().severe(
+					ChatColor.RED + "Could not save " + PlayerUtils.getInstance().getUUID(playerName) + ".yml!");
 		}
 
 	}
@@ -238,8 +232,7 @@ public class Data {
 			data.set(path, value);
 			FilesManager.getInstance().editFile(dFile, data);
 		} catch (IllegalArgumentException ex) {
-			plugin.debug("Tried to set an empty path for a user. Name: "
-					+ user.getPlayerName() + " Path: " + path);
+			plugin.debug("Tried to set an empty path for a user. Name: " + user.getPlayerName() + " Path: " + path);
 		}
 	}
 
@@ -274,21 +267,18 @@ public class Data {
 			return;
 		}
 
-		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data",
-				uuid + ".yml");
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
 			try {
 				data.save(dFile);
 				setPlayerName(user);
 
-				plugin.debug("Created file: " + uuid + ".yml from player: "
-						+ playerName);
+				plugin.debug("Created file: " + uuid + ".yml from player: " + playerName);
 
 			} catch (IOException e) {
-				plugin.getPlugin().getLogger().severe(
-						ChatColor.RED + "Could not create " + uuid
-								+ ".yml! Name: " + playerName);
+				plugin.getPlugin().getLogger()
+						.severe(ChatColor.RED + "Could not create " + uuid + ".yml! Name: " + playerName);
 
 			}
 		}

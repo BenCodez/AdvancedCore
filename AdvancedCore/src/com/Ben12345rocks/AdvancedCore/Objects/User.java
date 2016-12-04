@@ -48,7 +48,7 @@ public class User {
 	/** The uuid. */
 	private String uuid;
 
-	AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
+	private AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Instantiates a new user.
@@ -209,6 +209,9 @@ public class User {
 	 * @return the player name
 	 */
 	public String getPlayerName() {
+		if (playerName == null || playerName.equalsIgnoreCase("null")) {
+			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
+		}
 		return playerName;
 	}
 
