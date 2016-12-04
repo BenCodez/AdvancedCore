@@ -240,6 +240,7 @@ public class AdvancedCoreHook {
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
 		loadHandle();
+		UserManager.getInstance().load();
 		if (setupEconomy()) {
 			plugin.getLogger().info("Successfully hooked into Vault!");
 		} else {
@@ -249,7 +250,7 @@ public class AdvancedCoreHook {
 		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
 		ServerData.getInstance().setup();
 		loadRewards();
-		UserManager.getInstance().load();
+
 	}
 
 	private void loadHandle() {
@@ -274,6 +275,7 @@ public class AdvancedCoreHook {
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
 		loadHandle();
+		UserManager.getInstance().load();
 		if (setupEconomy()) {
 			plugin.getLogger().info("Successfully hooked into Vault!");
 		} else {
@@ -285,7 +287,7 @@ public class AdvancedCoreHook {
 		loadRewards();
 		loadBackgroundTimer(5);
 		loadValueRequestInputCommands();
-		UserManager.getInstance().load();
+
 	}
 
 	/**

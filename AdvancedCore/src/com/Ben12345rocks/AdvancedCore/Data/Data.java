@@ -147,7 +147,6 @@ public class Data {
 	 *
 	 * @return the players UUI ds
 	 */
-	@SuppressWarnings("unused")
 	public ArrayList<String> getPlayersUUIDs() {
 		ArrayList<String> files = getFiles();
 		if (files != null) {
@@ -157,14 +156,10 @@ public class Data {
 					String uuid = playerFile.replace(".yml", "");
 					uuids.add(uuid);
 				}
-				if (uuids == null) {
-					return null;
-				} else {
-					return uuids;
-				}
+				return uuids;
 			}
 		}
-		return null;
+		return new ArrayList<String>();
 
 	}
 
