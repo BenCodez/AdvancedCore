@@ -13,7 +13,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -82,6 +81,11 @@ public class Data {
 	 */
 	public String getName(User user) {
 		return getData(user).getString("Name");
+	}
+
+	public void deletePlayerFile(String uuid) {
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
+		dFile.delete();
 	}
 
 	/**
@@ -162,23 +166,6 @@ public class Data {
 		}
 		return null;
 
-	}
-
-	/**
-	 * Gets the users.
-	 *
-	 * @return the users
-	 */
-	@Deprecated
-	public Set<User> getUsers() {
-		Set<User> users = new HashSet<User>();
-		ArrayList<User> players = UserManager.getInstance().getUsers();
-
-		for (User user : players) {
-			users.add(user);
-
-		}
-		return users;
 	}
 
 	/**

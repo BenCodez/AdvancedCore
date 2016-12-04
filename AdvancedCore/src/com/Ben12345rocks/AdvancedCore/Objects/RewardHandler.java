@@ -78,7 +78,8 @@ public class RewardHandler {
 
 			@Override
 			public void run() {
-				for (User user : UserManager.getInstance().getUsers()) {
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
 					for (Reward reward : getRewards()) {
 						ArrayList<Long> times = user.getTimedReward(reward);
 						for (Long t : times) {

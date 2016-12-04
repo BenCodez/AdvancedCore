@@ -249,7 +249,7 @@ public class AdvancedCoreHook {
 		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
 		ServerData.getInstance().setup();
 		loadRewards();
-		loadUsers();
+		UserManager.getInstance().load();
 	}
 
 	private void loadHandle() {
@@ -283,9 +283,9 @@ public class AdvancedCoreHook {
 		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
 		ServerData.getInstance().setup();
 		loadRewards();
-		loadUsers();
 		loadBackgroundTimer(5);
 		loadValueRequestInputCommands();
+		UserManager.getInstance().load();
 	}
 
 	/**
@@ -305,20 +305,13 @@ public class AdvancedCoreHook {
 	}
 
 	/**
-	 * Load UserManager
-	 */
-	public void loadUsers() {
-		UserManager.getInstance().loadUsers();
-	}
-
-	/**
 	 * Reload
 	 */
 	public void reload() {
 		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		update();
-		UserManager.getInstance().loadUsers();
+		UserManager.getInstance().load();
 	}
 
 	/**
