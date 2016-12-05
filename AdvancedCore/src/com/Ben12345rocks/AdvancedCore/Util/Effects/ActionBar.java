@@ -95,20 +95,20 @@ public class ActionBar {
 	 */
 	public void sendActionBar(Player player, String message) {
 		try {
-			Class<?> c1 = Class.forName("org.bukkit.craftbukkit." + nmsver + ".entity.CraftPlayer");
+			Class<?> c1 = Class.forName("org.bukkit.craftbukkit." + nmsver + "entity.CraftPlayer");
 			Object p = c1.cast(player);
 			Object ppoc;
-			Class<?> c4 = Class.forName("net.minecraft.server." + nmsver + ".PacketPlayOutChat");
-			Class<?> c5 = Class.forName("net.minecraft.server." + nmsver + ".Packet");
+			Class<?> c4 = Class.forName("net.minecraft.server." + nmsver + "PacketPlayOutChat");
+			Class<?> c5 = Class.forName("net.minecraft.server." + nmsver + "Packet");
 			if (useOldMethods) {
-				Class<?> c2 = Class.forName("net.minecraft.server." + nmsver + ".ChatSerializer");
-				Class<?> c3 = Class.forName("net.minecraft.server." + nmsver + ".IChatBaseComponent");
+				Class<?> c2 = Class.forName("net.minecraft.server." + nmsver + "ChatSerializer");
+				Class<?> c3 = Class.forName("net.minecraft.server." + nmsver + "IChatBaseComponent");
 				Method m3 = c2.getDeclaredMethod("a", String.class);
 				Object cbc = c3.cast(m3.invoke(c2, "{\"text\": \"" + message + "\"}"));
 				ppoc = c4.getConstructor(new Class<?>[] { c3, byte.class }).newInstance(cbc, (byte) 2);
 			} else {
-				Class<?> c2 = Class.forName("net.minecraft.server." + nmsver + ".ChatComponentText");
-				Class<?> c3 = Class.forName("net.minecraft.server." + nmsver + ".IChatBaseComponent");
+				Class<?> c2 = Class.forName("net.minecraft.server." + nmsver + "ChatComponentText");
+				Class<?> c3 = Class.forName("net.minecraft.server." + nmsver + "IChatBaseComponent");
 				Object o = c2.getConstructor(new Class<?>[] { String.class }).newInstance(message);
 				ppoc = c4.getConstructor(new Class<?>[] { c3, byte.class }).newInstance(o, (byte) 2);
 			}

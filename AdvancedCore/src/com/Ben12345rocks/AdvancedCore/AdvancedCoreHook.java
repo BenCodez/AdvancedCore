@@ -206,7 +206,8 @@ public class AdvancedCoreHook {
 	/**
 	 * Load background
 	 *
-	 * @param minutes Minutes
+	 * @param minutes
+	 *            Minutes
 	 */
 	public void loadBackgroundTimer(int minutes) {
 		if (!timerLoaded) {
@@ -222,7 +223,7 @@ public class AdvancedCoreHook {
 					}
 
 				}
-			}, 60 * 1000, minutes * 60 * 1000);
+			}, minutes * 60 * 1000, minutes * 60 * 1000);
 		} else {
 			debug("Timer is already loaded");
 		}
