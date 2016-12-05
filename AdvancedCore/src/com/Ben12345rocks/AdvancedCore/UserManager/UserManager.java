@@ -2,7 +2,6 @@ package com.Ben12345rocks.AdvancedCore.UserManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Set;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -11,7 +10,6 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 /**
@@ -102,20 +100,7 @@ public class UserManager {
 	}
 
 	public void load() {
-		Thread.getInstance().run(new Runnable() {
-			@Override
-			public void run() {
-				for (String uuid : getAllUUIDs()) {
-					User user = getUser(new UUID(uuid));
-					Set<String> data = user.getRawData().getKeys(false);
-					if (data.size() < 2) {
-						Data.getInstance().deletePlayerFile(uuid);
-						users.remove(uuid);
-						AdvancedCoreHook.getInstance().debug("Deleted file: " + uuid + ".yml");
-					}
-				}
-			}
-		});
+		
 	}
 
 }
