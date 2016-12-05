@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Listeners;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -8,6 +9,7 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 // TODO: Auto-generated Javadoc
@@ -37,24 +39,31 @@ public class PlayerJoinEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(PlayerLoginEvent event) {
-		plugin.getServer().getScheduler().runTaskLater(plugin, new Runnable() {
+		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
-				if (event.getPlayer() == null) {
-					return;
-				}
-				Player player = event.getPlayer();
+				Thread.getInstance().run(new Runnable() {
 
-				if (!plugin.getDataFolder().exists()) {
-					plugin.getDataFolder().mkdir();
-				}
+					@Override
+					public void run() {
+						if (event.getPlayer() == null) {
+							return;
+						}
+						Player player = event.getPlayer();
 
-				User user = UserManager.getInstance().getUser(player);
-				user.setPlayerName();
+						if (!plugin.getDataFolder().exists()) {
+							plugin.getDataFolder().mkdir();
+						}
 
-				user.checkOfflineRewards();
-				user.offVoteWorld(player.getWorld().getName());
+						User user = UserManager.getInstance().getUser(player);
+						user.setPlayerName();
+
+						user.checkOfflineRewards();
+						user.offVoteWorld(player.getWorld().getName());
+					}
+				});
+
 			}
 		}, 20L);
 
