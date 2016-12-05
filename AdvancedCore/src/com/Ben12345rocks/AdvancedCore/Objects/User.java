@@ -386,7 +386,6 @@ public class User {
 	 * @param item
 	 *            the item
 	 */
-	@SuppressWarnings("deprecation")
 	public void giveItem(ItemStack item) {
 		if (item.getAmount() == 0) {
 			return;

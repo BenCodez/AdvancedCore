@@ -130,7 +130,6 @@ public class PlayerUtils {
 	 *            the perm
 	 * @return true, if successful
 	 */
-	@SuppressWarnings("deprecation")
 	public boolean hasPermission(String playerName, String perm) {
 		if (playerName == null) {
 			return false;
@@ -151,7 +150,6 @@ public class PlayerUtils {
 	 *            the perm
 	 * @return true, if successful
 	 */
-	@SuppressWarnings("deprecation")
 	public boolean hasServerPermission(String playerName, String perm) {
 		if (playerName == null) {
 			return false;
@@ -184,7 +182,6 @@ public class PlayerUtils {
 	 *            the player name
 	 * @return true, if is player online
 	 */
-	@SuppressWarnings("deprecation")
 	public boolean isPlayerOnline(String playerName) {
 		if (playerName == null) {
 			return false;
