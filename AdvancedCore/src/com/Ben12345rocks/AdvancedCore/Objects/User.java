@@ -386,14 +386,13 @@ public class User {
 	 * @param item
 	 *            the item
 	 */
+	@SuppressWarnings("deprecation")
 	public void giveItem(ItemStack item) {
 		if (item.getAmount() == 0) {
 			return;
 		}
 
-		String playerName = getPlayerName();
-
-		Player player = Bukkit.getPlayer(playerName);
+		Player player = getPlayer();
 
 		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
 		for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {

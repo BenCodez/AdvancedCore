@@ -782,7 +782,7 @@ public class Reward {
 	 *            the user
 	 * @return true, if successful
 	 */
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({ "deprecation" })
 	public boolean checkTimed(User user) {
 		if (!isTimedEnabled()) {
 			return false;
@@ -1369,7 +1369,7 @@ public class Reward {
 
 		if (checkChance()) {
 			ArrayList<String> worlds = getWorlds();
-			Player player = Bukkit.getPlayer(user.getPlayerName());
+			Player player = user.getPlayer();
 			if ((player != null) && (worlds != null) && !worlds.isEmpty()) {
 				if (isGiveInEachWorld()) {
 					for (String world : worlds) {
@@ -1404,7 +1404,7 @@ public class Reward {
 	 *            the user
 	 */
 	public void giveRewardUser(User user) {
-		Player player = Bukkit.getPlayer(user.getPlayerName());
+		Player player = user.getPlayer();
 		if (player != null) {
 			if (hasPermission(user)) {
 				giveRandom(user, true);
@@ -1604,7 +1604,7 @@ public class Reward {
 		// Player commands
 		ArrayList<String> playercmds = getPlayerCommands();
 
-		Player player = Bukkit.getPlayer(playerName);
+		Player player = user.getPlayer();
 		if (playercmds != null) {
 			for (String playercmd : playercmds) {
 				if ((player != null) && (playercmd.length() > 0)) {
