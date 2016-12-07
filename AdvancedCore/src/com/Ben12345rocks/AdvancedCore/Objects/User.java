@@ -52,6 +52,8 @@ public class User {
 
 	private boolean loadName = true;
 
+	private FileConfiguration data;
+
 	/**
 	 * Instantiates a new user.
 	 *
@@ -65,6 +67,7 @@ public class User {
 		this.plugin = plugin;
 		playerName = player.getName();
 		uuid = player.getUniqueId().toString();
+		loadData();
 	}
 
 	/**
@@ -80,6 +83,7 @@ public class User {
 		this.plugin = plugin;
 		this.playerName = playerName;
 		uuid = PlayerUtils.getInstance().getUUID(playerName);
+		loadData();
 	}
 
 	/**
@@ -95,7 +99,7 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
-
+		loadData();
 	}
 
 	/**
@@ -116,7 +120,11 @@ public class User {
 		if (this.loadName) {
 			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
 		}
+		loadData();
+	}
 
+	private void loadData() {
+		data = Data.getInstance().getData(this);
 	}
 
 	/**
@@ -139,10 +147,16 @@ public class User {
 				giveReward(reward, false);
 				offVotes--;
 				setOfflineRewards(reward, offVotes);
-
 			}
 
 		}
+	}
+
+	/**
+	 * Reload data from file
+	 */
+	public void reloadData() {
+		loadData();
 	}
 
 	/**
@@ -224,11 +238,11 @@ public class User {
 	 * @return the plugin data
 	 */
 	public synchronized ConfigurationSection getPluginData() {
-		boolean isSection = Data.getInstance().getData(this).isConfigurationSection(plugin.getName());
+		boolean isSection = getRawData().isConfigurationSection(plugin.getName());
 		if (!isSection) {
-			return Data.getInstance().getData(this).createSection(plugin.getName());
+			return getRawData().createSection(plugin.getName());
 		}
-		return Data.getInstance().getData(this).getConfigurationSection(plugin.getName());
+		return getRawData().getConfigurationSection(plugin.getName());
 	}
 
 	/**
@@ -237,7 +251,10 @@ public class User {
 	 * @return the raw data
 	 */
 	public synchronized FileConfiguration getRawData() {
-		return Data.getInstance().getData(this);
+		if (data == null) {
+			loadData();
+		}
+		return data;
 	}
 
 	/**
@@ -833,7 +850,7 @@ public class User {
 	 *            the value
 	 */
 	public synchronized void setPluginData(String path, Object value) {
-		Data.getInstance().set(this, plugin.getName() + "." + path, value);
+		setRawData(plugin.getName() + "." + path, value);
 	}
 
 	/**
@@ -845,7 +862,8 @@ public class User {
 	 *            the value
 	 */
 	public synchronized void setRawData(String path, Object value) {
-		Data.getInstance().set(this, path, value);
+		data.set(path, value);
+		Data.getInstance().saveData(this, data);
 	}
 
 	/**

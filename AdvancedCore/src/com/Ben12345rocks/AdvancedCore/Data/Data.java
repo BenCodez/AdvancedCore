@@ -197,6 +197,11 @@ public class Data {
 
 	}
 
+	public void saveData(User user, FileConfiguration data) {
+		File dFile = getPlayerFile(user);
+		FilesManager.getInstance().editFile(dFile, data);
+	}
+
 	/**
 	 * Sets the.
 	 *

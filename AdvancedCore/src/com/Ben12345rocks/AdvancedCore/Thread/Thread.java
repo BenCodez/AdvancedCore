@@ -71,7 +71,7 @@ public class Thread {
 	 * @param run
 	 *            the run
 	 */
-	public void run(Runnable run) {
+	public synchronized void run(Runnable run) {
 		if (thread == null || !thread.isAlive()) {
 			loadThread();
 		}

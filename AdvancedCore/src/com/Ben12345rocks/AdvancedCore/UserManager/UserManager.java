@@ -10,6 +10,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 /**
@@ -99,8 +100,16 @@ public class UserManager {
 		return Data.getInstance().getPlayersUUIDs();
 	}
 
-	public void load() {
-		
+	public void reload() {
+		Thread.getInstance().run(new Runnable() {
+
+			@Override
+			public void run() {
+				for (User user : users.values()) {
+					user.reloadData();
+				}
+			}
+		});
 	}
 
 }
