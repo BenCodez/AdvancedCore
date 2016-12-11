@@ -356,7 +356,13 @@ public class BInventory implements Listener {
 						Player player = (Player) event.getWhoClicked();
 						event.setCancelled(true);
 						player.closeInventory();
-						button.onClick(new ClickEvent(event));
+						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+							
+							@Override
+							public void run() {
+								button.onClick(new ClickEvent(event));
+							}
+						});
 						destroy();
 						return;
 					}

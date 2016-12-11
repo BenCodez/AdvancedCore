@@ -9,7 +9,6 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.Objects.User;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 // TODO: Auto-generated Javadoc
@@ -43,26 +42,22 @@ public class PlayerJoinEvent implements Listener {
 
 			@Override
 			public void run() {
-				Thread.getInstance().run(new Runnable() {
 
-					@Override
-					public void run() {
-						if (event.getPlayer() == null) {
-							return;
-						}
-						Player player = event.getPlayer();
+				Player player = event.getPlayer();
 
-						if (!plugin.getDataFolder().exists()) {
-							plugin.getDataFolder().mkdir();
-						}
+				if (!plugin.getDataFolder().exists()) {
+					plugin.getDataFolder().mkdir();
+				}
 
-						User user = UserManager.getInstance().getUser(player);
-						user.setPlayerName();
+				if (player == null) {
+					return;
+				}
 
-						user.checkOfflineRewards();
-						user.offVoteWorld(player.getWorld().getName());
-					}
-				});
+				User user = UserManager.getInstance().getUser(player);
+				user.setPlayerName();
+
+				user.checkOfflineRewards();
+				user.offVoteWorld(player.getWorld().getName());
 
 			}
 		}, 20L);

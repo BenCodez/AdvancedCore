@@ -415,7 +415,14 @@ public abstract class CommandHandler {
 				return true;
 			}
 
-			execute(sender, args);
+			Bukkit.getServer().getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					execute(sender, args);
+				}
+			});
+
 			return true;
 		}
 		return false;

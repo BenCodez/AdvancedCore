@@ -4,6 +4,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.DateFormatSymbols;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -40,10 +43,8 @@ public class MiscUtils {
 	 *            the time
 	 * @return the day from mili
 	 */
-	@SuppressWarnings("deprecation")
 	public int getDayFromMili(long time) {
-		Date date = new Date(time);
-		return date.getDate();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getDayOfMonth();
 	}
 
 	/**
@@ -53,10 +54,8 @@ public class MiscUtils {
 	 *            the time
 	 * @return the hour from mili
 	 */
-	@SuppressWarnings("deprecation")
 	public int getHourFromMili(long time) {
-		Date date = new Date(time);
-		return date.getHours();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getHour();
 	}
 
 	/**
@@ -66,10 +65,8 @@ public class MiscUtils {
 	 *            the time
 	 * @return the minutes from mili
 	 */
-	@SuppressWarnings("deprecation")
 	public int getMinutesFromMili(long time) {
-		Date date = new Date(time);
-		return date.getMinutes();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getMinute();
 	}
 
 	/**
@@ -79,10 +76,8 @@ public class MiscUtils {
 	 *            the time
 	 * @return the month from mili
 	 */
-	@SuppressWarnings("deprecation")
 	public int getMonthFromMili(long time) {
-		Date date = new Date(time);
-		return date.getMonth();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getMonthValue();
 	}
 
 	/**

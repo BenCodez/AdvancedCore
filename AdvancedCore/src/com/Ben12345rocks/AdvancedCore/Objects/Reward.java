@@ -1,13 +1,14 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.io.File;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.lang3.time.DateUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -741,10 +742,10 @@ public class Reward {
 			return false;
 		}
 
-		Date time = new Date();
-		time = DateUtils.addHours(time, getDelayHours());
-		time = DateUtils.addMinutes(time, getDelayMinutes());
-		user.addTimedReward(this, time.getTime());
+		LocalDateTime time = LocalDateTime.now();
+		time = time.plus(getDelayHours(), ChronoUnit.HOURS);
+		time = time.plus(getDelayMinutes(), ChronoUnit.MINUTES);
+		user.addTimedReward(this, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
 		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours " + getDelayMinutes() + " minutes ("
 				+ time.toString() + ")");
@@ -782,19 +783,19 @@ public class Reward {
 	 *            the user
 	 * @return true, if successful
 	 */
-	@SuppressWarnings({ "deprecation" })
 	public boolean checkTimed(User user) {
 		if (!isTimedEnabled()) {
 			return false;
 		}
 
-		Date time = new Date();
-		time.setHours(getTimedHour());
-		time.setMinutes(getTimedMinute());
-		if (new Date().after(time)) {
-			time = DateUtils.addDays(time, 1);
+		LocalDateTime time = LocalDateTime.now();
+		time = time.withHour(getTimedHour());
+		time = time.withMinute(getTimedMinute());
+
+		if (LocalDateTime.now().isAfter(time)) {
+			time = time.plusDays(1);
 		}
-		user.addTimedReward(this, time.getTime());
+		user.addTimedReward(this, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
 		plugin.debug("Giving reward " + name + " at " + time.toString());
 		return true;
@@ -1327,7 +1328,7 @@ public class Reward {
 
 		if (!online && !user.isOnline()) {
 			if (giveOffline) {
-				user.setOfflineRewards(this, user.getOfflineRewards(this) + 1);
+				user.addOfflineRewards(this);
 			}
 			return;
 		}

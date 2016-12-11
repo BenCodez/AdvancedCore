@@ -1,5 +1,11 @@
 package com.Ben12345rocks.AdvancedCore.TimeChecker;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.TemporalField;
+import java.time.temporal.WeekFields;
+import java.util.Locale;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.DayChangeEvent;
@@ -37,13 +43,9 @@ public class TimeChecker {
 	 *
 	 * @return true, if successful
 	 */
-	@SuppressWarnings("deprecation")
 	public boolean hasDayChanged() {
 		int prevDay = ServerData.getInstance().getPrevDay();
-
-		java.util.TimeZone tz = java.util.TimeZone.getTimeZone(plugin.getTimeZone());
-		java.util.Calendar c = java.util.Calendar.getInstance(tz);
-		int day = c.getTime().getDate();
+		int day = LocalDateTime.now().getDayOfMonth();
 		ServerData.getInstance().setPrevDay(day);
 		if (prevDay == -1) {
 			return false;
@@ -59,20 +61,12 @@ public class TimeChecker {
 	 *
 	 * @return true, if successful
 	 */
-	@SuppressWarnings("deprecation")
 	public boolean hasMonthChanged() {
-		int prevMonth = ServerData.getInstance().getPrevMonth();
-		java.util.TimeZone tz = java.util.TimeZone.getTimeZone(plugin.getTimeZone());
-		java.util.Calendar c = java.util.Calendar.getInstance(tz);
-		int month = c.getTime().getMonth();
+		String prevMonth = ServerData.getInstance().getPrevMonth();
+		String month = LocalDateTime.now().getMonth().toString();
 		ServerData.getInstance().setPrevMonth(month);
-		if (prevMonth == -1) {
-			return false;
-		}
-		if (prevMonth != month) {
-			return true;
-		}
-		return false;
+		return !prevMonth.equals(month);
+
 	}
 
 	/**
@@ -80,16 +74,16 @@ public class TimeChecker {
 	 *
 	 * @return true, if successful
 	 */
-	@SuppressWarnings("deprecation")
 	public boolean hasWeekChanged() {
 		int prevDate = ServerData.getInstance().getPrevWeekDay();
-		java.util.TimeZone tz = java.util.TimeZone.getTimeZone(plugin.getTimeZone());
-		java.util.Calendar c = java.util.Calendar.getInstance(tz);
-		ServerData.getInstance().setPrevWeekDay(c.getTime().getDate());
+		LocalDate date = LocalDate.now();
+		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear(); 
+		int weekNumber = date.get(woy);
+		ServerData.getInstance().setPrevWeekDay(weekNumber);
 		if (prevDate == -1) {
 			return false;
 		}
-		if (ServerData.getInstance().getPrevDay() == 0 && c.getTime().getDate() != prevDate) {
+		if (weekNumber != prevDate) {
 			return true;
 		}
 		return false;

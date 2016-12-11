@@ -274,8 +274,14 @@ public class AInventory {
 								AdvancedCoreHook.getInstance().debug("Anvil handler was null, fixing...");
 							}
 
-							handler.onAnvilClick(clickEvent);
-
+							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+								
+								@Override
+								public void run() {
+									handler.onAnvilClick(clickEvent);
+								}
+							});
+						
 							destroy();
 						}
 

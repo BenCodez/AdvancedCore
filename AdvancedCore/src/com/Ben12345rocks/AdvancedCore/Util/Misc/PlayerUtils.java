@@ -7,8 +7,6 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Data.Data;
-import com.Ben12345rocks.AdvancedCore.Objects.User;
 
 public class PlayerUtils {
 	/** The instance. */
@@ -49,26 +47,15 @@ public class PlayerUtils {
 	 *            the uuid
 	 * @return the player name
 	 */
-	public String getPlayerName(String uuid) {
+	public synchronized String getPlayerName(String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
-
 			plugin.debug("Null UUID");
-
 			return null;
-		}
-
-		@SuppressWarnings("deprecation")
-		User user = new User(plugin.getPlugin(), new com.Ben12345rocks.AdvancedCore.Objects.UUID(uuid), false);
-		String playerName = Data.getInstance().getName(user);
-
-		if (playerName != null && !playerName.equals("null")) {
-			return playerName;
 		}
 
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player == null) {
-			playerName = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid)).getName();
-			return playerName;
+			return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid)).getName();
 		} else {
 			return player.getName();
 		}

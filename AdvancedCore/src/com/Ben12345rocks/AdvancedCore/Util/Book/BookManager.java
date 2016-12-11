@@ -45,12 +45,20 @@ public class BookManager implements Listener {
 				Player player = event.getPlayer();
 				boolean destory = false;
 
-				String input = "";
+				String st = "";
 				for (String str : event.getNewBookMeta().getPages()) {
-					input += str;
+					st += str;
 				}
+				final String input = st;
 				BookSign listener = (BookSign) PlayerUtils.getInstance().getPlayerMeta(player, "BookManager");
-				listener.onBookSign(player, input);
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						listener.onBookSign(player, input);
+					}
+				});
+
 				player.getInventory().getItem(event.getSlot()).setType(Material.AIR);
 				player.getInventory().setItem(event.getSlot(), new ItemStack(Material.AIR));
 				destory = true;

@@ -279,10 +279,7 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLore(String... lore) {
-		ItemMeta im = is.getItemMeta();
-		im.setLore(Arrays.asList(lore));
-		is.setItemMeta(im);
-		return this;
+		return setLore(Arrays.asList(lore));
 	}
 
 	/**
