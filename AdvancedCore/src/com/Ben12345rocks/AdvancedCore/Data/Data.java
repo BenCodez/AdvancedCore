@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Data;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,6 +23,46 @@ public class Data {
 
 	/** The instance. */
 	static Data instance = new Data();
+
+	UserThread thread = new UserThread();
+
+	public class UserThread extends Thread {
+
+		@Override
+		public void run() {
+
+		}
+
+		public synchronized File getPlayerFile(String uuid) {
+			File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
+			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+			if (!dFile.exists()) {
+				FilesManager.getInstance().editFile(dFile, data);
+			}
+			return dFile;
+		}
+
+		public synchronized FileConfiguration getData(String uuid) {
+			synchronized (this) {
+				File dFile = getPlayerFile(uuid);
+				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+				notify();
+				return data;
+			}
+		}
+
+		public synchronized void setData(String uuid, String path, Object value) {
+			File dFile = getPlayerFile(uuid);
+			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+			data.set(path, value);
+			try {
+				data.save(dFile);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
@@ -49,9 +90,9 @@ public class Data {
 	 * @return the data
 	 */
 	public synchronized FileConfiguration getData(String uuid) {
-		File dFile = getPlayerFile(uuid);
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		return data;
+		synchronized (thread) {
+			return thread.getData(uuid);
+		}
 	}
 
 	/**
@@ -83,22 +124,6 @@ public class Data {
 	public void deletePlayerFile(String uuid) {
 		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
 		dFile.delete();
-	}
-
-	/**
-	 * Gets the player file.
-	 *
-	 * @param user
-	 *            the user
-	 * @return the player file
-	 */
-	public synchronized File getPlayerFile(String uuid) {
-		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		if (!dFile.exists()) {
-			FilesManager.getInstance().editFile(dFile, data);
-		}
-		return dFile;
 	}
 
 	/**
@@ -171,14 +196,7 @@ public class Data {
 	 *            the value
 	 */
 	public synchronized void set(String uuid, String path, Object value) {
-		try {
-			File dFile = getPlayerFile(uuid);
-			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-			data.set(path, value);
-			FilesManager.getInstance().editFile(dFile, data);
-		} catch (IllegalArgumentException ex) {
-			plugin.debug("Tried to set an empty path for a user. UUID: " + uuid + " Path: " + path);
-		}
+		thread.setData(uuid, path, value);
 	}
 
 	/**

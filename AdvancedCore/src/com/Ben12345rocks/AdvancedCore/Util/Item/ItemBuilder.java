@@ -346,9 +346,7 @@ public class ItemBuilder {
 		if (im.hasLore())
 			lore = new ArrayList<>(im.getLore());
 		lore.add(line);
-		im.setLore(lore);
-		is.setItemMeta(im);
-		return this;
+		return setLore(lore);
 	}
 
 	/**
@@ -364,9 +362,7 @@ public class ItemBuilder {
 		ItemMeta im = is.getItemMeta();
 		List<String> lore = new ArrayList<>(im.getLore());
 		lore.set(pos, line);
-		im.setLore(lore);
-		is.setItemMeta(im);
-		return this;
+		return setLore(lore);
 	}
 
 	/**

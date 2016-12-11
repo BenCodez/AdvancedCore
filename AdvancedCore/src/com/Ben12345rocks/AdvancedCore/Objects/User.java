@@ -768,7 +768,7 @@ public class User {
 	 * Sets the player name.
 	 */
 	public synchronized void setPlayerName() {
-		Data.getInstance().setPlayerName(uuid,playerName);
+		Data.getInstance().setPlayerName(uuid, playerName);
 	}
 
 	/**

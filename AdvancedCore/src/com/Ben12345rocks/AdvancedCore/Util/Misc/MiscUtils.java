@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -145,10 +144,8 @@ public class MiscUtils {
 	 *            the time
 	 * @return the year from mili
 	 */
-	@SuppressWarnings("deprecation")
 	public int getYearFromMili(long time) {
-		Date date = new Date(time);
-		return date.getYear();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getYear();
 	}
 
 	/**
