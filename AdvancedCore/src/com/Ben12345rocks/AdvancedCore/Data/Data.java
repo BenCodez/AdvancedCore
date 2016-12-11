@@ -24,7 +24,7 @@ public class Data {
 	/** The instance. */
 	static Data instance = new Data();
 
-	UserThread thread = new UserThread();
+	UserThread thread;
 
 	public class UserThread extends Thread {
 
@@ -90,6 +90,7 @@ public class Data {
 	 * @return the data
 	 */
 	public synchronized FileConfiguration getData(String uuid) {
+		loadThread();
 		synchronized (thread) {
 			return thread.getData(uuid);
 		}
@@ -196,6 +197,7 @@ public class Data {
 	 *            the value
 	 */
 	public synchronized void set(String uuid, String path, Object value) {
+		loadThread();
 		thread.setData(uuid, path, value);
 	}
 
@@ -207,5 +209,12 @@ public class Data {
 	 */
 	public synchronized void setPlayerName(String uuid, String playerName) {
 		set(uuid, "PlayerName", playerName);
+	}
+	
+	private void loadThread() {
+		if (thread == null || !thread.isAlive()) {
+			thread = new UserThread();
+			thread.start();
+		}
 	}
 }
