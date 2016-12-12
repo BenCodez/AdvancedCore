@@ -1,7 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.UserManager;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -10,7 +9,6 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 /**
@@ -33,8 +31,6 @@ public class UserManager {
 		return instance;
 	}
 
-	private HashMap<String, User> users = new HashMap<String, User>();
-
 	/**
 	 * Instantiates a new user manager.
 	 */
@@ -48,7 +44,7 @@ public class UserManager {
 	 *            the player
 	 * @return the user
 	 */
-	public User getUser(OfflinePlayer player) {
+	public synchronized User getUser(OfflinePlayer player) {
 		return getUser(player.getName());
 	}
 
@@ -59,7 +55,7 @@ public class UserManager {
 	 *            the player
 	 * @return the user
 	 */
-	public User getUser(Player player) {
+	public synchronized User getUser(Player player) {
 		return getUser(player.getName());
 	}
 
@@ -70,7 +66,7 @@ public class UserManager {
 	 *            the player name
 	 * @return the user
 	 */
-	public User getUser(String playerName) {
+	public synchronized User getUser(String playerName) {
 		return getUser(new UUID(PlayerUtils.getInstance().getUUID(playerName)));
 	}
 
@@ -82,34 +78,15 @@ public class UserManager {
 	 * @return the user
 	 */
 	@SuppressWarnings("deprecation")
-	public User getUser(UUID uuid) {
-		if (users.containsKey(uuid.getUUID())) {
-			return users.get(uuid.getUUID());
-		}
-		User user = new User(plugin.getPlugin(), uuid);
-		user.setPlayerName();
-		users.put(uuid.getUUID(), user);
-		return user;
+	public synchronized User getUser(UUID uuid) {
+		return new User(plugin.getPlugin(), uuid);
 	}
 
-	public ArrayList<String> getAllPlayerNames() {
+	public synchronized ArrayList<String> getAllPlayerNames() {
 		return Data.getInstance().getPlayerNames();
 	}
 
-	public ArrayList<String> getAllUUIDs() {
+	public synchronized ArrayList<String> getAllUUIDs() {
 		return Data.getInstance().getPlayersUUIDs();
 	}
-
-	public void reload() {
-		Thread.getInstance().run(new Runnable() {
-
-			@Override
-			public void run() {
-				for (User user : users.values()) {
-					user.reloadData();
-				}
-			}
-		});
-	}
-
 }

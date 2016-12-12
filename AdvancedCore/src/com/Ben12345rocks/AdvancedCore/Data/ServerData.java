@@ -60,8 +60,8 @@ public class ServerData extends YMLFile {
 	 *
 	 * @return the prev month
 	 */
-	public int getPrevMonth() {
-		return getData().getInt("PrevMonth", -1);
+	public String getPrevMonth() {
+		return getData().getString("Month", "");
 	}
 
 	/**
@@ -80,8 +80,7 @@ public class ServerData extends YMLFile {
 	 *            the new plugin version
 	 */
 	public void setPluginVersion(Plugin plugin) {
-		getData().set("PluginVersions." + plugin.getName(),
-				plugin.getDescription().getVersion());
+		getData().set("PluginVersions." + plugin.getName(), plugin.getDescription().getVersion());
 		saveData();
 	}
 
@@ -99,11 +98,11 @@ public class ServerData extends YMLFile {
 	/**
 	 * Sets the prev month.
 	 *
-	 * @param value
+	 * @param month
 	 *            the new prev month
 	 */
-	public void setPrevMonth(int value) {
-		getData().set("PrevMonth", value);
+	public void setPrevMonth(String month) {
+		getData().set("Month", month);
 		saveData();
 	}
 
@@ -118,7 +117,9 @@ public class ServerData extends YMLFile {
 		saveData();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.Ben12345rocks.AdvancedCore.YML.YMLFile#onFileCreation()
 	 */
 	@Override

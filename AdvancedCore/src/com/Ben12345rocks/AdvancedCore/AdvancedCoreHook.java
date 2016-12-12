@@ -23,7 +23,6 @@ import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
@@ -44,7 +43,6 @@ public class AdvancedCoreHook {
 	private boolean logDebugToFile = true;
 	private String defaultRequestMethod = "ANVIL";
 	private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
-	private String TimeZone = "UTC";
 	private String formatNoPerms = "&cYou do not have enough permission!";
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
@@ -179,10 +177,6 @@ public class AdvancedCoreHook {
 		return serverHandle;
 	}
 
-	public String getTimeZone() {
-		return TimeZone;
-	}
-
 	public boolean isDebug() {
 		return debug;
 	}
@@ -312,7 +306,6 @@ public class AdvancedCoreHook {
 		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		update();
-		UserManager.getInstance().reload();
 	}
 
 	/**
@@ -359,10 +352,6 @@ public class AdvancedCoreHook {
 
 	public void setPermPrefix(String permPrefix) {
 		this.permPrefix = permPrefix;
-	}
-
-	public void setTimeZone(String timeZone) {
-		TimeZone = timeZone;
 	}
 
 	/**

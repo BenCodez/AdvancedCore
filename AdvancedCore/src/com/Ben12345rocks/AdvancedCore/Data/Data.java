@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -25,6 +23,46 @@ public class Data {
 
 	/** The instance. */
 	static Data instance = new Data();
+
+	UserThread thread;
+
+	public class UserThread extends Thread {
+
+		@Override
+		public void run() {
+
+		}
+
+		public synchronized File getPlayerFile(String uuid) {
+			File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
+			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+			if (!dFile.exists()) {
+				FilesManager.getInstance().editFile(dFile, data);
+			}
+			return dFile;
+		}
+
+		public synchronized FileConfiguration getData(String uuid) {
+			synchronized (this) {
+				File dFile = getPlayerFile(uuid);
+				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+				notify();
+				return data;
+			}
+		}
+
+		public synchronized void setData(String uuid, String path, Object value) {
+			File dFile = getPlayerFile(uuid);
+			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+			data.set(path, value);
+			try {
+				data.save(dFile);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
@@ -44,17 +82,11 @@ public class Data {
 	private Data() {
 	}
 
-	/**
-	 * Gets the data.
-	 *
-	 * @param user
-	 *            the user
-	 * @return the data
-	 */
-	public FileConfiguration getData(User user) {
-		File dFile = getPlayerFile(user);
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		return data;
+	public synchronized FileConfiguration getData(String uuid) {
+		loadThread();
+		synchronized (thread) {
+			return thread.getData(uuid);
+		}
 	}
 
 	/**
@@ -72,51 +104,13 @@ public class Data {
 		}
 	}
 
-	/**
-	 * Gets the name.
-	 *
-	 * @param user
-	 *            the user
-	 * @return the name
-	 */
-	public String getName(User user) {
-		return getData(user).getString("Name");
+	public synchronized String getName(String uuid) {
+		return getData(uuid).getString("PlayerName", "");
 	}
 
 	public void deletePlayerFile(String uuid) {
 		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
 		dFile.delete();
-	}
-
-	/**
-	 * Gets the player file.
-	 *
-	 * @param user
-	 *            the user
-	 * @return the player file
-	 */
-	public File getPlayerFile(User user) {
-		String playerName = user.getPlayerName();
-		String uuid = user.getUUID();
-		// plugin.debug(playerName + ":" + uuid);
-		// plugin.debug(plugin.toString());
-		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		if (!dFile.exists()) {
-			try {
-				data.save(dFile);
-				setPlayerName(user);
-
-				plugin.debug("Created file: " + uuid + ".yml from player: " + playerName);
-
-			} catch (IOException e) {
-				Bukkit.getServer().getLogger()
-						.severe(ChatColor.RED + "Could not create " + uuid + ".yml! Name: " + playerName);
-
-			}
-		}
-		return dFile;
-
 	}
 
 	/**
@@ -143,9 +137,9 @@ public class Data {
 	}
 
 	/**
-	 * Gets the players UUI ds.
+	 * Gets the players UUIDs
 	 *
-	 * @return the players UUI ds
+	 * @return the players UUIDs
 	 */
 	public ArrayList<String> getPlayersUUIDs() {
 		ArrayList<String> files = getFiles();
@@ -178,96 +172,19 @@ public class Data {
 		}
 	}
 
-	/**
-	 * Save data.
-	 *
-	 * @param user
-	 *            the user
-	 */
-	public void saveData(User user) {
-		File dFile = getPlayerFile(user);
-		String playerName = user.getPlayerName();
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		try {
-			data.save(dFile);
-		} catch (IOException e) {
-			Bukkit.getServer().getLogger().severe(
-					ChatColor.RED + "Could not save " + PlayerUtils.getInstance().getUUID(playerName) + ".yml!");
-		}
-
+	public synchronized void set(String uuid, String path, Object value) {
+		loadThread();
+		thread.setData(uuid, path, value);
 	}
 
-	public void saveData(User user, FileConfiguration data) {
-		File dFile = getPlayerFile(user);
-		FilesManager.getInstance().editFile(dFile, data);
+	public synchronized void setPlayerName(String uuid, String playerName) {
+		set(uuid, "PlayerName", playerName);
 	}
-
-	/**
-	 * Sets the.
-	 *
-	 * @param user
-	 *            the user
-	 * @param path
-	 *            the path
-	 * @param value
-	 *            the value
-	 */
-	public void set(User user, String path, Object value) {
-		try {
-			File dFile = getPlayerFile(user);
-			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-			data.set(path, value);
-			FilesManager.getInstance().editFile(dFile, data);
-		} catch (IllegalArgumentException ex) {
-			plugin.debug("Tried to set an empty path for a user. Name: " + user.getPlayerName() + " Path: " + path);
-		}
-	}
-
-	/**
-	 * Sets the player name.
-	 *
-	 * @param user
-	 *            the new player name
-	 */
-	public void setPlayerName(User user) {
-		set(user, "PlayerName", user.getPlayerName());
-	}
-
-	/**
-	 * Sets the up.
-	 *
-	 * @param user
-	 *            the new up
-	 */
-	public void setup(User user) {
-		if (!plugin.getPlugin().getDataFolder().exists()) {
-			plugin.getPlugin().getDataFolder().mkdir();
-		}
-
-		String uuid = user.getUUID();
-		String playerName = user.getPlayerName();
-		if (playerName == null) {
-			PlayerUtils.getInstance().getPlayerName(uuid);
-		}
-
-		if (playerName == null) {
-			return;
-		}
-
-		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		if (!dFile.exists()) {
-			try {
-				data.save(dFile);
-				setPlayerName(user);
-
-				plugin.debug("Created file: " + uuid + ".yml from player: " + playerName);
-
-			} catch (IOException e) {
-				plugin.getPlugin().getLogger()
-						.severe(ChatColor.RED + "Could not create " + uuid + ".yml! Name: " + playerName);
-
-			}
+	
+	private void loadThread() {
+		if (thread == null || !thread.isAlive()) {
+			thread = new UserThread();
+			thread.start();
 		}
 	}
 }

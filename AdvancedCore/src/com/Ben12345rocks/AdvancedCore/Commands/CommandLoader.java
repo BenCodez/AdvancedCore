@@ -213,7 +213,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
 				User user = UserManager.getInstance().getUser((Player) sender);
-				if (user.getChoiceReward(reward) != 0) {
+				if (user.getChoiceRewards().contains(reward.name)) {
 					new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
 							ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false,
 							new StringListener() {
@@ -222,7 +222,9 @@ public class CommandLoader {
 								public void onInput(Player player, String value) {
 									User user = UserManager.getInstance().getUser(player);
 									RewardHandler.getInstance().giveReward(user, value, true);
-									user.setChoiceReward(reward, user.getChoiceReward(reward) - 1);
+									ArrayList<String> rewards = user.getChoiceRewards();
+									rewards.remove(value);
+									user.setChoiceRewards(rewards);
 								}
 							});
 				} else {

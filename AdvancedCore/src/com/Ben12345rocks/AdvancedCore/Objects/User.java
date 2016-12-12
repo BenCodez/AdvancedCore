@@ -5,7 +5,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -52,8 +51,6 @@ public class User {
 
 	private boolean loadName = true;
 
-	private FileConfiguration data;
-
 	/**
 	 * Instantiates a new user.
 	 *
@@ -67,7 +64,6 @@ public class User {
 		this.plugin = plugin;
 		playerName = player.getName();
 		uuid = player.getUniqueId().toString();
-		loadData();
 	}
 
 	/**
@@ -83,7 +79,6 @@ public class User {
 		this.plugin = plugin;
 		this.playerName = playerName;
 		uuid = PlayerUtils.getInstance().getUUID(playerName);
-		loadData();
 	}
 
 	/**
@@ -99,7 +94,6 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
-		loadData();
 	}
 
 	/**
@@ -120,11 +114,10 @@ public class User {
 		if (this.loadName) {
 			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
 		}
-		loadData();
 	}
 
-	private void loadData() {
-		data = Data.getInstance().getData(this);
+	private synchronized FileConfiguration loadData() {
+		return Data.getInstance().getData(uuid);
 	}
 
 	/**
@@ -133,66 +126,33 @@ public class User {
 	 * @param reward
 	 *            the reward
 	 */
-	public void addChoiceReward(Reward reward) {
-		setChoiceReward(reward, getChoiceReward(reward) + 1);
+	public synchronized void addChoiceReward(Reward reward) {
+		ArrayList<String> rewards = getChoiceRewards();
+		rewards.add(reward.getRewardName());
+		setChoiceRewards(rewards);
 	}
 
 	/**
 	 * Check offline rewards.
 	 */
-	public void checkOfflineRewards() {
-		for (Reward reward : RewardHandler.getInstance().getRewards()) {
-			int offVotes = getOfflineRewards(reward);
-			while (offVotes > 0 && isOnline()) {
-				giveReward(reward, false);
-				offVotes--;
-				setOfflineRewards(reward, offVotes);
-			}
-
-		}
+	public synchronized void checkOfflineRewards() {
+		RewardHandler.getInstance().giveReward(this, false, ArrayUtils.getInstance().convert(getOfflineRewards()));
+		setOfflineRewards(new ArrayList<String>());
 	}
 
-	/**
-	 * Reload data from file
-	 */
-	public void reloadData() {
-		loadData();
-	}
-
-	/**
-	 * Gets the choice reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return the choice reward
-	 */
-	public int getChoiceReward(Reward reward) {
-		return getRawData().getInt("ChoiceRewards." + reward.name);
-	}
-
-	public ArrayList<String> getChoiceRewards() {
-		if (getRawData().isConfigurationSection("ChoiceRewards")) {
-			Set<String> set = getRawData().getConfigurationSection("ChoiceRewards").getKeys(false);
-			ArrayList<String> rewards = new ArrayList<String>();
-			for (String reward : set) {
-				if (getChoiceReward(RewardHandler.getInstance().getReward(reward)) != 0) {
-					rewards.add(reward);
-				}
-			}
-			return rewards;
-		}
-		return new ArrayList<String>();
+	@SuppressWarnings("unchecked")
+	public synchronized ArrayList<String> getChoiceRewards() {
+		return (ArrayList<String>) getRawData().getList("ChoiceRewardsList", new ArrayList<String>());
 	}
 
 	/**
 	 * Gets the offline rewards.
 	 *
-	 * @param reward
-	 *            the reward
 	 * @return the offline rewards
 	 */
-	public int getOfflineRewards(Reward reward) {
-		return getRawData().getInt("OfflineReward." + reward.getRewardName());
+	@SuppressWarnings("unchecked")
+	public synchronized ArrayList<String> getOfflineRewards() {
+		return (ArrayList<String>) getRawData().getList("OfflineRewards", new ArrayList<String>());
 	}
 
 	/**
@@ -204,7 +164,7 @@ public class User {
 	 *            the world
 	 * @return the offline reward world
 	 */
-	public int getOfflineRewardWorld(String reward, String world) {
+	public synchronized int getOfflineRewardWorld(String reward, String world) {
 		if (world == null) {
 			world = "AllTheWorlds";
 		}
@@ -216,7 +176,7 @@ public class User {
 	 *
 	 * @return the player
 	 */
-	public Player getPlayer() {
+	public synchronized Player getPlayer() {
 		return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 	}
 
@@ -225,7 +185,7 @@ public class User {
 	 *
 	 * @return the player name
 	 */
-	public String getPlayerName() {
+	public synchronized String getPlayerName() {
 		if ((playerName == null || playerName.equalsIgnoreCase("null")) && loadName) {
 			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
 		}
@@ -251,10 +211,7 @@ public class User {
 	 * @return the raw data
 	 */
 	public synchronized FileConfiguration getRawData() {
-		if (data == null) {
-			loadData();
-		}
-		return data;
+		return loadData();
 	}
 
 	/**
@@ -265,7 +222,7 @@ public class User {
 	 * @return the timed reward
 	 */
 	@SuppressWarnings("unchecked")
-	public ArrayList<Long> getTimedReward(Reward reward) {
+	public synchronized ArrayList<Long> getTimedReward(Reward reward) {
 		return (ArrayList<Long>) getRawData().getList("TimedRewards." + reward.getRewardName(), new ArrayList<Long>());
 	}
 
@@ -277,7 +234,7 @@ public class User {
 	 * @param time
 	 *            the time
 	 */
-	public void addTimedReward(Reward reward, long time) {
+	public synchronized void addTimedReward(Reward reward, long time) {
 		ArrayList<Long> times = getTimedReward(reward);
 		times.add(Long.valueOf(time));
 		setTimedReward(reward, times);
@@ -299,7 +256,7 @@ public class User {
 	 * @param time
 	 *            the time
 	 */
-	public void removeTimedReward(Reward reward, long time) {
+	public synchronized void removeTimedReward(Reward reward, long time) {
 		ArrayList<Long> times = getTimedReward(reward);
 		times.remove(Long.valueOf(time));
 		setTimedReward(reward, times);
@@ -310,7 +267,7 @@ public class User {
 	 *
 	 * @return the user input method
 	 */
-	public InputMethod getUserInputMethod() {
+	public synchronized InputMethod getUserInputMethod() {
 		return InputMethod.getMethod(getRawData().getString("InputMethod", hook.getDefaultRequestMethod()));
 	}
 
@@ -319,7 +276,7 @@ public class User {
 	 *
 	 * @return the uuid
 	 */
-	public String getUUID() {
+	public synchronized String getUUID() {
 		return uuid;
 	}
 
@@ -329,7 +286,7 @@ public class User {
 	 * @param exp
 	 *            the exp
 	 */
-	public void giveExp(int exp) {
+	public synchronized void giveExp(int exp) {
 		Player player = getPlayer();
 		if (player != null) {
 			player.giveExp(exp);
@@ -353,23 +310,7 @@ public class User {
 	 *            the enchants
 	 */
 	@SuppressWarnings("deprecation")
-	/**
-	 * Give the user an item
-	 * 
-	 * @param id
-	 *            Item id
-	 * @param amount
-	 *            Item amount
-	 * @param data
-	 *            Item data
-	 * @param itemName
-	 *            Item name
-	 * @param lore
-	 *            Item lore
-	 * @param enchants
-	 *            Item enchants
-	 */
-	public void giveItem(int id, int amount, int data, String itemName, List<String> lore,
+	public synchronized void giveItem(int id, int amount, int data, String itemName, List<String> lore,
 			HashMap<String, Integer> enchants) {
 
 		if (amount == 0) {
@@ -403,7 +344,7 @@ public class User {
 	 * @param item
 	 *            the item
 	 */
-	public void giveItem(ItemStack item) {
+	public synchronized void giveItem(ItemStack item) {
 		if (item.getAmount() == 0) {
 			return;
 		}
@@ -433,7 +374,7 @@ public class User {
 	 * @param money
 	 *            Amount of money to give
 	 */
-	public void giveMoney(double money) {
+	public synchronized void giveMoney(double money) {
 		String playerName = getPlayerName();
 		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null) {
 			if (money > 0) {
@@ -452,7 +393,7 @@ public class User {
 	 *            the money
 	 */
 	@SuppressWarnings("deprecation")
-	public void giveMoney(int money) {
+	public synchronized void giveMoney(int money) {
 		String playerName = getPlayerName();
 		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null && hook.getEcon() != null) {
 			if (money > 0) {
@@ -474,7 +415,7 @@ public class User {
 	 * @param amplifier
 	 *            the amplifier
 	 */
-	public void givePotionEffect(String potionName, int duration, int amplifier) {
+	public synchronized void givePotionEffect(String potionName, int duration, int amplifier) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(getUUID()));
 		if (player != null) {
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
@@ -497,7 +438,7 @@ public class User {
 	 * @param online
 	 *            the online
 	 */
-	public void giveReward(Reward reward, boolean online) {
+	public synchronized void giveReward(Reward reward, boolean online) {
 		reward.giveReward(this, online);
 	}
 
@@ -506,7 +447,7 @@ public class User {
 	 *
 	 * @return true, if successful
 	 */
-	public boolean hasJoinedBefore() {
+	public synchronized boolean hasJoinedBefore() {
 		return Data.getInstance().hasJoinedBefore(this);
 	}
 
@@ -515,7 +456,7 @@ public class User {
 	 *
 	 * @return true, if is online
 	 */
-	public boolean isOnline() {
+	public synchronized boolean isOnline() {
 		return PlayerUtils.getInstance().isPlayerOnline(getPlayerName());
 	}
 
@@ -525,7 +466,7 @@ public class User {
 	 * @param world
 	 *            the world
 	 */
-	public void offVoteWorld(String world) {
+	public synchronized void offVoteWorld(String world) {
 
 		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			if (reward.isUsesWorlds()) {
@@ -534,7 +475,7 @@ public class User {
 					if (reward.isGiveInEachWorld()) {
 						for (String worldName : worlds) {
 
-							hook.debug("Checking world: " + worldName + ", reard: " + reward);
+							hook.debug("Checking world: " + worldName + ", reward: " + reward);
 
 							if (worldName != "") {
 								if (worldName.equals(world)) {
@@ -625,7 +566,7 @@ public class User {
 	 * @param delay
 	 *            the delay
 	 */
-	public void sendActionBar(String msg, int delay) {
+	public synchronized void sendActionBar(String msg, int delay) {
 		// plugin.debug("attempting to send action bar");
 		if (msg != null && msg != "") {
 			Player player = getPlayer();
@@ -656,7 +597,7 @@ public class User {
 	 * @param delay
 	 *            the delay
 	 */
-	public void sendBossBar(String msg, String color, String style, double progress, int delay) {
+	public synchronized void sendBossBar(String msg, String color, String style, double progress, int delay) {
 		// plugin.debug("attempting to send action bar");
 		if (msg != null && msg != "") {
 			Player player = getPlayer();
@@ -678,7 +619,7 @@ public class User {
 	 * @param messages
 	 *            the messages
 	 */
-	public void sendJson(ArrayList<TextComponent> messages) {
+	public synchronized void sendJson(ArrayList<TextComponent> messages) {
 		Player player = getPlayer();
 		if ((player != null) && (messages != null)) {
 			/*
@@ -700,7 +641,7 @@ public class User {
 	 * @param message
 	 *            the message
 	 */
-	public void sendJson(TextComponent message) {
+	public synchronized void sendJson(TextComponent message) {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
 			AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, message);
@@ -713,7 +654,7 @@ public class User {
 	 * @param msg
 	 *            the msg
 	 */
-	public void sendMessage(ArrayList<String> msg) {
+	public synchronized void sendMessage(ArrayList<String> msg) {
 		sendMessage(ArrayUtils.getInstance().convert(msg));
 	}
 
@@ -723,7 +664,7 @@ public class User {
 	 * @param msg
 	 *            the msg
 	 */
-	public void sendMessage(String msg) {
+	public synchronized void sendMessage(String msg) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
 			if (msg != "") {
@@ -741,7 +682,7 @@ public class User {
 	 * @param msg
 	 *            the msg
 	 */
-	public void sendMessage(String[] msg) {
+	public synchronized void sendMessage(String[] msg) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
 
@@ -767,7 +708,7 @@ public class User {
 	 * @param fadeOut
 	 *            the fade out
 	 */
-	public void sendTitle(String title, String subTitle, int fadeIn, int showTime, int fadeOut) {
+	public synchronized void sendTitle(String title, String subTitle, int fadeIn, int showTime, int fadeOut) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			// Title.getInstance().sendTitle(player, title, subTitle, fadeIn,
@@ -782,28 +723,12 @@ public class User {
 		}
 	}
 
-	/**
-	 * Sets the choice reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
-	public void setChoiceReward(Reward reward, int value) {
-		setRawData("ChoiceRewards." + reward.name, value);
+	public synchronized void setChoiceRewards(ArrayList<String> rewards) {
+		setRawData("ChoiceRewardsList", rewards);
 	}
 
-	/**
-	 * Sets the offline rewards.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
-	public void setOfflineRewards(Reward reward, int value) {
-		setRawData("OfflineReward." + reward.getRewardName(), value);
+	public synchronized void setOfflineRewards(ArrayList<String> rewards) {
+		setRawData("OfflineRewards", rewards);
 	}
 
 	/**
@@ -816,7 +741,7 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
-	public void setOfflineRewardWorld(String reward, String world, int value) {
+	public synchronized void setOfflineRewardWorld(String reward, String world, int value) {
 		if (world == null) {
 			world = "AllTheWorlds";
 		}
@@ -826,9 +751,8 @@ public class User {
 	/**
 	 * Sets the player name.
 	 */
-	public void setPlayerName() {
-		User user = this;
-		Data.getInstance().setPlayerName(user);
+	public synchronized void setPlayerName() {
+		Data.getInstance().setPlayerName(uuid, playerName);
 	}
 
 	/**
@@ -837,7 +761,7 @@ public class User {
 	 * @param playerName
 	 *            the new player name
 	 */
-	public void setPlayerName(String playerName) {
+	public synchronized void setPlayerName(String playerName) {
 		this.playerName = playerName;
 	}
 
@@ -862,8 +786,7 @@ public class User {
 	 *            the value
 	 */
 	public synchronized void setRawData(String path, Object value) {
-		data.set(path, value);
-		Data.getInstance().saveData(this, data);
+		Data.getInstance().set(uuid, path, value);
 	}
 
 	/**
@@ -874,7 +797,7 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
-	public void setTimedReward(Reward reward, ArrayList<Long> value) {
+	public synchronized void setTimedReward(Reward reward, ArrayList<Long> value) {
 		setRawData("TimedRewards." + reward.getRewardName(), value);
 	}
 
@@ -884,7 +807,7 @@ public class User {
 	 * @param method
 	 *            the new user input method
 	 */
-	public void setUserInputMethod(InputMethod method) {
+	public synchronized void setUserInputMethod(InputMethod method) {
 		if (method == null) {
 			method = InputMethod.ANVIL;
 		}
@@ -897,8 +820,14 @@ public class User {
 	 * @param uuid
 	 *            the new uuid
 	 */
-	public void setUUID(String uuid) {
+	public synchronized void setUUID(String uuid) {
 		this.uuid = uuid;
+	}
+
+	public synchronized void addOfflineRewards(Reward reward) {
+		ArrayList<String> rewards = getOfflineRewards();
+		rewards.add(reward.name);
+		setOfflineRewards(rewards);
 	}
 
 }

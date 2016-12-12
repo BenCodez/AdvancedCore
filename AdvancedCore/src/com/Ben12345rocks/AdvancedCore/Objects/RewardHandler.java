@@ -53,7 +53,7 @@ public class RewardHandler {
 	 * @param file
 	 *            the file
 	 */
-	public void addRewardFolder(File file) {
+	public synchronized void addRewardFolder(File file) {
 		file.mkdirs();
 		if (file.isDirectory()) {
 			if (!rewardFolders.contains(file)) {
@@ -106,7 +106,7 @@ public class RewardHandler {
 	 *            the reward
 	 * @return the reward
 	 */
-	public Reward getReward(String reward) {
+	public synchronized Reward getReward(String reward) {
 		reward = reward.replace(" ", "_");
 
 		for (Reward rewardFile : getRewards()) {
@@ -128,7 +128,7 @@ public class RewardHandler {
 	 *
 	 * @return the rewards
 	 */
-	public ArrayList<Reward> getRewards() {
+	public synchronized ArrayList<Reward> getRewards() {
 		if (rewards == null) {
 			rewards = new ArrayList<Reward>();
 		}
@@ -143,7 +143,7 @@ public class RewardHandler {
 	 * @param reward
 	 *            the reward
 	 */
-	public void giveReward(User user, Reward reward) {
+	public synchronized void giveReward(User user, Reward reward) {
 		giveReward(user, reward, user.isOnline());
 	}
 
@@ -155,7 +155,7 @@ public class RewardHandler {
 	 * @param rewards
 	 *            rewards
 	 */
-	public void giveReward(User user, Reward... rewards) {
+	public synchronized void giveReward(User user, Reward... rewards) {
 		for (Reward reward : rewards) {
 			giveReward(user, reward);
 		}
@@ -169,13 +169,13 @@ public class RewardHandler {
 	 * @param rewards
 	 *            rewards
 	 */
-	public void giveReward(User user, String... rewards) {
+	public synchronized void giveReward(User user, String... rewards) {
 		for (String reward : rewards) {
 			giveReward(user, reward);
 		}
 	}
 
-	public void giveReward(User user, boolean online, String... rewards) {
+	public synchronized void giveReward(User user, boolean online, String... rewards) {
 		for (String reward : rewards) {
 			giveReward(user, reward, online);
 		}
@@ -191,7 +191,7 @@ public class RewardHandler {
 	 * @param online
 	 *            the online
 	 */
-	public void giveReward(User user, Reward reward, boolean online) {
+	public synchronized void giveReward(User user, Reward reward, boolean online) {
 		reward.giveReward(user, online);
 	}
 
@@ -203,7 +203,7 @@ public class RewardHandler {
 	 * @param reward
 	 *            the reward
 	 */
-	public void giveReward(User user, String reward) {
+	public synchronized void giveReward(User user, String reward) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), user.isOnline());
 		}
@@ -219,7 +219,7 @@ public class RewardHandler {
 	 * @param online
 	 *            the online
 	 */
-	public void giveReward(User user, String reward, boolean online) {
+	public synchronized void giveReward(User user, String reward, boolean online) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), online);
 		}
@@ -237,7 +237,7 @@ public class RewardHandler {
 	 * @param giveOffline
 	 *            the give offline
 	 */
-	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline) {
+	public synchronized void giveReward(User user, Reward reward, boolean online, boolean giveOffline) {
 		reward.giveReward(user, online, giveOffline);
 	}
 
@@ -253,7 +253,7 @@ public class RewardHandler {
 	 * @param giveOffline
 	 *            the give offline
 	 */
-	public void giveReward(User user, String reward, boolean online, boolean giveOffline) {
+	public synchronized void giveReward(User user, String reward, boolean online, boolean giveOffline) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), online, giveOffline);
 		}
@@ -262,7 +262,7 @@ public class RewardHandler {
 	/**
 	 * Load rewards.
 	 */
-	public void loadRewards() {
+	public synchronized void loadRewards() {
 		rewards = new ArrayList<Reward>();
 		setupExample();
 		for (File file : rewardFolders) {
@@ -317,7 +317,7 @@ public class RewardHandler {
 	 *            the reward
 	 * @return true, if successful
 	 */
-	public boolean rewardExist(String reward) {
+	public synchronized boolean rewardExist(String reward) {
 		if (reward.equals("")) {
 			return false;
 		}
@@ -336,7 +336,7 @@ public class RewardHandler {
 	 *            the folder
 	 * @return the reward files
 	 */
-	public ArrayList<String> getRewardFiles(File folder) {
+	public synchronized ArrayList<String> getRewardFiles(File folder) {
 		String[] fileNames = folder.list();
 		return ArrayUtils.getInstance().convert(fileNames);
 	}
@@ -348,7 +348,7 @@ public class RewardHandler {
 	 *            the file
 	 * @return the reward names
 	 */
-	public ArrayList<String> getRewardNames(File file) {
+	public synchronized ArrayList<String> getRewardNames(File file) {
 		ArrayList<String> rewardFiles = getRewardFiles(file);
 		if (rewardFiles == null) {
 			return new ArrayList<String>();
@@ -367,7 +367,7 @@ public class RewardHandler {
 	 *
 	 * @return the default folder
 	 */
-	public File getDefaultFolder() {
+	public synchronized File getDefaultFolder() {
 		return defaultFolder;
 	}
 
@@ -377,7 +377,7 @@ public class RewardHandler {
 	 * @param defaultFolder
 	 *            the new default folder
 	 */
-	public void setDefaultFolder(File defaultFolder) {
+	public synchronized void setDefaultFolder(File defaultFolder) {
 		this.defaultFolder = defaultFolder;
 	}
 }
