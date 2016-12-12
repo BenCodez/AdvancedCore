@@ -723,26 +723,10 @@ public class User {
 		}
 	}
 
-	/**
-	 * Sets the choice reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
 	public synchronized void setChoiceRewards(ArrayList<String> rewards) {
 		setRawData("ChoiceRewardsList", rewards);
 	}
 
-	/**
-	 * Sets the offline rewards.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param value
-	 *            the value
-	 */
 	public synchronized void setOfflineRewards(ArrayList<String> rewards) {
 		setRawData("OfflineRewards", rewards);
 	}

@@ -82,13 +82,6 @@ public class Data {
 	private Data() {
 	}
 
-	/**
-	 * Gets the data.
-	 *
-	 * @param user
-	 *            the user
-	 * @return the data
-	 */
 	public synchronized FileConfiguration getData(String uuid) {
 		loadThread();
 		synchronized (thread) {
@@ -111,13 +104,6 @@ public class Data {
 		}
 	}
 
-	/**
-	 * Gets the name.
-	 *
-	 * @param user
-	 *            the user
-	 * @return the name
-	 */
 	public synchronized String getName(String uuid) {
 		return getData(uuid).getString("PlayerName", "");
 	}
@@ -151,9 +137,9 @@ public class Data {
 	}
 
 	/**
-	 * Gets the players UUI ds.
+	 * Gets the players UUIDs
 	 *
-	 * @return the players UUI ds
+	 * @return the players UUIDs
 	 */
 	public ArrayList<String> getPlayersUUIDs() {
 		ArrayList<String> files = getFiles();
@@ -186,27 +172,11 @@ public class Data {
 		}
 	}
 
-	/**
-	 * Sets the.
-	 *
-	 * @param user
-	 *            the user
-	 * @param path
-	 *            the path
-	 * @param value
-	 *            the value
-	 */
 	public synchronized void set(String uuid, String path, Object value) {
 		loadThread();
 		thread.setData(uuid, path, value);
 	}
 
-	/**
-	 * Sets the player name.
-	 *
-	 * @param user
-	 *            the new player name
-	 */
 	public synchronized void setPlayerName(String uuid, String playerName) {
 		set(uuid, "PlayerName", playerName);
 	}
