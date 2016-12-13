@@ -8,6 +8,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.Plugin;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
@@ -58,6 +59,12 @@ public class PlayerJoinEvent implements Listener {
 
 				user.checkOfflineRewards();
 				user.offVoteWorld(player.getWorld().getName());
+
+				AdvancedCoreHook.getInstance().getSql().setInt(player.getUniqueId().toString(), "logins",
+						AdvancedCoreHook.getInstance().getSql().getInt(player.getUniqueId().toString(), "logins") + 1);
+
+				plugin.getLogger().info("Logins: "
+						+ AdvancedCoreHook.getInstance().getSql().getInt(player.getUniqueId().toString(), "logins"));
 
 			}
 		}, 20L);
