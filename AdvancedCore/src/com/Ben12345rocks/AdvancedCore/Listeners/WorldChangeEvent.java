@@ -36,7 +36,7 @@ public class WorldChangeEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorldChange(PlayerChangedWorldEvent event) {
-		plugin.getServer().getScheduler().runTaskLater(plugin, new Runnable() {
+		plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
