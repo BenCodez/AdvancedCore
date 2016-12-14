@@ -51,6 +51,8 @@ public class User {
 
 	private boolean loadName = true;
 
+	private UserData data;
+
 	/**
 	 * Instantiates a new user.
 	 *
@@ -64,6 +66,7 @@ public class User {
 		this.plugin = plugin;
 		playerName = player.getName();
 		uuid = player.getUniqueId().toString();
+		loadData();
 	}
 
 	/**
@@ -79,6 +82,7 @@ public class User {
 		this.plugin = plugin;
 		this.playerName = playerName;
 		uuid = PlayerUtils.getInstance().getUUID(playerName);
+		loadData();
 	}
 
 	/**
@@ -94,6 +98,7 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
+		loadData();
 	}
 
 	/**
@@ -114,10 +119,41 @@ public class User {
 		if (this.loadName) {
 			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
 		}
+		loadData();
 	}
 
-	private synchronized FileConfiguration loadData() {
-		return Data.getInstance().getData(uuid);
+	@Deprecated
+	public User(Plugin plugin, UUID uuid, boolean loadName, boolean loadData) {
+		this.plugin = plugin;
+		this.uuid = uuid.getUUID();
+		this.loadName = loadName;
+		if (this.loadName) {
+			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
+		}
+		if (loadData) {
+			loadData();
+		}
+	}
+
+	public void loadData() {
+		data = new UserData(this, AdvancedCoreHook.getInstance().getStorageType());
+		data.loadData();
+	}
+
+	public UserData getUserData() {
+		return data;
+	}
+
+	public String getData(String key) {
+		return data.getData(key);
+	}
+
+	public void setData(String key, String value) {
+		data.setData(key, value);
+	}
+
+	public void saveData() {
+		data.saveData();
 	}
 
 	/**
@@ -211,7 +247,7 @@ public class User {
 	 * @return the raw data
 	 */
 	public synchronized FileConfiguration getRawData() {
-		return loadData();
+		return Data.getInstance().getData(uuid);
 	}
 
 	/**

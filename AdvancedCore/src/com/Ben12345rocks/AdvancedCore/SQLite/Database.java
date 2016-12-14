@@ -1,18 +1,19 @@
 package com.Ben12345rocks.AdvancedCore.SQLite;
 
-import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.logging.Level;
 
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
 
 public abstract class Database {
 	Plugin plugin = AdvancedCoreHook.getInstance().getPlugin();
@@ -33,7 +34,7 @@ public abstract class Database {
 		try {
 			uuid = uuid.replace("-", "_");
 			conn = getSQLConnection();
-			ps = conn.prepareStatement("INSERT INTO IF NOT EXISTS Users (uuid) VALUES (" + uuid + ");");
+			ps = conn.prepareStatement("INSERT INTO IGNORE " + table + " (uuid) VALUES ('" + uuid + "');");
 			ps.executeQuery();
 		} catch (SQLException ex) {
 			plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
@@ -63,53 +64,33 @@ public abstract class Database {
 		}
 	}
 
-	public int getInt(String uuid, String column) {
-		Connection conn = null;
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		try {
-			uuid = uuid.replace("-", "_");
-			create(uuid);
-			conn = getSQLConnection();
-			ps = conn.prepareStatement("SELECT * FROM " + table + " WHERE uuid = '" + uuid + "';");
-
-			rs = ps.executeQuery();
-			while (rs.next()) {
-				if (rs.getString("uuid").equalsIgnoreCase(uuid)) {
-					return rs.getInt(column);
-				}
-			}
-		} catch (SQLException ex) {
-			plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
-		} finally {
-			try {
-				if (ps != null)
-					ps.close();
-				if (conn != null)
-					conn.close();
-			} catch (SQLException ex) {
-				plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
-			}
+	public HashMap<String, String> getSet(String uuid) {
+		// create(uuid);
+		HashMap<String, String> data = new HashMap<String, String>();
+		for (String column : columns()) {
+			data.put(column, getString(uuid, column));
 		}
-		return 0;
+		return data;
 	}
 
-	public String getString(String uuid, String column) {
+	public String getString(String uuid, String key) {
+		// create(uuid);
 		Connection conn = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		try {
 			uuid = uuid.replace("-", "_");
-			create(uuid);
+
 			conn = getSQLConnection();
 			ps = conn.prepareStatement("SELECT * FROM " + table + " WHERE uuid = '" + uuid + "';");
 
 			rs = ps.executeQuery();
 			while (rs.next()) {
 				if (rs.getString("uuid").equalsIgnoreCase(uuid)) {
-					return rs.getString(column);
+					return rs.getString(key);
 				}
 			}
+
 		} catch (SQLException ex) {
 			plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
 		} finally {
@@ -125,117 +106,83 @@ public abstract class Database {
 		return "";
 	}
 
-	public ArrayList<String> getArray(String uuid, String column) {
+	public void setData(User user, HashMap<String, String> data) {
+		if (data == null || data.size() == 0) {
+			return;
+		}
+		for (String d : data.keySet()) {
+			checkColumn(d);
+		}
 		Connection conn = null;
 		PreparedStatement ps = null;
-		ResultSet rs = null;
 		try {
-			uuid = uuid.replace("-", "_");
-			create(uuid);
 			conn = getSQLConnection();
-			ps = conn.prepareStatement("SELECT * FROM " + table + " WHERE uuid = '" + uuid + "';");
+			String str = "(";
+			boolean first = true;
+			for (String d : data.keySet()) {
+				if (!first) {
+					str += ",";
+				}
+				str += d;
+				first = false;
+			}
+			str += ") VALUES(";
+			first = true;
+			for (String d : data.values()) {
+				if (!first) {
+					str += ",";
+				}
+				str += d;
+				first = false;
+			}
+			str += ")";
+			ps = conn.prepareStatement("REPLACE INTO " + table + " " + str);
+			ps.executeUpdate();
+			return;
+		} catch (SQLException ex) {
+			plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
+		} finally {
+			try {
+				if (ps != null)
+					ps.close();
+				if (conn != null)
+					conn.close();
+			} catch (SQLException ex) {
+				plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
+			}
+		}
+		return;
+	}
 
-			rs = ps.executeQuery();
-			while (rs.next()) {
-				if (rs.getString("uuid").equalsIgnoreCase(uuid)) {
-					String value = rs.getString(column);
-					Type type = new TypeToken<ArrayList<String>>() {
-					}.getType();
-					Gson gson = new Gson();
-					return gson.fromJson(value, type);
+	public void checkColumn(String column) {
+		Connection con;
+		Statement st;
+		ResultSet rs;
+
+		try {
+			con = getSQLConnection();
+
+			st = con.createStatement();
+
+			String sql = "select * from table";
+			rs = st.executeQuery(sql);
+			ResultSetMetaData metaData = rs.getMetaData();
+			int rowCount = metaData.getColumnCount();
+
+			boolean isMyColumnPresent = false;
+			for (int i = 1; i <= rowCount; i++) {
+				if (column.equals(metaData.getColumnName(i))) {
+					isMyColumnPresent = true;
 				}
 			}
-		} catch (SQLException ex) {
-			plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
-		} finally {
-			try {
-				if (ps != null)
-					ps.close();
-				if (conn != null)
-					conn.close();
-			} catch (SQLException ex) {
-				plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
-			}
-		}
-		return new ArrayList<String>();
-	}
 
-	public void setString(String uuid, String column, String value) {
-		Connection conn = null;
-		PreparedStatement ps = null;
-		try {
-			uuid = uuid.replace("-", "_");
-			create(uuid);
-			conn = getSQLConnection();
-			ps = conn.prepareStatement("UPDATE " + table + " SET " + column + "=" + value + " WHERE uuid=" + uuid);
-			ps.executeUpdate();
-			return;
-		} catch (SQLException ex) {
-			plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
-		} finally {
-			try {
-				if (ps != null)
-					ps.close();
-				if (conn != null)
-					conn.close();
-			} catch (SQLException ex) {
-				plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
+			if (!isMyColumnPresent) {
+				String myColumnType = "TEXT";
+				st.executeUpdate("ALTER TABLE table ADD " + column + " " + myColumnType);
 			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		return;
-	}
-
-	public void setInt(String uuid, String column, int value) {
-		Connection conn = null;
-		PreparedStatement ps = null;
-		try {
-			uuid = uuid.replace("-", "_");
-			create(uuid);
-			conn = getSQLConnection();
-			ps = conn.prepareStatement("UPDATE " + table + " SET " + column + "=" + value + " WHERE uuid=" + uuid);
-			ps.executeUpdate();
-			return;
-		} catch (SQLException ex) {
-			plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
-		} finally {
-			try {
-				if (ps != null)
-					ps.close();
-				if (conn != null)
-					conn.close();
-			} catch (SQLException ex) {
-				plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
-			}
-		}
-		return;
-	}
-
-	public void setArray(String uuid, String column, ArrayList<String> values) {
-		Connection conn = null;
-		PreparedStatement ps = null;
-		try {
-			conn = getSQLConnection();
-			Gson gson = new Gson();
-			uuid = uuid.replace("-", "_");
-			create(uuid);
-
-			String value = gson.toJson(values);
-			ps = conn.prepareStatement("UPDATE " + table + " SET " + column + "=" + value + " WHERE uuid=" + uuid);
-			ps.executeUpdate();
-			return;
-		} catch (SQLException ex) {
-			plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
-		} finally {
-			try {
-				if (ps != null)
-					ps.close();
-				if (conn != null)
-					conn.close();
-			} catch (SQLException ex) {
-				plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
-			}
-		}
-		return;
 	}
 
 	public void close(PreparedStatement ps, ResultSet rs) {
@@ -247,5 +194,30 @@ public abstract class Database {
 		} catch (SQLException ex) {
 			Error.close(plugin, ex);
 		}
+	}
+
+	public ArrayList<String> columns() {
+		ArrayList<String> columns = new ArrayList<String>();
+		Connection con;
+		Statement st;
+		ResultSet rs;
+
+		try {
+			con = getSQLConnection();
+
+			st = con.createStatement();
+
+			String sql = "select * from " + table;
+			rs = st.executeQuery(sql);
+			ResultSetMetaData metaData = rs.getMetaData();
+			int rowCount = metaData.getColumnCount();
+
+			for (int i = 1; i <= rowCount; i++) {
+				columns.add(metaData.getColumnName(i));
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return columns;
 	}
 }

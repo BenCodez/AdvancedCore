@@ -213,7 +213,7 @@ public class BInventory implements Listener {
 	 */
 	public BInventory(String name) {
 		setInventoryName(name);
-		Bukkit.getPluginManager().registerEvents(this, Bukkit.getPluginManager().getPlugins()[0]);
+		Bukkit.getPluginManager().registerEvents(this, AdvancedCoreHook.getInstance().getPlugin());
 	}
 
 	/**
@@ -356,13 +356,14 @@ public class BInventory implements Listener {
 						Player player = (Player) event.getWhoClicked();
 						event.setCancelled(true);
 						player.closeInventory();
-						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-							
-							@Override
-							public void run() {
-								button.onClick(new ClickEvent(event));
-							}
-						});
+						Bukkit.getServer().getScheduler()
+								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+									@Override
+									public void run() {
+										button.onClick(new ClickEvent(event));
+									}
+								});
 						destroy();
 						return;
 					}

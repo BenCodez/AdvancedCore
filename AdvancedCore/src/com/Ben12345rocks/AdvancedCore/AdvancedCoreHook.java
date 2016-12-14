@@ -19,6 +19,7 @@ import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.SQLite.SQLite;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
@@ -48,6 +49,21 @@ public class AdvancedCoreHook {
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	private SQLite sql;
+	private boolean preloadData = true;
+
+	public boolean isPreloadData() {
+		return preloadData;
+	}
+
+	public void setPreloadData(boolean preloadData) {
+		this.preloadData = preloadData;
+	}
+
+	public void setStorageType(UserStorage storageType) {
+		this.storageType = storageType;
+	}
+
+	private UserStorage storageType = UserStorage.SQLITE;
 
 	private String permPrefix;
 
@@ -396,5 +412,9 @@ public class AdvancedCoreHook {
 
 	public void setSql(SQLite sql) {
 		this.sql = sql;
+	}
+
+	public UserStorage getStorageType() {
+		return storageType;
 	}
 }

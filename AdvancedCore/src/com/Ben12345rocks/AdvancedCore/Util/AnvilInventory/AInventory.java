@@ -274,14 +274,21 @@ public class AInventory {
 								AdvancedCoreHook.getInstance().debug("Anvil handler was null, fixing...");
 							}
 
-							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-								
-								@Override
-								public void run() {
-									handler.onAnvilClick(clickEvent);
-								}
-							});
-						
+							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(),
+									new Runnable() {
+
+										@Override
+										public void run() {
+											if (handler == null) {
+												handler = (AnvilClickEventHandler) PlayerUtils.getInstance()
+														.getPlayerMeta(player, "AInventory");
+												AdvancedCoreHook.getInstance()
+														.debug("Anvil handler was null, fixing...");
+											}
+											handler.onAnvilClick(clickEvent);
+										}
+									});
+
 							destroy();
 						}
 

@@ -6,7 +6,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
 import java.util.logging.Level;
 
 public class SQLite extends Database {
@@ -15,20 +14,8 @@ public class SQLite extends Database {
 	public SQLite(String fileName) {
 		super("Users");
 		dbname = fileName;
-		String str = "";
-		HashMap<String, String> columns = new HashMap<String, String>();
-		columns.put("playername", "'playername' varchar(32) NOT NULL");
-		columns.put("offlinerewards", "'offlinerewards' text NOT NULL");
-		int num = 0;
-		for (String st : columns.values()) {
-			if (num != 0) {
-				str += ", ";
-			}
-			str += st;
-			num++;
-		}
-		SQLiteCreateTokensTable = "CREATE TABLE IF NOT EXISTS Users (`uuid` varchar(36) NOT NULL," + str + ","
-				+ "PRIMARY KEY (`uuid`)" + ");";
+		SQLiteCreateTokensTable = "CREATE TABLE IF NOT EXISTS Users (`uuid` TEXT NOT NULL," + "PRIMARY KEY (`uuid`)"
+				+ ");";
 	}
 
 	public String SQLiteCreateTokensTable;
