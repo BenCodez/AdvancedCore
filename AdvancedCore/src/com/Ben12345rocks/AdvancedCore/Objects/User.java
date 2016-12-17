@@ -53,6 +53,10 @@ public class User {
 
 	private UserData data;
 
+	private ArrayList<String> choiceRewards;
+
+	private ArrayList<String> offlineRewards;
+
 	/**
 	 * Instantiates a new user.
 	 *
@@ -143,12 +147,9 @@ public class User {
 		return data;
 	}
 
-	public String getString(String key) {
-		return data.getString(key);
-	}
-
-	public void setString(String key, String value) {
-		data.setString(key, value);
+	public void init() {
+		choiceRewards = getUserData().getStringList("ChoiceRewards");
+		offlineRewards = getUserData().getStringList("OfflineRewards");
 	}
 
 	/**
@@ -158,22 +159,15 @@ public class User {
 	 *            the reward
 	 */
 	public synchronized void addChoiceReward(Reward reward) {
-		ArrayList<String> rewards = getChoiceRewards();
-		rewards.add(reward.getRewardName());
-		setChoiceRewards(rewards);
+		choiceRewards.add(reward.getRewardName());
 	}
 
 	/**
 	 * Check offline rewards.
 	 */
 	public synchronized void checkOfflineRewards() {
-		RewardHandler.getInstance().giveReward(this, false, ArrayUtils.getInstance().convert(getOfflineRewards()));
-		setOfflineRewards(new ArrayList<String>());
-	}
-
-	@SuppressWarnings("unchecked")
-	public synchronized ArrayList<String> getChoiceRewards() {
-		return (ArrayList<String>) getRawData().getList("ChoiceRewardsList", new ArrayList<String>());
+		RewardHandler.getInstance().giveReward(this, false, ArrayUtils.getInstance().convert(offlineRewards));
+		offlineRewards = new ArrayList<String>();
 	}
 
 	/**
@@ -228,6 +222,7 @@ public class User {
 	 *
 	 * @return the plugin data
 	 */
+	@Deprecated
 	public synchronized ConfigurationSection getPluginData() {
 		boolean isSection = getRawData().isConfigurationSection(plugin.getName());
 		if (!isSection) {
@@ -241,6 +236,7 @@ public class User {
 	 *
 	 * @return the raw data
 	 */
+	@Deprecated
 	public synchronized FileConfiguration getRawData() {
 		return Data.getInstance().getData(uuid);
 	}
@@ -804,6 +800,7 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
+	@Deprecated
 	public synchronized void setPluginData(String path, Object value) {
 		setRawData(plugin.getName() + "." + path, value);
 	}
@@ -816,6 +813,7 @@ public class User {
 	 * @param value
 	 *            the value
 	 */
+	@Deprecated
 	public synchronized void setRawData(String path, Object value) {
 		Data.getInstance().set(uuid, path, value);
 	}
@@ -856,9 +854,7 @@ public class User {
 	}
 
 	public synchronized void addOfflineRewards(Reward reward) {
-		ArrayList<String> rewards = getOfflineRewards();
-		rewards.add(reward.name);
-		setOfflineRewards(rewards);
+		offlineRewards.add(reward.name);
 	}
 
 }

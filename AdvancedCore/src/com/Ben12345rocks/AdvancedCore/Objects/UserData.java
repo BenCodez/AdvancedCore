@@ -9,6 +9,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
 
@@ -41,7 +42,6 @@ public class UserData {
 			List<Column> row = getSQLiteRow();
 			if (row != null) {
 				for (int i = 0; i < row.size(); i++) {
-					AdvancedCoreHook.getInstance().debug("Column: " + row.get(i).getName());
 					if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.STRING)) {
 						return (String) row.get(i).getValue();
 					}
@@ -52,6 +52,23 @@ public class UserData {
 			return getData(user.getUUID()).getString(key, "");
 		}
 		return "";
+	}
+
+	public int getInt(String key) {
+		if (storage.equals(UserStorage.SQLITE)) {
+			List<Column> row = getSQLiteRow();
+			if (row != null) {
+				for (int i = 0; i < row.size(); i++) {
+					if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.INTEGER)) {
+						return (int) row.get(i).getValue();
+					}
+				}
+			}
+
+		} else if (storage.equals(UserStorage.FLAT)) {
+			return getData(user.getUUID()).getInt(key, 0);
+		}
+		return 0;
 	}
 
 	public void setData(String uuid, String path, Object value) {
@@ -78,4 +95,32 @@ public class UserData {
 		}
 	}
 
+	public void setInt(String key, int value) {
+		if (storage.equals(UserStorage.SQLITE)) {
+			ArrayList<Column> columns = new ArrayList<Column>();
+			Column primary = new Column("uuid", DataType.STRING, user.getUUID());
+			Column column = new Column(key, DataType.INTEGER, value);
+			columns.add(primary);
+			columns.add(column);
+			AdvancedCoreHook.getInstance().getSQLiteUserTable().insert(columns);
+		} else if (storage.equals(UserStorage.FLAT)) {
+			setData(user.getUUID(), key, value);
+		}
+	}
+
+	public void setStringList(String key, ArrayList<String> value) {
+		String str = "";
+		for (int i = 0; i < value.size(); i++) {
+			if (i != 0) {
+				str += ",";
+			}
+			str += value.get(i);
+		}
+		setString(key, str);
+	}
+
+	public ArrayList<String> getStringList(String key) {
+		String[] list = getString(key).split(",");
+		return ArrayUtils.getInstance().convert(list);
+	}
 }
