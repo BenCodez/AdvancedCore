@@ -137,23 +137,18 @@ public class User {
 
 	public void loadData() {
 		data = new UserData(this, AdvancedCoreHook.getInstance().getStorageType());
-		data.loadData();
 	}
 
 	public UserData getUserData() {
 		return data;
 	}
 
-	public String getData(String key) {
-		return data.getData(key);
+	public String getString(String key) {
+		return data.getString(key);
 	}
 
-	public void setData(String key, String value) {
-		data.setData(key, value);
-	}
-
-	public void saveData() {
-		data.saveData();
+	public void setString(String key, String value) {
+		data.setString(key, value);
 	}
 
 	/**

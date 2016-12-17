@@ -59,14 +59,14 @@ public class PlayerJoinEvent implements Listener {
 				user.checkOfflineRewards();
 				user.offVoteWorld(player.getWorld().getName());
 
-				String data = user.getData("Logins");
+				String data = user.getString("Logins");
+				plugin.getLogger().info(data);
 				if (data.equals("")) {
 					data = "0";
 				}
 				int num = Integer.parseInt(data);
 				num++;
-				user.setData("Logins", "" + num);
-				user.saveData();
+				user.setString("Logins", "" + num);
 				plugin.getLogger().info("Logins: " + num);
 
 			}

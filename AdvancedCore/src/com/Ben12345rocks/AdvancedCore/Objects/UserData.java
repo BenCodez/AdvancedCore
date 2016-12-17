@@ -1,80 +1,81 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
-import java.util.HashMap;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Data.Data;
+import com.Ben12345rocks.AdvancedCore.sql.Column;
+import com.Ben12345rocks.AdvancedCore.sql.DataType;
 
 public class UserData {
 	private User user;
 	private UserStorage storage;
-	private HashMap<String, String> data;
 
 	public UserData(User user, UserStorage storage) {
 		this.user = user;
 		this.storage = storage;
 	}
 
-	public void loadData() {
-		data = new HashMap<String, String>();
-		if (AdvancedCoreHook.getInstance().isPreloadData()) {
-			if (storage.equals(UserStorage.SQLITE)) {
-				data.putAll(AdvancedCoreHook.getInstance().getSql().getSet(user.getUUID()));
-			} else if (storage.equals(UserStorage.FLAT)) {
-				FileConfiguration file = Data.getInstance().getData(user.getUUID());
-				for (String key : file.getConfigurationSection("").getKeys(false)) {
-					data.put(key, file.getString(key, ""));
+	public FileConfiguration getData(String uuid) {
+		File dFile = AdvancedCoreHook.getInstance().getPlayerFile(uuid);
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		notify();
+		return data;
+	}
+
+	public List<Column> getSQLiteRow() {
+		if (storage.equals(UserStorage.SQLITE)) {
+			return AdvancedCoreHook.getInstance().getSQLiteUserTable()
+					.getExact(new Column("uuid", DataType.STRING, user.getUUID()));
+		}
+		return null;
+	}
+
+	public String getString(String key) {
+		if (storage.equals(UserStorage.SQLITE)) {
+			List<Column> row = getSQLiteRow();
+			if (row != null) {
+				for (int i = 0; i < row.size(); i++) {
+					AdvancedCoreHook.getInstance().debug("Column: " + row.get(i).getName());
+					if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.STRING)) {
+						return (String) row.get(i).getValue();
+					}
 				}
 			}
-			if (data.size() == 0) {
-				data.put("uuid", user.getUUID().replace("-", "_"));
-				data.put("playername", user.getPlayerName());
-			}
-		}
-	}
 
-	public void saveData() {
-		if (storage.equals(UserStorage.SQLITE)) {
-			AdvancedCoreHook.getInstance().getSql().setData(user, data);
 		} else if (storage.equals(UserStorage.FLAT)) {
-			for (String d : data.keySet()) {
-				Data.getInstance().set(user.getUUID(), d, data.get(d));
-			}
-		}
-	}
-
-	public synchronized String getData(String key) {
-		if (AdvancedCoreHook.getInstance().isPreloadData()) {
-			if (data.containsKey(key)) {
-				return data.get(key);
-			} else {
-				return "";
-			}
-		} else {
-			if (storage.equals(UserStorage.SQLITE)) {
-				return AdvancedCoreHook.getInstance().getSql().getString(user.getUUID(), key);
-			} else if (storage.equals(UserStorage.FLAT)) {
-				return Data.getInstance().getData(user.getUUID()).getString(key);
-			}
+			return getData(user.getUUID()).getString(key, "");
 		}
 		return "";
 	}
 
-	public synchronized void setData(String key, String value) {
-		if (AdvancedCoreHook.getInstance().isPreloadData()) {
-			data.put(key, value);
-		} else {
-			if (storage.equals(UserStorage.SQLITE)) {
-				data = new HashMap<String, String>();
-				data.put("uuid", user.getUUID().replace("-", "_"));
-				data.put("playername", user.getPlayerName());
-				data.put(key, value);
-				AdvancedCoreHook.getInstance().getSql().setData(user, data);
-			} else if (storage.equals(UserStorage.FLAT)) {
-				Data.getInstance().getData(user.getUUID()).set(key, value);
-			}
+	public void setData(String uuid, String path, Object value) {
+		File dFile = AdvancedCoreHook.getInstance().getPlayerFile(uuid);
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		data.set(path, value);
+		try {
+			data.save(dFile);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
+
+	public void setString(String key, String value) {
+		if (storage.equals(UserStorage.SQLITE)) {
+			ArrayList<Column> columns = new ArrayList<Column>();
+			Column primary = new Column("uuid", DataType.STRING, user.getUUID());
+			Column column = new Column(key, DataType.STRING, value);
+			columns.add(primary);
+			columns.add(column);
+			AdvancedCoreHook.getInstance().getSQLiteUserTable().insert(columns);
+		} else if (storage.equals(UserStorage.FLAT)) {
+			setData(user.getUUID(), key, value);
+		}
+	}
+
 }

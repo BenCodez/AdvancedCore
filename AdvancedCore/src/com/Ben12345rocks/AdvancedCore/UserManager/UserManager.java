@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.UserManager;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -21,6 +22,8 @@ public class UserManager {
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+
+	private HashMap<String, User> users = new HashMap<String, User>();
 
 	/**
 	 * Gets the single instance of UserManager.
@@ -79,7 +82,12 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public synchronized User getUser(UUID uuid) {
-		return new User(plugin.getPlugin(), uuid);
+		if (users.containsKey(uuid.toString())) {
+			return users.get(uuid.toString());
+		}
+		User user = new User(plugin.getPlugin(), uuid);
+		users.put(uuid.getUUID(), user);
+		return user;
 	}
 
 	public synchronized ArrayList<String> getAllPlayerNames() {

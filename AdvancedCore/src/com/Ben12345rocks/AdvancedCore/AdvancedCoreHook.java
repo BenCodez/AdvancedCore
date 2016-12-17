@@ -10,6 +10,8 @@ import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -20,13 +22,17 @@ import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
-import com.Ben12345rocks.AdvancedCore.SQLite.SQLite;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
+import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.sql.Column;
+import com.Ben12345rocks.AdvancedCore.sql.DataType;
+import com.Ben12345rocks.AdvancedCore.sql.Database;
+import com.Ben12345rocks.AdvancedCore.sql.Table;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -48,7 +54,7 @@ public class AdvancedCoreHook {
 	private String formatNoPerms = "&cYou do not have enough permission!";
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
-	private SQLite sql;
+	private Database database;
 	private boolean preloadData = true;
 
 	public boolean isPreloadData() {
@@ -285,6 +291,7 @@ public class AdvancedCoreHook {
 	public void loadHook(Plugin plugin) {
 		this.plugin = plugin;
 		permPrefix = plugin.getName();
+		loadUserAPI(UserStorage.SQLITE);
 		checkPlaceHolderAPI();
 		loadHandle();
 		if (setupEconomy()) {
@@ -298,9 +305,36 @@ public class AdvancedCoreHook {
 		loadRewards();
 		loadBackgroundTimer(15);
 		loadValueRequestInputCommands();
+	}
 
-		sql = new SQLite("Users");
-		sql.load();
+	public void loadUserAPI(UserStorage storageType) {
+		if (storageType.equals(UserStorage.SQLITE)) {
+			ArrayList<Column> columns = new ArrayList<Column>();
+			Column key = new Column("uuid", DataType.STRING);
+			columns.add(key);
+			Table table = new Table("Users", columns, key);
+			database = new Database(plugin, "Users", table);
+		} else if (storageType.equals(UserStorage.MYSQL)) {
+			// load mysql
+		}
+	}
+
+	public File getPlayerFile(String uuid) {
+		File dFile = new File(getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		if (!dFile.exists()) {
+			FilesManager.getInstance().editFile(dFile, data);
+		}
+		return dFile;
+	}
+
+	public Table getSQLiteUserTable() {
+		for (Table table : database.getTables()) {
+			if (table.getName().equalsIgnoreCase("Users")) {
+				return table;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -404,14 +438,6 @@ public class AdvancedCoreHook {
 			}
 		});
 
-	}
-
-	public SQLite getSql() {
-		return sql;
-	}
-
-	public void setSql(SQLite sql) {
-		this.sql = sql;
 	}
 
 	public UserStorage getStorageType() {
