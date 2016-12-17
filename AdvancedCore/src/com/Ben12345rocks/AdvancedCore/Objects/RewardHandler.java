@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 
+import org.bukkit.Bukkit;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -192,7 +194,14 @@ public class RewardHandler {
 	 *            the online
 	 */
 	public synchronized void giveReward(User user, Reward reward, boolean online) {
-		reward.giveReward(user, online);
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+			
+			@Override
+			public void run() {
+				reward.giveReward(user, online);
+			}
+		});
+		
 	}
 
 	/**
