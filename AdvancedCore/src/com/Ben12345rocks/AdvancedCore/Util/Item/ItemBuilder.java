@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
@@ -56,10 +57,7 @@ public class ItemBuilder {
 			if (amount > 0) {
 				currentAmount = amount;
 			} else {
-				currentAmount = (int) ((Math.random() * maxAmount) + 1);
-				if (currentAmount < minAmount) {
-					currentAmount = minAmount;
-				}
+				currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
 			}
 
 			int dat = data.getInt("Data");
