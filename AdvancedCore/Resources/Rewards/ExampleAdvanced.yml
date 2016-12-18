@@ -94,10 +94,6 @@ Worlds:
 - 'world1'
 - 'world2'
 
-# If true, the player will be rewarded in each world
-# If false, the player will be reward one of the worlds once
-GiveInEachWorld: false
-
 # Reward type
 # Possible Values: ONLINE,OFFLINE,BOTH
 # Default: BOTH

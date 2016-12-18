@@ -16,9 +16,6 @@ public class ServerData extends YMLFile {
 	/** The instance. */
 	static ServerData instance = new ServerData();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	/**
 	 * Gets the single instance of ServerData.
 	 *
@@ -27,6 +24,9 @@ public class ServerData extends YMLFile {
 	public static ServerData getInstance() {
 		return instance;
 	}
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Instantiates a new server data.
@@ -73,6 +73,15 @@ public class ServerData extends YMLFile {
 		return getData().getInt("PrevWeek", -1);
 	}
 
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see com.Ben12345rocks.AdvancedCore.YML.YMLFile#onFileCreation()
+	 */
+	@Override
+	public void onFileCreation() {
+	}
+
 	/**
 	 * Sets the plugin version.
 	 *
@@ -115,14 +124,5 @@ public class ServerData extends YMLFile {
 	public void setPrevWeekDay(int week) {
 		getData().set("PrevWeek", week);
 		saveData();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.Ben12345rocks.AdvancedCore.YML.YMLFile#onFileCreation()
-	 */
-	@Override
-	public void onFileCreation() {
 	}
 }

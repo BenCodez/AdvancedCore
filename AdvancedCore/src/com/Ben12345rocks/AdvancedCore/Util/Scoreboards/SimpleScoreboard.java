@@ -72,8 +72,7 @@ public class SimpleScoreboard {
 	 *            the score
 	 */
 	public void add(String text, Integer score) {
-		Preconditions.checkArgument(text.length() < 48,
-				"text cannot be over 48 characters in length");
+		Preconditions.checkArgument(text.length() < 48, "text cannot be over 48 characters in length");
 		text = StringUtils.getInstance().colorize(text);
 		text = fixDuplicates(text);
 		scores.put(text, score);
@@ -91,10 +90,8 @@ public class SimpleScoreboard {
 	 */
 	@SuppressWarnings("deprecation")
 	public void build() {
-		Objective obj = scoreboard
-				.registerNewObjective(
-						(title.length() > 16 ? title.substring(0, 15) : title),
-						"dummy");
+		Objective obj = scoreboard.registerNewObjective((title.length() > 16 ? title.substring(0, 15) : title),
+				"dummy");
 		obj.setDisplayName(title);
 		obj.setDisplaySlot(DisplaySlot.SIDEBAR);
 
@@ -124,10 +121,8 @@ public class SimpleScoreboard {
 		if (text.length() <= 16) {
 			return new AbstractMap.SimpleEntry<>(null, text);
 		}
-		Team team = scoreboard.registerNewTeam("text-"
-				+ scoreboard.getTeams().size());
-		Iterator<String> iterator = Splitter.fixedLength(16).split(text)
-				.iterator();
+		Team team = scoreboard.registerNewTeam("text-" + scoreboard.getTeams().size());
+		Iterator<String> iterator = Splitter.fixedLength(16).split(text).iterator();
 		team.setPrefix(iterator.next());
 		result = iterator.next();
 		if (text.length() > 32) {

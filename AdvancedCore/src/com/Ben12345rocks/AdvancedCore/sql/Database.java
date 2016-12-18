@@ -12,49 +12,49 @@ import com.Ben12345rocks.AdvancedCore.sql.db.SQLite;
 
 public class Database {
 
-    private List<Table> tables = new ArrayList<>();
-    private SQLite sqLite;
+	private List<Table> tables = new ArrayList<>();
+	private SQLite sqLite;
 
-    public Database(Plugin plugin, String dbName, Table table) {
-        this.tables.add(table);
-        this.sqLite = new SQLite(plugin, dbName, this);
-        sqLite.load();
-        table.setSqLite(sqLite);
-    }
+	public Database(Plugin plugin, String dbName, Table table) {
+		tables.add(table);
+		sqLite = new SQLite(plugin, dbName, this);
+		sqLite.load();
+		table.setSqLite(sqLite);
+	}
 
-    public Database(Plugin plugin, String dbName, Table table, String file) {
-        this.tables.add(table);
-        this.sqLite = new SQLite(plugin, dbName, this, file);
-        sqLite.load();
-        table.setSqLite(sqLite);
-    }
+	public Database(Plugin plugin, String dbName, Table table, String file) {
+		tables.add(table);
+		sqLite = new SQLite(plugin, dbName, this, file);
+		sqLite.load();
+		table.setSqLite(sqLite);
+	}
 
-    public List<Table> getTables() {
-        return tables;
-    }
+	public void addTable(Table table) {
+		tables.add(table);
+		table.setSqLite(sqLite);
+		try {
+			PreparedStatement statement = sqLite.getSQLConnection().prepareStatement(table.getQuery());
+			statement.executeUpdate();
+			statement.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
 
-    public String getTableQuery() {
-        return tables.get(0).getQuery();
-    }
+	public Connection getConnection() {
+		return sqLite.getSQLConnection();
+	}
 
-    public SQLite getDB() {
-        return this.sqLite;
-    }
+	public SQLite getDB() {
+		return sqLite;
+	}
 
-    public Connection getConnection() {
-        return this.sqLite.getSQLConnection();
-    }
+	public String getTableQuery() {
+		return tables.get(0).getQuery();
+	}
 
-    public void addTable(Table table) {
-        this.tables.add(table);
-        table.setSqLite(sqLite);
-        try {
-            PreparedStatement statement = this.sqLite.getSQLConnection().prepareStatement(table.getQuery());
-            statement.executeUpdate();
-            statement.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
+	public List<Table> getTables() {
+		return tables;
+	}
 
 }

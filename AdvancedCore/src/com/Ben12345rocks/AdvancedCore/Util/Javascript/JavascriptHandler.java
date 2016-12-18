@@ -34,10 +34,6 @@ public class JavascriptHandler {
 	private JavascriptHandler() {
 	}
 
-	public boolean evalute(User user, String expression) {
-		return evalute(user.getPlayer(), expression);
-	}
-
 	public boolean evalute(Player player, String expression) {
 		ScriptEngine engine = null;
 		if (player == null || expression.equals("")) {
@@ -64,5 +60,9 @@ public class JavascriptHandler {
 			e.printStackTrace();
 		}
 		return false;
+	}
+
+	public boolean evalute(User user, String expression) {
+		return evalute(user.getPlayer(), expression);
 	}
 }

@@ -20,11 +20,6 @@ public class UserManager {
 	/** The instance. */
 	static UserManager instance = new UserManager();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
-	private HashMap<String, User> users = new HashMap<String, User>();
-
 	/**
 	 * Gets the single instance of UserManager.
 	 *
@@ -34,10 +29,23 @@ public class UserManager {
 		return instance;
 	}
 
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+
+	private HashMap<String, User> users = new HashMap<String, User>();
+
 	/**
 	 * Instantiates a new user manager.
 	 */
 	public UserManager() {
+	}
+
+	public synchronized ArrayList<String> getAllPlayerNames() {
+		return Data.getInstance().getPlayerNames();
+	}
+
+	public synchronized ArrayList<String> getAllUUIDs() {
+		return Data.getInstance().getPlayersUUIDs();
 	}
 
 	/**
@@ -88,13 +96,5 @@ public class UserManager {
 		User user = new User(plugin.getPlugin(), uuid);
 		users.put(uuid.getUUID(), user);
 		return user;
-	}
-
-	public synchronized ArrayList<String> getAllPlayerNames() {
-		return Data.getInstance().getPlayerNames();
-	}
-
-	public synchronized ArrayList<String> getAllUUIDs() {
-		return Data.getInstance().getPlayersUUIDs();
 	}
 }

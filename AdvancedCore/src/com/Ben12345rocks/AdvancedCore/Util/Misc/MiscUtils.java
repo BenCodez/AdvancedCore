@@ -25,14 +25,63 @@ public class MiscUtils {
 	/** The instance. */
 	static MiscUtils instance = new MiscUtils();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	public static MiscUtils getInstance() {
 		return instance;
 	}
 
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+
 	private MiscUtils() {
+	}
+
+	/**
+	 * Broadcast.
+	 *
+	 * @param broadcastMsg
+	 *            the broadcast msg
+	 */
+	public void broadcast(String broadcastMsg) {
+		if (broadcastMsg != null) {
+			if (!broadcastMsg.equals("")) {
+				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						Bukkit.broadcastMessage(StringUtils.getInstance().colorize(broadcastMsg));
+					}
+				});
+			}
+		}
+
+	}
+
+	/**
+	 * Gets the connection.
+	 *
+	 * @param player
+	 *            the player
+	 * @return the connection
+	 * @throws SecurityException
+	 *             the security exception
+	 * @throws NoSuchMethodException
+	 *             the no such method exception
+	 * @throws NoSuchFieldException
+	 *             the no such field exception
+	 * @throws IllegalArgumentException
+	 *             the illegal argument exception
+	 * @throws IllegalAccessException
+	 *             the illegal access exception
+	 * @throws InvocationTargetException
+	 *             the invocation target exception
+	 */
+	public Object getConnection(Player player) throws SecurityException, NoSuchMethodException, NoSuchFieldException,
+			IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+		Method getHandle = player.getClass().getMethod("getHandle");
+		Object nmsPlayer = getHandle.invoke(player);
+		Field conField = nmsPlayer.getClass().getField("playerConnection");
+		Object con = conField.get(nmsPlayer);
+		return con;
 	}
 
 	/**
@@ -117,27 +166,6 @@ public class MiscUtils {
 	}
 
 	/**
-	 * Broadcast.
-	 *
-	 * @param broadcastMsg
-	 *            the broadcast msg
-	 */
-	public void broadcast(String broadcastMsg) {
-		if (broadcastMsg != null) {
-			if (!broadcastMsg.equals("")) {
-				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-					@Override
-					public void run() {
-						Bukkit.broadcastMessage(StringUtils.getInstance().colorize(broadcastMsg));
-					}
-				});
-			}
-		}
-
-	}
-
-	/**
 	 * Gets the year from mili.
 	 *
 	 * @param time
@@ -146,34 +174,6 @@ public class MiscUtils {
 	 */
 	public int getYearFromMili(long time) {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getYear();
-	}
-
-	/**
-	 * Gets the connection.
-	 *
-	 * @param player
-	 *            the player
-	 * @return the connection
-	 * @throws SecurityException
-	 *             the security exception
-	 * @throws NoSuchMethodException
-	 *             the no such method exception
-	 * @throws NoSuchFieldException
-	 *             the no such field exception
-	 * @throws IllegalArgumentException
-	 *             the illegal argument exception
-	 * @throws IllegalAccessException
-	 *             the illegal access exception
-	 * @throws InvocationTargetException
-	 *             the invocation target exception
-	 */
-	public Object getConnection(Player player) throws SecurityException, NoSuchMethodException, NoSuchFieldException,
-			IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-		Method getHandle = player.getClass().getMethod("getHandle");
-		Object nmsPlayer = getHandle.invoke(player);
-		Field conField = nmsPlayer.getClass().getField("playerConnection");
-		Object con = conField.get(nmsPlayer);
-		return con;
 	}
 
 	/**

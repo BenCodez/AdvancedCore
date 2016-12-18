@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -77,9 +78,6 @@ public class Reward {
 
 	/** The worlds. */
 	private ArrayList<String> worlds;
-
-	/** The give in each world. */
-	private boolean giveInEachWorld;
 
 	/** The items. */
 	private Set<String> items;
@@ -231,320 +229,6 @@ public class Reward {
 	/** The effect effect. */
 	private String effectEffect;
 
-	/**
-	 * Gets the items and amounts given.
-	 *
-	 * @return the items and amounts given
-	 */
-	public HashMap<String, Integer> getItemsAndAmountsGiven() {
-		return itemsAndAmountsGiven;
-	}
-
-	/**
-	 * Sets the items and amounts given.
-	 *
-	 * @param itemsAndAmountsGiven
-	 *            the items and amounts given
-	 */
-	public void setItemsAndAmountsGiven(HashMap<String, Integer> itemsAndAmountsGiven) {
-		this.itemsAndAmountsGiven = itemsAndAmountsGiven;
-	}
-
-	/**
-	 * Checks if is title enabled.
-	 *
-	 * @return true, if is title enabled
-	 */
-	public boolean isTitleEnabled() {
-		return titleEnabled;
-	}
-
-	/**
-	 * Sets the title enabled.
-	 *
-	 * @param titleEnabled
-	 *            the new title enabled
-	 */
-	public void setTitleEnabled(boolean titleEnabled) {
-		this.titleEnabled = titleEnabled;
-	}
-
-	/**
-	 * Gets the title title.
-	 *
-	 * @return the title title
-	 */
-	public String getTitleTitle() {
-		return titleTitle;
-	}
-
-	/**
-	 * Sets the title title.
-	 *
-	 * @param titleTitle
-	 *            the new title title
-	 */
-	public void setTitleTitle(String titleTitle) {
-		this.titleTitle = titleTitle;
-	}
-
-	/**
-	 * Gets the title sub title.
-	 *
-	 * @return the title sub title
-	 */
-	public String getTitleSubTitle() {
-		return titleSubTitle;
-	}
-
-	/**
-	 * Sets the title sub title.
-	 *
-	 * @param titleSubTitle
-	 *            the new title sub title
-	 */
-	public void setTitleSubTitle(String titleSubTitle) {
-		this.titleSubTitle = titleSubTitle;
-	}
-
-	/**
-	 * Gets the title fade in.
-	 *
-	 * @return the title fade in
-	 */
-	public int getTitleFadeIn() {
-		return titleFadeIn;
-	}
-
-	/**
-	 * Sets the title fade in.
-	 *
-	 * @param titleFadeIn
-	 *            the new title fade in
-	 */
-	public void setTitleFadeIn(int titleFadeIn) {
-		this.titleFadeIn = titleFadeIn;
-	}
-
-	/**
-	 * Gets the title show time.
-	 *
-	 * @return the title show time
-	 */
-	public int getTitleShowTime() {
-		return titleShowTime;
-	}
-
-	/**
-	 * Sets the title show time.
-	 *
-	 * @param titleShowTime
-	 *            the new title show time
-	 */
-	public void setTitleShowTime(int titleShowTime) {
-		this.titleShowTime = titleShowTime;
-	}
-
-	/**
-	 * Gets the title fade out.
-	 *
-	 * @return the title fade out
-	 */
-	public int getTitleFadeOut() {
-		return titleFadeOut;
-	}
-
-	/**
-	 * Sets the title fade out.
-	 *
-	 * @param titleFadeOut
-	 *            the new title fade out
-	 */
-	public void setTitleFadeOut(int titleFadeOut) {
-		this.titleFadeOut = titleFadeOut;
-	}
-
-	/**
-	 * Checks if is sound enabled.
-	 *
-	 * @return true, if is sound enabled
-	 */
-	public boolean isSoundEnabled() {
-		return soundEnabled;
-	}
-
-	/**
-	 * Sets the sound enabled.
-	 *
-	 * @param soundEnabled
-	 *            the new sound enabled
-	 */
-	public void setSoundEnabled(boolean soundEnabled) {
-		this.soundEnabled = soundEnabled;
-	}
-
-	/**
-	 * Gets the sound sound.
-	 *
-	 * @return the sound sound
-	 */
-	public String getSoundSound() {
-		return soundSound;
-	}
-
-	/**
-	 * Sets the sound sound.
-	 *
-	 * @param soundSound
-	 *            the new sound sound
-	 */
-	public void setSoundSound(String soundSound) {
-		this.soundSound = soundSound;
-	}
-
-	/**
-	 * Gets the sound volume.
-	 *
-	 * @return the sound volume
-	 */
-	public double getSoundVolume() {
-		return soundVolume;
-	}
-
-	/**
-	 * Sets the sound volume.
-	 *
-	 * @param soundVolume
-	 *            the new sound volume
-	 */
-	public void setSoundVolume(float soundVolume) {
-		this.soundVolume = soundVolume;
-	}
-
-	/**
-	 * Gets the sound pitch.
-	 *
-	 * @return the sound pitch
-	 */
-	public double getSoundPitch() {
-		return soundPitch;
-	}
-
-	/**
-	 * Sets the sound pitch.
-	 *
-	 * @param soundPitch
-	 *            the new sound pitch
-	 */
-	public void setSoundPitch(float soundPitch) {
-		this.soundPitch = soundPitch;
-	}
-
-	/**
-	 * Checks if is effect enabled.
-	 *
-	 * @return true, if is effect enabled
-	 */
-	public boolean isEffectEnabled() {
-		return effectEnabled;
-	}
-
-	/**
-	 * Sets the effect enabled.
-	 *
-	 * @param effectEnabled
-	 *            the new effect enabled
-	 */
-	public void setEffectEnabled(boolean effectEnabled) {
-		this.effectEnabled = effectEnabled;
-	}
-
-	/**
-	 * Gets the effect effect.
-	 *
-	 * @return the effect effect
-	 */
-	public String getEffectEffect() {
-		return effectEffect;
-	}
-
-	/**
-	 * Sets the effect effect.
-	 *
-	 * @param effectEffect
-	 *            the new effect effect
-	 */
-	public void setEffectEffect(String effectEffect) {
-		this.effectEffect = effectEffect;
-	}
-
-	/**
-	 * Gets the effect data.
-	 *
-	 * @return the effect data
-	 */
-	public int getEffectData() {
-		return effectData;
-	}
-
-	/**
-	 * Sets the effect data.
-	 *
-	 * @param effectData
-	 *            the new effect data
-	 */
-	public void setEffectData(int effectData) {
-		this.effectData = effectData;
-	}
-
-	/**
-	 * Gets the effect particles.
-	 *
-	 * @return the effect particles
-	 */
-	public int getEffectParticles() {
-		return effectParticles;
-	}
-
-	/**
-	 * Sets the effect particles.
-	 *
-	 * @param effectParticles
-	 *            the new effect particles
-	 */
-	public void setEffectParticles(int effectParticles) {
-		this.effectParticles = effectParticles;
-	}
-
-	/**
-	 * Gets the effect radius.
-	 *
-	 * @return the effect radius
-	 */
-	public int getEffectRadius() {
-		return effectRadius;
-	}
-
-	/**
-	 * Sets the effect radius.
-	 *
-	 * @param effectRadius
-	 *            the new effect radius
-	 */
-	public void setEffectRadius(int effectRadius) {
-		this.effectRadius = effectRadius;
-	}
-
-	/**
-	 * Sets the file.
-	 *
-	 * @param file
-	 *            the new file
-	 */
-	public void setFile(File file) {
-		this.file = file;
-	}
-
 	/** The effect data. */
 	private int effectData;
 
@@ -570,114 +254,6 @@ public class Reward {
 	}
 
 	/**
-	 * Load.
-	 *
-	 * @param folder
-	 *            the folder
-	 * @param reward
-	 *            the reward
-	 */
-	public void load(File folder, String reward) {
-		name = reward;
-		this.file = folder;
-		fileData = new RewardFileData(this, getFile());
-		setRewardType(getConfig().getRewardType());
-
-		setDelayEnabled(getConfig().getDelayedEnabled());
-		setDelayHours(getConfig().getDelayedHours());
-		setDelayMinutes(getConfig().getDelayedMinutes());
-
-		setTimedEnabled(getConfig().getTimedEnabled());
-		setTimedHour(getConfig().getTimedHour());
-		setTimedMinute(getConfig().getTimedMinute());
-
-		setChance(getConfig().getChance());
-		setRandomChance(getConfig().getRandomChance());
-		setRandomRewards(getConfig().getRandomRewards());
-		setRandomFallBack(getConfig().getRandomFallBack());
-
-		setRequirePermission(getConfig().getRequirePermission());
-		setWorlds(getConfig().getWorlds());
-		setGiveInEachWorld(getConfig().getGiveInEachWorld());
-
-		setItems(getConfig().getItems());
-
-		setMoney(getConfig().getMoney());
-		setMinMoney(getConfig().getMinMoney());
-		setMaxMoney(getConfig().getMaxMoney());
-
-		setExp(getConfig().getEXP());
-		setMinExp(getConfig().getMinExp());
-		setMaxExp(getConfig().getMaxExp());
-
-		setConsoleCommands(getConfig().getCommandsConsole());
-		setPlayerCommands(getConfig().getCommandsPlayer());
-
-		potions = getConfig().getPotions();
-		potionsDuration = new HashMap<String, Integer>();
-		potionsAmplifier = new HashMap<String, Integer>();
-		for (String potion : potions) {
-			potionsDuration.put(potion, getConfig().getPotionsDuration(potion));
-			potionsAmplifier.put(potion, getConfig().getPotionsAmplifier(potion));
-		}
-
-		setRewardMsg(getConfig().getMessagesReward());
-		setActionBarMsg(getConfig().getActionBarMessage());
-		setActionBarDelay(getConfig().getActionBarDelay());
-
-		setBossBarEnabled(getConfig().getBossBarEnabled());
-		setBossBarMessage(getConfig().getBossBarMessage());
-		setBossBarColor(getConfig().getBossBarColor());
-		setBossBarStyle(getConfig().getBossBarStyle());
-		setBossBarProgress(getConfig().getBossBarProgress());
-		setBossBarDelay(getConfig().getBossBarDelay());
-
-		broadcastMsg = getConfig().getMessagesBroadcast();
-
-		permission = getConfig().getPermission();
-
-		setJavascriptEnabled(getConfig().getJavascriptEnabled());
-		setJavascriptExpression(getConfig().getJavascriptExpression());
-		setJavascriptTrueRewards(getConfig().getJavascriptTrueRewards());
-		setJavascriptFalseRewards(getConfig().getJavascriptFalseRewards());
-		setChoiceRewardsEnabled(getConfig().getChoiceRewardsEnabled());
-		setChoiceRewardsRewards(getConfig().getChoiceRewardsRewards());
-
-		fireworkEnabled = getConfig().getFireworkEnabled();
-		fireworkColors = getConfig().getFireworkColors();
-		fireworkFadeOutColors = getConfig().getFireworkColorsFadeOut();
-		fireworkPower = getConfig().getFireworkPower();
-		fireworkTypes = getConfig().getFireworkTypes();
-		fireworkTrail = getConfig().getFireworkTrail();
-		fireworkFlicker = getConfig().getFireworkFlicker();
-
-		if (getWorlds().size() == 0) {
-			usesWorlds = false;
-		} else {
-			usesWorlds = true;
-		}
-
-		titleEnabled = getConfig().getTitleEnabled();
-		titleTitle = getConfig().getTitleTitle();
-		titleSubTitle = getConfig().getTitleSubTitle();
-		titleFadeIn = getConfig().getTitleFadeIn();
-		titleShowTime = getConfig().getTitleShowTime();
-		titleFadeOut = getConfig().getTitleFadeOut();
-
-		soundEnabled = getConfig().getSoundEnabled();
-		soundSound = getConfig().getSoundSound();
-		soundPitch = getConfig().getSoundPitch();
-		soundVolume = getConfig().getSoundVolume();
-
-		effectEnabled = getConfig().getEffectEnabled();
-		effectEffect = getConfig().getEffectEffect();
-		effectData = getConfig().getEffectData();
-		effectParticles = getConfig().getEffectParticles();
-		effectRadius = getConfig().getEffectRadius();
-
-	}
-
-	/**
 	 * Instantiates a new reward.
 	 *
 	 * @param reward
@@ -686,10 +262,6 @@ public class Reward {
 	@Deprecated
 	public Reward(String reward) {
 		load(new File(plugin.getPlugin().getDataFolder(), "Rewards"), reward);
-	}
-
-	public ItemStack getItem() {
-		return new ItemStack(Material.STONE);
 	}
 
 	/**
@@ -704,7 +276,7 @@ public class Reward {
 			return true;
 		}
 
-		double randomNum = (Math.random() * 100) + 1;
+		double randomNum = ThreadLocalRandom.current().nextDouble(chance+1);
 
 		plugin.debug("Random: " + randomNum + ", Chance: " + chance);
 
@@ -765,7 +337,7 @@ public class Reward {
 			return true;
 		}
 
-		double randomNum = (Math.random() * 100) + 1;
+		double randomNum = ThreadLocalRandom.current().nextDouble(chance+1);
 
 		plugin.debug("Random: Random: " + randomNum + ", Chance: " + chance);
 
@@ -799,6 +371,23 @@ public class Reward {
 
 		plugin.debug("Giving reward " + name + " at " + time.toString());
 		return true;
+	}
+
+	public boolean checkWorld(User user) {
+		if (!isUsesWorlds()) {
+			return true;
+		}
+
+		Player player = user.getPlayer();
+		if (player == null) {
+			return false;
+		}
+		String world = player.getWorld().getName();
+		if (getWorlds().contains(world)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -892,6 +481,15 @@ public class Reward {
 	}
 
 	/**
+	 * Gets the config.
+	 *
+	 * @return the config
+	 */
+	public RewardFileData getConfig() {
+		return fileData;
+	}
+
+	/**
 	 * Gets the console commands.
 	 *
 	 * @return the console commands
@@ -916,6 +514,42 @@ public class Reward {
 	 */
 	public int getDelayMinutes() {
 		return delayMinutes;
+	}
+
+	/**
+	 * Gets the effect data.
+	 *
+	 * @return the effect data
+	 */
+	public int getEffectData() {
+		return effectData;
+	}
+
+	/**
+	 * Gets the effect effect.
+	 *
+	 * @return the effect effect
+	 */
+	public String getEffectEffect() {
+		return effectEffect;
+	}
+
+	/**
+	 * Gets the effect particles.
+	 *
+	 * @return the effect particles
+	 */
+	public int getEffectParticles() {
+		return effectParticles;
+	}
+
+	/**
+	 * Gets the effect radius.
+	 *
+	 * @return the effect radius
+	 */
+	public int getEffectRadius() {
+		return effectRadius;
 	}
 
 	/**
@@ -946,6 +580,15 @@ public class Reward {
 			}
 			return num;
 		}
+	}
+
+	/**
+	 * Gets the file.
+	 *
+	 * @return the file
+	 */
+	public File getFile() {
+		return file;
 	}
 
 	/**
@@ -984,6 +627,10 @@ public class Reward {
 		return fireworkTypes;
 	}
 
+	public ItemStack getItem() {
+		return new ItemStack(Material.STONE);
+	}
+
 	/**
 	 * Gets the items.
 	 *
@@ -991,6 +638,19 @@ public class Reward {
 	 */
 	public Set<String> getItems() {
 		return items;
+	}
+
+	/**
+	 * Gets the items and amounts given.
+	 *
+	 * @return the items and amounts given
+	 */
+	public HashMap<String, Integer> getItemsAndAmountsGiven() {
+		return itemsAndAmountsGiven;
+	}
+
+	public ItemStack getItemStack(User user, String item) {
+		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getPlayerName()).toItemStack();
 	}
 
 	/**
@@ -1186,6 +846,33 @@ public class Reward {
 	}
 
 	/**
+	 * Gets the sound pitch.
+	 *
+	 * @return the sound pitch
+	 */
+	public double getSoundPitch() {
+		return soundPitch;
+	}
+
+	/**
+	 * Gets the sound sound.
+	 *
+	 * @return the sound sound
+	 */
+	public String getSoundSound() {
+		return soundSound;
+	}
+
+	/**
+	 * Gets the sound volume.
+	 *
+	 * @return the sound volume
+	 */
+	public double getSoundVolume() {
+		return soundVolume;
+	}
+
+	/**
 	 * Gets the timed hour.
 	 *
 	 * @return the timed hour
@@ -1201,6 +888,51 @@ public class Reward {
 	 */
 	public int getTimedMinute() {
 		return timedMinute;
+	}
+
+	/**
+	 * Gets the title fade in.
+	 *
+	 * @return the title fade in
+	 */
+	public int getTitleFadeIn() {
+		return titleFadeIn;
+	}
+
+	/**
+	 * Gets the title fade out.
+	 *
+	 * @return the title fade out
+	 */
+	public int getTitleFadeOut() {
+		return titleFadeOut;
+	}
+
+	/**
+	 * Gets the title show time.
+	 *
+	 * @return the title show time
+	 */
+	public int getTitleShowTime() {
+		return titleShowTime;
+	}
+
+	/**
+	 * Gets the title sub title.
+	 *
+	 * @return the title sub title
+	 */
+	public String getTitleSubTitle() {
+		return titleSubTitle;
+	}
+
+	/**
+	 * Gets the title title.
+	 *
+	 * @return the title title
+	 */
+	public String getTitleTitle() {
+		return titleTitle;
 	}
 
 	/**
@@ -1222,10 +954,6 @@ public class Reward {
 	 */
 	public void giveExp(User user, int exp) {
 		user.giveExp(exp);
-	}
-
-	public ItemStack getItemStack(User user, String item) {
-		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getPlayerName()).toItemStack();
 	}
 
 	/**
@@ -1326,7 +1054,7 @@ public class Reward {
 			return;
 		}
 
-		if (!online && !user.isOnline()) {
+		if ((!online && !user.isOnline()) || !checkWorld(user)) {
 			if (giveOffline) {
 				user.addOfflineRewards(this);
 			}
@@ -1369,32 +1097,7 @@ public class Reward {
 		}
 
 		if (checkChance()) {
-			ArrayList<String> worlds = getWorlds();
-			Player player = user.getPlayer();
-			if ((player != null) && (worlds != null) && !worlds.isEmpty()) {
-				if (isGiveInEachWorld()) {
-					for (String world : worlds) {
-						if (player.getWorld().getName().equals(world)) {
-							giveRewardUser(user);
-						} else {
-							user.setOfflineRewardWorld(getRewardName(), world,
-									user.getOfflineRewardWorld(getRewardName(), world) + 1);
-						}
-					}
-				} else {
-					if (worlds.contains(player.getWorld().getName())) {
-						giveRewardUser(user);
-
-					} else {
-						user.setOfflineRewardWorld(getRewardName(), null,
-								user.getOfflineRewardWorld(getRewardName(), null) + 1);
-
-					}
-				}
-			} else {
-				giveRewardUser(user);
-
-			}
+			giveRewardUser(user);
 		}
 	}
 
@@ -1474,6 +1177,15 @@ public class Reward {
 	}
 
 	/**
+	 * Checks if is effect enabled.
+	 *
+	 * @return true, if is effect enabled
+	 */
+	public boolean isEffectEnabled() {
+		return effectEnabled;
+	}
+
+	/**
 	 * Checks if is firework enabled.
 	 *
 	 * @return true, if is firework enabled
@@ -1501,15 +1213,6 @@ public class Reward {
 	}
 
 	/**
-	 * Checks if is give in each world.
-	 *
-	 * @return true, if is give in each world
-	 */
-	public boolean isGiveInEachWorld() {
-		return giveInEachWorld;
-	}
-
-	/**
 	 * Checks if is javascript enabled.
 	 *
 	 * @return true, if is javascript enabled
@@ -1528,6 +1231,15 @@ public class Reward {
 	}
 
 	/**
+	 * Checks if is sound enabled.
+	 *
+	 * @return true, if is sound enabled
+	 */
+	public boolean isSoundEnabled() {
+		return soundEnabled;
+	}
+
+	/**
 	 * Checks if is timed enabled.
 	 *
 	 * @return true, if is timed enabled
@@ -1537,12 +1249,128 @@ public class Reward {
 	}
 
 	/**
+	 * Checks if is title enabled.
+	 *
+	 * @return true, if is title enabled
+	 */
+	public boolean isTitleEnabled() {
+		return titleEnabled;
+	}
+
+	/**
 	 * Checks if is uses worlds.
 	 *
 	 * @return true, if is uses worlds
 	 */
 	public boolean isUsesWorlds() {
 		return usesWorlds;
+	}
+
+	/**
+	 * Load.
+	 *
+	 * @param folder
+	 *            the folder
+	 * @param reward
+	 *            the reward
+	 */
+	public void load(File folder, String reward) {
+		name = reward;
+		file = folder;
+		fileData = new RewardFileData(this, getFile());
+		setRewardType(getConfig().getRewardType());
+
+		setDelayEnabled(getConfig().getDelayedEnabled());
+		setDelayHours(getConfig().getDelayedHours());
+		setDelayMinutes(getConfig().getDelayedMinutes());
+
+		setTimedEnabled(getConfig().getTimedEnabled());
+		setTimedHour(getConfig().getTimedHour());
+		setTimedMinute(getConfig().getTimedMinute());
+
+		setChance(getConfig().getChance());
+		setRandomChance(getConfig().getRandomChance());
+		setRandomRewards(getConfig().getRandomRewards());
+		setRandomFallBack(getConfig().getRandomFallBack());
+
+		setRequirePermission(getConfig().getRequirePermission());
+		setWorlds(getConfig().getWorlds());
+
+		setItems(getConfig().getItems());
+
+		setMoney(getConfig().getMoney());
+		setMinMoney(getConfig().getMinMoney());
+		setMaxMoney(getConfig().getMaxMoney());
+
+		setExp(getConfig().getEXP());
+		setMinExp(getConfig().getMinExp());
+		setMaxExp(getConfig().getMaxExp());
+
+		setConsoleCommands(getConfig().getCommandsConsole());
+		setPlayerCommands(getConfig().getCommandsPlayer());
+
+		potions = getConfig().getPotions();
+		potionsDuration = new HashMap<String, Integer>();
+		potionsAmplifier = new HashMap<String, Integer>();
+		for (String potion : potions) {
+			potionsDuration.put(potion, getConfig().getPotionsDuration(potion));
+			potionsAmplifier.put(potion, getConfig().getPotionsAmplifier(potion));
+		}
+
+		setRewardMsg(getConfig().getMessagesReward());
+		setActionBarMsg(getConfig().getActionBarMessage());
+		setActionBarDelay(getConfig().getActionBarDelay());
+
+		setBossBarEnabled(getConfig().getBossBarEnabled());
+		setBossBarMessage(getConfig().getBossBarMessage());
+		setBossBarColor(getConfig().getBossBarColor());
+		setBossBarStyle(getConfig().getBossBarStyle());
+		setBossBarProgress(getConfig().getBossBarProgress());
+		setBossBarDelay(getConfig().getBossBarDelay());
+
+		broadcastMsg = getConfig().getMessagesBroadcast();
+
+		permission = getConfig().getPermission();
+
+		setJavascriptEnabled(getConfig().getJavascriptEnabled());
+		setJavascriptExpression(getConfig().getJavascriptExpression());
+		setJavascriptTrueRewards(getConfig().getJavascriptTrueRewards());
+		setJavascriptFalseRewards(getConfig().getJavascriptFalseRewards());
+		setChoiceRewardsEnabled(getConfig().getChoiceRewardsEnabled());
+		setChoiceRewardsRewards(getConfig().getChoiceRewardsRewards());
+
+		fireworkEnabled = getConfig().getFireworkEnabled();
+		fireworkColors = getConfig().getFireworkColors();
+		fireworkFadeOutColors = getConfig().getFireworkColorsFadeOut();
+		fireworkPower = getConfig().getFireworkPower();
+		fireworkTypes = getConfig().getFireworkTypes();
+		fireworkTrail = getConfig().getFireworkTrail();
+		fireworkFlicker = getConfig().getFireworkFlicker();
+
+		if (getWorlds().size() == 0) {
+			usesWorlds = false;
+		} else {
+			usesWorlds = true;
+		}
+
+		titleEnabled = getConfig().getTitleEnabled();
+		titleTitle = getConfig().getTitleTitle();
+		titleSubTitle = getConfig().getTitleSubTitle();
+		titleFadeIn = getConfig().getTitleFadeIn();
+		titleShowTime = getConfig().getTitleShowTime();
+		titleFadeOut = getConfig().getTitleFadeOut();
+
+		soundEnabled = getConfig().getSoundEnabled();
+		soundSound = getConfig().getSoundSound();
+		soundPitch = getConfig().getSoundPitch();
+		soundVolume = getConfig().getSoundVolume();
+
+		effectEnabled = getConfig().getEffectEnabled();
+		effectEffect = getConfig().getEffectEffect();
+		effectData = getConfig().getEffectData();
+		effectParticles = getConfig().getEffectParticles();
+		effectRadius = getConfig().getEffectRadius();
+
 	}
 
 	/**
@@ -1741,15 +1569,6 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the file.
-	 *
-	 * @return the file
-	 */
-	public File getFile() {
-		return file;
-	}
-
-	/**
 	 * Sets the action bar delay.
 	 *
 	 * @param actionBarDelay
@@ -1910,6 +1729,56 @@ public class Reward {
 	}
 
 	/**
+	 * Sets the effect data.
+	 *
+	 * @param effectData
+	 *            the new effect data
+	 */
+	public void setEffectData(int effectData) {
+		this.effectData = effectData;
+	}
+
+	/**
+	 * Sets the effect effect.
+	 *
+	 * @param effectEffect
+	 *            the new effect effect
+	 */
+	public void setEffectEffect(String effectEffect) {
+		this.effectEffect = effectEffect;
+	}
+
+	/**
+	 * Sets the effect enabled.
+	 *
+	 * @param effectEnabled
+	 *            the new effect enabled
+	 */
+	public void setEffectEnabled(boolean effectEnabled) {
+		this.effectEnabled = effectEnabled;
+	}
+
+	/**
+	 * Sets the effect particles.
+	 *
+	 * @param effectParticles
+	 *            the new effect particles
+	 */
+	public void setEffectParticles(int effectParticles) {
+		this.effectParticles = effectParticles;
+	}
+
+	/**
+	 * Sets the effect radius.
+	 *
+	 * @param effectRadius
+	 *            the new effect radius
+	 */
+	public void setEffectRadius(int effectRadius) {
+		this.effectRadius = effectRadius;
+	}
+
+	/**
 	 * Sets the exp.
 	 *
 	 * @param exp
@@ -1917,6 +1786,16 @@ public class Reward {
 	 */
 	public void setExp(int exp) {
 		this.exp = exp;
+	}
+
+	/**
+	 * Sets the file.
+	 *
+	 * @param file
+	 *            the new file
+	 */
+	public void setFile(File file) {
+		this.file = file;
 	}
 
 	/**
@@ -1990,16 +1869,6 @@ public class Reward {
 	}
 
 	/**
-	 * Sets the give in each world.
-	 *
-	 * @param giveInEachWorld
-	 *            the new give in each world
-	 */
-	public void setGiveInEachWorld(boolean giveInEachWorld) {
-		this.giveInEachWorld = giveInEachWorld;
-	}
-
-	/**
 	 * Sets the items.
 	 *
 	 * @param items
@@ -2007,6 +1876,16 @@ public class Reward {
 	 */
 	public void setItems(Set<String> items) {
 		this.items = items;
+	}
+
+	/**
+	 * Sets the items and amounts given.
+	 *
+	 * @param itemsAndAmountsGiven
+	 *            the items and amounts given
+	 */
+	public void setItemsAndAmountsGiven(HashMap<String, Integer> itemsAndAmountsGiven) {
+		this.itemsAndAmountsGiven = itemsAndAmountsGiven;
 	}
 
 	/**
@@ -2210,6 +2089,46 @@ public class Reward {
 	}
 
 	/**
+	 * Sets the sound enabled.
+	 *
+	 * @param soundEnabled
+	 *            the new sound enabled
+	 */
+	public void setSoundEnabled(boolean soundEnabled) {
+		this.soundEnabled = soundEnabled;
+	}
+
+	/**
+	 * Sets the sound pitch.
+	 *
+	 * @param soundPitch
+	 *            the new sound pitch
+	 */
+	public void setSoundPitch(float soundPitch) {
+		this.soundPitch = soundPitch;
+	}
+
+	/**
+	 * Sets the sound sound.
+	 *
+	 * @param soundSound
+	 *            the new sound sound
+	 */
+	public void setSoundSound(String soundSound) {
+		this.soundSound = soundSound;
+	}
+
+	/**
+	 * Sets the sound volume.
+	 *
+	 * @param soundVolume
+	 *            the new sound volume
+	 */
+	public void setSoundVolume(float soundVolume) {
+		this.soundVolume = soundVolume;
+	}
+
+	/**
 	 * Sets the timed enabled.
 	 *
 	 * @param timedEnabled
@@ -2240,6 +2159,66 @@ public class Reward {
 	}
 
 	/**
+	 * Sets the title enabled.
+	 *
+	 * @param titleEnabled
+	 *            the new title enabled
+	 */
+	public void setTitleEnabled(boolean titleEnabled) {
+		this.titleEnabled = titleEnabled;
+	}
+
+	/**
+	 * Sets the title fade in.
+	 *
+	 * @param titleFadeIn
+	 *            the new title fade in
+	 */
+	public void setTitleFadeIn(int titleFadeIn) {
+		this.titleFadeIn = titleFadeIn;
+	}
+
+	/**
+	 * Sets the title fade out.
+	 *
+	 * @param titleFadeOut
+	 *            the new title fade out
+	 */
+	public void setTitleFadeOut(int titleFadeOut) {
+		this.titleFadeOut = titleFadeOut;
+	}
+
+	/**
+	 * Sets the title show time.
+	 *
+	 * @param titleShowTime
+	 *            the new title show time
+	 */
+	public void setTitleShowTime(int titleShowTime) {
+		this.titleShowTime = titleShowTime;
+	}
+
+	/**
+	 * Sets the title sub title.
+	 *
+	 * @param titleSubTitle
+	 *            the new title sub title
+	 */
+	public void setTitleSubTitle(String titleSubTitle) {
+		this.titleSubTitle = titleSubTitle;
+	}
+
+	/**
+	 * Sets the title title.
+	 *
+	 * @param titleTitle
+	 *            the new title title
+	 */
+	public void setTitleTitle(String titleTitle) {
+		this.titleTitle = titleTitle;
+	}
+
+	/**
 	 * Sets the worlds.
 	 *
 	 * @param worlds
@@ -2247,15 +2226,6 @@ public class Reward {
 	 */
 	public void setWorlds(ArrayList<String> worlds) {
 		this.worlds = worlds;
-	}
-
-	/**
-	 * Gets the config.
-	 *
-	 * @return the config
-	 */
-	public RewardFileData getConfig() {
-		return fileData;
 	}
 
 }

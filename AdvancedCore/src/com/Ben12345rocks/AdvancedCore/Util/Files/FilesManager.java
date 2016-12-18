@@ -19,9 +19,6 @@ public class FilesManager {
 	/** The instance. */
 	static FilesManager instance = new FilesManager();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	/**
 	 * Gets the single instance of FilesManager.
 	 *
@@ -30,6 +27,9 @@ public class FilesManager {
 	public static FilesManager getInstance() {
 		return instance;
 	}
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Instantiates a new files manager.

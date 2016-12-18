@@ -57,18 +57,6 @@ public class AdvancedCoreHook {
 	private Database database;
 	private boolean preloadData = true;
 
-	public boolean isPreloadData() {
-		return preloadData;
-	}
-
-	public void setPreloadData(boolean preloadData) {
-		this.preloadData = preloadData;
-	}
-
-	public void setStorageType(UserStorage storageType) {
-		this.storageType = storageType;
-	}
-
 	private UserStorage storageType = UserStorage.SQLITE;
 
 	private String permPrefix;
@@ -76,6 +64,8 @@ public class AdvancedCoreHook {
 	private IServerHandle serverHandle;
 
 	private Logger logger;
+
+	private boolean checkOfflineVotesOnWorldChange = true;
 
 	/** The econ. */
 	public Economy econ = null;
@@ -137,20 +127,6 @@ public class AdvancedCoreHook {
 		}
 	}
 
-	public void loadValueRequestInputCommands() {
-		try {
-			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
-
-			bukkitCommandMap.setAccessible(true);
-			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
-
-			commandMap.register(plugin.getName() + "valuerequestinput",
-					new ValueRequestInputCommand(plugin.getName() + "valuerequestinput"));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 	/**
 	 * Show debug in console, file, and/or ingame
 	 *
@@ -193,12 +169,38 @@ public class AdvancedCoreHook {
 		return permPrefix;
 	}
 
+	public File getPlayerFile(String uuid) {
+		File dFile = new File(getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		if (!dFile.exists()) {
+			FilesManager.getInstance().editFile(dFile, data);
+		}
+		return dFile;
+	}
+
 	public Plugin getPlugin() {
 		return plugin;
 	}
 
 	public IServerHandle getServerHandle() {
 		return serverHandle;
+	}
+
+	public Table getSQLiteUserTable() {
+		for (Table table : database.getTables()) {
+			if (table.getName().equalsIgnoreCase("Users")) {
+				return table;
+			}
+		}
+		return null;
+	}
+
+	public UserStorage getStorageType() {
+		return storageType;
+	}
+
+	public boolean isCheckOfflineVotesOnWorldChange() {
+		return checkOfflineVotesOnWorldChange;
 	}
 
 	public boolean isDebug() {
@@ -215,6 +217,10 @@ public class AdvancedCoreHook {
 
 	public boolean isPlaceHolderAPIEnabled() {
 		return placeHolderAPIEnabled;
+	}
+
+	public boolean isPreloadData() {
+		return preloadData;
 	}
 
 	public boolean isTimerLoaded() {
@@ -249,7 +255,7 @@ public class AdvancedCoreHook {
 	}
 
 	/**
-	 * Load AdvancedCore hook without background task started
+	 * Load AdvancedCore hook without most things loaded
 	 *
 	 * @param plugin
 	 *            Plugin that is hooking in
@@ -259,16 +265,24 @@ public class AdvancedCoreHook {
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
 		loadHandle();
+		loadEconomy();
+		ServerData.getInstance().setup();
+		loadRewards();
+	}
+
+	public void loadEconomy() {
 		if (setupEconomy()) {
 			plugin.getLogger().info("Successfully hooked into Vault!");
 		} else {
 			plugin.getLogger().warning("Failed to hook into Vault");
 		}
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
-		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
-		ServerData.getInstance().setup();
-		loadRewards();
+	}
 
+	public void loadEvents() {
+		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
+		if (checkOfflineVotesOnWorldChange) {
+			Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
+		}
 	}
 
 	private void loadHandle() {
@@ -294,47 +308,12 @@ public class AdvancedCoreHook {
 		loadUserAPI(UserStorage.SQLITE);
 		checkPlaceHolderAPI();
 		loadHandle();
-		if (setupEconomy()) {
-			plugin.getLogger().info("Successfully hooked into Vault!");
-		} else {
-			plugin.getLogger().warning("Failed to hook into Vault");
-		}
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
-		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
+		loadEconomy();
+		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
 		loadBackgroundTimer(15);
 		loadValueRequestInputCommands();
-	}
-
-	public void loadUserAPI(UserStorage storageType) {
-		if (storageType.equals(UserStorage.SQLITE)) {
-			ArrayList<Column> columns = new ArrayList<Column>();
-			Column key = new Column("uuid", DataType.STRING);
-			columns.add(key);
-			Table table = new Table("Users", columns, key);
-			database = new Database(plugin, "Users", table);
-		} else if (storageType.equals(UserStorage.MYSQL)) {
-			// load mysql
-		}
-	}
-
-	public File getPlayerFile(String uuid) {
-		File dFile = new File(getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		if (!dFile.exists()) {
-			FilesManager.getInstance().editFile(dFile, data);
-		}
-		return dFile;
-	}
-
-	public Table getSQLiteUserTable() {
-		for (Table table : database.getTables()) {
-			if (table.getName().equalsIgnoreCase("Users")) {
-				return table;
-			}
-		}
-		return null;
 	}
 
 	/**
@@ -351,6 +330,32 @@ public class AdvancedCoreHook {
 	 */
 	public void loadRewards() {
 		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
+	}
+
+	public void loadUserAPI(UserStorage storageType) {
+		if (storageType.equals(UserStorage.SQLITE)) {
+			ArrayList<Column> columns = new ArrayList<Column>();
+			Column key = new Column("uuid", DataType.STRING);
+			columns.add(key);
+			Table table = new Table("Users", columns, key);
+			database = new Database(plugin, "Users", table);
+		} else if (storageType.equals(UserStorage.MYSQL)) {
+			// load mysql
+		}
+	}
+
+	public void loadValueRequestInputCommands() {
+		try {
+			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+
+			bukkitCommandMap.setAccessible(true);
+			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
+
+			commandMap.register(plugin.getName() + "valuerequestinput",
+					new ValueRequestInputCommand(plugin.getName() + "valuerequestinput"));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -370,6 +375,10 @@ public class AdvancedCoreHook {
 	 */
 	public void run(Runnable run) {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
+	}
+
+	public void setCheckOfflineVotesOnWorldChange(boolean checkOfflineVotesOnWorldChange) {
+		this.checkOfflineVotesOnWorldChange = checkOfflineVotesOnWorldChange;
 	}
 
 	public void setDebug(boolean debug) {
@@ -408,6 +417,14 @@ public class AdvancedCoreHook {
 		this.permPrefix = permPrefix;
 	}
 
+	public void setPreloadData(boolean preloadData) {
+		this.preloadData = preloadData;
+	}
+
+	public void setStorageType(UserStorage storageType) {
+		this.storageType = storageType;
+	}
+
 	/**
 	 * Setup economy.
 	 *
@@ -429,7 +446,7 @@ public class AdvancedCoreHook {
 	 * Update.
 	 */
 	public synchronized void update() {
-		run(new Runnable() {
+		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
 
 			@Override
 			public void run() {
@@ -438,9 +455,5 @@ public class AdvancedCoreHook {
 			}
 		});
 
-	}
-
-	public UserStorage getStorageType() {
-		return storageType;
 	}
 }

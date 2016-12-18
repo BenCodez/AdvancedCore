@@ -13,8 +13,7 @@ public class YMLFileHandler extends YMLFile {
 		this.file = file;
 		if (file.isDirectory()) {
 			try {
-				throw new FileDirectoryException(file.getAbsolutePath()
-						+ " must be a file");
+				throw new FileDirectoryException(file.getAbsolutePath() + " must be a file");
 			} catch (FileDirectoryException e) {
 				e.printStackTrace();
 			}

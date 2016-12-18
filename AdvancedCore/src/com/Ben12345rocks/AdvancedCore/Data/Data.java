@@ -21,16 +21,15 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
  */
 public class Data {
 
-	/** The instance. */
-	static Data instance = new Data();
-
-	UserThread thread;
-
 	public class UserThread extends Thread {
 
-		@Override
-		public void run() {
-
+		public synchronized FileConfiguration getData(String uuid) {
+			synchronized (this) {
+				File dFile = getPlayerFile(uuid);
+				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+				notify();
+				return data;
+			}
 		}
 
 		public synchronized File getPlayerFile(String uuid) {
@@ -42,13 +41,9 @@ public class Data {
 			return dFile;
 		}
 
-		public synchronized FileConfiguration getData(String uuid) {
-			synchronized (this) {
-				File dFile = getPlayerFile(uuid);
-				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-				notify();
-				return data;
-			}
+		@Override
+		public void run() {
+
 		}
 
 		public synchronized void setData(String uuid, String path, Object value) {
@@ -64,8 +59,8 @@ public class Data {
 
 	}
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	/** The instance. */
+	static Data instance = new Data();
 
 	/**
 	 * Gets the single instance of Data.
@@ -76,10 +71,20 @@ public class Data {
 		return instance;
 	}
 
+	UserThread thread;
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+
 	/**
 	 * Instantiates a new data.
 	 */
 	private Data() {
+	}
+
+	public void deletePlayerFile(String uuid) {
+		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
+		dFile.delete();
 	}
 
 	public synchronized FileConfiguration getData(String uuid) {
@@ -106,11 +111,6 @@ public class Data {
 
 	public synchronized String getName(String uuid) {
 		return getData(uuid).getString("PlayerName", "");
-	}
-
-	public void deletePlayerFile(String uuid) {
-		File dFile = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
-		dFile.delete();
 	}
 
 	/**
@@ -172,6 +172,13 @@ public class Data {
 		}
 	}
 
+	private void loadThread() {
+		if (thread == null || !thread.isAlive()) {
+			thread = new UserThread();
+			thread.start();
+		}
+	}
+
 	public synchronized void set(String uuid, String path, Object value) {
 		loadThread();
 		thread.setData(uuid, path, value);
@@ -179,12 +186,5 @@ public class Data {
 
 	public synchronized void setPlayerName(String uuid, String playerName) {
 		set(uuid, "PlayerName", playerName);
-	}
-	
-	private void loadThread() {
-		if (thread == null || !thread.isAlive()) {
-			thread = new UserThread();
-			thread.start();
-		}
 	}
 }

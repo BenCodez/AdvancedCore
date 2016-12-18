@@ -205,6 +205,10 @@ public class BInventory implements Listener {
 	/** The buttons. */
 	private Map<Integer, BInventoryButton> buttons = new HashMap<Integer, BInventoryButton>();
 
+	private Inventory inv;
+
+	private Player player;
+
 	/**
 	 * Instantiates a new b inventory.
 	 *
@@ -214,6 +218,16 @@ public class BInventory implements Listener {
 	public BInventory(String name) {
 		setInventoryName(name);
 		Bukkit.getPluginManager().registerEvents(this, AdvancedCoreHook.getInstance().getPlugin());
+	}
+
+	/**
+	 * Adds the button.
+	 *
+	 * @param button
+	 *            the button
+	 */
+	public void addButton(BInventoryButton button) {
+		getButtons().put(getNextSlot(), button);
 	}
 
 	/**
@@ -229,25 +243,11 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * Adds the button.
-	 *
-	 * @param button
-	 *            the button
-	 */
-	public void addButton(BInventoryButton button) {
-		getButtons().put(getNextSlot(), button);
-	}
-
-	/**
 	 * Destroy.
 	 */
 	public void destroy() {
 		HandlerList.unregisterAll(this);
 	}
-
-	private Inventory inv;
-
-	private Player player;
 
 	/**
 	 * Gets the buttons.
@@ -316,19 +316,6 @@ public class BInventory implements Listener {
 		return getHighestSlot() + 1;
 	}
 
-	// event handling
-	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-	public void onInventoryClick(InventoryCloseEvent event) {
-		if (!(event.getPlayer() instanceof Player)) {
-			return;
-		}
-		if (this.inv != null && inv.equals(this.inv) && this.player != null
-				&& this.player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId())) {
-			destroy();
-		}
-		return;
-	}
-
 	/**
 	 * On inventory click.
 	 *
@@ -345,8 +332,8 @@ public class BInventory implements Listener {
 
 		Inventory inv = event.getInventory();
 
-		if (this.inv != null && inv.equals(this.inv) && this.player != null
-				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
+		if (this.inv != null && inv.equals(this.inv) && player != null
+				&& player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
@@ -403,6 +390,19 @@ public class BInventory implements Listener {
 				}
 			}
 		}
+	}
+
+	// event handling
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+	public void onInventoryClick(InventoryCloseEvent event) {
+		if (!(event.getPlayer() instanceof Player)) {
+			return;
+		}
+		if (inv != null && inv.equals(inv) && player != null
+				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId())) {
+			destroy();
+		}
+		return;
 	}
 
 	/**

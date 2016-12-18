@@ -18,9 +18,6 @@ public class FireworkHandler {
 	/** The instance. */
 	static FireworkHandler instance = new FireworkHandler();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	/**
 	 * Gets the single instance of FireworkHandler.
 	 *
@@ -29,6 +26,9 @@ public class FireworkHandler {
 	public static FireworkHandler getInstance() {
 		return instance;
 	}
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Instantiates a new FireworkHandler.

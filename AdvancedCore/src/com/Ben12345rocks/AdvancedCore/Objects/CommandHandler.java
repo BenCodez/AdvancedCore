@@ -335,6 +335,21 @@ public abstract class CommandHandler {
 		return options;
 	}
 
+	public boolean hasPerm(CommandSender sender) {
+		boolean hasPerm = false;
+
+		if (!perm.equals("")) {
+			for (String perm : this.perm.split("\\|")) {
+				if (sender.hasPermission(perm)) {
+					hasPerm = true;
+				}
+			}
+		} else {
+			hasPerm = true;
+		}
+		return hasPerm;
+	}
+
 	/**
 	 * Load tab complete.
 	 */
@@ -363,21 +378,6 @@ public abstract class CommandHandler {
 		}
 		addTabCompleteOption("(RequestMethod)", method);
 
-	}
-
-	public boolean hasPerm(CommandSender sender) {
-		boolean hasPerm = false;
-
-		if (!perm.equals("")) {
-			for (String perm : this.perm.split("\\|")) {
-				if (sender.hasPermission(perm)) {
-					hasPerm = true;
-				}
-			}
-		} else {
-			hasPerm = true;
-		}
-		return hasPerm;
 	}
 
 	/**

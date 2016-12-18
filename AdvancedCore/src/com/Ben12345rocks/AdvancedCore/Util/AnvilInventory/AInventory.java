@@ -196,6 +196,18 @@ public class AInventory {
 		}
 	}
 
+	/**
+	 * Gets the version.
+	 *
+	 * @return the version
+	 */
+	public static String getVersion() {
+		Server server = Bukkit.getServer();
+		final String packageName = server.getClass().getPackage().getName();
+
+		return packageName.substring(packageName.lastIndexOf('.') + 1);
+	}
+
 	/** The version handle. */
 	private AInventoryVersionHandler versionHandle;
 
@@ -210,18 +222,6 @@ public class AInventory {
 
 	/** The listener. */
 	private Listener listener;
-
-	/**
-	 * Gets the version.
-	 *
-	 * @return the version
-	 */
-	public static String getVersion() {
-		Server server = Bukkit.getServer();
-		final String packageName = server.getClass().getPackage().getName();
-
-		return packageName.substring(packageName.lastIndexOf('.') + 1);
-	}
 
 	/**
 	 * Instantiates a new a inventory.

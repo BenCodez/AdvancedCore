@@ -43,17 +43,6 @@ public class NumberRequester {
 	public NumberRequester() {
 	}
 
-	public void request(Player player, InputMethod method, String currentValue, String promptText, Number[] options,
-			boolean allowCustomOption, NumberListener listener) {
-		HashMap<Number, ItemStack> items = new HashMap<Number, ItemStack>();
-		if (options != null) {
-			for (Number option : options) {
-				items.put(option, new ItemStack(Material.STONE, 1));
-			}
-		}
-		request(player, method, currentValue, items, promptText, allowCustomOption, listener);
-	}
-
 	/**
 	 * Request.
 	 *
@@ -220,5 +209,16 @@ public class NumberRequester {
 					"Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
 		}
 
+	}
+
+	public void request(Player player, InputMethod method, String currentValue, String promptText, Number[] options,
+			boolean allowCustomOption, NumberListener listener) {
+		HashMap<Number, ItemStack> items = new HashMap<Number, ItemStack>();
+		if (options != null) {
+			for (Number option : options) {
+				items.put(option, new ItemStack(Material.STONE, 1));
+			}
+		}
+		request(player, method, currentValue, items, promptText, allowCustomOption, listener);
 	}
 }

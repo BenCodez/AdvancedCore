@@ -6,6 +6,10 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class AnimationAPI {
+	public interface Animation {
+		public void onAnimate(String text);
+	}
+
 	private static AnimationAPI instance = new AnimationAPI();
 
 	public static AnimationAPI getInstance() {
@@ -15,13 +19,9 @@ public class AnimationAPI {
 	private AnimationAPI() {
 	}
 
-	public interface Animation {
-		public void onAnimate(String text);
-	}
-
 	/**
 	 * Run an animation
-	 * 
+	 *
 	 * @param texts
 	 *            Text for animation
 	 * @param timeBetween

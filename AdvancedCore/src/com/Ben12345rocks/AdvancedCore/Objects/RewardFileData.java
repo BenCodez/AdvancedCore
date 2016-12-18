@@ -148,8 +148,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getChoiceRewardsRewards() {
-		return (ArrayList<String>) getData().getList("ChoiceRewards.Rewards",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("ChoiceRewards.Rewards", new ArrayList<String>());
 	}
 
 	/**
@@ -160,8 +159,7 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsConsole() {
 
-		return (ArrayList<String>) getData().getList("Commands.Console",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("Commands.Console", new ArrayList<String>());
 
 	}
 
@@ -173,8 +171,7 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsPlayer() {
 
-		return (ArrayList<String>) getData().getList("Commands.Player",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("Commands.Player", new ArrayList<String>());
 
 	}
 
@@ -276,8 +273,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkColors() {
-		return (ArrayList<String>) getData().getList("Firework.Colors",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("Firework.Colors", new ArrayList<String>());
 	}
 
 	/**
@@ -287,8 +283,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkColorsFadeOut() {
-		return (ArrayList<String>) getData().getList("Firework.FadeOutColor",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("Firework.FadeOutColor", new ArrayList<String>());
 	}
 
 	/**
@@ -334,17 +329,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkTypes() {
-		return (ArrayList<String>) getData().getList("Firework.Types",
-				new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the give in each world.
-	 *
-	 * @return the give in each world
-	 */
-	public boolean getGiveInEachWorld() {
-		return getData().getBoolean("GiveInEachWorld");
+		return (ArrayList<String>) getData().getList("Firework.Types", new ArrayList<String>());
 	}
 
 	/**
@@ -370,10 +355,6 @@ public class RewardFileData {
 	public int getItemData(String item) {
 		return getData().getInt("Items." + item + ".Data");
 	}
-	
-	public ConfigurationSection getItemSection(String item) {
-		return getData().getConfigurationSection("Items." + item);
-	}
 
 	/**
 	 * Gets the item durability.
@@ -397,8 +378,7 @@ public class RewardFileData {
 	@Deprecated
 	public Set<String> getItemEnchants(String item) {
 		try {
-			return getData().getConfigurationSection(
-					"Items." + item + ".Enchants").getKeys(false);
+			return getData().getConfigurationSection("Items." + item + ".Enchants").getKeys(false);
 		} catch (Exception ex) {
 			return new HashSet<String>();
 		}
@@ -492,6 +472,10 @@ public class RewardFileData {
 		}
 	}
 
+	public ConfigurationSection getItemSection(String item) {
+		return getData().getConfigurationSection("Items." + item);
+	}
+
 	/**
 	 * Gets the item skull.
 	 *
@@ -529,8 +513,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getJavascriptFalseRewards() {
-		return (ArrayList<String>) getData().getList("Javascript.FalseRewards",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("Javascript.FalseRewards", new ArrayList<String>());
 	}
 
 	/**
@@ -540,8 +523,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getJavascriptTrueRewards() {
-		return (ArrayList<String>) getData().getList("Javascript.TrueRewards",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("Javascript.TrueRewards", new ArrayList<String>());
 	}
 
 	/**
@@ -615,8 +597,7 @@ public class RewardFileData {
 	 * @return the permission
 	 */
 	public String getPermission() {
-		return getData().getString("Permission",
-				"AdvancedCore.Reward." + reward);
+		return getData().getString("Permission", "AdvancedCore.Reward." + reward);
 	}
 
 	/**
@@ -685,8 +666,7 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getRandomRewards() {
 
-		return (ArrayList<String>) getData().getList("Random.Rewards",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("Random.Rewards", new ArrayList<String>());
 
 	}
 
@@ -697,34 +677,6 @@ public class RewardFileData {
 	 */
 	public boolean getRequirePermission() {
 		return getData().getBoolean("RequirePermission");
-	}
-
-	/**
-	 * Setup.
-	 */
-	public void setup() {
-		if (dFile == null) {
-			dFile = new File(rewardFolder, reward.getRewardName() + ".yml");
-		}
-		data = YamlConfiguration.loadConfiguration(dFile);
-		if (!dFile.exists()) {
-			try {
-				data.save(dFile);
-			} catch (IOException e) {
-				plugin.getPlugin().getLogger().severe(
-						ChatColor.RED + "Could not create "
-								+ dFile.getAbsolutePath());
-
-			}
-		}
-
-	}
-
-	/**
-	 * Reload.
-	 */
-	public void reload() {
-		data = YamlConfiguration.loadConfiguration(dFile);
 	}
 
 	/**
@@ -871,9 +823,15 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getWorlds() {
 
-		return (ArrayList<String>) getData().getList("Worlds",
-				new ArrayList<String>());
+		return (ArrayList<String>) getData().getList("Worlds", new ArrayList<String>());
 
+	}
+
+	/**
+	 * Reload.
+	 */
+	public void reload() {
+		data = YamlConfiguration.loadConfiguration(dFile);
 	}
 
 	/**
@@ -1172,6 +1130,25 @@ public class RewardFileData {
 	 */
 	public void setRewardType(String value) {
 		set("RewardType", value);
+	}
+
+	/**
+	 * Setup.
+	 */
+	public void setup() {
+		if (dFile == null) {
+			dFile = new File(rewardFolder, reward.getRewardName() + ".yml");
+		}
+		data = YamlConfiguration.loadConfiguration(dFile);
+		if (!dFile.exists()) {
+			try {
+				data.save(dFile);
+			} catch (IOException e) {
+				plugin.getPlugin().getLogger().severe(ChatColor.RED + "Could not create " + dFile.getAbsolutePath());
+
+			}
+		}
+
 	}
 
 	/**

@@ -889,34 +889,6 @@ public class RewardEditGUI {
 		setCurrentReward(player, reward);
 
 		inv.addButton(inv.getNextSlot(),
-				new BInventoryButton("Set GiveInEachWorld", new String[] {}, new ItemStack(Material.STONE)) {
-
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						Player player = clickEvent.getWhoClicked();
-
-						Reward reward = getCurrentReward(player);
-
-						new ValueRequest().requestBoolean(player, "" + reward.isGiveInEachWorld(),
-								new BooleanListener() {
-
-									@Override
-									public void onInput(Player player, boolean value) {
-										Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player,
-												"Reward");
-										reward.getConfig().setGiveInEachWorld(
-
-												value);
-										player.sendMessage(
-												"GiveInEachWorld set to " + value + " on " + reward.getRewardName());
-										plugin.reload();
-									}
-								});
-
-					}
-				});
-
-		inv.addButton(inv.getNextSlot(),
 				new BInventoryButton("Add world", new String[] {}, new ItemStack(Material.STONE)) {
 
 					@Override
@@ -1019,7 +991,6 @@ public class RewardEditGUI {
 			}
 			if (reward.getWorlds().size() > 0) {
 				lore.add("Worlds: " + ArrayUtils.getInstance().makeStringList(reward.getWorlds()));
-				lore.add("GiveInEachWorld: " + reward.isGiveInEachWorld());
 			}
 			if (!reward.getRewardType().equals("BOTH")) {
 				lore.add("RewardType: " + reward.getRewardType());

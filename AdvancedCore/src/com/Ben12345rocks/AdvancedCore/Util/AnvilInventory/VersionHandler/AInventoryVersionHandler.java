@@ -14,6 +14,13 @@ import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilSlot;
 public interface AInventoryVersionHandler {
 
 	/**
+	 * Gets the inventory.
+	 *
+	 * @return the inventory
+	 */
+	public Inventory getInventory();
+
+	/**
 	 * Load classes.
 	 */
 	public void loadClasses();
@@ -27,11 +34,4 @@ public interface AInventoryVersionHandler {
 	 *            the items
 	 */
 	public void open(Player player, HashMap<AnvilSlot, ItemStack> items);
-	
-	/**
-	 * Gets the inventory.
-	 *
-	 * @return the inventory
-	 */
-	public Inventory getInventory();
 }

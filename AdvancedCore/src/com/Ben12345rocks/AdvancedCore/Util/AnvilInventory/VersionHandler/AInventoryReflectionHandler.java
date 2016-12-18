@@ -53,7 +53,18 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
+	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
+	 * AInventoryVersionHandler#getInventory()
+	 */
+	@Override
+	public Inventory getInventory() {
+		return inv;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#loadClasses()
 	 */
@@ -68,7 +79,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#open(org.bukkit.entity.Player,
 	 * java.util.HashMap)
@@ -129,17 +140,6 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 			AdvancedCoreHook.getInstance().debug("Failed to use AnvilGUI");
 
 		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
-	 * AInventoryVersionHandler#getInventory()
-	 */
-	@Override
-	public Inventory getInventory() {
-		return inv;
 	}
 
 }

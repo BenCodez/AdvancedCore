@@ -35,14 +35,14 @@ public class AdminGUI {
 
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
+	/** The plugin GU is. */
+	private ArrayList<BInventoryButton> pluginGUIs;
+
 	/**
 	 * Instantiates a new admin GUI.
 	 */
 	private AdminGUI() {
 	}
-
-	/** The plugin GU is. */
-	private ArrayList<BInventoryButton> pluginGUIs;
 
 	/**
 	 * Adds the button.
