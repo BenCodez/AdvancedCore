@@ -19,7 +19,7 @@ public class Column {
 		this.limit = limit;
 	}
 
-	public Column(String name, DataType dataType, Object value) {
+	public Column(String name, Object value, DataType dataType) {
 		this.name = name;
 		this.dataType = dataType;
 		limit = 0;

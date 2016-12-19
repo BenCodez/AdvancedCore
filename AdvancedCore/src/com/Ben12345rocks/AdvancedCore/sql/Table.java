@@ -97,13 +97,9 @@ public class Table {
 	}
 
 	private boolean containsKey(Column column) {
-		for (List<Column> col : getAll()) {
-			for (Column c : col) {
-				if (c.getName().equals(primaryKey.getName())) {
-					if (c.getValue().equals(column.getValue())) {
-						return true;
-					}
-				}
+		for (Column col : getRows()) {
+			if (col.getValue().equals(column.getValue())) {
+				return true;
 			}
 		}
 		return false;
@@ -162,6 +158,30 @@ public class Table {
 
 	public List<Column> getColumns() {
 		return columns;
+	}
+
+	public List<Column> getRows() {
+		List<Column> result = new ArrayList<Column>();
+		String query = "SELECT uuid FROM " + getName();
+
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			ResultSet rs = s.executeQuery();
+			try {
+				while (rs.next()) {
+					Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
+					result.add(rCol);
+				}
+				sqLite.close(s, rs);
+			} catch (SQLException e) {
+				s.close();
+				return null;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return result;
 	}
 
 	public List<Column> getExact(Column column) {
@@ -249,6 +269,9 @@ public class Table {
 	}
 
 	public void insert(List<Column> columns) {
+		for (Column c : columns) {
+			checkColumn(c);
+		}
 		String query = "INSERT OR REPLACE INTO " + getName() + " (";
 		for (Column column : columns) {
 			if (columns.indexOf(column) < columns.size() - 1) {
@@ -352,7 +375,7 @@ public class Table {
 		for (Column c : columns) {
 			checkColumn(c);
 		}
-		if (!containsKey(primaryKey)) {
+		if (containsKey(primaryKey)) {
 			String query = "UPDATE " + getName() + " SET ";
 			for (Column column : columns) {
 				if (column.dataType == DataType.STRING) {
@@ -380,16 +403,7 @@ public class Table {
 				e.printStackTrace();
 			}
 		} else {
-			List<Column> newColumns = getExact(primaryKey);
-			for (Column column : columns) {
-				if (column.getName().equalsIgnoreCase(primaryKey.getName())) {
-					newColumns.set(0, column);
-				} else {
-					newColumns.set(columns.indexOf(column), column);
-				}
-			}
-			delete(primaryKey);
-			insert(newColumns);
+			insert(columns);
 		}
 	}
 

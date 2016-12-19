@@ -142,11 +142,11 @@ public class User {
 	 * @param reward
 	 *            the reward
 	 */
-	public void addChoiceReward(Reward reward) {
+	public synchronized void addChoiceReward(Reward reward) {
 		choiceRewards.add(reward.getRewardName());
 	}
 
-	public void addOfflineRewards(Reward reward) {
+	public synchronized void addOfflineRewards(Reward reward) {
 		offlineRewards.add(reward.name);
 	}
 
@@ -165,25 +165,25 @@ public class User {
 	 * Check offline rewards.
 	 */
 	@SuppressWarnings("unchecked")
-	public void checkOfflineRewards() {
+	public synchronized void checkOfflineRewards() {
 		ArrayList<String> copy = (ArrayList<String>) offlineRewards.clone();
 		setOfflineRewards(new ArrayList<String>());
 		RewardHandler.getInstance().giveReward(this, false, ArrayUtils.getInstance().convert(copy));
 	}
 
-	public ArrayList<String> getChoiceRewards() {
+	public synchronized ArrayList<String> getChoiceRewards() {
 		return choiceRewards;
 	}
 
-	public UserData getData() {
+	public synchronized UserData getData() {
 		return data;
 	}
 
-	public String getInputMethod() {
+	public synchronized String getInputMethod() {
 		return inputMethod;
 	}
 
-	public ArrayList<String> getOfflineRewards() {
+	public synchronized ArrayList<String> getOfflineRewards() {
 		return offlineRewards;
 	}
 
@@ -201,14 +201,18 @@ public class User {
 	 *
 	 * @return the player name
 	 */
-	public String getPlayerName() {
+	public synchronized String getPlayerName() {
 		if ((playerName == null || playerName.equalsIgnoreCase("null")) && loadName) {
 			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
 		}
 		return playerName;
 	}
 
-	public HashMap<Reward, ArrayList<Long>> getTimedRewards() {
+	public boolean hasPermission(String perm) {
+		return false;
+	}
+
+	public synchronized HashMap<Reward, ArrayList<Long>> getTimedRewards() {
 		return timedRewards;
 	}
 
@@ -216,7 +220,7 @@ public class User {
 		return data;
 	}
 
-	public InputMethod getUserInputMethod() {
+	public synchronized InputMethod getUserInputMethod() {
 		if (inputMethod == null) {
 			return InputMethod.getMethod(AdvancedCoreHook.getInstance().getDefaultRequestMethod());
 		}
@@ -229,7 +233,7 @@ public class User {
 	 *
 	 * @return the uuid
 	 */
-	public String getUUID() {
+	public synchronized String getUUID() {
 		return uuid;
 	}
 
@@ -427,7 +431,10 @@ public class User {
 			}
 		}
 		inputMethod = getUserData().getString("InputMethod");
+		
 	}
+
+	
 
 	/**
 	 * Checks if is online.
@@ -439,7 +446,7 @@ public class User {
 	}
 
 	public void loadData() {
-		data = new UserData(this, AdvancedCoreHook.getInstance().getStorageType());
+		data = new UserData(this);
 		init();
 	}
 
@@ -643,26 +650,26 @@ public class User {
 		}
 	}
 
-	public void setChoiceRewards(ArrayList<String> choiceRewards) {
+	public synchronized void setChoiceRewards(ArrayList<String> choiceRewards) {
 		this.choiceRewards = choiceRewards;
 		data.setStringList("ChoiceRewards", choiceRewards);
 	}
 
-	public void setInputMethod(String inputMethod) {
+	public synchronized void setInputMethod(String inputMethod) {
 		this.inputMethod = inputMethod;
 		data.setString("InputMethod", inputMethod);
 	}
 
-	public void setOfflineRewards(ArrayList<String> offlineRewards) {
+	public synchronized void setOfflineRewards(ArrayList<String> offlineRewards) {
 		this.offlineRewards = offlineRewards;
 		data.setStringList("OfflineRewards", offlineRewards);
 	}
 
-	public void setPlayerName(String playerName) {
+	public synchronized void setPlayerName(String playerName) {
 		this.playerName = playerName;
 	}
 
-	public void setTimedRewards(HashMap<Reward, ArrayList<Long>> timed) {
+	public synchronized void setTimedRewards(HashMap<Reward, ArrayList<Long>> timed) {
 		ArrayList<String> timedRewards = new ArrayList<String>();
 		for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
 			if (entry.getValue().size() > 0) {
@@ -682,7 +689,7 @@ public class User {
 		data.setStringList("TimedRewards", timedRewards);
 	}
 
-	public void setUserInputMethod(InputMethod method) {
+	public synchronized void setUserInputMethod(InputMethod method) {
 		setInputMethod(method.toString());
 	}
 
@@ -692,7 +699,7 @@ public class User {
 	 * @param uuid
 	 *            the new uuid
 	 */
-	public void setUUID(String uuid) {
+	public synchronized void setUUID(String uuid) {
 		this.uuid = uuid;
 	}
 

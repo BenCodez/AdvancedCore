@@ -35,6 +35,7 @@ import com.Ben12345rocks.AdvancedCore.sql.Database;
 import com.Ben12345rocks.AdvancedCore.sql.Table;
 
 import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.permission.Permission;
 
 public class AdvancedCoreHook {
 	private static AdvancedCoreHook instance = new AdvancedCoreHook();
@@ -68,7 +69,9 @@ public class AdvancedCoreHook {
 	private boolean checkOfflineVotesOnWorldChange = true;
 
 	/** The econ. */
-	public Economy econ = null;
+	private Economy econ = null;
+
+	private Permission perms;
 
 	private AdvancedCoreHook() {
 
@@ -278,6 +281,20 @@ public class AdvancedCoreHook {
 		}
 	}
 
+	public void loadPermissions() {
+		if (setupPermissions()) {
+			plugin.getLogger().info("Hooked into Vault permissions");
+		}
+	}
+
+	public Permission getPerms() {
+		return perms;
+	}
+
+	public void setPlugin(Plugin plugin) {
+		this.plugin = plugin;
+	}
+
 	public void loadEvents() {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
 		if (checkOfflineVotesOnWorldChange) {
@@ -440,6 +457,13 @@ public class AdvancedCoreHook {
 		}
 		econ = rsp.getProvider();
 		return econ != null;
+	}
+
+	private boolean setupPermissions() {
+		RegisteredServiceProvider<Permission> rsp = Bukkit.getServer().getServicesManager()
+				.getRegistration(Permission.class);
+		perms = rsp.getProvider();
+		return perms != null;
 	}
 
 	/**

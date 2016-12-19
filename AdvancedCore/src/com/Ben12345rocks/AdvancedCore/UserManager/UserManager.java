@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.UserManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -10,7 +11,9 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.sql.Column;
 
 /**
  * The Class UserManager.
@@ -40,12 +43,18 @@ public class UserManager {
 	public UserManager() {
 	}
 
-	public synchronized ArrayList<String> getAllPlayerNames() {
-		return Data.getInstance().getPlayerNames();
-	}
-
 	public synchronized ArrayList<String> getAllUUIDs() {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 		return Data.getInstance().getPlayersUUIDs();
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			List<Column> cols = AdvancedCoreHook.getInstance().getSQLiteUserTable().getRows();
+			ArrayList<String> uuids = new ArrayList<String>();
+			for (Column col : cols) {
+				uuids.add((String) col.getValue());
+			}
+			return uuids;
+		}
+		return new ArrayList<String>();
 	}
 
 	/**

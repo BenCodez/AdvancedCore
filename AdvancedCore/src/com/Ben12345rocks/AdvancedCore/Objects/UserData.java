@@ -15,22 +15,19 @@ import com.Ben12345rocks.AdvancedCore.sql.DataType;
 
 public class UserData {
 	private User user;
-	private UserStorage storage;
 
-	public UserData(User user, UserStorage storage) {
+	public UserData(User user) {
 		this.user = user;
-		this.storage = storage;
 	}
 
 	public FileConfiguration getData(String uuid) {
 		File dFile = AdvancedCoreHook.getInstance().getPlayerFile(uuid);
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		notify();
 		return data;
 	}
 
-	public int getInt(String key) {
-		if (storage.equals(UserStorage.SQLITE)) {
+	public synchronized int getInt(String key) {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			List<Column> row = getSQLiteRow();
 			if (row != null) {
 				for (int i = 0; i < row.size(); i++) {
@@ -40,39 +37,47 @@ public class UserData {
 				}
 			}
 
-		} else if (storage.equals(UserStorage.FLAT)) {
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			return getData(user.getUUID()).getInt(key, 0);
 		}
 		return 0;
 	}
 
 	public List<Column> getSQLiteRow() {
-		if (storage.equals(UserStorage.SQLITE)) {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			return AdvancedCoreHook.getInstance().getSQLiteUserTable()
-					.getExact(new Column("uuid", DataType.STRING, user.getUUID()));
+					.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
 		}
 		return null;
 	}
 
-	public String getString(String key) {
-		if (storage.equals(UserStorage.SQLITE)) {
+	public synchronized String getString(String key) {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			List<Column> row = getSQLiteRow();
 			if (row != null) {
 				for (int i = 0; i < row.size(); i++) {
 					if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.STRING)) {
-						return (String) row.get(i).getValue();
+						String st = (String) row.get(i).getValue();
+						if (st != null) {
+							return st;
+						}
+						return "";
 					}
 				}
 			}
 
-		} else if (storage.equals(UserStorage.FLAT)) {
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			return getData(user.getUUID()).getString(key, "");
 		}
 		return "";
 	}
 
-	public ArrayList<String> getStringList(String key) {
-		String[] list = getString(key).split(",");
+	public synchronized ArrayList<String> getStringList(String key) {
+		String str = getString(key);
+		if (str.equals("")) {
+			return new ArrayList<String>();
+		}
+		String[] list = str.split(",");
 		return ArrayUtils.getInstance().convert(list);
 	}
 
@@ -87,33 +92,41 @@ public class UserData {
 		}
 	}
 
-	public void setInt(String key, int value) {
-		if (storage.equals(UserStorage.SQLITE)) {
+	public synchronized void setInt(final String key, final int value) {
+
+		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
-			Column primary = new Column("uuid", DataType.STRING, user.getUUID());
-			Column column = new Column(key, DataType.INTEGER, value);
+			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);
+			Column column = new Column(key, value, DataType.INTEGER);
 			columns.add(primary);
 			columns.add(column);
-			AdvancedCoreHook.getInstance().getSQLiteUserTable().insert(columns);
-		} else if (storage.equals(UserStorage.FLAT)) {
+			AdvancedCoreHook.getInstance().getSQLiteUserTable().update(primary, columns);
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			setData(user.getUUID(), key, value);
 		}
+
 	}
 
-	public void setString(String key, String value) {
-		if (storage.equals(UserStorage.SQLITE)) {
+	public synchronized void setString(final String key, final String value) {
+
+		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
-			Column primary = new Column("uuid", DataType.STRING, user.getUUID());
-			Column column = new Column(key, DataType.STRING, value);
+			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);
+			Column column = new Column(key, value, DataType.STRING);
 			columns.add(primary);
 			columns.add(column);
-			AdvancedCoreHook.getInstance().getSQLiteUserTable().insert(columns);
-		} else if (storage.equals(UserStorage.FLAT)) {
+			AdvancedCoreHook.getInstance().getSQLiteUserTable().update(primary, columns);
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			setData(user.getUUID(), key, value);
 		}
+
 	}
 
-	public void setStringList(String key, ArrayList<String> value) {
+	public synchronized void setStringList(final String key, final ArrayList<String> value) {
+
+		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
 		String str = "";
 		for (int i = 0; i < value.size(); i++) {
 			if (i != 0) {
@@ -122,5 +135,6 @@ public class UserData {
 			str += value.get(i);
 		}
 		setString(key, str);
+
 	}
 }
