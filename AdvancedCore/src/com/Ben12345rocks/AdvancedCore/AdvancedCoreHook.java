@@ -66,7 +66,7 @@ public class AdvancedCoreHook {
 
 	private Logger logger;
 
-	private boolean checkOfflineVotesOnWorldChange = true;
+	private boolean checkOnWorldChange = false;
 
 	/** The econ. */
 	private Economy econ = null;
@@ -202,10 +202,6 @@ public class AdvancedCoreHook {
 		return storageType;
 	}
 
-	public boolean isCheckOfflineVotesOnWorldChange() {
-		return checkOfflineVotesOnWorldChange;
-	}
-
 	public boolean isDebug() {
 		return debug;
 	}
@@ -297,7 +293,7 @@ public class AdvancedCoreHook {
 
 	public void loadEvents() {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
-		if (checkOfflineVotesOnWorldChange) {
+		if (checkOnWorldChange) {
 			Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
 		}
 	}
@@ -394,8 +390,12 @@ public class AdvancedCoreHook {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
 	}
 
-	public void setCheckOfflineVotesOnWorldChange(boolean checkOfflineVotesOnWorldChange) {
-		this.checkOfflineVotesOnWorldChange = checkOfflineVotesOnWorldChange;
+	public synchronized boolean isCheckOnWorldChange() {
+		return checkOnWorldChange;
+	}
+
+	public synchronized void setCheckOnWorldChange(boolean checkOnWorldChange) {
+		this.checkOnWorldChange = checkOnWorldChange;
 	}
 
 	public void setDebug(boolean debug) {
