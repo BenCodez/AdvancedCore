@@ -264,7 +264,13 @@ public class RewardHandler {
 	 *            the give offline
 	 */
 	public synchronized void giveReward(User user, Reward reward, boolean online, boolean giveOffline) {
-		reward.giveReward(user, online, giveOffline);
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				reward.giveReward(user, online, giveOffline);
+			}
+		});
 	}
 
 	/**
