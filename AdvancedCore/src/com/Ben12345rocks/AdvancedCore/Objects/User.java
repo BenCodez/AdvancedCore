@@ -431,10 +431,8 @@ public class User {
 			}
 		}
 		inputMethod = getUserData().getString("InputMethod");
-		
-	}
 
-	
+	}
 
 	/**
 	 * Checks if is online.
