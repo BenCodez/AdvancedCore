@@ -235,29 +235,28 @@ public class BStatsMetrics {
 	 */
 	@SuppressWarnings("unchecked")
 	private void submitData() {
-		final JSONObject data = getServerData();
-
-		JSONArray pluginData = new JSONArray();
-		// Search for all other bStats Metrics classes to get their plugin data
-		for (Class<?> service : Bukkit.getServicesManager().getKnownServices()) {
-			try {
-				service.getField("B_STATS_VERSION"); // Our identifier :)
-			} catch (NoSuchFieldException ignored) {
-				continue; // Continue "searching"
-			}
-			// Found one!
-			try {
-				pluginData.add(service.getMethod("getPluginData").invoke(Bukkit.getServicesManager().load(service)));
-			} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
-			}
-		}
-
-		data.put("plugins", pluginData);
-
 		// Create a new thread for the connection to the bStats server
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
+				final JSONObject data = getServerData();
+
+				JSONArray pluginData = new JSONArray();
+				// Search for all other bStats Metrics classes to get their plugin data
+				for (Class<?> service : Bukkit.getServicesManager().getKnownServices()) {
+					try {
+						service.getField("B_STATS_VERSION"); // Our identifier :)
+					} catch (NoSuchFieldException ignored) {
+						continue; // Continue "searching"
+					}
+					// Found one!
+					try {
+						pluginData.add(service.getMethod("getPluginData").invoke(Bukkit.getServicesManager().load(service)));
+					} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+					}
+				}
+
+				data.put("plugins", pluginData);
 				try {
 					// Send the data
 					sendData(data);

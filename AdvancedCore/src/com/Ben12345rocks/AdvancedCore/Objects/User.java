@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -21,10 +23,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
+import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -116,8 +118,30 @@ public class User {
 		}
 	}
 
+	public synchronized File getPlayerFile(String uuid) {
+		File dFile = new File(plugin.getDataFolder() + File.separator + "Data", uuid + ".yml");
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		if (!dFile.exists()) {
+			FilesManager.getInstance().editFile(dFile, data);
+		}
+		return dFile;
+	}
+
+	public synchronized FileConfiguration getData(String uuid) {
+		File dFile = getPlayerFile(uuid);
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		return data;
+	}
+
+	public synchronized void setData(String uuid, String path, Object value) {
+		File dFile = getPlayerFile(uuid);
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		data.set(path, value);
+		FilesManager.getInstance().editFile(dFile, data);
+	}
+
 	private synchronized FileConfiguration loadData() {
-		return Data.getInstance().getData(uuid);
+		return getData(uuid);
 	}
 
 	/**
@@ -448,7 +472,7 @@ public class User {
 	 * @return true, if successful
 	 */
 	public synchronized boolean hasJoinedBefore() {
-		return Data.getInstance().hasJoinedBefore(this);
+		return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid)).hasPlayedBefore();
 	}
 
 	/**
@@ -750,13 +774,6 @@ public class User {
 
 	/**
 	 * Sets the player name.
-	 */
-	public synchronized void setPlayerName() {
-		Data.getInstance().setPlayerName(uuid, playerName);
-	}
-
-	/**
-	 * Sets the player name.
 	 *
 	 * @param playerName
 	 *            the new player name
@@ -786,7 +803,7 @@ public class User {
 	 *            the value
 	 */
 	public synchronized void setRawData(String path, Object value) {
-		Data.getInstance().set(uuid, path, value);
+		setData(uuid, path, value);
 	}
 
 	/**

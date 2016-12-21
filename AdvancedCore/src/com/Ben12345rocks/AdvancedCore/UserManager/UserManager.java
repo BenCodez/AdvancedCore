@@ -1,12 +1,12 @@
 package com.Ben12345rocks.AdvancedCore.UserManager;
 
+import java.io.File;
 import java.util.ArrayList;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Data.Data;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -82,11 +82,18 @@ public class UserManager {
 		return new User(plugin.getPlugin(), uuid);
 	}
 
-	public synchronized ArrayList<String> getAllPlayerNames() {
-		return Data.getInstance().getPlayerNames();
-	}
-
 	public synchronized ArrayList<String> getAllUUIDs() {
-		return Data.getInstance().getPlayersUUIDs();
+		File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
+		String[] fileNames = folder.list();
+		ArrayList<String> uuids = new ArrayList<String>();
+		if (fileNames != null) {
+			for (String playerFile : fileNames) {
+				if (!playerFile.equals("null") && !playerFile.equals("")) {
+					String uuid = playerFile.replace(".yml", "");
+					uuids.add(uuid);
+				}
+			}
+		}
+		return uuids;
 	}
 }
