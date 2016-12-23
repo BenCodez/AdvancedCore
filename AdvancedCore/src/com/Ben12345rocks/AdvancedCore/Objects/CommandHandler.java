@@ -457,6 +457,9 @@ public abstract class CommandHandler {
 			players.add(player.getName());
 		}
 		addTabCompleteOption("(Player)", players);
+	}
+
+	public void reloadTabComplete() {
 		ArrayList<String> rewards = new ArrayList<String>();
 		for (Reward reward : RewardHandler.getInstance().getRewards()) {
 			rewards.add(reward.getRewardName());
