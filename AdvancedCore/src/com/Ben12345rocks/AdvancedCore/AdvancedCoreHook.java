@@ -57,15 +57,19 @@ public class AdvancedCoreHook {
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	private Database database;
-	private boolean preloadData = true;
-
 	private UserStorage storageType = UserStorage.SQLITE;
-
 	private String permPrefix;
-
 	private IServerHandle serverHandle;
-
 	private Logger logger;
+	private boolean preloadUsers = false;
+
+	public boolean isPreloadUsers() {
+		return preloadUsers;
+	}
+
+	public void setPreloadUsers(boolean preloadUsers) {
+		this.preloadUsers = preloadUsers;
+	}
 
 	private boolean checkOnWorldChange = false;
 
@@ -217,10 +221,6 @@ public class AdvancedCoreHook {
 
 	public boolean isPlaceHolderAPIEnabled() {
 		return placeHolderAPIEnabled;
-	}
-
-	public boolean isPreloadData() {
-		return preloadData;
 	}
 
 	public boolean isTimerLoaded() {
@@ -443,10 +443,6 @@ public class AdvancedCoreHook {
 
 	public void setPermPrefix(String permPrefix) {
 		this.permPrefix = permPrefix;
-	}
-
-	public void setPreloadData(boolean preloadData) {
-		this.preloadData = preloadData;
 	}
 
 	public void setStorageType(UserStorage storageType) {

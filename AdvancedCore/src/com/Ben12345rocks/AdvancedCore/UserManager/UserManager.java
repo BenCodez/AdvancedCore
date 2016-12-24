@@ -110,11 +110,15 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public synchronized User getUser(UUID uuid) {
-		if (users.containsKey(uuid.toString())) {
-			return users.get(uuid.toString());
+		if (AdvancedCoreHook.getInstance().isPreloadUsers()) {
+			if (users.containsKey(uuid.toString())) {
+				return users.get(uuid.toString());
+			}
 		}
 		User user = new User(plugin.getPlugin(), uuid);
-		users.put(uuid.getUUID(), user);
+		if (AdvancedCoreHook.getInstance().isPreloadUsers()) {
+			users.put(uuid.getUUID(), user);
+		}
 		return user;
 	}
 }
