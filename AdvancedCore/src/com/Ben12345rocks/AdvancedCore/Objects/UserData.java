@@ -20,7 +20,7 @@ public class UserData {
 		this.user = user;
 	}
 
-	public FileConfiguration getData(String uuid) {
+	public synchronized FileConfiguration getData(String uuid) {
 		File dFile = AdvancedCoreHook.getInstance().getPlayerFile(uuid);
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		return data;

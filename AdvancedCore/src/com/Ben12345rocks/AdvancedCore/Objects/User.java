@@ -49,11 +49,6 @@ public class User {
 
 	private UserData data;
 
-	private ArrayList<String> choiceRewards;
-	private ArrayList<String> offlineRewards;
-	private HashMap<Reward, ArrayList<Long>> timedRewards;
-	private String inputMethod;
-
 	/**
 	 * Instantiates a new user.
 	 *
@@ -143,11 +138,15 @@ public class User {
 	 *            the reward
 	 */
 	public synchronized void addChoiceReward(Reward reward) {
+		ArrayList<String> choiceRewards = getChoiceRewards();
 		choiceRewards.add(reward.getRewardName());
+		setChoiceRewards(choiceRewards);
 	}
 
 	public synchronized void addOfflineRewards(Reward reward) {
-		offlineRewards.add(reward.name);
+		ArrayList<String> offlineRewards = getOfflineRewards();
+		offlineRewards.add(reward.getRewardName());
+		setOfflineRewards(offlineRewards);
 	}
 
 	public void addTimedReward(Reward reward, long epochMilli) {
@@ -164,15 +163,14 @@ public class User {
 	/**
 	 * Check offline rewards.
 	 */
-	@SuppressWarnings("unchecked")
 	public synchronized void checkOfflineRewards() {
-		ArrayList<String> copy = (ArrayList<String>) offlineRewards.clone();
+		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
 		RewardHandler.getInstance().giveReward(this, false, ArrayUtils.getInstance().convert(copy));
 	}
 
 	public synchronized ArrayList<String> getChoiceRewards() {
-		return choiceRewards;
+		return getUserData().getStringList("ChoiceRewards");
 	}
 
 	public synchronized UserData getData() {
@@ -180,11 +178,11 @@ public class User {
 	}
 
 	public synchronized String getInputMethod() {
-		return inputMethod;
+		return getUserData().getString("InputMethod");
 	}
 
 	public synchronized ArrayList<String> getOfflineRewards() {
-		return offlineRewards;
+		return getUserData().getStringList("OfflineRewards");
 	}
 
 	/**
@@ -213,6 +211,21 @@ public class User {
 	}
 
 	public synchronized HashMap<Reward, ArrayList<Long>> getTimedRewards() {
+		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards");
+		HashMap<Reward, ArrayList<Long>> timedRewards = new HashMap<Reward, ArrayList<Long>>();
+		for (String str : timedReward) {
+			String[] data = str.split("//");
+			if (data.length > 1) {
+				String rewardName = data[0];
+				Reward reward = RewardHandler.getInstance().getReward(rewardName);
+				String timeStr = data[1];
+				ArrayList<Long> t = new ArrayList<Long>();
+				for (String ti : timeStr.split("&")) {
+					t.add(Long.valueOf(ti));
+				}
+				timedRewards.put(reward, t);
+			}
+		}
 		return timedRewards;
 	}
 
@@ -221,6 +234,7 @@ public class User {
 	}
 
 	public synchronized InputMethod getUserInputMethod() {
+		String inputMethod = getInputMethod();
 		if (inputMethod == null) {
 			return InputMethod.getMethod(AdvancedCoreHook.getInstance().getDefaultRequestMethod());
 		}
@@ -412,26 +426,11 @@ public class User {
 		return false;
 	}
 
-	public void init() {
-		choiceRewards = getUserData().getStringList("ChoiceRewards");
-		offlineRewards = getUserData().getStringList("OfflineRewards");
-		ArrayList<String> timedRewards = getUserData().getStringList("TimedRewards");
-		this.timedRewards = new HashMap<Reward, ArrayList<Long>>();
-		for (String str : timedRewards) {
-			String[] data = str.split("//");
-			if (data.length > 1) {
-				String rewardName = data[0];
-				Reward reward = RewardHandler.getInstance().getReward(rewardName);
-				String timeStr = data[1];
-				ArrayList<Long> t = new ArrayList<Long>();
-				for (String ti : timeStr.split("&")) {
-					t.add(Long.valueOf(ti));
-				}
-				this.timedRewards.put(reward, t);
-			}
-		}
-		inputMethod = getUserData().getString("InputMethod");
-
+	public synchronized void saveData() {
+		setChoiceRewards(getChoiceRewards());
+		setOfflineRewards(getOfflineRewards());
+		setTimedRewards(getTimedRewards());
+		setInputMethod(getInputMethod());
 	}
 
 	/**
@@ -445,7 +444,6 @@ public class User {
 
 	public void loadData() {
 		data = new UserData(this);
-		init();
 	}
 
 	/**
@@ -649,17 +647,14 @@ public class User {
 	}
 
 	public synchronized void setChoiceRewards(ArrayList<String> choiceRewards) {
-		this.choiceRewards = choiceRewards;
 		data.setStringList("ChoiceRewards", choiceRewards);
 	}
 
 	public synchronized void setInputMethod(String inputMethod) {
-		this.inputMethod = inputMethod;
 		data.setString("InputMethod", inputMethod);
 	}
 
 	public synchronized void setOfflineRewards(ArrayList<String> offlineRewards) {
-		this.offlineRewards = offlineRewards;
 		data.setStringList("OfflineRewards", offlineRewards);
 	}
 
@@ -683,7 +678,6 @@ public class User {
 				timedRewards.add(str);
 			}
 		}
-		this.timedRewards = timed;
 		data.setStringList("TimedRewards", timedRewards);
 	}
 

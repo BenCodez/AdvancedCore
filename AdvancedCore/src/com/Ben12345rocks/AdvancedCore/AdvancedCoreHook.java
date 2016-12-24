@@ -19,6 +19,7 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import com.Ben12345rocks.AdvancedCore.Commands.Executor.ValueRequestInputCommand;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
+import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
@@ -327,6 +328,7 @@ public class AdvancedCoreHook {
 		loadRewards();
 		loadBackgroundTimer(15);
 		loadValueRequestInputCommands();
+		checkPluginUpdate();
 	}
 
 	/**
@@ -369,6 +371,15 @@ public class AdvancedCoreHook {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void checkPluginUpdate() {
+		String version = ServerData.getInstance().getPluginVersion(plugin);
+		if (!version.equals(plugin.getDescription().getVersion())) {
+			PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
+			Bukkit.getServer().getPluginManager().callEvent(event);
+		}
+		ServerData.getInstance().setPluginVersion(plugin);
 	}
 
 	/**
