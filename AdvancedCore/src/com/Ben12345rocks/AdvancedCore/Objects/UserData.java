@@ -20,13 +20,13 @@ public class UserData {
 		this.user = user;
 	}
 
-	public synchronized FileConfiguration getData(String uuid) {
+	public FileConfiguration getData(String uuid) {
 		File dFile = AdvancedCoreHook.getInstance().getPlayerFile(uuid);
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		return data;
 	}
 
-	public synchronized int getInt(String key) {
+	public int getInt(String key) {
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			List<Column> row = getSQLiteRow();
 			if (row != null) {
@@ -51,7 +51,7 @@ public class UserData {
 		return null;
 	}
 
-	public synchronized String getString(String key) {
+	public String getString(String key) {
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			List<Column> row = getSQLiteRow();
 			if (row != null) {
@@ -72,7 +72,7 @@ public class UserData {
 		return "";
 	}
 
-	public synchronized ArrayList<String> getStringList(String key) {
+	public ArrayList<String> getStringList(String key) {
 		String str = getString(key);
 		if (str.equals("")) {
 			return new ArrayList<String>();
@@ -81,7 +81,7 @@ public class UserData {
 		return ArrayUtils.getInstance().convert(list);
 	}
 
-	public void setData(String uuid, String path, Object value) {
+	public void setData(final String uuid, final String path, final Object value) {
 		File dFile = AdvancedCoreHook.getInstance().getPlayerFile(uuid);
 		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 		data.set(path, value);
@@ -92,7 +92,7 @@ public class UserData {
 		}
 	}
 
-	public synchronized void setInt(final String key, final int value) {
+	public void setInt(final String key, final int value) {
 
 		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
@@ -108,7 +108,7 @@ public class UserData {
 
 	}
 
-	public synchronized void setString(final String key, final String value) {
+	public void setString(final String key, final String value) {
 
 		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
@@ -124,7 +124,7 @@ public class UserData {
 
 	}
 
-	public synchronized void setStringList(final String key, final ArrayList<String> value) {
+	public void setStringList(final String key, final ArrayList<String> value) {
 
 		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
 		String str = "";
