@@ -112,21 +112,21 @@ Potions:
     # Amplifier
     Amplifier: 1
     
-# Title to send to voter
+# Title to send to player
 Title:
   Enabled: false
-  Title: '&cThanks for voting!'
-  SubTitle: '&aYou voted on a website!'
+  Title: '&cTitle!'
+  SubTitle: '&aSubTitle!'
   FadeIn: 10
   ShowTime: 50
   FadeOut: 10
   
-# Send bossbar to voter
+# Send bossbar to player
 # This requires 1.9+
 BossBar:
   Enabled: false
   # Message to send
-  Message: '&aThanks for Voting!'
+  Message: '&aBossbar'
   # Bar Colors:
   # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/boss/BarColor.html
   Color: 'BLUE'
@@ -182,7 +182,7 @@ Firework:
   
 # Send action bar
 ActionBar:
-  Message: '&cThanks for Voting!'
+  Message: '&cThis is an actionbar!'
   # Delay until action bar goes away (in ticks)
   Delay: 30
   
