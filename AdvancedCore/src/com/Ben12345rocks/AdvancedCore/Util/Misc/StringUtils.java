@@ -15,12 +15,12 @@ public class StringUtils {
 	/** The instance. */
 	static StringUtils instance = new StringUtils();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	public static StringUtils getInstance() {
 		return instance;
 	}
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	private StringUtils() {
 	}
@@ -49,6 +49,17 @@ public class StringUtils {
 	}
 
 	/**
+	 * Comp to string.
+	 *
+	 * @param comp
+	 *            the comp
+	 * @return the string
+	 */
+	public String compToString(TextComponent comp) {
+		return colorize(comp.toPlainText());
+	}
+
+	/**
 	 * Checks if is int.
 	 *
 	 * @param st
@@ -64,17 +75,6 @@ public class StringUtils {
 		} catch (NumberFormatException ex) {
 			return false;
 		}
-	}
-
-	/**
-	 * Comp to string.
-	 *
-	 * @param comp
-	 *            the comp
-	 * @return the string
-	 */
-	public String compToString(TextComponent comp) {
-		return colorize(comp.toPlainText());
 	}
 
 	/**

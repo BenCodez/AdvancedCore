@@ -2,6 +2,8 @@ package com.Ben12345rocks.AdvancedCore.UserManager;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -9,7 +11,9 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.sql.Column;
 
 /**
  * The Class UserManager.
@@ -18,9 +22,6 @@ public class UserManager {
 
 	/** The instance. */
 	static UserManager instance = new UserManager();
-
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Gets the single instance of UserManager.
@@ -31,10 +32,40 @@ public class UserManager {
 		return instance;
 	}
 
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+
+	private HashMap<String, User> users = new HashMap<String, User>();
+
 	/**
 	 * Instantiates a new user manager.
 	 */
 	public UserManager() {
+	}
+
+	public synchronized ArrayList<String> getAllUUIDs() {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
+			String[] fileNames = folder.list();
+			ArrayList<String> uuids = new ArrayList<String>();
+			if (fileNames != null) {
+				for (String playerFile : fileNames) {
+					if (!playerFile.equals("null") && !playerFile.equals("")) {
+						String uuid = playerFile.replace(".yml", "");
+						uuids.add(uuid);
+					}
+				}
+			}
+			return uuids;
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			List<Column> cols = AdvancedCoreHook.getInstance().getSQLiteUserTable().getRows();
+			ArrayList<String> uuids = new ArrayList<String>();
+			for (Column col : cols) {
+				uuids.add((String) col.getValue());
+			}
+			return uuids;
+		}
+		return new ArrayList<String>();
 	}
 
 	/**
@@ -79,21 +110,15 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public synchronized User getUser(UUID uuid) {
-		return new User(plugin.getPlugin(), uuid);
-	}
-
-	public synchronized ArrayList<String> getAllUUIDs() {
-		File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
-		String[] fileNames = folder.list();
-		ArrayList<String> uuids = new ArrayList<String>();
-		if (fileNames != null) {
-			for (String playerFile : fileNames) {
-				if (!playerFile.equals("null") && !playerFile.equals("")) {
-					String uuid = playerFile.replace(".yml", "");
-					uuids.add(uuid);
-				}
+		if (AdvancedCoreHook.getInstance().isPreloadUsers()) {
+			if (users.containsKey(uuid.toString())) {
+				return users.get(uuid.toString());
 			}
 		}
-		return uuids;
+		User user = new User(plugin.getPlugin(), uuid);
+		if (AdvancedCoreHook.getInstance().isPreloadUsers()) {
+			users.put(uuid.getUUID(), user);
+		}
+		return user;
 	}
 }

@@ -31,8 +31,6 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
  */
 public class MCStatsMetrics {
 
-	AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
-
 	/**
 	 * The Class Graph.
 	 */
@@ -66,7 +64,7 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
-		 * 
+		 *
 		 * @see java.lang.Object#equals(java.lang.Object)
 		 */
 		@Override
@@ -99,7 +97,7 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
-		 * 
+		 *
 		 * @see java.lang.Object#hashCode()
 		 */
 		@Override
@@ -146,7 +144,7 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
-		 * 
+		 *
 		 * @see java.lang.Object#equals(java.lang.Object)
 		 */
 		@Override
@@ -177,7 +175,7 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
-		 * 
+		 *
 		 * @see java.lang.Object#hashCode()
 		 */
 		@Override
@@ -240,6 +238,8 @@ public class MCStatsMetrics {
 			throws UnsupportedEncodingException {
 		buffer.append('&').append(encode(key)).append('=').append(encode(value));
 	}
+
+	AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
 
 	/** The configuration. */
 	private final YamlConfiguration configuration;

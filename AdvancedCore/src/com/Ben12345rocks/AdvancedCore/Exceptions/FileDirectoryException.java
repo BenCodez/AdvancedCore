@@ -11,11 +11,11 @@ public class FileDirectoryException extends Exception {
 		super(message);
 	}
 
-	public FileDirectoryException(Throwable cause) {
-		super(cause);
-	}
-
 	public FileDirectoryException(String message, Throwable cause) {
 		super(message, cause);
+	}
+
+	public FileDirectoryException(Throwable cause) {
+		super(cause);
 	}
 }

@@ -20,9 +20,6 @@ public class TimeChecker {
 	/** The instance. */
 	static TimeChecker instance = new TimeChecker();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	/**
 	 * Gets the single instance of TimeChecker.
 	 *
@@ -31,6 +28,9 @@ public class TimeChecker {
 	public static TimeChecker getInstance() {
 		return instance;
 	}
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/**
 	 * Instantiates a new time checker.
@@ -77,7 +77,7 @@ public class TimeChecker {
 	public boolean hasWeekChanged() {
 		int prevDate = ServerData.getInstance().getPrevWeekDay();
 		LocalDate date = LocalDate.now();
-		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear(); 
+		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear();
 		int weekNumber = date.get(woy);
 		ServerData.getInstance().setPrevWeekDay(weekNumber);
 		if (prevDate == -1) {

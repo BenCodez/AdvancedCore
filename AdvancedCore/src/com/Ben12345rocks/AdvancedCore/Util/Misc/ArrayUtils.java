@@ -20,130 +20,14 @@ public class ArrayUtils {
 	/** The instance. */
 	static ArrayUtils instance = new ArrayUtils();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	public static ArrayUtils getInstance() {
 		return instance;
 	}
 
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+
 	private ArrayUtils() {
-	}
-
-	/**
-	 * Convert.
-	 *
-	 * @param array
-	 *            the array
-	 * @return the user[]
-	 */
-	public User[] convertUsers(ArrayList<User> array) {
-		if (array == null) {
-			return null;
-		}
-		User[] list = new User[array.size()];
-		for (int i = 0; i < array.size(); i++) {
-			list[i] = array.get(i);
-		}
-		return list;
-	}
-
-	/**
-	 * Convert.
-	 *
-	 * @param set
-	 *            the set
-	 * @return the array list
-	 */
-	public ArrayList<String> convert(Set<String> set) {
-		ArrayList<String> list = new ArrayList<String>();
-		for (String st : set) {
-			list.add(st);
-		}
-		return list;
-	}
-
-	/**
-	 * Convert array.
-	 *
-	 * @param list
-	 *            the list
-	 * @return the string[]
-	 */
-	@SuppressWarnings("unused")
-	public String[] convert(ArrayList<String> list) {
-		if (list == null) {
-			return null;
-		}
-		String[] string = new String[list.size()];
-		for (int i = 0; i < list.size(); i++) {
-			string[i] = list.get(i);
-		}
-		if (string == null) {
-			return null;
-		} else {
-			return string;
-		}
-	}
-
-	/**
-	 * Convert array.
-	 *
-	 * @param list
-	 *            the list
-	 * @return the array list
-	 */
-	@SuppressWarnings("unused")
-	public ArrayList<String> convert(String[] list) {
-		if (list == null) {
-			return null;
-		}
-		ArrayList<String> newlist = new ArrayList<String>();
-		for (String element : list) {
-			newlist.add(element);
-		}
-		if (newlist == null) {
-			return null;
-		} else {
-			return newlist;
-		}
-	}
-
-	/**
-	 * Convert set.
-	 *
-	 * @param set
-	 *            the set
-	 * @return the array list
-	 */
-	public ArrayList<User> convertUsers(Set<User> set) {
-		if (set == null) {
-			return null;
-		}
-
-		ArrayList<User> list = new ArrayList<User>();
-		for (User user : set) {
-			list.add(user);
-		}
-		return list;
-	}
-
-	/**
-	 * Colorize.
-	 *
-	 * @param list
-	 *            the list
-	 * @return the string[]
-	 */
-	public String[] colorize(String[] list) {
-		if (list == null) {
-			return null;
-		}
-
-		for (int i = 0; i < list.length; i++) {
-			list[i] = StringUtils.getInstance().colorize(list[i]);
-		}
-		return list;
 	}
 
 	/**
@@ -183,6 +67,24 @@ public class ArrayUtils {
 	}
 
 	/**
+	 * Colorize.
+	 *
+	 * @param list
+	 *            the list
+	 * @return the string[]
+	 */
+	public String[] colorize(String[] list) {
+		if (list == null) {
+			return null;
+		}
+
+		for (int i = 0; i < list.length; i++) {
+			list[i] = StringUtils.getInstance().colorize(list[i]);
+		}
+		return list;
+	}
+
+	/**
 	 * Compto string.
 	 *
 	 * @param comps
@@ -195,6 +97,146 @@ public class ArrayUtils {
 			txt.add(StringUtils.getInstance().compToString(comp));
 		}
 		return txt;
+	}
+
+	/**
+	 * Sets the contains ignore case.
+	 *
+	 * @param set
+	 *            the set
+	 * @param str
+	 *            the str
+	 * @return true, if successful
+	 */
+	public boolean containsIgnoreCase(Set<String> set, String str) {
+		str = str.toLowerCase();
+		for (String text : set) {
+			text = text.toLowerCase();
+			if (text.equals(str)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Convert array.
+	 *
+	 * @param list
+	 *            the list
+	 * @return the string[]
+	 */
+	@SuppressWarnings("unused")
+	public String[] convert(ArrayList<String> list) {
+		if (list == null) {
+			return null;
+		}
+		String[] string = new String[list.size()];
+		for (int i = 0; i < list.size(); i++) {
+			string[i] = list.get(i);
+		}
+		if (string == null) {
+			return null;
+		} else {
+			return string;
+		}
+	}
+
+	/**
+	 * Convert.
+	 *
+	 * @param set
+	 *            the set
+	 * @return the array list
+	 */
+	public ArrayList<String> convert(Set<String> set) {
+		ArrayList<String> list = new ArrayList<String>();
+		for (String st : set) {
+			list.add(st);
+		}
+		return list;
+	}
+
+	/**
+	 * Convert array.
+	 *
+	 * @param list
+	 *            the list
+	 * @return the array list
+	 */
+	@SuppressWarnings("unused")
+	public ArrayList<String> convert(String[] list) {
+		if (list == null) {
+			return null;
+		}
+		ArrayList<String> newlist = new ArrayList<String>();
+		for (String element : list) {
+			newlist.add(element);
+		}
+		if (newlist == null) {
+			return null;
+		} else {
+			return newlist;
+		}
+	}
+
+	/**
+	 * Sets the to array.
+	 *
+	 * @param set
+	 *            the set
+	 * @return the string[]
+	 */
+	@SuppressWarnings("unused")
+	public String[] convertSet(Set<String> set) {
+		String[] array = new String[set.size()];
+		int i = 0;
+		for (String item : set) {
+			array[i] = item;
+			i++;
+		}
+		if (array == null) {
+			return null;
+		} else {
+			return array;
+		}
+	}
+
+	/**
+	 * Convert.
+	 *
+	 * @param array
+	 *            the array
+	 * @return the user[]
+	 */
+	public User[] convertUsers(ArrayList<User> array) {
+		if (array == null) {
+			return null;
+		}
+		User[] list = new User[array.size()];
+		for (int i = 0; i < array.size(); i++) {
+			list[i] = array.get(i);
+		}
+		return list;
+	}
+
+	/**
+	 * Convert set.
+	 *
+	 * @param set
+	 *            the set
+	 * @return the array list
+	 */
+	public ArrayList<User> convertUsers(Set<User> set) {
+		if (set == null) {
+			return null;
+		}
+
+		ArrayList<User> list = new ArrayList<User>();
+		for (User user : set) {
+			list.add(user);
+		}
+		return list;
 	}
 
 	/**
@@ -299,49 +341,7 @@ public class ArrayUtils {
 		}
 		return newList;
 	}
-	
-	/**
-	 * Sets the contains ignore case.
-	 *
-	 * @param set
-	 *            the set
-	 * @param str
-	 *            the str
-	 * @return true, if successful
-	 */
-	public boolean containsIgnoreCase(Set<String> set, String str) {
-		str = str.toLowerCase();
-		for (String text : set) {
-			text = text.toLowerCase();
-			if (text.equals(str)) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	/**
-	 * Sets the to array.
-	 *
-	 * @param set
-	 *            the set
-	 * @return the string[]
-	 */
-	@SuppressWarnings("unused")
-	public String[] convertSet(Set<String> set) {
-		String[] array = new String[set.size()];
-		int i = 0;
-		for (String item : set) {
-			array[i] = item;
-			i++;
-		}
-		if (array == null) {
-			return null;
-		} else {
-			return array;
-		}
-	}
-	
+
 	/**
 	 * Sort by values.
 	 *

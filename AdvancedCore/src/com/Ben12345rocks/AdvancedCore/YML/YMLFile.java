@@ -14,14 +14,21 @@ import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
  * The Class YMLFile.
  */
 public abstract class YMLFile {
-	
+
+	/** The data. */
+	private FileConfiguration data;
+
+	/** The d file. */
+	private File dFile;
+
 	/**
-	 * Gets the d file.
+	 * Instantiates a new YML file.
 	 *
-	 * @return the d file
+	 * @param file
+	 *            the file
 	 */
-	public File getdFile() {
-		return dFile;
+	public YMLFile(File file) {
+		dFile = file;
 	}
 
 	/**
@@ -40,22 +47,6 @@ public abstract class YMLFile {
 	}
 
 	/**
-	 * Instantiates a new YML file.
-	 *
-	 * @param file
-	 *            the file
-	 */
-	public YMLFile(File file) {
-		dFile = file;
-	}
-
-	/** The data. */
-	private FileConfiguration data;
-
-	/** The d file. */
-	private File dFile;
-
-	/**
 	 * Gets the data.
 	 *
 	 * @return the data
@@ -63,6 +54,20 @@ public abstract class YMLFile {
 	public FileConfiguration getData() {
 		return data;
 	}
+
+	/**
+	 * Gets the d file.
+	 *
+	 * @return the d file
+	 */
+	public File getdFile() {
+		return dFile;
+	}
+
+	/**
+	 * On file creation.
+	 */
+	public abstract void onFileCreation();
 
 	/**
 	 * Reload data.
@@ -81,11 +86,6 @@ public abstract class YMLFile {
 	}
 
 	/**
-	 * On file creation.
-	 */
-	public abstract void onFileCreation();
-
-	/**
 	 * Setup.
 	 */
 	public void setup() {
@@ -96,10 +96,7 @@ public abstract class YMLFile {
 				getdFile().createNewFile();
 				onFileCreation();
 			} catch (IOException e) {
-				Bukkit.getServer()
-						.getLogger()
-						.severe(ChatColor.RED + "Could not create "
-								+ getdFile().getName() + "!");
+				Bukkit.getServer().getLogger().severe(ChatColor.RED + "Could not create " + getdFile().getName() + "!");
 			}
 		}
 

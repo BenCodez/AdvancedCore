@@ -27,42 +27,6 @@ public class Report {
 	/** The instance. */
 	static Report instance = new Report();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
-	/**
-	 * Adds the to zip.
-	 *
-	 * @param file
-	 *            the file
-	 * @param zos
-	 *            the zos
-	 * @throws FileNotFoundException
-	 *             the file not found exception
-	 * @throws IOException
-	 *             Signals that an I/O exception has occurred.
-	 */
-	public void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
-
-		FileInputStream fis = new FileInputStream(file);
-
-		String zipFilePath = file.getPath();
-
-		plugin.debug("Writing '" + zipFilePath + "' to zip file");
-
-		ZipEntry zipEntry = new ZipEntry(zipFilePath);
-		zos.putNextEntry(zipEntry);
-
-		byte[] bytes = new byte[1024];
-		int length;
-		while ((length = fis.read(bytes)) >= 0) {
-			zos.write(bytes, 0, length);
-		}
-
-		zos.closeEntry();
-		fis.close();
-	}
-
 	/**
 	 * Gets the single instance of Report.
 	 *
@@ -71,6 +35,9 @@ public class Report {
 	public static Report getInstance() {
 		return instance;
 	}
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The data. */
 	FileConfiguration data;
@@ -111,6 +78,39 @@ public class Report {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Adds the to zip.
+	 *
+	 * @param file
+	 *            the file
+	 * @param zos
+	 *            the zos
+	 * @throws FileNotFoundException
+	 *             the file not found exception
+	 * @throws IOException
+	 *             Signals that an I/O exception has occurred.
+	 */
+	public void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
+
+		FileInputStream fis = new FileInputStream(file);
+
+		String zipFilePath = file.getPath();
+
+		plugin.debug("Writing '" + zipFilePath + "' to zip file");
+
+		ZipEntry zipEntry = new ZipEntry(zipFilePath);
+		zos.putNextEntry(zipEntry);
+
+		byte[] bytes = new byte[1024];
+		int length;
+		while ((length = fis.read(bytes)) >= 0) {
+			zos.write(bytes, 0, length);
+		}
+
+		zos.closeEntry();
+		fis.close();
 	}
 
 	/**

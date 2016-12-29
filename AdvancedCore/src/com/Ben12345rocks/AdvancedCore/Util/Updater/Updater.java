@@ -94,8 +94,7 @@ public class Updater {
 		}
 
 		try {
-			connection = (HttpURLConnection) new URL(HOST + QUERY)
-					.openConnection();
+			connection = (HttpURLConnection) new URL(HOST + QUERY).openConnection();
 		} catch (IOException e) {
 			result = UpdateResult.FAIL_SPIGOT;
 			return;
@@ -140,8 +139,7 @@ public class Updater {
 		}
 		String version;
 		try {
-			version = new BufferedReader(new InputStreamReader(
-					connection.getInputStream())).readLine();
+			version = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
 		} catch (Exception e) {
 			result = UpdateResult.BAD_RESOURCEID;
 			return;

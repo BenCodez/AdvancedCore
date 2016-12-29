@@ -33,574 +33,6 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
  * Check out https://bStats.org/ to learn more about bStats!
  */
 public class BStatsMetrics {
-	
-	static AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
-
-	// The version of this bStats class
-	public static final int B_STATS_VERSION = 1;
-
-	// The url to which the data is sent
-	private static final String URL = "https://bStats.org/submitData";
-
-	// Should failed requests be logged?
-	private static boolean logFailedRequests;
-
-	// The uuid of the server
-	private static String serverUUID;
-
-	// The plugin
-	private final Plugin plugin;
-
-	// A list with all custom charts
-	private final List<CustomChart> charts = new ArrayList<>();
-
-	/**
-	 * Class constructor.
-	 *
-	 * @param plugin
-	 *            The plugin which stats should be submitted.
-	 */
-	public BStatsMetrics(Plugin plugin) {
-		if (plugin == null) {
-			throw new IllegalArgumentException("Plugin cannot be null!");
-		}
-		this.plugin = plugin;
-
-		// Get the config file
-		File bStatsFolder = new File(plugin.getDataFolder().getParentFile(), "bStats");
-		File configFile = new File(bStatsFolder, "config.yml");
-		YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-
-		// Check if the config file exists
-		if (!config.isSet("serverUuid")) {
-
-			// Add default values
-			config.addDefault("enabled", true);
-			// Every server gets it's unique random id.
-			config.addDefault("serverUuid", UUID.randomUUID().toString());
-			// Should failed request be logged?
-			config.addDefault("logFailedRequests", false);
-
-			// Inform the server owners about bStats
-			config.options()
-					.header("bStats collects some data for plugin authors like how many servers are using their plugins.\n"
-							+ "To honor their work, you should not disable it.\n"
-							+ "This has nearly no effect on the server performance!\n"
-							+ "Check out https://bStats.org/ to learn more :)")
-					.copyDefaults(true);
-			try {
-				config.save(configFile);
-			} catch (IOException ignored) {
-			}
-		}
-
-		// Load the data
-		serverUUID = config.getString("serverUuid");
-		logFailedRequests = config.getBoolean("logFailedRequests", false);
-		if (config.getBoolean("enabled", true)) {
-			boolean found = false;
-			// Search for all other bStats Metrics classes to see if we are the
-			// first one
-			for (Class<?> service : Bukkit.getServicesManager().getKnownServices()) {
-				try {
-					service.getField("B_STATS_VERSION"); // Our identifier :)
-					found = true; // We aren't the first
-					break;
-				} catch (NoSuchFieldException ignored) {
-				}
-			}
-			// Register our service
-			Bukkit.getServicesManager().register(BStatsMetrics.class, this, plugin, ServicePriority.Normal);
-			if (!found) {
-				// We are the first!
-				startSubmitting();
-			}
-		}
-	}
-
-	/**
-	 * Adds a custom chart.
-	 *
-	 * @param chart
-	 *            The chart to add.
-	 */
-	public void addCustomChart(CustomChart chart) {
-		if (chart == null) {
-			throw new IllegalArgumentException("Chart cannot be null!");
-		}
-		charts.add(chart);
-	}
-
-	/**
-	 * Starts the Scheduler which submits our data every 30 minutes.
-	 */
-	private void startSubmitting() {
-		final Timer timer = new Timer(true); // We use a timer cause the Bukkit
-												// scheduler is affected by
-												// server lags
-		timer.scheduleAtFixedRate(new TimerTask() {
-			@Override
-			public void run() {
-				if (!plugin.isEnabled()) { // Plugin was disabled
-					timer.cancel();
-					return;
-				}
-				// Nevertheless we want our code to run in the Bukkit main
-				// thread, so we have to use the Bukkit scheduler
-				// Don't be afraid! The connection to the bStats server is still
-				// async, only the stats collection is sync ;)
-				Bukkit.getScheduler().runTask(plugin, new Runnable() {
-					@Override
-					public void run() {
-						submitData();
-					}
-				});
-			}
-		}, 1000 * 60 * 5, 1000 * 60 * 30);
-		// Submit the data every 30 minutes, first time after 5 minutes to give
-		// other plugins enough time to start
-		// WARNING: Changing the frequency has no effect but your plugin WILL be
-		// blocked/deleted!
-		// WARNING: Just don't do it!
-	}
-
-	/**
-	 * Gets the plugin specific data. This method is called using Reflection.
-	 *
-	 * @return The plugin specific data.
-	 */
-	@SuppressWarnings("unchecked")
-	public JSONObject getPluginData() {
-		JSONObject data = new JSONObject();
-
-		String pluginName = plugin.getDescription().getName();
-		String pluginVersion = plugin.getDescription().getVersion();
-
-		data.put("pluginName", pluginName); // Append the name of the plugin
-		data.put("pluginVersion", pluginVersion); // Append the version of the
-													// plugin
-		JSONArray customCharts = new JSONArray();
-		for (CustomChart customChart : charts) {
-			// Add the data of the custom charts
-			JSONObject chart = customChart.getRequestJsonObject();
-			if (chart == null) { // If the chart is null, we skip it
-				continue;
-			}
-			customCharts.add(chart);
-		}
-		data.put("customCharts", customCharts);
-
-		return data;
-	}
-
-	/**
-	 * Gets the server specific data.
-	 *
-	 * @return The server specific data.
-	 */
-	@SuppressWarnings("unchecked")
-	private JSONObject getServerData() {
-		// Minecraft specific data
-		int playerAmount = Bukkit.getOnlinePlayers().size();
-		int onlineMode = Bukkit.getOnlineMode() ? 1 : 0;
-		String bukkitVersion = org.bukkit.Bukkit.getVersion();
-		bukkitVersion = bukkitVersion.substring(bukkitVersion.indexOf("MC: ") + 4, bukkitVersion.length() - 1);
-
-		// OS/Java specific data
-		String javaVersion = System.getProperty("java.version");
-		String osName = System.getProperty("os.name");
-		String osArch = System.getProperty("os.arch");
-		String osVersion = System.getProperty("os.version");
-		int coreCount = Runtime.getRuntime().availableProcessors();
-
-		JSONObject data = new JSONObject();
-
-		data.put("serverUUID", serverUUID);
-
-		data.put("playerAmount", playerAmount);
-		data.put("onlineMode", onlineMode);
-		data.put("bukkitVersion", bukkitVersion);
-
-		data.put("javaVersion", javaVersion);
-		data.put("osName", osName);
-		data.put("osArch", osArch);
-		data.put("osVersion", osVersion);
-		data.put("coreCount", coreCount);
-
-		return data;
-	}
-
-	/**
-	 * Collects the data and sends it afterwards.
-	 */
-	@SuppressWarnings("unchecked")
-	private void submitData() {
-		// Create a new thread for the connection to the bStats server
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				final JSONObject data = getServerData();
-
-				JSONArray pluginData = new JSONArray();
-				// Search for all other bStats Metrics classes to get their plugin data
-				for (Class<?> service : Bukkit.getServicesManager().getKnownServices()) {
-					try {
-						service.getField("B_STATS_VERSION"); // Our identifier :)
-					} catch (NoSuchFieldException ignored) {
-						continue; // Continue "searching"
-					}
-					// Found one!
-					try {
-						pluginData.add(service.getMethod("getPluginData").invoke(Bukkit.getServicesManager().load(service)));
-					} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
-					}
-				}
-
-				data.put("plugins", pluginData);
-				try {
-					// Send the data
-					sendData(data);
-				} catch (Exception e) {
-					// Something went wrong! :(
-					if (logFailedRequests) {
-						hook.debug("Could not submit plugin stats of " + plugin.getName());
-						hook.debug(e);
-					}
-				}
-			}
-		}).start();
-
-	}
-
-	/**
-	 * Sends the data to the bStats server.
-	 *
-	 * @param data
-	 *            The data to send.
-	 * @throws Exception
-	 *             If the request failed.
-	 */
-	private static void sendData(JSONObject data) throws Exception {
-		if (data == null) {
-			throw new IllegalArgumentException("Data cannot be null!");
-		}
-		if (Bukkit.isPrimaryThread()) {
-			throw new IllegalAccessException("This method must not be called from the main thread!");
-		}
-		HttpsURLConnection connection = (HttpsURLConnection) new URL(URL).openConnection();
-
-		// Compress the data to save bandwidth
-		byte[] compressedData = compress(data.toString());
-
-		// Add headers
-		connection.setRequestMethod("POST");
-		connection.addRequestProperty("Accept", "application/json");
-		connection.addRequestProperty("Connection", "close");
-		connection.addRequestProperty("Content-Encoding", "gzip"); // We gzip
-																	// our
-																	// request
-		connection.addRequestProperty("Content-Length", String.valueOf(compressedData.length));
-		connection.setRequestProperty("Content-Type", "application/json"); // We
-																			// send
-																			// our
-																			// data
-																			// in
-																			// JSON
-																			// format
-		connection.setRequestProperty("User-Agent", "MC-Server/" + B_STATS_VERSION);
-
-		// Send data
-		connection.setDoOutput(true);
-		DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
-		outputStream.write(compressedData);
-		outputStream.flush();
-		outputStream.close();
-
-		connection.getInputStream().close(); // We don't care about the response
-												// - Just send our data :)
-	}
-
-	/**
-	 * Gzips the given String.
-	 *
-	 * @param str
-	 *            The string to gzip.
-	 * @return The gzipped String.
-	 * @throws IOException
-	 *             If the compression failed.
-	 */
-	private static byte[] compress(final String str) throws IOException {
-		if (str == null) {
-			return null;
-		}
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		GZIPOutputStream gzip = new GZIPOutputStream(outputStream);
-		gzip.write(str.getBytes("UTF-8"));
-		gzip.close();
-		return outputStream.toByteArray();
-	}
-
-	/**
-	 * Represents a custom chart.
-	 */
-	public static abstract class CustomChart {
-
-		// The id of the chart
-		protected final String chartId;
-
-		/**
-		 * Class constructor.
-		 *
-		 * @param chartId
-		 *            The id of the chart.
-		 */
-		public CustomChart(String chartId) {
-			if (chartId == null || chartId.isEmpty()) {
-				throw new IllegalArgumentException("ChartId cannot be null or empty!");
-			}
-			this.chartId = chartId;
-		}
-
-		@SuppressWarnings("unchecked")
-		protected JSONObject getRequestJsonObject() {
-			JSONObject chart = new JSONObject();
-			chart.put("chartId", chartId);
-			try {
-				JSONObject data = getChartData();
-				if (data == null) {
-					// If the data is null we don't send the chart.
-					return null;
-				}
-				chart.put("data", data);
-			} catch (Exception e) {
-				if (logFailedRequests) {
-					hook.debug("Failed to get data for custom chart with id " + chartId);
-					hook.debug(e);
-				}
-				return null;
-			}
-			return chart;
-		}
-
-		protected abstract JSONObject getChartData();
-
-	}
-
-	/**
-	 * Represents a custom simple pie.
-	 */
-	public static abstract class SimplePie extends CustomChart {
-
-		/**
-		 * Class constructor.
-		 *
-		 * @param chartId
-		 *            The id of the chart.
-		 */
-		public SimplePie(String chartId) {
-			super(chartId);
-		}
-
-		/**
-		 * Gets the value of the pie.
-		 *
-		 * @return The value of the pie.
-		 */
-		public abstract String getValue();
-
-		@SuppressWarnings("unchecked")
-		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
-			String value = getValue();
-			if (value == null || value.isEmpty()) {
-				// Null = skip the chart
-				return null;
-			}
-			data.put("value", value);
-			return data;
-		}
-	}
-
-	/**
-	 * Represents a custom advanced pie.
-	 */
-	public static abstract class AdvancedPie extends CustomChart {
-
-		/**
-		 * Class constructor.
-		 *
-		 * @param chartId
-		 *            The id of the chart.
-		 */
-		public AdvancedPie(String chartId) {
-			super(chartId);
-		}
-
-		/**
-		 * Gets the values of the pie.
-		 *
-		 * @param valueMap
-		 *            Just an empty map. The only reason it exists is to make
-		 *            your life easier. You don't have to create a map yourself!
-		 * @return The values of the pie.
-		 */
-		public abstract HashMap<String, Integer> getValues(HashMap<String, Integer> valueMap);
-
-		@SuppressWarnings("unchecked")
-		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
-			JSONObject values = new JSONObject();
-			HashMap<String, Integer> map = getValues(new HashMap<String, Integer>());
-			if (map == null || map.isEmpty()) {
-				// Null = skip the chart
-				return null;
-			}
-			boolean allSkipped = true;
-			for (Map.Entry<String, Integer> entry : map.entrySet()) {
-				if (entry.getValue() == 0) {
-					continue; // Skip this invalid
-				}
-				allSkipped = false;
-				values.put(entry.getKey(), entry.getValue());
-			}
-			if (allSkipped) {
-				// Null = skip the chart
-				return null;
-			}
-			data.put("values", values);
-			return data;
-		}
-	}
-
-	/**
-	 * Represents a custom single line chart.
-	 */
-	public static abstract class SingleLineChart extends CustomChart {
-
-		/**
-		 * Class constructor.
-		 *
-		 * @param chartId
-		 *            The id of the chart.
-		 */
-		public SingleLineChart(String chartId) {
-			super(chartId);
-		}
-
-		/**
-		 * Gets the value of the chart.
-		 *
-		 * @return The value of the chart.
-		 */
-		public abstract int getValue();
-
-		@SuppressWarnings("unchecked")
-		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
-			int value = getValue();
-			if (value == 0) {
-				// Null = skip the chart
-				return null;
-			}
-			data.put("value", value);
-			return data;
-		}
-
-	}
-
-	/**
-	 * Represents a custom multi line chart.
-	 */
-	public static abstract class MultiLineChart extends CustomChart {
-
-		/**
-		 * Class constructor.
-		 *
-		 * @param chartId
-		 *            The id of the chart.
-		 */
-		public MultiLineChart(String chartId) {
-			super(chartId);
-		}
-
-		/**
-		 * Gets the values of the chart.
-		 *
-		 * @param valueMap
-		 *            Just an empty map. The only reason it exists is to make
-		 *            your life easier. You don't have to create a map yourself!
-		 * @return The values of the chart.
-		 */
-		public abstract HashMap<String, Integer> getValues(HashMap<String, Integer> valueMap);
-
-		@SuppressWarnings("unchecked")
-		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
-			JSONObject values = new JSONObject();
-			HashMap<String, Integer> map = getValues(new HashMap<String, Integer>());
-			if (map == null || map.isEmpty()) {
-				// Null = skip the chart
-				return null;
-			}
-			boolean allSkipped = true;
-			for (Map.Entry<String, Integer> entry : map.entrySet()) {
-				if (entry.getValue() == 0) {
-					continue; // Skip this invalid
-				}
-				allSkipped = false;
-				values.put(entry.getKey(), entry.getValue());
-			}
-			if (allSkipped) {
-				// Null = skip the chart
-				return null;
-			}
-			data.put("values", values);
-			return data;
-		}
-
-	}
-
-	/**
-	 * Represents a custom simple map chart.
-	 */
-	public static abstract class SimpleMapChart extends CustomChart {
-
-		/**
-		 * Class constructor.
-		 *
-		 * @param chartId
-		 *            The id of the chart.
-		 */
-		public SimpleMapChart(String chartId) {
-			super(chartId);
-		}
-
-		/**
-		 * Gets the value of the chart.
-		 *
-		 * @return The value of the chart.
-		 */
-		public abstract Country getValue();
-
-		@SuppressWarnings("unchecked")
-		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
-			Country value = getValue();
-
-			if (value == null) {
-				// Null = skip the chart
-				return null;
-			}
-			data.put("value", value.getCountryIsoTag());
-			return data;
-		}
-
-	}
 
 	/**
 	 * Represents a custom advanced map chart.
@@ -616,16 +48,6 @@ public class BStatsMetrics {
 		public AdvancedMapChart(String chartId) {
 			super(chartId);
 		}
-
-		/**
-		 * Gets the value of the chart.
-		 *
-		 * @param valueMap
-		 *            Just an empty map. The only reason it exists is to make
-		 *            your life easier. You don't have to create a map yourself!
-		 * @return The value of the chart.
-		 */
-		public abstract HashMap<Country, Integer> getValues(HashMap<Country, Integer> valueMap);
 
 		@SuppressWarnings("unchecked")
 		@Override
@@ -653,6 +75,68 @@ public class BStatsMetrics {
 			return data;
 		}
 
+		/**
+		 * Gets the value of the chart.
+		 *
+		 * @param valueMap
+		 *            Just an empty map. The only reason it exists is to make
+		 *            your life easier. You don't have to create a map yourself!
+		 * @return The value of the chart.
+		 */
+		public abstract HashMap<Country, Integer> getValues(HashMap<Country, Integer> valueMap);
+
+	}
+
+	/**
+	 * Represents a custom advanced pie.
+	 */
+	public static abstract class AdvancedPie extends CustomChart {
+
+		/**
+		 * Class constructor.
+		 *
+		 * @param chartId
+		 *            The id of the chart.
+		 */
+		public AdvancedPie(String chartId) {
+			super(chartId);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected JSONObject getChartData() {
+			JSONObject data = new JSONObject();
+			JSONObject values = new JSONObject();
+			HashMap<String, Integer> map = getValues(new HashMap<String, Integer>());
+			if (map == null || map.isEmpty()) {
+				// Null = skip the chart
+				return null;
+			}
+			boolean allSkipped = true;
+			for (Map.Entry<String, Integer> entry : map.entrySet()) {
+				if (entry.getValue() == 0) {
+					continue; // Skip this invalid
+				}
+				allSkipped = false;
+				values.put(entry.getKey(), entry.getValue());
+			}
+			if (allSkipped) {
+				// Null = skip the chart
+				return null;
+			}
+			data.put("values", values);
+			return data;
+		}
+
+		/**
+		 * Gets the values of the pie.
+		 *
+		 * @param valueMap
+		 *            Just an empty map. The only reason it exists is to make
+		 *            your life easier. You don't have to create a map yourself!
+		 * @return The values of the pie.
+		 */
+		public abstract HashMap<String, Integer> getValues(HashMap<String, Integer> valueMap);
 	}
 
 	/**
@@ -1139,32 +623,6 @@ public class BStatsMetrics {
 																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				"ZW",
 																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				"Zimbabwe");
 
-		private String isoTag;
-		private String name;
-
-		Country(String isoTag, String name) {
-			this.isoTag = isoTag;
-			this.name = name;
-		}
-
-		/**
-		 * Gets the name of the country.
-		 *
-		 * @return The name of the country.
-		 */
-		public String getCountryName() {
-			return name;
-		}
-
-		/**
-		 * Gets the iso tag of the country.
-		 *
-		 * @return The iso tag of the country.
-		 */
-		public String getCountryIsoTag() {
-			return isoTag;
-		}
-
 		/**
 		 * Gets a country by it's iso tag.
 		 *
@@ -1193,6 +651,552 @@ public class BStatsMetrics {
 		public static Country byLocale(Locale locale) {
 			return byIsoTag(locale.getCountry());
 		}
+
+		private String isoTag;
+
+		private String name;
+
+		Country(String isoTag, String name) {
+			this.isoTag = isoTag;
+			this.name = name;
+		}
+
+		/**
+		 * Gets the iso tag of the country.
+		 *
+		 * @return The iso tag of the country.
+		 */
+		public String getCountryIsoTag() {
+			return isoTag;
+		}
+
+		/**
+		 * Gets the name of the country.
+		 *
+		 * @return The name of the country.
+		 */
+		public String getCountryName() {
+			return name;
+		}
+
+	}
+
+	/**
+	 * Represents a custom chart.
+	 */
+	public static abstract class CustomChart {
+
+		// The id of the chart
+		protected final String chartId;
+
+		/**
+		 * Class constructor.
+		 *
+		 * @param chartId
+		 *            The id of the chart.
+		 */
+		public CustomChart(String chartId) {
+			if (chartId == null || chartId.isEmpty()) {
+				throw new IllegalArgumentException("ChartId cannot be null or empty!");
+			}
+			this.chartId = chartId;
+		}
+
+		protected abstract JSONObject getChartData();
+
+		@SuppressWarnings("unchecked")
+		protected JSONObject getRequestJsonObject() {
+			JSONObject chart = new JSONObject();
+			chart.put("chartId", chartId);
+			try {
+				JSONObject data = getChartData();
+				if (data == null) {
+					// If the data is null we don't send the chart.
+					return null;
+				}
+				chart.put("data", data);
+			} catch (Exception e) {
+				if (logFailedRequests) {
+					hook.debug("Failed to get data for custom chart with id " + chartId);
+					hook.debug(e);
+				}
+				return null;
+			}
+			return chart;
+		}
+
+	}
+
+	/**
+	 * Represents a custom multi line chart.
+	 */
+	public static abstract class MultiLineChart extends CustomChart {
+
+		/**
+		 * Class constructor.
+		 *
+		 * @param chartId
+		 *            The id of the chart.
+		 */
+		public MultiLineChart(String chartId) {
+			super(chartId);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected JSONObject getChartData() {
+			JSONObject data = new JSONObject();
+			JSONObject values = new JSONObject();
+			HashMap<String, Integer> map = getValues(new HashMap<String, Integer>());
+			if (map == null || map.isEmpty()) {
+				// Null = skip the chart
+				return null;
+			}
+			boolean allSkipped = true;
+			for (Map.Entry<String, Integer> entry : map.entrySet()) {
+				if (entry.getValue() == 0) {
+					continue; // Skip this invalid
+				}
+				allSkipped = false;
+				values.put(entry.getKey(), entry.getValue());
+			}
+			if (allSkipped) {
+				// Null = skip the chart
+				return null;
+			}
+			data.put("values", values);
+			return data;
+		}
+
+		/**
+		 * Gets the values of the chart.
+		 *
+		 * @param valueMap
+		 *            Just an empty map. The only reason it exists is to make
+		 *            your life easier. You don't have to create a map yourself!
+		 * @return The values of the chart.
+		 */
+		public abstract HashMap<String, Integer> getValues(HashMap<String, Integer> valueMap);
+
+	}
+
+	/**
+	 * Represents a custom simple map chart.
+	 */
+	public static abstract class SimpleMapChart extends CustomChart {
+
+		/**
+		 * Class constructor.
+		 *
+		 * @param chartId
+		 *            The id of the chart.
+		 */
+		public SimpleMapChart(String chartId) {
+			super(chartId);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected JSONObject getChartData() {
+			JSONObject data = new JSONObject();
+			Country value = getValue();
+
+			if (value == null) {
+				// Null = skip the chart
+				return null;
+			}
+			data.put("value", value.getCountryIsoTag());
+			return data;
+		}
+
+		/**
+		 * Gets the value of the chart.
+		 *
+		 * @return The value of the chart.
+		 */
+		public abstract Country getValue();
+
+	}
+
+	/**
+	 * Represents a custom simple pie.
+	 */
+	public static abstract class SimplePie extends CustomChart {
+
+		/**
+		 * Class constructor.
+		 *
+		 * @param chartId
+		 *            The id of the chart.
+		 */
+		public SimplePie(String chartId) {
+			super(chartId);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected JSONObject getChartData() {
+			JSONObject data = new JSONObject();
+			String value = getValue();
+			if (value == null || value.isEmpty()) {
+				// Null = skip the chart
+				return null;
+			}
+			data.put("value", value);
+			return data;
+		}
+
+		/**
+		 * Gets the value of the pie.
+		 *
+		 * @return The value of the pie.
+		 */
+		public abstract String getValue();
+	}
+
+	/**
+	 * Represents a custom single line chart.
+	 */
+	public static abstract class SingleLineChart extends CustomChart {
+
+		/**
+		 * Class constructor.
+		 *
+		 * @param chartId
+		 *            The id of the chart.
+		 */
+		public SingleLineChart(String chartId) {
+			super(chartId);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected JSONObject getChartData() {
+			JSONObject data = new JSONObject();
+			int value = getValue();
+			if (value == 0) {
+				// Null = skip the chart
+				return null;
+			}
+			data.put("value", value);
+			return data;
+		}
+
+		/**
+		 * Gets the value of the chart.
+		 *
+		 * @return The value of the chart.
+		 */
+		public abstract int getValue();
+
+	}
+
+	static AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
+
+	// The version of this bStats class
+	public static final int B_STATS_VERSION = 1;
+
+	// The url to which the data is sent
+	private static final String URL = "https://bStats.org/submitData";
+
+	// Should failed requests be logged?
+	private static boolean logFailedRequests;
+
+	// The uuid of the server
+	private static String serverUUID;
+
+	/**
+	 * Gzips the given String.
+	 *
+	 * @param str
+	 *            The string to gzip.
+	 * @return The gzipped String.
+	 * @throws IOException
+	 *             If the compression failed.
+	 */
+	private static byte[] compress(final String str) throws IOException {
+		if (str == null) {
+			return null;
+		}
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		GZIPOutputStream gzip = new GZIPOutputStream(outputStream);
+		gzip.write(str.getBytes("UTF-8"));
+		gzip.close();
+		return outputStream.toByteArray();
+	}
+
+	/**
+	 * Sends the data to the bStats server.
+	 *
+	 * @param data
+	 *            The data to send.
+	 * @throws Exception
+	 *             If the request failed.
+	 */
+	private static void sendData(JSONObject data) throws Exception {
+		if (data == null) {
+			throw new IllegalArgumentException("Data cannot be null!");
+		}
+		if (Bukkit.isPrimaryThread()) {
+			throw new IllegalAccessException("This method must not be called from the main thread!");
+		}
+		HttpsURLConnection connection = (HttpsURLConnection) new URL(URL).openConnection();
+
+		// Compress the data to save bandwidth
+		byte[] compressedData = compress(data.toString());
+
+		// Add headers
+		connection.setRequestMethod("POST");
+		connection.addRequestProperty("Accept", "application/json");
+		connection.addRequestProperty("Connection", "close");
+		connection.addRequestProperty("Content-Encoding", "gzip"); // We gzip
+																	// our
+																	// request
+		connection.addRequestProperty("Content-Length", String.valueOf(compressedData.length));
+		connection.setRequestProperty("Content-Type", "application/json"); // We
+																			// send
+																			// our
+																			// data
+																			// in
+																			// JSON
+																			// format
+		connection.setRequestProperty("User-Agent", "MC-Server/" + B_STATS_VERSION);
+
+		// Send data
+		connection.setDoOutput(true);
+		DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+		outputStream.write(compressedData);
+		outputStream.flush();
+		outputStream.close();
+
+		connection.getInputStream().close(); // We don't care about the response
+												// - Just send our data :)
+	}
+
+	// The plugin
+	private final Plugin plugin;
+
+	// A list with all custom charts
+	private final List<CustomChart> charts = new ArrayList<>();
+
+	/**
+	 * Class constructor.
+	 *
+	 * @param plugin
+	 *            The plugin which stats should be submitted.
+	 */
+	public BStatsMetrics(Plugin plugin) {
+		if (plugin == null) {
+			throw new IllegalArgumentException("Plugin cannot be null!");
+		}
+		this.plugin = plugin;
+
+		// Get the config file
+		File bStatsFolder = new File(plugin.getDataFolder().getParentFile(), "bStats");
+		File configFile = new File(bStatsFolder, "config.yml");
+		YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+
+		// Check if the config file exists
+		if (!config.isSet("serverUuid")) {
+
+			// Add default values
+			config.addDefault("enabled", true);
+			// Every server gets it's unique random id.
+			config.addDefault("serverUuid", UUID.randomUUID().toString());
+			// Should failed request be logged?
+			config.addDefault("logFailedRequests", false);
+
+			// Inform the server owners about bStats
+			config.options()
+					.header("bStats collects some data for plugin authors like how many servers are using their plugins.\n"
+							+ "To honor their work, you should not disable it.\n"
+							+ "This has nearly no effect on the server performance!\n"
+							+ "Check out https://bStats.org/ to learn more :)")
+					.copyDefaults(true);
+			try {
+				config.save(configFile);
+			} catch (IOException ignored) {
+			}
+		}
+
+		// Load the data
+		serverUUID = config.getString("serverUuid");
+		logFailedRequests = config.getBoolean("logFailedRequests", false);
+		if (config.getBoolean("enabled", true)) {
+			boolean found = false;
+			// Search for all other bStats Metrics classes to see if we are the
+			// first one
+			for (Class<?> service : Bukkit.getServicesManager().getKnownServices()) {
+				try {
+					service.getField("B_STATS_VERSION"); // Our identifier :)
+					found = true; // We aren't the first
+					break;
+				} catch (NoSuchFieldException ignored) {
+				}
+			}
+			// Register our service
+			Bukkit.getServicesManager().register(BStatsMetrics.class, this, plugin, ServicePriority.Normal);
+			if (!found) {
+				// We are the first!
+				startSubmitting();
+			}
+		}
+	}
+
+	/**
+	 * Adds a custom chart.
+	 *
+	 * @param chart
+	 *            The chart to add.
+	 */
+	public void addCustomChart(CustomChart chart) {
+		if (chart == null) {
+			throw new IllegalArgumentException("Chart cannot be null!");
+		}
+		charts.add(chart);
+	}
+
+	/**
+	 * Gets the plugin specific data. This method is called using Reflection.
+	 *
+	 * @return The plugin specific data.
+	 */
+	@SuppressWarnings("unchecked")
+	public JSONObject getPluginData() {
+		JSONObject data = new JSONObject();
+
+		String pluginName = plugin.getDescription().getName();
+		String pluginVersion = plugin.getDescription().getVersion();
+
+		data.put("pluginName", pluginName); // Append the name of the plugin
+		data.put("pluginVersion", pluginVersion); // Append the version of the
+													// plugin
+		JSONArray customCharts = new JSONArray();
+		for (CustomChart customChart : charts) {
+			// Add the data of the custom charts
+			JSONObject chart = customChart.getRequestJsonObject();
+			if (chart == null) { // If the chart is null, we skip it
+				continue;
+			}
+			customCharts.add(chart);
+		}
+		data.put("customCharts", customCharts);
+
+		return data;
+	}
+
+	/**
+	 * Gets the server specific data.
+	 *
+	 * @return The server specific data.
+	 */
+	@SuppressWarnings("unchecked")
+	private JSONObject getServerData() {
+		// Minecraft specific data
+		int playerAmount = Bukkit.getOnlinePlayers().size();
+		int onlineMode = Bukkit.getOnlineMode() ? 1 : 0;
+		String bukkitVersion = org.bukkit.Bukkit.getVersion();
+		bukkitVersion = bukkitVersion.substring(bukkitVersion.indexOf("MC: ") + 4, bukkitVersion.length() - 1);
+
+		// OS/Java specific data
+		String javaVersion = System.getProperty("java.version");
+		String osName = System.getProperty("os.name");
+		String osArch = System.getProperty("os.arch");
+		String osVersion = System.getProperty("os.version");
+		int coreCount = Runtime.getRuntime().availableProcessors();
+
+		JSONObject data = new JSONObject();
+
+		data.put("serverUUID", serverUUID);
+
+		data.put("playerAmount", playerAmount);
+		data.put("onlineMode", onlineMode);
+		data.put("bukkitVersion", bukkitVersion);
+
+		data.put("javaVersion", javaVersion);
+		data.put("osName", osName);
+		data.put("osArch", osArch);
+		data.put("osVersion", osVersion);
+		data.put("coreCount", coreCount);
+
+		return data;
+	}
+
+	/**
+	 * Starts the Scheduler which submits our data every 30 minutes.
+	 */
+	private void startSubmitting() {
+		final Timer timer = new Timer(true); // We use a timer cause the Bukkit
+												// scheduler is affected by
+												// server lags
+		timer.scheduleAtFixedRate(new TimerTask() {
+			@Override
+			public void run() {
+				if (!plugin.isEnabled()) { // Plugin was disabled
+					timer.cancel();
+					return;
+				}
+				// Nevertheless we want our code to run in the Bukkit main
+				// thread, so we have to use the Bukkit scheduler
+				// Don't be afraid! The connection to the bStats server is still
+				// async, only the stats collection is sync ;)
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
+					@Override
+					public void run() {
+						submitData();
+					}
+				});
+			}
+		}, 1000 * 60 * 5, 1000 * 60 * 30);
+		// Submit the data every 30 minutes, first time after 5 minutes to give
+		// other plugins enough time to start
+		// WARNING: Changing the frequency has no effect but your plugin WILL be
+		// blocked/deleted!
+		// WARNING: Just don't do it!
+	}
+
+	/**
+	 * Collects the data and sends it afterwards.
+	 */
+	@SuppressWarnings("unchecked")
+	private void submitData() {
+		// Create a new thread for the connection to the bStats server
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				final JSONObject data = getServerData();
+
+				JSONArray pluginData = new JSONArray();
+				// Search for all other bStats Metrics classes to get their
+				// plugin data
+				for (Class<?> service : Bukkit.getServicesManager().getKnownServices()) {
+					try {
+						service.getField("B_STATS_VERSION"); // Our identifier
+																// :)
+					} catch (NoSuchFieldException ignored) {
+						continue; // Continue "searching"
+					}
+					// Found one!
+					try {
+						pluginData.add(
+								service.getMethod("getPluginData").invoke(Bukkit.getServicesManager().load(service)));
+					} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+					}
+				}
+
+				data.put("plugins", pluginData);
+				try {
+					// Send the data
+					sendData(data);
+				} catch (Exception e) {
+					// Something went wrong! :(
+					if (logFailedRequests) {
+						hook.debug("Could not submit plugin stats of " + plugin.getName());
+						hook.debug(e);
+					}
+				}
+			}
+		}).start();
 
 	}
 

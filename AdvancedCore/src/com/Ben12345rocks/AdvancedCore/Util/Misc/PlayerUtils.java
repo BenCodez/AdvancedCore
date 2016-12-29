@@ -12,12 +12,12 @@ public class PlayerUtils {
 	/** The instance. */
 	static PlayerUtils instance = new PlayerUtils();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	public static PlayerUtils getInstance() {
 		return instance;
 	}
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	private PlayerUtils() {
 	}

@@ -36,9 +36,6 @@ public class Thread {
 	/** The instance. */
 	static Thread instance = new Thread();
 
-	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
 	/**
 	 * Gets the single instance of Thread.
 	 *
@@ -47,6 +44,9 @@ public class Thread {
 	public static Thread getInstance() {
 		return instance;
 	}
+
+	/** The plugin. */
+	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The thread. */
 	public ReadThread thread;

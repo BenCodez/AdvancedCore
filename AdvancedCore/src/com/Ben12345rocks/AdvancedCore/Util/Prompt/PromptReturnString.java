@@ -15,7 +15,7 @@ public abstract class PromptReturnString extends StringPrompt {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.bukkit.conversations.Prompt#acceptInput(org.bukkit.conversations.
 	 * ConversationContext, java.lang.String)
@@ -30,7 +30,7 @@ public abstract class PromptReturnString extends StringPrompt {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.bukkit.conversations.Prompt#getPromptText(org.bukkit.conversations
 	 * .ConversationContext)
@@ -50,7 +50,6 @@ public abstract class PromptReturnString extends StringPrompt {
 	 * @param input
 	 *            the input
 	 */
-	public abstract void onInput(ConversationContext context,
-			Conversable conversable, String input);
+	public abstract void onInput(ConversationContext context, Conversable conversable, String input);
 
 }

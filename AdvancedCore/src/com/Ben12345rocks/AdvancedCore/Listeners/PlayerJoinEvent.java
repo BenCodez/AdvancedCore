@@ -45,19 +45,10 @@ public class PlayerJoinEvent implements Listener {
 
 				Player player = event.getPlayer();
 
-				if (!plugin.getDataFolder().exists()) {
-					plugin.getDataFolder().mkdir();
+				if (player != null) {
+					User user = UserManager.getInstance().getUser(player);
+					user.checkOfflineRewards();
 				}
-
-				if (player == null) {
-					return;
-				}
-
-				User user = UserManager.getInstance().getUser(player);
-
-				user.checkOfflineRewards();
-				user.offVoteWorld(player.getWorld().getName());
-
 			}
 		}, 20L);
 

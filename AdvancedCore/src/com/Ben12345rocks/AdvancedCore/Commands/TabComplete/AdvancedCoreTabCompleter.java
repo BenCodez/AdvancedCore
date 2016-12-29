@@ -33,13 +33,13 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 		ArrayList<String> cmds = new ArrayList<String>();
 		/*
 		 * for (CommandHandler commandHandler : plugin.advancedCoreCommands) {
-		 * 
+		 *
 		 * if (sender.hasPermission(commandHandler.getPerm())) { String[]
 		 * cmdArgs = commandHandler.getArgs(); if (cmdArgs.length > argNum) {
 		 * boolean argsMatch = true; for (int i = 0; i < argNum; i++) { if
 		 * (args.length >= i) { if (!commandHandler.argsMatch(args[i], i)) {
 		 * argsMatch = false; } } }
-		 * 
+		 *
 		 * if (argsMatch) { String[] cmdArgsList = cmdArgs[argNum].split("&");
 		 * for (String arg : cmdArgsList) { if
 		 * (arg.equalsIgnoreCase("(player)")) { for (Object playerOb :
@@ -52,9 +52,9 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 		 * (InputMethod method : InputMethod.values()) { if
 		 * (!cmds.contains(method.toString())) { cmds.add(method.toString()); }
 		 * } } else if (arg.equalsIgnoreCase("(number)")) {
-		 * 
+		 *
 		 * } else if (!cmds.contains(arg)) { cmds.add(arg); } }
-		 * 
+		 *
 		 * } } } }
 		 */
 

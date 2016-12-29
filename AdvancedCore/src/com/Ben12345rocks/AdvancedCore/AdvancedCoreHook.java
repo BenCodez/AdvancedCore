@@ -10,6 +10,8 @@ import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -17,16 +19,24 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import com.Ben12345rocks.AdvancedCore.Commands.Executor.ValueRequestInputCommand;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
+import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
+import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.sql.Column;
+import com.Ben12345rocks.AdvancedCore.sql.DataType;
+import com.Ben12345rocks.AdvancedCore.sql.Database;
+import com.Ben12345rocks.AdvancedCore.sql.Table;
 
 import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.permission.Permission;
 
 public class AdvancedCoreHook {
 	private static AdvancedCoreHook instance = new AdvancedCoreHook();
@@ -46,15 +56,27 @@ public class AdvancedCoreHook {
 	private String formatNoPerms = "&cYou do not have enough permission!";
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
-
+	private Database database;
+	private UserStorage storageType = UserStorage.SQLITE;
 	private String permPrefix;
-
 	private IServerHandle serverHandle;
-
 	private Logger logger;
+	private boolean preloadUsers = false;
+
+	public boolean isPreloadUsers() {
+		return preloadUsers;
+	}
+
+	public void setPreloadUsers(boolean preloadUsers) {
+		this.preloadUsers = preloadUsers;
+	}
+
+	private boolean checkOnWorldChange = false;
 
 	/** The econ. */
-	public Economy econ = null;
+	private Economy econ = null;
+
+	private Permission perms;
 
 	private AdvancedCoreHook() {
 
@@ -113,20 +135,6 @@ public class AdvancedCoreHook {
 		}
 	}
 
-	public void loadValueRequestInputCommands() {
-		try {
-			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
-
-			bukkitCommandMap.setAccessible(true);
-			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
-
-			commandMap.register(plugin.getName() + "valuerequestinput",
-					new ValueRequestInputCommand(plugin.getName() + "valuerequestinput"));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 	/**
 	 * Show debug in console, file, and/or ingame
 	 *
@@ -169,12 +177,34 @@ public class AdvancedCoreHook {
 		return permPrefix;
 	}
 
+	public File getPlayerFile(String uuid) {
+		File dFile = new File(getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		if (!dFile.exists()) {
+			FilesManager.getInstance().editFile(dFile, data);
+		}
+		return dFile;
+	}
+
 	public Plugin getPlugin() {
 		return plugin;
 	}
 
 	public IServerHandle getServerHandle() {
 		return serverHandle;
+	}
+
+	public Table getSQLiteUserTable() {
+		for (Table table : database.getTables()) {
+			if (table.getName().equalsIgnoreCase("Users")) {
+				return table;
+			}
+		}
+		return null;
+	}
+
+	public UserStorage getStorageType() {
+		return storageType;
 	}
 
 	public boolean isDebug() {
@@ -225,7 +255,7 @@ public class AdvancedCoreHook {
 	}
 
 	/**
-	 * Load AdvancedCore hook without background task started
+	 * Load AdvancedCore hook without most things loaded
 	 *
 	 * @param plugin
 	 *            Plugin that is hooking in
@@ -235,16 +265,38 @@ public class AdvancedCoreHook {
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
 		loadHandle();
+		loadEconomy();
+		ServerData.getInstance().setup();
+		loadRewards();
+	}
+
+	public void loadEconomy() {
 		if (setupEconomy()) {
 			plugin.getLogger().info("Successfully hooked into Vault!");
 		} else {
 			plugin.getLogger().warning("Failed to hook into Vault");
 		}
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
-		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
-		ServerData.getInstance().setup();
-		loadRewards();
+	}
 
+	public void loadPermissions() {
+		if (setupPermissions()) {
+			plugin.getLogger().info("Hooked into Vault permissions");
+		}
+	}
+
+	public Permission getPerms() {
+		return perms;
+	}
+
+	public void setPlugin(Plugin plugin) {
+		this.plugin = plugin;
+	}
+
+	public void loadEvents() {
+		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
+		if (checkOnWorldChange) {
+			Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
+		}
 	}
 
 	private void loadHandle() {
@@ -267,20 +319,16 @@ public class AdvancedCoreHook {
 	public void loadHook(Plugin plugin) {
 		this.plugin = plugin;
 		permPrefix = plugin.getName();
+		loadUserAPI(UserStorage.SQLITE);
 		checkPlaceHolderAPI();
 		loadHandle();
-		if (setupEconomy()) {
-			plugin.getLogger().info("Successfully hooked into Vault!");
-		} else {
-			plugin.getLogger().warning("Failed to hook into Vault");
-		}
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
-		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
+		loadEconomy();
+		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
 		loadBackgroundTimer(15);
 		loadValueRequestInputCommands();
-
+		checkPluginUpdate();
 	}
 
 	/**
@@ -297,6 +345,41 @@ public class AdvancedCoreHook {
 	 */
 	public void loadRewards() {
 		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
+	}
+
+	public void loadUserAPI(UserStorage storageType) {
+		if (storageType.equals(UserStorage.SQLITE)) {
+			ArrayList<Column> columns = new ArrayList<Column>();
+			Column key = new Column("uuid", DataType.STRING);
+			columns.add(key);
+			Table table = new Table("Users", columns, key);
+			database = new Database(plugin, "Users", table);
+		} else if (storageType.equals(UserStorage.MYSQL)) {
+			// load mysql
+		}
+	}
+
+	public void loadValueRequestInputCommands() {
+		try {
+			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+
+			bukkitCommandMap.setAccessible(true);
+			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
+
+			commandMap.register(plugin.getName() + "valuerequestinput",
+					new ValueRequestInputCommand(plugin.getName() + "valuerequestinput"));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void checkPluginUpdate() {
+		String version = ServerData.getInstance().getPluginVersion(plugin);
+		if (!version.equals(plugin.getDescription().getVersion())) {
+			PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
+			Bukkit.getServer().getPluginManager().callEvent(event);
+		}
+		ServerData.getInstance().setPluginVersion(plugin);
 	}
 
 	/**
@@ -316,6 +399,14 @@ public class AdvancedCoreHook {
 	 */
 	public void run(Runnable run) {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
+	}
+
+	public synchronized boolean isCheckOnWorldChange() {
+		return checkOnWorldChange;
+	}
+
+	public synchronized void setCheckOnWorldChange(boolean checkOnWorldChange) {
+		this.checkOnWorldChange = checkOnWorldChange;
 	}
 
 	public void setDebug(boolean debug) {
@@ -354,6 +445,10 @@ public class AdvancedCoreHook {
 		this.permPrefix = permPrefix;
 	}
 
+	public void setStorageType(UserStorage storageType) {
+		this.storageType = storageType;
+	}
+
 	/**
 	 * Setup economy.
 	 *
@@ -369,6 +464,13 @@ public class AdvancedCoreHook {
 		}
 		econ = rsp.getProvider();
 		return econ != null;
+	}
+
+	private boolean setupPermissions() {
+		RegisteredServiceProvider<Permission> rsp = Bukkit.getServer().getServicesManager()
+				.getRegistration(Permission.class);
+		perms = rsp.getProvider();
+		return perms != null;
 	}
 
 	/**

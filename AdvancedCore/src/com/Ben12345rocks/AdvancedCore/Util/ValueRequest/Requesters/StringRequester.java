@@ -44,17 +44,6 @@ public class StringRequester {
 
 	}
 
-	public void request(Player player, InputMethod method, String currentValue, String promptText, String[] options,
-			boolean allowCustomOption, StringListener listener) {
-		HashMap<String, ItemStack> items = new HashMap<String, ItemStack>();
-		if (options != null) {
-			for (String option : options) {
-				items.put(option, new ItemStack(Material.STONE, 1));
-			}
-		}
-		request(player, method, currentValue, items, promptText, allowCustomOption, listener);
-	}
-
 	/**
 	 * Request.
 	 *
@@ -197,5 +186,16 @@ public class StringRequester {
 			player.sendMessage(
 					"Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
 		}
+	}
+
+	public void request(Player player, InputMethod method, String currentValue, String promptText, String[] options,
+			boolean allowCustomOption, StringListener listener) {
+		HashMap<String, ItemStack> items = new HashMap<String, ItemStack>();
+		if (options != null) {
+			for (String option : options) {
+				items.put(option, new ItemStack(Material.STONE, 1));
+			}
+		}
+		request(player, method, currentValue, items, promptText, allowCustomOption, listener);
 	}
 }

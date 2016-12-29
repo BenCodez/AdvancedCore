@@ -28,6 +28,14 @@ public abstract class BInventoryButton {
 	/** The slot. */
 	private int slot;
 
+	public BInventoryButton(ItemBuilder item) {
+		setItem(item);
+	}
+
+	public BInventoryButton(ItemStack item) {
+		setItem(item);
+	}
+
 	/**
 	 * Instantiates a new b inventory button.
 	 *
@@ -41,14 +49,6 @@ public abstract class BInventoryButton {
 	public BInventoryButton(String name, String[] lore, ItemStack item) {
 		setName(name);
 		setLore(lore);
-		setItem(item);
-	}
-
-	public BInventoryButton(ItemStack item) {
-		setItem(item);
-	}
-
-	public BInventoryButton(ItemBuilder item) {
 		setItem(item);
 	}
 
@@ -96,6 +96,10 @@ public abstract class BInventoryButton {
 	 */
 	public abstract void onClick(ClickEvent clickEvent);
 
+	public void setItem(ItemBuilder builder) {
+		item = builder.toItemStack();
+	}
+
 	/**
 	 * Sets the item.
 	 *
@@ -104,10 +108,6 @@ public abstract class BInventoryButton {
 	 */
 	public void setItem(ItemStack item) {
 		this.item = item;
-	}
-
-	public void setItem(ItemBuilder builder) {
-		this.item = builder.toItemStack();
 	}
 
 	/**
