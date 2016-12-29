@@ -12,6 +12,7 @@ import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
@@ -83,7 +84,23 @@ public class ItemBuilder {
 				addEnchantments(enchants);
 			}
 
+			@SuppressWarnings("unchecked")
+			ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags", new ArrayList<String>());
+			for (String flag : itemFlags) {
+				addItemFlag(flag);
+			}
 		}
+	}
+
+	public ItemBuilder addItemFlag(String flag) {
+		try {
+			ItemMeta meta = is.getItemMeta();
+			meta.addItemFlags(ItemFlag.valueOf(flag));
+			is.setItemMeta(meta);
+		} catch (Exception ex) {
+			AdvancedCoreHook.getInstance().debug("Invalid flag: " + flag);
+		}
+		return this;
 	}
 
 	/**
