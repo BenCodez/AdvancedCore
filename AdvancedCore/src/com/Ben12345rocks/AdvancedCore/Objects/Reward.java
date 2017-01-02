@@ -276,7 +276,7 @@ public class Reward {
 			return true;
 		}
 
-		double randomNum = ThreadLocalRandom.current().nextDouble(chance+1);
+		double randomNum = ThreadLocalRandom.current().nextDouble(chance + 1);
 
 		plugin.debug("Random: " + randomNum + ", Chance: " + chance);
 
@@ -337,7 +337,7 @@ public class Reward {
 			return true;
 		}
 
-		double randomNum = ThreadLocalRandom.current().nextDouble(chance+1);
+		double randomNum = ThreadLocalRandom.current().nextDouble(chance + 1);
 
 		plugin.debug("Random: Random: " + randomNum + ", Chance: " + chance);
 
@@ -1007,7 +1007,7 @@ public class Reward {
 			ArrayList<String> rewards = getRandomRewards();
 			if (rewards != null) {
 				if (rewards.size() > 0) {
-					String reward = rewards.get((int) Math.random() * rewards.size());
+					String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
 					if (!reward.equals("")) {
 						RewardHandler.getInstance().giveReward(user, reward, online);
 					}
