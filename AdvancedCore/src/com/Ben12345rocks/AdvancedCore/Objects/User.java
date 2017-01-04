@@ -203,7 +203,11 @@ public class User {
 		if ((playerName == null || playerName.equalsIgnoreCase("null")) && loadName) {
 			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
 		}
+		if (playerName == null) {
+			return "";
+		} else {
 		return playerName;
+		}
 	}
 
 	public boolean hasPermission(String perm) {

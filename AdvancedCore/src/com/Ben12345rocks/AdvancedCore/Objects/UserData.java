@@ -31,8 +31,16 @@ public class UserData {
 			List<Column> row = getSQLiteRow();
 			if (row != null) {
 				for (int i = 0; i < row.size(); i++) {
-					if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.INTEGER)) {
-						return (int) row.get(i).getValue();
+					if (row.get(i).getName().equals(key)) {
+						try {
+							return (int) row.get(i).getValue();
+						} catch (ClassCastException ex) {
+							try {
+								return Integer.parseInt((String) row.get(i).getValue());
+							} catch (Exception e) {
+								AdvancedCoreHook.getInstance().debug(e);
+							}
+						}
 					}
 				}
 			}
@@ -40,6 +48,7 @@ public class UserData {
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			return getData(user.getUUID()).getInt(key, 0);
 		}
+		AdvancedCoreHook.getInstance().debug("Failed to get value: " + key);
 		return 0;
 	}
 
@@ -69,6 +78,7 @@ public class UserData {
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			return getData(user.getUUID()).getString(key, "");
 		}
+		AdvancedCoreHook.getInstance().debug("Failed to get value: " + key);
 		return "";
 	}
 
