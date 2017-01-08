@@ -59,22 +59,6 @@ public class AdvancedCoreHook {
 	private IServerHandle serverHandle;
 	private Logger logger;
 	private boolean preloadUsers = false;
-	private boolean resetCorruptFile = false;
-
-	/**
-	 * @return the resetCorruptFile
-	 */
-	public boolean isResetCorruptFile() {
-		return resetCorruptFile;
-	}
-
-	/**
-	 * @param resetCorruptFile
-	 *            the resetCorruptFile to set
-	 */
-	public void setResetCorruptFile(boolean resetCorruptFile) {
-		this.resetCorruptFile = resetCorruptFile;
-	}
 
 	public boolean isPreloadUsers() {
 		return preloadUsers;

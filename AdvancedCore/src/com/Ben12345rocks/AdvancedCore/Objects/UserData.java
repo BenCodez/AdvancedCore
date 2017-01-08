@@ -1,13 +1,11 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.yaml.snakeyaml.scanner.ScannerException;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
@@ -25,25 +23,10 @@ public class UserData {
 	public File getPlayerFile(String uuid) {
 		File dFile = new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
 				uuid + ".yml");
-		try {
-			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-			if (!dFile.exists()) {
-				FilesManager.getInstance().editFile(dFile, data);
-			}
-		} catch (ScannerException ex) {
-			if (dFile.exists() && AdvancedCoreHook.getInstance().isResetCorruptFile()) {
-				AdvancedCoreHook.getInstance().debug("Resetting corrupt file: " + uuid + ".yml");
-				dFile.delete();
-				try {
-					dFile.createNewFile();
-					FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-					if (!dFile.exists()) {
-						FilesManager.getInstance().editFile(dFile, data);
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
+
+		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+		if (!dFile.exists()) {
+			FilesManager.getInstance().editFile(dFile, data);
 		}
 		return dFile;
 	}
