@@ -10,8 +10,6 @@ import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -27,7 +25,6 @@ import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
-import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
@@ -62,6 +59,22 @@ public class AdvancedCoreHook {
 	private IServerHandle serverHandle;
 	private Logger logger;
 	private boolean preloadUsers = false;
+	private boolean resetCorruptFile = false;
+
+	/**
+	 * @return the resetCorruptFile
+	 */
+	public boolean isResetCorruptFile() {
+		return resetCorruptFile;
+	}
+
+	/**
+	 * @param resetCorruptFile
+	 *            the resetCorruptFile to set
+	 */
+	public void setResetCorruptFile(boolean resetCorruptFile) {
+		this.resetCorruptFile = resetCorruptFile;
+	}
 
 	public boolean isPreloadUsers() {
 		return preloadUsers;
@@ -175,15 +188,6 @@ public class AdvancedCoreHook {
 
 	public String getPermPrefix() {
 		return permPrefix;
-	}
-
-	public File getPlayerFile(String uuid) {
-		File dFile = new File(getPlugin().getDataFolder() + File.separator + "Data", uuid + ".yml");
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		if (!dFile.exists()) {
-			FilesManager.getInstance().editFile(dFile, data);
-		}
-		return dFile;
 	}
 
 	public Plugin getPlugin() {
