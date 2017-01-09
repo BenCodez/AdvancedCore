@@ -120,7 +120,7 @@ public class UserData {
 
 	public void setInt(final String key, final int value) {
 		if (key.equals("")) {
-			AdvancedCoreHook.getInstance().debug("No value/key: " + key + " to " + value);
+			AdvancedCoreHook.getInstance().debug("No key: " + key + " to " + value);
 			return;
 		}
 		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
@@ -138,8 +138,8 @@ public class UserData {
 	}
 
 	public void setString(final String key, final String value) {
-		if (key.equals("") || value.equals("")) {
-			AdvancedCoreHook.getInstance().debug("No value/key: " + key + " to " + value);
+		if (key.equals("")) {
+			AdvancedCoreHook.getInstance().debug("No key: " + key + " to " + value);
 			return;
 		}
 		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
