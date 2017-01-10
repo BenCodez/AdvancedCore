@@ -8,6 +8,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
@@ -32,9 +33,7 @@ public class UserData {
 	}
 
 	public FileConfiguration getData(String uuid) {
-		File dFile = getPlayerFile(uuid);
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		return data;
+		return Thread.getInstance().thread.getData(this, uuid);
 	}
 
 	public int getInt(String key) {
@@ -58,7 +57,9 @@ public class UserData {
 				}
 
 			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+
 				return getData(user.getUUID()).getInt(key, 0);
+
 			}
 		}
 		AdvancedCoreHook.getInstance().debug("Failed to get int from: " + key);
@@ -90,7 +91,9 @@ public class UserData {
 				}
 
 			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+
 				return getData(user.getUUID()).getString(key, "");
+
 			}
 		}
 		AdvancedCoreHook.getInstance().debug("Failed to get string from: " + key);
@@ -107,15 +110,7 @@ public class UserData {
 	}
 
 	public void setData(final String uuid, final String path, final Object value) {
-		try {
-			File dFile = getPlayerFile(uuid);
-			FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-			data.set(path, value);
-			data.save(dFile);
-		} catch (Exception e) {
-			AdvancedCoreHook.getInstance().debug("Failing to set a value for " + uuid + ".yml");
-			AdvancedCoreHook.getInstance().debug(e);
-		}
+		Thread.getInstance().thread.setData(this, uuid, path, value);
 	}
 
 	public void setInt(final String key, final int value) {
@@ -132,7 +127,9 @@ public class UserData {
 			columns.add(column);
 			AdvancedCoreHook.getInstance().getSQLiteUserTable().update(primary, columns);
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+
 			setData(user.getUUID(), key, value);
+
 		}
 
 	}
@@ -151,7 +148,9 @@ public class UserData {
 			columns.add(column);
 			AdvancedCoreHook.getInstance().getSQLiteUserTable().update(primary, columns);
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+
 			setData(user.getUUID(), key, value);
+
 		}
 	}
 

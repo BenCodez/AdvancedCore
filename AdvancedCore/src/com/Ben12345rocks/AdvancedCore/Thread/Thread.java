@@ -1,6 +1,12 @@
 package com.Ben12345rocks.AdvancedCore.Thread;
 
+import java.io.File;
+
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Objects.UserData;
 
 /**
  * The Class Thread.
@@ -30,6 +36,32 @@ public class Thread {
 		 */
 		public synchronized void run(Runnable run) {
 			run.run();
+		}
+
+		public synchronized FileConfiguration getData(UserData userData, String uuid) {
+			synchronized (this) {
+				File dFile = userData.getPlayerFile(uuid);
+				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+				notify();
+				return data;
+			}
+
+		}
+
+		public synchronized void setData(UserData userData, final String uuid, final String path, final Object value) {
+			synchronized (this) {
+				try {
+					File dFile = userData.getPlayerFile(uuid);
+					FileConfiguration data = getData(userData, uuid);
+					data.set(path, value);
+					data.save(dFile);
+				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().debug("Failed to set a value for " + uuid + ".yml");
+					AdvancedCoreHook.getInstance().debug(e);
+				}
+				notify();
+			}
+
 		}
 	}
 
