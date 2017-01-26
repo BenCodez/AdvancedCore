@@ -91,5 +91,5 @@ Commands:
 # set to '' to give no message
 # If no value is set, default in Format.yml is used
 Messages:
-  Reward: '&aMessage on reward'
+  Player: '&aMessage on reward'
   Broadcast: '&aThis is a broadcast'

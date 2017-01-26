@@ -25,9 +25,6 @@ public class RewardFileData {
 	/** The reward. */
 	private Reward reward;
 
-	/** The reward folder. */
-	private File rewardFolder;
-
 	/** The d file. */
 	private File dFile;
 
@@ -44,11 +41,17 @@ public class RewardFileData {
 	 */
 	public RewardFileData(Reward reward, File rewardFolder) {
 		this.reward = reward;
+
 		if (!rewardFolder.isDirectory()) {
 			rewardFolder = rewardFolder.getParentFile();
 		}
-		this.rewardFolder = rewardFolder;
+
 		setup();
+	}
+
+	public void setData(ConfigurationSection value) {
+		this.data.set("", value);
+		reward.loadValues();
 	}
 
 	/**
@@ -558,8 +561,8 @@ public class RewardFileData {
 	 *
 	 * @return the messages reward
 	 */
-	public String getMessagesReward() {
-		String msg = getData().getString("Messages.Reward", "");
+	public String getMessagesPlayer() {
+		String msg = getData().getString("Messages.Player", getData().getString("Messages.Reward", ""));
 		return msg;
 
 	}
@@ -1044,8 +1047,8 @@ public class RewardFileData {
 	 * @param value
 	 *            the new messages reward
 	 */
-	public void setMessagesReward(String value) {
-		set("Messages.Reward", value);
+	public void setMessagesPlayer(String value) {
+		set("Messages.Player", value);
 	}
 
 	/**
@@ -1136,9 +1139,6 @@ public class RewardFileData {
 	 * Setup.
 	 */
 	public void setup() {
-		if (dFile == null) {
-			dFile = new File(rewardFolder, reward.getRewardName() + ".yml");
-		}
 		data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
 			try {
@@ -1148,7 +1148,6 @@ public class RewardFileData {
 
 			}
 		}
-
 	}
 
 	/**

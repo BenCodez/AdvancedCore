@@ -100,6 +100,7 @@ public class UserGUI {
 						new ValueRequest().requestString(clickEvent.getPlayer(), "",
 								ArrayUtils.getInstance().convert(rewards), true, new StringListener() {
 
+									@SuppressWarnings("deprecation")
 									@Override
 									public void onInput(Player player, String value) {
 										User user = UserManager.getInstance()
