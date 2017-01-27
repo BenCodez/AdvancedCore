@@ -27,6 +27,7 @@ import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.mysql.MySQL;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
 import com.Ben12345rocks.AdvancedCore.sql.Database;
@@ -54,6 +55,7 @@ public class AdvancedCoreHook {
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	private Database database;
+	private MySQL mysql;
 	private UserStorage storageType = UserStorage.SQLITE;
 	private String permPrefix;
 	private IServerHandle serverHandle;
@@ -343,8 +345,23 @@ public class AdvancedCoreHook {
 			Table table = new Table("Users", columns, key);
 			database = new Database(plugin, "Users", table);
 		} else if (storageType.equals(UserStorage.MYSQL)) {
-			// load mysql
+			mysql = null;
 		}
+	}
+
+	/**
+	 * @param mysql
+	 *            the mysql to set
+	 */
+	public void setMysql(MySQL mysql) {
+		this.mysql = mysql;
+	}
+
+	/**
+	 * @return the mysql
+	 */
+	public MySQL getMysql() {
+		return mysql;
 	}
 
 	public void loadValueRequestInputCommands() {

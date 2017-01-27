@@ -173,6 +173,11 @@
 			<id>dwd-repo</id>
 			<url>http://ci.dwdg.net/plugin/repository/everything/</url>
 		</repository>
+		<repository>
+            <id>mrten-releases</id>
+            <name>Mrten's Release Repo</name>
+            <url>http://repo.mrten.nl/content/repositories/releases/</url>
+        </repository>
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -199,5 +204,11 @@
 			<version>1.2</version>
 			<scope>compile</scope>
 		</dependency>
+		<dependency>
+            <groupId>me.mrten</groupId>
+            <artifactId>MySQLAPI</artifactId>
+            <version>LATEST</version>
+            <scope>compile</scope>
+        </dependency>
 	</dependencies>
 </project>
