@@ -41,6 +41,7 @@ public class RewardFileData {
 	 */
 	public RewardFileData(Reward reward, File rewardFolder) {
 		this.reward = reward;
+		this.dFile = reward.getFile();
 
 		if (!rewardFolder.isDirectory()) {
 			rewardFolder = rewardFolder.getParentFile();
@@ -562,9 +563,7 @@ public class RewardFileData {
 	 * @return the messages reward
 	 */
 	public String getMessagesPlayer() {
-		String msg = getData().getString("Messages.Player", getData().getString("Messages.Reward", ""));
-		return msg;
-
+		return getData().getString("Messages.Player", getData().getString("Messages.Reward", ""));
 	}
 
 	/**

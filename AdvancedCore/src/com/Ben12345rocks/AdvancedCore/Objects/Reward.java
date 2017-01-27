@@ -238,6 +238,8 @@ public class Reward {
 	/** The effect radius. */
 	private int effectRadius;
 
+	private File file;
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -1359,8 +1361,20 @@ public class Reward {
 	 */
 	public void load(File folder, String reward) {
 		name = reward;
+		if (folder.isDirectory()) {
+			file = new File(folder, reward + ".txt");
+		} else {
+			file = folder;
+		}
 		fileData = new RewardFileData(this, folder);
 		loadValues();
+	}
+
+	/**
+	 * @return the file
+	 */
+	public File getFile() {
+		return file;
 	}
 
 	/**

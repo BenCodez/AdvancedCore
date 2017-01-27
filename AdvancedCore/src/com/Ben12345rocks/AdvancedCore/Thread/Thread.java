@@ -81,7 +81,17 @@ public class Thread {
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The thread. */
-	public ReadThread thread;
+	private ReadThread thread;
+
+	/**
+	 * @return the thread
+	 */
+	public ReadThread getThread() {
+		if (thread == null || !thread.isAlive()) {
+			loadThread();
+		}
+		return thread;
+	}
 
 	/**
 	 * Instantiates a new thread.

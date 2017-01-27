@@ -33,7 +33,7 @@ public class UserData {
 	}
 
 	public FileConfiguration getData(String uuid) {
-		return Thread.getInstance().thread.getData(this, uuid);
+		return Thread.getInstance().getThread().getData(this, uuid);
 	}
 
 	public int getInt(String key) {
@@ -138,7 +138,7 @@ public class UserData {
 	}
 
 	public void setData(final String uuid, final String path, final Object value) {
-		Thread.getInstance().thread.setData(this, uuid, path, value);
+		Thread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
 	public void setInt(final String key, final int value) {
