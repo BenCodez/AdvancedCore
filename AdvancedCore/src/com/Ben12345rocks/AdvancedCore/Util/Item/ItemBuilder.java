@@ -176,12 +176,11 @@ public class ItemBuilder {
 		if ((enchants == null) || (enchants.size() == 0)) {
 			return this;
 		}
-		ItemMeta meta = is.getItemMeta();
+		HashMap<Enchantment,Integer> enchantments = new HashMap<Enchantment,Integer>();
 		for (String enchant : enchants.keySet()) {
-			meta.addEnchant(Enchantment.getByName(enchant), enchants.get(enchant), false);
+			enchantments.put(Enchantment.getByName(enchant), enchants.get(enchant));
 		}
-		is.setItemMeta(meta);
-		return this;
+		return addEnchantments(enchantments);
 	}
 
 	/**
@@ -192,7 +191,7 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchantments(Map<Enchantment, Integer> enchantments) {
-		is.addEnchantments(enchantments);
+		is.addUnsafeEnchantments(enchantments);
 		return this;
 	}
 
