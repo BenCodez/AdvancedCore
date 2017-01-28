@@ -1362,7 +1362,7 @@ public class Reward {
 	public void load(File folder, String reward) {
 		name = reward;
 		if (folder.isDirectory()) {
-			file = new File(folder, reward + ".txt");
+			file = new File(folder, reward + ".yml");
 		} else {
 			file = folder;
 		}

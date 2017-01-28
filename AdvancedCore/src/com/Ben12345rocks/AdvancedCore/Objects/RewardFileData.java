@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.bukkit.ChatColor;
@@ -51,7 +53,10 @@ public class RewardFileData {
 	}
 
 	public void setData(ConfigurationSection value) {
-		this.data.set("", value);
+		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
+		for (Entry<String, Object> entry : map.entrySet()) {
+			set(entry.getKey(), entry.getValue());
+		}
 		reward.loadValues();
 	}
 

@@ -84,12 +84,15 @@ public class RewardHandler {
 			}
 		} else if (data.isConfigurationSection(path)) {
 			String rewardName = path.replace(".", "_");
-			if (rewardExist(rewardName)) {
-				ConfigurationSection section = data.getConfigurationSection(path);
-				Reward reward = new Reward(rewardName);
-				reward.getConfig().setData(section);
-				rewards.add(reward);
+			ConfigurationSection section = data.getConfigurationSection(path);
+			Reward reward;
+			if (!rewardExist(rewardName)) {
+				reward = new Reward(rewardName);
+			} else {
+				reward = getReward(rewardName);
 			}
+			reward.getConfig().setData(section);
+			loadRewards();
 			giveReward(user, rewardName, online, giveOffline);
 
 		} else {

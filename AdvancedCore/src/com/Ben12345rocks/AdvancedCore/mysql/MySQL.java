@@ -11,14 +11,13 @@ import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
 
-import me.mrten.mysqlapi.queries.CreateTableQuery;
 import me.mrten.mysqlapi.queries.Query;
 
 public class MySQL {
 	private me.mrten.mysqlapi.MySQL mysql;
 
 	public String getName() {
-		return "Users";
+		return "VotingPlugin_Users";
 	}
 
 	public MySQL(String hostName, int port, String database, String user, String pass) {
@@ -26,7 +25,10 @@ public class MySQL {
 		if (!mysql.connect(hostName, "" + port, user, pass, database)) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
 		}
-		String sql = new CreateTableQuery(getName()).ifNotExists().column("uuid", "VARCHAR").primaryKey("uuid").build();
+		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
+		sql += "uuid VARCHAR(36),";
+		sql += "PRIMARY KEY ( uuid )";
+		sql += ");";
 		Query query = new Query(mysql, sql);
 		Thread.getInstance().run(new Runnable() {
 
@@ -39,6 +41,7 @@ public class MySQL {
 				}
 			}
 		});
+
 	}
 
 	public void update(String index, String column, Object value, DataType dataType) {
@@ -56,7 +59,17 @@ public class MySQL {
 			query += "'" + index + "'";
 			Query sql = new Query(mysql, query);
 
-			sql.executeUpdateAsync();
+			Thread.getInstance().run(new Runnable() {
+
+				@Override
+				public void run() {
+					try {
+						sql.executeUpdate();
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+				}
+			});
 
 		} else {
 			insert(index, column, value, dataType);
@@ -79,7 +92,17 @@ public class MySQL {
 		sql.setParameter(1, index);
 		sql.setParameter(2, value);
 
-		sql.executeUpdateAsync();
+		Thread.getInstance().run(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					sql.executeUpdate();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 
 	public boolean containsKey(String index) {
@@ -128,7 +151,17 @@ public class MySQL {
 		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " " + dataType.toString();
 		Query query = new Query(mysql, sql);
 
-		query.executeUpdateAsync();
+		Thread.getInstance().run(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					query.executeUpdate();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 
 	public List<Column> getExact(Column column) {
