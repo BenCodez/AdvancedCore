@@ -13,7 +13,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Thread.Thread;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
 
@@ -24,7 +23,7 @@ public class MySQL {
 
 	private ArrayList<String> columns;
 
-	private HashMap<Column, ArrayList<Column>> table;
+	private HashMap<String, ArrayList<Column>> table;
 
 	private Queue<String> query;
 
@@ -47,16 +46,13 @@ public class MySQL {
 		sql += "uuid VARCHAR(255),";
 		sql += "PRIMARY KEY ( uuid )";
 		sql += ");";
-		System.out.println(sql);
+		// System.out.println(sql);
 		Query query = new Query(mysql, sql);
 		query.executeUpdateAsync();
 
 		this.query = new LinkedBlockingQueue<>();
-		columns = getColumnsQueury();
-		table = new HashMap<Column, ArrayList<Column>>();
-		for (Column uuid : getRowsQuery()) {
-			table.put(uuid, getExactQuery(uuid));
-		}
+
+		loadData();
 
 		new Timer().schedule(new TimerTask() {
 
@@ -64,19 +60,25 @@ public class MySQL {
 			public void run() {
 				updateBatch();
 
-				AdvancedCoreHook.getInstance().debug(ArrayUtils.getInstance().makeStringList(columns));
-				String str = "";
-				for (Entry<Column, ArrayList<Column>> entry : table.entrySet()) {
-					str += entry.getKey().getValue() + ":";
-					for (Column col : entry.getValue()) {
-						if (col.getValue() != null) {
-							str += col.getValue().toString() + ",";
-						}
-					}
-				}
-				AdvancedCoreHook.getInstance().debug(str);
+				/*
+				 * AdvancedCoreHook.getInstance().debug(ArrayUtils.getInstance()
+				 * .makeStringList(columns)); String str = ""; for
+				 * (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
+				 * str += entry.getKey() + ":"; for (Column col :
+				 * entry.getValue()) { if (col.getValue() != null) { str +=
+				 * col.getValue().toString() + ","; } } }
+				 * AdvancedCoreHook.getInstance().debug(str);
+				 */
 			}
 		}, 10 * 1000, 5 * 1000);
+	}
+
+	public void loadData() {
+		columns = getColumnsQueury();
+		table = new HashMap<String, ArrayList<Column>>();
+		for (Column uuid : getRowsQuery()) {
+			table.put((String) uuid.getValue(), getExactQuery(uuid));
+		}
 	}
 
 	public void updateBatch() {
@@ -90,21 +92,6 @@ public class MySQL {
 				}
 				sql += text;
 			}
-
-			/*
-			 * Connection connection = null; PreparedStatement statement = null;
-			 * try { connection = mysql.getConnectionManager().getConnection();
-			 * statement = connection.prepareStatement(sql); if
-			 * (connection.getAutoCommit()) { connection.setAutoCommit(false); }
-			 * statement.addBatch(); statement.executeBatch(); } catch
-			 * (SQLException e) { e.printStackTrace(); } finally { if (statement
-			 * != null) { try { statement.close(); } catch (SQLException e) { //
-			 * TODO Auto-generated catch block e.printStackTrace(); } }
-			 * 
-			 * if (connection != null) { try { connection.commit();
-			 * connection.close(); } catch (SQLException e) { // TODO
-			 * Auto-generated catch block e.printStackTrace(); } } }
-			 */
 
 			for (String text : sql.split(";")) {
 				Query query = new Query(mysql, text);
@@ -185,7 +172,7 @@ public class MySQL {
 		query += column + "='" + value.toString() + "';";
 		this.query.add(query);
 
-		Column uuid = new Column("uuid", index, DataType.STRING);
+		String uuid = index;
 		if (!table.containsKey(uuid)) {
 			ArrayList<Column> cols = new ArrayList<Column>();
 			for (String col : columns) {
@@ -252,7 +239,7 @@ public class MySQL {
 		columns.add(column);
 
 		Column col = new Column(column, dataType);
-		for (Entry<Column, ArrayList<Column>> entry : table.entrySet()) {
+		for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
 			entry.getValue().add(col);
 		}
 	}
@@ -263,14 +250,15 @@ public class MySQL {
 
 		Query sql = new Query(mysql, query);
 		sql.setParameter(1, column.getValue().toString());
-
-		ArrayList<String> columns = getColumnsQueury();
 		try {
 			ResultSet rs = sql.executeQuery();
-			for (int i = 0; i < columns.size(); i++) {
-				Column rCol = new Column(columns.get(i), DataType.STRING);
-				rCol.setValue(rs.getString(columns.get(i)));
-				System.out.println(i + " " + columns.get(i) + " = " + rCol.getValue());
+			rs.next();
+			for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+				Column rCol = new Column(rs.getMetaData().getColumnLabel(i), DataType.STRING);
+				// System.out.println(i + " " +
+				// rs.getMetaData().getColumnLabel(i));
+				rCol.setValue(rs.getString(i));
+				// System.out.println(rCol.getValue());
 				result.add(rCol);
 			}
 		} catch (Exception e) {
@@ -281,9 +269,8 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-		Column col = new Column("uuid", uuid, DataType.STRING);
-		if (table.containsKey(col)) {
-			return table.get(col);
+		if (table.containsKey(uuid)) {
+			return table.get(uuid);
 		}
 		return new ArrayList<Column>();
 	}
@@ -309,8 +296,8 @@ public class MySQL {
 
 	public ArrayList<String> getUuids() {
 		ArrayList<String> uuids = new ArrayList<String>();
-		for (Column col : table.keySet()) {
-			uuids.add((String) col.getValue());
+		for (String col : table.keySet()) {
+			uuids.add(col);
 		}
 
 		return uuids;
