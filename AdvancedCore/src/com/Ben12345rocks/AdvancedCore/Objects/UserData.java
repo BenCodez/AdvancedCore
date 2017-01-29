@@ -88,7 +88,7 @@ public class UserData {
 	}
 
 	public List<Column> getMySqlRow() {
-		return AdvancedCoreHook.getInstance().getMysql().getExact(new Column("uuid", user.getUUID(), DataType.STRING));
+		return AdvancedCoreHook.getInstance().getMysql().getExact(user.getUUID());
 	}
 
 	public String getString(String key) {
