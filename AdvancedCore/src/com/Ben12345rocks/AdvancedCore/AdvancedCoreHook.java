@@ -61,6 +61,21 @@ public class AdvancedCoreHook {
 	private IServerHandle serverHandle;
 	private Logger logger;
 	private boolean preloadUsers = false;
+	private boolean sendScoreboards = true;
+
+	/**
+	 * @return the sendScoreboards
+	 */
+	public boolean isSendScoreboards() {
+		return sendScoreboards;
+	}
+
+	/**
+	 * @param sendScoreboards the sendScoreboards to set
+	 */
+	public void setSendScoreboards(boolean sendScoreboards) {
+		this.sendScoreboards = sendScoreboards;
+	}
 
 	public boolean isPreloadUsers() {
 		return preloadUsers;
