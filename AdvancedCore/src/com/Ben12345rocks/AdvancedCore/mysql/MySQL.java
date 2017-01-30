@@ -102,9 +102,9 @@ public class MySQL {
 					e.printStackTrace();
 				}
 			}
-			final String t = sql;
+			//final String t = sql;
 
-			AdvancedCoreHook.getInstance().debug(t);
+			//AdvancedCoreHook.getInstance().debug(t);
 
 		}
 	}

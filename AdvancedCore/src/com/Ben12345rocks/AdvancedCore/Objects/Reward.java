@@ -25,7 +25,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class Reward.
  */
