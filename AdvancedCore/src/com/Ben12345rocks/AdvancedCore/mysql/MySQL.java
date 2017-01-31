@@ -12,7 +12,6 @@ import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
 
@@ -76,8 +75,10 @@ public class MySQL {
 	public void loadData() {
 		columns = getColumnsQueury();
 		table = new HashMap<String, ArrayList<Column>>();
-		for (Column uuid : getRowsQuery()) {
-			table.put((String) uuid.getValue(), getExactQuery(uuid));
+		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
+			for (Column uuid : getRowsQuery()) {
+				table.put((String) uuid.getValue(), getExactQuery(uuid));
+			}
 		}
 	}
 
@@ -102,9 +103,9 @@ public class MySQL {
 					e.printStackTrace();
 				}
 			}
-			//final String t = sql;
+			// final String t = sql;
 
-			//AdvancedCoreHook.getInstance().debug(t);
+			// AdvancedCoreHook.getInstance().debug(t);
 
 		}
 	}
@@ -123,12 +124,17 @@ public class MySQL {
 			query += " WHERE `uuid`=";
 			query += "'" + index + "';";
 
-			this.query.add(query);
+			if (AdvancedCoreHook.getInstance().isPreloadTable()) {
+				this.query.add(query);
 
-			for (Column col : getExact(index)) {
-				if (col.getName().equals(column)) {
-					col.setValue(value);
+				for (Column col : getExact(index)) {
+					if (col.getName().equals(column)) {
+						col.setValue(value);
+					}
 				}
+			} else {
+				Query q = new Query(mysql, query);
+				q.executeUpdateAsync();
 			}
 
 		} else {
@@ -137,32 +143,14 @@ public class MySQL {
 	}
 
 	public void insertQuery(String index, String column, Object value, DataType dataType) {
-		String query = "INSERT OR REPLACE INTO " + getName() + " (";
+		String query = "INSERT " + getName() + " ";
 
-		query += "`" + index + "`, ";
-
-		query += "`" + column + "`) ";
-
-		query += "VALUES (";
-
-		query += "?, ?)";
-
-		query += ";";
+		query += "set uuid='" + index + "', ";
+		query += column + "='" + value.toString() + "';";
 		Query sql = new Query(mysql, query);
-		sql.setParameter(1, index);
-		sql.setParameter(2, value);
 
-		Thread.getInstance().run(new Runnable() {
+		sql.executeUpdateAsync();
 
-			@Override
-			public void run() {
-				try {
-					sql.executeUpdate();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}
-		});
 	}
 
 	public void insert(String index, String column, Object value, DataType dataType) {
@@ -173,20 +161,24 @@ public class MySQL {
 		this.query.add(query);
 
 		String uuid = index;
-		if (!table.containsKey(uuid)) {
-			ArrayList<Column> cols = new ArrayList<Column>();
-			for (String col : columns) {
-				cols.add(new Column(col, DataType.STRING));
-			}
-			for (Column col : cols) {
-				if (col.getName().equals("uuid")) {
-					col.setValue(index);
-				} else if (col.getName().equals(column)) {
-					col.setValue(value);
+		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
+			if (!table.containsKey(uuid)) {
+				ArrayList<Column> cols = new ArrayList<Column>();
+				for (String col : columns) {
+					cols.add(new Column(col, DataType.STRING));
 				}
+				for (Column col : cols) {
+					if (col.getName().equals("uuid")) {
+						col.setValue(index);
+					} else if (col.getName().equals(column)) {
+						col.setValue(value);
+					}
 
+				}
+				table.put(uuid, cols);
 			}
-			table.put(uuid, cols);
+		} else {
+			insertQuery(index, column, value, dataType);
 		}
 
 	}
@@ -235,12 +227,19 @@ public class MySQL {
 
 	public void addColumn(String column, DataType dataType) {
 		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
-		query.add(sql);
+		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
+			query.add(sql);
+		} else {
+			Query query = new Query(mysql, sql);
+			query.executeUpdateAsync();
+		}
 		columns.add(column);
 
-		Column col = new Column(column, dataType);
-		for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
-			entry.getValue().add(col);
+		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
+			Column col = new Column(column, dataType);
+			for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
+				entry.getValue().add(col);
+			}
 		}
 	}
 
@@ -269,10 +268,14 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-		if (table.containsKey(uuid)) {
-			return table.get(uuid);
+		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
+			if (table.containsKey(uuid)) {
+				return table.get(uuid);
+			}
+			return new ArrayList<Column>();
+		} else {
+			return getExactQuery(new Column("uuid", uuid, DataType.STRING));
 		}
-		return new ArrayList<Column>();
 	}
 
 	public ArrayList<Column> getRowsQuery() {
@@ -296,10 +299,18 @@ public class MySQL {
 
 	public ArrayList<String> getUuids() {
 		ArrayList<String> uuids = new ArrayList<String>();
-		for (String col : table.keySet()) {
-			uuids.add(col);
-		}
+		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
 
+			for (String col : table.keySet()) {
+				uuids.add(col);
+			}
+
+		} else {
+			ArrayList<Column> rows = getRowsQuery();
+			for (Column c : rows) {
+				uuids.add((String) c.getValue());
+			}
+		}
 		return uuids;
 	}
 }

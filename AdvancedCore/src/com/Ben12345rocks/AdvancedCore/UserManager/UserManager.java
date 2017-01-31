@@ -64,6 +64,8 @@ public class UserManager {
 				uuids.add((String) col.getValue());
 			}
 			return uuids;
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			return AdvancedCoreHook.getInstance().getMysql().getUuids();
 		}
 		return new ArrayList<String>();
 	}

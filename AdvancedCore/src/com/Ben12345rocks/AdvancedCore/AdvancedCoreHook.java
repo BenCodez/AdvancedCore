@@ -62,6 +62,21 @@ public class AdvancedCoreHook {
 	private Logger logger;
 	private boolean preloadUsers = false;
 	private boolean sendScoreboards = true;
+	private boolean preloadTable = true;
+
+	/**
+	 * @return the preloadTable
+	 */
+	public boolean isPreloadTable() {
+		return preloadTable;
+	}
+
+	/**
+	 * @param preloadTable the preloadTable to set
+	 */
+	public void setPreloadTable(boolean preloadTable) {
+		this.preloadTable = preloadTable;
+	}
 
 	/**
 	 * @return the sendScoreboards
