@@ -644,7 +644,7 @@ public class RewardEditGUI {
 		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
 		setCurrentReward(player, reward);
 		inv.addButton(inv.getNextSlot(),
-				new BInventoryButton("Set Reward Message", new String[0], new ItemStack(Material.STONE)) {
+				new BInventoryButton("Set Player Message", new String[0], new ItemStack(Material.STONE)) {
 
 					@Override
 					public void onClick(ClickEvent event) {
@@ -655,8 +655,8 @@ public class RewardEditGUI {
 							public void onInput(Player player, String value) {
 								Reward reward = getCurrentReward(player);
 
-								reward.getConfig().setMessagesReward(value);
-								player.sendMessage("Reward message set to " + value + " on " + reward);
+								reward.getConfig().setMessagesPlayer(value);
+								player.sendMessage("Player message set to " + value + " on " + reward);
 								plugin.reload();
 
 							}

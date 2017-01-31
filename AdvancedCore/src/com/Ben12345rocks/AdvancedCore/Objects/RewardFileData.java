@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.bukkit.ChatColor;
@@ -25,9 +27,6 @@ public class RewardFileData {
 	/** The reward. */
 	private Reward reward;
 
-	/** The reward folder. */
-	private File rewardFolder;
-
 	/** The d file. */
 	private File dFile;
 
@@ -44,11 +43,21 @@ public class RewardFileData {
 	 */
 	public RewardFileData(Reward reward, File rewardFolder) {
 		this.reward = reward;
+		this.dFile = reward.getFile();
+
 		if (!rewardFolder.isDirectory()) {
 			rewardFolder = rewardFolder.getParentFile();
 		}
-		this.rewardFolder = rewardFolder;
+
 		setup();
+	}
+
+	public void setData(ConfigurationSection value) {
+		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
+		for (Entry<String, Object> entry : map.entrySet()) {
+			set(entry.getKey(), entry.getValue());
+		}
+		reward.loadValues();
 	}
 
 	/**
@@ -558,10 +567,8 @@ public class RewardFileData {
 	 *
 	 * @return the messages reward
 	 */
-	public String getMessagesReward() {
-		String msg = getData().getString("Messages.Reward", "");
-		return msg;
-
+	public String getMessagesPlayer() {
+		return getData().getString("Messages.Player", getData().getString("Messages.Reward", ""));
 	}
 
 	/**
@@ -1044,8 +1051,8 @@ public class RewardFileData {
 	 * @param value
 	 *            the new messages reward
 	 */
-	public void setMessagesReward(String value) {
-		set("Messages.Reward", value);
+	public void setMessagesPlayer(String value) {
+		set("Messages.Player", value);
 	}
 
 	/**
@@ -1136,9 +1143,6 @@ public class RewardFileData {
 	 * Setup.
 	 */
 	public void setup() {
-		if (dFile == null) {
-			dFile = new File(rewardFolder, reward.getRewardName() + ".yml");
-		}
 		data = YamlConfiguration.loadConfiguration(dFile);
 		if (!dFile.exists()) {
 			try {
@@ -1148,7 +1152,6 @@ public class RewardFileData {
 
 			}
 		}
-
 	}
 
 	/**

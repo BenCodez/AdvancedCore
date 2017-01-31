@@ -11,6 +11,7 @@ import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -163,10 +164,14 @@ public class User {
 	/**
 	 * Check offline rewards.
 	 */
+	@SuppressWarnings("deprecation")
 	public void checkOfflineRewards() {
 		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
-		RewardHandler.getInstance().giveReward(this, false, ArrayUtils.getInstance().convert(copy));
+		for (String str : ArrayUtils.getInstance().convert(copy)) {
+			RewardHandler.getInstance().giveReward(this, str, false);
+		}
+
 	}
 
 	public ArrayList<String> getChoiceRewards() {
@@ -206,7 +211,7 @@ public class User {
 		if (playerName == null) {
 			return "";
 		} else {
-		return playerName;
+			return playerName;
 		}
 	}
 
@@ -415,6 +420,18 @@ public class User {
 	 */
 	public void giveReward(Reward reward, boolean online) {
 		reward.giveReward(this, online);
+	}
+
+	/**
+	 * Give reward
+	 * 
+	 * @param data
+	 *            Data
+	 * @param path
+	 *            Path
+	 */
+	public void giveReward(FileConfiguration data, String path) {
+		RewardHandler.getInstance().giveReward(this, data, path);
 	}
 
 	/**

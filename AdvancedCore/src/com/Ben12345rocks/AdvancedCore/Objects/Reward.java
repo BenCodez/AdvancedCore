@@ -25,7 +25,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class Reward.
  */
@@ -238,7 +237,6 @@ public class Reward {
 	/** The effect radius. */
 	private int effectRadius;
 
-	/** The file. */
 	private File file;
 
 	/**
@@ -259,7 +257,6 @@ public class Reward {
 	 * @param reward
 	 *            the reward
 	 */
-	@Deprecated
 	public Reward(String reward) {
 		load(new File(plugin.getPlugin().getDataFolder(), "Rewards"), reward);
 	}
@@ -580,15 +577,6 @@ public class Reward {
 			}
 			return num;
 		}
-	}
-
-	/**
-	 * Gets the file.
-	 *
-	 * @return the file
-	 */
-	public File getFile() {
-		return file;
 	}
 
 	/**
@@ -1002,6 +990,7 @@ public class Reward {
 	 * @param online
 	 *            the online
 	 */
+	@SuppressWarnings("deprecation")
 	public void giveRandom(User user, boolean online) {
 		if (checkRandomChance()) {
 			ArrayList<String> rewards = getRandomRewards();
@@ -1266,18 +1255,7 @@ public class Reward {
 		return usesWorlds;
 	}
 
-	/**
-	 * Load.
-	 *
-	 * @param folder
-	 *            the folder
-	 * @param reward
-	 *            the reward
-	 */
-	public void load(File folder, String reward) {
-		name = reward;
-		file = folder;
-		fileData = new RewardFileData(this, getFile());
+	public void loadValues() {
 		setRewardType(getConfig().getRewardType());
 
 		setDelayEnabled(getConfig().getDelayedEnabled());
@@ -1317,7 +1295,7 @@ public class Reward {
 			potionsAmplifier.put(potion, getConfig().getPotionsAmplifier(potion));
 		}
 
-		setRewardMsg(getConfig().getMessagesReward());
+		setRewardMsg(getConfig().getMessagesPlayer());
 		setActionBarMsg(getConfig().getActionBarMessage());
 		setActionBarDelay(getConfig().getActionBarDelay());
 
@@ -1370,7 +1348,32 @@ public class Reward {
 		effectData = getConfig().getEffectData();
 		effectParticles = getConfig().getEffectParticles();
 		effectRadius = getConfig().getEffectRadius();
+	}
 
+	/**
+	 * Load.
+	 *
+	 * @param folder
+	 *            the folder
+	 * @param reward
+	 *            the reward
+	 */
+	public void load(File folder, String reward) {
+		name = reward;
+		if (folder.isDirectory()) {
+			file = new File(folder, reward + ".yml");
+		} else {
+			file = folder;
+		}
+		fileData = new RewardFileData(this, folder);
+		loadValues();
+	}
+
+	/**
+	 * @return the file
+	 */
+	public File getFile() {
+		return file;
 	}
 
 	/**
@@ -1460,6 +1463,7 @@ public class Reward {
 	 * @param online
 	 *            the online
 	 */
+	@SuppressWarnings("deprecation")
 	public void runJavascript(User user, boolean online) {
 		if (isJavascriptEnabled()) {
 			if (JavascriptHandler.getInstance().evalute(user, getJavascriptExpression())) {
@@ -1786,16 +1790,6 @@ public class Reward {
 	 */
 	public void setExp(int exp) {
 		this.exp = exp;
-	}
-
-	/**
-	 * Sets the file.
-	 *
-	 * @param file
-	 *            the new file
-	 */
-	public void setFile(File file) {
-		this.file = file;
 	}
 
 	/**

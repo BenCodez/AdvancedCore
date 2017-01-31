@@ -33,7 +33,7 @@ public class UserData {
 	}
 
 	public FileConfiguration getData(String uuid) {
-		return Thread.getInstance().thread.getData(this, uuid);
+		return Thread.getInstance().getThread().getData(this, uuid);
 	}
 
 	public int getInt(String key) {
@@ -56,8 +56,24 @@ public class UserData {
 					}
 				}
 
+			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+				List<Column> row = getMySqlRow();
+				if (row != null) {
+					for (int i = 0; i < row.size(); i++) {
+						if (row.get(i).getName().equals(key)) {
+							try {
+								return (int) row.get(i).getValue();
+							} catch (ClassCastException | NullPointerException ex) {
+								try {
+									return Integer.parseInt((String) row.get(i).getValue());
+								} catch (Exception e) {
+									AdvancedCoreHook.getInstance().debug(e);
+								}
+							}
+						}
+					}
+				}
 			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-
 				return getData(user.getUUID()).getInt(key, 0);
 
 			}
@@ -67,11 +83,12 @@ public class UserData {
 	}
 
 	public List<Column> getSQLiteRow() {
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-			return AdvancedCoreHook.getInstance().getSQLiteUserTable()
-					.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
-		}
-		return null;
+		return AdvancedCoreHook.getInstance().getSQLiteUserTable()
+				.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
+	}
+
+	public List<Column> getMySqlRow() {
+		return AdvancedCoreHook.getInstance().getMysql().getExact(user.getUUID());
 	}
 
 	public String getString(String key) {
@@ -90,10 +107,21 @@ public class UserData {
 					}
 				}
 
+			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+				List<Column> row = getMySqlRow();
+				if (row != null) {
+					for (int i = 0; i < row.size(); i++) {
+						if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.STRING)) {
+							String st = (String) row.get(i).getValue();
+							if (st != null) {
+								return st;
+							}
+							return "";
+						}
+					}
+				}
 			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-
 				return getData(user.getUUID()).getString(key, "");
-
 			}
 		}
 		AdvancedCoreHook.getInstance().debug("Failed to get string from: " + key);
@@ -110,7 +138,7 @@ public class UserData {
 	}
 
 	public void setData(final String uuid, final String path, final Object value) {
-		Thread.getInstance().thread.setData(this, uuid, path, value);
+		Thread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
 	public void setInt(final String key, final int value) {
@@ -126,6 +154,8 @@ public class UserData {
 			columns.add(primary);
 			columns.add(column);
 			AdvancedCoreHook.getInstance().getSQLiteUserTable().update(primary, columns);
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			AdvancedCoreHook.getInstance().getMysql().update(user.getUUID(), key, value, DataType.INTEGER);
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 
 			setData(user.getUUID(), key, value);
@@ -147,6 +177,8 @@ public class UserData {
 			columns.add(primary);
 			columns.add(column);
 			AdvancedCoreHook.getInstance().getSQLiteUserTable().update(primary, columns);
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			AdvancedCoreHook.getInstance().getMysql().update(user.getUUID(), key, value, DataType.STRING);
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 
 			setData(user.getUUID(), key, value);

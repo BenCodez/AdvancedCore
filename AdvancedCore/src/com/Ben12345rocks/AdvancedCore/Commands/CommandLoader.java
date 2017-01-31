@@ -59,6 +59,7 @@ public class CommandLoader {
 		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)" }, permPrefix + ".GiveReward",
 				"Give a player a reward file", true) {
 
+			@SuppressWarnings("deprecation")
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				User user = UserManager.getInstance().getUser(args[2]);
@@ -153,6 +154,7 @@ public class CommandLoader {
 							ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false,
 							new StringListener() {
 
+								@SuppressWarnings("deprecation")
 								@Override
 								public void onInput(Player player, String value) {
 									User user = UserManager.getInstance().getUser(player);

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Color;
@@ -159,9 +160,11 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchant(Enchantment ench, int level) {
-		ItemMeta im = is.getItemMeta();
-		im.addEnchant(ench, level, true);
-		is.setItemMeta(im);
+		if (ench != null) {
+			ItemMeta im = is.getItemMeta();
+			im.addEnchant(ench, level, true);
+			is.setItemMeta(im);
+		}
 		return this;
 	}
 
@@ -176,12 +179,11 @@ public class ItemBuilder {
 		if ((enchants == null) || (enchants.size() == 0)) {
 			return this;
 		}
-		ItemMeta meta = is.getItemMeta();
+		HashMap<Enchantment, Integer> enchantments = new HashMap<Enchantment, Integer>();
 		for (String enchant : enchants.keySet()) {
-			meta.addEnchant(Enchantment.getByName(enchant), enchants.get(enchant), false);
+			enchantments.put(Enchantment.getByName(enchant), enchants.get(enchant));
 		}
-		is.setItemMeta(meta);
-		return this;
+		return addEnchantments(enchantments);
 	}
 
 	/**
@@ -192,7 +194,9 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchantments(Map<Enchantment, Integer> enchantments) {
-		is.addEnchantments(enchantments);
+		for (Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+			addEnchant(entry.getKey(), entry.getValue());
+		}
 		return this;
 	}
 
@@ -227,20 +231,6 @@ public class ItemBuilder {
 		List<String> lore = new ArrayList<>(im.getLore());
 		lore.set(pos, line);
 		return setLore(lore);
-	}
-
-	/**
-	 * Add an unsafe enchantment.
-	 *
-	 * @param ench
-	 *            The enchantment to add.
-	 * @param level
-	 *            The level to put the enchant on.
-	 * @return ItemBuilder
-	 */
-	public ItemBuilder addUnsafeEnchantment(Enchantment ench, int level) {
-		is.addUnsafeEnchantment(ench, level);
-		return this;
 	}
 
 	/**
