@@ -32,7 +32,7 @@ public class UserData {
 		return dFile;
 	}
 
-	public FileConfiguration getData(String uuid) {
+	public synchronized FileConfiguration getData(String uuid) {
 		return Thread.getInstance().getThread().getData(this, uuid);
 	}
 
@@ -137,7 +137,7 @@ public class UserData {
 		return ArrayUtils.getInstance().convert(list);
 	}
 
-	public void setData(final String uuid, final String path, final Object value) {
+	public synchronized void setData(final String uuid, final String path, final Object value) {
 		Thread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 

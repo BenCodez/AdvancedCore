@@ -8,7 +8,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
+import com.Ben12345rocks.AdvancedCore.Thread.FileThread;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -46,7 +46,7 @@ public class FilesManager {
 	 *            the data
 	 */
 	public void editFile(File file, FileConfiguration data) {
-		Thread.getInstance().run(new Runnable() {
+		FileThread.getInstance().run(new Runnable() {
 
 			@Override
 			public void run() {
