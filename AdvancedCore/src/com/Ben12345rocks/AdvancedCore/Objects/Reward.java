@@ -273,9 +273,9 @@ public class Reward {
 			return true;
 		}
 
-		double randomNum = ThreadLocalRandom.current().nextDouble(chance + 1);
+		double randomNum = ThreadLocalRandom.current().nextDouble(100);
 
-		plugin.debug("Random: " + randomNum + ", Chance: " + chance);
+		plugin.debug("Chance: " + chance + ", RandomNum: " + randomNum);
 
 		if (randomNum <= chance) {
 			return true;
@@ -334,9 +334,9 @@ public class Reward {
 			return true;
 		}
 
-		double randomNum = ThreadLocalRandom.current().nextDouble(chance + 1);
+		double randomNum = ThreadLocalRandom.current().nextDouble(100);
 
-		plugin.debug("Random: Random: " + randomNum + ", Chance: " + chance);
+		plugin.debug("Chance: " + chance + ", RandomNum: " + randomNum);
 
 		if (randomNum <= chance) {
 			return true;
