@@ -76,14 +76,23 @@ public class RewardHandler {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	public void giveReward(User user, FileConfiguration data, String path, boolean online, boolean giveOffline) {
+		giveReward(user, "", data, path, online, giveOffline);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline) {
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
 				giveReward(user, reward, online, giveOffline);
 			}
 		} else if (data.isConfigurationSection(path)) {
-			String rewardName = path.replace(".", "_");
+			String rewardName = "";
+			if (prefix != null && !prefix.equals("")) {
+				rewardName += prefix + "_";
+			}
+			rewardName = path.replace(".", "_");
 			ConfigurationSection section = data.getConfigurationSection(path);
 			Reward reward;
 			if (!rewardExist(rewardName)) {
@@ -106,6 +115,14 @@ public class RewardHandler {
 
 	public void giveReward(User user, FileConfiguration data, String path) {
 		giveReward(user, data, path, user.isOnline(), true);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online) {
+		giveReward(user, prefix, data, path, online, true);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
+		giveReward(user, prefix, data, path, user.isOnline(), true);
 	}
 
 	/**
