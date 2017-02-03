@@ -134,24 +134,29 @@ public class RewardHandler {
 			@Override
 			public void run() {
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
-					for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
-						ArrayList<Long> times = entry.getValue();
-						for (Long t : times) {
-							long time = t.longValue();
+					try {
+						User user = UserManager.getInstance().getUser(new UUID(uuid));
+						HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
+						for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+							ArrayList<Long> times = entry.getValue();
+							for (Long t : times) {
+								long time = t.longValue();
 
-							if (time != 0) {
-								Date timeDate = new Date(time);
-								if (new Date().after(timeDate)) {
-									entry.getKey().giveRewardReward(user, true);
-									times.remove(t);
+								if (time != 0) {
+									Date timeDate = new Date(time);
+									if (new Date().after(timeDate)) {
+										entry.getKey().giveRewardReward(user, true);
+										times.remove(t);
+									}
 								}
 							}
+							timed.put(entry.getKey(), times);
 						}
-						timed.put(entry.getKey(), times);
+						user.setTimedRewards(timed);
+					} catch (Exception ex) {
+						plugin.debug("Failed to update delayed/timed for: " + uuid);
+						plugin.debug(ex);
 					}
-					user.setTimedRewards(timed);
 				}
 			}
 		});
