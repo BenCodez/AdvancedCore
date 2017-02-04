@@ -267,7 +267,7 @@ public class AdvancedCoreHook {
 					}
 
 				}
-			}, minutes * 60 * 1000, minutes * 60 * 1000);
+			}, 60 * 1000, minutes * 60 * 1000);
 		} else {
 			debug("Timer is already loaded");
 		}
@@ -346,7 +346,7 @@ public class AdvancedCoreHook {
 		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
-		loadBackgroundTimer(15);
+		loadBackgroundTimer(5);
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 	}

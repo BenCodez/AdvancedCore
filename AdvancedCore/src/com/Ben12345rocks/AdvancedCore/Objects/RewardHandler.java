@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.ListIterator;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
@@ -128,38 +129,34 @@ public class RewardHandler {
 	/**
 	 * Check delayed timed rewards.
 	 */
-	public void checkDelayedTimedRewards() {
-		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(new Runnable() {
+	public synchronized void checkDelayedTimedRewards() {
 
-			@Override
-			public void run() {
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					try {
-						User user = UserManager.getInstance().getUser(new UUID(uuid));
-						HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
-						for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
-							ArrayList<Long> times = entry.getValue();
-							for (Long t : times) {
-								long time = t.longValue();
-
-								if (time != 0) {
-									Date timeDate = new Date(time);
-									if (new Date().after(timeDate)) {
-										entry.getKey().giveRewardReward(user, true);
-										times.remove(t);
-									}
-								}
+		for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+			try {
+				User user = UserManager.getInstance().getUser(new UUID(uuid));
+				HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
+				for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+					ArrayList<Long> times = entry.getValue();
+					ListIterator<Long> iterator = times.listIterator();
+					while (iterator.hasNext()) {
+						long time = iterator.next();
+						if (time != 0) {
+							Date timeDate = new Date(time);
+							if (new Date().after(timeDate)) {
+								entry.getKey().giveRewardReward(user, true);
+								iterator.remove();
 							}
-							timed.put(entry.getKey(), times);
 						}
-						user.setTimedRewards(timed);
-					} catch (Exception ex) {
-						plugin.debug("Failed to update delayed/timed for: " + uuid);
-						plugin.debug(ex);
 					}
+					
+					timed.put(entry.getKey(), times);
 				}
+				user.setTimedRewards(timed);
+			} catch (Exception ex) {
+				plugin.debug("Failed to update delayed/timed for: " + uuid);
+				plugin.debug(ex);
 			}
-		});
+		}
 
 	}
 
