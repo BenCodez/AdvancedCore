@@ -2,7 +2,6 @@ package com.Ben12345rocks.AdvancedCore.UserManager;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import org.bukkit.OfflinePlayer;
@@ -35,15 +34,13 @@ public class UserManager {
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
-	private HashMap<String, User> users = new HashMap<String, User>();
-
 	/**
 	 * Instantiates a new user manager.
 	 */
 	public UserManager() {
 	}
 
-	public synchronized ArrayList<String> getAllUUIDs() {
+	public ArrayList<String> getAllUUIDs() {
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
 			String[] fileNames = folder.list();
@@ -77,7 +74,7 @@ public class UserManager {
 	 *            the player
 	 * @return the user
 	 */
-	public synchronized User getUser(OfflinePlayer player) {
+	public User getUser(OfflinePlayer player) {
 		return getUser(player.getName());
 	}
 
@@ -88,7 +85,7 @@ public class UserManager {
 	 *            the player
 	 * @return the user
 	 */
-	public synchronized User getUser(Player player) {
+	public User getUser(Player player) {
 		return getUser(player.getName());
 	}
 
@@ -99,7 +96,7 @@ public class UserManager {
 	 *            the player name
 	 * @return the user
 	 */
-	public synchronized User getUser(String playerName) {
+	public User getUser(String playerName) {
 		return getUser(new UUID(PlayerUtils.getInstance().getUUID(playerName)));
 	}
 
@@ -111,16 +108,8 @@ public class UserManager {
 	 * @return the user
 	 */
 	@SuppressWarnings("deprecation")
-	public synchronized User getUser(UUID uuid) {
-		if (AdvancedCoreHook.getInstance().isPreloadUsers()) {
-			if (users.containsKey(uuid.toString())) {
-				return users.get(uuid.toString());
-			}
-		}
+	public User getUser(UUID uuid) {
 		User user = new User(plugin.getPlugin(), uuid);
-		if (AdvancedCoreHook.getInstance().isPreloadUsers()) {
-			users.put(uuid.getUUID(), user);
-		}
 		return user;
 	}
 }

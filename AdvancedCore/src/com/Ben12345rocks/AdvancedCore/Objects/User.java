@@ -169,7 +169,7 @@ public class User {
 		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
 		for (String str : ArrayUtils.getInstance().convert(copy)) {
-			RewardHandler.getInstance().giveReward(this, str, false);
+			RewardHandler.getInstance().giveReward(this, str, false,true,false);
 		}
 
 	}

@@ -1023,6 +1023,10 @@ public class Reward {
 		giveReward(user, online, true);
 	}
 
+	public void giveReward(User user, boolean online, boolean giveOffline) {
+		giveReward(user, online, giveOffline, true);
+	}
+	
 	/**
 	 * Give reward.
 	 *
@@ -1032,8 +1036,9 @@ public class Reward {
 	 *            the online
 	 * @param giveOffline
 	 *            the give offline
+	 * @param checkTimed checkTimed
 	 */
-	public void giveReward(User user, boolean online, boolean giveOffline) {
+	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed) {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user);
 		Bukkit.getPluginManager().callEvent(event);
@@ -1043,18 +1048,20 @@ public class Reward {
 			return;
 		}
 
+		if (checkTimed) {
+			if (checkDelayed(user)) {
+				return;
+			}
+
+			if (checkTimed(user)) {
+				return;
+			}
+		}
+
 		if ((!online && !user.isOnline()) || !checkWorld(user)) {
 			if (giveOffline) {
 				user.addOfflineRewards(this);
 			}
-			return;
-		}
-
-		if (checkDelayed(user)) {
-			return;
-		}
-
-		if (checkTimed(user)) {
 			return;
 		}
 

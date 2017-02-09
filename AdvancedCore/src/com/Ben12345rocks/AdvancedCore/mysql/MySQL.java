@@ -25,12 +25,15 @@ public class MySQL {
 	private HashMap<String, ArrayList<Column>> table;
 
 	private Queue<String> query;
+	
+	private String name;
 
 	public String getName() {
-		return "VotingPlugin_Users";
+		return name;
 	}
 
-	public MySQL(String hostName, int port, String database, String user, String pass, int maxThreads) {
+	public MySQL(String tableName, String hostName, int port, String database, String user, String pass, int maxThreads) {
+		this.name = tableName;
 		mysql = new me.mrten.mysqlapi.MySQL(maxThreads);
 		if (!mysql.connect(hostName, "" + port, user, pass, database)) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
@@ -72,7 +75,7 @@ public class MySQL {
 		}, 10 * 1000, 5 * 1000);
 	}
 
-	public void loadData() {
+	public synchronized void loadData() {
 		columns = getColumnsQueury();
 		table = new HashMap<String, ArrayList<Column>>();
 		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
@@ -82,7 +85,7 @@ public class MySQL {
 		}
 	}
 
-	public void updateBatch() {
+	public synchronized void updateBatch() {
 		if (this.query.size() > 0) {
 
 			String sql = "";
@@ -110,7 +113,7 @@ public class MySQL {
 		}
 	}
 
-	public void update(String index, String column, Object value, DataType dataType) {
+	public synchronized void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
 			String query = "UPDATE " + getName() + " SET ";
@@ -142,7 +145,7 @@ public class MySQL {
 		}
 	}
 
-	public void insertQuery(String index, String column, Object value, DataType dataType) {
+	public synchronized void insertQuery(String index, String column, Object value, DataType dataType) {
 		String query = "INSERT " + getName() + " ";
 
 		query += "set uuid='" + index + "', ";
@@ -153,7 +156,7 @@ public class MySQL {
 
 	}
 
-	public void insert(String index, String column, Object value, DataType dataType) {
+	public synchronized void insert(String index, String column, Object value, DataType dataType) {
 		String query = "INSERT " + getName() + " ";
 
 		query += "set uuid='" + index + "', ";
@@ -183,7 +186,7 @@ public class MySQL {
 
 	}
 
-	public boolean containsKeyQuery(String index) {
+	public synchronized boolean containsKeyQuery(String index) {
 		String sql = "SELECT uuid FROM " + getName() + ";";
 		Query query = new Query(mysql, sql);
 		try {
@@ -200,13 +203,13 @@ public class MySQL {
 		return false;
 	}
 
-	public void checkColumn(String column, DataType dataType) {
+	public synchronized void checkColumn(String column, DataType dataType) {
 		if (!columns.contains(column)) {
 			addColumn(column, dataType);
 		}
 	}
 
-	public ArrayList<String> getColumnsQueury() {
+	public synchronized ArrayList<String> getColumnsQueury() {
 		Query query = new Query(mysql, "SELECT * FROM " + getName() + ";");
 		ArrayList<String> columns = new ArrayList<String>();
 		try {
@@ -225,7 +228,7 @@ public class MySQL {
 		return columns;
 	}
 
-	public void addColumn(String column, DataType dataType) {
+	public synchronized void addColumn(String column, DataType dataType) {
 		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
 			query.add(sql);
@@ -243,7 +246,7 @@ public class MySQL {
 		}
 	}
 
-	public ArrayList<Column> getExactQuery(Column column) {
+	public synchronized ArrayList<Column> getExactQuery(Column column) {
 		ArrayList<Column> result = new ArrayList<>();
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?" + ";";
 
@@ -267,7 +270,7 @@ public class MySQL {
 		return result;
 	}
 
-	public ArrayList<Column> getExact(String uuid) {
+	public synchronized ArrayList<Column> getExact(String uuid) {
 		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
 			if (table.containsKey(uuid)) {
 				return table.get(uuid);
@@ -278,7 +281,7 @@ public class MySQL {
 		}
 	}
 
-	public ArrayList<Column> getRowsQuery() {
+	public synchronized ArrayList<Column> getRowsQuery() {
 		ArrayList<Column> result = new ArrayList<Column>();
 		String sql = "SELECT uuid FROM " + getName() + ";";
 
@@ -297,7 +300,7 @@ public class MySQL {
 		return result;
 	}
 
-	public ArrayList<String> getUuids() {
+	public synchronized ArrayList<String> getUuids() {
 		ArrayList<String> uuids = new ArrayList<String>();
 		if (AdvancedCoreHook.getInstance().isPreloadTable()) {
 

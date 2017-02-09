@@ -295,6 +295,17 @@ public class RewardHandler {
 			}
 		});
 	}
+	
+	@Deprecated
+	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline, boolean checkTimed) {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				reward.giveReward(user, online, giveOffline,checkTimed);
+			}
+		});
+	}
 
 	/**
 	 * Give reward.
@@ -357,6 +368,13 @@ public class RewardHandler {
 	public void giveReward(User user, String reward, boolean online, boolean giveOffline) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), online, giveOffline);
+		}
+	}
+	
+	@Deprecated
+	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed) {
+		if (!reward.equals("")) {
+			giveReward(user, getReward(reward), online, giveOffline, checkTimed);
 		}
 	}
 
