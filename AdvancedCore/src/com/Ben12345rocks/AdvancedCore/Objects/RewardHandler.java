@@ -130,34 +130,43 @@ public class RewardHandler {
 	 * Check delayed timed rewards.
 	 */
 	public synchronized void checkDelayedTimedRewards() {
-
-		for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-			try {
-				User user = UserManager.getInstance().getUser(new UUID(uuid));
-				HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
-				for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
-					ArrayList<Long> times = entry.getValue();
-					ListIterator<Long> iterator = times.listIterator();
-					while (iterator.hasNext()) {
-						long time = iterator.next();
-						if (time != 0) {
-							Date timeDate = new Date(time);
-							if (new Date().after(timeDate)) {
-								entry.getKey().giveRewardReward(user, true);
-								iterator.remove();
+		if (usesTimed()) {
+			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+				try {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
+					for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+						ArrayList<Long> times = entry.getValue();
+						ListIterator<Long> iterator = times.listIterator();
+						while (iterator.hasNext()) {
+							long time = iterator.next();
+							if (time != 0) {
+								Date timeDate = new Date(time);
+								if (new Date().after(timeDate)) {
+									entry.getKey().giveReward(user, user.isOnline(), true, false);
+									iterator.remove();
+								}
 							}
 						}
+
+						timed.put(entry.getKey(), times);
 					}
-					
-					timed.put(entry.getKey(), times);
+					user.setTimedRewards(timed);
+				} catch (Exception ex) {
+					plugin.debug("Failed to update delayed/timed for: " + uuid);
+					plugin.debug(ex);
 				}
-				user.setTimedRewards(timed);
-			} catch (Exception ex) {
-				plugin.debug("Failed to update delayed/timed for: " + uuid);
-				plugin.debug(ex);
 			}
 		}
+	}
 
+	public synchronized boolean usesTimed() {
+		for (Reward reward : getRewards()) {
+			if (reward.isTimedEnabled() || reward.isDelayEnabled()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -295,14 +304,14 @@ public class RewardHandler {
 			}
 		});
 	}
-	
+
 	@Deprecated
 	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline, boolean checkTimed) {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
 
 			@Override
 			public void run() {
-				reward.giveReward(user, online, giveOffline,checkTimed);
+				reward.giveReward(user, online, giveOffline, checkTimed);
 			}
 		});
 	}
@@ -370,7 +379,7 @@ public class RewardHandler {
 			giveReward(user, getReward(reward), online, giveOffline);
 		}
 	}
-	
+
 	@Deprecated
 	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed) {
 		if (!reward.equals("")) {
