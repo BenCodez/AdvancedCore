@@ -28,6 +28,8 @@ public class Query {
      *
      * @param index the index of the parameter to set (starts with 1)
      * @param value the value to set the parameter to
+     * 
+     * @throws SQLException SQLException
      */
     public void setParameter(int index, Object value) throws SQLException {
         statement.setObject(index, value);
@@ -35,6 +37,8 @@ public class Query {
 
     /**
      * Add the current statement to the batch.
+     * 
+     * @throws SQLException SQLException
      */
     public void addBatch() throws SQLException {
         if (connection.getAutoCommit()) {
@@ -47,6 +51,8 @@ public class Query {
      * Execute a SQL query that does not return a ResultSet.
      *
      * @return number of rows changed
+     * 
+     * @throws SQLException SQLException
      */
     public int executeUpdate() throws SQLException {
         try {
@@ -68,6 +74,8 @@ public class Query {
      * Uses a CachedRowSetImpl that is not connected to the database.
      *
      * @return the ResultSet
+     * 
+     * @throws SQLException SQLException
      */
     public ResultSet executeQuery() throws SQLException {
         CachedRowSetImpl rowSet = new CachedRowSetImpl();
@@ -95,6 +103,8 @@ public class Query {
      * Execute a batch that does not return a ResultSet.
      *
      * @return an array with updates rows
+     * 
+     * @throws SQLException SQLException
      */
     public int[] executeBatch() throws SQLException {
         try {
@@ -207,6 +217,8 @@ public class Query {
 
     /**
      * Rollback the transaction.
+     * 
+     * @throws SQLException SQLException
      */
     public void rollback() throws SQLException {
         if (connection != null) {

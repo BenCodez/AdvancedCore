@@ -9,7 +9,7 @@ public class QueryUtils {
      *
      * @param collection the collection to be separated
      * @param separator  the separator
-     * @return
+     * @return String
      */
     public static String separate(Collection<String> collection, String separator) {
         StringBuilder builder = new StringBuilder();

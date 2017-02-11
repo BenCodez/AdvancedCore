@@ -71,8 +71,8 @@ public class InsertQuery {
      * <p>
      * Automatically inserts values(column).
      *
-     * @param column
-     * @return
+     * @param column column
+     * @return InsertQuery
      */
     public InsertQuery set(String column) {
         set(column, "VALUES(" + column + ")");
