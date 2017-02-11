@@ -34,5 +34,8 @@ com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners
 com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters
 com.Ben12345rocks.AdvancedCore.YML
 com.Ben12345rocks.AdvancedCore.mysql
+com.Ben12345rocks.AdvancedCore.mysql.api
+com.Ben12345rocks.AdvancedCore.mysql.api.queries
+com.Ben12345rocks.AdvancedCore.mysql.api.utils
 com.Ben12345rocks.AdvancedCore.sql
 com.Ben12345rocks.AdvancedCore.sql.db
