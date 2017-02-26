@@ -7,6 +7,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.UserData;
+import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 /**
  * The Class Thread.
@@ -18,14 +19,8 @@ public class FileThread {
 	 */
 	public class ReadThread extends java.lang.Thread {
 
-		/*
-		 * (non-Javadoc)
-		 *
-		 * @see java.lang.Thread#run()
-		 */
 		@Override
 		public void run() {
-			// plugin.getLogger().info("File Editing Thread Loaded!");
 		}
 
 		/**
@@ -40,7 +35,7 @@ public class FileThread {
 
 		public synchronized FileConfiguration getData(UserData userData, String uuid) {
 			synchronized (this) {
-				File dFile = userData.getPlayerFile(uuid);
+				File dFile = getPlayerFile(uuid);
 				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 				notify();
 				return data;
@@ -51,7 +46,7 @@ public class FileThread {
 		public synchronized void setData(UserData userData, final String uuid, final String path, final Object value) {
 			synchronized (this) {
 				try {
-					File dFile = userData.getPlayerFile(uuid);
+					File dFile = getPlayerFile(uuid);
 					FileConfiguration data = getData(userData, uuid);
 					data.set(path, value);
 					data.save(dFile);
@@ -62,6 +57,21 @@ public class FileThread {
 				notify();
 			}
 
+		}
+
+		public synchronized File getPlayerFile(String uuid) {
+			synchronized (this) {
+				File dFile = new File(
+						AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
+						uuid + ".yml");
+
+				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+				if (!dFile.exists()) {
+					FilesManager.getInstance().editFile(dFile, data);
+				}
+				notify();
+				return dFile;
+			}
 		}
 	}
 
@@ -114,9 +124,6 @@ public class FileThread {
 	 *            the run
 	 */
 	public synchronized void run(Runnable run) {
-		if (thread == null || !thread.isAlive()) {
-			loadThread();
-		}
-		thread.run(run);
+		getThread().run(run);
 	}
 }

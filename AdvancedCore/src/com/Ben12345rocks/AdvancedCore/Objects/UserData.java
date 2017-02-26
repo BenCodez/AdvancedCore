@@ -1,15 +1,12 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
-import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
+import com.Ben12345rocks.AdvancedCore.Thread.FileThread;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
@@ -21,19 +18,8 @@ public class UserData {
 		this.user = user;
 	}
 
-	public File getPlayerFile(String uuid) {
-		File dFile = new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
-				uuid + ".yml");
-
-		FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-		if (!dFile.exists()) {
-			FilesManager.getInstance().editFile(dFile, data);
-		}
-		return dFile;
-	}
-
 	public synchronized FileConfiguration getData(String uuid) {
-		return Thread.getInstance().getThread().getData(this, uuid);
+		return FileThread.getInstance().getThread().getData(this, uuid);
 	}
 
 	public int getInt(String key) {
@@ -138,7 +124,7 @@ public class UserData {
 	}
 
 	public synchronized void setData(final String uuid, final String path, final Object value) {
-		Thread.getInstance().getThread().setData(this, uuid, path, value);
+		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
 	public void setInt(final String key, final int value) {
