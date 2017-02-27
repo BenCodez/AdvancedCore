@@ -169,7 +169,7 @@ public class User {
 		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
 		for (String str : ArrayUtils.getInstance().convert(copy)) {
-			RewardHandler.getInstance().giveReward(this, str, false,true,false);
+			RewardHandler.getInstance().giveReward(this, str, false, true, false);
 		}
 
 	}
@@ -442,7 +442,10 @@ public class User {
 	public boolean hasJoinedBefore() {
 		OfflinePlayer player = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
-			return player.hasPlayedBefore();
+			if (player.hasPlayedBefore() || player.isOnline()) {
+				return true;
+			}
+			
 		}
 		return false;
 	}
