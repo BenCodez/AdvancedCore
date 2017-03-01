@@ -35,7 +35,7 @@ public class UserData {
 								try {
 									return Integer.parseInt((String) row.get(i).getValue());
 								} catch (Exception e) {
-									AdvancedCoreHook.getInstance().debug(e);
+									//AdvancedCoreHook.getInstance().debug(e);
 								}
 							}
 						}
@@ -53,7 +53,7 @@ public class UserData {
 								try {
 									return Integer.parseInt((String) row.get(i).getValue());
 								} catch (Exception e) {
-									AdvancedCoreHook.getInstance().debug(e);
+									//AdvancedCoreHook.getInstance().debug(e);
 								}
 							}
 						}
