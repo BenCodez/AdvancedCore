@@ -210,11 +210,8 @@ public class User {
 	 * @return the player name
 	 */
 	public String getPlayerName() {
-		if ((playerName == null || playerName.equalsIgnoreCase("null")) && loadName) {
-			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
-		}
 		if (playerName == null) {
-			return getData().getString("PlayerName");
+			return "";
 		} else {
 			return playerName;
 		}
