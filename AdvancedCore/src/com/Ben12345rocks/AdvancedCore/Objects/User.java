@@ -61,9 +61,10 @@ public class User {
 	@Deprecated
 	public User(Plugin plugin, Player player) {
 		this.plugin = plugin;
-		playerName = player.getName();
-		uuid = player.getUniqueId().toString();
 		loadData();
+		setPlayerName(player.getName());
+		uuid = player.getUniqueId().toString();
+
 	}
 
 	/**
@@ -77,9 +78,10 @@ public class User {
 	@Deprecated
 	public User(Plugin plugin, String playerName) {
 		this.plugin = plugin;
-		this.playerName = playerName;
-		uuid = PlayerUtils.getInstance().getUUID(playerName);
 		loadData();
+		setPlayerName(playerName);
+		uuid = PlayerUtils.getInstance().getUUID(playerName);
+
 	}
 
 	/**
@@ -94,8 +96,9 @@ public class User {
 	public User(Plugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
-		playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
 		loadData();
+		setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+
 	}
 
 	/**
@@ -113,10 +116,11 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		this.loadName = loadName;
-		if (this.loadName) {
-			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
-		}
 		loadData();
+		if (this.loadName) {
+			setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+		}
+
 	}
 
 	@Deprecated
@@ -124,12 +128,13 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		this.loadName = loadName;
-		if (this.loadName) {
-			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
-		}
 		if (loadData) {
 			loadData();
 		}
+		if (this.loadName) {
+			setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+		}
+
 	}
 
 	/**
@@ -209,7 +214,7 @@ public class User {
 			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
 		}
 		if (playerName == null) {
-			return "";
+			return getData().getString("PlayerName");
 		} else {
 			return playerName;
 		}
@@ -445,7 +450,7 @@ public class User {
 			if (player.hasPlayedBefore() || player.isOnline()) {
 				return true;
 			}
-			
+
 		}
 		return false;
 	}
@@ -682,7 +687,7 @@ public class User {
 		data.setStringList("OfflineRewards", offlineRewards);
 	}
 
-	public void setPlayerName(String playerName) {
+	private void setPlayerName(String playerName) {
 		this.playerName = playerName;
 	}
 

@@ -105,7 +105,10 @@ public class CompatibleCacheBuilder<K, V> {
 	 *             if the time to idle or time to live was already set
 	 */
 	public CompatibleCacheBuilder<K, V> expireAfterAccess(long duration, TimeUnit unit) {
-		builder.expireAfterAccess(duration, unit);
+		try {
+			builder.expireAfterAccess(duration, unit);
+		} catch (NoSuchMethodError e) {
+		}
 		return this;
 	}
 
@@ -140,7 +143,10 @@ public class CompatibleCacheBuilder<K, V> {
 	 *             if the time to live or time to idle was already set
 	 */
 	public CompatibleCacheBuilder<K, V> expireAfterWrite(long duration, TimeUnit unit) {
-		builder.expireAfterWrite(duration, unit);
+		try {
+			builder.expireAfterWrite(duration, unit);
+		} catch (NoSuchMethodError e) {
+		}
 		return this;
 	}
 

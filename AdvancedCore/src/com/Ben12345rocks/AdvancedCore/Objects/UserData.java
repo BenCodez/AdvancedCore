@@ -35,7 +35,7 @@ public class UserData {
 								try {
 									return Integer.parseInt((String) row.get(i).getValue());
 								} catch (Exception e) {
-									//AdvancedCoreHook.getInstance().debug(e);
+									// AdvancedCoreHook.getInstance().debug(e);
 								}
 							}
 						}
@@ -53,7 +53,7 @@ public class UserData {
 								try {
 									return Integer.parseInt((String) row.get(i).getValue());
 								} catch (Exception e) {
-									//AdvancedCoreHook.getInstance().debug(e);
+									// AdvancedCoreHook.getInstance().debug(e);
 								}
 							}
 						}
@@ -64,7 +64,7 @@ public class UserData {
 
 			}
 		}
-		AdvancedCoreHook.getInstance().debug("Failed to get int from: " + key);
+		AdvancedCoreHook.getInstance().debug("Failed to get int from '" + key + "' for '" + user.getPlayerName() + "'");
 		return 0;
 	}
 
@@ -110,7 +110,8 @@ public class UserData {
 				return getData(user.getUUID()).getString(key, "");
 			}
 		}
-		AdvancedCoreHook.getInstance().debug("Failed to get string from: " + key);
+		AdvancedCoreHook.getInstance()
+				.debug("Failed to get string from: '" + key + "' for '" + user.getPlayerName() + "'");
 		return "";
 	}
 
@@ -132,7 +133,8 @@ public class UserData {
 			AdvancedCoreHook.getInstance().debug("No key: " + key + " to " + value);
 			return;
 		}
-		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
+		AdvancedCoreHook.getInstance()
+				.debug("Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "'");
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
 			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);
@@ -155,7 +157,8 @@ public class UserData {
 			AdvancedCoreHook.getInstance().debug("No key: " + key + " to " + value);
 			return;
 		}
-		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
+		AdvancedCoreHook.getInstance()
+				.debug("Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "'");
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
 			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);
@@ -173,7 +176,8 @@ public class UserData {
 	}
 
 	public void setStringList(final String key, final ArrayList<String> value) {
-		AdvancedCoreHook.getInstance().debug("Setting " + key + " to " + value);
+		// AdvancedCoreHook.getInstance().debug("Setting " + key + " to " +
+		// value);
 		String str = "";
 		for (int i = 0; i < value.size(); i++) {
 			if (i != 0) {

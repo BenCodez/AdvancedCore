@@ -27,8 +27,8 @@ public class MySQL {
 
 	// private HashMap<String, ArrayList<Column>> table;
 
-	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).weakKeys()
-			.maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
+	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4)
+			.expireAfterAccess(1, TimeUnit.HOURS).build(new CacheLoader<String, ArrayList<Column>>() {
 				public ArrayList<Column> load(String key) {
 					return getExactQuery(new Column("uuid", key, DataType.STRING));
 				}
@@ -144,10 +144,12 @@ public class MySQL {
 	}
 
 	public void insert(String index, String column, Object value, DataType dataType) {
-		/*String query = "INSERT " + getName() + " ";
-
-		query += "set uuid='" + index + "', ";
-		query += column + "='" + value.toString() + "';";*/
+		/*
+		 * String query = "INSERT " + getName() + " ";
+		 * 
+		 * query += "set uuid='" + index + "', "; query += column + "='" +
+		 * value.toString() + "';";
+		 */
 
 		insertQuery(index, column, value, dataType);
 
@@ -155,7 +157,7 @@ public class MySQL {
 
 	public boolean containsKey(String uuid) {
 		return table.containsKey(uuid);
-		//return table.getIfPresent(uuid) != null;
+		// return table.getIfPresent(uuid) != null;
 	}
 
 	public boolean containsKeyQuery(String index) {
@@ -295,6 +297,10 @@ public class MySQL {
 
 	public void removePlayer(String uuid) {
 		table.remove(uuid);
-	//	table.invalidate(uuid);
+		// table.invalidate(uuid);
+	}
+
+	public void close() {
+		mysql.disconnect();
 	}
 }
