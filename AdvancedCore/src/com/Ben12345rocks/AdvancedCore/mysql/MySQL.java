@@ -10,15 +10,15 @@ import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
 import com.Ben12345rocks.AdvancedCore.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 
 public class MySQL {
 	private com.Ben12345rocks.AdvancedCore.mysql.api.MySQL mysql;
@@ -27,8 +27,8 @@ public class MySQL {
 
 	// private HashMap<String, ArrayList<Column>> table;
 
-	LoadingCache<String, ArrayList<Column>> table = CacheBuilder.newBuilder().concurrencyLevel(4).weakKeys()
-			.maximumSize(10000).expireAfterWrite(2, TimeUnit.HOURS).build(new CacheLoader<String, ArrayList<Column>>() {
+	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).weakKeys()
+			.maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
 				public ArrayList<Column> load(String key) {
 					return getExactQuery(new Column("uuid", key, DataType.STRING));
 				}
@@ -154,7 +154,8 @@ public class MySQL {
 	}
 
 	public boolean containsKey(String uuid) {
-		return table.getIfPresent(uuid) != null;
+		return table.containsKey(uuid);
+		//return table.getIfPresent(uuid) != null;
 	}
 
 	public boolean containsKeyQuery(String index) {
@@ -216,7 +217,7 @@ public class MySQL {
 		getColumns().add(column);
 
 		Column col = new Column(column, dataType);
-		for (Entry<String, ArrayList<Column>> entry : table.asMap().entrySet()) {
+		for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
 			entry.getValue().add(col);
 		}
 	}
@@ -255,7 +256,7 @@ public class MySQL {
 		if (!containsKey(uuid)) {
 			loadPlayer(uuid);
 		}
-		return table.getIfPresent(uuid);
+		return table.get(uuid);
 	}
 
 	public ArrayList<Column> getRowsQuery() {
@@ -293,6 +294,7 @@ public class MySQL {
 	}
 
 	public void removePlayer(String uuid) {
-		table.invalidate(uuid);
+		table.remove(uuid);
+	//	table.invalidate(uuid);
 	}
 }
