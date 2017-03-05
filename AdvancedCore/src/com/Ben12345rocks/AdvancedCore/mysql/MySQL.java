@@ -85,6 +85,7 @@ public class MySQL {
 	}
 
 	public synchronized void updateBatch() {
+
 		if (this.query.size() > 0) {
 
 			String sql = "";
@@ -106,11 +107,15 @@ public class MySQL {
 			}
 
 		}
+
 	}
 
-	public void update(String index, String column, Object value, DataType dataType) {
+	public synchronized void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
-		if (containsKey(index) || getUuids().contains(index)) {
+		if (getUuids().contains(index)) {
+			if (!containsKey(index)) {
+				loadPlayer(index);
+			}
 			String query = "UPDATE " + getName() + " SET ";
 
 			if (dataType == DataType.STRING) {
@@ -134,23 +139,20 @@ public class MySQL {
 		}
 	}
 
-	public void insertQuery(String index, String column, Object value, DataType dataType) {
+	public synchronized void insertQuery(String index, String column, Object value, DataType dataType) {
 		String query = "INSERT " + getName() + " ";
 
 		query += "set uuid='" + index + "', ";
 		query += column + "='" + value.toString() + "';";
 
-		this.query.add(query);
+		try {
+			new Query(mysql, query).executeUpdateAsync();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public void insert(String index, String column, Object value, DataType dataType) {
-		/*
-		 * String query = "INSERT " + getName() + " ";
-		 * 
-		 * query += "set uuid='" + index + "', "; query += column + "='" +
-		 * value.toString() + "';";
-		 */
-
+	public synchronized void insert(String index, String column, Object value, DataType dataType) {
 		insertQuery(index, column, value, dataType);
 
 	}
@@ -178,7 +180,7 @@ public class MySQL {
 		return false;
 	}
 
-	public void checkColumn(String column, DataType dataType) {
+	public synchronized void checkColumn(String column, DataType dataType) {
 		if (!getColumns().contains(column)) {
 			addColumn(column, dataType);
 		}
@@ -206,7 +208,7 @@ public class MySQL {
 
 	}
 
-	public void addColumn(String column, DataType dataType) {
+	public synchronized void addColumn(String column, DataType dataType) {
 		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
 		try {
@@ -249,6 +251,7 @@ public class MySQL {
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
 		}
 
 		return result;
