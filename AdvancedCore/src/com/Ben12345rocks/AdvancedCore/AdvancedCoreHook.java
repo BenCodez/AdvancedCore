@@ -371,6 +371,7 @@ public class AdvancedCoreHook {
 	public void setMysql(MySQL mysql) {
 		if (this.mysql != null) {
 			this.mysql.close();
+			this.mysql = null;
 		}
 		this.mysql = mysql;
 	}
