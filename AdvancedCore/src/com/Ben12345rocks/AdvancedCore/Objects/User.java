@@ -61,9 +61,10 @@ public class User {
 	@Deprecated
 	public User(Plugin plugin, Player player) {
 		this.plugin = plugin;
-		playerName = player.getName();
-		uuid = player.getUniqueId().toString();
 		loadData();
+		setPlayerName(player.getName());
+		uuid = player.getUniqueId().toString();
+
 	}
 
 	/**
@@ -77,9 +78,10 @@ public class User {
 	@Deprecated
 	public User(Plugin plugin, String playerName) {
 		this.plugin = plugin;
-		this.playerName = playerName;
-		uuid = PlayerUtils.getInstance().getUUID(playerName);
 		loadData();
+		setPlayerName(playerName);
+		uuid = PlayerUtils.getInstance().getUUID(playerName);
+
 	}
 
 	/**
@@ -94,8 +96,9 @@ public class User {
 	public User(Plugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
-		playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
 		loadData();
+		setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+
 	}
 
 	/**
@@ -113,10 +116,11 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		this.loadName = loadName;
-		if (this.loadName) {
-			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
-		}
 		loadData();
+		if (this.loadName) {
+			setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+		}
+
 	}
 
 	@Deprecated
@@ -124,12 +128,13 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		this.loadName = loadName;
-		if (this.loadName) {
-			playerName = PlayerUtils.getInstance().getPlayerName(this.uuid);
-		}
 		if (loadData) {
 			loadData();
 		}
+		if (this.loadName) {
+			setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+		}
+
 	}
 
 	/**
@@ -169,7 +174,7 @@ public class User {
 		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
 		for (String str : ArrayUtils.getInstance().convert(copy)) {
-			RewardHandler.getInstance().giveReward(this, str, false,true,false);
+			RewardHandler.getInstance().giveReward(this, str, false, true, false);
 		}
 
 	}
@@ -205,9 +210,6 @@ public class User {
 	 * @return the player name
 	 */
 	public String getPlayerName() {
-		if ((playerName == null || playerName.equalsIgnoreCase("null")) && loadName) {
-			playerName = PlayerUtils.getInstance().getPlayerName(uuid);
-		}
 		if (playerName == null) {
 			return "";
 		} else {
@@ -442,7 +444,10 @@ public class User {
 	public boolean hasJoinedBefore() {
 		OfflinePlayer player = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
-			return player.hasPlayedBefore();
+			if (player.hasPlayedBefore() || player.isOnline()) {
+				return true;
+			}
+
 		}
 		return false;
 	}
@@ -679,7 +684,7 @@ public class User {
 		data.setStringList("OfflineRewards", offlineRewards);
 	}
 
-	public void setPlayerName(String playerName) {
+	private void setPlayerName(String playerName) {
 		this.playerName = playerName;
 	}
 

@@ -62,21 +62,6 @@ public class AdvancedCoreHook {
 	private Logger logger;
 	private boolean preloadUsers = false;
 	private boolean sendScoreboards = true;
-	private boolean preloadTable = true;
-
-	/**
-	 * @return the preloadTable
-	 */
-	public boolean isPreloadTable() {
-		return preloadTable;
-	}
-
-	/**
-	 * @param preloadTable the preloadTable to set
-	 */
-	public void setPreloadTable(boolean preloadTable) {
-		this.preloadTable = preloadTable;
-	}
 
 	/**
 	 * @return the sendScoreboards
@@ -384,6 +369,10 @@ public class AdvancedCoreHook {
 	 *            the mysql to set
 	 */
 	public void setMysql(MySQL mysql) {
+		if (this.mysql != null) {
+			this.mysql.close();
+			this.mysql = null;
+		}
 		this.mysql = mysql;
 	}
 

@@ -1,14 +1,19 @@
 package com.Ben12345rocks.AdvancedCore.Listeners;
 
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 // TODO: Auto-generated Javadoc
@@ -51,6 +56,21 @@ public class PlayerJoinEvent implements Listener {
 				}
 			}
 		}, 20L);
+	}
 
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	public void onPlayerQuit(PlayerQuitEvent event) {
+		final String uuid = event.getPlayer().getPlayer().getUniqueId().toString();
+		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				if (Bukkit.getPlayer(UUID.fromString(uuid)) == null) {
+					if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+						AdvancedCoreHook.getInstance().getMysql().removePlayer(uuid);
+					}
+				}
+			}
+		}, 100L);
 	}
 }
