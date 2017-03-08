@@ -500,7 +500,7 @@ public class AdvancedCoreHook {
 	/**
 	 * Update.
 	 */
-	public synchronized void update() {
+	public void update() {
 		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
 
 			@Override
