@@ -118,6 +118,7 @@ public class CommandLoader {
 				RewardEditGUI.getInstance().openRewardGUI((Player) sender, args[1]);
 			}
 		});
+		
 		return cmds;
 	}
 

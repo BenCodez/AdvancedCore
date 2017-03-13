@@ -18,7 +18,7 @@ public class UserData {
 		this.user = user;
 	}
 
-	public synchronized FileConfiguration getData(String uuid) {
+	public FileConfiguration getData(String uuid) {
 		return FileThread.getInstance().getThread().getData(this, uuid);
 	}
 
@@ -60,7 +60,11 @@ public class UserData {
 					}
 				}
 			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-				return getData(user.getUUID()).getInt(key, 0);
+				try {
+					return getData(user.getUUID()).getInt(key, 0);
+				} catch (Exception e) {
+
+				}
 
 			}
 		}
@@ -107,7 +111,11 @@ public class UserData {
 					}
 				}
 			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-				return getData(user.getUUID()).getString(key, "");
+				try {
+					return getData(user.getUUID()).getString(key, "");
+				} catch (Exception e) {
+
+				}
 			}
 		}
 		AdvancedCoreHook.getInstance()
@@ -124,7 +132,7 @@ public class UserData {
 		return ArrayUtils.getInstance().convert(list);
 	}
 
-	public synchronized void setData(final String uuid, final String path, final Object value) {
+	public void setData(final String uuid, final String path, final Object value) {
 		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
@@ -145,9 +153,7 @@ public class UserData {
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
 			AdvancedCoreHook.getInstance().getMysql().update(user.getUUID(), key, value, DataType.INTEGER);
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-
 			setData(user.getUUID(), key, value);
-
 		}
 
 	}
@@ -169,9 +175,7 @@ public class UserData {
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
 			AdvancedCoreHook.getInstance().getMysql().update(user.getUUID(), key, value, DataType.STRING);
 		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-
 			setData(user.getUUID(), key, value);
-
 		}
 	}
 

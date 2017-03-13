@@ -22,8 +22,11 @@ public class Thread {
 		 * @param run
 		 *            the run
 		 */
-		public synchronized void run(Runnable run) {
-			run.run();
+		public void run(Runnable run) {
+			synchronized (Thread.getInstance()) {
+				run.run();
+			}
+
 		}
 	}
 
@@ -75,7 +78,7 @@ public class Thread {
 	 * @param run
 	 *            the run
 	 */
-	public synchronized void run(Runnable run) {
+	public void run(Runnable run) {
 		getThread().run(run);
 	}
 }

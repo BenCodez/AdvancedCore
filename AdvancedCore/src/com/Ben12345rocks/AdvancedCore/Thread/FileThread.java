@@ -29,48 +29,64 @@ public class FileThread {
 		 * @param run
 		 *            the run
 		 */
-		public synchronized void run(Runnable run) {
-			run.run();
-		}
-
-		public synchronized FileConfiguration getData(UserData userData, String uuid) {
-			synchronized (this) {
-				File dFile = getPlayerFile(uuid);
-				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-				notify();
-				return data;
+		public void run(Runnable run) {
+			synchronized (FileThread.getInstance()) {
+				run.run();
 			}
 
 		}
 
-		public synchronized void setData(UserData userData, final String uuid, final String path, final Object value) {
-			synchronized (this) {
+		public FileConfiguration getData(UserData userData, String uuid) {
+			synchronized (FileThread.getInstance()) {
+				try {
+					File dFile = getPlayerFile(uuid);
+					if (dFile != null) {
+						FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+						return data;
+					}
+				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().debug(e);
+				}
+				AdvancedCoreHook.getInstance().getPlugin().getLogger()
+						.warning("Filed to load " + uuid + ".yml, turn debug on to see full stacktraces");
+				return null;
+			}
+
+		}
+
+		public void setData(UserData userData, final String uuid, final String path, final Object value) {
+			synchronized (FileThread.getInstance()) {
 				try {
 					File dFile = getPlayerFile(uuid);
 					FileConfiguration data = getData(userData, uuid);
 					data.set(path, value);
 					data.save(dFile);
 				} catch (Exception e) {
-					AdvancedCoreHook.getInstance().debug("Failed to set a value for " + uuid + ".yml");
+					AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
+							"Failed to set a value for " + uuid + ".yml, turn debug on to see full stacktraces");
 					AdvancedCoreHook.getInstance().debug(e);
 				}
-				notify();
 			}
 
 		}
 
-		public synchronized File getPlayerFile(String uuid) {
-			synchronized (this) {
-				File dFile = new File(
-						AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
-						uuid + ".yml");
-
-				FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
-				if (!dFile.exists()) {
-					FilesManager.getInstance().editFile(dFile, data);
+		public File getPlayerFile(String uuid) {
+			synchronized (FileThread.getInstance()) {
+				try {
+					File dFile = new File(
+							AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
+							uuid + ".yml");
+					FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
+					if (!dFile.exists()) {
+						FilesManager.getInstance().editFile(dFile, data);
+					}
+					return dFile;
+				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().debug(e);
 				}
-				notify();
-				return dFile;
+				AdvancedCoreHook.getInstance().getPlugin().getLogger()
+						.warning("Failed to load " + uuid + ".yml, turn debug on to see full stacktraces");
+				return null;
 			}
 		}
 	}
@@ -123,7 +139,7 @@ public class FileThread {
 	 * @param run
 	 *            the run
 	 */
-	public synchronized void run(Runnable run) {
+	public void run(Runnable run) {
 		getThread().run(run);
 	}
 }

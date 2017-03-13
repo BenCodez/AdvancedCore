@@ -71,7 +71,8 @@ public class AdvancedCoreHook {
 	}
 
 	/**
-	 * @param sendScoreboards the sendScoreboards to set
+	 * @param sendScoreboards
+	 *            the sendScoreboards to set
 	 */
 	public void setSendScoreboards(boolean sendScoreboards) {
 		this.sendScoreboards = sendScoreboards;
@@ -509,6 +510,5 @@ public class AdvancedCoreHook {
 				TimeChecker.getInstance().update();
 			}
 		});
-
 	}
 }

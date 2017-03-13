@@ -377,6 +377,12 @@ public abstract class CommandHandler {
 			method.add(me.toString());
 		}
 		addTabCompleteOption("(RequestMethod)", method);
+		
+		ArrayList<String> userStorage = new ArrayList<String>();
+		for (UserStorage storage : UserStorage.values()) {
+			userStorage.add(storage.toString());
+		}
+		addTabCompleteOption("(UserStorage)", userStorage);
 
 	}
 

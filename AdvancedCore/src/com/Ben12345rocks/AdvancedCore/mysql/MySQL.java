@@ -85,9 +85,7 @@ public class MySQL {
 	}
 
 	public synchronized void updateBatch() {
-
 		if (this.query.size() > 0) {
-
 			String sql = "";
 			while (query.size() > 0) {
 				String text = query.poll();
@@ -112,10 +110,7 @@ public class MySQL {
 
 	public synchronized void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
-		if (getUuids().contains(index)) {
-			if (!containsKey(index)) {
-				loadPlayer(index);
-			}
+		if (getUuids().contains(index) || containsKey(index)) {
 			String query = "UPDATE " + getName() + " SET ";
 
 			if (dataType == DataType.STRING) {
@@ -159,7 +154,6 @@ public class MySQL {
 
 	public boolean containsKey(String uuid) {
 		return table.containsKey(uuid);
-		// return table.getIfPresent(uuid) != null;
 	}
 
 	public boolean containsKeyQuery(String index) {
