@@ -1,5 +1,4 @@
 # AdvancedCore
-Plugin on SpigotMC:
 https://www.spigotmc.org/resources/advancedcore.28295/
 
 ##License
