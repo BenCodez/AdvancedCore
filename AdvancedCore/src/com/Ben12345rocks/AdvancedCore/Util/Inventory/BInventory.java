@@ -300,7 +300,7 @@ public class BInventory implements Listener {
 		} else if (highestSlot < 45) {
 			return 45;
 		} else {
-			return 45;
+			return 54;
 		}
 	}
 
