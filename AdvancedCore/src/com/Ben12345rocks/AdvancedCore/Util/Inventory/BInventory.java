@@ -399,7 +399,7 @@ public class BInventory implements Listener {
 			return;
 		}
 		if (inv != null && inv.equals(inv) && player != null
-				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId())) {
+				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
 			destroy();
 		}
 		return;
