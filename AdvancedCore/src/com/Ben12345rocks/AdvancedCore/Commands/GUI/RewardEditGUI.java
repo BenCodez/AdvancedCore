@@ -981,9 +981,6 @@ public class RewardEditGUI {
 			if (reward.isJavascriptEnabled()) {
 				lore.add("Javascript: true");
 				lore.add("Expression: " + reward.getJavascriptExpression());
-				lore.add("TrueRewards: " + ArrayUtils.getInstance().makeStringList(reward.getJavascriptTrueRewards()));
-				lore.add(
-						"FalseRewards: " + ArrayUtils.getInstance().makeStringList(reward.getJavascriptFalseRewards()));
 			}
 			if (reward.isChoiceRewardsEnabled()) {
 				lore.add("ChoiceRewards: true");
