@@ -49,6 +49,11 @@ public class ItemBuilder {
 				material = Material.valueOf(data.getString("Material"));
 			} catch (Exception e) {
 				AdvancedCoreHook.getInstance().debug(e);
+				try {
+					material = Material.valueOf(data.getName());
+				} catch (Exception ex) {
+					AdvancedCoreHook.getInstance().debug(ex);
+				}
 			}
 
 			int amount = data.getInt("Amount");

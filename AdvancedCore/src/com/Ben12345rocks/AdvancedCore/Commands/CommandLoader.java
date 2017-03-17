@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.AdminGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardEditGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
@@ -12,10 +13,12 @@ import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
@@ -118,7 +121,24 @@ public class CommandLoader {
 				RewardEditGUI.getInstance().openRewardGUI((Player) sender, args[1]);
 			}
 		});
-		
+
+		cmds.add(new CommandHandler(new String[] { "ClearCache" }, permPrefix + ".ClearCache", "Clear MySQL Cache") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+					if (AdvancedCoreHook.getInstance().getMysql() != null) {
+						AdvancedCoreHook.getInstance().getMysql().clearCache();
+						sender.sendMessage(StringUtils.getInstance().colorize("&cCache cleared"));
+					} else {
+						sender.sendMessage(StringUtils.getInstance().colorize("&cMySQL not loaded"));
+					}
+				} else {
+					sender.sendMessage(StringUtils.getInstance().colorize("&cCurrent storage type not mysql"));
+				}
+			}
+		});
+
 		return cmds;
 	}
 

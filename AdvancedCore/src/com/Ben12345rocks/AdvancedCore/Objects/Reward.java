@@ -66,12 +66,6 @@ public class Reward {
 	/** The random chance. */
 	private double randomChance;
 
-	/** The random rewards. */
-	private ArrayList<String> randomRewards;
-
-	/** The random fall back. */
-	private ArrayList<String> randomFallBack;
-
 	/** The require permission. */
 	private boolean requirePermission;
 
@@ -153,12 +147,6 @@ public class Reward {
 	/** The javascript expression. */
 	private String javascriptExpression;
 
-	/** The javascript true rewards. */
-	private ArrayList<String> javascriptTrueRewards;
-
-	/** The javascript false rewards. */
-	private ArrayList<String> javascriptFalseRewards;
-
 	/** The choice rewards rewards. */
 	private ArrayList<String> choiceRewardsRewards;
 
@@ -238,6 +226,8 @@ public class Reward {
 	private int effectRadius;
 
 	private File file;
+
+	private boolean randomPickRandom;
 
 	/**
 	 * Instantiates a new reward.
@@ -651,24 +641,6 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the javascript false rewards.
-	 *
-	 * @return the javascript false rewards
-	 */
-	public ArrayList<String> getJavascriptFalseRewards() {
-		return javascriptFalseRewards;
-	}
-
-	/**
-	 * Gets the javascript true rewards.
-	 *
-	 * @return the javascript true rewards
-	 */
-	public ArrayList<String> getJavascriptTrueRewards() {
-		return javascriptTrueRewards;
-	}
-
-	/**
 	 * Gets the max exp.
 	 *
 	 * @return the max exp
@@ -786,24 +758,6 @@ public class Reward {
 	 */
 	public double getRandomChance() {
 		return randomChance;
-	}
-
-	/**
-	 * Gets the random fall back.
-	 *
-	 * @return the random fall back
-	 */
-	public ArrayList<String> getRandomFallBack() {
-		return randomFallBack;
-	}
-
-	/**
-	 * Gets the random rewards.
-	 *
-	 * @return the random rewards
-	 */
-	public ArrayList<String> getRandomRewards() {
-		return randomRewards;
 	}
 
 	/**
@@ -993,21 +947,24 @@ public class Reward {
 	@SuppressWarnings("deprecation")
 	public void giveRandom(User user, boolean online) {
 		if (checkRandomChance()) {
-			ArrayList<String> rewards = getRandomRewards();
-			if (rewards != null) {
-				if (rewards.size() > 0) {
-					String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
-					if (!reward.equals("")) {
-						RewardHandler.getInstance().giveReward(user, reward, online);
+			if (isRandomPickRandom()) {
+				ArrayList<String> rewards = getConfig().getRandomRewards();
+				if (rewards != null) {
+					if (rewards.size() > 0) {
+						String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
+						if (!reward.equals("")) {
+							RewardHandler.getInstance().giveReward(user, reward, online);
+
+						}
 					}
 				}
+			} else {
+				new RewardBuilder(getConfig().getData(), getConfig().getRandomRewardsPath()).withPrefix(name)
+						.send(user);
 			}
 		} else {
-			for (String reward : getRandomFallBack()) {
-				if (!reward.equals("")) {
-					RewardHandler.getInstance().giveReward(user, reward, online);
-				}
-			}
+			new RewardBuilder(getConfig().getData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name)
+					.send(user);
 		}
 	}
 
@@ -1026,7 +983,7 @@ public class Reward {
 	public void giveReward(User user, boolean online, boolean giveOffline) {
 		giveReward(user, online, giveOffline, true);
 	}
-	
+
 	/**
 	 * Give reward.
 	 *
@@ -1036,7 +993,8 @@ public class Reward {
 	 *            the online
 	 * @param giveOffline
 	 *            the give offline
-	 * @param checkTimed checkTimed
+	 * @param checkTimed
+	 *            checkTimed
 	 */
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed) {
 
@@ -1275,8 +1233,7 @@ public class Reward {
 
 		setChance(getConfig().getChance());
 		setRandomChance(getConfig().getRandomChance());
-		setRandomRewards(getConfig().getRandomRewards());
-		setRandomFallBack(getConfig().getRandomFallBack());
+		randomPickRandom = getConfig().getRandomPickRandom();
 
 		setRequirePermission(getConfig().getRequirePermission());
 		setWorlds(getConfig().getWorlds());
@@ -1319,8 +1276,6 @@ public class Reward {
 
 		setJavascriptEnabled(getConfig().getJavascriptEnabled());
 		setJavascriptExpression(getConfig().getJavascriptExpression());
-		setJavascriptTrueRewards(getConfig().getJavascriptTrueRewards());
-		setJavascriptFalseRewards(getConfig().getJavascriptFalseRewards());
 		setChoiceRewardsEnabled(getConfig().getChoiceRewardsEnabled());
 		setChoiceRewardsRewards(getConfig().getChoiceRewardsRewards());
 
@@ -1355,6 +1310,21 @@ public class Reward {
 		effectData = getConfig().getEffectData();
 		effectParticles = getConfig().getEffectParticles();
 		effectRadius = getConfig().getEffectRadius();
+	}
+
+	/**
+	 * @return the randomPickRandom
+	 */
+	public boolean isRandomPickRandom() {
+		return randomPickRandom;
+	}
+
+	/**
+	 * @param randomPickRandom
+	 *            the randomPickRandom to set
+	 */
+	public void setRandomPickRandom(boolean randomPickRandom) {
+		this.randomPickRandom = randomPickRandom;
 	}
 
 	/**
@@ -1470,17 +1440,14 @@ public class Reward {
 	 * @param online
 	 *            the online
 	 */
-	@SuppressWarnings("deprecation")
 	public void runJavascript(User user, boolean online) {
 		if (isJavascriptEnabled()) {
 			if (JavascriptHandler.getInstance().evalute(user, getJavascriptExpression())) {
-				for (String reward : getJavascriptTrueRewards()) {
-					RewardHandler.getInstance().giveReward(user, reward, online);
-				}
+				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptTrueRewardsPath()).withPrefix(name)
+						.send(user);
 			} else {
-				for (String reward : getJavascriptFalseRewards()) {
-					RewardHandler.getInstance().giveReward(user, reward, online);
-				}
+				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptFalseRewardsPath()).withPrefix(name)
+						.send(user);
 			}
 		}
 	}
@@ -1910,26 +1877,6 @@ public class Reward {
 	}
 
 	/**
-	 * Sets the javascript false rewards.
-	 *
-	 * @param javascriptFalseRewards
-	 *            the new javascript false rewards
-	 */
-	public void setJavascriptFalseRewards(ArrayList<String> javascriptFalseRewards) {
-		this.javascriptFalseRewards = javascriptFalseRewards;
-	}
-
-	/**
-	 * Sets the javascript true rewards.
-	 *
-	 * @param javascriptTrueRewards
-	 *            the new javascript true rewards
-	 */
-	public void setJavascriptTrueRewards(ArrayList<String> javascriptTrueRewards) {
-		this.javascriptTrueRewards = javascriptTrueRewards;
-	}
-
-	/**
 	 * Sets the max exp.
 	 *
 	 * @param maxExp
@@ -2037,26 +1984,6 @@ public class Reward {
 	 */
 	public void setRandomChance(double randomChance) {
 		this.randomChance = randomChance;
-	}
-
-	/**
-	 * Sets the random fall back.
-	 *
-	 * @param randomFallBack
-	 *            the new random fall back
-	 */
-	public void setRandomFallBack(ArrayList<String> randomFallBack) {
-		this.randomFallBack = randomFallBack;
-	}
-
-	/**
-	 * Sets the random rewards.
-	 *
-	 * @param randomRewards
-	 *            the new random rewards
-	 */
-	public void setRandomRewards(ArrayList<String> randomRewards) {
-		this.randomRewards = randomRewards;
 	}
 
 	/**

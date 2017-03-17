@@ -516,26 +516,6 @@ public class RewardFileData {
 	}
 
 	/**
-	 * Gets the javascript false rewards.
-	 *
-	 * @return the javascript false rewards
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getJavascriptFalseRewards() {
-		return (ArrayList<String>) getData().getList("Javascript.FalseRewards", new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the javascript true rewards.
-	 *
-	 * @return the javascript true rewards
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getJavascriptTrueRewards() {
-		return (ArrayList<String>) getData().getList("Javascript.TrueRewards", new ArrayList<String>());
-	}
-
-	/**
 	 * Gets the max exp.
 	 *
 	 * @return the max exp
@@ -649,32 +629,6 @@ public class RewardFileData {
 	 */
 	public double getRandomChance() {
 		return getData().getDouble("Random.Chance");
-	}
-
-	/**
-	 * Gets the random fall back.
-	 *
-	 * @return the random fall back
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getRandomFallBack() {
-		try {
-			return (ArrayList<String>) getData().getList("Random.FallBack");
-		} catch (Exception ex) {
-			return new ArrayList<String>();
-		}
-	}
-
-	/**
-	 * Gets the random rewards.
-	 *
-	 * @return the random rewards
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getRandomRewards() {
-
-		return (ArrayList<String>) getData().getList("Random.Rewards", new ArrayList<String>());
-
 	}
 
 	/**
@@ -1162,5 +1116,30 @@ public class RewardFileData {
 	 */
 	public void setWorlds(ArrayList<String> value) {
 		set("Worlds", value);
+	}
+
+	public String getRandomRewardsPath() {
+		return "Random.Rewards";
+	}
+
+	public String getRandomFallBackRewardsPath() {
+		return "Random.FallBack";
+	}
+
+	public String getJavascriptTrueRewardsPath() {
+		return "Javascript.TrueRewards";
+	}
+
+	public String getJavascriptFalseRewardsPath() {
+		return "Javascript.FalseRewards";
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getRandomRewards() {
+		return (ArrayList<String>) getData().getList("Random.Rewards", new ArrayList<String>());
+	}
+
+	public boolean getRandomPickRandom() {
+		return getData().getBoolean("Random.PickRandom", true);
 	}
 }
