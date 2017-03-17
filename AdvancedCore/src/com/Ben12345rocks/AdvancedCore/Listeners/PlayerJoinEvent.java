@@ -51,11 +51,15 @@ public class PlayerJoinEvent implements Listener {
 				Player player = event.getPlayer();
 
 				if (player != null) {
+					if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
+							&& AdvancedCoreHook.getInstance().getMysql() != null) {
+						AdvancedCoreHook.getInstance().getMysql().loadPlayer(player.getUniqueId().toString());
+					}
 					User user = UserManager.getInstance().getUser(player);
 					user.checkOfflineRewards();
 				}
 			}
-		}, 20L);
+		}, 10L);
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
