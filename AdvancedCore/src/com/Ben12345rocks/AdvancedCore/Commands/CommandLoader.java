@@ -122,8 +122,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "ClearCache" }, permPrefix + ".ClearCache", "Clear MySQL Cache",
-				false) {
+		cmds.add(new CommandHandler(new String[] { "ClearCache" }, permPrefix + ".ClearCache", "Clear MySQL Cache") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
