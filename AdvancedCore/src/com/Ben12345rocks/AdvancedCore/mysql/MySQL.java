@@ -28,7 +28,7 @@ public class MySQL {
 	// private HashMap<String, ArrayList<Column>> table;
 
 	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4)
-			.expireAfterAccess(15, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
+			.expireAfterAccess(20, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
 				public ArrayList<Column> load(String key) {
 					return getExactQuery(new Column("uuid", key, DataType.STRING));
 				}
@@ -110,7 +110,7 @@ public class MySQL {
 
 	public synchronized void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
-		if (getUuids().contains(index) || containsKey(index)) {
+		if (getUuids().contains(index)) {
 			String query = "UPDATE " + getName() + " SET ";
 
 			if (dataType == DataType.STRING) {
@@ -243,11 +243,15 @@ public class MySQL {
 				// System.out.println(rCol.getValue());
 				result.add(rCol);
 			}
+			return result;
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} catch (ArrayIndexOutOfBoundsException e) {
 		}
 
+		for (String col : getColumns()) {
+			result.add(new Column(col, DataType.STRING));
+		}
 		return result;
 	}
 
