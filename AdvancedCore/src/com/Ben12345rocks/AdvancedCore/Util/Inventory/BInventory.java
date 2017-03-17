@@ -433,7 +433,14 @@ public class BInventory implements Listener {
 				item.setItemMeta(meta);
 				inv.setItem(pair.getKey(), item);
 			}
-			player.openInventory(inv);
+			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					player.openInventory(inv);
+				}
+			});
+
 		} else {
 			maxPage = getHighestSlot() / 45;
 			if (getHighestSlot() % 45 != 0) {
@@ -483,7 +490,13 @@ public class BInventory implements Listener {
 		inv.setItem(53,
 				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aNext Page").toItemStack());
 
-		player.openInventory(inv);
+		Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				player.openInventory(inv);
+			}
+		});
 	}
 
 	/**

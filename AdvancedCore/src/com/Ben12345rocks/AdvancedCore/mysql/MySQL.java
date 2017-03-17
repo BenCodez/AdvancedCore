@@ -28,7 +28,7 @@ public class MySQL {
 	// private HashMap<String, ArrayList<Column>> table;
 
 	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4)
-			.expireAfterAccess(1, TimeUnit.HOURS).build(new CacheLoader<String, ArrayList<Column>>() {
+			.expireAfterAccess(15, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
 				public ArrayList<Column> load(String key) {
 					return getExactQuery(new Column("uuid", key, DataType.STRING));
 				}
@@ -294,10 +294,13 @@ public class MySQL {
 
 	public void removePlayer(String uuid) {
 		table.remove(uuid);
-		// table.invalidate(uuid);
 	}
 
 	public void close() {
 		mysql.disconnect();
+	}
+
+	public void clearCache() {
+		table.clear();
 	}
 }
