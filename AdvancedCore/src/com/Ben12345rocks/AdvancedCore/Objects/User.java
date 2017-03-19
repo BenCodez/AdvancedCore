@@ -1,8 +1,10 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -147,6 +149,26 @@ public class User {
 		ArrayList<String> choiceRewards = getChoiceRewards();
 		choiceRewards.add(reward.getRewardName());
 		setChoiceRewards(choiceRewards);
+	}
+
+	public void checkDelayedTimedRewards() {
+		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
+		for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+			ArrayList<Long> times = entry.getValue();
+			ListIterator<Long> iterator = times.listIterator();
+			while (iterator.hasNext()) {
+				long time = iterator.next();
+				if (time != 0) {
+					Date timeDate = new Date(time);
+					if (new Date().after(timeDate)) {
+						entry.getKey().giveReward(this, isOnline(), true, false);
+						iterator.remove();
+					}
+				}
+			}
+			timed.put(entry.getKey(), times);
+		}
+		setTimedRewards(timed);
 	}
 
 	public void addOfflineRewards(Reward reward) {

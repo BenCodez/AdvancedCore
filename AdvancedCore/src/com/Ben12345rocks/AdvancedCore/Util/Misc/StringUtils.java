@@ -1,6 +1,8 @@
 package com.Ben12345rocks.AdvancedCore.Util.Misc;
 
 import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.bukkit.entity.Player;
@@ -112,6 +114,13 @@ public class StringUtils {
 	public String replacePlaceHolder(String str, String toReplace, String replaceWith) {
 		return replaceIgnoreCase(replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "\\{" + toReplace + "\\}",
 				replaceWith);
+	}
+
+	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
+		for (Entry<String, String> entry : placeholders.entrySet()) {
+			str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+		}
+		return str;
 	}
 
 	/**

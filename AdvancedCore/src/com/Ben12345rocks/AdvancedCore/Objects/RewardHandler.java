@@ -3,10 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.ListIterator;
-import java.util.Map.Entry;
+import java.util.List;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -38,7 +35,7 @@ public class RewardHandler {
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The rewards. */
-	private ArrayList<Reward> rewards;
+	private List<Reward> rewards;
 
 	/** The default folder. */
 	private File defaultFolder;
@@ -134,24 +131,7 @@ public class RewardHandler {
 			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 				try {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
-					for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
-						ArrayList<Long> times = entry.getValue();
-						ListIterator<Long> iterator = times.listIterator();
-						while (iterator.hasNext()) {
-							long time = iterator.next();
-							if (time != 0) {
-								Date timeDate = new Date(time);
-								if (new Date().after(timeDate)) {
-									entry.getKey().giveReward(user, user.isOnline(), true, false);
-									iterator.remove();
-								}
-							}
-						}
-
-						timed.put(entry.getKey(), times);
-					}
-					user.setTimedRewards(timed);
+					user.checkDelayedTimedRewards();
 				} catch (Exception ex) {
 					plugin.debug("Failed to update delayed/timed for: " + uuid);
 					plugin.debug(ex);
@@ -253,9 +233,9 @@ public class RewardHandler {
 	 *
 	 * @return the rewards
 	 */
-	public ArrayList<Reward> getRewards() {
+	public List<Reward> getRewards() {
 		if (rewards == null) {
-			rewards = new ArrayList<Reward>();
+			rewards = Collections.synchronizedList(new ArrayList<Reward>());
 		}
 		return rewards;
 	}
@@ -391,7 +371,7 @@ public class RewardHandler {
 	 * Load rewards.
 	 */
 	public void loadRewards() {
-		rewards = new ArrayList<Reward>();
+		rewards = Collections.synchronizedList(new ArrayList<Reward>());
 		setupExample();
 		for (File file : rewardFolders) {
 			for (String reward : getRewardNames(file)) {

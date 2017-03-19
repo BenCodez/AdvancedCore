@@ -33,6 +33,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
  */
 public class ItemBuilder {
 	private ItemStack is;
+	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -42,7 +43,13 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder(ConfigurationSection data) {
 		if (data == null) {
-			throw new IllegalArgumentException("Data can not be null!");
+			try {
+				throw new IllegalArgumentException("Data can not be null!");
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			}
+			is = new ItemStack(Material.STONE);
+			setAmount(1);
 		} else {
 			Material material = Material.STONE;
 			try {
@@ -76,6 +83,11 @@ public class ItemBuilder {
 			}
 			if (lore != null && lore.size() > 0) {
 				setLore(lore);
+			} else {
+				String line = data.getString("Lore", "");
+				if (!line.equals("")) {
+					addLoreLine(line);
+				}
 			}
 			int durability = data.getInt("Durability");
 			if (durability > 0) {
@@ -95,7 +107,17 @@ public class ItemBuilder {
 			for (String flag : itemFlags) {
 				addItemFlag(flag);
 			}
+
+			String skull = data.getString("Skull", "");
+			if (!skull.equals("")) {
+				setSkullOwner(skull);
+			}
 		}
+	}
+
+	public ItemBuilder setAmount(int amount) {
+		is.setAmount(amount);
+		return this;
 	}
 
 	public ItemBuilder addItemFlag(String flag) {
@@ -139,6 +161,11 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder(Material m, int amount) {
 		is = new ItemStack(m, amount);
+	}
+
+	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
+		placeholders.put(toReplace, replaceWith);
+		return this;
 	}
 
 	/**
@@ -213,13 +240,18 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addLoreLine(String line) {
-		ItemMeta im = is.getItemMeta();
-		List<String> lore = new ArrayList<>();
-		if (im.hasLore()) {
-			lore = new ArrayList<>(im.getLore());
+		if (line != null) {
+			ItemMeta im = is.getItemMeta();
+			List<String> lore = new ArrayList<>();
+			if (im.hasLore()) {
+				lore = new ArrayList<>(im.getLore());
+			}
+			for (String str : line.split("%NewLine%")) {
+				lore.add(str);
+			}
+			setLore(lore);
 		}
-		lore.add(line);
-		return setLore(lore);
+		return this;
 	}
 
 	/**
@@ -411,12 +443,30 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public String getName() {
+		return is.getItemMeta().getDisplayName();
+	}
+
+	public ArrayList<String> getLore() {
+		List<String> lore = is.getItemMeta().getLore();
+		ArrayList<String> list = new ArrayList<String>();
+		if (lore != null) {
+			list.addAll(lore);
+		}
+		return list;
+		
+	}
+
 	/**
 	 * Retrieves the itemstack from the ItemBuilder.
 	 *
 	 * @return The itemstack created/modified by the ItemBuilder instance.
 	 */
 	public ItemStack toItemStack() {
+		if (!placeholders.isEmpty()) {
+			setName(StringUtils.getInstance().replacePlaceHolder(getName(), placeholders));
+			setLore(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders));
+		}
 		return is;
 	}
 }

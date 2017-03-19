@@ -332,7 +332,7 @@ public class AdvancedCoreHook {
 		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
-		loadBackgroundTimer(5);
+		loadBackgroundTimer(1);
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 	}
