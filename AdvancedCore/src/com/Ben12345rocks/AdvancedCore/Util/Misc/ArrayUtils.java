@@ -48,6 +48,13 @@ public class ArrayUtils {
 		return list;
 	}
 
+	public ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
+		for (int i = 0; i < list.size(); i++) {
+			list.set(i, StringUtils.getInstance().replacePlaceHolder(list.get(i), placeholders));
+		}
+		return list;
+	}
+
 	/**
 	 * Colorize.
 	 *
