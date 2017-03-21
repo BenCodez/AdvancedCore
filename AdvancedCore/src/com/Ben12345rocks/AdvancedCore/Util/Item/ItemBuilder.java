@@ -44,7 +44,8 @@ public class ItemBuilder {
 	public ItemBuilder(ConfigurationSection data) {
 		if (data == null) {
 			try {
-				throw new IllegalArgumentException("Data can not be null!");
+				throw new IllegalArgumentException(
+						"ConfigurationSection can not be null! You are probably missing a section in your config.");
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
 			}
@@ -454,7 +455,7 @@ public class ItemBuilder {
 			list.addAll(lore);
 		}
 		return list;
-		
+
 	}
 
 	/**
