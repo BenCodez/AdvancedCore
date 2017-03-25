@@ -9,6 +9,7 @@ public class RewardBuilder {
 
 	public RewardBuilder(FileConfiguration data, String path) {
 		this.data = data;
+		this.path = path;
 	}
 
 	public RewardBuilder withPrefix(String prefix) {
