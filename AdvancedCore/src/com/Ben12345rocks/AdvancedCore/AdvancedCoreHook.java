@@ -64,6 +64,21 @@ public class AdvancedCoreHook {
 	private boolean sendScoreboards = true;
 	private int resourceId = 0;
 	private String jarName;
+	private boolean extraDebug = false;
+
+	/**
+	 * @return the extraDebug
+	 */
+	public boolean isExtraDebug() {
+		return extraDebug;
+	}
+
+	/**
+	 * @param extraDebug the extraDebug to set
+	 */
+	public void setExtraDebug(boolean extraDebug) {
+		this.extraDebug = extraDebug;
+	}
 
 	/**
 	 * @return the sendScoreboards

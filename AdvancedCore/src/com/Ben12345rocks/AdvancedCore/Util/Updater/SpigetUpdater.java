@@ -1,13 +1,13 @@
 package com.Ben12345rocks.AdvancedCore.Util.Updater;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import org.bukkit.Bukkit;
 
 public class SpigetUpdater {
 
@@ -22,9 +22,10 @@ public class SpigetUpdater {
 
 	public void download(int resourceId, String jarName) {
 		try {
-			download(new URL("https://api.spiget.org/v2/resources/" + resourceId + "/versions/latest/download"),
-					new File(AdvancedCoreHook.getInstance().getPlugin().getServer().getUpdateFolder(),
+			download(new URL("https://api.spiget.org/v2/resources/" + resourceId + "/download"),
+					new File(Bukkit.getServer().getUpdateFolderFile(),
 							jarName + ".jar"));
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -32,8 +33,15 @@ public class SpigetUpdater {
 	}
 
 	private void download(URL url, File target) throws IOException {
-		Path targetPath = target.toPath();
-		Files.copy(url.openStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+		/*Path targetPath = target.toPath();
+		Files.copy(url.openStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);*/
+		target.getParentFile().mkdirs();
+		target.createNewFile();
+        ReadableByteChannel rbc = Channels.newChannel(url.openStream());
+        FileOutputStream fos = new FileOutputStream(target);
+        fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+        fos.close();
+        rbc.close();
 	}
 
 }
