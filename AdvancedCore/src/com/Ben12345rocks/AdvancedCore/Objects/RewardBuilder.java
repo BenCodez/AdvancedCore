@@ -10,14 +10,13 @@ public class RewardBuilder {
 	private String path;
 	private HashMap<String, String> placeholders;
 	private boolean giveOffline;
-	private boolean checkTimed;
+	private boolean online;
 
 	public RewardBuilder(FileConfiguration data, String path) {
 		this.data = data;
 		this.path = path;
 		this.placeholders = new HashMap<String, String>();
 		this.giveOffline = true;
-		this.checkTimed = true;
 	}
 
 	public RewardBuilder withPrefix(String prefix) {
@@ -26,7 +25,7 @@ public class RewardBuilder {
 	}
 
 	public RewardBuilder withPlaceHolder(HashMap<String, String> placeholders) {
-		this.placeholders = placeholders;
+		this.placeholders.putAll(placeholders);
 		return this;
 	}
 
@@ -40,13 +39,13 @@ public class RewardBuilder {
 		return this;
 	}
 
-	public RewardBuilder checkTimed(boolean checkTimed) {
-		this.checkTimed = checkTimed;
-		return this;
+	public void send(User user) {
+		RewardHandler.getInstance().giveReward(user, prefix, data, path, online, giveOffline, placeholders);
 	}
 
-	public void send(User user) {
-		RewardHandler.getInstance().giveReward(user, prefix, data, path, giveOffline, checkTimed, placeholders);
+	public RewardBuilder setOnline(boolean online) {
+		this.online = online;
+		return this;
 	}
 
 }

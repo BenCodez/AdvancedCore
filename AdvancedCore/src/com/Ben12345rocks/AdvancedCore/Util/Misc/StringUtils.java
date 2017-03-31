@@ -117,8 +117,10 @@ public class StringUtils {
 	}
 
 	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
-		for (Entry<String, String> entry : placeholders.entrySet()) {
-			str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+		if (placeholders != null) {
+			for (Entry<String, String> entry : placeholders.entrySet()) {
+				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+			}
 		}
 		return str;
 	}
