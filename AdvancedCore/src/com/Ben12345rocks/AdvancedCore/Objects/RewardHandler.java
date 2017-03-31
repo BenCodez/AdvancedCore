@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -78,12 +79,17 @@ public class RewardHandler {
 		giveReward(user, "", data, path, online, giveOffline);
 	}
 
-	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
 			boolean giveOffline) {
+		giveReward(user, prefix, data, path, online, giveOffline, null);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline, HashMap<String, String> placeholders) {
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
-				giveReward(user, reward, online, giveOffline);
+				giveReward(user, reward, online, giveOffline, true, placeholders);
 			}
 		} else if (data.isConfigurationSection(path)) {
 			String rewardName = "";
@@ -100,10 +106,10 @@ public class RewardHandler {
 			}
 			reward.getConfig().setData(section);
 			loadRewards();
-			giveReward(user, rewardName, online, giveOffline);
+			giveReward(user, rewardName, online, giveOffline, true, placeholders);
 
 		} else {
-			giveReward(user, data.getString(path, ""), online);
+			giveReward(user, data.getString(path, ""), online, giveOffline, true, placeholders);
 		}
 	}
 
@@ -296,6 +302,18 @@ public class RewardHandler {
 		});
 	}
 
+	@Deprecated
+	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline, boolean checkTimed,
+			HashMap<String, String> placeholders) {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				reward.giveReward(user, online, giveOffline, checkTimed, placeholders);
+			}
+		});
+	}
+
 	/**
 	 * Give reward.
 	 *
@@ -362,8 +380,14 @@ public class RewardHandler {
 
 	@Deprecated
 	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed) {
+		giveReward(user, reward, online, giveOffline, checkTimed, null);
+	}
+
+	@Deprecated
+	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed,
+			HashMap<String, String> placeholders) {
 		if (!reward.equals("")) {
-			giveReward(user, getReward(reward), online, giveOffline, checkTimed);
+			giveReward(user, getReward(reward), online, giveOffline, checkTimed, placeholders);
 		}
 	}
 

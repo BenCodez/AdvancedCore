@@ -903,11 +903,12 @@ public class Reward {
 	 *
 	 * @param user
 	 *            the user
+	 * @param placeholders
 	 */
-	public void giveItems(User user) {
+	public void giveItems(User user, HashMap<String, String> placeholders) {
 		itemsAndAmountsGiven = new HashMap<String, Integer>();
 		for (String item : getItems()) {
-			user.giveItem(getItemStack(user, item));
+			user.giveItem(getItemStack(user, item), placeholders);
 		}
 	}
 
@@ -984,6 +985,10 @@ public class Reward {
 		giveReward(user, online, giveOffline, true);
 	}
 
+	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed) {
+		giveReward(user, online, giveOffline, checkTimed, null);
+	}
+
 	/**
 	 * Give reward.
 	 *
@@ -996,13 +1001,14 @@ public class Reward {
 	 * @param checkTimed
 	 *            checkTimed
 	 */
-	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed) {
+	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
+			HashMap<String, String> placeholders) {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user);
 		Bukkit.getPluginManager().callEvent(event);
 
 		if (event.isCancelled()) {
-			plugin.debug("Reward " + name + " was cancelled");
+			plugin.debug("Reward " + name + " was cancelled for " + user.getPlayerName());
 			return;
 		}
 
@@ -1023,7 +1029,7 @@ public class Reward {
 			return;
 		}
 
-		giveRewardReward(user, online);
+		giveRewardReward(user, online, placeholders);
 	}
 
 	/**
@@ -1034,7 +1040,7 @@ public class Reward {
 	 * @param online
 	 *            the online
 	 */
-	public void giveRewardReward(User user, boolean online) {
+	public void giveRewardReward(User user, boolean online, HashMap<String, String> placeholders) {
 		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 
 		String type = getRewardType();
@@ -1051,7 +1057,7 @@ public class Reward {
 		}
 
 		if (checkChance()) {
-			giveRewardUser(user);
+			giveRewardUser(user, placeholders);
 		}
 	}
 
@@ -1060,26 +1066,27 @@ public class Reward {
 	 *
 	 * @param user
 	 *            the user
+	 * @param placeholders
 	 */
-	public void giveRewardUser(User user) {
+	public void giveRewardUser(User user, HashMap<String, String> placeholders) {
 		Player player = user.getPlayer();
 		if (player != null) {
 			if (hasPermission(user)) {
 				giveRandom(user, true);
-				runJavascript(user, true);
+				runJavascript(user, true, placeholders);
 				int money = getMoneyToGive();
 				giveMoney(user, money);
-				giveItems(user);
+				giveItems(user, placeholders);
 				int exp = getExpToGive();
 				giveExp(user, exp);
-				runCommands(user);
+				runCommands(user, placeholders);
 				givePotions(user);
-				sendTitle(user);
-				sendActionBar(user);
+				sendTitle(user, placeholders);
+				sendActionBar(user, placeholders);
 				playSound(user);
 				playEffect(user);
-				sendBossBar(user);
-				sendMessage(user, money, exp);
+				sendBossBar(user, placeholders);
+				sendMessage(user, money, exp, placeholders);
 				checkChoiceRewards(user);
 				sendFirework(user);
 
@@ -1386,12 +1393,13 @@ public class Reward {
 	 *
 	 * @param user
 	 *            the user
+	 * @param placeholders
 	 */
-	public void runCommands(User user) {
+	public void runCommands(User user, HashMap<String, String> placeholders) {
 		String playerName = user.getPlayerName();
 
 		// Console commands
-		ArrayList<String> consolecmds = getConsoleCommands();
+		ArrayList<String> consolecmds = ArrayUtils.getInstance().replacePlaceHolder(getConsoleCommands(), placeholders);
 
 		if (consolecmds != null) {
 			for (String consolecmd : consolecmds) {
@@ -1411,7 +1419,7 @@ public class Reward {
 		}
 
 		// Player commands
-		ArrayList<String> playercmds = getPlayerCommands();
+		ArrayList<String> playercmds = ArrayUtils.getInstance().replacePlaceHolder(getPlayerCommands(), placeholders);
 
 		Player player = user.getPlayer();
 		if (playercmds != null) {
@@ -1425,6 +1433,7 @@ public class Reward {
 						public void run() {
 							player.performCommand(cmd);
 						}
+
 					});
 
 				}
@@ -1439,8 +1448,9 @@ public class Reward {
 	 *            the user
 	 * @param online
 	 *            the online
+	 * @param placeholders
 	 */
-	public void runJavascript(User user, boolean online) {
+	public void runJavascript(User user, boolean online, HashMap<String, String> placeholders) {
 		if (isJavascriptEnabled()) {
 			if (JavascriptHandler.getInstance().evalute(user, getJavascriptExpression())) {
 				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptTrueRewardsPath()).withPrefix(name)
@@ -1457,9 +1467,11 @@ public class Reward {
 	 *
 	 * @param user
 	 *            the user
+	 * @param placeholders
 	 */
-	public void sendActionBar(User user) {
-		user.sendActionBar(getActionBarMsg(), getActionBarDelay());
+	public void sendActionBar(User user, HashMap<String, String> placeholders) {
+		user.sendActionBar(StringUtils.getInstance().replacePlaceHolder(getActionBarMsg(), placeholders),
+				getActionBarDelay());
 	}
 
 	/**
@@ -1467,11 +1479,12 @@ public class Reward {
 	 *
 	 * @param user
 	 *            the user
+	 * @param placeholders
 	 */
-	public void sendBossBar(User user) {
+	public void sendBossBar(User user, HashMap<String, String> placeholders) {
 		if (isBossBarEnabled()) {
-			user.sendBossBar(getBossBarMessage(), getBossBarColor(), getBossBarStyle(), getBossBarProgress(),
-					getBossBarDelay());
+			user.sendBossBar(StringUtils.getInstance().replacePlaceHolder(getBossBarMessage(), placeholders),
+					getBossBarColor(), getBossBarStyle(), getBossBarProgress(), getBossBarDelay());
 		}
 	}
 
@@ -1498,15 +1511,16 @@ public class Reward {
 	 *            the money
 	 * @param exp
 	 *            the exp
+	 * @param placeholders
 	 */
-	public void sendMessage(User user, int money, int exp) {
+	public void sendMessage(User user, int money, int exp, HashMap<String, String> placeholders) {
 		ArrayList<String> itemsAndAmounts = new ArrayList<String>();
 		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
 			itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
 		}
 		String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
 
-		String broadcastMsg = this.broadcastMsg;
+		String broadcastMsg = StringUtils.getInstance().replacePlaceHolder(this.broadcastMsg, placeholders);
 		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "player", user.getPlayerName());
 
 		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "money", "" + money);
@@ -1526,7 +1540,7 @@ public class Reward {
 		msg = StringUtils.getInstance().replacePlaceHolder(msg, "items",
 				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-		user.sendMessage(msg);
+		user.sendMessage(msg,placeholders);
 
 	}
 
@@ -1535,12 +1549,13 @@ public class Reward {
 	 *
 	 * @param user
 	 *            the user
+	 * @param placeholders
 	 */
-	public void sendTitle(User user) {
+	public void sendTitle(User user, HashMap<String, String> placeholders) {
 		if (titleEnabled) {
-			user.sendTitle(titleTitle,
+			user.sendTitle(StringUtils.getInstance().replacePlaceHolder(titleTitle, placeholders),
 
-					titleSubTitle,
+					StringUtils.getInstance().replacePlaceHolder(titleSubTitle, placeholders),
 
 					titleFadeIn, titleShowTime, titleFadeOut);
 		}

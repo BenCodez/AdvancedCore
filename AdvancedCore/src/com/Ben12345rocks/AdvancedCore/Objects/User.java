@@ -743,4 +743,12 @@ public class User {
 		this.uuid = uuid;
 	}
 
+	public void giveItem(ItemStack itemStack, HashMap<String, String> placeholders) {
+		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack());
+	}
+
+	public void sendMessage(String msg, HashMap<String, String> placeholders) {
+		sendMessage(StringUtils.getInstance().replacePlaceHolder(msg, placeholders));
+	}
+
 }

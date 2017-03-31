@@ -470,4 +470,9 @@ public class ItemBuilder {
 		}
 		return is;
 	}
+
+	public ItemBuilder setPlaceholders(HashMap<String, String> placeholders) {
+		this.placeholders = placeholders;
+		return this;
+	}
 }
