@@ -946,7 +946,7 @@ public class Reward {
 	 *            the online
 	 */
 	@SuppressWarnings("deprecation")
-	public void giveRandom(User user, boolean online) {
+	public void giveRandom(User user, boolean online, HashMap<String,String> placeholders) {
 		if (checkRandomChance()) {
 			if (isRandomPickRandom()) {
 				ArrayList<String> rewards = getConfig().getRandomRewards();
@@ -954,17 +954,17 @@ public class Reward {
 					if (rewards.size() > 0) {
 						String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
 						if (!reward.equals("")) {
-							RewardHandler.getInstance().giveReward(user, reward, online);
+							RewardHandler.getInstance().giveReward(user, reward, online,true,true,placeholders);
 
 						}
 					}
 				}
 			} else {
-				new RewardBuilder(getConfig().getData(), getConfig().getRandomRewardsPath()).withPrefix(name)
+				new RewardBuilder(getConfig().getData(), getConfig().getRandomRewardsPath()).withPrefix(name).withPlaceHolder(placeholders)
 						.send(user);
 			}
 		} else {
-			new RewardBuilder(getConfig().getData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name)
+			new RewardBuilder(getConfig().getData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name).withPlaceHolder(placeholders)
 					.send(user);
 		}
 	}
@@ -1072,7 +1072,7 @@ public class Reward {
 		Player player = user.getPlayer();
 		if (player != null) {
 			if (hasPermission(user)) {
-				giveRandom(user, true);
+				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
 				int money = getMoneyToGive();
 				giveMoney(user, money);
@@ -1429,17 +1429,14 @@ public class Reward {
 					final String cmd = playercmd;
 					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
-						@Override
-						public void run() {
-							player.performCommand(cmd);
-						}
-
-					});
-
-				}
-			}
-		}
+	@Override
+	public void run() {
+		player.performCommand(cmd);
 	}
+
+	});
+
+	}}}}
 
 	/**
 	 * Run javascript.
@@ -1540,7 +1537,7 @@ public class Reward {
 		msg = StringUtils.getInstance().replacePlaceHolder(msg, "items",
 				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-		user.sendMessage(msg,placeholders);
+		user.sendMessage(msg, placeholders);
 
 	}
 

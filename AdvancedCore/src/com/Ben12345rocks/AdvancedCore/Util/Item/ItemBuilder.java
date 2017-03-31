@@ -35,6 +35,25 @@ public class ItemBuilder {
 	private ItemStack is;
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
+	private boolean checkChance(double chance) {
+		if ((chance == 0) || (chance == 100)) {
+			return true;
+		}
+
+		double randomNum = ThreadLocalRandom.current().nextDouble(100);
+
+		if (randomNum <= chance) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	private void setBlank() {
+		is = new ItemStack(Material.STONE);
+		setAmount(0);
+	}
+
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
 	 *
@@ -49,69 +68,73 @@ public class ItemBuilder {
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
 			}
-			is = new ItemStack(Material.STONE);
-			setAmount(1);
+			setBlank();
 		} else {
-			Material material = Material.STONE;
-			try {
-				material = Material.valueOf(data.getString("Material"));
-			} catch (Exception e) {
-				AdvancedCoreHook.getInstance().debug(e);
+			double chance = data.getDouble("Chance", 100);
+			if (checkChance(chance)) {
+				Material material = Material.STONE;
 				try {
-					material = Material.valueOf(data.getName());
-				} catch (Exception ex) {
-					AdvancedCoreHook.getInstance().debug(ex);
+					material = Material.valueOf(data.getString("Material"));
+				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().debug(e);
+					try {
+						material = Material.valueOf(data.getName());
+					} catch (Exception ex) {
+						AdvancedCoreHook.getInstance().debug(ex);
+					}
 				}
-			}
 
-			int amount = data.getInt("Amount");
-			int minAmount = data.getInt("MinAmount");
-			int maxAmount = data.getInt("MaxAmount");
+				int amount = data.getInt("Amount");
+				int minAmount = data.getInt("MinAmount");
+				int maxAmount = data.getInt("MaxAmount");
 
-			int currentAmount = 0;
-			if (amount > 0) {
-				currentAmount = amount;
+				int currentAmount = 0;
+				if (amount > 0) {
+					currentAmount = amount;
+				} else {
+					currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
+				}
+
+				int dat = data.getInt("Data");
+				is = new ItemStack(material, currentAmount, (short) dat);
+				String name = data.getString("Name");
+				List<String> lore = data.getStringList("Lore");
+				if (name != null && !name.equals("")) {
+					setName(name);
+				}
+				if (lore != null && lore.size() > 0) {
+					setLore(lore);
+				} else {
+					String line = data.getString("Lore", "");
+					if (!line.equals("")) {
+						addLoreLine(line);
+					}
+				}
+				int durability = data.getInt("Durability");
+				if (durability > 0) {
+					setDurability((short) durability);
+				}
+
+				if (data.isConfigurationSection("Enchants")) {
+					HashMap<String, Integer> enchants = new HashMap<String, Integer>();
+					for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
+						enchants.put(enchant, data.getInt("Enchants." + enchant));
+					}
+					addEnchantments(enchants);
+				}
+
+				@SuppressWarnings("unchecked")
+				ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags", new ArrayList<String>());
+				for (String flag : itemFlags) {
+					addItemFlag(flag);
+				}
+
+				String skull = data.getString("Skull", "");
+				if (!skull.equals("")) {
+					setSkullOwner(skull);
+				}
 			} else {
-				currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
-			}
-
-			int dat = data.getInt("Data");
-			is = new ItemStack(material, currentAmount, (short) dat);
-			String name = data.getString("Name");
-			List<String> lore = data.getStringList("Lore");
-			if (name != null && !name.equals("")) {
-				setName(name);
-			}
-			if (lore != null && lore.size() > 0) {
-				setLore(lore);
-			} else {
-				String line = data.getString("Lore", "");
-				if (!line.equals("")) {
-					addLoreLine(line);
-				}
-			}
-			int durability = data.getInt("Durability");
-			if (durability > 0) {
-				setDurability((short) durability);
-			}
-
-			if (data.isConfigurationSection("Enchants")) {
-				HashMap<String, Integer> enchants = new HashMap<String, Integer>();
-				for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
-					enchants.put(enchant, data.getInt("Enchants." + enchant));
-				}
-				addEnchantments(enchants);
-			}
-
-			@SuppressWarnings("unchecked")
-			ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags", new ArrayList<String>());
-			for (String flag : itemFlags) {
-				addItemFlag(flag);
-			}
-
-			String skull = data.getString("Skull", "");
-			if (!skull.equals("")) {
-				setSkullOwner(skull);
+				setBlank();
 			}
 		}
 	}
