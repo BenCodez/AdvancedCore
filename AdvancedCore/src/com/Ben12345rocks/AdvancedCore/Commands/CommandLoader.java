@@ -19,6 +19,7 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
@@ -138,6 +139,19 @@ public class CommandLoader {
 				}
 			}
 		});
+
+		if (AdvancedCoreHook.getInstance().getResourceId() != 0) {
+			cmds.add(new CommandHandler(new String[] { "Download" }, permPrefix + ".Download", "Download from spigot") {
+
+				@Override
+				public void execute(CommandSender sender, String[] args) {
+					SpigetUpdater.getInstance().download(AdvancedCoreHook.getInstance().getResourceId(),
+							AdvancedCoreHook.getInstance().getJarName());
+					sender.sendMessage(StringUtils.getInstance().colorize(
+							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
+				}
+			});
+		}
 
 		return cmds;
 	}

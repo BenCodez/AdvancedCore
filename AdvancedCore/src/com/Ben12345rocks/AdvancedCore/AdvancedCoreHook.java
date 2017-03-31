@@ -62,6 +62,8 @@ public class AdvancedCoreHook {
 	private Logger logger;
 	private boolean preloadUsers = false;
 	private boolean sendScoreboards = true;
+	private int resourceId = 0;
+	private String jarName;
 
 	/**
 	 * @return the sendScoreboards
@@ -95,6 +97,25 @@ public class AdvancedCoreHook {
 
 	private AdvancedCoreHook() {
 
+	}
+
+	public void allowDownloadingFromSpigot(int resourceId, String jarName) {
+		this.resourceId = resourceId;
+		this.jarName = jarName;
+	}
+
+	/**
+	 * @return the resourceId
+	 */
+	public int getResourceId() {
+		return resourceId;
+	}
+
+	/**
+	 * @return the jarName
+	 */
+	public String getJarName() {
+		return jarName;
 	}
 
 	private void checkPlaceHolderAPI() {
