@@ -30,6 +30,7 @@ public abstract class BInventoryButton {
 
 	public BInventoryButton(ItemBuilder item) {
 		setItem(item);
+		slot = item.getSlot();
 	}
 
 	public BInventoryButton(ItemStack item) {

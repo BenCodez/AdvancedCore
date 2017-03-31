@@ -34,6 +34,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 public class ItemBuilder {
 	private ItemStack is;
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
+	private int slot = -1;
 
 	private boolean checkChance(double chance) {
 		if ((chance == 0) || (chance == 100)) {
@@ -133,10 +134,24 @@ public class ItemBuilder {
 				if (!skull.equals("")) {
 					setSkullOwner(skull);
 				}
+
+				slot = data.getInt("Slot", -1);
 			} else {
 				setBlank();
 			}
 		}
+	}
+
+	/**
+	 * @return the slot
+	 */
+	public int getSlot() {
+		return slot;
+	}
+
+	public ItemBuilder setSlot(int slot) {
+		this.slot = slot;
+		return this;
 	}
 
 	public ItemBuilder setAmount(int amount) {
