@@ -1,12 +1,14 @@
 package com.Ben12345rocks.AdvancedCore.Util.Misc;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 
 public class PlayerUtils {
 	/** The instance. */
@@ -53,9 +55,15 @@ public class PlayerUtils {
 			return null;
 		}
 
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		java.util.UUID u = java.util.UUID.fromString(uuid);
+		Player player = Bukkit.getPlayer(uuid);
 		if (player == null) {
-			return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid)).getName();
+			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
+			if (p.hasPlayedBefore() || p.isOnline()) {
+				return p.getName();
+			} else {
+				return Thread.getInstance().getThread().getName(u);
+			}
 		} else {
 			return player.getName();
 		}

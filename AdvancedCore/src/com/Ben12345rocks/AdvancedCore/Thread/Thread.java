@@ -1,6 +1,9 @@
 package com.Ben12345rocks.AdvancedCore.Thread;
 
+import java.util.Arrays;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.NameFetcher;
 
 /**
  * The Class Thread.
@@ -26,7 +29,15 @@ public class Thread {
 			synchronized (Thread.getInstance()) {
 				run.run();
 			}
+		}
 
+		public String getName(java.util.UUID uuid) {
+			NameFetcher fet = new NameFetcher(Arrays.asList(uuid));
+			try {
+				return fet.call().get(uuid);
+			} catch (Exception e) {
+				return "Error Getting Name";
+			}
 		}
 	}
 
