@@ -76,7 +76,7 @@ public class MySQL {
 			public void run() {
 				updateBatch();
 			}
-		}, 10 * 1000, 5 * 1000);
+		}, 10 * 1000, 1 * 1000);
 
 	}
 
@@ -98,7 +98,7 @@ public class MySQL {
 			for (String text : sql.split(";")) {
 				try {
 					Query query = new Query(mysql, text);
-					query.executeUpdate();
+					query.executeUpdateAsync();
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
@@ -306,5 +306,7 @@ public class MySQL {
 
 	public void clearCache() {
 		table.clear();
+		columns.clear();
+		columns.addAll(getColumnsQueury());
 	}
 }

@@ -171,10 +171,13 @@ public class User {
 		setTimedRewards(timed);
 	}
 
-	public void addOfflineRewards(Reward reward) {
-		ArrayList<String> offlineRewards = getOfflineRewards();
-		offlineRewards.add(reward.getRewardName());
-		setOfflineRewards(offlineRewards);
+	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
+		synchronized (AdvancedCoreHook.getInstance()) {
+			ArrayList<String> offlineRewards = getOfflineRewards();
+			offlineRewards
+					.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders));
+			setOfflineRewards(offlineRewards);
+		}
 	}
 
 	public void addTimedReward(Reward reward, long epochMilli) {
@@ -196,7 +199,13 @@ public class User {
 		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
 		for (String str : ArrayUtils.getInstance().convert(copy)) {
-			RewardHandler.getInstance().giveReward(this, str, false, true, false);
+			String[] args = str.split("%placeholders%");
+			String placeholders = "";
+			if (args.length > 1) {
+				placeholders = args[1];
+			}
+			RewardHandler.getInstance().giveReward(this, args[0], false, true, false,
+					ArrayUtils.getInstance().fromString(placeholders));
 		}
 
 	}

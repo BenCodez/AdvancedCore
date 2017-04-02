@@ -402,7 +402,9 @@ public class RewardHandler {
 				if (!reward.equals("")) {
 					if (!rewardExist(reward)) {
 						rewards.add(new Reward(file, reward));
-						plugin.debug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
+						if (AdvancedCoreHook.getInstance().isExtraDebug()) {
+							plugin.debug("Extra: Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
+						}
 					} else {
 						plugin.getPlugin().getLogger().warning("Detected that a reward file named " + reward
 								+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);

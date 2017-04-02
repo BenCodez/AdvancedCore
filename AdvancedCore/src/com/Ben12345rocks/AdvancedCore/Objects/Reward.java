@@ -1024,7 +1024,7 @@ public class Reward {
 
 		if ((!online && !user.isOnline()) || !checkWorld(user)) {
 			if (giveOffline) {
-				user.addOfflineRewards(this);
+				user.addOfflineRewards(this,placeholders);
 			}
 			return;
 		}

@@ -383,4 +383,34 @@ public class ArrayUtils {
 
 		return sortedMap;
 	}
+
+	public String makeString(HashMap<String, String> placeholders) {
+		String str = "";
+		int count = 0;
+		if (placeholders != null && !placeholders.isEmpty()) {
+			for (Entry<String, String> entry : placeholders.entrySet()) {
+				str += entry.getKey() + "@" + entry.getValue();
+				count++;
+				if (count != placeholders.size()) {
+					str += "&";
+				}
+			}
+		}
+		return str;
+	}
+
+	public HashMap<String, String> fromString(String str) {
+		HashMap<String, String> map = new HashMap<String, String>();
+		if (!str.equals("")) {
+			for (String entry : str.split("&")) {
+				String[] values = entry.split("@");
+				if (values.length > 1) {
+					String key = values[0];
+					String value = values[1];
+					map.put(key, value);
+				}
+			}
+		}
+		return map;
+	}
 }

@@ -47,7 +47,17 @@ public class RewardBuilder {
 	}
 
 	public void send(User user) {
+		withPlaceHolder("player", user.getPlayerName());
 		RewardHandler.getInstance().giveReward(user, prefix, data, path, online, giveOffline, placeholders);
+	}
+
+	public boolean isGiveOffline() {
+		return giveOffline;
+	}
+
+	public RewardBuilder setGiveOffline(boolean giveOffline) {
+		this.giveOffline = giveOffline;
+		return this;
 	}
 
 	public void send(User... users) {
