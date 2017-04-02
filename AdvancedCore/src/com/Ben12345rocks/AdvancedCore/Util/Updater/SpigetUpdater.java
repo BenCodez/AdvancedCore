@@ -23,9 +23,8 @@ public class SpigetUpdater {
 	public void download(int resourceId, String jarName) {
 		try {
 			download(new URL("https://api.spiget.org/v2/resources/" + resourceId + "/download"),
-					new File(Bukkit.getServer().getUpdateFolderFile(),
-							jarName + ".jar"));
-			
+					new File(Bukkit.getServer().getUpdateFolderFile(), jarName + ".jar"));
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -33,15 +32,17 @@ public class SpigetUpdater {
 	}
 
 	private void download(URL url, File target) throws IOException {
-		/*Path targetPath = target.toPath();
-		Files.copy(url.openStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);*/
+		/*
+		 * Path targetPath = target.toPath(); Files.copy(url.openStream(),
+		 * targetPath, StandardCopyOption.REPLACE_EXISTING);
+		 */
 		target.getParentFile().mkdirs();
 		target.createNewFile();
-        ReadableByteChannel rbc = Channels.newChannel(url.openStream());
-        FileOutputStream fos = new FileOutputStream(target);
-        fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-        fos.close();
-        rbc.close();
+		ReadableByteChannel rbc = Channels.newChannel(url.openStream());
+		FileOutputStream fos = new FileOutputStream(target);
+		fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+		fos.close();
+		rbc.close();
 	}
 
 }

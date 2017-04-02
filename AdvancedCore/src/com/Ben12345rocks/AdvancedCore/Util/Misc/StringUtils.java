@@ -100,6 +100,15 @@ public class StringUtils {
 		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
 
+	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
+		if (placeholders != null) {
+			for (Entry<String, String> entry : placeholders.entrySet()) {
+				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+			}
+		}
+		return str;
+	}
+
 	/**
 	 * Replace place holder.
 	 *
@@ -114,15 +123,6 @@ public class StringUtils {
 	public String replacePlaceHolder(String str, String toReplace, String replaceWith) {
 		return replaceIgnoreCase(replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "\\{" + toReplace + "\\}",
 				replaceWith);
-	}
-
-	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
-			}
-		}
-		return str;
 	}
 
 	/**

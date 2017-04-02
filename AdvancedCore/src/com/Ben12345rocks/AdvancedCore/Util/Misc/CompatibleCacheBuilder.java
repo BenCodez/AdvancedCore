@@ -40,6 +40,56 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
+	 * Returns the cache wrapped as a ConcurrentMap.
+	 * <p>
+	 * We can't return the direct Cache instance as it changed in Guava 13.
+	 *
+	 * @param <K1>
+	 *            Key type
+	 * @param <V1>
+	 *            Value type
+	 * @param loader
+	 *            - cache loader
+	 * @return The cache as a a map.
+	 */
+	@SuppressWarnings("unchecked")
+	public <K1 extends K, V1 extends V> ConcurrentMap<K1, V1> build(CacheLoader<? super K1, V1> loader) {
+		Object cache = null;
+
+		if (BUILD_METHOD == null) {
+			try {
+				BUILD_METHOD = builder.getClass().getDeclaredMethod("build", CacheLoader.class);
+				BUILD_METHOD.setAccessible(true);
+			} catch (Exception e) {
+				throw new IllegalStateException("Unable to find CacheBuilder.build(CacheLoader)", e);
+			}
+		}
+
+		// Attempt to build the Cache
+		try {
+			cache = BUILD_METHOD.invoke(builder, loader);
+		} catch (Exception e) {
+			throw new IllegalStateException("Unable to invoke " + BUILD_METHOD + " on " + builder, e);
+		}
+
+		if (AS_MAP_METHOD == null) {
+			try {
+				AS_MAP_METHOD = cache.getClass().getMethod("asMap");
+				AS_MAP_METHOD.setAccessible(true);
+			} catch (Exception e) {
+				throw new IllegalStateException("Unable to find Cache.asMap() in " + cache, e);
+			}
+		}
+
+		// Retrieve it as a map
+		try {
+			return (ConcurrentMap<K1, V1>) AS_MAP_METHOD.invoke(cache);
+		} catch (Exception e) {
+			throw new IllegalStateException("Unable to invoke " + AS_MAP_METHOD + " on " + cache, e);
+		}
+	}
+
+	/**
 	 * Guides the allowed concurrency among update operations. Used as a hint
 	 * for internal sizing. The table is internally partitioned to try to permit
 	 * the indicated number of concurrent updates without contention. Because
@@ -255,27 +305,6 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Specifies a nanosecond-precision time source for use in determining when
-	 * entries should be expired. By default, {@link System#nanoTime} is used.
-	 *
-	 * <p>
-	 * The primary intent of this method is to facilitate testing of caches
-	 * which have been configured with {@link #expireAfterWrite} or
-	 * {@link #expireAfterAccess}.
-	 *
-	 * @param ticker
-	 *            - ticker
-	 * @return This for chaining
-	 *
-	 * @throws IllegalStateException
-	 *             if a ticker was already set
-	 */
-	public CompatibleCacheBuilder<K, V> ticker(Ticker ticker) {
-		builder.ticker(ticker);
-		return this;
-	}
-
-	/**
 	 * Specifies that each value (not key) stored in the cache should be wrapped
 	 * in a {@link java.lang.ref.SoftReference SoftReference} (by default,
 	 * strong references are used). Softly-referenced objects will be
@@ -299,6 +328,27 @@ public class CompatibleCacheBuilder<K, V> {
 	 */
 	public CompatibleCacheBuilder<K, V> softValues() {
 		builder.softValues();
+		return this;
+	}
+
+	/**
+	 * Specifies a nanosecond-precision time source for use in determining when
+	 * entries should be expired. By default, {@link System#nanoTime} is used.
+	 *
+	 * <p>
+	 * The primary intent of this method is to facilitate testing of caches
+	 * which have been configured with {@link #expireAfterWrite} or
+	 * {@link #expireAfterAccess}.
+	 *
+	 * @param ticker
+	 *            - ticker
+	 * @return This for chaining
+	 *
+	 * @throws IllegalStateException
+	 *             if a ticker was already set
+	 */
+	public CompatibleCacheBuilder<K, V> ticker(Ticker ticker) {
+		builder.ticker(ticker);
 		return this;
 	}
 
@@ -343,55 +393,5 @@ public class CompatibleCacheBuilder<K, V> {
 	public CompatibleCacheBuilder<K, V> weakValues() {
 		builder.weakValues();
 		return this;
-	}
-
-	/**
-	 * Returns the cache wrapped as a ConcurrentMap.
-	 * <p>
-	 * We can't return the direct Cache instance as it changed in Guava 13.
-	 *
-	 * @param <K1>
-	 *            Key type
-	 * @param <V1>
-	 *            Value type
-	 * @param loader
-	 *            - cache loader
-	 * @return The cache as a a map.
-	 */
-	@SuppressWarnings("unchecked")
-	public <K1 extends K, V1 extends V> ConcurrentMap<K1, V1> build(CacheLoader<? super K1, V1> loader) {
-		Object cache = null;
-
-		if (BUILD_METHOD == null) {
-			try {
-				BUILD_METHOD = builder.getClass().getDeclaredMethod("build", CacheLoader.class);
-				BUILD_METHOD.setAccessible(true);
-			} catch (Exception e) {
-				throw new IllegalStateException("Unable to find CacheBuilder.build(CacheLoader)", e);
-			}
-		}
-
-		// Attempt to build the Cache
-		try {
-			cache = BUILD_METHOD.invoke(builder, loader);
-		} catch (Exception e) {
-			throw new IllegalStateException("Unable to invoke " + BUILD_METHOD + " on " + builder, e);
-		}
-
-		if (AS_MAP_METHOD == null) {
-			try {
-				AS_MAP_METHOD = cache.getClass().getMethod("asMap");
-				AS_MAP_METHOD.setAccessible(true);
-			} catch (Exception e) {
-				throw new IllegalStateException("Unable to find Cache.asMap() in " + cache, e);
-			}
-		}
-
-		// Retrieve it as a map
-		try {
-			return (ConcurrentMap<K1, V1>) AS_MAP_METHOD.invoke(cache);
-		} catch (Exception e) {
-			throw new IllegalStateException("Unable to invoke " + AS_MAP_METHOD + " on " + cache, e);
-		}
 	}
 }

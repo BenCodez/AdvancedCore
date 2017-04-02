@@ -1,10 +1,10 @@
 package com.Ben12345rocks.AdvancedCore.mysql.api;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-
 import java.sql.Connection;
 import java.sql.SQLException;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class ConnectionManager {
 
@@ -18,6 +18,29 @@ public class ConnectionManager {
 	private int maximumPoolsize;
 	private int maxConnections;
 
+	public ConnectionManager(String host, String port, String username, String password, String database) {
+		this.host = host;
+		this.port = port;
+		this.username = username;
+		this.password = password;
+		this.database = database;
+		connectionTimeout = 5000;
+		maximumPoolsize = 10;
+		maxConnections = 1;
+	}
+
+	public ConnectionManager(String host, String port, String username, String password, String database,
+			int maxConnections) {
+		this.host = host;
+		this.port = port;
+		this.username = username;
+		this.password = password;
+		this.database = database;
+		connectionTimeout = 5000;
+		maximumPoolsize = 10;
+		this.maxConnections = maxConnections;
+	}
+
 	public ConnectionManager(String host, String port, String username, String password, String database,
 			int connectionTimeout, int maximumPoolsize, int maxConnections) {
 		this.host = host;
@@ -30,32 +53,18 @@ public class ConnectionManager {
 		this.maxConnections = maxConnections;
 	}
 
-	public ConnectionManager(String host, String port, String username, String password, String database) {
-		this.host = host;
-		this.port = port;
-		this.username = username;
-		this.password = password;
-		this.database = database;
-		this.connectionTimeout = 5000;
-		this.maximumPoolsize = 10;
-		this.maxConnections = 1;
-	}
+	public void close() {
+		if (isClosed()) {
+			throw new IllegalStateException("Connection is not open.");
+		}
 
-	public ConnectionManager(String host, String port, String username, String password, String database,
-			int maxConnections) {
-		this.host = host;
-		this.port = port;
-		this.username = username;
-		this.password = password;
-		this.database = database;
-		this.connectionTimeout = 5000;
-		this.maximumPoolsize = 10;
-		this.maxConnections = maxConnections;
+		dataSource.close();
 	}
 
 	public Connection getConnection() {
-		if (isClosed())
+		if (isClosed()) {
 			throw new IllegalStateException("Connection is not open.");
+		}
 
 		try {
 			return dataSource.getConnection();
@@ -63,6 +72,10 @@ public class ConnectionManager {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	public boolean isClosed() {
+		return dataSource == null || dataSource.isClosed();
 	}
 
 	public boolean open() {
@@ -77,23 +90,12 @@ public class ConnectionManager {
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(maxConnections);
-			this.dataSource = new HikariDataSource(config);
+			dataSource = new HikariDataSource(config);
 			return true;
 		} catch (Exception e) {
 			System.out.println(e.toString());
 			return false;
 		}
-	}
-
-	public void close() {
-		if (isClosed())
-			throw new IllegalStateException("Connection is not open.");
-
-		this.dataSource.close();
-	}
-
-	public boolean isClosed() {
-		return dataSource == null || dataSource.isClosed();
 	}
 
 }

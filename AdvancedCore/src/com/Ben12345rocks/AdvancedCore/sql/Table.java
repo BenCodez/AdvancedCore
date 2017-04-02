@@ -160,30 +160,6 @@ public class Table {
 		return columns;
 	}
 
-	public List<Column> getRows() {
-		List<Column> result = new ArrayList<Column>();
-		String query = "SELECT uuid FROM " + getName();
-
-		try {
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-			ResultSet rs = s.executeQuery();
-			try {
-				while (rs.next()) {
-					Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
-					result.add(rCol);
-				}
-				sqLite.close(s, rs);
-			} catch (SQLException e) {
-				s.close();
-				return null;
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		return result;
-	}
-
 	public List<Column> getExact(Column column) {
 		checkColumns();
 		List<Column> result = new ArrayList<>();
@@ -240,6 +216,30 @@ public class Table {
 		query += "PRIMARY KEY (`" + primaryKey.getName() + "`)";
 		query += ");";
 		return query;
+	}
+
+	public List<Column> getRows() {
+		List<Column> result = new ArrayList<Column>();
+		String query = "SELECT uuid FROM " + getName();
+
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			ResultSet rs = s.executeQuery();
+			try {
+				while (rs.next()) {
+					Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
+					result.add(rCol);
+				}
+				sqLite.close(s, rs);
+			} catch (SQLException e) {
+				s.close();
+				return null;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return result;
 	}
 
 	public ArrayList<String> getTableColumns() {

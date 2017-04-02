@@ -570,6 +570,13 @@ public class Reward {
 	}
 
 	/**
+	 * @return the file
+	 */
+	public File getFile() {
+		return file;
+	}
+
+	/**
 	 * Gets the firework colors.
 	 *
 	 * @return the firework colors
@@ -943,10 +950,10 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param online
-	 *            the online
+	 *            the online * @param placeholders placeholders
 	 */
 	@SuppressWarnings("deprecation")
-	public void giveRandom(User user, boolean online, HashMap<String,String> placeholders) {
+	public void giveRandom(User user, boolean online, HashMap<String, String> placeholders) {
 		if (checkRandomChance()) {
 			if (isRandomPickRandom()) {
 				ArrayList<String> rewards = getConfig().getRandomRewards();
@@ -954,18 +961,18 @@ public class Reward {
 					if (rewards.size() > 0) {
 						String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
 						if (!reward.equals("")) {
-							RewardHandler.getInstance().giveReward(user, reward, online,true,true,placeholders);
+							RewardHandler.getInstance().giveReward(user, reward, online, true, true, placeholders);
 
 						}
 					}
 				}
 			} else {
-				new RewardBuilder(getConfig().getData(), getConfig().getRandomRewardsPath()).withPrefix(name).withPlaceHolder(placeholders)
-						.send(user);
+				new RewardBuilder(getConfig().getData(), getConfig().getRandomRewardsPath()).withPrefix(name)
+						.withPlaceHolder(placeholders).send(user);
 			}
 		} else {
-			new RewardBuilder(getConfig().getData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name).withPlaceHolder(placeholders)
-					.send(user);
+			new RewardBuilder(getConfig().getData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name)
+					.withPlaceHolder(placeholders).send(user);
 		}
 	}
 
@@ -1000,6 +1007,8 @@ public class Reward {
 	 *            the give offline
 	 * @param checkTimed
 	 *            checkTimed
+	 * @param placeholders
+	 *            placeholders
 	 */
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
 			HashMap<String, String> placeholders) {
@@ -1024,7 +1033,7 @@ public class Reward {
 
 		if ((!online && !user.isOnline()) || !checkWorld(user)) {
 			if (giveOffline) {
-				user.addOfflineRewards(this,placeholders);
+				user.addOfflineRewards(this, placeholders);
 			}
 			return;
 		}
@@ -1039,6 +1048,8 @@ public class Reward {
 	 *            the user
 	 * @param online
 	 *            the online
+	 * @param placeholders
+	 *            placeholders
 	 */
 	public void giveRewardReward(User user, boolean online, HashMap<String, String> placeholders) {
 		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
@@ -1183,6 +1194,13 @@ public class Reward {
 	}
 
 	/**
+	 * @return the randomPickRandom
+	 */
+	public boolean isRandomPickRandom() {
+		return randomPickRandom;
+	}
+
+	/**
 	 * Checks if is require permission.
 	 *
 	 * @return true, if is require permission
@@ -1225,6 +1243,25 @@ public class Reward {
 	 */
 	public boolean isUsesWorlds() {
 		return usesWorlds;
+	}
+
+	/**
+	 * Load.
+	 *
+	 * @param folder
+	 *            the folder
+	 * @param reward
+	 *            the reward
+	 */
+	public void load(File folder, String reward) {
+		name = reward;
+		if (folder.isDirectory()) {
+			file = new File(folder, reward + ".yml");
+		} else {
+			file = folder;
+		}
+		fileData = new RewardFileData(this, folder);
+		loadValues();
 	}
 
 	public void loadValues() {
@@ -1320,47 +1357,6 @@ public class Reward {
 	}
 
 	/**
-	 * @return the randomPickRandom
-	 */
-	public boolean isRandomPickRandom() {
-		return randomPickRandom;
-	}
-
-	/**
-	 * @param randomPickRandom
-	 *            the randomPickRandom to set
-	 */
-	public void setRandomPickRandom(boolean randomPickRandom) {
-		this.randomPickRandom = randomPickRandom;
-	}
-
-	/**
-	 * Load.
-	 *
-	 * @param folder
-	 *            the folder
-	 * @param reward
-	 *            the reward
-	 */
-	public void load(File folder, String reward) {
-		name = reward;
-		if (folder.isDirectory()) {
-			file = new File(folder, reward + ".yml");
-		} else {
-			file = folder;
-		}
-		fileData = new RewardFileData(this, folder);
-		loadValues();
-	}
-
-	/**
-	 * @return the file
-	 */
-	public File getFile() {
-		return file;
-	}
-
-	/**
 	 * Play effect.
 	 *
 	 * @param user
@@ -1392,8 +1388,7 @@ public class Reward {
 	 * Run commands.
 	 *
 	 * @param user
-	 *            the user
-	 * @param placeholders
+	 *            the user * @param placeholders placeholders
 	 */
 	public void runCommands(User user, HashMap<String, String> placeholders) {
 		String playerName = user.getPlayerName();
@@ -1429,14 +1424,17 @@ public class Reward {
 					final String cmd = playercmd;
 					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
-	@Override
-	public void run() {
-		player.performCommand(cmd);
+						@Override
+						public void run() {
+							player.performCommand(cmd);
+						}
+
+					});
+
+				}
+			}
+		}
 	}
-
-	});
-
-	}}}}
 
 	/**
 	 * Run javascript.
@@ -1444,8 +1442,7 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param online
-	 *            the online
-	 * @param placeholders
+	 *            the online * @param placeholders placeholders
 	 */
 	public void runJavascript(User user, boolean online, HashMap<String, String> placeholders) {
 		if (isJavascriptEnabled()) {
@@ -1477,6 +1474,7 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param placeholders
+	 *            placeholders
 	 */
 	public void sendBossBar(User user, HashMap<String, String> placeholders) {
 		if (isBossBarEnabled()) {
@@ -1509,6 +1507,7 @@ public class Reward {
 	 * @param exp
 	 *            the exp
 	 * @param placeholders
+	 *            placeholders
 	 */
 	public void sendMessage(User user, int money, int exp, HashMap<String, String> placeholders) {
 		ArrayList<String> itemsAndAmounts = new ArrayList<String>();
@@ -1547,6 +1546,7 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param placeholders
+	 *            placeholders
 	 */
 	public void sendTitle(User user, HashMap<String, String> placeholders) {
 		if (titleEnabled) {
@@ -1996,6 +1996,14 @@ public class Reward {
 	 */
 	public void setRandomChance(double randomChance) {
 		this.randomChance = randomChance;
+	}
+
+	/**
+	 * @param randomPickRandom
+	 *            the randomPickRandom to set
+	 */
+	public void setRandomPickRandom(boolean randomPickRandom) {
+		this.randomPickRandom = randomPickRandom;
 	}
 
 	/**

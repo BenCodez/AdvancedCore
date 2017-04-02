@@ -8,13 +8,13 @@ public class SpigotHandle implements IServerHandle {
 
 	@Override
 	public void sendMessage(Player player, BaseComponent component) {
-		//ComponentSender.sendMessage(player, component);
+		// ComponentSender.sendMessage(player, component);
 		player.spigot().sendMessage(component);
 	}
 
 	@Override
 	public void sendMessage(Player player, BaseComponent... components) {
-		//ComponentSender.sendMessage(player, components);
+		// ComponentSender.sendMessage(player, components);
 		player.spigot().sendMessage(components);
 	}
 

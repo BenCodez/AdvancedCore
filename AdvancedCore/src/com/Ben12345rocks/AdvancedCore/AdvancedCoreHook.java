@@ -66,43 +66,6 @@ public class AdvancedCoreHook {
 	private String jarName;
 	private boolean extraDebug = false;
 
-	/**
-	 * @return the extraDebug
-	 */
-	public boolean isExtraDebug() {
-		return extraDebug;
-	}
-
-	/**
-	 * @param extraDebug the extraDebug to set
-	 */
-	public void setExtraDebug(boolean extraDebug) {
-		this.extraDebug = extraDebug;
-	}
-
-	/**
-	 * @return the sendScoreboards
-	 */
-	public boolean isSendScoreboards() {
-		return sendScoreboards;
-	}
-
-	/**
-	 * @param sendScoreboards
-	 *            the sendScoreboards to set
-	 */
-	public void setSendScoreboards(boolean sendScoreboards) {
-		this.sendScoreboards = sendScoreboards;
-	}
-
-	public boolean isPreloadUsers() {
-		return preloadUsers;
-	}
-
-	public void setPreloadUsers(boolean preloadUsers) {
-		this.preloadUsers = preloadUsers;
-	}
-
 	private boolean checkOnWorldChange = false;
 
 	/** The econ. */
@@ -119,20 +82,6 @@ public class AdvancedCoreHook {
 		this.jarName = jarName;
 	}
 
-	/**
-	 * @return the resourceId
-	 */
-	public int getResourceId() {
-		return resourceId;
-	}
-
-	/**
-	 * @return the jarName
-	 */
-	public String getJarName() {
-		return jarName;
-	}
-
 	private void checkPlaceHolderAPI() {
 		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
 			placeHolderAPIEnabled = true;
@@ -141,6 +90,15 @@ public class AdvancedCoreHook {
 			placeHolderAPIEnabled = false;
 			debug("PlaceholderAPI not found, PlaceholderAPI placeholders will not work");
 		}
+	}
+
+	public void checkPluginUpdate() {
+		String version = ServerData.getInstance().getPluginVersion(plugin);
+		if (!version.equals(plugin.getDescription().getVersion())) {
+			PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
+			Bukkit.getServer().getPluginManager().callEvent(event);
+		}
+		ServerData.getInstance().setPluginVersion(plugin);
 	}
 
 	/**
@@ -220,16 +178,41 @@ public class AdvancedCoreHook {
 		return helpLine;
 	}
 
+	/**
+	 * @return the jarName
+	 */
+	public String getJarName() {
+		return jarName;
+	}
+
 	public Logger getLogger() {
 		return logger;
+	}
+
+	/**
+	 * @return the mysql
+	 */
+	public MySQL getMysql() {
+		return mysql;
 	}
 
 	public String getPermPrefix() {
 		return permPrefix;
 	}
 
+	public Permission getPerms() {
+		return perms;
+	}
+
 	public Plugin getPlugin() {
 		return plugin;
+	}
+
+	/**
+	 * @return the resourceId
+	 */
+	public int getResourceId() {
+		return resourceId;
 	}
 
 	public IServerHandle getServerHandle() {
@@ -249,6 +232,10 @@ public class AdvancedCoreHook {
 		return storageType;
 	}
 
+	public synchronized boolean isCheckOnWorldChange() {
+		return checkOnWorldChange;
+	}
+
 	public boolean isDebug() {
 		return debug;
 	}
@@ -257,12 +244,30 @@ public class AdvancedCoreHook {
 		return debugIngame;
 	}
 
+	/**
+	 * @return the extraDebug
+	 */
+	public boolean isExtraDebug() {
+		return extraDebug;
+	}
+
 	public boolean isLogDebugToFile() {
 		return logDebugToFile;
 	}
 
 	public boolean isPlaceHolderAPIEnabled() {
 		return placeHolderAPIEnabled;
+	}
+
+	public boolean isPreloadUsers() {
+		return preloadUsers;
+	}
+
+	/**
+	 * @return the sendScoreboards
+	 */
+	public boolean isSendScoreboards() {
+		return sendScoreboards;
 	}
 
 	public boolean isTimerLoaded() {
@@ -320,20 +325,6 @@ public class AdvancedCoreHook {
 		}
 	}
 
-	public void loadPermissions() {
-		if (setupPermissions()) {
-			plugin.getLogger().info("Hooked into Vault permissions");
-		}
-	}
-
-	public Permission getPerms() {
-		return perms;
-	}
-
-	public void setPlugin(Plugin plugin) {
-		this.plugin = plugin;
-	}
-
 	public void loadEvents() {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
 		if (checkOnWorldChange) {
@@ -382,6 +373,12 @@ public class AdvancedCoreHook {
 		}
 	}
 
+	public void loadPermissions() {
+		if (setupPermissions()) {
+			plugin.getLogger().info("Hooked into Vault permissions");
+		}
+	}
+
 	/**
 	 * Setup Reward Files
 	 */
@@ -401,25 +398,6 @@ public class AdvancedCoreHook {
 		}
 	}
 
-	/**
-	 * @param mysql
-	 *            the mysql to set
-	 */
-	public void setMysql(MySQL mysql) {
-		if (this.mysql != null) {
-			this.mysql.close();
-			this.mysql = null;
-		}
-		this.mysql = mysql;
-	}
-
-	/**
-	 * @return the mysql
-	 */
-	public MySQL getMysql() {
-		return mysql;
-	}
-
 	public void loadValueRequestInputCommands() {
 		try {
 			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
@@ -432,15 +410,6 @@ public class AdvancedCoreHook {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-
-	public void checkPluginUpdate() {
-		String version = ServerData.getInstance().getPluginVersion(plugin);
-		if (!version.equals(plugin.getDescription().getVersion())) {
-			PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
-			Bukkit.getServer().getPluginManager().callEvent(event);
-		}
-		ServerData.getInstance().setPluginVersion(plugin);
 	}
 
 	/**
@@ -460,10 +429,6 @@ public class AdvancedCoreHook {
 	 */
 	public void run(Runnable run) {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
-	}
-
-	public synchronized boolean isCheckOnWorldChange() {
-		return checkOnWorldChange;
 	}
 
 	public synchronized void setCheckOnWorldChange(boolean checkOnWorldChange) {
@@ -486,6 +451,14 @@ public class AdvancedCoreHook {
 		this.disabledRequestMethods = disabledRequestMethods;
 	}
 
+	/**
+	 * @param extraDebug
+	 *            the extraDebug to set
+	 */
+	public void setExtraDebug(boolean extraDebug) {
+		this.extraDebug = extraDebug;
+	}
+
 	public void setFormatNoPerms(String formatNoPerms) {
 		this.formatNoPerms = formatNoPerms;
 	}
@@ -502,8 +475,36 @@ public class AdvancedCoreHook {
 		this.logDebugToFile = logDebugToFile;
 	}
 
+	/**
+	 * @param mysql
+	 *            the mysql to set
+	 */
+	public void setMysql(MySQL mysql) {
+		if (this.mysql != null) {
+			this.mysql.close();
+			this.mysql = null;
+		}
+		this.mysql = mysql;
+	}
+
 	public void setPermPrefix(String permPrefix) {
 		this.permPrefix = permPrefix;
+	}
+
+	public void setPlugin(Plugin plugin) {
+		this.plugin = plugin;
+	}
+
+	public void setPreloadUsers(boolean preloadUsers) {
+		this.preloadUsers = preloadUsers;
+	}
+
+	/**
+	 * @param sendScoreboards
+	 *            the sendScoreboards to set
+	 */
+	public void setSendScoreboards(boolean sendScoreboards) {
+		this.sendScoreboards = sendScoreboards;
 	}
 
 	public void setStorageType(UserStorage storageType) {

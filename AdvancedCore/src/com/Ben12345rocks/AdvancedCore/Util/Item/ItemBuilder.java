@@ -36,25 +36,6 @@ public class ItemBuilder {
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 	private int slot = -1;
 
-	private boolean checkChance(double chance) {
-		if ((chance == 0) || (chance == 100)) {
-			return true;
-		}
-
-		double randomNum = ThreadLocalRandom.current().nextDouble(100);
-
-		if (randomNum <= chance) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	private void setBlank() {
-		is = new ItemStack(Material.STONE);
-		setAmount(0);
-	}
-
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
 	 *
@@ -143,34 +124,6 @@ public class ItemBuilder {
 	}
 
 	/**
-	 * @return the slot
-	 */
-	public int getSlot() {
-		return slot;
-	}
-
-	public ItemBuilder setSlot(int slot) {
-		this.slot = slot;
-		return this;
-	}
-
-	public ItemBuilder setAmount(int amount) {
-		is.setAmount(amount);
-		return this;
-	}
-
-	public ItemBuilder addItemFlag(String flag) {
-		try {
-			ItemMeta meta = is.getItemMeta();
-			meta.addItemFlags(ItemFlag.valueOf(flag));
-			is.setItemMeta(meta);
-		} catch (Exception ex) {
-			AdvancedCoreHook.getInstance().debug("Invalid flag: " + flag);
-		}
-		return this;
-	}
-
-	/**
 	 * Create a new ItemBuilder over an existing itemstack.
 	 *
 	 * @param is
@@ -200,11 +153,6 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder(Material m, int amount) {
 		is = new ItemStack(m, amount);
-	}
-
-	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
-		placeholders.put(toReplace, replaceWith);
-		return this;
 	}
 
 	/**
@@ -271,6 +219,17 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public ItemBuilder addItemFlag(String flag) {
+		try {
+			ItemMeta meta = is.getItemMeta();
+			meta.addItemFlags(ItemFlag.valueOf(flag));
+			is.setItemMeta(meta);
+		} catch (Exception ex) {
+			AdvancedCoreHook.getInstance().debug("Invalid flag: " + flag);
+		}
+		return this;
+	}
+
 	/**
 	 * Add a lore line.
 	 *
@@ -309,6 +268,25 @@ public class ItemBuilder {
 		return setLore(lore);
 	}
 
+	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
+		placeholders.put(toReplace, replaceWith);
+		return this;
+	}
+
+	private boolean checkChance(double chance) {
+		if ((chance == 0) || (chance == 100)) {
+			return true;
+		}
+
+		double randomNum = ThreadLocalRandom.current().nextDouble(100);
+
+		if (randomNum <= chance) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	/**
 	 * Clone the ItemBuilder into a new one.
 	 *
@@ -317,6 +295,27 @@ public class ItemBuilder {
 	@Override
 	public ItemBuilder clone() {
 		return new ItemBuilder(is);
+	}
+
+	public ArrayList<String> getLore() {
+		List<String> lore = is.getItemMeta().getLore();
+		ArrayList<String> list = new ArrayList<String>();
+		if (lore != null) {
+			list.addAll(lore);
+		}
+		return list;
+
+	}
+
+	public String getName() {
+		return is.getItemMeta().getDisplayName();
+	}
+
+	/**
+	 * @return the slot
+	 */
+	public int getSlot() {
+		return slot;
 	}
 
 	/**
@@ -367,6 +366,16 @@ public class ItemBuilder {
 		im.setLore(lore);
 		is.setItemMeta(im);
 		return this;
+	}
+
+	public ItemBuilder setAmount(int amount) {
+		is.setAmount(amount);
+		return this;
+	}
+
+	private void setBlank() {
+		is = new ItemStack(Material.STONE);
+		setAmount(0);
 	}
 
 	/**
@@ -465,6 +474,11 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public ItemBuilder setPlaceholders(HashMap<String, String> placeholders) {
+		this.placeholders = placeholders;
+		return this;
+	}
+
 	/**
 	 * Set the skull owner for the item. Works on skulls only.
 	 *
@@ -482,18 +496,9 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public String getName() {
-		return is.getItemMeta().getDisplayName();
-	}
-
-	public ArrayList<String> getLore() {
-		List<String> lore = is.getItemMeta().getLore();
-		ArrayList<String> list = new ArrayList<String>();
-		if (lore != null) {
-			list.addAll(lore);
-		}
-		return list;
-
+	public ItemBuilder setSlot(int slot) {
+		this.slot = slot;
+		return this;
 	}
 
 	/**
@@ -507,10 +512,5 @@ public class ItemBuilder {
 			setLore(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders));
 		}
 		return is;
-	}
-
-	public ItemBuilder setPlaceholders(HashMap<String, String> placeholders) {
-		this.placeholders = placeholders;
-		return this;
 	}
 }

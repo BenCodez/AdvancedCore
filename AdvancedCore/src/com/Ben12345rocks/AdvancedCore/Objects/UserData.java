@@ -77,13 +77,13 @@ public class UserData {
 		return 0;
 	}
 
+	public List<Column> getMySqlRow() {
+		return AdvancedCoreHook.getInstance().getMysql().getExact(user.getUUID());
+	}
+
 	public List<Column> getSQLiteRow() {
 		return AdvancedCoreHook.getInstance().getSQLiteUserTable()
 				.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
-	}
-
-	public List<Column> getMySqlRow() {
-		return AdvancedCoreHook.getInstance().getMysql().getExact(user.getUUID());
 	}
 
 	public String getString(String key) {

@@ -32,7 +32,7 @@ public class AInventory1_7_R4Handler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#getInventory()
 	 */
@@ -44,7 +44,7 @@ public class AInventory1_7_R4Handler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#loadClasses()
 	 */
@@ -55,7 +55,7 @@ public class AInventory1_7_R4Handler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#open(org.bukkit.entity.Player,
 	 * java.util.HashMap)

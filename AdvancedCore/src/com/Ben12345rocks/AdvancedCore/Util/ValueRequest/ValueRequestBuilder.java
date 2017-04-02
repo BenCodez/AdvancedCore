@@ -17,32 +17,27 @@ public class ValueRequestBuilder {
 	private String currentValue = "";
 	private boolean allowCustomOption = false;
 
-	public ValueRequestBuilder(StringListener listener, String[] options) {
-		this.stringListener = listener;
-		this.stringOptions = options;
+	public ValueRequestBuilder(BooleanListener listener) {
+		booleanListener = listener;
 	}
 
 	public ValueRequestBuilder(NumberListener listener, Number[] options) {
-		this.numberListener = listener;
-		this.numberOptions = options;
+		numberListener = listener;
+		numberOptions = options;
 	}
 
-	public ValueRequestBuilder(BooleanListener listener) {
-		this.booleanListener = listener;
+	public ValueRequestBuilder(StringListener listener, String[] options) {
+		stringListener = listener;
+		stringOptions = options;
 	}
 
-	public ValueRequestBuilder usingMethod(InputMethod method) {
-		this.method = method;
+	public ValueRequestBuilder allowCustomOption(boolean allowCustomOption) {
+		this.allowCustomOption = allowCustomOption;
 		return this;
 	}
 
 	public ValueRequestBuilder currentValue(String currentValue) {
 		this.currentValue = currentValue;
-		return this;
-	}
-
-	public ValueRequestBuilder allowCustomOption(boolean allowCustomOption) {
-		this.allowCustomOption = allowCustomOption;
 		return this;
 	}
 
@@ -56,6 +51,11 @@ public class ValueRequestBuilder {
 		} else if (booleanListener != null) {
 			new ValueRequest(method).requestBoolean(player, booleanListener);
 		}
+	}
+
+	public ValueRequestBuilder usingMethod(InputMethod method) {
+		this.method = method;
+		return this;
 	}
 
 }

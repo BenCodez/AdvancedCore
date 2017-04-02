@@ -29,6 +29,7 @@ public class MySQL {
 
 	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4)
 			.expireAfterAccess(20, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
+				@Override
 				public ArrayList<Column> load(String key) {
 					return getExactQuery(new Column("uuid", key, DataType.STRING));
 				}
@@ -37,10 +38,6 @@ public class MySQL {
 	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
 	private String name;
-
-	public String getName() {
-		return name;
-	}
 
 	public MySQL(String tableName, String hostName, int port, String database, String user, String pass,
 			int maxThreads) {
@@ -80,76 +77,38 @@ public class MySQL {
 
 	}
 
-	public void loadData() {
-		columns = getColumnsQueury();
-	}
-
-	public synchronized void updateBatch() {
-		if (this.query.size() > 0) {
-			String sql = "";
-			while (query.size() > 0) {
-				String text = query.poll();
-				if (!text.endsWith(";")) {
-					text += ";";
-				}
-				sql += text;
-			}
-
-			for (String text : sql.split(";")) {
-				try {
-					Query query = new Query(mysql, text);
-					query.executeUpdateAsync();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}
-
-		}
-
-	}
-
-	public synchronized void update(String index, String column, Object value, DataType dataType) {
-		checkColumn(column, dataType);
-		if (getUuids().contains(index)) {
-			String query = "UPDATE " + getName() + " SET ";
-
-			if (dataType == DataType.STRING) {
-				query += "`" + column + "`='" + value.toString() + "'";
-			} else {
-				query += "`" + column + "`=" + value.toString();
-
-			}
-			query += " WHERE `uuid`=";
-			query += "'" + index + "';";
-
-			for (Column col : getExact(index)) {
-				if (col.getName().equals(column)) {
-					col.setValue(value);
-				}
-			}
-
-			this.query.add(query);
-		} else {
-			insert(index, column, value, dataType);
-		}
-	}
-
-	public synchronized void insertQuery(String index, String column, Object value, DataType dataType) {
-		String query = "INSERT " + getName() + " ";
-
-		query += "set uuid='" + index + "', ";
-		query += column + "='" + value.toString() + "';";
+	public synchronized void addColumn(String column, DataType dataType) {
+		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
 		try {
-			new Query(mysql, query).executeUpdateAsync();
+			Query query = new Query(mysql, sql);
+			query.executeUpdateAsync();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+
+		getColumns().add(column);
+
+		Column col = new Column(column, dataType);
+		for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
+			entry.getValue().add(col);
+		}
 	}
 
-	public synchronized void insert(String index, String column, Object value, DataType dataType) {
-		insertQuery(index, column, value, dataType);
+	public synchronized void checkColumn(String column, DataType dataType) {
+		if (!getColumns().contains(column)) {
+			addColumn(column, dataType);
+		}
+	}
 
+	public void clearCache() {
+		table.clear();
+		columns.clear();
+		columns.addAll(getColumnsQueury());
+	}
+
+	public void close() {
+		mysql.disconnect();
 	}
 
 	public boolean containsKey(String uuid) {
@@ -174,10 +133,8 @@ public class MySQL {
 		return false;
 	}
 
-	public synchronized void checkColumn(String column, DataType dataType) {
-		if (!getColumns().contains(column)) {
-			addColumn(column, dataType);
-		}
+	public List<String> getColumns() {
+		return columns;
 	}
 
 	public ArrayList<String> getColumnsQueury() {
@@ -202,26 +159,11 @@ public class MySQL {
 
 	}
 
-	public synchronized void addColumn(String column, DataType dataType) {
-		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
-
-		try {
-			Query query = new Query(mysql, sql);
-			query.executeUpdateAsync();
-		} catch (SQLException e) {
-			e.printStackTrace();
+	public ArrayList<Column> getExact(String uuid) {
+		if (!containsKey(uuid)) {
+			loadPlayer(uuid);
 		}
-
-		getColumns().add(column);
-
-		Column col = new Column(column, dataType);
-		for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
-			entry.getValue().add(col);
-		}
-	}
-
-	public List<String> getColumns() {
-		return columns;
+		return table.get(uuid);
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
@@ -255,11 +197,8 @@ public class MySQL {
 		return result;
 	}
 
-	public ArrayList<Column> getExact(String uuid) {
-		if (!containsKey(uuid)) {
-			loadPlayer(uuid);
-		}
-		return table.get(uuid);
+	public String getName() {
+		return name;
 	}
 
 	public ArrayList<Column> getRowsQuery() {
@@ -292,6 +231,28 @@ public class MySQL {
 		return uuids;
 	}
 
+	public synchronized void insert(String index, String column, Object value, DataType dataType) {
+		insertQuery(index, column, value, dataType);
+
+	}
+
+	public synchronized void insertQuery(String index, String column, Object value, DataType dataType) {
+		String query = "INSERT " + getName() + " ";
+
+		query += "set uuid='" + index + "', ";
+		query += column + "='" + value.toString() + "';";
+
+		try {
+			new Query(mysql, query).executeUpdateAsync();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void loadData() {
+		columns = getColumnsQueury();
+	}
+
 	public void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
 	}
@@ -300,13 +261,53 @@ public class MySQL {
 		table.remove(uuid);
 	}
 
-	public void close() {
-		mysql.disconnect();
+	public synchronized void update(String index, String column, Object value, DataType dataType) {
+		checkColumn(column, dataType);
+		if (getUuids().contains(index)) {
+			String query = "UPDATE " + getName() + " SET ";
+
+			if (dataType == DataType.STRING) {
+				query += "`" + column + "`='" + value.toString() + "'";
+			} else {
+				query += "`" + column + "`=" + value.toString();
+
+			}
+			query += " WHERE `uuid`=";
+			query += "'" + index + "';";
+
+			for (Column col : getExact(index)) {
+				if (col.getName().equals(column)) {
+					col.setValue(value);
+				}
+			}
+
+			this.query.add(query);
+		} else {
+			insert(index, column, value, dataType);
+		}
 	}
 
-	public void clearCache() {
-		table.clear();
-		columns.clear();
-		columns.addAll(getColumnsQueury());
+	public synchronized void updateBatch() {
+		if (query.size() > 0) {
+			String sql = "";
+			while (query.size() > 0) {
+				String text = query.poll();
+				if (!text.endsWith(";")) {
+					text += ";";
+				}
+				sql += text;
+			}
+
+			for (String text : sql.split(";")) {
+				try {
+					Query query = new Query(mysql, text);
+					query.executeUpdateAsync();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+
+		}
+
 	}
 }

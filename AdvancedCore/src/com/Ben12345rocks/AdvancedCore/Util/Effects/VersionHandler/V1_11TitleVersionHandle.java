@@ -20,9 +20,8 @@ public class V1_11TitleVersionHandle implements TitleVersionHandle {
 	 */
 	@Override
 	public void clearTitle(Player player) {
-		player.sendTitle("","",-1,-1,-1);
+		player.sendTitle("", "", -1, -1, -1);
 	}
-
 
 	/**
 	 * Reset the title settings
@@ -43,7 +42,8 @@ public class V1_11TitleVersionHandle implements TitleVersionHandle {
 	 */
 	@Override
 	public void send(Player player, String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
-		player.sendTitle(StringUtils.getInstance().colorize(title), StringUtils.getInstance().colorize(subtitle), fadeInTime, stayTime, fadeOutTime);
+		player.sendTitle(StringUtils.getInstance().colorize(title), StringUtils.getInstance().colorize(subtitle),
+				fadeInTime, stayTime, fadeOutTime);
 	}
 
 	@Override

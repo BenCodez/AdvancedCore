@@ -15,6 +15,15 @@ public class Thread {
 	 */
 	public class ReadThread extends java.lang.Thread {
 
+		public String getName(java.util.UUID uuid) {
+			NameFetcher fet = new NameFetcher(Arrays.asList(uuid));
+			try {
+				return fet.call().get(uuid);
+			} catch (Exception e) {
+				return "Error Getting Name";
+			}
+		}
+
 		@Override
 		public void run() {
 		}
@@ -28,15 +37,6 @@ public class Thread {
 		public void run(Runnable run) {
 			synchronized (Thread.getInstance()) {
 				run.run();
-			}
-		}
-
-		public String getName(java.util.UUID uuid) {
-			NameFetcher fet = new NameFetcher(Arrays.asList(uuid));
-			try {
-				return fet.call().get(uuid);
-			} catch (Exception e) {
-				return "Error Getting Name";
 			}
 		}
 	}
@@ -60,6 +60,12 @@ public class Thread {
 	private ReadThread thread;
 
 	/**
+	 * Instantiates a new thread.
+	 */
+	private Thread() {
+	}
+
+	/**
 	 * @return the thread
 	 */
 	public ReadThread getThread() {
@@ -67,12 +73,6 @@ public class Thread {
 			loadThread();
 		}
 		return thread;
-	}
-
-	/**
-	 * Instantiates a new thread.
-	 */
-	private Thread() {
 	}
 
 	/**

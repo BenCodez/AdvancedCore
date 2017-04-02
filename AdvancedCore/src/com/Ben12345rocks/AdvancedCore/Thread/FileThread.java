@@ -19,23 +19,6 @@ public class FileThread {
 	 */
 	public class ReadThread extends java.lang.Thread {
 
-		@Override
-		public void run() {
-		}
-
-		/**
-		 * Run.
-		 *
-		 * @param run
-		 *            the run
-		 */
-		public void run(Runnable run) {
-			synchronized (FileThread.getInstance()) {
-				run.run();
-			}
-
-		}
-
 		public FileConfiguration getData(UserData userData, String uuid) {
 			synchronized (FileThread.getInstance()) {
 				try {
@@ -50,22 +33,6 @@ public class FileThread {
 				AdvancedCoreHook.getInstance().getPlugin().getLogger()
 						.warning("Filed to load " + uuid + ".yml, turn debug on to see full stacktraces");
 				return null;
-			}
-
-		}
-
-		public void setData(UserData userData, final String uuid, final String path, final Object value) {
-			synchronized (FileThread.getInstance()) {
-				try {
-					File dFile = getPlayerFile(uuid);
-					FileConfiguration data = getData(userData, uuid);
-					data.set(path, value);
-					data.save(dFile);
-				} catch (Exception e) {
-					AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
-							"Failed to set a value for " + uuid + ".yml, turn debug on to see full stacktraces");
-					AdvancedCoreHook.getInstance().debug(e);
-				}
 			}
 
 		}
@@ -89,6 +56,39 @@ public class FileThread {
 				return null;
 			}
 		}
+
+		@Override
+		public void run() {
+		}
+
+		/**
+		 * Run.
+		 *
+		 * @param run
+		 *            the run
+		 */
+		public void run(Runnable run) {
+			synchronized (FileThread.getInstance()) {
+				run.run();
+			}
+
+		}
+
+		public void setData(UserData userData, final String uuid, final String path, final Object value) {
+			synchronized (FileThread.getInstance()) {
+				try {
+					File dFile = getPlayerFile(uuid);
+					FileConfiguration data = getData(userData, uuid);
+					data.set(path, value);
+					data.save(dFile);
+				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
+							"Failed to set a value for " + uuid + ".yml, turn debug on to see full stacktraces");
+					AdvancedCoreHook.getInstance().debug(e);
+				}
+			}
+
+		}
 	}
 
 	/** The instance. */
@@ -110,6 +110,12 @@ public class FileThread {
 	private ReadThread thread;
 
 	/**
+	 * Instantiates a new thread.
+	 */
+	private FileThread() {
+	}
+
+	/**
 	 * @return the thread
 	 */
 	public ReadThread getThread() {
@@ -117,12 +123,6 @@ public class FileThread {
 			loadThread();
 		}
 		return thread;
-	}
-
-	/**
-	 * Instantiates a new thread.
-	 */
-	private FileThread() {
 	}
 
 	/**
