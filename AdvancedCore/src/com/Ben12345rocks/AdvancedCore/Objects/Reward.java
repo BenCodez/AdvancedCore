@@ -911,6 +911,7 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param placeholders
+	 *            placeholders
 	 */
 	public void giveItems(User user, HashMap<String, String> placeholders) {
 		itemsAndAmountsGiven = new HashMap<String, Integer>();
@@ -950,7 +951,9 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param online
-	 *            the online * @param placeholders placeholders
+	 *            the online
+	 * @param placeholders
+	 *            placeholders
 	 */
 	@SuppressWarnings("deprecation")
 	public void giveRandom(User user, boolean online, HashMap<String, String> placeholders) {
@@ -1078,6 +1081,7 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param placeholders
+	 *            placeholders
 	 */
 	public void giveRewardUser(User user, HashMap<String, String> placeholders) {
 		Player player = user.getPlayer();
@@ -1388,7 +1392,9 @@ public class Reward {
 	 * Run commands.
 	 *
 	 * @param user
-	 *            the user * @param placeholders placeholders
+	 *            the user
+	 * @param placeholders
+	 *            placeholders
 	 */
 	public void runCommands(User user, HashMap<String, String> placeholders) {
 		String playerName = user.getPlayerName();
@@ -1442,7 +1448,9 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param online
-	 *            the online * @param placeholders placeholders
+	 *            the online
+	 * @param placeholders
+	 *            placeholders
 	 */
 	public void runJavascript(User user, boolean online, HashMap<String, String> placeholders) {
 		if (isJavascriptEnabled()) {
@@ -1462,6 +1470,7 @@ public class Reward {
 	 * @param user
 	 *            the user
 	 * @param placeholders
+	 *            placeholders
 	 */
 	public void sendActionBar(User user, HashMap<String, String> placeholders) {
 		user.sendActionBar(StringUtils.getInstance().replacePlaceHolder(getActionBarMsg(), placeholders),
