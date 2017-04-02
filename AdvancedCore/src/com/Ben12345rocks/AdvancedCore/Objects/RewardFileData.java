@@ -43,21 +43,13 @@ public class RewardFileData {
 	 */
 	public RewardFileData(Reward reward, File rewardFolder) {
 		this.reward = reward;
-		this.dFile = reward.getFile();
+		dFile = reward.getFile();
 
 		if (!rewardFolder.isDirectory()) {
 			rewardFolder = rewardFolder.getParentFile();
 		}
 
 		setup();
-	}
-
-	public void setData(ConfigurationSection value) {
-		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
-		for (Entry<String, Object> entry : map.entrySet()) {
-			set(entry.getKey(), entry.getValue());
-		}
-		reward.loadValues();
 	}
 
 	/**
@@ -515,6 +507,14 @@ public class RewardFileData {
 		return getData().getString("Javascript.Expression", "");
 	}
 
+	public String getJavascriptFalseRewardsPath() {
+		return "Javascript.FalseRewards";
+	}
+
+	public String getJavascriptTrueRewardsPath() {
+		return "Javascript.TrueRewards";
+	}
+
 	/**
 	 * Gets the max exp.
 	 *
@@ -629,6 +629,23 @@ public class RewardFileData {
 	 */
 	public double getRandomChance() {
 		return getData().getDouble("Random.Chance");
+	}
+
+	public String getRandomFallBackRewardsPath() {
+		return "Random.FallBack";
+	}
+
+	public boolean getRandomPickRandom() {
+		return getData().getBoolean("Random.PickRandom", true);
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getRandomRewards() {
+		return (ArrayList<String>) getData().getList("Random.Rewards", new ArrayList<String>());
+	}
+
+	public String getRandomRewardsPath() {
+		return "Random.Rewards";
 	}
 
 	/**
@@ -837,6 +854,14 @@ public class RewardFileData {
 	 */
 	public void setCommandsPlayer(ArrayList<String> value) {
 		set("Commands.Player", value);
+	}
+
+	public void setData(ConfigurationSection value) {
+		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
+		for (Entry<String, Object> entry : map.entrySet()) {
+			set(entry.getKey(), entry.getValue());
+		}
+		reward.loadValues();
 	}
 
 	/**
@@ -1116,30 +1141,5 @@ public class RewardFileData {
 	 */
 	public void setWorlds(ArrayList<String> value) {
 		set("Worlds", value);
-	}
-
-	public String getRandomRewardsPath() {
-		return "Random.Rewards";
-	}
-
-	public String getRandomFallBackRewardsPath() {
-		return "Random.FallBack";
-	}
-
-	public String getJavascriptTrueRewardsPath() {
-		return "Javascript.TrueRewards";
-	}
-
-	public String getJavascriptFalseRewardsPath() {
-		return "Javascript.FalseRewards";
-	}
-
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getRandomRewards() {
-		return (ArrayList<String>) getData().getList("Random.Rewards", new ArrayList<String>());
-	}
-
-	public boolean getRandomPickRandom() {
-		return getData().getBoolean("Random.PickRandom", true);
 	}
 }

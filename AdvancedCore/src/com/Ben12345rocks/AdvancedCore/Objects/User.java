@@ -151,6 +151,26 @@ public class User {
 		setChoiceRewards(choiceRewards);
 	}
 
+	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
+		synchronized (AdvancedCoreHook.getInstance()) {
+			ArrayList<String> offlineRewards = getOfflineRewards();
+			offlineRewards
+					.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders));
+			setOfflineRewards(offlineRewards);
+		}
+	}
+
+	public void addTimedReward(Reward reward, long epochMilli) {
+		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
+		ArrayList<Long> times = timed.get(reward);
+		if (times == null) {
+			times = new ArrayList<Long>();
+		}
+		times.add(epochMilli);
+		timed.put(reward, times);
+		setTimedRewards(timed);
+	}
+
 	public void checkDelayedTimedRewards() {
 		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
 		for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
@@ -171,23 +191,6 @@ public class User {
 		setTimedRewards(timed);
 	}
 
-	public void addOfflineRewards(Reward reward) {
-		ArrayList<String> offlineRewards = getOfflineRewards();
-		offlineRewards.add(reward.getRewardName());
-		setOfflineRewards(offlineRewards);
-	}
-
-	public void addTimedReward(Reward reward, long epochMilli) {
-		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
-		ArrayList<Long> times = timed.get(reward);
-		if (times == null) {
-			times = new ArrayList<Long>();
-		}
-		times.add(epochMilli);
-		timed.put(reward, times);
-		setTimedRewards(timed);
-	}
-
 	/**
 	 * Check offline rewards.
 	 */
@@ -196,7 +199,13 @@ public class User {
 		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
 		for (String str : ArrayUtils.getInstance().convert(copy)) {
-			RewardHandler.getInstance().giveReward(this, str, false, true, false);
+			String[] args = str.split("%placeholders%");
+			String placeholders = "";
+			if (args.length > 1) {
+				placeholders = args[1];
+			}
+			RewardHandler.getInstance().giveReward(this, args[0], false, true, false,
+					ArrayUtils.getInstance().fromString(placeholders));
 		}
 
 	}
@@ -237,10 +246,6 @@ public class User {
 		} else {
 			return playerName;
 		}
-	}
-
-	public boolean hasPermission(String perm) {
-		return false;
 	}
 
 	public HashMap<Reward, ArrayList<Long>> getTimedRewards() {
@@ -371,6 +376,10 @@ public class User {
 
 	}
 
+	public void giveItem(ItemStack itemStack, HashMap<String, String> placeholders) {
+		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack());
+	}
+
 	@SuppressWarnings("deprecation")
 	/**
 	 * Give user money, needs vault installed
@@ -435,6 +444,18 @@ public class User {
 	}
 
 	/**
+	 * Give reward
+	 *
+	 * @param data
+	 *            Data
+	 * @param path
+	 *            Path
+	 */
+	public void giveReward(FileConfiguration data, String path) {
+		RewardHandler.getInstance().giveReward(this, data, path);
+	}
+
+	/**
 	 * Give reward.
 	 *
 	 * @param reward
@@ -444,18 +465,6 @@ public class User {
 	 */
 	public void giveReward(Reward reward, boolean online) {
 		reward.giveReward(this, online);
-	}
-
-	/**
-	 * Give reward
-	 * 
-	 * @param data
-	 *            Data
-	 * @param path
-	 *            Path
-	 */
-	public void giveReward(FileConfiguration data, String path) {
-		RewardHandler.getInstance().giveReward(this, data, path);
 	}
 
 	/**
@@ -474,11 +483,8 @@ public class User {
 		return false;
 	}
 
-	public void saveData() {
-		setChoiceRewards(getChoiceRewards());
-		setOfflineRewards(getOfflineRewards());
-		setTimedRewards(getTimedRewards());
-		setInputMethod(getInputMethod());
+	public boolean hasPermission(String perm) {
+		return false;
 	}
 
 	/**
@@ -537,6 +543,13 @@ public class User {
 				hook.debug("Invalid sound: " + soundName);
 			}
 		}
+	}
+
+	public void saveData() {
+		setChoiceRewards(getChoiceRewards());
+		setOfflineRewards(getOfflineRewards());
+		setTimedRewards(getTimedRewards());
+		setInputMethod(getInputMethod());
 	}
 
 	/**
@@ -647,6 +660,10 @@ public class User {
 				}
 			}
 		}
+	}
+
+	public void sendMessage(String msg, HashMap<String, String> placeholders) {
+		sendMessage(StringUtils.getInstance().replacePlaceHolder(msg, placeholders));
 	}
 
 	/**

@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -74,55 +75,6 @@ public class RewardHandler {
 		}
 	}
 
-	public void giveReward(User user, FileConfiguration data, String path, boolean online, boolean giveOffline) {
-		giveReward(user, "", data, path, online, giveOffline);
-	}
-
-	@SuppressWarnings("unchecked")
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline) {
-		if (data.isList(path)) {
-			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
-				giveReward(user, reward, online, giveOffline);
-			}
-		} else if (data.isConfigurationSection(path)) {
-			String rewardName = "";
-			if (prefix != null && !prefix.equals("")) {
-				rewardName += prefix + "_";
-			}
-			rewardName = path.replace(".", "_");
-			ConfigurationSection section = data.getConfigurationSection(path);
-			Reward reward;
-			if (!rewardExist(rewardName)) {
-				reward = new Reward(rewardName);
-			} else {
-				reward = getReward(rewardName);
-			}
-			reward.getConfig().setData(section);
-			loadRewards();
-			giveReward(user, rewardName, online, giveOffline);
-
-		} else {
-			giveReward(user, data.getString(path, ""), online);
-		}
-	}
-
-	public void giveReward(User user, FileConfiguration data, String path, boolean online) {
-		giveReward(user, data, path, online, true);
-	}
-
-	public void giveReward(User user, FileConfiguration data, String path) {
-		giveReward(user, data, path, user.isOnline(), true);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online) {
-		giveReward(user, prefix, data, path, online, true);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
-		giveReward(user, prefix, data, path, user.isOnline(), true);
-	}
-
 	/**
 	 * Check delayed timed rewards.
 	 */
@@ -138,15 +90,6 @@ public class RewardHandler {
 				}
 			}
 		}
-	}
-
-	public synchronized boolean usesTimed() {
-		for (Reward reward : getRewards()) {
-			if (reward.isTimedEnabled() || reward.isDelayEnabled()) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	/**
@@ -240,6 +183,18 @@ public class RewardHandler {
 		return rewards;
 	}
 
+	public void giveReward(User user, FileConfiguration data, String path) {
+		giveReward(user, data, path, user.isOnline(), true);
+	}
+
+	public void giveReward(User user, FileConfiguration data, String path, boolean online) {
+		giveReward(user, data, path, online, true);
+	}
+
+	public void giveReward(User user, FileConfiguration data, String path, boolean online, boolean giveOffline) {
+		giveReward(user, "", data, path, online, giveOffline);
+	}
+
 	/**
 	 * Give reward
 	 *
@@ -296,6 +251,25 @@ public class RewardHandler {
 		});
 	}
 
+	@Deprecated
+	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline, boolean checkTimed,
+			HashMap<String, String> placeholders) {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				reward.giveReward(user, online, giveOffline, checkTimed, placeholders);
+			}
+		});
+	}
+
+	@Deprecated
+	public void giveReward(User user, String reward) {
+		if (!reward.equals("")) {
+			giveReward(user, getReward(reward), user.isOnline());
+		}
+	}
+
 	/**
 	 * Give reward.
 	 *
@@ -313,10 +287,77 @@ public class RewardHandler {
 		}
 	}
 
+	/**
+	 * Give reward.
+	 *
+	 * @param user
+	 *            the user
+	 * @param reward
+	 *            the reward
+	 * @param online
+	 *            the online
+	 * @param giveOffline
+	 *            the give offline
+	 */
 	@Deprecated
-	public void giveReward(User user, String reward) {
+	public void giveReward(User user, String reward, boolean online, boolean giveOffline) {
 		if (!reward.equals("")) {
-			giveReward(user, getReward(reward), user.isOnline());
+			giveReward(user, getReward(reward), online, giveOffline);
+		}
+	}
+
+	@Deprecated
+	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed) {
+		giveReward(user, reward, online, giveOffline, checkTimed, null);
+	}
+
+	@Deprecated
+	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed,
+			HashMap<String, String> placeholders) {
+		if (!reward.equals("")) {
+			giveReward(user, getReward(reward), online, giveOffline, checkTimed, placeholders);
+		}
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
+		giveReward(user, prefix, data, path, user.isOnline(), true);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online) {
+		giveReward(user, prefix, data, path, online, true);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline) {
+		giveReward(user, prefix, data, path, online, giveOffline, null);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline, HashMap<String, String> placeholders) {
+		if (data.isList(path)) {
+			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
+				giveReward(user, reward, online, giveOffline, true, placeholders);
+			}
+		} else if (data.isConfigurationSection(path)) {
+			String rewardName = "";
+			if (prefix != null && !prefix.equals("")) {
+				rewardName += prefix + "_";
+			}
+			rewardName = path.replace(".", "_");
+			ConfigurationSection section = data.getConfigurationSection(path);
+			Reward reward;
+			if (!rewardExist(rewardName)) {
+				reward = new Reward(rewardName);
+			} else {
+				reward = getReward(rewardName);
+			}
+			reward.getConfig().setData(section);
+			loadRewards();
+			giveReward(user, rewardName, online, giveOffline, true, placeholders);
+
+		} else {
+			giveReward(user, data.getString(path, ""), online, giveOffline, true, placeholders);
 		}
 	}
 
@@ -342,32 +383,6 @@ public class RewardHandler {
 	}
 
 	/**
-	 * Give reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param reward
-	 *            the reward
-	 * @param online
-	 *            the online
-	 * @param giveOffline
-	 *            the give offline
-	 */
-	@Deprecated
-	public void giveReward(User user, String reward, boolean online, boolean giveOffline) {
-		if (!reward.equals("")) {
-			giveReward(user, getReward(reward), online, giveOffline);
-		}
-	}
-
-	@Deprecated
-	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed) {
-		if (!reward.equals("")) {
-			giveReward(user, getReward(reward), online, giveOffline, checkTimed);
-		}
-	}
-
-	/**
 	 * Load rewards.
 	 */
 	public void loadRewards() {
@@ -378,7 +393,9 @@ public class RewardHandler {
 				if (!reward.equals("")) {
 					if (!rewardExist(reward)) {
 						rewards.add(new Reward(file, reward));
-						plugin.debug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
+						if (AdvancedCoreHook.getInstance().isExtraDebug()) {
+							plugin.debug("Extra: Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
+						}
 					} else {
 						plugin.getPlugin().getLogger().warning("Detected that a reward file named " + reward
 								+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
@@ -432,5 +449,14 @@ public class RewardHandler {
 
 		copyFile("ExampleBasic.yml");
 		copyFile("ExampleAdvanced.yml");
+	}
+
+	public synchronized boolean usesTimed() {
+		for (Reward reward : getRewards()) {
+			if (reward.isTimedEnabled() || reward.isDelayEnabled()) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

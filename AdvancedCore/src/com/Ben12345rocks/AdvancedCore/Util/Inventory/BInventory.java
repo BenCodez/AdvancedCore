@@ -227,7 +227,11 @@ public class BInventory implements Listener {
 	 *            the button
 	 */
 	public void addButton(BInventoryButton button) {
-		getButtons().put(getNextSlot(), button);
+		int slot = button.getSlot();
+		if (slot == -1) {
+			slot = getNextSlot();
+		}
+		getButtons().put(slot, button);
 	}
 
 	/**

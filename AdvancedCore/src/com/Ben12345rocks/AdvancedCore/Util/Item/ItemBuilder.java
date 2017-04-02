@@ -34,6 +34,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 public class ItemBuilder {
 	private ItemStack is;
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
+	private int slot = -1;
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -49,87 +50,77 @@ public class ItemBuilder {
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
 			}
-			is = new ItemStack(Material.STONE);
-			setAmount(1);
+			setBlank();
 		} else {
-			Material material = Material.STONE;
-			try {
-				material = Material.valueOf(data.getString("Material"));
-			} catch (Exception e) {
-				AdvancedCoreHook.getInstance().debug(e);
+			double chance = data.getDouble("Chance", 100);
+			if (checkChance(chance)) {
+				Material material = Material.STONE;
 				try {
-					material = Material.valueOf(data.getName());
-				} catch (Exception ex) {
-					AdvancedCoreHook.getInstance().debug(ex);
+					material = Material.valueOf(data.getString("Material"));
+				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().debug(e);
+					try {
+						material = Material.valueOf(data.getName());
+					} catch (Exception ex) {
+						AdvancedCoreHook.getInstance().debug(ex);
+					}
 				}
-			}
 
-			int amount = data.getInt("Amount");
-			int minAmount = data.getInt("MinAmount");
-			int maxAmount = data.getInt("MaxAmount");
+				int amount = data.getInt("Amount");
+				int minAmount = data.getInt("MinAmount");
+				int maxAmount = data.getInt("MaxAmount");
 
-			int currentAmount = 0;
-			if (amount > 0) {
-				currentAmount = amount;
+				int currentAmount = 0;
+				if (amount > 0) {
+					currentAmount = amount;
+				} else {
+					currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
+				}
+
+				int dat = data.getInt("Data");
+				is = new ItemStack(material, currentAmount, (short) dat);
+				String name = data.getString("Name");
+				List<String> lore = data.getStringList("Lore");
+				if (name != null && !name.equals("")) {
+					setName(name);
+				}
+				if (lore != null && lore.size() > 0) {
+					setLore(lore);
+				} else {
+					String line = data.getString("Lore", "");
+					if (!line.equals("")) {
+						addLoreLine(line);
+					}
+				}
+				int durability = data.getInt("Durability");
+				if (durability > 0) {
+					setDurability((short) durability);
+				}
+
+				if (data.isConfigurationSection("Enchants")) {
+					HashMap<String, Integer> enchants = new HashMap<String, Integer>();
+					for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
+						enchants.put(enchant, data.getInt("Enchants." + enchant));
+					}
+					addEnchantments(enchants);
+				}
+
+				@SuppressWarnings("unchecked")
+				ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags", new ArrayList<String>());
+				for (String flag : itemFlags) {
+					addItemFlag(flag);
+				}
+
+				String skull = data.getString("Skull", "");
+				if (!skull.equals("")) {
+					setSkullOwner(skull);
+				}
+
+				slot = data.getInt("Slot", -1);
 			} else {
-				currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
-			}
-
-			int dat = data.getInt("Data");
-			is = new ItemStack(material, currentAmount, (short) dat);
-			String name = data.getString("Name");
-			List<String> lore = data.getStringList("Lore");
-			if (name != null && !name.equals("")) {
-				setName(name);
-			}
-			if (lore != null && lore.size() > 0) {
-				setLore(lore);
-			} else {
-				String line = data.getString("Lore", "");
-				if (!line.equals("")) {
-					addLoreLine(line);
-				}
-			}
-			int durability = data.getInt("Durability");
-			if (durability > 0) {
-				setDurability((short) durability);
-			}
-
-			if (data.isConfigurationSection("Enchants")) {
-				HashMap<String, Integer> enchants = new HashMap<String, Integer>();
-				for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
-					enchants.put(enchant, data.getInt("Enchants." + enchant));
-				}
-				addEnchantments(enchants);
-			}
-
-			@SuppressWarnings("unchecked")
-			ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags", new ArrayList<String>());
-			for (String flag : itemFlags) {
-				addItemFlag(flag);
-			}
-
-			String skull = data.getString("Skull", "");
-			if (!skull.equals("")) {
-				setSkullOwner(skull);
+				setBlank();
 			}
 		}
-	}
-
-	public ItemBuilder setAmount(int amount) {
-		is.setAmount(amount);
-		return this;
-	}
-
-	public ItemBuilder addItemFlag(String flag) {
-		try {
-			ItemMeta meta = is.getItemMeta();
-			meta.addItemFlags(ItemFlag.valueOf(flag));
-			is.setItemMeta(meta);
-		} catch (Exception ex) {
-			AdvancedCoreHook.getInstance().debug("Invalid flag: " + flag);
-		}
-		return this;
 	}
 
 	/**
@@ -162,11 +153,6 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder(Material m, int amount) {
 		is = new ItemStack(m, amount);
-	}
-
-	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
-		placeholders.put(toReplace, replaceWith);
-		return this;
 	}
 
 	/**
@@ -233,6 +219,17 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public ItemBuilder addItemFlag(String flag) {
+		try {
+			ItemMeta meta = is.getItemMeta();
+			meta.addItemFlags(ItemFlag.valueOf(flag));
+			is.setItemMeta(meta);
+		} catch (Exception ex) {
+			AdvancedCoreHook.getInstance().debug("Invalid flag: " + flag);
+		}
+		return this;
+	}
+
 	/**
 	 * Add a lore line.
 	 *
@@ -271,6 +268,25 @@ public class ItemBuilder {
 		return setLore(lore);
 	}
 
+	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
+		placeholders.put(toReplace, replaceWith);
+		return this;
+	}
+
+	private boolean checkChance(double chance) {
+		if ((chance == 0) || (chance == 100)) {
+			return true;
+		}
+
+		double randomNum = ThreadLocalRandom.current().nextDouble(100);
+
+		if (randomNum <= chance) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	/**
 	 * Clone the ItemBuilder into a new one.
 	 *
@@ -279,6 +295,27 @@ public class ItemBuilder {
 	@Override
 	public ItemBuilder clone() {
 		return new ItemBuilder(is);
+	}
+
+	public ArrayList<String> getLore() {
+		List<String> lore = is.getItemMeta().getLore();
+		ArrayList<String> list = new ArrayList<String>();
+		if (lore != null) {
+			list.addAll(lore);
+		}
+		return list;
+
+	}
+
+	public String getName() {
+		return is.getItemMeta().getDisplayName();
+	}
+
+	/**
+	 * @return the slot
+	 */
+	public int getSlot() {
+		return slot;
 	}
 
 	/**
@@ -329,6 +366,16 @@ public class ItemBuilder {
 		im.setLore(lore);
 		is.setItemMeta(im);
 		return this;
+	}
+
+	public ItemBuilder setAmount(int amount) {
+		is.setAmount(amount);
+		return this;
+	}
+
+	private void setBlank() {
+		is = new ItemStack(Material.STONE);
+		setAmount(0);
 	}
 
 	/**
@@ -427,6 +474,11 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public ItemBuilder setPlaceholders(HashMap<String, String> placeholders) {
+		this.placeholders = placeholders;
+		return this;
+	}
+
 	/**
 	 * Set the skull owner for the item. Works on skulls only.
 	 *
@@ -444,18 +496,9 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public String getName() {
-		return is.getItemMeta().getDisplayName();
-	}
-
-	public ArrayList<String> getLore() {
-		List<String> lore = is.getItemMeta().getLore();
-		ArrayList<String> list = new ArrayList<String>();
-		if (lore != null) {
-			list.addAll(lore);
-		}
-		return list;
-
+	public ItemBuilder setSlot(int slot) {
+		this.slot = slot;
+		return this;
 	}
 
 	/**

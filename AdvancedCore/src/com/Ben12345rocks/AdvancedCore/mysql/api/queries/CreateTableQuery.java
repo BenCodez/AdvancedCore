@@ -7,79 +7,81 @@ import com.Ben12345rocks.AdvancedCore.mysql.api.utils.QueryUtils;
 
 public class CreateTableQuery {
 
-    private String table;
-    private boolean ifNotExists = false;
-    private List<String> columns = new ArrayList<String>();
-    private String primaryKey;
+	private String table;
+	private boolean ifNotExists = false;
+	private List<String> columns = new ArrayList<String>();
+	private String primaryKey;
 
-    /**
-     * Create a create table query.
-     *
-     * @param table the table to be created
-     */
-    public CreateTableQuery(String table) {
-        this.table = table;
-    }
+	/**
+	 * Create a create table query.
+	 *
+	 * @param table
+	 *            the table to be created
+	 */
+	public CreateTableQuery(String table) {
+		this.table = table;
+	}
 
-    /**
-     * Add if not exists to the query.
-     *
-     * @return the CreateTableQuery object
-     */
-    public CreateTableQuery ifNotExists() {
-        this.ifNotExists = true;
-        return this;
-    }
+	/**
+	 * Build the query as a String.
+	 *
+	 * @return the query as a String
+	 */
+	public String build() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("CREATE TABLE ");
 
-    /**
-     * Add a column with settings.
-     *
-     * @param column   the column
-     * @param settings the column settings
-     * @return the CreateTableQuery object
-     */
-    public CreateTableQuery column(String column, String settings) {
-        columns.add(column + " " + settings);
-        return this;
-    }
+		if (ifNotExists) {
+			builder.append("IF NOT EXISTS ");
+		}
 
-    /**
-     * Set the primary key to column.
-     *
-     * @param column the column to be the primary key
-     * @return the CreateTableQuery object
-     */
-    public CreateTableQuery primaryKey(String column) {
-        this.primaryKey = column;
-        return this;
-    }
+		builder.append(table).append(" (").append(QueryUtils.separate(columns, ","));
 
-    /**
-     * Build the query as a String.
-     *
-     * @return the query as a String
-     */
-    public String build() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("CREATE TABLE ");
+		if (primaryKey != null) {
+			builder.append(",PRIMARY KEY(");
+			builder.append(primaryKey);
+			builder.append(")");
+		}
 
-        if (ifNotExists) {
-            builder.append("IF NOT EXISTS ");
-        }
+		builder.append(")");
 
-        builder.append(table)
-                .append(" (")
-                .append(QueryUtils.separate(columns, ","));
+		return builder.toString();
+	}
 
-        if (primaryKey != null) {
-            builder.append(",PRIMARY KEY(");
-            builder.append(primaryKey);
-            builder.append(")");
-        }
+	/**
+	 * Add a column with settings.
+	 *
+	 * @param column
+	 *            the column
+	 * @param settings
+	 *            the column settings
+	 * @return the CreateTableQuery object
+	 */
+	public CreateTableQuery column(String column, String settings) {
+		columns.add(column + " " + settings);
+		return this;
+	}
 
-        builder.append(")");
+	/**
+	 * Add if not exists to the query.
+	 *
+	 * @return the CreateTableQuery object
+	 */
+	public CreateTableQuery ifNotExists() {
+		ifNotExists = true;
+		return this;
+	}
 
-        return builder.toString();
-    }
+	/**
+	 * Set the primary key to column.
+	 *
+	 * @param column
+	 *            the column to be the primary key
+	 * @return the CreateTableQuery object
+	 */
+	public CreateTableQuery primaryKey(String column) {
+		primaryKey = column;
+		return this;
+	}
 
 }
