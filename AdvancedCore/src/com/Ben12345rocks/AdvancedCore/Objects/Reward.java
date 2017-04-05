@@ -1082,7 +1082,7 @@ public class Reward {
 	 *
 	 * @param user
 	 *            the user
-	 * @param placeholders
+	 * @param phs
 	 *            placeholders
 	 */
 	public void giveRewardUser(User user, HashMap<String, String> phs) {
