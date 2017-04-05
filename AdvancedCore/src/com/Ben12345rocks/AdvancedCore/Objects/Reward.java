@@ -1,10 +1,12 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -1083,10 +1085,15 @@ public class Reward {
 	 * @param placeholders
 	 *            placeholders
 	 */
-	public void giveRewardUser(User user, HashMap<String, String> placeholders) {
+	public void giveRewardUser(User user, HashMap<String, String> phs) {
 		Player player = user.getPlayer();
 		if (player != null) {
 			if (hasPermission(user)) {
+				phs.put("player", player.getName());
+				LocalDateTime ldt = LocalDateTime.now();
+				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+				phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
+				final HashMap<String,String> placeholders = new HashMap<String,String>(phs);
 				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
 				int money = getMoneyToGive();
@@ -1397,15 +1404,15 @@ public class Reward {
 	 *            placeholders
 	 */
 	public void runCommands(User user, HashMap<String, String> placeholders) {
-		String playerName = user.getPlayerName();
-
 		// Console commands
-		ArrayList<String> consolecmds = ArrayUtils.getInstance().replacePlaceHolder(getConsoleCommands(), placeholders);
+		ArrayList<String> consolecmds = getConsoleCommands();
 
 		if (consolecmds != null) {
 			for (String consolecmd : consolecmds) {
 				if (consolecmd.length() > 0) {
-					consolecmd = consolecmd.replace("%player%", playerName);
+					consolecmd = StringUtils.getInstance()
+							.replacePlaceHolder(consolecmd, placeholders);
+
 					final String cmd = consolecmd;
 					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
@@ -1420,13 +1427,14 @@ public class Reward {
 		}
 
 		// Player commands
-		ArrayList<String> playercmds = ArrayUtils.getInstance().replacePlaceHolder(getPlayerCommands(), placeholders);
+		ArrayList<String> playercmds = getPlayerCommands();
 
 		Player player = user.getPlayer();
 		if (playercmds != null) {
 			for (String playercmd : playercmds) {
 				if ((player != null) && (playercmd.length() > 0)) {
-					playercmd = playercmd.replace("%player%", playerName);
+					playercmd = StringUtils.getInstance().replacePlaceHolder(playercmd,
+							placeholders);
 					final String cmd = playercmd;
 					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
