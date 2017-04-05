@@ -242,8 +242,8 @@ public class ArrayUtils {
 	public HashMap<String, String> fromString(String str) {
 		HashMap<String, String> map = new HashMap<String, String>();
 		if (!str.equals("")) {
-			for (String entry : str.split("&")) {
-				String[] values = entry.split("@");
+			for (String entry : str.split("%entry%")) {
+				String[] values = entry.split("%pair%");
 				if (values.length > 1) {
 					String key = values[0];
 					String value = values[1];
@@ -259,10 +259,10 @@ public class ArrayUtils {
 		int count = 0;
 		if (placeholders != null && !placeholders.isEmpty()) {
 			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str += entry.getKey() + "@" + entry.getValue();
+				str += entry.getKey() + "%pair%" + entry.getValue();
 				count++;
 				if (count != placeholders.size()) {
-					str += "&";
+					str += "%entry%";
 				}
 			}
 		}

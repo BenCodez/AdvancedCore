@@ -198,7 +198,7 @@ public class User {
 	public void checkOfflineRewards() {
 		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
-		for (String str : ArrayUtils.getInstance().convert(copy)) {
+		for (String str : copy) {
 			String[] args = str.split("%placeholders%");
 			String placeholders = "";
 			if (args.length > 1) {

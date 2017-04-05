@@ -135,7 +135,7 @@ public class UserData {
 		if (str.equals("")) {
 			return new ArrayList<String>();
 		}
-		String[] list = str.split(",");
+		String[] list = str.split("%line%");
 		return ArrayUtils.getInstance().convert(list);
 	}
 
@@ -196,7 +196,7 @@ public class UserData {
 		String str = "";
 		for (int i = 0; i < value.size(); i++) {
 			if (i != 0) {
-				str += ",";
+				str += "%line%";
 			}
 			str += value.get(i);
 		}
