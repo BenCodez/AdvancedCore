@@ -82,7 +82,7 @@ public class MySQL {
 
 		try {
 			Query query = new Query(mysql, sql);
-			query.executeUpdateAsync();
+			query.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -303,7 +303,9 @@ public class MySQL {
 					Query query = new Query(mysql, text);
 					query.executeUpdateAsync();
 				} catch (SQLException e) {
-					e.printStackTrace();
+					AdvancedCoreHook.getInstance().getPlugin().getLogger().severe("Error occoured while executing sql: "
+							+ e.toString() + ", turn debug on to see full stacktrace");
+					AdvancedCoreHook.getInstance().debug(e);
 				}
 			}
 
