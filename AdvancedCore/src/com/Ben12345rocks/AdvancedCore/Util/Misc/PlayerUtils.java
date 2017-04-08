@@ -8,6 +8,7 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 
 public class PlayerUtils {
@@ -42,31 +43,67 @@ public class PlayerUtils {
 		return null;
 	}
 
-	/**
-	 * Gets the player name.
-	 *
-	 * @param uuid
-	 *            the uuid
-	 * @return the player name
-	 */
+	public synchronized String getPlayerName(User user, String uuid) {
+		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
+			plugin.debug("Null UUID");
+			return null;
+		}
+
+		String name = "";
+		String storedName = user.getData().getString("PlayerName");
+
+		java.util.UUID u = java.util.UUID.fromString(uuid);
+		Player player = Bukkit.getPlayer(uuid);
+		if (player == null) {
+			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
+			if (p.getFirstPlayed() != 0) {
+				name = p.getName();
+			} else {
+				name = storedName;
+				if (name.equals("")) {
+					name = Thread.getInstance().getThread().getName(u);
+				}
+			}
+		} else {
+			name = player.getName();
+		}
+
+		if (!name.equals("")) {
+			if (!name.equals(storedName) && !storedName.equals("")) {
+				user.getData().setString("PlayerName", name);
+			}
+		} else {
+			name = "Can't get name";
+		}
+		return name;
+
+	}
+
 	public synchronized String getPlayerName(String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
 			plugin.debug("Null UUID");
 			return null;
 		}
 
+		String name = "";
+
 		java.util.UUID u = java.util.UUID.fromString(uuid);
 		Player player = Bukkit.getPlayer(uuid);
 		if (player == null) {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
 			if (p.hasPlayedBefore() || p.isOnline()) {
-				return p.getName();
+				name = p.getName();
 			} else {
-				return Thread.getInstance().getThread().getName(u);
+				name = Thread.getInstance().getThread().getName(u);
 			}
 		} else {
-			return player.getName();
+			name = player.getName();
 		}
+
+		if (name.equals("")) {
+			name = "Can't get name";
+		}
+		return name;
 
 	}
 

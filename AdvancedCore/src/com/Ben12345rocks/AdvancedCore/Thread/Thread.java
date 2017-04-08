@@ -20,7 +20,8 @@ public class Thread {
 			try {
 				return fet.call().get(uuid);
 			} catch (Exception e) {
-				return "Error Getting Name";
+				//AdvancedCoreHook.getInstance().debug(e);
+				return "";
 			}
 		}
 

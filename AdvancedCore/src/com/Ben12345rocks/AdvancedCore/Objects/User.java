@@ -99,7 +99,7 @@ public class User {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		loadData();
-		setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+		setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
 
 	}
 
@@ -120,7 +120,7 @@ public class User {
 		this.loadName = loadName;
 		loadData();
 		if (this.loadName) {
-			setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+			setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
 		}
 
 	}
@@ -134,7 +134,7 @@ public class User {
 			loadData();
 		}
 		if (this.loadName) {
-			setPlayerName(PlayerUtils.getInstance().getPlayerName(this.uuid));
+			setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
 		}
 
 	}
