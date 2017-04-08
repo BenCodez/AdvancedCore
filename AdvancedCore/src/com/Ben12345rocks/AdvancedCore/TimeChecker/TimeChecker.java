@@ -6,8 +6,11 @@ import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
 
+import org.bukkit.Bukkit;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
+import com.Ben12345rocks.AdvancedCore.Listeners.DateChangedEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.DayChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.MonthChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WeekChangeEvent;
@@ -93,20 +96,45 @@ public class TimeChecker {
 	 * Update.
 	 */
 	public void update() {
-		if (hasDayChanged()) {
-			plugin.debug("Day changed");
-			DayChangeEvent dayChange = new DayChangeEvent();
-			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
-		}
-		if (hasMonthChanged()) {
-			plugin.debug("Month Changed");
-			MonthChangeEvent dayChange = new MonthChangeEvent();
-			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
-		}
-		if (hasWeekChanged()) {
-			plugin.debug("Week Changed");
-			WeekChangeEvent dayChange = new WeekChangeEvent();
-			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
-		}
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				boolean dayChanged = false;
+				boolean weekChanged = false;
+				boolean monthChanged = false;
+				if (hasDayChanged()) {
+					plugin.debug("Day changed");
+					dayChanged = true;
+				}
+				if (hasWeekChanged()) {
+					plugin.debug("Week Changed");
+					weekChanged = true;
+				}
+				if (hasMonthChanged()) {
+					plugin.debug("Month Changed");
+					monthChanged = true;
+				}
+
+				if (dayChanged || weekChanged || monthChanged) {
+					DateChangedEvent dateChanged = new DateChangedEvent();
+					plugin.getPlugin().getServer().getPluginManager().callEvent(dateChanged);
+				}
+
+				if (dayChanged) {
+					DayChangeEvent dayChange = new DayChangeEvent();
+					plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
+				}
+				if (weekChanged) {
+					WeekChangeEvent weekChange = new WeekChangeEvent();
+					plugin.getPlugin().getServer().getPluginManager().callEvent(weekChange);
+				}
+				if (monthChanged) {
+					MonthChangeEvent monthChange = new MonthChangeEvent();
+					plugin.getPlugin().getServer().getPluginManager().callEvent(monthChange);
+				}
+			}
+		});
+
 	}
 }

@@ -419,6 +419,9 @@ public class AdvancedCoreHook {
 		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		update();
+		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
+			getMysql().clearCache();
+		}
 	}
 
 	/**

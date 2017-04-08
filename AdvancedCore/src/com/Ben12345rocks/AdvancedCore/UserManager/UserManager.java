@@ -11,7 +11,6 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 
 /**
@@ -96,8 +95,9 @@ public class UserManager {
 	 *            the player name
 	 * @return the user
 	 */
+	@SuppressWarnings("deprecation")
 	public User getUser(String playerName) {
-		return getUser(new UUID(PlayerUtils.getInstance().getUUID(playerName)));
+		return new User(plugin.getPlugin(), playerName);
 	}
 
 	/**
@@ -109,7 +109,6 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public User getUser(UUID uuid) {
-		User user = new User(plugin.getPlugin(), uuid);
-		return user;
+		return  new User(plugin.getPlugin(), uuid);
 	}
 }

@@ -64,9 +64,8 @@ public class User {
 	public User(Plugin plugin, Player player) {
 		this.plugin = plugin;
 		loadData();
-		setPlayerName(player.getName());
 		uuid = player.getUniqueId().toString();
-
+		setPlayerName(player.getName());
 	}
 
 	/**
@@ -81,9 +80,8 @@ public class User {
 	public User(Plugin plugin, String playerName) {
 		this.plugin = plugin;
 		loadData();
-		setPlayerName(playerName);
 		uuid = PlayerUtils.getInstance().getUUID(playerName);
-
+		setPlayerName(playerName);
 	}
 
 	/**
@@ -207,7 +205,12 @@ public class User {
 			RewardHandler.getInstance().giveReward(this, args[0], false, true, false,
 					ArrayUtils.getInstance().fromString(placeholders));
 		}
-
+	}
+	
+	public void updateName() {
+		if (!getData().getString("PlayerName").equals(getPlayerName())) {
+			getData().setString("PlayerName", getPlayerName());
+		}
 	}
 
 	public ArrayList<String> getChoiceRewards() {
@@ -725,6 +728,7 @@ public class User {
 
 	private void setPlayerName(String playerName) {
 		this.playerName = playerName;
+		updateName();
 	}
 
 	public void setTimedRewards(HashMap<Reward, ArrayList<Long>> timed) {
