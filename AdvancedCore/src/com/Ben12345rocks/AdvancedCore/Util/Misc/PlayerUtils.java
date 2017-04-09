@@ -101,7 +101,7 @@ public class PlayerUtils {
 		}
 
 		if (name.equals("")) {
-			name = "Can't get name";
+			name = "Error getting name";
 		}
 		return name;
 
