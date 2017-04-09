@@ -73,7 +73,7 @@ public class PlayerUtils {
 				user.getData().setString("PlayerName", name);
 			}
 		} else {
-			name = "Can't get name";
+			name = "Error getting name";
 		}
 		return name;
 

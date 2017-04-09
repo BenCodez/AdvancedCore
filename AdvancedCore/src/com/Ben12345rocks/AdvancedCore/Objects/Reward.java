@@ -1089,6 +1089,9 @@ public class Reward {
 		Player player = user.getPlayer();
 		if (player != null) {
 			if (hasPermission(user)) {
+				if (phs == null) {
+					phs = new HashMap<String,String>();
+				}
 				phs.put("player", player.getName());
 				LocalDateTime ldt = LocalDateTime.now();
 				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
