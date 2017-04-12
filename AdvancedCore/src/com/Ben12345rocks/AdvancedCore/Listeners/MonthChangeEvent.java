@@ -25,7 +25,7 @@ public class MonthChangeEvent extends Event {
 	 * Instantiates a new month change event.
 	 */
 	public MonthChangeEvent() {
-		super();
+		super(true);
 	}
 
 	/*

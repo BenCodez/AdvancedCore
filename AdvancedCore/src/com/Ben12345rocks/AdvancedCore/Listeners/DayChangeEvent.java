@@ -25,7 +25,7 @@ public class DayChangeEvent extends Event {
 	 * Instantiates a new day change event.
 	 */
 	public DayChangeEvent() {
-		super();
+		super(true);
 	}
 
 	/*

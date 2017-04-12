@@ -25,7 +25,7 @@ public class WeekChangeEvent extends Event {
 	 * Instantiates a new week change event.
 	 */
 	public WeekChangeEvent() {
-		super();
+		super(true);
 	}
 
 	/*
