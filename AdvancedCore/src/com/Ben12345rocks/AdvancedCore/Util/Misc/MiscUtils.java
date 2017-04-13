@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -53,7 +54,22 @@ public class MiscUtils {
 				});
 			}
 		}
+	}
+	
+	public boolean checkChance(double chance, double outOf) {
+		if ((chance == 0) || (chance == outOf)) {
+			return true;
+		}
 
+		double randomNum = ThreadLocalRandom.current().nextDouble(outOf);
+
+		plugin.debug("Chance: " + chance + ", RandomNum: " + randomNum);
+
+		if (randomNum <= chance) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	/**

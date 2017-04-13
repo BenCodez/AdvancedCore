@@ -259,21 +259,7 @@ public class Reward {
 	 * @return true, if successful
 	 */
 	public boolean checkChance() {
-		double chance = getChance();
-
-		if ((chance == 0) || (chance == 100)) {
-			return true;
-		}
-
-		double randomNum = ThreadLocalRandom.current().nextDouble(100);
-
-		plugin.debug("Chance: " + chance + ", RandomNum: " + randomNum);
-
-		if (randomNum <= chance) {
-			return true;
-		} else {
-			return false;
-		}
+		return MiscUtils.getInstance().checkChance(getChance(), 100);
 	}
 
 	/**
@@ -320,21 +306,7 @@ public class Reward {
 	 * @return true, if successful
 	 */
 	public boolean checkRandomChance() {
-		double chance = getRandomChance();
-
-		if ((chance == 0) || (chance == 100)) {
-			return true;
-		}
-
-		double randomNum = ThreadLocalRandom.current().nextDouble(100);
-
-		plugin.debug("Chance: " + chance + ", RandomNum: " + randomNum);
-
-		if (randomNum <= chance) {
-			return true;
-		} else {
-			return false;
-		}
+		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
 	}
 
 	/**
