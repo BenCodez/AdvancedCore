@@ -181,7 +181,7 @@ public class StringUtils {
 					num++;
 					endIndex = text.indexOf("]", startIndex);
 					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
-					plugin.debug(startIndex + ":" + endIndex + " from " + text + " to " + str + " currently " + msg);
+					//plugin.debug(startIndex + ":" + endIndex + " from " + text + " to " + str + " currently " + msg);
 					String script = new JavascriptEngine().addToEngine(engineAPI).getStringValue(str);
 					if (script == null) {
 						script = "" + new JavascriptEngine().getBooleanValue(str);
@@ -200,7 +200,7 @@ public class StringUtils {
 		} else {
 			msg = text;
 		}
-		plugin.debug(msg);
+		//plugin.debug(msg);
 		return msg;
 	}
 
