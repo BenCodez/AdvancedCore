@@ -157,6 +157,8 @@ public class StringUtils {
 	public String replaceJavascript(Player player, String text) {
 		HashMap<String, Object> engineAPI = new HashMap<String, Object>();
 		engineAPI.put("Player", player);
+		engineAPI.put("PlayerName", player.getName());
+		engineAPI.put("PlayerUUID", player.getUniqueId().toString());
 		engineAPI.put("User", UserManager.getInstance().getUser(player));
 		engineAPI.put("CommandSender", player);
 		return replaceJavascript(text, engineAPI);
@@ -181,7 +183,8 @@ public class StringUtils {
 					num++;
 					endIndex = text.indexOf("]", startIndex);
 					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
-					//plugin.debug(startIndex + ":" + endIndex + " from " + text + " to " + str + " currently " + msg);
+					// plugin.debug(startIndex + ":" + endIndex + " from " +
+					// text + " to " + str + " currently " + msg);
 					String script = new JavascriptEngine().addToEngine(engineAPI).getStringValue(str);
 					if (script == null) {
 						script = "" + new JavascriptEngine().getBooleanValue(str);
@@ -200,7 +203,7 @@ public class StringUtils {
 		} else {
 			msg = text;
 		}
-		//plugin.debug(msg);
+		// plugin.debug(msg);
 		return msg;
 	}
 

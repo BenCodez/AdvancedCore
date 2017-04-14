@@ -32,7 +32,7 @@ public class JavascriptEngine {
 			engine.put("Bukkit", Bukkit.getServer());
 			engine.put("AdvancedCore", AdvancedCoreHook.getInstance());
 			engine.put("Console", Bukkit.getConsoleSender());
-			
+
 			engineAPI.putAll(AdvancedCoreHook.getInstance().getJavascriptEngine());
 
 			for (Entry<String, Object> entry : engineAPI.entrySet()) {
@@ -42,7 +42,9 @@ public class JavascriptEngine {
 			try {
 				return engine.eval(expression);
 			} catch (ScriptException e) {
-				e.printStackTrace();
+				AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
+						"Error occoured while evaluating javascript, turn debug on to see stacktrace: " + e.toString());
+				AdvancedCoreHook.getInstance().debug(e);
 			}
 		}
 		return null;
@@ -50,6 +52,8 @@ public class JavascriptEngine {
 
 	public JavascriptEngine addPlayer(Player player) {
 		addToEngine("Player", player);
+		addToEngine("PlayerName", player.getName());
+		addToEngine("PlayerUUID", player.getUniqueId().toString());
 		addToEngine("User", UserManager.getInstance().getUser(player));
 		addToEngine("CommandSender", player);
 		return this;
