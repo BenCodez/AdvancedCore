@@ -21,7 +21,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
-import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -1062,13 +1062,13 @@ public class Reward {
 		if (player != null) {
 			if (hasPermission(user)) {
 				if (phs == null) {
-					phs = new HashMap<String,String>();
+					phs = new HashMap<String, String>();
 				}
 				phs.put("player", player.getName());
 				LocalDateTime ldt = LocalDateTime.now();
 				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 				phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
-				final HashMap<String,String> placeholders = new HashMap<String,String>(phs);
+				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
 				int money = getMoneyToGive();
@@ -1379,50 +1379,9 @@ public class Reward {
 	 *            placeholders
 	 */
 	public void runCommands(User user, HashMap<String, String> placeholders) {
-		// Console commands
-		ArrayList<String> consolecmds = getConsoleCommands();
+		MiscUtils.getInstance().executeConsoleCommands(getConsoleCommands(), placeholders);
 
-		if (consolecmds != null) {
-			for (String consolecmd : consolecmds) {
-				if (consolecmd.length() > 0) {
-					consolecmd = StringUtils.getInstance()
-							.replacePlaceHolder(consolecmd, placeholders);
-
-					final String cmd = consolecmd;
-					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-						@Override
-						public void run() {
-							Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-						}
-					});
-
-				}
-			}
-		}
-
-		// Player commands
-		ArrayList<String> playercmds = getPlayerCommands();
-
-		Player player = user.getPlayer();
-		if (playercmds != null) {
-			for (String playercmd : playercmds) {
-				if ((player != null) && (playercmd.length() > 0)) {
-					playercmd = StringUtils.getInstance().replacePlaceHolder(playercmd,
-							placeholders);
-					final String cmd = playercmd;
-					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-						@Override
-						public void run() {
-							player.performCommand(cmd);
-						}
-
-					});
-
-				}
-			}
-		}
+		user.preformCommand(getPlayerCommands(), placeholders);
 	}
 
 	/**
@@ -1437,7 +1396,8 @@ public class Reward {
 	 */
 	public void runJavascript(User user, boolean online, HashMap<String, String> placeholders) {
 		if (isJavascriptEnabled()) {
-			if (JavascriptHandler.getInstance().evalute(user, getJavascriptExpression())) {
+			if (new JavascriptEngine().addPlayer(user.getPlayer()).getBooleanValue(
+					StringUtils.getInstance().replacePlaceHolder(getJavascriptExpression(), placeholders))) {
 				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptTrueRewardsPath()).withPrefix(name)
 						.send(user);
 			} else {

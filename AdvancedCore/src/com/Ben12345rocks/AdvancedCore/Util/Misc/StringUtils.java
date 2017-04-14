@@ -9,6 +9,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -148,6 +149,20 @@ public class StringUtils {
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
+		HashMap<String, Object> engineAPI = new HashMap<String, Object>();
+		engineAPI.put("CommandSender", player);
+		return replaceJavascript(text, engineAPI);
+	}
+
+	public String replaceJavascript(Player player, String text) {
+		HashMap<String, Object> engineAPI = new HashMap<String, Object>();
+		engineAPI.put("Player", player);
+		engineAPI.put("User", UserManager.getInstance().getUser(player));
+		engineAPI.put("CommandSender", player);
+		return replaceJavascript(text, engineAPI);
+	}
+
+	public String replaceJavascript(String text, HashMap<String, Object> engineAPI) {
 		String msg = "";
 		if (containsIgnorecase(text, "[Javascript=")) {
 			int lastIndex = 0;
@@ -159,7 +174,7 @@ public class StringUtils {
 				int endIndex = -1;
 				if (startIndex != -1) {
 					if (num != 0) {
-						msg += text.substring(lastIndex+1, startIndex);
+						msg += text.substring(lastIndex + 1, startIndex);
 					} else {
 						msg += text.substring(lastIndex, startIndex);
 					}
@@ -167,9 +182,9 @@ public class StringUtils {
 					endIndex = text.indexOf("]", startIndex);
 					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
 					plugin.debug(startIndex + ":" + endIndex + " from " + text + " to " + str + " currently " + msg);
-					String script = new JavascriptEngine().addPlayer(player).getStringValue(str);
+					String script = new JavascriptEngine().addToEngine(engineAPI).getStringValue(str);
 					if (script == null) {
-						script = "" + new JavascriptEngine().addPlayer(player).getBooleanValue(str);
+						script = "" + new JavascriptEngine().getBooleanValue(str);
 
 					}
 
@@ -187,6 +202,10 @@ public class StringUtils {
 		}
 		plugin.debug(msg);
 		return msg;
+	}
+
+	public String replaceJavascript(String text) {
+		return replaceJavascript(text, null);
 	}
 
 	public boolean containsIgnorecase(String str1, String str2) {

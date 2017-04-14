@@ -29,12 +29,11 @@ public class JavascriptEngine {
 	public Object getResult(String expression) {
 		if (!expression.equals("")) {
 			ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
-			engine.put("BukkitServer", Bukkit.getServer());
+			engine.put("Bukkit", Bukkit.getServer());
 			engine.put("AdvancedCore", AdvancedCoreHook.getInstance());
-
-			// String exp =
-			// StringUtils.getInstance().replacePlaceHolders(player,
-			// expression);
+			engine.put("Console", Bukkit.getConsoleSender());
+			
+			engineAPI.putAll(AdvancedCoreHook.getInstance().getJavascriptEngine());
 
 			for (Entry<String, Object> entry : engineAPI.entrySet()) {
 				engine.put(entry.getKey(), entry.getValue());
@@ -52,11 +51,12 @@ public class JavascriptEngine {
 	public JavascriptEngine addPlayer(Player player) {
 		addToEngine("Player", player);
 		addToEngine("User", UserManager.getInstance().getUser(player));
+		addToEngine("CommandSender", player);
 		return this;
 	}
 
 	public JavascriptEngine addPlayer(CommandSender player) {
-		addToEngine("Sender", player);
+		addToEngine("CommandSender", player);
 		return this;
 	}
 
@@ -73,10 +73,17 @@ public class JavascriptEngine {
 	public boolean getBooleanValue(String expression) {
 		Object result = getResult(expression);
 		try {
-			return ((Boolean) result);
+			return ((boolean) result);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return false;
+	}
+
+	public JavascriptEngine addToEngine(HashMap<String, Object> engineAPI) {
+		if (engineAPI != null && !engineAPI.isEmpty()) {
+			this.engineAPI.putAll(engineAPI);
+		}
+		return this;
 	}
 }

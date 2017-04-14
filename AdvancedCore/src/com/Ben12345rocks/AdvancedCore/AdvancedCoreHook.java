@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -25,6 +26,7 @@ import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.mysql.MySQL;
@@ -65,8 +67,9 @@ public class AdvancedCoreHook {
 	private int resourceId = 0;
 	private String jarName;
 	private boolean extraDebug = false;
-
 	private boolean checkOnWorldChange = false;
+	
+	private HashMap<String,Object> javascriptEngine = new HashMap<String,Object>();
 
 	/** The econ. */
 	private Economy econ = null;
@@ -74,7 +77,14 @@ public class AdvancedCoreHook {
 	private Permission perms;
 
 	private AdvancedCoreHook() {
-
+	}
+	
+	public UserManager getUserManager() {
+		return UserManager.getInstance();
+	}
+	
+	public HashMap<String,Object> getJavascriptEngine() {
+		return javascriptEngine;
 	}
 
 	public void allowDownloadingFromSpigot(int resourceId, String jarName) {

@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 
@@ -412,5 +415,33 @@ public class ArrayUtils {
 		}
 
 		return sortedMap;
+	}
+
+	public ArrayList<String> replaceJavascript(ArrayList<String> list, HashMap<String, Object> engineAPI) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringUtils.getInstance().replaceJavascript(str, engineAPI));
+		}
+		return msg;
+	}
+
+	public ArrayList<String> replaceJavascript(ArrayList<String> list) {
+		return replaceJavascript(list, null);
+	}
+
+	public ArrayList<String> replaceJavascript(CommandSender sender, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringUtils.getInstance().replaceJavascript(sender, str));
+		}
+		return msg;
+	}
+
+	public ArrayList<String> replaceJavascript(Player player, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringUtils.getInstance().replaceJavascript(player, str));
+		}
+		return msg;
 	}
 }
