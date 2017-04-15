@@ -53,6 +53,8 @@ public class Reward {
 	/** The delay minutes. */
 	private int delayMinutes;
 
+	private int delaySeconds;
+
 	/** The timed enabled. */
 	private boolean timedEnabled;
 
@@ -292,10 +294,11 @@ public class Reward {
 		LocalDateTime time = LocalDateTime.now();
 		time = time.plus(getDelayHours(), ChronoUnit.HOURS);
 		time = time.plus(getDelayMinutes(), ChronoUnit.MINUTES);
+		time = time.plus(getDelaySeconds(), ChronoUnit.SECONDS);
 		user.addTimedReward(this, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
-		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours " + getDelayMinutes() + " minutes ("
-				+ time.toString() + ")");
+		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours, " + getDelayMinutes() + " minutes, "
+				+ getDelaySeconds() + " seconds (" + time.toString() + ")");
 		return true;
 
 	}
@@ -1256,6 +1259,7 @@ public class Reward {
 		setDelayEnabled(getConfig().getDelayedEnabled());
 		setDelayHours(getConfig().getDelayedHours());
 		setDelayMinutes(getConfig().getDelayedMinutes());
+		setDelaySeconds(getConfig().getDelayedSeconds());
 
 		setTimedEnabled(getConfig().getTimedEnabled());
 		setTimedHour(getConfig().getTimedHour());
@@ -1340,6 +1344,29 @@ public class Reward {
 		effectData = getConfig().getEffectData();
 		effectParticles = getConfig().getEffectParticles();
 		effectRadius = getConfig().getEffectRadius();
+	}
+
+	/**
+	 * @return the delaySeconds
+	 */
+	public int getDelaySeconds() {
+		return delaySeconds;
+	}
+
+	/**
+	 * @param delaySeconds
+	 *            the delaySeconds to set
+	 */
+	public void setDelaySeconds(int delaySeconds) {
+		this.delaySeconds = delaySeconds;
+	}
+
+	/**
+	 * @param usesWorlds
+	 *            the usesWorlds to set
+	 */
+	public void setUsesWorlds(boolean usesWorlds) {
+		this.usesWorlds = usesWorlds;
 	}
 
 	/**

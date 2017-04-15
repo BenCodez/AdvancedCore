@@ -211,6 +211,10 @@ public class RewardFileData {
 	public int getDelayedMinutes() {
 		return getData().getInt("Delayed.Minutes");
 	}
+	
+	public int getDelayedSeconds() {
+		return getData().getInt("Delayed.Seconds");
+	}
 
 	/**
 	 * Gets the effect data.

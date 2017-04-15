@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -167,9 +168,26 @@ public class User {
 		times.add(epochMilli);
 		timed.put(reward, times);
 		setTimedRewards(timed);
+		loadTimedDelayedTimer(epochMilli);
+	}
+
+	public void loadTimedDelayedTimer(long time) {
+		long delay = time - System.currentTimeMillis();
+		if (delay < 0) {
+			delay = 0;
+		}
+		delay+=250;
+		AdvancedCoreHook.getInstance().getTimer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				checkDelayedTimedRewards();
+			}
+		}, delay);
 	}
 
 	public void checkDelayedTimedRewards() {
+		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
 		for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
 			ArrayList<Long> times = entry.getValue();
@@ -180,6 +198,8 @@ public class User {
 					Date timeDate = new Date(time);
 					if (new Date().after(timeDate)) {
 						entry.getKey().giveReward(this, isOnline(), true, false);
+						AdvancedCoreHook.getInstance().debug(
+								"Giving timed/delayed reward " + entry.getKey().name + " for " + getPlayerName());
 						iterator.remove();
 					}
 				}
@@ -744,8 +764,7 @@ public class User {
 		if (player != null) {
 			try {
 				Title titleObject = new Title(StringUtils.getInstance().replaceJavascript(getPlayer(), title),
-						StringUtils.getInstance().replaceJavascript(getPlayer(), subTitle), fadeIn, showTime,
-						fadeOut);
+						StringUtils.getInstance().replaceJavascript(getPlayer(), subTitle), fadeIn, showTime, fadeOut);
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");

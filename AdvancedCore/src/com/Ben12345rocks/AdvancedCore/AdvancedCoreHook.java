@@ -68,7 +68,15 @@ public class AdvancedCoreHook {
 	private String jarName;
 	private boolean extraDebug = false;
 	private boolean checkOnWorldChange = false;
+	private Timer timer = new Timer();
 	
+	/**
+	 * @return the timer
+	 */
+	public Timer getTimer() {
+		return timer;
+	}
+
 	private HashMap<String,Object> javascriptEngine = new HashMap<String,Object>();
 
 	/** The econ. */
@@ -325,6 +333,7 @@ public class AdvancedCoreHook {
 		loadEconomy();
 		ServerData.getInstance().setup();
 		loadRewards();
+		RewardHandler.getInstance().checkDelayedTimedRewards();
 	}
 
 	public void loadEconomy() {
@@ -372,6 +381,7 @@ public class AdvancedCoreHook {
 		loadBackgroundTimer(1);
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
+		RewardHandler.getInstance().checkDelayedTimedRewards();
 	}
 
 	/**
@@ -432,6 +442,8 @@ public class AdvancedCoreHook {
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
 			getMysql().clearCache();
 		}
+		getTimer().purge();
+		RewardHandler.getInstance().checkDelayedTimedRewards();
 	}
 
 	/**
@@ -556,7 +568,7 @@ public class AdvancedCoreHook {
 
 			@Override
 			public void run() {
-				RewardHandler.getInstance().checkDelayedTimedRewards();
+				//RewardHandler.getInstance().checkDelayedTimedRewards();
 				TimeChecker.getInstance().update();
 			}
 		});

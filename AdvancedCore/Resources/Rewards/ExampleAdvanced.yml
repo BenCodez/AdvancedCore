@@ -20,6 +20,7 @@ Delayed:
   Enabled: false
   Hours: 1
   Minutes: 0
+  Seconds: 0
   
 # Specific time of day to give this reward file
 # in 24 hour time, relative to local time zone

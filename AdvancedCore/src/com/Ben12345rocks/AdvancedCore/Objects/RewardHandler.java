@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -83,7 +84,12 @@ public class RewardHandler {
 			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 				try {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					user.checkDelayedTimedRewards();
+					HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
+					for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+						for (Long time : entry.getValue()) {
+							user.loadTimedDelayedTimer(time.longValue());
+						}
+					}
 				} catch (Exception ex) {
 					plugin.debug("Failed to update delayed/timed for: " + uuid);
 					plugin.debug(ex);
