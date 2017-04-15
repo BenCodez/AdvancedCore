@@ -34,6 +34,8 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
  */
 public class BInventory implements Listener {
 
+	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
+
 	/**
 	 * The Class ClickEvent.
 	 */
@@ -192,6 +194,21 @@ public class BInventory implements Listener {
 
 	/** The pages. */
 	private boolean pages = false;
+
+	/**
+	 * @return the pages
+	 */
+	public boolean isPages() {
+		return pages;
+	}
+
+	/**
+	 * @param pages
+	 *            the pages to set
+	 */
+	public void setPages(boolean pages) {
+		this.pages = pages;
+	}
 
 	/** The page. */
 	private int page = 1;
@@ -392,6 +409,12 @@ public class BInventory implements Listener {
 					}
 
 				}
+				
+				for (BInventoryButton b : pageButtons) {
+					if (slot == b.getSlot()) {
+						b.onClick(new ClickEvent(event));
+					}
+				}
 			}
 		}
 	}
@@ -488,6 +511,11 @@ public class BInventory implements Listener {
 			}
 
 		}
+		
+		for (BInventoryButton b : pageButtons) {
+			inv.setItem(b.getSlot(), b.getItem());
+		}
+		
 		inv.setItem(45,
 				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aPrevious Page").toItemStack());
 
@@ -525,6 +553,20 @@ public class BInventory implements Listener {
 	 */
 	public void setMeta(Player player, String str, Object ob) {
 		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
+	}
+
+	/**
+	 * @return the pageButtons
+	 */
+	public ArrayList<BInventoryButton> getPageButtons() {
+		return pageButtons;
+	}
+
+	/**
+	 * @param pageButtons the pageButtons to set
+	 */
+	public void setPageButtons(ArrayList<BInventoryButton> pageButtons) {
+		this.pageButtons = pageButtons;
 	}
 
 }

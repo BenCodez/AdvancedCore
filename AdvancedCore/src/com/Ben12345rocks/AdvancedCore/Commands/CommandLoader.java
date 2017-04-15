@@ -81,14 +81,6 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Test", "(String)" }, permPrefix + ".Test", "Test command") {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				sender.sendMessage(StringUtils.getInstance().replaceJavascript(sender, args[1]));
-			}
-		});
-
 		cmds.add(new CommandHandler(new String[] { "GUI" }, permPrefix + ".AdminGUI", "Open AdminGUI", false) {
 
 			@Override

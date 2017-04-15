@@ -97,7 +97,9 @@ public class MySQL {
 
 	public synchronized void checkColumn(String column, DataType dataType) {
 		if (!getColumns().contains(column)) {
-			addColumn(column, dataType);
+			if (!getColumnsQueury().contains(column)) {
+				addColumn(column, dataType);
+			}
 		}
 	}
 

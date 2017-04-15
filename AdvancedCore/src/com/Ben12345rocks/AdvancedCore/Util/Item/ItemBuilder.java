@@ -508,8 +508,10 @@ public class ItemBuilder {
 	 */
 	public ItemStack toItemStack() {
 		if (!placeholders.isEmpty()) {
-			setName(StringUtils.getInstance().replacePlaceHolder(getName(), placeholders));
-			setLore(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders));
+			setName(StringUtils.getInstance()
+					.replaceJavascript(StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
+			setLore(ArrayUtils.getInstance()
+					.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
 		}
 		return is;
 	}
