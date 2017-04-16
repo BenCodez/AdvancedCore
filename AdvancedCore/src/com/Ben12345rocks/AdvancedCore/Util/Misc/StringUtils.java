@@ -9,7 +9,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -149,24 +148,21 @@ public class StringUtils {
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
-		HashMap<String, Object> engineAPI = new HashMap<String, Object>();
-		engineAPI.put("CommandSender", player);
-		return replaceJavascript(text, engineAPI);
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+		return replaceJavascript(text, engine);
 	}
 
 	public String replaceJavascript(Player player, String text) {
-		HashMap<String, Object> engineAPI = new HashMap<String, Object>();
-		engineAPI.put("Player", player);
-		engineAPI.put("PlayerName", player.getName());
-		engineAPI.put("PlayerUUID", player.getUniqueId().toString());
-		engineAPI.put("User", UserManager.getInstance().getUser(player));
-		engineAPI.put("CommandSender", player);
-		return replaceJavascript(text, engineAPI);
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+		return replaceJavascript(text, engine);
 	}
 
-	public String replaceJavascript(String text, HashMap<String, Object> engineAPI) {
+	public String replaceJavascript(String text, JavascriptEngine engine) {
 		String msg = "";
 		if (containsIgnorecase(text, "[Javascript=")) {
+			if (engine == null) {
+				engine = new JavascriptEngine();
+			}
 			int lastIndex = 0;
 			int startIndex = 0;
 			int num = 0;
@@ -185,9 +181,9 @@ public class StringUtils {
 					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
 					// plugin.debug(startIndex + ":" + endIndex + " from " +
 					// text + " to " + str + " currently " + msg);
-					String script = new JavascriptEngine().addToEngine(engineAPI).getStringValue(str);
+					String script = engine.getStringValue(str);
 					if (script == null) {
-						script = "" + new JavascriptEngine().getBooleanValue(str);
+						script = "" + engine.getBooleanValue(str);
 
 					}
 

@@ -16,6 +16,7 @@ import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
@@ -417,10 +418,10 @@ public class ArrayUtils {
 		return sortedMap;
 	}
 
-	public ArrayList<String> replaceJavascript(ArrayList<String> list, HashMap<String, Object> engineAPI) {
+	public ArrayList<String> replaceJavascript(ArrayList<String> list, JavascriptEngine engine) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(str, engineAPI));
+			msg.add(StringUtils.getInstance().replaceJavascript(str, engine));
 		}
 		return msg;
 	}

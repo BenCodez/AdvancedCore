@@ -65,6 +65,7 @@ public class JavascriptEngine {
 
 	public JavascriptEngine addPlayer(CommandSender player) {
 		addToEngine("CommandSender", player);
+		addToEngine("Player", player);
 		return this;
 	}
 
