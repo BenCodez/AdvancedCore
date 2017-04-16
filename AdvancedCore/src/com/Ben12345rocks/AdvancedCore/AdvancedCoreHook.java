@@ -27,8 +27,10 @@ import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
 import com.Ben12345rocks.AdvancedCore.mysql.MySQL;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
@@ -65,11 +67,55 @@ public class AdvancedCoreHook {
 	private boolean preloadUsers = false;
 	private boolean sendScoreboards = true;
 	private int resourceId = 0;
-	private String jarName;
 	private boolean extraDebug = false;
 	private boolean checkOnWorldChange = false;
 	private Timer timer = new Timer();
-	
+	private boolean autoDownload = false;
+	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
+
+	/**
+	 * @return the javascriptEngineRequests
+	 */
+	public ArrayList<JavascriptPlaceholderRequest> getJavascriptEngineRequests() {
+		return javascriptEngineRequests;
+	}
+
+	/**
+	 * @param javascriptEngineRequests the javascriptEngineRequests to set
+	 */
+	public void setJavascriptEngineRequests(ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests) {
+		this.javascriptEngineRequests = javascriptEngineRequests;
+	}
+
+	/**
+	 * @param resourceId the resourceId to set
+	 */
+	public void setResourceId(int resourceId) {
+		this.resourceId = resourceId;
+	}
+
+	/**
+	 * @param javascriptEngine the javascriptEngine to set
+	 */
+	public void setJavascriptEngine(HashMap<String, Object> javascriptEngine) {
+		this.javascriptEngine = javascriptEngine;
+	}
+
+	/**
+	 * @return the autoDownload
+	 */
+	public boolean isAutoDownload() {
+		return autoDownload;
+	}
+
+	/**
+	 * @param autoDownload
+	 *            the autoDownload to set
+	 */
+	public void setAutoDownload(boolean autoDownload) {
+		this.autoDownload = autoDownload;
+	}
+
 	/**
 	 * @return the timer
 	 */
@@ -77,7 +123,7 @@ public class AdvancedCoreHook {
 		return timer;
 	}
 
-	private HashMap<String,Object> javascriptEngine = new HashMap<String,Object>();
+	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
 	private Economy econ = null;
@@ -86,18 +132,17 @@ public class AdvancedCoreHook {
 
 	private AdvancedCoreHook() {
 	}
-	
+
 	public UserManager getUserManager() {
 		return UserManager.getInstance();
 	}
-	
-	public HashMap<String,Object> getJavascriptEngine() {
+
+	public HashMap<String, Object> getJavascriptEngine() {
 		return javascriptEngine;
 	}
 
-	public void allowDownloadingFromSpigot(int resourceId, String jarName) {
+	public void allowDownloadingFromSpigot(int resourceId) {
 		this.resourceId = resourceId;
-		this.jarName = jarName;
 	}
 
 	private void checkPlaceHolderAPI() {
@@ -194,13 +239,6 @@ public class AdvancedCoreHook {
 
 	public String getHelpLine() {
 		return helpLine;
-	}
-
-	/**
-	 * @return the jarName
-	 */
-	public String getJarName() {
-		return jarName;
 	}
 
 	public Logger getLogger() {
@@ -378,7 +416,7 @@ public class AdvancedCoreHook {
 		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
-		loadBackgroundTimer(1);
+		loadBackgroundTimer(5);
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
@@ -568,9 +606,25 @@ public class AdvancedCoreHook {
 
 			@Override
 			public void run() {
-				//RewardHandler.getInstance().checkDelayedTimedRewards();
+				// RewardHandler.getInstance().checkDelayedTimedRewards();
 				TimeChecker.getInstance().update();
 			}
 		});
+	}
+	
+	public void loadAutoUpdateCheck() {
+		timer.schedule(new TimerTask() {
+			
+			@Override
+			public void run() {
+				checkAutoUpdate();
+			}
+		}, 1000 * 60 * 1, 1000*60*60);
+	}
+	
+	private void checkAutoUpdate() {
+		if (isAutoDownload() && getResourceId() != 0) {
+			SpigetUpdater.getInstance().checkAutoDownload(getPlugin(), getResourceId());
+		}
 	}
 }

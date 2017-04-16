@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -176,7 +177,7 @@ public class User {
 		if (delay < 0) {
 			delay = 0;
 		}
-		delay+=250;
+		delay += 250;
 		AdvancedCoreHook.getInstance().getTimer().schedule(new TimerTask() {
 
 			@Override
@@ -197,7 +198,10 @@ public class User {
 				if (time != 0) {
 					Date timeDate = new Date(time);
 					if (new Date().after(timeDate)) {
-						entry.getKey().giveReward(this, isOnline(), true, false);
+						new RewardBuilder(entry.getKey()).setCheckTimed(false)
+								.withPlaceHolder("date",
+										"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
+								.send(this);
 						AdvancedCoreHook.getInstance().debug(
 								"Giving timed/delayed reward " + entry.getKey().name + " for " + getPlayerName());
 						iterator.remove();
