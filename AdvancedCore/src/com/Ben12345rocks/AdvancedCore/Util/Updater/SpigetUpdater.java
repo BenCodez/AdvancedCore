@@ -45,9 +45,10 @@ public class SpigetUpdater {
 	}
 
 	public void checkAutoDownload(JavaPlugin plugin, int resourceId) {
-		Updater updater = new Updater(plugin, resourceId, AdvancedCoreHook.getInstance().isAutoDownload());
+		Updater updater = new Updater(plugin, resourceId, !AdvancedCoreHook.getInstance().isAutoDownload());
 		switch (updater.getResult()) {
 		case UPDATE_AVAILABLE:
+			plugin.getLogger().info("Downloaded jar automaticly, restart to update. Note: Updates take 30-40 minutes to load");
 			download(plugin, resourceId);
 			break;
 		default:

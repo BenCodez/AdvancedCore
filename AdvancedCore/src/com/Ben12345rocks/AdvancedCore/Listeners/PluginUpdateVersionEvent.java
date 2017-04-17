@@ -36,7 +36,7 @@ public class PluginUpdateVersionEvent extends Event {
 	 *            the old version
 	 */
 	public PluginUpdateVersionEvent(Plugin plugin, String oldVersion) {
-		super();
+		super(true);
 		this.plugin = plugin;
 		this.oldVersion = oldVersion;
 	}

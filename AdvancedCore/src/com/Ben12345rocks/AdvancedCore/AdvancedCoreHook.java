@@ -157,12 +157,19 @@ public class AdvancedCoreHook {
 	}
 
 	public void checkPluginUpdate() {
-		String version = ServerData.getInstance().getPluginVersion(plugin);
-		if (!version.equals(plugin.getDescription().getVersion())) {
-			PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
-			Bukkit.getServer().getPluginManager().callEvent(event);
-		}
-		ServerData.getInstance().setPluginVersion(plugin);
+		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
+			
+			@Override
+			public void run() {
+				String version = ServerData.getInstance().getPluginVersion(plugin);
+				if (!version.equals(plugin.getDescription().getVersion())) {
+					PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
+					Bukkit.getServer().getPluginManager().callEvent(event);
+				}
+				ServerData.getInstance().setPluginVersion(plugin);
+			}
+		});
+		
 	}
 
 	/**
@@ -373,6 +380,7 @@ public class AdvancedCoreHook {
 		ServerData.getInstance().setup();
 		loadRewards();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
+		loadAutoUpdateCheck();
 	}
 
 	public void loadEconomy() {
@@ -421,6 +429,7 @@ public class AdvancedCoreHook {
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
+		loadAutoUpdateCheck();
 	}
 
 	/**
@@ -607,25 +616,31 @@ public class AdvancedCoreHook {
 
 			@Override
 			public void run() {
-				// RewardHandler.getInstance().checkDelayedTimedRewards();
 				TimeChecker.getInstance().update();
 			}
 		});
 	}
 	
 	public void loadAutoUpdateCheck() {
-		timer.schedule(new TimerTask() {
+		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
 			
 			@Override
 			public void run() {
 				checkAutoUpdate();
 			}
-		}, 1000 * 60 * 1, 1000*60*60);
+		}, 20, 20*1000*60*60);
 	}
 	
 	private void checkAutoUpdate() {
-		if (isAutoDownload() && getResourceId() != 0) {
-			SpigetUpdater.getInstance().checkAutoDownload(getPlugin(), getResourceId());
-		}
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+			
+			@Override
+			public void run() {
+				if (isAutoDownload() && getResourceId() != 0) {
+					SpigetUpdater.getInstance().checkAutoDownload(getPlugin(), getResourceId());
+				}
+			}
+		});
+		
 	}
 }

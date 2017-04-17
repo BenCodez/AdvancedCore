@@ -80,22 +80,29 @@ public class RewardHandler {
 	 * Check delayed timed rewards.
 	 */
 	public synchronized void checkDelayedTimedRewards() {
-		if (usesTimed()) {
-			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-				try {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
-					for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
-						for (Long time : entry.getValue()) {
-							user.loadTimedDelayedTimer(time.longValue());
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+			
+			@Override
+			public void run() {
+				if (usesTimed()) {
+					for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+						try {
+							User user = UserManager.getInstance().getUser(new UUID(uuid));
+							HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
+							for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+								for (Long time : entry.getValue()) {
+									user.loadTimedDelayedTimer(time.longValue());
+								}
+							}
+						} catch (Exception ex) {
+							plugin.debug("Failed to update delayed/timed for: " + uuid);
+							plugin.debug(ex);
 						}
 					}
-				} catch (Exception ex) {
-					plugin.debug("Failed to update delayed/timed for: " + uuid);
-					plugin.debug(ex);
 				}
 			}
-		}
+		});
+		
 	}
 
 	/**
