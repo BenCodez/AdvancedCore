@@ -5,9 +5,11 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatColor;
@@ -143,6 +145,70 @@ public class StringUtils {
 		} else {
 			return text;
 		}
+	}
+
+	public String replaceJavascript(CommandSender player, String text) {
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+		return replaceJavascript(text, engine);
+	}
+
+	public String replaceJavascript(Player player, String text) {
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+		return replaceJavascript(text, engine);
+	}
+
+	public String replaceJavascript(String text, JavascriptEngine engine) {
+		String msg = "";
+		if (containsIgnorecase(text, "[Javascript=")) {
+			if (engine == null) {
+				engine = new JavascriptEngine();
+			}
+			int lastIndex = 0;
+			int startIndex = 0;
+			int num = 0;
+			while (startIndex != -1) {
+				startIndex = text.indexOf("[Javascript=", lastIndex);
+
+				int endIndex = -1;
+				if (startIndex != -1) {
+					if (num != 0) {
+						msg += text.substring(lastIndex + 1, startIndex);
+					} else {
+						msg += text.substring(lastIndex, startIndex);
+					}
+					num++;
+					endIndex = text.indexOf("]", startIndex);
+					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
+					// plugin.debug(startIndex + ":" + endIndex + " from " +
+					// text + " to " + str + " currently " + msg);
+					String script = engine.getStringValue(str);
+					if (script == null) {
+						script = "" + engine.getBooleanValue(str);
+
+					}
+
+					if (script != null) {
+						msg += script;
+					}
+					lastIndex = endIndex;
+				}
+
+			}
+			msg += text.substring(lastIndex + 1);
+
+		} else {
+			msg = text;
+		}
+		// plugin.debug(msg);
+		return msg;
+	}
+
+	public String replaceJavascript(String text) {
+		return replaceJavascript(text, null);
+	}
+
+	public boolean containsIgnorecase(String str1, String str2) {
+		return str1.toLowerCase().contains(str2.toLowerCase());
 	}
 
 	/**

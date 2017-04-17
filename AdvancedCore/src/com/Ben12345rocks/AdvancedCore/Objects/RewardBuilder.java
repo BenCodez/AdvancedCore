@@ -12,13 +12,24 @@ public class RewardBuilder {
 	private FileConfiguration data;
 	private String prefix = "";
 	private String path;
+	private Reward reward;
 	private HashMap<String, String> placeholders;
 	private boolean giveOffline;
 	private boolean online;
+	private boolean checkTimed = true;
 
 	public RewardBuilder(FileConfiguration data, String path) {
 		this.data = data;
 		this.path = path;
+		giveOffline = true;
+		placeholders = new HashMap<String, String>();
+		LocalDateTime ldt = LocalDateTime.now();
+		Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+		placeholders.put("Date", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
+	}
+
+	public RewardBuilder(Reward reward) {
+		this.reward = reward;
 		giveOffline = true;
 		placeholders = new HashMap<String, String>();
 		LocalDateTime ldt = LocalDateTime.now();
@@ -35,8 +46,58 @@ public class RewardBuilder {
 		return giveOffline;
 	}
 
+	@SuppressWarnings("deprecation")
 	public void send(User user) {
-		RewardHandler.getInstance().giveReward(user, prefix, data, path, online, giveOffline, placeholders);
+		if (reward == null) {
+			RewardHandler.getInstance().giveReward(user, prefix, data, path, online, giveOffline, checkTimed,
+					placeholders);
+		} else {
+			RewardHandler.getInstance().giveReward(user, reward, isGiveOffline(), isGiveOffline(), checkTimed,
+					placeholders);
+		}
+	}
+
+	/**
+	 * @return the reward
+	 */
+	public Reward getReward() {
+		return reward;
+	}
+
+	/**
+	 * @param reward
+	 *            the reward to set
+	 */
+	public void setReward(Reward reward) {
+		this.reward = reward;
+	}
+
+	/**
+	 * @return the prefix
+	 */
+	public String getPrefix() {
+		return prefix;
+	}
+
+	/**
+	 * @return the placeholders
+	 */
+	public HashMap<String, String> getPlaceholders() {
+		return placeholders;
+	}
+
+	/**
+	 * @return the online
+	 */
+	public boolean isOnline() {
+		return online;
+	}
+
+	/**
+	 * @return the checkTimed
+	 */
+	public boolean isCheckTimed() {
+		return checkTimed;
 	}
 
 	public void send(User... users) {
@@ -67,6 +128,11 @@ public class RewardBuilder {
 
 	public RewardBuilder withPrefix(String prefix) {
 		this.prefix = prefix;
+		return this;
+	}
+
+	public RewardBuilder setCheckTimed(boolean b) {
+		checkTimed = b;
 		return this;
 	}
 

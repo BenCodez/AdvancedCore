@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -167,9 +169,26 @@ public class User {
 		times.add(epochMilli);
 		timed.put(reward, times);
 		setTimedRewards(timed);
+		loadTimedDelayedTimer(epochMilli);
+	}
+
+	public void loadTimedDelayedTimer(long time) {
+		long delay = time - System.currentTimeMillis();
+		if (delay < 0) {
+			delay = 0;
+		}
+		delay += 250;
+		AdvancedCoreHook.getInstance().getTimer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				checkDelayedTimedRewards();
+			}
+		}, delay);
 	}
 
 	public void checkDelayedTimedRewards() {
+		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
 		for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
 			ArrayList<Long> times = entry.getValue();
@@ -179,7 +198,12 @@ public class User {
 				if (time != 0) {
 					Date timeDate = new Date(time);
 					if (new Date().after(timeDate)) {
-						entry.getKey().giveReward(this, isOnline(), true, false);
+						new RewardBuilder(entry.getKey()).setCheckTimed(false)
+								.withPlaceHolder("date",
+										"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
+								.send(this);
+						AdvancedCoreHook.getInstance().debug(
+								"Giving timed/delayed reward " + entry.getKey().name + " for " + getPlayerName());
 						iterator.remove();
 					}
 				}
@@ -187,6 +211,41 @@ public class User {
 			timed.put(entry.getKey(), times);
 		}
 		setTimedRewards(timed);
+	}
+
+	public void preformCommand(String command, HashMap<String, String> placeholders) {
+		if (command != null && !command.isEmpty()) {
+			final String cmd = StringUtils.getInstance().replaceJavascript(getPlayer(),StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					Player player = getPlayer();
+					if (player != null) {
+						player.performCommand(cmd);
+					}
+				}
+			});
+		}
+	}
+
+	public void preformCommand(ArrayList<String> commands, HashMap<String, String> placeholders) {
+		if (commands != null && !commands.isEmpty()) {
+			final ArrayList<String> cmds = ArrayUtils.getInstance()
+					.replaceJavascript(getPlayer(), ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					Player player = getPlayer();
+					if (player != null) {
+						for (String cmd : cmds) {
+							player.performCommand(cmd);
+						}
+					}
+				}
+			});
+		}
 	}
 
 	/**
@@ -206,7 +265,7 @@ public class User {
 					ArrayUtils.getInstance().fromString(placeholders));
 		}
 	}
-	
+
 	public void updateName() {
 		if (!getData().getString("PlayerName").equals(getPlayerName())) {
 			getData().setString("PlayerName", getPlayerName());
@@ -570,7 +629,8 @@ public class User {
 			if (player != null) {
 
 				try {
-					ActionBar actionBar = new ActionBar(msg, delay);
+					ActionBar actionBar = new ActionBar(StringUtils.getInstance().replaceJavascript(getPlayer(), msg),
+							delay);
 					actionBar.send(player);
 				} catch (Exception ex) {
 					hook.debug("Failed to send ActionBar, turn debug on to see stack trace");
@@ -599,7 +659,8 @@ public class User {
 			Player player = getPlayer();
 			if (player != null) {
 				try {
-					BossBar bossBar = new BossBar(msg, color, style, progress);
+					BossBar bossBar = new BossBar(StringUtils.getInstance().replaceJavascript(getPlayer(), msg), color,
+							style, progress);
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
 					hook.debug("Failed to send BossBar");
@@ -619,6 +680,7 @@ public class User {
 		Player player = getPlayer();
 		if ((player != null) && (messages != null)) {
 			for (TextComponent txt : messages) {
+				txt.setText(StringUtils.getInstance().replaceJavascript(getPlayer(), txt.getText()));
 				AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, txt);
 			}
 		}
@@ -633,6 +695,7 @@ public class User {
 	public void sendJson(TextComponent message) {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
+			message.setText(StringUtils.getInstance().replaceJavascript(getPlayer(), message.getText()));
 			AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, message);
 		}
 	}
@@ -656,10 +719,10 @@ public class User {
 	public void sendMessage(String msg) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
-			if (msg != "") {
+			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
-					player.sendMessage(StringUtils.getInstance()
-							.colorize(StringUtils.getInstance().replacePlaceHolders(player, str)));
+					player.sendMessage(StringUtils.getInstance().colorize(StringUtils.getInstance().replaceJavascript(
+							getPlayer(), StringUtils.getInstance().replacePlaceHolders(player, str))));
 				}
 			}
 		}
@@ -679,10 +742,9 @@ public class User {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
 
-			for (int i = 0; i < msg.length; i++) {
-				msg[i] = StringUtils.getInstance().replacePlaceHolders(player, msg[i]);
+			for (String str : msg) {
+				sendMessage(str);
 			}
-			player.sendMessage(ArrayUtils.getInstance().colorize(msg));
 
 		}
 	}
@@ -705,7 +767,8 @@ public class User {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			try {
-				Title titleObject = new Title(title, subTitle, fadeIn, showTime, fadeOut);
+				Title titleObject = new Title(StringUtils.getInstance().replaceJavascript(getPlayer(), title),
+						StringUtils.getInstance().replaceJavascript(getPlayer(), subTitle), fadeIn, showTime, fadeOut);
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");

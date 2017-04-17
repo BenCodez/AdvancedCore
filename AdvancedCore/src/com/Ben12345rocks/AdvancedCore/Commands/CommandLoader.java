@@ -145,8 +145,8 @@ public class CommandLoader {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					SpigetUpdater.getInstance().download(AdvancedCoreHook.getInstance().getResourceId(),
-							AdvancedCoreHook.getInstance().getJarName());
+					SpigetUpdater.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
+							AdvancedCoreHook.getInstance().getResourceId());
 					sender.sendMessage(StringUtils.getInstance().colorize(
 							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
 				}

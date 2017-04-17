@@ -8,6 +8,10 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
 public class SpigetUpdater {
 
@@ -20,22 +24,17 @@ public class SpigetUpdater {
 	private SpigetUpdater() {
 	}
 
-	public void download(int resourceId, String jarName) {
+	public void download(Plugin plugin, int resourceId) {
 		try {
 			download(new URL("https://api.spiget.org/v2/resources/" + resourceId + "/download"),
-					new File(Bukkit.getServer().getUpdateFolderFile(), jarName + ".jar"));
+					new File(Bukkit.getServer().getUpdateFolderFile(), plugin.getDescription().getName() + ".jar"));
 
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+		} catch (IOException e) { // TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	private void download(URL url, File target) throws IOException {
-		/*
-		 * Path targetPath = target.toPath(); Files.copy(url.openStream(),
-		 * targetPath, StandardCopyOption.REPLACE_EXISTING);
-		 */
 		target.getParentFile().mkdirs();
 		target.createNewFile();
 		ReadableByteChannel rbc = Channels.newChannel(url.openStream());
@@ -45,4 +44,15 @@ public class SpigetUpdater {
 		rbc.close();
 	}
 
+	public void checkAutoDownload(JavaPlugin plugin, int resourceId) {
+		Updater updater = new Updater(plugin, resourceId, !AdvancedCoreHook.getInstance().isAutoDownload());
+		switch (updater.getResult()) {
+		case UPDATE_AVAILABLE:
+			plugin.getLogger().info("Downloaded jar automaticly, restart to update. Note: Updates take 30-40 minutes to load");
+			download(plugin, resourceId);
+			break;
+		default:
+			break;
+		}
+	}
 }

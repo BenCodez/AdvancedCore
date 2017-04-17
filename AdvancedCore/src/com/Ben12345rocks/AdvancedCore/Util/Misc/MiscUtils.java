@@ -8,7 +8,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -53,7 +55,22 @@ public class MiscUtils {
 				});
 			}
 		}
+	}
 
+	public boolean checkChance(double chance, double outOf) {
+		if ((chance == 0) || (chance == outOf)) {
+			return true;
+		}
+
+		double randomNum = ThreadLocalRandom.current().nextDouble(outOf);
+
+		plugin.debug("Chance: " + chance + ", RandomNum: " + randomNum);
+
+		if (randomNum <= chance) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	/**
@@ -186,6 +203,38 @@ public class MiscUtils {
 	public ItemStack setSkullOwner(String playerName) {
 		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();
+	}
+
+	public void executeConsoleCommands(Player player, ArrayList<String> cmds, HashMap<String, String> placeholders) {
+		if (cmds != null && !cmds.isEmpty()) {
+			final ArrayList<String> commands = ArrayUtils.getInstance()
+					.replaceJavascript(player, ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
+			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					for (String cmd : commands) {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+					}
+				}
+			});
+		}
+	}
+
+	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
+		if (command != null && !command.isEmpty()) {
+			final String cmd = StringUtils.getInstance()
+					.replaceJavascript(player, StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+				}
+
+			});
+		}
+
 	}
 
 }

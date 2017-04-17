@@ -21,7 +21,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
-import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -52,6 +52,8 @@ public class Reward {
 
 	/** The delay minutes. */
 	private int delayMinutes;
+
+	private int delaySeconds;
 
 	/** The timed enabled. */
 	private boolean timedEnabled;
@@ -227,6 +229,8 @@ public class Reward {
 	/** The effect radius. */
 	private int effectRadius;
 
+	private ArrayList<String> javascripts;
+
 	private File file;
 
 	private boolean randomPickRandom;
@@ -259,21 +263,7 @@ public class Reward {
 	 * @return true, if successful
 	 */
 	public boolean checkChance() {
-		double chance = getChance();
-
-		if ((chance == 0) || (chance == 100)) {
-			return true;
-		}
-
-		double randomNum = ThreadLocalRandom.current().nextDouble(100);
-
-		plugin.debug("Chance: " + chance + ", RandomNum: " + randomNum);
-
-		if (randomNum <= chance) {
-			return true;
-		} else {
-			return false;
-		}
+		return MiscUtils.getInstance().checkChance(getChance(), 100);
 	}
 
 	/**
@@ -306,10 +296,11 @@ public class Reward {
 		LocalDateTime time = LocalDateTime.now();
 		time = time.plus(getDelayHours(), ChronoUnit.HOURS);
 		time = time.plus(getDelayMinutes(), ChronoUnit.MINUTES);
+		time = time.plus(getDelaySeconds(), ChronoUnit.SECONDS);
 		user.addTimedReward(this, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
-		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours " + getDelayMinutes() + " minutes ("
-				+ time.toString() + ")");
+		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours, " + getDelayMinutes() + " minutes, "
+				+ getDelaySeconds() + " seconds (" + time.toString() + ")");
 		return true;
 
 	}
@@ -320,21 +311,7 @@ public class Reward {
 	 * @return true, if successful
 	 */
 	public boolean checkRandomChance() {
-		double chance = getRandomChance();
-
-		if ((chance == 0) || (chance == 100)) {
-			return true;
-		}
-
-		double randomNum = ThreadLocalRandom.current().nextDouble(100);
-
-		plugin.debug("Chance: " + chance + ", RandomNum: " + randomNum);
-
-		if (randomNum <= chance) {
-			return true;
-		} else {
-			return false;
-		}
+		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
 	}
 
 	/**
@@ -1090,13 +1067,13 @@ public class Reward {
 		if (player != null) {
 			if (hasPermission(user)) {
 				if (phs == null) {
-					phs = new HashMap<String,String>();
+					phs = new HashMap<String, String>();
 				}
 				phs.put("player", player.getName());
 				LocalDateTime ldt = LocalDateTime.now();
 				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 				phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
-				final HashMap<String,String> placeholders = new HashMap<String,String>(phs);
+				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
 				int money = getMoneyToGive();
@@ -1284,10 +1261,13 @@ public class Reward {
 		setDelayEnabled(getConfig().getDelayedEnabled());
 		setDelayHours(getConfig().getDelayedHours());
 		setDelayMinutes(getConfig().getDelayedMinutes());
+		setDelaySeconds(getConfig().getDelayedSeconds());
 
 		setTimedEnabled(getConfig().getTimedEnabled());
 		setTimedHour(getConfig().getTimedHour());
 		setTimedMinute(getConfig().getTimedMinute());
+
+		javascripts = getConfig().getJavascripts();
 
 		setChance(getConfig().getChance());
 		setRandomChance(getConfig().getRandomChance());
@@ -1371,6 +1351,44 @@ public class Reward {
 	}
 
 	/**
+	 * @return the javascripts
+	 */
+	public ArrayList<String> getJavascripts() {
+		return javascripts;
+	}
+
+	/**
+	 * @param javascripts
+	 *            the javascripts to set
+	 */
+	public void setJavascripts(ArrayList<String> javascripts) {
+		this.javascripts = javascripts;
+	}
+
+	/**
+	 * @return the delaySeconds
+	 */
+	public int getDelaySeconds() {
+		return delaySeconds;
+	}
+
+	/**
+	 * @param delaySeconds
+	 *            the delaySeconds to set
+	 */
+	public void setDelaySeconds(int delaySeconds) {
+		this.delaySeconds = delaySeconds;
+	}
+
+	/**
+	 * @param usesWorlds
+	 *            the usesWorlds to set
+	 */
+	public void setUsesWorlds(boolean usesWorlds) {
+		this.usesWorlds = usesWorlds;
+	}
+
+	/**
 	 * Play effect.
 	 *
 	 * @param user
@@ -1407,50 +1425,9 @@ public class Reward {
 	 *            placeholders
 	 */
 	public void runCommands(User user, HashMap<String, String> placeholders) {
-		// Console commands
-		ArrayList<String> consolecmds = getConsoleCommands();
+		MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), getConsoleCommands(), placeholders);
 
-		if (consolecmds != null) {
-			for (String consolecmd : consolecmds) {
-				if (consolecmd.length() > 0) {
-					consolecmd = StringUtils.getInstance()
-							.replacePlaceHolder(consolecmd, placeholders);
-
-					final String cmd = consolecmd;
-					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-						@Override
-						public void run() {
-							Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-						}
-					});
-
-				}
-			}
-		}
-
-		// Player commands
-		ArrayList<String> playercmds = getPlayerCommands();
-
-		Player player = user.getPlayer();
-		if (playercmds != null) {
-			for (String playercmd : playercmds) {
-				if ((player != null) && (playercmd.length() > 0)) {
-					playercmd = StringUtils.getInstance().replacePlaceHolder(playercmd,
-							placeholders);
-					final String cmd = playercmd;
-					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-						@Override
-						public void run() {
-							player.performCommand(cmd);
-						}
-
-					});
-
-				}
-			}
-		}
+		user.preformCommand(getPlayerCommands(), placeholders);
 	}
 
 	/**
@@ -1465,12 +1442,20 @@ public class Reward {
 	 */
 	public void runJavascript(User user, boolean online, HashMap<String, String> placeholders) {
 		if (isJavascriptEnabled()) {
-			if (JavascriptHandler.getInstance().evalute(user, getJavascriptExpression())) {
+			if (new JavascriptEngine().addPlayer(user.getPlayer()).getBooleanValue(
+					StringUtils.getInstance().replacePlaceHolder(getJavascriptExpression(), placeholders))) {
 				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptTrueRewardsPath()).withPrefix(name)
 						.send(user);
 			} else {
 				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptFalseRewardsPath()).withPrefix(name)
 						.send(user);
+			}
+		}
+
+		if (!getJavascripts().isEmpty()) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getPlayer());
+			for (String str : getJavascripts()) {
+				engine.execute(StringUtils.getInstance().replacePlaceHolder(str, placeholders));
 			}
 		}
 	}

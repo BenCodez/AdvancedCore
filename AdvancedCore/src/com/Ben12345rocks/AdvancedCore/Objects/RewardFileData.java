@@ -60,6 +60,11 @@ public class RewardFileData {
 	public int getActionBarDelay() {
 		return getData().getInt("ActionBar.Delay");
 	}
+	
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getJavascripts() {
+		return (ArrayList<String>) getData().getList("Javascripts",new ArrayList<String>());
+	}
 
 	/**
 	 * Gets the action bar message.
@@ -210,6 +215,10 @@ public class RewardFileData {
 	 */
 	public int getDelayedMinutes() {
 		return getData().getInt("Delayed.Minutes");
+	}
+	
+	public int getDelayedSeconds() {
+		return getData().getInt("Delayed.Seconds");
 	}
 
 	/**

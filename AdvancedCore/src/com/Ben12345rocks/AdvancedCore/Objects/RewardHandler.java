@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -79,17 +80,29 @@ public class RewardHandler {
 	 * Check delayed timed rewards.
 	 */
 	public synchronized void checkDelayedTimedRewards() {
-		if (usesTimed()) {
-			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-				try {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					user.checkDelayedTimedRewards();
-				} catch (Exception ex) {
-					plugin.debug("Failed to update delayed/timed for: " + uuid);
-					plugin.debug(ex);
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+			
+			@Override
+			public void run() {
+				if (usesTimed()) {
+					for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+						try {
+							User user = UserManager.getInstance().getUser(new UUID(uuid));
+							HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
+							for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+								for (Long time : entry.getValue()) {
+									user.loadTimedDelayedTimer(time.longValue());
+								}
+							}
+						} catch (Exception ex) {
+							plugin.debug("Failed to update delayed/timed for: " + uuid);
+							plugin.debug(ex);
+						}
+					}
 				}
 			}
-		}
+		});
+		
 	}
 
 	/**
@@ -332,12 +345,17 @@ public class RewardHandler {
 		giveReward(user, prefix, data, path, online, giveOffline, null);
 	}
 
-	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
 			boolean giveOffline, HashMap<String, String> placeholders) {
+		giveReward(user, prefix, data, path, online, giveOffline, true, placeholders);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline, boolean checkTimed, HashMap<String, String> placeholders) {
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
-				giveReward(user, reward, online, giveOffline, true, placeholders);
+				giveReward(user, reward, online, giveOffline, checkTimed, placeholders);
 			}
 		} else if (data.isConfigurationSection(path)) {
 			String rewardName = "";
@@ -353,12 +371,22 @@ public class RewardHandler {
 				reward = getReward(rewardName);
 			}
 			reward.getConfig().setData(section);
-			loadRewards();
-			giveReward(user, rewardName, online, giveOffline, true, placeholders);
+			updateReward(reward);
+			giveReward(user, rewardName, online, giveOffline, checkTimed, placeholders);
 
 		} else {
-			giveReward(user, data.getString(path, ""), online, giveOffline, true, placeholders);
+			giveReward(user, data.getString(path, ""), online, giveOffline, checkTimed, placeholders);
 		}
+	}
+
+	private void updateReward(Reward reward) {
+		for (int i = getRewards().size()-1; i>=0; i--) {
+			if(getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
+				getRewards().set(i, reward);
+				return;
+			}
+		}
+		getRewards().add(reward);
 	}
 
 	public boolean hasRewards(FileConfiguration data, String path) {

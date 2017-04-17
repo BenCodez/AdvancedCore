@@ -25,7 +25,7 @@ public class DateChangedEvent extends Event {
 	 * Instantiates a new day change event.
 	 */
 	public DateChangedEvent() {
-		super();
+		super(true);
 	}
 
 	/*
@@ -37,5 +37,6 @@ public class DateChangedEvent extends Event {
 	public HandlerList getHandlers() {
 		return handlers;
 	}
+
 
 }

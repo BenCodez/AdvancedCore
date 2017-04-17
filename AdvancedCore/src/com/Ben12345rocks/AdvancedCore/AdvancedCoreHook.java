@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -13,6 +14,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import com.Ben12345rocks.AdvancedCore.Commands.Executor.ValueRequestInputCommand;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
@@ -25,8 +27,11 @@ import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
 import com.Ben12345rocks.AdvancedCore.mysql.MySQL;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
@@ -43,7 +48,7 @@ public class AdvancedCoreHook {
 		return instance;
 	}
 
-	private Plugin plugin;
+	private JavaPlugin plugin;
 	private boolean placeHolderAPIEnabled;
 	private boolean timerLoaded = false;
 	private boolean debug = false;
@@ -63,10 +68,63 @@ public class AdvancedCoreHook {
 	private boolean preloadUsers = false;
 	private boolean sendScoreboards = true;
 	private int resourceId = 0;
-	private String jarName;
 	private boolean extraDebug = false;
-
 	private boolean checkOnWorldChange = false;
+	private Timer timer = new Timer();
+	private boolean autoDownload = false;
+	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
+
+	/**
+	 * @return the javascriptEngineRequests
+	 */
+	public ArrayList<JavascriptPlaceholderRequest> getJavascriptEngineRequests() {
+		return javascriptEngineRequests;
+	}
+
+	/**
+	 * @param javascriptEngineRequests the javascriptEngineRequests to set
+	 */
+	public void setJavascriptEngineRequests(ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests) {
+		this.javascriptEngineRequests = javascriptEngineRequests;
+	}
+
+	/**
+	 * @param resourceId the resourceId to set
+	 */
+	public void setResourceId(int resourceId) {
+		this.resourceId = resourceId;
+	}
+
+	/**
+	 * @param javascriptEngine the javascriptEngine to set
+	 */
+	public void setJavascriptEngine(HashMap<String, Object> javascriptEngine) {
+		this.javascriptEngine = javascriptEngine;
+	}
+
+	/**
+	 * @return the autoDownload
+	 */
+	public boolean isAutoDownload() {
+		return autoDownload;
+	}
+
+	/**
+	 * @param autoDownload
+	 *            the autoDownload to set
+	 */
+	public void setAutoDownload(boolean autoDownload) {
+		this.autoDownload = autoDownload;
+	}
+
+	/**
+	 * @return the timer
+	 */
+	public Timer getTimer() {
+		return timer;
+	}
+
+	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
 	private Economy econ = null;
@@ -74,12 +132,18 @@ public class AdvancedCoreHook {
 	private Permission perms;
 
 	private AdvancedCoreHook() {
-
 	}
 
-	public void allowDownloadingFromSpigot(int resourceId, String jarName) {
+	public UserManager getUserManager() {
+		return UserManager.getInstance();
+	}
+
+	public HashMap<String, Object> getJavascriptEngine() {
+		return javascriptEngine;
+	}
+
+	public void allowDownloadingFromSpigot(int resourceId) {
 		this.resourceId = resourceId;
-		this.jarName = jarName;
 	}
 
 	private void checkPlaceHolderAPI() {
@@ -93,12 +157,19 @@ public class AdvancedCoreHook {
 	}
 
 	public void checkPluginUpdate() {
-		String version = ServerData.getInstance().getPluginVersion(plugin);
-		if (!version.equals(plugin.getDescription().getVersion())) {
-			PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
-			Bukkit.getServer().getPluginManager().callEvent(event);
-		}
-		ServerData.getInstance().setPluginVersion(plugin);
+		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
+			
+			@Override
+			public void run() {
+				String version = ServerData.getInstance().getPluginVersion(plugin);
+				if (!version.equals(plugin.getDescription().getVersion())) {
+					PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
+					Bukkit.getServer().getPluginManager().callEvent(event);
+				}
+				ServerData.getInstance().setPluginVersion(plugin);
+			}
+		});
+		
 	}
 
 	/**
@@ -178,13 +249,6 @@ public class AdvancedCoreHook {
 		return helpLine;
 	}
 
-	/**
-	 * @return the jarName
-	 */
-	public String getJarName() {
-		return jarName;
-	}
-
 	public Logger getLogger() {
 		return logger;
 	}
@@ -204,7 +268,7 @@ public class AdvancedCoreHook {
 		return perms;
 	}
 
-	public Plugin getPlugin() {
+	public JavaPlugin getPlugin() {
 		return plugin;
 	}
 
@@ -307,7 +371,7 @@ public class AdvancedCoreHook {
 	 * @param plugin
 	 *            Plugin that is hooking in
 	 */
-	public void loadBasicHook(Plugin plugin) {
+	public void loadBasicHook(JavaPlugin plugin) {
 		this.plugin = plugin;
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
@@ -315,6 +379,8 @@ public class AdvancedCoreHook {
 		loadEconomy();
 		ServerData.getInstance().setup();
 		loadRewards();
+		RewardHandler.getInstance().checkDelayedTimedRewards();
+		loadAutoUpdateCheck();
 	}
 
 	public void loadEconomy() {
@@ -349,7 +415,7 @@ public class AdvancedCoreHook {
 	 * @param plugin
 	 *            Plugin that is hooking in
 	 */
-	public void loadHook(Plugin plugin) {
+	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
 		permPrefix = plugin.getName();
 		loadUserAPI(UserStorage.SQLITE);
@@ -359,9 +425,11 @@ public class AdvancedCoreHook {
 		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
-		loadBackgroundTimer(1);
+		loadBackgroundTimer(5);
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
+		RewardHandler.getInstance().checkDelayedTimedRewards();
+		loadAutoUpdateCheck();
 	}
 
 	/**
@@ -422,6 +490,8 @@ public class AdvancedCoreHook {
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
 			getMysql().clearCache();
 		}
+		getTimer().purge();
+		RewardHandler.getInstance().checkDelayedTimedRewards();
 	}
 
 	/**
@@ -494,7 +564,7 @@ public class AdvancedCoreHook {
 		this.permPrefix = permPrefix;
 	}
 
-	public void setPlugin(Plugin plugin) {
+	public void setPlugin(JavaPlugin plugin) {
 		this.plugin = plugin;
 	}
 
@@ -546,9 +616,31 @@ public class AdvancedCoreHook {
 
 			@Override
 			public void run() {
-				RewardHandler.getInstance().checkDelayedTimedRewards();
 				TimeChecker.getInstance().update();
 			}
 		});
+	}
+	
+	public void loadAutoUpdateCheck() {
+		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
+			
+			@Override
+			public void run() {
+				checkAutoUpdate();
+			}
+		}, 20, 20*1000*60*60);
+	}
+	
+	private void checkAutoUpdate() {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+			
+			@Override
+			public void run() {
+				if (isAutoDownload() && getResourceId() != 0) {
+					SpigetUpdater.getInstance().checkAutoDownload(getPlugin(), getResourceId());
+				}
+			}
+		});
+		
 	}
 }
