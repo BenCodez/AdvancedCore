@@ -14,6 +14,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import com.Ben12345rocks.AdvancedCore.Commands.Executor.ValueRequestInputCommand;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
@@ -47,7 +48,7 @@ public class AdvancedCoreHook {
 		return instance;
 	}
 
-	private Plugin plugin;
+	private JavaPlugin plugin;
 	private boolean placeHolderAPIEnabled;
 	private boolean timerLoaded = false;
 	private boolean debug = false;
@@ -260,7 +261,7 @@ public class AdvancedCoreHook {
 		return perms;
 	}
 
-	public Plugin getPlugin() {
+	public JavaPlugin getPlugin() {
 		return plugin;
 	}
 
@@ -363,7 +364,7 @@ public class AdvancedCoreHook {
 	 * @param plugin
 	 *            Plugin that is hooking in
 	 */
-	public void loadBasicHook(Plugin plugin) {
+	public void loadBasicHook(JavaPlugin plugin) {
 		this.plugin = plugin;
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
@@ -406,7 +407,7 @@ public class AdvancedCoreHook {
 	 * @param plugin
 	 *            Plugin that is hooking in
 	 */
-	public void loadHook(Plugin plugin) {
+	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
 		permPrefix = plugin.getName();
 		loadUserAPI(UserStorage.SQLITE);
@@ -554,7 +555,7 @@ public class AdvancedCoreHook {
 		this.permPrefix = permPrefix;
 	}
 
-	public void setPlugin(Plugin plugin) {
+	public void setPlugin(JavaPlugin plugin) {
 		this.plugin = plugin;
 	}
 

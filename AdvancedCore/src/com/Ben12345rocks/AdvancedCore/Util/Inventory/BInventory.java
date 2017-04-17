@@ -36,6 +36,8 @@ public class BInventory implements Listener {
 
 	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
 
+	private int maxInvSize = 54;
+
 	/**
 	 * The Class ClickEvent.
 	 */
@@ -309,16 +311,19 @@ public class BInventory implements Listener {
 	 * @return the inventory size
 	 */
 	public int getInventorySize() {
-		int highestSlot = getHighestSlot();
-		if (highestSlot < 9) {
+		return getProperSize(getHighestSlot());
+	}
+
+	private int getProperSize(int size) {
+		if (size <= 9) {
 			return 9;
-		} else if (highestSlot < 18) {
+		} else if (size <= 18) {
 			return 18;
-		} else if (highestSlot < 27) {
+		} else if (size <= 27) {
 			return 27;
-		} else if (highestSlot < 36) {
+		} else if (size <= 36) {
 			return 36;
-		} else if (highestSlot < 45) {
+		} else if (size <= 45) {
 			return 45;
 		} else {
 			return 54;
@@ -380,26 +385,33 @@ public class BInventory implements Listener {
 			} else {
 				event.setCancelled(true);
 				int slot = event.getSlot();
-				if (slot < 45) {
-					int buttonSlot = (page - 1) * 45 + event.getSlot();
+				if (slot < maxInvSize - 9) {
+					int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (button != null) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
-						button.onClick(new ClickEvent(event));
+						Bukkit.getServer().getScheduler()
+								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+									@Override
+									public void run() {
+										button.onClick(new ClickEvent(event));
+									}
+								});
 						destroy();
 						return;
 					}
 
-				} else if (slot == 45) {
+				} else if (slot == maxInvSize - 9) {
 					if (page > 1) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
 						int nextPage = page - 1;
 						openInventory(player, nextPage);
 					}
-				} else if (slot == 53) {
-					AdvancedCoreHook.getInstance().debug(maxPage + " " + page);
+				} else if (slot == maxInvSize - 1) {
+					//AdvancedCoreHook.getInstance().debug(maxPage + " " + page);
 					if (maxPage > page) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
@@ -409,9 +421,9 @@ public class BInventory implements Listener {
 					}
 
 				}
-				
+
 				for (BInventoryButton b : pageButtons) {
-					if (slot == b.getSlot()) {
+					if (slot == b.getSlot()+(getMaxInvSize()-9)) {
 						b.onClick(new ClickEvent(event));
 					}
 				}
@@ -419,9 +431,23 @@ public class BInventory implements Listener {
 		}
 	}
 
+	/**
+	 * @return the maxInvSize
+	 */
+	public int getMaxInvSize() {
+		return maxInvSize;
+	}
+
+	/**
+	 * @param maxInvSize the maxInvSize to set
+	 */
+	public void setMaxInvSize(int maxInvSize) {
+		this.maxInvSize = getProperSize(maxInvSize);
+	}
+
 	// event handling
 	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-	public void onInventoryClick(InventoryCloseEvent event) {
+	public void onInventoryClose(InventoryCloseEvent event) {
 		if (!(event.getPlayer() instanceof Player)) {
 			return;
 		}
@@ -442,8 +468,7 @@ public class BInventory implements Listener {
 		BInventory inventory = this;
 		this.player = player;
 
-		pages = false;
-		if (inventory.getHighestSlot() > 53) {
+		if (inventory.getHighestSlot() >= maxInvSize) {
 			pages = true;
 		}
 		if (!pages) {
@@ -469,8 +494,8 @@ public class BInventory implements Listener {
 			});
 
 		} else {
-			maxPage = getHighestSlot() / 45;
-			if (getHighestSlot() % 45 != 0) {
+			maxPage = getHighestSlot() / (maxInvSize - 9);
+			if (getHighestSlot() % (maxInvSize - 9) != 0) {
 				maxPage++;
 			}
 			openInventory(player, 1);
@@ -489,14 +514,14 @@ public class BInventory implements Listener {
 	private void openInventory(Player player, int page) {
 		BInventory inventory = this;
 		this.player = player;
-		inv = Bukkit.createInventory(player, 54, inventory.getInventoryName());
+		inv = Bukkit.createInventory(player, maxInvSize, inventory.getInventoryName());
 		this.page = page;
-		int startSlot = (page - 1) * 45;
+		int startSlot = (page - 1) * (maxInvSize - 9);
 		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 			int slot = pair.getKey();
 			if (slot >= startSlot) {
 				slot -= startSlot;
-				if (slot < 45 && pair.getKey() < inventory.getButtons().size()) {
+				if (slot < (maxInvSize - 9) && pair.getKey() < inventory.getButtons().size()) {
 					ItemStack item = pair.getValue().getItem();
 					ItemMeta meta = item.getItemMeta();
 					if (pair.getValue().getName() != null) {
@@ -511,15 +536,15 @@ public class BInventory implements Listener {
 			}
 
 		}
-		
+
 		for (BInventoryButton b : pageButtons) {
-			inv.setItem(b.getSlot(), b.getItem());
+			inv.setItem((maxInvSize-9) + b.getSlot(), b.getItem());
 		}
-		
-		inv.setItem(45,
+
+		inv.setItem(maxInvSize - 9,
 				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aPrevious Page").toItemStack());
 
-		inv.setItem(53,
+		inv.setItem(maxInvSize - 1,
 				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aNext Page").toItemStack());
 
 		Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
@@ -563,7 +588,8 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * @param pageButtons the pageButtons to set
+	 * @param pageButtons
+	 *            the pageButtons to set
 	 */
 	public void setPageButtons(ArrayList<BInventoryButton> pageButtons) {
 		this.pageButtons = pageButtons;

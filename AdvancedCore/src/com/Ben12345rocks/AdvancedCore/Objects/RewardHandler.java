@@ -345,10 +345,10 @@ public class RewardHandler {
 
 	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline,boolean checkTimed, HashMap<String, String> placeholders) {
+			boolean giveOffline, boolean checkTimed, HashMap<String, String> placeholders) {
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
-				giveReward(user, reward, online, giveOffline,  checkTimed, placeholders);
+				giveReward(user, reward, online, giveOffline, checkTimed, placeholders);
 			}
 		} else if (data.isConfigurationSection(path)) {
 			String rewardName = "";
@@ -364,12 +364,22 @@ public class RewardHandler {
 				reward = getReward(rewardName);
 			}
 			reward.getConfig().setData(section);
-			loadRewards();
-			giveReward(user, rewardName, online, giveOffline,  checkTimed, placeholders);
+			updateReward(reward);
+			giveReward(user, rewardName, online, giveOffline, checkTimed, placeholders);
 
 		} else {
 			giveReward(user, data.getString(path, ""), online, giveOffline, checkTimed, placeholders);
 		}
+	}
+
+	private void updateReward(Reward reward) {
+		for (int i = getRewards().size()-1; i>=0; i--) {
+			if(getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
+				getRewards().set(i, reward);
+				return;
+			}
+		}
+		getRewards().add(reward);
 	}
 
 	public boolean hasRewards(FileConfiguration data, String path) {

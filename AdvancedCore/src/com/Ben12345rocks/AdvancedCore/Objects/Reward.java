@@ -1406,7 +1406,7 @@ public class Reward {
 	 *            placeholders
 	 */
 	public void runCommands(User user, HashMap<String, String> placeholders) {
-		MiscUtils.getInstance().executeConsoleCommands(getConsoleCommands(), placeholders);
+		MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),getConsoleCommands(), placeholders);
 
 		user.preformCommand(getPlayerCommands(), placeholders);
 	}

@@ -48,7 +48,9 @@ public class ItemBuilder {
 				throw new IllegalArgumentException(
 						"ConfigurationSection can not be null! You are probably missing a section in your config.");
 			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
+				AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
+						"Error occoured while obtaining item, turn debug on to see full stacktrace: " + e.toString());
+				AdvancedCoreHook.getInstance().debug(e);
 			}
 			setBlank();
 		} else {
@@ -514,5 +516,16 @@ public class ItemBuilder {
 					.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
 		}
 		return is;
+	}
+
+	public ItemBuilder setAmountNone(int i) {
+		if (getAmount() == 0) {
+			setAmount(i);
+		}
+		return this;
+	}
+
+	private int getAmount() {
+		return is.getAmount();
 	}
 }

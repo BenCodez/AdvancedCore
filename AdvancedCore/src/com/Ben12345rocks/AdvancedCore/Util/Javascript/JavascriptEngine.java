@@ -54,7 +54,7 @@ public class JavascriptEngine {
 		addToEngine("Player", player);
 		addToEngine("PlayerName", player.getName());
 		addToEngine("PlayerUUID", player.getUniqueId().toString());
-		addToEngine("User", UserManager.getInstance().getUser(player));
+		addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
 		addToEngine("CommandSender", player);
 
 		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
@@ -71,20 +71,24 @@ public class JavascriptEngine {
 
 	public String getStringValue(String expression) {
 		Object result = getResult(expression);
-		try {
-			return result.toString();
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (result != null) {
+			try {
+				return result.toString();
+			} catch (Exception e) {
+				AdvancedCoreHook.getInstance().debug(e);
+			}
 		}
 		return "";
 	}
 
 	public boolean getBooleanValue(String expression) {
 		Object result = getResult(expression);
-		try {
-			return ((boolean) result);
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (result != null) {
+			try {
+				return ((boolean) result);
+			} catch (Exception e) {
+				AdvancedCoreHook.getInstance().debug(e);
+			}
 		}
 		return false;
 	}

@@ -215,7 +215,7 @@ public class User {
 
 	public void preformCommand(String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
-			final String cmd = StringUtils.getInstance().replacePlaceHolder(command, placeholders);
+			final String cmd = StringUtils.getInstance().replaceJavascript(getPlayer(),StringUtils.getInstance().replacePlaceHolder(command, placeholders));
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
@@ -232,7 +232,7 @@ public class User {
 	public void preformCommand(ArrayList<String> commands, HashMap<String, String> placeholders) {
 		if (commands != null && !commands.isEmpty()) {
 			final ArrayList<String> cmds = ArrayUtils.getInstance()
-					.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
+					.replaceJavascript(getPlayer(), ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
@@ -719,7 +719,7 @@ public class User {
 	public void sendMessage(String msg) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
-			if (msg != "") {
+			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
 					player.sendMessage(StringUtils.getInstance().colorize(StringUtils.getInstance().replaceJavascript(
 							getPlayer(), StringUtils.getInstance().replacePlaceHolders(player, str))));

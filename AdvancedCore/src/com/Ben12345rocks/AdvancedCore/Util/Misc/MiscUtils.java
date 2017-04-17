@@ -205,10 +205,10 @@ public class MiscUtils {
 				.toItemStack();
 	}
 
-	public void executeConsoleCommands(ArrayList<String> cmds, HashMap<String, String> placeholders) {
+	public void executeConsoleCommands(Player player, ArrayList<String> cmds, HashMap<String, String> placeholders) {
 		if (cmds != null && !cmds.isEmpty()) {
 			final ArrayList<String> commands = ArrayUtils.getInstance()
-					.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
+					.replaceJavascript(player, ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 				@Override
@@ -221,10 +221,10 @@ public class MiscUtils {
 		}
 	}
 
-	public void executeConsoleCommands(String command, HashMap<String, String> placeholders) {
+	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringUtils.getInstance()
-					.replaceJavascript(StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+					.replaceJavascript(player, StringUtils.getInstance().replacePlaceHolder(command, placeholders));
 			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 				@Override
