@@ -229,6 +229,8 @@ public class Reward {
 	/** The effect radius. */
 	private int effectRadius;
 
+	private ArrayList<String> javascripts;
+
 	private File file;
 
 	private boolean randomPickRandom;
@@ -1265,6 +1267,8 @@ public class Reward {
 		setTimedHour(getConfig().getTimedHour());
 		setTimedMinute(getConfig().getTimedMinute());
 
+		javascripts = getConfig().getJavascripts();
+
 		setChance(getConfig().getChance());
 		setRandomChance(getConfig().getRandomChance());
 		randomPickRandom = getConfig().getRandomPickRandom();
@@ -1347,6 +1351,21 @@ public class Reward {
 	}
 
 	/**
+	 * @return the javascripts
+	 */
+	public ArrayList<String> getJavascripts() {
+		return javascripts;
+	}
+
+	/**
+	 * @param javascripts
+	 *            the javascripts to set
+	 */
+	public void setJavascripts(ArrayList<String> javascripts) {
+		this.javascripts = javascripts;
+	}
+
+	/**
 	 * @return the delaySeconds
 	 */
 	public int getDelaySeconds() {
@@ -1406,7 +1425,7 @@ public class Reward {
 	 *            placeholders
 	 */
 	public void runCommands(User user, HashMap<String, String> placeholders) {
-		MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),getConsoleCommands(), placeholders);
+		MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), getConsoleCommands(), placeholders);
 
 		user.preformCommand(getPlayerCommands(), placeholders);
 	}
@@ -1430,6 +1449,13 @@ public class Reward {
 			} else {
 				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptFalseRewardsPath()).withPrefix(name)
 						.send(user);
+			}
+		}
+
+		if (!getJavascripts().isEmpty()) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getPlayer());
+			for (String str : getJavascripts()) {
+				engine.execute(StringUtils.getInstance().replacePlaceHolder(str, placeholders));
 			}
 		}
 	}

@@ -99,4 +99,8 @@ public class JavascriptEngine {
 		}
 		return this;
 	}
+
+	public void execute(String expression) {
+		getResult(expression);
+	}
 }

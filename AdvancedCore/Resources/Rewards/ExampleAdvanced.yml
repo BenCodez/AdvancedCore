@@ -83,6 +83,10 @@ Javascript:
   # Reward files to run if expression is false
   FalseRewards: []
   
+# Do things like set health or other things
+# not possible with commands
+Javascripts: []
+  
 # Let the user pick a reward file to get
 # User can only pick one
 ChoiceRewards:
