@@ -377,10 +377,11 @@ public class ArrayUtils {
 	}
 
 	public ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
+		ArrayList<String> newList = new ArrayList<String>();
 		for (int i = 0; i < list.size(); i++) {
-			list.set(i, StringUtils.getInstance().replacePlaceHolder(list.get(i), placeholders));
+			newList.add(StringUtils.getInstance().replacePlaceHolder(list.get(i), placeholders));
 		}
-		return list;
+		return newList;
 	}
 
 	/**

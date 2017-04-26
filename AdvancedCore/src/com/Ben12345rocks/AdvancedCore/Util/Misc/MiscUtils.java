@@ -205,8 +205,9 @@ public class MiscUtils {
 				.toItemStack();
 	}
 
-	public void executeConsoleCommands(Player player, ArrayList<String> cmds, HashMap<String, String> placeholders) {
+	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds, final HashMap<String, String> placeholders) {
 		if (cmds != null && !cmds.isEmpty()) {
+			placeholders.put("player", player.getName());
 			final ArrayList<String> commands = ArrayUtils.getInstance()
 					.replaceJavascript(player, ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
