@@ -158,10 +158,6 @@
 		</plugins>
 	</build>
 	<repositories>
-	<repository>
-			<id>dwd-repo</id>
-			<url>http://ci.dwdg.net/plugin/repository/everything/</url>
-		</repository>
 		<repository>
 			<id>spigot-repo</id>
 			<url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
@@ -183,7 +179,10 @@
 			<id>dmulloy2-repo</id>
 			<url>http://repo.dmulloy2.net/content/groups/public/</url>
 		</repository>
-		
+		<repository>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
+		</repository>
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -204,7 +203,12 @@
 			<version>2.6.0</version>
 			<scope>provided</scope>
 		</dependency>
-	
+		<dependency>
+			<groupId>com.github.Ben12345rocks</groupId>
+			<artifactId>ChatComponentAPI</artifactId>
+			<version>master-SNAPSHOT</version>
+			<scope>compile</scope>
+		</dependency>
 		<dependency>
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
