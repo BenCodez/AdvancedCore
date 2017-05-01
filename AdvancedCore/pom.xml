@@ -203,12 +203,7 @@
 			<version>2.6.0</version>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>net.pl3x.bukkit.chatapi</groupId>
-			<artifactId>ChatComponentAPI</artifactId>
-			<version>1.2</version>
-			<scope>compile</scope>
-		</dependency>
+	
 		<dependency>
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
