@@ -1,6 +1,9 @@
 package com.Ben12345rocks.AdvancedCore;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -11,6 +14,7 @@ import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -73,6 +77,38 @@ public class AdvancedCoreHook {
 	private Timer timer = new Timer();
 	private boolean autoDownload = false;
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
+
+	/**
+	 * @return the version
+	 */
+	public String getVersion() {
+		return getVersionFile().getString("version", "");
+	}
+	
+	public String getTime() {
+		return getVersionFile().getString("time", "");
+	}
+
+	@SuppressWarnings("static-access")
+	private YamlConfiguration getVersionFile() {
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
+		if (classLoader == null) {
+			classLoader = Class.class.getClassLoader();
+		}
+		try {
+			Reader defConfigStream = new InputStreamReader(classLoader.getSystemResourceAsStream("version.yml"),
+					"UTF8");
+			if (defConfigStream != null) {
+				YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
+				defConfigStream.close();
+				return defConfig;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 
 	/**
 	 * @return the javascriptEngineRequests
@@ -394,6 +430,7 @@ public class AdvancedCoreHook {
 		loadRewards();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
+		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
 	public void loadEconomy() {
@@ -443,6 +480,7 @@ public class AdvancedCoreHook {
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
+		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
 	/**
