@@ -28,7 +28,7 @@
 				<directory>Resources</directory>
 				<filtering>true</filtering>
 				<includes>
-					<include>plugin.yml</include>
+					<include>version.yml</include>
 				</includes>
 			</resource>
 			<resource>
