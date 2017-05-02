@@ -98,7 +98,7 @@ public class Report {
 
 		String zipFilePath = file.getPath();
 
-		plugin.debug("Writing '" + zipFilePath + "' to zip file");
+		plugin.extraDebug("Writing '" + zipFilePath + "' to zip file");
 
 		ZipEntry zipEntry = new ZipEntry(zipFilePath);
 		zos.putNextEntry(zipEntry);
@@ -126,16 +126,15 @@ public class Report {
 			File directoryToZip = plugin.getDataFolder();
 
 			try {
-				this.plugin.getPlugin().getLogger()
-						.info("---Getting references to all files in: " + directoryToZip.getCanonicalPath());
+				this.plugin.debug("---Getting references to all files in: " + directoryToZip.getCanonicalPath());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			addAllFiles(directoryToZip, fileList);
 		}
-		plugin.getPlugin().getLogger().info("---Creating zip file");
+		plugin.debug("---Creating zip file");
 		writeZipFile(fileList, zipFileName);
-		plugin.getPlugin().getLogger().info("---Done");
+		plugin.debug("---Done");
 	}
 
 	/**
@@ -151,15 +150,14 @@ public class Report {
 
 		List<File> fileList = new ArrayList<File>();
 		try {
-			plugin.getPlugin().getLogger()
-					.info("---Getting references to all files in: " + directoryToZip.getCanonicalPath());
+			plugin.debug("---Getting references to all files in: " + directoryToZip.getCanonicalPath());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		addAllFiles(directoryToZip, fileList);
-		plugin.getPlugin().getLogger().info("---Creating zip file");
+		plugin.debug("---Creating zip file");
 		writeZipFile(fileList, zipFileName);
-		plugin.getPlugin().getLogger().info("---Done");
+		plugin.debug("---Done");
 	}
 
 	/**
@@ -202,8 +200,9 @@ public class Report {
 				fileZipFolder.mkdirs();
 			}
 
-			FileOutputStream fos = new FileOutputStream(plugin.getPlugin().getDataFolder().getAbsolutePath()
-					+ File.separator + "Reports" + File.separator + zipFileName + ".zip");
+			File zipFile = new File(plugin.getPlugin().getDataFolder(),
+					"Reports" + File.separator + zipFileName + ".zip");
+			FileOutputStream fos = new FileOutputStream(zipFile);
 			ZipOutputStream zos = new ZipOutputStream(fos);
 
 			for (File file : fileList) {
@@ -211,6 +210,8 @@ public class Report {
 					addToZip(file, zos);
 				}
 			}
+
+			plugin.getPlugin().getLogger().info("[Report] Created zip file at " + zipFile.getAbsolutePath());
 
 			zos.close();
 			fos.close();

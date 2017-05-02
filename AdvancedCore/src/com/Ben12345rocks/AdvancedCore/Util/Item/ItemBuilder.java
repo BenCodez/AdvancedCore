@@ -171,6 +171,10 @@ public class ItemBuilder {
 		is = new ItemStack(m, amount, s);
 	}
 
+	public ItemBuilder(Material m, short s) {
+		is = new ItemStack(m, 1, s);
+	}
+
 	/**
 	 * Add an enchant to the item.
 	 *

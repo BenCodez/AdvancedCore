@@ -82,21 +82,24 @@ public class AdvancedCoreHook {
 	}
 
 	/**
-	 * @param javascriptEngineRequests the javascriptEngineRequests to set
+	 * @param javascriptEngineRequests
+	 *            the javascriptEngineRequests to set
 	 */
 	public void setJavascriptEngineRequests(ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests) {
 		this.javascriptEngineRequests = javascriptEngineRequests;
 	}
 
 	/**
-	 * @param resourceId the resourceId to set
+	 * @param resourceId
+	 *            the resourceId to set
 	 */
 	public void setResourceId(int resourceId) {
 		this.resourceId = resourceId;
 	}
 
 	/**
-	 * @param javascriptEngine the javascriptEngine to set
+	 * @param javascriptEngine
+	 *            the javascriptEngine to set
 	 */
 	public void setJavascriptEngine(HashMap<String, Object> javascriptEngine) {
 		this.javascriptEngine = javascriptEngine;
@@ -158,7 +161,7 @@ public class AdvancedCoreHook {
 
 	public void checkPluginUpdate() {
 		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
-			
+
 			@Override
 			public void run() {
 				String version = ServerData.getInstance().getPluginVersion(plugin);
@@ -169,7 +172,7 @@ public class AdvancedCoreHook {
 				ServerData.getInstance().setPluginVersion(plugin);
 			}
 		});
-		
+
 	}
 
 	/**
@@ -213,6 +216,16 @@ public class AdvancedCoreHook {
 				}
 			}
 		}
+	}
+
+	public void extraDebug(Plugin plug, String msg) {
+		if (extraDebug) {
+			debug(plug, "[Extra] " + msg);
+		}
+	}
+
+	public void extraDebug(String msg) {
+		debug(plugin, "[Extra] " + msg);
 	}
 
 	/**
@@ -620,20 +633,20 @@ public class AdvancedCoreHook {
 			}
 		});
 	}
-	
+
 	public void loadAutoUpdateCheck() {
 		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
-			
+
 			@Override
 			public void run() {
 				checkAutoUpdate();
 			}
-		}, 20, 20*1000*60*60);
+		}, 20, 20 * 1000 * 60 * 60);
 	}
-	
+
 	private void checkAutoUpdate() {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-			
+
 			@Override
 			public void run() {
 				if (isAutoDownload() && getResourceId() != 0) {
@@ -641,6 +654,6 @@ public class AdvancedCoreHook {
 				}
 			}
 		});
-		
+
 	}
 }
