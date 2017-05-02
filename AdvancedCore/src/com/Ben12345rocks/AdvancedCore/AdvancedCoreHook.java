@@ -97,7 +97,7 @@ public class AdvancedCoreHook {
 			classLoader = Class.class.getClassLoader();
 		}
 		try {
-			Reader defConfigStream = new InputStreamReader(classLoader.getSystemResourceAsStream("version.yml"),
+			Reader defConfigStream = new InputStreamReader(classLoader.getSystemResourceAsStream("/version.yml"),
 					"UTF8");
 			if (defConfigStream != null) {
 				YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
