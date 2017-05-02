@@ -1,16 +1,19 @@
 package com.Ben12345rocks.AdvancedCore;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Field;
+import java.net.URL;
+import java.security.CodeSource;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
@@ -77,34 +80,49 @@ public class AdvancedCoreHook {
 	private Timer timer = new Timer();
 	private boolean autoDownload = false;
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
+	private String version = "";
+	private String buildTime = "";
 
 	/**
 	 * @return the version
 	 */
 	public String getVersion() {
-		return getVersionFile().getString("version", "");
+		return version;
 	}
-	
+
 	public String getTime() {
-		return getVersionFile().getString("time", "");
+		return buildTime;
 	}
 
-	@SuppressWarnings("static-access")
-	private YamlConfiguration getVersionFile() {
-		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+	private void loadVersionFile() {
+		YamlConfiguration conf = getVersionFile();
+		version = conf.getString("version", "Unknown");
+		buildTime = conf.getString("time", "Unknown");
+	}
 
-		if (classLoader == null) {
-			classLoader = Class.class.getClassLoader();
-		}
+	private YamlConfiguration getVersionFile() {
 		try {
-			Reader defConfigStream = new InputStreamReader(classLoader.getSystemResourceAsStream("/version.yml"),
-					"UTF8");
-			if (defConfigStream != null) {
-				YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
-				defConfigStream.close();
-				return defConfig;
+			CodeSource src = this.getClass().getProtectionDomain().getCodeSource();
+			if (src != null) {
+				URL jar = src.getLocation();
+				ZipInputStream zip = null;
+				zip = new ZipInputStream(jar.openStream());
+				while (true) {
+					ZipEntry e = zip.getNextEntry();
+					if (e != null) {
+						String name = e.getName();
+						if (name.equals("version.yml")) {
+							Reader defConfigStream = new InputStreamReader(zip);
+							if (defConfigStream != null) {
+								YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
+								defConfigStream.close();
+								return defConfig;
+							}
+						}
+					}
+				}
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -430,6 +448,7 @@ public class AdvancedCoreHook {
 		loadRewards();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
+		loadVersionFile();
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
@@ -480,6 +499,7 @@ public class AdvancedCoreHook {
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
+		loadVersionFile();
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
