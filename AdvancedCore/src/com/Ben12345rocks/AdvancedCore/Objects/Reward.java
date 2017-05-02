@@ -614,7 +614,8 @@ public class Reward {
 	}
 
 	public ItemStack getItemStack(User user, String item) {
-		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getPlayerName()).toItemStack();
+		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getPlayerName())
+				.toItemStack(user.getPlayer());
 	}
 
 	/**

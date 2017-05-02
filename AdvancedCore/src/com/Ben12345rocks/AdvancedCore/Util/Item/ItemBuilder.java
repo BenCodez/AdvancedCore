@@ -13,6 +13,7 @@ import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -35,6 +36,7 @@ public class ItemBuilder {
 	private ItemStack is;
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 	private int slot = -1;
+	private String skull = "";
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -497,9 +499,17 @@ public class ItemBuilder {
 			SkullMeta im = (SkullMeta) is.getItemMeta();
 			im.setOwner(owner);
 			is.setItemMeta(im);
+			skull = owner;
 		} catch (ClassCastException expected) {
 		}
 		return this;
+	}
+
+	/**
+	 * @return the skull
+	 */
+	public String getSkull() {
+		return skull;
 	}
 
 	public ItemBuilder setSlot(int slot) {
@@ -518,6 +528,23 @@ public class ItemBuilder {
 					.replaceJavascript(StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
 			setLore(ArrayUtils.getInstance()
 					.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
+		}
+		return is;
+	}
+
+	public ItemStack toItemStack(Player player) {
+		if (player != null) {
+			if (!placeholders.isEmpty()) {
+				setName(StringUtils.getInstance().replaceJavascript(player,
+						StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
+				setLore(ArrayUtils.getInstance().replaceJavascript(player,
+						ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
+				if (!skull.equals("")) {
+					setSkullOwner(StringUtils.getInstance().replacePlaceHolder(skull, "player", player.getName()));
+				}
+			}
+		} else {
+			return toItemStack();
 		}
 		return is;
 	}
