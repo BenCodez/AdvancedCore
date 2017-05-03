@@ -3,12 +3,11 @@
 
 package com.Ben12345rocks.AdvancedCore.Util.Inventory;
 
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -16,21 +15,30 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
  */
 public abstract class BInventoryButton {
 
-	/** The name. */
-	private String name;
-
-	/** The lore. */
-	private String[] lore;
-
 	/** The item. */
-	private ItemStack item;
+	private ItemBuilder builder;
 
 	/** The slot. */
 	private int slot;
 
 	public BInventoryButton(ItemBuilder item) {
-		setItem(item);
+		setBuilder(item);
 		slot = item.getSlot();
+	}
+
+	/**
+	 * @return the builder
+	 */
+	public ItemBuilder getBuilder() {
+		return builder;
+	}
+
+	/**
+	 * @param builder
+	 *            the builder to set
+	 */
+	public void setBuilder(ItemBuilder builder) {
+		this.builder = builder;
 	}
 
 	public BInventoryButton(ItemStack item) {
@@ -48,9 +56,7 @@ public abstract class BInventoryButton {
 	 *            the item
 	 */
 	public BInventoryButton(String name, String[] lore, ItemStack item) {
-		setName(name);
-		setLore(lore);
-		setItem(item);
+		setBuilder(new ItemBuilder(item).setName(name).setLore(lore));
 	}
 
 	/**
@@ -59,25 +65,11 @@ public abstract class BInventoryButton {
 	 * @return the item
 	 */
 	public ItemStack getItem() {
-		return item;
+		return builder.toItemStack();
 	}
 
-	/**
-	 * Gets the lore.
-	 *
-	 * @return the lore
-	 */
-	public String[] getLore() {
-		return lore;
-	}
-
-	/**
-	 * Gets the name.
-	 *
-	 * @return the name
-	 */
-	public String getName() {
-		return name;
+	public ItemStack getItem(Player player) {
+		return builder.toItemStack(player);
 	}
 
 	/**
@@ -98,7 +90,7 @@ public abstract class BInventoryButton {
 	public abstract void onClick(ClickEvent clickEvent);
 
 	public void setItem(ItemBuilder builder) {
-		item = builder.toItemStack();
+		this.builder = builder;
 	}
 
 	/**
@@ -108,27 +100,7 @@ public abstract class BInventoryButton {
 	 *            the new item
 	 */
 	public void setItem(ItemStack item) {
-		this.item = item;
-	}
-
-	/**
-	 * Sets the lore.
-	 *
-	 * @param lore
-	 *            the new lore
-	 */
-	public void setLore(String[] lore) {
-		this.lore = ArrayUtils.getInstance().colorize(lore);
-	}
-
-	/**
-	 * Sets the name.
-	 *
-	 * @param name
-	 *            the new name
-	 */
-	public void setName(String name) {
-		this.name = StringUtils.getInstance().colorize(name);
+		this.builder = new ItemBuilder(item);
 	}
 
 	/**
