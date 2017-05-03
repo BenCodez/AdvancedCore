@@ -539,9 +539,9 @@ public class ItemBuilder {
 						StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
 				setLore(ArrayUtils.getInstance().replaceJavascript(player,
 						ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
-				if (!skull.equals("")) {
-					setSkullOwner(StringUtils.getInstance().replacePlaceHolder(skull, "player", player.getName()));
-				}
+			}
+			if (!skull.equals("")) {
+				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(skull, "player", player.getName()));
 			}
 		} else {
 			return toItemStack();
