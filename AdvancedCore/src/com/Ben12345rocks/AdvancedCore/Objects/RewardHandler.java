@@ -81,7 +81,7 @@ public class RewardHandler {
 	 */
 	public synchronized void checkDelayedTimedRewards() {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
-			
+
 			@Override
 			public void run() {
 				if (usesTimed()) {
@@ -102,7 +102,7 @@ public class RewardHandler {
 				}
 			}
 		});
-		
+
 	}
 
 	/**
@@ -345,11 +345,6 @@ public class RewardHandler {
 		giveReward(user, prefix, data, path, online, giveOffline, null);
 	}
 
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline, HashMap<String, String> placeholders) {
-		giveReward(user, prefix, data, path, online, giveOffline, true, placeholders);
-	}
-
 	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
 			boolean giveOffline, boolean checkTimed, HashMap<String, String> placeholders) {
@@ -379,14 +374,9 @@ public class RewardHandler {
 		}
 	}
 
-	private void updateReward(Reward reward) {
-		for (int i = getRewards().size()-1; i>=0; i--) {
-			if(getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
-				getRewards().set(i, reward);
-				return;
-			}
-		}
-		getRewards().add(reward);
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline, HashMap<String, String> placeholders) {
+		giveReward(user, prefix, data, path, online, giveOffline, true, placeholders);
 	}
 
 	public boolean hasRewards(FileConfiguration data, String path) {
@@ -477,6 +467,16 @@ public class RewardHandler {
 
 		copyFile("ExampleBasic.yml");
 		copyFile("ExampleAdvanced.yml");
+	}
+
+	private void updateReward(Reward reward) {
+		for (int i = getRewards().size() - 1; i >= 0; i--) {
+			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
+				getRewards().set(i, reward);
+				return;
+			}
+		}
+		getRewards().add(reward);
 	}
 
 	public synchronized boolean usesTimed() {

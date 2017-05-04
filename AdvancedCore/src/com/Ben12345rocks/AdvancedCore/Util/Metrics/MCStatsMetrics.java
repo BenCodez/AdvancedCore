@@ -413,11 +413,11 @@ public class MCStatsMetrics {
 				configuration.load(CONFIG_FILE);
 			} catch (IOException ex) {
 
-				hook.debug("[Metrics] " + ex.getMessage());
+				// hook.debug("[Metrics] " + ex.getMessage());
 
 				return true;
 			} catch (InvalidConfigurationException ex) {
-				hook.debug("[Metrics] " + ex.getMessage());
+				// hook.debug("[Metrics] " + ex.getMessage());
 
 				return true;
 			}
@@ -581,7 +581,7 @@ public class MCStatsMetrics {
 						firstPost = false;
 					} catch (IOException e) {
 
-						hook.debug("[Metrics] " + e.getMessage());
+						// hook.debug("[Metrics] " + e.getMessage());
 
 					}
 				}

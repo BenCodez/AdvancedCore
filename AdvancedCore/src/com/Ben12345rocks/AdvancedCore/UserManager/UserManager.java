@@ -109,6 +109,6 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public User getUser(UUID uuid) {
-		return  new User(plugin.getPlugin(), uuid);
+		return new User(plugin.getPlugin(), uuid);
 	}
 }

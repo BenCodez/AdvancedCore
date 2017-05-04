@@ -23,7 +23,7 @@ public class Query {
 
 	/**
 	 * Add the current statement to the batch.
-	 * 
+	 *
 	 * @throws SQLException
 	 *             SQLException
 	 */
@@ -38,7 +38,7 @@ public class Query {
 	 * Execute a batch that does not return a ResultSet.
 	 *
 	 * @return an array with updates rows
-	 * 
+	 *
 	 * @throws SQLException
 	 *             SQLException
 	 */
@@ -100,7 +100,7 @@ public class Query {
 	 * Uses a CachedRowSetImpl that is not connected to the database.
 	 *
 	 * @return the ResultSet
-	 * 
+	 *
 	 * @throws SQLException
 	 *             SQLException
 	 */
@@ -154,7 +154,7 @@ public class Query {
 	 * Execute a SQL query that does not return a ResultSet.
 	 *
 	 * @return number of rows changed
-	 * 
+	 *
 	 * @throws SQLException
 	 *             SQLException
 	 */
@@ -213,7 +213,7 @@ public class Query {
 
 	/**
 	 * Rollback the transaction.
-	 * 
+	 *
 	 * @throws SQLException
 	 *             SQLException
 	 */
@@ -232,7 +232,7 @@ public class Query {
 	 *            the index of the parameter to set (starts with 1)
 	 * @param value
 	 *            the value to set the parameter to
-	 * 
+	 *
 	 * @throws SQLException
 	 *             SQLException
 	 */

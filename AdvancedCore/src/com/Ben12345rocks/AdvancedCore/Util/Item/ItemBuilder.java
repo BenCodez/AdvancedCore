@@ -13,6 +13,7 @@ import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -35,6 +36,7 @@ public class ItemBuilder {
 	private ItemStack is;
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 	private int slot = -1;
+	private String skull = "";
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -171,6 +173,10 @@ public class ItemBuilder {
 		is = new ItemStack(m, amount, s);
 	}
 
+	public ItemBuilder(Material m, short s) {
+		is = new ItemStack(m, 1, s);
+	}
+
 	/**
 	 * Add an enchant to the item.
 	 *
@@ -299,6 +305,10 @@ public class ItemBuilder {
 		return new ItemBuilder(is);
 	}
 
+	private int getAmount() {
+		return is.getAmount();
+	}
+
 	public ArrayList<String> getLore() {
 		List<String> lore = is.getItemMeta().getLore();
 		ArrayList<String> list = new ArrayList<String>();
@@ -311,6 +321,13 @@ public class ItemBuilder {
 
 	public String getName() {
 		return is.getItemMeta().getDisplayName();
+	}
+
+	/**
+	 * @return the skull
+	 */
+	public String getSkull() {
+		return skull;
 	}
 
 	/**
@@ -372,6 +389,13 @@ public class ItemBuilder {
 
 	public ItemBuilder setAmount(int amount) {
 		is.setAmount(amount);
+		return this;
+	}
+
+	public ItemBuilder setAmountNone(int i) {
+		if (getAmount() == 0) {
+			setAmount(i);
+		}
 		return this;
 	}
 
@@ -493,6 +517,7 @@ public class ItemBuilder {
 			SkullMeta im = (SkullMeta) is.getItemMeta();
 			im.setOwner(owner);
 			is.setItemMeta(im);
+			skull = owner;
 		} catch (ClassCastException expected) {
 		}
 		return this;
@@ -518,14 +543,20 @@ public class ItemBuilder {
 		return is;
 	}
 
-	public ItemBuilder setAmountNone(int i) {
-		if (getAmount() == 0) {
-			setAmount(i);
+	public ItemStack toItemStack(Player player) {
+		if (player != null) {
+			if (!placeholders.isEmpty()) {
+				setName(StringUtils.getInstance().replaceJavascript(player,
+						StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
+				setLore(ArrayUtils.getInstance().replaceJavascript(player,
+						ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
+			}
+			if (!skull.equals("")) {
+				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(skull, "player", player.getName()));
+			}
+		} else {
+			return toItemStack();
 		}
-		return this;
-	}
-
-	private int getAmount() {
-		return is.getAmount();
+		return is;
 	}
 }

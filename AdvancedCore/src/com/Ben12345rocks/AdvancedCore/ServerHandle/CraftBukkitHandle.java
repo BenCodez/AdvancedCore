@@ -17,5 +17,4 @@ public class CraftBukkitHandle implements IServerHandle {
 	public void sendMessage(Player player, BaseComponent... components) {
 		ComponentSender.sendMessage(player, components);
 	}
-
 }

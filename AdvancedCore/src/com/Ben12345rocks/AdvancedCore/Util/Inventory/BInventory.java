@@ -5,7 +5,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.Inventory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,7 +21,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
@@ -33,10 +31,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
  * The Class BInventory.
  */
 public class BInventory implements Listener {
-
-	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
-
-	private int maxInvSize = 54;
 
 	/**
 	 * The Class ClickEvent.
@@ -194,23 +188,12 @@ public class BInventory implements Listener {
 		inventory.openInventory(player);
 	}
 
+	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
+
+	private int maxInvSize = 54;
+
 	/** The pages. */
 	private boolean pages = false;
-
-	/**
-	 * @return the pages
-	 */
-	public boolean isPages() {
-		return pages;
-	}
-
-	/**
-	 * @param pages
-	 *            the pages to set
-	 */
-	public void setPages(boolean pages) {
-		this.pages = pages;
-	}
 
 	/** The page. */
 	private int page = 1;
@@ -314,6 +297,32 @@ public class BInventory implements Listener {
 		return getProperSize(getHighestSlot());
 	}
 
+	/**
+	 * @return the maxInvSize
+	 */
+	public int getMaxInvSize() {
+		return maxInvSize;
+	}
+
+	/**
+	 * Gets the next slot.
+	 *
+	 * @return the next slot
+	 */
+	public int getNextSlot() {
+		if (buttons.keySet().size() == 0) {
+			return 0;
+		}
+		return getHighestSlot() + 1;
+	}
+
+	/**
+	 * @return the pageButtons
+	 */
+	public ArrayList<BInventoryButton> getPageButtons() {
+		return pageButtons;
+	}
+
 	private int getProperSize(int size) {
 		if (size <= 9) {
 			return 9;
@@ -331,15 +340,10 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * Gets the next slot.
-	 *
-	 * @return the next slot
+	 * @return the pages
 	 */
-	public int getNextSlot() {
-		if (buttons.keySet().size() == 0) {
-			return 0;
-		}
-		return getHighestSlot() + 1;
+	public boolean isPages() {
+		return pages;
 	}
 
 	/**
@@ -411,7 +415,8 @@ public class BInventory implements Listener {
 						openInventory(player, nextPage);
 					}
 				} else if (slot == maxInvSize - 1) {
-					//AdvancedCoreHook.getInstance().debug(maxPage + " " + page);
+					// AdvancedCoreHook.getInstance().debug(maxPage + " " +
+					// page);
 					if (maxPage > page) {
 						Player player = (Player) event.getWhoClicked();
 						player.closeInventory();
@@ -423,26 +428,12 @@ public class BInventory implements Listener {
 				}
 
 				for (BInventoryButton b : pageButtons) {
-					if (slot == b.getSlot()+(getMaxInvSize()-9)) {
+					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
 						b.onClick(new ClickEvent(event));
 					}
 				}
 			}
 		}
-	}
-
-	/**
-	 * @return the maxInvSize
-	 */
-	public int getMaxInvSize() {
-		return maxInvSize;
-	}
-
-	/**
-	 * @param maxInvSize the maxInvSize to set
-	 */
-	public void setMaxInvSize(int maxInvSize) {
-		this.maxInvSize = getProperSize(maxInvSize);
 	}
 
 	// event handling
@@ -474,15 +465,7 @@ public class BInventory implements Listener {
 		if (!pages) {
 			inv = Bukkit.createInventory(player, inventory.getInventorySize(), inventory.getInventoryName());
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
-				ItemStack item = pair.getValue().getItem();
-				ItemMeta meta = item.getItemMeta();
-				if (pair.getValue().getName() != null) {
-					meta.setDisplayName(pair.getValue().getName());
-				}
-				if (pair.getValue().getLore() != null) {
-					meta.setLore(new ArrayList<String>(Arrays.asList(pair.getValue().getLore())));
-				}
-				item.setItemMeta(meta);
+				ItemStack item = pair.getValue().getItem(player);
 				inv.setItem(pair.getKey(), item);
 			}
 			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
@@ -522,15 +505,7 @@ public class BInventory implements Listener {
 			if (slot >= startSlot) {
 				slot -= startSlot;
 				if (slot < (maxInvSize - 9) && pair.getKey() < inventory.getButtons().size()) {
-					ItemStack item = pair.getValue().getItem();
-					ItemMeta meta = item.getItemMeta();
-					if (pair.getValue().getName() != null) {
-						meta.setDisplayName(pair.getValue().getName());
-					}
-					if (pair.getValue().getLore() != null) {
-						meta.setLore(new ArrayList<String>(Arrays.asList(pair.getValue().getLore())));
-					}
-					item.setItemMeta(meta);
+					ItemStack item = pair.getValue().getItem(player);
 					inv.setItem(slot, item);
 				}
 			}
@@ -538,7 +513,7 @@ public class BInventory implements Listener {
 		}
 
 		for (BInventoryButton b : pageButtons) {
-			inv.setItem((maxInvSize-9) + b.getSlot(), b.getItem());
+			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem());
 		}
 
 		inv.setItem(maxInvSize - 9,
@@ -567,6 +542,14 @@ public class BInventory implements Listener {
 	}
 
 	/**
+	 * @param maxInvSize
+	 *            the maxInvSize to set
+	 */
+	public void setMaxInvSize(int maxInvSize) {
+		this.maxInvSize = getProperSize(maxInvSize);
+	}
+
+	/**
 	 * Sets the meta.
 	 *
 	 * @param player
@@ -581,18 +564,19 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * @return the pageButtons
-	 */
-	public ArrayList<BInventoryButton> getPageButtons() {
-		return pageButtons;
-	}
-
-	/**
 	 * @param pageButtons
 	 *            the pageButtons to set
 	 */
 	public void setPageButtons(ArrayList<BInventoryButton> pageButtons) {
 		this.pageButtons = pageButtons;
+	}
+
+	/**
+	 * @param pages
+	 *            the pages to set
+	 */
+	public void setPages(boolean pages) {
+		this.pages = pages;
 	}
 
 }

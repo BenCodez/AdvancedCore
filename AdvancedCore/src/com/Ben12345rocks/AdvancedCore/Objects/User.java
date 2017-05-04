@@ -172,21 +172,6 @@ public class User {
 		loadTimedDelayedTimer(epochMilli);
 	}
 
-	public void loadTimedDelayedTimer(long time) {
-		long delay = time - System.currentTimeMillis();
-		if (delay < 0) {
-			delay = 0;
-		}
-		delay += 250;
-		AdvancedCoreHook.getInstance().getTimer().schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				checkDelayedTimedRewards();
-			}
-		}, delay);
-	}
-
 	public void checkDelayedTimedRewards() {
 		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
@@ -213,41 +198,6 @@ public class User {
 		setTimedRewards(timed);
 	}
 
-	public void preformCommand(String command, HashMap<String, String> placeholders) {
-		if (command != null && !command.isEmpty()) {
-			final String cmd = StringUtils.getInstance().replaceJavascript(getPlayer(),StringUtils.getInstance().replacePlaceHolder(command, placeholders));
-			Bukkit.getScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					Player player = getPlayer();
-					if (player != null) {
-						player.performCommand(cmd);
-					}
-				}
-			});
-		}
-	}
-
-	public void preformCommand(ArrayList<String> commands, HashMap<String, String> placeholders) {
-		if (commands != null && !commands.isEmpty()) {
-			final ArrayList<String> cmds = ArrayUtils.getInstance()
-					.replaceJavascript(getPlayer(), ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
-			Bukkit.getScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					Player player = getPlayer();
-					if (player != null) {
-						for (String cmd : cmds) {
-							player.performCommand(cmd);
-						}
-					}
-				}
-			});
-		}
-	}
-
 	/**
 	 * Check offline rewards.
 	 */
@@ -263,12 +213,6 @@ public class User {
 			}
 			RewardHandler.getInstance().giveReward(this, args[0], false, true, false,
 					ArrayUtils.getInstance().fromString(placeholders));
-		}
-	}
-
-	public void updateName() {
-		if (!getData().getString("PlayerName").equals(getPlayerName())) {
-			getData().setString("PlayerName", getPlayerName());
 		}
 	}
 
@@ -562,6 +506,21 @@ public class User {
 		data = new UserData(this);
 	}
 
+	public void loadTimedDelayedTimer(long time) {
+		long delay = time - System.currentTimeMillis();
+		if (delay < 0) {
+			delay = 0;
+		}
+		delay += 250;
+		AdvancedCoreHook.getInstance().getTimer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				checkDelayedTimedRewards();
+			}
+		}, delay);
+	}
+
 	/**
 	 * Play particle effect.
 	 *
@@ -604,6 +563,42 @@ public class User {
 			} else {
 				hook.debug("Invalid sound: " + soundName);
 			}
+		}
+	}
+
+	public void preformCommand(ArrayList<String> commands, HashMap<String, String> placeholders) {
+		if (commands != null && !commands.isEmpty()) {
+			final ArrayList<String> cmds = ArrayUtils.getInstance().replaceJavascript(getPlayer(),
+					ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					Player player = getPlayer();
+					if (player != null) {
+						for (String cmd : cmds) {
+							player.performCommand(cmd);
+						}
+					}
+				}
+			});
+		}
+	}
+
+	public void preformCommand(String command, HashMap<String, String> placeholders) {
+		if (command != null && !command.isEmpty()) {
+			final String cmd = StringUtils.getInstance().replaceJavascript(getPlayer(),
+					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					Player player = getPlayer();
+					if (player != null) {
+						player.performCommand(cmd);
+					}
+				}
+			});
 		}
 	}
 
@@ -825,6 +820,12 @@ public class User {
 	 */
 	public void setUUID(String uuid) {
 		this.uuid = uuid;
+	}
+
+	public void updateName() {
+		if (!getData().getString("PlayerName").equals(getPlayerName())) {
+			getData().setString("PlayerName", getPlayerName());
+		}
 	}
 
 }
