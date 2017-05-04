@@ -32,7 +32,6 @@ import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
-import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
@@ -470,7 +469,7 @@ public class AdvancedCoreHook {
 	private void loadHandle() {
 		try {
 			Class.forName("org.spigotmc.SpigotConfig");
-			serverHandle = new SpigotHandle();
+			serverHandle = new CraftBukkitHandle();
 			debug("Detected using spigot");
 		} catch (Exception ex) {
 			serverHandle = new CraftBukkitHandle();
