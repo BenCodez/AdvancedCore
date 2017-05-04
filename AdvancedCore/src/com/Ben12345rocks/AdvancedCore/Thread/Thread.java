@@ -20,7 +20,7 @@ public class Thread {
 			try {
 				return fet.call().get(uuid);
 			} catch (Exception e) {
-				//AdvancedCoreHook.getInstance().debug(e);
+				// AdvancedCoreHook.getInstance().debug(e);
 				return "";
 			}
 		}

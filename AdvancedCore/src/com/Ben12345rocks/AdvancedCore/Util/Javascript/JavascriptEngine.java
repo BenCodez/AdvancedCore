@@ -21,9 +21,51 @@ public class JavascriptEngine {
 		engineAPI = new HashMap<String, Object>();
 	}
 
+	public JavascriptEngine addPlayer(CommandSender player) {
+		addToEngine("CommandSender", player);
+		addToEngine("Player", player);
+		return this;
+	}
+
+	public JavascriptEngine addPlayer(Player player) {
+		addToEngine("Player", player);
+		addToEngine("PlayerName", player.getName());
+		addToEngine("PlayerUUID", player.getUniqueId().toString());
+		addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
+		addToEngine("CommandSender", player);
+
+		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+			addToEngine(request.getStr(), request.getObject(player));
+		}
+		return this;
+	}
+
+	public JavascriptEngine addToEngine(HashMap<String, Object> engineAPI) {
+		if (engineAPI != null && !engineAPI.isEmpty()) {
+			this.engineAPI.putAll(engineAPI);
+		}
+		return this;
+	}
+
 	public JavascriptEngine addToEngine(String text, Object ob) {
 		engineAPI.put(text, ob);
 		return this;
+	}
+
+	public void execute(String expression) {
+		getResult(expression);
+	}
+
+	public boolean getBooleanValue(String expression) {
+		Object result = getResult(expression);
+		if (result != null) {
+			try {
+				return ((boolean) result);
+			} catch (Exception e) {
+				AdvancedCoreHook.getInstance().debug(e);
+			}
+		}
+		return false;
 	}
 
 	public Object getResult(String expression) {
@@ -50,25 +92,6 @@ public class JavascriptEngine {
 		return null;
 	}
 
-	public JavascriptEngine addPlayer(Player player) {
-		addToEngine("Player", player);
-		addToEngine("PlayerName", player.getName());
-		addToEngine("PlayerUUID", player.getUniqueId().toString());
-		addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
-		addToEngine("CommandSender", player);
-
-		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
-			addToEngine(request.getStr(), request.getObject(player));
-		}
-		return this;
-	}
-
-	public JavascriptEngine addPlayer(CommandSender player) {
-		addToEngine("CommandSender", player);
-		addToEngine("Player", player);
-		return this;
-	}
-
 	public String getStringValue(String expression) {
 		Object result = getResult(expression);
 		if (result != null) {
@@ -79,28 +102,5 @@ public class JavascriptEngine {
 			}
 		}
 		return "";
-	}
-
-	public boolean getBooleanValue(String expression) {
-		Object result = getResult(expression);
-		if (result != null) {
-			try {
-				return ((boolean) result);
-			} catch (Exception e) {
-				AdvancedCoreHook.getInstance().debug(e);
-			}
-		}
-		return false;
-	}
-
-	public JavascriptEngine addToEngine(HashMap<String, Object> engineAPI) {
-		if (engineAPI != null && !engineAPI.isEmpty()) {
-			this.engineAPI.putAll(engineAPI);
-		}
-		return this;
-	}
-
-	public void execute(String expression) {
-		getResult(expression);
 	}
 }

@@ -305,6 +305,10 @@ public class ItemBuilder {
 		return new ItemBuilder(is);
 	}
 
+	private int getAmount() {
+		return is.getAmount();
+	}
+
 	public ArrayList<String> getLore() {
 		List<String> lore = is.getItemMeta().getLore();
 		ArrayList<String> list = new ArrayList<String>();
@@ -317,6 +321,13 @@ public class ItemBuilder {
 
 	public String getName() {
 		return is.getItemMeta().getDisplayName();
+	}
+
+	/**
+	 * @return the skull
+	 */
+	public String getSkull() {
+		return skull;
 	}
 
 	/**
@@ -378,6 +389,13 @@ public class ItemBuilder {
 
 	public ItemBuilder setAmount(int amount) {
 		is.setAmount(amount);
+		return this;
+	}
+
+	public ItemBuilder setAmountNone(int i) {
+		if (getAmount() == 0) {
+			setAmount(i);
+		}
 		return this;
 	}
 
@@ -505,13 +523,6 @@ public class ItemBuilder {
 		return this;
 	}
 
-	/**
-	 * @return the skull
-	 */
-	public String getSkull() {
-		return skull;
-	}
-
 	public ItemBuilder setSlot(int slot) {
 		this.slot = slot;
 		return this;
@@ -547,16 +558,5 @@ public class ItemBuilder {
 			return toItemStack();
 		}
 		return is;
-	}
-
-	public ItemBuilder setAmountNone(int i) {
-		if (getAmount() == 0) {
-			setAmount(i);
-		}
-		return this;
-	}
-
-	private int getAmount() {
-		return is.getAmount();
 	}
 }

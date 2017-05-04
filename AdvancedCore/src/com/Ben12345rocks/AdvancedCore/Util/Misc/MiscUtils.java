@@ -73,6 +73,40 @@ public class MiscUtils {
 		}
 	}
 
+	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds,
+			final HashMap<String, String> placeholders) {
+		if (cmds != null && !cmds.isEmpty()) {
+			placeholders.put("player", player.getName());
+			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(player,
+					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
+			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					for (String cmd : commands) {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+					}
+				}
+			});
+		}
+	}
+
+	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
+		if (command != null && !command.isEmpty()) {
+			final String cmd = StringUtils.getInstance().replaceJavascript(player,
+					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+				}
+
+			});
+		}
+
+	}
+
 	/**
 	 * Gets the connection.
 	 *
@@ -203,39 +237,6 @@ public class MiscUtils {
 	public ItemStack setSkullOwner(String playerName) {
 		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();
-	}
-
-	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds, final HashMap<String, String> placeholders) {
-		if (cmds != null && !cmds.isEmpty()) {
-			placeholders.put("player", player.getName());
-			final ArrayList<String> commands = ArrayUtils.getInstance()
-					.replaceJavascript(player, ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-				@Override
-				public void run() {
-					for (String cmd : commands) {
-						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-					}
-				}
-			});
-		}
-	}
-
-	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
-		if (command != null && !command.isEmpty()) {
-			final String cmd = StringUtils.getInstance()
-					.replaceJavascript(player, StringUtils.getInstance().replacePlaceHolder(command, placeholders));
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-				}
-
-			});
-		}
-
 	}
 
 }

@@ -42,8 +42,43 @@ public class RewardBuilder {
 		return this;
 	}
 
+	/**
+	 * @return the placeholders
+	 */
+	public HashMap<String, String> getPlaceholders() {
+		return placeholders;
+	}
+
+	/**
+	 * @return the prefix
+	 */
+	public String getPrefix() {
+		return prefix;
+	}
+
+	/**
+	 * @return the reward
+	 */
+	public Reward getReward() {
+		return reward;
+	}
+
+	/**
+	 * @return the checkTimed
+	 */
+	public boolean isCheckTimed() {
+		return checkTimed;
+	}
+
 	public boolean isGiveOffline() {
 		return giveOffline;
+	}
+
+	/**
+	 * @return the online
+	 */
+	public boolean isOnline() {
+		return online;
 	}
 
 	@SuppressWarnings("deprecation")
@@ -57,53 +92,15 @@ public class RewardBuilder {
 		}
 	}
 
-	/**
-	 * @return the reward
-	 */
-	public Reward getReward() {
-		return reward;
-	}
-
-	/**
-	 * @param reward
-	 *            the reward to set
-	 */
-	public void setReward(Reward reward) {
-		this.reward = reward;
-	}
-
-	/**
-	 * @return the prefix
-	 */
-	public String getPrefix() {
-		return prefix;
-	}
-
-	/**
-	 * @return the placeholders
-	 */
-	public HashMap<String, String> getPlaceholders() {
-		return placeholders;
-	}
-
-	/**
-	 * @return the online
-	 */
-	public boolean isOnline() {
-		return online;
-	}
-
-	/**
-	 * @return the checkTimed
-	 */
-	public boolean isCheckTimed() {
-		return checkTimed;
-	}
-
 	public void send(User... users) {
 		for (User user : users) {
 			send(user);
 		}
+	}
+
+	public RewardBuilder setCheckTimed(boolean b) {
+		checkTimed = b;
+		return this;
 	}
 
 	public RewardBuilder setGiveOffline(boolean giveOffline) {
@@ -114,6 +111,14 @@ public class RewardBuilder {
 	public RewardBuilder setOnline(boolean online) {
 		this.online = online;
 		return this;
+	}
+
+	/**
+	 * @param reward
+	 *            the reward to set
+	 */
+	public void setReward(Reward reward) {
+		this.reward = reward;
 	}
 
 	public RewardBuilder withPlaceHolder(HashMap<String, String> placeholders) {
@@ -128,11 +133,6 @@ public class RewardBuilder {
 
 	public RewardBuilder withPrefix(String prefix) {
 		this.prefix = prefix;
-		return this;
-	}
-
-	public RewardBuilder setCheckTimed(boolean b) {
-		checkTimed = b;
 		return this;
 	}
 

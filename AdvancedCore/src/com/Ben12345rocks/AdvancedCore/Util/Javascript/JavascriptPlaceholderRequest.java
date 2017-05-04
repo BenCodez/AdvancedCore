@@ -10,6 +10,8 @@ public abstract class JavascriptPlaceholderRequest {
 		this.str = str;
 	}
 
+	public abstract Object getObject(Player player);
+
 	/**
 	 * @return the str
 	 */
@@ -24,7 +26,5 @@ public abstract class JavascriptPlaceholderRequest {
 	public void setStr(String str) {
 		this.str = str;
 	}
-
-	public abstract Object getObject(Player player);
 
 }

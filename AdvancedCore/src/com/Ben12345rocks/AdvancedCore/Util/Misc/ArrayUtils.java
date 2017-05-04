@@ -376,6 +376,34 @@ public class ArrayUtils {
 		return newList;
 	}
 
+	public ArrayList<String> replaceJavascript(ArrayList<String> list) {
+		return replaceJavascript(list, null);
+	}
+
+	public ArrayList<String> replaceJavascript(ArrayList<String> list, JavascriptEngine engine) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringUtils.getInstance().replaceJavascript(str, engine));
+		}
+		return msg;
+	}
+
+	public ArrayList<String> replaceJavascript(CommandSender sender, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringUtils.getInstance().replaceJavascript(sender, str));
+		}
+		return msg;
+	}
+
+	public ArrayList<String> replaceJavascript(Player player, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringUtils.getInstance().replaceJavascript(player, str));
+		}
+		return msg;
+	}
+
 	public ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
 		ArrayList<String> newList = new ArrayList<String>();
 		for (int i = 0; i < list.size(); i++) {
@@ -417,33 +445,5 @@ public class ArrayUtils {
 		}
 
 		return sortedMap;
-	}
-
-	public ArrayList<String> replaceJavascript(ArrayList<String> list, JavascriptEngine engine) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(str, engine));
-		}
-		return msg;
-	}
-
-	public ArrayList<String> replaceJavascript(ArrayList<String> list) {
-		return replaceJavascript(list, null);
-	}
-
-	public ArrayList<String> replaceJavascript(CommandSender sender, ArrayList<String> list) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(sender, str));
-		}
-		return msg;
-	}
-
-	public ArrayList<String> replaceJavascript(Player player, ArrayList<String> list) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(player, str));
-		}
-		return msg;
 	}
 }

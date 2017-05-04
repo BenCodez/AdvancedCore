@@ -63,6 +63,10 @@ public class StringUtils {
 		return colorize(comp.toPlainText());
 	}
 
+	public boolean containsIgnorecase(String str1, String str2) {
+		return str1.toLowerCase().contains(str2.toLowerCase());
+	}
+
 	/**
 	 * Checks if is int.
 	 *
@@ -102,51 +106,6 @@ public class StringUtils {
 		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
 
-	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
-			}
-		}
-		return str;
-	}
-
-	/**
-	 * Replace place holder.
-	 *
-	 * @param str
-	 *            the str
-	 * @param toReplace
-	 *            the to replace
-	 * @param replaceWith
-	 *            the replace with
-	 * @return the string
-	 */
-	public String replacePlaceHolder(String str, String toReplace, String replaceWith) {
-		return replaceIgnoreCase(replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "\\{" + toReplace + "\\}",
-				replaceWith);
-	}
-
-	/**
-	 * Replace place holders.
-	 *
-	 * @param player
-	 *            the player
-	 * @param text
-	 *            the text
-	 * @return the string
-	 */
-	public String replacePlaceHolders(Player player, String text) {
-		if (player == null) {
-			return text;
-		}
-		if (plugin.isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setBracketPlaceholders(player, PlaceholderAPI.setPlaceholders(player, text));
-		} else {
-			return text;
-		}
-	}
-
 	public String replaceJavascript(CommandSender player, String text) {
 		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
 		return replaceJavascript(text, engine);
@@ -155,6 +114,10 @@ public class StringUtils {
 	public String replaceJavascript(Player player, String text) {
 		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
 		return replaceJavascript(text, engine);
+	}
+
+	public String replaceJavascript(String text) {
+		return replaceJavascript(text, null);
 	}
 
 	public String replaceJavascript(String text, JavascriptEngine engine) {
@@ -203,12 +166,49 @@ public class StringUtils {
 		return msg;
 	}
 
-	public String replaceJavascript(String text) {
-		return replaceJavascript(text, null);
+	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
+		if (placeholders != null) {
+			for (Entry<String, String> entry : placeholders.entrySet()) {
+				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+			}
+		}
+		return str;
 	}
 
-	public boolean containsIgnorecase(String str1, String str2) {
-		return str1.toLowerCase().contains(str2.toLowerCase());
+	/**
+	 * Replace place holder.
+	 *
+	 * @param str
+	 *            the str
+	 * @param toReplace
+	 *            the to replace
+	 * @param replaceWith
+	 *            the replace with
+	 * @return the string
+	 */
+	public String replacePlaceHolder(String str, String toReplace, String replaceWith) {
+		return replaceIgnoreCase(replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "\\{" + toReplace + "\\}",
+				replaceWith);
+	}
+
+	/**
+	 * Replace place holders.
+	 *
+	 * @param player
+	 *            the player
+	 * @param text
+	 *            the text
+	 * @return the string
+	 */
+	public String replacePlaceHolders(Player player, String text) {
+		if (player == null) {
+			return text;
+		}
+		if (plugin.isPlaceHolderAPIEnabled()) {
+			return PlaceholderAPI.setBracketPlaceholders(player, PlaceholderAPI.setPlaceholders(player, text));
+		} else {
+			return text;
+		}
 	}
 
 	/**

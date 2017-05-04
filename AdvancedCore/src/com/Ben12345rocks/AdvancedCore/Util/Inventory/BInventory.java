@@ -32,10 +32,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
  */
 public class BInventory implements Listener {
 
-	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
-
-	private int maxInvSize = 54;
-
 	/**
 	 * The Class ClickEvent.
 	 */
@@ -192,23 +188,12 @@ public class BInventory implements Listener {
 		inventory.openInventory(player);
 	}
 
+	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
+
+	private int maxInvSize = 54;
+
 	/** The pages. */
 	private boolean pages = false;
-
-	/**
-	 * @return the pages
-	 */
-	public boolean isPages() {
-		return pages;
-	}
-
-	/**
-	 * @param pages
-	 *            the pages to set
-	 */
-	public void setPages(boolean pages) {
-		this.pages = pages;
-	}
 
 	/** The page. */
 	private int page = 1;
@@ -312,6 +297,32 @@ public class BInventory implements Listener {
 		return getProperSize(getHighestSlot());
 	}
 
+	/**
+	 * @return the maxInvSize
+	 */
+	public int getMaxInvSize() {
+		return maxInvSize;
+	}
+
+	/**
+	 * Gets the next slot.
+	 *
+	 * @return the next slot
+	 */
+	public int getNextSlot() {
+		if (buttons.keySet().size() == 0) {
+			return 0;
+		}
+		return getHighestSlot() + 1;
+	}
+
+	/**
+	 * @return the pageButtons
+	 */
+	public ArrayList<BInventoryButton> getPageButtons() {
+		return pageButtons;
+	}
+
 	private int getProperSize(int size) {
 		if (size <= 9) {
 			return 9;
@@ -329,15 +340,10 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * Gets the next slot.
-	 *
-	 * @return the next slot
+	 * @return the pages
 	 */
-	public int getNextSlot() {
-		if (buttons.keySet().size() == 0) {
-			return 0;
-		}
-		return getHighestSlot() + 1;
+	public boolean isPages() {
+		return pages;
 	}
 
 	/**
@@ -428,21 +434,6 @@ public class BInventory implements Listener {
 				}
 			}
 		}
-	}
-
-	/**
-	 * @return the maxInvSize
-	 */
-	public int getMaxInvSize() {
-		return maxInvSize;
-	}
-
-	/**
-	 * @param maxInvSize
-	 *            the maxInvSize to set
-	 */
-	public void setMaxInvSize(int maxInvSize) {
-		this.maxInvSize = getProperSize(maxInvSize);
 	}
 
 	// event handling
@@ -551,6 +542,14 @@ public class BInventory implements Listener {
 	}
 
 	/**
+	 * @param maxInvSize
+	 *            the maxInvSize to set
+	 */
+	public void setMaxInvSize(int maxInvSize) {
+		this.maxInvSize = getProperSize(maxInvSize);
+	}
+
+	/**
 	 * Sets the meta.
 	 *
 	 * @param player
@@ -565,18 +564,19 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * @return the pageButtons
-	 */
-	public ArrayList<BInventoryButton> getPageButtons() {
-		return pageButtons;
-	}
-
-	/**
 	 * @param pageButtons
 	 *            the pageButtons to set
 	 */
 	public void setPageButtons(ArrayList<BInventoryButton> pageButtons) {
 		this.pageButtons = pageButtons;
+	}
+
+	/**
+	 * @param pages
+	 *            the pages to set
+	 */
+	public void setPages(boolean pages) {
+		this.pages = pages;
 	}
 
 }

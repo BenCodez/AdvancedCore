@@ -32,6 +32,7 @@ import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
+import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
@@ -82,104 +83,6 @@ public class AdvancedCoreHook {
 	private String version = "";
 	private String buildTime = "";
 
-	/**
-	 * @return the version
-	 */
-	public String getVersion() {
-		return version;
-	}
-
-	public String getTime() {
-		return buildTime;
-	}
-
-	private void loadVersionFile() {
-		YamlConfiguration conf = getVersionFile();
-		version = conf.getString("version", "Unknown");
-		buildTime = conf.getString("time", "Unknown");
-	}
-
-	private YamlConfiguration getVersionFile() {
-		try {
-			CodeSource src = this.getClass().getProtectionDomain().getCodeSource();
-			if (src != null) {
-				URL jar = src.getLocation();
-				ZipInputStream zip = null;
-				zip = new ZipInputStream(jar.openStream());
-				while (true) {
-					ZipEntry e = zip.getNextEntry();
-					if (e != null) {
-						String name = e.getName();
-						if (name.equals("version.yml")) {
-							Reader defConfigStream = new InputStreamReader(zip);
-							if (defConfigStream != null) {
-								YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
-								defConfigStream.close();
-								return defConfig;
-							}
-						}
-					}
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	/**
-	 * @return the javascriptEngineRequests
-	 */
-	public ArrayList<JavascriptPlaceholderRequest> getJavascriptEngineRequests() {
-		return javascriptEngineRequests;
-	}
-
-	/**
-	 * @param javascriptEngineRequests
-	 *            the javascriptEngineRequests to set
-	 */
-	public void setJavascriptEngineRequests(ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests) {
-		this.javascriptEngineRequests = javascriptEngineRequests;
-	}
-
-	/**
-	 * @param resourceId
-	 *            the resourceId to set
-	 */
-	public void setResourceId(int resourceId) {
-		this.resourceId = resourceId;
-	}
-
-	/**
-	 * @param javascriptEngine
-	 *            the javascriptEngine to set
-	 */
-	public void setJavascriptEngine(HashMap<String, Object> javascriptEngine) {
-		this.javascriptEngine = javascriptEngine;
-	}
-
-	/**
-	 * @return the autoDownload
-	 */
-	public boolean isAutoDownload() {
-		return autoDownload;
-	}
-
-	/**
-	 * @param autoDownload
-	 *            the autoDownload to set
-	 */
-	public void setAutoDownload(boolean autoDownload) {
-		this.autoDownload = autoDownload;
-	}
-
-	/**
-	 * @return the timer
-	 */
-	public Timer getTimer() {
-		return timer;
-	}
-
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
@@ -190,16 +93,21 @@ public class AdvancedCoreHook {
 	private AdvancedCoreHook() {
 	}
 
-	public UserManager getUserManager() {
-		return UserManager.getInstance();
-	}
-
-	public HashMap<String, Object> getJavascriptEngine() {
-		return javascriptEngine;
-	}
-
 	public void allowDownloadingFromSpigot(int resourceId) {
 		this.resourceId = resourceId;
+	}
+
+	private void checkAutoUpdate() {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				if (isAutoDownload() && getResourceId() != 0) {
+					SpigetUpdater.getInstance().checkAutoDownload(getPlugin(), getResourceId());
+				}
+			}
+		});
+
 	}
 
 	private void checkPlaceHolderAPI() {
@@ -271,16 +179,6 @@ public class AdvancedCoreHook {
 		}
 	}
 
-	public void extraDebug(Plugin plug, String msg) {
-		if (extraDebug) {
-			debug(plug, "[Extra] " + msg);
-		}
-	}
-
-	public void extraDebug(String msg) {
-		debug(plugin, "[Extra] " + msg);
-	}
-
 	/**
 	 * Show debug in console, file, and/or ingame
 	 *
@@ -289,6 +187,16 @@ public class AdvancedCoreHook {
 	 */
 	public void debug(String msg) {
 		debug(plugin, msg);
+	}
+
+	public void extraDebug(Plugin plug, String msg) {
+		if (extraDebug) {
+			debug(plug, "[Extra] " + msg);
+		}
+	}
+
+	public void extraDebug(String msg) {
+		debug(plugin, "[Extra] " + msg);
 	}
 
 	public String getDefaultRequestMethod() {
@@ -313,6 +221,17 @@ public class AdvancedCoreHook {
 
 	public String getHelpLine() {
 		return helpLine;
+	}
+
+	public HashMap<String, Object> getJavascriptEngine() {
+		return javascriptEngine;
+	}
+
+	/**
+	 * @return the javascriptEngineRequests
+	 */
+	public ArrayList<JavascriptPlaceholderRequest> getJavascriptEngineRequests() {
+		return javascriptEngineRequests;
 	}
 
 	public Logger getLogger() {
@@ -362,6 +281,63 @@ public class AdvancedCoreHook {
 		return storageType;
 	}
 
+	public String getTime() {
+		return buildTime;
+	}
+
+	/**
+	 * @return the timer
+	 */
+	public Timer getTimer() {
+		return timer;
+	}
+
+	public UserManager getUserManager() {
+		return UserManager.getInstance();
+	}
+
+	/**
+	 * @return the version
+	 */
+	public String getVersion() {
+		return version;
+	}
+
+	private YamlConfiguration getVersionFile() {
+		try {
+			CodeSource src = this.getClass().getProtectionDomain().getCodeSource();
+			if (src != null) {
+				URL jar = src.getLocation();
+				ZipInputStream zip = null;
+				zip = new ZipInputStream(jar.openStream());
+				while (true) {
+					ZipEntry e = zip.getNextEntry();
+					if (e != null) {
+						String name = e.getName();
+						if (name.equals("version.yml")) {
+							Reader defConfigStream = new InputStreamReader(zip);
+							if (defConfigStream != null) {
+								YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
+								defConfigStream.close();
+								return defConfig;
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * @return the autoDownload
+	 */
+	public boolean isAutoDownload() {
+		return autoDownload;
+	}
+
 	public synchronized boolean isCheckOnWorldChange() {
 		return checkOnWorldChange;
 	}
@@ -402,6 +378,16 @@ public class AdvancedCoreHook {
 
 	public boolean isTimerLoaded() {
 		return timerLoaded;
+	}
+
+	public void loadAutoUpdateCheck() {
+		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				checkAutoUpdate();
+			}
+		}, 20, 20 * 1000 * 60 * 60);
 	}
 
 	/**
@@ -469,7 +455,7 @@ public class AdvancedCoreHook {
 	private void loadHandle() {
 		try {
 			Class.forName("org.spigotmc.SpigotConfig");
-			serverHandle = new CraftBukkitHandle();
+			serverHandle = new SpigotHandle();
 			debug("Detected using spigot");
 		} catch (Exception ex) {
 			serverHandle = new CraftBukkitHandle();
@@ -550,6 +536,12 @@ public class AdvancedCoreHook {
 		}
 	}
 
+	private void loadVersionFile() {
+		YamlConfiguration conf = getVersionFile();
+		version = conf.getString("version", "Unknown");
+		buildTime = conf.getString("time", "Unknown");
+	}
+
 	/**
 	 * Reload
 	 */
@@ -572,6 +564,14 @@ public class AdvancedCoreHook {
 	 */
 	public void run(Runnable run) {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
+	}
+
+	/**
+	 * @param autoDownload
+	 *            the autoDownload to set
+	 */
+	public void setAutoDownload(boolean autoDownload) {
+		this.autoDownload = autoDownload;
 	}
 
 	public synchronized void setCheckOnWorldChange(boolean checkOnWorldChange) {
@@ -614,6 +614,22 @@ public class AdvancedCoreHook {
 		this.helpLine = helpLine;
 	}
 
+	/**
+	 * @param javascriptEngine
+	 *            the javascriptEngine to set
+	 */
+	public void setJavascriptEngine(HashMap<String, Object> javascriptEngine) {
+		this.javascriptEngine = javascriptEngine;
+	}
+
+	/**
+	 * @param javascriptEngineRequests
+	 *            the javascriptEngineRequests to set
+	 */
+	public void setJavascriptEngineRequests(ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests) {
+		this.javascriptEngineRequests = javascriptEngineRequests;
+	}
+
 	public void setLogDebugToFile(boolean logDebugToFile) {
 		this.logDebugToFile = logDebugToFile;
 	}
@@ -640,6 +656,14 @@ public class AdvancedCoreHook {
 
 	public void setPreloadUsers(boolean preloadUsers) {
 		this.preloadUsers = preloadUsers;
+	}
+
+	/**
+	 * @param resourceId
+	 *            the resourceId to set
+	 */
+	public void setResourceId(int resourceId) {
+		this.resourceId = resourceId;
 	}
 
 	/**
@@ -689,28 +713,5 @@ public class AdvancedCoreHook {
 				TimeChecker.getInstance().update();
 			}
 		});
-	}
-
-	public void loadAutoUpdateCheck() {
-		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
-
-			@Override
-			public void run() {
-				checkAutoUpdate();
-			}
-		}, 20, 20 * 1000 * 60 * 60);
-	}
-
-	private void checkAutoUpdate() {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-
-			@Override
-			public void run() {
-				if (isAutoDownload() && getResourceId() != 0) {
-					SpigetUpdater.getInstance().checkAutoDownload(getPlugin(), getResourceId());
-				}
-			}
-		});
-
 	}
 }

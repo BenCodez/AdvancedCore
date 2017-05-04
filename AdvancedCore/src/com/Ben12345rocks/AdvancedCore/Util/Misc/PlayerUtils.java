@@ -43,6 +43,34 @@ public class PlayerUtils {
 		return null;
 	}
 
+	public synchronized String getPlayerName(String uuid) {
+		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
+			plugin.debug("Null UUID");
+			return null;
+		}
+
+		String name = "";
+
+		java.util.UUID u = java.util.UUID.fromString(uuid);
+		Player player = Bukkit.getPlayer(uuid);
+		if (player == null) {
+			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
+			if (p.hasPlayedBefore() || p.isOnline()) {
+				name = p.getName();
+			} else {
+				name = Thread.getInstance().getThread().getName(u);
+			}
+		} else {
+			name = player.getName();
+		}
+
+		if (name.equals("")) {
+			name = "Error getting name";
+		}
+		return name;
+
+	}
+
 	public synchronized String getPlayerName(User user, String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
 			plugin.debug("Null UUID");
@@ -73,34 +101,6 @@ public class PlayerUtils {
 				user.getData().setString("PlayerName", name);
 			}
 		} else {
-			name = "Error getting name";
-		}
-		return name;
-
-	}
-
-	public synchronized String getPlayerName(String uuid) {
-		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
-			plugin.debug("Null UUID");
-			return null;
-		}
-
-		String name = "";
-
-		java.util.UUID u = java.util.UUID.fromString(uuid);
-		Player player = Bukkit.getPlayer(uuid);
-		if (player == null) {
-			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
-			if (p.hasPlayedBefore() || p.isOnline()) {
-				name = p.getName();
-			} else {
-				name = Thread.getInstance().getThread().getName(u);
-			}
-		} else {
-			name = player.getName();
-		}
-
-		if (name.equals("")) {
 			name = "Error getting name";
 		}
 		return name;

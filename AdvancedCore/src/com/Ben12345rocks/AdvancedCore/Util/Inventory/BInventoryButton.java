@@ -26,21 +26,6 @@ public abstract class BInventoryButton {
 		slot = item.getSlot();
 	}
 
-	/**
-	 * @return the builder
-	 */
-	public ItemBuilder getBuilder() {
-		return builder;
-	}
-
-	/**
-	 * @param builder
-	 *            the builder to set
-	 */
-	public void setBuilder(ItemBuilder builder) {
-		this.builder = builder;
-	}
-
 	public BInventoryButton(ItemStack item) {
 		setItem(item);
 	}
@@ -57,6 +42,13 @@ public abstract class BInventoryButton {
 	 */
 	public BInventoryButton(String name, String[] lore, ItemStack item) {
 		setBuilder(new ItemBuilder(item).setName(name).setLore(lore));
+	}
+
+	/**
+	 * @return the builder
+	 */
+	public ItemBuilder getBuilder() {
+		return builder;
 	}
 
 	/**
@@ -89,6 +81,14 @@ public abstract class BInventoryButton {
 	 */
 	public abstract void onClick(ClickEvent clickEvent);
 
+	/**
+	 * @param builder
+	 *            the builder to set
+	 */
+	public void setBuilder(ItemBuilder builder) {
+		this.builder = builder;
+	}
+
 	public void setItem(ItemBuilder builder) {
 		this.builder = builder;
 	}
@@ -100,7 +100,7 @@ public abstract class BInventoryButton {
 	 *            the new item
 	 */
 	public void setItem(ItemStack item) {
-		this.builder = new ItemBuilder(item);
+		builder = new ItemBuilder(item);
 	}
 
 	/**

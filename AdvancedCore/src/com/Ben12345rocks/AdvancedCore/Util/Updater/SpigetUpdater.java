@@ -24,6 +24,19 @@ public class SpigetUpdater {
 	private SpigetUpdater() {
 	}
 
+	public void checkAutoDownload(JavaPlugin plugin, int resourceId) {
+		Updater updater = new Updater(plugin, resourceId, !AdvancedCoreHook.getInstance().isAutoDownload());
+		switch (updater.getResult()) {
+		case UPDATE_AVAILABLE:
+			plugin.getLogger()
+					.info("Downloaded jar automaticly, restart to update. Note: Updates take 30-40 minutes to load");
+			download(plugin, resourceId);
+			break;
+		default:
+			break;
+		}
+	}
+
 	public void download(Plugin plugin, int resourceId) {
 		try {
 			download(new URL("https://api.spiget.org/v2/resources/" + resourceId + "/download"),
@@ -42,17 +55,5 @@ public class SpigetUpdater {
 		fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 		fos.close();
 		rbc.close();
-	}
-
-	public void checkAutoDownload(JavaPlugin plugin, int resourceId) {
-		Updater updater = new Updater(plugin, resourceId, !AdvancedCoreHook.getInstance().isAutoDownload());
-		switch (updater.getResult()) {
-		case UPDATE_AVAILABLE:
-			plugin.getLogger().info("Downloaded jar automaticly, restart to update. Note: Updates take 30-40 minutes to load");
-			download(plugin, resourceId);
-			break;
-		default:
-			break;
-		}
 	}
 }

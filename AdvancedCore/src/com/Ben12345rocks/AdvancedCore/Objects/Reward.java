@@ -483,6 +483,13 @@ public class Reward {
 	}
 
 	/**
+	 * @return the delaySeconds
+	 */
+	public int getDelaySeconds() {
+		return delaySeconds;
+	}
+
+	/**
 	 * Gets the effect data.
 	 *
 	 * @return the effect data
@@ -625,6 +632,13 @@ public class Reward {
 	 */
 	public String getJavascriptExpression() {
 		return javascriptExpression;
+	}
+
+	/**
+	 * @return the javascripts
+	 */
+	public ArrayList<String> getJavascripts() {
+		return javascripts;
 	}
 
 	/**
@@ -1353,44 +1367,6 @@ public class Reward {
 	}
 
 	/**
-	 * @return the javascripts
-	 */
-	public ArrayList<String> getJavascripts() {
-		return javascripts;
-	}
-
-	/**
-	 * @param javascripts
-	 *            the javascripts to set
-	 */
-	public void setJavascripts(ArrayList<String> javascripts) {
-		this.javascripts = javascripts;
-	}
-
-	/**
-	 * @return the delaySeconds
-	 */
-	public int getDelaySeconds() {
-		return delaySeconds;
-	}
-
-	/**
-	 * @param delaySeconds
-	 *            the delaySeconds to set
-	 */
-	public void setDelaySeconds(int delaySeconds) {
-		this.delaySeconds = delaySeconds;
-	}
-
-	/**
-	 * @param usesWorlds
-	 *            the usesWorlds to set
-	 */
-	public void setUsesWorlds(boolean usesWorlds) {
-		this.usesWorlds = usesWorlds;
-	}
-
-	/**
 	 * Play effect.
 	 *
 	 * @param user
@@ -1726,6 +1702,14 @@ public class Reward {
 	}
 
 	/**
+	 * @param delaySeconds
+	 *            the delaySeconds to set
+	 */
+	public void setDelaySeconds(int delaySeconds) {
+		this.delaySeconds = delaySeconds;
+	}
+
+	/**
 	 * Sets the effect data.
 	 *
 	 * @param effectData
@@ -1893,6 +1877,14 @@ public class Reward {
 	 */
 	public void setJavascriptExpression(String javascriptExpression) {
 		this.javascriptExpression = javascriptExpression;
+	}
+
+	/**
+	 * @param javascripts
+	 *            the javascripts to set
+	 */
+	public void setJavascripts(ArrayList<String> javascripts) {
+		this.javascripts = javascripts;
 	}
 
 	/**
@@ -2171,6 +2163,14 @@ public class Reward {
 	 */
 	public void setTitleTitle(String titleTitle) {
 		this.titleTitle = titleTitle;
+	}
+
+	/**
+	 * @param usesWorlds
+	 *            the usesWorlds to set
+	 */
+	public void setUsesWorlds(boolean usesWorlds) {
+		this.usesWorlds = usesWorlds;
 	}
 
 	/**
