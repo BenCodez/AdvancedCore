@@ -16,6 +16,7 @@ https://github.com/Ben12345rocks/AdvancedCore/blob/master/VotingPlugin/LICENSE.t
 	    <groupId>com.github.Ben12345rocks</groupId>
 	    <artifactId>AdvancedCore</artifactId>
 	    <version>LATEST</version>
+	    <scope>compile</scope>
 	</dependency>
   
   Versions:  
