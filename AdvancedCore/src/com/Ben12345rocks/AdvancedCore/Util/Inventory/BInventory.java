@@ -456,6 +456,10 @@ public class BInventory implements Listener {
 	 *            the player
 	 */
 	public void openInventory(Player player) {
+		if (player.isSleeping()) {
+			AdvancedCoreHook.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
+			return;
+		}
 		BInventory inventory = this;
 		this.player = player;
 
@@ -495,6 +499,10 @@ public class BInventory implements Listener {
 	 *            the page
 	 */
 	private void openInventory(Player player, int page) {
+		if (player.isSleeping()) {
+			AdvancedCoreHook.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
+			return;
+		}
 		BInventory inventory = this;
 		this.player = player;
 		inv = Bukkit.createInventory(player, maxInvSize, inventory.getInventoryName());
