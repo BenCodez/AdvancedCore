@@ -241,6 +241,10 @@ public class User {
 		return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 	}
 
+	public OfflinePlayer getOfflinePlayer() {
+		return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
+	}
+
 	/**
 	 * Gets the player name.
 	 *
@@ -386,7 +390,6 @@ public class User {
 		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack());
 	}
 
-	@SuppressWarnings("deprecation")
 	/**
 	 * Give user money, needs vault installed
 	 *
@@ -394,13 +397,12 @@ public class User {
 	 *            Amount of money to give
 	 */
 	public void giveMoney(double money) {
-		String playerName = getPlayerName();
-		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null) {
+		if (hook.getEcon() != null) {
 			if (money > 0) {
-				hook.getEcon().depositPlayer(playerName, money);
+				hook.getEcon().depositPlayer(getOfflinePlayer(), money);
 			} else if (money < 0) {
 				money = money * -1;
-				hook.getEcon().withdrawPlayer(playerName, money);
+				hook.getEcon().withdrawPlayer(getOfflinePlayer(), money);
 			}
 		}
 	}
@@ -411,17 +413,8 @@ public class User {
 	 * @param money
 	 *            the money
 	 */
-	@SuppressWarnings("deprecation")
 	public void giveMoney(int money) {
-		String playerName = getPlayerName();
-		if (Bukkit.getServer().getPluginManager().getPlugin("Vault") != null && hook.getEcon() != null) {
-			if (money > 0) {
-				hook.getEcon().depositPlayer(playerName, money);
-			} else if (money < 0) {
-				money = money * -1;
-				hook.getEcon().withdrawPlayer(playerName, money);
-			}
-		}
+		giveMoney((double) money);
 	}
 
 	/**
@@ -490,7 +483,11 @@ public class User {
 	}
 
 	public boolean hasPermission(String perm) {
-		return false;
+		Player player = getPlayer();
+		if (player == null) {
+			return false;
+		}
+		return player.hasPermission(perm);
 	}
 
 	/**
