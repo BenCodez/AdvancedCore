@@ -103,6 +103,17 @@ public class ArrayUtils {
 		return txt;
 	}
 
+	public ArrayList<String> sort(ArrayList<String> list) {
+		Collections.sort(list, new Comparator<String>() {
+
+			@Override
+			public int compare(String o1, String o2) {
+				return o1.toString().compareToIgnoreCase(o2.toString());
+			}
+		});
+		return list;
+	}
+
 	/**
 	 * Sets the contains ignore case.
 	 *

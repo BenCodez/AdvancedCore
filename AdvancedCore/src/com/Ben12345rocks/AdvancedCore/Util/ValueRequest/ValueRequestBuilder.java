@@ -130,7 +130,7 @@ public class ValueRequestBuilder {
 						stringListener);
 			}
 		} else if (booleanListener != null) {
-			new ValueRequest(method).requestBoolean(player, booleanListener);
+			new ValueRequest(method).requestBoolean(player, currentValue, booleanListener);
 		}
 	}
 
