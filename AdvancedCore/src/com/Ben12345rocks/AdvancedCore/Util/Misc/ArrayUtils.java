@@ -104,7 +104,7 @@ public class ArrayUtils {
 	}
 
 	public ArrayList<String> sort(ArrayList<String> list) {
-		Collections.sort(list);
+		Collections.sort(list, String.CASE_INSENSITIVE_ORDER);
 		return list;
 	}
 
