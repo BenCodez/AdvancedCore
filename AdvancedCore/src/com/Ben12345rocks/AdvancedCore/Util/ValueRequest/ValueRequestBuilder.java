@@ -1,6 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.ValueRequest;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -21,8 +21,8 @@ public class ValueRequestBuilder {
 	private String currentValue = "";
 	private boolean allowCustomOption = false;
 
-	private HashMap<String, ItemStack> stringItemOptions;
-	private HashMap<Number, ItemStack> numberItemOptions;
+	private LinkedHashMap<String, ItemStack> stringItemOptions;
+	private LinkedHashMap<Number, ItemStack> numberItemOptions;
 
 	public ValueRequestBuilder(BooleanListener listener) {
 		booleanListener = listener;
@@ -38,12 +38,12 @@ public class ValueRequestBuilder {
 		stringOptions = options;
 	}
 
-	public ValueRequestBuilder(NumberListener listener, HashMap<Number, ItemStack> options) {
+	public ValueRequestBuilder(NumberListener listener, LinkedHashMap<Number, ItemStack> options) {
 		numberListener = listener;
 		numberItemOptions = options;
 	}
 
-	public ValueRequestBuilder(StringListener listener, HashMap<String, ItemStack> options) {
+	public ValueRequestBuilder(StringListener listener, LinkedHashMap<String, ItemStack> options) {
 		stringListener = listener;
 		stringItemOptions = options;
 	}
@@ -80,7 +80,7 @@ public class ValueRequestBuilder {
 		stringOptions = options;
 	}
 
-	public ValueRequestBuilder(final Listener<Number> listener, HashMap<Number, ItemStack> options) {
+	public ValueRequestBuilder(final Listener<Number> listener, LinkedHashMap<Number, ItemStack> options) {
 		numberListener = new NumberListener() {
 
 			@Override
@@ -91,7 +91,7 @@ public class ValueRequestBuilder {
 		numberItemOptions = options;
 	}
 
-	public ValueRequestBuilder(HashMap<String, ItemStack> options, final Listener<String> listener) {
+	public ValueRequestBuilder(LinkedHashMap<String, ItemStack> options, final Listener<String> listener) {
 		stringListener = new StringListener() {
 
 			@Override

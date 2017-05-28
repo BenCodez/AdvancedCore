@@ -1,6 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.ValueRequest;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -75,7 +75,7 @@ public class ValueRequest {
 		new BooleanRequester().request(player, input, currentValue, "Type cancel to cancel", listener);
 	}
 
-	public void requestNumber(Player player, HashMap<Number, ItemStack> options, String currentValue,
+	public void requestNumber(Player player, LinkedHashMap<Number, ItemStack> options, String currentValue,
 			boolean allowCustomOption, NumberListener listener) {
 		InputMethod input = method;
 		if (input == null) {
@@ -145,7 +145,7 @@ public class ValueRequest {
 		new NumberRequester().request(player, input, currentValue, "Type cancel to cancel", options, true, listener);
 	}
 
-	public void requestString(Player player, HashMap<String, ItemStack> options, String currentValue,
+	public void requestString(Player player, LinkedHashMap<String, ItemStack> options, String currentValue,
 			boolean allowCustomOption, StringListener listener) {
 		InputMethod input = method;
 		if (input == null) {

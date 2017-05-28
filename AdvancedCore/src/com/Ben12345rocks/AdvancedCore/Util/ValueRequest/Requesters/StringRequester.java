@@ -1,7 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
 import org.bukkit.Material;
@@ -62,7 +62,7 @@ public class StringRequester {
 	 * @param listener
 	 *            the listener
 	 */
-	public void request(Player player, InputMethod method, String currentValue, HashMap<String, ItemStack> options,
+	public void request(Player player, InputMethod method, String currentValue, LinkedHashMap<String, ItemStack> options,
 			String promptText, boolean allowCustomOption, StringListener listener) {
 		if ((options == null || options.size() == 0) && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
 			method = InputMethod.ANVIL;
@@ -190,7 +190,7 @@ public class StringRequester {
 
 	public void request(Player player, InputMethod method, String currentValue, String promptText, String[] options,
 			boolean allowCustomOption, StringListener listener) {
-		HashMap<String, ItemStack> items = new HashMap<String, ItemStack>();
+		LinkedHashMap<String, ItemStack> items = new LinkedHashMap<String, ItemStack>();
 		if (options != null) {
 			for (String option : options) {
 				items.put(option, new ItemStack(Material.STONE, 1));
