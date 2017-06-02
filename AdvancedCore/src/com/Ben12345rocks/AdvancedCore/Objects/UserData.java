@@ -23,6 +23,10 @@ public class UserData {
 	}
 
 	public int getInt(String key) {
+		return getInt(key, 0);
+	}
+
+	public int getInt(String key, int def) {
 		if (!key.equals("")) {
 			if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 				List<Column> row = getSQLiteRow();
@@ -61,7 +65,7 @@ public class UserData {
 				}
 			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 				try {
-					return getData(user.getUUID()).getInt(key, 0);
+					return getData(user.getUUID()).getInt(key, def);
 				} catch (Exception e) {
 
 				}
@@ -74,7 +78,7 @@ public class UserData {
 			AdvancedCoreHook.getInstance()
 					.debug("Extra: Failed to get int from '" + key + "' for '" + user.getPlayerName() + "'");
 		}
-		return 0;
+		return def;
 	}
 
 	public List<Column> getMySqlRow() {
