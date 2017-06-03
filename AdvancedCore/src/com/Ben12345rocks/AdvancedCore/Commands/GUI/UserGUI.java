@@ -89,32 +89,31 @@ public class UserGUI {
 			return;
 		}
 		BInventory inv = new BInventory("UserGUI: " + playerName);
-		inv.addButton(inv.getNextSlot(),
-				new BInventoryButton("Give Reward File", new String[] {}, new ItemStack(Material.STONE)) {
+		inv.addButton(new BInventoryButton("Give Reward File", new String[] {}, new ItemStack(Material.STONE)) {
 
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						ArrayList<String> rewards = new ArrayList<String>();
-						for (Reward reward : RewardHandler.getInstance().getRewards()) {
-							rewards.add(reward.getRewardName());
-						}
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				ArrayList<String> rewards = new ArrayList<String>();
+				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+					rewards.add(reward.getRewardName());
+				}
 
-						new ValueRequest().requestString(clickEvent.getPlayer(), "",
-								ArrayUtils.getInstance().convert(rewards), true, new StringListener() {
+				new ValueRequest().requestString(clickEvent.getPlayer(), "", ArrayUtils.getInstance().convert(rewards),
+						true, new StringListener() {
 
-									@SuppressWarnings("deprecation")
-									@Override
-									public void onInput(Player player, String value) {
-										User user = UserManager.getInstance()
-												.getUser(UserGUI.getInstance().getCurrentPlayer(player));
-										RewardHandler.getInstance().giveReward(user, value, user.isOnline());
-										player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
+							@SuppressWarnings("deprecation")
+							@Override
+							public void onInput(Player player, String value) {
+								User user = UserManager.getInstance()
+										.getUser(UserGUI.getInstance().getCurrentPlayer(player));
+								RewardHandler.getInstance().giveReward(user, value, user.isOnline());
+								player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
 
-									}
-								});
+							}
+						});
 
-					}
-				});
+			}
+		});
 
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BOOK_AND_QUILL).setName("Edit Data")) {
 
@@ -136,7 +135,7 @@ public class UserGUI {
 									user.getData().setData(user.getUUID(), key, value);
 									openUserGUI(player, playerName);
 								}
-							}, new String[] {}).allowCustomOption(true);
+							}, new String[] {}).allowCustomOption(true).currentValue(value).request(player);
 						}
 					});
 				}
