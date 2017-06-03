@@ -155,15 +155,16 @@ public class CommandLoader {
 			});
 		}
 
-		cmds.add(new CommandHandler(new String[] { "(TimeType)" }, permPrefix + ".ForceTimeChange",
+		cmds.add(new CommandHandler(new String[] { "ForceTimeChanged", "(TimeType)" }, permPrefix + ".ForceTimeChange",
 				"Force time change, use at your own risk!") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				try {
-					TimeType time = TimeType.getTimeType(args[0]);
-					TimeChecker.getInstance().forceChanged(time);
+					TimeType time = TimeType.getTimeType(args[1]);
 					sender.sendMessage("Forcing change for " + time.toString());
+					TimeChecker.getInstance().forceChanged(time);
+					sender.sendMessage("Forced change for " + time.toString());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
