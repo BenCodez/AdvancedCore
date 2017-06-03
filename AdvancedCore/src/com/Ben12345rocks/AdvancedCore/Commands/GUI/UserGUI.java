@@ -131,8 +131,8 @@ public class UserGUI {
 							new ValueRequestBuilder(new StringListener() {
 
 								@Override
-								public void onInput(Player player, String value) {
-									user.getData().setData(user.getUUID(), key, value);
+								public void onInput(Player player, String newValue) {
+									user.getData().setData(user.getUUID(), key, newValue);
 									openUserGUI(player, playerName);
 								}
 							}, new String[] {}).allowCustomOption(true).currentValue(value).request(player);
