@@ -81,6 +81,25 @@ public class UserData {
 		return def;
 	}
 
+	public ArrayList<String> getKeys() {
+		ArrayList<String> keys = new ArrayList<String>();
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			List<Column> col = getMySqlRow();
+			for (Column c : col) {
+				keys.add(c.getName());
+			}
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			List<Column> col = getSQLiteRow();
+			for (Column c : col) {
+				keys.add(c.getName());
+			}
+		}
+
+		return keys;
+	}
+
 	public List<Column> getMySqlRow() {
 		return AdvancedCoreHook.getInstance().getMysql().getExact(user.getUUID());
 	}
