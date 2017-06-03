@@ -271,7 +271,8 @@ public class AInventory {
 							if (handler == null) {
 								handler = (AnvilClickEventHandler) PlayerUtils.getInstance().getPlayerMeta(player,
 										"AInventory");
-								AdvancedCoreHook.getInstance().debug("Anvil handler was null, fixing...");
+								// AdvancedCoreHook.getInstance().debug("Anvil
+								// handler was null, fixing...");
 							}
 
 							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(),
@@ -282,8 +283,9 @@ public class AInventory {
 											if (handler == null) {
 												handler = (AnvilClickEventHandler) PlayerUtils.getInstance()
 														.getPlayerMeta(player, "AInventory");
-												AdvancedCoreHook.getInstance()
-														.debug("Anvil handler was null, fixing...");
+												// AdvancedCoreHook.getInstance()
+												// .debug("Anvil handler was
+												// null, fixing...");
 											}
 											handler.onAnvilClick(clickEvent);
 										}

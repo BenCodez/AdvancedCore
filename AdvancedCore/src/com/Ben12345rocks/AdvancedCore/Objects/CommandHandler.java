@@ -13,6 +13,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
@@ -119,6 +120,18 @@ public abstract class CommandHandler {
 	}
 
 	/**
+	 * Adds the tab complete option.
+	 *
+	 * @param toReplace
+	 *            the to replace
+	 * @param options
+	 *            the options
+	 */
+	public void addTabCompleteOption(String toReplace, String... options) {
+		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
+	}
+
+	/**
 	 * Args match.
 	 *
 	 * @param arg
@@ -131,7 +144,6 @@ public abstract class CommandHandler {
 		if (i < args.length) {
 			String[] cmdArgs = args[i].split("&");
 			for (String cmdArg : cmdArgs) {
-				// plugin.debug(cmdArg);
 				if (arg.equalsIgnoreCase(cmdArg)) {
 					return true;
 				}
@@ -212,37 +224,9 @@ public abstract class CommandHandler {
 			int count = 1;
 			for (String arg : arg1.split("&")) {
 				if (count == 1) {
-					if (arg.equalsIgnoreCase("(player)")) {
-						commandText += " (Player)";
-					} else if (arg.equalsIgnoreCase("(sitename)")) {
-						commandText += " (SiteName)";
-					} else if (arg.equalsIgnoreCase("(reward)")) {
-						commandText += " (Reward)";
-					} else if (arg.equalsIgnoreCase("(boolean)")) {
-						commandText += " (True/False)";
-					} else if (arg.equalsIgnoreCase("(number)")) {
-						commandText += " (Number)";
-					} else if (arg.equalsIgnoreCase("(string)")) {
-						commandText += " (Text)";
-					} else {
-						commandText += " " + arg;
-					}
+					commandText += " " + arg;
 				} else {
-					if (arg.equalsIgnoreCase("(player)")) {
-						commandText += "/(Player)";
-					} else if (arg.equalsIgnoreCase("(sitename)")) {
-						commandText += "/(SiteName)";
-					} else if (arg.equalsIgnoreCase("(reward)")) {
-						commandText += "/(Reward)";
-					} else if (arg.equalsIgnoreCase("(boolean)")) {
-						commandText += "/(True/False)";
-					} else if (arg.equalsIgnoreCase("(number)")) {
-						commandText += "/(Number)";
-					} else if (arg.equalsIgnoreCase("(string)")) {
-						commandText += "/(Text)";
-					} else {
-						commandText += "/" + arg;
-					}
+					commandText += "/" + arg;
 				}
 				count++;
 			}
@@ -290,19 +274,11 @@ public abstract class CommandHandler {
 				boolean argsMatch = true;
 				for (int i = 0; i < argNum; i++) {
 					if (args.length >= i) {
-
 						if (!commandHandler.argsMatch(args[i], i)) {
 							argsMatch = false;
-							// plugin.debug(args[i] + " " + i);
 						}
 					}
 				}
-
-				// plugin.debug(Boolean.toString(argsMatch)
-				// + " "
-				// + Utils.getInstance().makeStringList(
-				// Utils.getInstance()
-				// .convertArray(this.getArgs())));
 
 				if (argsMatch) {
 					String[] cmdArgsList = cmdArgs[argNum].split("&");
@@ -314,8 +290,6 @@ public abstract class CommandHandler {
 							if (arg.equalsIgnoreCase(entry.getKey())) {
 								add = false;
 								cmds.addAll(entry.getValue());
-								// plugin.debug(Utils.getInstance()
-								// .makeStringList(entry.getValue()));
 							}
 						}
 						if (!cmds.contains(arg) && add) {
@@ -383,6 +357,13 @@ public abstract class CommandHandler {
 			userStorage.add(storage.toString());
 		}
 		addTabCompleteOption("(UserStorage)", userStorage);
+		
+		
+		ArrayList<String> times = new ArrayList<String>();
+		for (TimeType ty : TimeType.values()) {
+			times.add(ty.toString());
+		}
+		addTabCompleteOption("(TimeType)", times);
 
 	}
 

@@ -1,7 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
 import org.bukkit.Material;
@@ -61,7 +61,7 @@ public class NumberRequester {
 	 * @param listener
 	 *            the listener
 	 */
-	public void request(Player player, InputMethod method, String currentValue, HashMap<Number, ItemStack> options,
+	public void request(Player player, InputMethod method, String currentValue, LinkedHashMap<Number, ItemStack> options,
 			String promptText, boolean allowCustomOption, NumberListener listener) {
 		if ((options == null || options.size() == 0) && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
 			method = InputMethod.ANVIL;
@@ -213,7 +213,7 @@ public class NumberRequester {
 
 	public void request(Player player, InputMethod method, String currentValue, String promptText, Number[] options,
 			boolean allowCustomOption, NumberListener listener) {
-		HashMap<Number, ItemStack> items = new HashMap<Number, ItemStack>();
+		LinkedHashMap<Number, ItemStack> items = new LinkedHashMap<Number, ItemStack>();
 		if (options != null) {
 			for (Number option : options) {
 				items.put(option, new ItemStack(Material.STONE, 1));

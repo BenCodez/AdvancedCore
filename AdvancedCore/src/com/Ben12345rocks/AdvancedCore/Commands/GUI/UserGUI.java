@@ -17,9 +17,11 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequestBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
 /**
@@ -81,38 +83,68 @@ public class UserGUI {
 	 * @param playerName
 	 *            the player name
 	 */
-	public void openUserGUI(Player player, String playerName) {
+	public void openUserGUI(Player player, final String playerName) {
 		if (!player.hasPermission("AdvancedCore.UserEdit")) {
 			player.sendMessage("Not enough permissions");
 			return;
 		}
 		BInventory inv = new BInventory("UserGUI: " + playerName);
-		inv.addButton(inv.getNextSlot(),
-				new BInventoryButton("Give Reward File", new String[] {}, new ItemStack(Material.STONE)) {
+		inv.addButton(new BInventoryButton("Give Reward File", new String[] {}, new ItemStack(Material.STONE)) {
 
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						ArrayList<String> rewards = new ArrayList<String>();
-						for (Reward reward : RewardHandler.getInstance().getRewards()) {
-							rewards.add(reward.getRewardName());
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				ArrayList<String> rewards = new ArrayList<String>();
+				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+					rewards.add(reward.getRewardName());
+				}
+
+				new ValueRequest().requestString(clickEvent.getPlayer(), "", ArrayUtils.getInstance().convert(rewards),
+						true, new StringListener() {
+
+							@SuppressWarnings("deprecation")
+							@Override
+							public void onInput(Player player, String value) {
+								User user = UserManager.getInstance()
+										.getUser(UserGUI.getInstance().getCurrentPlayer(player));
+								RewardHandler.getInstance().giveReward(user, value, user.isOnline());
+								player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
+
+							}
+						});
+
+			}
+		});
+
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BOOK_AND_QUILL).setName("Edit Data")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Player player = clickEvent.getPlayer();
+				BInventory inv = new BInventory("Edit Data, click to change");
+				final User user = UserManager.getInstance().getUser(playerName);
+				for (final String key : user.getData().getKeys()) {
+					String value = user.getData().getString(key);
+					inv.addButton(new BInventoryButton(new ItemBuilder(Material.STONE).setName(key + " = " + value)) {
+
+						@Override
+						public void onClick(ClickEvent clickEvent) {
+							new ValueRequestBuilder(new StringListener() {
+
+								@Override
+								public void onInput(Player player, String newValue) {
+									user.getData().setString(key, newValue);
+									user.getData().updatePlayerData();
+									openUserGUI(player, playerName);
+								}
+							}, new String[] {}).allowCustomOption(true).currentValue(value).request(player);
 						}
+					});
+				}
 
-						new ValueRequest().requestString(clickEvent.getPlayer(), "",
-								ArrayUtils.getInstance().convert(rewards), true, new StringListener() {
+				inv.openInventory(player);
 
-									@SuppressWarnings("deprecation")
-									@Override
-									public void onInput(Player player, String value) {
-										User user = UserManager.getInstance()
-												.getUser(UserGUI.getInstance().getCurrentPlayer(player));
-										RewardHandler.getInstance().giveReward(user, value, user.isOnline());
-										player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
-
-									}
-								});
-
-					}
-				});
+			}
+		});
 
 		for (BInventoryButton button : extraButtons.values()) {
 			inv.addButton(button);

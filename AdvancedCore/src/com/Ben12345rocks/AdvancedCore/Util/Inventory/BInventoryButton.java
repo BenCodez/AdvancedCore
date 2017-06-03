@@ -19,7 +19,7 @@ public abstract class BInventoryButton {
 	private ItemBuilder builder;
 
 	/** The slot. */
-	private int slot;
+	private int slot = -1;
 
 	public BInventoryButton(ItemBuilder item) {
 		setBuilder(item);

@@ -103,6 +103,11 @@ public class ArrayUtils {
 		return txt;
 	}
 
+	public ArrayList<String> sort(ArrayList<String> list) {
+		Collections.sort(list, String.CASE_INSENSITIVE_ORDER);
+		return list;
+	}
+
 	/**
 	 * Sets the contains ignore case.
 	 *
