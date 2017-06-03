@@ -116,25 +116,33 @@ public class TimeChecker {
 					monthChanged = true;
 				}
 
-				if (dayChanged || weekChanged || monthChanged) {
-					DateChangedEvent dateChanged = new DateChangedEvent();
-					plugin.getPlugin().getServer().getPluginManager().callEvent(dateChanged);
-				}
-
 				if (dayChanged) {
-					DayChangeEvent dayChange = new DayChangeEvent();
-					plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
+					forceChanged(TimeType.DAY);
 				}
 				if (weekChanged) {
-					WeekChangeEvent weekChange = new WeekChangeEvent();
-					plugin.getPlugin().getServer().getPluginManager().callEvent(weekChange);
+					forceChanged(TimeType.WEEK);
 				}
 				if (monthChanged) {
-					MonthChangeEvent monthChange = new MonthChangeEvent();
-					plugin.getPlugin().getServer().getPluginManager().callEvent(monthChange);
+					forceChanged(TimeType.MONTH);
 				}
 			}
 		});
+	}
+
+	public void forceChanged(TimeType time) {
+		if (time.equals(TimeType.DAY)) {
+			DayChangeEvent dayChange = new DayChangeEvent();
+			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
+		} else if (time.equals(TimeType.WEEK)) {
+			WeekChangeEvent weekChange = new WeekChangeEvent();
+			plugin.getPlugin().getServer().getPluginManager().callEvent(weekChange);
+		} else if (time.equals(TimeType.MONTH)) {
+			MonthChangeEvent monthChange = new MonthChangeEvent();
+			plugin.getPlugin().getServer().getPluginManager().callEvent(monthChange);
+		}
+
+		DateChangedEvent dateChanged = new DateChangedEvent(time);
+		plugin.getPlugin().getServer().getPluginManager().callEvent(dateChanged);
 
 	}
 }

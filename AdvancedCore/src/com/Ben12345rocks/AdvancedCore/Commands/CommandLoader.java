@@ -15,6 +15,8 @@ import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
+import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
+import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -152,6 +154,21 @@ public class CommandLoader {
 				}
 			});
 		}
+
+		cmds.add(new CommandHandler(new String[] { "(TimeType)" }, permPrefix + ".ForceTimeChange",
+				"Force time change, use at your own risk!") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				try {
+					TimeType time = TimeType.getTimeType(args[0]);
+					TimeChecker.getInstance().forceChanged(time);
+					sender.sendMessage("Forcing change for " + time.toString());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
 
 		return cmds;
 	}
