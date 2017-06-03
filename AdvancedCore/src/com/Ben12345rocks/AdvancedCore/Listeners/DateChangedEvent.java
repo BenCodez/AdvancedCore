@@ -23,9 +23,6 @@ public class DateChangedEvent extends Event {
 		return handlers;
 	}
 
-	/**
-	 * Instantiates a new day change event.
-	 */
 	public DateChangedEvent(TimeType time) {
 		super(true);
 		this.timeType = time;
