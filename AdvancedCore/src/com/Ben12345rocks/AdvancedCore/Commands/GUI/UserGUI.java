@@ -132,7 +132,8 @@ public class UserGUI {
 
 								@Override
 								public void onInput(Player player, String newValue) {
-									user.getData().setData(user.getUUID(), key, newValue);
+									user.getData().setString(key, newValue);
+									user.getData().updatePlayerData();
 									openUserGUI(player, playerName);
 								}
 							}, new String[] {}).allowCustomOption(true).currentValue(value).request(player);
