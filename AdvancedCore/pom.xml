@@ -139,9 +139,9 @@
 			<url>http://nexus.hc.to/content/repositories/pub_releases</url>
 		</repository>
 		<repository>
-			<id>placeholderapi</id>
-			<url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
-		</repository>
+            <id>placeholderapi</id>
+            <url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+        </repository>
 		<repository>
 			<id>mrten-releases</id>
 			<name>Mrten's Release Repo</name>
@@ -173,7 +173,8 @@
 			<groupId>me.clip</groupId>
 			<artifactId>placeholderapi</artifactId>
 			<version>LATEST</version>
-			<scope>provided</scope>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/Jars/PlaceholderAPI.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>com.github.Ben12345rocks</groupId>
