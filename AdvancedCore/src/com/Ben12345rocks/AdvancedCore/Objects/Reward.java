@@ -36,7 +36,7 @@ public class Reward {
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	/** The name. */
-	public String name;
+	private String name;
 
 	/** The file data. */
 	private RewardFileData fileData;
@@ -230,6 +230,22 @@ public class Reward {
 	private int effectRadius;
 
 	private ArrayList<String> javascripts;
+	
+	private ArrayList<String> priority;
+
+	/**
+	 * @return the name
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * @return the priority
+	 */
+	public ArrayList<String> getPriority() {
+		return priority;
+	}
 
 	private File file;
 
@@ -312,6 +328,23 @@ public class Reward {
 	 */
 	public boolean checkRandomChance() {
 		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
+	}
+	
+	public void givePriorityReward(User user) {
+		for (String str : getPriority()) {
+			Reward reward = RewardHandler.getInstance().getReward(str);
+			if (reward.canGiveReward(user)) {
+				new RewardBuilder(reward).send(user);
+				return;
+			}
+		}
+	}
+	
+	public boolean canGiveReward(User user) {
+		if (hasPermission(user)) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -1364,6 +1397,8 @@ public class Reward {
 		effectData = getConfig().getEffectData();
 		effectParticles = getConfig().getEffectParticles();
 		effectRadius = getConfig().getEffectRadius();
+		
+		priority = getConfig().getPriority();
 	}
 
 	/**

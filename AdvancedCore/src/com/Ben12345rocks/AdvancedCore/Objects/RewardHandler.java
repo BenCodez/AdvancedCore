@@ -138,7 +138,7 @@ public class RewardHandler {
 		reward = reward.replace(" ", "_");
 
 		for (Reward rewardFile : getRewards()) {
-			if (rewardFile.name.equalsIgnoreCase(reward)) {
+			if (rewardFile.getName().equalsIgnoreCase(reward)) {
 				return rewardFile;
 			}
 		}

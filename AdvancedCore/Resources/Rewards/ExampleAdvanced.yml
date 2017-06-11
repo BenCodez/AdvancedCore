@@ -86,6 +86,10 @@ Javascript:
 # Do things like set health or other things
 # not possible with commands
 Javascripts: []
+
+# List of reward files to try and execute
+# Will only execute first possible reward that can be given
+Priority: []
   
 # Let the user pick a reward file to get
 # User can only pick one

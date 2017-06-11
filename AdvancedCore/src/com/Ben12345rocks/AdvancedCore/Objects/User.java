@@ -188,7 +188,7 @@ public class User {
 										"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
 								.send(this);
 						AdvancedCoreHook.getInstance().debug(
-								"Giving timed/delayed reward " + entry.getKey().name + " for " + getPlayerName());
+								"Giving timed/delayed reward " + entry.getKey().getName() + " for " + getPlayerName());
 						iterator.remove();
 					}
 				}

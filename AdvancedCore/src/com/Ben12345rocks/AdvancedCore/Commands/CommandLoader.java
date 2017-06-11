@@ -202,7 +202,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
 				User user = UserManager.getInstance().getUser((Player) sender);
-				if (user.getChoiceRewards().contains(reward.name)) {
+				if (user.getChoiceRewards().contains(reward.getName())) {
 					new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
 							ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false,
 							new StringListener() {

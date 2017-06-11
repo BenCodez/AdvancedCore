@@ -171,9 +171,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsPlayer() {
-
 		return (ArrayList<String>) getData().getList("Commands.Player", new ArrayList<String>());
-
 	}
 
 	/**
@@ -183,6 +181,11 @@ public class RewardFileData {
 	 */
 	public FileConfiguration getData() {
 		return data;
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getPriority() {
+		return (ArrayList<String>) getData().getList("Priority", new ArrayList<String>());
 	}
 
 	/**
