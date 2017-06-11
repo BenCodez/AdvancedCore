@@ -330,11 +330,11 @@ public class Reward {
 		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
 	}
 	
-	public void givePriorityReward(User user) {
+	public void givePriorityReward(User user, final HashMap<String,String> placeholders) {
 		for (String str : getPriority()) {
 			Reward reward = RewardHandler.getInstance().getReward(str);
 			if (reward.canGiveReward(user)) {
-				new RewardBuilder(reward).send(user);
+				new RewardBuilder(reward).withPlaceHolder(placeholders).send(user);
 				return;
 			}
 		}
@@ -1123,6 +1123,7 @@ public class Reward {
 				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 				phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
 				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
+				givePriorityReward(user,placeholders);
 				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
 				int money = getMoneyToGive();
