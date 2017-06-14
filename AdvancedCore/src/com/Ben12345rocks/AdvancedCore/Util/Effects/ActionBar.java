@@ -54,7 +54,7 @@ public class ActionBar {
 			useOldMethods = true;
 		}
 
-		if (nmsver.contains("1.9") || nmsver.contains("1.10") || nmsver.contains("1.11")) {
+		if (nmsver.contains("1_9") || nmsver.contains("1_10") || nmsver.contains("1_11")) {
 			useNewMethods = false;
 		}
 	}
