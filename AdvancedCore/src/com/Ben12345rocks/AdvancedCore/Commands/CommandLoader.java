@@ -182,10 +182,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				new ValueRequest().requestString((Player) sender, "", ArrayUtils.getInstance().convert(
+				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
+						ArrayUtils.getInstance().convert(
 
-						UserManager.getInstance().getUser(sender.getName()).getChoiceRewards()), true,
-						new StringListener() {
+								UserManager.getInstance().getUser(sender.getName()).getChoiceRewards()),
+						true, new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {
@@ -312,14 +313,13 @@ public class CommandLoader {
 	public void loadCommands() {
 
 	}
-	
-	public void selectChoiceReward(CommandSender sender, String rewardSt) {
+
+	public void selectChoiceReward(CommandSender sender, final String rewardSt) {
 		Reward reward = RewardHandler.getInstance().getReward(rewardSt);
 		User user = UserManager.getInstance().getUser((Player) sender);
 		if (user.getChoiceRewards().contains(reward.getName())) {
 			new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-					ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false,
-					new StringListener() {
+					ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false, new StringListener() {
 
 						@SuppressWarnings("deprecation")
 						@Override
@@ -327,7 +327,7 @@ public class CommandLoader {
 							User user = UserManager.getInstance().getUser(player);
 							RewardHandler.getInstance().giveReward(user, value, true);
 							ArrayList<String> rewards = user.getChoiceRewards();
-							rewards.remove(value);
+							rewards.remove(rewardSt);
 							user.setChoiceRewards(rewards);
 						}
 					});
