@@ -460,6 +460,7 @@ public class AdvancedCoreHook {
 		} catch (Exception ex) {
 			serverHandle = new CraftBukkitHandle();
 			debug("Detected using craftbukkit");
+			plugin.getLogger().info("Detected server running craftbukkit. It is recommended to use spigot instead");
 		}
 	}
 

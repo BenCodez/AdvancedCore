@@ -182,14 +182,15 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				new ValueRequest().requestString((Player) sender, "", ArrayUtils.getInstance().convert(
+				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
+						ArrayUtils.getInstance().convert(
 
-						UserManager.getInstance().getUser(sender.getName()).getChoiceRewards()), true,
-						new StringListener() {
+								UserManager.getInstance().getUser(sender.getName()).getChoiceRewards()),
+						true, new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {
-								player.performCommand("advancedcore selectchoicereward " + value);
+								selectChoiceReward(sender, value);
 							}
 						});
 			}
@@ -200,26 +201,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				Reward reward = RewardHandler.getInstance().getReward(args[1]);
-				User user = UserManager.getInstance().getUser((Player) sender);
-				if (user.getChoiceRewards().contains(reward.getName())) {
-					new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-							ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false,
-							new StringListener() {
-
-								@SuppressWarnings("deprecation")
-								@Override
-								public void onInput(Player player, String value) {
-									User user = UserManager.getInstance().getUser(player);
-									RewardHandler.getInstance().giveReward(user, value, true);
-									ArrayList<String> rewards = user.getChoiceRewards();
-									rewards.remove(value);
-									user.setChoiceRewards(rewards);
-								}
-							});
-				} else {
-					sender.sendMessage("No rewards to choose");
-				}
+				selectChoiceReward(sender, args[1]);
 			}
 		});
 
@@ -330,6 +312,28 @@ public class CommandLoader {
 	 */
 	public void loadCommands() {
 
+	}
+
+	public void selectChoiceReward(CommandSender sender, final String rewardSt) {
+		Reward reward = RewardHandler.getInstance().getReward(rewardSt);
+		User user = UserManager.getInstance().getUser((Player) sender);
+		if (user.getChoiceRewards().contains(reward.getName())) {
+			new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
+					ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false, new StringListener() {
+
+						@SuppressWarnings("deprecation")
+						@Override
+						public void onInput(Player player, String value) {
+							User user = UserManager.getInstance().getUser(player);
+							RewardHandler.getInstance().giveReward(user, value, true);
+							ArrayList<String> rewards = user.getChoiceRewards();
+							rewards.remove(rewardSt);
+							user.setChoiceRewards(rewards);
+						}
+					});
+		} else {
+			sender.sendMessage("No rewards to choose");
+		}
 	}
 
 }
