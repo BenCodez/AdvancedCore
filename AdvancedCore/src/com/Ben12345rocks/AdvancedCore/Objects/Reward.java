@@ -43,6 +43,8 @@ public class Reward {
 
 	/** The reward type. */
 	private String rewardType;
+	
+	private boolean forceOffline;
 
 	/** The delay enabled. */
 	private boolean delayEnabled;
@@ -1061,7 +1063,7 @@ public class Reward {
 			}
 		}
 
-		if ((!online && !user.isOnline()) || !checkWorld(user)) {
+		if (((!online && !user.isOnline()) || !checkWorld(user)) && !isForceOffline()) {
 			if (giveOffline) {
 				user.addOfflineRewards(this, placeholders);
 			}
@@ -1112,7 +1114,7 @@ public class Reward {
 	 */
 	public void giveRewardUser(User user, HashMap<String, String> phs) {
 		Player player = user.getPlayer();
-		if (player != null) {
+		if (player != null || isForceOffline()) {
 			if (hasPermission(user)) {
 				if (phs == null) {
 					phs = new HashMap<String, String>();
@@ -1307,6 +1309,8 @@ public class Reward {
 
 	public void loadValues() {
 		setRewardType(getConfig().getRewardType());
+		
+		forceOffline = getConfig().getForceOffline();
 
 		setDelayEnabled(getConfig().getDelayedEnabled());
 		setDelayHours(getConfig().getDelayedHours());
@@ -1400,6 +1404,20 @@ public class Reward {
 		effectRadius = getConfig().getEffectRadius();
 		
 		priority = getConfig().getPriority();
+	}
+
+	/**
+	 * @return the forceOffline
+	 */
+	public boolean isForceOffline() {
+		return forceOffline;
+	}
+
+	/**
+	 * @param forceOffline the forceOffline to set
+	 */
+	public void setForceOffline(boolean forceOffline) {
+		this.forceOffline = forceOffline;
 	}
 
 	/**
