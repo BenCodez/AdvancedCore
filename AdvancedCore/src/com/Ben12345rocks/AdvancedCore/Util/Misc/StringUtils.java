@@ -113,7 +113,7 @@ public class StringUtils {
 
 	public String replaceJavascript(Player player, String text) {
 		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-		return replaceJavascript(text, engine);
+		return replaceJavascript(replacePlaceHolders(player, text), engine);
 	}
 
 	public String replaceJavascript(String text) {

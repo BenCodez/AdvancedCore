@@ -112,6 +112,11 @@ Worlds:
 # Make this reward file only give rewards depending 
 # if player was online/offline when the reward attempted to give
 RewardType: 'BOTH'
+
+# If true, reward file will execute even if player is offline
+# Does not support all rewards
+# ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING
+ForceOffline: false
   
 # Potions to give on reward
 Potions:

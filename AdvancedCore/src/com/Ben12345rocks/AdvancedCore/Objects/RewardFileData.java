@@ -88,11 +88,10 @@ public class RewardFileData {
 		return getData().getInt("BossBar.Delay");
 	}
 
-	/**
-	 * Gets the boss bar enabled.
-	 *
-	 * @return the boss bar enabled
-	 */
+	public boolean getForceOffline() {
+		return getData().getBoolean("ForceOffline");
+	}
+
 	public boolean getBossBarEnabled() {
 		return getData().getBoolean("BossBar.Enabled");
 	}

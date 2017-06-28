@@ -111,7 +111,7 @@ public class BooleanRequester {
 			lore.add("&cDoes not cost exp");
 			builder.setLore(lore);
 
-			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack());
+			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack(player));
 
 			inv.open();
 

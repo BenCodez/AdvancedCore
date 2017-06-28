@@ -55,7 +55,10 @@ public abstract class BInventoryButton {
 	 * Gets the item.
 	 *
 	 * @return the item
+	 * 
+	 * @deprecated Use getItem(Player player)
 	 */
+	@Deprecated
 	public ItemStack getItem() {
 		return builder.toItemStack();
 	}

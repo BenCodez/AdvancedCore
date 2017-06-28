@@ -32,6 +32,9 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
  */
 public class BInventory implements Listener {
 
+	private ItemStack prevItem;
+	private ItemStack nextItem;
+
 	/**
 	 * The Class ClickEvent.
 	 */
@@ -521,14 +524,20 @@ public class BInventory implements Listener {
 		}
 
 		for (BInventoryButton b : pageButtons) {
-			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem());
+			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
+		}
+		if (prevItem == null) {
+			prevItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aPrevious Page")
+					.toItemStack(player);
+		}
+		if (nextItem == null) {
+			nextItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aNext Page")
+					.toItemStack(player);
 		}
 
-		inv.setItem(maxInvSize - 9,
-				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aPrevious Page").toItemStack());
+		inv.setItem(maxInvSize - 9, prevItem);
 
-		inv.setItem(maxInvSize - 1,
-				new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aNext Page").toItemStack());
+		inv.setItem(maxInvSize - 1, nextItem);
 
 		Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
@@ -537,6 +546,34 @@ public class BInventory implements Listener {
 				player.openInventory(inv);
 			}
 		});
+	}
+
+	/**
+	 * @return the prevItem
+	 */
+	public ItemStack getPrevItem() {
+		return prevItem;
+	}
+
+	/**
+	 * @param prevItem the prevItem to set
+	 */
+	public void setPrevItem(ItemStack prevItem) {
+		this.prevItem = prevItem;
+	}
+
+	/**
+	 * @return the nextItem
+	 */
+	public ItemStack getNextItem() {
+		return nextItem;
+	}
+
+	/**
+	 * @param nextItem the nextItem to set
+	 */
+	public void setNextItem(ItemStack nextItem) {
+		this.nextItem = nextItem;
 	}
 
 	/**
