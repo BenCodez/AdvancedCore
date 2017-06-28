@@ -532,7 +532,10 @@ public class ItemBuilder {
 	 * Retrieves the itemstack from the ItemBuilder.
 	 *
 	 * @return The itemstack created/modified by the ItemBuilder instance.
+	 * 
+	 * @deprecated Use toItemStack(Player player)
 	 */
+	@Deprecated
 	public ItemStack toItemStack() {
 		if (!placeholders.isEmpty()) {
 			setName(StringUtils.getInstance()

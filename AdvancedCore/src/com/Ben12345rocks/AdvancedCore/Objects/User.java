@@ -328,7 +328,7 @@ public class User {
 	 * @param enchants
 	 *            the enchants
 	 */
-	@SuppressWarnings("deprecation")
+	@Deprecated
 	public void giveItem(int id, int amount, int data, String itemName, List<String> lore,
 			HashMap<String, Integer> enchants) {
 
@@ -387,7 +387,7 @@ public class User {
 	}
 
 	public void giveItem(ItemStack itemStack, HashMap<String, String> placeholders) {
-		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack());
+		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack(getPlayer()));
 	}
 
 	/**
@@ -467,11 +467,11 @@ public class User {
 	}
 
 	/**
-	 * Checks for joined before.
+	 * Check if player joined before
 	 *
 	 * @return true, if successful
 	 */
-	public boolean hasJoinedBefore() {
+	public boolean hasLoggedOnBefore() {
 		OfflinePlayer player = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			if (player.hasPlayedBefore() || player.isOnline()) {

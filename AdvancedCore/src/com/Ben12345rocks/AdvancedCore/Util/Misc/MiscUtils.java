@@ -234,6 +234,7 @@ public class MiscUtils {
 	 *            the player name
 	 * @return the item stack
 	 */
+	@SuppressWarnings("deprecation")
 	public ItemStack setSkullOwner(String playerName) {
 		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();
