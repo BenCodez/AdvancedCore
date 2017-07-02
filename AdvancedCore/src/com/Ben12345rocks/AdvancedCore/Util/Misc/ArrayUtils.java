@@ -451,4 +451,30 @@ public class ArrayUtils {
 
 		return sortedMap;
 	}
+	
+	public HashMap<User, Long> sortByValuesLong(HashMap<User, Long> unsortMap, final boolean order) {
+
+		List<Entry<User, Long>> list = new LinkedList<Entry<User, Long>>(unsortMap.entrySet());
+
+		// Sorting the list based on values
+		Collections.sort(list, new Comparator<Entry<User, Long>>() {
+			@Override
+			public int compare(Entry<User, Long> o1, Entry<User, Long> o2) {
+				if (order) {
+					return o1.getValue().compareTo(o2.getValue());
+				} else {
+					return o2.getValue().compareTo(o1.getValue());
+
+				}
+			}
+		});
+
+		// Maintaining insertion order with the help of LinkedList
+		HashMap<User, Long> sortedMap = new LinkedHashMap<User, Long>();
+		for (Entry<User, Long> entry : list) {
+			sortedMap.put(entry.getKey(), entry.getValue());
+		}
+
+		return sortedMap;
+	}
 }

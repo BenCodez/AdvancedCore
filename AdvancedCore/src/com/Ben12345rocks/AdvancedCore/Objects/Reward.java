@@ -994,7 +994,6 @@ public class Reward {
 						String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
 						if (!reward.equals("")) {
 							RewardHandler.getInstance().giveReward(user, reward, online, true, true, placeholders);
-
 						}
 					}
 				}

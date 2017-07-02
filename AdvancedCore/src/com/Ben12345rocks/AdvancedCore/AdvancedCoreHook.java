@@ -135,6 +135,7 @@ public class AdvancedCoreHook {
 		});
 
 	}
+	
 
 	/**
 	 * Show exception in console if debug is on
