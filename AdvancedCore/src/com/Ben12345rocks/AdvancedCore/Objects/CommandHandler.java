@@ -131,6 +131,14 @@ public abstract class CommandHandler {
 		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
 	}
 
+	public void sendMessage(CommandSender sender, ArrayList<String> msg) {
+		sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().colorize(msg)));
+	}
+
+	public void sendMessage(CommandSender sender, String msg) {
+		sender.sendMessage(StringUtils.getInstance().colorize(msg));
+	}
+
 	/**
 	 * Args match.
 	 *
@@ -357,8 +365,7 @@ public abstract class CommandHandler {
 			userStorage.add(storage.toString());
 		}
 		addTabCompleteOption("(UserStorage)", userStorage);
-		
-		
+
 		ArrayList<String> times = new ArrayList<String>();
 		for (TimeType ty : TimeType.values()) {
 			times.add(ty.toString());
