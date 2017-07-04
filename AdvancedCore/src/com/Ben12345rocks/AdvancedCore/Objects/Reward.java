@@ -561,7 +561,7 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the exp.
+	 * Gets the .
 	 *
 	 * @return the exp
 	 */
@@ -581,12 +581,7 @@ public class Reward {
 		if ((maxAmount == 0) && (minAmount == 0)) {
 			return amount;
 		} else {
-			int num = (int) (Math.random() * maxAmount);
-			num++;
-			if (num < minAmount) {
-				num = minAmount;
-			}
-			return num;
+			return ThreadLocalRandom.current().nextInt(minAmount, maxAmount);
 		}
 	}
 
@@ -733,12 +728,7 @@ public class Reward {
 		if ((maxAmount == 0) && (minAmount == 0)) {
 			return amount;
 		} else {
-			int num = (int) (Math.random() * maxAmount);
-			num++;
-			if (num < minAmount) {
-				num = minAmount;
-			}
-			return num;
+			return ThreadLocalRandom.current().nextInt(minAmount, maxAmount);
 		}
 	}
 
