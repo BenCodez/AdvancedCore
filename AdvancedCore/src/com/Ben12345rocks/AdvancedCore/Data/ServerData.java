@@ -125,4 +125,9 @@ public class ServerData extends YMLFile {
 		getData().set("PrevWeek", week);
 		saveData();
 	}
+
+	public void setData(String path, Object value) {
+		getData().set(path, value);
+		saveData();
+	}
 }
