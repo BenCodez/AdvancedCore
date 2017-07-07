@@ -135,7 +135,6 @@ public class AdvancedCoreHook {
 		});
 
 	}
-	
 
 	/**
 	 * Show exception in console if debug is on
@@ -556,6 +555,7 @@ public class AdvancedCoreHook {
 		}
 		getTimer().purge();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
+
 	}
 
 	/**
@@ -708,12 +708,6 @@ public class AdvancedCoreHook {
 	 * Update.
 	 */
 	public void update() {
-		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				TimeChecker.getInstance().update();
-			}
-		});
+		TimeChecker.getInstance().update();
 	}
 }
