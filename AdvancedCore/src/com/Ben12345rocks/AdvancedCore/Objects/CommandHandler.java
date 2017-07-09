@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
@@ -129,6 +130,36 @@ public abstract class CommandHandler {
 	 */
 	public void addTabCompleteOption(String toReplace, String... options) {
 		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
+	}
+
+	public void sendMessage(CommandSender sender, ArrayList<String> msg) {
+		sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().colorize(msg)));
+	}
+
+	public void sendMessage(CommandSender sender, String msg) {
+		sender.sendMessage(StringUtils.getInstance().colorize(msg));
+	}
+
+	public void sendMessageJson(CommandSender sender, TextComponent comp) {
+		if (isPlayer(sender)) {
+			Player player = (Player) sender;
+			UserManager.getInstance().getUser(player).sendJson(comp);
+		} else {
+			sender.sendMessage(StringUtils.getInstance().compToString(comp));
+		}
+	}
+
+	public void sendMessageJson(CommandSender sender, ArrayList<TextComponent> comp) {
+		if (isPlayer(sender)) {
+			Player player = (Player) sender;
+			UserManager.getInstance().getUser(player).sendJson(comp);
+		} else {
+			sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(comp)));
+		}
+	}
+
+	public boolean isPlayer(CommandSender sender) {
+		return sender instanceof Player;
 	}
 
 	/**
@@ -357,8 +388,7 @@ public abstract class CommandHandler {
 			userStorage.add(storage.toString());
 		}
 		addTabCompleteOption("(UserStorage)", userStorage);
-		
-		
+
 		ArrayList<String> times = new ArrayList<String>();
 		for (TimeType ty : TimeType.values()) {
 			times.add(ty.toString());

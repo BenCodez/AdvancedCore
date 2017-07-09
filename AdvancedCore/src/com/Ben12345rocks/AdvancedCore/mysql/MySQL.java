@@ -53,7 +53,7 @@ public class MySQL {
 			e.printStackTrace();
 		}
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
-		sql += "uuid VARCHAR(255),";
+		sql += "uuid VARCHAR(191),";
 		sql += "PRIMARY KEY ( uuid )";
 		sql += ");";
 		Query query;
