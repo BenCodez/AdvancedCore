@@ -702,6 +702,15 @@ public class User {
 		sendMessage(ArrayUtils.getInstance().convert(msg));
 	}
 
+	public boolean isBanned() {
+		OfflinePlayer p = getOfflinePlayer();
+		if (p != null) {
+			return p.isBanned();
+		} else {
+			return false;
+		}
+	}
+
 	/**
 	 * Send message.
 	 *

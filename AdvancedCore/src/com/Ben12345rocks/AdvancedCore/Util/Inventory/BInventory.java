@@ -475,6 +475,7 @@ public class BInventory implements Listener {
 				ItemStack item = pair.getValue().getItem(player);
 				inv.setItem(pair.getKey(), item);
 			}
+			
 			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
 				@Override
