@@ -203,6 +203,7 @@ ActionBar:
   # Delay until action bar goes away (in ticks)
   Delay: 30
   
+OnlyOneLucky: false
 # The example below would give a 1 in 10 chance of receiving an extra $100, and a 1 in 50 chance of an extra $1000.
 Lucky:
   '10':

@@ -300,6 +300,10 @@ public class RewardFileData {
 			return new HashSet<String>();
 		}
 	}
+	
+	public boolean getOnlyOneLucky() {
+		return getData().getBoolean("OnlyOneLucky");
+	}
 
 	public String getLuckyRewardsPath(int num) {
 		return "Lucky." + num;

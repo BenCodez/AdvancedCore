@@ -8,6 +8,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -236,6 +237,8 @@ public class Reward {
 	private ArrayList<String> priority;
 
 	private HashMap<Integer, String> luckyRewards;
+
+	private boolean onlyOneLucky;
 
 	/**
 	 * @return the name
@@ -1096,9 +1099,27 @@ public class Reward {
 	}
 
 	public void giveLucky(User user, HashMap<String, String> placeholders) {
+		HashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
 		for (Entry<Integer, String> entry : luckyRewards.entrySet()) {
 			if (MiscUtils.getInstance().checkChance(1, entry.getKey())) {
-				new RewardBuilder(getConfig().getData(), entry.getValue()).withPlaceHolder(placeholders).send(user);
+				// new RewardBuilder(getConfig().getData(),
+				// entry.getValue()).withPlaceHolder(placeholders).send(user);
+				map.put(entry.getValue(), entry.getKey());
+			}
+		}
+
+		map = ArrayUtils.getInstance().sortByValuesStr(map, false);
+		if (map.size() > 0) {
+			if (isOnlyOneLucky()) {
+				for (Entry<String, Integer> entry : map.entrySet()) {
+					new RewardBuilder(getConfig().getData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
+					return;
+				}
+
+			} else {
+				for (Entry<String, Integer> entry : map.entrySet()) {
+					new RewardBuilder(getConfig().getData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
+				}
 			}
 		}
 	}
@@ -1416,6 +1437,22 @@ public class Reward {
 				}
 			}
 		}
+
+		onlyOneLucky = getConfig().getOnlyOneLucky();
+	}
+
+	/**
+	 * @return the luckyRewards
+	 */
+	public HashMap<Integer, String> getLuckyRewards() {
+		return luckyRewards;
+	}
+
+	/**
+	 * @return the onlyOneLucky
+	 */
+	public boolean isOnlyOneLucky() {
+		return onlyOneLucky;
 	}
 
 	/**
