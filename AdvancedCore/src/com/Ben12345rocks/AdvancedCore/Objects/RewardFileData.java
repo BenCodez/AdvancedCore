@@ -294,7 +294,11 @@ public class RewardFileData {
 	}
 
 	public Set<String> getLuckyRewards() {
-		return getData().getConfigurationSection("Lucky").getKeys(false);
+		if (getData().getConfigurationSection("Lucky") != null) {
+			return getData().getConfigurationSection("Lucky").getKeys(false);
+		} else {
+			return new HashSet<String>();
+		}
 	}
 
 	public String getLuckyRewardsPath(int num) {
