@@ -1097,7 +1097,7 @@ public class Reward {
 
 	public void giveLucky(User user, HashMap<String, String> placeholders) {
 		for (Entry<Integer, String> entry : luckyRewards.entrySet()) {
-			if (MiscUtils.getInstance().checkChance(1 / entry.getKey(), entry.getKey())) {
+			if (MiscUtils.getInstance().checkChance(1, entry.getKey())) {
 				new RewardBuilder(getConfig().getData(), entry.getValue()).withPlaceHolder(placeholders).send(user);
 			}
 		}
