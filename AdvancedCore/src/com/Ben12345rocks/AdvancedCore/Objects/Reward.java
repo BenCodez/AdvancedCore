@@ -43,7 +43,7 @@ public class Reward {
 
 	/** The reward type. */
 	private String rewardType;
-	
+
 	private boolean forceOffline;
 
 	/** The delay enabled. */
@@ -232,8 +232,10 @@ public class Reward {
 	private int effectRadius;
 
 	private ArrayList<String> javascripts;
-	
+
 	private ArrayList<String> priority;
+
+	private HashMap<Integer, String> luckyRewards;
 
 	/**
 	 * @return the name
@@ -331,8 +333,8 @@ public class Reward {
 	public boolean checkRandomChance() {
 		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
 	}
-	
-	public void givePriorityReward(User user, final HashMap<String,String> placeholders) {
+
+	public void givePriorityReward(User user, final HashMap<String, String> placeholders) {
 		for (String str : getPriority()) {
 			Reward reward = RewardHandler.getInstance().getReward(str);
 			if (reward.canGiveReward(user)) {
@@ -341,7 +343,7 @@ public class Reward {
 			}
 		}
 	}
-	
+
 	public boolean canGiveReward(User user) {
 		if (hasPermission(user)) {
 			return true;
@@ -1093,6 +1095,14 @@ public class Reward {
 		}
 	}
 
+	public void giveLucky(User user, HashMap<String, String> placeholders) {
+		for (Entry<Integer, String> entry : luckyRewards.entrySet()) {
+			if (MiscUtils.getInstance().checkChance(1 / entry.getKey(), entry.getKey())) {
+				new RewardBuilder(getConfig().getData(), entry.getValue()).withPlaceHolder(placeholders).send(user);
+			}
+		}
+	}
+
 	/**
 	 * Give reward user.
 	 *
@@ -1114,7 +1124,7 @@ public class Reward {
 				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 				phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
 				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
-				givePriorityReward(user,placeholders);
+				givePriorityReward(user, placeholders);
 				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
 				int money = getMoneyToGive();
@@ -1132,6 +1142,7 @@ public class Reward {
 				sendMessage(user, money, exp, placeholders);
 				checkChoiceRewards(user);
 				sendFirework(user);
+				giveLucky(user, placeholders);
 
 				plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 
@@ -1298,7 +1309,7 @@ public class Reward {
 
 	public void loadValues() {
 		setRewardType(getConfig().getRewardType());
-		
+
 		forceOffline = getConfig().getForceOffline();
 
 		setDelayEnabled(getConfig().getDelayedEnabled());
@@ -1391,8 +1402,20 @@ public class Reward {
 		effectData = getConfig().getEffectData();
 		effectParticles = getConfig().getEffectParticles();
 		effectRadius = getConfig().getEffectRadius();
-		
+
 		priority = getConfig().getPriority();
+
+		luckyRewards = new HashMap<Integer, String>();
+
+		for (String str : getConfig().getLuckyRewards()) {
+			if (StringUtils.getInstance().isInt(str)) {
+				int num = Integer.parseInt(str);
+				if (num > 0) {
+					String path = getConfig().getLuckyRewardsPath(num);
+					luckyRewards.put(num, path);
+				}
+			}
+		}
 	}
 
 	/**
@@ -1403,7 +1426,8 @@ public class Reward {
 	}
 
 	/**
-	 * @param forceOffline the forceOffline to set
+	 * @param forceOffline
+	 *            the forceOffline to set
 	 */
 	public void setForceOffline(boolean forceOffline) {
 		this.forceOffline = forceOffline;

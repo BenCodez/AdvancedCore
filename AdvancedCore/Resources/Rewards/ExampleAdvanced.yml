@@ -203,3 +203,15 @@ ActionBar:
   # Delay until action bar goes away (in ticks)
   Delay: 30
   
+# The example below would give a 1 in 10 chance of receiving an extra $100, and a 1 in 50 chance of an extra $1000.
+Lucky:
+  '10':
+    Messages:
+      Plyaer: 'You were lucky and received an extra $100!'
+    Money: 100
+  '50':
+    Messages:
+      Plyaer: 'You were lucky and received an extra $1000!'
+    Money: 1000
+    
+  
