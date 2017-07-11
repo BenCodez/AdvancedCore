@@ -6,8 +6,6 @@ import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
 
-import org.bukkit.Bukkit;
-
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.DateChangedEvent;
@@ -96,37 +94,33 @@ public class TimeChecker {
 	 * Update.
 	 */
 	public void update() {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
 
-			@Override
-			public void run() {
-				boolean dayChanged = false;
-				boolean weekChanged = false;
-				boolean monthChanged = false;
-				if (hasDayChanged()) {
-					plugin.debug("Day changed");
-					dayChanged = true;
-				}
-				if (hasWeekChanged()) {
-					plugin.debug("Week Changed");
-					weekChanged = true;
-				}
-				if (hasMonthChanged()) {
-					plugin.debug("Month Changed");
-					monthChanged = true;
-				}
+		boolean dayChanged = false;
+		boolean weekChanged = false;
+		boolean monthChanged = false;
+		if (hasDayChanged()) {
+			plugin.debug("Day changed");
+			dayChanged = true;
+		}
+		if (hasWeekChanged()) {
+			plugin.debug("Week Changed");
+			weekChanged = true;
+		}
+		if (hasMonthChanged()) {
+			plugin.debug("Month Changed");
+			monthChanged = true;
+		}
 
-				if (dayChanged) {
-					forceChanged(TimeType.DAY);
-				}
-				if (weekChanged) {
-					forceChanged(TimeType.WEEK);
-				}
-				if (monthChanged) {
-					forceChanged(TimeType.MONTH);
-				}
-			}
-		});
+		if (dayChanged) {
+			forceChanged(TimeType.DAY);
+		}
+		if (weekChanged) {
+			forceChanged(TimeType.WEEK);
+		}
+		if (monthChanged) {
+			forceChanged(TimeType.MONTH);
+		}
+
 	}
 
 	public void forceChanged(TimeType time) {

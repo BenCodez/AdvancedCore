@@ -293,6 +293,22 @@ public class RewardFileData {
 		return (ArrayList<String>) getData().getList("Firework.FadeOutColor", new ArrayList<String>());
 	}
 
+	public Set<String> getLuckyRewards() {
+		if (getData().getConfigurationSection("Lucky") != null) {
+			return getData().getConfigurationSection("Lucky").getKeys(false);
+		} else {
+			return new HashSet<String>();
+		}
+	}
+	
+	public boolean getOnlyOneLucky() {
+		return getData().getBoolean("OnlyOneLucky");
+	}
+
+	public String getLuckyRewardsPath(int num) {
+		return "Lucky." + num;
+	}
+
 	/**
 	 * Gets the firework enabled.
 	 *
