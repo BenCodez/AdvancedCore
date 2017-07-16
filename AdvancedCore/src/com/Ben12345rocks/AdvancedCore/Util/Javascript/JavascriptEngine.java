@@ -8,6 +8,7 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -102,5 +103,22 @@ public class JavascriptEngine {
 			}
 		}
 		return "";
+	}
+
+	public JavascriptEngine addPlayer(OfflinePlayer player) {
+		addToEngine("Player", player);
+		addToEngine("PlayerName", player.getName());
+		addToEngine("PlayerUUID", player.getUniqueId().toString());
+		addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
+		addToEngine("CommandSender", player);
+
+		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+			addToEngine(request.getStr(), request.getObject(player));
+		}
+		
+		if (player.isOnline()) {
+			return addPlayer(player.getPlayer());
+		}
+		return this;
 	}
 }
