@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -114,6 +115,11 @@ public class StringUtils {
 	public String replaceJavascript(Player player, String text) {
 		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
 		return replaceJavascript(replacePlaceHolders(player, text), engine);
+	}
+	
+	public String replaceJavascript(OfflinePlayer player, String text) {
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+		return replaceJavascript(text, engine);
 	}
 
 	public String replaceJavascript(String text) {

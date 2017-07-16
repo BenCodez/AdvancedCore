@@ -91,6 +91,25 @@ public class MiscUtils {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
+	public void executeConsoleCommands(final String playerName, final ArrayList<String> cmds,
+			final HashMap<String, String> placeholders) {
+		if (cmds != null && !cmds.isEmpty()) {
+			placeholders.put("player", playerName);
+			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(Bukkit.getOfflinePlayer(playerName),
+					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
+			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					for (String cmd : commands) {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+					}
+				}
+			});
+		}
+	}
+
 	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringUtils.getInstance().replaceJavascript(player,

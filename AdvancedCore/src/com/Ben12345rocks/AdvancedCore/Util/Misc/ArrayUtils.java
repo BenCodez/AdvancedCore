@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -402,6 +403,14 @@ public class ArrayUtils {
 	}
 
 	public ArrayList<String> replaceJavascript(Player player, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringUtils.getInstance().replaceJavascript(player, str));
+		}
+		return msg;
+	}
+	
+	public ArrayList<String> replaceJavascript(OfflinePlayer player, ArrayList<String> list) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {
 			msg.add(StringUtils.getInstance().replaceJavascript(player, str));

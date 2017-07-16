@@ -1,6 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.Javascript;
 
-import org.bukkit.entity.Player;
+import org.bukkit.OfflinePlayer;
 
 public abstract class JavascriptPlaceholderRequest {
 
@@ -10,7 +10,7 @@ public abstract class JavascriptPlaceholderRequest {
 		this.str = str;
 	}
 
-	public abstract Object getObject(Player player);
+	public abstract Object getObject(OfflinePlayer player);
 
 	/**
 	 * @return the str
