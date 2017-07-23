@@ -179,7 +179,7 @@
 		<dependency>
 			<groupId>com.github.Ben12345rocks</groupId>
 			<artifactId>ChatComponentAPI</artifactId>
-			<version>LATEST</version>
+			<version>master-SNAPSHOT</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
