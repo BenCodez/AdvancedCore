@@ -65,21 +65,25 @@ public class CommandLoader {
 
 	public ArrayList<CommandHandler> getBasicAdminCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
-		cmds.add(new CommandHandler(new String[] { "GiveAll","(reward)" },
-				permPrefix + ".GiveAll", "Give all users a reward") {
+		cmds.add(new CommandHandler(new String[] { "GiveAll", "(reward)" }, permPrefix + ".GiveAll",
+				"Give all users a reward") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
+				ArrayList<User> users = new ArrayList<User>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					users.add(user);
+				}
+				for (User user : users) {
 					new RewardBuilder(reward).send(user);
 				}
 			}
 		});
-		
-		cmds.add(new CommandHandler(new String[] { "GiveAllOnline","(reward)" },
-				permPrefix + ".GiveAllOnline", "Give all users a reward") {
+
+		cmds.add(new CommandHandler(new String[] { "GiveAllOnline", "(reward)" }, permPrefix + ".GiveAllOnline",
+				"Give all users a reward") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
