@@ -9,12 +9,22 @@ public class CraftBukkitHandle implements IServerHandle {
 
 	@Override
 	public void sendMessage(Player player, BaseComponent component) {
-		ComponentSender.sendMessage(player, component);
+		try {
+			ComponentSender.sendMessage(player, component);
+		} catch (Exception e) {
+			player.sendMessage(component.toPlainText());
+		}
 
 	}
 
 	@Override
 	public void sendMessage(Player player, BaseComponent... components) {
-		ComponentSender.sendMessage(player, components);
+		try {
+			ComponentSender.sendMessage(player, components);
+		} catch (Exception e) {
+			for (BaseComponent comp : components) {
+				sendMessage(player, comp);
+			}
+		}
 	}
 }
