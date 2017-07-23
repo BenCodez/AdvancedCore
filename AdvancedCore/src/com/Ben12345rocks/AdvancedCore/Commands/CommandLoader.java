@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Commands;
 
 import java.util.ArrayList;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -11,7 +12,9 @@ import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardEditGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
+import com.Ben12345rocks.AdvancedCore.Objects.RewardBuilder;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
@@ -62,6 +65,35 @@ public class CommandLoader {
 
 	public ArrayList<CommandHandler> getBasicAdminCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
+		cmds.add(new CommandHandler(new String[] { "GiveAll", "(reward)" }, permPrefix + ".GiveAll",
+				"Give all users a reward") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Reward reward = RewardHandler.getInstance().getReward(args[1]);
+				ArrayList<User> users = new ArrayList<User>();
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					users.add(user);
+				}
+				for (User user : users) {
+					new RewardBuilder(reward).send(user);
+				}
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "GiveAllOnline", "(reward)" }, permPrefix + ".GiveAllOnline",
+				"Give all users a reward") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Reward reward = RewardHandler.getInstance().getReward(args[1]);
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					User user = UserManager.getInstance().getUser(p);
+					new RewardBuilder(reward).send(user);
+				}
+			}
+		});
 		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)" }, permPrefix + ".GiveReward",
 				"Give a player a reward file", true) {
 
