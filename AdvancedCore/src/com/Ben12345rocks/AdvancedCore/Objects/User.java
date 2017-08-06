@@ -24,6 +24,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
@@ -490,6 +491,10 @@ public class User {
 				return true;
 			}
 
+		}
+		ArrayList<String> uuids = UserManager.getInstance().getAllUUIDs();
+		if (uuids.contains(getUUID())) {
+			return true;
 		}
 		return false;
 	}
