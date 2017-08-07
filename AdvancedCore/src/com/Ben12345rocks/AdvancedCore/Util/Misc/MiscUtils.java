@@ -96,7 +96,8 @@ public class MiscUtils {
 			final HashMap<String, String> placeholders) {
 		if (cmds != null && !cmds.isEmpty()) {
 			placeholders.put("player", playerName);
-			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(Bukkit.getOfflinePlayer(playerName),
+			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(
+					Bukkit.getOfflinePlayer(playerName),
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 

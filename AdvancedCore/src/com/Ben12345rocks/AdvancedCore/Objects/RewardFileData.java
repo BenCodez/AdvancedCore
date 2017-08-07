@@ -158,8 +158,11 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsConsole() {
-
-		return (ArrayList<String>) getData().getList("Commands.Console", new ArrayList<String>());
+		if (getData().isList("Commands")) {
+			return (ArrayList<String>) getData().getList("Commands", new ArrayList<String>());
+		} else {
+			return (ArrayList<String>) getData().getList("Commands.Console", new ArrayList<String>());
+		}
 
 	}
 
@@ -300,7 +303,7 @@ public class RewardFileData {
 			return new HashSet<String>();
 		}
 	}
-	
+
 	public boolean getOnlyOneLucky() {
 		return getData().getBoolean("OnlyOneLucky");
 	}
