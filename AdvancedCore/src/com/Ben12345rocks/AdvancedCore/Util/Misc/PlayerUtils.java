@@ -130,7 +130,7 @@ public class PlayerUtils {
 			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 				User user = UserManager.getInstance().getUser(new UUID(uuid));
 				String name = user.getData().getString("PlayerName");
-				if (!name.equals("")) {
+				if (name.equals(playerName)) {
 					return uuid;
 				}
 			}
