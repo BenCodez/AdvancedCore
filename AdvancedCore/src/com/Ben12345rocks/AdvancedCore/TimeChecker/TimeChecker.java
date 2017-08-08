@@ -124,6 +124,9 @@ public class TimeChecker {
 	}
 
 	public void forceChanged(TimeType time) {
+		DateChangedEvent dateChanged = new DateChangedEvent(time);
+		plugin.getPlugin().getServer().getPluginManager().callEvent(dateChanged);
+		
 		if (time.equals(TimeType.DAY)) {
 			DayChangeEvent dayChange = new DayChangeEvent();
 			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
@@ -135,8 +138,7 @@ public class TimeChecker {
 			plugin.getPlugin().getServer().getPluginManager().callEvent(monthChange);
 		}
 
-		DateChangedEvent dateChanged = new DateChangedEvent(time);
-		plugin.getPlugin().getServer().getPluginManager().callEvent(dateChanged);
+		
 
 	}
 }

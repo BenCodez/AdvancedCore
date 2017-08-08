@@ -89,6 +89,11 @@ public class AdvancedCoreHook {
 	private Economy econ = null;
 
 	private Permission perms;
+	private boolean alternateUUIDLookUp;
+
+	public void setAlternateUUIDLookUp(boolean alternateUUIDLookUp) {
+		this.alternateUUIDLookUp = alternateUUIDLookUp;
+	}
 
 	private AdvancedCoreHook() {
 	}
@@ -709,5 +714,9 @@ public class AdvancedCoreHook {
 	 */
 	public void update() {
 		TimeChecker.getInstance().update();
+	}
+
+	public boolean isAlternateUUIDLookUp() {
+		return alternateUUIDLookUp;
 	}
 }

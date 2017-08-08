@@ -125,12 +125,24 @@ public class PlayerUtils {
 		if (playerName == null) {
 			return null;
 		}
+
+		if (plugin.isAlternateUUIDLookUp()) {
+			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+				User user = UserManager.getInstance().getUser(new UUID(uuid));
+				String name = user.getData().getString("PlayerName");
+				if (name.equals(playerName)) {
+					return uuid;
+				}
+			}
+		}
+
 		Player player = Bukkit.getPlayer(playerName);
 		if (player == null) {
 			return Bukkit.getOfflinePlayer(playerName).getUniqueId().toString();
 		} else {
 			return player.getUniqueId().toString();
 		}
+
 	}
 
 	/**

@@ -18,11 +18,13 @@ import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
@@ -137,6 +139,17 @@ public class User {
 			setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
 		}
 
+	}
+
+	public boolean isVanished() {
+		Player player = getPlayer();
+		if (player != null) {
+			for (MetadataValue meta : player.getMetadata("vanished")) {
+				if (meta.asBoolean())
+					return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -478,6 +491,10 @@ public class User {
 				return true;
 			}
 
+		}
+		ArrayList<String> uuids = UserManager.getInstance().getAllUUIDs();
+		if (uuids.contains(getUUID())) {
+			return true;
 		}
 		return false;
 	}
