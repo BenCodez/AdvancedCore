@@ -140,6 +140,10 @@ public class Updater {
 		String version;
 		try {
 			version = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
+			if (version == null) {
+				result = UpdateResult.FAIL_SPIGOT;
+				return;
+			}
 		} catch (Exception e) {
 			result = UpdateResult.BAD_RESOURCEID;
 			return;
