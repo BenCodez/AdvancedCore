@@ -82,6 +82,15 @@ public class AdvancedCoreHook {
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
 	private String version = "";
 	private String buildTime = "";
+	private int maxMysqlSize = -1;
+
+	public int getMaxMysqlSize() {
+		return maxMysqlSize;
+	}
+
+	public void setMaxMysqlSize(int maxMysqlSize) {
+		this.maxMysqlSize = maxMysqlSize;
+	}
 
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 

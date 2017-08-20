@@ -1,14 +1,14 @@
 package com.Ben12345rocks.AdvancedCore.Util.Updater;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.ProtocolException;
 import java.net.URL;
 
+import javax.net.ssl.HttpsURLConnection;
+
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -40,14 +40,12 @@ public class Updater {
 		UPDATE_AVAILABLE
 	}
 
-	/** The api key. */
-	private final String API_KEY = "98BE0FE67F88AB82B4C197FAF1DC3B69206EFDCC4D3B80FC83A00037510B99B4";
+	// private final String API_KEY =
+	// "98BE0FE67F88AB82B4C197FAF1DC3B69206EFDCC4D3B80FC83A00037510B99B4";
 
-	/** The connection. */
-	private HttpURLConnection connection;
+	// private HttpURLConnection connection;
 
-	/** The host. */
-	private final String HOST = "http://www.spigotmc.org";
+	// private final String HOST = "http://www.spigotmc.org";
 
 	/** The old version. */
 	private String oldVersion;
@@ -55,11 +53,9 @@ public class Updater {
 	/** The plugin. */
 	private JavaPlugin plugin;
 
-	/** The query. */
-	private final String QUERY = "/api/general.php";
+	// private final String QUERY = "/api/general.php";
 
-	/** The request method. */
-	private final String REQUEST_METHOD = "POST";
+	// private final String REQUEST_METHOD = "POST";
 
 	/** The resource id. */
 	private String RESOURCE_ID = "";
@@ -70,8 +66,7 @@ public class Updater {
 	/** The version. */
 	private String version;
 
-	/** The write string. */
-	private String WRITE_STRING;
+	// private String WRITE_STRING;
 
 	/**
 	 * Instantiates a new updater.
@@ -93,14 +88,7 @@ public class Updater {
 			return;
 		}
 
-		try {
-			connection = (HttpURLConnection) new URL(HOST + QUERY).openConnection();
-		} catch (IOException e) {
-			result = UpdateResult.FAIL_SPIGOT;
-			return;
-		}
-
-		WRITE_STRING = "key=" + API_KEY + "&resource=" + RESOURCE_ID;
+		// WRITE_STRING = "key=" + API_KEY + "&resource=" + RESOURCE_ID;
 		run();
 	}
 
@@ -122,40 +110,38 @@ public class Updater {
 		return version;
 	}
 
-	/**
-	 * Run.
-	 */
 	private void run() {
-		connection.setDoOutput(true);
 		try {
-			connection.setRequestMethod(REQUEST_METHOD);
-			connection.getOutputStream().write(WRITE_STRING.getBytes("UTF-8"));
-		} catch (ProtocolException e1) {
-			result = UpdateResult.FAIL_SPIGOT;
-		} catch (UnsupportedEncodingException e) {
-			result = UpdateResult.FAIL_SPIGOT;
-		} catch (IOException e) {
-			result = UpdateResult.FAIL_SPIGOT;
-		}
-		String version;
-		try {
-			version = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
-			if (version == null) {
-				result = UpdateResult.FAIL_SPIGOT;
-				return;
-			}
-		} catch (Exception e) {
-			result = UpdateResult.BAD_RESOURCEID;
-			return;
-		}
-		if (version.length() <= 7) {
-			this.version = version;
-			version.replace("[^A-Za-z]", "").replace("|", "");
+			HttpsURLConnection connection = (HttpsURLConnection) new URL(
+					"https://api.spigotmc.org/legacy/update.php?resource=" + RESOURCE_ID).openConnection();
+			int timed_out = 1250; // check if API is avaible, set your time as you want
+			connection.setConnectTimeout(timed_out);
+			connection.setReadTimeout(timed_out);
+			this.version = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
+			connection.disconnect();
 			versionCheck();
 			return;
+		} catch (Exception e) {
+			result = UpdateResult.FAIL_SPIGOT;
+			AdvancedCoreHook.getInstance().debug(e);
 		}
-		result = UpdateResult.BAD_RESOURCEID;
+		result = UpdateResult.FAIL_SPIGOT;
 	}
+
+	/*
+	 * private void run() { connection.setDoOutput(true); try {
+	 * connection.setRequestMethod(REQUEST_METHOD);
+	 * connection.getOutputStream().write(WRITE_STRING.getBytes("UTF-8")); } catch
+	 * (ProtocolException e1) { result = UpdateResult.FAIL_SPIGOT; } catch
+	 * (UnsupportedEncodingException e) { result = UpdateResult.FAIL_SPIGOT; } catch
+	 * (IOException e) { result = UpdateResult.FAIL_SPIGOT; } String version; try {
+	 * version = new BufferedReader(new
+	 * InputStreamReader(connection.getInputStream())).readLine(); if (version ==
+	 * null) { result = UpdateResult.FAIL_SPIGOT; return; } } catch (Exception e) {
+	 * result = UpdateResult.BAD_RESOURCEID; return; } if (version.length() <= 7) {
+	 * this.version = version; version.replace("[^A-Za-z]", "").replace("|", "");
+	 * versionCheck(); return; } result = UpdateResult.BAD_RESOURCEID; }
+	 */
 
 	/**
 	 * Should update.
