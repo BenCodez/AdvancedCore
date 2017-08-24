@@ -322,6 +322,14 @@ public class ItemBuilder {
 	public String getName() {
 		return is.getItemMeta().getDisplayName();
 	}
+	
+	public boolean hasCustomDisplayName() {
+		return is.getItemMeta().hasDisplayName();
+	}
+	
+	public boolean hasCustomLore() {
+		return is.getItemMeta().hasLore();
+	}
 
 	/**
 	 * @return the skull
