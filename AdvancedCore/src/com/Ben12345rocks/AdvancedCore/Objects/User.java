@@ -506,6 +506,13 @@ public class User {
 		}
 		return player.hasPermission(perm);
 	}
+	
+	public void closeInv() {
+		Player player = getPlayer();
+		if (player != null) {
+			player.closeInventory();
+		}
+	}
 
 	/**
 	 * Checks if is online.
