@@ -41,6 +41,16 @@ public class MySQL {
 
 	public MySQL(String tableName, String hostName, int port, String database, String user, String pass,
 			int maxThreads) {
+		if (AdvancedCoreHook.getInstance().getMaxMysqlSize() >= 0) {
+			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
+					.maximumSize(AdvancedCoreHook.getInstance().getMaxMysqlSize())
+					.build(new CacheLoader<String, ArrayList<Column>>() {
+						@Override
+						public ArrayList<Column> load(String key) {
+							return getExactQuery(new Column("uuid", key, DataType.STRING));
+						}
+					});
+		}
 		name = tableName;
 		mysql = new com.Ben12345rocks.AdvancedCore.mysql.api.MySQL(maxThreads);
 		if (!mysql.connect(hostName, "" + port, user, pass, database)) {

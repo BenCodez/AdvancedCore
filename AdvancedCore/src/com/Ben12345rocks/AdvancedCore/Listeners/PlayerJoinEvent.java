@@ -43,6 +43,8 @@ public class PlayerJoinEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(PlayerLoginEvent event) {
+		AdvancedCoreHook.getInstance()
+				.debug("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 			@Override
@@ -65,6 +67,8 @@ public class PlayerJoinEvent implements Listener {
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerQuit(PlayerQuitEvent event) {
+		AdvancedCoreHook.getInstance()
+				.debug("Logout: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 		final String uuid = event.getPlayer().getPlayer().getUniqueId().toString();
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
