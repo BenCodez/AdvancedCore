@@ -447,7 +447,9 @@ public class BInventory implements Listener {
 		}
 		if (inv != null && inv.equals(inv) && player != null
 				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
-			destroy();
+			if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
+				destroy();
+			}
 		}
 		return;
 	}
@@ -475,7 +477,7 @@ public class BInventory implements Listener {
 				ItemStack item = pair.getValue().getItem(player);
 				inv.setItem(pair.getKey(), item);
 			}
-			
+
 			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
 				@Override
@@ -557,7 +559,8 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * @param prevItem the prevItem to set
+	 * @param prevItem
+	 *            the prevItem to set
 	 */
 	public void setPrevItem(ItemStack prevItem) {
 		this.prevItem = prevItem;
@@ -571,7 +574,8 @@ public class BInventory implements Listener {
 	}
 
 	/**
-	 * @param nextItem the nextItem to set
+	 * @param nextItem
+	 *            the nextItem to set
 	 */
 	public void setNextItem(ItemStack nextItem) {
 		this.nextItem = nextItem;
