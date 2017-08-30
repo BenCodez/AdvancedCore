@@ -53,7 +53,7 @@ public class MiscUtils {
 
 						@Override
 						public void run() {
-							Bukkit.broadcastMessage(msg);
+							player.sendMessage(msg);
 						}
 					});
 				}
