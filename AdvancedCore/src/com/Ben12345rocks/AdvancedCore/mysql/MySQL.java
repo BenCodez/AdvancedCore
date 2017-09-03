@@ -5,8 +5,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -38,6 +40,8 @@ public class MySQL {
 	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
 	private String name;
+
+	private Set<String> uuids = (Set<String>) Collections.synchronizedSet(new HashSet<String>());
 
 	public MySQL(String tableName, String hostName, int port, String database, String user, String pass,
 			int maxThreads) {
@@ -83,7 +87,7 @@ public class MySQL {
 			public void run() {
 				updateBatch();
 			}
-		}, 10 * 1000, 1 * 1000);
+		}, 10 * 1000, 500);
 
 	}
 
@@ -115,8 +119,14 @@ public class MySQL {
 
 	public void clearCache() {
 		table.clear();
+		clearCacheBasic();
+	}
+
+	public void clearCacheBasic() {
 		columns.clear();
 		columns.addAll(getColumnsQueury());
+		uuids.clear();
+		uuids.addAll(getUuidsQuery());
 	}
 
 	public void close() {
@@ -146,6 +156,9 @@ public class MySQL {
 	}
 
 	public List<String> getColumns() {
+		if (columns == null || columns.size() == 0) {
+			loadData();
+		}
 		return columns;
 	}
 
@@ -232,7 +245,7 @@ public class MySQL {
 		return result;
 	}
 
-	public ArrayList<String> getUuids() {
+	public ArrayList<String> getUuidsQuery() {
 		ArrayList<String> uuids = new ArrayList<String>();
 
 		ArrayList<Column> rows = getRowsQuery();
@@ -240,6 +253,15 @@ public class MySQL {
 			uuids.add((String) c.getValue());
 		}
 
+		return uuids;
+	}
+
+	public Set<String> getUuids() {
+		if (uuids == null || uuids.size() == 0) {
+			uuids.clear();
+			uuids.addAll(getUuidsQuery());
+			return uuids;
+		}
 		return uuids;
 	}
 
@@ -256,6 +278,7 @@ public class MySQL {
 
 		try {
 			new Query(mysql, query).executeUpdateAsync();
+			uuids.add(index);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -267,6 +290,9 @@ public class MySQL {
 
 	public void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		if (uuids.contains(uuid)) {
+			uuids.add(uuid);
+		}
 	}
 
 	public void removePlayer(String uuid) {
@@ -323,5 +349,11 @@ public class MySQL {
 
 		}
 
+	}
+
+	public void loadPlayerIfNeeded(String uuid) {
+		if (!containsKey(uuid)) {
+			loadPlayer(uuid);
+		}
 	}
 }

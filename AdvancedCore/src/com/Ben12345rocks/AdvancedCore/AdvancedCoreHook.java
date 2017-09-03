@@ -83,6 +83,15 @@ public class AdvancedCoreHook {
 	private String version = "";
 	private String buildTime = "";
 	private int maxMysqlSize = -1;
+	private boolean autoKillInvs = true;
+
+	public boolean isAutoKillInvs() {
+		return autoKillInvs;
+	}
+
+	public void setAutoKillInvs(boolean autoKillInvs) {
+		this.autoKillInvs = autoKillInvs;
+	}
 
 	public int getMaxMysqlSize() {
 		return maxMysqlSize;
