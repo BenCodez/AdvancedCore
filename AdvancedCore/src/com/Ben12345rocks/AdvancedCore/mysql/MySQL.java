@@ -87,7 +87,7 @@ public class MySQL {
 			public void run() {
 				updateBatch();
 			}
-		}, 10 * 1000, 1 * 1000);
+		}, 10 * 1000, 500);
 
 	}
 
@@ -353,7 +353,9 @@ public class MySQL {
 
 	public void loadPlayerIfNeeded(String uuid) {
 		if (table.containsKey(uuid)) {
-			return;
+			if (table.get(uuid).size() == getColumns().size()) {
+				return;
+			}
 		}
 		loadPlayer(uuid);
 
