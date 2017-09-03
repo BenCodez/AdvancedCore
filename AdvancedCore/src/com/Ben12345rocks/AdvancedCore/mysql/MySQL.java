@@ -352,6 +352,8 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		loadPlayer(uuid);
+		if (!containsKey(uuid)) {
+			loadPlayer(uuid);
+		}
 	}
 }
