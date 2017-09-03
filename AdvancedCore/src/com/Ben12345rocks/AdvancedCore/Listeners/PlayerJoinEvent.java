@@ -1,7 +1,5 @@
 package com.Ben12345rocks.AdvancedCore.Listeners;
 
-import java.util.UUID;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -69,17 +67,14 @@ public class PlayerJoinEvent implements Listener {
 	public void onPlayerQuit(PlayerQuitEvent event) {
 		AdvancedCoreHook.getInstance()
 				.debug("Logout: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
-		final String uuid = event.getPlayer().getPlayer().getUniqueId().toString();
-		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
-
-			@Override
-			public void run() {
-				if (Bukkit.getPlayer(UUID.fromString(uuid)) == null) {
-					if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-						AdvancedCoreHook.getInstance().getMysql().removePlayer(uuid);
-					}
-				}
-			}
-		}, 100L);
+		/*
+		 * final String uuid = event.getPlayer().getPlayer().getUniqueId().toString();
+		 * Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+		 * 
+		 * @Override public void run() { if (Bukkit.getPlayer(UUID.fromString(uuid)) ==
+		 * null) { if
+		 * (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+		 * AdvancedCoreHook.getInstance().getMysql().removePlayer(uuid); } } } }, 100L);
+		 */
 	}
 }
