@@ -381,21 +381,21 @@ public class User {
 			return;
 		}
 
-		Player player = getPlayer();
+		final Player player = getPlayer();
 
-		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
-		for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
-			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+		Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
-				@Override
-				public void run() {
+			@Override
+			public void run() {
+				HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+				for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
 					player.getWorld().dropItem(player.getLocation(), me.getValue());
 				}
-			});
 
-		}
+				player.updateInventory();
 
-		player.updateInventory();
+			}
+		});
 
 	}
 
@@ -506,7 +506,7 @@ public class User {
 		}
 		return player.hasPermission(perm);
 	}
-	
+
 	public void closeInv() {
 		Player player = getPlayer();
 		if (player != null) {
