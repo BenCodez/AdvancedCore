@@ -352,13 +352,6 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (containsKey(uuid)) {
-			if (table.get(uuid).size() == getColumns().size()) {
-				AdvancedCoreHook.getInstance().debug("Player loaded already");
-				return;
-			}
-		}
 		loadPlayer(uuid);
-
 	}
 }
