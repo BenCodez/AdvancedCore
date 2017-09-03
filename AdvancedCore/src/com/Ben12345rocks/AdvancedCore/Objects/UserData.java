@@ -130,12 +130,10 @@ public class UserData {
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.STRING)) {
-							AdvancedCoreHook.getInstance().debug(key);
-							String st = (String) row.get(i).getValue();
-							if (st != null) {
-								return st;
-							}
-							return "";
+							//AdvancedCoreHook.getInstance().debug(key);
+							String st = "" + row.get(i).getValue().toString();
+							return st;
+
 						}
 					}
 				}
