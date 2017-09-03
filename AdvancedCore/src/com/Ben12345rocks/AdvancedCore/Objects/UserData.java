@@ -131,9 +131,10 @@ public class UserData {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.STRING)) {
 							// AdvancedCoreHook.getInstance().debug(key);
-							String st = row.get(i).getValue().toString();
-							if (st != null) {
-								return st;
+							Object value = row.get(i).getValue();
+
+							if (value != null) {
+								return value.toString();
 							}
 							return "";
 
