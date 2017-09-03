@@ -115,8 +115,13 @@ public class MySQL {
 
 	public void clearCache() {
 		table.clear();
+		clearCacheBasic();
+	}
+
+	public void clearCacheBasic() {
 		columns.clear();
 		columns.addAll(getColumnsQueury());
+		uuids = getUuidsQuery();
 	}
 
 	public void close() {
@@ -146,6 +151,9 @@ public class MySQL {
 	}
 
 	public List<String> getColumns() {
+		if (columns == null || columns.size() == 0) {
+			loadData();
+		}
 		return columns;
 	}
 
@@ -232,7 +240,9 @@ public class MySQL {
 		return result;
 	}
 
-	public ArrayList<String> getUuids() {
+	private ArrayList<String> uuids = new ArrayList<String>();
+
+	public ArrayList<String> getUuidsQuery() {
 		ArrayList<String> uuids = new ArrayList<String>();
 
 		ArrayList<Column> rows = getRowsQuery();
@@ -240,6 +250,14 @@ public class MySQL {
 			uuids.add((String) c.getValue());
 		}
 
+		return uuids;
+	}
+
+	public ArrayList<String> getUuids() {
+		if (uuids == null || uuids.size() == 0) {
+			uuids = getUuidsQuery();
+			return uuids;
+		}
 		return uuids;
 	}
 
