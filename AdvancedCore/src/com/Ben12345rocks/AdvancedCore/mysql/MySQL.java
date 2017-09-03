@@ -290,6 +290,9 @@ public class MySQL {
 
 	public void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		if (uuids.contains(uuid)) {
+			uuids.add(uuid);
+		}
 	}
 
 	public void removePlayer(String uuid) {
