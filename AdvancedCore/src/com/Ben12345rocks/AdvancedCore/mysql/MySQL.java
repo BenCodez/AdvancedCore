@@ -350,4 +350,12 @@ public class MySQL {
 		}
 
 	}
+
+	public void loadPlayerIfNeeded(String uuid) {
+		if (table.containsKey(uuid)) {
+			return;
+		}
+		loadPlayer(uuid);
+
+	}
 }
