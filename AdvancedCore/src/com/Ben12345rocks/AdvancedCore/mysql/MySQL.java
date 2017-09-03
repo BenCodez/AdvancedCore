@@ -5,8 +5,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -38,6 +40,8 @@ public class MySQL {
 	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
 	private String name;
+
+	private Set<String> uuids = (Set<String>) Collections.synchronizedSet(new HashSet<String>());
 
 	public MySQL(String tableName, String hostName, int port, String database, String user, String pass,
 			int maxThreads) {
@@ -121,7 +125,8 @@ public class MySQL {
 	public void clearCacheBasic() {
 		columns.clear();
 		columns.addAll(getColumnsQueury());
-		uuids = getUuidsQuery();
+		uuids.clear();
+		uuids.addAll(getUuidsQuery());
 	}
 
 	public void close() {
@@ -240,8 +245,6 @@ public class MySQL {
 		return result;
 	}
 
-	private ArrayList<String> uuids = new ArrayList<String>();
-
 	public ArrayList<String> getUuidsQuery() {
 		ArrayList<String> uuids = new ArrayList<String>();
 
@@ -253,9 +256,10 @@ public class MySQL {
 		return uuids;
 	}
 
-	public ArrayList<String> getUuids() {
+	public Set<String> getUuids() {
 		if (uuids == null || uuids.size() == 0) {
-			uuids = getUuidsQuery();
+			uuids.clear();
+			uuids.addAll(getUuidsQuery());
 			return uuids;
 		}
 		return uuids;
@@ -274,6 +278,7 @@ public class MySQL {
 
 		try {
 			new Query(mysql, query).executeUpdateAsync();
+			uuids.add(index);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
