@@ -17,6 +17,7 @@ public class RewardBuilder {
 	private boolean giveOffline;
 	private boolean online;
 	private boolean checkTimed = true;
+	private boolean ignoreChance;
 
 	public RewardBuilder(FileConfiguration data, String path) {
 		this.data = data;
@@ -85,10 +86,10 @@ public class RewardBuilder {
 	public void send(User user) {
 		if (reward == null) {
 			RewardHandler.getInstance().giveReward(user, prefix, data, path, online, giveOffline, checkTimed,
-					placeholders);
+					ignoreChance, placeholders);
 		} else {
 			RewardHandler.getInstance().giveReward(user, reward, isGiveOffline(), isGiveOffline(), checkTimed,
-					placeholders);
+					ignoreChance, placeholders);
 		}
 	}
 
@@ -133,6 +134,11 @@ public class RewardBuilder {
 
 	public RewardBuilder withPrefix(String prefix) {
 		this.prefix = prefix;
+		return this;
+	}
+
+	public RewardBuilder ignoreChance(boolean ignoreChance) {
+		this.ignoreChance = ignoreChance;
 		return this;
 	}
 

@@ -85,6 +85,17 @@ public class StringUtils {
 			return false;
 		}
 	}
+	
+	public boolean isDouble(String st) {
+		try {
+			@SuppressWarnings("unused")
+			double num = Double.parseDouble(st);
+			return true;
+
+		} catch (NumberFormatException ex) {
+			return false;
+		}
+	}
 
 	/**
 	 * Replace ignore case.
