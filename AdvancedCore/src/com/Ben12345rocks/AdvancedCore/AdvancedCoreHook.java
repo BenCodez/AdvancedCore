@@ -12,6 +12,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -29,6 +30,8 @@ import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.UUID;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
@@ -54,6 +57,8 @@ public class AdvancedCoreHook {
 	public static AdvancedCoreHook getInstance() {
 		return instance;
 	}
+
+	private ConcurrentHashMap<String, String> uuids;
 
 	private JavaPlugin plugin;
 	private boolean placeHolderAPIEnabled;
@@ -448,6 +453,7 @@ public class AdvancedCoreHook {
 	 */
 	public void loadBasicHook(JavaPlugin plugin) {
 		this.plugin = plugin;
+		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
 		loadHandle();
@@ -495,6 +501,7 @@ public class AdvancedCoreHook {
 	 */
 	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
+		loadUUIDs();
 		permPrefix = plugin.getName();
 		loadUserAPI(UserStorage.SQLITE);
 		checkPlaceHolderAPI();
@@ -510,6 +517,28 @@ public class AdvancedCoreHook {
 		loadAutoUpdateCheck();
 		loadVersionFile();
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
+	}
+
+	public ConcurrentHashMap<String, String> getUuids() {
+		return uuids;
+	}
+
+	private void loadUUIDs() {
+		uuids = new ConcurrentHashMap<String, String>();
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					String name = user.getData().getString("PlayerName");
+					if (uuids.containsKey(name)) {
+						debug("Duplicate uuid? " + uuid + ":" + name + " Other key: " + uuids.get(name));
+					}
+					uuids.put(name, uuid);
+				}
+			}
+		});
 	}
 
 	/**
