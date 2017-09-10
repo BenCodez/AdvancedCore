@@ -47,15 +47,10 @@ public class MiscUtils {
 		if (broadcastMsg != null) {
 			if (!broadcastMsg.equals("")) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
-					final String msg = StringUtils.getInstance()
+					String msg = StringUtils.getInstance()
 							.colorize(StringUtils.getInstance().replacePlaceHolders(player, broadcastMsg));
-					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+					player.sendMessage(msg);
 
-						@Override
-						public void run() {
-							player.sendMessage(msg);
-						}
-					});
 				}
 			}
 		}
