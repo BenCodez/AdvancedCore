@@ -344,19 +344,13 @@ public class MySQL {
 	public synchronized void updateBatch() {
 		if (query.size() > 0) {
 			String sql = "";
-			boolean stop = false;
-			int size = 0;
-			while (query.size() > 0 && !stop) {
+			while (query.size() > 0) {
 
 				String text = query.poll();
 				if (!text.endsWith(";")) {
 					text += ";";
 				}
 				sql += text;
-				size++;
-				if (size > 500) {
-					stop = true;
-				}
 			}
 
 			try {
