@@ -3,7 +3,6 @@ package com.Ben12345rocks.AdvancedCore.mysql;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -88,7 +87,8 @@ public class MySQL {
 			public void run() {
 				updateBatch();
 			}
-		}, 10 * 1000, 1000);
+
+		}, 10 * 1000, 500);
 
 	}
 
@@ -327,45 +327,34 @@ public class MySQL {
 	}
 
 	public synchronized void updateBatch() {
-		try {
+
+		if (query.size() > 0) {
 			String sql = "";
-			if (query.size() > 0) {
-				while (query.size() > 0) {
-					String text = query.poll();
-					if (!text.endsWith(";")) {
-						text += ";";
-					}
-					sql += text;
-
+			while (query.size() > 0) {
+				String text = query.poll();
+				if (!text.endsWith(";")) {
+					text += ";";
 				}
-				AdvancedCoreHook.getInstance().extraDebug(sql);
-				Statement st = mysql.getConnectionManager().getConnection().createStatement();
-				for (String str : sql.split(";")) {
-					st.addBatch(str);
-				}
-				st.executeBatch();
-				mysql.getConnectionManager().getConnection().close();
-				
-
+				sql += text;
 			}
-		} catch (SQLException e1) {
-			e1.printStackTrace();
+
+			executeBatch(sql);
+
 		}
 
-		/*
-		 * if (query.size() > 0) { String sql = ""; while (query.size() > 0) { String
-		 * text = query.poll(); if (!text.endsWith(";")) { text += ";"; } sql += text; }
-		 * 
-		 * for (String text : sql.split(";")) { try { Query query = new Query(mysql,
-		 * text); query.executeUpdateAsync(); } catch (SQLException e) {
-		 * AdvancedCoreHook.getInstance().getPlugin().getLogger().
-		 * severe("Error occoured while executing sql: " + e.toString() +
-		 * ", turn debug on to see full stacktrace");
-		 * AdvancedCoreHook.getInstance().debug(e); } }
-		 * 
-		 * }
-		 */
+	}
 
+	private synchronized void executeBatch(String sql) {
+		for (String text : sql.split(";")) {
+			try {
+				Query query = new Query(mysql, text);
+				query.executeUpdateAsync();
+			} catch (SQLException e) {
+				AdvancedCoreHook.getInstance().getPlugin().getLogger().severe("Error occoured while executing sql: "
+						+ e.toString() + ", turn debug on to see full stacktrace");
+				AdvancedCoreHook.getInstance().debug(e);
+			}
+		}
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
