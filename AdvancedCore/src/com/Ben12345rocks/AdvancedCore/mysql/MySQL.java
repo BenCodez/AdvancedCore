@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.mysql;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -334,11 +335,16 @@ public class MySQL {
 					if (!text.endsWith(";")) {
 						text += ";";
 					}
-					sql += text + " ";
+					sql += text;
 
 				}
-				AdvancedCoreHook.getInstance().debug(sql);
-				mysql.getConnectionManager().getConnection().createStatement().executeUpdate(sql);
+				AdvancedCoreHook.getInstance().extraDebug(sql);
+				Statement st = mysql.getConnectionManager().getConnection().createStatement();
+				for (String str : sql.split(";")) {
+					st.executeUpdate(str);
+				}
+				st.close();
+				
 
 			}
 		} catch (SQLException e1) {
