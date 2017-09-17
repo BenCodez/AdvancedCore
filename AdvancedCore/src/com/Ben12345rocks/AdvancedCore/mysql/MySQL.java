@@ -44,7 +44,7 @@ public class MySQL {
 
 	private Set<String> uuids = (Set<String>) Collections.synchronizedSet(new HashSet<String>());
 
-	private boolean useBatchUpdates = false;
+	private boolean useBatchUpdates = true;
 
 	public MySQL(String tableName, String hostName, int port, String database, String user, String pass,
 			int maxThreads) {
@@ -82,12 +82,7 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
-		try {
-			useBatchUpdates = mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates();
-			AdvancedCoreHook.getInstance().debug("UseBatchUpdates: " + useBatchUpdates);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		
 
 		loadData();
 
@@ -297,6 +292,17 @@ public class MySQL {
 
 	public void loadData() {
 		columns = getColumnsQueury();
+		
+		try {
+			useBatchUpdates = mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates();
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public boolean isUseBatchUpdates() {
+		return useBatchUpdates;
 	}
 
 	public void loadPlayer(String uuid) {
