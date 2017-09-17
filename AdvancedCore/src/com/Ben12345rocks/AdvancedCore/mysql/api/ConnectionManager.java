@@ -16,7 +16,7 @@ public class ConnectionManager {
 	private String database;
 	private int connectionTimeout;
 	private int maximumPoolsize;
-	private int maxConnections;
+	//private int maxConnections;
 
 	public ConnectionManager(String host, String port, String username, String password, String database) {
 		this.host = host;
@@ -25,8 +25,8 @@ public class ConnectionManager {
 		this.password = password;
 		this.database = database;
 		connectionTimeout = 5000;
-		maximumPoolsize = 10;
-		maxConnections = 1;
+		maximumPoolsize = 5;
+		//maxConnections = 1;
 
 	}
 
@@ -43,7 +43,7 @@ public class ConnectionManager {
 		} else {
 			maximumPoolsize = 5;
 		}
-		this.maxConnections = maxConnections;
+		//this.maxConnections = maxConnections;
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
@@ -55,7 +55,7 @@ public class ConnectionManager {
 		this.database = database;
 		this.connectionTimeout = connectionTimeout;
 		this.maximumPoolsize = maximumPoolsize;
-		this.maxConnections = maxConnections;
+		//this.maxConnections = maxConnections;
 	}
 
 	public void close() {
@@ -92,8 +92,7 @@ public class ConnectionManager {
 			config.setUsername(username);
 			config.setPassword(password);
 			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database)
-					+ "?useSSL=false&amp;allowMultiQueries=true&amp;rewriteBatchedStatements=true&amp;max-connections="
-					+ maxConnections);
+					+ "?useSSL=false&amp;allowMultiQueries=true&amp;rewriteBatchedStatements=true");
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(1);

@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.mysql;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -327,7 +328,6 @@ public class MySQL {
 	}
 
 	public synchronized void updateBatch() {
-
 		if (query.size() > 0) {
 			String sql = "";
 			while (query.size() > 0) {
@@ -338,23 +338,35 @@ public class MySQL {
 				sql += text;
 			}
 
-			executeBatch(sql);
-
-		}
-
-	}
-
-	private synchronized void executeBatch(String sql) {
-		for (String text : sql.split(";")) {
 			try {
-				Query query = new Query(mysql, text);
-				query.executeUpdateAsync();
-			} catch (SQLException e) {
-				AdvancedCoreHook.getInstance().getPlugin().getLogger().severe("Error occoured while executing sql: "
-						+ e.toString() + ", turn debug on to see full stacktrace");
-				AdvancedCoreHook.getInstance().debug(e);
+				if (mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates()) {
+					Statement st = mysql.getConnectionManager().getConnection().createStatement();
+					st.closeOnCompletion();
+					for (String str : sql.split(";")) {
+						st.addBatch(str);
+					}
+					st.executeBatch();
+				} else {
+					for (String text : sql.split(";")) {
+						try {
+							Query query = new Query(mysql, text);
+							query.executeUpdateAsync();
+						} catch (SQLException e) {
+							AdvancedCoreHook.getInstance().getPlugin().getLogger().severe("Error occoured while executing sql: "
+									+ e.toString() + ", turn debug on to see full stacktrace");
+							AdvancedCoreHook.getInstance().debug(e);
+						}
+					}
+				}
+			} catch (SQLException e1) {
+				
+				e1.printStackTrace();
 			}
+
+		
+
 		}
+
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
