@@ -341,9 +341,9 @@ public class MySQL {
 				AdvancedCoreHook.getInstance().extraDebug(sql);
 				Statement st = mysql.getConnectionManager().getConnection().createStatement();
 				for (String str : sql.split(";")) {
-					st.executeUpdate(str);
+					st.addBatch(str);
 				}
-				st.close();
+				st.executeBatch();
 				
 
 			}

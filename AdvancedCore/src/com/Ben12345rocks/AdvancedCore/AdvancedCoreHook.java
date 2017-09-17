@@ -224,7 +224,9 @@ public class AdvancedCoreHook {
 	}
 
 	public void extraDebug(String msg) {
-		debug(plugin, "[Extra] " + msg);
+		if (extraDebug) {
+			debug(plugin, "[Extra] " + msg);
+		}
 	}
 
 	public String getDefaultRequestMethod() {
