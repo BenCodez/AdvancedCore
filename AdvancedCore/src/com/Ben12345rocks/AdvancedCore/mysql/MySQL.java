@@ -340,7 +340,7 @@ public class MySQL {
 				AdvancedCoreHook.getInstance().debug(sql);
 				Query query = new Query(mysql, sql);
 				query.addBatch();
-				query.executeBatchAsync();
+				query.executeBatch();
 			}
 		} catch (SQLException e1) {
 			e1.printStackTrace();
