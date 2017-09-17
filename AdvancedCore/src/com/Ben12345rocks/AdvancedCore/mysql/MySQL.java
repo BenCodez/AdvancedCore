@@ -353,7 +353,7 @@ public class MySQL {
 				}
 				sql += text;
 				size++;
-				if (useBatchUpdates && size > 100) {
+				if (size > 150) {
 					stop = true;
 				}
 			}
