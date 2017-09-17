@@ -44,6 +44,8 @@ public class MySQL {
 
 	private Set<String> uuids = (Set<String>) Collections.synchronizedSet(new HashSet<String>());
 
+	private boolean useBatchUpdates = false;
+
 	public MySQL(String tableName, String hostName, int port, String database, String user, String pass,
 			int maxThreads) {
 		if (AdvancedCoreHook.getInstance().getMaxMysqlSize() >= 0) {
@@ -76,6 +78,13 @@ public class MySQL {
 			query = new Query(mysql, sql);
 
 			query.executeUpdateAsync();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			useBatchUpdates = mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates();
+			AdvancedCoreHook.getInstance().debug("UseBatchUpdates: " + useBatchUpdates);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -339,7 +348,7 @@ public class MySQL {
 			}
 
 			try {
-				if (mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates()) {
+				if (useBatchUpdates) {
 					Statement st = mysql.getConnectionManager().getConnection().createStatement();
 					st.closeOnCompletion();
 					for (String str : sql.split(";")) {
@@ -352,18 +361,17 @@ public class MySQL {
 							Query query = new Query(mysql, text);
 							query.executeUpdateAsync();
 						} catch (SQLException e) {
-							AdvancedCoreHook.getInstance().getPlugin().getLogger().severe("Error occoured while executing sql: "
-									+ e.toString() + ", turn debug on to see full stacktrace");
+							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+									.severe("Error occoured while executing sql: " + e.toString()
+											+ ", turn debug on to see full stacktrace");
 							AdvancedCoreHook.getInstance().debug(e);
 						}
 					}
 				}
 			} catch (SQLException e1) {
-				
+
 				e1.printStackTrace();
 			}
-
-		
 
 		}
 
