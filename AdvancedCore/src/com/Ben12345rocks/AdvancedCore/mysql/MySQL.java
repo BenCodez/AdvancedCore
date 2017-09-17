@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.mysql;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -360,12 +361,14 @@ public class MySQL {
 
 			try {
 				if (useBatchUpdates) {
-					Statement st = mysql.getConnectionManager().getConnection().createStatement();
+					Connection conn = mysql.getConnectionManager().getConnection();
+					Statement st = conn.createStatement();
 					for (String str : sql.split(";")) {
 						st.addBatch(str);
 					}
 					st.executeBatch();
 					st.close();
+					conn.close();
 				} else {
 					for (String text : sql.split(";")) {
 						try {
