@@ -25,7 +25,7 @@ public class ConnectionManager {
 		this.username = username;
 		this.password = password;
 		this.database = database;
-		connectionTimeout = 10000;
+		connectionTimeout = 20000;
 		maximumPoolsize = 5;
 		//maxConnections = 1;
 
@@ -38,7 +38,7 @@ public class ConnectionManager {
 		this.username = username;
 		this.password = password;
 		this.database = database;
-		connectionTimeout = 10000;
+		connectionTimeout = 20000;
 		if (maxConnections > 5) {
 			maximumPoolsize = maxConnections;
 		} else {
@@ -68,12 +68,11 @@ public class ConnectionManager {
 	}
 
 	public Connection getConnection() {
-		if (isClosed()) {
-			AdvancedCoreHook.getInstance().debug("Connection closed... opening....");
-			open();
-		}	
-
 		try {
+			if (isClosed()) {
+				AdvancedCoreHook.getInstance().debug("Connection closed... opening....");
+				open();
+			}	
 			return dataSource.getConnection();
 		} catch (SQLException e) {
 			e.printStackTrace();
