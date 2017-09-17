@@ -338,7 +338,7 @@ public class MySQL {
 
 				}
 				AdvancedCoreHook.getInstance().debug(sql);
-				mysql.getConnectionManager().getConnection().createStatement().executeQuery(sql);
+				mysql.getConnectionManager().getConnection().createStatement().executeUpdate(sql);
 
 			}
 		} catch (SQLException e1) {
