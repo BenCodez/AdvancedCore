@@ -338,9 +338,8 @@ public class MySQL {
 
 				}
 				AdvancedCoreHook.getInstance().debug(sql);
-				Query query = new Query(mysql, sql);
-				query.addBatch();
-				query.executeBatch();
+				mysql.getConnectionManager().getConnection().createStatement().executeQuery(sql);
+
 			}
 		} catch (SQLException e1) {
 			e1.printStackTrace();
