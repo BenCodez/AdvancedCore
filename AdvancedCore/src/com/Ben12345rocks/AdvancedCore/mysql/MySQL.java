@@ -60,7 +60,6 @@ public class MySQL {
 		if (!mysql.connect(hostName, "" + port, user, pass, database)) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
 		}
-		mysql.getConnectionManager().open();
 		try {
 			Query q = new Query(mysql, "USE " + database + ";");
 			q.executeUpdateAsync();
