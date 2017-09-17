@@ -27,6 +27,7 @@ public class ConnectionManager {
 		connectionTimeout = 5000;
 		maximumPoolsize = 10;
 		maxConnections = 1;
+		
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
@@ -37,7 +38,7 @@ public class ConnectionManager {
 		this.password = password;
 		this.database = database;
 		connectionTimeout = 5000;
-		maximumPoolsize = 10;
+		maximumPoolsize = maxConnections;
 		this.maxConnections = maxConnections;
 	}
 
@@ -95,7 +96,7 @@ public class ConnectionManager {
 			dataSource = new HikariDataSource(config);
 			return true;
 		} catch (Exception e) {
-			System.out.println(e.toString());
+			e.printStackTrace();
 			return false;
 		}
 	}
