@@ -328,7 +328,6 @@ public class MySQL {
 
 	public synchronized void updateBatch() {
 		try {
-
 			String sql = "";
 			if (query.size() > 0) {
 				while (query.size() > 0) {
@@ -339,6 +338,7 @@ public class MySQL {
 					sql += text;
 
 				}
+				AdvancedCoreHook.getInstance().debug(sql);
 				Query query = new Query(mysql, sql);
 				query.addBatch();
 				query.executeBatchAsync();
