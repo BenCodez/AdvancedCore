@@ -700,7 +700,6 @@ public class AdvancedCoreHook {
 			this.mysql = null;
 		}
 		this.mysql = mysql;
-		debug("UseBatchUpdates: " + mysql.isUseBatchUpdates());
 	}
 
 	public void setPermPrefix(String permPrefix) {
