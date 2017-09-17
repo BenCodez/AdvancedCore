@@ -82,8 +82,6 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
-		
-
 		loadData();
 
 		new Timer().schedule(new TimerTask() {
@@ -292,10 +290,10 @@ public class MySQL {
 
 	public void loadData() {
 		columns = getColumnsQueury();
-		
+
 		try {
 			useBatchUpdates = mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates();
-			
+
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -345,12 +343,19 @@ public class MySQL {
 	public synchronized void updateBatch() {
 		if (query.size() > 0) {
 			String sql = "";
-			while (query.size() > 0) {
+			boolean stop = false;
+			int size = 0;
+			while (query.size() > 0 && !stop) {
+
 				String text = query.poll();
 				if (!text.endsWith(";")) {
 					text += ";";
 				}
 				sql += text;
+				size++;
+				if (useBatchUpdates && size > 100) {
+					stop = true;
+				}
 			}
 
 			try {
