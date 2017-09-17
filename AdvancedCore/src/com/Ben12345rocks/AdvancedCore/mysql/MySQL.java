@@ -88,7 +88,7 @@ public class MySQL {
 			public void run() {
 				updateBatch();
 			}
-		}, 10 * 1000, 500);
+		}, 10 * 1000, 1000);
 
 	}
 
@@ -344,6 +344,7 @@ public class MySQL {
 					st.addBatch(str);
 				}
 				st.executeBatch();
+				mysql.getConnectionManager().getConnection().close();
 				
 
 			}
