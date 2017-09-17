@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.mysql.api;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -24,7 +25,7 @@ public class ConnectionManager {
 		this.username = username;
 		this.password = password;
 		this.database = database;
-		connectionTimeout = 5000;
+		connectionTimeout = 100000;
 		maximumPoolsize = 5;
 		//maxConnections = 1;
 
@@ -37,7 +38,7 @@ public class ConnectionManager {
 		this.username = username;
 		this.password = password;
 		this.database = database;
-		connectionTimeout = 50000;
+		connectionTimeout = 100000;
 		if (maxConnections > 5) {
 			maximumPoolsize = maxConnections;
 		} else {
@@ -68,8 +69,9 @@ public class ConnectionManager {
 
 	public Connection getConnection() {
 		if (isClosed()) {
-			throw new IllegalStateException("Connection is not open.");
-		}
+			AdvancedCoreHook.getInstance().debug("Connection closed... opening....");
+			open();
+		}	
 
 		try {
 			return dataSource.getConnection();

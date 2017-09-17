@@ -354,7 +354,7 @@ public class MySQL {
 				}
 				sql += text;
 				size++;
-				if (size > 150) {
+				if (size > 500) {
 					stop = true;
 				}
 			}
