@@ -1,10 +1,8 @@
 package com.Ben12345rocks.AdvancedCore.mysql;
 
-import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -22,7 +20,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
 import com.Ben12345rocks.AdvancedCore.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
-import com.Ben12345rocks.AdvancedCore.sql.Database;
 import com.google.common.cache.CacheLoader;
 
 public class MySQL {
@@ -63,6 +60,7 @@ public class MySQL {
 		if (!mysql.connect(hostName, "" + port, user, pass, database)) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
 		}
+		mysql.getConnectionManager().open();
 		try {
 			Query q = new Query(mysql, "USE " + database + ";");
 			q.executeUpdateAsync();
@@ -330,17 +328,20 @@ public class MySQL {
 
 	public synchronized void updateBatch() {
 		try {
-			mysql.getConnectionManager().getConnection().setAutoCommit(false);
-			Statement st = mysql.getConnectionManager().getConnection().createStatement();
+
+			String sql = "";
 			if (query.size() > 0) {
 				while (query.size() > 0) {
 					String text = query.poll();
 					if (!text.endsWith(";")) {
 						text += ";";
 					}
-					st.addBatch(text);
+					sql += text;
+
 				}
-				st.executeBatch();
+				Query query = new Query(mysql, sql);
+				query.addBatch();
+				query.executeBatchAsync();
 			}
 		} catch (SQLException e1) {
 			e1.printStackTrace();

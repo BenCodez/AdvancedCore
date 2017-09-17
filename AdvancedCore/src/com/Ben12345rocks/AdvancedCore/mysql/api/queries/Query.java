@@ -33,6 +33,13 @@ public class Query {
 		}
 		statement.addBatch();
 	}
+	
+	public void addBatch(String sql) throws SQLException {
+		if (connection.getAutoCommit()) {
+			connection.setAutoCommit(false);
+		}
+		statement.addBatch(sql);
+	}
 
 	/**
 	 * Execute a batch that does not return a ResultSet.
