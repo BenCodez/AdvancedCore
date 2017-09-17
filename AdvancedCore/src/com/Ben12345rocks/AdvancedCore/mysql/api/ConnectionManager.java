@@ -27,7 +27,7 @@ public class ConnectionManager {
 		connectionTimeout = 5000;
 		maximumPoolsize = 10;
 		maxConnections = 1;
-		
+
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
@@ -38,7 +38,11 @@ public class ConnectionManager {
 		this.password = password;
 		this.database = database;
 		connectionTimeout = 5000;
-		maximumPoolsize = maxConnections;
+		if (maxConnections > 5) {
+			maximumPoolsize = maxConnections;
+		} else {
+			maximumPoolsize = 5;
+		}
 		this.maxConnections = maxConnections;
 	}
 
