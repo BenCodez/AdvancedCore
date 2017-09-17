@@ -334,7 +334,7 @@ public class MySQL {
 					if (!text.endsWith(";")) {
 						text += ";";
 					}
-					sql += text;
+					sql += text + " ";
 
 				}
 				AdvancedCoreHook.getInstance().debug(sql);
