@@ -86,10 +86,12 @@ public class ConnectionManager {
 			config.setDriverClassName("com.mysql.jdbc.Driver");
 			config.setUsername(username);
 			config.setPassword(password);
-			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=false&amp;allowMultiQueries=true&amp;rewriteBatchedStatements=true");
+			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database)
+					+ "?useSSL=false&amp;allowMultiQueries=true&amp;rewriteBatchedStatements=true&amp;max-connections="
+					+ maxConnections);
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
-			config.setMinimumIdle(maxConnections);
+			config.setMinimumIdle(1);
 			dataSource = new HikariDataSource(config);
 			return true;
 		} catch (Exception e) {
