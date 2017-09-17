@@ -86,7 +86,7 @@ public class ConnectionManager {
 			config.setDriverClassName("com.mysql.jdbc.Driver");
 			config.setUsername(username);
 			config.setPassword(password);
-			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=false?allowMultiQueries=true");
+			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=false&amp;allowMultiQueries=true");
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(maxConnections);
