@@ -361,11 +361,11 @@ public class MySQL {
 			try {
 				if (useBatchUpdates) {
 					Statement st = mysql.getConnectionManager().getConnection().createStatement();
-					st.closeOnCompletion();
 					for (String str : sql.split(";")) {
 						st.addBatch(str);
 					}
 					st.executeBatch();
+					st.close();
 				} else {
 					for (String text : sql.split(";")) {
 						try {
