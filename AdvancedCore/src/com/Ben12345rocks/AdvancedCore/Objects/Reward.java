@@ -1027,20 +1027,6 @@ public class Reward {
 		giveReward(user, online, giveOffline, checkTimed, false, placeholders);
 	}	
 
-	/**
-	 * Give reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 * @param giveOffline
-	 *            the give offline
-	 * @param checkTimed
-	 *            checkTimed
-	 * @param placeholders
-	 *            placeholders
-	 */
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
 			HashMap<String, String> placeholders) {
 
@@ -1072,16 +1058,6 @@ public class Reward {
 		giveRewardReward(user, online, ignoreChance, placeholders);
 	}
 
-	/**
-	 * Give reward reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 * @param placeholders
-	 *            placeholders
-	 */
 	public void giveRewardReward(User user, boolean online, boolean ignoreChance,
 			HashMap<String, String> placeholders) {
 		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
