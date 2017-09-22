@@ -1,5 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.Misc;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -125,23 +127,28 @@ public class PlayerUtils {
 		if (playerName == null) {
 			return null;
 		}
+		
+		OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 
-		if (plugin.isAlternateUUIDLookUp()) {
+		if (plugin.isAlternateUUIDLookUp() || (!p.hasPlayedBefore() && !p.isOnline())) {
+			ConcurrentHashMap<String, String> uuids = plugin.getUuids();
+			if (uuids != null) {
+				String uuid = uuids.get(playerName);
+				if (uuid != null) {
+					return uuid;
+				}
+			}
 			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 				User user = UserManager.getInstance().getUser(new UUID(uuid));
 				String name = user.getData().getString("PlayerName");
 				if (name.equals(playerName)) {
+					plugin.getUuids().put(playerName, uuid);
 					return uuid;
 				}
 			}
 		}
 
-		Player player = Bukkit.getPlayer(playerName);
-		if (player == null) {
-			return Bukkit.getOfflinePlayer(playerName).getUniqueId().toString();
-		} else {
-			return player.getUniqueId().toString();
-		}
+		return p.getUniqueId().toString();
 
 	}
 

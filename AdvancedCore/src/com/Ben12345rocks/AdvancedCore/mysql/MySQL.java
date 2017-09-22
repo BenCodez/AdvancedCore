@@ -1,8 +1,10 @@
 package com.Ben12345rocks.AdvancedCore.mysql;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -42,6 +44,8 @@ public class MySQL {
 	private String name;
 
 	private Set<String> uuids = (Set<String>) Collections.synchronizedSet(new HashSet<String>());
+
+	private boolean useBatchUpdates = true;
 
 	public MySQL(String tableName, String hostName, int port, String database, String user, String pass,
 			int maxThreads) {
@@ -87,6 +91,7 @@ public class MySQL {
 			public void run() {
 				updateBatch();
 			}
+
 		}, 10 * 1000, 500);
 
 	}
@@ -286,6 +291,17 @@ public class MySQL {
 
 	public void loadData() {
 		columns = getColumnsQueury();
+
+		try {
+			useBatchUpdates = mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public boolean isUseBatchUpdates() {
+		return useBatchUpdates;
 	}
 
 	public void loadPlayer(String uuid) {
@@ -327,8 +343,10 @@ public class MySQL {
 
 	public synchronized void updateBatch() {
 		if (query.size() > 0) {
+			AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
 			String sql = "";
 			while (query.size() > 0) {
+
 				String text = query.poll();
 				if (!text.endsWith(";")) {
 					text += ";";
@@ -336,15 +354,32 @@ public class MySQL {
 				sql += text;
 			}
 
-			for (String text : sql.split(";")) {
-				try {
-					Query query = new Query(mysql, text);
-					query.executeUpdateAsync();
-				} catch (SQLException e) {
-					AdvancedCoreHook.getInstance().getPlugin().getLogger().severe("Error occoured while executing sql: "
-							+ e.toString() + ", turn debug on to see full stacktrace");
-					AdvancedCoreHook.getInstance().debug(e);
+			try {
+				if (useBatchUpdates) {
+					Connection conn = mysql.getConnectionManager().getConnection();
+					Statement st = conn.createStatement();
+					for (String str : sql.split(";")) {
+						st.addBatch(str);
+					}
+					st.executeBatch();
+					st.close();
+					conn.close();
+				} else {
+					for (String text : sql.split(";")) {
+						try {
+							Query query = new Query(mysql, text);
+							query.executeUpdateAsync();
+						} catch (SQLException e) {
+							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+									.severe("Error occoured while executing sql: " + e.toString()
+											+ ", turn debug on to see full stacktrace");
+							AdvancedCoreHook.getInstance().debug(e);
+						}
+					}
 				}
+			} catch (SQLException e1) {
+
+				e1.printStackTrace();
 			}
 
 		}

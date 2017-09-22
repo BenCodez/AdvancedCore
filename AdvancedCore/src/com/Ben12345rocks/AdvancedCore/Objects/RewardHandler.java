@@ -277,6 +277,18 @@ public class RewardHandler {
 	}
 
 	@Deprecated
+	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline, boolean checkTimed,
+			boolean ignoreChance, HashMap<String, String> placeholders) {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				reward.giveReward(user, online, giveOffline, checkTimed, ignoreChance, placeholders);
+			}
+		});
+	}
+
+	@Deprecated
 	public void giveReward(User user, String reward) {
 		if (!reward.equals("")) {
 			giveReward(user, getReward(reward), user.isOnline());
@@ -332,6 +344,14 @@ public class RewardHandler {
 		}
 	}
 
+	@Deprecated
+	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed,
+			boolean ignoreChance, HashMap<String, String> placeholders) {
+		if (!reward.equals("")) {
+			giveReward(user, getReward(reward), online, giveOffline, checkTimed, ignoreChance, placeholders);
+		}
+	}
+
 	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
 		giveReward(user, prefix, data, path, user.isOnline(), true);
 	}
@@ -345,12 +365,17 @@ public class RewardHandler {
 		giveReward(user, prefix, data, path, online, giveOffline, null);
 	}
 
-	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
 			boolean giveOffline, boolean checkTimed, HashMap<String, String> placeholders) {
+		giveReward(user, prefix, data, path, online, giveOffline, checkTimed, false, placeholders);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline, boolean checkTimed, boolean ignoreChance, HashMap<String, String> placeholders) {
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
-				giveReward(user, reward, online, giveOffline, checkTimed, placeholders);
+				giveReward(user, reward, online, giveOffline, checkTimed, ignoreChance, placeholders);
 			}
 		} else if (data.isConfigurationSection(path)) {
 			String rewardName = "";
@@ -367,10 +392,10 @@ public class RewardHandler {
 			}
 			reward.getConfig().setData(section);
 			updateReward(reward);
-			giveReward(user, rewardName, online, giveOffline, checkTimed, placeholders);
+			giveReward(user, rewardName, online, giveOffline, checkTimed, ignoreChance, placeholders);
 
 		} else {
-			giveReward(user, data.getString(path, ""), online, giveOffline, checkTimed, placeholders);
+			giveReward(user, data.getString(path, ""), online, giveOffline, checkTimed, ignoreChance, placeholders);
 		}
 	}
 

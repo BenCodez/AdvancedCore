@@ -47,15 +47,10 @@ public class MiscUtils {
 		if (broadcastMsg != null) {
 			if (!broadcastMsg.equals("")) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
-					final String msg = StringUtils.getInstance()
+					String msg = StringUtils.getInstance()
 							.colorize(StringUtils.getInstance().replacePlaceHolders(player, broadcastMsg));
-					Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+					player.sendMessage(msg);
 
-						@Override
-						public void run() {
-							player.sendMessage(msg);
-						}
-					});
 				}
 			}
 		}
@@ -83,15 +78,17 @@ public class MiscUtils {
 			placeholders.put("player", player.getName());
 			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(player,
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+			for (final String cmd : commands) {
+				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
-				@Override
-				public void run() {
-					for (String cmd : commands) {
+					@Override
+					public void run() {
 						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
 					}
-				}
-			});
+
+				});
+			}
+
 		}
 	}
 

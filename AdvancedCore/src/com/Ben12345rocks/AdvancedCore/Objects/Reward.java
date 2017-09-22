@@ -341,14 +341,14 @@ public class Reward {
 		for (String str : getPriority()) {
 			Reward reward = RewardHandler.getInstance().getReward(str);
 			if (reward.canGiveReward(user)) {
-				new RewardBuilder(reward).withPlaceHolder(placeholders).send(user);
+				new RewardBuilder(reward).withPlaceHolder(placeholders).ignoreChance(true).send(user);
 				return;
 			}
 		}
 	}
 
 	public boolean canGiveReward(User user) {
-		if (hasPermission(user)) {
+		if (hasPermission(user) && checkChance()) {
 			return true;
 		}
 		return false;
@@ -1022,6 +1022,11 @@ public class Reward {
 		giveReward(user, online, giveOffline, checkTimed, null);
 	}
 
+	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
+			HashMap<String, String> placeholders) {
+		giveReward(user, online, giveOffline, checkTimed, false, placeholders);
+	}	
+
 	/**
 	 * Give reward.
 	 *
@@ -1036,7 +1041,7 @@ public class Reward {
 	 * @param placeholders
 	 *            placeholders
 	 */
-	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
+	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
 			HashMap<String, String> placeholders) {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user);
@@ -1064,7 +1069,7 @@ public class Reward {
 			return;
 		}
 
-		giveRewardReward(user, online, placeholders);
+		giveRewardReward(user, online, ignoreChance, placeholders);
 	}
 
 	/**
@@ -1077,7 +1082,8 @@ public class Reward {
 	 * @param placeholders
 	 *            placeholders
 	 */
-	public void giveRewardReward(User user, boolean online, HashMap<String, String> placeholders) {
+	public void giveRewardReward(User user, boolean online, boolean ignoreChance,
+			HashMap<String, String> placeholders) {
 		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 
 		String type = getRewardType();
@@ -1093,7 +1099,7 @@ public class Reward {
 			}
 		}
 
-		if (checkChance()) {
+		if (ignoreChance || checkChance()) {
 			giveRewardUser(user, placeholders);
 		}
 	}
