@@ -343,7 +343,7 @@ public class MySQL {
 
 	public synchronized void updateBatch() {
 		if (query.size() > 0) {
-			AdvancedCoreHook.getInstance().debug("Size: " + query.size());
+			AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
 			String sql = "";
 			while (query.size() > 0) {
 
