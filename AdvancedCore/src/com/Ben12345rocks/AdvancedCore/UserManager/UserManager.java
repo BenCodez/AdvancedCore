@@ -98,7 +98,7 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public User getUser(String playerName) {
-		return new User(plugin.getPlugin(), playerName);
+		return new User(plugin.getPlugin(), getProperName(playerName));
 	}
 
 	/**
@@ -111,5 +111,14 @@ public class UserManager {
 	@SuppressWarnings("deprecation")
 	public User getUser(UUID uuid) {
 		return new User(plugin.getPlugin(), uuid);
+	}
+
+	public String getProperName(String name) {
+		for (String s : plugin.getUuids().keySet()) {
+			if (s.equalsIgnoreCase(name)) {
+				return s;
+			}
+		}
+		return name;
 	}
 }
