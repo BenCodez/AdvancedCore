@@ -361,8 +361,6 @@ public class BInventory implements Listener {
 			return;
 		}
 
-		// Main.plugin.debug("Event ran");
-
 		Inventory inv = event.getInventory();
 
 		if (this.inv != null && inv.equals(this.inv) && player != null
@@ -381,7 +379,11 @@ public class BInventory implements Listener {
 
 									@Override
 									public void run() {
-										button.onClick(new ClickEvent(event));
+										try {
+											button.onClick(new ClickEvent(event));
+										} catch (Exception e) {
+											e.printStackTrace();
+										}
 									}
 								});
 						destroy();
@@ -403,7 +405,11 @@ public class BInventory implements Listener {
 
 									@Override
 									public void run() {
-										button.onClick(new ClickEvent(event));
+										try {
+											button.onClick(new ClickEvent(event));
+										} catch (Exception e) {
+											e.printStackTrace();
+										}
 									}
 								});
 						destroy();
@@ -432,7 +438,11 @@ public class BInventory implements Listener {
 
 				for (BInventoryButton b : pageButtons) {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
-						b.onClick(new ClickEvent(event));
+						try {
+							b.onClick(new ClickEvent(event));
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
 					}
 				}
 			}
