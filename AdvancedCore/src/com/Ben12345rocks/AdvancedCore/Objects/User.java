@@ -255,7 +255,10 @@ public class User {
 	}
 
 	public OfflinePlayer getOfflinePlayer() {
-		return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
+		if (uuid != null && !uuid.equals("")) {
+			return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
+		}
+		return null;
 	}
 
 	/**
