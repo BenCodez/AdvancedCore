@@ -12,6 +12,7 @@ import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 
 /**
@@ -120,5 +121,20 @@ public class UserManager {
 			}
 		}
 		return name;
+	}
+
+	public boolean userExist(UUID uuid) {
+		if (uuid != null && uuid.getUUID() != null) {
+			for (String str : getAllUUIDs()) {
+				if (str.equals(uuid.getUUID())) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public boolean userExist(String name) {
+		return userExist(new UUID(PlayerUtils.getInstance().getUUID(name)));
 	}
 }
