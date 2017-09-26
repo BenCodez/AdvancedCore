@@ -19,7 +19,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType.SlotType;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -369,7 +369,7 @@ public class BInventory implements Listener {
 
 			event.setCancelled(true);
 			Player player = (Player) event.getWhoClicked();
-			if (!event.getSlotType().equals(SlotType.CONTAINER)) {
+			if (!event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
 				return;
 			}
 			player.closeInventory();
@@ -377,7 +377,7 @@ public class BInventory implements Listener {
 				for (int buttonSlot : getButtons().keySet()) {
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (event.getSlot() == buttonSlot) {
-						
+
 						Bukkit.getServer().getScheduler()
 								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
