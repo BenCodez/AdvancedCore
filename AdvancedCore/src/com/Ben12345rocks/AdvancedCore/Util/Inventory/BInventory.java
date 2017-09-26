@@ -19,6 +19,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryType.SlotType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -368,7 +369,9 @@ public class BInventory implements Listener {
 
 			event.setCancelled(true);
 			Player player = (Player) event.getWhoClicked();
-			
+			if (!event.getSlotType().equals(SlotType.CONTAINER)) {
+				return;
+			}
 			player.closeInventory();
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
