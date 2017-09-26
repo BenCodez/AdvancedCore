@@ -369,7 +369,7 @@ public class BInventory implements Listener {
 
 			event.setCancelled(true);
 			Player player = (Player) event.getWhoClicked();
-			if (!event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
+			if (event.getClickedInventory() != null && !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
 				return;
 			}
 			
