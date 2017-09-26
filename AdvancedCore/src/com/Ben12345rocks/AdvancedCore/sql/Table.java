@@ -166,12 +166,16 @@ public class Table {
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			String value = "";
+			if (column.getValue() != null) {
+				value = column.getValue().toString();
+			}
 			if (column.dataType == DataType.STRING) {
-				s.setString(1, column.getValue().toString());
+				s.setString(1, value);
 			} else if (column.dataType == DataType.INTEGER) {
-				s.setInt(1, Integer.parseInt(column.getValue().toString()));
+				s.setInt(1, Integer.parseInt(value));
 			} else {
-				s.setFloat(1, Float.parseFloat(column.getValue().toString()));
+				s.setFloat(1, Float.parseFloat(value));
 			}
 			ResultSet rs = s.executeQuery();
 			try {
