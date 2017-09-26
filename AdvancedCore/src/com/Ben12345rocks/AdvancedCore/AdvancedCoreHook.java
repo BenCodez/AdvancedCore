@@ -535,10 +535,11 @@ public class AdvancedCoreHook {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
 					String name = user.getData().getString("PlayerName");
 					if (uuids.containsKey(name)) {
-						debug("Duplicate uuid? " + uuid + ":" + name + " Other key: " + uuids.get(name));
+						debug("Duplicate uuid? " + uuid + " : " + name + " Other key: " + uuids.get(name));
 					}
 					uuids.put(name, uuid);
 				}
+				debug("Loaded uuids in the background");
 			}
 		});
 	}

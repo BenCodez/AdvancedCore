@@ -151,6 +151,15 @@ public class PlayerUtils {
 		return p.getUniqueId().toString();
 
 	}
+	
+	@SuppressWarnings("deprecation")
+	public boolean isValidUser(String name) {
+		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
+		if (p.hasPlayedBefore() || p.isOnline()) {
+			return true;
+		}
+		return UserManager.getInstance().userExist(name);
+	}
 
 	/**
 	 * Checks for permission.
