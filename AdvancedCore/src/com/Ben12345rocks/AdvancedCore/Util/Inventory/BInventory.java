@@ -364,16 +364,17 @@ public class BInventory implements Listener {
 		Inventory inv = event.getInventory();
 
 		if (this.inv != null && inv.equals(this.inv) && player != null
-				&& player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
+				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 
+			event.setCancelled(true);
+			Player player = (Player) event.getWhoClicked();
+			
+			player.closeInventory();
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (event.getSlot() == buttonSlot) {
-						// Main.plugin.debug("Running onclick");
-						Player player = (Player) event.getWhoClicked();
-						event.setCancelled(true);
-						player.closeInventory();
+						
 						Bukkit.getServer().getScheduler()
 								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
@@ -392,14 +393,11 @@ public class BInventory implements Listener {
 
 				}
 			} else {
-				event.setCancelled(true);
 				int slot = event.getSlot();
 				if (slot < maxInvSize - 9) {
 					int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (button != null) {
-						Player player = (Player) event.getWhoClicked();
-						player.closeInventory();
 						Bukkit.getServer().getScheduler()
 								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
@@ -418,8 +416,6 @@ public class BInventory implements Listener {
 
 				} else if (slot == maxInvSize - 9) {
 					if (page > 1) {
-						Player player = (Player) event.getWhoClicked();
-						player.closeInventory();
 						int nextPage = page - 1;
 						openInventory(player, nextPage);
 					}
@@ -427,8 +423,6 @@ public class BInventory implements Listener {
 					// AdvancedCoreHook.getInstance().debug(maxPage + " " +
 					// page);
 					if (maxPage > page) {
-						Player player = (Player) event.getWhoClicked();
-						player.closeInventory();
 						int nextPage = page + 1;
 						openInventory(player, nextPage);
 						AdvancedCoreHook.getInstance().debug("Opening inv");
