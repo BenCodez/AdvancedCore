@@ -38,6 +38,7 @@ import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -478,6 +479,7 @@ public class AdvancedCoreHook {
 
 	public void loadEvents() {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
+		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), plugin);
 		if (checkOnWorldChange) {
 			Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
 		}

@@ -13,12 +13,13 @@ import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
-public class FireworkHandler {
+public class FireworkHandler implements Listener {
 
 	/** The instance. */
 	static FireworkHandler instance = new FireworkHandler();
@@ -111,7 +112,7 @@ public class FireworkHandler {
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onPlayerLogin(EntityDamageByEntityEvent event) {
+	public void onFireworkDamage(EntityDamageByEntityEvent event) {
 		if (event.getDamager() instanceof Firework && event.getEntity() instanceof Player) {
 			Firework fw = (Firework) event.getDamager();
 			if (fireWorks.contains(fw)) {
