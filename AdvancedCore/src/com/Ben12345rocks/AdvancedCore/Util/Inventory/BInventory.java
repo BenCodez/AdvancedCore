@@ -369,10 +369,11 @@ public class BInventory implements Listener {
 
 			event.setCancelled(true);
 			Player player = (Player) event.getWhoClicked();
-			if (event.getClickedInventory() != null && !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
+			if (event.getClickedInventory() != null
+					&& !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
 				return;
 			}
-			
+
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
 					BInventoryButton button = getButtons().get(buttonSlot);
@@ -541,12 +542,12 @@ public class BInventory implements Listener {
 			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
 		}
 		if (prevItem == null) {
-			prevItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aPrevious Page")
-					.toItemStack(player);
+			prevItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15)
+					.setName(AdvancedCoreHook.getInstance().getPrevPageTxt()).toItemStack(player);
 		}
 		if (nextItem == null) {
-			nextItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aNext Page")
-					.toItemStack(player);
+			nextItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15)
+					.setName(AdvancedCoreHook.getInstance().getNextPageTxt()).toItemStack(player);
 		}
 
 		inv.setItem(maxInvSize - 9, prevItem);

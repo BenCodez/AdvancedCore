@@ -90,6 +90,24 @@ public class AdvancedCoreHook {
 	private String buildTime = "";
 	private int maxMysqlSize = -1;
 	private boolean autoKillInvs = true;
+	private String prevPageTxt = "&aPrevious Page";
+	private String nextPageTxt = "&aNext Page";
+
+	public String getPrevPageTxt() {
+		return prevPageTxt;
+	}
+
+	public void setPrevPageTxt(String prevPageTxt) {
+		this.prevPageTxt = prevPageTxt;
+	}
+
+	public String getNextPageTxt() {
+		return nextPageTxt;
+	}
+
+	public void setNextPageTxt(String nextPageTxt) {
+		this.nextPageTxt = nextPageTxt;
+	}
 
 	public boolean isAutoKillInvs() {
 		return autoKillInvs;
