@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.Misc;
 
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -136,6 +137,12 @@ public class PlayerUtils {
 				String uuid = uuids.get(playerName);
 				if (uuid != null) {
 					return uuid;
+				} else {
+					for (Entry<String,String> entry : uuids.entrySet()) {
+						if (entry.getKey().equalsIgnoreCase(playerName)) {
+							return entry.getValue();
+						}
+					}
 				}
 			}
 			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
