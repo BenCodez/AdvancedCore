@@ -15,6 +15,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.FireworkExplodeEvent;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
@@ -117,7 +118,22 @@ public class FireworkHandler implements Listener {
 			Firework fw = (Firework) event.getDamager();
 			if (fireWorks.contains(fw)) {
 				event.setCancelled(true);
-				fireWorks.remove(fw);
+			}
+		}
+	}
+
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onFireworkDamage(FireworkExplodeEvent event) {
+		if (event.getEntity() instanceof Firework) {
+			Firework fw = (Firework) event.getEntity();
+			if (fireWorks.contains(fw)) {
+				Bukkit.getScheduler().runTaskLaterAsynchronously(plugin.getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						fireWorks.remove(fw);
+					}
+				}, 10l);
 			}
 		}
 	}
