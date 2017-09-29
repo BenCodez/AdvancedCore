@@ -144,7 +144,7 @@ public class UserManager {
 		for (String uuid : getAllUUIDs()) {
 			User user = getUser(new UUID(uuid));
 			if (user.getPlayerName().equalsIgnoreCase(name)) {
-				//plugin.extraDebug("Found " + name + " in database");
+				plugin.extraDebug("Found " + name + " in database");
 				return true;
 			}
 		}
