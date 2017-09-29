@@ -24,6 +24,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -369,9 +370,13 @@ public class BInventory implements Listener {
 
 			event.setCancelled(true);
 			Player player = (Player) event.getWhoClicked();
-			if (event.getClickedInventory() != null
-					&& !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
-				return;
+
+			if (AdvancedCoreHook.getInstance().getServerHandle() instanceof SpigotHandle) {
+				// spigot only method
+				if (event.getClickedInventory() != null
+						&& !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
+					return;
+				}
 			}
 
 			if (!pages) {
