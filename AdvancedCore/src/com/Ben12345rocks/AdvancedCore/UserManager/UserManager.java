@@ -125,10 +125,8 @@ public class UserManager {
 
 	public boolean userExist(UUID uuid) {
 		if (uuid != null && uuid.getUUID() != null) {
-			for (String str : getAllUUIDs()) {
-				if (str.equals(uuid.getUUID())) {
-					return true;
-				}
+			if (getAllUUIDs().contains(uuid.getUUID())) {
+				return true;
 			}
 		}
 		return false;

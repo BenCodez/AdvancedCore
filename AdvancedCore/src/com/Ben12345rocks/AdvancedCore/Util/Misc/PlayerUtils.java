@@ -128,7 +128,7 @@ public class PlayerUtils {
 		if (playerName == null) {
 			return null;
 		}
-		
+
 		OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 
 		if (plugin.isAlternateUUIDLookUp() || (!p.hasPlayedBefore() && !p.isOnline())) {
@@ -138,7 +138,7 @@ public class PlayerUtils {
 				if (uuid != null) {
 					return uuid;
 				} else {
-					for (Entry<String,String> entry : uuids.entrySet()) {
+					for (Entry<String, String> entry : uuids.entrySet()) {
 						if (entry.getKey().equalsIgnoreCase(playerName)) {
 							return entry.getValue();
 						}
@@ -158,13 +158,13 @@ public class PlayerUtils {
 		return p.getUniqueId().toString();
 
 	}
-	
+
 	@SuppressWarnings("deprecation")
 	public boolean isValidUser(String name) {
 		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 		if (p.hasPlayedBefore() || p.isOnline()) {
 			return true;
-		}
+		}	
 		return UserManager.getInstance().userExist(name);
 	}
 
