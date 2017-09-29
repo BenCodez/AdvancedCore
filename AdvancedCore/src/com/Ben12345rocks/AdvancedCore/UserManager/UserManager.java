@@ -126,9 +126,12 @@ public class UserManager {
 	public boolean userExist(UUID uuid) {
 		if (uuid != null && uuid.getUUID() != null) {
 			if (getAllUUIDs().contains(uuid.getUUID())) {
+				plugin.debug(uuid.getUUID() + " exists");
 				return true;
 			}
+			plugin.debug(uuid.getUUID() + " not exist");
 		}
+
 		return false;
 	}
 
