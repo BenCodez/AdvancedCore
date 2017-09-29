@@ -12,7 +12,6 @@ import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 
 /**
@@ -126,16 +125,21 @@ public class UserManager {
 	public boolean userExist(UUID uuid) {
 		if (uuid != null && uuid.getUUID() != null) {
 			if (getAllUUIDs().contains(uuid.getUUID())) {
-				plugin.debug(uuid.getUUID() + " exists");
+				//plugin.debug(uuid.getUUID() + " exists");
 				return true;
 			}
-			plugin.debug(uuid.getUUID() + " not exist");
+			//plugin.debug(uuid.getUUID() + " not exist");
 		}
 
 		return false;
 	}
 
 	public boolean userExist(String name) {
-		return userExist(new UUID(PlayerUtils.getInstance().getUUID(name)));
+		for (String uuid : getAllUUIDs()) {
+			if (getUser(new UUID(uuid)).getPlayerName().equalsIgnoreCase(name)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
