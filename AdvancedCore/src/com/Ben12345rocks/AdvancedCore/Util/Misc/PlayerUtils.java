@@ -163,7 +163,7 @@ public class PlayerUtils {
 	public boolean isValidUser(String name) {
 		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 		if (p.hasPlayedBefore() || p.isOnline()) {
-			plugin.debug(name + " has joined before");
+			plugin.extraDebug(name + " has joined before");
 			return true;
 		}	
 		return UserManager.getInstance().userExist(name);

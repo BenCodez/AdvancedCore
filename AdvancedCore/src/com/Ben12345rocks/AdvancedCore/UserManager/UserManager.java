@@ -125,10 +125,10 @@ public class UserManager {
 	public boolean userExist(UUID uuid) {
 		if (uuid != null && uuid.getUUID() != null) {
 			if (getAllUUIDs().contains(uuid.getUUID())) {
-				//plugin.debug(uuid.getUUID() + " exists");
+				// plugin.debug(uuid.getUUID() + " exists");
 				return true;
 			}
-			//plugin.debug(uuid.getUUID() + " not exist");
+			// plugin.debug(uuid.getUUID() + " not exist");
 		}
 
 		return false;
@@ -136,7 +136,9 @@ public class UserManager {
 
 	public boolean userExist(String name) {
 		for (String uuid : getAllUUIDs()) {
-			if (getUser(new UUID(uuid)).getPlayerName().equalsIgnoreCase(name)) {
+			User user = getUser(new UUID(uuid));
+			if (user.getPlayerName().equalsIgnoreCase(name)) {
+				plugin.extraDebug("Found " + name + " in database");
 				return true;
 			}
 		}
