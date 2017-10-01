@@ -244,7 +244,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 
 				User user = UserManager.getInstance().getUser((Player) sender);
-				InputMethod method = InputMethod.valueOf(args[1]);
+				InputMethod method = InputMethod.getMethod(args[1]);
 				if (method == null) {
 					user.sendMessage("&cInvalid request method: " + args[1]);
 				} else {
