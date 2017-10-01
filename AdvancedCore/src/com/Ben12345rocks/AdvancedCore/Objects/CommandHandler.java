@@ -348,9 +348,6 @@ public abstract class CommandHandler {
 				if (sender.hasPermission(perm)) {
 					hasPerm = true;
 				}
-				if (sender.hasPermission("-" + perm)) {
-					return false;
-				}
 			}
 		} else {
 			hasPerm = true;
