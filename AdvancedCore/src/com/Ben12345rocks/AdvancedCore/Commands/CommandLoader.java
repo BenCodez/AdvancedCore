@@ -270,7 +270,7 @@ public class CommandLoader {
 							@Override
 							public void onInput(Player player, String value) {
 								User user = UserManager.getInstance().getUser(player);
-								user.setUserInputMethod(InputMethod.valueOf(value));
+								user.setUserInputMethod(InputMethod.getMethod(value));
 
 							}
 						});
