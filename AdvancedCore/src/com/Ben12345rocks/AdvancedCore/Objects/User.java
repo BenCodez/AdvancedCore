@@ -596,15 +596,18 @@ public class User {
 					ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
 
 			final Player player = getPlayer();
-			for (final String cmd : cmds) {
-				AdvancedCoreHook.getInstance().debug("Executing player command for " + getPlayerName() + ": " + cmd);
-				Bukkit.getScheduler().runTask(plugin, new Runnable() {
+			if (player != null) {
+				for (final String cmd : cmds) {
+					AdvancedCoreHook.getInstance()
+							.debug("Executing player command for " + getPlayerName() + ": " + cmd);
+					Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
-					@Override
-					public void run() {
-						player.performCommand(cmd);
-					}
-				});
+						@Override
+						public void run() {
+							player.performCommand(cmd);
+						}
+					});
+				}
 			}
 		}
 	}
