@@ -656,7 +656,7 @@ public class Reward {
 	}
 
 	public ItemStack getItemStack(User user, String item) {
-		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getPlayerName())
+		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getOfflinePlayer())
 				.toItemStack(user.getPlayer());
 	}
 
@@ -1025,7 +1025,7 @@ public class Reward {
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
 			HashMap<String, String> placeholders) {
 		giveReward(user, online, giveOffline, checkTimed, false, placeholders);
-	}	
+	}
 
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
 			HashMap<String, String> placeholders) {

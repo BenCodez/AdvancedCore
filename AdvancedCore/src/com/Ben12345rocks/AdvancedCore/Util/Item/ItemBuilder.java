@@ -11,6 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -36,7 +37,6 @@ public class ItemBuilder {
 	private ItemStack is;
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 	private int slot = -1;
-	private String skull = "";
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -322,11 +322,11 @@ public class ItemBuilder {
 	public String getName() {
 		return is.getItemMeta().getDisplayName();
 	}
-	
+
 	public boolean hasCustomDisplayName() {
 		return is.getItemMeta().hasDisplayName();
 	}
-	
+
 	public boolean hasCustomLore() {
 		return is.getItemMeta().hasLore();
 	}
@@ -334,8 +334,27 @@ public class ItemBuilder {
 	/**
 	 * @return the skull
 	 */
+	@Deprecated
 	public String getSkull() {
-		return skull;
+		try {
+			SkullMeta im = (SkullMeta) is.getItemMeta();
+			if (im.hasOwner()) {
+				return im.getOwner();
+			}
+		} catch (ClassCastException expected) {
+		}
+		return "";
+	}
+
+	public OfflinePlayer getSkullOwner() {
+		try {
+			SkullMeta im = (SkullMeta) is.getItemMeta();
+			if (im.hasOwner()) {
+				return im.getOwningPlayer();
+			}
+		} catch (ClassCastException expected) {
+		}
+		return null;
 	}
 
 	/**
@@ -426,8 +445,8 @@ public class ItemBuilder {
 	}
 
 	/**
-	 * Sets the dye color on an item. <b>* Notice that this doesn't check for
-	 * item type, sets the literal data of the dyecolor as durability.</b>
+	 * Sets the dye color on an item. <b>* Notice that this doesn't check for item
+	 * type, sets the literal data of the dyecolor as durability.</b>
 	 *
 	 * @param color
 	 *            The color to put.
@@ -451,8 +470,8 @@ public class ItemBuilder {
 	}
 
 	/**
-	 * Sets the armor color of a leather armor piece. Works only on leather
-	 * armor pieces.
+	 * Sets the armor color of a leather armor piece. Works only on leather armor
+	 * pieces.
 	 *
 	 * @param color
 	 *            The color to set it to.
@@ -520,13 +539,22 @@ public class ItemBuilder {
 	 *            The name of the skull's owner.
 	 * @return ItemBuilder
 	 */
-	@SuppressWarnings("deprecation")
+	@Deprecated
 	public ItemBuilder setSkullOwner(String owner) {
 		try {
 			SkullMeta im = (SkullMeta) is.getItemMeta();
 			im.setOwner(owner);
 			is.setItemMeta(im);
-			skull = owner;
+		} catch (ClassCastException expected) {
+		}
+		return this;
+	}
+
+	public ItemBuilder setSkullOwner(OfflinePlayer offlinePlayer) {
+		try {
+			SkullMeta im = (SkullMeta) is.getItemMeta();
+			im.setOwningPlayer(offlinePlayer);
+			is.setItemMeta(im);
 		} catch (ClassCastException expected) {
 		}
 		return this;
@@ -556,6 +584,10 @@ public class ItemBuilder {
 	}
 
 	public ItemStack toItemStack(Player player) {
+		return toItemStack((OfflinePlayer) player);
+	}
+
+	public ItemStack toItemStack(OfflinePlayer player) {
 		if (player != null) {
 			if (!placeholders.isEmpty()) {
 				setName(StringUtils.getInstance().replaceJavascript(player,
@@ -563,8 +595,8 @@ public class ItemBuilder {
 				setLore(ArrayUtils.getInstance().replaceJavascript(player,
 						ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
 			}
-			if (!skull.equals("")) {
-				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(skull, "player", player.getName()));
+			if (!getSkull().equals("")) {
+				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(getSkull(), "player", player.getName()));
 			}
 		} else {
 			return toItemStack();

@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -259,10 +260,15 @@ public class MiscUtils {
 	 *            the player name
 	 * @return the item stack
 	 */
-	@SuppressWarnings("deprecation")
+	@Deprecated
 	public ItemStack setSkullOwner(String playerName) {
 		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();
+	}
+
+	public ItemStack setSkullOwner(OfflinePlayer player) {
+		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(player)
+				.toItemStack(player);
 	}
 
 }
