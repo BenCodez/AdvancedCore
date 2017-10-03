@@ -551,11 +551,13 @@ public class ItemBuilder {
 	}
 
 	public ItemBuilder setSkullOwner(OfflinePlayer offlinePlayer) {
-		try {
-			SkullMeta im = (SkullMeta) is.getItemMeta();
-			im.setOwningPlayer(offlinePlayer);
-			is.setItemMeta(im);
-		} catch (ClassCastException expected) {
+		if (offlinePlayer != null) {
+			try {
+				SkullMeta im = (SkullMeta) is.getItemMeta();
+				im.setOwningPlayer(offlinePlayer);
+				is.setItemMeta(im);
+			} catch (ClassCastException expected) {
+			}
 		}
 		return this;
 	}
