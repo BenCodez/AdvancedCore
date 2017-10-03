@@ -594,18 +594,18 @@ public class User {
 		if (commands != null && !commands.isEmpty()) {
 			final ArrayList<String> cmds = ArrayUtils.getInstance().replaceJavascript(getPlayer(),
 					ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
-			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
-				@Override
-				public void run() {
-					Player player = getPlayer();
-					if (player != null) {
-						for (String cmd : cmds) {
-							player.performCommand(cmd);
-						}
+			final Player player = getPlayer();
+			for (final String cmd : cmds) {
+				AdvancedCoreHook.getInstance().debug("Executing player command for " + getPlayerName() + ": " + cmd);
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+					@Override
+					public void run() {
+						player.performCommand(cmd);
 					}
-				}
-			});
+				});
+			}
 		}
 	}
 
@@ -613,6 +613,7 @@ public class User {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringUtils.getInstance().replaceJavascript(getPlayer(),
 					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+			AdvancedCoreHook.getInstance().debug("Executing player command for " + getPlayerName() + ": " + command);
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override

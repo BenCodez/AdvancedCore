@@ -79,6 +79,7 @@ public class MiscUtils {
 			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(player,
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			for (final String cmd : commands) {
+				plugin.debug("Executing console command: " + cmd);
 				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 					@Override
@@ -100,15 +101,16 @@ public class MiscUtils {
 			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(
 					Bukkit.getOfflinePlayer(playerName),
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+			for (final String cmd : commands) {
+				plugin.debug("Executing console command: " + cmd);
+				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
-				@Override
-				public void run() {
-					for (String cmd : commands) {
+					@Override
+					public void run() {
 						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
 					}
-				}
-			});
+				});
+			}
 		}
 	}
 
@@ -116,6 +118,8 @@ public class MiscUtils {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringUtils.getInstance().replaceJavascript(player,
 					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+
+			plugin.debug("Executing console command: " + command);
 			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 				@Override
