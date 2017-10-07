@@ -7,7 +7,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
+
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 public class RewardBuilder {
 	private FileConfiguration data;
@@ -92,6 +96,14 @@ public class RewardBuilder {
 			RewardHandler.getInstance().giveReward(user, reward, isGiveOffline(), isGiveOffline(), checkTimed,
 					ignoreChance, placeholders);
 		}
+	}
+	
+	public void send(Player p) {
+		send(UserManager.getInstance().getUser(p));
+	}
+	
+	public void send(OfflinePlayer p) {
+		send(UserManager.getInstance().getUser(p));
 	}
 
 	public void send(User... users) {
