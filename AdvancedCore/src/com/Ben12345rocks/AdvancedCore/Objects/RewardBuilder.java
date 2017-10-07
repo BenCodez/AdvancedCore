@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -94,6 +95,12 @@ public class RewardBuilder {
 	}
 
 	public void send(User... users) {
+		for (User user : users) {
+			send(user);
+		}
+	}
+	
+	public void send(ArrayList<User> users) {
 		for (User user : users) {
 			send(user);
 		}
