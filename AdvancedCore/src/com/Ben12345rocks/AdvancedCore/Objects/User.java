@@ -568,18 +568,19 @@ public class User {
 
 		}
 	}
-	
+
 	@Deprecated
 	public void playParticleEffect(String effectName, int data, int particles, int radius) {
-		playParticle(effectName, data, particles, radius);
+		playParticle(effectName, data, particles, radius, 1);
 	}
 
-	public void playParticle(String effectName, int data, int particles, int radius) {
+	public void playParticle(String effectName, int data, int particles, int radius, int speed) {
 		Player player = getPlayer();
 		if ((player != null) && (effectName != null)) {
 			Particle effect = Particle.valueOf(effectName);
 			for (int i = 0; i < particles; i++) {
-				player.getWorld().spawnParticle(effect, player.getLocation(), particles, radius, radius, radius, data);
+				player.getWorld().spawnParticle(effect, player.getLocation(), particles, radius, radius, radius, speed,
+						data);
 			}
 
 		}

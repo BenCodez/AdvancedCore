@@ -258,6 +258,10 @@ public class RewardFileData {
 		return getData().getInt("Effect.Particles");
 	}
 
+	public int getEffectSpeed() {
+		return getData().getInt("Effect.Speed", 1);
+	}
+
 	/**
 	 * Gets the effect radius.
 	 *

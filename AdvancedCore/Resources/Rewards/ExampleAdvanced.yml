@@ -179,6 +179,7 @@ Effect:
   Data: 0
   Particles: 10
   Radius: 5
+  Speed: 1
   
 Firework:
   Enabled: false
