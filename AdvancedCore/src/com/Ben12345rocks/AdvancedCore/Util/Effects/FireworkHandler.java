@@ -123,7 +123,7 @@ public class FireworkHandler implements Listener {
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onFireworkDamage(FireworkExplodeEvent event) {
+	public void onFireworkExplode(FireworkExplodeEvent event) {
 		if (event.getEntity() instanceof Firework) {
 			Firework fw = (Firework) event.getEntity();
 			if (fireWorks.contains(fw)) {
