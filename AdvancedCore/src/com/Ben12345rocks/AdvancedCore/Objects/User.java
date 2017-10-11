@@ -14,6 +14,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -557,12 +558,28 @@ public class User {
 	 * @param radius
 	 *            the radius
 	 */
-	public void playParticleEffect(String effectName, int data, int particles, int radius) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+	public void playEffect(String effectName, int data, int particles, int radius) {
+		Player player = getPlayer();
 		if ((player != null) && (effectName != null)) {
 			Effect effect = Effect.valueOf(effectName);
 			for (int i = 0; i < particles; i++) {
 				player.getWorld().playEffect(player.getLocation(), effect, data, radius);
+			}
+
+		}
+	}
+	
+	@Deprecated
+	public void playParticleEffect(String effectName, int data, int particles, int radius) {
+		playParticle(effectName, data, particles, radius);
+	}
+
+	public void playParticle(String effectName, int data, int particles, int radius) {
+		Player player = getPlayer();
+		if ((player != null) && (effectName != null)) {
+			Particle effect = Particle.valueOf(effectName);
+			for (int i = 0; i < particles; i++) {
+				player.getWorld().spawnParticle(effect, player.getLocation(), particles, radius, radius, radius, data);
 			}
 
 		}

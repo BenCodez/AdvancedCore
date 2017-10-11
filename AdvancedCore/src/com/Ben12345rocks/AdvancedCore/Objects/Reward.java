@@ -1460,7 +1460,7 @@ public class Reward {
 	 */
 	public void playEffect(User user) {
 		if (effectEnabled) {
-			user.playParticleEffect(effectEffect, effectData, effectParticles, effectRadius);
+			user.playParticle(effectEffect, effectData, effectParticles, effectRadius);
 		}
 	}
 
