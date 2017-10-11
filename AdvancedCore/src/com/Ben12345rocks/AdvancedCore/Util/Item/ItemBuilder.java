@@ -310,25 +310,37 @@ public class ItemBuilder {
 	}
 
 	public ArrayList<String> getLore() {
-		List<String> lore = is.getItemMeta().getLore();
-		ArrayList<String> list = new ArrayList<String>();
-		if (lore != null) {
-			list.addAll(lore);
+		if (hasCustomLore()) {
+			List<String> lore = is.getItemMeta().getLore();
+			ArrayList<String> list = new ArrayList<String>();
+			if (lore != null) {
+				list.addAll(lore);
+			}
+			return list;
 		}
-		return list;
+		return new ArrayList<String>();
 
 	}
 
 	public String getName() {
-		return is.getItemMeta().getDisplayName();
+		if (hasCustomDisplayName()) {
+			return is.getItemMeta().getDisplayName();
+		}
+		return "";
 	}
 
 	public boolean hasCustomDisplayName() {
-		return is.getItemMeta().hasDisplayName();
+		if (hasItemMeta()) {
+			return is.getItemMeta().hasDisplayName();
+		}
+		return false;
 	}
 
 	public boolean hasCustomLore() {
-		return is.getItemMeta().hasLore();
+		if (hasItemMeta()) {
+			return is.getItemMeta().hasLore();
+		}
+		return false;
 	}
 
 	/**
@@ -560,6 +572,10 @@ public class ItemBuilder {
 			}
 		}
 		return this;
+	}
+
+	public boolean hasItemMeta() {
+		return is.hasItemMeta();
 	}
 
 	public ItemBuilder setSlot(int slot) {
