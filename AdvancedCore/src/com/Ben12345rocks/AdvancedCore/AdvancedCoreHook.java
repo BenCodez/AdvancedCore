@@ -513,6 +513,11 @@ public class AdvancedCoreHook {
 			debug("Detected using craftbukkit");
 			plugin.getLogger().info("Detected server running craftbukkit. It is recommended to use spigot instead");
 		}
+		if (Bukkit.getOnlineMode()) {
+			debug("Server in online mode");
+		} else {
+			debug("Server in offline mode");
+		}
 	}
 
 	/**
