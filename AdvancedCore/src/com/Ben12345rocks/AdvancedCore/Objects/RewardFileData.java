@@ -88,10 +88,6 @@ public class RewardFileData {
 		return getData().getInt("BossBar.Delay");
 	}
 
-	public boolean getForceOffline() {
-		return getData().getBoolean("ForceOffline");
-	}
-
 	public boolean getBossBarEnabled() {
 		return getData().getBoolean("BossBar.Enabled");
 	}
@@ -185,11 +181,6 @@ public class RewardFileData {
 		return data;
 	}
 
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getPriority() {
-		return (ArrayList<String>) getData().getList("Priority", new ArrayList<String>());
-	}
-
 	/**
 	 * Gets the delayed enabled.
 	 *
@@ -258,10 +249,6 @@ public class RewardFileData {
 		return getData().getInt("Effect.Particles");
 	}
 
-	public int getEffectSpeed() {
-		return getData().getInt("Effect.Speed", 1);
-	}
-
 	/**
 	 * Gets the effect radius.
 	 *
@@ -269,6 +256,10 @@ public class RewardFileData {
 	 */
 	public int getEffectRadius() {
 		return getData().getInt("Effect.Radius");
+	}
+
+	public int getEffectSpeed() {
+		return getData().getInt("Effect.Speed", 1);
 	}
 
 	/**
@@ -298,22 +289,6 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkColorsFadeOut() {
 		return (ArrayList<String>) getData().getList("Firework.FadeOutColor", new ArrayList<String>());
-	}
-
-	public Set<String> getLuckyRewards() {
-		if (getData().getConfigurationSection("Lucky") != null) {
-			return getData().getConfigurationSection("Lucky").getKeys(false);
-		} else {
-			return new HashSet<String>();
-		}
-	}
-
-	public boolean getOnlyOneLucky() {
-		return getData().getBoolean("OnlyOneLucky");
-	}
-
-	public String getLuckyRewardsPath(int num) {
-		return "Lucky." + num;
 	}
 
 	/**
@@ -360,6 +335,10 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkTypes() {
 		return (ArrayList<String>) getData().getList("Firework.Types", new ArrayList<String>());
+	}
+
+	public boolean getForceOffline() {
+		return getData().getBoolean("ForceOffline");
 	}
 
 	/**
@@ -549,6 +528,18 @@ public class RewardFileData {
 		return "Javascript.TrueRewards";
 	}
 
+	public Set<String> getLuckyRewards() {
+		if (getData().getConfigurationSection("Lucky") != null) {
+			return getData().getConfigurationSection("Lucky").getKeys(false);
+		} else {
+			return new HashSet<String>();
+		}
+	}
+
+	public String getLuckyRewardsPath(int num) {
+		return "Lucky." + num;
+	}
+
 	/**
 	 * Gets the max exp.
 	 *
@@ -612,6 +603,10 @@ public class RewardFileData {
 		return getData().getInt("Money");
 	}
 
+	public boolean getOnlyOneLucky() {
+		return getData().getBoolean("OnlyOneLucky");
+	}
+
 	/**
 	 * Gets the permission.
 	 *
@@ -654,6 +649,11 @@ public class RewardFileData {
 	 */
 	public int getPotionsDuration(String potion) {
 		return getData().getInt("Potions." + potion + ".Duration");
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getPriority() {
+		return (ArrayList<String>) getData().getList("Priority", new ArrayList<String>());
 	}
 
 	/**

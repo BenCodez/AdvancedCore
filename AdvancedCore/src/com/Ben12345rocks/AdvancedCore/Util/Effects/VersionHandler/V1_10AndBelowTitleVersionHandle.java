@@ -257,9 +257,8 @@ public class V1_10AndBelowTitleVersionHandle implements TitleVersionHandle {
 				Object connection = getField(handle.getClass(), "playerConnection").get(handle);
 				Object[] actions = packetActions.getEnumConstants();
 				Method sendPacket = getMethod(connection.getClass(), "sendPacket");
-				Object packet = packetTitle
-						.getConstructor(new Class[] { packetActions, chatBaseComponent, Integer.TYPE, Integer.TYPE,
-								Integer.TYPE })
+				Object packet = packetTitle.getConstructor(
+						new Class[] { packetActions, chatBaseComponent, Integer.TYPE, Integer.TYPE, Integer.TYPE })
 						.newInstance(new Object[] { actions[2], null, Integer.valueOf(fadeInTime * (ticks ? 1 : 20)),
 								Integer.valueOf(stayTime * (ticks ? 1 : 20)),
 								Integer.valueOf(fadeOutTime * (ticks ? 1 : 20)) });

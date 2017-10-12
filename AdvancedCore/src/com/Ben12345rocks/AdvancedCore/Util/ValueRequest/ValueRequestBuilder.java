@@ -28,23 +28,14 @@ public class ValueRequestBuilder {
 		booleanListener = listener;
 	}
 
-	public ValueRequestBuilder(NumberListener listener, Number[] options) {
-		numberListener = listener;
-		numberOptions = options;
-	}
+	public ValueRequestBuilder(LinkedHashMap<String, ItemStack> options, final Listener<String> listener) {
+		stringListener = new StringListener() {
 
-	public ValueRequestBuilder(StringListener listener, String[] options) {
-		stringListener = listener;
-		stringOptions = options;
-	}
-
-	public ValueRequestBuilder(NumberListener listener, LinkedHashMap<Number, ItemStack> options) {
-		numberListener = listener;
-		numberItemOptions = options;
-	}
-
-	public ValueRequestBuilder(StringListener listener, LinkedHashMap<String, ItemStack> options) {
-		stringListener = listener;
+			@Override
+			public void onInput(Player player, String value) {
+				listener.onInput(player, value);
+			}
+		};
 		stringItemOptions = options;
 	}
 
@@ -56,6 +47,17 @@ public class ValueRequestBuilder {
 				listener.onInput(player, value);
 			}
 		};
+	}
+
+	public ValueRequestBuilder(final Listener<Number> listener, LinkedHashMap<Number, ItemStack> options) {
+		numberListener = new NumberListener() {
+
+			@Override
+			public void onInput(Player player, Number value) {
+				listener.onInput(player, value);
+			}
+		};
+		numberItemOptions = options;
 	}
 
 	public ValueRequestBuilder(final Listener<Number> listener, Number[] options) {
@@ -80,26 +82,24 @@ public class ValueRequestBuilder {
 		stringOptions = options;
 	}
 
-	public ValueRequestBuilder(final Listener<Number> listener, LinkedHashMap<Number, ItemStack> options) {
-		numberListener = new NumberListener() {
-
-			@Override
-			public void onInput(Player player, Number value) {
-				listener.onInput(player, value);
-			}
-		};
+	public ValueRequestBuilder(NumberListener listener, LinkedHashMap<Number, ItemStack> options) {
+		numberListener = listener;
 		numberItemOptions = options;
 	}
 
-	public ValueRequestBuilder(LinkedHashMap<String, ItemStack> options, final Listener<String> listener) {
-		stringListener = new StringListener() {
+	public ValueRequestBuilder(NumberListener listener, Number[] options) {
+		numberListener = listener;
+		numberOptions = options;
+	}
 
-			@Override
-			public void onInput(Player player, String value) {
-				listener.onInput(player, value);
-			}
-		};
+	public ValueRequestBuilder(StringListener listener, LinkedHashMap<String, ItemStack> options) {
+		stringListener = listener;
 		stringItemOptions = options;
+	}
+
+	public ValueRequestBuilder(StringListener listener, String[] options) {
+		stringListener = listener;
+		stringOptions = options;
 	}
 
 	public ValueRequestBuilder allowCustomOption(boolean allowCustomOption) {

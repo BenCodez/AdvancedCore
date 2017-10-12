@@ -94,6 +94,24 @@ public class MiscUtils {
 		}
 	}
 
+	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
+		if (command != null && !command.isEmpty()) {
+			final String cmd = StringUtils.getInstance().replaceJavascript(player,
+					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+
+			plugin.debug("Executing console command: " + command);
+			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+				}
+
+			});
+		}
+
+	}
+
 	@SuppressWarnings("deprecation")
 	public void executeConsoleCommands(final String playerName, final ArrayList<String> cmds,
 			final HashMap<String, String> placeholders) {
@@ -113,24 +131,6 @@ public class MiscUtils {
 				});
 			}
 		}
-	}
-
-	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
-		if (command != null && !command.isEmpty()) {
-			final String cmd = StringUtils.getInstance().replaceJavascript(player,
-					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
-
-			plugin.debug("Executing console command: " + command);
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-				}
-
-			});
-		}
-
 	}
 
 	/**
@@ -253,6 +253,15 @@ public class MiscUtils {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getYear();
 	}
 
+	public ItemStack setSkullOwner(OfflinePlayer player) {
+		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
+			return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(player)
+					.toItemStack(player);
+		} else {
+			return setSkullOwner(player.getName());
+		}
+	}
+
 	/**
 	 * Sets the skull owner.
 	 *
@@ -264,15 +273,6 @@ public class MiscUtils {
 	public ItemStack setSkullOwner(String playerName) {
 		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();
-	}
-
-	public ItemStack setSkullOwner(OfflinePlayer player) {
-		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
-			return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(player)
-					.toItemStack(player);
-		} else {
-			return setSkullOwner(player.getName());
-		}
 	}
 
 }

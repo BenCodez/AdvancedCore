@@ -159,16 +159,6 @@ public class PlayerUtils {
 
 	}
 
-	@SuppressWarnings("deprecation")
-	public boolean isValidUser(String name) {
-		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
-		if (p.hasPlayedBefore() || p.isOnline()) {
-			plugin.extraDebug(name + " has joined before");
-			return true;
-		}	
-		return UserManager.getInstance().userExist(name);
-	}
-
 	/**
 	 * Checks for permission.
 	 *
@@ -265,6 +255,16 @@ public class PlayerUtils {
 			return true;
 		}
 		return false;
+	}
+
+	@SuppressWarnings("deprecation")
+	public boolean isValidUser(String name) {
+		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
+		if (p.hasPlayedBefore() || p.isOnline()) {
+			plugin.extraDebug(name + " has joined before");
+			return true;
+		}
+		return UserManager.getInstance().userExist(name);
 	}
 
 	/**

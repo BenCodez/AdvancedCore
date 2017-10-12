@@ -69,6 +69,11 @@ public class RewardBuilder {
 		return reward;
 	}
 
+	public RewardBuilder ignoreChance(boolean ignoreChance) {
+		this.ignoreChance = ignoreChance;
+		return this;
+	}
+
 	/**
 	 * @return the checkTimed
 	 */
@@ -87,6 +92,20 @@ public class RewardBuilder {
 		return online;
 	}
 
+	public void send(ArrayList<User> users) {
+		for (User user : users) {
+			send(user);
+		}
+	}
+
+	public void send(OfflinePlayer p) {
+		send(UserManager.getInstance().getUser(p));
+	}
+
+	public void send(Player p) {
+		send(UserManager.getInstance().getUser(p));
+	}
+
 	@SuppressWarnings("deprecation")
 	public void send(User user) {
 		if (reward == null) {
@@ -97,22 +116,8 @@ public class RewardBuilder {
 					ignoreChance, placeholders);
 		}
 	}
-	
-	public void send(Player p) {
-		send(UserManager.getInstance().getUser(p));
-	}
-	
-	public void send(OfflinePlayer p) {
-		send(UserManager.getInstance().getUser(p));
-	}
 
 	public void send(User... users) {
-		for (User user : users) {
-			send(user);
-		}
-	}
-	
-	public void send(ArrayList<User> users) {
 		for (User user : users) {
 			send(user);
 		}
@@ -153,11 +158,6 @@ public class RewardBuilder {
 
 	public RewardBuilder withPrefix(String prefix) {
 		this.prefix = prefix;
-		return this;
-	}
-
-	public RewardBuilder ignoreChance(boolean ignoreChance) {
-		this.ignoreChance = ignoreChance;
 		return this;
 	}
 

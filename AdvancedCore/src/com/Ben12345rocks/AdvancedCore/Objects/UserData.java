@@ -149,10 +149,11 @@ public class UserData {
 				}
 			}
 		}
-		/*if (AdvancedCoreHook.getInstance().isExtraDebug()) {
-			AdvancedCoreHook.getInstance()
-					.debug("Extra: Failed to get string from: '" + key + "' for '" + user.getPlayerName() + "'");
-		}*/
+		/*
+		 * if (AdvancedCoreHook.getInstance().isExtraDebug()) {
+		 * AdvancedCoreHook.getInstance() .debug("Extra: Failed to get string from: '" +
+		 * key + "' for '" + user.getPlayerName() + "'"); }
+		 */
 		return "";
 	}
 
@@ -174,10 +175,11 @@ public class UserData {
 			AdvancedCoreHook.getInstance().debug("No key: " + key + " to " + value);
 			return;
 		}
-		/*if (AdvancedCoreHook.getInstance().isExtraDebug()) {
-			AdvancedCoreHook.getInstance()
-					.debug("Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "'");
-		}*/
+		/*
+		 * if (AdvancedCoreHook.getInstance().isExtraDebug()) {
+		 * AdvancedCoreHook.getInstance() .debug("Extra: Setting " + key + " to '" +
+		 * value + "' for '" + user.getPlayerName() + "'"); }
+		 */
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
 			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);

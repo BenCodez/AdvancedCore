@@ -329,20 +329,6 @@ public class ItemBuilder {
 		return "";
 	}
 
-	public boolean hasCustomDisplayName() {
-		if (hasItemMeta()) {
-			return is.getItemMeta().hasDisplayName();
-		}
-		return false;
-	}
-
-	public boolean hasCustomLore() {
-		if (hasItemMeta()) {
-			return is.getItemMeta().hasLore();
-		}
-		return false;
-	}
-
 	/**
 	 * @return the skull
 	 */
@@ -374,6 +360,24 @@ public class ItemBuilder {
 	 */
 	public int getSlot() {
 		return slot;
+	}
+
+	public boolean hasCustomDisplayName() {
+		if (hasItemMeta()) {
+			return is.getItemMeta().hasDisplayName();
+		}
+		return false;
+	}
+
+	public boolean hasCustomLore() {
+		if (hasItemMeta()) {
+			return is.getItemMeta().hasLore();
+		}
+		return false;
+	}
+
+	public boolean hasItemMeta() {
+		return is.hasItemMeta();
 	}
 
 	/**
@@ -544,6 +548,18 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public ItemBuilder setSkullOwner(OfflinePlayer offlinePlayer) {
+		if (offlinePlayer != null) {
+			try {
+				SkullMeta im = (SkullMeta) is.getItemMeta();
+				im.setOwningPlayer(offlinePlayer);
+				is.setItemMeta(im);
+			} catch (ClassCastException expected) {
+			}
+		}
+		return this;
+	}
+
 	/**
 	 * Set the skull owner for the item. Works on skulls only.
 	 *
@@ -562,22 +578,6 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public ItemBuilder setSkullOwner(OfflinePlayer offlinePlayer) {
-		if (offlinePlayer != null) {
-			try {
-				SkullMeta im = (SkullMeta) is.getItemMeta();
-				im.setOwningPlayer(offlinePlayer);
-				is.setItemMeta(im);
-			} catch (ClassCastException expected) {
-			}
-		}
-		return this;
-	}
-
-	public boolean hasItemMeta() {
-		return is.hasItemMeta();
-	}
-
 	public ItemBuilder setSlot(int slot) {
 		this.slot = slot;
 		return this;
@@ -587,7 +587,7 @@ public class ItemBuilder {
 	 * Retrieves the itemstack from the ItemBuilder.
 	 *
 	 * @return The itemstack created/modified by the ItemBuilder instance.
-	 * 
+	 *
 	 * @deprecated Use toItemStack(Player player)
 	 */
 	@Deprecated
@@ -599,10 +599,6 @@ public class ItemBuilder {
 					.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
 		}
 		return is;
-	}
-
-	public ItemStack toItemStack(Player player) {
-		return toItemStack((OfflinePlayer) player);
 	}
 
 	public ItemStack toItemStack(OfflinePlayer player) {
@@ -620,5 +616,9 @@ public class ItemBuilder {
 			return toItemStack();
 		}
 		return is;
+	}
+
+	public ItemStack toItemStack(Player player) {
+		return toItemStack((OfflinePlayer) player);
 	}
 }

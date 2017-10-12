@@ -43,7 +43,7 @@ public class MySQL {
 
 	private String name;
 
-	private Set<String> uuids = (Set<String>) Collections.synchronizedSet(new HashSet<String>());
+	private Set<String> uuids = Collections.synchronizedSet(new HashSet<String>());
 
 	private boolean useBatchUpdates = true;
 
@@ -250,6 +250,15 @@ public class MySQL {
 		return result;
 	}
 
+	public Set<String> getUuids() {
+		if (uuids == null || uuids.size() == 0) {
+			uuids.clear();
+			uuids.addAll(getUuidsQuery());
+			return uuids;
+		}
+		return uuids;
+	}
+
 	public ArrayList<String> getUuidsQuery() {
 		ArrayList<String> uuids = new ArrayList<String>();
 
@@ -258,15 +267,6 @@ public class MySQL {
 			uuids.add((String) c.getValue());
 		}
 
-		return uuids;
-	}
-
-	public Set<String> getUuids() {
-		if (uuids == null || uuids.size() == 0) {
-			uuids.clear();
-			uuids.addAll(getUuidsQuery());
-			return uuids;
-		}
 		return uuids;
 	}
 
@@ -289,6 +289,10 @@ public class MySQL {
 		}
 	}
 
+	public boolean isUseBatchUpdates() {
+		return useBatchUpdates;
+	}
+
 	public void loadData() {
 		columns = getColumnsQueury();
 
@@ -300,14 +304,16 @@ public class MySQL {
 		}
 	}
 
-	public boolean isUseBatchUpdates() {
-		return useBatchUpdates;
-	}
-
 	public void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
 		if (uuids.contains(uuid)) {
 			uuids.add(uuid);
+		}
+	}
+
+	public void loadPlayerIfNeeded(String uuid) {
+		if (!containsKey(uuid)) {
+			loadPlayer(uuid);
 		}
 	}
 
@@ -384,11 +390,5 @@ public class MySQL {
 
 		}
 
-	}
-
-	public void loadPlayerIfNeeded(String uuid) {
-		if (!containsKey(uuid)) {
-			loadPlayer(uuid);
-		}
 	}
 }

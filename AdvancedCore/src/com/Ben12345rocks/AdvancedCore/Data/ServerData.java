@@ -82,6 +82,11 @@ public class ServerData extends YMLFile {
 	public void onFileCreation() {
 	}
 
+	public void setData(String path, Object value) {
+		getData().set(path, value);
+		saveData();
+	}
+
 	/**
 	 * Sets the plugin version.
 	 *
@@ -123,11 +128,6 @@ public class ServerData extends YMLFile {
 	 */
 	public void setPrevWeekDay(int week) {
 		getData().set("PrevWeek", week);
-		saveData();
-	}
-
-	public void setData(String path, Object value) {
-		getData().set(path, value);
 		saveData();
 	}
 }

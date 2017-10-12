@@ -23,12 +23,22 @@ public class DateChangedEvent extends Event {
 		return handlers;
 	}
 
+	private TimeType timeType;
+
 	public DateChangedEvent(TimeType time) {
 		super(true);
 		this.timeType = time;
 	}
 
-	private TimeType timeType;
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see org.bukkit.event.Event#getHandlers()
+	 */
+	@Override
+	public HandlerList getHandlers() {
+		return handlers;
+	}
 
 	/**
 	 * @return the timeType
@@ -43,16 +53,6 @@ public class DateChangedEvent extends Event {
 	 */
 	public void setTimeType(TimeType timeType) {
 		this.timeType = timeType;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see org.bukkit.event.Event#getHandlers()
-	 */
-	@Override
-	public HandlerList getHandlers() {
-		return handlers;
 	}
 
 }

@@ -81,8 +81,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 	 * (non-Javadoc)
 	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
-	 * AInventoryVersionHandler#open(org.bukkit.entity.Player,
-	 * java.util.HashMap)
+	 * AInventoryVersionHandler#open(org.bukkit.entity.Player, java.util.HashMap)
 	 */
 	@Override
 	public void open(Player player, HashMap<AnvilSlot, ItemStack> items) {

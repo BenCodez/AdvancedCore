@@ -93,49 +93,14 @@ public class AdvancedCoreHook {
 	private String prevPageTxt = "&aPrevious Page";
 	private String nextPageTxt = "&aNext Page";
 
-	public String getPrevPageTxt() {
-		return prevPageTxt;
-	}
-
-	public void setPrevPageTxt(String prevPageTxt) {
-		this.prevPageTxt = prevPageTxt;
-	}
-
-	public String getNextPageTxt() {
-		return nextPageTxt;
-	}
-
-	public void setNextPageTxt(String nextPageTxt) {
-		this.nextPageTxt = nextPageTxt;
-	}
-
-	public boolean isAutoKillInvs() {
-		return autoKillInvs;
-	}
-
-	public void setAutoKillInvs(boolean autoKillInvs) {
-		this.autoKillInvs = autoKillInvs;
-	}
-
-	public int getMaxMysqlSize() {
-		return maxMysqlSize;
-	}
-
-	public void setMaxMysqlSize(int maxMysqlSize) {
-		this.maxMysqlSize = maxMysqlSize;
-	}
-
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
 	private Economy econ = null;
 
 	private Permission perms;
-	private boolean alternateUUIDLookUp;
 
-	public void setAlternateUUIDLookUp(boolean alternateUUIDLookUp) {
-		this.alternateUUIDLookUp = alternateUUIDLookUp;
-	}
+	private boolean alternateUUIDLookUp;
 
 	private AdvancedCoreHook() {
 	}
@@ -287,11 +252,19 @@ public class AdvancedCoreHook {
 		return logger;
 	}
 
+	public int getMaxMysqlSize() {
+		return maxMysqlSize;
+	}
+
 	/**
 	 * @return the mysql
 	 */
 	public MySQL getMysql() {
 		return mysql;
+	}
+
+	public String getNextPageTxt() {
+		return nextPageTxt;
 	}
 
 	public String getPermPrefix() {
@@ -304,6 +277,10 @@ public class AdvancedCoreHook {
 
 	public JavaPlugin getPlugin() {
 		return plugin;
+	}
+
+	public String getPrevPageTxt() {
+		return prevPageTxt;
 	}
 
 	/**
@@ -345,6 +322,10 @@ public class AdvancedCoreHook {
 		return UserManager.getInstance();
 	}
 
+	public ConcurrentHashMap<String, String> getUuids() {
+		return uuids;
+	}
+
 	/**
 	 * @return the version
 	 */
@@ -380,11 +361,19 @@ public class AdvancedCoreHook {
 		return null;
 	}
 
+	public boolean isAlternateUUIDLookUp() {
+		return alternateUUIDLookUp;
+	}
+
 	/**
 	 * @return the autoDownload
 	 */
 	public boolean isAutoDownload() {
 		return autoDownload;
+	}
+
+	public boolean isAutoKillInvs() {
+		return autoKillInvs;
 	}
 
 	public synchronized boolean isCheckOnWorldChange() {
@@ -546,29 +535,6 @@ public class AdvancedCoreHook {
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
-	public ConcurrentHashMap<String, String> getUuids() {
-		return uuids;
-	}
-
-	private void loadUUIDs() {
-		uuids = new ConcurrentHashMap<String, String>();
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-
-			@Override
-			public void run() {
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					String name = user.getData().getString("PlayerName");
-					if (uuids.containsKey(name)) {
-						debug("Duplicate uuid? " + uuid + " : " + name + " Other key: " + uuids.get(name));
-					}
-					uuids.put(name, uuid);
-				}
-				debug("Loaded uuids in the background");
-			}
-		});
-	}
-
 	/**
 	 * Load logger
 	 */
@@ -601,6 +567,25 @@ public class AdvancedCoreHook {
 		} else if (storageType.equals(UserStorage.MYSQL)) {
 			mysql = null;
 		}
+	}
+
+	private void loadUUIDs() {
+		uuids = new ConcurrentHashMap<String, String>();
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					String name = user.getData().getString("PlayerName");
+					if (uuids.containsKey(name)) {
+						debug("Duplicate uuid? " + uuid + " : " + name + " Other key: " + uuids.get(name));
+					}
+					uuids.put(name, uuid);
+				}
+				debug("Loaded uuids in the background");
+			}
+		});
 	}
 
 	public void loadValueRequestInputCommands() {
@@ -648,12 +633,20 @@ public class AdvancedCoreHook {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
 	}
 
+	public void setAlternateUUIDLookUp(boolean alternateUUIDLookUp) {
+		this.alternateUUIDLookUp = alternateUUIDLookUp;
+	}
+
 	/**
 	 * @param autoDownload
 	 *            the autoDownload to set
 	 */
 	public void setAutoDownload(boolean autoDownload) {
 		this.autoDownload = autoDownload;
+	}
+
+	public void setAutoKillInvs(boolean autoKillInvs) {
+		this.autoKillInvs = autoKillInvs;
 	}
 
 	public synchronized void setCheckOnWorldChange(boolean checkOnWorldChange) {
@@ -716,6 +709,10 @@ public class AdvancedCoreHook {
 		this.logDebugToFile = logDebugToFile;
 	}
 
+	public void setMaxMysqlSize(int maxMysqlSize) {
+		this.maxMysqlSize = maxMysqlSize;
+	}
+
 	/**
 	 * @param mysql
 	 *            the mysql to set
@@ -728,6 +725,10 @@ public class AdvancedCoreHook {
 		this.mysql = mysql;
 	}
 
+	public void setNextPageTxt(String nextPageTxt) {
+		this.nextPageTxt = nextPageTxt;
+	}
+
 	public void setPermPrefix(String permPrefix) {
 		this.permPrefix = permPrefix;
 	}
@@ -738,6 +739,10 @@ public class AdvancedCoreHook {
 
 	public void setPreloadUsers(boolean preloadUsers) {
 		this.preloadUsers = preloadUsers;
+	}
+
+	public void setPrevPageTxt(String prevPageTxt) {
+		this.prevPageTxt = prevPageTxt;
 	}
 
 	/**
@@ -789,9 +794,5 @@ public class AdvancedCoreHook {
 	 */
 	public void update() {
 		TimeChecker.getInstance().update();
-	}
-
-	public boolean isAlternateUUIDLookUp() {
-		return alternateUUIDLookUp;
 	}
 }

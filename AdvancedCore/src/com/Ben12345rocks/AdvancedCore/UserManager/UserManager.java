@@ -67,6 +67,15 @@ public class UserManager {
 		return new ArrayList<String>();
 	}
 
+	public String getProperName(String name) {
+		for (String s : plugin.getUuids().keySet()) {
+			if (s.equalsIgnoreCase(name)) {
+				return s;
+			}
+		}
+		return name;
+	}
+
 	/**
 	 * Gets the user.
 	 *
@@ -113,13 +122,21 @@ public class UserManager {
 		return new User(plugin.getPlugin(), uuid);
 	}
 
-	public String getProperName(String name) {
+	public boolean userExist(String name) {
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
-				return s;
+				return true;
 			}
 		}
-		return name;
+
+		for (String uuid : getAllUUIDs()) {
+			User user = getUser(new UUID(uuid));
+			if (user.getPlayerName().equalsIgnoreCase(name)) {
+				plugin.extraDebug("Found " + name + " in database");
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public boolean userExist(UUID uuid) {
@@ -131,23 +148,6 @@ public class UserManager {
 			// plugin.debug(uuid.getUUID() + " not exist");
 		}
 
-		return false;
-	}
-
-	public boolean userExist(String name) {
-		for (String s : plugin.getUuids().keySet()) {
-			if (s.equalsIgnoreCase(name)) {
-				return true;
-			}
-		}
-		
-		for (String uuid : getAllUUIDs()) {
-			User user = getUser(new UUID(uuid));
-			if (user.getPlayerName().equalsIgnoreCase(name)) {
-				plugin.extraDebug("Found " + name + " in database");
-				return true;
-			}
-		}
 		return false;
 	}
 }

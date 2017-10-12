@@ -25,8 +25,6 @@ public class FireworkHandler implements Listener {
 	/** The instance. */
 	static FireworkHandler instance = new FireworkHandler();
 
-	private ConcurrentLinkedQueue<Firework> fireWorks = new ConcurrentLinkedQueue<Firework>();
-
 	/**
 	 * Gets the single instance of FireworkHandler.
 	 *
@@ -35,6 +33,8 @@ public class FireworkHandler implements Listener {
 	public static FireworkHandler getInstance() {
 		return instance;
 	}
+
+	private ConcurrentLinkedQueue<Firework> fireWorks = new ConcurrentLinkedQueue<Firework>();
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
@@ -125,7 +125,7 @@ public class FireworkHandler implements Listener {
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onFireworkExplode(FireworkExplodeEvent event) {
 		if (event.getEntity() instanceof Firework) {
-			Firework fw = (Firework) event.getEntity();
+			Firework fw = event.getEntity();
 			if (fireWorks.contains(fw)) {
 				Bukkit.getScheduler().runTaskLaterAsynchronously(plugin.getPlugin(), new Runnable() {
 

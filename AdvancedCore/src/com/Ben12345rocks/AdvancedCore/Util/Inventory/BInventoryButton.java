@@ -55,7 +55,7 @@ public abstract class BInventoryButton {
 	 * Gets the item.
 	 *
 	 * @return the item
-	 * 
+	 *
 	 * @deprecated Use getItem(Player player)
 	 */
 	@Deprecated

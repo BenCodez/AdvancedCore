@@ -68,6 +68,17 @@ public class StringUtils {
 		return str1.toLowerCase().contains(str2.toLowerCase());
 	}
 
+	public boolean isDouble(String st) {
+		try {
+			@SuppressWarnings("unused")
+			double num = Double.parseDouble(st);
+			return true;
+
+		} catch (NumberFormatException ex) {
+			return false;
+		}
+	}
+
 	/**
 	 * Checks if is int.
 	 *
@@ -79,17 +90,6 @@ public class StringUtils {
 		try {
 			@SuppressWarnings("unused")
 			int num = Integer.parseInt(st);
-			return true;
-
-		} catch (NumberFormatException ex) {
-			return false;
-		}
-	}
-	
-	public boolean isDouble(String st) {
-		try {
-			@SuppressWarnings("unused")
-			double num = Double.parseDouble(st);
 			return true;
 
 		} catch (NumberFormatException ex) {
@@ -123,14 +123,14 @@ public class StringUtils {
 		return replaceJavascript(text, engine);
 	}
 
-	public String replaceJavascript(Player player, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-		return replaceJavascript(replacePlaceHolders(player, text), engine);
-	}
-	
 	public String replaceJavascript(OfflinePlayer player, String text) {
 		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
 		return replaceJavascript(text, engine);
+	}
+
+	public String replaceJavascript(Player player, String text) {
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+		return replaceJavascript(replacePlaceHolders(player, text), engine);
 	}
 
 	public String replaceJavascript(String text) {
