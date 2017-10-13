@@ -40,6 +40,7 @@ public class TimeChecker {
 	}
 
 	public void forceChanged(TimeType time) {
+		plugin.debug("Executing time change events: " + time.toString());
 		if (time.equals(TimeType.DAY)) {
 			DayChangeEvent dayChange = new DayChangeEvent();
 			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
@@ -50,10 +51,11 @@ public class TimeChecker {
 			MonthChangeEvent monthChange = new MonthChangeEvent();
 			plugin.getPlugin().getServer().getPluginManager().callEvent(monthChange);
 		}
-		
+
 		DateChangedEvent dateChanged = new DateChangedEvent(time);
 		plugin.getPlugin().getServer().getPluginManager().callEvent(dateChanged);
 
+		plugin.debug("Finished executing time change events: " + time.toString());
 	}
 
 	/**
