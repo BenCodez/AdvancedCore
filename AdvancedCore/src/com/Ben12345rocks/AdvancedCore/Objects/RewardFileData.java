@@ -258,10 +258,6 @@ public class RewardFileData {
 		return getData().getInt("Effect.Radius");
 	}
 
-	public int getEffectSpeed() {
-		return getData().getInt("Effect.Speed", 1);
-	}
-
 	/**
 	 * Gets the exp.
 	 *

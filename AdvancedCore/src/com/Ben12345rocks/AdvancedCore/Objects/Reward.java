@@ -229,8 +229,6 @@ public class Reward {
 	/** The effect particles. */
 	private int effectParticles;
 
-	private int effectSpeed;
-
 	/** The effect radius. */
 	private int effectRadius;
 
@@ -1428,7 +1426,6 @@ public class Reward {
 		effectData = getConfig().getEffectData();
 		effectParticles = getConfig().getEffectParticles();
 		effectRadius = getConfig().getEffectRadius();
-		effectSpeed = getConfig().getEffectSpeed();
 
 		priority = getConfig().getPriority();
 
@@ -1455,7 +1452,7 @@ public class Reward {
 	 */
 	public void playEffect(User user) {
 		if (effectEnabled) {
-			user.playParticle(effectEffect, effectData, effectParticles, effectRadius, effectSpeed);
+			user.playParticle(effectEffect, effectData, effectParticles, effectRadius);
 		}
 	}
 
