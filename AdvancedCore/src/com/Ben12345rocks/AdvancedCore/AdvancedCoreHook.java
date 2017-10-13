@@ -519,7 +519,6 @@ public class AdvancedCoreHook {
 		this.plugin = plugin;
 		loadUUIDs();
 		permPrefix = plugin.getName();
-		loadUserAPI(UserStorage.SQLITE);
 		checkPlaceHolderAPI();
 		loadHandle();
 		loadEconomy();
@@ -763,6 +762,7 @@ public class AdvancedCoreHook {
 
 	public void setStorageType(UserStorage storageType) {
 		this.storageType = storageType;
+		loadUserAPI(storageType);
 	}
 
 	/**
