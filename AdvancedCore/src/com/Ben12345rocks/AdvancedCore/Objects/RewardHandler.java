@@ -435,9 +435,13 @@ public class RewardHandler {
 			for (String reward : getRewardNames(file)) {
 				if (!reward.equals("")) {
 					if (!rewardExist(reward)) {
-						rewards.add(new Reward(file, reward));
-						if (AdvancedCoreHook.getInstance().isExtraDebug()) {
-							plugin.debug("Extra: Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
+						try {
+							rewards.add(new Reward(file, reward));
+							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
+						} catch (Exception e) {
+							plugin.getPlugin().getLogger()
+									.severe("Failed to load reward file " + reward + ".yml: " + e.getMessage());
+							e.printStackTrace();
 						}
 					} else {
 						plugin.getPlugin().getLogger().warning("Detected that a reward file named " + reward
