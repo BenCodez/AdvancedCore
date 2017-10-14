@@ -176,7 +176,8 @@ Sound:
 Effect:
   Enabled: false
   Effect: 'EXPLOSION'
-  Data: 0
+  # Ususally speed
+  Data: 1
   Particles: 10
   Radius: 5
   

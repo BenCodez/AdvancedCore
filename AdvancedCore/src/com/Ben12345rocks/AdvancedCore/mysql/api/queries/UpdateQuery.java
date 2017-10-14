@@ -60,11 +60,11 @@ public class UpdateQuery {
 	}
 
 	/**
-	 * Set the value of a column. Automatically sets the value to ? to be used
-	 * with prepared statements.
+	 * Set the value of a column. Automatically sets the value to ? to be used with
+	 * prepared statements.
 	 * <p>
-	 * MySQLAPIBukkit does not do any interpretation so you have to add
-	 * apostrophes yourself.
+	 * MySQLAPIBukkit does not do any interpretation so you have to add apostrophes
+	 * yourself.
 	 *
 	 * @param column
 	 *            the column to set the value for

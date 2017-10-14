@@ -70,7 +70,7 @@ public class PlayerJoinEvent implements Listener {
 		/*
 		 * final String uuid = event.getPlayer().getPlayer().getUniqueId().toString();
 		 * Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
-		 * 
+		 *
 		 * @Override public void run() { if (Bukkit.getPlayer(UUID.fromString(uuid)) ==
 		 * null) { if
 		 * (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {

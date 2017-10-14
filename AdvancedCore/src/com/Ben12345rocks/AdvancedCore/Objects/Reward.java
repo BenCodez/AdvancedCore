@@ -240,20 +240,6 @@ public class Reward {
 
 	private boolean onlyOneLucky;
 
-	/**
-	 * @return the name
-	 */
-	public String getName() {
-		return name;
-	}
-
-	/**
-	 * @return the priority
-	 */
-	public ArrayList<String> getPriority() {
-		return priority;
-	}
-
 	private File file;
 
 	private boolean randomPickRandom;
@@ -278,6 +264,13 @@ public class Reward {
 	 */
 	public Reward(String reward) {
 		load(new File(plugin.getPlugin().getDataFolder(), "Rewards"), reward);
+	}
+
+	public boolean canGiveReward(User user) {
+		if (hasPermission(user) && checkChance()) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -335,23 +328,6 @@ public class Reward {
 	 */
 	public boolean checkRandomChance() {
 		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
-	}
-
-	public void givePriorityReward(User user, final HashMap<String, String> placeholders) {
-		for (String str : getPriority()) {
-			Reward reward = RewardHandler.getInstance().getReward(str);
-			if (reward.canGiveReward(user)) {
-				new RewardBuilder(reward).withPlaceHolder(placeholders).ignoreChance(true).send(user);
-				return;
-			}
-		}
-	}
-
-	public boolean canGiveReward(User user) {
-		if (hasPermission(user) && checkChance()) {
-			return true;
-		}
-		return false;
 	}
 
 	/**
@@ -656,7 +632,7 @@ public class Reward {
 	}
 
 	public ItemStack getItemStack(User user, String item) {
-		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getPlayerName())
+		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getOfflinePlayer())
 				.toItemStack(user.getPlayer());
 	}
 
@@ -674,6 +650,13 @@ public class Reward {
 	 */
 	public ArrayList<String> getJavascripts() {
 		return javascripts;
+	}
+
+	/**
+	 * @return the luckyRewards
+	 */
+	public HashMap<Integer, String> getLuckyRewards() {
+		return luckyRewards;
 	}
 
 	/**
@@ -738,6 +721,13 @@ public class Reward {
 	}
 
 	/**
+	 * @return the name
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
 	 * Gets the permission.
 	 *
 	 * @return the permission
@@ -780,6 +770,13 @@ public class Reward {
 	 */
 	public HashMap<String, Integer> getPotionsDuration() {
 		return potionsDuration;
+	}
+
+	/**
+	 * @return the priority
+	 */
+	public ArrayList<String> getPriority() {
+		return priority;
 	}
 
 	/**
@@ -944,6 +941,32 @@ public class Reward {
 		}
 	}
 
+	public void giveLucky(User user, HashMap<String, String> placeholders) {
+		HashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
+		for (Entry<Integer, String> entry : luckyRewards.entrySet()) {
+			if (MiscUtils.getInstance().checkChance(1, entry.getKey())) {
+				// new RewardBuilder(getConfig().getData(),
+				// entry.getValue()).withPlaceHolder(placeholders).send(user);
+				map.put(entry.getValue(), entry.getKey());
+			}
+		}
+
+		map = ArrayUtils.getInstance().sortByValuesStr(map, false);
+		if (map.size() > 0) {
+			if (isOnlyOneLucky()) {
+				for (Entry<String, Integer> entry : map.entrySet()) {
+					new RewardBuilder(getConfig().getData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
+					return;
+				}
+
+			} else {
+				for (Entry<String, Integer> entry : map.entrySet()) {
+					new RewardBuilder(getConfig().getData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
+				}
+			}
+		}
+	}
+
 	/**
 	 * Give money.
 	 *
@@ -966,6 +989,16 @@ public class Reward {
 		for (String potionName : getPotions()) {
 			user.givePotionEffect(potionName, getPotionsDuration().get(potionName),
 					getPotionsAmplifier().get(potionName));
+		}
+	}
+
+	public void givePriorityReward(User user, final HashMap<String, String> placeholders) {
+		for (String str : getPriority()) {
+			Reward reward = RewardHandler.getInstance().getReward(str);
+			if (reward.canGiveReward(user)) {
+				new RewardBuilder(reward).withPlaceHolder(placeholders).ignoreChance(true).send(user);
+				return;
+			}
 		}
 	}
 
@@ -1022,11 +1055,6 @@ public class Reward {
 		giveReward(user, online, giveOffline, checkTimed, null);
 	}
 
-	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
-			HashMap<String, String> placeholders) {
-		giveReward(user, online, giveOffline, checkTimed, false, placeholders);
-	}	
-
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
 			HashMap<String, String> placeholders) {
 
@@ -1058,6 +1086,11 @@ public class Reward {
 		giveRewardReward(user, online, ignoreChance, placeholders);
 	}
 
+	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
+			HashMap<String, String> placeholders) {
+		giveReward(user, online, giveOffline, checkTimed, false, placeholders);
+	}
+
 	public void giveRewardReward(User user, boolean online, boolean ignoreChance,
 			HashMap<String, String> placeholders) {
 		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
@@ -1077,32 +1110,6 @@ public class Reward {
 
 		if (ignoreChance || checkChance()) {
 			giveRewardUser(user, placeholders);
-		}
-	}
-
-	public void giveLucky(User user, HashMap<String, String> placeholders) {
-		HashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
-		for (Entry<Integer, String> entry : luckyRewards.entrySet()) {
-			if (MiscUtils.getInstance().checkChance(1, entry.getKey())) {
-				// new RewardBuilder(getConfig().getData(),
-				// entry.getValue()).withPlaceHolder(placeholders).send(user);
-				map.put(entry.getValue(), entry.getKey());
-			}
-		}
-
-		map = ArrayUtils.getInstance().sortByValuesStr(map, false);
-		if (map.size() > 0) {
-			if (isOnlyOneLucky()) {
-				for (Entry<String, Integer> entry : map.entrySet()) {
-					new RewardBuilder(getConfig().getData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
-					return;
-				}
-
-			} else {
-				for (Entry<String, Integer> entry : map.entrySet()) {
-					new RewardBuilder(getConfig().getData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
-				}
-			}
 		}
 	}
 
@@ -1231,12 +1238,26 @@ public class Reward {
 	}
 
 	/**
+	 * @return the forceOffline
+	 */
+	public boolean isForceOffline() {
+		return forceOffline;
+	}
+
+	/**
 	 * Checks if is javascript enabled.
 	 *
 	 * @return true, if is javascript enabled
 	 */
 	public boolean isJavascriptEnabled() {
 		return javascriptEnabled;
+	}
+
+	/**
+	 * @return the onlyOneLucky
+	 */
+	public boolean isOnlyOneLucky() {
+		return onlyOneLucky;
 	}
 
 	/**
@@ -1424,35 +1445,6 @@ public class Reward {
 	}
 
 	/**
-	 * @return the luckyRewards
-	 */
-	public HashMap<Integer, String> getLuckyRewards() {
-		return luckyRewards;
-	}
-
-	/**
-	 * @return the onlyOneLucky
-	 */
-	public boolean isOnlyOneLucky() {
-		return onlyOneLucky;
-	}
-
-	/**
-	 * @return the forceOffline
-	 */
-	public boolean isForceOffline() {
-		return forceOffline;
-	}
-
-	/**
-	 * @param forceOffline
-	 *            the forceOffline to set
-	 */
-	public void setForceOffline(boolean forceOffline) {
-		this.forceOffline = forceOffline;
-	}
-
-	/**
 	 * Play effect.
 	 *
 	 * @param user
@@ -1460,7 +1452,7 @@ public class Reward {
 	 */
 	public void playEffect(User user) {
 		if (effectEnabled) {
-			user.playParticleEffect(effectEffect, effectData, effectParticles, effectRadius);
+			user.playParticle(effectEffect, effectData, effectParticles, effectRadius);
 		}
 	}
 
@@ -1923,6 +1915,14 @@ public class Reward {
 	 */
 	public void setFireworkTypes(ArrayList<String> fireworkTypes) {
 		this.fireworkTypes = fireworkTypes;
+	}
+
+	/**
+	 * @param forceOffline
+	 *            the forceOffline to set
+	 */
+	public void setForceOffline(boolean forceOffline) {
+		this.forceOffline = forceOffline;
 	}
 
 	/**

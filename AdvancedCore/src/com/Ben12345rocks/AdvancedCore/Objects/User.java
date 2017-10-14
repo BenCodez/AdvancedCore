@@ -14,6 +14,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -141,17 +142,6 @@ public class User {
 
 	}
 
-	public boolean isVanished() {
-		Player player = getPlayer();
-		if (player != null) {
-			for (MetadataValue meta : player.getMetadata("vanished")) {
-				if (meta.asBoolean())
-					return true;
-			}
-		}
-		return false;
-	}
-
 	/**
 	 * Adds the choice reward.
 	 *
@@ -229,6 +219,20 @@ public class User {
 		}
 	}
 
+	public void closeInv() {
+		Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				Player player = getPlayer();
+				if (player != null) {
+					player.closeInventory();
+				}
+			}
+		});
+
+	}
+
 	public ArrayList<String> getChoiceRewards() {
 		return getUserData().getStringList("ChoiceRewards");
 	}
@@ -239,6 +243,13 @@ public class User {
 
 	public String getInputMethod() {
 		return getUserData().getString("InputMethod");
+	}
+
+	public OfflinePlayer getOfflinePlayer() {
+		if (uuid != null && !uuid.equals("")) {
+			return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
+		}
+		return null;
 	}
 
 	public ArrayList<String> getOfflineRewards() {
@@ -252,13 +263,6 @@ public class User {
 	 */
 	public Player getPlayer() {
 		return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
-	}
-
-	public OfflinePlayer getOfflinePlayer() {
-		if (uuid != null && !uuid.equals("")) {
-			return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
-		}
-		return null;
 	}
 
 	/**
@@ -510,10 +514,12 @@ public class User {
 		return player.hasPermission(perm);
 	}
 
-	public void closeInv() {
-		Player player = getPlayer();
-		if (player != null) {
-			player.closeInventory();
+	public boolean isBanned() {
+		OfflinePlayer p = getOfflinePlayer();
+		if (p != null) {
+			return p.isBanned();
+		} else {
+			return false;
 		}
 	}
 
@@ -524,6 +530,18 @@ public class User {
 	 */
 	public boolean isOnline() {
 		return PlayerUtils.getInstance().isPlayerOnline(getPlayerName());
+	}
+
+	public boolean isVanished() {
+		Player player = getPlayer();
+		if (player != null) {
+			for (MetadataValue meta : player.getMetadata("vanished")) {
+				if (meta.asBoolean()) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public void loadData() {
@@ -557,8 +575,8 @@ public class User {
 	 * @param radius
 	 *            the radius
 	 */
-	public void playParticleEffect(String effectName, int data, int particles, int radius) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+	public void playEffect(String effectName, int data, int particles, int radius) {
+		Player player = getPlayer();
 		if ((player != null) && (effectName != null)) {
 			Effect effect = Effect.valueOf(effectName);
 			for (int i = 0; i < particles; i++) {
@@ -566,6 +584,22 @@ public class User {
 			}
 
 		}
+	}
+
+	public void playParticle(String effectName, int data, int particles, int radius) {
+		Player player = getPlayer();
+		if ((player != null) && (effectName != null)) {
+			Particle effect = Particle.valueOf(effectName);
+			for (int i = 0; i < particles; i++) {
+				player.getWorld().spawnParticle(effect, player.getLocation(), particles, radius, radius, radius, data);
+			}
+
+		}
+	}
+
+	@Deprecated
+	public void playParticleEffect(String effectName, int data, int particles, int radius) {
+		playParticle(effectName, data, particles, radius);
 	}
 
 	/**
@@ -594,18 +628,21 @@ public class User {
 		if (commands != null && !commands.isEmpty()) {
 			final ArrayList<String> cmds = ArrayUtils.getInstance().replaceJavascript(getPlayer(),
 					ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
-			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
-				@Override
-				public void run() {
-					Player player = getPlayer();
-					if (player != null) {
-						for (String cmd : cmds) {
+			final Player player = getPlayer();
+			if (player != null) {
+				for (final String cmd : cmds) {
+					AdvancedCoreHook.getInstance()
+							.debug("Executing player command for " + getPlayerName() + ": " + cmd);
+					Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+						@Override
+						public void run() {
 							player.performCommand(cmd);
 						}
-					}
+					});
 				}
-			});
+			}
 		}
 	}
 
@@ -613,6 +650,7 @@ public class User {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringUtils.getInstance().replaceJavascript(getPlayer(),
 					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+			AdvancedCoreHook.getInstance().debug("Executing player command for " + getPlayerName() + ": " + command);
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
@@ -727,15 +765,6 @@ public class User {
 	 */
 	public void sendMessage(ArrayList<String> msg) {
 		sendMessage(ArrayUtils.getInstance().convert(msg));
-	}
-
-	public boolean isBanned() {
-		OfflinePlayer p = getOfflinePlayer();
-		if (p != null) {
-			return p.isBanned();
-		} else {
-			return false;
-		}
 	}
 
 	/**

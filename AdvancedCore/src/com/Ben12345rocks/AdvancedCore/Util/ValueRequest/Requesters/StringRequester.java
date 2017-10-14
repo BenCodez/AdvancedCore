@@ -62,8 +62,9 @@ public class StringRequester {
 	 * @param listener
 	 *            the listener
 	 */
-	public void request(Player player, InputMethod method, String currentValue, LinkedHashMap<String, ItemStack> options,
-			String promptText, boolean allowCustomOption, StringListener listener) {
+	public void request(Player player, InputMethod method, String currentValue,
+			LinkedHashMap<String, ItemStack> options, String promptText, boolean allowCustomOption,
+			StringListener listener) {
 		if ((options == null || options.size() == 0) && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
 			method = InputMethod.ANVIL;
 		}

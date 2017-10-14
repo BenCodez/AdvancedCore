@@ -90,19 +90,18 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Guides the allowed concurrency among update operations. Used as a hint
-	 * for internal sizing. The table is internally partitioned to try to permit
-	 * the indicated number of concurrent updates without contention. Because
-	 * assignment of entries to these partitions is not necessarily uniform, the
-	 * actual concurrency observed may vary. Ideally, you should choose a value
-	 * to accommodate as many threads as will ever concurrently modify the
-	 * table. Using a significantly higher value than you need can waste space
-	 * and time, and a significantly lower value can lead to thread contention.
-	 * But overestimates and underestimates within an order of magnitude do not
-	 * usually have much noticeable impact. A value of one permits only one
-	 * thread to modify the cache at a time, but since read operations can
-	 * proceed concurrently, this still yields higher concurrency than full
-	 * synchronization. Defaults to 4.
+	 * Guides the allowed concurrency among update operations. Used as a hint for
+	 * internal sizing. The table is internally partitioned to try to permit the
+	 * indicated number of concurrent updates without contention. Because assignment
+	 * of entries to these partitions is not necessarily uniform, the actual
+	 * concurrency observed may vary. Ideally, you should choose a value to
+	 * accommodate as many threads as will ever concurrently modify the table. Using
+	 * a significantly higher value than you need can waste space and time, and a
+	 * significantly lower value can lead to thread contention. But overestimates
+	 * and underestimates within an order of magnitude do not usually have much
+	 * noticeable impact. A value of one permits only one thread to modify the cache
+	 * at a time, but since read operations can proceed concurrently, this still
+	 * yields higher concurrency than full synchronization. Defaults to 4.
 	 *
 	 * <p>
 	 * <b>Note:</b>The default may change in the future. If you care about this
@@ -123,28 +122,28 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Specifies that each entry should be automatically removed from the cache
-	 * once a fixed duration has elapsed after the entry's creation, or last
-	 * access. Access time is reset by {@link com.google.common.cache.Cache#get
+	 * Specifies that each entry should be automatically removed from the cache once
+	 * a fixed duration has elapsed after the entry's creation, or last access.
+	 * Access time is reset by {@link com.google.common.cache.Cache#get
 	 * Cache.get()}, but not by operations on the view returned by
 	 * {@link com.google.common.cache.Cache#asMap() Cache.asMap()}.
 	 *
 	 * <p>
 	 * When {@code duration} is zero, elements will be evicted immediately after
 	 * being loaded into the cache. This has the same effect as invoking
-	 * {@link #maximumSize maximumSize}{@code (0)}. It can be useful in testing,
-	 * or to disable caching temporarily without a code change.
+	 * {@link #maximumSize maximumSize}{@code (0)}. It can be useful in testing, or
+	 * to disable caching temporarily without a code change.
 	 *
 	 * <p>
-	 * Expired entries may be counted by
-	 * {@link com.google.common.cache.Cache#size Cache.size()}, but will never
-	 * be visible to read or write operations. Expired entries are currently
-	 * cleaned up during write operations, or during occasional read operations
-	 * in the absense of writes; though this behavior may change in the future.
+	 * Expired entries may be counted by {@link com.google.common.cache.Cache#size
+	 * Cache.size()}, but will never be visible to read or write operations. Expired
+	 * entries are currently cleaned up during write operations, or during
+	 * occasional read operations in the absense of writes; though this behavior may
+	 * change in the future.
 	 *
 	 * @param duration
-	 *            the length of time after an entry is last accessed that it
-	 *            should be automatically removed
+	 *            the length of time after an entry is last accessed that it should
+	 *            be automatically removed
 	 * @param unit
 	 *            the unit that {@code duration} is expressed in
 	 * @return This for chaining
@@ -163,22 +162,22 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Specifies that each entry should be automatically removed from the cache
-	 * once a fixed duration has elapsed after the entry's creation, or the most
-	 * recent replacement of its value.
+	 * Specifies that each entry should be automatically removed from the cache once
+	 * a fixed duration has elapsed after the entry's creation, or the most recent
+	 * replacement of its value.
 	 *
 	 * <p>
 	 * When {@code duration} is zero, elements will be evicted immediately after
 	 * being loaded into the cache. This has the same effect as invoking
-	 * {@link #maximumSize maximumSize}{@code (0)}. It can be useful in testing,
-	 * or to disable caching temporarily without a code change.
+	 * {@link #maximumSize maximumSize}{@code (0)}. It can be useful in testing, or
+	 * to disable caching temporarily without a code change.
 	 *
 	 * <p>
-	 * Expired entries may be counted by
-	 * {@link com.google.common.cache.Cache#size Cache.size()}, but will never
-	 * be visible to read or write operations. Expired entries are currently
-	 * cleaned up during write operations, or during occasional read operations
-	 * in the absense of writes; though this behavior may change in the future.
+	 * Expired entries may be counted by {@link com.google.common.cache.Cache#size
+	 * Cache.size()}, but will never be visible to read or write operations. Expired
+	 * entries are currently cleaned up during write operations, or during
+	 * occasional read operations in the absense of writes; though this behavior may
+	 * change in the future.
 	 *
 	 * @param duration
 	 *            the length of time after an entry is created that it should be
@@ -201,12 +200,12 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Sets the minimum total size for the internal hash tables. For example, if
-	 * the initial capacity is {@code 60}, and the concurrency level is
-	 * {@code 8}, then eight segments are created, each having a hash table of
-	 * size eight. Providing a large enough estimate at construction time avoids
-	 * the need for expensive resizing operations later, but setting this value
-	 * unnecessarily high wastes memory.
+	 * Sets the minimum total size for the internal hash tables. For example, if the
+	 * initial capacity is {@code 60}, and the concurrency level is {@code 8}, then
+	 * eight segments are created, each having a hash table of size eight. Providing
+	 * a large enough estimate at construction time avoids the need for expensive
+	 * resizing operations later, but setting this value unnecessarily high wastes
+	 * memory.
 	 *
 	 * @param initialCapacity
 	 *            - initial capacity
@@ -223,15 +222,15 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Specifies the maximum number of entries the cache may contain. Note that
-	 * the cache <b>may evict an entry before this limit is exceeded</b>. As the
-	 * cache size grows close to the maximum, the cache evicts entries that are
-	 * less likely to be used again. For example, the cache may evict an entry
-	 * because it hasn't been used recently or very often.
+	 * Specifies the maximum number of entries the cache may contain. Note that the
+	 * cache <b>may evict an entry before this limit is exceeded</b>. As the cache
+	 * size grows close to the maximum, the cache evicts entries that are less
+	 * likely to be used again. For example, the cache may evict an entry because it
+	 * hasn't been used recently or very often.
 	 *
 	 * <p>
-	 * When {@code size} is zero, elements will be evicted immediately after
-	 * being loaded into the cache. This has the same effect as invoking
+	 * When {@code size} is zero, elements will be evicted immediately after being
+	 * loaded into the cache. This has the same effect as invoking
 	 * {@link #expireAfterWrite expireAfterWrite}{@code (0, unit)} or
 	 * {@link #expireAfterAccess expireAfterAccess}{@code (0,
 	 * unit)}. It can be useful in testing, or to disable caching temporarily
@@ -256,35 +255,34 @@ public class CompatibleCacheBuilder<K, V> {
 
 	/**
 	 * Specifies a listener instance, which all caches built using this
-	 * {@code CacheBuilder} will notify each time an entry is removed from the
-	 * cache by any means.
+	 * {@code CacheBuilder} will notify each time an entry is removed from the cache
+	 * by any means.
 	 *
 	 * <p>
 	 * Each cache built by this {@code CacheBuilder} after this method is called
-	 * invokes the supplied listener after removing an element for any reason
-	 * (see removal causes in {@link com.google.common.cache.RemovalCause
-	 * RemovalCause}). It will invoke the listener during invocations of any of
-	 * that cache's public methods (even read-only methods).
+	 * invokes the supplied listener after removing an element for any reason (see
+	 * removal causes in {@link com.google.common.cache.RemovalCause RemovalCause}).
+	 * It will invoke the listener during invocations of any of that cache's public
+	 * methods (even read-only methods).
 	 *
 	 * <p>
 	 * <b>Important note:</b> Instead of returning <em>this</em> as a
 	 * {@code CacheBuilder} instance, this method returns
 	 * {@code CacheBuilder<K1, V1>}. From this point on, either the original
-	 * reference or the returned reference may be used to complete configuration
-	 * and build the cache, but only the "generic" one is type-safe. That is, it
-	 * will properly prevent you from building caches whose key or value types
-	 * are incompatible with the types accepted by the listener already
-	 * provided; the {@code CacheBuilder} type cannot do this. For best results,
-	 * simply use the standard method-chaining idiom, as illustrated in the
-	 * documentation at top, configuring a {@code CacheBuilder} and building
-	 * your {@link com.google.common.cache.Cache Cache} all in a single
-	 * statement.
+	 * reference or the returned reference may be used to complete configuration and
+	 * build the cache, but only the "generic" one is type-safe. That is, it will
+	 * properly prevent you from building caches whose key or value types are
+	 * incompatible with the types accepted by the listener already provided; the
+	 * {@code CacheBuilder} type cannot do this. For best results, simply use the
+	 * standard method-chaining idiom, as illustrated in the documentation at top,
+	 * configuring a {@code CacheBuilder} and building your
+	 * {@link com.google.common.cache.Cache Cache} all in a single statement.
 	 *
 	 * <p>
 	 * <b>Warning:</b> if you ignore the above advice, and use this
-	 * {@code CacheBuilder} to build a cache whose key or value type is
-	 * incompatible with the listener, you will likely experience a
-	 * {@link ClassCastException} at some <i>undefined</i> point in the future.
+	 * {@code CacheBuilder} to build a cache whose key or value type is incompatible
+	 * with the listener, you will likely experience a {@link ClassCastException} at
+	 * some <i>undefined</i> point in the future.
 	 *
 	 * @param <K1>
 	 *            Key type
@@ -305,21 +303,20 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Specifies that each value (not key) stored in the cache should be wrapped
-	 * in a {@link java.lang.ref.SoftReference SoftReference} (by default,
-	 * strong references are used). Softly-referenced objects will be
-	 * garbage-collected in a <i>globally</i> least-recently-used manner, in
-	 * response to memory demand.
+	 * Specifies that each value (not key) stored in the cache should be wrapped in
+	 * a {@link java.lang.ref.SoftReference SoftReference} (by default, strong
+	 * references are used). Softly-referenced objects will be garbage-collected in
+	 * a <i>globally</i> least-recently-used manner, in response to memory demand.
 	 *
 	 * <p>
 	 * <b>Warning:</b> in most circumstances it is better to set a per-cache
-	 * {@linkplain #maximumSize maximum size} instead of using soft references.
-	 * You should only use this method if you are well familiar with the
-	 * practical consequences of soft references.
+	 * {@linkplain #maximumSize maximum size} instead of using soft references. You
+	 * should only use this method if you are well familiar with the practical
+	 * consequences of soft references.
 	 *
 	 * <p>
-	 * <b>Note:</b> when this method is used, the resulting cache will use
-	 * identity ({@code ==}) comparison to determine equality of values.
+	 * <b>Note:</b> when this method is used, the resulting cache will use identity
+	 * ({@code ==}) comparison to determine equality of values.
 	 *
 	 * @return This for chaining
 	 *
@@ -336,8 +333,8 @@ public class CompatibleCacheBuilder<K, V> {
 	 * entries should be expired. By default, {@link System#nanoTime} is used.
 	 *
 	 * <p>
-	 * The primary intent of this method is to facilitate testing of caches
-	 * which have been configured with {@link #expireAfterWrite} or
+	 * The primary intent of this method is to facilitate testing of caches which
+	 * have been configured with {@link #expireAfterWrite} or
 	 * {@link #expireAfterAccess}.
 	 *
 	 * @param ticker
@@ -353,9 +350,9 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Specifies that each key (not value) stored in the cache should be wrapped
-	 * in a {@link java.lang.ref.WeakReference WeakReference} (by default,
-	 * strong references are used).
+	 * Specifies that each key (not value) stored in the cache should be wrapped in
+	 * a {@link java.lang.ref.WeakReference WeakReference} (by default, strong
+	 * references are used).
 	 *
 	 * <p>
 	 * <b>Warning:</b> when this method is used, the resulting cache will use
@@ -372,18 +369,18 @@ public class CompatibleCacheBuilder<K, V> {
 	}
 
 	/**
-	 * Specifies that each value (not key) stored in the cache should be wrapped
-	 * in a {@link java.lang.ref.WeakReference WeakReference} (by default,
-	 * strong references are used).
+	 * Specifies that each value (not key) stored in the cache should be wrapped in
+	 * a {@link java.lang.ref.WeakReference WeakReference} (by default, strong
+	 * references are used).
 	 *
 	 * <p>
-	 * Weak values will be garbage collected once they are weakly reachable.
-	 * This makes them a poor candidate for caching; consider
-	 * {@link #softValues} instead.
+	 * Weak values will be garbage collected once they are weakly reachable. This
+	 * makes them a poor candidate for caching; consider {@link #softValues}
+	 * instead.
 	 *
 	 * <p>
-	 * <b>Note:</b> when this method is used, the resulting cache will use
-	 * identity ({@code ==}) comparison to determine equality of values.
+	 * <b>Note:</b> when this method is used, the resulting cache will use identity
+	 * ({@code ==}) comparison to determine equality of values.
 	 *
 	 * @return This for chaining
 	 *

@@ -3,10 +3,15 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
+
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 public class RewardBuilder {
 	private FileConfiguration data;
@@ -64,6 +69,11 @@ public class RewardBuilder {
 		return reward;
 	}
 
+	public RewardBuilder ignoreChance(boolean ignoreChance) {
+		this.ignoreChance = ignoreChance;
+		return this;
+	}
+
 	/**
 	 * @return the checkTimed
 	 */
@@ -80,6 +90,20 @@ public class RewardBuilder {
 	 */
 	public boolean isOnline() {
 		return online;
+	}
+
+	public void send(ArrayList<User> users) {
+		for (User user : users) {
+			send(user);
+		}
+	}
+
+	public void send(OfflinePlayer p) {
+		send(UserManager.getInstance().getUser(p));
+	}
+
+	public void send(Player p) {
+		send(UserManager.getInstance().getUser(p));
 	}
 
 	@SuppressWarnings("deprecation")
@@ -134,11 +158,6 @@ public class RewardBuilder {
 
 	public RewardBuilder withPrefix(String prefix) {
 		this.prefix = prefix;
-		return this;
-	}
-
-	public RewardBuilder ignoreChance(boolean ignoreChance) {
-		this.ignoreChance = ignoreChance;
 		return this;
 	}
 

@@ -12,7 +12,6 @@ import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 
 /**
@@ -68,6 +67,15 @@ public class UserManager {
 		return new ArrayList<String>();
 	}
 
+	public String getProperName(String name) {
+		for (String s : plugin.getUuids().keySet()) {
+			if (s.equalsIgnoreCase(name)) {
+				return s;
+			}
+		}
+		return name;
+	}
+
 	/**
 	 * Gets the user.
 	 *
@@ -114,27 +122,32 @@ public class UserManager {
 		return new User(plugin.getPlugin(), uuid);
 	}
 
-	public String getProperName(String name) {
+	public boolean userExist(String name) {
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
-				return s;
+				return true;
 			}
 		}
-		return name;
-	}
 
-	public boolean userExist(UUID uuid) {
-		if (uuid != null && uuid.getUUID() != null) {
-			for (String str : getAllUUIDs()) {
-				if (str.equals(uuid.getUUID())) {
-					return true;
-				}
+		for (String uuid : getAllUUIDs()) {
+			User user = getUser(new UUID(uuid));
+			if (user.getPlayerName().equalsIgnoreCase(name)) {
+				plugin.extraDebug("Found " + name + " in database");
+				return true;
 			}
 		}
 		return false;
 	}
 
-	public boolean userExist(String name) {
-		return userExist(new UUID(PlayerUtils.getInstance().getUUID(name)));
+	public boolean userExist(UUID uuid) {
+		if (uuid != null && uuid.getUUID() != null) {
+			if (getAllUUIDs().contains(uuid.getUUID())) {
+				// plugin.debug(uuid.getUUID() + " exists");
+				return true;
+			}
+			// plugin.debug(uuid.getUUID() + " not exist");
+		}
+
+		return false;
 	}
 }

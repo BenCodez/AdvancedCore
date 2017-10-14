@@ -132,36 +132,6 @@ public abstract class CommandHandler {
 		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
 	}
 
-	public void sendMessage(CommandSender sender, ArrayList<String> msg) {
-		sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().colorize(msg)));
-	}
-
-	public void sendMessage(CommandSender sender, String msg) {
-		sender.sendMessage(StringUtils.getInstance().colorize(msg));
-	}
-
-	public void sendMessageJson(CommandSender sender, TextComponent comp) {
-		if (isPlayer(sender)) {
-			Player player = (Player) sender;
-			UserManager.getInstance().getUser(player).sendJson(comp);
-		} else {
-			sender.sendMessage(StringUtils.getInstance().compToString(comp));
-		}
-	}
-
-	public void sendMessageJson(CommandSender sender, ArrayList<TextComponent> comp) {
-		if (isPlayer(sender)) {
-			Player player = (Player) sender;
-			UserManager.getInstance().getUser(player).sendJson(comp);
-		} else {
-			sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(comp)));
-		}
-	}
-
-	public boolean isPlayer(CommandSender sender) {
-		return sender instanceof Player;
-	}
-
 	/**
 	 * Args match.
 	 *
@@ -355,6 +325,10 @@ public abstract class CommandHandler {
 		return hasPerm;
 	}
 
+	public boolean isPlayer(CommandSender sender) {
+		return sender instanceof Player;
+	}
+
 	/**
 	 * Load tab complete.
 	 */
@@ -451,6 +425,32 @@ public abstract class CommandHandler {
 			return true;
 		}
 		return false;
+	}
+
+	public void sendMessage(CommandSender sender, ArrayList<String> msg) {
+		sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().colorize(msg)));
+	}
+
+	public void sendMessage(CommandSender sender, String msg) {
+		sender.sendMessage(StringUtils.getInstance().colorize(msg));
+	}
+
+	public void sendMessageJson(CommandSender sender, ArrayList<TextComponent> comp) {
+		if (isPlayer(sender)) {
+			Player player = (Player) sender;
+			UserManager.getInstance().getUser(player).sendJson(comp);
+		} else {
+			sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(comp)));
+		}
+	}
+
+	public void sendMessageJson(CommandSender sender, TextComponent comp) {
+		if (isPlayer(sender)) {
+			Player player = (Player) sender;
+			UserManager.getInstance().getUser(player).sendJson(comp);
+		} else {
+			sender.sendMessage(StringUtils.getInstance().compToString(comp));
+		}
 	}
 
 	/**

@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.Effects;
 
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
@@ -9,11 +10,17 @@ import org.bukkit.FireworkEffect.Type;
 import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.FireworkExplodeEvent;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
-public class FireworkHandler {
+public class FireworkHandler implements Listener {
 
 	/** The instance. */
 	static FireworkHandler instance = new FireworkHandler();
@@ -26,6 +33,8 @@ public class FireworkHandler {
 	public static FireworkHandler getInstance() {
 		return instance;
 	}
+
+	private ConcurrentLinkedQueue<Firework> fireWorks = new ConcurrentLinkedQueue<Firework>();
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
@@ -96,9 +105,36 @@ public class FireworkHandler {
 				fwmeta.addEffects(builder.build());
 				fwmeta.setPower(power);
 				fw.setFireworkMeta(fwmeta);
+				fireWorks.add(fw);
 				// plugin.debug("Launched firework");
 			}
 		});
 
+	}
+
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onFireworkDamage(EntityDamageByEntityEvent event) {
+		if (event.getDamager() instanceof Firework && event.getEntity() instanceof Player) {
+			Firework fw = (Firework) event.getDamager();
+			if (fireWorks.contains(fw)) {
+				event.setCancelled(true);
+			}
+		}
+	}
+
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onFireworkExplode(FireworkExplodeEvent event) {
+		if (event.getEntity() instanceof Firework) {
+			Firework fw = event.getEntity();
+			if (fireWorks.contains(fw)) {
+				Bukkit.getScheduler().runTaskLaterAsynchronously(plugin.getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						fireWorks.remove(fw);
+					}
+				}, 10l);
+			}
+		}
 	}
 }

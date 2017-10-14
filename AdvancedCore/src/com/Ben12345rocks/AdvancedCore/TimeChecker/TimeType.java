@@ -1,9 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.TimeChecker;
 
 public enum TimeType {
-	MONTH,
-	WEEK,
-	DAY;
+	MONTH, WEEK, DAY;
 
 	public static TimeType getTimeType(String str) {
 		for (TimeType time : TimeType.values()) {

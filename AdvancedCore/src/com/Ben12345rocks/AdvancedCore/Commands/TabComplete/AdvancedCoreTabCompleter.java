@@ -34,24 +34,22 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 		/*
 		 * for (CommandHandler commandHandler : plugin.advancedCoreCommands) {
 		 *
-		 * if (sender.hasPermission(commandHandler.getPerm())) { String[]
-		 * cmdArgs = commandHandler.getArgs(); if (cmdArgs.length > argNum) {
-		 * boolean argsMatch = true; for (int i = 0; i < argNum; i++) { if
-		 * (args.length >= i) { if (!commandHandler.argsMatch(args[i], i)) {
-		 * argsMatch = false; } } }
+		 * if (sender.hasPermission(commandHandler.getPerm())) { String[] cmdArgs =
+		 * commandHandler.getArgs(); if (cmdArgs.length > argNum) { boolean argsMatch =
+		 * true; for (int i = 0; i < argNum; i++) { if (args.length >= i) { if
+		 * (!commandHandler.argsMatch(args[i], i)) { argsMatch = false; } } }
 		 *
-		 * if (argsMatch) { String[] cmdArgsList = cmdArgs[argNum].split("&");
-		 * for (String arg : cmdArgsList) { if
-		 * (arg.equalsIgnoreCase("(player)")) { for (Object playerOb :
-		 * Bukkit.getOnlinePlayers().toArray()) { Player player = (Player)
-		 * playerOb; if (!cmds.contains(player.getName())) {
-		 * cmds.add(player.getName()); } } } else if
-		 * (arg.equalsIgnoreCase("(boolean)")) { if (!cmds.contains("True")) {
-		 * cmds.add("True"); } if (!cmds.contains("False")) { cmds.add("False");
-		 * } } else if (arg.equalsIgnoreCase("(requestmethod)")) { for
-		 * (InputMethod method : InputMethod.values()) { if
-		 * (!cmds.contains(method.toString())) { cmds.add(method.toString()); }
-		 * } } else if (arg.equalsIgnoreCase("(number)")) {
+		 * if (argsMatch) { String[] cmdArgsList = cmdArgs[argNum].split("&"); for
+		 * (String arg : cmdArgsList) { if (arg.equalsIgnoreCase("(player)")) { for
+		 * (Object playerOb : Bukkit.getOnlinePlayers().toArray()) { Player player =
+		 * (Player) playerOb; if (!cmds.contains(player.getName())) {
+		 * cmds.add(player.getName()); } } } else if (arg.equalsIgnoreCase("(boolean)"))
+		 * { if (!cmds.contains("True")) { cmds.add("True"); } if
+		 * (!cmds.contains("False")) { cmds.add("False"); } } else if
+		 * (arg.equalsIgnoreCase("(requestmethod)")) { for (InputMethod method :
+		 * InputMethod.values()) { if (!cmds.contains(method.toString())) {
+		 * cmds.add(method.toString()); } } } else if (arg.equalsIgnoreCase("(number)"))
+		 * {
 		 *
 		 * } else if (!cmds.contains(arg)) { cmds.add(arg); } }
 		 *
@@ -79,8 +77,8 @@ public class AdvancedCoreTabCompleter implements TabCompleter {
 
 		/*
 		 * for (CommandHandler commandHandler : plugin.advancedCoreCommands) {
-		 * cmds.addAll(commandHandler.getTabCompleteOptions(sender, args,
-		 * args.length - 1)); }
+		 * cmds.addAll(commandHandler.getTabCompleteOptions(sender, args, args.length -
+		 * 1)); }
 		 */
 
 		for (String str : cmds) {

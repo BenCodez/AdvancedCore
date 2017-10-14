@@ -17,7 +17,7 @@ public class ConnectionManager {
 	private String database;
 	private int connectionTimeout;
 	private int maximumPoolsize;
-	//private int maxConnections;
+	// private int maxConnections;
 
 	public ConnectionManager(String host, String port, String username, String password, String database) {
 		this.host = host;
@@ -27,7 +27,7 @@ public class ConnectionManager {
 		this.database = database;
 		connectionTimeout = 20000;
 		maximumPoolsize = 5;
-		//maxConnections = 1;
+		// maxConnections = 1;
 
 	}
 
@@ -44,7 +44,7 @@ public class ConnectionManager {
 		} else {
 			maximumPoolsize = 5;
 		}
-		//this.maxConnections = maxConnections;
+		// this.maxConnections = maxConnections;
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
@@ -56,7 +56,7 @@ public class ConnectionManager {
 		this.database = database;
 		this.connectionTimeout = connectionTimeout;
 		this.maximumPoolsize = maximumPoolsize;
-		//this.maxConnections = maxConnections;
+		// this.maxConnections = maxConnections;
 	}
 
 	public void close() {
@@ -72,7 +72,7 @@ public class ConnectionManager {
 			if (isClosed()) {
 				AdvancedCoreHook.getInstance().debug("Connection closed... opening....");
 				open();
-			}	
+			}
 			return dataSource.getConnection();
 		} catch (SQLException e) {
 			e.printStackTrace();

@@ -1,9 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 public enum UserStorage {
-	FLAT,
-	SQLITE,
-	MYSQL;
+	FLAT, SQLITE, MYSQL;
 
 	public static UserStorage value(String str) {
 		for (UserStorage s : values()) {

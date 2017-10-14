@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -79,6 +80,7 @@ public class MiscUtils {
 			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(player,
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			for (final String cmd : commands) {
+				plugin.debug("Executing console command: " + cmd);
 				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 					@Override
@@ -92,30 +94,12 @@ public class MiscUtils {
 		}
 	}
 
-	@SuppressWarnings("deprecation")
-	public void executeConsoleCommands(final String playerName, final ArrayList<String> cmds,
-			final HashMap<String, String> placeholders) {
-		if (cmds != null && !cmds.isEmpty()) {
-			placeholders.put("player", playerName);
-			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(
-					Bukkit.getOfflinePlayer(playerName),
-					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-				@Override
-				public void run() {
-					for (String cmd : commands) {
-						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-					}
-				}
-			});
-		}
-	}
-
 	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringUtils.getInstance().replaceJavascript(player,
 					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+
+			plugin.debug("Executing console command: " + command);
 			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
 
 				@Override
@@ -126,6 +110,27 @@ public class MiscUtils {
 			});
 		}
 
+	}
+
+	@SuppressWarnings("deprecation")
+	public void executeConsoleCommands(final String playerName, final ArrayList<String> cmds,
+			final HashMap<String, String> placeholders) {
+		if (cmds != null && !cmds.isEmpty()) {
+			placeholders.put("player", playerName);
+			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(
+					Bukkit.getOfflinePlayer(playerName),
+					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
+			for (final String cmd : commands) {
+				plugin.debug("Executing console command: " + cmd);
+				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+					}
+				});
+			}
+		}
 	}
 
 	/**
@@ -248,6 +253,15 @@ public class MiscUtils {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getYear();
 	}
 
+	public ItemStack setSkullOwner(OfflinePlayer player) {
+		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
+			return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(player)
+					.toItemStack(player);
+		} else {
+			return setSkullOwner(player.getName());
+		}
+	}
+
 	/**
 	 * Sets the skull owner.
 	 *
@@ -255,7 +269,7 @@ public class MiscUtils {
 	 *            the player name
 	 * @return the item stack
 	 */
-	@SuppressWarnings("deprecation")
+	@Deprecated
 	public ItemStack setSkullOwner(String playerName) {
 		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();

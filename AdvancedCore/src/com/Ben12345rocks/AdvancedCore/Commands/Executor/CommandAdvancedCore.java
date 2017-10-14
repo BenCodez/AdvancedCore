@@ -40,8 +40,8 @@ public class CommandAdvancedCore implements CommandExecutor {
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
 		/*
-		 * for (CommandHandler commandHandler : plugin.advancedCoreCommands) {
-		 * if (commandHandler.runCommand(sender, args)) { return true; } }
+		 * for (CommandHandler commandHandler : plugin.advancedCoreCommands) { if
+		 * (commandHandler.runCommand(sender, args)) { return true; } }
 		 */
 
 		// invalid command

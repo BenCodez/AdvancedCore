@@ -24,6 +24,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -32,9 +33,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
  * The Class BInventory.
  */
 public class BInventory implements Listener {
-
-	private ItemStack prevItem;
-	private ItemStack nextItem;
 
 	/**
 	 * The Class ClickEvent.
@@ -192,6 +190,10 @@ public class BInventory implements Listener {
 		inventory.openInventory(player);
 	}
 
+	private ItemStack prevItem;
+
+	private ItemStack nextItem;
+
 	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
 
 	private int maxInvSize = 54;
@@ -309,6 +311,13 @@ public class BInventory implements Listener {
 	}
 
 	/**
+	 * @return the nextItem
+	 */
+	public ItemStack getNextItem() {
+		return nextItem;
+	}
+
+	/**
 	 * Gets the next slot.
 	 *
 	 * @return the next slot
@@ -325,6 +334,13 @@ public class BInventory implements Listener {
 	 */
 	public ArrayList<BInventoryButton> getPageButtons() {
 		return pageButtons;
+	}
+
+	/**
+	 * @return the prevItem
+	 */
+	public ItemStack getPrevItem() {
+		return prevItem;
 	}
 
 	private int getProperSize(int size) {
@@ -369,10 +385,15 @@ public class BInventory implements Listener {
 
 			event.setCancelled(true);
 			Player player = (Player) event.getWhoClicked();
-			if (event.getClickedInventory() != null && !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
-				return;
+
+			if (AdvancedCoreHook.getInstance().getServerHandle() instanceof SpigotHandle) {
+				// spigot only method
+				if (event.getClickedInventory() != null
+						&& !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
+					return;
+				}
 			}
-			
+
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
 					BInventoryButton button = getButtons().get(buttonSlot);
@@ -541,12 +562,12 @@ public class BInventory implements Listener {
 			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
 		}
 		if (prevItem == null) {
-			prevItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aPrevious Page")
-					.toItemStack(player);
+			prevItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15)
+					.setName(AdvancedCoreHook.getInstance().getPrevPageTxt()).toItemStack(player);
 		}
 		if (nextItem == null) {
-			nextItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15).setName("&aNext Page")
-					.toItemStack(player);
+			nextItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15)
+					.setName(AdvancedCoreHook.getInstance().getNextPageTxt()).toItemStack(player);
 		}
 
 		inv.setItem(maxInvSize - 9, prevItem);
@@ -560,36 +581,6 @@ public class BInventory implements Listener {
 				player.openInventory(inv);
 			}
 		});
-	}
-
-	/**
-	 * @return the prevItem
-	 */
-	public ItemStack getPrevItem() {
-		return prevItem;
-	}
-
-	/**
-	 * @param prevItem
-	 *            the prevItem to set
-	 */
-	public void setPrevItem(ItemStack prevItem) {
-		this.prevItem = prevItem;
-	}
-
-	/**
-	 * @return the nextItem
-	 */
-	public ItemStack getNextItem() {
-		return nextItem;
-	}
-
-	/**
-	 * @param nextItem
-	 *            the nextItem to set
-	 */
-	public void setNextItem(ItemStack nextItem) {
-		this.nextItem = nextItem;
 	}
 
 	/**
@@ -625,6 +616,14 @@ public class BInventory implements Listener {
 	}
 
 	/**
+	 * @param nextItem
+	 *            the nextItem to set
+	 */
+	public void setNextItem(ItemStack nextItem) {
+		this.nextItem = nextItem;
+	}
+
+	/**
 	 * @param pageButtons
 	 *            the pageButtons to set
 	 */
@@ -638,6 +637,14 @@ public class BInventory implements Listener {
 	 */
 	public void setPages(boolean pages) {
 		this.pages = pages;
+	}
+
+	/**
+	 * @param prevItem
+	 *            the prevItem to set
+	 */
+	public void setPrevItem(ItemStack prevItem) {
+		this.prevItem = prevItem;
 	}
 
 }

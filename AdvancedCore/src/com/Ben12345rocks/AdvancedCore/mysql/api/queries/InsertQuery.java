@@ -85,8 +85,8 @@ public class InsertQuery {
 	}
 
 	/**
-	 * Set a column to insert to. Automatically sets the value to ? to be used
-	 * with prepared statements.
+	 * Set a column to insert to. Automatically sets the value to ? to be used with
+	 * prepared statements.
 	 *
 	 * @param column
 	 *            the column to insert to
