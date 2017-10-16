@@ -41,7 +41,7 @@ public class BossBar {
 	}
 
 	public void setTitle(String title) {
-		bossBar.setTitle(title);
+		bossBar.setTitle(StringUtils.getInstance().colorize(title));
 	}
 
 	public void setStyle(String barStyle) {
