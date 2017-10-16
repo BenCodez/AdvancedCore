@@ -385,12 +385,16 @@ public class RewardHandler {
 			} else {
 				reward = getReward(rewardName);
 			}
-			if (!reward.getConfig().getData().getConfigurationSection("").getKeys(true).equals(section.getKeys(true))) {
-				plugin.getPlugin().getLogger().warning(
-						"Detected a reward file edited when it should be edited where directly defined, overriding");
+			if (reward.getConfig().getData().getConfigurationSection("").getKeys(true).size() != 0) {
+				if (!reward.getConfig().getData().getConfigurationSection("").getKeys(true)
+						.equals(section.getKeys(true))) {
+					plugin.getPlugin().getLogger().warning(
+							"Detected a reward file edited when it should be edited where directly defined, overriding");
+				}
 			}
 			reward.getConfig().setData(section);
-			reward.getConfig().getData().options().header("Directly defined reward file from path: '" + path + "' ANY EDITS HERE CAN GET OVERRIDDEN!");
+			reward.getConfig().getData().options().header(
+					"Directly defined reward file from path: '" + path + "' ANY EDITS HERE CAN GET OVERRIDDEN!");
 			updateReward(reward);
 			giveReward(user, rewardName, online, giveOffline, checkTimed, ignoreChance, placeholders);
 
