@@ -51,17 +51,16 @@ public class BossBar {
 	public void setColor(String barColor) {
 		bossBar.setColor(BarColor.valueOf(barColor));
 	}
-	
+
 	public void hide() {
 		bossBar.setVisible(false);
 		bossBar.removeAll();
 	}
-	
-	
+
 	public void addPlayer(Player player) {
 		bossBar.addPlayer(player);
 	}
-	
+
 	public void send(int delay) {
 		bossBar.setVisible(true);
 		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
@@ -71,6 +70,10 @@ public class BossBar {
 				hide();
 			}
 		}, delay);
+	}
+
+	public void setVisilble(boolean visible) {
+		bossBar.setVisible(visible);
 	}
 
 	/**
