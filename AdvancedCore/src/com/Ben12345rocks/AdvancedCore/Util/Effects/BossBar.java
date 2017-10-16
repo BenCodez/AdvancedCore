@@ -51,16 +51,26 @@ public class BossBar {
 	public void setColor(String barColor) {
 		bossBar.setColor(BarColor.valueOf(barColor));
 	}
-
-	/**
-	 * Hide.
-	 *
-	 * @param player
-	 *            the player
-	 */
-	public void hide(Player player) {
+	
+	public void hide() {
 		bossBar.setVisible(false);
 		bossBar.removeAll();
+	}
+	
+	
+	public void addPlayer(Player player) {
+		bossBar.addPlayer(player);
+	}
+	
+	public void send(int delay) {
+		bossBar.setVisible(true);
+		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				hide();
+			}
+		}, delay);
 	}
 
 	/**
@@ -78,7 +88,7 @@ public class BossBar {
 
 			@Override
 			public void run() {
-				hide(player);
+				hide();
 			}
 		}, delay);
 	}
