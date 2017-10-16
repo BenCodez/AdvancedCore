@@ -72,7 +72,7 @@ public class BossBar {
 		}, delay);
 	}
 
-	public void setVisilble(boolean visible) {
+	public void setVisible(boolean visible) {
 		bossBar.setVisible(visible);
 	}
 
