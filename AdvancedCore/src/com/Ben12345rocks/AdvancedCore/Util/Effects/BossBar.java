@@ -34,7 +34,22 @@ public class BossBar {
 		bossBar = Bukkit.createBossBar(StringUtils.getInstance().colorize(msg), BarColor.valueOf(barColor),
 				BarStyle.valueOf(barStyle), BarFlag.DARKEN_SKY);
 		bossBar.setProgress(progress);
+	}
 
+	public void setProgress(double progress) {
+		bossBar.setProgress(progress);
+	}
+
+	public void setTitle(String title) {
+		bossBar.setTitle(title);
+	}
+
+	public void setStyle(String barStyle) {
+		bossBar.setStyle(BarStyle.valueOf(barStyle));
+	}
+
+	public void setColor(String barColor) {
+		bossBar.setColor(BarColor.valueOf(barColor));
 	}
 
 	/**
