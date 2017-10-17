@@ -1133,14 +1133,16 @@ public class Reward {
 				LocalDateTime ldt = LocalDateTime.now();
 				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 				phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
+				int exp = getExpToGive();
+				int money = getMoneyToGive();
+				phs.put("money", "" + money);
+				phs.put("exp", "" + exp);
 				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 				givePriorityReward(user, placeholders);
 				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
-				int money = getMoneyToGive();
 				giveMoney(user, money);
 				giveItems(user, placeholders);
-				int exp = getExpToGive();
 				giveExp(user, exp);
 				runCommands(user, placeholders);
 				givePotions(user);
