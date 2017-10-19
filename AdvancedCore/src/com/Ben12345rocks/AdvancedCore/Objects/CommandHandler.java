@@ -329,30 +329,43 @@ public abstract class CommandHandler {
 		return sender instanceof Player;
 	}
 
+	public boolean hasArg(String arg) {
+		for (String str : args) {
+			if (str.equalsIgnoreCase(arg)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Load tab complete.
 	 */
 	public void loadTabComplete() {
-		ArrayList<String> players = new ArrayList<String>();
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			players.add(player.getName());
-		}
-		for (String name : plugin.getUuids().keySet()) {
-			if (!players.contains(name)) {
-				players.add(name);
+		if (hasArg("(Player)")) {
+			ArrayList<String> players = new ArrayList<String>();
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				players.add(player.getName());
 			}
-		}
-		addTabCompleteOption("(Player)", players);
-		ArrayList<String> uuids = new ArrayList<String>();
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			uuids.add(player.getUniqueId().toString());
-		}
-		for (String name : plugin.getUuids().values()) {
-			if (!uuids.contains(name)) {
-				uuids.add(name);
+			for (String name : plugin.getUuids().keySet()) {
+				if (!players.contains(name)) {
+					players.add(name);
+				}
 			}
+			addTabCompleteOption("(Player)", players);
 		}
-		addTabCompleteOption("(uuid)", uuids);
+		if (hasArg("(uuid)")) {
+			ArrayList<String> uuids = new ArrayList<String>();
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				uuids.add(player.getUniqueId().toString());
+			}
+			for (String name : plugin.getUuids().values()) {
+				if (!uuids.contains(name)) {
+					uuids.add(name);
+				}
+			}
+			addTabCompleteOption("(uuid)", uuids);
+		}
 		ArrayList<String> options = new ArrayList<String>();
 		options.add("True");
 		options.add("False");
