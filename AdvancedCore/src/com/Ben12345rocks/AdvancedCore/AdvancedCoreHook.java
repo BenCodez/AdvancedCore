@@ -619,21 +619,18 @@ public class AdvancedCoreHook {
 		for (InputMethod me : InputMethod.values()) {
 			method.add(me.toString());
 		}
-		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
 		TabCompleteHandler.getInstance().addTabCompleteOption("(RequestMethod)", method);
 
 		ArrayList<String> userStorage = new ArrayList<String>();
 		for (UserStorage storage : UserStorage.values()) {
 			userStorage.add(storage.toString());
 		}
-		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
 		TabCompleteHandler.getInstance().addTabCompleteOption("(UserStorage)", userStorage);
 
 		ArrayList<String> times = new ArrayList<String>();
 		for (TimeType ty : TimeType.values()) {
 			times.add(ty.toString());
 		}
-		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
 		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
 	}
 
