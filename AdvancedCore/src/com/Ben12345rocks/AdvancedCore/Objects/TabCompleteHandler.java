@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
 public class TabCompleteHandler {
@@ -12,11 +13,17 @@ public class TabCompleteHandler {
 		return instance;
 	}
 
-	// private AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	private AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
 	private ArrayList<TabCompleteHandle> tabCompletes;
 
 	public void addTabCompleteOption(TabCompleteHandle handle) {
+		for (TabCompleteHandle h : tabCompletes) {
+			if (h.getToReplace().equals(handle.getToReplace())) {
+				plugin.debug("Tabcompletehandle not added, one already exists for " + handle.getToReplace());
+				return;
+			}
+		}
 		tabCompletes.add(handle);
 		loadTabCompleteOptions();
 	}
