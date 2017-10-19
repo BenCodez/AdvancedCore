@@ -113,11 +113,7 @@ public abstract class CommandHandler {
 	 *            the options
 	 */
 	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
-		ArrayList<String> replace = new ArrayList<String>();
-		for (String str : options) {
-			replace.add(str);
-		}
-		tabCompleteOptions.put(toReplace, replace);
+		tabCompleteOptions.put(toReplace, options);
 	}
 
 	/**
@@ -330,7 +326,7 @@ public abstract class CommandHandler {
 	}
 
 	public boolean hasArg(String arg) {
-		for (String str : args) {
+		for (String str : getArgs()) {
 			if (str.equalsIgnoreCase(arg)) {
 				return true;
 			}
