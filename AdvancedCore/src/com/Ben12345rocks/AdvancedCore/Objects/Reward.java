@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -264,6 +265,10 @@ public class Reward {
 	 */
 	public Reward(String reward) {
 		load(new File(plugin.getPlugin().getDataFolder(), "Rewards"), reward);
+	}
+
+	public Reward(String name, ConfigurationSection section) {
+		load(name, section);
 	}
 
 	public boolean canGiveReward(User user) {
@@ -955,13 +960,13 @@ public class Reward {
 		if (map.size() > 0) {
 			if (isOnlyOneLucky()) {
 				for (Entry<String, Integer> entry : map.entrySet()) {
-					new RewardBuilder(getConfig().getData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
+					new RewardBuilder(getConfig().getFileData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
 					return;
 				}
 
 			} else {
 				for (Entry<String, Integer> entry : map.entrySet()) {
-					new RewardBuilder(getConfig().getData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
+					new RewardBuilder(getConfig().getFileData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
 				}
 			}
 		}
@@ -1026,11 +1031,11 @@ public class Reward {
 					}
 				}
 			} else {
-				new RewardBuilder(getConfig().getData(), getConfig().getRandomRewardsPath()).withPrefix(name)
+				new RewardBuilder(getConfig().getFileData(), getConfig().getRandomRewardsPath()).withPrefix(name)
 						.withPlaceHolder(placeholders).send(user);
 			}
 		} else {
-			new RewardBuilder(getConfig().getData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name)
+			new RewardBuilder(getConfig().getFileData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name)
 					.withPlaceHolder(placeholders).send(user);
 		}
 	}
@@ -1333,6 +1338,12 @@ public class Reward {
 		loadValues();
 	}
 
+	public void load(String name, ConfigurationSection section) {
+		this.name = name;
+		fileData = new RewardFileData(section);
+		loadValues();
+	}
+
 	public void loadValues() {
 		setRewardType(getConfig().getRewardType());
 
@@ -1502,10 +1513,10 @@ public class Reward {
 		if (isJavascriptEnabled()) {
 			if (new JavascriptEngine().addPlayer(user.getPlayer()).getBooleanValue(
 					StringUtils.getInstance().replacePlaceHolder(getJavascriptExpression(), placeholders))) {
-				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptTrueRewardsPath()).withPrefix(name)
+				new RewardBuilder(getConfig().getFileData(), getConfig().getJavascriptTrueRewardsPath()).withPrefix(name)
 						.send(user);
 			} else {
-				new RewardBuilder(getConfig().getData(), getConfig().getJavascriptFalseRewardsPath()).withPrefix(name)
+				new RewardBuilder(getConfig().getFileData(), getConfig().getJavascriptFalseRewardsPath()).withPrefix(name)
 						.send(user);
 			}
 		}

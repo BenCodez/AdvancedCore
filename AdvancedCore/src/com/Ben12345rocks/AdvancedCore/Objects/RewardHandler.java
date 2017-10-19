@@ -379,7 +379,8 @@ public class RewardHandler {
 			}
 			rewardName = path.replace(".", "_");
 			ConfigurationSection section = data.getConfigurationSection(path);
-			Reward reward;
+			Reward reward = new Reward(rewardName, section);
+			/*Reward reward;
 			if (!rewardExist(rewardName)) {
 				reward = new Reward(rewardName);
 			} else {
@@ -395,8 +396,8 @@ public class RewardHandler {
 			reward.getConfig().setData(section);
 			reward.getConfig().getData().options().header(
 					"Directly defined reward file from path: '" + path + "' ANY EDITS HERE CAN GET OVERRIDDEN!");
-			updateReward(reward);
-			giveReward(user, rewardName, online, giveOffline, checkTimed, ignoreChance, placeholders);
+			updateReward(reward);*/
+			giveReward(user, reward, online, giveOffline, checkTimed, ignoreChance, placeholders);
 
 		} else {
 			giveReward(user, data.getString(path, ""), online, giveOffline, checkTimed, ignoreChance, placeholders);
@@ -507,7 +508,7 @@ public class RewardHandler {
 		copyFile("ExampleAdvanced.yml");
 	}
 
-	private void updateReward(Reward reward) {
+	/*private void updateReward(Reward reward) {
 		for (int i = getRewards().size() - 1; i >= 0; i--) {
 			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
 				getRewards().set(i, reward);
@@ -515,7 +516,7 @@ public class RewardHandler {
 			}
 		}
 		getRewards().add(reward);
-	}
+	}*/
 
 	public synchronized boolean usesTimed() {
 		for (Reward reward : getRewards()) {
