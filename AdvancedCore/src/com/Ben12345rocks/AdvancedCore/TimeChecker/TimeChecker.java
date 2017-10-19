@@ -11,6 +11,7 @@ import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.DateChangedEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.DayChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.MonthChangeEvent;
+import com.Ben12345rocks.AdvancedCore.Listeners.PreDateChangedEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WeekChangeEvent;
 
 /**
@@ -41,6 +42,8 @@ public class TimeChecker {
 
 	public void forceChanged(TimeType time) {
 		plugin.debug("Executing time change events: " + time.toString());
+		PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
+		plugin.getPlugin().getServer().getPluginManager().callEvent(preDateChanged);
 		if (time.equals(TimeType.DAY)) {
 			DayChangeEvent dayChange = new DayChangeEvent();
 			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
