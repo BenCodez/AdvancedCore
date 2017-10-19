@@ -261,11 +261,10 @@ public abstract class CommandHandler {
 	 * @return the tab complete options
 	 */
 	public ArrayList<String> getTabCompleteOptions(CommandSender sender, String[] args, int argNum) {
-		CommandHandler commandHandler = this;
-		updateTabComplete();
 		Set<String> cmds = new HashSet<String>();
-
 		if (hasPerm(sender)) {
+			CommandHandler commandHandler = this;
+
 			String[] cmdArgs = commandHandler.getArgs();
 			if (cmdArgs.length > argNum) {
 				boolean argsMatch = true;
@@ -278,6 +277,7 @@ public abstract class CommandHandler {
 				}
 
 				if (argsMatch) {
+					updateTabComplete();
 					String[] cmdArgsList = cmdArgs[argNum].split("&");
 
 					for (String arg : cmdArgsList) {
