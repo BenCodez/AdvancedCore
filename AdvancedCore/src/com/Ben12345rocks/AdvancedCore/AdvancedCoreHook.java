@@ -30,6 +30,7 @@ import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
@@ -623,7 +624,7 @@ public class AdvancedCoreHook {
 		}
 		getTimer().purge();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
-
+		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}
 
 	/**

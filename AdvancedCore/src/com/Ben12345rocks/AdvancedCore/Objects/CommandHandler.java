@@ -2,7 +2,6 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -43,9 +42,6 @@ public abstract class CommandHandler {
 	/** The help message. */
 	private String helpMessage;
 
-	/** The tab complete options. */
-	public HashMap<String, ArrayList<String>> tabCompleteOptions;
-
 	/** The allow console. */
 	private boolean allowConsole = true;
 
@@ -61,7 +57,6 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		helpMessage = "Unknown Help Message";
-		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
 		loadTabComplete();
 	}
 
@@ -79,7 +74,6 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
-		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
 		loadTabComplete();
 	}
 
@@ -99,7 +93,6 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
-		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
 		this.allowConsole = allowConsole;
 		loadTabComplete();
 	}
@@ -113,7 +106,7 @@ public abstract class CommandHandler {
 	 *            the options
 	 */
 	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
-		tabCompleteOptions.put(toReplace, options);
+		TabCompleteHandler.getInstance().addTabCompleteOption(toReplace, options);
 	}
 
 	/**
@@ -145,7 +138,7 @@ public abstract class CommandHandler {
 					return true;
 				}
 
-				for (String str : tabCompleteOptions.keySet()) {
+				for (String str : TabCompleteHandler.getInstance().getTabCompleteReplaces()) {
 					if (str.equalsIgnoreCase(cmdArg)) {
 						return true;
 					}
@@ -156,7 +149,7 @@ public abstract class CommandHandler {
 			// Utils.getInstance().convert(
 			// tabCompleteOptions.keySet())) + " "
 			// + args[i]);
-			for (String str : tabCompleteOptions.keySet()) {
+			for (String str : TabCompleteHandler.getInstance().getTabCompleteReplaces()) {
 				if (str.equalsIgnoreCase(args[i])) {
 					return true;
 				}
@@ -283,7 +276,8 @@ public abstract class CommandHandler {
 					for (String arg : cmdArgsList) {
 						// plugin.debug(arg);
 						boolean add = true;
-						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions.entrySet()) {
+						for (Entry<String, ArrayList<String>> entry : TabCompleteHandler.getInstance()
+								.getTabCompleteOptions().entrySet()) {
 							if (arg.equalsIgnoreCase(entry.getKey())) {
 								add = false;
 								cmds.addAll(entry.getValue());
