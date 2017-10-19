@@ -505,11 +505,30 @@ public abstract class CommandHandler {
 	 * Update tab complete.
 	 */
 	public void updateTabComplete() {
-		ArrayList<String> players = new ArrayList<String>();
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			players.add(player.getName());
+		if (hasArg("(Player)")) {
+			ArrayList<String> players = new ArrayList<String>();
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				players.add(player.getName());
+			}
+			for (String name : plugin.getUuids().keySet()) {
+				if (!players.contains(name)) {
+					players.add(name);
+				}
+			}
+			addTabCompleteOption("(Player)", players);
 		}
-		addTabCompleteOption("(Player)", players);
+		if (hasArg("(uuid)")) {
+			ArrayList<String> uuids = new ArrayList<String>();
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				uuids.add(player.getUniqueId().toString());
+			}
+			for (String name : plugin.getUuids().values()) {
+				if (!uuids.contains(name)) {
+					uuids.add(name);
+				}
+			}
+			addTabCompleteOption("(uuid)", uuids);
+		}
 	}
 
 }
