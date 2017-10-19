@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.bukkit.command.CommandSender;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
@@ -82,5 +84,15 @@ public class TabCompleteHandler {
 		for (TabCompleteHandle h : tabCompletes) {
 			h.reload();
 		}
+	}
+
+	public ArrayList<String> getTabCompleteOptions(ArrayList<CommandHandler> handles, CommandSender sender,
+			String[] args, int argNum) {
+		ArrayList<String> tabComplete = new ArrayList<String>();
+		ConcurrentHashMap<String, ArrayList<String>> options = getTabCompleteOptions();
+		for (CommandHandler h : handles) {
+			tabComplete.addAll(h.getTabCompleteOptions(sender, args, argNum, options));
+		}
+		return tabComplete;
 	}
 }

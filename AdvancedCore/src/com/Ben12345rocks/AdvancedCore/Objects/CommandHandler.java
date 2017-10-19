@@ -240,18 +240,8 @@ public abstract class CommandHandler {
 		return perm;
 	}
 
-	/**
-	 * Gets the tab complete options.
-	 *
-	 * @param sender
-	 *            the sender
-	 * @param args
-	 *            the args
-	 * @param argNum
-	 *            the arg num
-	 * @return the tab complete options
-	 */
-	public ArrayList<String> getTabCompleteOptions(CommandSender sender, String[] args, int argNum) {
+	public ArrayList<String> getTabCompleteOptions(CommandSender sender, String[] args, int argNum,
+			ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions) {
 		Set<String> cmds = new HashSet<String>();
 		if (hasPerm(sender)) {
 			CommandHandler commandHandler = this;
@@ -268,8 +258,6 @@ public abstract class CommandHandler {
 				}
 
 				if (argsMatch) {
-					ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions = TabCompleteHandler.getInstance()
-							.getTabCompleteOptions();
 					String[] cmdArgsList = cmdArgs[argNum].split("&");
 
 					for (String arg : cmdArgsList) {
