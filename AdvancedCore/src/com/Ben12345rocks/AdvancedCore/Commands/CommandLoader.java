@@ -14,6 +14,8 @@ import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardBuilder;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandle;
+import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
@@ -369,4 +371,99 @@ public class CommandLoader {
 		}
 	}
 
+	public void loadTabComplete() {
+		TabCompleteHandler.getInstance()
+				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {
+
+					@Override
+					public void updateReplacements() {
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							if (!getReplace().contains(player.getName())) {
+								getReplace().add(player.getName());
+							}
+						}
+
+					}
+
+					@Override
+					public void reload() {
+						ArrayList<String> players = new ArrayList<String>();
+						for (String name : AdvancedCoreHook.getInstance().getUuids().keySet()) {
+							if (!players.contains(name)) {
+								players.add(name);
+							}
+						}
+						setReplace(players);
+					}
+				});
+
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
+
+			@Override
+			public void updateReplacements() {
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					if (!getReplace().contains(player.getUniqueId().toString())) {
+						getReplace().add(player.getUniqueId().toString());
+					}
+				}
+			}
+
+			@Override
+			public void reload() {
+				ArrayList<String> uuids = new ArrayList<String>();
+				for (String name : AdvancedCoreHook.getInstance().getUuids().values()) {
+					if (!uuids.contains(name)) {
+						uuids.add(name);
+					}
+				}
+				setReplace(uuids);
+			}
+		});
+
+		ArrayList<String> options = new ArrayList<String>();
+		options.add("True");
+		options.add("False");
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Boolean)", options);
+		options = new ArrayList<String>();
+		TabCompleteHandler.getInstance().addTabCompleteOption("(List)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(String)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(Reward)", options) {
+
+			@Override
+			public void updateReplacements() {
+
+			}
+
+			@Override
+			public void reload() {
+				ArrayList<String> rewards = new ArrayList<String>();
+				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+					rewards.add(reward.getRewardName());
+				}
+				setReplace(rewards);
+			}
+		});
+
+		ArrayList<String> method = new ArrayList<String>();
+		for (InputMethod me : InputMethod.values()) {
+			method.add(me.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(RequestMethod)", method);
+
+		ArrayList<String> userStorage = new ArrayList<String>();
+		for (UserStorage storage : UserStorage.values()) {
+			userStorage.add(storage.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(UserStorage)", userStorage);
+
+		ArrayList<String> times = new ArrayList<String>();
+		for (TimeType ty : TimeType.values()) {
+			times.add(ty.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
+	}
 }

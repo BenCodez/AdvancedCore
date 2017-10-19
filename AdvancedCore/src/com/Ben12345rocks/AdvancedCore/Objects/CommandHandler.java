@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -12,11 +13,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
-import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -57,7 +56,6 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		helpMessage = "Unknown Help Message";
-		loadTabComplete();
 	}
 
 	/**
@@ -74,7 +72,6 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
-		loadTabComplete();
 	}
 
 	/**
@@ -94,7 +91,6 @@ public abstract class CommandHandler {
 		this.perm = perm;
 		this.helpMessage = helpMessage;
 		this.allowConsole = allowConsole;
-		loadTabComplete();
 	}
 
 	/**
@@ -270,14 +266,14 @@ public abstract class CommandHandler {
 				}
 
 				if (argsMatch) {
-					updateTabComplete();
+					HashMap<String, ArrayList<String>> tabCompleteOptions = TabCompleteHandler.getInstance()
+							.getTabCompleteOptions();
 					String[] cmdArgsList = cmdArgs[argNum].split("&");
 
 					for (String arg : cmdArgsList) {
 						// plugin.debug(arg);
 						boolean add = true;
-						for (Entry<String, ArrayList<String>> entry : TabCompleteHandler.getInstance()
-								.getTabCompleteOptions().entrySet()) {
+						for (Entry<String, ArrayList<String>> entry : tabCompleteOptions.entrySet()) {
 							if (arg.equalsIgnoreCase(entry.getKey())) {
 								add = false;
 								cmds.addAll(entry.getValue());
@@ -326,75 +322,6 @@ public abstract class CommandHandler {
 			}
 		}
 		return false;
-	}
-
-	/**
-	 * Load tab complete.
-	 */
-	public void loadTabComplete() {
-		if (hasArg("(Player)")) {
-			ArrayList<String> players = new ArrayList<String>();
-			for (Player player : Bukkit.getOnlinePlayers()) {
-				players.add(player.getName());
-			}
-			for (String name : plugin.getUuids().keySet()) {
-				if (!players.contains(name)) {
-					players.add(name);
-				}
-			}
-			addTabCompleteOption("(Player)", players);
-		}
-		if (hasArg("(uuid)")) {
-			ArrayList<String> uuids = new ArrayList<String>();
-			for (Player player : Bukkit.getOnlinePlayers()) {
-				uuids.add(player.getUniqueId().toString());
-			}
-			for (String name : plugin.getUuids().values()) {
-				if (!uuids.contains(name)) {
-					uuids.add(name);
-				}
-			}
-			addTabCompleteOption("(uuid)", uuids);
-		}
-		ArrayList<String> options = new ArrayList<String>();
-		options.add("True");
-		options.add("False");
-		addTabCompleteOption("(Boolean)", options);
-		options = new ArrayList<String>();
-		addTabCompleteOption("(List)", options);
-		addTabCompleteOption("(String)", options);
-		addTabCompleteOption("(Number)", options);
-		ArrayList<String> rewards = new ArrayList<String>();
-		for (Reward reward : RewardHandler.getInstance().getRewards()) {
-			rewards.add(reward.getRewardName());
-		}
-		addTabCompleteOption("(Reward)", rewards);
-		ArrayList<String> method = new ArrayList<String>();
-		for (InputMethod me : InputMethod.values()) {
-			method.add(me.toString());
-		}
-		addTabCompleteOption("(RequestMethod)", method);
-
-		ArrayList<String> userStorage = new ArrayList<String>();
-		for (UserStorage storage : UserStorage.values()) {
-			userStorage.add(storage.toString());
-		}
-		addTabCompleteOption("(UserStorage)", userStorage);
-
-		ArrayList<String> times = new ArrayList<String>();
-		for (TimeType ty : TimeType.values()) {
-			times.add(ty.toString());
-		}
-		addTabCompleteOption("(TimeType)", times);
-
-	}
-
-	public void reloadTabComplete() {
-		ArrayList<String> rewards = new ArrayList<String>();
-		for (Reward reward : RewardHandler.getInstance().getRewards()) {
-			rewards.add(reward.getRewardName());
-		}
-		addTabCompleteOption("(reward)", rewards);
 	}
 
 	/**
@@ -489,36 +416,6 @@ public abstract class CommandHandler {
 	 */
 	public void setPerm(String perm) {
 		this.perm = perm;
-	}
-
-	/**
-	 * Update tab complete.
-	 */
-	public void updateTabComplete() {
-		if (hasArg("(Player)")) {
-			ArrayList<String> players = new ArrayList<String>();
-			for (Player player : Bukkit.getOnlinePlayers()) {
-				players.add(player.getName());
-			}
-			for (String name : plugin.getUuids().keySet()) {
-				if (!players.contains(name)) {
-					players.add(name);
-				}
-			}
-			addTabCompleteOption("(Player)", players);
-		}
-		if (hasArg("(uuid)")) {
-			ArrayList<String> uuids = new ArrayList<String>();
-			for (Player player : Bukkit.getOnlinePlayers()) {
-				uuids.add(player.getUniqueId().toString());
-			}
-			for (String name : plugin.getUuids().values()) {
-				if (!uuids.contains(name)) {
-					uuids.add(name);
-				}
-			}
-			addTabCompleteOption("(uuid)", uuids);
-		}
 	}
 
 }

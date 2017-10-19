@@ -24,17 +24,24 @@ public class TabCompleteHandler {
 				return;
 			}
 		}
+		handle.reload();
 		tabCompletes.add(handle);
 		loadTabCompleteOptions();
-	}
 
-	public ArrayList<String> getTabCompleteReplaces() {
 		ArrayList<String> list = new ArrayList<String>();
 		for (TabCompleteHandle h : tabCompletes) {
 			list.add(h.getToReplace());
+			h.updateReplacements();
 		}
-		return list;
+		tabCompleteReplaces.clear();
+		tabCompleteReplaces.addAll(list);
 	}
+
+	public ArrayList<String> getTabCompleteReplaces() {
+		return tabCompleteReplaces;
+	}
+
+	private ArrayList<String> tabCompleteReplaces = new ArrayList<String>();
 
 	public void loadTabCompleteOptions() {
 		for (TabCompleteHandle h : tabCompletes) {
@@ -49,6 +56,7 @@ public class TabCompleteHandler {
 	private HashMap<String, ArrayList<String>> tabCompleteOptions = new HashMap<String, ArrayList<String>>();
 
 	public HashMap<String, ArrayList<String>> getTabCompleteOptions() {
+		loadTabCompleteOptions();
 		return tabCompleteOptions;
 	}
 
@@ -58,6 +66,10 @@ public class TabCompleteHandler {
 			@Override
 			public void updateReplacements() {
 			}
+
+			@Override
+			public void reload() {
+			}
 		});
 	}
 
@@ -65,29 +77,9 @@ public class TabCompleteHandler {
 		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
 	}
 
-	public abstract class TabCompleteHandle {
-		private String toReplace;
-		private ArrayList<String> replace;
-
-		public String getToReplace() {
-			return toReplace;
+	public void reload() {
+		for (TabCompleteHandle h : tabCompletes) {
+			h.reload();
 		}
-
-		public void setToReplace(String toReplace) {
-			this.toReplace = toReplace;
-		}
-
-		public ArrayList<String> getReplace() {
-			return replace;
-		}
-
-		public void setReplace(ArrayList<String> replace) {
-			this.replace = replace;
-		}
-
-		public TabCompleteHandle(String toReplace, ArrayList<String> replace) {
-		}
-
-		public abstract void updateReplacements();
 	}
 }

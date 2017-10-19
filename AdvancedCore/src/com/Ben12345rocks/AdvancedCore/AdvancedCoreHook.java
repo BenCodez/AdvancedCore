@@ -624,6 +624,7 @@ public class AdvancedCoreHook {
 		}
 		getTimer().purge();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
+		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}
 
