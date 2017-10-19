@@ -688,6 +688,7 @@ public class AdvancedCoreHook {
 				debug("Loaded uuids in the background");
 			}
 		});
+		TabCompleteHandler.getInstance().reload();
 	}
 
 	public void loadValueRequestInputCommands() {

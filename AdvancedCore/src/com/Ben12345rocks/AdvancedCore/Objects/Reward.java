@@ -960,13 +960,15 @@ public class Reward {
 		if (map.size() > 0) {
 			if (isOnlyOneLucky()) {
 				for (Entry<String, Integer> entry : map.entrySet()) {
-					new RewardBuilder(getConfig().getFileData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
+					new RewardBuilder(getConfig().getConfigData(), entry.getKey()).withPlaceHolder(placeholders)
+							.send(user);
 					return;
 				}
 
 			} else {
 				for (Entry<String, Integer> entry : map.entrySet()) {
-					new RewardBuilder(getConfig().getFileData(), entry.getKey()).withPlaceHolder(placeholders).send(user);
+					new RewardBuilder(getConfig().getConfigData(), entry.getKey()).withPlaceHolder(placeholders)
+							.send(user);
 				}
 			}
 		}
@@ -1031,11 +1033,11 @@ public class Reward {
 					}
 				}
 			} else {
-				new RewardBuilder(getConfig().getFileData(), getConfig().getRandomRewardsPath()).withPrefix(name)
+				new RewardBuilder(getConfig().getConfigData(), getConfig().getRandomRewardsPath()).withPrefix(name)
 						.withPlaceHolder(placeholders).send(user);
 			}
 		} else {
-			new RewardBuilder(getConfig().getFileData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name)
+			new RewardBuilder(getConfig().getConfigData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name)
 					.withPlaceHolder(placeholders).send(user);
 		}
 	}
@@ -1513,11 +1515,11 @@ public class Reward {
 		if (isJavascriptEnabled()) {
 			if (new JavascriptEngine().addPlayer(user.getPlayer()).getBooleanValue(
 					StringUtils.getInstance().replacePlaceHolder(getJavascriptExpression(), placeholders))) {
-				new RewardBuilder(getConfig().getFileData(), getConfig().getJavascriptTrueRewardsPath()).withPrefix(name)
-						.send(user);
+				new RewardBuilder(getConfig().getConfigData(), getConfig().getJavascriptTrueRewardsPath())
+						.withPrefix(name).send(user);
 			} else {
-				new RewardBuilder(getConfig().getFileData(), getConfig().getJavascriptFalseRewardsPath()).withPrefix(name)
-						.send(user);
+				new RewardBuilder(getConfig().getConfigData(), getConfig().getJavascriptFalseRewardsPath())
+						.withPrefix(name).send(user);
 			}
 		}
 

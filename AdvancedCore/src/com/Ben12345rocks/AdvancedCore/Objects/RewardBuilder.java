@@ -8,13 +8,13 @@ import java.util.Date;
 import java.util.HashMap;
 
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 public class RewardBuilder {
-	private FileConfiguration data;
+	private ConfigurationSection data;
 	private String prefix = "";
 	private String path;
 	private Reward reward;
@@ -24,7 +24,7 @@ public class RewardBuilder {
 	private boolean checkTimed = true;
 	private boolean ignoreChance;
 
-	public RewardBuilder(FileConfiguration data, String path) {
+	public RewardBuilder(ConfigurationSection data, String path) {
 		this.data = data;
 		this.path = path;
 		giveOffline = true;

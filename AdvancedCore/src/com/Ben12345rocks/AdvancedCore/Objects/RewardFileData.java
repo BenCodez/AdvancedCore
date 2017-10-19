@@ -189,9 +189,9 @@ public class RewardFileData {
 	 *
 	 * @return the data
 	 */
-	public FileConfiguration getFileData() {
-		return fileData;
-	}
+	/*
+	 * private FileConfiguration getFileData() { return fileData; }
+	 */
 
 	/**
 	 * Gets the delayed enabled.
@@ -864,9 +864,13 @@ public class RewardFileData {
 	 *            the value
 	 */
 	public void set(String path, Object value) {
-		fileData.set(path, value);
-		FilesManager.getInstance().editFile(dFile, fileData);
-		reload();
+		if (fileData != null) {
+			fileData.set(path, value);
+			FilesManager.getInstance().editFile(dFile, fileData);
+			reload();
+		} else {
+			plugin.debug("Editing invalid reward: " + reward.getName());
+		}
 	}
 
 	/**
@@ -899,15 +903,10 @@ public class RewardFileData {
 		set("Commands.Player", value);
 	}
 
-	public void setData(ConfigurationSection value) {
-		getFileData().set("", value);
-		/*
-		 * Map<String, Object> map = value.getConfigurationSection("").getValues(true);
-		 * for (Entry<String, Object> entry : map.entrySet()) { set(entry.getKey(),
-		 * entry.getValue()); }
-		 */
-		reward.loadValues();
-	}
+	/*
+	 * public void setData(ConfigurationSection value) { getFileData().set("",
+	 * value); reward.loadValues(); }
+	 */
 
 	/**
 	 * Sets the exp.

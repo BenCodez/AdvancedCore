@@ -366,7 +366,7 @@ public class RewardHandler {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+	public void giveReward(User user, String prefix, ConfigurationSection data, String path, boolean online,
 			boolean giveOffline, boolean checkTimed, boolean ignoreChance, HashMap<String, String> placeholders) {
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
@@ -479,7 +479,7 @@ public class RewardHandler {
 			return false;
 		}
 		for (Reward rewardName : getRewards()) {
-			if (rewardName.getRewardName().equalsIgnoreCase(reward)) {
+			if (rewardName.getName().equalsIgnoreCase(reward)) {
 				return true;
 			}
 		}
