@@ -101,6 +101,7 @@ public abstract class CommandHandler {
 	 * @param options
 	 *            the options
 	 */
+	@Deprecated
 	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
 		TabCompleteHandler.getInstance().addTabCompleteOption(toReplace, options);
 	}
@@ -113,6 +114,7 @@ public abstract class CommandHandler {
 	 * @param options
 	 *            the options
 	 */
+	@Deprecated
 	public void addTabCompleteOption(String toReplace, String... options) {
 		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
 	}
