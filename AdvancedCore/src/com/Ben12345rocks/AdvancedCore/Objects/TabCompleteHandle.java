@@ -23,6 +23,8 @@ public abstract class TabCompleteHandle {
 	}
 
 	public TabCompleteHandle(String toReplace, ArrayList<String> replace) {
+		this.toReplace = toReplace;
+		this.replace = replace;
 	}
 
 	public abstract void updateReplacements();
