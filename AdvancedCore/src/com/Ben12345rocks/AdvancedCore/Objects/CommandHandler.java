@@ -337,7 +337,22 @@ public abstract class CommandHandler {
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			players.add(player.getName());
 		}
+		for (String name : plugin.getUuids().keySet()) {
+			if (!players.contains(name)) {
+				players.add(name);
+			}
+		}
 		addTabCompleteOption("(Player)", players);
+		ArrayList<String> uuids = new ArrayList<String>();
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			uuids.add(player.getUniqueId().toString());
+		}
+		for (String name : plugin.getUuids().values()) {
+			if (!uuids.contains(name)) {
+				uuids.add(name);
+			}
+		}
+		addTabCompleteOption("(uuid)", uuids);
 		ArrayList<String> options = new ArrayList<String>();
 		options.add("True");
 		options.add("False");
