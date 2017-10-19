@@ -97,7 +97,7 @@ public class PlayerUtils {
 				name = p.getName();
 			} else {
 				name = storedName;
-				if (name.equals("")) {
+				if (name == null || name.equals("")) {
 					name = Thread.getInstance().getThread().getName(u);
 				}
 			}
@@ -105,7 +105,7 @@ public class PlayerUtils {
 			name = player.getName();
 		}
 
-		if (!name.equals("")) {
+		if (name != null && !name.equals("")) {
 			if (!name.equals(storedName) && !storedName.equals("")) {
 				user.getData().setString("PlayerName", name);
 			}
