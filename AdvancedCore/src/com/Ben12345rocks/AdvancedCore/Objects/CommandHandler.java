@@ -2,10 +2,10 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
@@ -268,7 +268,7 @@ public abstract class CommandHandler {
 				}
 
 				if (argsMatch) {
-					HashMap<String, ArrayList<String>> tabCompleteOptions = TabCompleteHandler.getInstance()
+					ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions = TabCompleteHandler.getInstance()
 							.getTabCompleteOptions();
 					String[] cmdArgsList = cmdArgs[argNum].split("&");
 

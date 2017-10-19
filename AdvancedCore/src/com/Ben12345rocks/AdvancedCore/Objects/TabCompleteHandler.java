@@ -1,7 +1,8 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
@@ -15,7 +16,7 @@ public class TabCompleteHandler {
 
 	private AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
-	private ArrayList<TabCompleteHandle> tabCompletes;
+	private ArrayList<TabCompleteHandle> tabCompletes = (ArrayList<TabCompleteHandle>) Collections.synchronizedList(new ArrayList<TabCompleteHandle>());
 
 	public void addTabCompleteOption(TabCompleteHandle handle) {
 		for (TabCompleteHandle h : tabCompletes) {
@@ -53,9 +54,9 @@ public class TabCompleteHandler {
 		}
 	}
 
-	private HashMap<String, ArrayList<String>> tabCompleteOptions = new HashMap<String, ArrayList<String>>();
+	private ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions = new ConcurrentHashMap<String, ArrayList<String>>();
 
-	public HashMap<String, ArrayList<String>> getTabCompleteOptions() {
+	public ConcurrentHashMap<String, ArrayList<String>> getTabCompleteOptions() {
 		loadTabCompleteOptions();
 		return tabCompleteOptions;
 	}
