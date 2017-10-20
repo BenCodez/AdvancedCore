@@ -25,7 +25,11 @@ public class JavascriptEngine {
 	public JavascriptEngine addPlayer(CommandSender player) {
 		addToEngine("CommandSender", player);
 		if (player instanceof Player) {
-			addToEngine("Player", (Player) player);
+			Player p = (Player) player;
+			addToEngine("Player", p);
+			addToEngine("PlayerName", p.getName());
+			addToEngine("PlayerUUID", p.getUniqueId().toString());
+			addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(p));
 		} else {
 			addToEngine("Player", player);
 		}
