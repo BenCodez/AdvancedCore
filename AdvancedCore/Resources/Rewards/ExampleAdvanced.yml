@@ -209,11 +209,11 @@ OnlyOneLucky: false
 Lucky:
   '10':
     Messages:
-      Plyaer: 'You were lucky and received an extra $100!'
+      Player: 'You were lucky and received an extra $100!'
     Money: 100
   '50':
     Messages:
-      Plyaer: 'You were lucky and received an extra $1000!'
+      Player: 'You were lucky and received an extra $1000!'
     Money: 1000
     
   

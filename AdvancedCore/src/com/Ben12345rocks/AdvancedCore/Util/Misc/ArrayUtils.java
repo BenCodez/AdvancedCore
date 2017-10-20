@@ -330,8 +330,11 @@ public class ArrayUtils {
 	 * @return the array list
 	 */
 	public ArrayList<String> removeDuplicates(ArrayList<String> list) {
-		Set<String> set = new HashSet<String>(list);
-		return new ArrayList<String>(set);
+		Set<String> set = new HashSet<String>();
+		set.addAll(list);
+		list.clear();
+		list.addAll(set);
+		return list;
 	}
 
 	/**
