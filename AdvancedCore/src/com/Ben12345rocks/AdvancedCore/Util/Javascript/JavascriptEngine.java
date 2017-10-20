@@ -30,6 +30,10 @@ public class JavascriptEngine {
 			addToEngine("PlayerName", p.getName());
 			addToEngine("PlayerUUID", p.getUniqueId().toString());
 			addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(p));
+
+			for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+				addToEngine(request.getStr(), request.getObject(p));
+			}
 		} else {
 			addToEngine("Player", player);
 		}
