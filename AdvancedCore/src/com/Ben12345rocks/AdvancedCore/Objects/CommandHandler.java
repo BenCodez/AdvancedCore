@@ -327,7 +327,7 @@ public abstract class CommandHandler {
 	 */
 	public boolean runCommand(CommandSender sender, String[] args) {
 		if (args.length >= this.args.length) {
-			for (int i = 0; i < args.length; i++) {
+			for (int i = 0; i < args.length && i < this.args.length; i++) {
 				if (!argsMatch(args[i], i)) {
 					return false;
 				}
