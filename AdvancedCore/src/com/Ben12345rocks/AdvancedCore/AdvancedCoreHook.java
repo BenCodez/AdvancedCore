@@ -567,6 +567,23 @@ public class AdvancedCoreHook {
 					}
 				});
 
+		TabCompleteHandler.getInstance()
+				.addTabCompleteOption(new TabCompleteHandle("(OnlinePlayer)", new ArrayList<String>()) {
+
+					@Override
+					public void updateReplacements() {
+						ArrayList<String> list = new ArrayList<String>();
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							list.add(player.getName());
+						}
+						setReplace(list);
+					}
+
+					@Override
+					public void reload() {
+					}
+				});
+
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
 
 			@Override
