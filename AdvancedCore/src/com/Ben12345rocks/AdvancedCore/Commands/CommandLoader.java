@@ -21,6 +21,7 @@ import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -201,6 +202,17 @@ public class CommandLoader {
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "Javascript", "(String)" }, permPrefix + ".Javascript",
+				"Execute javascript") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				JavascriptEngine engine = new JavascriptEngine();
+				engine.addPlayer(sender);
+				sendMessage(sender, "&cJavascript result: " + engine.getStringValue(args[1]));
 			}
 		});
 

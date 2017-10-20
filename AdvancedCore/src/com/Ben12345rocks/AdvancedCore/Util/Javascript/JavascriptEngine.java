@@ -24,7 +24,11 @@ public class JavascriptEngine {
 
 	public JavascriptEngine addPlayer(CommandSender player) {
 		addToEngine("CommandSender", player);
-		addToEngine("Player", player);
+		if (player instanceof Player) {
+			addToEngine("Player", (Player) player);
+		} else {
+			addToEngine("Player", player);
+		}
 		return this;
 	}
 
