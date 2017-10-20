@@ -153,6 +153,8 @@ public abstract class CommandHandler {
 				}
 			}
 			return false;
+		} else if (args[args.length - 1].equalsIgnoreCase("(list)")) {
+			return true;
 		}
 		return false;
 	}

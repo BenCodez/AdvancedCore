@@ -205,14 +205,18 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Javascript", "(String)" }, permPrefix + ".Javascript",
+		cmds.add(new CommandHandler(new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
 				"Execute javascript") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
+				String str = "";
+				for (int i = 1; i < args.length; i++) {
+					str += args[i] + " ";
+				}
 				JavascriptEngine engine = new JavascriptEngine();
 				engine.addPlayer(sender);
-				sendMessage(sender, "&cJavascript result: " + engine.getStringValue(args[1]));
+				sendMessage(sender, "&cJavascript result: " + engine.getStringValue(str.trim()));
 			}
 		});
 
