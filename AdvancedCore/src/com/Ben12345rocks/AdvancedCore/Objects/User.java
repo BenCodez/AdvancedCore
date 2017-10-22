@@ -905,7 +905,7 @@ public class User {
 			return (int) dur.toDays();
 		}
 
-		return 0;
+		return -1;
 	}
 
 	public void setLastOnline(long online) {

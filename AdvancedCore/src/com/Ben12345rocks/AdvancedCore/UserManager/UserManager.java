@@ -157,6 +157,10 @@ public class UserManager {
 			for (String uuid : getAllUUIDs()) {
 				User user = getUser(new UUID(uuid));
 				int days = user.getNumberOfDaysSinceLogin();
+				if (days == -1) {
+					// fix ones with no last online
+					user.setLastOnline(System.currentTimeMillis());
+				}
 				if (days > daysOld) {
 					user.remove();
 				}
