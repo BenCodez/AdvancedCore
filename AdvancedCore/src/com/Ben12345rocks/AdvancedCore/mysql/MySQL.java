@@ -392,12 +392,7 @@ public class MySQL {
 	public void deletePlayer(String uuid) {
 		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
 		uuids.remove(uuid);
-		try {
-			Query query = new Query(mysql, q);
-			query.executeBatchAsync();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		this.query.add(q);
 
 	}
 }
