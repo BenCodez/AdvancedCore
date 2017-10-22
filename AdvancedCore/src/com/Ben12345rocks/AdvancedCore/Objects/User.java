@@ -923,6 +923,7 @@ public class User {
 	}
 
 	public void remove() {
+		AdvancedCoreHook.getInstance().debug("Removing " + getUUID() + " (" + getPlayerName() + ") from storage...");
 		getData().remove();
 	}
 
