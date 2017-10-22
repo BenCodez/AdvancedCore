@@ -558,9 +558,15 @@ public class AdvancedCoreHook {
 		loadAutoUpdateCheck();
 		loadVersionFile();
 		loadTabComplete();
-		if (purgeOldData) {
-			UserManager.getInstance().purgeOldPlayers(purgeMinimumDays);
-		}
+
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				UserManager.getInstance().purgeOldPlayers();
+			}
+		});
+
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 

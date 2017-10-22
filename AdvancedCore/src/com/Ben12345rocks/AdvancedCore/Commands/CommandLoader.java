@@ -175,6 +175,15 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "Purge" }, permPrefix + ".Purge", "Purge Data") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				UserManager.getInstance().purgeOldPlayers();
+				sendMessage(sender, "&cPurged data");
+			}
+		});
+
 		if (AdvancedCoreHook.getInstance().getResourceId() != 0) {
 			cmds.add(new CommandHandler(new String[] { "Download" }, permPrefix + ".Download", "Download from spigot") {
 
