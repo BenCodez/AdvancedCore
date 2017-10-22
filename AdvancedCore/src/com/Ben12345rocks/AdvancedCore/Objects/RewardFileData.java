@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.bukkit.ChatColor;
@@ -31,7 +29,17 @@ public class RewardFileData {
 	private File dFile;
 
 	/** The data. */
-	private FileConfiguration data;
+	private FileConfiguration fileData;
+
+	private ConfigurationSection configData;
+
+	public ConfigurationSection getConfigData() {
+		return configData;
+	}
+
+	public void setConfigData(ConfigurationSection configData) {
+		this.configData = configData;
+	}
 
 	/**
 	 * Instantiates a new reward file data.
@@ -52,13 +60,17 @@ public class RewardFileData {
 		setup();
 	}
 
+	public RewardFileData(ConfigurationSection section) {
+		configData = section;
+	}
+
 	/**
 	 * Gets the action bar delay.
 	 *
 	 * @return the action bar delay
 	 */
 	public int getActionBarDelay() {
-		return getData().getInt("ActionBar.Delay");
+		return getConfigData().getInt("ActionBar.Delay");
 	}
 
 	/**
@@ -67,7 +79,7 @@ public class RewardFileData {
 	 * @return the action bar message
 	 */
 	public String getActionBarMessage() {
-		return getData().getString("ActionBar.Message");
+		return getConfigData().getString("ActionBar.Message");
 	}
 
 	/**
@@ -76,7 +88,7 @@ public class RewardFileData {
 	 * @return the boss bar color
 	 */
 	public String getBossBarColor() {
-		return getData().getString("BossBar.Color");
+		return getConfigData().getString("BossBar.Color");
 	}
 
 	/**
@@ -85,11 +97,11 @@ public class RewardFileData {
 	 * @return the boss bar delay
 	 */
 	public int getBossBarDelay() {
-		return getData().getInt("BossBar.Delay");
+		return getConfigData().getInt("BossBar.Delay");
 	}
 
 	public boolean getBossBarEnabled() {
-		return getData().getBoolean("BossBar.Enabled");
+		return getConfigData().getBoolean("BossBar.Enabled");
 	}
 
 	/**
@@ -98,7 +110,7 @@ public class RewardFileData {
 	 * @return the boss bar message
 	 */
 	public String getBossBarMessage() {
-		return getData().getString("BossBar.Message");
+		return getConfigData().getString("BossBar.Message");
 	}
 
 	/**
@@ -107,7 +119,7 @@ public class RewardFileData {
 	 * @return the boss bar progress
 	 */
 	public double getBossBarProgress() {
-		return getData().getDouble("BossBar.Progress");
+		return getConfigData().getDouble("BossBar.Progress");
 	}
 
 	/**
@@ -116,7 +128,7 @@ public class RewardFileData {
 	 * @return the boss bar style
 	 */
 	public String getBossBarStyle() {
-		return getData().getString("BossBar.Style");
+		return getConfigData().getString("BossBar.Style");
 	}
 
 	/**
@@ -125,7 +137,7 @@ public class RewardFileData {
 	 * @return the chance
 	 */
 	public double getChance() {
-		return getData().getDouble("Chance");
+		return getConfigData().getDouble("Chance");
 	}
 
 	/**
@@ -134,7 +146,7 @@ public class RewardFileData {
 	 * @return the choice rewards enabled
 	 */
 	public boolean getChoiceRewardsEnabled() {
-		return getData().getBoolean("ChoiceRewards.Enabled");
+		return getConfigData().getBoolean("ChoiceRewards.Enabled");
 	}
 
 	/**
@@ -144,7 +156,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getChoiceRewardsRewards() {
-		return (ArrayList<String>) getData().getList("ChoiceRewards.Rewards", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("ChoiceRewards.Rewards", new ArrayList<String>());
 	}
 
 	/**
@@ -154,10 +166,10 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsConsole() {
-		if (getData().isList("Commands")) {
-			return (ArrayList<String>) getData().getList("Commands", new ArrayList<String>());
+		if (getConfigData().isList("Commands")) {
+			return (ArrayList<String>) getConfigData().getList("Commands", new ArrayList<String>());
 		} else {
-			return (ArrayList<String>) getData().getList("Commands.Console", new ArrayList<String>());
+			return (ArrayList<String>) getConfigData().getList("Commands.Console", new ArrayList<String>());
 		}
 
 	}
@@ -169,7 +181,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsPlayer() {
-		return (ArrayList<String>) getData().getList("Commands.Player", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Commands.Player", new ArrayList<String>());
 	}
 
 	/**
@@ -177,9 +189,9 @@ public class RewardFileData {
 	 *
 	 * @return the data
 	 */
-	public FileConfiguration getData() {
-		return data;
-	}
+	/*
+	 * private FileConfiguration getFileData() { return fileData; }
+	 */
 
 	/**
 	 * Gets the delayed enabled.
@@ -187,7 +199,7 @@ public class RewardFileData {
 	 * @return the delayed enabled
 	 */
 	public boolean getDelayedEnabled() {
-		return getData().getBoolean("Delayed.Enabled");
+		return getConfigData().getBoolean("Delayed.Enabled");
 	}
 
 	/**
@@ -196,7 +208,7 @@ public class RewardFileData {
 	 * @return the delayed hours
 	 */
 	public int getDelayedHours() {
-		return getData().getInt("Delayed.Hours");
+		return getConfigData().getInt("Delayed.Hours");
 	}
 
 	/**
@@ -205,11 +217,11 @@ public class RewardFileData {
 	 * @return the delayed minutes
 	 */
 	public int getDelayedMinutes() {
-		return getData().getInt("Delayed.Minutes");
+		return getConfigData().getInt("Delayed.Minutes");
 	}
 
 	public int getDelayedSeconds() {
-		return getData().getInt("Delayed.Seconds");
+		return getConfigData().getInt("Delayed.Seconds");
 	}
 
 	/**
@@ -218,7 +230,7 @@ public class RewardFileData {
 	 * @return the effect data
 	 */
 	public int getEffectData() {
-		return getData().getInt("Effect.Data");
+		return getConfigData().getInt("Effect.Data");
 	}
 
 	/**
@@ -227,7 +239,7 @@ public class RewardFileData {
 	 * @return the effect effect
 	 */
 	public String getEffectEffect() {
-		return getData().getString("Effect.Effect", "");
+		return getConfigData().getString("Effect.Effect", "");
 
 	}
 
@@ -237,7 +249,7 @@ public class RewardFileData {
 	 * @return the effect enabled
 	 */
 	public boolean getEffectEnabled() {
-		return getData().getBoolean("Effect.Enabled");
+		return getConfigData().getBoolean("Effect.Enabled");
 	}
 
 	/**
@@ -246,7 +258,7 @@ public class RewardFileData {
 	 * @return the effect particles
 	 */
 	public int getEffectParticles() {
-		return getData().getInt("Effect.Particles");
+		return getConfigData().getInt("Effect.Particles");
 	}
 
 	/**
@@ -255,7 +267,7 @@ public class RewardFileData {
 	 * @return the effect radius
 	 */
 	public int getEffectRadius() {
-		return getData().getInt("Effect.Radius");
+		return getConfigData().getInt("Effect.Radius");
 	}
 
 	/**
@@ -264,7 +276,7 @@ public class RewardFileData {
 	 * @return the exp
 	 */
 	public int getEXP() {
-		return getData().getInt("EXP");
+		return getConfigData().getInt("EXP");
 	}
 
 	/**
@@ -274,7 +286,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkColors() {
-		return (ArrayList<String>) getData().getList("Firework.Colors", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Firework.Colors", new ArrayList<String>());
 	}
 
 	/**
@@ -284,7 +296,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkColorsFadeOut() {
-		return (ArrayList<String>) getData().getList("Firework.FadeOutColor", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Firework.FadeOutColor", new ArrayList<String>());
 	}
 
 	/**
@@ -293,7 +305,7 @@ public class RewardFileData {
 	 * @return the firework enabled
 	 */
 	public boolean getFireworkEnabled() {
-		return getData().getBoolean("Firework.Enabled");
+		return getConfigData().getBoolean("Firework.Enabled");
 	}
 
 	/**
@@ -302,7 +314,7 @@ public class RewardFileData {
 	 * @return the firework flicker
 	 */
 	public boolean getFireworkFlicker() {
-		return getData().getBoolean("Firework.Flicker");
+		return getConfigData().getBoolean("Firework.Flicker");
 	}
 
 	/**
@@ -311,7 +323,7 @@ public class RewardFileData {
 	 * @return the firework power
 	 */
 	public int getFireworkPower() {
-		return getData().getInt("Firework.Power");
+		return getConfigData().getInt("Firework.Power");
 	}
 
 	/**
@@ -320,7 +332,7 @@ public class RewardFileData {
 	 * @return the firework trail
 	 */
 	public boolean getFireworkTrail() {
-		return getData().getBoolean("Firework.Trail");
+		return getConfigData().getBoolean("Firework.Trail");
 	}
 
 	/**
@@ -330,11 +342,11 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getFireworkTypes() {
-		return (ArrayList<String>) getData().getList("Firework.Types", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Firework.Types", new ArrayList<String>());
 	}
 
 	public boolean getForceOffline() {
-		return getData().getBoolean("ForceOffline");
+		return getConfigData().getBoolean("ForceOffline");
 	}
 
 	/**
@@ -346,7 +358,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public int getItemAmount(String item) {
-		return getData().getInt("Items." + item + ".Amount");
+		return getConfigData().getInt("Items." + item + ".Amount");
 	}
 
 	/**
@@ -358,7 +370,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public int getItemData(String item) {
-		return getData().getInt("Items." + item + ".Data");
+		return getConfigData().getInt("Items." + item + ".Data");
 	}
 
 	/**
@@ -370,7 +382,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public int getItemDurability(String item) {
-		return getData().getInt("Items." + item + ".Durability");
+		return getConfigData().getInt("Items." + item + ".Durability");
 	}
 
 	/**
@@ -383,7 +395,7 @@ public class RewardFileData {
 	@Deprecated
 	public Set<String> getItemEnchants(String item) {
 		try {
-			return getData().getConfigurationSection("Items." + item + ".Enchants").getKeys(false);
+			return getConfigData().getConfigurationSection("Items." + item + ".Enchants").getKeys(false);
 		} catch (Exception ex) {
 			return new HashSet<String>();
 		}
@@ -400,7 +412,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public int getItemEnchantsLevel(String item, String enchant) {
-		return getData().getInt("Items." + item + ".Enchants." + enchant);
+		return getConfigData().getInt("Items." + item + ".Enchants." + enchant);
 	}
 
 	/**
@@ -413,7 +425,7 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	@Deprecated
 	public ArrayList<String> getItemLore(String item) {
-		return (ArrayList<String>) getData().getList("Items." + item + ".Lore");
+		return (ArrayList<String>) getConfigData().getList("Items." + item + ".Lore");
 	}
 
 	/**
@@ -425,7 +437,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public String getItemMaterial(String item) {
-		return getData().getString("Items." + item + ".Material");
+		return getConfigData().getString("Items." + item + ".Material");
 	}
 
 	/**
@@ -437,7 +449,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public int getItemMaxAmount(String item) {
-		return getData().getInt("Items." + item + ".MaxAmount");
+		return getConfigData().getInt("Items." + item + ".MaxAmount");
 	}
 
 	/**
@@ -449,7 +461,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public int getItemMinAmount(String item) {
-		return getData().getInt("Items." + item + ".MinAmount");
+		return getConfigData().getInt("Items." + item + ".MinAmount");
 	}
 
 	/**
@@ -461,7 +473,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public String getItemName(String item) {
-		return getData().getString("Items." + item + ".Name");
+		return getConfigData().getString("Items." + item + ".Name");
 	}
 
 	/**
@@ -471,14 +483,14 @@ public class RewardFileData {
 	 */
 	public Set<String> getItems() {
 		try {
-			return getData().getConfigurationSection("Items").getKeys(false);
+			return getConfigData().getConfigurationSection("Items").getKeys(false);
 		} catch (Exception ex) {
 			return new HashSet<String>();
 		}
 	}
 
 	public ConfigurationSection getItemSection(String item) {
-		return getData().getConfigurationSection("Items." + item);
+		return getConfigData().getConfigurationSection("Items." + item);
 	}
 
 	/**
@@ -490,7 +502,7 @@ public class RewardFileData {
 	 */
 	@Deprecated
 	public String getItemSkull(String item) {
-		return getData().getString("Items." + item + ".Skull");
+		return getConfigData().getString("Items." + item + ".Skull");
 	}
 
 	/**
@@ -499,7 +511,7 @@ public class RewardFileData {
 	 * @return the javascript enabled
 	 */
 	public boolean getJavascriptEnabled() {
-		return getData().getBoolean("Javascript.Enabled");
+		return getConfigData().getBoolean("Javascript.Enabled");
 	}
 
 	/**
@@ -508,7 +520,7 @@ public class RewardFileData {
 	 * @return the javascript expression
 	 */
 	public String getJavascriptExpression() {
-		return getData().getString("Javascript.Expression", "");
+		return getConfigData().getString("Javascript.Expression", "");
 	}
 
 	public String getJavascriptFalseRewardsPath() {
@@ -517,7 +529,7 @@ public class RewardFileData {
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getJavascripts() {
-		return (ArrayList<String>) getData().getList("Javascripts", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Javascripts", new ArrayList<String>());
 	}
 
 	public String getJavascriptTrueRewardsPath() {
@@ -525,8 +537,8 @@ public class RewardFileData {
 	}
 
 	public Set<String> getLuckyRewards() {
-		if (getData().getConfigurationSection("Lucky") != null) {
-			return getData().getConfigurationSection("Lucky").getKeys(false);
+		if (getConfigData().getConfigurationSection("Lucky") != null) {
+			return getConfigData().getConfigurationSection("Lucky").getKeys(false);
 		} else {
 			return new HashSet<String>();
 		}
@@ -542,7 +554,7 @@ public class RewardFileData {
 	 * @return the max exp
 	 */
 	public int getMaxExp() {
-		return getData().getInt("MaxEXP");
+		return getConfigData().getInt("MaxEXP");
 	}
 
 	/**
@@ -551,7 +563,7 @@ public class RewardFileData {
 	 * @return the max money
 	 */
 	public int getMaxMoney() {
-		return getData().getInt("MaxMoney");
+		return getConfigData().getInt("MaxMoney");
 	}
 
 	/**
@@ -560,7 +572,7 @@ public class RewardFileData {
 	 * @return the messages broadcast
 	 */
 	public String getMessagesBroadcast() {
-		return getData().getString("Messages.Broadcast", "");
+		return getConfigData().getString("Messages.Broadcast", "");
 	}
 
 	/**
@@ -569,7 +581,7 @@ public class RewardFileData {
 	 * @return the messages reward
 	 */
 	public String getMessagesPlayer() {
-		return getData().getString("Messages.Player", getData().getString("Messages.Reward", ""));
+		return getConfigData().getString("Messages.Player", getConfigData().getString("Messages.Reward", ""));
 	}
 
 	/**
@@ -578,7 +590,7 @@ public class RewardFileData {
 	 * @return the min exp
 	 */
 	public int getMinExp() {
-		return getData().getInt("MinEXP");
+		return getConfigData().getInt("MinEXP");
 	}
 
 	/**
@@ -587,7 +599,7 @@ public class RewardFileData {
 	 * @return the min money
 	 */
 	public int getMinMoney() {
-		return getData().getInt("MinMoney");
+		return getConfigData().getInt("MinMoney");
 	}
 
 	/**
@@ -596,11 +608,11 @@ public class RewardFileData {
 	 * @return the money
 	 */
 	public int getMoney() {
-		return getData().getInt("Money");
+		return getConfigData().getInt("Money");
 	}
 
 	public boolean getOnlyOneLucky() {
-		return getData().getBoolean("OnlyOneLucky");
+		return getConfigData().getBoolean("OnlyOneLucky");
 	}
 
 	/**
@@ -609,7 +621,7 @@ public class RewardFileData {
 	 * @return the permission
 	 */
 	public String getPermission() {
-		return getData().getString("Permission", "AdvancedCore.Reward." + reward);
+		return getConfigData().getString("Permission", "AdvancedCore.Reward." + reward);
 	}
 
 	/**
@@ -619,7 +631,7 @@ public class RewardFileData {
 	 */
 	public Set<String> getPotions() {
 		try {
-			return getData().getConfigurationSection("Potions").getKeys(false);
+			return getConfigData().getConfigurationSection("Potions").getKeys(false);
 		} catch (Exception ex) {
 			return new HashSet<String>();
 		}
@@ -633,7 +645,7 @@ public class RewardFileData {
 	 * @return the potions amplifier
 	 */
 	public int getPotionsAmplifier(String potion) {
-		return getData().getInt("Potions." + potion + ".Amplifier");
+		return getConfigData().getInt("Potions." + potion + ".Amplifier");
 	}
 
 	/**
@@ -644,12 +656,12 @@ public class RewardFileData {
 	 * @return the potions duration
 	 */
 	public int getPotionsDuration(String potion) {
-		return getData().getInt("Potions." + potion + ".Duration");
+		return getConfigData().getInt("Potions." + potion + ".Duration");
 	}
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getPriority() {
-		return (ArrayList<String>) getData().getList("Priority", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Priority", new ArrayList<String>());
 	}
 
 	/**
@@ -658,7 +670,7 @@ public class RewardFileData {
 	 * @return the random chance
 	 */
 	public double getRandomChance() {
-		return getData().getDouble("Random.Chance");
+		return getConfigData().getDouble("Random.Chance");
 	}
 
 	public String getRandomFallBackRewardsPath() {
@@ -666,12 +678,12 @@ public class RewardFileData {
 	}
 
 	public boolean getRandomPickRandom() {
-		return getData().getBoolean("Random.PickRandom", true);
+		return getConfigData().getBoolean("Random.PickRandom", true);
 	}
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getRandomRewards() {
-		return (ArrayList<String>) getData().getList("Random.Rewards", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Random.Rewards", new ArrayList<String>());
 	}
 
 	public String getRandomRewardsPath() {
@@ -684,7 +696,7 @@ public class RewardFileData {
 	 * @return the require permission
 	 */
 	public boolean getRequirePermission() {
-		return getData().getBoolean("RequirePermission");
+		return getConfigData().getBoolean("RequirePermission");
 	}
 
 	/**
@@ -693,7 +705,7 @@ public class RewardFileData {
 	 * @return the reward type
 	 */
 	public String getRewardType() {
-		String str = getData().getString("RewardType", "BOTH");
+		String str = getConfigData().getString("RewardType", "BOTH");
 		if (str != null) {
 			if (str.equalsIgnoreCase("online")) {
 				return "ONLINE";
@@ -712,7 +724,7 @@ public class RewardFileData {
 	 * @return the sound enabled
 	 */
 	public boolean getSoundEnabled() {
-		return getData().getBoolean("Sound.Enabled");
+		return getConfigData().getBoolean("Sound.Enabled");
 	}
 
 	/**
@@ -721,7 +733,7 @@ public class RewardFileData {
 	 * @return the sound pitch
 	 */
 	public float getSoundPitch() {
-		return (float) getData().getDouble("Sound.Pitch");
+		return (float) getConfigData().getDouble("Sound.Pitch");
 	}
 
 	/**
@@ -730,7 +742,7 @@ public class RewardFileData {
 	 * @return the sound sound
 	 */
 	public String getSoundSound() {
-		return getData().getString("Sound.Sound");
+		return getConfigData().getString("Sound.Sound");
 	}
 
 	/**
@@ -739,7 +751,7 @@ public class RewardFileData {
 	 * @return the sound volume
 	 */
 	public float getSoundVolume() {
-		return (float) getData().getDouble("Sound.Volume");
+		return (float) getConfigData().getDouble("Sound.Volume");
 	}
 
 	/**
@@ -748,7 +760,7 @@ public class RewardFileData {
 	 * @return the timed enabled
 	 */
 	public boolean getTimedEnabled() {
-		return getData().getBoolean("Timed.Enabled");
+		return getConfigData().getBoolean("Timed.Enabled");
 	}
 
 	/**
@@ -757,7 +769,7 @@ public class RewardFileData {
 	 * @return the timed hour
 	 */
 	public int getTimedHour() {
-		return getData().getInt("Timed.Hour");
+		return getConfigData().getInt("Timed.Hour");
 	}
 
 	/**
@@ -766,7 +778,7 @@ public class RewardFileData {
 	 * @return the timed minute
 	 */
 	public int getTimedMinute() {
-		return getData().getInt("Timed.Minute");
+		return getConfigData().getInt("Timed.Minute");
 	}
 
 	/**
@@ -775,7 +787,7 @@ public class RewardFileData {
 	 * @return the title enabled
 	 */
 	public boolean getTitleEnabled() {
-		return getData().getBoolean("Title.Enabled");
+		return getConfigData().getBoolean("Title.Enabled");
 	}
 
 	/**
@@ -784,7 +796,7 @@ public class RewardFileData {
 	 * @return the title fade in
 	 */
 	public int getTitleFadeIn() {
-		return getData().getInt("Title.FadeIn");
+		return getConfigData().getInt("Title.FadeIn");
 	}
 
 	/**
@@ -793,7 +805,7 @@ public class RewardFileData {
 	 * @return the title fade out
 	 */
 	public int getTitleFadeOut() {
-		return getData().getInt("Title.FadeOut");
+		return getConfigData().getInt("Title.FadeOut");
 	}
 
 	/**
@@ -802,7 +814,7 @@ public class RewardFileData {
 	 * @return the title show time
 	 */
 	public int getTitleShowTime() {
-		return getData().getInt("Title.ShowTime");
+		return getConfigData().getInt("Title.ShowTime");
 	}
 
 	/**
@@ -811,7 +823,7 @@ public class RewardFileData {
 	 * @return the title sub title
 	 */
 	public String getTitleSubTitle() {
-		return getData().getString("Title.SubTitle");
+		return getConfigData().getString("Title.SubTitle");
 	}
 
 	/**
@@ -820,7 +832,7 @@ public class RewardFileData {
 	 * @return the title title
 	 */
 	public String getTitleTitle() {
-		return getData().getString("Title.Title");
+		return getConfigData().getString("Title.Title");
 	}
 
 	/**
@@ -831,7 +843,7 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getWorlds() {
 
-		return (ArrayList<String>) getData().getList("Worlds", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Worlds", new ArrayList<String>());
 
 	}
 
@@ -839,7 +851,8 @@ public class RewardFileData {
 	 * Reload.
 	 */
 	public void reload() {
-		data = YamlConfiguration.loadConfiguration(dFile);
+		fileData = YamlConfiguration.loadConfiguration(dFile);
+		configData = fileData.getConfigurationSection("");
 	}
 
 	/**
@@ -851,9 +864,13 @@ public class RewardFileData {
 	 *            the value
 	 */
 	public void set(String path, Object value) {
-		data.set(path, value);
-		FilesManager.getInstance().editFile(dFile, data);
-		reload();
+		if (fileData != null) {
+			fileData.set(path, value);
+			FilesManager.getInstance().editFile(dFile, fileData);
+			reload();
+		} else {
+			plugin.debug("Editing invalid reward: " + reward.getName());
+		}
 	}
 
 	/**
@@ -886,13 +903,10 @@ public class RewardFileData {
 		set("Commands.Player", value);
 	}
 
-	public void setData(ConfigurationSection value) {
-		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
-		for (Entry<String, Object> entry : map.entrySet()) {
-			set(entry.getKey(), entry.getValue());
-		}
-		reward.loadValues();
-	}
+	/*
+	 * public void setData(ConfigurationSection value) { getFileData().set("",
+	 * value); reward.loadValues(); }
+	 */
 
 	/**
 	 * Sets the exp.
@@ -1152,15 +1166,17 @@ public class RewardFileData {
 	 * Setup.
 	 */
 	public void setup() {
-		data = YamlConfiguration.loadConfiguration(dFile);
+		fileData = YamlConfiguration.loadConfiguration(dFile);
+
 		if (!dFile.exists()) {
 			try {
-				data.save(dFile);
+				fileData.save(dFile);
 			} catch (IOException e) {
 				plugin.getPlugin().getLogger().severe(ChatColor.RED + "Could not create " + dFile.getAbsolutePath());
 
 			}
 		}
+		configData = fileData.getConfigurationSection("");
 	}
 
 	/**

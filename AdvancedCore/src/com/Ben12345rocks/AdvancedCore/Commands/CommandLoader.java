@@ -21,6 +21,7 @@ import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -174,15 +175,25 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "Purge" }, permPrefix + ".Purge", "Purge Data") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				UserManager.getInstance().purgeOldPlayers();
+				sendMessage(sender, "&cPurged data");
+			}
+		});
+
 		if (AdvancedCoreHook.getInstance().getResourceId() != 0) {
 			cmds.add(new CommandHandler(new String[] { "Download" }, permPrefix + ".Download", "Download from spigot") {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					SpigetUpdater.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
-							AdvancedCoreHook.getInstance().getResourceId());
 					sender.sendMessage(StringUtils.getInstance().colorize(
 							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
+					SpigetUpdater.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
+							AdvancedCoreHook.getInstance().getResourceId());
+					sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
 				}
 			});
 		}
@@ -200,6 +211,21 @@ public class CommandLoader {
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
+				"Execute javascript") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				String str = "";
+				for (int i = 1; i < args.length; i++) {
+					str += args[i] + " ";
+				}
+				JavascriptEngine engine = new JavascriptEngine();
+				engine.addPlayer(sender);
+				sendMessage(sender, "&cJavascript result: " + engine.getStringValue(str.trim()));
 			}
 		});
 
@@ -367,5 +393,4 @@ public class CommandLoader {
 			sender.sendMessage("No rewards to choose");
 		}
 	}
-
 }

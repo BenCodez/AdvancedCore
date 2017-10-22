@@ -2,10 +2,10 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
@@ -13,11 +13,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
-import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -43,9 +41,6 @@ public abstract class CommandHandler {
 	/** The help message. */
 	private String helpMessage;
 
-	/** The tab complete options. */
-	public HashMap<String, ArrayList<String>> tabCompleteOptions;
-
 	/** The allow console. */
 	private boolean allowConsole = true;
 
@@ -61,8 +56,6 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		helpMessage = "Unknown Help Message";
-		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
-		loadTabComplete();
 	}
 
 	/**
@@ -79,8 +72,6 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
-		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
-		loadTabComplete();
 	}
 
 	/**
@@ -99,9 +90,7 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
-		tabCompleteOptions = new HashMap<String, ArrayList<String>>();
 		this.allowConsole = allowConsole;
-		loadTabComplete();
 	}
 
 	/**
@@ -112,12 +101,9 @@ public abstract class CommandHandler {
 	 * @param options
 	 *            the options
 	 */
+	@Deprecated
 	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
-		ArrayList<String> replace = new ArrayList<String>();
-		for (String str : options) {
-			replace.add(str);
-		}
-		tabCompleteOptions.put(toReplace, replace);
+		TabCompleteHandler.getInstance().addTabCompleteOption(toReplace, options);
 	}
 
 	/**
@@ -128,6 +114,7 @@ public abstract class CommandHandler {
 	 * @param options
 	 *            the options
 	 */
+	@Deprecated
 	public void addTabCompleteOption(String toReplace, String... options) {
 		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
 	}
@@ -149,7 +136,7 @@ public abstract class CommandHandler {
 					return true;
 				}
 
-				for (String str : tabCompleteOptions.keySet()) {
+				for (String str : TabCompleteHandler.getInstance().getTabCompleteReplaces()) {
 					if (str.equalsIgnoreCase(cmdArg)) {
 						return true;
 					}
@@ -160,12 +147,14 @@ public abstract class CommandHandler {
 			// Utils.getInstance().convert(
 			// tabCompleteOptions.keySet())) + " "
 			// + args[i]);
-			for (String str : tabCompleteOptions.keySet()) {
+			for (String str : TabCompleteHandler.getInstance().getTabCompleteReplaces()) {
 				if (str.equalsIgnoreCase(args[i])) {
 					return true;
 				}
 			}
 			return false;
+		} else if (args[args.length - 1].equalsIgnoreCase("(list)")) {
+			return true;
 		}
 		return false;
 	}
@@ -253,23 +242,12 @@ public abstract class CommandHandler {
 		return perm;
 	}
 
-	/**
-	 * Gets the tab complete options.
-	 *
-	 * @param sender
-	 *            the sender
-	 * @param args
-	 *            the args
-	 * @param argNum
-	 *            the arg num
-	 * @return the tab complete options
-	 */
-	public ArrayList<String> getTabCompleteOptions(CommandSender sender, String[] args, int argNum) {
-		CommandHandler commandHandler = this;
-		updateTabComplete();
+	public ArrayList<String> getTabCompleteOptions(CommandSender sender, String[] args, int argNum,
+			ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions) {
 		Set<String> cmds = new HashSet<String>();
-
 		if (hasPerm(sender)) {
+			CommandHandler commandHandler = this;
+
 			String[] cmdArgs = commandHandler.getArgs();
 			if (cmdArgs.length > argNum) {
 				boolean argsMatch = true;
@@ -329,54 +307,13 @@ public abstract class CommandHandler {
 		return sender instanceof Player;
 	}
 
-	/**
-	 * Load tab complete.
-	 */
-	public void loadTabComplete() {
-		ArrayList<String> players = new ArrayList<String>();
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			players.add(player.getName());
+	public boolean hasArg(String arg) {
+		for (String str : getArgs()) {
+			if (str.equalsIgnoreCase(arg)) {
+				return true;
+			}
 		}
-		addTabCompleteOption("(Player)", players);
-		ArrayList<String> options = new ArrayList<String>();
-		options.add("True");
-		options.add("False");
-		addTabCompleteOption("(Boolean)", options);
-		options = new ArrayList<String>();
-		addTabCompleteOption("(List)", options);
-		addTabCompleteOption("(String)", options);
-		addTabCompleteOption("(Number)", options);
-		ArrayList<String> rewards = new ArrayList<String>();
-		for (Reward reward : RewardHandler.getInstance().getRewards()) {
-			rewards.add(reward.getRewardName());
-		}
-		addTabCompleteOption("(Reward)", rewards);
-		ArrayList<String> method = new ArrayList<String>();
-		for (InputMethod me : InputMethod.values()) {
-			method.add(me.toString());
-		}
-		addTabCompleteOption("(RequestMethod)", method);
-
-		ArrayList<String> userStorage = new ArrayList<String>();
-		for (UserStorage storage : UserStorage.values()) {
-			userStorage.add(storage.toString());
-		}
-		addTabCompleteOption("(UserStorage)", userStorage);
-
-		ArrayList<String> times = new ArrayList<String>();
-		for (TimeType ty : TimeType.values()) {
-			times.add(ty.toString());
-		}
-		addTabCompleteOption("(TimeType)", times);
-
-	}
-
-	public void reloadTabComplete() {
-		ArrayList<String> rewards = new ArrayList<String>();
-		for (Reward reward : RewardHandler.getInstance().getRewards()) {
-			rewards.add(reward.getRewardName());
-		}
-		addTabCompleteOption("(reward)", rewards);
+		return false;
 	}
 
 	/**
@@ -390,7 +327,10 @@ public abstract class CommandHandler {
 	 */
 	public boolean runCommand(CommandSender sender, String[] args) {
 		if (args.length >= this.args.length) {
-			for (int i = 0; i < args.length; i++) {
+			if (this.args.length != args.length && !hasArg("(list)")) {
+				return false;
+			}
+			for (int i = 0; i < args.length && i < this.args.length; i++) {
 				if (!argsMatch(args[i], i)) {
 					return false;
 				}
@@ -471,17 +411,6 @@ public abstract class CommandHandler {
 	 */
 	public void setPerm(String perm) {
 		this.perm = perm;
-	}
-
-	/**
-	 * Update tab complete.
-	 */
-	public void updateTabComplete() {
-		ArrayList<String> players = new ArrayList<String>();
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			players.add(player.getName());
-		}
-		addTabCompleteOption("(Player)", players);
 	}
 
 }

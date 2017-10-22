@@ -34,18 +34,52 @@ public class BossBar {
 		bossBar = Bukkit.createBossBar(StringUtils.getInstance().colorize(msg), BarColor.valueOf(barColor),
 				BarStyle.valueOf(barStyle), BarFlag.DARKEN_SKY);
 		bossBar.setProgress(progress);
-
 	}
 
-	/**
-	 * Hide.
-	 *
-	 * @param player
-	 *            the player
-	 */
-	public void hide(Player player) {
+	public void setProgress(double progress) {
+		if (progress > 1) {
+			progress = 1;
+		}
+		if (progress < 0) {
+			progress = 0;
+		}
+		bossBar.setProgress(progress);
+	}
+
+	public void setTitle(String title) {
+		bossBar.setTitle(StringUtils.getInstance().colorize(title));
+	}
+
+	public void setStyle(String barStyle) {
+		bossBar.setStyle(BarStyle.valueOf(barStyle));
+	}
+
+	public void setColor(String barColor) {
+		bossBar.setColor(BarColor.valueOf(barColor));
+	}
+
+	public void hide() {
 		bossBar.setVisible(false);
 		bossBar.removeAll();
+	}
+
+	public void addPlayer(Player player) {
+		bossBar.addPlayer(player);
+	}
+
+	public void send(int delay) {
+		bossBar.setVisible(true);
+		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				hide();
+			}
+		}, delay);
+	}
+
+	public void setVisible(boolean visible) {
+		bossBar.setVisible(visible);
 	}
 
 	/**
@@ -63,7 +97,7 @@ public class BossBar {
 
 			@Override
 			public void run() {
-				hide(player);
+				hide();
 			}
 		}, delay);
 	}

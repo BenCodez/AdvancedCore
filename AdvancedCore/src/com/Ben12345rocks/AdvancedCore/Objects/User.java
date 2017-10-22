@@ -1,6 +1,10 @@
 package com.Ben12345rocks.AdvancedCore.Objects;
 
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -885,9 +889,47 @@ public class User {
 	}
 
 	public void updateName() {
-		if (!getData().getString("PlayerName").equals(getPlayerName())) {
-			getData().setString("PlayerName", getPlayerName());
+		if (getData().hasData()) {
+			if (!getData().getString("PlayerName").equals(getPlayerName())) {
+				getData().setString("PlayerName", getPlayerName());
+			}
 		}
+	}
+
+	public int getNumberOfDaysSinceLogin() {
+		long time = getLastOnline();
+		if (time > 0) {
+			LocalDateTime online = LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault());
+			LocalDateTime now = LocalDateTime.now();
+			Duration dur = Duration.between(online, now);
+			return (int) dur.toDays();
+		}
+
+		return -1;
+	}
+
+	public void setLastOnline(long online) {
+		getData().setString("LastOnline", "" + online);
+	}
+
+	public long getLastOnline() {
+		String d = getData().getString("LastOnline");
+		long time = 0;
+		if (d != null && !d.equals("")) {
+			time = Long.valueOf(d);
+		}
+		if (time == 0) {
+			time = getOfflinePlayer().getLastPlayed();
+			if (time > 0) {
+				setLastOnline(time);
+			}
+		}
+		return time;
+	}
+
+	public void remove() {
+		AdvancedCoreHook.getInstance().debug("Removing " + getUUID() + " (" + getPlayerName() + ") from storage...");
+		getData().remove();
 	}
 
 }

@@ -24,7 +24,19 @@ public class JavascriptEngine {
 
 	public JavascriptEngine addPlayer(CommandSender player) {
 		addToEngine("CommandSender", player);
-		addToEngine("Player", player);
+		if (player instanceof Player) {
+			Player p = (Player) player;
+			addToEngine("Player", p);
+			addToEngine("PlayerName", p.getName());
+			addToEngine("PlayerUUID", p.getUniqueId().toString());
+			addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(p));
+
+			for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+				addToEngine(request.getStr(), request.getObject(p));
+			}
+		} else {
+			addToEngine("Player", player);
+		}
 		return this;
 	}
 

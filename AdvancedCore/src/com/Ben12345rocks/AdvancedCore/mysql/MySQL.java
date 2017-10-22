@@ -306,13 +306,10 @@ public class MySQL {
 
 	public void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
-		if (uuids.contains(uuid)) {
-			uuids.add(uuid);
-		}
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (!containsKey(uuid)) {
+		if (getUuidsQuery().contains(uuid)) {
 			loadPlayer(uuid);
 		}
 	}
@@ -389,6 +386,14 @@ public class MySQL {
 			}
 
 		}
+
+	}
+
+	public void deletePlayer(String uuid) {
+		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
+		uuids.remove(uuid);
+		this.query.add(q);
+		removePlayer(uuid);
 
 	}
 }

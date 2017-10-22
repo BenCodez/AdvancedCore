@@ -58,6 +58,7 @@ public class PlayerJoinEvent implements Listener {
 					}
 					User user = UserManager.getInstance().getUser(player);
 					user.checkOfflineRewards();
+					user.setLastOnline(System.currentTimeMillis());
 				}
 			}
 		}, 10L);

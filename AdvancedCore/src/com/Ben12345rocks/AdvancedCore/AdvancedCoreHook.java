@@ -29,7 +29,10 @@ import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
+import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandle;
+import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
@@ -37,12 +40,14 @@ import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
+import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
+import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.mysql.MySQL;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
@@ -101,6 +106,26 @@ public class AdvancedCoreHook {
 	private Permission perms;
 
 	private boolean alternateUUIDLookUp;
+
+	private boolean purgeOldData = false;
+
+	private int purgeMinimumDays = 90;
+
+	public boolean isPurgeOldData() {
+		return purgeOldData;
+	}
+
+	public void setPurgeOldData(boolean purgeOldData) {
+		this.purgeOldData = purgeOldData;
+	}
+
+	public int getPurgeMinimumDays() {
+		return purgeMinimumDays;
+	}
+
+	public void setPurgeMinimumDays(int purgeMinimumDays) {
+		this.purgeMinimumDays = purgeMinimumDays;
+	}
 
 	private AdvancedCoreHook() {
 	}
@@ -532,7 +557,127 @@ public class AdvancedCoreHook {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
 		loadVersionFile();
+		loadTabComplete();
+
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				UserManager.getInstance().purgeOldPlayers();
+			}
+		});
+
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
+	}
+
+	public void loadTabComplete() {
+		TabCompleteHandler.getInstance()
+				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {
+
+					@Override
+					public void updateReplacements() {
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							if (!getReplace().contains(player.getName())) {
+								getReplace().add(player.getName());
+							}
+						}
+
+					}
+
+					@Override
+					public void reload() {
+						ArrayList<String> players = new ArrayList<String>();
+						for (String name : AdvancedCoreHook.getInstance().getUuids().keySet()) {
+							if (!players.contains(name)) {
+								players.add(name);
+							}
+						}
+						setReplace(players);
+					}
+				});
+
+		TabCompleteHandler.getInstance()
+				.addTabCompleteOption(new TabCompleteHandle("(OnlinePlayer)", new ArrayList<String>()) {
+
+					@Override
+					public void updateReplacements() {
+						ArrayList<String> list = new ArrayList<String>();
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							list.add(player.getName());
+						}
+						setReplace(list);
+					}
+
+					@Override
+					public void reload() {
+					}
+				});
+
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
+
+			@Override
+			public void updateReplacements() {
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					if (!getReplace().contains(player.getUniqueId().toString())) {
+						getReplace().add(player.getUniqueId().toString());
+					}
+				}
+			}
+
+			@Override
+			public void reload() {
+				ArrayList<String> uuids = new ArrayList<String>();
+				for (String name : AdvancedCoreHook.getInstance().getUuids().values()) {
+					if (!uuids.contains(name)) {
+						uuids.add(name);
+					}
+				}
+				setReplace(uuids);
+			}
+		});
+
+		ArrayList<String> options = new ArrayList<String>();
+		options.add("True");
+		options.add("False");
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Boolean)", options);
+		options = new ArrayList<String>();
+		TabCompleteHandler.getInstance().addTabCompleteOption("(List)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(String)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(Reward)", options) {
+
+			@Override
+			public void updateReplacements() {
+
+			}
+
+			@Override
+			public void reload() {
+				ArrayList<String> rewards = new ArrayList<String>();
+				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+					rewards.add(reward.getRewardName());
+				}
+				setReplace(rewards);
+			}
+		});
+
+		ArrayList<String> method = new ArrayList<String>();
+		for (InputMethod me : InputMethod.values()) {
+			method.add(me.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(RequestMethod)", method);
+
+		ArrayList<String> userStorage = new ArrayList<String>();
+		for (UserStorage storage : UserStorage.values()) {
+			userStorage.add(storage.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(UserStorage)", userStorage);
+
+		ArrayList<String> times = new ArrayList<String>();
+		for (TimeType ty : TimeType.values()) {
+			times.add(ty.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
 	}
 
 	/**
@@ -581,11 +726,16 @@ public class AdvancedCoreHook {
 					if (uuids.containsKey(name)) {
 						debug("Duplicate uuid? " + uuid + " : " + name + " Other key: " + uuids.get(name));
 					}
+					if (name == null || name.equals("") || name.equals("Error getting name")) {
+						debug("Invalid player name: " + uuid);
+					}
 					uuids.put(name, uuid);
 				}
 				debug("Loaded uuids in the background");
 			}
 		});
+		TabCompleteHandler.getInstance().reload();
+		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}
 
 	public void loadValueRequestInputCommands() {
@@ -620,7 +770,8 @@ public class AdvancedCoreHook {
 		}
 		getTimer().purge();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
-
+		TabCompleteHandler.getInstance().reload();
+		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}
 
 	/**
@@ -719,6 +870,7 @@ public class AdvancedCoreHook {
 	 */
 	public void setMysql(MySQL mysql) {
 		if (this.mysql != null) {
+			this.mysql.updateBatch();
 			this.mysql.close();
 			this.mysql = null;
 		}

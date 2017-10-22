@@ -41,7 +41,6 @@ public class SpigetUpdater {
 		try {
 			download(new URL("https://api.spiget.org/v2/resources/" + resourceId + "/download"),
 					new File(Bukkit.getServer().getUpdateFolderFile(), plugin.getDescription().getName() + ".jar"));
-
 		} catch (IOException e) { // TODO Auto-generated catch block
 			e.printStackTrace();
 		}
