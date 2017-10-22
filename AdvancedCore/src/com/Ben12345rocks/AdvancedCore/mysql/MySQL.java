@@ -323,7 +323,7 @@ public class MySQL {
 
 	public synchronized void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
-		if (getUuidsQuery().contains(index)) {
+		if (getUuids().contains(index)) {
 			String query = "UPDATE " + getName() + " SET ";
 
 			if (dataType == DataType.STRING) {
