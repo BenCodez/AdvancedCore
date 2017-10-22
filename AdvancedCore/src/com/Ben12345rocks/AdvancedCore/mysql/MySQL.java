@@ -160,6 +160,14 @@ public class MySQL {
 		return false;
 	}
 
+	public void deletePlayer(String uuid) {
+		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
+		uuids.remove(uuid);
+		this.query.add(q);
+		removePlayer(uuid);
+
+	}
+
 	public List<String> getColumns() {
 		if (columns == null || columns.size() == 0) {
 			loadData();
@@ -386,14 +394,6 @@ public class MySQL {
 			}
 
 		}
-
-	}
-
-	public void deletePlayer(String uuid) {
-		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
-		uuids.remove(uuid);
-		this.query.add(q);
-		removePlayer(uuid);
 
 	}
 }

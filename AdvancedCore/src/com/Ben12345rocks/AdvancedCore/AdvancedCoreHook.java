@@ -111,22 +111,6 @@ public class AdvancedCoreHook {
 
 	private int purgeMinimumDays = 90;
 
-	public boolean isPurgeOldData() {
-		return purgeOldData;
-	}
-
-	public void setPurgeOldData(boolean purgeOldData) {
-		this.purgeOldData = purgeOldData;
-	}
-
-	public int getPurgeMinimumDays() {
-		return purgeMinimumDays;
-	}
-
-	public void setPurgeMinimumDays(int purgeMinimumDays) {
-		this.purgeMinimumDays = purgeMinimumDays;
-	}
-
 	private AdvancedCoreHook() {
 	}
 
@@ -308,6 +292,10 @@ public class AdvancedCoreHook {
 		return prevPageTxt;
 	}
 
+	public int getPurgeMinimumDays() {
+		return purgeMinimumDays;
+	}
+
 	/**
 	 * @return the resourceId
 	 */
@@ -430,6 +418,10 @@ public class AdvancedCoreHook {
 
 	public boolean isPreloadUsers() {
 		return preloadUsers;
+	}
+
+	public boolean isPurgeOldData() {
+		return purgeOldData;
 	}
 
 	/**
@@ -570,116 +562,6 @@ public class AdvancedCoreHook {
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
-	public void loadTabComplete() {
-		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {
-
-					@Override
-					public void updateReplacements() {
-						for (Player player : Bukkit.getOnlinePlayers()) {
-							if (!getReplace().contains(player.getName())) {
-								getReplace().add(player.getName());
-							}
-						}
-
-					}
-
-					@Override
-					public void reload() {
-						ArrayList<String> players = new ArrayList<String>();
-						for (String name : AdvancedCoreHook.getInstance().getUuids().keySet()) {
-							if (!players.contains(name)) {
-								players.add(name);
-							}
-						}
-						setReplace(players);
-					}
-				});
-
-		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(OnlinePlayer)", new ArrayList<String>()) {
-
-					@Override
-					public void updateReplacements() {
-						ArrayList<String> list = new ArrayList<String>();
-						for (Player player : Bukkit.getOnlinePlayers()) {
-							list.add(player.getName());
-						}
-						setReplace(list);
-					}
-
-					@Override
-					public void reload() {
-					}
-				});
-
-		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
-
-			@Override
-			public void updateReplacements() {
-				for (Player player : Bukkit.getOnlinePlayers()) {
-					if (!getReplace().contains(player.getUniqueId().toString())) {
-						getReplace().add(player.getUniqueId().toString());
-					}
-				}
-			}
-
-			@Override
-			public void reload() {
-				ArrayList<String> uuids = new ArrayList<String>();
-				for (String name : AdvancedCoreHook.getInstance().getUuids().values()) {
-					if (!uuids.contains(name)) {
-						uuids.add(name);
-					}
-				}
-				setReplace(uuids);
-			}
-		});
-
-		ArrayList<String> options = new ArrayList<String>();
-		options.add("True");
-		options.add("False");
-		TabCompleteHandler.getInstance().addTabCompleteOption("(Boolean)", options);
-		options = new ArrayList<String>();
-		TabCompleteHandler.getInstance().addTabCompleteOption("(List)", options);
-		TabCompleteHandler.getInstance().addTabCompleteOption("(String)", options);
-		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
-		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(Reward)", options) {
-
-			@Override
-			public void updateReplacements() {
-
-			}
-
-			@Override
-			public void reload() {
-				ArrayList<String> rewards = new ArrayList<String>();
-				for (Reward reward : RewardHandler.getInstance().getRewards()) {
-					rewards.add(reward.getRewardName());
-				}
-				setReplace(rewards);
-			}
-		});
-
-		ArrayList<String> method = new ArrayList<String>();
-		for (InputMethod me : InputMethod.values()) {
-			method.add(me.toString());
-		}
-		TabCompleteHandler.getInstance().addTabCompleteOption("(RequestMethod)", method);
-
-		ArrayList<String> userStorage = new ArrayList<String>();
-		for (UserStorage storage : UserStorage.values()) {
-			userStorage.add(storage.toString());
-		}
-		TabCompleteHandler.getInstance().addTabCompleteOption("(UserStorage)", userStorage);
-
-		ArrayList<String> times = new ArrayList<String>();
-		for (TimeType ty : TimeType.values()) {
-			times.add(ty.toString());
-		}
-		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
-	}
-
 	/**
 	 * Load logger
 	 */
@@ -700,6 +582,116 @@ public class AdvancedCoreHook {
 	 */
 	public void loadRewards() {
 		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
+	}
+
+	public void loadTabComplete() {
+		TabCompleteHandler.getInstance()
+				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {
+
+					@Override
+					public void reload() {
+						ArrayList<String> players = new ArrayList<String>();
+						for (String name : AdvancedCoreHook.getInstance().getUuids().keySet()) {
+							if (!players.contains(name)) {
+								players.add(name);
+							}
+						}
+						setReplace(players);
+					}
+
+					@Override
+					public void updateReplacements() {
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							if (!getReplace().contains(player.getName())) {
+								getReplace().add(player.getName());
+							}
+						}
+
+					}
+				});
+
+		TabCompleteHandler.getInstance()
+				.addTabCompleteOption(new TabCompleteHandle("(OnlinePlayer)", new ArrayList<String>()) {
+
+					@Override
+					public void reload() {
+					}
+
+					@Override
+					public void updateReplacements() {
+						ArrayList<String> list = new ArrayList<String>();
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							list.add(player.getName());
+						}
+						setReplace(list);
+					}
+				});
+
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
+
+			@Override
+			public void reload() {
+				ArrayList<String> uuids = new ArrayList<String>();
+				for (String name : AdvancedCoreHook.getInstance().getUuids().values()) {
+					if (!uuids.contains(name)) {
+						uuids.add(name);
+					}
+				}
+				setReplace(uuids);
+			}
+
+			@Override
+			public void updateReplacements() {
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					if (!getReplace().contains(player.getUniqueId().toString())) {
+						getReplace().add(player.getUniqueId().toString());
+					}
+				}
+			}
+		});
+
+		ArrayList<String> options = new ArrayList<String>();
+		options.add("True");
+		options.add("False");
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Boolean)", options);
+		options = new ArrayList<String>();
+		TabCompleteHandler.getInstance().addTabCompleteOption("(List)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(String)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(Reward)", options) {
+
+			@Override
+			public void reload() {
+				ArrayList<String> rewards = new ArrayList<String>();
+				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+					rewards.add(reward.getRewardName());
+				}
+				setReplace(rewards);
+			}
+
+			@Override
+			public void updateReplacements() {
+
+			}
+		});
+
+		ArrayList<String> method = new ArrayList<String>();
+		for (InputMethod me : InputMethod.values()) {
+			method.add(me.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(RequestMethod)", method);
+
+		ArrayList<String> userStorage = new ArrayList<String>();
+		for (UserStorage storage : UserStorage.values()) {
+			userStorage.add(storage.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(UserStorage)", userStorage);
+
+		ArrayList<String> times = new ArrayList<String>();
+		for (TimeType ty : TimeType.values()) {
+			times.add(ty.toString());
+		}
+		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
 	}
 
 	public void loadUserAPI(UserStorage storageType) {
@@ -895,6 +887,14 @@ public class AdvancedCoreHook {
 
 	public void setPrevPageTxt(String prevPageTxt) {
 		this.prevPageTxt = prevPageTxt;
+	}
+
+	public void setPurgeMinimumDays(int purgeMinimumDays) {
+		this.purgeMinimumDays = purgeMinimumDays;
+	}
+
+	public void setPurgeOldData(boolean purgeOldData) {
+		this.purgeOldData = purgeOldData;
 	}
 
 	/**

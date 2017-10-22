@@ -288,6 +288,15 @@ public abstract class CommandHandler {
 		return options;
 	}
 
+	public boolean hasArg(String arg) {
+		for (String str : getArgs()) {
+			if (str.equalsIgnoreCase(arg)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public boolean hasPerm(CommandSender sender) {
 		boolean hasPerm = false;
 
@@ -305,15 +314,6 @@ public abstract class CommandHandler {
 
 	public boolean isPlayer(CommandSender sender) {
 		return sender instanceof Player;
-	}
-
-	public boolean hasArg(String arg) {
-		for (String str : getArgs()) {
-			if (str.equalsIgnoreCase(arg)) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	/**

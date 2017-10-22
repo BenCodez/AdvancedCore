@@ -36,35 +36,13 @@ public class BossBar {
 		bossBar.setProgress(progress);
 	}
 
-	public void setProgress(double progress) {
-		if (progress > 1) {
-			progress = 1;
-		}
-		if (progress < 0) {
-			progress = 0;
-		}
-		bossBar.setProgress(progress);
-	}
-
-	public void setTitle(String title) {
-		bossBar.setTitle(StringUtils.getInstance().colorize(title));
-	}
-
-	public void setStyle(String barStyle) {
-		bossBar.setStyle(BarStyle.valueOf(barStyle));
-	}
-
-	public void setColor(String barColor) {
-		bossBar.setColor(BarColor.valueOf(barColor));
+	public void addPlayer(Player player) {
+		bossBar.addPlayer(player);
 	}
 
 	public void hide() {
 		bossBar.setVisible(false);
 		bossBar.removeAll();
-	}
-
-	public void addPlayer(Player player) {
-		bossBar.addPlayer(player);
 	}
 
 	public void send(int delay) {
@@ -76,10 +54,6 @@ public class BossBar {
 				hide();
 			}
 		}, delay);
-	}
-
-	public void setVisible(boolean visible) {
-		bossBar.setVisible(visible);
 	}
 
 	/**
@@ -100,5 +74,31 @@ public class BossBar {
 				hide();
 			}
 		}, delay);
+	}
+
+	public void setColor(String barColor) {
+		bossBar.setColor(BarColor.valueOf(barColor));
+	}
+
+	public void setProgress(double progress) {
+		if (progress > 1) {
+			progress = 1;
+		}
+		if (progress < 0) {
+			progress = 0;
+		}
+		bossBar.setProgress(progress);
+	}
+
+	public void setStyle(String barStyle) {
+		bossBar.setStyle(BarStyle.valueOf(barStyle));
+	}
+
+	public void setTitle(String title) {
+		bossBar.setTitle(StringUtils.getInstance().colorize(title));
+	}
+
+	public void setVisible(boolean visible) {
+		bossBar.setVisible(visible);
 	}
 }

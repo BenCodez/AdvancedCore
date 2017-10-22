@@ -19,6 +19,22 @@ public class FileThread {
 	 */
 	public class ReadThread extends java.lang.Thread {
 
+		public void deletePlayerFile(String uuid) {
+			synchronized (FileThread.getInstance()) {
+				try {
+					File dFile = new File(
+							AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
+							uuid + ".yml");
+					if (dFile.exists()) {
+						dFile.delete();
+					}
+
+				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().debug(e);
+				}
+			}
+		}
+
 		public FileConfiguration getData(UserData userData, String uuid) {
 			synchronized (FileThread.getInstance()) {
 				try {
@@ -54,22 +70,6 @@ public class FileThread {
 				AdvancedCoreHook.getInstance().getPlugin().getLogger()
 						.warning("Failed to load " + uuid + ".yml, turn debug on to see full stacktraces");
 				return null;
-			}
-		}
-
-		public void deletePlayerFile(String uuid) {
-			synchronized (FileThread.getInstance()) {
-				try {
-					File dFile = new File(
-							AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
-							uuid + ".yml");
-					if (dFile.exists()) {
-						dFile.delete();
-					}
-
-				} catch (Exception e) {
-					AdvancedCoreHook.getInstance().debug(e);
-				}
 			}
 		}
 

@@ -166,6 +166,29 @@ public class UserData {
 		return ArrayUtils.getInstance().convert(list);
 	}
 
+	public boolean hasData() {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			return AdvancedCoreHook.getInstance().getMysql().containsKey(user.getUUID());
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			return FileThread.getInstance().getThread().hasPlayerFile(user.getUUID());
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			return AdvancedCoreHook.getInstance().getSQLiteUserTable()
+					.containsKey(new Column("uuid", user.getUUID(), DataType.STRING));
+		}
+		return false;
+	}
+
+	public void remove() {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			AdvancedCoreHook.getInstance().getMysql().deletePlayer(user.getUUID());
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			FileThread.getInstance().getThread().deletePlayerFile(user.getUUID());
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			AdvancedCoreHook.getInstance().getSQLiteUserTable()
+					.delete(new Column("uuid", user.getUUID(), DataType.STRING));
+		}
+	}
+
 	public void setData(final String uuid, final String path, final Object value) {
 		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}
@@ -235,28 +258,5 @@ public class UserData {
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
 			AdvancedCoreHook.getInstance().getMysql().removePlayer(user.getUUID());
 		}
-	}
-
-	public void remove() {
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			AdvancedCoreHook.getInstance().getMysql().deletePlayer(user.getUUID());
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-			FileThread.getInstance().getThread().deletePlayerFile(user.getUUID());
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-			AdvancedCoreHook.getInstance().getSQLiteUserTable()
-					.delete(new Column("uuid", user.getUUID(), DataType.STRING));
-		}
-	}
-
-	public boolean hasData() {
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			return AdvancedCoreHook.getInstance().getMysql().containsKey(user.getUUID());
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-			return FileThread.getInstance().getThread().hasPlayerFile(user.getUUID());
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-			return AdvancedCoreHook.getInstance().getSQLiteUserTable()
-					.containsKey(new Column("uuid", user.getUUID(), DataType.STRING));
-		}
-		return false;
 	}
 }

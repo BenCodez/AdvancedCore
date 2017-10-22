@@ -352,19 +352,6 @@ public class RewardHandler {
 		}
 	}
 
-	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
-		giveReward(user, prefix, data, path, user.isOnline(), true);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online) {
-		giveReward(user, prefix, data, path, online, true);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline) {
-		giveReward(user, prefix, data, path, online, giveOffline, null);
-	}
-
 	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, ConfigurationSection data, String path, boolean online,
 			boolean giveOffline, boolean checkTimed, boolean ignoreChance, HashMap<String, String> placeholders) {
@@ -380,28 +367,37 @@ public class RewardHandler {
 			rewardName = path.replace(".", "_");
 			ConfigurationSection section = data.getConfigurationSection(path);
 			Reward reward = new Reward(rewardName, section);
-			/*Reward reward;
-			if (!rewardExist(rewardName)) {
-				reward = new Reward(rewardName);
-			} else {
-				reward = getReward(rewardName);
-			}
-			if (reward.getConfig().getData().getConfigurationSection("").getKeys(true).size() != 0) {
-				if (!reward.getConfig().getData().getConfigurationSection("").getKeys(true)
-						.equals(section.getKeys(true))) {
-					plugin.getPlugin().getLogger().warning(
-							"Detected a reward file edited when it should be edited where directly defined, overriding");
-				}
-			}
-			reward.getConfig().setData(section);
-			reward.getConfig().getData().options().header(
-					"Directly defined reward file from path: '" + path + "' ANY EDITS HERE CAN GET OVERRIDDEN!");
-			updateReward(reward);*/
+			/*
+			 * Reward reward; if (!rewardExist(rewardName)) { reward = new
+			 * Reward(rewardName); } else { reward = getReward(rewardName); } if
+			 * (reward.getConfig().getData().getConfigurationSection("").getKeys(true).size(
+			 * ) != 0) { if
+			 * (!reward.getConfig().getData().getConfigurationSection("").getKeys(true)
+			 * .equals(section.getKeys(true))) { plugin.getPlugin().getLogger().warning(
+			 * "Detected a reward file edited when it should be edited where directly defined, overriding"
+			 * ); } } reward.getConfig().setData(section);
+			 * reward.getConfig().getData().options().header(
+			 * "Directly defined reward file from path: '" + path +
+			 * "' ANY EDITS HERE CAN GET OVERRIDDEN!"); updateReward(reward);
+			 */
 			giveReward(user, reward, online, giveOffline, checkTimed, ignoreChance, placeholders);
 
 		} else {
 			giveReward(user, data.getString(path, ""), online, giveOffline, checkTimed, ignoreChance, placeholders);
 		}
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
+		giveReward(user, prefix, data, path, user.isOnline(), true);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online) {
+		giveReward(user, prefix, data, path, online, true);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline) {
+		giveReward(user, prefix, data, path, online, giveOffline, null);
 	}
 
 	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
@@ -508,15 +504,12 @@ public class RewardHandler {
 		copyFile("ExampleAdvanced.yml");
 	}
 
-	/*private void updateReward(Reward reward) {
-		for (int i = getRewards().size() - 1; i >= 0; i--) {
-			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
-				getRewards().set(i, reward);
-				return;
-			}
-		}
-		getRewards().add(reward);
-	}*/
+	/*
+	 * private void updateReward(Reward reward) { for (int i = getRewards().size() -
+	 * 1; i >= 0; i--) { if
+	 * (getRewards().get(i).getFile().getName().equals(reward.getFile().getName()))
+	 * { getRewards().set(i, reward); return; } } getRewards().add(reward); }
+	 */
 
 	public synchronized boolean usesTimed() {
 		for (Reward reward : getRewards()) {

@@ -33,12 +33,8 @@ public class RewardFileData {
 
 	private ConfigurationSection configData;
 
-	public ConfigurationSection getConfigData() {
-		return configData;
-	}
-
-	public void setConfigData(ConfigurationSection configData) {
-		this.configData = configData;
+	public RewardFileData(ConfigurationSection section) {
+		configData = section;
 	}
 
 	/**
@@ -58,10 +54,6 @@ public class RewardFileData {
 		}
 
 		setup();
-	}
-
-	public RewardFileData(ConfigurationSection section) {
-		configData = section;
 	}
 
 	/**
@@ -184,14 +176,9 @@ public class RewardFileData {
 		return (ArrayList<String>) getConfigData().getList("Commands.Player", new ArrayList<String>());
 	}
 
-	/**
-	 * Gets the data.
-	 *
-	 * @return the data
-	 */
-	/*
-	 * private FileConfiguration getFileData() { return fileData; }
-	 */
+	public ConfigurationSection getConfigData() {
+		return configData;
+	}
 
 	/**
 	 * Gets the delayed enabled.
@@ -201,6 +188,15 @@ public class RewardFileData {
 	public boolean getDelayedEnabled() {
 		return getConfigData().getBoolean("Delayed.Enabled");
 	}
+
+	/**
+	 * Gets the data.
+	 *
+	 * @return the data
+	 */
+	/*
+	 * private FileConfiguration getFileData() { return fileData; }
+	 */
 
 	/**
 	 * Gets the delayed hours.
@@ -901,6 +897,10 @@ public class RewardFileData {
 	 */
 	public void setCommandsPlayer(ArrayList<String> value) {
 		set("Commands.Player", value);
+	}
+
+	public void setConfigData(ConfigurationSection configData) {
+		this.configData = configData;
 	}
 
 	/*

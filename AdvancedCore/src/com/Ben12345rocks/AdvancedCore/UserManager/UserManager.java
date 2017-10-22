@@ -122,6 +122,27 @@ public class UserManager {
 		return new User(plugin.getPlugin(), uuid);
 	}
 
+	public void purgeOldPlayers() {
+		if (plugin.isPurgeOldData()) {
+			int daysOld = plugin.getPurgeMinimumDays();
+			for (String uuid : getAllUUIDs()) {
+				User user = getUser(new UUID(uuid));
+				int days = user.getNumberOfDaysSinceLogin();
+				if (days == -1) {
+					// fix ones with no last online
+					user.setLastOnline(System.currentTimeMillis());
+				}
+				if (days > daysOld) {
+					user.remove();
+				}
+			}
+		}
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
+				&& AdvancedCoreHook.getInstance().getMysql() != null) {
+			AdvancedCoreHook.getInstance().getMysql().clearCacheBasic();
+		}
+	}
+
 	public boolean userExist(String name) {
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
@@ -149,26 +170,5 @@ public class UserManager {
 		}
 
 		return false;
-	}
-
-	public void purgeOldPlayers() {
-		if (plugin.isPurgeOldData()) {
-			int daysOld = plugin.getPurgeMinimumDays();
-			for (String uuid : getAllUUIDs()) {
-				User user = getUser(new UUID(uuid));
-				int days = user.getNumberOfDaysSinceLogin();
-				if (days == -1) {
-					// fix ones with no last online
-					user.setLastOnline(System.currentTimeMillis());
-				}
-				if (days > daysOld) {
-					user.remove();
-				}
-			}
-		}
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
-				&& AdvancedCoreHook.getInstance().getMysql() != null) {
-			AdvancedCoreHook.getInstance().getMysql().clearCacheBasic();
-		}
 	}
 }

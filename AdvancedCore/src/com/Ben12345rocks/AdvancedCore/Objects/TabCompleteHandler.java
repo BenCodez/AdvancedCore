@@ -20,6 +20,27 @@ public class TabCompleteHandler {
 
 	private ConcurrentLinkedQueue<TabCompleteHandle> tabCompletes = new ConcurrentLinkedQueue<TabCompleteHandle>();
 
+	private ArrayList<String> tabCompleteReplaces = new ArrayList<String>();
+
+	private ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions = new ConcurrentHashMap<String, ArrayList<String>>();
+
+	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
+		addTabCompleteOption(new TabCompleteHandle(toReplace, options) {
+
+			@Override
+			public void reload() {
+			}
+
+			@Override
+			public void updateReplacements() {
+			}
+		});
+	}
+
+	public void addTabCompleteOption(String toReplace, String... options) {
+		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
+	}
+
 	public void addTabCompleteOption(TabCompleteHandle handle) {
 		for (TabCompleteHandle h : tabCompletes) {
 			if (h.getToReplace().equals(handle.getToReplace())) {
@@ -40,11 +61,24 @@ public class TabCompleteHandler {
 		tabCompleteReplaces.addAll(list);
 	}
 
+	public ConcurrentHashMap<String, ArrayList<String>> getTabCompleteOptions() {
+		loadTabCompleteOptions();
+		return tabCompleteOptions;
+	}
+
+	public ArrayList<String> getTabCompleteOptions(ArrayList<CommandHandler> handles, CommandSender sender,
+			String[] args, int argNum) {
+		ArrayList<String> tabComplete = new ArrayList<String>();
+		ConcurrentHashMap<String, ArrayList<String>> options = getTabCompleteOptions();
+		for (CommandHandler h : handles) {
+			tabComplete.addAll(h.getTabCompleteOptions(sender, args, argNum, options));
+		}
+		return tabComplete;
+	}
+
 	public ArrayList<String> getTabCompleteReplaces() {
 		return tabCompleteReplaces;
 	}
-
-	private ArrayList<String> tabCompleteReplaces = new ArrayList<String>();
 
 	public void loadTabCompleteOptions() {
 		for (TabCompleteHandle h : tabCompletes) {
@@ -56,43 +90,9 @@ public class TabCompleteHandler {
 		}
 	}
 
-	private ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions = new ConcurrentHashMap<String, ArrayList<String>>();
-
-	public ConcurrentHashMap<String, ArrayList<String>> getTabCompleteOptions() {
-		loadTabCompleteOptions();
-		return tabCompleteOptions;
-	}
-
-	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
-		addTabCompleteOption(new TabCompleteHandle(toReplace, options) {
-
-			@Override
-			public void updateReplacements() {
-			}
-
-			@Override
-			public void reload() {
-			}
-		});
-	}
-
-	public void addTabCompleteOption(String toReplace, String... options) {
-		addTabCompleteOption(toReplace, ArrayUtils.getInstance().convert(options));
-	}
-
 	public void reload() {
 		for (TabCompleteHandle h : tabCompletes) {
 			h.reload();
 		}
-	}
-
-	public ArrayList<String> getTabCompleteOptions(ArrayList<CommandHandler> handles, CommandSender sender,
-			String[] args, int argNum) {
-		ArrayList<String> tabComplete = new ArrayList<String>();
-		ConcurrentHashMap<String, ArrayList<String>> options = getTabCompleteOptions();
-		for (CommandHandler h : handles) {
-			tabComplete.addAll(h.getTabCompleteOptions(sender, args, argNum, options));
-		}
-		return tabComplete;
 	}
 }
