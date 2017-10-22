@@ -162,5 +162,9 @@ public class UserManager {
 				}
 			}
 		}
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
+				&& AdvancedCoreHook.getInstance().getMysql() != null) {
+			AdvancedCoreHook.getInstance().getMysql().clearCacheBasic();
+		}
 	}
 }
