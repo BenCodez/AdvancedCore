@@ -920,6 +920,9 @@ public class User {
 		}
 		if (time == 0) {
 			time = getOfflinePlayer().getLastPlayed();
+			if (time > 0) {
+				setLastOnline(time);
+			}
 		}
 		return time;
 	}
