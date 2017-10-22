@@ -394,7 +394,7 @@ public class MySQL {
 		uuids.remove(uuid);
 		try {
 			Query query = new Query(mysql, q);
-			query.executeBatch();
+			query.executeBatchAsync();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

@@ -93,7 +93,7 @@ public class ConnectionManager {
 			config.setUsername(username);
 			config.setPassword(password);
 			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database)
-					+ "?useSSL=false&amp;allowMultiQueries=true&amp;rewriteBatchedStatements=true&amp;relaxAutoCommit=true");
+					+ "?useSSL=false&amp;allowMultiQueries=true&amp;rewriteBatchedStatements=true");
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(1);
