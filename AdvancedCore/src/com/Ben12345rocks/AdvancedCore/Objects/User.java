@@ -889,8 +889,10 @@ public class User {
 	}
 
 	public void updateName() {
-		if (!getData().getString("PlayerName").equals(getPlayerName())) {
-			getData().setString("PlayerName", getPlayerName());
+		if (getData().hasData()) {
+			if (!getData().getString("PlayerName").equals(getPlayerName())) {
+				getData().setString("PlayerName", getPlayerName());
+			}
 		}
 	}
 

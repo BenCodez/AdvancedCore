@@ -96,7 +96,7 @@ public class Table {
 		}
 	}
 
-	private boolean containsKey(Column column) {
+	public boolean containsKey(Column column) {
 		for (Column col : getRows()) {
 			if (col.getValue().equals(column.getValue())) {
 				return true;

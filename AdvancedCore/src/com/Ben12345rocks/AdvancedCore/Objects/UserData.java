@@ -247,4 +247,16 @@ public class UserData {
 					.delete(new Column("uuid", user.getUUID(), DataType.STRING));
 		}
 	}
+
+	public boolean hasData() {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			return AdvancedCoreHook.getInstance().getMysql().containsKey(user.getUUID());
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			return FileThread.getInstance().getThread().hasPlayerFile(user.getUUID());
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			return AdvancedCoreHook.getInstance().getSQLiteUserTable()
+					.containsKey(new Column("uuid", user.getUUID(), DataType.STRING));
+		}
+		return false;
+	}
 }
