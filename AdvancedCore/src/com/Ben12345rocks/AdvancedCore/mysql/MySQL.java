@@ -312,7 +312,7 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (!containsKey(uuid)) {
+		if (getUuidsQuery().contains(uuid)) {
 			loadPlayer(uuid);
 		}
 	}
@@ -323,7 +323,7 @@ public class MySQL {
 
 	public synchronized void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
-		if (getUuids().contains(index)) {
+		if (getUuidsQuery().contains(index)) {
 			String query = "UPDATE " + getName() + " SET ";
 
 			if (dataType == DataType.STRING) {
@@ -393,7 +393,14 @@ public class MySQL {
 	}
 
 	public void deletePlayer(String uuid) {
-		String query = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
-		this.query.add(query);
+		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
+		uuids.remove(uuid);
+		try {
+			Query query = new Query(mysql, q);
+			query.executeBatch();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
 	}
 }
