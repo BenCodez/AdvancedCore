@@ -706,6 +706,7 @@ public class AdvancedCoreHook {
 			}
 		});
 		TabCompleteHandler.getInstance().reload();
+		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}
 
 	public void loadValueRequestInputCommands() {
