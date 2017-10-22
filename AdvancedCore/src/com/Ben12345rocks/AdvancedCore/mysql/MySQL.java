@@ -393,6 +393,7 @@ public class MySQL {
 		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
 		uuids.remove(uuid);
 		this.query.add(q);
+		removePlayer(uuid);
 
 	}
 }
