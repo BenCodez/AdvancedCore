@@ -107,6 +107,26 @@ public class AdvancedCoreHook {
 
 	private boolean alternateUUIDLookUp;
 
+	private boolean purgeOldData = false;
+
+	private int purgeMinimumDays = 90;
+
+	public boolean isPurgeOldData() {
+		return purgeOldData;
+	}
+
+	public void setPurgeOldData(boolean purgeOldData) {
+		this.purgeOldData = purgeOldData;
+	}
+
+	public int getPurgeMinimumDays() {
+		return purgeMinimumDays;
+	}
+
+	public void setPurgeMinimumDays(int purgeMinimumDays) {
+		this.purgeMinimumDays = purgeMinimumDays;
+	}
+
 	private AdvancedCoreHook() {
 	}
 
@@ -538,6 +558,9 @@ public class AdvancedCoreHook {
 		loadAutoUpdateCheck();
 		loadVersionFile();
 		loadTabComplete();
+		if (purgeOldData) {
+			UserManager.getInstance().purgeOldPlayers(purgeMinimumDays);
+		}
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 

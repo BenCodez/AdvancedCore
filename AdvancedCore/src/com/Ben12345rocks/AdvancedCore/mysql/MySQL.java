@@ -391,4 +391,9 @@ public class MySQL {
 		}
 
 	}
+
+	public void deletePlayer(String uuid) {
+		String query = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
+		this.query.add(query);
+	}
 }

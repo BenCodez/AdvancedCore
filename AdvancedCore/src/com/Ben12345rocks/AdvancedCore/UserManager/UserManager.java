@@ -150,4 +150,14 @@ public class UserManager {
 
 		return false;
 	}
+
+	public void purgeOldPlayers(int daysOld) {
+		for (String uuid : getAllUUIDs()) {
+			User user = getUser(new UUID(uuid));
+			int days = user.getNumberOfDaysSinceLogin();
+			if (days > daysOld) {
+				user.remove();
+			}
+		}
+	}
 }

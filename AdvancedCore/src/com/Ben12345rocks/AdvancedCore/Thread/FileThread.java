@@ -57,6 +57,22 @@ public class FileThread {
 			}
 		}
 
+		public void deletePlayerFile(String uuid) {
+			synchronized (FileThread.getInstance()) {
+				try {
+					File dFile = new File(
+							AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
+							uuid + ".yml");
+					if (dFile.exists()) {
+						dFile.delete();
+					}
+
+				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().debug(e);
+				}
+			}
+		}
+
 		@Override
 		public void run() {
 		}

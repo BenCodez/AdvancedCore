@@ -236,4 +236,15 @@ public class UserData {
 			AdvancedCoreHook.getInstance().getMysql().removePlayer(user.getUUID());
 		}
 	}
+
+	public void remove() {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			AdvancedCoreHook.getInstance().getMysql().deletePlayer(user.getUUID());
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			FileThread.getInstance().getThread().deletePlayerFile(user.getUUID());
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			AdvancedCoreHook.getInstance().getSQLiteUserTable()
+					.delete(new Column("uuid", user.getUUID(), DataType.STRING));
+		}
+	}
 }
