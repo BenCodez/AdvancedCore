@@ -109,8 +109,10 @@ public class RewardBuilder {
 	@SuppressWarnings("deprecation")
 	public void send(User user) {
 		if (reward == null) {
-			RewardHandler.getInstance().giveReward(user, prefix, data, path, online, giveOffline, checkTimed,
-					ignoreChance, placeholders);
+			if (data != null) {
+				RewardHandler.getInstance().giveReward(user, prefix, data, path, online, giveOffline, checkTimed,
+						ignoreChance, placeholders);
+			}
 		} else {
 			RewardHandler.getInstance().giveReward(user, reward, isGiveOffline(), isGiveOffline(), checkTimed,
 					ignoreChance, placeholders);

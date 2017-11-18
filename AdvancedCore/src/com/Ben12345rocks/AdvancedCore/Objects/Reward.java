@@ -1145,6 +1145,7 @@ public class Reward {
 				phs.put("money", "" + money);
 				phs.put("exp", "" + exp);
 				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
+				giveRewardsRewards(user, placeholders);
 				givePriorityReward(user, placeholders);
 				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
@@ -1167,6 +1168,10 @@ public class Reward {
 
 			}
 		}
+	}
+
+	private void giveRewardsRewards(User user, HashMap<String, String> placeholders) {
+		new RewardBuilder(getConfig().getConfigData(), "Rewards").withPlaceHolder(placeholders).send(user);
 	}
 
 	/**
