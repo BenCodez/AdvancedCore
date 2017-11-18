@@ -93,7 +93,6 @@ public class AdvancedCoreHook {
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
 	private String version = "";
 	private String buildTime = "";
-	private int maxMysqlSize = -1;
 	private boolean autoKillInvs = true;
 	private String prevPageTxt = "&aPrevious Page";
 	private String nextPageTxt = "&aNext Page";
@@ -259,10 +258,6 @@ public class AdvancedCoreHook {
 
 	public Logger getLogger() {
 		return logger;
-	}
-
-	public int getMaxMysqlSize() {
-		return maxMysqlSize;
 	}
 
 	/**
@@ -850,10 +845,6 @@ public class AdvancedCoreHook {
 
 	public void setLogDebugToFile(boolean logDebugToFile) {
 		this.logDebugToFile = logDebugToFile;
-	}
-
-	public void setMaxMysqlSize(int maxMysqlSize) {
-		this.maxMysqlSize = maxMysqlSize;
 	}
 
 	/**
