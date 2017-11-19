@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
+import org.bukkit.configuration.ConfigurationSection;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
 import com.Ben12345rocks.AdvancedCore.mysql.api.queries.Query;
@@ -47,19 +49,34 @@ public class MySQL {
 
 	private boolean useBatchUpdates = true;
 
-	public MySQL(String tableName, String hostName, int port, String database, String user, String pass,
-			int maxThreads) {
-		if (AdvancedCoreHook.getInstance().getMaxMysqlSize() >= 0) {
+	private int maxSize = 0;
+
+	public MySQL(String tableName, ConfigurationSection section) {
+		String tablePrefix = section.getString("Prefix");
+		String hostName = section.getString("Host");
+		int port = section.getInt("Port");
+		String user = section.getString("Username");
+		String pass = section.getString("Password");
+		String database = section.getString("Database");
+		int maxThreads = section.getInt("MaxConnections",1);
+		if (maxThreads < 1) {
+			maxThreads = 1;
+		}
+		this.maxSize = section.getInt("MaxSize", -1);
+		if (maxSize >= 0) {
 			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
-					.maximumSize(AdvancedCoreHook.getInstance().getMaxMysqlSize())
-					.build(new CacheLoader<String, ArrayList<Column>>() {
+					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
 						@Override
 						public ArrayList<Column> load(String key) {
 							return getExactQuery(new Column("uuid", key, DataType.STRING));
 						}
 					});
 		}
+
 		name = tableName;
+		if (tablePrefix != null) {
+			name = tablePrefix + tableName;
+		}
 		mysql = new com.Ben12345rocks.AdvancedCore.mysql.api.MySQL(maxThreads);
 		if (!mysql.connect(hostName, "" + port, user, pass, database)) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
@@ -395,5 +412,9 @@ public class MySQL {
 
 		}
 
+	}
+
+	public int getMaxSize() {
+		return maxSize;
 	}
 }

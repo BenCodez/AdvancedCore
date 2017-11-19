@@ -318,12 +318,32 @@ public class Reward {
 		time = time.plus(getDelayHours(), ChronoUnit.HOURS);
 		time = time.plus(getDelayMinutes(), ChronoUnit.MINUTES);
 		time = time.plus(getDelaySeconds(), ChronoUnit.SECONDS);
+		checkRewardFile();
 		user.addTimedReward(this, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
 		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours, " + getDelayMinutes() + " minutes, "
 				+ getDelaySeconds() + " seconds (" + time.toString() + ")");
 		return true;
+	}
 
+	private void checkRewardFile() {
+		if (!getConfig().isRewardFile()) {
+			String rewardName = name;
+			Reward reward = RewardHandler.getInstance().getReward(rewardName);
+			ConfigurationSection section = getConfig().getConfigData();
+
+			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
+				if (!reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
+						.equals(section.getKeys(true))) {
+					plugin.getPlugin().getLogger().warning(
+							"Detected a reward file edited when it should be edited where directly defined, overriding");
+				}
+			}
+			reward.getConfig().setData(section);
+			reward.getConfig().getFileData().options()
+					.header("Directly defined reward file. ANY EDITS HERE CAN GET OVERRIDDEN!");
+			RewardHandler.getInstance().updateReward(reward);
+		}
 	}
 
 	/**
@@ -354,6 +374,7 @@ public class Reward {
 		if (LocalDateTime.now().isAfter(time)) {
 			time = time.plusDays(1);
 		}
+		checkRewardFile();
 		user.addTimedReward(this, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
 		plugin.debug("Giving reward " + name + " at " + time.toString());
@@ -1145,6 +1166,7 @@ public class Reward {
 				phs.put("money", "" + money);
 				phs.put("exp", "" + exp);
 				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
+				giveRewardsRewards(user, placeholders);
 				givePriorityReward(user, placeholders);
 				giveRandom(user, true, placeholders);
 				runJavascript(user, true, placeholders);
@@ -1167,6 +1189,11 @@ public class Reward {
 
 			}
 		}
+	}
+
+	private void giveRewardsRewards(User user, HashMap<String, String> placeholders) {
+		new RewardBuilder(getConfig().getConfigData(), "Rewards").withPrefix(name).withPlaceHolder(placeholders)
+				.send(user);
 	}
 
 	/**

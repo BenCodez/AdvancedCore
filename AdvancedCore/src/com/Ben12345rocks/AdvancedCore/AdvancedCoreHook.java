@@ -83,7 +83,6 @@ public class AdvancedCoreHook {
 	private String permPrefix;
 	private IServerHandle serverHandle;
 	private Logger logger;
-	private boolean preloadUsers = false;
 	private boolean sendScoreboards = true;
 	private int resourceId = 0;
 	private boolean extraDebug = false;
@@ -93,7 +92,6 @@ public class AdvancedCoreHook {
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
 	private String version = "";
 	private String buildTime = "";
-	private int maxMysqlSize = -1;
 	private boolean autoKillInvs = true;
 	private String prevPageTxt = "&aPrevious Page";
 	private String nextPageTxt = "&aNext Page";
@@ -261,10 +259,6 @@ public class AdvancedCoreHook {
 		return logger;
 	}
 
-	public int getMaxMysqlSize() {
-		return maxMysqlSize;
-	}
-
 	/**
 	 * @return the mysql
 	 */
@@ -414,10 +408,6 @@ public class AdvancedCoreHook {
 
 	public boolean isPlaceHolderAPIEnabled() {
 		return placeHolderAPIEnabled;
-	}
-
-	public boolean isPreloadUsers() {
-		return preloadUsers;
 	}
 
 	public boolean isPurgeOldData() {
@@ -852,10 +842,6 @@ public class AdvancedCoreHook {
 		this.logDebugToFile = logDebugToFile;
 	}
 
-	public void setMaxMysqlSize(int maxMysqlSize) {
-		this.maxMysqlSize = maxMysqlSize;
-	}
-
 	/**
 	 * @param mysql
 	 *            the mysql to set
@@ -879,10 +865,6 @@ public class AdvancedCoreHook {
 
 	public void setPlugin(JavaPlugin plugin) {
 		this.plugin = plugin;
-	}
-
-	public void setPreloadUsers(boolean preloadUsers) {
-		this.preloadUsers = preloadUsers;
 	}
 
 	public void setPrevPageTxt(String prevPageTxt) {

@@ -554,7 +554,8 @@ public class ItemBuilder {
 				SkullMeta im = (SkullMeta) is.getItemMeta();
 				im.setOwningPlayer(offlinePlayer);
 				is.setItemMeta(im);
-			} catch (ClassCastException expected) {
+			} catch (Exception expected) {
+				setSkullOwner(offlinePlayer.getName());
 			}
 		}
 		return this;
