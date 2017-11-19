@@ -83,7 +83,6 @@ public class AdvancedCoreHook {
 	private String permPrefix;
 	private IServerHandle serverHandle;
 	private Logger logger;
-	private boolean preloadUsers = false;
 	private boolean sendScoreboards = true;
 	private int resourceId = 0;
 	private boolean extraDebug = false;
@@ -409,10 +408,6 @@ public class AdvancedCoreHook {
 
 	public boolean isPlaceHolderAPIEnabled() {
 		return placeHolderAPIEnabled;
-	}
-
-	public boolean isPreloadUsers() {
-		return preloadUsers;
 	}
 
 	public boolean isPurgeOldData() {
@@ -870,10 +865,6 @@ public class AdvancedCoreHook {
 
 	public void setPlugin(JavaPlugin plugin) {
 		this.plugin = plugin;
-	}
-
-	public void setPreloadUsers(boolean preloadUsers) {
-		this.preloadUsers = preloadUsers;
 	}
 
 	public void setPrevPageTxt(String prevPageTxt) {
