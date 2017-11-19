@@ -58,8 +58,11 @@ public class MySQL {
 		String user = section.getString("Username");
 		String pass = section.getString("Password");
 		String database = section.getString("Database");
-		int maxThreads = section.getInt("MaxConnections");
-		this.maxSize = section.getInt("MaxSize");
+		int maxThreads = section.getInt("MaxConnections",1);
+		if (maxThreads < 1) {
+			maxThreads = 1;
+		}
+		this.maxSize = section.getInt("MaxSize", -1);
 		if (maxSize >= 0) {
 			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
 					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
