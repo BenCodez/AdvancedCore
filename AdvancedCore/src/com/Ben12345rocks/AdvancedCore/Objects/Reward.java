@@ -329,7 +329,7 @@ public class Reward {
 	private void checkRewardFile() {
 		if (!getConfig().isRewardFile()) {
 			String rewardName = name;
-			Reward reward = RewardHandler.getInstance().getReward(rewardName);
+			Reward reward = RewardHandler.getInstance().getReward(rewardName + "_Rewards");
 			ConfigurationSection section = getConfig().getConfigData();
 
 			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
