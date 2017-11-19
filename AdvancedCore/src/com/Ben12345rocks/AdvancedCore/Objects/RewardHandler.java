@@ -362,9 +362,15 @@ public class RewardHandler {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, ConfigurationSection data, String path, boolean online,
 			boolean giveOffline, boolean checkTimed, boolean ignoreChance, HashMap<String, String> placeholders) {
+		giveReward(user, prefix, "", data, path, online, giveOffline, checkTimed, ignoreChance, placeholders);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void giveReward(User user, String prefix, String suffix, ConfigurationSection data, String path,
+			boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
+			HashMap<String, String> placeholders) {
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
 				giveReward(user, reward, online, giveOffline, checkTimed, ignoreChance, placeholders);
@@ -374,7 +380,11 @@ public class RewardHandler {
 			if (prefix != null && !prefix.equals("")) {
 				rewardName += prefix + "_";
 			}
-			rewardName = path.replace(".", "_");
+			rewardName += path.replace(".", "_");
+
+			if (suffix != null && !suffix.equals("")) {
+				rewardName += "_" + suffix;
+			}
 			ConfigurationSection section = data.getConfigurationSection(path);
 			Reward reward = new Reward(rewardName, section);
 			/*

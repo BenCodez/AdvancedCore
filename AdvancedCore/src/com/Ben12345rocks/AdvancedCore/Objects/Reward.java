@@ -329,7 +329,7 @@ public class Reward {
 	private void checkRewardFile() {
 		if (!getConfig().isRewardFile()) {
 			String rewardName = name;
-			Reward reward = RewardHandler.getInstance().getReward(rewardName + "_Rewards");
+			Reward reward = RewardHandler.getInstance().getReward(rewardName);
 			ConfigurationSection section = getConfig().getConfigData();
 
 			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
@@ -1192,7 +1192,8 @@ public class Reward {
 	}
 
 	private void giveRewardsRewards(User user, HashMap<String, String> placeholders) {
-		new RewardBuilder(getConfig().getConfigData(), "Rewards").withPlaceHolder(placeholders).send(user);
+		new RewardBuilder(getConfig().getConfigData(), "Rewards").withPrefix(name).withPlaceHolder(placeholders)
+				.send(user);
 	}
 
 	/**

@@ -23,6 +23,7 @@ public class RewardBuilder {
 	private boolean online;
 	private boolean checkTimed = true;
 	private boolean ignoreChance;
+	private String suffix;
 
 	public RewardBuilder(ConfigurationSection data, String path) {
 		this.data = data;
@@ -110,8 +111,8 @@ public class RewardBuilder {
 	public void send(User user) {
 		if (reward == null) {
 			if (data != null) {
-				RewardHandler.getInstance().giveReward(user, prefix, data, path, online, giveOffline, checkTimed,
-						ignoreChance, placeholders);
+				RewardHandler.getInstance().giveReward(user, prefix, suffix, data, path, online, giveOffline,
+						checkTimed, ignoreChance, placeholders);
 			}
 		} else {
 			RewardHandler.getInstance().giveReward(user, reward, isGiveOffline(), isGiveOffline(), checkTimed,
@@ -160,6 +161,11 @@ public class RewardBuilder {
 
 	public RewardBuilder withPrefix(String prefix) {
 		this.prefix = prefix;
+		return this;
+	}
+
+	public RewardBuilder withSuffix(String suffix) {
+		this.suffix = suffix;
 		return this;
 	}
 
