@@ -151,6 +151,16 @@ public class RewardHandler {
 		return new Reward(defaultFolder, reward);
 	}
 
+	public void updateReward(Reward reward) {
+		for (int i = getRewards().size() - 1; i >= 0; i--) {
+			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
+				getRewards().set(i, reward);
+				return;
+			}
+		}
+		getRewards().add(reward);
+	}
+
 	/**
 	 * Gets the reward files.
 	 *

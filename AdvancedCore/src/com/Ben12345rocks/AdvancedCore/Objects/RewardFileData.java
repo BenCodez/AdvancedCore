@@ -56,6 +56,20 @@ public class RewardFileData {
 		setup();
 	}
 
+	public boolean isRewardFile() {
+		return dFile != null;
+	}
+
+	public void setData(ConfigurationSection value) {
+		getFileData().set("", value);
+
+		reward.loadValues();
+	}
+
+	public FileConfiguration getFileData() {
+		return fileData;
+	}
+
 	/**
 	 * Gets the action bar delay.
 	 *
