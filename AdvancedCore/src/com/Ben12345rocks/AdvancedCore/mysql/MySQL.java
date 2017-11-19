@@ -52,15 +52,14 @@ public class MySQL {
 	private int maxSize = 0;
 
 	public MySQL(String tableName, ConfigurationSection section) {
-		loadMySQL(tableName, section.getString("Host"), section.getInt("Port"), section.getString("Database"),
-				section.getString("Username"), section.getString("Password"), section.getInt("MaxConnections"),
-				section.getString("Prefix"), section.getInt("MaxSize"));
-
-	}
-
-	public void loadMySQL(String tableName, String hostName, int port, String database, String user, String pass,
-			int maxThreads, String tablePrefix, int maxSize) {
-		this.maxSize = maxSize;
+		String tablePrefix = section.getString("Prefix");
+		String hostName = section.getString("Host");
+		int port = section.getInt("Port");
+		String user = section.getString("Username");
+		String pass = section.getString("Password");
+		String database = section.getString("Database");
+		int maxThreads = section.getInt("MaxConnections");
+		this.maxSize = section.getInt("MaxSize");
 		if (maxSize >= 0) {
 			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
 					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
