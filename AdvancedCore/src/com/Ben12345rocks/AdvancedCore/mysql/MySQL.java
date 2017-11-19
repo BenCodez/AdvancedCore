@@ -73,7 +73,7 @@ public class MySQL {
 
 		name = tableName;
 		if (tablePrefix != null) {
-			name = tablePrefix = tableName;
+			name = tablePrefix + tableName;
 		}
 		mysql = new com.Ben12345rocks.AdvancedCore.mysql.api.MySQL(maxThreads);
 		if (!mysql.connect(hostName, "" + port, user, pass, database)) {
