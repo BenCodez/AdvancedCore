@@ -22,6 +22,7 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
@@ -550,11 +551,16 @@ public class ItemBuilder {
 
 	public ItemBuilder setSkullOwner(OfflinePlayer offlinePlayer) {
 		if (offlinePlayer != null) {
-			try {
-				SkullMeta im = (SkullMeta) is.getItemMeta();
-				im.setOwningPlayer(offlinePlayer);
-				is.setItemMeta(im);
-			} catch (Exception expected) {
+			String version = NMSManager.getInstance().getVersion();
+			if (!version.contains("1_8")) {
+				try {
+					SkullMeta im = (SkullMeta) is.getItemMeta();
+					im.setOwningPlayer(offlinePlayer);
+					is.setItemMeta(im);
+				} catch (Exception expected) {
+					setSkullOwner(offlinePlayer.getName());
+				}
+			} else {
 				setSkullOwner(offlinePlayer.getName());
 			}
 		}
