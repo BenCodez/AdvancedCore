@@ -58,7 +58,7 @@ public class MySQL {
 		String user = section.getString("Username");
 		String pass = section.getString("Password");
 		String database = section.getString("Database");
-		int maxThreads = section.getInt("MaxConnections",1);
+		int maxThreads = section.getInt("MaxConnections", 1);
 		if (maxThreads < 1) {
 			maxThreads = 1;
 		}
@@ -406,7 +406,7 @@ public class MySQL {
 					}
 				}
 			} catch (SQLException e1) {
-
+				AdvancedCoreHook.getInstance().extraDebug("Failed to send query: " + sql);
 				e1.printStackTrace();
 			}
 
