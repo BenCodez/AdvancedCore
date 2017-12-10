@@ -122,6 +122,10 @@ public class UserManager {
 		return new User(plugin.getPlugin(), uuid);
 	}
 
+	public User getUser(java.util.UUID uuid) {
+		return getUser(new UUID(uuid.toString()));
+	}
+
 	public void purgeOldPlayers() {
 		if (plugin.isPurgeOldData()) {
 			int daysOld = plugin.getPurgeMinimumDays();
