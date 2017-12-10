@@ -150,6 +150,7 @@ public class UserManager {
 	public boolean userExist(String name) {
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
+				plugin.extraDebug("Found " + name + " loaded in uuid map");
 				return true;
 			}
 		}
