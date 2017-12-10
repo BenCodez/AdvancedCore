@@ -48,8 +48,9 @@ public class WorldChangeEvent implements Listener {
 				Player player = event.getPlayer();
 
 				User user = UserManager.getInstance().getUser(player);
-
-				user.checkOfflineRewards();
+				if (user.isCheckWorld()) {
+					user.checkOfflineRewards();
+				}
 			}
 		}, 20L);
 

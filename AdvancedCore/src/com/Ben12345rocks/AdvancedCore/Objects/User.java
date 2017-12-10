@@ -932,4 +932,12 @@ public class User {
 		}
 	}
 
+	public void setCheckWorld(boolean b) {
+		getData().setString("CheckWorld", "" + b);
+	}
+
+	public boolean isCheckWorld() {
+		return Boolean.valueOf(getData().getString("CheckWorld"));
+	}
+
 }
