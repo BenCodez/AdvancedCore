@@ -88,7 +88,7 @@ public class AdvancedCoreHook {
 	private boolean sendScoreboards = true;
 	private int resourceId = 0;
 	private boolean extraDebug = false;
-	private boolean dsiableCheckOnWorldChange = false;
+	private boolean disableCheckOnWorldChange = false;
 	private Timer timer = new Timer();
 	private boolean autoDownload = false;
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
@@ -787,16 +787,16 @@ public class AdvancedCoreHook {
 	/**
 	 * @return the dsiableCheckOnWorldChange
 	 */
-	public boolean isDsiableCheckOnWorldChange() {
-		return dsiableCheckOnWorldChange;
+	public boolean isDisableCheckOnWorldChange() {
+		return disableCheckOnWorldChange;
 	}
 
 	/**
 	 * @param dsiableCheckOnWorldChange
 	 *            the dsiableCheckOnWorldChange to set
 	 */
-	public void setDsiableCheckOnWorldChange(boolean dsiableCheckOnWorldChange) {
-		this.dsiableCheckOnWorldChange = dsiableCheckOnWorldChange;
+	public void setDiableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
+		this.disableCheckOnWorldChange = disableCheckOnWorldChange;
 	}
 
 	public void setDebug(boolean debug) {
