@@ -795,7 +795,7 @@ public class AdvancedCoreHook {
 	 * @param dsiableCheckOnWorldChange
 	 *            the dsiableCheckOnWorldChange to set
 	 */
-	public void setDiableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
+	public void setDisableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
 		this.disableCheckOnWorldChange = disableCheckOnWorldChange;
 	}
 
