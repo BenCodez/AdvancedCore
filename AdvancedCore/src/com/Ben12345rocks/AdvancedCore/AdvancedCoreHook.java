@@ -46,6 +46,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.mysql.MySQL;
@@ -66,6 +67,7 @@ public class AdvancedCoreHook {
 
 	private ConcurrentHashMap<String, String> uuids;
 
+	private SignMenu signMenu;
 	private JavaPlugin plugin;
 	private boolean placeHolderAPIEnabled;
 	private boolean timerLoaded = false;
@@ -470,6 +472,7 @@ public class AdvancedCoreHook {
 	 */
 	public void loadBasicHook(JavaPlugin plugin) {
 		this.plugin = plugin;
+		this.signMenu = new SignMenu(plugin);
 		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
@@ -481,6 +484,10 @@ public class AdvancedCoreHook {
 		loadAutoUpdateCheck();
 		loadVersionFile();
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
+	}
+
+	public SignMenu getSignMenu() {
+		return this.signMenu;
 	}
 
 	public void loadEconomy() {
@@ -524,6 +531,7 @@ public class AdvancedCoreHook {
 	 */
 	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
+		this.signMenu = new SignMenu(plugin);
 		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();

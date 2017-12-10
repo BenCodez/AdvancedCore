@@ -55,6 +55,9 @@ public class BooleanRequester {
 		if (AdvancedCoreHook.getInstance().getDisabledRequestMethods().contains(method.toString())) {
 			player.sendMessage("Disabled method: " + method.toString());
 		}
+		if (method.equals(InputMethod.SIGN)) {
+			method = InputMethod.INVENTORY;
+		}
 		if (method.equals(InputMethod.INVENTORY)) {
 
 			BInventory inv = new BInventory("Click one of the following:");
