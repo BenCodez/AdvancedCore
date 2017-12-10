@@ -363,9 +363,15 @@ public class MySQL {
 				}
 			}
 
-			this.query.add(query);
+			addToQue(query);
 		} else {
 			insert(index, column, value, dataType);
+		}
+	}
+
+	public void addToQue(String query) {
+		if (!this.query.contains(query)) {
+			this.query.add(query);
 		}
 	}
 
