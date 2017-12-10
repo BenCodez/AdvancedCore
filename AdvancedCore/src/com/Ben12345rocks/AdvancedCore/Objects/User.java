@@ -221,6 +221,7 @@ public class User {
 			RewardHandler.getInstance().giveReward(this, args[0], false, true, false,
 					ArrayUtils.getInstance().fromString(placeholders));
 		}
+		setCheckWorld(false);
 	}
 
 	public void closeInv() {
