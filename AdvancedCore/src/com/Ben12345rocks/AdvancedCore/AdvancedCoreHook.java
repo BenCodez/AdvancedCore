@@ -88,7 +88,7 @@ public class AdvancedCoreHook {
 	private boolean sendScoreboards = true;
 	private int resourceId = 0;
 	private boolean extraDebug = false;
-	private boolean checkOnWorldChange = false;
+	private boolean dsiableCheckOnWorldChange = false;
 	private Timer timer = new Timer();
 	private boolean autoDownload = false;
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
@@ -385,10 +385,6 @@ public class AdvancedCoreHook {
 		return autoKillInvs;
 	}
 
-	public synchronized boolean isCheckOnWorldChange() {
-		return checkOnWorldChange;
-	}
-
 	public boolean isDebug() {
 		return debug;
 	}
@@ -501,9 +497,7 @@ public class AdvancedCoreHook {
 	public void loadEvents() {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
 		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), plugin);
-		if (checkOnWorldChange) {
-			Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
-		}
+		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
 	}
 
 	private void loadHandle() {
@@ -790,8 +784,19 @@ public class AdvancedCoreHook {
 		this.autoKillInvs = autoKillInvs;
 	}
 
-	public synchronized void setCheckOnWorldChange(boolean checkOnWorldChange) {
-		this.checkOnWorldChange = checkOnWorldChange;
+	/**
+	 * @return the dsiableCheckOnWorldChange
+	 */
+	public boolean isDsiableCheckOnWorldChange() {
+		return dsiableCheckOnWorldChange;
+	}
+
+	/**
+	 * @param dsiableCheckOnWorldChange
+	 *            the dsiableCheckOnWorldChange to set
+	 */
+	public void setDsiableCheckOnWorldChange(boolean dsiableCheckOnWorldChange) {
+		this.dsiableCheckOnWorldChange = dsiableCheckOnWorldChange;
 	}
 
 	public void setDebug(boolean debug) {

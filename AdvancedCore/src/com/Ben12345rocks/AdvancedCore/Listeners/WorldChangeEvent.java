@@ -7,6 +7,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.plugin.Plugin;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
@@ -36,18 +37,15 @@ public class WorldChangeEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorldChange(PlayerChangedWorldEvent event) {
+
 		plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
-				if (event.getPlayer() == null) {
+				if (AdvancedCoreHook.getInstance().isDsiableCheckOnWorldChange() || event.getPlayer() == null) {
 					return;
 				}
 				Player player = event.getPlayer();
-
-				if (!plugin.getDataFolder().exists()) {
-					plugin.getDataFolder().mkdir();
-				}
 
 				User user = UserManager.getInstance().getUser(player);
 
