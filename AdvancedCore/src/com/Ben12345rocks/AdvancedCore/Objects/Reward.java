@@ -390,6 +390,7 @@ public class Reward {
 		if (player == null) {
 			return false;
 		}
+		checkRewardFile();
 		String world = player.getWorld().getName();
 		if (getWorlds().contains(world)) {
 			return true;
