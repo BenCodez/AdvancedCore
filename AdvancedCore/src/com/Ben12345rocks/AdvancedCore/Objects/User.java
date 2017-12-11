@@ -210,6 +210,7 @@ public class User {
 	 */
 	@SuppressWarnings("deprecation")
 	public void checkOfflineRewards() {
+		setCheckWorld(false);
 		ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
 		for (String str : copy) {
@@ -221,7 +222,7 @@ public class User {
 			RewardHandler.getInstance().giveReward(this, args[0], false, true, false,
 					ArrayUtils.getInstance().fromString(placeholders));
 		}
-		setCheckWorld(false);
+		
 	}
 
 	public void closeInv() {
