@@ -1107,6 +1107,7 @@ public class Reward {
 
 		if (((!online && !user.isOnline()) || !checkWorld(user)) && !isForceOffline()) {
 			if (giveOffline) {
+				checkRewardFile();
 				user.addOfflineRewards(this, placeholders);
 				user.setCheckWorld(true);
 			}
