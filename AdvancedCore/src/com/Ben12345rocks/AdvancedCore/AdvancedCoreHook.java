@@ -468,7 +468,7 @@ public class AdvancedCoreHook {
 	 */
 	public void loadBasicHook(JavaPlugin plugin) {
 		this.plugin = plugin;
-		this.signMenu = new SignMenu(plugin);
+		loadSignAPI();
 		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
@@ -525,7 +525,7 @@ public class AdvancedCoreHook {
 	 */
 	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
-		this.signMenu = new SignMenu(plugin);
+		loadSignAPI();
 		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
@@ -552,6 +552,17 @@ public class AdvancedCoreHook {
 		});
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
+	}
+
+	private void loadSignAPI() {
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null) {
+			try {
+				this.signMenu = new SignMenu(plugin);
+			} catch (Exception e) {
+				debug(e);
+			}
+		}
+
 	}
 
 	/**
