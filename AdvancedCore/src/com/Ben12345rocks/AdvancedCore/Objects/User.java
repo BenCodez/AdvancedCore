@@ -211,18 +211,25 @@ public class User {
 	@SuppressWarnings("deprecation")
 	public void checkOfflineRewards() {
 		setCheckWorld(false);
-		ArrayList<String> copy = getOfflineRewards();
+		final ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
-		for (String str : copy) {
-			String[] args = str.split("%placeholders%");
-			String placeholders = "";
-			if (args.length > 1) {
-				placeholders = args[1];
+		final User user = this;
+		Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				for (String str : copy) {
+					String[] args = str.split("%placeholders%");
+					String placeholders = "";
+					if (args.length > 1) {
+						placeholders = args[1];
+					}
+					RewardHandler.getInstance().giveReward(user, args[0], false, true, false,
+							ArrayUtils.getInstance().fromString(placeholders));
+				}
 			}
-			RewardHandler.getInstance().giveReward(this, args[0], false, true, false,
-					ArrayUtils.getInstance().fromString(placeholders));
-		}
-		
+		}, 5l);
+
 	}
 
 	public void closeInv() {
