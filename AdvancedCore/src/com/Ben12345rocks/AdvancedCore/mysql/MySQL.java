@@ -370,9 +370,9 @@ public class MySQL {
 	}
 
 	public void addToQue(String query) {
-		if (!this.query.contains(query)) {
-			this.query.add(query);
-		}
+		// if (!this.query.contains(query)) {
+		this.query.add(query);
+		// }
 	}
 
 	public synchronized void updateBatch() {
