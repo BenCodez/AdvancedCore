@@ -333,8 +333,8 @@ public class Reward {
 			ConfigurationSection section = getConfig().getConfigData();
 
 			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
-				if (!reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
-						.equals(section.getKeys(true))) {
+				if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(false).size() != section
+						.getKeys(true).size()) {
 					plugin.getPlugin().getLogger().warning(
 							"Detected a reward file edited when it should be edited where directly defined, overriding");
 				}
