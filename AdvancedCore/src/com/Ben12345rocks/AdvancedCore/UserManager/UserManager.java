@@ -150,7 +150,7 @@ public class UserManager {
 	public boolean userExist(String name) {
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
-				plugin.extraDebug("Found " + name + " loaded in uuid map");
+				//plugin.extraDebug("Found " + name + " loaded in uuid map");
 				return true;
 			}
 		}
@@ -158,7 +158,7 @@ public class UserManager {
 		for (String uuid : getAllUUIDs()) {
 			User user = getUser(new UUID(uuid));
 			if (user.getPlayerName().equalsIgnoreCase(name)) {
-				plugin.extraDebug("Found " + name + " in database");
+				//plugin.extraDebug("Found " + name + " in database");
 				return true;
 			}
 		}
