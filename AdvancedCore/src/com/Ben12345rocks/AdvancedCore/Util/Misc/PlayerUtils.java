@@ -129,34 +129,43 @@ public class PlayerUtils {
 			return null;
 		}
 
-		OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
+		if (plugin.isAlternateUUIDLookUp() || !Bukkit.getServer().getOnlineMode()) {
+			return getUUIDLookup(playerName);
+		}
 
-		if (plugin.isAlternateUUIDLookUp() || (!p.hasPlayedBefore() && !p.isOnline())) {
-			ConcurrentHashMap<String, String> uuids = plugin.getUuids();
-			if (uuids != null) {
-				String uuid = uuids.get(playerName);
-				if (uuid != null) {
-					return uuid;
-				} else {
-					for (Entry<String, String> entry : uuids.entrySet()) {
-						if (entry.getKey().equalsIgnoreCase(playerName)) {
-							return entry.getValue();
-						}
+		try {
+			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
+			return p.getUniqueId().toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return getUUIDLookup(playerName);
+		}
+
+	}
+
+	private String getUUIDLookup(String playerName) {
+		ConcurrentHashMap<String, String> uuids = plugin.getUuids();
+		if (uuids != null) {
+			String uuid = uuids.get(playerName);
+			if (uuid != null) {
+				return uuid;
+			} else {
+				for (Entry<String, String> entry : uuids.entrySet()) {
+					if (entry.getKey().equalsIgnoreCase(playerName)) {
+						return entry.getValue();
 					}
 				}
 			}
-			for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-				User user = UserManager.getInstance().getUser(new UUID(uuid));
-				String name = user.getData().getString("PlayerName");
-				if (name.equals(playerName)) {
-					plugin.getUuids().put(playerName, uuid);
-					return uuid;
-				}
+		}
+		for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+			User user = UserManager.getInstance().getUser(new UUID(uuid));
+			String name = user.getData().getString("PlayerName");
+			if (name.equals(playerName)) {
+				plugin.getUuids().put(playerName, uuid);
+				return uuid;
 			}
 		}
-
-		return p.getUniqueId().toString();
-
+		return "";
 	}
 
 	/**

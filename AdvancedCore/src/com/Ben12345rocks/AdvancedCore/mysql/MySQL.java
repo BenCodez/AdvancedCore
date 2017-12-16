@@ -346,6 +346,12 @@ public class MySQL {
 	public synchronized void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
+			for (Column col : getExact(index)) {
+				if (col.getName().equals(column)) {
+					col.setValue(value);
+				}
+			}
+			
 			String query = "UPDATE " + getName() + " SET ";
 
 			if (dataType == DataType.STRING) {
@@ -356,12 +362,6 @@ public class MySQL {
 			}
 			query += " WHERE `uuid`=";
 			query += "'" + index + "';";
-
-			for (Column col : getExact(index)) {
-				if (col.getName().equals(column)) {
-					col.setValue(value);
-				}
-			}
 
 			addToQue(query);
 		} else {
