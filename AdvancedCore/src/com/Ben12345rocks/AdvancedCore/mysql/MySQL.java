@@ -334,7 +334,7 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (getUuidsQuery().contains(uuid)) {
+		if (!table.containsKey(uuid)) {
 			loadPlayer(uuid);
 		}
 	}
@@ -351,7 +351,7 @@ public class MySQL {
 					col.setValue(value);
 				}
 			}
-			
+
 			String query = "UPDATE " + getName() + " SET ";
 
 			if (dataType == DataType.STRING) {
