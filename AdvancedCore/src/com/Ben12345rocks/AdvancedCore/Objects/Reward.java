@@ -1105,11 +1105,15 @@ public class Reward {
 			}
 		}
 
-		if (((!online && !user.isOnline()) || !checkWorld(user)) && !isForceOffline()) {
+		boolean checkWorld = checkWorld(user);
+
+		if (((!online && !user.isOnline()) || !checkWorld) && !isForceOffline()) {
 			if (giveOffline) {
 				checkRewardFile();
 				user.addOfflineRewards(this, placeholders);
-				user.setCheckWorld(true);
+				if (checkWorld) {
+					user.setCheckWorld(true);
+				}
 			}
 			return;
 		}
