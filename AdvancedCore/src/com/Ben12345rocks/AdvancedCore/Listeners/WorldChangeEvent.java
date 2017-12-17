@@ -52,7 +52,7 @@ public class WorldChangeEvent implements Listener {
 					user.checkOfflineRewards();
 				}
 			}
-		}, 20L);
+		}, 1l);
 
 	}
 
