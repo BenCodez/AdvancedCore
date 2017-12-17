@@ -25,6 +25,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptManager;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
+import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu.InputReceiver;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
@@ -183,6 +184,20 @@ public class StringRequester {
 
 				}
 			});
+		} else if (method.equals(InputMethod.SIGN)) {
+			AdvancedCoreHook.getInstance().getSignMenu().open(player.getUniqueId(), new String[] {"","","",""},
+					new InputReceiver() {
+
+						@Override
+						public void receive(Player player, String[] text) {
+							String str = "";
+							for (String t : text) {
+								str += t;
+							}
+							listener.onInput(player, str);
+
+						}
+					});
 		} else {
 			player.sendMessage(
 					"Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
