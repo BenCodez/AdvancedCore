@@ -1111,7 +1111,7 @@ public class Reward {
 			if (giveOffline) {
 				checkRewardFile();
 				user.addOfflineRewards(this, placeholders);
-				if (checkWorld) {
+				if (!checkWorld) {
 					user.setCheckWorld(true);
 				}
 			}
