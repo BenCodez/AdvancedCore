@@ -343,7 +343,7 @@ public class MySQL {
 		table.remove(uuid);
 	}
 
-	public synchronized void update(String index, String column, Object value, DataType dataType) {
+	public void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
 			for (Column col : getExact(index)) {
