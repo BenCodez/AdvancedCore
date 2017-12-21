@@ -375,53 +375,52 @@ public class MySQL {
 		// }
 	}
 
-	private Object ob = new Object();
+	//private Object ob = new Object();
 
 	public void updateBatch() {
-		synchronized (ob) {
 
-			if (query.size() > 0) {
-				AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
-				String sql = "";
-				while (query.size() > 0) {
+		if (query.size() > 0) {
+			AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
+			String sql = "";
+			while (query.size() > 0) {
 
-					String text = query.poll();
-					if (!text.endsWith(";")) {
-						text += ";";
-					}
-					sql += text;
+				String text = query.poll();
+				if (!text.endsWith(";")) {
+					text += ";";
 				}
-
-				try {
-					if (useBatchUpdates) {
-						Connection conn = mysql.getConnectionManager().getConnection();
-						Statement st = conn.createStatement();
-						for (String str : sql.split(";")) {
-							st.addBatch(str);
-						}
-						st.executeBatch();
-						st.close();
-						conn.close();
-					} else {
-						for (String text : sql.split(";")) {
-							try {
-								Query query = new Query(mysql, text);
-								query.executeUpdateAsync();
-							} catch (SQLException e) {
-								AdvancedCoreHook.getInstance().getPlugin().getLogger()
-										.severe("Error occoured while executing sql: " + e.toString()
-												+ ", turn debug on to see full stacktrace");
-								AdvancedCoreHook.getInstance().debug(e);
-							}
-						}
-					}
-				} catch (SQLException e1) {
-					AdvancedCoreHook.getInstance().extraDebug("Failed to send query: " + sql);
-					e1.printStackTrace();
-				}
-
+				sql += text;
 			}
+
+			try {
+				if (useBatchUpdates) {
+					Connection conn = mysql.getConnectionManager().getConnection();
+					Statement st = conn.createStatement();
+					for (String str : sql.split(";")) {
+						st.addBatch(str);
+					}
+					st.executeBatch();
+					st.close();
+					conn.close();
+				} else {
+					for (String text : sql.split(";")) {
+						try {
+							Query query = new Query(mysql, text);
+							query.executeUpdateAsync();
+						} catch (SQLException e) {
+							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+									.severe("Error occoured while executing sql: " + e.toString()
+											+ ", turn debug on to see full stacktrace");
+							AdvancedCoreHook.getInstance().debug(e);
+						}
+					}
+				}
+			} catch (SQLException e1) {
+				AdvancedCoreHook.getInstance().extraDebug("Failed to send query: " + sql);
+				e1.printStackTrace();
+			}
+
 		}
+
 	}
 
 	public int getMaxSize() {
