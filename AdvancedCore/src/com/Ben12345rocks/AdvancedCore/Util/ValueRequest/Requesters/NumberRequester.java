@@ -64,6 +64,9 @@ public class NumberRequester {
 	public void request(Player player, InputMethod method, String currentValue,
 			LinkedHashMap<Number, ItemStack> options, String promptText, boolean allowCustomOption,
 			NumberListener listener) {
+		if (method.equals(InputMethod.SIGN)) {
+			method = InputMethod.INVENTORY;
+		}
 		if ((options == null || options.size() == 0) && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
 			method = InputMethod.ANVIL;
 		}

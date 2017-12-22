@@ -58,7 +58,7 @@ public class MySQL {
 		String user = section.getString("Username");
 		String pass = section.getString("Password");
 		String database = section.getString("Database");
-		int maxThreads = section.getInt("MaxConnections",1);
+		int maxThreads = section.getInt("MaxConnections", 1);
 		if (maxThreads < 1) {
 			maxThreads = 1;
 		}
@@ -334,7 +334,7 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (getUuidsQuery().contains(uuid)) {
+		if (!table.containsKey(uuid)) {
 			loadPlayer(uuid);
 		}
 	}
@@ -346,6 +346,12 @@ public class MySQL {
 	public synchronized void update(String index, String column, Object value, DataType dataType) {
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
+			for (Column col : getExact(index)) {
+				if (col.getName().equals(column)) {
+					col.setValue(value);
+				}
+			}
+
 			String query = "UPDATE " + getName() + " SET ";
 
 			if (dataType == DataType.STRING) {
@@ -357,19 +363,22 @@ public class MySQL {
 			query += " WHERE `uuid`=";
 			query += "'" + index + "';";
 
-			for (Column col : getExact(index)) {
-				if (col.getName().equals(column)) {
-					col.setValue(value);
-				}
-			}
-
-			this.query.add(query);
+			addToQue(query);
 		} else {
 			insert(index, column, value, dataType);
 		}
 	}
 
-	public synchronized void updateBatch() {
+	public void addToQue(String query) {
+		// if (!this.query.contains(query)) {
+		this.query.add(query);
+		// }
+	}
+
+	//private Object ob = new Object();
+
+	public void updateBatch() {
+
 		if (query.size() > 0) {
 			AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
 			String sql = "";
@@ -406,7 +415,7 @@ public class MySQL {
 					}
 				}
 			} catch (SQLException e1) {
-
+				AdvancedCoreHook.getInstance().extraDebug("Failed to send query: " + sql);
 				e1.printStackTrace();
 			}
 

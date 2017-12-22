@@ -122,6 +122,10 @@ public class UserManager {
 		return new User(plugin.getPlugin(), uuid);
 	}
 
+	public User getUser(java.util.UUID uuid) {
+		return getUser(new UUID(uuid.toString()));
+	}
+
 	public void purgeOldPlayers() {
 		if (plugin.isPurgeOldData()) {
 			int daysOld = plugin.getPurgeMinimumDays();
@@ -146,6 +150,7 @@ public class UserManager {
 	public boolean userExist(String name) {
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
+				//plugin.extraDebug("Found " + name + " loaded in uuid map");
 				return true;
 			}
 		}
@@ -153,7 +158,7 @@ public class UserManager {
 		for (String uuid : getAllUUIDs()) {
 			User user = getUser(new UUID(uuid));
 			if (user.getPlayerName().equalsIgnoreCase(name)) {
-				plugin.extraDebug("Found " + name + " in database");
+				//plugin.extraDebug("Found " + name + " in database");
 				return true;
 			}
 		}

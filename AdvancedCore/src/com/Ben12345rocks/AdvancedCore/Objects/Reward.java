@@ -333,8 +333,8 @@ public class Reward {
 			ConfigurationSection section = getConfig().getConfigData();
 
 			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
-				if (!reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
-						.equals(section.getKeys(true))) {
+				if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != section
+						.getKeys(true).size()) {
 					plugin.getPlugin().getLogger().warning(
 							"Detected a reward file edited when it should be edited where directly defined, overriding");
 				}
@@ -390,6 +390,7 @@ public class Reward {
 		if (player == null) {
 			return false;
 		}
+		checkRewardFile();
 		String world = player.getWorld().getName();
 		if (getWorlds().contains(world)) {
 			return true;
@@ -1104,9 +1105,15 @@ public class Reward {
 			}
 		}
 
-		if (((!online && !user.isOnline()) || !checkWorld(user)) && !isForceOffline()) {
+		boolean checkWorld = checkWorld(user);
+
+		if (((!online && !user.isOnline()) || !checkWorld) && !isForceOffline()) {
 			if (giveOffline) {
+				checkRewardFile();
 				user.addOfflineRewards(this, placeholders);
+				if (!checkWorld) {
+					user.setCheckWorld(true);
+				}
 			}
 			return;
 		}

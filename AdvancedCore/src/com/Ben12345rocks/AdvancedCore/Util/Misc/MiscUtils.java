@@ -52,7 +52,9 @@ public class MiscUtils {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					String msg = StringUtils.getInstance()
 							.colorize(StringUtils.getInstance().replacePlaceHolders(player, broadcastMsg));
-					player.sendMessage(msg);
+					for (String str : msg.split("%NewLine%")) {
+						player.sendMessage(str);
+					}
 
 				}
 			}

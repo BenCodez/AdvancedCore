@@ -2,6 +2,8 @@ package com.Ben12345rocks.AdvancedCore.YML;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -53,6 +55,13 @@ public abstract class YMLFile {
 	 */
 	public FileConfiguration getData() {
 		return data;
+	}
+
+	public void setData(FileConfiguration data) {
+		Map<String, Object> map = data.getConfigurationSection("").getValues(true);
+		for (Entry<String, Object> entry : map.entrySet()) {
+			this.data.set(entry.getKey(), entry.getValue());
+		}
 	}
 
 	/**

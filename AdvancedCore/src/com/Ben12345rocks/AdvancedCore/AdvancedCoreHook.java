@@ -46,6 +46,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.mysql.MySQL;
@@ -66,6 +67,7 @@ public class AdvancedCoreHook {
 
 	private ConcurrentHashMap<String, String> uuids;
 
+	private SignMenu signMenu;
 	private JavaPlugin plugin;
 	private boolean placeHolderAPIEnabled;
 	private boolean timerLoaded = false;
@@ -86,7 +88,7 @@ public class AdvancedCoreHook {
 	private boolean sendScoreboards = true;
 	private int resourceId = 0;
 	private boolean extraDebug = false;
-	private boolean checkOnWorldChange = false;
+	private boolean disableCheckOnWorldChange = false;
 	private Timer timer = new Timer();
 	private boolean autoDownload = false;
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
@@ -383,10 +385,6 @@ public class AdvancedCoreHook {
 		return autoKillInvs;
 	}
 
-	public synchronized boolean isCheckOnWorldChange() {
-		return checkOnWorldChange;
-	}
-
 	public boolean isDebug() {
 		return debug;
 	}
@@ -470,6 +468,7 @@ public class AdvancedCoreHook {
 	 */
 	public void loadBasicHook(JavaPlugin plugin) {
 		this.plugin = plugin;
+		loadSignAPI();
 		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
@@ -483,6 +482,10 @@ public class AdvancedCoreHook {
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
+	public SignMenu getSignMenu() {
+		return this.signMenu;
+	}
+
 	public void loadEconomy() {
 		if (setupEconomy()) {
 			plugin.getLogger().info("Successfully hooked into Vault!");
@@ -494,9 +497,7 @@ public class AdvancedCoreHook {
 	public void loadEvents() {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
 		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), plugin);
-		if (checkOnWorldChange) {
-			Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
-		}
+		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
 	}
 
 	private void loadHandle() {
@@ -524,6 +525,7 @@ public class AdvancedCoreHook {
 	 */
 	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
+		loadSignAPI();
 		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
@@ -550,6 +552,17 @@ public class AdvancedCoreHook {
 		});
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
+	}
+
+	private void loadSignAPI() {
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null) {
+			try {
+				this.signMenu = new SignMenu(plugin);
+			} catch (Exception e) {
+				debug(e);
+			}
+		}
+
 	}
 
 	/**
@@ -782,8 +795,19 @@ public class AdvancedCoreHook {
 		this.autoKillInvs = autoKillInvs;
 	}
 
-	public synchronized void setCheckOnWorldChange(boolean checkOnWorldChange) {
-		this.checkOnWorldChange = checkOnWorldChange;
+	/**
+	 * @return the dsiableCheckOnWorldChange
+	 */
+	public boolean isDisableCheckOnWorldChange() {
+		return disableCheckOnWorldChange;
+	}
+
+	/**
+	 * @param dsiableCheckOnWorldChange
+	 *            the dsiableCheckOnWorldChange to set
+	 */
+	public void setDisableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
+		this.disableCheckOnWorldChange = disableCheckOnWorldChange;
 	}
 
 	public void setDebug(boolean debug) {

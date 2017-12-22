@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.Ben12345rocks</groupId>
 	<artifactId>AdvancedCore</artifactId>
-	<version>2.11</version>
+	<version>2.12</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
 	<properties>
@@ -13,7 +13,7 @@
 		<github.global.server>github</github.global.server>
 		<project.build.sourceEncoding>Cp1252</project.build.sourceEncoding>
 		<timestamp>${maven.build.timestamp}</timestamp>
-   <maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+		<maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
 	</properties>
 	<distributionManagement>
 		<repository>
@@ -139,9 +139,9 @@
 			<url>http://nexus.hc.to/content/repositories/pub_releases</url>
 		</repository>
 		<repository>
-            <id>placeholderapi</id>
-            <url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
-        </repository>
+			<id>placeholderapi</id>
+			<url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+		</repository>
 		<repository>
 			<id>mrten-releases</id>
 			<name>Mrten's Release Repo</name>
@@ -155,6 +155,7 @@
 			<id>jitpack.io</id>
 			<url>https://jitpack.io</url>
 		</repository>
+
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -193,6 +194,12 @@
 			<artifactId>slf4j-simple</artifactId>
 			<version>1.6.4</version>
 			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.comphenix.protocol</groupId>
+			<artifactId>ProtocolLib-API</artifactId>
+			<version>LATEST</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 </project>
