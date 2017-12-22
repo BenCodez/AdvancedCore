@@ -803,7 +803,7 @@ public class AdvancedCoreHook {
 	}
 
 	/**
-	 * @param dsiableCheckOnWorldChange
+	 * @param disableCheckOnWorldChange
 	 *            the dsiableCheckOnWorldChange to set
 	 */
 	public void setDisableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
