@@ -29,6 +29,7 @@ import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandle;
@@ -555,7 +556,8 @@ public class AdvancedCoreHook {
 	}
 
 	private void loadSignAPI() {
-		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null) {
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
+				&& !NMSManager.getInstance().getVersion().contains("!.8")) {
 			try {
 				this.signMenu = new SignMenu(plugin);
 			} catch (Exception e) {
