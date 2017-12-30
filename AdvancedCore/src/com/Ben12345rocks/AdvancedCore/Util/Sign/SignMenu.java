@@ -16,6 +16,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
@@ -69,20 +70,26 @@ public class SignMenu {
 	}
 
 	private void listen() {
-		ProtocolLibrary.getProtocolManager()
-				.addPacketListener(new PacketAdapter(this.plugin, PacketType.Play.Client.UPDATE_SIGN) {
-					@Override
-					public void onPacketReceiving(PacketEvent event) {
-						PacketContainer packet = event.getPacket();
-						Player player = event.getPlayer();
-						String[] text = packet.getStringArrays().read(0);
-						if (!inputReceivers.containsKey(player.getUniqueId())) {
-							return;
+		if (!NMSManager.getInstance().getVersion().contains("1.8")
+				&& !NMSManager.getInstance().getVersion().contains("1.9")
+				&& !NMSManager.getInstance().getVersion().contains("1.10")
+				&& !NMSManager.getInstance().getVersion().contains("1.11")) {
+			ProtocolLibrary.getProtocolManager()
+					.addPacketListener(new PacketAdapter(this.plugin, PacketType.Play.Client.UPDATE_SIGN) {
+						@Override
+						public void onPacketReceiving(PacketEvent event) {
+							PacketContainer packet = event.getPacket();
+							Player player = event.getPlayer();
+							String[] text = packet.getStringArrays().read(0);
+							if (!inputReceivers.containsKey(player.getUniqueId())) {
+								return;
+							}
+							event.setCancelled(true);
+							inputReceivers.remove(player.getUniqueId()).receive(player, text);
 						}
-						event.setCancelled(true);
-						inputReceivers.remove(player.getUniqueId()).receive(player, text);
-					}
-				});
+					});
+		}
+
 	}
 
 	private InputReceiver display(UUID uuid, InputReceiver inputReceiver, String... text) {

@@ -557,7 +557,10 @@ public class AdvancedCoreHook {
 
 	private void loadSignAPI() {
 		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
-				&& !NMSManager.getInstance().getVersion().contains("1.8")) {
+				&& !NMSManager.getInstance().getVersion().contains("1.8")
+				&& !NMSManager.getInstance().getVersion().contains("1.9")
+				&& !NMSManager.getInstance().getVersion().contains("1.10")
+				&& !NMSManager.getInstance().getVersion().contains("1.11")) {
 			try {
 				this.signMenu = new SignMenu(plugin);
 			} catch (Exception e) {
@@ -725,6 +728,9 @@ public class AdvancedCoreHook {
 					}
 					if (name == null || name.equals("") || name.equals("Error getting name")) {
 						debug("Invalid player name: " + uuid);
+					}
+					if (uuid == null || uuid.equals("")) {
+						debug("Invalid uuid: " + uuid);
 					}
 					uuids.put(name, uuid);
 				}

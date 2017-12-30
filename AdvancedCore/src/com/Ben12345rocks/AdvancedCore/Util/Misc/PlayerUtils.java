@@ -81,9 +81,9 @@ public class PlayerUtils {
 	}
 
 	public synchronized String getPlayerName(User user, String uuid) {
-		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
+		if ((uuid == null) || uuid.equalsIgnoreCase("null") || uuid.isEmpty()) {
 			plugin.debug("Null UUID");
-			return null;
+			return "";
 		}
 
 		String name = "";
@@ -276,7 +276,7 @@ public class PlayerUtils {
 		}
 		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 		if (p.hasPlayedBefore() || p.isOnline()) {
-			//plugin.extraDebug(name + " has joined before");
+			// plugin.extraDebug(name + " has joined before");
 			return true;
 		}
 		return false;
