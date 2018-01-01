@@ -379,6 +379,8 @@ public class PlayerUtils {
 						hasDeniedPerm = hasD;
 					}
 				}
+				
+				plugin.debug("HasPerm: " + hasPerm + ", HasDeniedPerm: " + hasDeniedPerm);
 
 				if (hasPerm && !hasDeniedPerm) {
 					return true;
