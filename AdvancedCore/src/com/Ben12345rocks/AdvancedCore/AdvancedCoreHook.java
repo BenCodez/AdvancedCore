@@ -488,11 +488,17 @@ public class AdvancedCoreHook {
 	}
 
 	public void loadEconomy() {
-		if (setupEconomy()) {
-			plugin.getLogger().info("Successfully hooked into Vault!");
-		} else {
-			plugin.getLogger().warning("Failed to hook into Vault");
-		}
+		Bukkit.getScheduler().runTaskLater(getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				if (setupEconomy()) {
+					plugin.getLogger().info("Successfully hooked into Vault!");
+				} else {
+					plugin.getLogger().warning("Failed to hook into Vault");
+				}
+			}
+		}, 5);
 	}
 
 	public void loadEvents() {
@@ -580,9 +586,16 @@ public class AdvancedCoreHook {
 	}
 
 	public void loadPermissions() {
-		if (setupPermissions()) {
-			plugin.getLogger().info("Hooked into Vault permissions");
-		}
+		Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				if (setupPermissions()) {
+					plugin.getLogger().info("Hooked into Vault permissions");
+				}
+			}
+		}, 2);
+
 	}
 
 	/**
