@@ -962,10 +962,17 @@ public class AdvancedCoreHook {
 	}
 
 	private boolean setupPermissions() {
-		RegisteredServiceProvider<Permission> rsp = Bukkit.getServer().getServicesManager()
-				.getRegistration(Permission.class);
-		perms = rsp.getProvider();
-		return perms != null;
+		RegisteredServiceProvider<Permission> permissionProvider = plugin.getServer().getServicesManager()
+				.getRegistration(net.milkbowl.vault.permission.Permission.class);
+		if (permissionProvider != null) {
+			perms = permissionProvider.getProvider();
+		}
+		return (perms != null);
+		/*
+		 * RegisteredServiceProvider<Permission> rsp =
+		 * Bukkit.getServer().getServicesManager() .getRegistration(Permission.class);
+		 * perms = rsp.getProvider(); return perms != null;
+		 */
 	}
 
 	/**
