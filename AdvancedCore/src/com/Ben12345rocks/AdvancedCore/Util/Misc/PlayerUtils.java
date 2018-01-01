@@ -367,24 +367,15 @@ public class PlayerUtils {
 
 			if (plugin.getPerms() != null) {
 				boolean hasPerm = false;
-				boolean hasDeniedPerm = false;
 				for (String permission : perm.split("\\|")) {
 
 					boolean has = plugin.getPerms().playerHas(player, permission);
 					if (!hasPerm) {
 						hasPerm = has;
 					}
-					boolean hasD = plugin.getPerms().playerHas(player, "-" + permission);
-					if (hasD) {
-						hasDeniedPerm = hasD;
-					}
 				}
-				
-				plugin.debug("HasPerm: " + hasPerm + ", HasDeniedPerm: " + hasDeniedPerm);
 
-				if (hasPerm && !hasDeniedPerm) {
-					return true;
-				}
+				return hasPerm;
 			} else {
 				boolean hasPerm = false;
 
@@ -399,7 +390,6 @@ public class PlayerUtils {
 				}
 				return hasPerm;
 			}
-			return false;
 
 		} else {
 			return true;
