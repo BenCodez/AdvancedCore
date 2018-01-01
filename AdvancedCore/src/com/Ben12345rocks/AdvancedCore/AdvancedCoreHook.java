@@ -475,6 +475,7 @@ public class AdvancedCoreHook {
 		checkPlaceHolderAPI();
 		loadHandle();
 		loadEconomy();
+		loadPermissions();
 		ServerData.getInstance().setup();
 		loadRewards();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
@@ -539,6 +540,7 @@ public class AdvancedCoreHook {
 		loadUserAPI(UserStorage.SQLITE);
 		loadHandle();
 		loadEconomy();
+		loadPermissions();
 		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
