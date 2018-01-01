@@ -155,7 +155,10 @@
 			<id>jitpack.io</id>
 			<url>https://jitpack.io</url>
 		</repository>
-
+		<repository>
+			<id>pex-repo</id>
+			<url>http://pex-repo.aoeu.xyz</url>
+		</repository>
 	</repositories>
 	<dependencies>
 		<dependency>

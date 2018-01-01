@@ -361,4 +361,31 @@ public class PlayerUtils {
 		});
 	}
 
+	public boolean hasEitherPermission(CommandSender sender, String perm) {
+		if (sender instanceof Player) {
+			Player player = (Player) sender;
+			boolean hasPerm = false;
+			boolean hasDeniedPerm = false;
+			for (String permission : perm.split("\\|")) {
+
+				boolean has = plugin.getPerms().playerHas(player, permission);
+				if (!hasPerm) {
+					hasPerm = has;
+				}
+				boolean hasD = plugin.getPerms().playerHas(player, "-" + permission);
+				if (hasD) {
+					hasDeniedPerm = hasD;
+				}
+			}
+
+			if (hasPerm && !hasDeniedPerm) {
+				return true;
+			}
+			return false;
+
+		}
+
+		return true;
+	}
+
 }
