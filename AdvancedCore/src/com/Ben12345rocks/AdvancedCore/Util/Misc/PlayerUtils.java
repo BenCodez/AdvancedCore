@@ -62,7 +62,7 @@ public class PlayerUtils {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
 			if (p.hasPlayedBefore() || p.isOnline()) {
 				name = p.getName();
-			} else {
+			} else if (plugin.isCheckNameMojang()) {
 				name = Thread.getInstance().getThread().getName(u);
 			}
 		} else {
@@ -97,7 +97,7 @@ public class PlayerUtils {
 				name = p.getName();
 			} else {
 				name = storedName;
-				if (name == null || name.equals("")) {
+				if ((name == null || name.equals("")) && plugin.isCheckNameMojang()) {
 					name = Thread.getInstance().getThread().getName(u);
 				}
 			}

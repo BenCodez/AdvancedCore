@@ -98,6 +98,22 @@ public class AdvancedCoreHook {
 	private boolean autoKillInvs = true;
 	private String prevPageTxt = "&aPrevious Page";
 	private String nextPageTxt = "&aNext Page";
+	private boolean checkNameMojang = true;
+
+	/**
+	 * @return the checkNameMojang
+	 */
+	public boolean isCheckNameMojang() {
+		return checkNameMojang;
+	}
+
+	/**
+	 * @param checkNameMojang
+	 *            the checkNameMojang to set
+	 */
+	public void setCheckNameMojang(boolean checkNameMojang) {
+		this.checkNameMojang = checkNameMojang;
+	}
 
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
