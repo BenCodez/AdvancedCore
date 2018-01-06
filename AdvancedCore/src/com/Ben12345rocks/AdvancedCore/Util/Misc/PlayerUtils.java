@@ -65,7 +65,7 @@ public class PlayerUtils {
 			} else if (plugin.isCheckNameMojang()) {
 				name = Thread.getInstance().getThread().getName(u);
 			}
-		} else if (plugin.isCheckNameMojang()) {
+		} else {
 			name = player.getName();
 		}
 
@@ -90,7 +90,7 @@ public class PlayerUtils {
 		String storedName = user.getData().getString("PlayerName");
 
 		java.util.UUID u = java.util.UUID.fromString(uuid);
-		Player player = Bukkit.getPlayer(uuid);
+		Player player = Bukkit.getPlayer(u);
 		if (player == null) {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
 			if (p.getFirstPlayed() != 0) {
@@ -101,7 +101,7 @@ public class PlayerUtils {
 					name = Thread.getInstance().getThread().getName(u);
 				}
 			}
-		} else if (plugin.isCheckNameMojang()) {
+		} else {
 			name = player.getName();
 		}
 
