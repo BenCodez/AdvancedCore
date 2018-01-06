@@ -37,9 +37,8 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
 			}
 			String cause = (String) response.get("cause");
 			String errorMessage = (String) response.get("errorMessage");
-			if (errorMessage.equals("TooManyRequestsException")) {
-				AdvancedCoreHook.getInstance().debug("Sent too many requests, delaying");
-				wait(10000);
+			if (errorMessage != null && errorMessage.equals("TooManyRequestsException")) {
+				AdvancedCoreHook.getInstance().debug("Sent too many requests");
 			}
 			if (cause != null && cause.length() > 0) {
 				throw new IllegalStateException(errorMessage);

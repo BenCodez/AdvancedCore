@@ -65,7 +65,7 @@ public class PlayerUtils {
 			} else if (plugin.isCheckNameMojang()) {
 				name = Thread.getInstance().getThread().getName(u);
 			}
-		} else {
+		} else if (plugin.isCheckNameMojang()) {
 			name = player.getName();
 		}
 
@@ -101,7 +101,7 @@ public class PlayerUtils {
 					name = Thread.getInstance().getThread().getName(u);
 				}
 			}
-		} else {
+		} else if (plugin.isCheckNameMojang()) {
 			name = player.getName();
 		}
 
