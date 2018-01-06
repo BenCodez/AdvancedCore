@@ -16,6 +16,7 @@ public class Thread {
 	public class ReadThread extends java.lang.Thread {
 
 		public String getName(java.util.UUID uuid) {
+			plugin.debug("Looking up player name: " + uuid);
 			NameFetcher fet = new NameFetcher(Arrays.asList(uuid));
 			try {
 				return fet.call().get(uuid);

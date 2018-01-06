@@ -12,6 +12,7 @@ import java.util.concurrent.Callable;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.google.common.collect.ImmutableList;
 
 public class NameFetcher implements Callable<Map<UUID, String>> {
@@ -36,6 +37,10 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
 			}
 			String cause = (String) response.get("cause");
 			String errorMessage = (String) response.get("errorMessage");
+			if (errorMessage.equals("TooManyRequestsException")) {
+				AdvancedCoreHook.getInstance().debug("Sent too many requests, delaying");
+				wait(10000);
+			}
 			if (cause != null && cause.length() > 0) {
 				throw new IllegalStateException(errorMessage);
 			}
