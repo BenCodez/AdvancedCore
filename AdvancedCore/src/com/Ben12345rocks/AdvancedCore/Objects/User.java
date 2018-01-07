@@ -555,12 +555,21 @@ public class User {
 	}
 
 	public boolean isBanned() {
-		OfflinePlayer p = getOfflinePlayer();
-		if (p != null) {
-			return p.isBanned();
+		if (AdvancedCoreHook.getInstance().isCheckNameMojang()) {
+			OfflinePlayer p = getOfflinePlayer();
+			if (p != null) {
+				return p.isBanned();
+			} else {
+				return false;
+			}
 		} else {
-			return false;
+			for (OfflinePlayer p : Bukkit.getBannedPlayers()) {
+				if (p.getUniqueId().toString().equalsIgnoreCase(getUUID())) {
+					return true;
+				}
+			}
 		}
+		return false;
 	}
 
 	/**
