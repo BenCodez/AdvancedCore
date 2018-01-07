@@ -57,19 +57,29 @@ public class BInventory implements Listener {
 		/** The clicked item. */
 		private ItemStack clickedItem;
 
+		private BInventoryButton button;
+
+		/**
+		 * @return the button
+		 */
+		public BInventoryButton getButton() {
+			return button;
+		}
+
 		/**
 		 * Instantiates a new click event.
 		 *
 		 * @param event
 		 *            the event
 		 */
-		public ClickEvent(InventoryClickEvent event) {
+		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
 			this.event = event;
 			player = (Player) event.getWhoClicked();
 			clickType = event.getClick();
 			inventory = event.getInventory();
 			clickedItem = event.getCurrentItem();
 			slot = event.getSlot();
+			button = b;
 		}
 
 		/**
@@ -405,7 +415,7 @@ public class BInventory implements Listener {
 									@Override
 									public void run() {
 										try {
-											button.onClick(new ClickEvent(event));
+											button.onClick(new ClickEvent(event, button));
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -429,7 +439,7 @@ public class BInventory implements Listener {
 									@Override
 									public void run() {
 										try {
-											button.onClick(new ClickEvent(event));
+											button.onClick(new ClickEvent(event, button));
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -461,7 +471,7 @@ public class BInventory implements Listener {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
 						player.closeInventory();
 						try {
-							b.onClick(new ClickEvent(event));
+							b.onClick(new ClickEvent(event, b));
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
