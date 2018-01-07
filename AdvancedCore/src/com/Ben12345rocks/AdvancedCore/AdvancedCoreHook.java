@@ -754,16 +754,21 @@ public class AdvancedCoreHook {
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
 					String name = user.getData().getString("PlayerName");
-					if (uuids.containsKey(name)) {
+					boolean add = true;
+					if (!name.equals("Error getting name") && uuids.containsKey(name)) {
 						debug("Duplicate uuid? " + uuid + " : " + name + " Other key: " + uuids.get(name));
 					}
 					if (name == null || name.equals("") || name.equals("Error getting name")) {
 						debug("Invalid player name: " + uuid);
+						add = false;
 					}
 					if (uuid == null || uuid.equals("")) {
 						debug("Invalid uuid: " + uuid);
+						add = false;
 					}
-					uuids.put(name, uuid);
+					if (add) {
+						uuids.put(name, uuid);
+					}
 				}
 				debug("Loaded uuids in the background");
 			}
