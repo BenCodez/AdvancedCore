@@ -129,7 +129,7 @@ public class PlayerUtils {
 			return null;
 		}
 
-		if (plugin.isAlternateUUIDLookUp() || !Bukkit.getServer().getOnlineMode()) {
+		if (plugin.isAlternateUUIDLookUp() || !Bukkit.getServer().getOnlineMode() || !plugin.isCheckNameMojang()) {
 			if (UserManager.getInstance().userExist(playerName)) {
 				return getUUIDLookup(playerName);
 			}
