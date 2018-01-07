@@ -91,17 +91,17 @@ public class PlayerUtils {
 
 		java.util.UUID u = java.util.UUID.fromString(uuid);
 		Player player = Bukkit.getPlayer(u);
-		if (player == null) {
+		if (player == null && plugin.isCheckNameMojang()) {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
 			if (p.getFirstPlayed() != 0) {
 				name = p.getName();
 			} else {
 				name = storedName;
-				if ((name == null || name.equals("")) && plugin.isCheckNameMojang()) {
+				if ((name == null || name.equals(""))) {
 					name = Thread.getInstance().getThread().getName(u);
 				}
 			}
-		} else {
+		} else if (player != null) {
 			name = player.getName();
 		}
 
