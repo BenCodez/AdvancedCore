@@ -107,6 +107,11 @@ public abstract class BInventoryButton {
 		return data;
 	}
 
+	public BInventoryButton addData(String str, Object object) {
+		getData().put(str, object);
+		return this;
+	}
+
 	/**
 	 * Sets the item.
 	 *
