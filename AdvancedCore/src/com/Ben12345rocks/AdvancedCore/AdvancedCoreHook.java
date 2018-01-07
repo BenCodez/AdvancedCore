@@ -755,9 +755,6 @@ public class AdvancedCoreHook {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
 					String name = user.getData().getString("PlayerName");
 					boolean add = true;
-					if (!name.equals("Error getting name") && uuids.containsKey(name)) {
-						debug("Duplicate player name? " + uuid + " : " + name + " Other key: " + uuids.get(name));
-					}
 					if (uuids.containsValue(uuid)) {
 						debug("Duplicate uuid? " + uuid);
 					}
