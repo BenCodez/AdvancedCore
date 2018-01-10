@@ -365,6 +365,10 @@ public class PlayerUtils {
 		if (sender instanceof Player) {
 			Player player = (Player) sender;
 
+			if (perm.equals("")) {
+				return true;
+			}
+
 			if (plugin.getPerms() != null) {
 				boolean hasPerm = false;
 				for (String permission : perm.split("\\|")) {
