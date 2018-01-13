@@ -146,6 +146,18 @@ public class UserGUI {
 			}
 		});
 
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&cView player data")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				Player player = clickEvent.getPlayer();
+				User user = UserManager.getInstance().getUser(player);
+				for (String key : user.getData().getKeys()) {
+					user.sendMessage("&c&l" + key + user.getData().getString(key));
+				}
+			}
+		});
+
 		for (BInventoryButton button : extraButtons.values()) {
 			inv.addButton(button);
 		}
