@@ -371,6 +371,12 @@ public class RewardHandler {
 	public void giveReward(User user, String prefix, String suffix, ConfigurationSection data, String path,
 			boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
 			HashMap<String, String> placeholders) {
+		if (data == null) {
+			plugin.getPlugin().getLogger().warning("ConfigurationSection is null, failing to give reward");
+		}
+		if (path == null) {
+			plugin.getPlugin().getLogger().warning("Path is null, failing to give reward");
+		}
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
 				giveReward(user, reward, online, giveOffline, checkTimed, ignoreChance, placeholders);
