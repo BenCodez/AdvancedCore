@@ -153,7 +153,7 @@ public class UserGUI {
 				Player player = clickEvent.getPlayer();
 				User user = UserManager.getInstance().getUser(player);
 				for (String key : user.getData().getKeys()) {
-					user.sendMessage("&c&l" + key + user.getData().getString(key));
+					user.sendMessage("&c&l" + key + " &c" + user.getData().getString(key));
 				}
 			}
 		});
