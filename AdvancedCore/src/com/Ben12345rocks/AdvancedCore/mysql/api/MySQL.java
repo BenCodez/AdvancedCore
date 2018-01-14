@@ -43,8 +43,9 @@ public class MySQL {
 	 *            name of the database to connect to
 	 * @return TRUE if connection was successful, FALSE if an error occurred
 	 */
-	public boolean connect(String host, String port, String username, String password, String database) {
-		connectionManager = new ConnectionManager(host, port, username, password, database, maxConnections);
+	public boolean connect(String host, String port, String username, String password, String database,
+			boolean useSSL) {
+		connectionManager = new ConnectionManager(host, port, username, password, database, maxConnections, useSSL);
 		return connectionManager.open();
 	}
 
