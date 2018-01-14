@@ -302,7 +302,10 @@ public class User {
 	 * @return the player
 	 */
 	public Player getPlayer() {
-		return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		if (uuid != null && !uuid.isEmpty()) {
+			return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		}
+		return null;
 	}
 
 	/**
