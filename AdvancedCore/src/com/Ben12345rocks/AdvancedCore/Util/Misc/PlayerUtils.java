@@ -88,6 +88,7 @@ public class PlayerUtils {
 
 		String name = "";
 		String storedName = user.getData().getString("PlayerName");
+		name = storedName;
 
 		java.util.UUID u = java.util.UUID.fromString(uuid);
 		Player player = Bukkit.getPlayer(u);
@@ -103,6 +104,12 @@ public class PlayerUtils {
 			}
 		} else if (player != null) {
 			name = player.getName();
+		} else {
+			for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
+				if (p.getUniqueId().toString().equalsIgnoreCase(uuid)) {
+					return p.getName();
+				}
+			}
 		}
 
 		if (name != null && !name.equals("")) {
