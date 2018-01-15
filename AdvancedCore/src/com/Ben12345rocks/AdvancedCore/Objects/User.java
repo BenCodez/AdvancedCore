@@ -302,7 +302,10 @@ public class User {
 	 * @return the player
 	 */
 	public Player getPlayer() {
-		return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		if (uuid != null && !uuid.isEmpty()) {
+			return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		}
+		return null;
 	}
 
 	/**
@@ -555,12 +558,21 @@ public class User {
 	}
 
 	public boolean isBanned() {
-		OfflinePlayer p = getOfflinePlayer();
-		if (p != null) {
-			return p.isBanned();
+		if (AdvancedCoreHook.getInstance().isCheckNameMojang()) {
+			OfflinePlayer p = getOfflinePlayer();
+			if (p != null) {
+				return p.isBanned();
+			} else {
+				return false;
+			}
 		} else {
-			return false;
+			for (OfflinePlayer p : Bukkit.getBannedPlayers()) {
+				if (p.getUniqueId().toString().equalsIgnoreCase(getUUID())) {
+					return true;
+				}
+			}
 		}
+		return false;
 	}
 
 	/**

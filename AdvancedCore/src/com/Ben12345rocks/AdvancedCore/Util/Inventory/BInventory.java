@@ -20,6 +20,7 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -57,19 +58,29 @@ public class BInventory implements Listener {
 		/** The clicked item. */
 		private ItemStack clickedItem;
 
+		private BInventoryButton button;
+
+		/**
+		 * @return the button
+		 */
+		public BInventoryButton getButton() {
+			return button;
+		}
+
 		/**
 		 * Instantiates a new click event.
 		 *
 		 * @param event
 		 *            the event
 		 */
-		public ClickEvent(InventoryClickEvent event) {
+		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
 			this.event = event;
 			player = (Player) event.getWhoClicked();
 			clickType = event.getClick();
 			inventory = event.getInventory();
 			clickedItem = event.getCurrentItem();
 			slot = event.getSlot();
+			button = b;
 		}
 
 		/**
@@ -405,7 +416,7 @@ public class BInventory implements Listener {
 									@Override
 									public void run() {
 										try {
-											button.onClick(new ClickEvent(event));
+											button.onClick(new ClickEvent(event, button));
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -429,7 +440,7 @@ public class BInventory implements Listener {
 									@Override
 									public void run() {
 										try {
-											button.onClick(new ClickEvent(event));
+											button.onClick(new ClickEvent(event, button));
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -441,8 +452,10 @@ public class BInventory implements Listener {
 
 				} else if (slot == maxInvSize - 9) {
 					if (page > 1) {
+
 						int nextPage = page - 1;
 						player.closeInventory();
+
 						openInventory(player, nextPage);
 					}
 				} else if (slot == maxInvSize - 1) {
@@ -450,23 +463,28 @@ public class BInventory implements Listener {
 					// page);
 					if (maxPage > page) {
 						player.closeInventory();
+
 						int nextPage = page + 1;
+
 						openInventory(player, nextPage);
 						AdvancedCoreHook.getInstance().debug("Opening inv");
 					}
 
 				}
 
-				for (BInventoryButton b : pageButtons) {
+				for (
+
+				BInventoryButton b : pageButtons) {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
 						player.closeInventory();
 						try {
-							b.onClick(new ClickEvent(event));
+							b.onClick(new ClickEvent(event, b));
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
 					}
 				}
+
 			}
 		}
 	}
@@ -479,6 +497,16 @@ public class BInventory implements Listener {
 		}
 		if (inv != null && inv.equals(inv) && player != null
 				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
+			if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
+				destroy();
+			}
+		}
+		return;
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+	public void onPlayerLeave(PlayerQuitEvent event) {
+		if (player.getUniqueId().equals(event.getPlayer().getUniqueId())) {
 			if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
 				destroy();
 			}

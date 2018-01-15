@@ -62,6 +62,7 @@ public class MySQL {
 		if (maxThreads < 1) {
 			maxThreads = 1;
 		}
+		boolean useSSL = section.getBoolean("UseSSL", false);
 		this.maxSize = section.getInt("MaxSize", -1);
 		if (maxSize >= 0) {
 			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
@@ -78,7 +79,7 @@ public class MySQL {
 			name = tablePrefix + tableName;
 		}
 		mysql = new com.Ben12345rocks.AdvancedCore.mysql.api.MySQL(maxThreads);
-		if (!mysql.connect(hostName, "" + port, user, pass, database)) {
+		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL)) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
 		}
 		try {
@@ -375,7 +376,7 @@ public class MySQL {
 		// }
 	}
 
-	//private Object ob = new Object();
+	// private Object ob = new Object();
 
 	public void updateBatch() {
 

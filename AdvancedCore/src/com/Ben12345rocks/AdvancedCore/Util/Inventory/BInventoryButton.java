@@ -3,6 +3,8 @@
 
 package com.Ben12345rocks.AdvancedCore.Util.Inventory;
 
+import java.util.HashMap;
+
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -94,6 +96,24 @@ public abstract class BInventoryButton {
 
 	public void setItem(ItemBuilder builder) {
 		this.builder = builder;
+	}
+
+	private HashMap<String, Object> data = new HashMap<String, Object>();
+
+	/**
+	 * @return the data
+	 */
+	public HashMap<String, Object> getData() {
+		return data;
+	}
+
+	public BInventoryButton addData(String key, Object object) {
+		getData().put(key, object);
+		return this;
+	}
+
+	public Object getData(String key) {
+		return data.get(key);
 	}
 
 	/**

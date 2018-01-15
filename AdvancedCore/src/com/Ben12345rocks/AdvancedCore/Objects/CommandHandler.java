@@ -15,6 +15,7 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import net.md_5.bungee.api.ChatColor;
@@ -298,18 +299,14 @@ public abstract class CommandHandler {
 	}
 
 	public boolean hasPerm(CommandSender sender) {
-		boolean hasPerm = false;
-
-		if (!perm.equals("")) {
-			for (String perm : this.perm.split("\\|")) {
-				if (sender.hasPermission(perm)) {
-					hasPerm = true;
-				}
-			}
-		} else {
-			hasPerm = true;
-		}
-		return hasPerm;
+		/*
+		 * boolean hasPerm = false;
+		 * 
+		 * if (!perm.equals("")) { for (String perm : this.perm.split("\\|")) { if
+		 * (sender.hasPermission(perm)) { hasPerm = true; } } } else { hasPerm = true; }
+		 * return hasPerm;
+		 */
+		return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
 	}
 
 	public boolean isPlayer(CommandSender sender) {

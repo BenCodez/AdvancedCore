@@ -29,6 +29,7 @@ import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandle;
@@ -97,6 +98,22 @@ public class AdvancedCoreHook {
 	private boolean autoKillInvs = true;
 	private String prevPageTxt = "&aPrevious Page";
 	private String nextPageTxt = "&aNext Page";
+	private boolean checkNameMojang = true;
+
+	/**
+	 * @return the checkNameMojang
+	 */
+	public boolean isCheckNameMojang() {
+		return checkNameMojang;
+	}
+
+	/**
+	 * @param checkNameMojang
+	 *            the checkNameMojang to set
+	 */
+	public void setCheckNameMojang(boolean checkNameMojang) {
+		this.checkNameMojang = checkNameMojang;
+	}
 
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
@@ -474,6 +491,7 @@ public class AdvancedCoreHook {
 		checkPlaceHolderAPI();
 		loadHandle();
 		loadEconomy();
+		loadPermissions();
 		ServerData.getInstance().setup();
 		loadRewards();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
@@ -487,11 +505,17 @@ public class AdvancedCoreHook {
 	}
 
 	public void loadEconomy() {
-		if (setupEconomy()) {
-			plugin.getLogger().info("Successfully hooked into Vault!");
-		} else {
-			plugin.getLogger().warning("Failed to hook into Vault");
-		}
+		Bukkit.getScheduler().runTaskLater(getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				if (setupEconomy()) {
+					plugin.getLogger().info("Successfully hooked into Vault!");
+				} else {
+					plugin.getLogger().warning("Failed to hook into Vault");
+				}
+			}
+		}, 5);
 	}
 
 	public void loadEvents() {
@@ -532,6 +556,7 @@ public class AdvancedCoreHook {
 		loadUserAPI(UserStorage.SQLITE);
 		loadHandle();
 		loadEconomy();
+		loadPermissions();
 		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
@@ -555,7 +580,11 @@ public class AdvancedCoreHook {
 	}
 
 	private void loadSignAPI() {
-		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null) {
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
+				&& !NMSManager.getInstance().getVersion().contains("1.8")
+				&& !NMSManager.getInstance().getVersion().contains("1.9")
+				&& !NMSManager.getInstance().getVersion().contains("1.10")
+				&& !NMSManager.getInstance().getVersion().contains("1.11")) {
 			try {
 				this.signMenu = new SignMenu(plugin);
 			} catch (Exception e) {
@@ -575,9 +604,16 @@ public class AdvancedCoreHook {
 	}
 
 	public void loadPermissions() {
-		if (setupPermissions()) {
-			plugin.getLogger().info("Hooked into Vault permissions");
-		}
+		Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				if (setupPermissions()) {
+					plugin.getLogger().info("Hooked into Vault permissions");
+				}
+			}
+		}, 2);
+
 	}
 
 	/**
@@ -718,13 +754,21 @@ public class AdvancedCoreHook {
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
 					String name = user.getData().getString("PlayerName");
-					if (uuids.containsKey(name)) {
-						debug("Duplicate uuid? " + uuid + " : " + name + " Other key: " + uuids.get(name));
+					boolean add = true;
+					if (uuids.containsValue(uuid)) {
+						debug("Duplicate uuid? " + uuid);
 					}
 					if (name == null || name.equals("") || name.equals("Error getting name")) {
 						debug("Invalid player name: " + uuid);
+						add = false;
 					}
-					uuids.put(name, uuid);
+					if (uuid == null || uuid.equals("")) {
+						debug("Invalid uuid: " + uuid);
+						add = false;
+					}
+					if (add) {
+						uuids.put(name, uuid);
+					}
 				}
 				debug("Loaded uuids in the background");
 			}
@@ -941,10 +985,15 @@ public class AdvancedCoreHook {
 	}
 
 	private boolean setupPermissions() {
-		RegisteredServiceProvider<Permission> rsp = Bukkit.getServer().getServicesManager()
+		RegisteredServiceProvider<Permission> rsp = plugin.getServer().getServicesManager()
 				.getRegistration(Permission.class);
 		perms = rsp.getProvider();
 		return perms != null;
+		/*
+		 * RegisteredServiceProvider<Permission> rsp =
+		 * Bukkit.getServer().getServicesManager() .getRegistration(Permission.class);
+		 * perms = rsp.getProvider(); return perms != null;
+		 */
 	}
 
 	/**
