@@ -107,4 +107,130 @@ public class ConnectionManager {
 		}
 	}
 
+	/**
+	 * @return the dataSource
+	 */
+	public HikariDataSource getDataSource() {
+		return dataSource;
+	}
+
+	/**
+	 * @param dataSource the dataSource to set
+	 */
+	public void setDataSource(HikariDataSource dataSource) {
+		this.dataSource = dataSource;
+	}
+
+	/**
+	 * @return the host
+	 */
+	public String getHost() {
+		return host;
+	}
+
+	/**
+	 * @param host the host to set
+	 */
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	/**
+	 * @return the port
+	 */
+	public String getPort() {
+		return port;
+	}
+
+	/**
+	 * @param port the port to set
+	 */
+	public void setPort(String port) {
+		this.port = port;
+	}
+
+	/**
+	 * @return the username
+	 */
+	public String getUsername() {
+		return username;
+	}
+
+	/**
+	 * @param username the username to set
+	 */
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	/**
+	 * @return the password
+	 */
+	public String getPassword() {
+		return password;
+	}
+
+	/**
+	 * @param password the password to set
+	 */
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	/**
+	 * @return the database
+	 */
+	public String getDatabase() {
+		return database;
+	}
+
+	/**
+	 * @param database the database to set
+	 */
+	public void setDatabase(String database) {
+		this.database = database;
+	}
+
+	/**
+	 * @return the connectionTimeout
+	 */
+	public int getConnectionTimeout() {
+		return connectionTimeout;
+	}
+
+	/**
+	 * @param connectionTimeout the connectionTimeout to set
+	 */
+	public void setConnectionTimeout(int connectionTimeout) {
+		this.connectionTimeout = connectionTimeout;
+	}
+
+	/**
+	 * @return the maximumPoolsize
+	 */
+	public int getMaximumPoolsize() {
+		return maximumPoolsize;
+	}
+
+	/**
+	 * @param maximumPoolsize the maximumPoolsize to set
+	 */
+	public void setMaximumPoolsize(int maximumPoolsize) {
+		this.maximumPoolsize = maximumPoolsize;
+	}
+
+	/**
+	 * @return the useSSL
+	 */
+	public boolean isUseSSL() {
+		return useSSL;
+	}
+
+	/**
+	 * @param useSSL the useSSL to set
+	 */
+	public void setUseSSL(boolean useSSL) {
+		this.useSSL = useSSL;
+	}
+
 }
