@@ -28,21 +28,6 @@ public class MySQL {
 		this.maxConnections = maxConnections;
 	}
 
-	/**
-	 * Connect to a MySQL database.
-	 *
-	 * @param host
-	 *            the host for connecting to the database
-	 * @param port
-	 *            the port (by default 3306)
-	 * @param username
-	 *            username used to connect to the database
-	 * @param password
-	 *            password used to connect to the database
-	 * @param database
-	 *            name of the database to connect to
-	 * @return TRUE if connection was successful, FALSE if an error occurred
-	 */
 	public boolean connect(String host, String port, String username, String password, String database,
 			boolean useSSL) {
 		connectionManager = new ConnectionManager(host, port, username, password, database, maxConnections, useSSL);

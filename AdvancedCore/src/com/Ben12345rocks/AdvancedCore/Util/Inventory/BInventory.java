@@ -67,12 +67,6 @@ public class BInventory implements Listener {
 			return button;
 		}
 
-		/**
-		 * Instantiates a new click event.
-		 *
-		 * @param event
-		 *            the event
-		 */
 		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
 			this.event = event;
 			player = (Player) event.getWhoClicked();
