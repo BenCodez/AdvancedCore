@@ -104,13 +104,7 @@ public class PlayerUtils {
 			}
 		} else if (player != null) {
 			name = player.getName();
-		} else {
-			for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
-				if (p.getUniqueId().toString().equalsIgnoreCase(uuid)) {
-					return p.getName();
-				}
-			}
-		}
+		} 
 
 		if (name != null && !name.equals("")) {
 			if (!name.equals(storedName) && !storedName.equals("")) {
