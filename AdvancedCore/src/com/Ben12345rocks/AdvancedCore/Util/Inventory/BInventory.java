@@ -500,9 +500,11 @@ public class BInventory implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
 	public void onPlayerLeave(PlayerQuitEvent event) {
-		if (player.getUniqueId().equals(event.getPlayer().getUniqueId())) {
-			if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
-				destroy();
+		if (player != null && event.getPlayer() != null) {
+			if (player.getUniqueId().equals(event.getPlayer().getUniqueId())) {
+				if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
+					destroy();
+				}
 			}
 		}
 		return;
