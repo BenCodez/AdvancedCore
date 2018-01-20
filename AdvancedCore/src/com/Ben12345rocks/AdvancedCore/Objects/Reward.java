@@ -104,6 +104,8 @@ public class Reward {
 	/** The console commands. */
 	private ArrayList<String> consoleCommands;
 
+	private ArrayList<String> randomCommand;
+
 	/** The player commands. */
 	private ArrayList<String> playerCommands;
 
@@ -1491,6 +1493,8 @@ public class Reward {
 		}
 
 		onlyOneLucky = getConfig().getOnlyOneLucky();
+
+		randomCommand = getConfig().getRandomCommand();
 	}
 
 	/**
@@ -1533,6 +1537,9 @@ public class Reward {
 		MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), getConsoleCommands(), placeholders);
 
 		user.preformCommand(getPlayerCommands(), placeholders);
+
+		MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),
+				randomCommand.get(ThreadLocalRandom.current().nextInt(randomCommand.size())), placeholders);
 	}
 
 	/**
