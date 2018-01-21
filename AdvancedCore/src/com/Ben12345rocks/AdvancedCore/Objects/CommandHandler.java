@@ -355,15 +355,7 @@ public abstract class CommandHandler {
 
 				@Override
 				public void run() {
-					try {
-						synchronized (plugin.getTimer()) {
-							plugin.getTimer().wait();
-						}
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
 					execute(sender, args);
-					//plugin.getTimer().notify();
 				}
 			});
 

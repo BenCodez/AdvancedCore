@@ -771,6 +771,27 @@ public class AdvancedCoreHook {
 								debug("Invalid uuid: " + uuid);
 								add = false;
 							}
+
+							if (getStorageType().equals(UserStorage.MYSQL)) {
+								boolean delete = false;
+								for (Column col : user.getData().getMySqlRow()) {
+									if (col.getValue() != null) {
+										if (!col.getName().equals("uuid")
+												&& !col.getName().equalsIgnoreCase("playername")) {
+
+											delete = true;
+										}
+
+									}
+								}
+								if (delete) {
+									add = false;
+									debug("Deleting " + uuid);
+									getMysql().deletePlayer(uuid);
+								}
+
+							}
+
 							if (add) {
 								uuids.put(name, uuid);
 							}
