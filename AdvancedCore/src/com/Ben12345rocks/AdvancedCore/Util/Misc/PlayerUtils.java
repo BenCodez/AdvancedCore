@@ -90,7 +90,8 @@ public class PlayerUtils {
 		java.util.UUID u = java.util.UUID.fromString(uuid);
 		Player player = Bukkit.getPlayer(u);
 
-		String storedName = user.getData().getString("PlayerName");
+		//String storedName = user.getData().getString("PlayerName");
+		String storedName = "";
 		if (player != null) {
 			name = player.getName();
 
