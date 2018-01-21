@@ -756,49 +756,48 @@ public class AdvancedCoreHook {
 
 					@Override
 					public void run() {
-						synchronized (plugin) {
 
-							for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-								User user = UserManager.getInstance().getUser(new UUID(uuid));
-								String name = user.getData().getString("PlayerName");
-								boolean add = true;
-								if (uuids.containsValue(uuid)) {
-									debug("Duplicate uuid? " + uuid);
-								}
-								if (name == null || name.equals("") || name.equals("Error getting name")) {
-									debug("Invalid player name: " + uuid);
-									add = false;
-								}
-								if (uuid == null || uuid.equals("")) {
-									debug("Invalid uuid: " + uuid);
-									add = false;
-								}
+						for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+							User user = UserManager.getInstance().getUser(new UUID(uuid));
+							String name = user.getData().getString("PlayerName");
+							boolean add = true;
+							if (uuids.containsValue(uuid)) {
+								debug("Duplicate uuid? " + uuid);
+							}
+							if (name == null || name.equals("") || name.equals("Error getting name")) {
+								debug("Invalid player name: " + uuid);
+								add = false;
+							}
+							if (uuid == null || uuid.equals("")) {
+								debug("Invalid uuid: " + uuid);
+								add = false;
+							}
 
-								if (getStorageType().equals(UserStorage.MYSQL)) {
-									boolean delete = true;
-									for (Column col : user.getData().getMySqlRow()) {
-										if (col.getValue() != null) {
-											if (!col.getName().equals("uuid")
-													&& !col.getName().equalsIgnoreCase("playername")) {
+							if (getStorageType().equals(UserStorage.MYSQL)) {
+								boolean delete = true;
+								for (Column col : user.getData().getMySqlRow()) {
+									if (col.getValue() != null) {
+										if (!col.getName().equals("uuid")
+												&& !col.getName().equalsIgnoreCase("playername")) {
 
-												delete = false;
-											}
-
+											delete = false;
 										}
-									}
-									if (delete) {
-										add = false;
-										debug("Deleting " + uuid);
-										getMysql().deletePlayer(uuid);
-									}
 
+									}
+								}
+								if (delete) {
+									add = false;
+									debug("Deleting " + uuid);
+									getMysql().deletePlayer(uuid);
 								}
 
-								if (add) {
-									uuids.put(name, uuid);
-								}
+							}
+
+							if (add) {
+								uuids.put(name, uuid);
 							}
 						}
+
 						debug("Loaded uuids in the background");
 					}
 				}, 0);
