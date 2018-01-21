@@ -771,7 +771,7 @@ public class AdvancedCoreHook {
 					}
 				}
 				try {
-					Thread.sleep(500);
+					Thread.sleep(5000);
 				} catch (InterruptedException e) {
 				}
 				debug("Loaded uuids in the background");
