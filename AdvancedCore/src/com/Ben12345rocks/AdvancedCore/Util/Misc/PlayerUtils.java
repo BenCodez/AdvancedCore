@@ -73,6 +73,18 @@ public class PlayerUtils {
 			return "";
 		}
 
+		if (plugin.getUuids().containsValue(uuid)) {
+			for (Entry<String, String> entry : plugin.getUuids().entrySet()) {
+				if (entry.getValue().equals(uuid)) {
+					String n = entry.getKey();
+					if (n != null && !n.isEmpty() && !n.equalsIgnoreCase("Error getting name")) {
+						return n;
+					}
+				}
+			}
+
+		}
+
 		String name = "";
 
 		java.util.UUID u = java.util.UUID.fromString(uuid);
