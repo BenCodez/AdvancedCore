@@ -770,10 +770,6 @@ public class AdvancedCoreHook {
 						uuids.put(name, uuid);
 					}
 				}
-				try {
-					Thread.sleep(5000);
-				} catch (InterruptedException e) {
-				}
 				debug("Loaded uuids in the background");
 			}
 		});
@@ -811,7 +807,6 @@ public class AdvancedCoreHook {
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
 			getMysql().clearCache();
 		}
-		getTimer().purge();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
