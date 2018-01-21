@@ -363,7 +363,7 @@ public abstract class CommandHandler {
 						e.printStackTrace();
 					}
 					execute(sender, args);
-					plugin.getTimer().notify();
+					//plugin.getTimer().notify();
 				}
 			});
 
