@@ -48,7 +48,7 @@ public class PlayerUtils {
 		return null;
 	}
 
-	public synchronized String getPlayerName(String uuid) {
+	public String getPlayerName(String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
 			plugin.debug("Null UUID");
 			return null;
@@ -80,7 +80,7 @@ public class PlayerUtils {
 
 	}
 
-	public synchronized String getPlayerName(User user, String uuid) {
+	public String getPlayerName(User user, String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null") || uuid.isEmpty()) {
 			plugin.debug("Null UUID");
 			return "";
@@ -104,7 +104,7 @@ public class PlayerUtils {
 			}
 		} else if (player != null) {
 			name = player.getName();
-		} 
+		}
 
 		if (name != null && !name.equals("")) {
 			if (!name.equals(storedName) && !storedName.equals("")) {
