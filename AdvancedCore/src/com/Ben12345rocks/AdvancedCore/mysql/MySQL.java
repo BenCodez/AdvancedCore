@@ -335,7 +335,7 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (!containsKeyQuery(uuid)) {
+		if (!containsKey(uuid)) {
 			loadPlayer(uuid);
 		}
 	}
