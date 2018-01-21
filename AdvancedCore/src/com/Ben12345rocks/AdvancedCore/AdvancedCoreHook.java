@@ -770,6 +770,10 @@ public class AdvancedCoreHook {
 						uuids.put(name, uuid);
 					}
 				}
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e) {
+				}
 				debug("Loaded uuids in the background");
 			}
 		});
