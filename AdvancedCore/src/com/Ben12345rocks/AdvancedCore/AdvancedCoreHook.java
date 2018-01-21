@@ -550,7 +550,7 @@ public class AdvancedCoreHook {
 	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
 		loadSignAPI();
-	//	loadUUIDs();
+		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
 		loadUserAPI(UserStorage.SQLITE);
@@ -748,7 +748,7 @@ public class AdvancedCoreHook {
 	private void loadUUIDs() {
 		uuids = new ConcurrentHashMap<String, String>();
 
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		/*Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -800,7 +800,7 @@ public class AdvancedCoreHook {
 					}
 				}, 0);
 			}
-		});
+		});*/
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}
