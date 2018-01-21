@@ -351,13 +351,14 @@ public abstract class CommandHandler {
 				return true;
 			}
 
-			
 			Bukkit.getServer().getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
 
 				@Override
 				public void run() {
 					try {
-						plugin.getTimer().wait();
+						synchronized (plugin.getTimer()) {
+							plugin.getTimer().wait();
+						}
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
