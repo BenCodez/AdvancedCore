@@ -1538,8 +1538,10 @@ public class Reward {
 
 		user.preformCommand(getPlayerCommands(), placeholders);
 
-		MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),
-				randomCommand.get(ThreadLocalRandom.current().nextInt(randomCommand.size())), placeholders);
+		if (randomCommand.size() > 0) {
+			MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),
+					randomCommand.get(ThreadLocalRandom.current().nextInt(randomCommand.size())), placeholders);
+		}
 	}
 
 	/**
