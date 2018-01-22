@@ -776,13 +776,13 @@ public class AdvancedCoreHook {
 							if (getStorageType().equals(UserStorage.MYSQL)) {
 								boolean delete = true;
 								for (Column col : user.getData().getMySqlRow()) {
-									if (col.getValue() != null) {
-										if (!col.getName().equals("uuid")
-												&& !col.getName().equalsIgnoreCase("playername")) {
-
-											delete = false;
+									if (!col.getName().equals("uuid")
+											&& !col.getName().equalsIgnoreCase("playername")) {
+										if (col.getValue() != null) {
+											if (!col.getValue().toString().isEmpty()) {
+												delete = false;
+											}
 										}
-
 									}
 								}
 								if (delete) {
