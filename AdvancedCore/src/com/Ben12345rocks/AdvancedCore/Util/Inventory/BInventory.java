@@ -498,18 +498,6 @@ public class BInventory implements Listener {
 		return;
 	}
 
-	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-	public void onPlayerLeave(PlayerQuitEvent event) {
-		if (player != null && event.getPlayer() != null) {
-			if (player.getUniqueId().equals(event.getPlayer().getUniqueId())) {
-				if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
-					destroy();
-				}
-			}
-		}
-		return;
-	}
-
 	/**
 	 * Open inventory.
 	 *
