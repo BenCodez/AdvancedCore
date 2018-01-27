@@ -117,6 +117,7 @@ public class MySQL {
 	public synchronized void addColumn(String column, DataType dataType) {
 		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
+		AdvancedCoreHook.getInstance().debug("Adding column: " + column);
 		try {
 			Query query = new Query(mysql, sql);
 			query.executeUpdate();
@@ -345,6 +346,7 @@ public class MySQL {
 	}
 
 	public synchronized void update(String index, String column, Object value, DataType dataType) {
+
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
 			for (Column col : getExact(index)) {
@@ -364,6 +366,7 @@ public class MySQL {
 			query += " WHERE `uuid`=";
 			query += "'" + index + "';";
 
+			AdvancedCoreHook.getInstance().debug(query);
 			addToQue(query);
 		} else {
 			insert(index, column, value, dataType);
