@@ -13,16 +13,18 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
 import com.Ben12345rocks.AdvancedCore.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
+import com.google.common.cache.CacheLoader;
 
 public class MySQL {
 	private com.Ben12345rocks.AdvancedCore.mysql.api.MySQL mysql;
@@ -31,15 +33,17 @@ public class MySQL {
 
 	// private HashMap<String, ArrayList<Column>> table;
 
-	/*
-	 * ConcurrentMap<String, ArrayList<Column>> table =
-	 * CompatibleCacheBuilder.newBuilder().concurrencyLevel(4) .build(new
-	 * CacheLoader<String, ArrayList<Column>>() {
-	 * 
-	 * @Override public ArrayList<Column> load(String key) { return
-	 * getExactQuery(new Column("uuid", key, DataType.STRING)); } });
-	 */
-	ConcurrentMap<String, ArrayList<Column>> table = new ConcurrentHashMap<String, ArrayList<Column>>();
+	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(10)
+			.build(new CacheLoader<String, ArrayList<Column>>() {
+
+				@Override
+				public ArrayList<Column> load(String key) {
+					return getExactQuery(new Column("uuid", key, DataType.STRING));
+				}
+			});
+
+	// ConcurrentMap<String, ArrayList<Column>> table = new
+	// ConcurrentHashMap<String, ArrayList<Column>>();
 
 	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
@@ -64,15 +68,17 @@ public class MySQL {
 		}
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		this.maxSize = section.getInt("MaxSize", -1);
-		/*
-		 * if (maxSize >= 0) { table =
-		 * CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20,
-		 * TimeUnit.MINUTES) .maximumSize(maxSize).build(new CacheLoader<String,
-		 * ArrayList<Column>>() {
-		 * 
-		 * @Override public ArrayList<Column> load(String key) { return
-		 * getExactQuery(new Column("uuid", key, DataType.STRING)); } }); }
-		 */
+
+		if (maxSize >= 0) {
+			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(10).expireAfterAccess(20, TimeUnit.MINUTES)
+					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
+
+						@Override
+						public ArrayList<Column> load(String key) {
+							return getExactQuery(new Column("uuid", key, DataType.STRING));
+						}
+					});
+		}
 
 		name = tableName;
 		if (tablePrefix != null) {
@@ -226,7 +232,7 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-		//AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
+		// AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
 		loadPlayerIfNeeded(uuid);
 		return table.get(uuid);
 	}
