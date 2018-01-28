@@ -746,31 +746,62 @@ public class AdvancedCoreHook {
 	}
 
 	private void loadUUIDs() {
+
 		uuids = new ConcurrentHashMap<String, String>();
+
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					String name = user.getData().getString("PlayerName");
-					boolean add = true;
-					if (uuids.containsValue(uuid)) {
-						debug("Duplicate uuid? " + uuid);
+				getTimer().schedule(new TimerTask() {
+
+					@Override
+					public void run() {
+
+						for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+							User user = UserManager.getInstance().getUser(new UUID(uuid));
+							String name = user.getData().getString("PlayerName");
+							boolean add = true;
+							if (uuids.containsValue(uuid)) {
+								debug("Duplicate uuid? " + uuid);
+							}
+							if (name == null || name.equals("") || name.equals("Error getting name")) {
+								debug("Invalid player name: " + uuid);
+								add = false;
+							}
+							if (uuid == null || uuid.equals("")) {
+								debug("Invalid uuid: " + uuid);
+								add = false;
+							}
+
+							if (getStorageType().equals(UserStorage.MYSQL)) {
+								boolean delete = true;
+								for (Column col : user.getData().getMySqlRow()) {
+									if (!col.getName().equals("uuid")
+											&& !col.getName().equalsIgnoreCase("playername")) {
+										if (col.getValue() != null) {
+											if (!col.getValue().toString().isEmpty()) {
+												delete = false;
+											}
+										}
+									}
+								}
+								if (delete) {
+									add = false;
+									debug("Deleting " + uuid);
+									getMysql().deletePlayer(uuid);
+								}
+
+							}
+
+							if (add) {
+								uuids.put(name, uuid);
+							}
+						}
+
+						debug("Loaded uuids in the background");
 					}
-					if (name == null || name.equals("") || name.equals("Error getting name")) {
-						debug("Invalid player name: " + uuid);
-						add = false;
-					}
-					if (uuid == null || uuid.equals("")) {
-						debug("Invalid uuid: " + uuid);
-						add = false;
-					}
-					if (add) {
-						uuids.put(name, uuid);
-					}
-				}
-				debug("Loaded uuids in the background");
+				}, 0);
 			}
 		});
 		TabCompleteHandler.getInstance().reload();
@@ -807,7 +838,6 @@ public class AdvancedCoreHook {
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
 			getMysql().clearCache();
 		}
-		getTimer().purge();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();

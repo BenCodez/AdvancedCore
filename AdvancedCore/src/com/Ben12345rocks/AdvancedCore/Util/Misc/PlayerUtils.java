@@ -13,7 +13,6 @@ import org.bukkit.plugin.Plugin;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 public class PlayerUtils {
@@ -48,72 +47,61 @@ public class PlayerUtils {
 		return null;
 	}
 
-	public synchronized String getPlayerName(String uuid) {
-		if ((uuid == null) || uuid.equalsIgnoreCase("null")) {
-			plugin.debug("Null UUID");
-			return null;
-		}
+	/*
+	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
+	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
+	 * 
+	 * String name = "";
+	 * 
+	 * java.util.UUID u = java.util.UUID.fromString(uuid); Player player =
+	 * Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
+	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
+	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
+	 * Thread.getInstance().getThread().getName(u); } } else { name =
+	 * player.getName(); }
+	 * 
+	 * if (name.equals("")) { name = UserManager.getInstance().getUser(new
+	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
+	 * name; } name = "Error getting name"; } return name;
+	 * 
+	 * }
+	 */
 
-		String name = "";
-
-		java.util.UUID u = java.util.UUID.fromString(uuid);
-		Player player = Bukkit.getPlayer(uuid);
-		if (player == null) {
-			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
-			if (p.hasPlayedBefore() || p.isOnline()) {
-				name = p.getName();
-			} else if (plugin.isCheckNameMojang()) {
-				name = Thread.getInstance().getThread().getName(u);
-			}
-		} else {
-			name = player.getName();
-		}
-
-		if (name.equals("")) {
-			name = UserManager.getInstance().getUser(new UUID(uuid)).getData().getString("PlayerName");
-			if (!name.equals("")) {
-				return name;
-			}
-			name = "Error getting name";
-		}
-		return name;
-
-	}
-
-	public synchronized String getPlayerName(User user, String uuid) {
+	public String getPlayerName(User user, String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null") || uuid.isEmpty()) {
 			plugin.debug("Null UUID");
 			return "";
 		}
 
+		if (plugin.getUuids().containsValue(uuid)) {
+			for (Entry<String, String> entry : plugin.getUuids().entrySet()) {
+				if (entry.getValue().equals(uuid)) {
+					String n = entry.getKey();
+					if (n != null && !n.isEmpty() && !n.equalsIgnoreCase("Error getting name")) {
+						return n;
+					}
+				}
+			}
+
+		}
+
 		String name = "";
-		String storedName = user.getData().getString("PlayerName");
-		name = storedName;
 
 		java.util.UUID u = java.util.UUID.fromString(uuid);
 		Player player = Bukkit.getPlayer(u);
-		if (player == null && plugin.isCheckNameMojang()) {
-			OfflinePlayer p = Bukkit.getOfflinePlayer(u);
-			if (p.getFirstPlayed() != 0) {
-				name = p.getName();
-			} else {
-				name = storedName;
-				if ((name == null || name.equals(""))) {
-					name = Thread.getInstance().getThread().getName(u);
-				}
-			}
-		} else if (player != null) {
-			name = player.getName();
-		} 
 
-		if (name != null && !name.equals("")) {
-			if (!name.equals(storedName) && !storedName.equals("")) {
+		String storedName = user.getData().getString("PlayerName");
+		// String storedName = "";
+		if (player != null) {
+			name = player.getName();
+
+			if (storedName == null || name != storedName || storedName.isEmpty()
+					|| storedName.equalsIgnoreCase("Error getting name")) {
 				user.getData().setString("PlayerName", name);
 			}
-		} else {
-			name = "Error getting name";
+			return name;
 		}
-		return name;
+		return storedName;
 
 	}
 

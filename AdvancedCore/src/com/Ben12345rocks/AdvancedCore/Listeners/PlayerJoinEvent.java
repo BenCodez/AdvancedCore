@@ -10,6 +10,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -54,11 +55,18 @@ public class PlayerJoinEvent implements Listener {
 						&& UserManager.getInstance().getAllUUIDs().contains(player.getUniqueId().toString())) {
 					if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
 							&& AdvancedCoreHook.getInstance().getMysql() != null) {
-						AdvancedCoreHook.getInstance().getMysql().loadPlayerIfNeeded(player.getUniqueId().toString());
+
 					}
-					User user = UserManager.getInstance().getUser(player);
-					user.checkOfflineRewards();
-					user.setLastOnline(System.currentTimeMillis());
+
+					if (UserManager.getInstance().userExist(new UUID(event.getPlayer().getUniqueId().toString()))) {
+						AdvancedCoreHook.getInstance().getMysql().loadPlayerIfNeeded(player.getUniqueId().toString());
+						User user = UserManager.getInstance().getUser(player);
+
+						user.checkOfflineRewards();
+						user.setLastOnline(System.currentTimeMillis());
+
+					}
+
 				}
 			}
 		}, 10L);

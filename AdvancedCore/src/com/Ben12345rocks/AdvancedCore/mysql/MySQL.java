@@ -33,13 +33,17 @@ public class MySQL {
 
 	// private HashMap<String, ArrayList<Column>> table;
 
-	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4)
-			.expireAfterAccess(20, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
+	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
+			.build(new CacheLoader<String, ArrayList<Column>>() {
+
 				@Override
 				public ArrayList<Column> load(String key) {
 					return getExactQuery(new Column("uuid", key, DataType.STRING));
 				}
 			});
+
+	// ConcurrentMap<String, ArrayList<Column>> table = new
+	// ConcurrentHashMap<String, ArrayList<Column>>();
 
 	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
@@ -64,9 +68,11 @@ public class MySQL {
 		}
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		this.maxSize = section.getInt("MaxSize", -1);
+
 		if (maxSize >= 0) {
-			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
+			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20, TimeUnit.MINUTES)
 					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
+
 						@Override
 						public ArrayList<Column> load(String key) {
 							return getExactQuery(new Column("uuid", key, DataType.STRING));
@@ -89,7 +95,7 @@ public class MySQL {
 			e.printStackTrace();
 		}
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
-		sql += "uuid VARCHAR(191),";
+		sql += "uuid VARCHAR(37),";
 		sql += "PRIMARY KEY ( uuid )";
 		sql += ");";
 		Query query;
@@ -101,6 +107,9 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
+		// tempoary to improve performance
+		addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
+
 		loadData();
 
 		new Timer().schedule(new TimerTask() {
@@ -110,42 +119,49 @@ public class MySQL {
 				updateBatch();
 			}
 
-		}, 10 * 1000, 500);
+		}, 10 * 1000, 3000);
 
 	}
 
-	public synchronized void addColumn(String column, DataType dataType) {
-		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
+	public void addColumn(String column, DataType dataType) {
+		synchronized (object3) {
+			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
-		try {
-			Query query = new Query(mysql, sql);
-			query.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+			AdvancedCoreHook.getInstance().debug("Adding column: " + column);
+			try {
+				Query query = new Query(mysql, sql);
+				query.executeUpdate();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 
-		getColumns().add(column);
+			getColumns().add(column);
 
-		Column col = new Column(column, dataType);
-		for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
-			entry.getValue().add(col);
+			Column col = new Column(column, dataType);
+			for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
+				entry.getValue().add(col);
+			}
 		}
 	}
 
-	public synchronized void checkColumn(String column, DataType dataType) {
-		if (!getColumns().contains(column)) {
-			if (!getColumnsQueury().contains(column)) {
-				addColumn(column, dataType);
+	public void checkColumn(String column, DataType dataType) {
+		synchronized (object4) {
+			if (!getColumns().contains(column)) {
+				if (!getColumnsQueury().contains(column)) {
+					addColumn(column, dataType);
+				}
 			}
 		}
 	}
 
 	public void clearCache() {
+		AdvancedCoreHook.getInstance().debug("CLearing cache");
 		table.clear();
 		clearCacheBasic();
 	}
 
 	public void clearCacheBasic() {
+		AdvancedCoreHook.getInstance().debug("CLearing cache basic");
 		columns.clear();
 		columns.addAll(getColumnsQueury());
 		uuids.clear();
@@ -216,9 +232,8 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-		if (!containsKey(uuid)) {
-			loadPlayer(uuid);
-		}
+		// AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
+		loadPlayerIfNeeded(uuid);
 		return table.get(uuid);
 	}
 
@@ -296,22 +311,25 @@ public class MySQL {
 		return uuids;
 	}
 
-	public synchronized void insert(String index, String column, Object value, DataType dataType) {
+	public void insert(String index, String column, Object value, DataType dataType) {
 		insertQuery(index, column, value, dataType);
 
 	}
 
-	public synchronized void insertQuery(String index, String column, Object value, DataType dataType) {
-		String query = "INSERT " + getName() + " ";
+	public void insertQuery(String index, String column, Object value, DataType dataType) {
+		synchronized (object5) {
+			String query = "INSERT " + getName() + " ";
 
-		query += "set uuid='" + index + "', ";
-		query += column + "='" + value.toString() + "';";
+			query += "set uuid='" + index + "', ";
+			query += column + "='" + value.toString() + "';";
+		//	AdvancedCoreHook.getInstance().extraDebug(query);
 
-		try {
-			new Query(mysql, query).executeUpdateAsync();
-			uuids.add(index);
-		} catch (SQLException e) {
-			e.printStackTrace();
+			try {
+				new Query(mysql, query).executeUpdateAsync();
+				uuids.add(index);
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -330,13 +348,16 @@ public class MySQL {
 		}
 	}
 
-	public void loadPlayer(String uuid) {
+	private void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (!table.containsKey(uuid)) {
-			loadPlayer(uuid);
+		synchronized (object1) {
+			if (!containsKey(uuid)) {
+				loadPlayer(uuid);
+			}
 		}
 	}
 
@@ -344,27 +365,38 @@ public class MySQL {
 		table.remove(uuid);
 	}
 
-	public synchronized void update(String index, String column, Object value, DataType dataType) {
+	private Object object1 = new Object();
+	private Object object2 = new Object();
+	private Object object3 = new Object();
+	private Object object4 = new Object();
+	private Object object5 = new Object();
+
+	public void update(String index, String column, Object value, DataType dataType) {
+
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
-			for (Column col : getExact(index)) {
-				if (col.getName().equals(column)) {
-					col.setValue(value);
+			synchronized (object2) {
+
+				for (Column col : getExact(index)) {
+					if (col.getName().equals(column)) {
+						col.setValue(value);
+					}
 				}
+
+				String query = "UPDATE " + getName() + " SET ";
+
+				if (dataType == DataType.STRING) {
+					query += "`" + column + "`='" + value.toString() + "'";
+				} else {
+					query += "`" + column + "`=" + value.toString();
+
+				}
+				query += " WHERE `uuid`=";
+				query += "'" + index + "';";
+
+			//	AdvancedCoreHook.getInstance().extraDebug(query);
+				addToQue(query);
 			}
-
-			String query = "UPDATE " + getName() + " SET ";
-
-			if (dataType == DataType.STRING) {
-				query += "`" + column + "`='" + value.toString() + "'";
-			} else {
-				query += "`" + column + "`=" + value.toString();
-
-			}
-			query += " WHERE `uuid`=";
-			query += "'" + index + "';";
-
-			addToQue(query);
 		} else {
 			insert(index, column, value, dataType);
 		}

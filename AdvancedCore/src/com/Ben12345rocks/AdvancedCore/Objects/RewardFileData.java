@@ -71,6 +71,11 @@ public class RewardFileData {
 		reward.loadValues();
 	}
 
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getRandomCommand() {
+		return (ArrayList<String>) getConfigData().getList("RandomCommand", new ArrayList<String>());
+	}
+
 	public FileConfiguration getFileData() {
 		return fileData;
 	}

@@ -53,6 +53,9 @@ Random:
   # A list of fall back rewards if chance is unlucky
   # Don't set this reward as a reward, may cause infinite loop
   FallBack: [] 
+  
+# Will give one command from the list
+RandomCommand: []
 
 # Require permission to give this reward file
 # Permission is AdvancedCore.Reward.(REWARDNAME) by default
