@@ -231,7 +231,7 @@ public class MySQL {
 		try {
 			throw new NullPointerException("Test");
 		} catch (NullPointerException e) {
-			
+			e.printStackTrace();
 		}
 		return table.get(uuid);
 	}
