@@ -339,8 +339,10 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (!containsKey(uuid)) {
-			loadPlayer(uuid);
+		synchronized (object1) {
+			if (!containsKey(uuid)) {
+				loadPlayer(uuid);
+			}
 		}
 	}
 
@@ -348,6 +350,7 @@ public class MySQL {
 		table.remove(uuid);
 	}
 
+	private Object object1 = new Object();
 	private Object object2 = new Object();
 
 	public void update(String index, String column, Object value, DataType dataType) {
