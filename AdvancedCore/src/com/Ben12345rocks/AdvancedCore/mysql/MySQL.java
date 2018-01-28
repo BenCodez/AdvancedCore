@@ -34,7 +34,7 @@ public class MySQL {
 	// private HashMap<String, ArrayList<Column>> table;
 
 	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
-			.expireAfterAccess(20, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
+			.build(new CacheLoader<String, ArrayList<Column>>() {
 				@Override
 				public ArrayList<Column> load(String key) {
 					return getExactQuery(new Column("uuid", key, DataType.STRING));
@@ -89,7 +89,7 @@ public class MySQL {
 			e.printStackTrace();
 		}
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
-		sql += "uuid VARCHAR(191),";
+		sql += "uuid VARCHAR(40),";
 		sql += "PRIMARY KEY ( uuid )";
 		sql += ");";
 		Query query;
@@ -332,7 +332,7 @@ public class MySQL {
 		}
 	}
 
-	public void loadPlayer(String uuid) {
+	public synchronized void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
 		AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
 	}
