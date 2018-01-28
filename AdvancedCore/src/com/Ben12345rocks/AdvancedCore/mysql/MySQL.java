@@ -33,7 +33,7 @@ public class MySQL {
 
 	// private HashMap<String, ArrayList<Column>> table;
 
-	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4)
+	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
 			.expireAfterAccess(20, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
 				@Override
 				public ArrayList<Column> load(String key) {
@@ -65,7 +65,7 @@ public class MySQL {
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		this.maxSize = section.getInt("MaxSize", -1);
 		if (maxSize >= 0) {
-			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
+			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20, TimeUnit.MINUTES)
 					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
 						@Override
 						public ArrayList<Column> load(String key) {
@@ -334,6 +334,7 @@ public class MySQL {
 
 	public void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
