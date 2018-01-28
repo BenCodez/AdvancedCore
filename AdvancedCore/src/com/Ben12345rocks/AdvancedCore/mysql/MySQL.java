@@ -100,7 +100,7 @@ public class MySQL {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		
+
 		// tempoary to improve performance
 		addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
 
@@ -335,8 +335,12 @@ public class MySQL {
 		}
 	}
 
+	private Object object1 = new Object();
+
 	public void loadPlayer(String uuid) {
-		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		synchronized (object1) {
+			table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		}
 		AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
 	}
 
@@ -350,29 +354,34 @@ public class MySQL {
 		table.remove(uuid);
 	}
 
-	public synchronized void update(String index, String column, Object value, DataType dataType) {
+	private Object object2 = new Object();
+
+	public void update(String index, String column, Object value, DataType dataType) {
 
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
-			for (Column col : getExact(index)) {
-				if (col.getName().equals(column)) {
-					col.setValue(value);
+			synchronized (object2) {
+
+				for (Column col : getExact(index)) {
+					if (col.getName().equals(column)) {
+						col.setValue(value);
+					}
 				}
+
+				String query = "UPDATE " + getName() + " SET ";
+
+				if (dataType == DataType.STRING) {
+					query += "`" + column + "`='" + value.toString() + "'";
+				} else {
+					query += "`" + column + "`=" + value.toString();
+
+				}
+				query += " WHERE `uuid`=";
+				query += "'" + index + "';";
+
+				AdvancedCoreHook.getInstance().extraDebug(query);
+				addToQue(query);
 			}
-
-			String query = "UPDATE " + getName() + " SET ";
-
-			if (dataType == DataType.STRING) {
-				query += "`" + column + "`='" + value.toString() + "'";
-			} else {
-				query += "`" + column + "`=" + value.toString();
-
-			}
-			query += " WHERE `uuid`=";
-			query += "'" + index + "';";
-
-			AdvancedCoreHook.getInstance().extraDebug(query);
-			addToQue(query);
 		} else {
 			insert(index, column, value, dataType);
 		}

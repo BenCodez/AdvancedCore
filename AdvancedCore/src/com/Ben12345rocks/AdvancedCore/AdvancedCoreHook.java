@@ -746,6 +746,7 @@ public class AdvancedCoreHook {
 	}
 
 	private void loadUUIDs() {
+		
 		uuids = new ConcurrentHashMap<String, String>();
 
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
