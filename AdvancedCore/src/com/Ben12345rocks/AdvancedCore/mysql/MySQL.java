@@ -16,16 +16,13 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
 import com.Ben12345rocks.AdvancedCore.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
-import com.google.common.cache.CacheLoader;
 
 public class MySQL {
 	private com.Ben12345rocks.AdvancedCore.mysql.api.MySQL mysql;
@@ -67,15 +64,15 @@ public class MySQL {
 		}
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		this.maxSize = section.getInt("MaxSize", -1);
-		/*if (maxSize >= 0) {
-			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
-					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
-						@Override
-						public ArrayList<Column> load(String key) {
-							return getExactQuery(new Column("uuid", key, DataType.STRING));
-						}
-					});
-		}*/
+		/*
+		 * if (maxSize >= 0) { table =
+		 * CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20,
+		 * TimeUnit.MINUTES) .maximumSize(maxSize).build(new CacheLoader<String,
+		 * ArrayList<Column>>() {
+		 * 
+		 * @Override public ArrayList<Column> load(String key) { return
+		 * getExactQuery(new Column("uuid", key, DataType.STRING)); } }); }
+		 */
 
 		name = tableName;
 		if (tablePrefix != null) {
@@ -120,29 +117,33 @@ public class MySQL {
 
 	}
 
-	public synchronized void addColumn(String column, DataType dataType) {
-		String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
+	public void addColumn(String column, DataType dataType) {
+		synchronized (object3) {
+			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
-		AdvancedCoreHook.getInstance().debug("Adding column: " + column);
-		try {
-			Query query = new Query(mysql, sql);
-			query.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+			AdvancedCoreHook.getInstance().debug("Adding column: " + column);
+			try {
+				Query query = new Query(mysql, sql);
+				query.executeUpdate();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 
-		getColumns().add(column);
+			getColumns().add(column);
 
-		Column col = new Column(column, dataType);
-		for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
-			entry.getValue().add(col);
+			Column col = new Column(column, dataType);
+			for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
+				entry.getValue().add(col);
+			}
 		}
 	}
 
-	public synchronized void checkColumn(String column, DataType dataType) {
-		if (!getColumns().contains(column)) {
-			if (!getColumnsQueury().contains(column)) {
-				addColumn(column, dataType);
+	public void checkColumn(String column, DataType dataType) {
+		synchronized (object4) {
+			if (!getColumns().contains(column)) {
+				if (!getColumnsQueury().contains(column)) {
+					addColumn(column, dataType);
+				}
 			}
 		}
 	}
@@ -225,6 +226,7 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
+		AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
 		loadPlayerIfNeeded(uuid);
 		return table.get(uuid);
 	}
@@ -303,23 +305,25 @@ public class MySQL {
 		return uuids;
 	}
 
-	public synchronized void insert(String index, String column, Object value, DataType dataType) {
+	public void insert(String index, String column, Object value, DataType dataType) {
 		insertQuery(index, column, value, dataType);
 
 	}
 
-	public synchronized void insertQuery(String index, String column, Object value, DataType dataType) {
-		String query = "INSERT " + getName() + " ";
+	public void insertQuery(String index, String column, Object value, DataType dataType) {
+		synchronized (object5) {
+			String query = "INSERT " + getName() + " ";
 
-		query += "set uuid='" + index + "', ";
-		query += column + "='" + value.toString() + "';";
-		AdvancedCoreHook.getInstance().extraDebug(query);
+			query += "set uuid='" + index + "', ";
+			query += column + "='" + value.toString() + "';";
+			AdvancedCoreHook.getInstance().extraDebug(query);
 
-		try {
-			new Query(mysql, query).executeUpdateAsync();
-			uuids.add(index);
-		} catch (SQLException e) {
-			e.printStackTrace();
+			try {
+				new Query(mysql, query).executeUpdateAsync();
+				uuids.add(index);
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -357,6 +361,9 @@ public class MySQL {
 
 	private Object object1 = new Object();
 	private Object object2 = new Object();
+	private Object object3 = new Object();
+	private Object object4 = new Object();
+	private Object object5 = new Object();
 
 	public void update(String index, String column, Object value, DataType dataType) {
 

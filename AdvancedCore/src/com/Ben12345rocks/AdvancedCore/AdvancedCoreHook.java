@@ -550,7 +550,7 @@ public class AdvancedCoreHook {
 	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
 		loadSignAPI();
-		loadUUIDs();
+		//loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
 		loadUserAPI(UserStorage.SQLITE);
