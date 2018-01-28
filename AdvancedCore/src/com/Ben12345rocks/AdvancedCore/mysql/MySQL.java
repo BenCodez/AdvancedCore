@@ -307,6 +307,7 @@ public class MySQL {
 
 		query += "set uuid='" + index + "', ";
 		query += column + "='" + value.toString() + "';";
+		AdvancedCoreHook.getInstance().extraDebug(query);
 
 		try {
 			new Query(mysql, query).executeUpdateAsync();
@@ -366,7 +367,7 @@ public class MySQL {
 			query += " WHERE `uuid`=";
 			query += "'" + index + "';";
 
-			AdvancedCoreHook.getInstance().debug(query);
+			AdvancedCoreHook.getInstance().extraDebug(query);
 			addToQue(query);
 		} else {
 			insert(index, column, value, dataType);
