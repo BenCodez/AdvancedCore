@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
@@ -15,6 +14,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -33,16 +33,17 @@ public class MySQL {
 
 	// private HashMap<String, ArrayList<Column>> table;
 
-	/*
-	 * ConcurrentMap<String, ArrayList<Column>> table =
-	 * CompatibleCacheBuilder.newBuilder().concurrencyLevel(6) .build(new
-	 * CacheLoader<String, ArrayList<Column>>() {
-	 * 
-	 * @Override public ArrayList<Column> load(String key) { return
-	 * getExactQuery(new Column("uuid", key, DataType.STRING)); } });
-	 */
+	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
+			.build(new CacheLoader<String, ArrayList<Column>>() {
 
-	HashMap<String, ArrayList<Column>> table = new HashMap<String, ArrayList<Column>>();
+				@Override
+				public ArrayList<Column> load(String key) {
+					return getExactQuery(new Column("uuid", key, DataType.STRING));
+				}
+			});
+
+	// ConcurrentMap<String, ArrayList<Column>> table = new
+	// ConcurrentHashMap<String, ArrayList<Column>>();
 
 	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
@@ -68,15 +69,16 @@ public class MySQL {
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		this.maxSize = section.getInt("MaxSize", -1);
 
-		/*
-		 * if (maxSize >= 0) { table =
-		 * CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20,
-		 * TimeUnit.MINUTES) .maximumSize(maxSize).build(new CacheLoader<String,
-		 * ArrayList<Column>>() {
-		 * 
-		 * @Override public ArrayList<Column> load(String key) { return
-		 * getExactQuery(new Column("uuid", key, DataType.STRING)); } }); }
-		 */
+		if (maxSize >= 0) {
+			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20, TimeUnit.MINUTES)
+					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
+
+						@Override
+						public ArrayList<Column> load(String key) {
+							return getExactQuery(new Column("uuid", key, DataType.STRING));
+						}
+					});
+		}
 
 		name = tableName;
 		if (tablePrefix != null) {
@@ -120,8 +122,6 @@ public class MySQL {
 		}, 10 * 1000, 3000);
 
 	}
-
-	private Object object = new Object();
 
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
@@ -234,9 +234,7 @@ public class MySQL {
 	public ArrayList<Column> getExact(String uuid) {
 		// AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
 		loadPlayerIfNeeded(uuid);
-		synchronized (object) {
-			return table.get(uuid);
-		}
+		return table.get(uuid);
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
@@ -351,10 +349,8 @@ public class MySQL {
 	}
 
 	private void loadPlayer(String uuid) {
-		synchronized (object) {
-			table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
-			AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
-		}
+		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
@@ -366,9 +362,7 @@ public class MySQL {
 	}
 
 	public void removePlayer(String uuid) {
-		synchronized (object) {
-			table.remove(uuid);
-		}
+		table.remove(uuid);
 	}
 
 	private Object object1 = new Object();
@@ -383,11 +377,9 @@ public class MySQL {
 		if (getUuids().contains(index)) {
 			synchronized (object2) {
 
-				synchronized (object) {
-					for (Column col : getExact(index)) {
-						if (col.getName().equals(column)) {
-							col.setValue(value);
-						}
+				for (Column col : getExact(index)) {
+					if (col.getName().equals(column)) {
+						col.setValue(value);
 					}
 				}
 
