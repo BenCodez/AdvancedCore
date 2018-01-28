@@ -335,13 +335,12 @@ public class MySQL {
 		}
 	}
 
-	private Object object1 = new Object();
-
 	public void loadPlayer(String uuid) {
-		synchronized (object1) {
+		if (table.containsKey(uuid)) {
 			table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+			AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
 		}
-		AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
+		
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
