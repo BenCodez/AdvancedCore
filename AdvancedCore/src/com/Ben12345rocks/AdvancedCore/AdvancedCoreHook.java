@@ -749,7 +749,7 @@ public class AdvancedCoreHook {
 
 		uuids = new ConcurrentHashMap<String, String>();
 
-		/*Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -803,7 +803,7 @@ public class AdvancedCoreHook {
 					}
 				}, 0);
 			}
-		});*/
+		});
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}

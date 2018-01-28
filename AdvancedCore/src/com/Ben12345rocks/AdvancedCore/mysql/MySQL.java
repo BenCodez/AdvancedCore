@@ -226,13 +226,8 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-		AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
+		//AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
 		loadPlayerIfNeeded(uuid);
-		try {
-			throw new NullPointerException("Test");
-		} catch (NullPointerException e) {
-			e.printStackTrace();
-		}
 		return table.get(uuid);
 	}
 

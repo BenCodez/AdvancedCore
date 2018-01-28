@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TimerTask;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
@@ -80,11 +81,12 @@ public class RewardHandler {
 	 * Check delayed timed rewards.
 	 */
 	public synchronized void checkDelayedTimedRewards() {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+		plugin.getTimer().schedule(new TimerTask() {
 
 			@Override
 			public void run() {
 				if (usesTimed()) {
+					plugin.debug("Checking timed/delayed rewards");
 					for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 						try {
 							User user = UserManager.getInstance().getUser(new UUID(uuid));
@@ -101,7 +103,7 @@ public class RewardHandler {
 					}
 				}
 			}
-		});
+		}, 0);
 
 	}
 
@@ -537,7 +539,7 @@ public class RewardHandler {
 	 * { getRewards().set(i, reward); return; } } getRewards().add(reward); }
 	 */
 
-	public synchronized boolean usesTimed() {
+	public boolean usesTimed() {
 		for (Reward reward : getRewards()) {
 			if (reward.isTimedEnabled() || reward.isDelayEnabled()) {
 				return true;
