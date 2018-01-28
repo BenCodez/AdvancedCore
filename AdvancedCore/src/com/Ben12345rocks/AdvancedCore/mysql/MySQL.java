@@ -336,7 +336,7 @@ public class MySQL {
 	}
 
 	public void loadPlayer(String uuid) {
-		if (table.containsKey(uuid)) {
+		if (!table.containsKey(uuid)) {
 			table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
 			AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
 		}
