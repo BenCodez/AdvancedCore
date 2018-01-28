@@ -128,6 +128,7 @@ public class UserManager {
 
 	public void purgeOldPlayers() {
 		if (plugin.isPurgeOldData()) {
+			plugin.debug("Purging players");
 			int daysOld = plugin.getPurgeMinimumDays();
 			for (String uuid : getAllUUIDs()) {
 				User user = getUser(new UUID(uuid));
@@ -137,6 +138,7 @@ public class UserManager {
 					user.setLastOnline(System.currentTimeMillis());
 				}
 				if (days > daysOld) {
+					plugin.debug("Removing " + user.getUUID() + " because of purge");
 					user.remove();
 				}
 			}
@@ -150,7 +152,7 @@ public class UserManager {
 	public boolean userExist(String name) {
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
-				//plugin.extraDebug("Found " + name + " loaded in uuid map");
+				// plugin.extraDebug("Found " + name + " loaded in uuid map");
 				return true;
 			}
 		}
@@ -158,7 +160,7 @@ public class UserManager {
 		for (String uuid : getAllUUIDs()) {
 			User user = getUser(new UUID(uuid));
 			if (user.getPlayerName().equalsIgnoreCase(name)) {
-				//plugin.extraDebug("Found " + name + " in database");
+				// plugin.extraDebug("Found " + name + " in database");
 				return true;
 			}
 		}

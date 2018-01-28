@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -33,13 +34,15 @@ public class MySQL {
 
 	// private HashMap<String, ArrayList<Column>> table;
 
-	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4)
-			.build(new CacheLoader<String, ArrayList<Column>>() {
-				@Override
-				public ArrayList<Column> load(String key) {
-					return getExactQuery(new Column("uuid", key, DataType.STRING));
-				}
-			});
+	/*
+	 * ConcurrentMap<String, ArrayList<Column>> table =
+	 * CompatibleCacheBuilder.newBuilder().concurrencyLevel(4) .build(new
+	 * CacheLoader<String, ArrayList<Column>>() {
+	 * 
+	 * @Override public ArrayList<Column> load(String key) { return
+	 * getExactQuery(new Column("uuid", key, DataType.STRING)); } });
+	 */
+	ConcurrentMap<String, ArrayList<Column>> table = new ConcurrentHashMap<String, ArrayList<Column>>();
 
 	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
@@ -64,7 +67,7 @@ public class MySQL {
 		}
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		this.maxSize = section.getInt("MaxSize", -1);
-		if (maxSize >= 0) {
+		/*if (maxSize >= 0) {
 			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(4).expireAfterAccess(20, TimeUnit.MINUTES)
 					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
 						@Override
@@ -72,7 +75,7 @@ public class MySQL {
 							return getExactQuery(new Column("uuid", key, DataType.STRING));
 						}
 					});
-		}
+		}*/
 
 		name = tableName;
 		if (tablePrefix != null) {
@@ -145,11 +148,13 @@ public class MySQL {
 	}
 
 	public void clearCache() {
+		AdvancedCoreHook.getInstance().debug("CLearing cache");
 		table.clear();
 		clearCacheBasic();
 	}
 
 	public void clearCacheBasic() {
+		AdvancedCoreHook.getInstance().debug("CLearing cache basic");
 		columns.clear();
 		columns.addAll(getColumnsQueury());
 		uuids.clear();
