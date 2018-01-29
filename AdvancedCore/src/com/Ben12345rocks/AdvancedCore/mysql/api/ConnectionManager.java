@@ -98,7 +98,7 @@ public class ConnectionManager {
 					+ "&amp;allowMultiQueries=true&amp;rewriteBatchedStatements=true");
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
-			config.setMinimumIdle(1);
+			config.setMinimumIdle(maximumPoolsize);
 			dataSource = new HikariDataSource(config);
 			return true;
 		} catch (Exception e) {
@@ -115,7 +115,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param dataSource the dataSource to set
+	 * @param dataSource
+	 *            the dataSource to set
 	 */
 	public void setDataSource(HikariDataSource dataSource) {
 		this.dataSource = dataSource;
@@ -129,7 +130,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param host the host to set
+	 * @param host
+	 *            the host to set
 	 */
 	public void setHost(String host) {
 		this.host = host;
@@ -143,7 +145,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param port the port to set
+	 * @param port
+	 *            the port to set
 	 */
 	public void setPort(String port) {
 		this.port = port;
@@ -157,7 +160,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param username the username to set
+	 * @param username
+	 *            the username to set
 	 */
 	public void setUsername(String username) {
 		this.username = username;
@@ -171,7 +175,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param password the password to set
+	 * @param password
+	 *            the password to set
 	 */
 	public void setPassword(String password) {
 		this.password = password;
@@ -185,7 +190,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param database the database to set
+	 * @param database
+	 *            the database to set
 	 */
 	public void setDatabase(String database) {
 		this.database = database;
@@ -199,7 +205,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param connectionTimeout the connectionTimeout to set
+	 * @param connectionTimeout
+	 *            the connectionTimeout to set
 	 */
 	public void setConnectionTimeout(int connectionTimeout) {
 		this.connectionTimeout = connectionTimeout;
@@ -213,7 +220,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param maximumPoolsize the maximumPoolsize to set
+	 * @param maximumPoolsize
+	 *            the maximumPoolsize to set
 	 */
 	public void setMaximumPoolsize(int maximumPoolsize) {
 		this.maximumPoolsize = maximumPoolsize;
@@ -227,7 +235,8 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param useSSL the useSSL to set
+	 * @param useSSL
+	 *            the useSSL to set
 	 */
 	public void setUseSSL(boolean useSSL) {
 		this.useSSL = useSSL;
