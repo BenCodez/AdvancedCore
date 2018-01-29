@@ -789,13 +789,6 @@ public class AdvancedCoreHook {
 				if (add) {
 					uuids.put(name, uuid);
 				}
-				if (getStorageType().equals(UserStorage.MYSQL)) {
-					try {
-						Thread.sleep(200);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
 			}
 
 			@Override
