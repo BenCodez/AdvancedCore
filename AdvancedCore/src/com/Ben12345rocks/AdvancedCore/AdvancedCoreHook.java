@@ -36,6 +36,7 @@ import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandle;
 import com.Ben12345rocks.AdvancedCore.Objects.TabCompleteHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
@@ -497,6 +498,8 @@ public class AdvancedCoreHook {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
 		loadVersionFile();
+
+		userStartup();
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
@@ -568,13 +571,9 @@ public class AdvancedCoreHook {
 		loadVersionFile();
 		loadTabComplete();
 
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		UserManager.getInstance().purgeOldPlayers();
 
-			@Override
-			public void run() {
-				UserManager.getInstance().purgeOldPlayers();
-			}
-		});
+		userStartup();
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
@@ -749,68 +748,62 @@ public class AdvancedCoreHook {
 
 		uuids = new ConcurrentHashMap<String, String>();
 
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		addUserStartup(new UserStartup() {
 
 			@Override
-			public void run() {
-				getTimer().schedule(new TimerTask() {
+			public void onStartUp(User user) {
+				String uuid = user.getUUID();
+				String name = user.getData().getString("PlayerName");
+				boolean add = true;
+				if (uuids.containsValue(uuid)) {
+					debug("Duplicate uuid? " + uuid);
+				}
+				if (name == null || name.equals("") || name.equals("Error getting name")) {
+					debug("Invalid player name: " + uuid);
+					add = false;
+				}
+				if (uuid == null || uuid.equals("")) {
+					debug("Invalid uuid: " + uuid);
+					add = false;
+				}
 
-					@Override
-					public void run() {
-
-						for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-							User user = UserManager.getInstance().getUser(new UUID(uuid));
-							String name = user.getData().getString("PlayerName");
-							boolean add = true;
-							if (uuids.containsValue(uuid)) {
-								debug("Duplicate uuid? " + uuid);
-							}
-							if (name == null || name.equals("") || name.equals("Error getting name")) {
-								debug("Invalid player name: " + uuid);
-								add = false;
-							}
-							if (uuid == null || uuid.equals("")) {
-								debug("Invalid uuid: " + uuid);
-								add = false;
-							}
-
-							if (getStorageType().equals(UserStorage.MYSQL)) {
-								boolean delete = true;
-								for (Column col : user.getData().getMySqlRow()) {
-									if (!col.getName().equals("uuid")
-											&& !col.getName().equalsIgnoreCase("playername")) {
-										if (col.getValue() != null) {
-											if (!col.getValue().toString().isEmpty()) {
-												delete = false;
-											}
-										}
-									}
-								}
-								if (delete) {
-									add = false;
-									debug("Deleting " + uuid);
-									getMysql().deletePlayer(uuid);
-								}
-
-							}
-
-							if (add) {
-								uuids.put(name, uuid);
-							}
-							if (getStorageType().equals(UserStorage.MYSQL)) {
-								try {
-									Thread.sleep(200);
-								} catch (InterruptedException e) {
-									e.printStackTrace();
+				if (getStorageType().equals(UserStorage.MYSQL)) {
+					boolean delete = true;
+					for (Column col : user.getData().getMySqlRow()) {
+						if (!col.getName().equals("uuid") && !col.getName().equalsIgnoreCase("playername")) {
+							if (col.getValue() != null) {
+								if (!col.getValue().toString().isEmpty()) {
+									delete = false;
 								}
 							}
 						}
-
-						debug("Loaded uuids in the background");
 					}
-				}, 0);
+					if (delete) {
+						add = false;
+						debug("Deleting " + uuid);
+						getMysql().deletePlayer(uuid);
+					}
+
+				}
+
+				if (add) {
+					uuids.put(name, uuid);
+				}
+				if (getStorageType().equals(UserStorage.MYSQL)) {
+					try {
+						Thread.sleep(200);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+			@Override
+			public void onFinish() {
+				TabCompleteHandler.getInstance().reload();
 			}
 		});
+
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}
@@ -1031,6 +1024,30 @@ public class AdvancedCoreHook {
 		 * Bukkit.getServer().getServicesManager() .getRegistration(Permission.class);
 		 * perms = rsp.getProvider(); return perms != null;
 		 */
+	}
+
+	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
+
+	public void addUserStartup(UserStartup start) {
+		userStartup.add(start);
+	}
+
+	public void userStartup() {
+		Bukkit.getScheduler().runTaskLaterAsynchronously(getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					for (UserStartup start : userStartup) {
+						start.onStartUp(user);
+					}
+				}
+				for (UserStartup start : userStartup) {
+					start.onFinish();
+				}
+			}
+		}, 30);
 	}
 
 	/**

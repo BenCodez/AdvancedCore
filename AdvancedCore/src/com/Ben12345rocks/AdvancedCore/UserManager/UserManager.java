@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
@@ -128,20 +129,27 @@ public class UserManager {
 
 	public void purgeOldPlayers() {
 		if (plugin.isPurgeOldData()) {
-			plugin.debug("Purging players");
-			int daysOld = plugin.getPurgeMinimumDays();
-			for (String uuid : getAllUUIDs()) {
-				User user = getUser(new UUID(uuid));
-				int days = user.getNumberOfDaysSinceLogin();
-				if (days == -1) {
-					// fix ones with no last online
-					user.setLastOnline(System.currentTimeMillis());
+			plugin.addUserStartup(new UserStartup() {
+
+				@Override
+				public void onStartUp(User user) {
+					int daysOld = plugin.getPurgeMinimumDays();
+					int days = user.getNumberOfDaysSinceLogin();
+					if (days == -1) {
+						// fix ones with no last online
+						user.setLastOnline(System.currentTimeMillis());
+					}
+					if (days > daysOld) {
+						plugin.debug("Removing " + user.getUUID() + " because of purge");
+						user.remove();
+					}
 				}
-				if (days > daysOld) {
-					plugin.debug("Removing " + user.getUUID() + " because of purge");
-					user.remove();
+
+				@Override
+				public void onFinish() {
+					plugin.debug("Finished purgining");
 				}
-			}
+			});
 		}
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
 				&& AdvancedCoreHook.getInstance().getMysql() != null) {
