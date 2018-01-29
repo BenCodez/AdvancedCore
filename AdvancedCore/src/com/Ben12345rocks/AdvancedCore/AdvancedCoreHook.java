@@ -801,6 +801,7 @@ public class AdvancedCoreHook {
 			@Override
 			public void onFinish() {
 				TabCompleteHandler.getInstance().reload();
+				debug("Finished loading uuids");
 			}
 		});
 
