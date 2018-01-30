@@ -159,17 +159,22 @@ public class UserManager {
 	}
 
 	public boolean userExist(String name) {
+		User user = getUser(name);
+		if (user.getData().hasData()) {
+			return true;
+		}
+
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
-				plugin.extraDebug("Found " + name + " loaded in uuid map");
+				//plugin.extraDebug("Found " + name + " loaded in uuid map");
 				return true;
 			}
 		}
 
 		for (String uuid : getAllUUIDs()) {
-			User user = getUser(new UUID(uuid));
-			if (user.getPlayerName().equalsIgnoreCase(name)) {
-				plugin.extraDebug("Found " + name + " in database");
+			User user1 = getUser(new UUID(uuid));
+			if (user1.getPlayerName().equalsIgnoreCase(name)) {
+				//plugin.extraDebug("Found " + name + " in database");
 				return true;
 			}
 		}
