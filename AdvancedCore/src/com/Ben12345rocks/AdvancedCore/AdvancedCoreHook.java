@@ -1031,13 +1031,16 @@ public class AdvancedCoreHook {
 
 			@Override
 			public void run() {
+				ArrayList<User> users = new ArrayList<User>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					users.add(user);
 					for (UserStartup start : userStartup) {
 						start.onStartUp(user);
 					}
 				}
 				for (UserStartup start : userStartup) {
+					start.setUsers(users);
 					start.onFinish();
 				}
 			}
