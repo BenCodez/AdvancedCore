@@ -69,12 +69,13 @@ public class UserManager {
 	}
 
 	public String getProperName(String name) {
-		for (String s : plugin.getUuids().keySet()) {
+		return name;
+		/*for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
 				return s;
 			}
 		}
-		return name;
+		return name;*/
 	}
 
 	/**
