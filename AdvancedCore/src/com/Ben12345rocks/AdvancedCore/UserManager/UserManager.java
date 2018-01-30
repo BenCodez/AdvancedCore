@@ -159,11 +159,6 @@ public class UserManager {
 	}
 
 	public boolean userExist(String name) {
-		User user = getUser(name);
-		if (user.getData().hasData()) {
-			return true;
-		}
-
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
 				//plugin.extraDebug("Found " + name + " loaded in uuid map");

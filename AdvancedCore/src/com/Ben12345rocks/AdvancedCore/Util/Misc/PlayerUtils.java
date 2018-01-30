@@ -118,13 +118,11 @@ public class PlayerUtils {
 			return null;
 		}
 
-		if (plugin.isAlternateUUIDLookUp() || !Bukkit.getServer().getOnlineMode() || !plugin.isCheckNameMojang()) {
-			if (UserManager.getInstance().userExist(playerName)) {
-				plugin.debug("Looking up uuid");
-				return getUUIDLookup(playerName);
-			}
-		}
+		String uuid = getUUIDLookup(playerName);
 
+		if (!uuid.equals("")) {
+			return uuid;
+		}
 		try {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 			return p.getUniqueId().toString();
