@@ -232,7 +232,7 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-		// AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
+		AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
 		loadPlayerIfNeeded(uuid);
 		AdvancedCoreHook.getInstance().debug("test one: " + uuid);
 		return table.get(uuid);
