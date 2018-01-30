@@ -323,7 +323,7 @@ public class MySQL {
 
 			query += "set uuid='" + index + "', ";
 			query += column + "='" + value.toString() + "';";
-		//	AdvancedCoreHook.getInstance().extraDebug(query);
+			// AdvancedCoreHook.getInstance().extraDebug(query);
 
 			try {
 				new Query(mysql, query).executeUpdateAsync();
@@ -357,6 +357,7 @@ public class MySQL {
 	public void loadPlayerIfNeeded(String uuid) {
 		synchronized (object1) {
 			if (!containsKey(uuid)) {
+				AdvancedCoreHook.getInstance().debug("Load: " + uuid);
 				loadPlayer(uuid);
 			}
 		}
@@ -395,7 +396,7 @@ public class MySQL {
 				query += " WHERE `uuid`=";
 				query += "'" + index + "';";
 
-			//	AdvancedCoreHook.getInstance().extraDebug(query);
+				// AdvancedCoreHook.getInstance().extraDebug(query);
 				addToQue(query);
 			}
 		} else {
