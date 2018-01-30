@@ -118,6 +118,11 @@ public class PlayerUtils {
 			return null;
 		}
 
+		Player player = Bukkit.getPlayer(playerName);
+		if (player != null) {
+			return player.getUniqueId().toString();
+		}
+
 		String uuid = getUUIDLookup(playerName);
 
 		if (!uuid.equals("")) {
