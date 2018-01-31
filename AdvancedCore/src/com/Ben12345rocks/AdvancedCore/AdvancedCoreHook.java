@@ -1042,6 +1042,9 @@ public class AdvancedCoreHook {
 			@Override
 			public void run() {
 				debug("User Startup starting");
+				for (UserStartup start : userStartup) {
+					start.onStart();
+				}
 				ArrayList<User> users = new ArrayList<User>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
