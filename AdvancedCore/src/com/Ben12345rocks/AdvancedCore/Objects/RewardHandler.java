@@ -109,7 +109,7 @@ public class RewardHandler {
 
 						@Override
 						public void onStart() {
-							plugin.debug("Checking timed/dealyed rewards");
+							plugin.debug("Checking timed/delayed rewards");
 						}
 					});
 				}
