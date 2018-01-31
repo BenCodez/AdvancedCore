@@ -758,9 +758,14 @@ public class AdvancedCoreHook {
 				if (uuids.containsValue(uuid)) {
 					debug("Duplicate uuid? " + uuid);
 				}
+
 				if (name == null || name.equals("") || name.equals("Error getting name")) {
 					debug("Invalid player name: " + uuid);
 					add = false;
+				} else {
+					if (uuids.containsKey(name)) {
+						debug("Duplicate player name?" + name);
+					}
 				}
 				if (uuid == null || uuid.equals("")) {
 					debug("Invalid uuid: " + uuid);
