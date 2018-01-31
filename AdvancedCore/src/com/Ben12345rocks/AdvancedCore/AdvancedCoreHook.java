@@ -796,6 +796,11 @@ public class AdvancedCoreHook {
 				TabCompleteHandler.getInstance().reload();
 				debug("Finished loading uuids");
 			}
+
+			@Override
+			public void onStart() {
+				debug("Starting background uuid task");
+			}
 		});
 
 		TabCompleteHandler.getInstance().reload();

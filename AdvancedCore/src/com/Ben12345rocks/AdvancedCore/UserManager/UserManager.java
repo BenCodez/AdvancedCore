@@ -150,6 +150,11 @@ public class UserManager {
 				public void onFinish() {
 					plugin.debug("Finished purgining");
 				}
+
+				@Override
+				public void onStart() {
+					
+				}
 			});
 		}
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)

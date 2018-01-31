@@ -6,6 +6,8 @@ public abstract class UserStartup {
 	public abstract void onStartUp(User user);
 
 	public abstract void onFinish();
+	
+	public abstract void onStart();
 
 	private ArrayList<User> users = new ArrayList<User>();
 

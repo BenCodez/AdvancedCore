@@ -85,7 +85,6 @@ public class RewardHandler {
 			@Override
 			public void run() {
 				if (usesTimed()) {
-					plugin.debug("Checking timed/delayed rewards");
 					plugin.addUserStartup(new UserStartup() {
 
 						@Override
@@ -106,6 +105,11 @@ public class RewardHandler {
 						@Override
 						public void onFinish() {
 
+						}
+
+						@Override
+						public void onStart() {
+							plugin.debug("Checking timed/dealyed rewards");
 						}
 					});
 				}
