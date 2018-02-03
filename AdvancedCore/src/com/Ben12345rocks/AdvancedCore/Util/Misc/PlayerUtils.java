@@ -264,10 +264,16 @@ public class PlayerUtils {
 
 	@SuppressWarnings("deprecation")
 	public boolean isValidUser(String name) {
+		Player player = Bukkit.getPlayer(name);
+		if (player != null) {
+			return true;
+		}
+
 		boolean userExist = UserManager.getInstance().userExist(name);
 		if (userExist) {
 			return userExist;
 		}
+		
 		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 		if (p.hasPlayedBefore() || p.isOnline()) {
 			// plugin.extraDebug(name + " has joined before");

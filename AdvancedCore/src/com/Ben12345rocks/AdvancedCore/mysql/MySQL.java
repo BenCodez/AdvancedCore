@@ -20,7 +20,10 @@ import java.util.concurrent.TimeUnit;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Objects.UUID;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
 import com.Ben12345rocks.AdvancedCore.sql.DataType;
@@ -50,6 +53,8 @@ public class MySQL {
 	private String name;
 
 	private Set<String> uuids = Collections.synchronizedSet(new HashSet<String>());
+
+	private Set<String> names = Collections.synchronizedSet(new HashSet<String>());
 
 	private boolean useBatchUpdates = true;
 
@@ -166,6 +171,8 @@ public class MySQL {
 		columns.addAll(getColumnsQueury());
 		uuids.clear();
 		uuids.addAll(getUuidsQuery());
+		names.clear();
+		names.addAll(getNamesQuery());
 	}
 
 	public void close() {
@@ -199,6 +206,8 @@ public class MySQL {
 		uuids.remove(uuid);
 		this.query.add(q);
 		removePlayer(uuid);
+		names.remove(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(uuid)), uuid));
+		clearCacheBasic();
 
 	}
 
@@ -232,9 +241,9 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-	//	AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
+		// AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
 		loadPlayerIfNeeded(uuid);
-		//AdvancedCoreHook.getInstance().debug("test one: " + uuid);
+		// AdvancedCoreHook.getInstance().debug("test one: " + uuid);
 		return table.get(uuid);
 	}
 
@@ -292,6 +301,25 @@ public class MySQL {
 		return result;
 	}
 
+	public ArrayList<Column> getRowsNameQuery() {
+		ArrayList<Column> result = new ArrayList<Column>();
+		String sql = "SELECT PlayerName FROM " + getName() + ";";
+
+		try {
+			Query query = new Query(mysql, sql);
+			ResultSet rs = query.executeQuery();
+
+			while (rs.next()) {
+				Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
+				result.add(rCol);
+			}
+		} catch (SQLException e) {
+			return null;
+		}
+
+		return result;
+	}
+
 	public Set<String> getUuids() {
 		if (uuids == null || uuids.size() == 0) {
 			uuids.clear();
@@ -301,10 +329,30 @@ public class MySQL {
 		return uuids;
 	}
 
+	public Set<String> getNames() {
+		if (names == null || names.size() == 0) {
+			names.clear();
+			names.addAll(getNamesQuery());
+			return names;
+		}
+		return names;
+	}
+
 	public ArrayList<String> getUuidsQuery() {
 		ArrayList<String> uuids = new ArrayList<String>();
 
 		ArrayList<Column> rows = getRowsQuery();
+		for (Column c : rows) {
+			uuids.add((String) c.getValue());
+		}
+
+		return uuids;
+	}
+
+	public ArrayList<String> getNamesQuery() {
+		ArrayList<String> uuids = new ArrayList<String>();
+
+		ArrayList<Column> rows = getRowsNameQuery();
 		for (Column c : rows) {
 			uuids.add((String) c.getValue());
 		}
@@ -328,6 +376,8 @@ public class MySQL {
 			try {
 				new Query(mysql, query).executeUpdateAsync();
 				uuids.add(index);
+				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
+						index));
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
@@ -351,14 +401,14 @@ public class MySQL {
 
 	private void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
-		//AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
+		// AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
 
 		if (!containsKey(uuid)) {
 			synchronized (object1) {
-			//	AdvancedCoreHook.getInstance().debug("Load: " + uuid);
+				// AdvancedCoreHook.getInstance().debug("Load: " + uuid);
 				loadPlayer(uuid);
 			}
 		}

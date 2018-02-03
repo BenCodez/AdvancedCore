@@ -68,6 +68,35 @@ public class UserManager {
 		return new ArrayList<String>();
 	}
 
+	public ArrayList<String> getAllPlayerNames() {
+		ArrayList<String> names = new ArrayList<String>();
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			for (String uuid : getAllUUIDs()) {
+				User user = UserManager.getInstance().getUser(new UUID(uuid));
+				String name = user.getPlayerName();
+				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+					names.add(name);
+				}
+			}
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			ArrayList<String> data = AdvancedCoreHook.getInstance().getSQLiteUserTable().getNames();
+			for (String name : data) {
+				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+					names.add(name);
+				}
+			}
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			ArrayList<String> data = ArrayUtils.getInstance()
+					.convert(AdvancedCoreHook.getInstance().getMysql().getNames());
+			for (String name : data) {
+				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+					names.add(name);
+				}
+			}
+		}
+		return names;
+	}
+
 	public String getProperName(String name) {
 
 		for (String s : plugin.getUuids().keySet()) {
@@ -153,7 +182,7 @@ public class UserManager {
 
 				@Override
 				public void onStart() {
-					
+
 				}
 			});
 		}
@@ -164,9 +193,14 @@ public class UserManager {
 	}
 
 	public boolean userExist(String name) {
+		boolean exist = UserManager.getInstance().getAllPlayerNames().contains(name);
+		if (exist) {
+			return exist;
+		}
+
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
-				//plugin.extraDebug("Found " + name + " loaded in uuid map");
+				// plugin.extraDebug("Found " + name + " loaded in uuid map");
 				return true;
 			}
 		}
@@ -174,7 +208,7 @@ public class UserManager {
 		for (String uuid : getAllUUIDs()) {
 			User user1 = getUser(new UUID(uuid));
 			if (user1.getPlayerName().equalsIgnoreCase(name)) {
-				//plugin.extraDebug("Found " + name + " in database");
+				// plugin.extraDebug("Found " + name + " in database");
 				return true;
 			}
 		}
