@@ -121,6 +121,8 @@ public class ItemBuilder {
 					setSkullOwner(skull);
 				}
 
+				setUnbreakable(data.getBoolean("Unbreakable", false));
+
 				slot = data.getInt("Slot", -1);
 			} else {
 				setBlank();
@@ -236,6 +238,11 @@ public class ItemBuilder {
 		} catch (Exception ex) {
 			AdvancedCoreHook.getInstance().debug("Invalid flag: " + flag);
 		}
+		return this;
+	}
+
+	public ItemBuilder setUnbreakable(boolean unbreakable) {
+		is.getItemMeta().setUnbreakable(unbreakable);
 		return this;
 	}
 
