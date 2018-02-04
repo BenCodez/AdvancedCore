@@ -104,6 +104,7 @@ public class JavascriptEngine {
 			engine.put("Bukkit", Bukkit.getServer());
 			engine.put("AdvancedCore", AdvancedCoreHook.getInstance());
 			engine.put("Console", Bukkit.getConsoleSender());
+			engine.put("UserManager", UserManager.getInstance());
 
 			engineAPI.putAll(AdvancedCoreHook.getInstance().getJavascriptEngine());
 

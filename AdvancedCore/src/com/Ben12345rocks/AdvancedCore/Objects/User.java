@@ -405,18 +405,20 @@ public class User {
 		builder.addEnchantments(enchants);
 
 		Player player = getPlayer();
-		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(builder.toItemStack());
-		for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
-			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+		if (player != null) {
+			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(builder.toItemStack());
+			for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
-				@Override
-				public void run() {
-					player.getWorld().dropItem(player.getLocation(), me.getValue());
-				}
-			});
+					@Override
+					public void run() {
+						player.getWorld().dropItem(player.getLocation(), me.getValue());
+					}
+				});
+			}
+
+			player.updateInventory();
 		}
-
-		player.updateInventory();
 
 	}
 
@@ -437,13 +439,14 @@ public class User {
 
 			@Override
 			public void run() {
-				HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
-				for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
-					player.getWorld().dropItem(player.getLocation(), me.getValue());
+				if (player != null) {
+					HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+					for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
+						player.getWorld().dropItem(player.getLocation(), me.getValue());
+					}
+
+					player.updateInventory();
 				}
-
-				player.updateInventory();
-
 			}
 		});
 

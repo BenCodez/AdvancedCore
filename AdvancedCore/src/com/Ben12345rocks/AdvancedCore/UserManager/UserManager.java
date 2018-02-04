@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.sql.Column;
@@ -67,7 +68,37 @@ public class UserManager {
 		return new ArrayList<String>();
 	}
 
+	public ArrayList<String> getAllPlayerNames() {
+		ArrayList<String> names = new ArrayList<String>();
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			for (String uuid : getAllUUIDs()) {
+				User user = UserManager.getInstance().getUser(new UUID(uuid));
+				String name = user.getPlayerName();
+				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+					names.add(name);
+				}
+			}
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			ArrayList<String> data = AdvancedCoreHook.getInstance().getSQLiteUserTable().getNames();
+			for (String name : data) {
+				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+					names.add(name);
+				}
+			}
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			ArrayList<String> data = ArrayUtils.getInstance()
+					.convert(AdvancedCoreHook.getInstance().getMysql().getNames());
+			for (String name : data) {
+				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+					names.add(name);
+				}
+			}
+		}
+		return names;
+	}
+
 	public String getProperName(String name) {
+
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
 				return s;
@@ -128,20 +159,32 @@ public class UserManager {
 
 	public void purgeOldPlayers() {
 		if (plugin.isPurgeOldData()) {
-			plugin.debug("Purging players");
-			int daysOld = plugin.getPurgeMinimumDays();
-			for (String uuid : getAllUUIDs()) {
-				User user = getUser(new UUID(uuid));
-				int days = user.getNumberOfDaysSinceLogin();
-				if (days == -1) {
-					// fix ones with no last online
-					user.setLastOnline(System.currentTimeMillis());
+			plugin.addUserStartup(new UserStartup() {
+
+				@Override
+				public void onStartUp(User user) {
+					int daysOld = plugin.getPurgeMinimumDays();
+					int days = user.getNumberOfDaysSinceLogin();
+					if (days == -1) {
+						// fix ones with no last online
+						user.setLastOnline(System.currentTimeMillis());
+					}
+					if (days > daysOld) {
+						plugin.debug("Removing " + user.getUUID() + " because of purge");
+						user.remove();
+					}
 				}
-				if (days > daysOld) {
-					plugin.debug("Removing " + user.getUUID() + " because of purge");
-					user.remove();
+
+				@Override
+				public void onFinish() {
+					plugin.debug("Finished purgining");
 				}
-			}
+
+				@Override
+				public void onStart() {
+
+				}
+			});
 		}
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
 				&& AdvancedCoreHook.getInstance().getMysql() != null) {
@@ -150,6 +193,11 @@ public class UserManager {
 	}
 
 	public boolean userExist(String name) {
+		boolean exist = UserManager.getInstance().getAllPlayerNames().contains(name);
+		if (exist) {
+			return exist;
+		}
+
 		for (String s : plugin.getUuids().keySet()) {
 			if (s.equalsIgnoreCase(name)) {
 				// plugin.extraDebug("Found " + name + " loaded in uuid map");
@@ -158,8 +206,8 @@ public class UserManager {
 		}
 
 		for (String uuid : getAllUUIDs()) {
-			User user = getUser(new UUID(uuid));
-			if (user.getPlayerName().equalsIgnoreCase(name)) {
+			User user1 = getUser(new UUID(uuid));
+			if (user1.getPlayerName().equalsIgnoreCase(name)) {
 				// plugin.extraDebug("Found " + name + " in database");
 				return true;
 			}

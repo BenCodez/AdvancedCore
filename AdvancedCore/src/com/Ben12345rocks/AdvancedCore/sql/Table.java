@@ -246,6 +246,38 @@ public class Table {
 		return result;
 	}
 
+	public List<Column> getRowsNames() {
+		List<Column> result = new ArrayList<Column>();
+		String query = "SELECT PLayerName FROM " + getName();
+
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			ResultSet rs = s.executeQuery();
+			try {
+				while (rs.next()) {
+					Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
+					result.add(rCol);
+				}
+				sqLite.close(s, rs);
+			} catch (SQLException e) {
+				s.close();
+				return null;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return result;
+	}
+
+	public ArrayList<String> getNames() {
+		ArrayList<String> names = new ArrayList<String>();
+		for (Column col : getRowsNames()) {
+			names.add(col.getValue().toString());
+		}
+		return names;
+	}
+
 	public ArrayList<String> getTableColumns() {
 		ArrayList<String> columns = new ArrayList<String>();
 		String query = "SELECT * FROM " + getName();

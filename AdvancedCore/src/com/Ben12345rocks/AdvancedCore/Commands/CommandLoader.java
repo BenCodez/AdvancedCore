@@ -149,6 +149,18 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(
+				new CommandHandler(new String[] { "UserRemove", "(uuid)" }, permPrefix + ".UserRemove", "Remove User") {
+
+					@Override
+					public void execute(CommandSender sender, String[] args) {
+						sendMessage(sender, "&cRemoving " + args[1]);
+						User user = UserManager.getInstance().getUser(new UUID(args[1]));
+						user.getData().remove();
+						sendMessage(sender, "&cRemoved " + args[1]);
+					}
+				});
+
 		cmds.add(new CommandHandler(new String[] { "Rewards", "(Reward)" }, permPrefix + ".RewardEdit",
 				"Open GUI Reward", false) {
 

@@ -118,12 +118,16 @@ public class PlayerUtils {
 			return null;
 		}
 
-		if (plugin.isAlternateUUIDLookUp() || !Bukkit.getServer().getOnlineMode() || !plugin.isCheckNameMojang()) {
-			if (UserManager.getInstance().userExist(playerName)) {
-				return getUUIDLookup(playerName);
-			}
+		Player player = Bukkit.getPlayer(playerName);
+		if (player != null) {
+			return player.getUniqueId().toString();
 		}
 
+		String uuid = getUUIDLookup(playerName);
+
+		if (!uuid.equals("")) {
+			return uuid;
+		}
 		try {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 			return p.getUniqueId().toString();
@@ -148,6 +152,7 @@ public class PlayerUtils {
 				}
 			}
 		}
+
 		for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 			User user = UserManager.getInstance().getUser(new UUID(uuid));
 			String name = user.getData().getString("PlayerName");
@@ -259,10 +264,16 @@ public class PlayerUtils {
 
 	@SuppressWarnings("deprecation")
 	public boolean isValidUser(String name) {
+		Player player = Bukkit.getPlayer(name);
+		if (player != null) {
+			return true;
+		}
+
 		boolean userExist = UserManager.getInstance().userExist(name);
 		if (userExist) {
 			return userExist;
 		}
+		
 		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 		if (p.hasPlayedBefore() || p.isOnline()) {
 			// plugin.extraDebug(name + " has joined before");
