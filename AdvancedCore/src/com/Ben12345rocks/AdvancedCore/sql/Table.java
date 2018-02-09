@@ -273,7 +273,9 @@ public class Table {
 	public ArrayList<String> getNames() {
 		ArrayList<String> names = new ArrayList<String>();
 		for (Column col : getRowsNames()) {
-			names.add(col.getValue().toString());
+			if (col.getValue() != null) {
+				names.add(col.getValue().toString());
+			}
 		}
 		return names;
 	}
