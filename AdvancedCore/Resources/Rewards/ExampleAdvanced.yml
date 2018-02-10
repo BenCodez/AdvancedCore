@@ -219,4 +219,7 @@ Lucky:
       Player: 'You were lucky and received an extra $1000!'
     Money: 1000
     
+# Ability for server option, very rare cases
+#Server: 'Minecraft Server'
+    
   

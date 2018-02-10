@@ -243,6 +243,8 @@ public class Reward {
 
 	private boolean onlyOneLucky;
 
+	private String server;
+
 	private File file;
 
 	private boolean randomPickRandom;
@@ -1107,9 +1109,10 @@ public class Reward {
 			}
 		}
 
+		boolean checkServer = checkServer();
 		boolean checkWorld = checkWorld(user);
 
-		if (((!online && !user.isOnline()) || !checkWorld) && !isForceOffline()) {
+		if (((!online && !user.isOnline()) || !checkWorld || !checkServer) && !isForceOffline()) {
 			if (giveOffline) {
 				checkRewardFile();
 				user.addOfflineRewards(this, placeholders);
@@ -1121,6 +1124,10 @@ public class Reward {
 		}
 
 		giveRewardReward(user, online, ignoreChance, placeholders);
+	}
+
+	public boolean checkServer() {
+		return Bukkit.getServer().getName().equals(server);
 	}
 
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
@@ -1495,6 +1502,8 @@ public class Reward {
 		onlyOneLucky = getConfig().getOnlyOneLucky();
 
 		randomCommand = getConfig().getRandomCommand();
+
+		server = getConfig().getServer();
 	}
 
 	/**

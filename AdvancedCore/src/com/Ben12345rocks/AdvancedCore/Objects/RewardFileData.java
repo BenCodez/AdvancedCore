@@ -89,6 +89,10 @@ public class RewardFileData {
 		return getConfigData().getInt("ActionBar.Delay");
 	}
 
+	public String getServer() {
+		return getConfigData().getString("Server", "");
+	}
+
 	/**
 	 * Gets the action bar message.
 	 *
