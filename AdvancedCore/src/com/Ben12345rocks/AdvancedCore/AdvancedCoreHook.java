@@ -632,7 +632,7 @@ public class AdvancedCoreHook {
 					@Override
 					public void run() {
 						setMysql(new MySQL(getPlugin().getName() + "_Users",
-								configData.getConfigurationSection("Mysql")));
+								configData.getConfigurationSection("MySQL")));
 					}
 				});
 			}
