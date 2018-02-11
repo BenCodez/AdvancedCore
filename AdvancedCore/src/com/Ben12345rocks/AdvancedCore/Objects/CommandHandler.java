@@ -46,6 +46,26 @@ public abstract class CommandHandler {
 	private boolean allowConsole = true;
 
 	/**
+	 * @return the allowConsole
+	 */
+	public boolean isAllowConsole() {
+		return allowConsole;
+	}
+
+	public CommandHandler setAllowConsole(boolean allowConsole) {
+		this.allowConsole = allowConsole;
+		return this;
+	}
+	
+	public CommandHandler() {
+	}
+
+	public CommandHandler setArgs(String[] args) {
+		this.args = args;
+		return this;
+	}
+
+	/**
 	 * Instantiates a new command handler.
 	 *
 	 * @param args
@@ -390,14 +410,9 @@ public abstract class CommandHandler {
 		}
 	}
 
-	/**
-	 * Sets the help message.
-	 *
-	 * @param helpMessage
-	 *            the new help message
-	 */
-	public void setHelpMessage(String helpMessage) {
+	public CommandHandler setHelpMessage(String helpMessage) {
 		this.helpMessage = helpMessage;
+		return this;
 	}
 
 	/**
@@ -406,8 +421,9 @@ public abstract class CommandHandler {
 	 * @param perm
 	 *            the new perm
 	 */
-	public void setPerm(String perm) {
+	public CommandHandler setPerm(String perm) {
 		this.perm = perm;
+		return this;
 	}
 
 }
