@@ -18,6 +18,7 @@ import java.util.zip.ZipInputStream;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -41,6 +42,7 @@ import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -128,6 +130,23 @@ public class AdvancedCoreHook {
 	private boolean purgeOldData = false;
 
 	private int purgeMinimumDays = 90;
+
+	private ConfigurationSection configData;
+
+	/**
+	 * @return the configData
+	 */
+	public ConfigurationSection getConfigData() {
+		return configData;
+	}
+
+	/**
+	 * @param configData
+	 *            the configData to set
+	 */
+	public void setConfigData(ConfigurationSection configData) {
+		this.configData = configData;
+	}
 
 	private AdvancedCoreHook() {
 	}
@@ -480,6 +499,8 @@ public class AdvancedCoreHook {
 
 	/**
 	 * Load AdvancedCore hook without most things loaded
+	 * 
+	 * Avoid using this unless you really want to
 	 *
 	 * @param plugin
 	 *            Plugin that is hooking in
@@ -571,11 +592,51 @@ public class AdvancedCoreHook {
 		loadVersionFile();
 		loadTabComplete();
 
+		loadConfig();
+
 		UserManager.getInstance().purgeOldPlayers();
 
 		userStartup();
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
+	}
+
+	@SuppressWarnings("unchecked")
+	private void loadConfig() {
+		if (configData != null) {
+			debug = configData.getBoolean("Debug", false);
+			debugIngame = configData.getBoolean("DebugInGame", false);
+			defaultRequestMethod = configData.getString("RequestAPI.DefaultMethod", "Anvil");
+			disabledRequestMethods = (ArrayList<String>) configData.getList("RequestAPI.DisabledMethods",
+					new ArrayList<String>());
+			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
+			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
+			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
+			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
+			sendScoreboards = configData.getBoolean("SendScoreboards", true);
+			alternateUUIDLookUp = configData.getBoolean("AlternateUUIDLookup", false);
+			autoKillInvs = configData.getBoolean("AutoKillInvs", true);
+			prevPageTxt = configData.getString("Format.PrevPage", "&aPrevious Page");
+			nextPageTxt = configData.getString("Format.NextPage", "&aNext Page");
+			purgeOldData = configData.getBoolean("PurgeOldData");
+			purgeMinimumDays = configData.getInt("PurgeMin", 90);
+			checkNameMojang = configData.getBoolean("CheckNameMojang", true);
+			disableCheckOnWorldChange = configData.getBoolean("");
+			autoDownload = configData.getBoolean("AutoDownload", false);
+			extraDebug = configData.getBoolean("ExtraDebug", false);
+			storageType = UserStorage.value(configData.getString("DataStorage", "SQLITE"));
+
+			if (storageType.equals(UserStorage.MYSQL)) {
+				Thread.getInstance().run(new Runnable() {
+
+					@Override
+					public void run() {
+						setMysql(new MySQL(getPlugin().getName() + "_Users",
+								configData.getConfigurationSection("MySQL")));
+					}
+				});
+			}
+		}
 	}
 
 	private void loadSignAPI() {
@@ -838,6 +899,7 @@ public class AdvancedCoreHook {
 	public void reload() {
 		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
+		loadConfig();
 		update();
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
 			getMysql().clearCache();

@@ -242,9 +242,13 @@ public class ItemBuilder {
 	}
 
 	public ItemBuilder setUnbreakable(boolean unbreakable) {
-		ItemMeta meta = is.getItemMeta();
-		meta.setUnbreakable(unbreakable);
-		is.setItemMeta(meta);
+		try {
+			ItemMeta meta = is.getItemMeta();
+			meta.setUnbreakable(unbreakable);
+			is.setItemMeta(meta);
+		} catch (NoSuchMethodError e) {
+
+		}
 		return this;
 	}
 

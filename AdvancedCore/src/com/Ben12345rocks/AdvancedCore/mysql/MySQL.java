@@ -73,6 +73,9 @@ public class MySQL {
 		}
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		this.maxSize = section.getInt("MaxSize", -1);
+		if (!section.getString("Name", "").isEmpty()) {
+			tableName = section.getString("Name", "");
+		}
 
 		if (maxSize >= 0) {
 			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20, TimeUnit.MINUTES)
