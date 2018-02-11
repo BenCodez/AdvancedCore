@@ -356,8 +356,10 @@ public class MySQL {
 		ArrayList<String> uuids = new ArrayList<String>();
 
 		ArrayList<Column> rows = getRowsNameQuery();
-		for (Column c : rows) {
-			uuids.add((String) c.getValue());
+		if (rows != null) {
+			for (Column c : rows) {
+				uuids.add((String) c.getValue());
+			}
 		}
 
 		return uuids;
