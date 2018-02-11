@@ -415,12 +415,6 @@ public abstract class CommandHandler {
 		return this;
 	}
 
-	/**
-	 * Sets the perm.
-	 *
-	 * @param perm
-	 *            the new perm
-	 */
 	public CommandHandler setPerm(String perm) {
 		this.perm = perm;
 		return this;
