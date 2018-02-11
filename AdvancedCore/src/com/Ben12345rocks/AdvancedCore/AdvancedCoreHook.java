@@ -42,6 +42,7 @@ import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -626,7 +627,14 @@ public class AdvancedCoreHook {
 			storageType = UserStorage.value(configData.getString("DataStorage", "SQLITE"));
 
 			if (storageType.equals(UserStorage.MYSQL)) {
-				setMysql(new MySQL(getPlugin().getName() + "_Users", configData.getConfigurationSection("Mysql")));
+				Thread.getInstance().run(new Runnable() {
+
+					@Override
+					public void run() {
+						setMysql(new MySQL(getPlugin().getName() + "_Users",
+								configData.getConfigurationSection("Mysql")));
+					}
+				});
 			}
 		}
 	}
@@ -899,7 +907,6 @@ public class AdvancedCoreHook {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
-
 	}
 
 	/**
