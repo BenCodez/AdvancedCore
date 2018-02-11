@@ -1112,7 +1112,7 @@ public class Reward {
 		boolean checkServer = checkServer();
 		boolean checkWorld = checkWorld(user);
 
-		if (((!online && !user.isOnline()) || !checkWorld || checkServer) && !isForceOffline()) {
+		if (((!online && !user.isOnline()) || !checkWorld || !checkServer) && !isForceOffline()) {
 			if (giveOffline) {
 				checkRewardFile();
 				user.addOfflineRewards(this, placeholders);
