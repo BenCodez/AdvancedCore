@@ -1112,7 +1112,7 @@ public class Reward {
 		boolean checkServer = checkServer();
 		boolean checkWorld = checkWorld(user);
 
-		if (((!online && !user.isOnline()) || !checkWorld || !checkServer) && !isForceOffline()) {
+		if (((!online && !user.isOnline()) || !checkWorld || checkServer) && !isForceOffline()) {
 			if (giveOffline) {
 				checkRewardFile();
 				user.addOfflineRewards(this, placeholders);
@@ -1127,7 +1127,10 @@ public class Reward {
 	}
 
 	public boolean checkServer() {
-		return Bukkit.getServer().getName().equals(server);
+		if (server != null && !server.isEmpty()) {
+			return Bukkit.getServer().getName().equals(server);
+		}
+		return true;
 	}
 
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
