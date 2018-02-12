@@ -109,6 +109,14 @@ public class UserData {
 				.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
 	}
 
+	public void setBoolean(String key, boolean value) {
+		setString(key, "" + value);
+	}
+
+	public boolean getBoolean(String key) {
+		return Boolean.valueOf(getString(key));
+	}
+
 	public String getString(String key) {
 		if (!key.equals("")) {
 			if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
