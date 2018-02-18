@@ -415,6 +415,14 @@ public class ArrayUtils {
 		}
 		return msg;
 	}
+	
+	public ArrayList<String> replaceJavascript(User user, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringUtils.getInstance().replaceJavascript(user, str));
+		}
+		return msg;
+	}
 
 	public ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
 		ArrayList<String> newList = new ArrayList<String>();

@@ -13,6 +13,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 public class JavascriptEngine {
@@ -36,6 +37,22 @@ public class JavascriptEngine {
 			}
 		} else {
 			addToEngine("Player", player);
+		}
+		return this;
+	}
+
+	public JavascriptEngine addPlayer(User user) {
+		addToEngine("PlayerName", user.getPlayerName());
+		addToEngine("PlayerUUID", user.getUUID());
+		addToEngine("AdvancedCoreUser", user);
+		// addToEngine("CommandSender", player);
+
+		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+			addToEngine(request.getStr(), request.getObject(user.getOfflinePlayer()));
+		}
+
+		if (user.isOnline()) {
+			return addPlayer(user.getPlayer());
 		}
 		return this;
 	}
