@@ -316,4 +316,13 @@ public class NMSManager {
 		}
 		return types;
 	}
+
+	public boolean isVersion(String... versions) {
+		for (String str : versions) {
+			if (getVersion().contains(str)) {
+				return true;
+			}
+		}
+		return false;
+	}
 }
