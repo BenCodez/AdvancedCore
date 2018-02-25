@@ -10,6 +10,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
+import com.Ben12345rocks.AdvancedCore.Util.Annotation.AnnotationHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 /**
@@ -110,5 +111,7 @@ public abstract class YMLFile {
 		}
 
 		data = YamlConfiguration.loadConfiguration(dFile);
+
+		new AnnotationHandler().load(data, this);
 	}
 }
