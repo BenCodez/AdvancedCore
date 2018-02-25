@@ -5,9 +5,6 @@ import java.util.ArrayList;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
-
 public class AnnotationHandler {
 
 	public AnnotationHandler() {
@@ -20,35 +17,28 @@ public class AnnotationHandler {
 		for (Field field : clazz.getDeclaredFields()) {
 			try {
 				field.setAccessible(true);
-				AdvancedCoreHook.getInstance().getPlugin().getLogger()
-						.info("Checking annotation for " + field.getName());
 
 				ConfigDataString stringAnnotation = field.getAnnotation(ConfigDataString.class);
 				if (stringAnnotation != null) {
 					String value = config.getString(stringAnnotation.path(), stringAnnotation.defaultValue());
-					AdvancedCoreHook.getInstance().getPlugin().getLogger()
-							.info(stringAnnotation.path() + " = " + value);
+
 					field.set(classToLoad, value);
-					return;
 
 				}
 
 				ConfigDataBoolean booleanAnnotation = field.getAnnotation(ConfigDataBoolean.class);
 				if (booleanAnnotation != null) {
 					boolean value = config.getBoolean(booleanAnnotation.path(), booleanAnnotation.defaultValue());
-					AdvancedCoreHook.getInstance().getPlugin().getLogger()
-							.info(booleanAnnotation.path() + " = " + value);
+
 					field.set(classToLoad, value);
-					return;
 
 				}
 
 				ConfigDataInt intAnnotation = field.getAnnotation(ConfigDataInt.class);
 				if (intAnnotation != null) {
 					int value = config.getInt(intAnnotation.path(), intAnnotation.defaultValue());
-					AdvancedCoreHook.getInstance().getPlugin().getLogger().info(intAnnotation.path() + " = " + value);
+
 					field.set(classToLoad, value);
-					return;
 
 				}
 
@@ -56,10 +46,8 @@ public class AnnotationHandler {
 				if (listAnnotation != null) {
 					ArrayList<String> value = (ArrayList<String>) config.getList(listAnnotation.path(),
 							new ArrayList<String>());
-					AdvancedCoreHook.getInstance().getPlugin().getLogger()
-							.info(listAnnotation.path() + " = " + ArrayUtils.getInstance().makeStringList(value));
+
 					field.set(classToLoad, value);
-					return;
 				}
 
 			} catch (Exception e) {
