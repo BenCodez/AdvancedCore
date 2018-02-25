@@ -111,7 +111,5 @@ public abstract class YMLFile {
 		}
 
 		data = YamlConfiguration.loadConfiguration(dFile);
-
-		new AnnotationHandler().load(data, this);
 	}
 }
