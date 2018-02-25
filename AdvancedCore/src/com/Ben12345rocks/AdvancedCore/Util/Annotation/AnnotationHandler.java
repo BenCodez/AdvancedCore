@@ -22,38 +22,33 @@ public class AnnotationHandler {
 
 				ConfigDataString stringAnnotation = field.getAnnotation(ConfigDataString.class);
 				if (stringAnnotation != null) {
-					if (config.isString(stringAnnotation.path())) {
-						field.set(classToLoad,
-								config.getString(stringAnnotation.path(), stringAnnotation.defaultValue()));
-						return;
-					}
+					field.set(classToLoad, config.getString(stringAnnotation.path(), stringAnnotation.defaultValue()));
+					return;
+
 				}
 
 				ConfigDataBoolean booleanAnnotation = field.getAnnotation(ConfigDataBoolean.class);
 				if (booleanAnnotation != null) {
-					if (config.isBoolean(booleanAnnotation.path())) {
-						field.set(classToLoad,
-								config.getBoolean(booleanAnnotation.path(), booleanAnnotation.defaultValue()));
-						return;
-					}
+					field.set(classToLoad,
+							config.getBoolean(booleanAnnotation.path(), booleanAnnotation.defaultValue()));
+					return;
+
 				}
 
 				ConfigDataInt intAnnotation = field.getAnnotation(ConfigDataInt.class);
 				if (intAnnotation != null) {
-					if (config.isInt(intAnnotation.path())) {
-						field.set(classToLoad, config.getInt(intAnnotation.path(), intAnnotation.defaultValue()));
-						return;
-					}
+					field.set(classToLoad, config.getInt(intAnnotation.path(), intAnnotation.defaultValue()));
+					return;
+
 				}
 
 				ConfigDataListString listAnnotation = field.getAnnotation(ConfigDataListString.class);
 				if (listAnnotation != null) {
-					if (config.isList(listAnnotation.path())) {
-						field.set(classToLoad,
-								(ArrayList<String>) config.getList(listAnnotation.path(), new ArrayList<String>()));
-						return;
-					}
+					field.set(classToLoad,
+							(ArrayList<String>) config.getList(listAnnotation.path(), new ArrayList<String>()));
+					return;
 				}
+
 			} catch (Exception e) {
 				AdvancedCoreHook.getInstance().debug(e);
 			}
