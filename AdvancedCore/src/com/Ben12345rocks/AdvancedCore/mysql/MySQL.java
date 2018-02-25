@@ -317,7 +317,6 @@ public class MySQL {
 				result.add(rCol);
 			}
 		} catch (SQLException e) {
-			return null;
 		}
 
 		return result;

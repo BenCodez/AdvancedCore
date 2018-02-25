@@ -47,7 +47,10 @@ public class SignMenu {
 	public SignMenu(Plugin plugin) {
 		this.plugin = plugin;
 		this.inputReceivers = new ConcurrentHashMap<>();
-		this.listen();
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
+				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
+			this.listen();
+		}
 	}
 
 	public void open(UUID uuid, String[] text, InputReceiver inputReceiver) {

@@ -641,17 +641,13 @@ public class AdvancedCoreHook {
 
 	private void loadSignAPI() {
 		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
-				&& !NMSManager.getInstance().getVersion().contains("1.8")
-				&& !NMSManager.getInstance().getVersion().contains("1.9")
-				&& !NMSManager.getInstance().getVersion().contains("1.10")
-				&& !NMSManager.getInstance().getVersion().contains("1.11")) {
+				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
 			try {
 				this.signMenu = new SignMenu(plugin);
 			} catch (Exception e) {
 				debug(e);
 			}
 		}
-
 	}
 
 	/**
