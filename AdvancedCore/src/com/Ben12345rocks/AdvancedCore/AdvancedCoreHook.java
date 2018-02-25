@@ -599,6 +599,17 @@ public class AdvancedCoreHook {
 		userStartup();
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
+
+		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				if (NMSManager.getInstance().isVersion("1.7", "1.8")) {
+					plugin.getLogger().warning(
+							"Detected using an old version, the plugin may not function properly, this version is also not fully supported");
+				}
+			}
+		}, 20l);
 	}
 
 	@SuppressWarnings("unchecked")
