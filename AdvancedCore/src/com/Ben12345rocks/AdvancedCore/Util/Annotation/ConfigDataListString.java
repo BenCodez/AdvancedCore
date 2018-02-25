@@ -7,6 +7,6 @@ import java.lang.annotation.Target;
 @Inherited
 @Target({ ElementType.METHOD, ElementType.FIELD })
 public @interface ConfigDataListString {
-	String path() default "";
+	String path();
 
 }
