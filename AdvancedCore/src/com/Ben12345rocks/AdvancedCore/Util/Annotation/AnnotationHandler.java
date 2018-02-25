@@ -20,11 +20,14 @@ public class AnnotationHandler {
 		for (Field field : clazz.getDeclaredFields()) {
 			try {
 				field.setAccessible(true);
+				AdvancedCoreHook.getInstance().getPlugin().getLogger()
+						.info("Checking annotation for " + field.getName());
 
 				ConfigDataString stringAnnotation = field.getAnnotation(ConfigDataString.class);
 				if (stringAnnotation != null) {
 					String value = config.getString(stringAnnotation.path(), stringAnnotation.defaultValue());
-					AdvancedCoreHook.getInstance().debug(stringAnnotation.path() + " = " + value);
+					AdvancedCoreHook.getInstance().getPlugin().getLogger()
+							.info(stringAnnotation.path() + " = " + value);
 					field.set(classToLoad, value);
 					return;
 
@@ -33,7 +36,8 @@ public class AnnotationHandler {
 				ConfigDataBoolean booleanAnnotation = field.getAnnotation(ConfigDataBoolean.class);
 				if (booleanAnnotation != null) {
 					boolean value = config.getBoolean(booleanAnnotation.path(), booleanAnnotation.defaultValue());
-					AdvancedCoreHook.getInstance().debug(booleanAnnotation.path() + " = " + value);
+					AdvancedCoreHook.getInstance().getPlugin().getLogger()
+							.info(booleanAnnotation.path() + " = " + value);
 					field.set(classToLoad, value);
 					return;
 
@@ -42,7 +46,7 @@ public class AnnotationHandler {
 				ConfigDataInt intAnnotation = field.getAnnotation(ConfigDataInt.class);
 				if (intAnnotation != null) {
 					int value = config.getInt(intAnnotation.path(), intAnnotation.defaultValue());
-					AdvancedCoreHook.getInstance().debug(intAnnotation.path() + " = " + value);
+					AdvancedCoreHook.getInstance().getPlugin().getLogger().info(intAnnotation.path() + " = " + value);
 					field.set(classToLoad, value);
 					return;
 
@@ -52,8 +56,8 @@ public class AnnotationHandler {
 				if (listAnnotation != null) {
 					ArrayList<String> value = (ArrayList<String>) config.getList(listAnnotation.path(),
 							new ArrayList<String>());
-					AdvancedCoreHook.getInstance()
-							.debug(listAnnotation.path() + " = " + ArrayUtils.getInstance().makeStringList(value));
+					AdvancedCoreHook.getInstance().getPlugin().getLogger()
+							.info(listAnnotation.path() + " = " + ArrayUtils.getInstance().makeStringList(value));
 					field.set(classToLoad, value);
 					return;
 				}
