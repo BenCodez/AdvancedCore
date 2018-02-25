@@ -59,7 +59,7 @@ public class AnnotationHandler {
 				}
 
 			} catch (Exception e) {
-				AdvancedCoreHook.getInstance().debug(e);
+				e.printStackTrace();
 			}
 		}
 
