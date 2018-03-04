@@ -120,7 +120,9 @@ public class StringUtils {
 			return str;
 		}
 		
-		return Pattern.compile(str, Pattern.CASE_INSENSITIVE).matcher(toReplace).replaceAll(replaceWith);
+		str = str.replace("$", "\\$");
+
+		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
