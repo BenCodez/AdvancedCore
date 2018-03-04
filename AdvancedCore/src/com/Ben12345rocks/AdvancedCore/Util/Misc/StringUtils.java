@@ -120,7 +120,7 @@ public class StringUtils {
 			return str;
 		}
 		str = escapeSpecialRegexChars(str);
-		return str.replaceAll("(?i)" + toReplace, replaceWith);
+		return Pattern.compile(str.replaceAll("(?i)" + toReplace, replaceWith)).toString();
 		
 		//return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
