@@ -82,8 +82,71 @@ public class ConnectionManager {
 		return null;
 	}
 
+	/**
+	 * @return the connectionTimeout
+	 */
+	public int getConnectionTimeout() {
+		return connectionTimeout;
+	}
+
+	/**
+	 * @return the database
+	 */
+	public String getDatabase() {
+		return database;
+	}
+
+	/**
+	 * @return the dataSource
+	 */
+	public HikariDataSource getDataSource() {
+		return dataSource;
+	}
+
+	/**
+	 * @return the host
+	 */
+	public String getHost() {
+		return host;
+	}
+
+	/**
+	 * @return the maximumPoolsize
+	 */
+	public int getMaximumPoolsize() {
+		return maximumPoolsize;
+	}
+
+	/**
+	 * @return the password
+	 */
+	public String getPassword() {
+		return password;
+	}
+
+	/**
+	 * @return the port
+	 */
+	public String getPort() {
+		return port;
+	}
+
+	/**
+	 * @return the username
+	 */
+	public String getUsername() {
+		return username;
+	}
+
 	public boolean isClosed() {
 		return dataSource == null || dataSource.isClosed();
+	}
+
+	/**
+	 * @return the useSSL
+	 */
+	public boolean isUseSSL() {
+		return useSSL;
 	}
 
 	public boolean open() {
@@ -108,85 +171,11 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @return the dataSource
+	 * @param connectionTimeout
+	 *            the connectionTimeout to set
 	 */
-	public HikariDataSource getDataSource() {
-		return dataSource;
-	}
-
-	/**
-	 * @param dataSource
-	 *            the dataSource to set
-	 */
-	public void setDataSource(HikariDataSource dataSource) {
-		this.dataSource = dataSource;
-	}
-
-	/**
-	 * @return the host
-	 */
-	public String getHost() {
-		return host;
-	}
-
-	/**
-	 * @param host
-	 *            the host to set
-	 */
-	public void setHost(String host) {
-		this.host = host;
-	}
-
-	/**
-	 * @return the port
-	 */
-	public String getPort() {
-		return port;
-	}
-
-	/**
-	 * @param port
-	 *            the port to set
-	 */
-	public void setPort(String port) {
-		this.port = port;
-	}
-
-	/**
-	 * @return the username
-	 */
-	public String getUsername() {
-		return username;
-	}
-
-	/**
-	 * @param username
-	 *            the username to set
-	 */
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
-	/**
-	 * @return the password
-	 */
-	public String getPassword() {
-		return password;
-	}
-
-	/**
-	 * @param password
-	 *            the password to set
-	 */
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
-	/**
-	 * @return the database
-	 */
-	public String getDatabase() {
-		return database;
+	public void setConnectionTimeout(int connectionTimeout) {
+		this.connectionTimeout = connectionTimeout;
 	}
 
 	/**
@@ -198,25 +187,19 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @return the connectionTimeout
+	 * @param dataSource
+	 *            the dataSource to set
 	 */
-	public int getConnectionTimeout() {
-		return connectionTimeout;
+	public void setDataSource(HikariDataSource dataSource) {
+		this.dataSource = dataSource;
 	}
 
 	/**
-	 * @param connectionTimeout
-	 *            the connectionTimeout to set
+	 * @param host
+	 *            the host to set
 	 */
-	public void setConnectionTimeout(int connectionTimeout) {
-		this.connectionTimeout = connectionTimeout;
-	}
-
-	/**
-	 * @return the maximumPoolsize
-	 */
-	public int getMaximumPoolsize() {
-		return maximumPoolsize;
+	public void setHost(String host) {
+		this.host = host;
 	}
 
 	/**
@@ -228,10 +211,27 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @return the useSSL
+	 * @param password
+	 *            the password to set
 	 */
-	public boolean isUseSSL() {
-		return useSSL;
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	/**
+	 * @param port
+	 *            the port to set
+	 */
+	public void setPort(String port) {
+		this.port = port;
+	}
+
+	/**
+	 * @param username
+	 *            the username to set
+	 */
+	public void setUsername(String username) {
+		this.username = username;
 	}
 
 	/**

@@ -103,21 +103,6 @@ public class AdvancedCoreHook {
 	private String nextPageTxt = "&aNext Page";
 	private boolean checkNameMojang = true;
 
-	/**
-	 * @return the checkNameMojang
-	 */
-	public boolean isCheckNameMojang() {
-		return checkNameMojang;
-	}
-
-	/**
-	 * @param checkNameMojang
-	 *            the checkNameMojang to set
-	 */
-	public void setCheckNameMojang(boolean checkNameMojang) {
-		this.checkNameMojang = checkNameMojang;
-	}
-
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
@@ -133,22 +118,13 @@ public class AdvancedCoreHook {
 
 	private ConfigurationSection configData;
 
-	/**
-	 * @return the configData
-	 */
-	public ConfigurationSection getConfigData() {
-		return configData;
-	}
-
-	/**
-	 * @param configData
-	 *            the configData to set
-	 */
-	public void setConfigData(ConfigurationSection configData) {
-		this.configData = configData;
-	}
+	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
 
 	private AdvancedCoreHook() {
+	}
+
+	public void addUserStartup(UserStartup start) {
+		userStartup.add(start);
 	}
 
 	public void allowDownloadingFromSpigot(int resourceId) {
@@ -259,6 +235,13 @@ public class AdvancedCoreHook {
 		}
 	}
 
+	/**
+	 * @return the configData
+	 */
+	public ConfigurationSection getConfigData() {
+		return configData;
+	}
+
 	public String getDefaultRequestMethod() {
 		return defaultRequestMethod;
 	}
@@ -338,6 +321,10 @@ public class AdvancedCoreHook {
 
 	public IServerHandle getServerHandle() {
 		return serverHandle;
+	}
+
+	public SignMenu getSignMenu() {
+		return this.signMenu;
 	}
 
 	public Table getSQLiteUserTable() {
@@ -422,12 +409,26 @@ public class AdvancedCoreHook {
 		return autoKillInvs;
 	}
 
+	/**
+	 * @return the checkNameMojang
+	 */
+	public boolean isCheckNameMojang() {
+		return checkNameMojang;
+	}
+
 	public boolean isDebug() {
 		return debug;
 	}
 
 	public boolean isDebugIngame() {
 		return debugIngame;
+	}
+
+	/**
+	 * @return the dsiableCheckOnWorldChange
+	 */
+	public boolean isDisableCheckOnWorldChange() {
+		return disableCheckOnWorldChange;
 	}
 
 	/**
@@ -499,7 +500,7 @@ public class AdvancedCoreHook {
 
 	/**
 	 * Load AdvancedCore hook without most things loaded
-	 * 
+	 *
 	 * Avoid using this unless you really want to
 	 *
 	 * @param plugin
@@ -524,8 +525,42 @@ public class AdvancedCoreHook {
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
-	public SignMenu getSignMenu() {
-		return this.signMenu;
+	@SuppressWarnings("unchecked")
+	private void loadConfig() {
+		if (configData != null) {
+			debug = configData.getBoolean("Debug", false);
+			debugIngame = configData.getBoolean("DebugInGame", false);
+			defaultRequestMethod = configData.getString("RequestAPI.DefaultMethod", "Anvil");
+			disabledRequestMethods = (ArrayList<String>) configData.getList("RequestAPI.DisabledMethods",
+					new ArrayList<String>());
+			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
+			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
+			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
+			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
+			sendScoreboards = configData.getBoolean("SendScoreboards", true);
+			alternateUUIDLookUp = configData.getBoolean("AlternateUUIDLookup", false);
+			autoKillInvs = configData.getBoolean("AutoKillInvs", true);
+			prevPageTxt = configData.getString("Format.PrevPage", "&aPrevious Page");
+			nextPageTxt = configData.getString("Format.NextPage", "&aNext Page");
+			purgeOldData = configData.getBoolean("PurgeOldData");
+			purgeMinimumDays = configData.getInt("PurgeMin", 90);
+			checkNameMojang = configData.getBoolean("CheckNameMojang", true);
+			disableCheckOnWorldChange = configData.getBoolean("DisableCheckOnWorldChange");
+			autoDownload = configData.getBoolean("AutoDownload", false);
+			extraDebug = configData.getBoolean("ExtraDebug", false);
+			storageType = UserStorage.value(configData.getString("DataStorage", "SQLITE"));
+
+			if (storageType.equals(UserStorage.MYSQL)) {
+				Thread.getInstance().run(new Runnable() {
+
+					@Override
+					public void run() {
+						setMysql(new MySQL(getPlugin().getName() + "_Users",
+								configData.getConfigurationSection("MySQL")));
+					}
+				});
+			}
+		}
 	}
 
 	public void loadEconomy() {
@@ -612,55 +647,6 @@ public class AdvancedCoreHook {
 		}, 20l);
 	}
 
-	@SuppressWarnings("unchecked")
-	private void loadConfig() {
-		if (configData != null) {
-			debug = configData.getBoolean("Debug", false);
-			debugIngame = configData.getBoolean("DebugInGame", false);
-			defaultRequestMethod = configData.getString("RequestAPI.DefaultMethod", "Anvil");
-			disabledRequestMethods = (ArrayList<String>) configData.getList("RequestAPI.DisabledMethods",
-					new ArrayList<String>());
-			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
-			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
-			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
-			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
-			sendScoreboards = configData.getBoolean("SendScoreboards", true);
-			alternateUUIDLookUp = configData.getBoolean("AlternateUUIDLookup", false);
-			autoKillInvs = configData.getBoolean("AutoKillInvs", true);
-			prevPageTxt = configData.getString("Format.PrevPage", "&aPrevious Page");
-			nextPageTxt = configData.getString("Format.NextPage", "&aNext Page");
-			purgeOldData = configData.getBoolean("PurgeOldData");
-			purgeMinimumDays = configData.getInt("PurgeMin", 90);
-			checkNameMojang = configData.getBoolean("CheckNameMojang", true);
-			disableCheckOnWorldChange = configData.getBoolean("");
-			autoDownload = configData.getBoolean("AutoDownload", false);
-			extraDebug = configData.getBoolean("ExtraDebug", false);
-			storageType = UserStorage.value(configData.getString("DataStorage", "SQLITE"));
-
-			if (storageType.equals(UserStorage.MYSQL)) {
-				Thread.getInstance().run(new Runnable() {
-
-					@Override
-					public void run() {
-						setMysql(new MySQL(getPlugin().getName() + "_Users",
-								configData.getConfigurationSection("MySQL")));
-					}
-				});
-			}
-		}
-	}
-
-	private void loadSignAPI() {
-		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
-				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
-			try {
-				this.signMenu = new SignMenu(plugin);
-			} catch (Exception e) {
-				debug(e);
-			}
-		}
-	}
-
 	/**
 	 * Load logger
 	 */
@@ -688,6 +674,17 @@ public class AdvancedCoreHook {
 	 */
 	public void loadRewards() {
 		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
+	}
+
+	private void loadSignAPI() {
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
+				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
+			try {
+				this.signMenu = new SignMenu(plugin);
+			} catch (Exception e) {
+				debug(e);
+			}
+		}
 	}
 
 	public void loadTabComplete() {
@@ -819,6 +816,17 @@ public class AdvancedCoreHook {
 		addUserStartup(new UserStartup() {
 
 			@Override
+			public void onFinish() {
+				TabCompleteHandler.getInstance().reload();
+				debug("Finished loading uuids");
+			}
+
+			@Override
+			public void onStart() {
+				debug("Starting background uuid task");
+			}
+
+			@Override
 			public void onStartUp(User user) {
 				String uuid = user.getUUID();
 				String name = user.getData().getString("PlayerName");
@@ -862,17 +870,6 @@ public class AdvancedCoreHook {
 				if (add) {
 					uuids.put(name, uuid);
 				}
-			}
-
-			@Override
-			public void onFinish() {
-				TabCompleteHandler.getInstance().reload();
-				debug("Finished loading uuids");
-			}
-
-			@Override
-			public void onStart() {
-				debug("Starting background uuid task");
 			}
 		});
 
@@ -943,18 +940,19 @@ public class AdvancedCoreHook {
 	}
 
 	/**
-	 * @return the dsiableCheckOnWorldChange
+	 * @param checkNameMojang
+	 *            the checkNameMojang to set
 	 */
-	public boolean isDisableCheckOnWorldChange() {
-		return disableCheckOnWorldChange;
+	public void setCheckNameMojang(boolean checkNameMojang) {
+		this.checkNameMojang = checkNameMojang;
 	}
 
 	/**
-	 * @param disableCheckOnWorldChange
-	 *            the dsiableCheckOnWorldChange to set
+	 * @param configData
+	 *            the configData to set
 	 */
-	public void setDisableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
-		this.disableCheckOnWorldChange = disableCheckOnWorldChange;
+	public void setConfigData(ConfigurationSection configData) {
+		this.configData = configData;
 	}
 
 	public void setDebug(boolean debug) {
@@ -967,6 +965,14 @@ public class AdvancedCoreHook {
 
 	public void setDefaultRequestMethod(String defaultRequestMethod) {
 		this.defaultRequestMethod = defaultRequestMethod;
+	}
+
+	/**
+	 * @param disableCheckOnWorldChange
+	 *            the dsiableCheckOnWorldChange to set
+	 */
+	public void setDisableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
+		this.disableCheckOnWorldChange = disableCheckOnWorldChange;
 	}
 
 	public void setDisabledRequestMethods(ArrayList<String> disabledRequestMethods) {
@@ -1099,10 +1105,11 @@ public class AdvancedCoreHook {
 		 */
 	}
 
-	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
-
-	public void addUserStartup(UserStartup start) {
-		userStartup.add(start);
+	/**
+	 * Update.
+	 */
+	public void update() {
+		TimeChecker.getInstance().update();
 	}
 
 	public void userStartup() {
@@ -1128,12 +1135,5 @@ public class AdvancedCoreHook {
 				}
 			}
 		}, 30);
-	}
-
-	/**
-	 * Update.
-	 */
-	public void update() {
-		TimeChecker.getInstance().update();
 	}
 }

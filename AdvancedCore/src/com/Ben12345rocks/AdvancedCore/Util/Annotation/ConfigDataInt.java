@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 @Target({ ElementType.METHOD, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ConfigDataInt {
-	String path();
-
 	int defaultValue() default 0;
+
+	String path();
 }

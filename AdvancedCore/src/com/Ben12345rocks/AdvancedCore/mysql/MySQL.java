@@ -60,6 +60,16 @@ public class MySQL {
 
 	private int maxSize = 0;
 
+	private Object object1 = new Object();
+
+	private Object object2 = new Object();
+
+	private Object object3 = new Object();
+
+	private Object object4 = new Object();
+
+	private Object object5 = new Object();
+
 	public MySQL(String tableName, ConfigurationSection section) {
 		String tablePrefix = section.getString("Prefix");
 		String hostName = section.getString("Host");
@@ -150,6 +160,12 @@ public class MySQL {
 				entry.getValue().add(col);
 			}
 		}
+	}
+
+	public void addToQue(String query) {
+		// if (!this.query.contains(query)) {
+		this.query.add(query);
+		// }
 	}
 
 	public void checkColumn(String column, DataType dataType) {
@@ -281,8 +297,52 @@ public class MySQL {
 		return result;
 	}
 
+	public int getMaxSize() {
+		return maxSize;
+	}
+
 	public String getName() {
 		return name;
+	}
+
+	public Set<String> getNames() {
+		if (names == null || names.size() == 0) {
+			names.clear();
+			names.addAll(getNamesQuery());
+			return names;
+		}
+		return names;
+	}
+
+	public ArrayList<String> getNamesQuery() {
+		ArrayList<String> uuids = new ArrayList<String>();
+
+		ArrayList<Column> rows = getRowsNameQuery();
+		if (rows != null) {
+			for (Column c : rows) {
+				uuids.add((String) c.getValue());
+			}
+		}
+
+		return uuids;
+	}
+
+	public ArrayList<Column> getRowsNameQuery() {
+		ArrayList<Column> result = new ArrayList<Column>();
+		String sql = "SELECT PlayerName FROM " + getName() + ";";
+
+		try {
+			Query query = new Query(mysql, sql);
+			ResultSet rs = query.executeQuery();
+
+			while (rs.next()) {
+				Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
+				result.add(rCol);
+			}
+		} catch (SQLException e) {
+		}
+
+		return result;
 	}
 
 	public ArrayList<Column> getRowsQuery() {
@@ -304,24 +364,6 @@ public class MySQL {
 		return result;
 	}
 
-	public ArrayList<Column> getRowsNameQuery() {
-		ArrayList<Column> result = new ArrayList<Column>();
-		String sql = "SELECT PlayerName FROM " + getName() + ";";
-
-		try {
-			Query query = new Query(mysql, sql);
-			ResultSet rs = query.executeQuery();
-
-			while (rs.next()) {
-				Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
-				result.add(rCol);
-			}
-		} catch (SQLException e) {
-		}
-
-		return result;
-	}
-
 	public Set<String> getUuids() {
 		if (uuids == null || uuids.size() == 0) {
 			uuids.clear();
@@ -331,34 +373,12 @@ public class MySQL {
 		return uuids;
 	}
 
-	public Set<String> getNames() {
-		if (names == null || names.size() == 0) {
-			names.clear();
-			names.addAll(getNamesQuery());
-			return names;
-		}
-		return names;
-	}
-
 	public ArrayList<String> getUuidsQuery() {
 		ArrayList<String> uuids = new ArrayList<String>();
 
 		ArrayList<Column> rows = getRowsQuery();
 		for (Column c : rows) {
 			uuids.add((String) c.getValue());
-		}
-
-		return uuids;
-	}
-
-	public ArrayList<String> getNamesQuery() {
-		ArrayList<String> uuids = new ArrayList<String>();
-
-		ArrayList<Column> rows = getRowsNameQuery();
-		if (rows != null) {
-			for (Column c : rows) {
-				uuids.add((String) c.getValue());
-			}
 		}
 
 		return uuids;
@@ -422,11 +442,7 @@ public class MySQL {
 		table.remove(uuid);
 	}
 
-	private Object object1 = new Object();
-	private Object object2 = new Object();
-	private Object object3 = new Object();
-	private Object object4 = new Object();
-	private Object object5 = new Object();
+	// private Object ob = new Object();
 
 	public void update(String index, String column, Object value, DataType dataType) {
 
@@ -458,14 +474,6 @@ public class MySQL {
 			insert(index, column, value, dataType);
 		}
 	}
-
-	public void addToQue(String query) {
-		// if (!this.query.contains(query)) {
-		this.query.add(query);
-		// }
-	}
-
-	// private Object ob = new Object();
 
 	public void updateBatch() {
 
@@ -511,9 +519,5 @@ public class MySQL {
 
 		}
 
-	}
-
-	public int getMaxSize() {
-		return maxSize;
 	}
 }

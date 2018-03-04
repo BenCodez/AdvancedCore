@@ -185,7 +185,7 @@ public class StringRequester {
 				}
 			});
 		} else if (method.equals(InputMethod.SIGN)) {
-			AdvancedCoreHook.getInstance().getSignMenu().open(player.getUniqueId(), new String[] {"","","",""},
+			AdvancedCoreHook.getInstance().getSignMenu().open(player.getUniqueId(), new String[] { "", "", "", "" },
 					new InputReceiver() {
 
 						@Override

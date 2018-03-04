@@ -45,24 +45,7 @@ public abstract class CommandHandler {
 	/** The allow console. */
 	private boolean allowConsole = true;
 
-	/**
-	 * @return the allowConsole
-	 */
-	public boolean isAllowConsole() {
-		return allowConsole;
-	}
-
-	public CommandHandler setAllowConsole(boolean allowConsole) {
-		this.allowConsole = allowConsole;
-		return this;
-	}
-	
 	public CommandHandler() {
-	}
-
-	public CommandHandler setArgs(String[] args) {
-		this.args = args;
-		return this;
 	}
 
 	/**
@@ -321,12 +304,19 @@ public abstract class CommandHandler {
 	public boolean hasPerm(CommandSender sender) {
 		/*
 		 * boolean hasPerm = false;
-		 * 
+		 *
 		 * if (!perm.equals("")) { for (String perm : this.perm.split("\\|")) { if
 		 * (sender.hasPermission(perm)) { hasPerm = true; } } } else { hasPerm = true; }
 		 * return hasPerm;
 		 */
 		return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
+	}
+
+	/**
+	 * @return the allowConsole
+	 */
+	public boolean isAllowConsole() {
+		return allowConsole;
 	}
 
 	public boolean isPlayer(CommandSender sender) {
@@ -408,6 +398,16 @@ public abstract class CommandHandler {
 		} else {
 			sender.sendMessage(StringUtils.getInstance().compToString(comp));
 		}
+	}
+
+	public CommandHandler setAllowConsole(boolean allowConsole) {
+		this.allowConsole = allowConsole;
+		return this;
+	}
+
+	public CommandHandler setArgs(String[] args) {
+		this.args = args;
+		return this;
 	}
 
 	public CommandHandler setHelpMessage(String helpMessage) {

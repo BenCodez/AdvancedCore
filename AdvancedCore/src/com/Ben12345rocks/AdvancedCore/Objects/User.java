@@ -578,6 +578,10 @@ public class User {
 		return false;
 	}
 
+	public boolean isCheckWorld() {
+		return Boolean.valueOf(getData().getString("CheckWorld"));
+	}
+
 	/**
 	 * Checks if is online.
 	 *
@@ -894,6 +898,10 @@ public class User {
 		}
 	}
 
+	public void setCheckWorld(boolean b) {
+		getData().setString("CheckWorld", "" + b);
+	}
+
 	public void setChoiceRewards(ArrayList<String> choiceRewards) {
 		data.setStringList("ChoiceRewards", choiceRewards);
 	}
@@ -954,14 +962,6 @@ public class User {
 				getData().setString("PlayerName", getPlayerName());
 			}
 		}
-	}
-
-	public void setCheckWorld(boolean b) {
-		getData().setString("CheckWorld", "" + b);
-	}
-
-	public boolean isCheckWorld() {
-		return Boolean.valueOf(getData().getString("CheckWorld"));
 	}
 
 }

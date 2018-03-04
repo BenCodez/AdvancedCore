@@ -18,6 +18,10 @@ public class UserData {
 		this.user = user;
 	}
 
+	public boolean getBoolean(String key) {
+		return Boolean.valueOf(getString(key));
+	}
+
 	public FileConfiguration getData(String uuid) {
 		return FileThread.getInstance().getThread().getData(this, uuid);
 	}
@@ -109,14 +113,6 @@ public class UserData {
 				.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
 	}
 
-	public void setBoolean(String key, boolean value) {
-		setString(key, "" + value);
-	}
-
-	public boolean getBoolean(String key) {
-		return Boolean.valueOf(getString(key));
-	}
-
 	public String getString(String key) {
 		if (!key.equals("")) {
 			if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
@@ -195,6 +191,10 @@ public class UserData {
 			AdvancedCoreHook.getInstance().getSQLiteUserTable()
 					.delete(new Column("uuid", user.getUUID(), DataType.STRING));
 		}
+	}
+
+	public void setBoolean(String key, boolean value) {
+		setString(key, "" + value);
 	}
 
 	public void setData(final String uuid, final String path, final Object value) {

@@ -138,11 +138,6 @@ public class StringUtils {
 		return replaceJavascript(replacePlaceHolders(player, text), engine);
 	}
 
-	public String replaceJavascript(User user, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
-		return replaceJavascript(text, engine);
-	}
-
 	public String replaceJavascript(String text) {
 		return replaceJavascript(text, null);
 	}
@@ -191,6 +186,11 @@ public class StringUtils {
 		}
 		// plugin.debug(msg);
 		return msg;
+	}
+
+	public String replaceJavascript(User user, String text) {
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
+		return replaceJavascript(text, engine);
 	}
 
 	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {

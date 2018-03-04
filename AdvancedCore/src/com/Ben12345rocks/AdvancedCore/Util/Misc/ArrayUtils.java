@@ -415,7 +415,7 @@ public class ArrayUtils {
 		}
 		return msg;
 	}
-	
+
 	public ArrayList<String> replaceJavascript(User user, ArrayList<String> list) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {

@@ -59,13 +59,6 @@ public class BInventory implements Listener {
 
 		private BInventoryButton button;
 
-		/**
-		 * @return the button
-		 */
-		public BInventoryButton getButton() {
-			return button;
-		}
-
 		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
 			this.event = event;
 			player = (Player) event.getWhoClicked();
@@ -74,6 +67,13 @@ public class BInventory implements Listener {
 			clickedItem = event.getCurrentItem();
 			slot = event.getSlot();
 			button = b;
+		}
+
+		/**
+		 * @return the button
+		 */
+		public BInventoryButton getButton() {
+			return button;
 		}
 
 		/**

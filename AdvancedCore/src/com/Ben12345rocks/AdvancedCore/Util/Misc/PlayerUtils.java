@@ -50,20 +50,20 @@ public class PlayerUtils {
 	/*
 	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
 	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
-	 * 
+	 *
 	 * String name = "";
-	 * 
+	 *
 	 * java.util.UUID u = java.util.UUID.fromString(uuid); Player player =
 	 * Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
 	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
 	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
 	 * Thread.getInstance().getThread().getName(u); } } else { name =
 	 * player.getName(); }
-	 * 
+	 *
 	 * if (name.equals("")) { name = UserManager.getInstance().getUser(new
 	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
 	 * name; } name = "Error getting name"; } return name;
-	 * 
+	 *
 	 * }
 	 */
 
@@ -162,6 +162,45 @@ public class PlayerUtils {
 			}
 		}
 		return "";
+	}
+
+	public boolean hasEitherPermission(CommandSender sender, String perm) {
+		if (sender instanceof Player) {
+			Player player = (Player) sender;
+
+			if (perm.equals("")) {
+				return true;
+			}
+
+			if (plugin.getPerms() != null) {
+				boolean hasPerm = false;
+				for (String permission : perm.split("\\|")) {
+
+					boolean has = plugin.getPerms().playerHas(player, permission);
+					if (!hasPerm) {
+						hasPerm = has;
+					}
+				}
+
+				return hasPerm;
+			} else {
+				boolean hasPerm = false;
+
+				if (!perm.equals("")) {
+					for (String permission : perm.split("\\|")) {
+						if (sender.hasPermission(permission)) {
+							hasPerm = true;
+						}
+					}
+				} else {
+					hasPerm = true;
+				}
+				return hasPerm;
+			}
+
+		} else {
+			return true;
+		}
 	}
 
 	/**
@@ -273,7 +312,7 @@ public class PlayerUtils {
 		if (userExist) {
 			return userExist;
 		}
-		
+
 		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 		if (p.hasPlayedBefore() || p.isOnline()) {
 			// plugin.extraDebug(name + " has joined before");
@@ -359,45 +398,6 @@ public class PlayerUtils {
 			}
 
 		});
-	}
-
-	public boolean hasEitherPermission(CommandSender sender, String perm) {
-		if (sender instanceof Player) {
-			Player player = (Player) sender;
-
-			if (perm.equals("")) {
-				return true;
-			}
-
-			if (plugin.getPerms() != null) {
-				boolean hasPerm = false;
-				for (String permission : perm.split("\\|")) {
-
-					boolean has = plugin.getPerms().playerHas(player, permission);
-					if (!hasPerm) {
-						hasPerm = has;
-					}
-				}
-
-				return hasPerm;
-			} else {
-				boolean hasPerm = false;
-
-				if (!perm.equals("")) {
-					for (String permission : perm.split("\\|")) {
-						if (sender.hasPermission(permission)) {
-							hasPerm = true;
-						}
-					}
-				} else {
-					hasPerm = true;
-				}
-				return hasPerm;
-			}
-
-		} else {
-			return true;
-		}
 	}
 
 }

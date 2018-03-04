@@ -3,12 +3,6 @@ package com.Ben12345rocks.AdvancedCore.Objects;
 import java.util.ArrayList;
 
 public abstract class UserStartup {
-	public abstract void onStartUp(User user);
-
-	public abstract void onFinish();
-	
-	public abstract void onStart();
-
 	private ArrayList<User> users = new ArrayList<User>();
 
 	/**
@@ -18,8 +12,15 @@ public abstract class UserStartup {
 		return users;
 	}
 
+	public abstract void onFinish();
+
+	public abstract void onStart();
+
+	public abstract void onStartUp(User user);
+
 	/**
-	 * @param users the users to set
+	 * @param users
+	 *            the users to set
 	 */
 	public void setUsers(ArrayList<User> users) {
 		this.users = users;

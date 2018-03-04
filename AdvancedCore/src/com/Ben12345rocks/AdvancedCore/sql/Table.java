@@ -206,6 +206,16 @@ public class Table {
 		return name;
 	}
 
+	public ArrayList<String> getNames() {
+		ArrayList<String> names = new ArrayList<String>();
+		for (Column col : getRowsNames()) {
+			if (col.getValue() != null) {
+				names.add(col.getValue().toString());
+			}
+		}
+		return names;
+	}
+
 	public Column getPrimaryKey() {
 		return primaryKey;
 	}
@@ -268,16 +278,6 @@ public class Table {
 		}
 
 		return result;
-	}
-
-	public ArrayList<String> getNames() {
-		ArrayList<String> names = new ArrayList<String>();
-		for (Column col : getRowsNames()) {
-			if (col.getValue() != null) {
-				names.add(col.getValue().toString());
-			}
-		}
-		return names;
 	}
 
 	public ArrayList<String> getTableColumns() {

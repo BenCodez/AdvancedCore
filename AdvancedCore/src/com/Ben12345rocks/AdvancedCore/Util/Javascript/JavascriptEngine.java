@@ -41,22 +41,6 @@ public class JavascriptEngine {
 		return this;
 	}
 
-	public JavascriptEngine addPlayer(User user) {
-		addToEngine("PlayerName", user.getPlayerName());
-		addToEngine("PlayerUUID", user.getUUID());
-		addToEngine("AdvancedCoreUser", user);
-		// addToEngine("CommandSender", player);
-
-		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
-			addToEngine(request.getStr(), request.getObject(user.getOfflinePlayer()));
-		}
-
-		if (user.isOnline()) {
-			return addPlayer(user.getPlayer());
-		}
-		return this;
-	}
-
 	public JavascriptEngine addPlayer(OfflinePlayer player) {
 		addToEngine("Player", player);
 		addToEngine("PlayerName", player.getName());
@@ -83,6 +67,22 @@ public class JavascriptEngine {
 
 		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
 			addToEngine(request.getStr(), request.getObject(player));
+		}
+		return this;
+	}
+
+	public JavascriptEngine addPlayer(User user) {
+		addToEngine("PlayerName", user.getPlayerName());
+		addToEngine("PlayerUUID", user.getUUID());
+		addToEngine("AdvancedCoreUser", user);
+		// addToEngine("CommandSender", player);
+
+		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+			addToEngine(request.getStr(), request.getObject(user.getOfflinePlayer()));
+		}
+
+		if (user.isOnline()) {
+			return addPlayer(user.getPlayer());
 		}
 		return this;
 	}

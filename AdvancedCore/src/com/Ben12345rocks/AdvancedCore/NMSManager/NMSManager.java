@@ -301,6 +301,15 @@ public class NMSManager {
 		}
 	}
 
+	public boolean isVersion(String... versions) {
+		for (String str : versions) {
+			if (getVersion().contains(str)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * To primitive type array.
 	 *
@@ -315,14 +324,5 @@ public class NMSManager {
 			types[i] = getPrimitiveType(classes[i]);
 		}
 		return types;
-	}
-
-	public boolean isVersion(String... versions) {
-		for (String str : versions) {
-			if (getVersion().contains(str)) {
-				return true;
-			}
-		}
-		return false;
 	}
 }

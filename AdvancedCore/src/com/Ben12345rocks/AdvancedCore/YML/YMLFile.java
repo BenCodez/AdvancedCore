@@ -57,13 +57,6 @@ public abstract class YMLFile {
 		return data;
 	}
 
-	public void setData(FileConfiguration data) {
-		Map<String, Object> map = data.getConfigurationSection("").getValues(true);
-		for (Entry<String, Object> entry : map.entrySet()) {
-			this.data.set(entry.getKey(), entry.getValue());
-		}
-	}
-
 	/**
 	 * Gets the d file.
 	 *
@@ -92,6 +85,13 @@ public abstract class YMLFile {
 
 		FilesManager.getInstance().editFile(dFile, data);
 
+	}
+
+	public void setData(FileConfiguration data) {
+		Map<String, Object> map = data.getConfigurationSection("").getValues(true);
+		for (Entry<String, Object> entry : map.entrySet()) {
+			this.data.set(entry.getKey(), entry.getValue());
+		}
 	}
 
 	/**

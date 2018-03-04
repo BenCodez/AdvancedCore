@@ -23,6 +23,8 @@ public abstract class BInventoryButton {
 	/** The slot. */
 	private int slot = -1;
 
+	private HashMap<String, Object> data = new HashMap<String, Object>();
+
 	public BInventoryButton(ItemBuilder item) {
 		setBuilder(item);
 		slot = item.getSlot();
@@ -46,11 +48,27 @@ public abstract class BInventoryButton {
 		setBuilder(new ItemBuilder(item).setName(name).setLore(lore));
 	}
 
+	public BInventoryButton addData(String key, Object object) {
+		getData().put(key, object);
+		return this;
+	}
+
 	/**
 	 * @return the builder
 	 */
 	public ItemBuilder getBuilder() {
 		return builder;
+	}
+
+	/**
+	 * @return the data
+	 */
+	public HashMap<String, Object> getData() {
+		return data;
+	}
+
+	public Object getData(String key) {
+		return data.get(key);
 	}
 
 	/**
@@ -96,24 +114,6 @@ public abstract class BInventoryButton {
 
 	public void setItem(ItemBuilder builder) {
 		this.builder = builder;
-	}
-
-	private HashMap<String, Object> data = new HashMap<String, Object>();
-
-	/**
-	 * @return the data
-	 */
-	public HashMap<String, Object> getData() {
-		return data;
-	}
-
-	public BInventoryButton addData(String key, Object object) {
-		getData().put(key, object);
-		return this;
-	}
-
-	public Object getData(String key) {
-		return data.get(key);
 	}
 
 	/**
