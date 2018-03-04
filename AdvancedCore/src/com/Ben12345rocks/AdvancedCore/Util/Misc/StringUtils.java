@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Misc;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -118,9 +119,17 @@ public class StringUtils {
 		if ((toReplace == null) || (replaceWith == null)) {
 			return str;
 		}
+		str = escapeSpecialRegexChars(str);
 		return str.replaceAll("(?i)" + toReplace, replaceWith);
 		
 		//return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
+	}
+	
+	Pattern SPECIAL_REGEX_CHARS = Pattern.compile("[{}()\\[\\].+*?^$\\\\|]");
+	
+	private String escapeSpecialRegexChars(String str) {
+
+	    return SPECIAL_REGEX_CHARS.matcher(str).replaceAll("\\\\$0");
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
