@@ -3,7 +3,6 @@ package com.Ben12345rocks.AdvancedCore.Util.Misc;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -119,9 +118,8 @@ public class StringUtils {
 		if ((toReplace == null) || (replaceWith == null)) {
 			return str;
 		}
-		str = Pattern.quote(str);
-		Pattern pattern = Pattern.compile(Pattern.quote(str), Pattern.CASE_INSENSITIVE);
-		return pattern.matcher(toReplace).replaceAll(replaceWith);
+		return str.replaceAll("(?i)" + toReplace, replaceWith);
+		
 		//return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
 
