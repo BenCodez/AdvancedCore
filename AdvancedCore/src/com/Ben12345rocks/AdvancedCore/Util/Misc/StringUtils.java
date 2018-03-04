@@ -119,17 +119,8 @@ public class StringUtils {
 		if ((toReplace == null) || (replaceWith == null)) {
 			return str;
 		}
-		str = escapeSpecialRegexChars(str);
-		return Pattern.compile(str.replaceAll("(?i)" + toReplace, replaceWith)).toString();
 		
-		//return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
-	}
-	
-	Pattern SPECIAL_REGEX_CHARS = Pattern.compile("[{}()\\[\\].+*?^$\\\\|]");
-	
-	private String escapeSpecialRegexChars(String str) {
-
-	    return SPECIAL_REGEX_CHARS.matcher(str).replaceAll("\\\\$0");
+		return Pattern.compile(str, Pattern.CASE_INSENSITIVE).matcher(toReplace).replaceAll(replaceWith);
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
