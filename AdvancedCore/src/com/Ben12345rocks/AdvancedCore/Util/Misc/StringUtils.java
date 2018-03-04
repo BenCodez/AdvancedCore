@@ -231,8 +231,8 @@ public class StringUtils {
 			return replaceIgnoreCase(replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith),
 					"\\{" + toReplace + "\\}", replaceWith);
 		} else {
-			str = str.replace("\\{", "%");
-			str = str.replace("\\}", "%");
+			str = str.replaceAll("\\{", "%");
+			str = str.replaceAll("\\}", "%");
 			str = str.replace("%" + toReplace + "%", replaceWith);
 			return str;
 
