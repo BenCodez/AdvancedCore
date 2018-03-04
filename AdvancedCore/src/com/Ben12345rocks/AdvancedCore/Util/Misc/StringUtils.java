@@ -120,7 +120,7 @@ public class StringUtils {
 			return str;
 		}
 		str = Pattern.quote(str);
-		Pattern pattern = Pattern.compile(Pattern.quote(str));
+		Pattern pattern = Pattern.compile(Pattern.quote(str), Pattern.CASE_INSENSITIVE);
 		return pattern.matcher(toReplace).replaceAll(replaceWith);
 		//return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
