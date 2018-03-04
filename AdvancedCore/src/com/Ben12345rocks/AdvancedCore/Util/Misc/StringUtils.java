@@ -119,6 +119,7 @@ public class StringUtils {
 		if ((toReplace == null) || (replaceWith == null)) {
 			return str;
 		}
+		str = Pattern.quote(str);
 		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
 
