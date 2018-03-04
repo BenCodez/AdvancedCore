@@ -139,9 +139,9 @@
 			<url>http://nexus.hc.to/content/repositories/pub_releases</url>
 		</repository>
 		<repository>
-			<id>placeholderapi</id>
-			<url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
-		</repository>
+            <id>placeholderapi</id>
+            <url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+        </repository>
 		<repository>
 			<id>mrten-releases</id>
 			<name>Mrten's Release Repo</name>
@@ -170,12 +170,11 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>me.clip</groupId>
-			<artifactId>placeholderapi</artifactId>
-			<version>LATEST</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/Jars/PlaceholderAPI.jar</systemPath>
-		</dependency>
+         <groupId>me.clip</groupId>
+          <artifactId>placeholderapi</artifactId>
+          <version>LATEST</version>
+         <scope>provided</scope>
+        </dependency>
 		<dependency>
 			<groupId>com.github.Ben12345rocks</groupId>
 			<artifactId>ChatComponentAPI</artifactId>
