@@ -120,7 +120,9 @@ public class StringUtils {
 			return str;
 		}
 		str = Pattern.quote(str);
-		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
+		Pattern pattern = Pattern.compile(Pattern.quote(str));
+		return pattern.matcher(toReplace).replaceAll(replaceWith);
+		//return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
