@@ -572,6 +572,7 @@ public class AdvancedCoreHook {
 					}
 				});
 			}
+			
 		}
 	}
 
