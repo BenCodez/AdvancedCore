@@ -120,6 +120,8 @@ public class AdvancedCoreHook {
 
 	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
 
+	private String formatInvFull;
+
 	private AdvancedCoreHook() {
 	}
 
@@ -525,6 +527,21 @@ public class AdvancedCoreHook {
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 	}
 
+	/**
+	 * @return the formatInvFull
+	 */
+	public String getFormatInvFull() {
+		return formatInvFull;
+	}
+
+	/**
+	 * @param formatInvFull
+	 *            the formatInvFull to set
+	 */
+	public void setFormatInvFull(String formatInvFull) {
+		this.formatInvFull = formatInvFull;
+	}
+
 	@SuppressWarnings("unchecked")
 	private void loadConfig() {
 		if (configData != null) {
@@ -535,6 +552,7 @@ public class AdvancedCoreHook {
 					new ArrayList<String>());
 			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
 			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
+			formatInvFull = configData.getString("Format.InvFull", "&cInventory full, dropping items on ground");
 			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
 			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
 			sendScoreboards = configData.getBoolean("SendScoreboards", true);

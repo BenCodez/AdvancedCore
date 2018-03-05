@@ -407,7 +407,9 @@ public class User {
 		Player player = getPlayer();
 		if (player != null) {
 			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(builder.toItemStack());
+			boolean full = false;
 			for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
+				full = true;
 				Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 					@Override
@@ -415,6 +417,13 @@ public class User {
 						player.getWorld().dropItem(player.getLocation(), me.getValue());
 					}
 				});
+
+			}
+			if (full) {
+				String msg = StringUtils.getInstance().colorize(AdvancedCoreHook.getInstance().getFormatInvFull());
+				if (!msg.isEmpty()) {
+					player.sendMessage(msg);
+				}
 			}
 
 			player.updateInventory();
@@ -441,8 +450,17 @@ public class User {
 			public void run() {
 				if (player != null) {
 					HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+					boolean full = false;
 					for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
+						full = true;
 						player.getWorld().dropItem(player.getLocation(), me.getValue());
+					}
+					if (full) {
+						String msg = StringUtils.getInstance()
+								.colorize(AdvancedCoreHook.getInstance().getFormatInvFull());
+						if (!msg.isEmpty()) {
+							player.sendMessage(msg);
+						}
 					}
 
 					player.updateInventory();
