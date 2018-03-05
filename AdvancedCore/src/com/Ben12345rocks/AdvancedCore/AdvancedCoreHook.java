@@ -256,6 +256,13 @@ public class AdvancedCoreHook {
 		return econ;
 	}
 
+	/**
+	 * @return the formatInvFull
+	 */
+	public String getFormatInvFull() {
+		return formatInvFull;
+	}
+
 	public String getFormatNoPerms() {
 		return formatNoPerms;
 	}
@@ -525,21 +532,6 @@ public class AdvancedCoreHook {
 
 		userStartup();
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
-	}
-
-	/**
-	 * @return the formatInvFull
-	 */
-	public String getFormatInvFull() {
-		return formatInvFull;
-	}
-
-	/**
-	 * @param formatInvFull
-	 *            the formatInvFull to set
-	 */
-	public void setFormatInvFull(String formatInvFull) {
-		this.formatInvFull = formatInvFull;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1003,6 +995,14 @@ public class AdvancedCoreHook {
 	 */
 	public void setExtraDebug(boolean extraDebug) {
 		this.extraDebug = extraDebug;
+	}
+
+	/**
+	 * @param formatInvFull
+	 *            the formatInvFull to set
+	 */
+	public void setFormatInvFull(String formatInvFull) {
+		this.formatInvFull = formatInvFull;
 	}
 
 	public void setFormatNoPerms(String formatNoPerms) {

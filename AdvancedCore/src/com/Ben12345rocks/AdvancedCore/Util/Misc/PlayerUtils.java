@@ -106,6 +106,10 @@ public class PlayerUtils {
 
 	}
 
+	public Player getRandomPlayer() {
+		return Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
+	}
+
 	/**
 	 * Gets the uuid.
 	 *
@@ -300,10 +304,6 @@ public class PlayerUtils {
 			return true;
 		}
 		return false;
-	}
-	
-	public Player getRandomPlayer() {
-		return Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
 	}
 
 	@SuppressWarnings("deprecation")
