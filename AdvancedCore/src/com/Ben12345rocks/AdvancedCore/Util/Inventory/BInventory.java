@@ -154,6 +154,10 @@ public class BInventory implements Listener {
 			return PlayerUtils.getInstance().getPlayerMeta(player, str);
 		}
 
+		public void runSync(Runnable run) {
+			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), run);
+		}
+
 		/**
 		 * Gets the player.
 		 *

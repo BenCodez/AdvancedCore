@@ -145,7 +145,7 @@ public class BooleanRequester {
 			});
 		} else {
 			player.sendMessage(
-					"Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
+					"Invalid method/disabled method, change your request method");
 		}
 	}
 }

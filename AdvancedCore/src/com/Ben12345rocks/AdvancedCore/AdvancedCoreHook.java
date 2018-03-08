@@ -542,11 +542,11 @@ public class AdvancedCoreHook {
 			defaultRequestMethod = configData.getString("RequestAPI.DefaultMethod", "Anvil");
 			disabledRequestMethods = (ArrayList<String>) configData.getList("RequestAPI.DisabledMethods",
 					new ArrayList<String>());
-			
+
 			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
 			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
 			formatInvFull = configData.getString("Format.InvFull", "&cInventory full, dropping items on ground");
-			
+
 			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
 			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
 			sendScoreboards = configData.getBoolean("SendScoreboards", true);
@@ -572,7 +572,7 @@ public class AdvancedCoreHook {
 					}
 				});
 			}
-			
+
 		}
 	}
 
