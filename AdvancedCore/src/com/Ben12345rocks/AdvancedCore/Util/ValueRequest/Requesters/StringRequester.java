@@ -199,8 +199,7 @@ public class StringRequester {
 						}
 					});
 		} else {
-			player.sendMessage(
-					"Invalid method/disabled method, change your request method");
+			player.sendMessage("Invalid method/disabled method, change your request method");
 		}
 	}
 

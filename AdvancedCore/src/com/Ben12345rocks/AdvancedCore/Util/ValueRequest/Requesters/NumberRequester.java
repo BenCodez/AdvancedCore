@@ -209,8 +209,7 @@ public class NumberRequester {
 				}
 			});
 		} else {
-			player.sendMessage(
-					"Invalid method/disabled method, change your request method");
+			player.sendMessage("Invalid method/disabled method, change your request method");
 		}
 
 	}
