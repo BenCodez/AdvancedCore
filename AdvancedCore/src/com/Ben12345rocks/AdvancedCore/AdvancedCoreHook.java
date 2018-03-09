@@ -904,12 +904,6 @@ public class AdvancedCoreHook {
 		}
 	}
 
-	private void loadVersionFile() {
-		YamlConfiguration conf = getVersionFile();
-		version = conf.getString("version", "Unknown");
-		buildTime = conf.getString("time", "Unknown");
-	}
-
 	/**
 	 * Reload
 	 */
@@ -924,6 +918,12 @@ public class AdvancedCoreHook {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
+	}
+
+	private void loadVersionFile() {
+		YamlConfiguration conf = getVersionFile();
+		version = conf.getString("version", "Unknown");
+		buildTime = conf.getString("time", "Unknown");
 	}
 
 	/**
