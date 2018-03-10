@@ -19,10 +19,18 @@ public class PluginMessage implements PluginMessageListener {
 		return instance;
 	}
 
+	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<PluginMessageHandler>();
+
 	public PluginMessage() {
 	}
 
-	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<PluginMessageHandler>();
+	public void add(PluginMessageHandler handle) {
+		pluginMessages.add(handle);
+	}
+
+	public ArrayList<PluginMessageHandler> getPluginMessages() {
+		return pluginMessages;
+	}
 
 	@Override
 	public void onPluginMessageReceived(String channel, Player player, byte[] message) {
@@ -50,14 +58,6 @@ public class PluginMessage implements PluginMessageListener {
 			}
 		}
 
-	}
-
-	public ArrayList<PluginMessageHandler> getPluginMessages() {
-		return pluginMessages;
-	}
-
-	public void add(PluginMessageHandler handle) {
-		pluginMessages.add(handle);
 	}
 
 	public void sendPluginMessage(Player p, String channel, String... messageData) {

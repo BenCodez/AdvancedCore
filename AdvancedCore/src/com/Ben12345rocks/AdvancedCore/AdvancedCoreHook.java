@@ -330,6 +330,10 @@ public class AdvancedCoreHook {
 		return resourceId;
 	}
 
+	public Server getServer() {
+		return getPlugin().getServer();
+	}
+
 	public IServerHandle getServerHandle() {
 		return serverHandle;
 	}
@@ -906,6 +910,18 @@ public class AdvancedCoreHook {
 		}
 	}
 
+	private void loadVersionFile() {
+		YamlConfiguration conf = getVersionFile();
+		version = conf.getString("version", "Unknown");
+		buildTime = conf.getString("time", "Unknown");
+	}
+
+	public void registerBungeeChannels() {
+		getServer().getMessenger().registerOutgoingPluginChannel(getPlugin(), getPlugin().getName());
+		getServer().getMessenger().registerIncomingPluginChannel(getPlugin(), getPlugin().getName(),
+				PluginMessage.getInstance());
+	}
+
 	/**
 	 * Reload
 	 */
@@ -920,12 +936,6 @@ public class AdvancedCoreHook {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
-	}
-
-	private void loadVersionFile() {
-		YamlConfiguration conf = getVersionFile();
-		version = conf.getString("version", "Unknown");
-		buildTime = conf.getString("time", "Unknown");
 	}
 
 	/**
@@ -1158,15 +1168,5 @@ public class AdvancedCoreHook {
 				}
 			}
 		}, 30);
-	}
-
-	public Server getServer() {
-		return getPlugin().getServer();
-	}
-
-	public void registerBungeeChannels() {
-		getServer().getMessenger().registerOutgoingPluginChannel(getPlugin(), getPlugin().getName());
-		getServer().getMessenger().registerIncomingPluginChannel(getPlugin(), getPlugin().getName(),
-				PluginMessage.getInstance());
 	}
 }

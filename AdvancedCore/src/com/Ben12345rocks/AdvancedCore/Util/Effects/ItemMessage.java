@@ -1,16 +1,17 @@
 package com.Ben12345rocks.AdvancedCore.Util.Effects;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
+import java.lang.reflect.InvocationTargetException;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.lang.reflect.InvocationTargetException;
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketContainer;
 
 public class ItemMessage {
 
@@ -41,6 +42,7 @@ public class ItemMessage {
 			e.printStackTrace();
 		}
 		new BukkitRunnable() {
+			@Override
 			public void run() {
 				try {
 					ProtocolLibrary.getProtocolManager().sendServerPacket(player, setSlot);

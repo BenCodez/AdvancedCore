@@ -107,10 +107,6 @@ public class RewardFileData {
 		return getConfigData().getString("BossBar.Message", "");
 	}
 
-	public String getItemMessage() {
-		return getConfigData().getString("ItemMessage", "");
-	}
-
 	/**
 	 * Gets the boss bar progress.
 	 *
@@ -237,15 +233,6 @@ public class RewardFileData {
 	}
 
 	/**
-	 * Gets the data.
-	 *
-	 * @return the data
-	 */
-	/*
-	 * private FileConfiguration getFileData() { return fileData; }
-	 */
-
-	/**
 	 * Gets the effect enabled.
 	 *
 	 * @return the effect enabled
@@ -253,6 +240,15 @@ public class RewardFileData {
 	public boolean getEffectEnabled() {
 		return getConfigData().getBoolean("Effect.Enabled");
 	}
+
+	/**
+	 * Gets the data.
+	 *
+	 * @return the data
+	 */
+	/*
+	 * private FileConfiguration getFileData() { return fileData; }
+	 */
 
 	/**
 	 * Gets the effect particles.
@@ -456,6 +452,10 @@ public class RewardFileData {
 	@Deprecated
 	public int getItemMaxAmount(String item) {
 		return getConfigData().getInt("Items." + item + ".MaxAmount");
+	}
+
+	public String getItemMessage() {
+		return getConfigData().getString("ItemMessage", "");
 	}
 
 	/**
