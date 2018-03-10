@@ -27,11 +27,7 @@ public class PluginMessage implements PluginMessageListener {
 	public void add(PluginMessageHandler handle) {
 		pluginMessages.add(handle);
 	}
-
-	public ArrayList<PluginMessageHandler> getPluginMessages() {
-		return pluginMessages;
-	}
-
+	
 	@Override
 	public void onPluginMessageReceived(String channel, Player player, byte[] message) {
 		// plugin.getLogger().info("Got plugin message " + channel + " : " + message);
@@ -58,6 +54,10 @@ public class PluginMessage implements PluginMessageListener {
 			}
 		}
 
+	}
+
+	public ArrayList<PluginMessageHandler> getPluginMessages() {
+		return pluginMessages;
 	}
 
 	public void sendPluginMessage(Player p, String channel, String... messageData) {
