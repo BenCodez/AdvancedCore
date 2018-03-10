@@ -18,6 +18,9 @@ public class ItemMessage {
 		if (player == null) {
 			return;
 		}
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") == null) {
+			return;
+		}
 		int slot = player.getInventory().getHeldItemSlot();
 		ItemStack stack0 = player.getInventory().getItem(slot);
 		ItemStack stack = new ItemStack(stack0.getType(), stack0.getAmount(), stack0.getDurability());
