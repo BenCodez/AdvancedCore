@@ -22,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Effects.ItemMessage;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
@@ -248,6 +249,8 @@ public class Reward {
 	private File file;
 
 	private boolean randomPickRandom;
+
+	private String itemMessage;
 
 	/**
 	 * Instantiates a new reward.
@@ -1507,6 +1510,8 @@ public class Reward {
 		randomCommand = getConfig().getRandomCommand();
 
 		server = getConfig().getServer();
+
+		itemMessage = getConfig().getItemMessage();
 	}
 
 	/**
@@ -1668,6 +1673,11 @@ public class Reward {
 				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
 		user.sendMessage(msg, placeholders);
+
+		// item message
+		if (!itemMessage.isEmpty()) {
+			ItemMessage.send(user.getPlayer(), itemMessage);
+		}
 
 	}
 

@@ -104,7 +104,11 @@ public class RewardFileData {
 	 * @return the boss bar message
 	 */
 	public String getBossBarMessage() {
-		return getConfigData().getString("BossBar.Message");
+		return getConfigData().getString("BossBar.Message", "");
+	}
+
+	public String getItemMessage() {
+		return getConfigData().getString("ItemMessage", "");
 	}
 
 	/**
