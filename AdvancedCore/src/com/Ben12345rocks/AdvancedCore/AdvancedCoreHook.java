@@ -17,6 +17,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Server;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -50,6 +51,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.PluginMessage.PluginMessage;
 import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
@@ -1156,5 +1158,15 @@ public class AdvancedCoreHook {
 				}
 			}
 		}, 30);
+	}
+
+	public Server getServer() {
+		return getPlugin().getServer();
+	}
+
+	public void registerBungeeChannels() {
+		getServer().getMessenger().registerOutgoingPluginChannel(getPlugin(), getPlugin().getName());
+		getServer().getMessenger().registerIncomingPluginChannel(getPlugin(), getPlugin().getName(),
+				PluginMessage.getInstance());
 	}
 }
