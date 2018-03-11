@@ -14,6 +14,7 @@ com.Ben12345rocks.AdvancedCore.Thread
 com.Ben12345rocks.AdvancedCore.TimeChecker
 com.Ben12345rocks.AdvancedCore.UserManager
 com.Ben12345rocks.AdvancedCore.Util.Animation
+com.Ben12345rocks.AdvancedCore.Util.Annotation
 com.Ben12345rocks.AdvancedCore.Util.AnvilInventory
 com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler
 com.Ben12345rocks.AdvancedCore.Util.Book
@@ -26,6 +27,7 @@ com.Ben12345rocks.AdvancedCore.Util.Javascript
 com.Ben12345rocks.AdvancedCore.Util.Logger
 com.Ben12345rocks.AdvancedCore.Util.Metrics
 com.Ben12345rocks.AdvancedCore.Util.Misc
+com.Ben12345rocks.AdvancedCore.Util.PluginMessage
 com.Ben12345rocks.AdvancedCore.Util.Prompt
 com.Ben12345rocks.AdvancedCore.Util.Scoreboards
 com.Ben12345rocks.AdvancedCore.Util.Sign
