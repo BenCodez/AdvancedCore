@@ -454,10 +454,6 @@ public class RewardFileData {
 		return getConfigData().getInt("Items." + item + ".MaxAmount");
 	}
 
-	public String getItemMessage() {
-		return getConfigData().getString("ItemMessage", "");
-	}
-
 	/**
 	 * Gets the item min amount.
 	 *
