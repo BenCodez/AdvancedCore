@@ -61,6 +61,10 @@ public class PluginMessage implements PluginMessageListener {
 	}
 
 	public void sendPluginMessage(Player p, String channel, String... messageData) {
+		if (p == null) {
+			AdvancedCoreHook.getInstance().debug("Can't send plugin message, player == null");
+			return;
+		}
 		ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(byteOutStream);
 		try {
