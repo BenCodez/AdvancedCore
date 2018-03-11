@@ -1676,7 +1676,7 @@ public class Reward {
 
 		// item message
 		if (!itemMessage.isEmpty()) {
-			ItemMessage.send(user.getPlayer(), itemMessage);
+			new ItemMessage(AdvancedCoreHook.getInstance().getPlugin()).sendMessage(user.getPlayer(), itemMessage);
 		}
 
 	}
