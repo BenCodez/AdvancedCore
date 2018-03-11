@@ -45,6 +45,16 @@ public abstract class CommandHandler {
 	/** The allow console. */
 	private boolean allowConsole = true;
 
+	private boolean advancedCoreCommand = false;
+
+	public boolean isAdvancedCoreCommand() {
+		return advancedCoreCommand;
+	}
+
+	public void setAdvancedCoreCommand(boolean advancedCoreCommand) {
+		this.advancedCoreCommand = advancedCoreCommand;
+	}
+
 	public CommandHandler() {
 	}
 

@@ -241,6 +241,10 @@ public class CommandLoader {
 			}
 		});
 
+		for (CommandHandler cmd : cmds) {
+			cmd.setAdvancedCoreCommand(true);
+		}
+
 		return cmds;
 	}
 
@@ -316,6 +320,10 @@ public class CommandLoader {
 			}
 		});
 
+		for (CommandHandler cmd : cmds) {
+			cmd.setAdvancedCoreCommand(true);
+		}
+
 		return cmds;
 	}
 
@@ -374,6 +382,9 @@ public class CommandLoader {
 				}
 			}
 		});
+		for (CommandHandler cmd : cmds) {
+			cmd.setAdvancedCoreCommand(true);
+		}
 		return cmds;
 	}
 
