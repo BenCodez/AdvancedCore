@@ -22,15 +22,15 @@ public class PluginUtils {
 	private PluginUtils() {
 	}
 
-	public void registerEvents(Listener listener, JavaPlugin plugin) {
-		Bukkit.getPluginManager().registerEvents(listener, plugin);
-	}
-
 	public void registerCommands(JavaPlugin plugin, String commandText, CommandExecutor executor, TabCompleter tab) {
 		plugin.getCommand(commandText).setExecutor(executor);
 		if (tab != null) {
 			plugin.getCommand(commandText).setTabCompleter(tab);
 		}
+	}
+
+	public void registerEvents(Listener listener, JavaPlugin plugin) {
+		Bukkit.getPluginManager().registerEvents(listener, plugin);
 	}
 
 }

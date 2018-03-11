@@ -18,7 +18,7 @@ public enum InputMethod {
 
 	/** The inventory. */
 	INVENTORY,
-	
+
 	SIGN;
 
 	/**

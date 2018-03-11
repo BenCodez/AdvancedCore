@@ -58,28 +58,6 @@ public class RewardFileData {
 		setup();
 	}
 
-	public boolean isRewardFile() {
-		return dFile != null;
-	}
-
-	public void setData(ConfigurationSection value) {
-		// getFileData().set("", value);
-		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
-		for (Entry<String, Object> entry : map.entrySet()) {
-			set(entry.getKey(), entry.getValue());
-		}
-		reward.loadValues();
-	}
-
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getRandomCommand() {
-		return (ArrayList<String>) getConfigData().getList("RandomCommand", new ArrayList<String>());
-	}
-
-	public FileConfiguration getFileData() {
-		return fileData;
-	}
-
 	/**
 	 * Gets the action bar delay.
 	 *
@@ -87,10 +65,6 @@ public class RewardFileData {
 	 */
 	public int getActionBarDelay() {
 		return getConfigData().getInt("ActionBar.Delay");
-	}
-
-	public String getServer() {
-		return getConfigData().getString("Server", "");
 	}
 
 	/**
@@ -130,7 +104,7 @@ public class RewardFileData {
 	 * @return the boss bar message
 	 */
 	public String getBossBarMessage() {
-		return getConfigData().getString("BossBar.Message");
+		return getConfigData().getString("BossBar.Message", "");
 	}
 
 	/**
@@ -218,15 +192,6 @@ public class RewardFileData {
 	}
 
 	/**
-	 * Gets the data.
-	 *
-	 * @return the data
-	 */
-	/*
-	 * private FileConfiguration getFileData() { return fileData; }
-	 */
-
-	/**
 	 * Gets the delayed hours.
 	 *
 	 * @return the delayed hours
@@ -277,6 +242,15 @@ public class RewardFileData {
 	}
 
 	/**
+	 * Gets the data.
+	 *
+	 * @return the data
+	 */
+	/*
+	 * private FileConfiguration getFileData() { return fileData; }
+	 */
+
+	/**
 	 * Gets the effect particles.
 	 *
 	 * @return the effect particles
@@ -301,6 +275,10 @@ public class RewardFileData {
 	 */
 	public int getEXP() {
 		return getConfigData().getInt("EXP");
+	}
+
+	public FileConfiguration getFileData() {
+		return fileData;
 	}
 
 	/**
@@ -697,6 +675,11 @@ public class RewardFileData {
 		return getConfigData().getDouble("Random.Chance");
 	}
 
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> getRandomCommand() {
+		return (ArrayList<String>) getConfigData().getList("RandomCommand", new ArrayList<String>());
+	}
+
 	public String getRandomFallBackRewardsPath() {
 		return "Random.FallBack";
 	}
@@ -740,6 +723,10 @@ public class RewardFileData {
 			}
 		}
 		return "BOTH";
+	}
+
+	public String getServer() {
+		return getConfigData().getString("Server", "");
 	}
 
 	/**
@@ -871,6 +858,10 @@ public class RewardFileData {
 
 	}
 
+	public boolean isRewardFile() {
+		return dFile != null;
+	}
+
 	/**
 	 * Reload.
 	 */
@@ -929,6 +920,15 @@ public class RewardFileData {
 
 	public void setConfigData(ConfigurationSection configData) {
 		this.configData = configData;
+	}
+
+	public void setData(ConfigurationSection value) {
+		// getFileData().set("", value);
+		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
+		for (Entry<String, Object> entry : map.entrySet()) {
+			set(entry.getKey(), entry.getValue());
+		}
+		reward.loadValues();
 	}
 
 	/*

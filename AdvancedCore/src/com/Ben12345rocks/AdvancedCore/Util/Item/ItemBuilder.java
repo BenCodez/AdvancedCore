@@ -241,17 +241,6 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public ItemBuilder setUnbreakable(boolean unbreakable) {
-		try {
-			ItemMeta meta = is.getItemMeta();
-			meta.setUnbreakable(unbreakable);
-			is.setItemMeta(meta);
-		} catch (NoSuchMethodError e) {
-
-		}
-		return this;
-	}
-
 	/**
 	 * Add a lore line.
 	 *
@@ -600,6 +589,17 @@ public class ItemBuilder {
 
 	public ItemBuilder setSlot(int slot) {
 		this.slot = slot;
+		return this;
+	}
+
+	public ItemBuilder setUnbreakable(boolean unbreakable) {
+		try {
+			ItemMeta meta = is.getItemMeta();
+			meta.setUnbreakable(unbreakable);
+			is.setItemMeta(meta);
+		} catch (NoSuchMethodError e) {
+
+		}
 		return this;
 	}
 

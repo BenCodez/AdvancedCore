@@ -330,6 +330,15 @@ public class Reward {
 		return true;
 	}
 
+	/**
+	 * Check random chance.
+	 *
+	 * @return true, if successful
+	 */
+	public boolean checkRandomChance() {
+		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
+	}
+
 	private void checkRewardFile() {
 		if (!getConfig().isRewardFile()) {
 			String rewardName = name;
@@ -350,13 +359,11 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * Check random chance.
-	 *
-	 * @return true, if successful
-	 */
-	public boolean checkRandomChance() {
-		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
+	public boolean checkServer() {
+		if (server != null && !server.isEmpty()) {
+			return Bukkit.getServer().getName().equals(server);
+		}
+		return true;
 	}
 
 	/**
@@ -1126,13 +1133,6 @@ public class Reward {
 		giveRewardReward(user, online, ignoreChance, placeholders);
 	}
 
-	public boolean checkServer() {
-		if (server != null && !server.isEmpty()) {
-			return Bukkit.getServer().getName().equals(server);
-		}
-		return true;
-	}
-
 	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
 			HashMap<String, String> placeholders) {
 		giveReward(user, online, giveOffline, checkTimed, false, placeholders);
@@ -1158,6 +1158,11 @@ public class Reward {
 		if (ignoreChance || checkChance()) {
 			giveRewardUser(user, placeholders);
 		}
+	}
+
+	private void giveRewardsRewards(User user, HashMap<String, String> placeholders) {
+		new RewardBuilder(getConfig().getConfigData(), "Rewards").withPrefix(name).withPlaceHolder(placeholders)
+				.send(user);
 	}
 
 	/**
@@ -1208,11 +1213,6 @@ public class Reward {
 
 			}
 		}
-	}
-
-	private void giveRewardsRewards(User user, HashMap<String, String> placeholders) {
-		new RewardBuilder(getConfig().getConfigData(), "Rewards").withPrefix(name).withPlaceHolder(placeholders)
-				.send(user);
 	}
 
 	/**
@@ -1668,7 +1668,6 @@ public class Reward {
 				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
 		user.sendMessage(msg, placeholders);
-
 	}
 
 	/**

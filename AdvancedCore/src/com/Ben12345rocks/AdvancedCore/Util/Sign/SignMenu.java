@@ -40,6 +40,11 @@ import com.comphenix.protocol.wrappers.nbt.NbtCompound;
 
 public class SignMenu {
 
+	public interface InputReceiver {
+
+		void receive(Player player, String[] text);
+	}
+
 	private final Plugin plugin;
 
 	private final Map<UUID, InputReceiver> inputReceivers;
@@ -47,49 +52,10 @@ public class SignMenu {
 	public SignMenu(Plugin plugin) {
 		this.plugin = plugin;
 		this.inputReceivers = new ConcurrentHashMap<>();
-		this.listen();
-	}
-
-	public void open(UUID uuid, String[] text, InputReceiver inputReceiver) {
-		this.inputReceivers.putIfAbsent(uuid, this.display(uuid, inputReceiver,
-				Arrays.stream(Arrays.copyOf(text, 4))
-						.map(s -> ChatColor.translateAlternateColorCodes('&', Optional.ofNullable(s).orElse("")))
-						.toArray(String[]::new)));
-	}
-
-	public void open(UUID uuid, List<String> text, InputReceiver inputReceiver) {
-		open(uuid, text.toArray(new String[text.size()]), inputReceiver);
-	}
-
-	public void open(Player player, String[] text, InputReceiver inputReceiver) {
-		open(player.getUniqueId(), text, inputReceiver);
-	}
-
-	public void open(Player player, List<String> text, InputReceiver inputReceiver) {
-		open(player.getUniqueId(), text, inputReceiver);
-	}
-
-	private void listen() {
-		if (!NMSManager.getInstance().getVersion().contains("1.8")
-				&& !NMSManager.getInstance().getVersion().contains("1.9")
-				&& !NMSManager.getInstance().getVersion().contains("1.10")
-				&& !NMSManager.getInstance().getVersion().contains("1.11")) {
-			ProtocolLibrary.getProtocolManager()
-					.addPacketListener(new PacketAdapter(this.plugin, PacketType.Play.Client.UPDATE_SIGN) {
-						@Override
-						public void onPacketReceiving(PacketEvent event) {
-							PacketContainer packet = event.getPacket();
-							Player player = event.getPlayer();
-							String[] text = packet.getStringArrays().read(0);
-							if (!inputReceivers.containsKey(player.getUniqueId())) {
-								return;
-							}
-							event.setCancelled(true);
-							inputReceivers.remove(player.getUniqueId()).receive(player, text);
-						}
-					});
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
+				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
+			this.listen();
 		}
-
 	}
 
 	private InputReceiver display(UUID uuid, InputReceiver inputReceiver, String... text) {
@@ -127,8 +93,45 @@ public class SignMenu {
 		return inputReceiver;
 	}
 
-	public interface InputReceiver {
+	private void listen() {
+		if (!NMSManager.getInstance().getVersion().contains("1.8")
+				&& !NMSManager.getInstance().getVersion().contains("1.9")
+				&& !NMSManager.getInstance().getVersion().contains("1.10")
+				&& !NMSManager.getInstance().getVersion().contains("1.11")) {
+			ProtocolLibrary.getProtocolManager()
+					.addPacketListener(new PacketAdapter(this.plugin, PacketType.Play.Client.UPDATE_SIGN) {
+						@Override
+						public void onPacketReceiving(PacketEvent event) {
+							PacketContainer packet = event.getPacket();
+							Player player = event.getPlayer();
+							String[] text = packet.getStringArrays().read(0);
+							if (!inputReceivers.containsKey(player.getUniqueId())) {
+								return;
+							}
+							event.setCancelled(true);
+							inputReceivers.remove(player.getUniqueId()).receive(player, text);
+						}
+					});
+		}
 
-		void receive(Player player, String[] text);
+	}
+
+	public void open(Player player, List<String> text, InputReceiver inputReceiver) {
+		open(player.getUniqueId(), text, inputReceiver);
+	}
+
+	public void open(Player player, String[] text, InputReceiver inputReceiver) {
+		open(player.getUniqueId(), text, inputReceiver);
+	}
+
+	public void open(UUID uuid, List<String> text, InputReceiver inputReceiver) {
+		open(uuid, text.toArray(new String[text.size()]), inputReceiver);
+	}
+
+	public void open(UUID uuid, String[] text, InputReceiver inputReceiver) {
+		this.inputReceivers.putIfAbsent(uuid, this.display(uuid, inputReceiver,
+				Arrays.stream(Arrays.copyOf(text, 4))
+						.map(s -> ChatColor.translateAlternateColorCodes('&', Optional.ofNullable(s).orElse("")))
+						.toArray(String[]::new)));
 	}
 }

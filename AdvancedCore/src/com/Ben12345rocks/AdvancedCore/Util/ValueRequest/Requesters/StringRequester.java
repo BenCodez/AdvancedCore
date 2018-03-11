@@ -185,7 +185,7 @@ public class StringRequester {
 				}
 			});
 		} else if (method.equals(InputMethod.SIGN)) {
-			AdvancedCoreHook.getInstance().getSignMenu().open(player.getUniqueId(), new String[] {"","","",""},
+			AdvancedCoreHook.getInstance().getSignMenu().open(player.getUniqueId(), new String[] { "", "", "", "" },
 					new InputReceiver() {
 
 						@Override
@@ -199,8 +199,7 @@ public class StringRequester {
 						}
 					});
 		} else {
-			player.sendMessage(
-					"Invalid method/disabled method, set method using /advancedcore SetRequestMethod (method)");
+			player.sendMessage("Invalid method/disabled method, change your request method");
 		}
 	}
 

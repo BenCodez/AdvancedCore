@@ -88,6 +88,16 @@ public class RewardHandler {
 					plugin.addUserStartup(new UserStartup() {
 
 						@Override
+						public void onFinish() {
+
+						}
+
+						@Override
+						public void onStart() {
+							plugin.debug("Checking timed/delayed rewards");
+						}
+
+						@Override
 						public void onStartUp(User user) {
 							try {
 								HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
@@ -100,16 +110,6 @@ public class RewardHandler {
 								plugin.debug("Failed to update delayed/timed for: " + user.getUUID());
 								plugin.debug(ex);
 							}
-						}
-
-						@Override
-						public void onFinish() {
-
-						}
-
-						@Override
-						public void onStart() {
-							plugin.debug("Checking timed/delayed rewards");
 						}
 					});
 				}
@@ -162,16 +162,6 @@ public class RewardHandler {
 		}
 
 		return new Reward(defaultFolder, reward);
-	}
-
-	public void updateReward(Reward reward) {
-		for (int i = getRewards().size() - 1; i >= 0; i--) {
-			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
-				getRewards().set(i, reward);
-				return;
-			}
-		}
-		getRewards().add(reward);
 	}
 
 	/**
@@ -380,6 +370,29 @@ public class RewardHandler {
 		giveReward(user, prefix, "", data, path, online, giveOffline, checkTimed, ignoreChance, placeholders);
 	}
 
+	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
+		giveReward(user, prefix, data, path, user.isOnline(), true);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online) {
+		giveReward(user, prefix, data, path, online, true);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline) {
+		giveReward(user, prefix, data, path, online, giveOffline, null);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline, boolean checkTimed, HashMap<String, String> placeholders) {
+		giveReward(user, prefix, data, path, online, giveOffline, checkTimed, false, placeholders);
+	}
+
+	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
+			boolean giveOffline, HashMap<String, String> placeholders) {
+		giveReward(user, prefix, data, path, online, giveOffline, true, placeholders);
+	}
+
 	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, String suffix, ConfigurationSection data, String path,
 			boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
@@ -424,29 +437,6 @@ public class RewardHandler {
 		} else {
 			giveReward(user, data.getString(path, ""), online, giveOffline, checkTimed, ignoreChance, placeholders);
 		}
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
-		giveReward(user, prefix, data, path, user.isOnline(), true);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online) {
-		giveReward(user, prefix, data, path, online, true);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline) {
-		giveReward(user, prefix, data, path, online, giveOffline, null);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline, boolean checkTimed, HashMap<String, String> placeholders) {
-		giveReward(user, prefix, data, path, online, giveOffline, checkTimed, false, placeholders);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline, HashMap<String, String> placeholders) {
-		giveReward(user, prefix, data, path, online, giveOffline, true, placeholders);
 	}
 
 	public boolean hasRewards(FileConfiguration data, String path) {
@@ -541,6 +531,16 @@ public class RewardHandler {
 
 		copyFile("ExampleBasic.yml");
 		copyFile("ExampleAdvanced.yml");
+	}
+
+	public void updateReward(Reward reward) {
+		for (int i = getRewards().size() - 1; i >= 0; i--) {
+			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
+				getRewards().set(i, reward);
+				return;
+			}
+		}
+		getRewards().add(reward);
 	}
 
 	/*

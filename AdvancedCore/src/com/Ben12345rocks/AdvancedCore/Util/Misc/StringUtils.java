@@ -119,6 +119,7 @@ public class StringUtils {
 		if ((toReplace == null) || (replaceWith == null)) {
 			return str;
 		}
+
 		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
 	}
 
@@ -135,11 +136,6 @@ public class StringUtils {
 	public String replaceJavascript(Player player, String text) {
 		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
 		return replaceJavascript(replacePlaceHolders(player, text), engine);
-	}
-
-	public String replaceJavascript(User user, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
-		return replaceJavascript(text, engine);
 	}
 
 	public String replaceJavascript(String text) {
@@ -192,10 +188,24 @@ public class StringUtils {
 		return msg;
 	}
 
+	public String replaceJavascript(User user, String text) {
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
+		return replaceJavascript(text, engine);
+	}
+
 	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
 		if (placeholders != null) {
 			for (Entry<String, String> entry : placeholders.entrySet()) {
 				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+			}
+		}
+		return str;
+	}
+
+	public String replacePlaceHolder(String str, HashMap<String, String> placeholders, boolean ignoreCase) {
+		if (placeholders != null) {
+			for (Entry<String, String> entry : placeholders.entrySet()) {
+				str = replacePlaceHolder(str, entry.getKey(), entry.getValue(), ignoreCase);
 			}
 		}
 		return str;
@@ -213,8 +223,20 @@ public class StringUtils {
 	 * @return the string
 	 */
 	public String replacePlaceHolder(String str, String toReplace, String replaceWith) {
-		return replaceIgnoreCase(replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith), "\\{" + toReplace + "\\}",
-				replaceWith);
+		return replacePlaceHolder(str, toReplace, replaceWith, true);
+	}
+
+	public String replacePlaceHolder(String str, String toReplace, String replaceWith, boolean ignoreCase) {
+		if (ignoreCase) {
+			return replaceIgnoreCase(replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith),
+					"\\{" + toReplace + "\\}", replaceWith);
+		} else {
+			str = str.replaceAll("\\{", "%");
+			str = str.replaceAll("\\}", "%");
+			str = str.replace("%" + toReplace + "%", replaceWith);
+			return str;
+
+		}
 	}
 
 	/**

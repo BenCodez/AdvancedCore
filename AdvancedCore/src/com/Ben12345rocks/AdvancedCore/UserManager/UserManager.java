@@ -41,33 +41,6 @@ public class UserManager {
 	public UserManager() {
 	}
 
-	public ArrayList<String> getAllUUIDs() {
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-			File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
-			String[] fileNames = folder.list();
-			ArrayList<String> uuids = new ArrayList<String>();
-			if (fileNames != null) {
-				for (String playerFile : fileNames) {
-					if (!playerFile.equals("null") && !playerFile.equals("")) {
-						String uuid = playerFile.replace(".yml", "");
-						uuids.add(uuid);
-					}
-				}
-			}
-			return uuids;
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-			List<Column> cols = AdvancedCoreHook.getInstance().getSQLiteUserTable().getRows();
-			ArrayList<String> uuids = new ArrayList<String>();
-			for (Column col : cols) {
-				uuids.add((String) col.getValue());
-			}
-			return uuids;
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			return ArrayUtils.getInstance().convert(AdvancedCoreHook.getInstance().getMysql().getUuids());
-		}
-		return new ArrayList<String>();
-	}
-
 	public ArrayList<String> getAllPlayerNames() {
 		ArrayList<String> names = new ArrayList<String>();
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
@@ -97,6 +70,33 @@ public class UserManager {
 		return names;
 	}
 
+	public ArrayList<String> getAllUUIDs() {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
+			String[] fileNames = folder.list();
+			ArrayList<String> uuids = new ArrayList<String>();
+			if (fileNames != null) {
+				for (String playerFile : fileNames) {
+					if (!playerFile.equals("null") && !playerFile.equals("")) {
+						String uuid = playerFile.replace(".yml", "");
+						uuids.add(uuid);
+					}
+				}
+			}
+			return uuids;
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			List<Column> cols = AdvancedCoreHook.getInstance().getSQLiteUserTable().getRows();
+			ArrayList<String> uuids = new ArrayList<String>();
+			for (Column col : cols) {
+				uuids.add((String) col.getValue());
+			}
+			return uuids;
+		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			return ArrayUtils.getInstance().convert(AdvancedCoreHook.getInstance().getMysql().getUuids());
+		}
+		return new ArrayList<String>();
+	}
+
 	public String getProperName(String name) {
 
 		for (String s : plugin.getUuids().keySet()) {
@@ -105,6 +105,10 @@ public class UserManager {
 			}
 		}
 		return name;
+	}
+
+	public User getUser(java.util.UUID uuid) {
+		return getUser(new UUID(uuid.toString()));
 	}
 
 	/**
@@ -153,13 +157,19 @@ public class UserManager {
 		return new User(plugin.getPlugin(), uuid);
 	}
 
-	public User getUser(java.util.UUID uuid) {
-		return getUser(new UUID(uuid.toString()));
-	}
-
 	public void purgeOldPlayers() {
 		if (plugin.isPurgeOldData()) {
 			plugin.addUserStartup(new UserStartup() {
+
+				@Override
+				public void onFinish() {
+					plugin.debug("Finished purgining");
+				}
+
+				@Override
+				public void onStart() {
+
+				}
 
 				@Override
 				public void onStartUp(User user) {
@@ -173,16 +183,6 @@ public class UserManager {
 						plugin.debug("Removing " + user.getUUID() + " because of purge");
 						user.remove();
 					}
-				}
-
-				@Override
-				public void onFinish() {
-					plugin.debug("Finished purgining");
-				}
-
-				@Override
-				public void onStart() {
-
 				}
 			});
 		}
