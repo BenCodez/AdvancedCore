@@ -313,11 +313,13 @@ public class PlayerUtils {
 			return true;
 		}
 
+		plugin.extraDebug("Checking if user exists in database: " + name);
 		boolean userExist = UserManager.getInstance().userExist(name);
 		if (userExist) {
 			return userExist;
 		}
 
+		plugin.extraDebug("Checking offline player: " + name);
 		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 		if (p.hasPlayedBefore() || p.isOnline()) {
 			// plugin.extraDebug(name + " has joined before");
