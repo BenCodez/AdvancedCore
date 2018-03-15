@@ -15,6 +15,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 
 /**
  * The Class RewardHandler.
@@ -353,6 +354,10 @@ public class RewardHandler {
 	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed,
 			boolean ignoreChance, HashMap<String, String> placeholders) {
 		if (!reward.equals("")) {
+
+			if (reward.startsWith("/")) {
+				MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward, placeholders);
+			}
 			giveReward(user, getReward(reward), online, giveOffline, checkTimed, ignoreChance, placeholders);
 		}
 	}

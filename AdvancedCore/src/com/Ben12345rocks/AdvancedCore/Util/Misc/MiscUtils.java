@@ -304,4 +304,27 @@ public class MiscUtils {
 				.toItemStack();
 	}
 
+	public void executeConsoleCommands(String playerName, String command, HashMap<String, String> placeholders) {
+		if (command != null && !command.isEmpty()) {
+			Player p = Bukkit.getPlayer(playerName);
+			if (p != null) {
+				command = StringUtils.getInstance().replaceJavascript(p, command);
+			}
+			if (command.startsWith("/")) {
+				command.replaceFirst("/", "");
+			}
+			final String cmd = StringUtils.getInstance().replacePlaceHolder(command, placeholders);
+
+			plugin.debug("Executing console command: " + command);
+			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+				}
+
+			});
+		}
+
+	}
 }

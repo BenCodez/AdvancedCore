@@ -162,6 +162,7 @@ public class Query {
 		try {
 			return statement.executeUpdate();
 		} finally {
+
 			if (statement != null) {
 				statement.close();
 			}

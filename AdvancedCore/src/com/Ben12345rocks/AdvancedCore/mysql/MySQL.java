@@ -403,7 +403,16 @@ public class MySQL {
 				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
 						index));
 			} catch (SQLException e) {
-				e.printStackTrace();
+				if (e.getMessage().contains("Duplicate entry")) {
+					AdvancedCoreHook.getInstance().getPlugin().getLogger()
+							.severe("Error occoured while inserting user " + index
+									+ ", duplicate entry. Turn debug on in order to see the error. " + column + ":"
+									+ value);
+					AdvancedCoreHook.getInstance().debug(e);
+
+				} else {
+					e.printStackTrace();
+				}
 			}
 		}
 	}
