@@ -68,8 +68,6 @@ public class MySQL {
 
 	private Object object4 = new Object();
 
-	private Object object5 = new Object();
-
 	public MySQL(String tableName, ConfigurationSection section) {
 		String tablePrefix = section.getString("Prefix");
 		String hostName = section.getString("Host");
@@ -390,7 +388,7 @@ public class MySQL {
 	}
 
 	public void insertQuery(String index, String column, Object value, DataType dataType) {
-		synchronized (object5) {
+		synchronized (object2) {
 			String query = "INSERT " + getName() + " ";
 
 			query += "set uuid='" + index + "', ";
@@ -398,8 +396,8 @@ public class MySQL {
 			// AdvancedCoreHook.getInstance().extraDebug(query);
 
 			try {
-				new Query(mysql, query).executeUpdateAsync();
 				uuids.add(index);
+				new Query(mysql, query).executeUpdateAsync();
 				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
 						index));
 			} catch (SQLException e) {
