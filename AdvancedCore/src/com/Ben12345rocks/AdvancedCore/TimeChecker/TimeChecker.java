@@ -1,7 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.TimeChecker;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -68,7 +68,7 @@ public class TimeChecker {
 	 */
 	public boolean hasDayChanged() {
 		int prevDay = ServerData.getInstance().getPrevDay();
-		int day = LocalDateTime.now().getDayOfMonth();
+		int day = getTime().getDayOfMonth();
 		ServerData.getInstance().setPrevDay(day);
 		if (prevDay == -1) {
 			return false;
@@ -79,6 +79,15 @@ public class TimeChecker {
 		return false;
 	}
 
+	public LocalDateTime getTime() {
+		String zone = AdvancedCoreHook.getInstance().getTimeZone();
+		ZoneId zoneId = ZoneId.systemDefault();
+		if (!zone.isEmpty()) {
+			zoneId = ZoneId.of(zone);
+		}
+		return LocalDateTime.now(zoneId);
+	}
+
 	/**
 	 * Checks for month changed.
 	 *
@@ -86,7 +95,7 @@ public class TimeChecker {
 	 */
 	public boolean hasMonthChanged() {
 		String prevMonth = ServerData.getInstance().getPrevMonth();
-		String month = LocalDateTime.now().getMonth().toString();
+		String month = getTime().getMonth().toString();
 		ServerData.getInstance().setPrevMonth(month);
 		return !prevMonth.equals(month);
 
@@ -99,7 +108,7 @@ public class TimeChecker {
 	 */
 	public boolean hasWeekChanged() {
 		int prevDate = ServerData.getInstance().getPrevWeekDay();
-		LocalDate date = LocalDate.now();
+		LocalDateTime date = getTime();
 		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear();
 		int weekNumber = date.get(woy);
 		ServerData.getInstance().setPrevWeekDay(weekNumber);
