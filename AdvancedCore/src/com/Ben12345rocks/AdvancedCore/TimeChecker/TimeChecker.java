@@ -1,7 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.TimeChecker;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -80,12 +80,8 @@ public class TimeChecker {
 	}
 
 	public LocalDateTime getTime() {
-		String zone = AdvancedCoreHook.getInstance().getTimeZone();
-		ZoneId zoneId = ZoneId.systemDefault();
-		if (!zone.isEmpty()) {
-			zoneId = ZoneId.of(zone);
-		}
-		return LocalDateTime.now(zoneId);
+		return LocalDateTime.now().atOffset(ZoneOffset.ofHours(AdvancedCoreHook.getInstance().getTimeHourOffSet()))
+				.toLocalDateTime();
 	}
 
 	/**
@@ -124,8 +120,7 @@ public class TimeChecker {
 	/**
 	 * Update.
 	 */
-	public void update() {
-
+	public void update() {		
 		boolean dayChanged = false;
 		boolean weekChanged = false;
 		boolean monthChanged = false;

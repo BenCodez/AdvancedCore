@@ -124,7 +124,7 @@ public class AdvancedCoreHook {
 
 	private String formatInvFull;
 
-	private String timeZone = "";
+	private int timeHourOffSet = 0;
 
 	private AdvancedCoreHook() {
 	}
@@ -580,17 +580,17 @@ public class AdvancedCoreHook {
 					}
 				});
 			}
-			timeZone = configData.getString("TimeZone", "");
+			timeHourOffSet = configData.getInt("TimeHourOffSet", 0);
 
 		}
 	}
 
-	public String getTimeZone() {
-		return timeZone;
+	public int getTimeHourOffSet() {
+		return timeHourOffSet;
 	}
 
-	public void setTimeZone(String timeZone) {
-		this.timeZone = timeZone;
+	public void setTimeHourOffSet(int timeHourOffSet) {
+		this.timeHourOffSet = timeHourOffSet;
 	}
 
 	public void loadEconomy() {
