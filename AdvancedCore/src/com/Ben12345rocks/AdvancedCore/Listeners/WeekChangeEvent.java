@@ -12,6 +12,16 @@ public class WeekChangeEvent extends Event {
 	/** The Constant handlers. */
 	private static final HandlerList handlers = new HandlerList();
 
+	private boolean fake = false;
+
+	public boolean isFake() {
+		return fake;
+	}
+
+	public void setFake(boolean fake) {
+		this.fake = fake;
+	}
+
 	/**
 	 * Gets the handler list.
 	 *

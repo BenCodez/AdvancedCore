@@ -41,21 +41,30 @@ public class TimeChecker {
 	}
 
 	public void forceChanged(TimeType time) {
+		forceChanged(time, true);
+	}
+
+	public void forceChanged(TimeType time, boolean fake) {
 		plugin.debug("Executing time change events: " + time.toString());
 		PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
+		preDateChanged.setFake(fake);
 		plugin.getPlugin().getServer().getPluginManager().callEvent(preDateChanged);
 		if (time.equals(TimeType.DAY)) {
 			DayChangeEvent dayChange = new DayChangeEvent();
+			dayChange.setFake(fake);
 			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
 		} else if (time.equals(TimeType.WEEK)) {
 			WeekChangeEvent weekChange = new WeekChangeEvent();
+			weekChange.setFake(fake);
 			plugin.getPlugin().getServer().getPluginManager().callEvent(weekChange);
 		} else if (time.equals(TimeType.MONTH)) {
 			MonthChangeEvent monthChange = new MonthChangeEvent();
+			monthChange.setFake(fake);
 			plugin.getPlugin().getServer().getPluginManager().callEvent(monthChange);
 		}
 
 		DateChangedEvent dateChanged = new DateChangedEvent(time);
+		dateChanged.setFake(fake);
 		plugin.getPlugin().getServer().getPluginManager().callEvent(dateChanged);
 
 		plugin.debug("Finished executing time change events: " + time.toString());
@@ -120,7 +129,7 @@ public class TimeChecker {
 	/**
 	 * Update.
 	 */
-	public void update() {		
+	public void update() {
 		boolean dayChanged = false;
 		boolean weekChanged = false;
 		boolean monthChanged = false;
@@ -138,13 +147,13 @@ public class TimeChecker {
 		}
 
 		if (dayChanged) {
-			forceChanged(TimeType.DAY);
+			forceChanged(TimeType.DAY, false);
 		}
 		if (weekChanged) {
-			forceChanged(TimeType.WEEK);
+			forceChanged(TimeType.WEEK, false);
 		}
 		if (monthChanged) {
-			forceChanged(TimeType.MONTH);
+			forceChanged(TimeType.MONTH, false);
 		}
 
 	}

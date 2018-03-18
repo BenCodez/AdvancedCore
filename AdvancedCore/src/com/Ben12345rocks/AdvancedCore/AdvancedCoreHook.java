@@ -26,6 +26,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.Ben12345rocks.AdvancedCore.Backups.BackupHandle;
 import com.Ben12345rocks.AdvancedCore.Commands.Executor.ValueRequestInputCommand;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
@@ -662,6 +663,8 @@ public class AdvancedCoreHook {
 		UserManager.getInstance().purgeOldPlayers();
 
 		userStartup();
+
+		Bukkit.getPluginManager().registerEvents(BackupHandle.getInstance(), getPlugin());
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
 
