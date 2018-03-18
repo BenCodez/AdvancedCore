@@ -319,12 +319,15 @@ public class PlayerUtils {
 			return userExist;
 		}
 
-		plugin.extraDebug("Checking offline player: " + name);
-		OfflinePlayer p = Bukkit.getOfflinePlayer(name);
-		if (p.hasPlayedBefore()) {
-			// plugin.extraDebug(name + " has joined before");
-			return true;
+		if (AdvancedCoreHook.getInstance().isCheckNameMojang()) {
+			plugin.extraDebug("Checking offline player: " + name);
+			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
+			if (p.hasPlayedBefore()) {
+				// plugin.extraDebug(name + " has joined before");
+				return true;
+			}
 		}
+		plugin.extraDebug("Player not exists");
 		return false;
 	}
 
