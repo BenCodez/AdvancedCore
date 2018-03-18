@@ -13,7 +13,6 @@ import java.util.zip.ZipOutputStream;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
@@ -118,35 +117,28 @@ public class Report {
 	 */
 	public void create() {
 		long time = Calendar.getInstance().getTime().getTime();
-		List<File> fileList = new ArrayList<File>();
-		ArrayList<Plugin> plugins = new ArrayList<Plugin>();
-		plugins.add(plugin.getPlugin());
-		for (Plugin plugin : plugins) {
-			File directoryToZip = plugin.getDataFolder();
-
-			try {
-				this.plugin.debug("---Getting references to all files in: " + directoryToZip.getCanonicalPath());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			addAllFiles(directoryToZip, fileList);
-		}
-		plugin.debug("---Creating zip file");
-		writeZipFile(fileList, new File(plugin.getPlugin().getDataFolder(),
-				"Reports" + File.separator + "Reports." + Long.toString(time)));
-		plugin.debug("---Done");
+		create(plugin.getPlugin().getDataFolder(), new File(plugin.getPlugin().getDataFolder(),
+				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"));
 	}
 
 	public void create(File directory, File zipFileLocation) {
-		File directoryToZip = directory;
+		if (zipFileLocation.exists()) {
+			zipFileLocation.delete();
+		}
+		try {
+			zipFileLocation.createNewFile();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 
 		List<File> fileList = new ArrayList<File>();
+
 		try {
-			plugin.debug("---Getting references to all files in: " + directoryToZip.getCanonicalPath());
+			plugin.debug("---Getting references to all files in: " + directory.getCanonicalPath());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		addAllFiles(directoryToZip, fileList);
+		addAllFiles(directory, fileList);
 		plugin.debug("---Creating zip file");
 		writeZipFile(fileList, zipFileLocation);
 		plugin.debug("---Done");
@@ -201,7 +193,7 @@ public class Report {
 				}
 			}
 
-			plugin.getPlugin().getLogger().info("[Report] Created zip file at " + zipFile.getAbsolutePath());
+			plugin.getPlugin().getLogger().info("Created zip file at " + zipFile.getAbsolutePath());
 
 			zos.close();
 			fos.close();
