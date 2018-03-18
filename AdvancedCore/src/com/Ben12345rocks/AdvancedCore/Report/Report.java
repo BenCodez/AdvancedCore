@@ -118,7 +118,6 @@ public class Report {
 	 */
 	public void create() {
 		long time = Calendar.getInstance().getTime().getTime();
-		String zipFileName = "Reports." + Long.toString(time);
 		List<File> fileList = new ArrayList<File>();
 		ArrayList<Plugin> plugins = new ArrayList<Plugin>();
 		plugins.add(plugin.getPlugin());
@@ -133,19 +132,12 @@ public class Report {
 			addAllFiles(directoryToZip, fileList);
 		}
 		plugin.debug("---Creating zip file");
-		writeZipFile(fileList, zipFileName);
+		writeZipFile(fileList, new File(plugin.getPlugin().getDataFolder(),
+				"Reports" + File.separator + "Reports." + Long.toString(time)));
 		plugin.debug("---Done");
 	}
 
-	/**
-	 * Creates the.
-	 *
-	 * @param directory
-	 *            the directory
-	 * @param zipFileName
-	 *            the zip file name
-	 */
-	public void create(File directory, String zipFileName) {
+	public void create(File directory, File zipFileLocation) {
 		File directoryToZip = directory;
 
 		List<File> fileList = new ArrayList<File>();
@@ -156,7 +148,7 @@ public class Report {
 		}
 		addAllFiles(directoryToZip, fileList);
 		plugin.debug("---Creating zip file");
-		writeZipFile(fileList, zipFileName);
+		writeZipFile(fileList, zipFileLocation);
 		plugin.debug("---Done");
 	}
 
@@ -191,7 +183,7 @@ public class Report {
 	 * @param zipFileName
 	 *            the zip file name
 	 */
-	public void writeZipFile(List<File> fileList, String zipFileName) {
+	public void writeZipFile(List<File> fileList, File zipFile) {
 
 		try {
 			File fileZipFolder = new File(
@@ -200,8 +192,6 @@ public class Report {
 				fileZipFolder.mkdirs();
 			}
 
-			File zipFile = new File(plugin.getPlugin().getDataFolder(),
-					"Reports" + File.separator + zipFileName + ".zip");
 			FileOutputStream fos = new FileOutputStream(zipFile);
 			ZipOutputStream zos = new ZipOutputStream(fos);
 

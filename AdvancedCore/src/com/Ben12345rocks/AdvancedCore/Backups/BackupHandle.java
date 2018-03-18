@@ -26,7 +26,8 @@ public class BackupHandle implements Listener {
 			// implement later
 		}
 
-		Report.getInstance().create(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(),
-				"Backups" + File.pathSeparator + "Backup-" + TimeChecker.getInstance().getTime().getDayOfMonth());
+		Report.getInstance().create(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), new File(
+				AdvancedCoreHook.getInstance().getPlugin().getDataFolder(),
+				"Backups" + File.pathSeparator + "Backup-" + TimeChecker.getInstance().getTime().getDayOfMonth()));
 	}
 }
