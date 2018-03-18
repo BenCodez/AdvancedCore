@@ -126,7 +126,7 @@ public class Report {
 			zipFileLocation.delete();
 		}
 		try {
-			zipFileLocation.mkdirs();
+			zipFileLocation.getParentFile().mkdirs();
 			zipFileLocation.createNewFile();
 		} catch (IOException e1) {
 			e1.printStackTrace();
