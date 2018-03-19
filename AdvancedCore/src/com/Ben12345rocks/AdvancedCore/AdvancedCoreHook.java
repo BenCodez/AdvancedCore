@@ -127,6 +127,16 @@ public class AdvancedCoreHook {
 
 	private int timeHourOffSet = 0;
 
+	private boolean createBackups = true;
+
+	public boolean isCreateBackups() {
+		return createBackups;
+	}
+
+	public void setCreateBackups(boolean createBackups) {
+		this.createBackups = createBackups;
+	}
+
 	private AdvancedCoreHook() {
 	}
 
@@ -586,6 +596,8 @@ public class AdvancedCoreHook {
 				});
 			}
 			timeHourOffSet = configData.getInt("TimeHourOffSet", 0);
+
+			createBackups = configData.getBoolean("CreateBackups", true);
 
 		}
 	}

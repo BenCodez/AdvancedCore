@@ -27,6 +27,10 @@ public class BackupHandle implements Listener {
 			return;
 		}
 
+		if (!AdvancedCoreHook.getInstance().isCreateBackups()) {
+			return;
+		}
+		
 		Report.getInstance().create(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), new File(
 				AdvancedCoreHook.getInstance().getPlugin().getDataFolder(),
 				"Backups" + File.separator + "Backup-" + TimeChecker.getInstance().getTime().getDayOfMonth() + ".zip"));
