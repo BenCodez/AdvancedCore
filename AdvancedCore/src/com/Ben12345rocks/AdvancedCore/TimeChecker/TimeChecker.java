@@ -1,7 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.TimeChecker;
 
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -89,8 +88,7 @@ public class TimeChecker {
 	}
 
 	public LocalDateTime getTime() {
-		return LocalDateTime.now().atOffset(ZoneOffset.ofHours(AdvancedCoreHook.getInstance().getTimeHourOffSet()))
-				.toLocalDateTime();
+		return LocalDateTime.now().plusHours(AdvancedCoreHook.getInstance().getTimeHourOffSet());
 	}
 
 	/**
