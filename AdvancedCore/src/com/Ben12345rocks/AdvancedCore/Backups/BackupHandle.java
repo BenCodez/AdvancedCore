@@ -9,6 +9,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Listeners.DateChangedEvent;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
+import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 
 public class BackupHandle implements Listener {
 	private static BackupHandle instance = new BackupHandle();
@@ -24,6 +25,11 @@ public class BackupHandle implements Listener {
 	public void onDateChange(DateChangedEvent e) {
 		if (e.isFake()) {
 			// implement later
+			// return;
+		}
+		
+		if(!e.getTimeType().equals(TimeType.DAY)) {
+			return;
 		}
 
 		Report.getInstance().create(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), new File(
