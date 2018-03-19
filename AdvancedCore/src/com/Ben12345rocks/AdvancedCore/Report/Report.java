@@ -65,8 +65,11 @@ public class Report {
 				fileList.add(file);
 				if (file.isDirectory()) {
 					plugin.debug("directory:" + file.getCanonicalPath());
+					if (!file.getAbsolutePath().contains("VotingPlugin" + File.separator + "Backups")
+							&& !file.getAbsolutePath().contains("VotingPlugin" + File.separator + "Reports")) {
+						addAllFiles(file, fileList);
+					}
 
-					addAllFiles(file, fileList);
 				} else {
 
 					plugin.debug("file:" + file.getCanonicalPath());
