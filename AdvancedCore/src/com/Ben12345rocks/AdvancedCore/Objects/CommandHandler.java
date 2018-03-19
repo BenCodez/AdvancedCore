@@ -47,14 +47,6 @@ public abstract class CommandHandler {
 
 	private boolean advancedCoreCommand = false;
 
-	public boolean isAdvancedCoreCommand() {
-		return advancedCoreCommand;
-	}
-
-	public void setAdvancedCoreCommand(boolean advancedCoreCommand) {
-		this.advancedCoreCommand = advancedCoreCommand;
-	}
-
 	public CommandHandler() {
 	}
 
@@ -322,6 +314,10 @@ public abstract class CommandHandler {
 		return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
 	}
 
+	public boolean isAdvancedCoreCommand() {
+		return advancedCoreCommand;
+	}
+
 	/**
 	 * @return the allowConsole
 	 */
@@ -408,6 +404,10 @@ public abstract class CommandHandler {
 		} else {
 			sender.sendMessage(StringUtils.getInstance().compToString(comp));
 		}
+	}
+
+	public void setAdvancedCoreCommand(boolean advancedCoreCommand) {
+		this.advancedCoreCommand = advancedCoreCommand;
 	}
 
 	public CommandHandler setAllowConsole(boolean allowConsole) {

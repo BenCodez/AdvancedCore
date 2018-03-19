@@ -362,6 +362,10 @@ public class AdvancedCoreHook {
 		return buildTime;
 	}
 
+	public int getTimeHourOffSet() {
+		return timeHourOffSet;
+	}
+
 	/**
 	 * @return the timer
 	 */
@@ -584,14 +588,6 @@ public class AdvancedCoreHook {
 			timeHourOffSet = configData.getInt("TimeHourOffSet", 0);
 
 		}
-	}
-
-	public int getTimeHourOffSet() {
-		return timeHourOffSet;
-	}
-
-	public void setTimeHourOffSet(int timeHourOffSet) {
-		this.timeHourOffSet = timeHourOffSet;
 	}
 
 	public void loadEconomy() {
@@ -1121,6 +1117,10 @@ public class AdvancedCoreHook {
 
 	public void setStorageType(UserStorage storageType) {
 		this.storageType = storageType;
+	}
+
+	public void setTimeHourOffSet(int timeHourOffSet) {
+		this.timeHourOffSet = timeHourOffSet;
 	}
 
 	/**

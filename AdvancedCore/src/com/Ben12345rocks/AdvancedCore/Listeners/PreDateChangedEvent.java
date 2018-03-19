@@ -14,16 +14,6 @@ public class PreDateChangedEvent extends Event {
 	/** The Constant handlers. */
 	private static final HandlerList handlers = new HandlerList();
 
-	private boolean fake = false;
-
-	public boolean isFake() {
-		return fake;
-	}
-
-	public void setFake(boolean fake) {
-		this.fake = fake;
-	}
-
 	/**
 	 * Gets the handler list.
 	 *
@@ -32,6 +22,8 @@ public class PreDateChangedEvent extends Event {
 	public static HandlerList getHandlerList() {
 		return handlers;
 	}
+
+	private boolean fake = false;
 
 	private TimeType timeType;
 
@@ -55,6 +47,14 @@ public class PreDateChangedEvent extends Event {
 	 */
 	public TimeType getTimeType() {
 		return timeType;
+	}
+
+	public boolean isFake() {
+		return fake;
+	}
+
+	public void setFake(boolean fake) {
+		this.fake = fake;
 	}
 
 	/**

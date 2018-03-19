@@ -23,12 +23,7 @@ public class BackupHandle implements Listener {
 
 	@EventHandler
 	public void onDateChange(DateChangedEvent e) {
-		if (e.isFake()) {
-			// implement later
-			// return;
-		}
-		
-		if(!e.getTimeType().equals(TimeType.DAY)) {
+		if (!e.getTimeType().equals(TimeType.DAY)) {
 			return;
 		}
 

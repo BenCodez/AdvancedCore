@@ -137,6 +137,30 @@ public class MiscUtils {
 		}
 	}
 
+	public void executeConsoleCommands(String playerName, String command, HashMap<String, String> placeholders) {
+		if (command != null && !command.isEmpty()) {
+			Player p = Bukkit.getPlayer(playerName);
+			if (p != null) {
+				command = StringUtils.getInstance().replaceJavascript(p, command);
+			}
+			if (command.startsWith("/")) {
+				command.replaceFirst("/", "");
+			}
+			final String cmd = StringUtils.getInstance().replacePlaceHolder(command, placeholders);
+
+			plugin.debug("Executing console command: " + command);
+			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+				}
+
+			});
+		}
+
+	}
+
 	/**
 	 * Gets the connection.
 	 *
@@ -302,29 +326,5 @@ public class MiscUtils {
 	public ItemStack setSkullOwner(String playerName) {
 		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();
-	}
-
-	public void executeConsoleCommands(String playerName, String command, HashMap<String, String> placeholders) {
-		if (command != null && !command.isEmpty()) {
-			Player p = Bukkit.getPlayer(playerName);
-			if (p != null) {
-				command = StringUtils.getInstance().replaceJavascript(p, command);
-			}
-			if (command.startsWith("/")) {
-				command.replaceFirst("/", "");
-			}
-			final String cmd = StringUtils.getInstance().replacePlaceHolder(command, placeholders);
-
-			plugin.debug("Executing console command: " + command);
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
-
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-				}
-
-			});
-		}
-
 	}
 }

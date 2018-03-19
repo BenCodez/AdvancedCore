@@ -24,12 +24,12 @@ public class PluginMessage implements PluginMessageListener {
 	public PluginMessage() {
 	}
 
-	public ArrayList<PluginMessageHandler> getPluginMessages() {
-		return pluginMessages;
-	}
-
 	public void add(PluginMessageHandler handle) {
 		pluginMessages.add(handle);
+	}
+
+	public ArrayList<PluginMessageHandler> getPluginMessages() {
+		return pluginMessages;
 	}
 
 	@Override

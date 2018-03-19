@@ -69,6 +69,10 @@ public class TimeChecker {
 		plugin.debug("Finished executing time change events: " + time.toString());
 	}
 
+	public LocalDateTime getTime() {
+		return LocalDateTime.now().plusHours(AdvancedCoreHook.getInstance().getTimeHourOffSet());
+	}
+
 	/**
 	 * Checks for day changed.
 	 *
@@ -85,10 +89,6 @@ public class TimeChecker {
 			return true;
 		}
 		return false;
-	}
-
-	public LocalDateTime getTime() {
-		return LocalDateTime.now().plusHours(AdvancedCoreHook.getInstance().getTimeHourOffSet());
 	}
 
 	/**

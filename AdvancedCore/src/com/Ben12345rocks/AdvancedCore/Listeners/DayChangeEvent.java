@@ -11,16 +11,6 @@ public class DayChangeEvent extends Event {
 
 	/** The Constant handlers. */
 	private static final HandlerList handlers = new HandlerList();
-	
-	private boolean fake = false;
-
-	public boolean isFake() {
-		return fake;
-	}
-
-	public void setFake(boolean fake) {
-		this.fake = fake;
-	}
 
 	/**
 	 * Gets the handler list.
@@ -30,6 +20,8 @@ public class DayChangeEvent extends Event {
 	public static HandlerList getHandlerList() {
 		return handlers;
 	}
+
+	private boolean fake = false;
 
 	/**
 	 * Instantiates a new day change event.
@@ -46,6 +38,14 @@ public class DayChangeEvent extends Event {
 	@Override
 	public HandlerList getHandlers() {
 		return handlers;
+	}
+
+	public boolean isFake() {
+		return fake;
+	}
+
+	public void setFake(boolean fake) {
+		this.fake = fake;
 	}
 
 }
