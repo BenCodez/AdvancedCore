@@ -64,7 +64,6 @@ public class Report {
 			for (File file : files) {
 				fileList.add(file);
 				if (file.isDirectory()) {
-
 					plugin.debug("directory:" + file.getCanonicalPath());
 
 					addAllFiles(file, fileList);
@@ -190,7 +189,9 @@ public class Report {
 
 			for (File file : fileList) {
 				if (!file.isDirectory()) { // we only zip files, not directories
-					addToZip(file, zos);
+					if (!file.getAbsolutePath().equals(zipFile.getAbsolutePath())) {
+						addToZip(file, zos);
+					}
 				}
 			}
 
