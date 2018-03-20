@@ -28,6 +28,7 @@ public class BackupHandle implements Listener {
 			long lastModified = file.lastModified();
 			if (LocalDateTime.now().minusDays(30).isAfter(MiscUtils.getInstance().getTime(lastModified))) {
 				file.delete();
+				AdvancedCoreHook.getInstance().debug("Deleting old backup: " + file.getName());
 			}
 		}
 	}
@@ -46,7 +47,7 @@ public class BackupHandle implements Listener {
 		Report.getInstance().create(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(),
 				new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Backups" + File.separator
 						+ "Backup-" + now.getYear() + "/" + now.getMonth() + "/" + now.getDayOfMonth() + ".zip"));
-		
+
 		checkOldBackups();
 	}
 }
