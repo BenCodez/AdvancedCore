@@ -315,6 +315,10 @@ public class MiscUtils {
 		}
 	}
 
+	public LocalDateTime getTime(long mills) {
+		return Instant.ofEpochMilli(mills).atZone(ZoneId.systemDefault()).toLocalDateTime();
+	}
+
 	/**
 	 * Sets the skull owner.
 	 *

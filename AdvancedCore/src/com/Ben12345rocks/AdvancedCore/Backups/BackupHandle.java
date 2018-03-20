@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Backups;
 
 import java.io.File;
+import java.time.LocalDateTime;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -10,6 +11,7 @@ import com.Ben12345rocks.AdvancedCore.Listeners.DateChangedEvent;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 
 public class BackupHandle implements Listener {
 	private static BackupHandle instance = new BackupHandle();
@@ -21,6 +23,15 @@ public class BackupHandle implements Listener {
 	public BackupHandle() {
 	}
 
+	public void checkOldBackups() {
+		for (File file : new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Backups").listFiles()) {
+			long lastModified = file.lastModified();
+			if (LocalDateTime.now().minusDays(30).isAfter(MiscUtils.getInstance().getTime(lastModified))) {
+				file.delete();
+			}
+		}
+	}
+
 	@EventHandler
 	public void onDateChange(DateChangedEvent e) {
 		if (!e.getTimeType().equals(TimeType.DAY)) {
@@ -30,9 +41,12 @@ public class BackupHandle implements Listener {
 		if (!AdvancedCoreHook.getInstance().isCreateBackups()) {
 			return;
 		}
+
+		LocalDateTime now = TimeChecker.getInstance().getTime();
+		Report.getInstance().create(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(),
+				new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Backups" + File.separator
+						+ "Backup-" + now.getYear() + "/" + now.getMonth() + "/" + now.getDayOfMonth() + ".zip"));
 		
-		Report.getInstance().create(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), new File(
-				AdvancedCoreHook.getInstance().getPlugin().getDataFolder(),
-				"Backups" + File.separator + "Backup-" + TimeChecker.getInstance().getTime().getDayOfMonth() + ".zip"));
+		checkOldBackups();
 	}
 }
