@@ -323,7 +323,7 @@ public class PlayerUtils {
 			plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 			if (p.hasPlayedBefore()) {
-				// plugin.extraDebug(name + " has joined before");
+				plugin.extraDebug(name + " has joined before");
 				return true;
 			}
 		}
