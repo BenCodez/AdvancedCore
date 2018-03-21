@@ -128,7 +128,7 @@ public class TimeChecker {
 	 * Update.
 	 */
 	public void update() {
-		plugin.debug(getTime().getHour() + ":" + getTime().getMinute());
+		plugin.extraDebug(getTime().getHour() + ":" + getTime().getMinute());
 
 		boolean dayChanged = false;
 		boolean weekChanged = false;
