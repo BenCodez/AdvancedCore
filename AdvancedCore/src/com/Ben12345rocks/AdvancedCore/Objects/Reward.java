@@ -249,6 +249,26 @@ public class Reward {
 
 	private boolean randomPickRandom;
 
+	private boolean repeatEnabled;
+
+	private int repeatAmount;
+
+	public ArrayList<String> getRandomCommand() {
+		return randomCommand;
+	}
+
+	public String getServer() {
+		return server;
+	}
+
+	public boolean isRepeatEnabled() {
+		return repeatEnabled;
+	}
+
+	public int getRepeatAmount() {
+		return repeatAmount;
+	}
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -1156,7 +1176,16 @@ public class Reward {
 		}
 
 		if (ignoreChance || checkChance()) {
-			giveRewardUser(user, placeholders);
+			int repeat = 1;
+			if (repeatEnabled) {
+				repeat = repeatAmount;
+			}
+			for (int i = 0; i < repeat; i++) {
+				if (repeatEnabled) {
+					placeholders.put("repeat", "" + repeat);
+				}
+				giveRewardUser(user, placeholders);
+			}
 		}
 	}
 
@@ -1507,6 +1536,9 @@ public class Reward {
 		randomCommand = getConfig().getRandomCommand();
 
 		server = getConfig().getServer();
+
+		repeatEnabled = getConfig().getRepeatEnabled();
+		repeatAmount = getConfig().getRepeatAmount();
 	}
 
 	/**

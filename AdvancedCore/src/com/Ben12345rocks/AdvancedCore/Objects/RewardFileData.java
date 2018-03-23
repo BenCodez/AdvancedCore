@@ -466,6 +466,14 @@ public class RewardFileData {
 		return getConfigData().getInt("Items." + item + ".MinAmount");
 	}
 
+	public boolean getRepeatEnabled() {
+		return getConfigData().getBoolean("Repeat.Enabled",false);
+	}
+
+	public int getRepeatAmount() {
+		return getConfigData().getInt("Repeat.Amount", 0);
+	}
+
 	/**
 	 * Gets the item name.
 	 *
