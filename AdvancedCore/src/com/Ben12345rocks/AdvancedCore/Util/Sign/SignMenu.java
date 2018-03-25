@@ -102,14 +102,18 @@ public class SignMenu {
 					.addPacketListener(new PacketAdapter(this.plugin, PacketType.Play.Client.UPDATE_SIGN) {
 						@Override
 						public void onPacketReceiving(PacketEvent event) {
-							PacketContainer packet = event.getPacket();
-							Player player = event.getPlayer();
-							String[] text = packet.getStringArrays().read(0);
-							if (!inputReceivers.containsKey(player.getUniqueId())) {
-								return;
+							try {
+								PacketContainer packet = event.getPacket();
+								Player player = event.getPlayer();
+								String[] text = packet.getStringArrays().read(0);
+								if (!inputReceivers.containsKey(player.getUniqueId())) {
+									return;
+								}
+								event.setCancelled(true);
+								inputReceivers.remove(player.getUniqueId()).receive(player, text);
+							} catch (Exception e) {
+								
 							}
-							event.setCancelled(true);
-							inputReceivers.remove(player.getUniqueId()).receive(player, text);
 						}
 					});
 		}
