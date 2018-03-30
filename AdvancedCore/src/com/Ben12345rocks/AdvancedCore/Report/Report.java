@@ -170,14 +170,6 @@ public class Report {
 		FilesManager.getInstance().editFile(dFile, data);
 	}
 
-	/**
-	 * Write zip file.
-	 *
-	 * @param fileList
-	 *            the file list
-	 * @param zipFileName
-	 *            the zip file name
-	 */
 	public void writeZipFile(List<File> fileList, File zipFile) {
 
 		try {

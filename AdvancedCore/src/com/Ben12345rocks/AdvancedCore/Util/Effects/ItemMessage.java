@@ -265,47 +265,14 @@ public class ItemMessage {
 		}
 	}
 
-	/**
-	 * Send a popup message to the player, with a default duration of 2 seconds and
-	 * default priority level of 0.
-	 *
-	 * @param message
-	 *            the message to send
-	 * @throws IllegalStateException
-	 *             if the player is unavailable (e.g. went offline)
-	 */
 	public void sendMessage(Player player, String message) {
 		sendMessage(player, message, DEFAULT_DURATION, DEFAULT_PRIORITY);
 	}
 
-	/**
-	 * Send a popup message to the player, for the given duration and default
-	 * priority level of 0.
-	 *
-	 * @param message
-	 *            the message to send
-	 * @param duration
-	 *            the duration, in seconds, for which the message will be displayed
-	 * @throws IllegalStateException
-	 *             if the player is unavailable (e.g. went offline)
-	 */
 	public void sendMessage(Player player, String message, int duration) {
 		sendMessage(player, message, duration, DEFAULT_PRIORITY);
 	}
 
-	/**
-	 * Send a popup message to the player, for the given duration and priority
-	 * level.
-	 *
-	 * @param message
-	 *            the message to send
-	 * @param duration
-	 *            the duration, in seconds, for which the message will be displayed
-	 * @param priority
-	 *            priority of this message
-	 * @throws IllegalStateException
-	 *             if the player is unavailable (e.g. went offline)
-	 */
 	public void sendMessage(Player player, String message, int duration, int priority) {
 
 		PriorityQueue<MessageRecord> msgQueue = getMessageQueue(player);
@@ -324,7 +291,7 @@ public class ItemMessage {
 	 * Set which item the player should held if he receives a message without having
 	 * something in his hand. Default is a snow layer
 	 *
-	 * @param material
+	 * @param material Material
 	 * @throws IllegalArgumentException
 	 *             if material is null
 	 */
