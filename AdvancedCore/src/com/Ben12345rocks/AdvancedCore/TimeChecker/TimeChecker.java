@@ -73,6 +73,10 @@ public class TimeChecker {
 		return LocalDateTime.now().plusHours(AdvancedCoreHook.getInstance().getTimeHourOffSet());
 	}
 
+	public boolean hasTimeOffSet() {
+		return AdvancedCoreHook.getInstance().getTimeHourOffSet() != 0;
+	}
+
 	/**
 	 * Checks for day changed.
 	 *
@@ -128,7 +132,9 @@ public class TimeChecker {
 	 * Update.
 	 */
 	public void update() {
-		plugin.extraDebug(getTime().getHour() + ":" + getTime().getMinute());
+		if (hasTimeOffSet()) {
+			plugin.extraDebug(getTime().getHour() + ":" + getTime().getMinute());
+		}
 
 		boolean dayChanged = false;
 		boolean weekChanged = false;
