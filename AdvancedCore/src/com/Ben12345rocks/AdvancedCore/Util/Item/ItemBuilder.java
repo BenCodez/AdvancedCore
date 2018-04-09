@@ -515,8 +515,14 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLore(List<String> lore) {
+		List<String> list = new ArrayList<String>();
+		for (String str : lore) {
+			for (String s : str.split("%NewLine%")) {
+				list.add(s);
+			}
+		}
 		ItemMeta im = is.getItemMeta();
-		im.setLore(ArrayUtils.getInstance().colorize(lore));
+		im.setLore(ArrayUtils.getInstance().colorize(list));
 		is.setItemMeta(im);
 		return this;
 	}
