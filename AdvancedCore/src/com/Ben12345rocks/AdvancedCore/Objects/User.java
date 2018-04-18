@@ -167,7 +167,7 @@ public class User {
 		}
 	}
 
-	public void addTimedReward(Reward reward, long epochMilli) {
+	public synchronized void addTimedReward(Reward reward, long epochMilli) {
 		HashMap<String, ArrayList<Long>> timed = getTimedRewards();
 		ArrayList<Long> times = timed.get(reward.getRewardName());
 		if (times == null) {
