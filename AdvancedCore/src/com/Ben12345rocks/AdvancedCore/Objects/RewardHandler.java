@@ -101,8 +101,8 @@ public class RewardHandler {
 						@Override
 						public void onStartUp(User user) {
 							try {
-								HashMap<Reward, ArrayList<Long>> timed = user.getTimedRewards();
-								for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+								HashMap<String, ArrayList<Long>> timed = user.getTimedRewards();
+								for (Entry<String, ArrayList<Long>> entry : timed.entrySet()) {
 									for (Long time : entry.getValue()) {
 										user.loadTimedDelayedTimer(time.longValue());
 									}

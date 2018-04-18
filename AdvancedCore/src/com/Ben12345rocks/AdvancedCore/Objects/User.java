@@ -168,21 +168,21 @@ public class User {
 	}
 
 	public void addTimedReward(Reward reward, long epochMilli) {
-		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
-		ArrayList<Long> times = timed.get(reward);
+		HashMap<String, ArrayList<Long>> timed = getTimedRewards();
+		ArrayList<Long> times = timed.get(reward.getRewardName());
 		if (times == null) {
 			times = new ArrayList<Long>();
 		}
 		times.add(epochMilli);
-		timed.put(reward, times);
+		timed.put(reward.getRewardName(), times);
 		setTimedRewards(timed);
 		loadTimedDelayedTimer(epochMilli);
 	}
 
 	public void checkDelayedTimedRewards() {
 		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
-		HashMap<Reward, ArrayList<Long>> timed = getTimedRewards();
-		for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+		HashMap<String, ArrayList<Long>> timed = getTimedRewards();
+		for (Entry<String, ArrayList<Long>> entry : timed.entrySet()) {
 			ArrayList<Long> times = entry.getValue();
 			ListIterator<Long> iterator = times.listIterator();
 			while (iterator.hasNext()) {
@@ -190,12 +190,12 @@ public class User {
 				if (time != 0) {
 					Date timeDate = new Date(time);
 					if (new Date().after(timeDate)) {
-						new RewardBuilder(entry.getKey()).setCheckTimed(false)
+						new RewardBuilder(RewardHandler.getInstance().getReward(entry.getKey())).setCheckTimed(false)
 								.withPlaceHolder("date",
 										"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
 								.send(this);
-						AdvancedCoreHook.getInstance().debug(
-								"Giving timed/delayed reward " + entry.getKey().getName() + " for " + getPlayerName());
+						AdvancedCoreHook.getInstance()
+								.debug("Giving timed/delayed reward " + entry.getKey() + " for " + getPlayerName());
 						iterator.remove();
 					}
 				}
@@ -321,20 +321,20 @@ public class User {
 		}
 	}
 
-	public HashMap<Reward, ArrayList<Long>> getTimedRewards() {
+	public HashMap<String, ArrayList<Long>> getTimedRewards() {
 		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards");
-		HashMap<Reward, ArrayList<Long>> timedRewards = new HashMap<Reward, ArrayList<Long>>();
+		HashMap<String, ArrayList<Long>> timedRewards = new HashMap<String, ArrayList<Long>>();
 		for (String str : timedReward) {
 			String[] data = str.split("//");
 			if (data.length > 1) {
 				String rewardName = data[0];
-				Reward reward = RewardHandler.getInstance().getReward(rewardName);
+
 				String timeStr = data[1];
 				ArrayList<Long> t = new ArrayList<Long>();
 				for (String ti : timeStr.split("&")) {
 					t.add(Long.valueOf(ti));
 				}
-				timedRewards.put(reward, t);
+				timedRewards.put(rewardName, t);
 			}
 		}
 		return timedRewards;
@@ -630,7 +630,7 @@ public class User {
 		if (delay < 0) {
 			delay = 0;
 		}
-		delay += 250;
+		delay += 500;
 		AdvancedCoreHook.getInstance().getTimer().schedule(new TimerTask() {
 
 			@Override
@@ -941,12 +941,12 @@ public class User {
 		updateName();
 	}
 
-	public void setTimedRewards(HashMap<Reward, ArrayList<Long>> timed) {
+	public void setTimedRewards(HashMap<String, ArrayList<Long>> timed) {
 		ArrayList<String> timedRewards = new ArrayList<String>();
-		for (Entry<Reward, ArrayList<Long>> entry : timed.entrySet()) {
+		for (Entry<String, ArrayList<Long>> entry : timed.entrySet()) {
 			if (entry.getValue().size() > 0) {
 				String str = "";
-				str += entry.getKey().getRewardName() + "//";
+				str += entry.getKey() + "//";
 				for (int i = 0; i < entry.getValue().size(); i++) {
 					if (i != 0) {
 						str += "&";
