@@ -112,7 +112,7 @@ public class SignMenu {
 								event.setCancelled(true);
 								inputReceivers.remove(player.getUniqueId()).receive(player, text);
 							} catch (Exception e) {
-								
+
 							}
 						}
 					});

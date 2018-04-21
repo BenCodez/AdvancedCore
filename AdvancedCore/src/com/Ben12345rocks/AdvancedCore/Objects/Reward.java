@@ -249,14 +249,6 @@ public class Reward {
 
 	private boolean randomPickRandom;
 
-	public ArrayList<String> getRandomCommand() {
-		return randomCommand;
-	}
-
-	public String getServer() {
-		return server;
-	}
-
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -834,6 +826,10 @@ public class Reward {
 		return randomChance;
 	}
 
+	public ArrayList<String> getRandomCommand() {
+		return randomCommand;
+	}
+
 	/**
 	 * Gets the reward msg.
 	 *
@@ -859,6 +855,10 @@ public class Reward {
 	 */
 	public String getRewardType() {
 		return rewardType;
+	}
+
+	public String getServer() {
+		return server;
 	}
 
 	/**

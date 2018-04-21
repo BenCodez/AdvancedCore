@@ -860,8 +860,7 @@ public class User {
 		if ((player != null) && (msg != null)) {
 			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
-					player.sendMessage(StringUtils.getInstance().colorize(StringUtils.getInstance().replaceJavascript(
-							getPlayer(), StringUtils.getInstance().replacePlaceHolders(player, str))));
+					player.sendMessage(StringUtils.getInstance().parseText(player, str));
 				}
 			}
 		}

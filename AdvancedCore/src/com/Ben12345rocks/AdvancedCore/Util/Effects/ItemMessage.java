@@ -291,7 +291,8 @@ public class ItemMessage {
 	 * Set which item the player should held if he receives a message without having
 	 * something in his hand. Default is a snow layer
 	 *
-	 * @param material Material
+	 * @param material
+	 *            Material
 	 * @throws IllegalArgumentException
 	 *             if material is null
 	 */

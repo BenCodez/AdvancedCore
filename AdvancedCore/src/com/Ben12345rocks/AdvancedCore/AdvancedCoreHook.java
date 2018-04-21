@@ -129,14 +129,6 @@ public class AdvancedCoreHook {
 
 	private boolean createBackups = true;
 
-	public boolean isCreateBackups() {
-		return createBackups;
-	}
-
-	public void setCreateBackups(boolean createBackups) {
-		this.createBackups = createBackups;
-	}
-
 	private AdvancedCoreHook() {
 	}
 
@@ -446,6 +438,10 @@ public class AdvancedCoreHook {
 	 */
 	public boolean isCheckNameMojang() {
 		return checkNameMojang;
+	}
+
+	public boolean isCreateBackups() {
+		return createBackups;
 	}
 
 	public boolean isDebug() {
@@ -1000,6 +996,10 @@ public class AdvancedCoreHook {
 	 */
 	public void setConfigData(ConfigurationSection configData) {
 		this.configData = configData;
+	}
+
+	public void setCreateBackups(boolean createBackups) {
+		this.createBackups = createBackups;
 	}
 
 	public void setDebug(boolean debug) {

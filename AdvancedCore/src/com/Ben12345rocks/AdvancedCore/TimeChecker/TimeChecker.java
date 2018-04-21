@@ -73,10 +73,6 @@ public class TimeChecker {
 		return LocalDateTime.now().plusHours(AdvancedCoreHook.getInstance().getTimeHourOffSet());
 	}
 
-	public boolean hasTimeOffSet() {
-		return AdvancedCoreHook.getInstance().getTimeHourOffSet() != 0;
-	}
-
 	/**
 	 * Checks for day changed.
 	 *
@@ -106,6 +102,10 @@ public class TimeChecker {
 		ServerData.getInstance().setPrevMonth(month);
 		return !prevMonth.equals(month);
 
+	}
+
+	public boolean hasTimeOffSet() {
+		return AdvancedCoreHook.getInstance().getTimeHourOffSet() != 0;
 	}
 
 	/**

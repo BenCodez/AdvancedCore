@@ -101,6 +101,34 @@ public class StringUtils {
 		}
 	}
 
+	public String parseText(Player player, String str) {
+		return parseText(player, str, null);
+	}
+
+	public String parseText(Player player, String str, HashMap<String, String> placeholders) {
+		if (placeholders != null) {
+			str = replacePlaceHolder(str, placeholders);
+		}
+
+		str = replacePlaceHolders(player, str);
+
+		str = replaceJavascript(player, str);
+		return colorize(str);
+	}
+
+	public String parseText(String str) {
+		return parseText(str, null);
+	}
+
+	public String parseText(String str, HashMap<String, String> placeholders) {
+		if (placeholders != null) {
+			str = replacePlaceHolder(str, placeholders);
+		}
+
+		str = replaceJavascript(str);
+		return colorize(str);
+	}
+
 	/**
 	 * Replace ignore case.
 	 *

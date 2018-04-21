@@ -295,6 +295,10 @@ public class MiscUtils {
 		return blocks;
 	}
 
+	public LocalDateTime getTime(long mills) {
+		return Instant.ofEpochMilli(mills).atZone(ZoneId.systemDefault()).toLocalDateTime();
+	}
+
 	/**
 	 * Gets the year from mili.
 	 *
@@ -313,10 +317,6 @@ public class MiscUtils {
 		} else {
 			return setSkullOwner(player.getName());
 		}
-	}
-
-	public LocalDateTime getTime(long mills) {
-		return Instant.ofEpochMilli(mills).atZone(ZoneId.systemDefault()).toLocalDateTime();
 	}
 
 	/**

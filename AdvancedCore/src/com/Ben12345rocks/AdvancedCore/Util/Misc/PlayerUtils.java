@@ -313,17 +313,17 @@ public class PlayerUtils {
 			return true;
 		}
 
-		//plugin.extraDebug("Checking if user exists in database: " + name);
+		// plugin.extraDebug("Checking if user exists in database: " + name);
 		boolean userExist = UserManager.getInstance().userExist(name);
 		if (userExist) {
 			return userExist;
 		}
 
 		if (AdvancedCoreHook.getInstance().isCheckNameMojang()) {
-			//plugin.extraDebug("Checking offline player: " + name);
+			// plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 			if (p.hasPlayedBefore()) {
-			//	plugin.extraDebug(name + " has joined before");
+				// plugin.extraDebug(name + " has joined before");
 				return true;
 			}
 		}
