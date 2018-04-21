@@ -494,10 +494,22 @@ public class BInventory implements Listener {
 		}
 		if (inv != null && inv.equals(inv) && player != null
 				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
-			if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
-				destroy();
-			}
+			Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					if (player != null) {
+						if (player.getOpenInventory() == null) {
+							if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
+								destroy();
+							}
+						}
+					}
+				}
+			}, 10l);
+
 		}
+
 		return;
 	}
 
