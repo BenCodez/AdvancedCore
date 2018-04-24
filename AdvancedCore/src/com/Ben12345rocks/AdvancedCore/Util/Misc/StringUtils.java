@@ -15,6 +15,9 @@ import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 
 public class StringUtils {
@@ -99,6 +102,39 @@ public class StringUtils {
 		} catch (NumberFormatException ex) {
 			return false;
 		}
+	}
+
+	public TextComponent parseJson(String msg) {
+		TextComponent comp = new TextComponent("");
+		if (containsIgnorecase(msg, "[Text=\"")) {
+			String preMessage = "";
+			String postMessage = "";
+
+			int startIndex = msg.indexOf("[Text=\"");
+			int endIndex = msg.indexOf("\"]");
+			int middle = msg.indexOf("\",\"", startIndex);
+			preMessage = msg.substring(0, startIndex);
+			postMessage = msg.substring(endIndex + "\"]".length());
+
+			String text = msg.substring(startIndex + "[Text=\"".length(), middle);
+			int secondMiddle = msg.indexOf("=\"", middle);
+			String type = msg.substring(middle + "\",\"".length(), secondMiddle);
+			String typeData = msg.substring(secondMiddle + "=\"".length(), endIndex);
+
+			comp.addExtra(parseJson(preMessage));
+
+			TextComponent t = new TextComponent(text);
+			if (type.equalsIgnoreCase("hover")) {
+				t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(typeData).create()));
+			} else if (type.equalsIgnoreCase("command")) {
+				t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, typeData));
+			}
+
+			comp.addExtra(parseJson(postMessage));
+		} else {
+			comp.addExtra(msg);
+		}
+		return comp;
 	}
 
 	public String parseText(Player player, String str) {
