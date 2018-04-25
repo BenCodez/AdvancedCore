@@ -860,6 +860,7 @@ public class User {
 		if ((player != null) && (msg != null)) {
 			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
+					AdvancedCoreHook.getInstance().debug(msg);
 					AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player,
 							StringUtils.getInstance().parseJson(StringUtils.getInstance().parseText(player, str)));
 				}
