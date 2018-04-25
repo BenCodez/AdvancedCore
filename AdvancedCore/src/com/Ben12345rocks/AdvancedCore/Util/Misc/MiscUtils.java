@@ -53,7 +53,8 @@ public class MiscUtils {
 					String msg = StringUtils.getInstance()
 							.colorize(StringUtils.getInstance().replacePlaceHolders(player, broadcastMsg));
 					for (String str : msg.split("%NewLine%")) {
-						player.sendMessage(str);
+						AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player,
+								StringUtils.getInstance().parseJson(str));
 					}
 
 				}
