@@ -129,6 +129,8 @@ public class StringUtils {
 			} else if (type.equalsIgnoreCase("command")) {
 				t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, typeData));
 			}
+			
+			comp.addExtra(t);
 
 			comp.addExtra(parseJson(postMessage));
 		} else {
