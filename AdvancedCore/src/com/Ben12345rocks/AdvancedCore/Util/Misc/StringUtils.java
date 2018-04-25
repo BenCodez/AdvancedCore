@@ -128,8 +128,12 @@ public class StringUtils {
 				t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(typeData).create()));
 			} else if (type.equalsIgnoreCase("command")) {
 				t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, typeData));
+			} else if (type.equalsIgnoreCase("url")) {
+				t.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, typeData));
+			} else if (type.equalsIgnoreCase("suggest_command")) {
+				t.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, typeData));
 			}
-			
+
 			comp.addExtra(t);
 
 			comp.addExtra(parseJson(postMessage));
