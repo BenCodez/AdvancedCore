@@ -112,13 +112,13 @@ public class StringUtils {
 
 			int startIndex = msg.indexOf("[Text=\"");
 			int endIndex = msg.indexOf("\"]");
-			int middle = msg.indexOf("\",\"", startIndex);
+			int middle = msg.indexOf("\",", startIndex);
 			preMessage = msg.substring(0, startIndex);
 			postMessage = msg.substring(endIndex + "\"]".length());
 
 			String text = msg.substring(startIndex + "[Text=\"".length(), middle);
 			int secondMiddle = msg.indexOf("=\"", middle);
-			String type = msg.substring(middle + "\",\"".length(), secondMiddle);
+			String type = msg.substring(middle + "\",".length(), secondMiddle);
 			String typeData = msg.substring(secondMiddle + "=\"".length(), endIndex);
 
 			comp.addExtra(parseJson(preMessage));
