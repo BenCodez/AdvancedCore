@@ -26,7 +26,7 @@ public class BackupHandle implements Listener {
 	public void checkOldBackups() {
 		for (File file : new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Backups").listFiles()) {
 			long lastModified = file.lastModified();
-			if (LocalDateTime.now().minusDays(15).isAfter(MiscUtils.getInstance().getTime(lastModified))) {
+			if (LocalDateTime.now().minusDays(5).isAfter(MiscUtils.getInstance().getTime(lastModified))) {
 				file.delete();
 				AdvancedCoreHook.getInstance().debug("Deleting old backup: " + file.getName());
 			}
