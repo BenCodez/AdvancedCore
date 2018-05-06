@@ -145,11 +145,12 @@ public class Report {
 		for (int i = fileList.size() - 1; i >= 0; i--) {
 			boolean remove = false;
 			for (File excl : exclude) {
-				if (fileList.get(i).equals(excl)) {
+				if (fileList.get(i).getAbsolutePath().equals(excl.getAbsolutePath())) {
 					remove = true;
 				}
 			}
 			if (remove) {
+				plugin.debug("Removing " + fileList.get(i).getAbsolutePath() + " from zip file");
 				fileList.remove(i);
 			}
 
