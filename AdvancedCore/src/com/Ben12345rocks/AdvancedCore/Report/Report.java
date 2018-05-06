@@ -120,10 +120,10 @@ public class Report {
 	public void create() {
 		long time = Calendar.getInstance().getTime().getTime();
 		create(plugin.getPlugin().getDataFolder(), new File(plugin.getPlugin().getDataFolder(),
-				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"));
+				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"), new File[] {});
 	}
 
-	public void create(File directory, File zipFileLocation) {
+	public void create(File directory, File zipFileLocation, File... exclude) {
 		if (zipFileLocation.exists()) {
 			zipFileLocation.delete();
 		}
@@ -142,7 +142,20 @@ public class Report {
 			e.printStackTrace();
 		}
 		addAllFiles(directory, fileList);
+		for (int i = fileList.size() - 1; i >= 0; i--) {
+			boolean remove = false;
+			for (File excl : exclude) {
+				if (fileList.get(i).equals(excl)) {
+					remove = true;
+				}
+			}
+			if (remove) {
+				fileList.remove(i);
+			}
+
+		}
 		plugin.debug("---Creating zip file");
+
 		writeZipFile(fileList, zipFileLocation);
 		plugin.debug("---Done");
 	}
