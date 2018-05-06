@@ -65,8 +65,10 @@ public class Report {
 				fileList.add(file);
 				if (file.isDirectory()) {
 					plugin.debug("directory:" + file.getCanonicalPath());
-					if (!file.getAbsolutePath().contains("VotingPlugin" + File.separator + "Backups")
-							&& !file.getAbsolutePath().contains("VotingPlugin" + File.separator + "Reports")) {
+					if (!file.getAbsolutePath()
+							.contains(AdvancedCoreHook.getInstance().getPlugin().getName() + File.separator + "Backups")
+							&& !file.getAbsolutePath().contains(AdvancedCoreHook.getInstance().getPlugin().getName()
+									+ File.separator + "Reports")) {
 						addAllFiles(file, fileList);
 					}
 
@@ -120,10 +122,10 @@ public class Report {
 	public void create() {
 		long time = Calendar.getInstance().getTime().getTime();
 		create(plugin.getPlugin().getDataFolder(), new File(plugin.getPlugin().getDataFolder(),
-				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"), new File[] {});
+				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"));
 	}
 
-	public void create(File directory, File zipFileLocation, File... exclude) {
+	public void create(File directory, File zipFileLocation) {
 		if (zipFileLocation.exists()) {
 			zipFileLocation.delete();
 		}
@@ -142,19 +144,6 @@ public class Report {
 			e.printStackTrace();
 		}
 		addAllFiles(directory, fileList);
-		for (int i = fileList.size() - 1; i >= 0; i--) {
-			boolean remove = false;
-			for (File excl : exclude) {
-				if (fileList.get(i).getAbsolutePath().equals(excl.getAbsolutePath())) {
-					remove = true;
-				}
-			}
-			if (remove) {
-				plugin.debug("Removing " + fileList.get(i).getAbsolutePath() + " from zip file");
-				fileList.remove(i);
-			}
-
-		}
 		plugin.debug("---Creating zip file");
 
 		writeZipFile(fileList, zipFileLocation);

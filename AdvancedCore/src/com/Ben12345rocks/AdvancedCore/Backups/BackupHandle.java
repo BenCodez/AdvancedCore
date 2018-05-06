@@ -45,10 +45,8 @@ public class BackupHandle implements Listener {
 
 		LocalDateTime now = TimeChecker.getInstance().getTime();
 		Report.getInstance().create(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(),
-				new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(),
-						"Backups" + File.separator + "Backup-" + now.getYear() + "_" + now.getMonth() + "_"
-								+ now.getDayOfMonth() + ".zip"),
-				new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Backups"));
+				new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Backups" + File.separator
+						+ "Backup-" + now.getYear() + "_" + now.getMonth() + "_" + now.getDayOfMonth() + ".zip"));
 
 		checkOldBackups();
 	}
