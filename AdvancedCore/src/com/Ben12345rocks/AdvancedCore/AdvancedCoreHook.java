@@ -593,7 +593,7 @@ public class AdvancedCoreHook {
 			}
 			timeHourOffSet = configData.getInt("TimeHourOffSet", 0);
 
-			createBackups = configData.getBoolean("CreateBackups", true);
+			createBackups = configData.getBoolean("CreateBackups", false);
 
 		}
 	}
