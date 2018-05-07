@@ -123,7 +123,7 @@ public class StringUtils {
 
 			comp.addExtra(parseJson(preMessage));
 
-			TextComponent t = new TextComponent(text);
+			TextComponent t = new TextComponent(TextComponent.fromLegacyText(text));
 			if (type.equalsIgnoreCase("hover")) {
 				t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(typeData).create()));
 			} else if (type.equalsIgnoreCase("command")) {
@@ -138,7 +138,7 @@ public class StringUtils {
 
 			comp.addExtra(parseJson(postMessage));
 		} else {
-			comp.addExtra(msg);
+			comp.addExtra(new TextComponent(TextComponent.fromLegacyText(msg)));
 		}
 		return comp;
 	}
