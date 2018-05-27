@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Annotation;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Set;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -46,6 +47,13 @@ public class AnnotationHandler {
 				if (listAnnotation != null) {
 					ArrayList<String> value = (ArrayList<String>) config.getList(listAnnotation.path(),
 							new ArrayList<String>());
+
+					field.set(classToLoad, value);
+				}
+
+				ConfigDataKeys setAnnotation = field.getAnnotation(ConfigDataKeys.class);
+				if (listAnnotation != null) {
+					Set<String> value = config.getConfigurationSection(setAnnotation.path()).getKeys(false);
 
 					field.set(classToLoad, value);
 				}
