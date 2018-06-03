@@ -223,7 +223,7 @@ public class CommandLoader {
 								AdvancedCoreHook.getInstance().getPlugin().getName());
 						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
 					} else {
-						sendMessage(sender, "&cNot enabled, please enable to use this Note: USE THESE DEV BUILDS AT YOUR OWN RISK");
+						sendMessage(sender, "&cNot enabled, please enable to use this. Note: USE THESE DEV BUILDS AT YOUR OWN RISK");
 					}
 				}
 			});
