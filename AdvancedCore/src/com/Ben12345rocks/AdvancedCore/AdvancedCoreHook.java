@@ -106,6 +106,16 @@ public class AdvancedCoreHook {
 	private String nextPageTxt = "&aNext Page";
 	private boolean checkNameMojang = true;
 
+	private String jenkinsSite = "";
+
+	public String getJenkinsSite() {
+		return jenkinsSite;
+	}
+
+	public void setJenkinsSite(String jenkinsSite) {
+		this.jenkinsSite = jenkinsSite;
+	}
+
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
@@ -128,6 +138,8 @@ public class AdvancedCoreHook {
 	private int timeHourOffSet = 0;
 
 	private boolean createBackups = true;
+
+	private boolean enableJenkins;
 
 	private AdvancedCoreHook() {
 	}
@@ -595,7 +607,17 @@ public class AdvancedCoreHook {
 
 			createBackups = configData.getBoolean("CreateBackups", false);
 
+			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
+
 		}
+	}
+
+	public boolean isEnableJenkins() {
+		return enableJenkins;
+	}
+
+	public void setEnableJenkins(boolean enableJenkins) {
+		this.enableJenkins = enableJenkins;
 	}
 
 	public void loadEconomy() {

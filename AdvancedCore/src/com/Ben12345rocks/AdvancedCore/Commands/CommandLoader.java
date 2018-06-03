@@ -210,6 +210,25 @@ public class CommandLoader {
 			});
 		}
 
+		if (!AdvancedCoreHook.getInstance().getJenkinsSite().isEmpty()) {
+			cmds.add(new CommandHandler(new String[] { "DownloadJenkins" }, permPrefix + ".Download",
+					"Download from jenkins, use at your own risk") {
+
+				@Override
+				public void execute(CommandSender sender, String[] args) {
+					if (AdvancedCoreHook.getInstance().isEnableJenkins()) {
+						sender.sendMessage(StringUtils.getInstance().colorize(
+								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
+						SpigetUpdater.getInstance().downloadFromJenkins(AdvancedCoreHook.getInstance().getJenkinsSite(),
+								AdvancedCoreHook.getInstance().getPlugin().getName());
+						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
+					} else {
+						sendMessage(sender, "&cNot enabled, please enable to use this Note: USE THESE DEV BUILDS AT YOUR OWN RISK");
+					}
+				}
+			});
+		}
+
 		cmds.add(new CommandHandler(new String[] { "ForceTimeChanged", "(TimeType)" }, permPrefix + ".ForceTimeChange",
 				"Force time change, use at your own risk!") {
 
