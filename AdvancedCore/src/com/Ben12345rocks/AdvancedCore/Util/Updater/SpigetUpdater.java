@@ -46,7 +46,7 @@ public class SpigetUpdater {
 		}
 	}
 
-	private void download(URL url, File target) throws IOException {
+	public void download(URL url, File target) throws IOException {
 		target.getParentFile().mkdirs();
 		target.createNewFile();
 		ReadableByteChannel rbc = Channels.newChannel(url.openStream());
@@ -54,5 +54,19 @@ public class SpigetUpdater {
 		fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 		fos.close();
 		rbc.close();
+	}
+
+	public void downloadFromJenkins(String site, String projectName) {
+		try {
+			download(
+					new URL("http://" + site + "/job/" + projectName + "/lastSuccessfulBuild/artifact/" + projectName
+							+ "/target/" + projectName + ".jar"),
+					new File(Bukkit.getServer().getUpdateFolderFile(),
+							AdvancedCoreHook.getInstance().getPlugin().getDescription().getName() + ".jar"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		// String site =
+		// "http://ben12345rocks.com/job/AylaChat/lastSuccessfulBuild/artifact/AylaChat/target/AylaChat.jar";
 	}
 }
