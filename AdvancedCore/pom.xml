@@ -175,12 +175,12 @@
           <version>LATEST</version>
          <scope>provided</scope>
         </dependency>
-		 <dependency>
-            <groupId>net.md-5</groupId>
-            <artifactId>bungeecord-chat</artifactId>
-            <version>1.12-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
+		<dependency>
+			<groupId>com.github.Ben12345rocks</groupId>
+			<artifactId>ChatComponentAPI</artifactId>
+			<version>master-SNAPSHOT</version>
+			<scope>compile</scope>
+		</dependency>
 		<dependency>
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
