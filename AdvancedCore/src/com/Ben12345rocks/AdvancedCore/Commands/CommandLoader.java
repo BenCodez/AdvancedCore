@@ -212,7 +212,7 @@ public class CommandLoader {
 
 		if (!AdvancedCoreHook.getInstance().getJenkinsSite().isEmpty()) {
 			cmds.add(new CommandHandler(new String[] { "DownloadJenkins" }, permPrefix + ".Download",
-					"Download from jenkins, use at your own risk") {
+					"Download from jenkins. Please use at your own risk") {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
