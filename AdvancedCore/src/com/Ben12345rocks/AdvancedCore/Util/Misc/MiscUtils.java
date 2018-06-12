@@ -49,15 +49,20 @@ public class MiscUtils {
 	public void broadcast(String broadcastMsg) {
 		if (broadcastMsg != null) {
 			if (!broadcastMsg.equals("")) {
+				String consoleMsg = "";
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					String msg = StringUtils.getInstance()
 							.colorize(StringUtils.getInstance().replacePlaceHolders(player, broadcastMsg));
+					if (consoleMsg.isEmpty()) {
+						consoleMsg = msg;
+					}
 					for (String str : msg.split("%NewLine%")) {
 						AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player,
 								StringUtils.getInstance().parseJson(str));
 					}
 
 				}
+				Bukkit.getServer().getConsoleSender().sendMessage(consoleMsg);
 			}
 		}
 	}
