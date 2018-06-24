@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Item;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -136,8 +137,37 @@ public class ItemBuilder {
 			ItemBuilder b = (ItemBuilder) ob;
 			return b.toItemStack().equals(toItemStack());
 		}
-		
+
 		return false;
+	}
+
+	@SuppressWarnings("deprecation")
+	public LinkedHashMap<String, Object> createConfigurationData() {
+		LinkedHashMap<String, Object> data = new LinkedHashMap<String, Object>();
+		data.put("Material", is.getType().toString());
+		data.put("Amount", getAmount());
+		data.put("Name", getName());
+		data.put("Lore", getLore());
+		data.put("Durability", is.getDurability());
+		data.put("Data", is.getData().getData());
+
+		for (Entry<Enchantment, Integer> en : is.getItemMeta().getEnchants().entrySet()) {
+			data.put("Enchants." + en.getKey().getName(), en.getValue());
+		}
+
+		ArrayList<String> flags = new ArrayList<String>();
+		for (ItemFlag fl : is.getItemMeta().getItemFlags()) {
+			flags.add(fl.toString());
+		}
+
+		data.put("ItemFlags", flags);
+
+		data.put("Unbreakable", is.getItemMeta().isUnbreakable());
+
+		data.put("Skull", getSkull());
+
+		return data;
+
 	}
 
 	/**
@@ -594,11 +624,13 @@ public class ItemBuilder {
 	 */
 	@Deprecated
 	public ItemBuilder setSkullOwner(String owner) {
-		try {
-			SkullMeta im = (SkullMeta) is.getItemMeta();
-			im.setOwner(owner);
-			is.setItemMeta(im);
-		} catch (ClassCastException expected) {
+		if (!owner.isEmpty()) {
+			try {
+				SkullMeta im = (SkullMeta) is.getItemMeta();
+				im.setOwner(owner);
+				is.setItemMeta(im);
+			} catch (ClassCastException expected) {
+			}
 		}
 		return this;
 	}
