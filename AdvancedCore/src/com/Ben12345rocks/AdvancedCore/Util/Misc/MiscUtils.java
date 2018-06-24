@@ -67,6 +67,14 @@ public class MiscUtils {
 		}
 	}
 
+	public ArrayList<String> getWorldNames() {
+		ArrayList<String> worlds = new ArrayList<String>();
+		for (World w : Bukkit.getWorlds()) {
+			worlds.add(w.getName());
+		}
+		return worlds;
+	}
+
 	public boolean checkChance(double chance, double outOf) {
 		if ((chance == 0) || (chance == outOf)) {
 			return true;

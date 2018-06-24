@@ -318,6 +318,7 @@ public class StringUtils {
 	 *            the text
 	 * @return the string
 	 */
+	@SuppressWarnings("deprecation")
 	public String replacePlaceHolders(Player player, String text) {
 		if (player == null) {
 			return text;
