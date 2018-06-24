@@ -47,6 +47,8 @@ public abstract class CommandHandler {
 
 	private boolean advancedCoreCommand = false;
 
+	private boolean ignoreNumberCheck = false;
+
 	public CommandHandler() {
 	}
 
@@ -62,6 +64,11 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		helpMessage = "Unknown Help Message";
+	}
+
+	public CommandHandler ignoreNumberCheck() {
+		ignoreNumberCheck = true;
+		return this;
 	}
 
 	/**
@@ -348,7 +355,7 @@ public abstract class CommandHandler {
 					return false;
 				}
 				if (this.args[i].equalsIgnoreCase("(number)")) {
-					if (!StringUtils.getInstance().isInt(args[i])) {
+					if (!ignoreNumberCheck && !StringUtils.getInstance().isInt(args[i])) {
 						sender.sendMessage(StringUtils.getInstance()
 								.colorize(plugin.getFormatNotNumber().replace("%arg%", args[i])));
 						return true;

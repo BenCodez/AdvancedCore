@@ -154,10 +154,15 @@ public class StringRequester {
 									+ option));
 					user.sendJson(comp);
 				}
-
-			}
-			
-			if (allowCustomOption || options == null || options.size() == 0) {
+				if (allowCustomOption) {
+					String option = "CustomValue";
+					TextComponent comp = new TextComponent(option);
+					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
+							"/" + AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput String "
+									+ option));
+					user.sendJson(comp);
+				}
+			} else {
 				ConversationFactory convoFactory = new ConversationFactory(AdvancedCoreHook.getInstance().getPlugin())
 						.withModality(true).withEscapeSequence("cancel").withTimeout(60);
 				PromptManager prompt = new PromptManager(promptText + " Current value: " + currentValue, convoFactory);
