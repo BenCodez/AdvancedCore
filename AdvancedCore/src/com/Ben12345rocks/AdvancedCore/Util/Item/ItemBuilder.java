@@ -130,6 +130,16 @@ public class ItemBuilder {
 		}
 	}
 
+	@Override
+	public boolean equals(Object ob) {
+		if (ob instanceof ItemBuilder) {
+			ItemBuilder b = (ItemBuilder) ob;
+			return b.toItemStack().equals(toItemStack());
+		}
+		
+		return false;
+	}
+
 	/**
 	 * Create a new ItemBuilder over an existing itemstack.
 	 *
