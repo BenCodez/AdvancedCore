@@ -146,8 +146,12 @@ public class ItemBuilder {
 		LinkedHashMap<String, Object> data = new LinkedHashMap<String, Object>();
 		data.put("Material", is.getType().toString());
 		data.put("Amount", getAmount());
-		data.put("Name", getName());
-		data.put("Lore", getLore());
+		if (hasCustomDisplayName()) {
+			data.put("Name", getName());
+		}
+		if (hasCustomLore()) {
+			data.put("Lore", getLore());
+		}
 		data.put("Durability", is.getDurability());
 		data.put("Data", is.getData().getData());
 
