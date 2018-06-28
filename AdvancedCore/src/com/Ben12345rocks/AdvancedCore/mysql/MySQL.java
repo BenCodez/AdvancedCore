@@ -75,6 +75,7 @@ public class MySQL {
 		String user = section.getString("Username");
 		String pass = section.getString("Password");
 		String database = section.getString("Database");
+		long lifeTime = section.getLong("MaxLifeTime", -1);
 		int maxThreads = section.getInt("MaxConnections", 1);
 		if (maxThreads < 1) {
 			maxThreads = 1;
@@ -101,7 +102,7 @@ public class MySQL {
 			name = tablePrefix + tableName;
 		}
 		mysql = new com.Ben12345rocks.AdvancedCore.mysql.api.MySQL(maxThreads);
-		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL)) {
+		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime)) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
 		}
 		try {

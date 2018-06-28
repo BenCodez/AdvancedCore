@@ -28,9 +28,10 @@ public class MySQL {
 		this.maxConnections = maxConnections;
 	}
 
-	public boolean connect(String host, String port, String username, String password, String database,
-			boolean useSSL) {
-		connectionManager = new ConnectionManager(host, port, username, password, database, maxConnections, useSSL);
+	public boolean connect(String host, String port, String username, String password, String database, boolean useSSL,
+			long lifeTime) {
+		connectionManager = new ConnectionManager(host, port, username, password, database, maxConnections, useSSL,
+				lifeTime);
 		return connectionManager.open();
 	}
 

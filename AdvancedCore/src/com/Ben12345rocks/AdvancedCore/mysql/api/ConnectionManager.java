@@ -19,6 +19,7 @@ public class ConnectionManager {
 	private int maximumPoolsize;
 	private boolean useSSL = false;
 	// private int maxConnections;
+	private long maxLifetimeMs;
 
 	public ConnectionManager(String host, String port, String username, String password, String database) {
 		this.host = host;
@@ -33,7 +34,7 @@ public class ConnectionManager {
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
-			int maxConnections, boolean useSSL) {
+			int maxConnections, boolean useSSL, long lifeTime) {
 		this.host = host;
 		this.port = port;
 		this.username = username;
@@ -46,6 +47,7 @@ public class ConnectionManager {
 			maximumPoolsize = 5;
 		}
 		this.useSSL = useSSL;
+		this.maxLifetimeMs = lifeTime;
 		// this.maxConnections = maxConnections;
 	}
 
@@ -162,6 +164,9 @@ public class ConnectionManager {
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(maximumPoolsize);
+			if (maxLifetimeMs > -1) {
+				config.setMaxLifetime(maxLifetimeMs);
+			}
 			dataSource = new HikariDataSource(config);
 			return true;
 		} catch (Exception e) {
