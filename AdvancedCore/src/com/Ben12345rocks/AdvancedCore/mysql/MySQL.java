@@ -124,11 +124,11 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
-		// tempoary to improve performance from old tables
-		//addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
-		alterColumnType("uuid", "VARCHAR(37)");
-
 		loadData();
+
+		// tempoary to improve performance from old tables
+		// addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
+		alterColumnType("uuid", "VARCHAR(37)");
 
 		new Timer().schedule(new TimerTask() {
 
@@ -141,7 +141,10 @@ public class MySQL {
 	}
 
 	public void alterColumnType(String column, String newType) {
+		checkColumn(column, DataType.STRING);
+		AdvancedCoreHook.getInstance().debug("Altering column " + column + " to " + newType);
 		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
+
 	}
 
 	public void addColumn(String column, DataType dataType) {
@@ -182,13 +185,13 @@ public class MySQL {
 	}
 
 	public void clearCache() {
-		AdvancedCoreHook.getInstance().debug("CLearing cache");
+		AdvancedCoreHook.getInstance().debug("Clearing cache");
 		table.clear();
 		clearCacheBasic();
 	}
 
 	public void clearCacheBasic() {
-		AdvancedCoreHook.getInstance().debug("CLearing cache basic");
+		AdvancedCoreHook.getInstance().debug("Clearing cache basic");
 		columns.clear();
 		columns.addAll(getColumnsQueury());
 		uuids.clear();
