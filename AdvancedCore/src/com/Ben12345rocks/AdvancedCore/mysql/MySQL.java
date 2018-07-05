@@ -124,8 +124,9 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
-		// tempoary to improve performance
-		addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
+		// tempoary to improve performance from old tables
+		//addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
+		alterColumnType("uuid", "VARCHAR(37)");
 
 		loadData();
 
@@ -137,7 +138,10 @@ public class MySQL {
 			}
 
 		}, 10 * 1000, 500);
+	}
 
+	public void alterColumnType(String column, String newType) {
+		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
 	}
 
 	public void addColumn(String column, DataType dataType) {
