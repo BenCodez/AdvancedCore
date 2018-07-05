@@ -104,7 +104,7 @@ public class AdvancedCoreHook {
 	private boolean autoKillInvs = true;
 	private String prevPageTxt = "&aPrevious Page";
 	private String nextPageTxt = "&aNext Page";
-	private boolean checkNameMojang = true;
+	private boolean checkNameMojang = false;
 
 	private String jenkinsSite = "";
 
