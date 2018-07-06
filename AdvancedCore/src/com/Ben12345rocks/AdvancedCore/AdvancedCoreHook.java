@@ -108,14 +108,6 @@ public class AdvancedCoreHook {
 
 	private String jenkinsSite = "";
 
-	public String getJenkinsSite() {
-		return jenkinsSite;
-	}
-
-	public void setJenkinsSite(String jenkinsSite) {
-		this.jenkinsSite = jenkinsSite;
-	}
-
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
@@ -305,6 +297,10 @@ public class AdvancedCoreHook {
 		return javascriptEngineRequests;
 	}
 
+	public String getJenkinsSite() {
+		return jenkinsSite;
+	}
+
 	public Logger getLogger() {
 		return logger;
 	}
@@ -471,6 +467,10 @@ public class AdvancedCoreHook {
 		return disableCheckOnWorldChange;
 	}
 
+	public boolean isEnableJenkins() {
+		return enableJenkins;
+	}
+
 	/**
 	 * @return the extraDebug
 	 */
@@ -610,14 +610,6 @@ public class AdvancedCoreHook {
 			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
 
 		}
-	}
-
-	public boolean isEnableJenkins() {
-		return enableJenkins;
-	}
-
-	public void setEnableJenkins(boolean enableJenkins) {
-		this.enableJenkins = enableJenkins;
 	}
 
 	public void loadEconomy() {
@@ -1048,6 +1040,10 @@ public class AdvancedCoreHook {
 		this.disabledRequestMethods = disabledRequestMethods;
 	}
 
+	public void setEnableJenkins(boolean enableJenkins) {
+		this.enableJenkins = enableJenkins;
+	}
+
 	/**
 	 * @param extraDebug
 	 *            the extraDebug to set
@@ -1090,6 +1086,10 @@ public class AdvancedCoreHook {
 	 */
 	public void setJavascriptEngineRequests(ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests) {
 		this.javascriptEngineRequests = javascriptEngineRequests;
+	}
+
+	public void setJenkinsSite(String jenkinsSite) {
+		this.jenkinsSite = jenkinsSite;
 	}
 
 	public void setLogDebugToFile(boolean logDebugToFile) {

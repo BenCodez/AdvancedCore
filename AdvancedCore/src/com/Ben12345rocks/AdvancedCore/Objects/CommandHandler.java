@@ -66,11 +66,6 @@ public abstract class CommandHandler {
 		helpMessage = "Unknown Help Message";
 	}
 
-	public CommandHandler ignoreNumberCheck() {
-		ignoreNumberCheck = true;
-		return this;
-	}
-
 	/**
 	 * Instantiates a new command handler.
 	 *
@@ -319,6 +314,11 @@ public abstract class CommandHandler {
 		 * return hasPerm;
 		 */
 		return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
+	}
+
+	public CommandHandler ignoreNumberCheck() {
+		ignoreNumberCheck = true;
+		return this;
 	}
 
 	public boolean isAdvancedCoreCommand() {

@@ -131,49 +131,6 @@ public class ItemBuilder {
 		}
 	}
 
-	@Override
-	public boolean equals(Object ob) {
-		if (ob instanceof ItemBuilder) {
-			ItemBuilder b = (ItemBuilder) ob;
-			return b.toItemStack().equals(toItemStack());
-		}
-
-		return false;
-	}
-
-	@SuppressWarnings("deprecation")
-	public LinkedHashMap<String, Object> createConfigurationData() {
-		LinkedHashMap<String, Object> data = new LinkedHashMap<String, Object>();
-		data.put("Material", is.getType().toString());
-		data.put("Amount", getAmount());
-		if (hasCustomDisplayName()) {
-			data.put("Name", getName());
-		}
-		if (hasCustomLore()) {
-			data.put("Lore", getLore());
-		}
-		data.put("Durability", is.getDurability());
-		data.put("Data", is.getData().getData());
-
-		for (Entry<Enchantment, Integer> en : is.getItemMeta().getEnchants().entrySet()) {
-			data.put("Enchants." + en.getKey().getName(), en.getValue());
-		}
-
-		ArrayList<String> flags = new ArrayList<String>();
-		for (ItemFlag fl : is.getItemMeta().getItemFlags()) {
-			flags.add(fl.toString());
-		}
-
-		data.put("ItemFlags", flags);
-
-		data.put("Unbreakable", is.getItemMeta().isUnbreakable());
-
-		data.put("Skull", getSkull());
-
-		return data;
-
-	}
-
 	/**
 	 * Create a new ItemBuilder over an existing itemstack.
 	 *
@@ -350,6 +307,49 @@ public class ItemBuilder {
 	@Override
 	public ItemBuilder clone() {
 		return new ItemBuilder(is);
+	}
+
+	@SuppressWarnings("deprecation")
+	public LinkedHashMap<String, Object> createConfigurationData() {
+		LinkedHashMap<String, Object> data = new LinkedHashMap<String, Object>();
+		data.put("Material", is.getType().toString());
+		data.put("Amount", getAmount());
+		if (hasCustomDisplayName()) {
+			data.put("Name", getName());
+		}
+		if (hasCustomLore()) {
+			data.put("Lore", getLore());
+		}
+		data.put("Durability", is.getDurability());
+		data.put("Data", is.getData().getData());
+
+		for (Entry<Enchantment, Integer> en : is.getItemMeta().getEnchants().entrySet()) {
+			data.put("Enchants." + en.getKey().getName(), en.getValue());
+		}
+
+		ArrayList<String> flags = new ArrayList<String>();
+		for (ItemFlag fl : is.getItemMeta().getItemFlags()) {
+			flags.add(fl.toString());
+		}
+
+		data.put("ItemFlags", flags);
+
+		data.put("Unbreakable", is.getItemMeta().isUnbreakable());
+
+		data.put("Skull", getSkull());
+
+		return data;
+
+	}
+
+	@Override
+	public boolean equals(Object ob) {
+		if (ob instanceof ItemBuilder) {
+			ItemBuilder b = (ItemBuilder) ob;
+			return b.toItemStack().equals(toItemStack());
+		}
+
+		return false;
 	}
 
 	private int getAmount() {

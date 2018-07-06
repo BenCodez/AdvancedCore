@@ -140,13 +140,6 @@ public class MySQL {
 		}, 10 * 1000, 500);
 	}
 
-	public void alterColumnType(String column, String newType) {
-		checkColumn(column, DataType.STRING);
-		AdvancedCoreHook.getInstance().debug("Altering column " + column + " to " + newType);
-		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
-
-	}
-
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
 			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
@@ -172,6 +165,13 @@ public class MySQL {
 		// if (!this.query.contains(query)) {
 		this.query.add(query);
 		// }
+	}
+
+	public void alterColumnType(String column, String newType) {
+		checkColumn(column, DataType.STRING);
+		AdvancedCoreHook.getInstance().debug("Altering column " + column + " to " + newType);
+		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
+
 	}
 
 	public void checkColumn(String column, DataType dataType) {
