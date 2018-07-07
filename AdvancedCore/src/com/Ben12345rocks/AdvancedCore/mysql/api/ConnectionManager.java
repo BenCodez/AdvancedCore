@@ -160,7 +160,7 @@ public class ConnectionManager {
 			config.setUsername(username);
 			config.setPassword(password);
 			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=" + useSSL
-					+ "&amp;allowMultiQueries=true&amp;rewriteBatchedStatements=true&amp;useDynamicCharsetInfo=false");
+					+ "&allowMultiQueries=true&rewriteBatchedStatements=true&useDynamicCharsetInfo=false");
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(maximumPoolsize);
