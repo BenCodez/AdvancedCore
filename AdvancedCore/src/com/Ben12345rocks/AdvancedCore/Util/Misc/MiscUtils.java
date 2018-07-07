@@ -74,7 +74,7 @@ public class MiscUtils {
 
 		double randomNum = ThreadLocalRandom.current().nextDouble(outOf);
 
-		plugin.debug("Chance Required: " + chance + ", RandomNum: " + randomNum);
+		plugin.extraDebug("Chance Required: " + chance + ", RandomNum: " + randomNum);
 
 		if (randomNum <= chance) {
 			return true;
