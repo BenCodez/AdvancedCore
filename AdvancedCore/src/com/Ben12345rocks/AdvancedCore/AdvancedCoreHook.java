@@ -740,7 +740,7 @@ public class AdvancedCoreHook {
 
 	public void loadTabComplete() {
 		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {
+				.addTabCompleteOption(new TabCompleteHandle("(AllPlayer)", new ArrayList<String>()) {
 
 					@Override
 					public void reload() {
@@ -765,7 +765,7 @@ public class AdvancedCoreHook {
 				});
 
 		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(OnlinePlayer)", new ArrayList<String>()) {
+				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {
 
 					@Override
 					public void reload() {
