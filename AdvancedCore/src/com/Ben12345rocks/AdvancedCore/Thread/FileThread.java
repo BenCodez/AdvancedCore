@@ -151,6 +151,7 @@ public class FileThread {
 	 */
 	public ReadThread getThread() {
 		if (thread == null || !thread.isAlive()) {
+			plugin.debug("Loading thread");
 			loadThread();
 		}
 		return thread;
