@@ -45,6 +45,7 @@ public class TimeChecker {
 
 	public void forceChanged(TimeType time, boolean fake) {
 		plugin.debug("Executing time change events: " + time.toString());
+		plugin.getPlugin().getLogger().info("Time change: " + time.toString() + ", Fake: " + fake);
 		PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
 		preDateChanged.setFake(fake);
 		plugin.getPlugin().getServer().getPluginManager().callEvent(preDateChanged);
@@ -99,8 +100,11 @@ public class TimeChecker {
 	public boolean hasMonthChanged() {
 		String prevMonth = ServerData.getInstance().getPrevMonth();
 		String month = getTime().getMonth().toString();
+		if (prevMonth.equals(month)) {
+			return false;
+		}
 		ServerData.getInstance().setPrevMonth(month);
-		return !prevMonth.equals(month);
+		return true;
 
 	}
 
