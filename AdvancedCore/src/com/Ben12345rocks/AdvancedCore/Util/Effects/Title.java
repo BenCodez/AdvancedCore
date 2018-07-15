@@ -3,10 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Effects;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
-import com.Ben12345rocks.AdvancedCore.Util.Effects.VersionHandler.TitleVersionHandle;
-import com.Ben12345rocks.AdvancedCore.Util.Effects.VersionHandler.V1_10AndBelowTitleVersionHandle;
-import com.Ben12345rocks.AdvancedCore.Util.Effects.VersionHandler.V1_11TitleVersionHandle;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -32,13 +29,10 @@ public class Title {
 	/** The fade out time. */
 	private int fadeOutTime = -1;
 
-	private TitleVersionHandle handle;
-
 	/**
 	 * Instantiates a new title.
 	 */
 	public Title() {
-		loadClasses();
 	}
 
 	/**
@@ -49,7 +43,6 @@ public class Title {
 	 */
 	public Title(String title) {
 		this.title = title;
-		loadClasses();
 	}
 
 	/**
@@ -63,7 +56,6 @@ public class Title {
 	public Title(String title, String subtitle) {
 		this.title = title;
 		this.subtitle = subtitle;
-		loadClasses();
 	}
 
 	/**
@@ -86,7 +78,6 @@ public class Title {
 		this.fadeInTime = fadeInTime;
 		this.stayTime = stayTime;
 		this.fadeOutTime = fadeOutTime;
-		loadClasses();
 	}
 
 	/**
@@ -102,7 +93,6 @@ public class Title {
 		fadeInTime = title.getFadeInTime();
 		fadeOutTime = title.getFadeOutTime();
 		stayTime = title.getStayTime();
-		loadClasses();
 	}
 
 	/**
@@ -121,7 +111,7 @@ public class Title {
 	 *            the player
 	 */
 	public void clearTitle(Player player) {
-		handle.clearTitle(player);
+		player.sendTitle("", "", -1, -1, -1);
 	}
 
 	/**
@@ -170,25 +160,13 @@ public class Title {
 	}
 
 	/**
-	 * Load classes.
-	 */
-	private void loadClasses() {
-		String version = NMSManager.getInstance().getVersion();
-		if (version.contains("1_8") || version.contains("1_9") || version.contains("1_10")) {
-			handle = new V1_10AndBelowTitleVersionHandle();
-		} else {
-			handle = new V1_11TitleVersionHandle();
-		}
-	}
-
-	/**
 	 * Reset title.
 	 *
 	 * @param player
 	 *            the player
 	 */
 	public void resetTitle(Player player) {
-		handle.resetTitle(player);
+		clearTitle(player);
 	}
 
 	/**
@@ -198,7 +176,7 @@ public class Title {
 	 *            the player
 	 */
 	public void send(Player player) {
-		handle.send(player, title, subtitle, fadeInTime, stayTime, fadeOutTime);
+		send(player, title, subtitle, fadeInTime, stayTime, fadeOutTime);
 	}
 
 	/**
@@ -258,7 +236,7 @@ public class Title {
 	 *            the player
 	 */
 	public void updateSubtitle(Player player) {
-		handle.updateSubtitle(player, subtitle);
+		updateSubtitle(player, subtitle);
 	}
 
 	/**
@@ -268,7 +246,7 @@ public class Title {
 	 *            the player
 	 */
 	public void updateTimes(Player player) {
-		handle.updateTimes(player, fadeInTime, stayTime, fadeOutTime);
+		updateTimes(player, fadeInTime, stayTime, fadeOutTime);
 	}
 
 	/**
@@ -278,6 +256,23 @@ public class Title {
 	 *            the player
 	 */
 	public void updateTitle(Player player) {
-		handle.updateTitle(player, title);
+		updateTitle(player, title);
+	}
+
+	public void send(Player player, String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
+		player.sendTitle(StringUtils.getInstance().colorize(title), StringUtils.getInstance().colorize(subtitle),
+				fadeInTime, stayTime, fadeOutTime);
+	}
+
+	public void updateSubtitle(Player player, String subtitle) {
+		player.sendTitle("", StringUtils.getInstance().colorize(subtitle), -1, -1, -1);
+	}
+
+	public void updateTimes(Player player, int fadeInTime, int stayTime, int fadeOutTime) {
+		player.sendTitle("", "", fadeInTime, stayTime, fadeOutTime);
+	}
+
+	public void updateTitle(Player player, String title) {
+		player.sendTitle(StringUtils.getInstance().colorize(title), "", -1, -1, -1);
 	}
 }

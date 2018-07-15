@@ -16,7 +16,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventory1_7_R4Handler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryReflectionHandler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -232,11 +231,9 @@ public class AInventory {
 	 *            the anvil click event handler
 	 */
 	public AInventory(final Player player, final AnvilClickEventHandler anvilClickEventHandler) {
-		if (getVersion().contains("1_7_R4")) {
-			versionHandle = new AInventory1_7_R4Handler(player, anvilClickEventHandler);
-		} else {
-			versionHandle = new AInventoryReflectionHandler(player, anvilClickEventHandler);
-		}
+
+		versionHandle = new AInventoryReflectionHandler(player, anvilClickEventHandler);
+
 		this.player = player;
 		handler = anvilClickEventHandler;
 		PlayerUtils.getInstance().setPlayerMeta(player, "AInventory", anvilClickEventHandler);
