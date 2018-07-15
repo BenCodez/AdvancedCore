@@ -327,7 +327,7 @@ public class MiscUtils {
 
 	public ItemStack setSkullOwner(OfflinePlayer player) {
 		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
-			return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(player)
+			return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1, (short) 3)).setSkullOwner(player)
 					.toItemStack(player);
 		} else {
 			return setSkullOwner(player.getName());
@@ -343,7 +343,7 @@ public class MiscUtils {
 	 */
 	@Deprecated
 	public ItemStack setSkullOwner(String playerName) {
-		return new ItemBuilder(new ItemStack(Material.SKULL_ITEM, 1, (short) 3)).setSkullOwner(playerName)
+		return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();
 	}
 }

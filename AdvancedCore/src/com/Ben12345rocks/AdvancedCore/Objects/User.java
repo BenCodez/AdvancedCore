@@ -8,7 +8,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -16,7 +15,6 @@ import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -373,62 +371,6 @@ public class User {
 		if (player != null) {
 			player.giveExp(exp);
 		}
-	}
-
-	/**
-	 * Give item.
-	 *
-	 * @param id
-	 *            the id
-	 * @param amount
-	 *            the amount
-	 * @param data
-	 *            the data
-	 * @param itemName
-	 *            the item name
-	 * @param lore
-	 *            the lore
-	 * @param enchants
-	 *            the enchants
-	 */
-	@Deprecated
-	public void giveItem(int id, int amount, int data, String itemName, List<String> lore,
-			HashMap<String, Integer> enchants) {
-
-		if (amount == 0) {
-			return;
-		}
-
-		ItemBuilder builder = new ItemBuilder(Material.getMaterial(id), amount, (short) data);
-		builder.setLore(lore);
-		builder.setName(itemName);
-		builder.addEnchantments(enchants);
-
-		Player player = getPlayer();
-		if (player != null) {
-			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(builder.toItemStack());
-			boolean full = false;
-			for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
-				full = true;
-				Bukkit.getScheduler().runTask(plugin, new Runnable() {
-
-					@Override
-					public void run() {
-						player.getWorld().dropItem(player.getLocation(), me.getValue());
-					}
-				});
-
-			}
-			if (full) {
-				String msg = StringUtils.getInstance().colorize(AdvancedCoreHook.getInstance().getFormatInvFull());
-				if (!msg.isEmpty()) {
-					player.sendMessage(msg);
-				}
-			}
-
-			player.updateInventory();
-		}
-
 	}
 
 	/**
