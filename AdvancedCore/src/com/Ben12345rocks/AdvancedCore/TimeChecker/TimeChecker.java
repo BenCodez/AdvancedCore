@@ -82,14 +82,15 @@ public class TimeChecker {
 	public boolean hasDayChanged() {
 		int prevDay = ServerData.getInstance().getPrevDay();
 		int day = getTime().getDayOfMonth();
+
+		if (prevDay == day) {
+			return false;
+		}
 		ServerData.getInstance().setPrevDay(day);
 		if (prevDay == -1) {
 			return false;
 		}
-		if (prevDay != day) {
-			return true;
-		}
-		return false;
+		return true;
 	}
 
 	/**
@@ -122,14 +123,14 @@ public class TimeChecker {
 		LocalDateTime date = getTime();
 		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear();
 		int weekNumber = date.get(woy);
+		if (weekNumber == prevDate) {
+			return false;
+		}
 		ServerData.getInstance().setPrevWeekDay(weekNumber);
 		if (prevDate == -1) {
 			return false;
 		}
-		if (weekNumber != prevDate) {
-			return true;
-		}
-		return false;
+		return true;
 	}
 
 	/**
