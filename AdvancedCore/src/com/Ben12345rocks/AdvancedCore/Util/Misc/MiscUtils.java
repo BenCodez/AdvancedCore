@@ -46,9 +46,8 @@ public class MiscUtils {
 	 * @param broadcastMsg
 	 *            the broadcast msg
 	 */
-	@SuppressWarnings("unchecked")
 	public void broadcast(String broadcastMsg) {
-		broadcast(broadcastMsg, (ArrayList<Player>) Bukkit.getOnlinePlayers());
+		broadcast(broadcastMsg, new ArrayList<Player>(Bukkit.getOnlinePlayers()));
 	}
 
 	public void broadcast(String broadcastMsg, ArrayList<Player> players) {
