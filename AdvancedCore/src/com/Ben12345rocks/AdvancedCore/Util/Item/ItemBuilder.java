@@ -628,7 +628,7 @@ public class ItemBuilder {
 	 */
 	@Deprecated
 	public ItemBuilder setSkullOwner(String owner) {
-		if (!owner.isEmpty()) {
+		if (owner != null && !owner.isEmpty()) {
 			try {
 				SkullMeta im = (SkullMeta) is.getItemMeta();
 				im.setOwner(owner);
