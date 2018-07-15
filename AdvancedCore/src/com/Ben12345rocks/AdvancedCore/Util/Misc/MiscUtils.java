@@ -46,24 +46,26 @@ public class MiscUtils {
 	 * @param broadcastMsg
 	 *            the broadcast msg
 	 */
+	@SuppressWarnings("unchecked")
 	public void broadcast(String broadcastMsg) {
-		if (broadcastMsg != null) {
-			if (!broadcastMsg.equals("")) {
-				String consoleMsg = "";
-				for (Player player : Bukkit.getOnlinePlayers()) {
-					String msg = StringUtils.getInstance()
-							.colorize(StringUtils.getInstance().replacePlaceHolders(player, broadcastMsg));
-					if (consoleMsg.isEmpty()) {
-						consoleMsg = msg;
-					}
-					for (String str : msg.split("%NewLine%")) {
-						AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player,
-								StringUtils.getInstance().parseJson(str));
-					}
+		broadcast(broadcastMsg, (ArrayList<Player>) Bukkit.getOnlinePlayers());
+	}
 
+	public void broadcast(String broadcastMsg, ArrayList<Player> players) {
+		if (broadcastMsg != null && !broadcastMsg.equals("")) {
+			String consoleMsg = "";
+			for (Player player : players) {
+				String msg = StringUtils.getInstance()
+						.colorize(StringUtils.getInstance().replacePlaceHolders(player, broadcastMsg));
+				if (consoleMsg.isEmpty()) {
+					consoleMsg = msg;
 				}
-				Bukkit.getServer().getConsoleSender().sendMessage(consoleMsg);
+				for (String str : msg.split("%NewLine%")) {
+					AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player,
+							StringUtils.getInstance().parseJson(str));
+				}
 			}
+			Bukkit.getServer().getConsoleSender().sendMessage(consoleMsg);
 		}
 	}
 
