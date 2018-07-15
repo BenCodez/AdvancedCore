@@ -576,7 +576,7 @@ public class RewardEditGUI {
 					reward.getConfig().setItemLore(itemStack, lore);
 					reward.getConfig().setItemDurability(itemStack, durability);
 					for (Entry<Enchantment, Integer> entry : enchants.entrySet()) {
-						reward.getConfig().setItemEnchant(itemStack, entry.getKey().getKey().getKey(),
+						reward.getConfig().setItemEnchant(itemStack, entry.getKey().getName(),
 								entry.getValue().intValue());
 					}
 					plugin.reload();

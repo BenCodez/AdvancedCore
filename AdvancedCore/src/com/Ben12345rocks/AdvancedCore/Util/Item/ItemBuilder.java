@@ -12,7 +12,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
@@ -213,9 +212,7 @@ public class ItemBuilder {
 		}
 		HashMap<Enchantment, Integer> enchantments = new HashMap<Enchantment, Integer>();
 		for (String enchant : enchants.keySet()) {
-			enchantments.put(
-					Enchantment.getByKey(new NamespacedKey(AdvancedCoreHook.getInstance().getPlugin(), enchant)),
-					enchants.get(enchant));
+			enchantments.put(Enchantment.getByName(enchant), enchants.get(enchant));
 		}
 		return addEnchantments(enchantments);
 	}

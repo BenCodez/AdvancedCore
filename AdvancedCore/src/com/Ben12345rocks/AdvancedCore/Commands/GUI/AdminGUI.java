@@ -93,7 +93,7 @@ public class AdminGUI {
 		});
 
 		inv.addButton(inv.getNextSlot(),
-				new BInventoryButton(new ItemBuilder(Material.PLAYER_HEAD, 1, (short) 3).setName("&cUsers")) {
+				new BInventoryButton(new ItemBuilder(Material.SKULL_ITEM, 1, (short) 3).setName("&cUsers")) {
 
 					@Override
 					public void onClick(ClickEvent event) {

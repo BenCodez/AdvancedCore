@@ -589,11 +589,11 @@ public class BInventory implements Listener {
 			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
 		}
 		if (prevItem == null) {
-			prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1)
+			prevItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15)
 					.setName(AdvancedCoreHook.getInstance().getPrevPageTxt()).toItemStack(player);
 		}
 		if (nextItem == null) {
-			nextItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1)
+			nextItem = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 15)
 					.setName(AdvancedCoreHook.getInstance().getNextPageTxt()).toItemStack(player);
 		}
 

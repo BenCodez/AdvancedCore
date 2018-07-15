@@ -73,7 +73,7 @@ public class BooleanRequester {
 						}
 					});
 			inv.addButton(inv.getNextSlot(),
-					new BInventoryButton("False", new String[] {}, new ItemStack(Material.IRON_BLOCK)) {
+					new BInventoryButton("False", new String[] {}, new ItemStack(Material.REDSTONE_LAMP_OFF)) {
 
 						@Override
 						public void onClick(ClickEvent clickEvent) {
