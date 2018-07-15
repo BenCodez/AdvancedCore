@@ -27,7 +27,7 @@ public class ConnectionManager {
 		this.username = username;
 		this.password = password;
 		this.database = database;
-		connectionTimeout = 20000;
+		connectionTimeout = 30000;
 		maximumPoolsize = 5;
 		// maxConnections = 1;
 
@@ -40,7 +40,7 @@ public class ConnectionManager {
 		this.username = username;
 		this.password = password;
 		this.database = database;
-		connectionTimeout = 20000;
+		connectionTimeout = 30000;
 		if (maxConnections > 5) {
 			maximumPoolsize = maxConnections;
 		} else {
