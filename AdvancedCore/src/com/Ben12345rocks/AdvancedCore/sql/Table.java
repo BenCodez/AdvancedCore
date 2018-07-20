@@ -258,7 +258,7 @@ public class Table {
 
 	public List<Column> getRowsNames() {
 		List<Column> result = new ArrayList<Column>();
-		String query = "SELECT PLayerName FROM " + getName();
+		String query = "SELECT PlayerName FROM " + getName();
 
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
