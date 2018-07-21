@@ -37,17 +37,21 @@ public class UserData {
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key)) {
-							try {
-								return (int) row.get(i).getValue();
-							} catch (ClassCastException | NullPointerException ex) {
+							Object value = row.get(i).getValue();
+							if (value instanceof Integer) {
+								try {
+									return (int) value;
+								} catch (ClassCastException | NullPointerException ex) {
+								}
+							} else if (value instanceof String) {
 								try {
 									return Integer.parseInt((String) row.get(i).getValue());
 								} catch (Exception e) {
-									// AdvancedCoreHook.getInstance().debug(e);
 								}
 							}
 						}
 					}
+
 				}
 
 			} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
@@ -55,13 +59,16 @@ public class UserData {
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key)) {
-							try {
-								return (int) row.get(i).getValue();
-							} catch (ClassCastException | NullPointerException ex) {
+							Object value = row.get(i).getValue();
+							if (value instanceof Integer) {
+								try {
+									return (int) value;
+								} catch (ClassCastException | NullPointerException ex) {
+								}
+							} else if (value instanceof String) {
 								try {
 									return Integer.parseInt((String) row.get(i).getValue());
 								} catch (Exception e) {
-									// AdvancedCoreHook.getInstance().debug(e);
 								}
 							}
 						}
@@ -83,6 +90,7 @@ public class UserData {
 		// user.getPlayerName() + "'");
 
 		return def;
+
 	}
 
 	public ArrayList<String> getKeys() {
