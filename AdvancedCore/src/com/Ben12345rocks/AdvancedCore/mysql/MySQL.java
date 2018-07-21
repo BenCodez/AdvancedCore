@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
@@ -68,7 +69,11 @@ public class MySQL {
 
 	private Object object4 = new Object();
 
+	private List<String> intColumns;
+
 	public MySQL(String tableName, ConfigurationSection section) {
+		intColumns = Collections.synchronizedList(ServerData.getInstance().getIntColumns());
+
 		String tablePrefix = section.getString("Prefix");
 		String hostName = section.getString("Host");
 		int port = section.getInt("Port");
@@ -171,7 +176,10 @@ public class MySQL {
 		checkColumn(column, DataType.STRING);
 		AdvancedCoreHook.getInstance().debug("Altering column " + column + " to " + newType);
 		if (newType.contains("INT")) {
-			addToQue("UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
+			addToQue(
+					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
+			intColumns.add(column);
+			ServerData.getInstance().setIntColumns((ArrayList<String>) intColumns);
 		}
 		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
 
@@ -287,7 +295,13 @@ public class MySQL {
 			ResultSet rs = sql.executeQuery();
 			rs.next();
 			for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-				Column rCol = new Column(rs.getMetaData().getColumnLabel(i), DataType.STRING);
+				String columnName = rs.getMetaData().getColumnLabel(i);
+				Column rCol = null;
+				if (intColumns.contains(columnName)) {
+					rCol = new Column(columnName, DataType.INTEGER);
+				} else {
+					rCol = new Column(columnName, DataType.STRING);
+				}
 				// System.out.println(i + " " +
 				// rs.getMetaData().getColumnLabel(i));
 				rCol.setValue(rs.getString(i));
@@ -537,5 +551,9 @@ public class MySQL {
 
 		}
 
+	}
+
+	public boolean isIntColumn(String key) {
+		return intColumns.contains(key);
 	}
 }

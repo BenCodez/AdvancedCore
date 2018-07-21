@@ -121,6 +121,18 @@ public class UserData {
 				.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
 	}
 
+	public String getValue(String key) {
+		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			if (AdvancedCoreHook.getInstance().getMysql().isIntColumn(key)) {
+				return "" + getInt(key);
+			} else {
+				return getString(key);
+			}
+		} else {
+			return getString(key);
+		}
+	}
+
 	public String getString(String key) {
 		if (!key.equals("")) {
 			if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
