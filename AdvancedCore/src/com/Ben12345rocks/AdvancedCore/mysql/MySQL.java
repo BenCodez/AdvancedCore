@@ -170,7 +170,9 @@ public class MySQL {
 	public void alterColumnType(String column, String newType) {
 		checkColumn(column, DataType.STRING);
 		AdvancedCoreHook.getInstance().debug("Altering column " + column + " to " + newType);
-		addToQue("UPDATE " + getName() + " SET " + column + " = " + " CASE " + column + " = '' THEN NULL ELSE " + column + " END;");
+		if (newType.contains("INT")) {
+			addToQue("SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
+		}
 		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
 
 	}
