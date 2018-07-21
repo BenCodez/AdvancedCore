@@ -167,6 +167,10 @@ public class ConnectionManager {
 			if (maxLifetimeMs > -1) {
 				config.setMaxLifetime(maxLifetimeMs);
 			}
+			config.addDataSourceProperty("cachePrepStmts", true);
+			config.addDataSourceProperty("prepStmtCacheSize", 250);
+			config.addDataSourceProperty("prepStmtCacheSqlLimit", 2048);
+			config.addDataSourceProperty("useServerPrepStmts", true);
 			dataSource = new HikariDataSource(config);
 			return true;
 		} catch (Exception e) {
