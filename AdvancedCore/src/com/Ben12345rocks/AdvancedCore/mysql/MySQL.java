@@ -171,6 +171,7 @@ public class MySQL {
 		checkColumn(column, DataType.STRING);
 		AdvancedCoreHook.getInstance().debug("Altering column " + column + " to " + newType);
 		if (newType.contains("INT")) {
+			addToQue("UPDATE " + getName() + ";");
 			addToQue("SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
 		}
 		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
