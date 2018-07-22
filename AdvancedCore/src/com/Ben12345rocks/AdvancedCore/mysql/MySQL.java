@@ -477,7 +477,11 @@ public class MySQL {
 	// private Object ob = new Object();
 
 	public void update(String index, String column, Object value, DataType dataType) {
-
+		if (value == null) {
+			AdvancedCoreHook.getInstance().extraDebug("Mysql value null: " + column);
+			return;
+		}
+		
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
 			synchronized (object2) {
