@@ -178,8 +178,10 @@ public class MySQL {
 		if (newType.contains("INT")) {
 			addToQue(
 					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
-			intColumns.add(column);
-			ServerData.getInstance().setIntColumns(intColumns);
+			if (!intColumns.contains(column)) {
+				intColumns.add(column);
+				ServerData.getInstance().setIntColumns(intColumns);
+			}
 		}
 		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
 
@@ -481,7 +483,7 @@ public class MySQL {
 			AdvancedCoreHook.getInstance().extraDebug("Mysql value null: " + column);
 			return;
 		}
-		
+
 		checkColumn(column, dataType);
 		if (getUuids().contains(index)) {
 			synchronized (object2) {
@@ -491,8 +493,9 @@ public class MySQL {
 						col.setValue(value);
 					}
 				}
-				
-				AdvancedCoreHook.getInstance().extraDebug("Update: " + column + " : " + value + " " + value.toString() + " : " + dataType.toString());
+
+				AdvancedCoreHook.getInstance().extraDebug(
+						"Update: " + column + " : " + value + " " + value.toString() + " : " + dataType.toString());
 
 				String query = "UPDATE " + getName() + " SET ";
 
