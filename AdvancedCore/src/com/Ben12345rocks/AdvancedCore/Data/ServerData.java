@@ -139,6 +139,6 @@ public class ServerData extends YMLFile {
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getIntColumns() {
-		return (ArrayList<String>) getData().getList("IntColumns", new ArrayList<Sting>());
+		return (ArrayList<String>) getData().getList("IntColumns", new ArrayList<String>());
 	}
 }
