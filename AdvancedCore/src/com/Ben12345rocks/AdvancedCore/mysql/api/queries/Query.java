@@ -13,12 +13,13 @@ public class Query {
 
 	private MySQL mysql;
 	private Connection connection;
+	String sql;
 	private PreparedStatement statement;
 
 	public Query(MySQL mysql, String sql) throws SQLException {
 		this.mysql = mysql;
-		connection = mysql.getConnectionManager().getConnection();
-		statement = connection.prepareStatement(sql);
+		this.sql = sql;
+		// statement = connection.prepareStatement(sql);
 	}
 
 	/**
@@ -159,18 +160,16 @@ public class Query {
 	 *             SQLException
 	 */
 	public int executeUpdate() throws SQLException {
-		try {
-			return statement.executeUpdate();
-		} finally {
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(this.sql);) {
 
-			if (statement != null) {
-				statement.close();
-			}
+			return sql.executeUpdate();
 
-			if (connection != null) {
-				connection.close();
-			}
+		} catch (SQLException e) {
 		}
+
+		return 0;
+
 	}
 
 	/**

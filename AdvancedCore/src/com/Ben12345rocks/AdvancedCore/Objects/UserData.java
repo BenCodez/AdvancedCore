@@ -247,8 +247,8 @@ public class UserData {
 	}
 
 	public void setString(final String key, final String value) {
-		if (key.equals("")) {
-			AdvancedCoreHook.getInstance().debug("No key: " + key + " to " + value);
+		if (key.equals("") && value != null) {
+			AdvancedCoreHook.getInstance().debug("No key/value: " + key + " to " + value);
 			return;
 		}
 		if (AdvancedCoreHook.getInstance().isExtraDebug()) {
