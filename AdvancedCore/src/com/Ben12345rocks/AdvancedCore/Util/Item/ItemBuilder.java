@@ -40,6 +40,7 @@ public class ItemBuilder {
 	private ItemStack is;
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 	private int slot = -1;
+	private boolean validMaterial = true;
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -65,12 +66,15 @@ public class ItemBuilder {
 				try {
 					material = Material.valueOf(data.getString("Material"));
 				} catch (Exception e) {
+					AdvancedCoreHook.getInstance().getPlugin().getLogger()
+							.warning("Invalid material: " + data.getString("Material"));
 					AdvancedCoreHook.getInstance().debug(e);
 					try {
 						material = Material.valueOf(data.getName());
 					} catch (Exception ex) {
 						AdvancedCoreHook.getInstance().debug(ex);
 					}
+					validMaterial = false;
 				}
 
 				int amount = data.getInt("Amount");
@@ -130,6 +134,10 @@ public class ItemBuilder {
 				setBlank();
 			}
 		}
+	}
+
+	public boolean isValidMaterial() {
+		return validMaterial;
 	}
 
 	/**
