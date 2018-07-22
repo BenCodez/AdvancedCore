@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 import com.Ben12345rocks.AdvancedCore.mysql.api.MySQL;
 import com.sun.rowset.CachedRowSetImpl;
@@ -13,13 +15,12 @@ public class Query {
 
 	private MySQL mysql;
 	private Connection connection;
-	String sql;
-	private PreparedStatement statement;
+	private String sql;
+	private boolean addBatch = false;
 
 	public Query(MySQL mysql, String sql) throws SQLException {
 		this.mysql = mysql;
 		this.sql = sql;
-		// statement = connection.prepareStatement(sql);
 	}
 
 	/**
@@ -32,7 +33,7 @@ public class Query {
 		if (connection.getAutoCommit()) {
 			connection.setAutoCommit(false);
 		}
-		statement.addBatch();
+		addBatch = true;
 	}
 
 	/**
@@ -44,18 +45,20 @@ public class Query {
 	 *             SQLException
 	 */
 	public int[] executeBatch() throws SQLException {
-		try {
-			return statement.executeBatch();
-		} finally {
-			if (statement != null) {
-				statement.close();
-			}
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(this.sql);) {
 
-			if (connection != null) {
-				connection.commit();
-				connection.close();
+			for (Entry<Integer, Object> entry : paramters.entrySet()) {
+				sql.setObject(entry.getKey(), entry.getValue());
 			}
+			if (addBatch) {
+				sql.addBatch();
+			}
+			return sql.executeBatch();
+
+		} catch (SQLException e) {
 		}
+		return new int[0];
 	}
 
 	/**
@@ -108,22 +111,22 @@ public class Query {
 	public ResultSet executeQuery() throws SQLException {
 		CachedRowSetImpl rowSet = new CachedRowSetImpl();
 		ResultSet resultSet = null;
-		try {
-			resultSet = statement.executeQuery();
+
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(this.sql);) {
+
+			for (Entry<Integer, Object> entry : paramters.entrySet()) {
+				sql.setObject(entry.getKey(), entry.getValue());
+			}
+			if (addBatch) {
+				sql.addBatch();
+			}
+			sql.executeQuery();
 			rowSet.populate(resultSet);
-		} finally {
-			if (resultSet != null) {
-				resultSet.close();
-			}
 
-			if (statement != null) {
-				statement.close();
-			}
-
-			if (connection != null) {
-				connection.close();
-			}
+		} catch (SQLException e) {
 		}
+
 		return rowSet;
 	}
 
@@ -162,7 +165,12 @@ public class Query {
 	public int executeUpdate() throws SQLException {
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(this.sql);) {
-
+			for (Entry<Integer, Object> entry : paramters.entrySet()) {
+				sql.setObject(entry.getKey(), entry.getValue());
+			}
+			if (addBatch) {
+				sql.addBatch();
+			}
 			return sql.executeUpdate();
 
 		} catch (SQLException e) {
@@ -223,6 +231,8 @@ public class Query {
 		}
 	}
 
+	private HashMap<Integer, Object> paramters = new HashMap<Integer, Object>();
+
 	/**
 	 * Set a parameter of the prepared statement.
 	 * <p>
@@ -237,7 +247,7 @@ public class Query {
 	 *             SQLException
 	 */
 	public void setParameter(int index, Object value) throws SQLException {
-		statement.setObject(index, value);
+		paramters.put(index, value);
 	}
 
 }
