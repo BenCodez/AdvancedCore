@@ -121,7 +121,7 @@ public class Query {
 			if (addBatch) {
 				sql.addBatch();
 			}
-			sql.executeQuery();
+			resultSet = sql.executeQuery();
 			rowSet.populate(resultSet);
 
 		} catch (SQLException e) {
