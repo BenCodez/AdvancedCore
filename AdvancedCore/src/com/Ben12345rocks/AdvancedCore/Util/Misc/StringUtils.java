@@ -76,6 +76,9 @@ public class StringUtils {
 	}
 
 	public boolean isDouble(String st) {
+		if (st == null) {
+			return false;
+		}
 		try {
 			@SuppressWarnings("unused")
 			double num = Double.parseDouble(st);
@@ -94,6 +97,9 @@ public class StringUtils {
 	 * @return true, if is int
 	 */
 	public boolean isInt(String st) {
+		if (st == null) {
+			return false;
+		}
 		try {
 			@SuppressWarnings("unused")
 			int num = Integer.parseInt(st);

@@ -492,7 +492,7 @@ public class MySQL {
 					}
 				}
 				
-				AdvancedCoreHook.getInstance().extraDebug("Update: " + value + " " + value.toString() + " : " + dataType.toString());
+				AdvancedCoreHook.getInstance().extraDebug("Update: " + column + " : " + value + " " + value.toString() + " : " + dataType.toString());
 
 				String query = "UPDATE " + getName() + " SET ";
 
