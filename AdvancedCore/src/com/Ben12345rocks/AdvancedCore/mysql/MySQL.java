@@ -491,6 +491,8 @@ public class MySQL {
 						col.setValue(value);
 					}
 				}
+				
+				AdvancedCoreHook.getInstance().extraDebug("Update: " + value + " " + value.toString() + " : " + dataType.toString());
 
 				String query = "UPDATE " + getName() + " SET ";
 
