@@ -494,9 +494,6 @@ public class MySQL {
 					}
 				}
 
-				AdvancedCoreHook.getInstance().extraDebug(
-						"Update: " + column + " : " + value + " " + value.toString() + " : " + dataType.toString());
-
 				String query = "UPDATE " + getName() + " SET ";
 
 				if (dataType == DataType.STRING) {
