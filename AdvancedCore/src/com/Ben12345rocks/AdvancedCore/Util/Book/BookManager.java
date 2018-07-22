@@ -34,7 +34,7 @@ public class BookManager implements Listener {
 	 */
 	public BookManager(Player player, String start, BookSign listener) {
 		User user = UserManager.getInstance().getUser(player);
-		ItemStack item = new ItemStack(Material.BOOK_AND_QUILL);
+		ItemStack item = new ItemStack(Material.WRITABLE_BOOK);
 		PlayerUtils.getInstance().setPlayerMeta(player, "BookManager", listener);
 
 		user.giveItem(item);
