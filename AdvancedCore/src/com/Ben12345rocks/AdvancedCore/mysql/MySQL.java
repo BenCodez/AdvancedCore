@@ -497,7 +497,7 @@ public class MySQL {
 				if (dataType == DataType.STRING) {
 					query += "`" + column + "`='" + value.toString() + "'";
 				} else {
-					query += "`" + column + "`=" + value.toString();
+					query += "`" + column + "`=" + value;
 
 				}
 				query += " WHERE `uuid`=";
