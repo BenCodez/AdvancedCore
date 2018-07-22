@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Data;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.bukkit.plugin.Plugin;
 
@@ -132,13 +133,13 @@ public class ServerData extends YMLFile {
 		saveData();
 	}
 
-	public void setIntColumns(ArrayList<String> columns) {
-		getData().set("IntColumns", columns);
+	public void setIntColumns(List<String> intColumns) {
+		getData().set("IntColumns", intColumns);
 		saveData();
 	}
 
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> getIntColumns() {
-		return (ArrayList<String>) getData().getList("IntColumns", new ArrayList<String>());
+	public List<String> getIntColumns() {
+		return (List<String>) getData().getList("IntColumns", new ArrayList<String>());
 	}
 }

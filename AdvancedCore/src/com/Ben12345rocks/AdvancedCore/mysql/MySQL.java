@@ -179,7 +179,7 @@ public class MySQL {
 			addToQue(
 					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
 			intColumns.add(column);
-			ServerData.getInstance().setIntColumns((ArrayList<String>) intColumns);
+			ServerData.getInstance().setIntColumns(intColumns);
 		}
 		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
 
