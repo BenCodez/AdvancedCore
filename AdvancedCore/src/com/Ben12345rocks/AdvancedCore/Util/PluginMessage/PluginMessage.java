@@ -74,7 +74,9 @@ public class PluginMessage implements PluginMessageListener {
 				out.writeUTF(message);
 			}
 			p.sendPluginMessage(AdvancedCoreHook.getInstance().getPlugin(),
-					AdvancedCoreHook.getInstance().getPlugin().getName(), byteOutStream.toByteArray());
+					AdvancedCoreHook.getInstance().getPlugin().getName() + ":"
+							+ AdvancedCoreHook.getInstance().getPlugin().getName(),
+					byteOutStream.toByteArray());
 			out.close();
 		} catch (Exception e) {
 			e.printStackTrace();
