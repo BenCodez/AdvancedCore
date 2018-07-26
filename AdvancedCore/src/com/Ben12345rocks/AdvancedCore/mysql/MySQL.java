@@ -264,7 +264,10 @@ public class MySQL {
 			ResultSet rs = query.executeQuery();
 
 			ResultSetMetaData metadata = rs.getMetaData();
-			int columnCount = metadata.getColumnCount();
+			int columnCount = 0;
+			if (metadata != null) {
+				columnCount = metadata.getColumnCount();
+			}
 
 			for (int i = 1; i <= columnCount; i++) {
 				String columnName = metadata.getColumnName(i);
