@@ -35,7 +35,8 @@ public class PluginMessage implements PluginMessageListener {
 	@Override
 	public void onPluginMessageReceived(String channel, Player player, byte[] message) {
 		// plugin.getLogger().info("Got plugin message " + channel + " : " + message);
-		if (!channel.equals(AdvancedCoreHook.getInstance().getPlugin().getName())) {
+		if (!channel.equals(AdvancedCoreHook.getInstance().getPlugin().getName() + ":"
+				+ AdvancedCoreHook.getInstance().getPlugin().getName())) {
 			return;
 		}
 		ByteArrayDataInput in = ByteStreams.newDataInput(message);
