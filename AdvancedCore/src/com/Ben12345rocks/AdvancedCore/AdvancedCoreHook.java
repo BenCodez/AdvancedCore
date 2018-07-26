@@ -949,9 +949,10 @@ public class AdvancedCoreHook {
 	}
 
 	public void registerBungeeChannels() {
-		getServer().getMessenger().registerOutgoingPluginChannel(getPlugin(), getPlugin().getName());
-		getServer().getMessenger().registerIncomingPluginChannel(getPlugin(), getPlugin().getName(),
-				PluginMessage.getInstance());
+		getServer().getMessenger().registerOutgoingPluginChannel(getPlugin(),
+				getPlugin().getName() + ":" + getPlugin().getName());
+		getServer().getMessenger().registerIncomingPluginChannel(getPlugin(),
+				getPlugin().getName() + ":" + getPlugin().getName(), PluginMessage.getInstance());
 	}
 
 	/**
