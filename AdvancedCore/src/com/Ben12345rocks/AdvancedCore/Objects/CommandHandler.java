@@ -360,6 +360,12 @@ public abstract class CommandHandler {
 								.colorize(plugin.getFormatNotNumber().replace("%arg%", args[i])));
 						return true;
 					}
+				} else if (this.args[i].equalsIgnoreCase("Player")) {
+					if (args[i].equalsIgnoreCase("@p")) {
+						args[i] = sender.getName();
+					} else if (args[i].equalsIgnoreCase("@r")) {
+						args[i] = PlayerUtils.getInstance().getRandomOnlinePlayer().getName();
+					}
 				}
 			}
 			if (!(sender instanceof Player) && !allowConsole) {
