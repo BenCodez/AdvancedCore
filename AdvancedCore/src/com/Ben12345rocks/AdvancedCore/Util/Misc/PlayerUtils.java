@@ -311,7 +311,11 @@ public class PlayerUtils {
 	public Player getRandomOnlinePlayer() {
 		@SuppressWarnings("unchecked")
 		ArrayList<Player> players = (ArrayList<Player>) Bukkit.getOnlinePlayers();
-		return players.get(ThreadLocalRandom.current().nextInt(players.size()));
+		if (!players.isEmpty()) {
+			return players.get(ThreadLocalRandom.current().nextInt(players.size()));
+		} else {
+			return null;
+		}
 	}
 
 	@SuppressWarnings("deprecation")
