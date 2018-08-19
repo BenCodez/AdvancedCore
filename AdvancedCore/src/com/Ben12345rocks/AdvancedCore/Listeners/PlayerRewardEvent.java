@@ -3,8 +3,9 @@ package com.Ben12345rocks.AdvancedCore.Listeners;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import com.Ben12345rocks.AdvancedCore.Objects.Reward;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -29,9 +30,25 @@ public class PlayerRewardEvent extends Event {
 
 	/** The reward. */
 	private Reward reward;
+	private RewardOptions rewardOptions;
 
 	/** The cancelled. */
 	private boolean cancelled;
+
+	/**
+	 * @return the rewardOptions
+	 */
+	public RewardOptions getRewardOptions() {
+		return rewardOptions;
+	}
+
+	/**
+	 * @param rewardOptions
+	 *            the rewardOptions to set
+	 */
+	public void setRewardOptions(RewardOptions rewardOptions) {
+		this.rewardOptions = rewardOptions;
+	}
 
 	/**
 	 * Instantiates a new player reward event.
@@ -40,11 +57,13 @@ public class PlayerRewardEvent extends Event {
 	 *            the reward
 	 * @param player
 	 *            the player
+	 * @param rewardOptions
 	 */
-	public PlayerRewardEvent(Reward reward, User player) {
+	public PlayerRewardEvent(Reward reward, User player, RewardOptions rewardOptions) {
 		super();
 		setPlayer(player);
 		setReward(reward);
+		setRewardOptions(rewardOptions);
 	}
 
 	/*

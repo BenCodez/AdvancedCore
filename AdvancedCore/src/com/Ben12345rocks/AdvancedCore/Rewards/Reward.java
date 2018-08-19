@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.Objects;
+package com.Ben12345rocks.AdvancedCore.Rewards;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -21,6 +21,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
@@ -1044,7 +1045,7 @@ public class Reward {
 		for (String str : getPriority()) {
 			Reward reward = RewardHandler.getInstance().getReward(str);
 			if (reward.canGiveReward(user)) {
-				new RewardBuilder(reward).withPlaceHolder(placeholders).ignoreChance(true).send(user);
+				new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true).send(user);
 				return;
 			}
 		}
@@ -1060,7 +1061,6 @@ public class Reward {
 	 * @param placeholders
 	 *            placeholders
 	 */
-	@SuppressWarnings("deprecation")
 	public void giveRandom(User user, boolean online, HashMap<String, String> placeholders) {
 		if (checkRandomChance()) {
 			if (isRandomPickRandom()) {
@@ -1069,7 +1069,8 @@ public class Reward {
 					if (rewards.size() > 0) {
 						String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
 						if (!reward.equals("")) {
-							RewardHandler.getInstance().giveReward(user, reward, online, true, true, placeholders);
+							RewardHandler.getInstance().giveReward(user, reward,
+									new RewardOptions().setOnline(online).setPlaceholders(placeholders));
 						}
 					}
 				}
@@ -1083,30 +1084,12 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * Give reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 */
-	public void giveReward(User user, boolean online) {
-		giveReward(user, online, true);
-	}
+	public void giveReward(User user, RewardOptions rewardOptions) {
+		if (rewardOptions == null) {
+			rewardOptions = new RewardOptions();
+		}
 
-	public void giveReward(User user, boolean online, boolean giveOffline) {
-		giveReward(user, online, giveOffline, true);
-	}
-
-	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed) {
-		giveReward(user, online, giveOffline, checkTimed, null);
-	}
-
-	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
-			HashMap<String, String> placeholders) {
-
-		PlayerRewardEvent event = new PlayerRewardEvent(this, user);
+		PlayerRewardEvent event = new PlayerRewardEvent(this, user, rewardOptions);
 		Bukkit.getPluginManager().callEvent(event);
 
 		if (event.isCancelled()) {
@@ -1114,7 +1097,7 @@ public class Reward {
 			return;
 		}
 
-		if (checkTimed) {
+		if (rewardOptions.isCheckTimed()) {
 			if (checkDelayed(user)) {
 				return;
 			}
@@ -1127,10 +1110,10 @@ public class Reward {
 		boolean checkServer = checkServer();
 		boolean checkWorld = checkWorld(user);
 
-		if (((!online && !user.isOnline()) || !checkWorld || !checkServer) && !isForceOffline()) {
-			if (giveOffline) {
+		if (((!rewardOptions.isOnline() && !user.isOnline()) || !checkWorld || !checkServer) && !isForceOffline()) {
+			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
-				user.addOfflineRewards(this, placeholders);
+				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
 				if (!checkWorld) {
 					user.setCheckWorld(true);
 				}
@@ -1138,20 +1121,14 @@ public class Reward {
 			return;
 		}
 
-		giveRewardReward(user, online, ignoreChance, placeholders);
+		giveRewardReward(user, rewardOptions);
 	}
 
-	public void giveReward(User user, boolean online, boolean giveOffline, boolean checkTimed,
-			HashMap<String, String> placeholders) {
-		giveReward(user, online, giveOffline, checkTimed, false, placeholders);
-	}
-
-	public void giveRewardReward(User user, boolean online, boolean ignoreChance,
-			HashMap<String, String> placeholders) {
+	public void giveRewardReward(User user, RewardOptions rewardOptions) {
 		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 
 		String type = getRewardType();
-		if (online) {
+		if (rewardOptions.isOnline()) {
 			if (type.equalsIgnoreCase("offline")) {
 				plugin.debug("Reward Type Don't match");
 				return;
@@ -1163,8 +1140,8 @@ public class Reward {
 			}
 		}
 
-		if (ignoreChance || checkChance()) {
-			giveRewardUser(user, placeholders);
+		if (rewardOptions.isIgnoreChance() || checkChance()) {
+			giveRewardUser(user, rewardOptions.getPlaceholders());
 		}
 	}
 

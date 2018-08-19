@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.Objects;
+package com.Ben12345rocks.AdvancedCore.Rewards;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -14,6 +14,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
+import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Objects.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 
@@ -210,16 +212,8 @@ public class RewardHandler {
 		return rewards;
 	}
 
-	public void giveReward(User user, FileConfiguration data, String path) {
-		giveReward(user, data, path, user.isOnline(), true);
-	}
-
-	public void giveReward(User user, FileConfiguration data, String path, boolean online) {
-		giveReward(user, data, path, online, true);
-	}
-
-	public void giveReward(User user, FileConfiguration data, String path, boolean online, boolean giveOffline) {
-		giveReward(user, "", data, path, online, giveOffline);
+	public void giveReward(User user, FileConfiguration data, String path, RewardOptions rewardOptions) {
+		giveReward(user, data, path, rewardOptions);
 	}
 
 	/**
@@ -232,176 +226,31 @@ public class RewardHandler {
 	 * @param online
 	 *            the online
 	 */
-	@Deprecated
-	public void giveReward(User user, Reward reward, boolean online) {
+	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
 
 			@Override
 			public void run() {
-				reward.giveReward(user, online);
+				reward.giveReward(user, rewardOptions);
 			}
 		});
 
 	}
 
-	/**
-	 * Give reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param reward
-	 *            the reward
-	 * @param online
-	 *            the online
-	 * @param giveOffline
-	 *            the give offline
-	 */
-	@Deprecated
-	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline) {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				reward.giveReward(user, online, giveOffline);
-			}
-		});
-	}
-
-	@Deprecated
-	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline, boolean checkTimed) {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				reward.giveReward(user, online, giveOffline, checkTimed);
-			}
-		});
-	}
-
-	@Deprecated
-	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline, boolean checkTimed,
-			boolean ignoreChance, HashMap<String, String> placeholders) {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				reward.giveReward(user, online, giveOffline, checkTimed, ignoreChance, placeholders);
-			}
-		});
-	}
-
-	@Deprecated
-	public void giveReward(User user, Reward reward, boolean online, boolean giveOffline, boolean checkTimed,
-			HashMap<String, String> placeholders) {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				reward.giveReward(user, online, giveOffline, checkTimed, placeholders);
-			}
-		});
-	}
-
-	@Deprecated
-	public void giveReward(User user, String reward) {
+	public void giveReward(User user, String reward, RewardOptions rewardOptions) {
 		if (!reward.equals("")) {
-			giveReward(user, getReward(reward), user.isOnline());
-		}
-	}
-
-	/**
-	 * Give reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param reward
-	 *            the reward
-	 * @param online
-	 *            the online
-	 */
-	@Deprecated
-	public void giveReward(User user, String reward, boolean online) {
-		if (!reward.equals("")) {
-			giveReward(user, getReward(reward), online);
-		}
-	}
-
-	/**
-	 * Give reward.
-	 *
-	 * @param user
-	 *            the user
-	 * @param reward
-	 *            the reward
-	 * @param online
-	 *            the online
-	 * @param giveOffline
-	 *            the give offline
-	 */
-	@Deprecated
-	public void giveReward(User user, String reward, boolean online, boolean giveOffline) {
-		if (!reward.equals("")) {
-			giveReward(user, getReward(reward), online, giveOffline);
-		}
-	}
-
-	@Deprecated
-	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed) {
-		giveReward(user, reward, online, giveOffline, checkTimed, null);
-	}
-
-	@Deprecated
-	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed,
-			boolean ignoreChance, HashMap<String, String> placeholders) {
-		if (!reward.equals("")) {
-
 			if (reward.startsWith("/")) {
-				MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward, placeholders);
+				MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward,
+						rewardOptions.getPlaceholders());
+				return;
 			}
-			giveReward(user, getReward(reward), online, giveOffline, checkTimed, ignoreChance, placeholders);
+			giveReward(user, getReward(reward), rewardOptions);
 		}
-	}
-
-	@Deprecated
-	public void giveReward(User user, String reward, boolean online, boolean giveOffline, boolean checkTimed,
-			HashMap<String, String> placeholders) {
-		if (!reward.equals("")) {
-			giveReward(user, getReward(reward), online, giveOffline, checkTimed, placeholders);
-		}
-	}
-
-	public void giveReward(User user, String prefix, ConfigurationSection data, String path, boolean online,
-			boolean giveOffline, boolean checkTimed, boolean ignoreChance, HashMap<String, String> placeholders) {
-		giveReward(user, prefix, "", data, path, online, giveOffline, checkTimed, ignoreChance, placeholders);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path) {
-		giveReward(user, prefix, data, path, user.isOnline(), true);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online) {
-		giveReward(user, prefix, data, path, online, true);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline) {
-		giveReward(user, prefix, data, path, online, giveOffline, null);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline, boolean checkTimed, HashMap<String, String> placeholders) {
-		giveReward(user, prefix, data, path, online, giveOffline, checkTimed, false, placeholders);
-	}
-
-	public void giveReward(User user, String prefix, FileConfiguration data, String path, boolean online,
-			boolean giveOffline, HashMap<String, String> placeholders) {
-		giveReward(user, prefix, data, path, online, giveOffline, true, placeholders);
 	}
 
 	@SuppressWarnings("unchecked")
 	public void giveReward(User user, String prefix, String suffix, ConfigurationSection data, String path,
-			boolean online, boolean giveOffline, boolean checkTimed, boolean ignoreChance,
-			HashMap<String, String> placeholders) {
+			RewardOptions rewardOptions) {
 		if (data == null) {
 			plugin.getPlugin().getLogger().warning("ConfigurationSection is null, failing to give reward");
 		}
@@ -410,7 +259,7 @@ public class RewardHandler {
 		}
 		if (data.isList(path)) {
 			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
-				giveReward(user, reward, online, giveOffline, checkTimed, ignoreChance, placeholders);
+				giveReward(user, reward, rewardOptions);
 			}
 		} else if (data.isConfigurationSection(path)) {
 			String rewardName = "";
@@ -437,10 +286,10 @@ public class RewardHandler {
 			 * "Directly defined reward file from path: '" + path +
 			 * "' ANY EDITS HERE CAN GET OVERRIDDEN!"); updateReward(reward);
 			 */
-			giveReward(user, reward, online, giveOffline, checkTimed, ignoreChance, placeholders);
+			giveReward(user, reward, rewardOptions);
 
 		} else {
-			giveReward(user, data.getString(path, ""), online, giveOffline, checkTimed, ignoreChance, placeholders);
+			giveReward(user, data.getString(path, ""), rewardOptions);
 		}
 	}
 

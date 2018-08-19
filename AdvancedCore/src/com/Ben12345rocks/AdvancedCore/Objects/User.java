@@ -27,6 +27,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardBuilder;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
@@ -206,7 +210,6 @@ public class User {
 	/**
 	 * Check offline rewards.
 	 */
-	@SuppressWarnings("deprecation")
 	public void checkOfflineRewards() {
 		setCheckWorld(false);
 		final ArrayList<String> copy = getOfflineRewards();
@@ -222,8 +225,9 @@ public class User {
 					if (args.length > 1) {
 						placeholders = args[1];
 					}
-					RewardHandler.getInstance().giveReward(user, args[0], false, true, false,
-							ArrayUtils.getInstance().fromString(placeholders));
+					RewardHandler.getInstance().giveReward(user, args[0],
+							new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
+									.setPlaceholders(ArrayUtils.getInstance().fromString(placeholders)));
 				}
 			}
 		}, 5l);
@@ -476,8 +480,8 @@ public class User {
 	 * @param path
 	 *            Path
 	 */
-	public void giveReward(FileConfiguration data, String path) {
-		RewardHandler.getInstance().giveReward(this, data, path);
+	public void giveReward(FileConfiguration data, String path, RewardOptions rewardOptions) {
+		RewardHandler.getInstance().giveReward(this, data, path, rewardOptions);
 	}
 
 	/**
@@ -488,8 +492,8 @@ public class User {
 	 * @param online
 	 *            the online
 	 */
-	public void giveReward(Reward reward, boolean online) {
-		reward.giveReward(this, online);
+	public void giveReward(Reward reward, RewardOptions rewardOptions) {
+		reward.giveReward(this, rewardOptions);
 	}
 
 	/**

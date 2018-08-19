@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.Objects;
+package com.Ben12345rocks.AdvancedCore.Rewards;
 
 import java.io.File;
 import java.io.IOException;

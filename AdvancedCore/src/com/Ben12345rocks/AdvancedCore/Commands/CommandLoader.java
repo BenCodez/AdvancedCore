@@ -11,13 +11,14 @@ import com.Ben12345rocks.AdvancedCore.Commands.GUI.AdminGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardEditGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
 import com.Ben12345rocks.AdvancedCore.Objects.CommandHandler;
-import com.Ben12345rocks.AdvancedCore.Objects.Reward;
-import com.Ben12345rocks.AdvancedCore.Objects.RewardBuilder;
-import com.Ben12345rocks.AdvancedCore.Objects.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Report.Report;
+import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardBuilder;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -98,11 +99,10 @@ public class CommandLoader {
 		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)" }, permPrefix + ".GiveReward",
 				"Give a player a reward file", true) {
 
-			@SuppressWarnings("deprecation")
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				User user = UserManager.getInstance().getUser(args[2]);
-				RewardHandler.getInstance().giveReward(user, args[1], user.isOnline());
+				RewardHandler.getInstance().giveReward(user, args[1], new RewardOptions().setOnline(user.isOnline()));
 
 				sender.sendMessage("Gave " + args[2] + " the reward file " + args[1]);
 			}
@@ -422,11 +422,10 @@ public class CommandLoader {
 			new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
 					ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false, new StringListener() {
 
-						@SuppressWarnings("deprecation")
 						@Override
 						public void onInput(Player player, String value) {
 							User user = UserManager.getInstance().getUser(player);
-							RewardHandler.getInstance().giveReward(user, value, true);
+							RewardHandler.getInstance().giveReward(user, value, new RewardOptions());
 							ArrayList<String> rewards = user.getChoiceRewards();
 							rewards.remove(rewardSt);
 							user.setChoiceRewards(rewards);
