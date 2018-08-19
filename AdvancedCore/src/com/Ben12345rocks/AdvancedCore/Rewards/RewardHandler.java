@@ -213,7 +213,7 @@ public class RewardHandler {
 	}
 
 	public void giveReward(User user, FileConfiguration data, String path, RewardOptions rewardOptions) {
-		giveReward(user, data, path, rewardOptions);
+		giveReward(user, "", "", data, path, rewardOptions);
 	}
 
 	/**
