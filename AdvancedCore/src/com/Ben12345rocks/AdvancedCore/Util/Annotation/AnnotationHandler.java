@@ -4,7 +4,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Set;
 
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
 
 public class AnnotationHandler {
 
@@ -12,7 +12,7 @@ public class AnnotationHandler {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void load(FileConfiguration config, Object classToLoad) {
+	public void load(ConfigurationSection config, Object classToLoad) {
 		Class<?> clazz = classToLoad.getClass();
 
 		for (Field field : clazz.getDeclaredFields()) {
