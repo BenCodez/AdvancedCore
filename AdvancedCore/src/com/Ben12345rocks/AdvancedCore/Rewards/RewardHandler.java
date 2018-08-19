@@ -293,6 +293,11 @@ public class RewardHandler {
 		}
 	}
 
+	public void giveReward(User user, String prefix, ConfigurationSection data, String path,
+			RewardOptions rewardOptions) {
+		giveReward(user, prefix, "", data, path, rewardOptions);
+	}
+
 	public boolean hasRewards(FileConfiguration data, String path) {
 		if (data.isList(path)) {
 			if (data.getList(path, new ArrayList<String>()).size() != 0) {
