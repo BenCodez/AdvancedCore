@@ -12,8 +12,8 @@ import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Objects.UserStorage;
+import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Column;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
-import com.Ben12345rocks.AdvancedCore.sql.Column;
 
 /**
  * The Class UserManager.

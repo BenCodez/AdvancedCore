@@ -7,9 +7,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Thread.FileThread;
+import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Column;
+import com.Ben12345rocks.AdvancedCore.UserStorage.sql.DataType;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
-import com.Ben12345rocks.AdvancedCore.sql.Column;
-import com.Ben12345rocks.AdvancedCore.sql.DataType;
 
 public class UserData {
 	private User user;

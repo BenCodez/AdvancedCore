@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.sql.db;
+package com.Ben12345rocks.AdvancedCore.UserStorage.sql.db;
 
 import java.util.logging.Level;
 

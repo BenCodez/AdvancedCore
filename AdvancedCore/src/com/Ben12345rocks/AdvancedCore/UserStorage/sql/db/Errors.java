@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.sql.db;
+package com.Ben12345rocks.AdvancedCore.UserStorage.sql.db;
 
 public class Errors {
 	public static String noSQLConnection() {

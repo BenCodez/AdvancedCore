@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.sql;
+package com.Ben12345rocks.AdvancedCore.UserStorage.sql;
 
 public class Column {
 

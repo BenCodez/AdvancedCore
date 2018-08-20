@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.sql;
+package com.Ben12345rocks.AdvancedCore.UserStorage.sql;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,7 +8,7 @@ import java.util.List;
 
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.sql.db.SQLite;
+import com.Ben12345rocks.AdvancedCore.UserStorage.sql.db.SQLite;
 
 public class Database {
 

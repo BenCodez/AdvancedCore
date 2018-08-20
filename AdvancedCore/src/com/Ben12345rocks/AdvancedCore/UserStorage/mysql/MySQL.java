@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.mysql;
+package com.Ben12345rocks.AdvancedCore.UserStorage.mysql;
 
 import java.sql.Connection;
 import java.sql.ResultSet;

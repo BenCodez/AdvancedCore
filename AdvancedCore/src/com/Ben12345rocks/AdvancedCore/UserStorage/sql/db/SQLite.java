@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.sql.db;
+package com.Ben12345rocks.AdvancedCore.UserStorage.sql.db;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.util.logging.Level;
 
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.sql.Database;
+import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Database;
 
 public class SQLite {
 
