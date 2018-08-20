@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.Ben12345rocks</groupId>
@@ -139,9 +140,9 @@
 			<url>http://nexus.hc.to/content/repositories/pub_releases</url>
 		</repository>
 		<repository>
-            <id>placeholderapi</id>
-            <url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
-        </repository>
+			<id>placeholderapi</id>
+			<url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+		</repository>
 		<repository>
 			<id>mrten-releases</id>
 			<name>Mrten's Release Repo</name>
@@ -154,6 +155,10 @@
 		<repository>
 			<id>jitpack.io</id>
 			<url>https://jitpack.io</url>
+		</repository>
+		<repository>
+			<id>bungee-repo</id>
+			<url>https://oss.sonatype.org/content/groups/public/</url>
 		</repository>
 	</repositories>
 	<dependencies>
@@ -170,17 +175,19 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-         <groupId>me.clip</groupId>
-          <artifactId>placeholderapi</artifactId>
-          <version>LATEST</version>
-         <scope>provided</scope>
-        </dependency>
+			<groupId>me.clip</groupId>
+			<artifactId>placeholderapi</artifactId>
+			<version>LATEST</version>
+			<scope>provided</scope>
+		</dependency>
 		<dependency>
-			<groupId>com.github.Ben12345rocks</groupId>
-			<artifactId>ChatComponentAPI</artifactId>
-			<version>master-SNAPSHOT</version>
+			<groupId>net.md-5</groupId>
+			<artifactId>bungeecord-chat</artifactId>
+			<version>1.13-SNAPSHOT</version>
 			<scope>compile</scope>
 		</dependency>
+		<!-- <dependency> <groupId>com.github.Ben12345rocks</groupId> <artifactId>ChatComponentAPI</artifactId> 
+			<version>master-SNAPSHOT</version> <scope>compile</scope> </dependency> -->
 		<dependency>
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
