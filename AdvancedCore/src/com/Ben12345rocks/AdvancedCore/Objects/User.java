@@ -884,7 +884,6 @@ public class User {
 
 	private void setPlayerName(String playerName) {
 		this.playerName = playerName;
-		updateName();
 	}
 
 	public void setTimedRewards(HashMap<String, ArrayList<Long>> timed) {

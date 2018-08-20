@@ -69,6 +69,7 @@ public class PlayerJoinEvent implements Listener {
 
 						user.checkOfflineRewards();
 						user.setLastOnline(System.currentTimeMillis());
+						user.updateName();
 					}
 					AdvancedCoreHook.getInstance().getUuids().put(player.getName(), player.getUniqueId().toString());
 
