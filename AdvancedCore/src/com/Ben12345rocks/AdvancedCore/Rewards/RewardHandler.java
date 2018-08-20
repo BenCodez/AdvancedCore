@@ -237,6 +237,11 @@ public class RewardHandler {
 
 	}
 
+	public void giveReward(User user, String prefix, ConfigurationSection data, String path,
+			RewardOptions rewardOptions) {
+		giveReward(user, prefix, "", data, path, rewardOptions);
+	}
+
 	public void giveReward(User user, String reward, RewardOptions rewardOptions) {
 		if (!reward.equals("")) {
 			if (reward.startsWith("/")) {
@@ -291,11 +296,6 @@ public class RewardHandler {
 		} else {
 			giveReward(user, data.getString(path, ""), rewardOptions);
 		}
-	}
-
-	public void giveReward(User user, String prefix, ConfigurationSection data, String path,
-			RewardOptions rewardOptions) {
-		giveReward(user, prefix, "", data, path, rewardOptions);
 	}
 
 	public boolean hasRewards(FileConfiguration data, String path) {

@@ -106,8 +106,7 @@ public class UserGUI {
 							public void onInput(Player player, String value) {
 								User user = UserManager.getInstance()
 										.getUser(UserGUI.getInstance().getCurrentPlayer(player));
-								RewardHandler.getInstance().giveReward(user, value,
-										new RewardOptions());
+								RewardHandler.getInstance().giveReward(user, value, new RewardOptions());
 								player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
 
 							}

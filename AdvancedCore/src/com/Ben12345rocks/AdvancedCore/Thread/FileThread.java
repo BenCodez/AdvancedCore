@@ -90,7 +90,7 @@ public class FileThread {
 
 		@Override
 		public void run() {
-			while(true) {
+			while (true) {
 				try {
 					sleep(50);
 				} catch (InterruptedException e) {

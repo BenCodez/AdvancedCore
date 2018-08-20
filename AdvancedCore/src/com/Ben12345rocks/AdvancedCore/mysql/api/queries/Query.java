@@ -18,6 +18,8 @@ public class Query {
 	private String sql;
 	private boolean addBatch = false;
 
+	private HashMap<Integer, Object> paramters = new HashMap<Integer, Object>();
+
 	public Query(MySQL mysql, String sql) throws SQLException {
 		this.mysql = mysql;
 		this.sql = sql;
@@ -230,8 +232,6 @@ public class Query {
 			connection.rollback();
 		}
 	}
-
-	private HashMap<Integer, Object> paramters = new HashMap<Integer, Object>();
 
 	/**
 	 * Set a parameter of the prepared statement.

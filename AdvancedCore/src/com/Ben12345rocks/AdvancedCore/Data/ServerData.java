@@ -37,6 +37,11 @@ public class ServerData extends YMLFile {
 		super(new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "ServerData.yml"));
 	}
 
+	@SuppressWarnings("unchecked")
+	public List<String> getIntColumns() {
+		return (List<String>) getData().getList("IntColumns", new ArrayList<String>());
+	}
+
 	/**
 	 * Gets the plugin version.
 	 *
@@ -89,6 +94,11 @@ public class ServerData extends YMLFile {
 		saveData();
 	}
 
+	public void setIntColumns(List<String> intColumns) {
+		getData().set("IntColumns", intColumns);
+		saveData();
+	}
+
 	/**
 	 * Sets the plugin version.
 	 *
@@ -131,15 +141,5 @@ public class ServerData extends YMLFile {
 	public void setPrevWeekDay(int week) {
 		getData().set("PrevWeek", week);
 		saveData();
-	}
-
-	public void setIntColumns(List<String> intColumns) {
-		getData().set("IntColumns", intColumns);
-		saveData();
-	}
-
-	@SuppressWarnings("unchecked")
-	public List<String> getIntColumns() {
-		return (List<String>) getData().getList("IntColumns", new ArrayList<String>());
 	}
 }

@@ -66,6 +66,10 @@ public class RewardBuilder {
 				"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
 	}
 
+	public RewardOptions getRewardOptions() {
+		return rewardOptions;
+	}
+
 	public void send(ArrayList<User> users) {
 		for (User user : users) {
 			send(user);
@@ -96,6 +100,26 @@ public class RewardBuilder {
 		}
 	}
 
+	public RewardBuilder setCheckTimed(boolean checkTimed) {
+		getRewardOptions().setCheckTimed(checkTimed);
+		return this;
+	}
+
+	public RewardBuilder setGiveOffline(boolean giveOffline) {
+		getRewardOptions().setGiveOffline(giveOffline);
+		return this;
+	}
+
+	public RewardBuilder setIgnoreChance(boolean ignoreChance) {
+		getRewardOptions().setIgnoreChance(ignoreChance);
+		return this;
+	}
+
+	public RewardBuilder setOnline(boolean online) {
+		getRewardOptions().setOnline(online);
+		return this;
+	}
+
 	/**
 	 * @param reward
 	 *            the reward to set
@@ -104,17 +128,13 @@ public class RewardBuilder {
 		this.reward = reward;
 	}
 
-	public RewardBuilder withPlaceHolder(HashMap<String, String> placeholders) {
-		this.rewardOptions.getPlaceholders().putAll(placeholders);
+	public RewardBuilder setRewardOptions(RewardOptions rewardOptions) {
+		this.rewardOptions = rewardOptions;
 		return this;
 	}
 
-	public RewardOptions getRewardOptions() {
-		return rewardOptions;
-	}
-
-	public RewardBuilder setRewardOptions(RewardOptions rewardOptions) {
-		this.rewardOptions = rewardOptions;
+	public RewardBuilder withPlaceHolder(HashMap<String, String> placeholders) {
+		this.rewardOptions.getPlaceholders().putAll(placeholders);
 		return this;
 	}
 
@@ -130,26 +150,6 @@ public class RewardBuilder {
 
 	public RewardBuilder withSuffix(String suffix) {
 		this.suffix = suffix;
-		return this;
-	}
-
-	public RewardBuilder setGiveOffline(boolean giveOffline) {
-		getRewardOptions().setGiveOffline(giveOffline);
-		return this;
-	}
-
-	public RewardBuilder setOnline(boolean online) {
-		getRewardOptions().setOnline(online);
-		return this;
-	}
-
-	public RewardBuilder setIgnoreChance(boolean ignoreChance) {
-		getRewardOptions().setIgnoreChance(ignoreChance);
-		return this;
-	}
-
-	public RewardBuilder setCheckTimed(boolean checkTimed) {
-		getRewardOptions().setCheckTimed(checkTimed);
 		return this;
 	}
 

@@ -36,21 +36,6 @@ public class PlayerRewardEvent extends Event {
 	private boolean cancelled;
 
 	/**
-	 * @return the rewardOptions
-	 */
-	public RewardOptions getRewardOptions() {
-		return rewardOptions;
-	}
-
-	/**
-	 * @param rewardOptions
-	 *            the rewardOptions to set
-	 */
-	public void setRewardOptions(RewardOptions rewardOptions) {
-		this.rewardOptions = rewardOptions;
-	}
-
-	/**
 	 * Instantiates a new player reward event.
 	 *
 	 * @param reward
@@ -95,6 +80,13 @@ public class PlayerRewardEvent extends Event {
 	}
 
 	/**
+	 * @return the rewardOptions
+	 */
+	public RewardOptions getRewardOptions() {
+		return rewardOptions;
+	}
+
+	/**
 	 * Checks if is cancelled.
 	 *
 	 * @return true, if is cancelled
@@ -131,6 +123,14 @@ public class PlayerRewardEvent extends Event {
 	 */
 	public void setReward(Reward reward) {
 		this.reward = reward;
+	}
+
+	/**
+	 * @param rewardOptions
+	 *            the rewardOptions to set
+	 */
+	public void setRewardOptions(RewardOptions rewardOptions) {
+		this.rewardOptions = rewardOptions;
 	}
 
 }

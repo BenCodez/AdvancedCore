@@ -47,7 +47,7 @@ public class SimpleScoreboard {
 	 *            the title
 	 */
 	public SimpleScoreboard(String title) {
-		
+
 		this.title = title;
 		scores = Maps.newLinkedHashMap();
 		teams = Lists.newArrayList();
@@ -92,7 +92,7 @@ public class SimpleScoreboard {
 	@SuppressWarnings("deprecation")
 	public void build() {
 		scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
-		
+
 		Objective obj = scoreboard.registerNewObjective((title.length() > 16 ? title.substring(0, 15) : title),
 				"dummy");
 		obj.setDisplayName(title);
@@ -110,6 +110,10 @@ public class SimpleScoreboard {
 			obj.getScore(player).setScore(score);
 			index -= 1;
 		}
+	}
+
+	public void clearScores() {
+		scores = Maps.newLinkedHashMap();
 	}
 
 	/**
@@ -185,10 +189,6 @@ public class SimpleScoreboard {
 				p.setScoreboard(scoreboard);
 			}
 		}
-	}
-
-	public void clearScores() {
-		scores = Maps.newLinkedHashMap();
 	}
 
 }

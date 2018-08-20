@@ -136,10 +136,6 @@ public class ItemBuilder {
 		}
 	}
 
-	public boolean isValidMaterial() {
-		return validMaterial;
-	}
-
 	/**
 	 * Create a new ItemBuilder over an existing itemstack.
 	 *
@@ -436,6 +432,10 @@ public class ItemBuilder {
 
 	public boolean hasItemMeta() {
 		return is.hasItemMeta();
+	}
+
+	public boolean isValidMaterial() {
+		return validMaterial;
 	}
 
 	/**

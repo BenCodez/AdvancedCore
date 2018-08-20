@@ -108,6 +108,16 @@ public class PlayerUtils {
 
 	}
 
+	public Player getRandomOnlinePlayer() {
+		@SuppressWarnings("unchecked")
+		ArrayList<Player> players = (ArrayList<Player>) Bukkit.getOnlinePlayers();
+		if (!players.isEmpty()) {
+			return players.get(ThreadLocalRandom.current().nextInt(players.size()));
+		} else {
+			return null;
+		}
+	}
+
 	public Player getRandomPlayer() {
 		return Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
 	}
@@ -306,16 +316,6 @@ public class PlayerUtils {
 			return true;
 		}
 		return false;
-	}
-
-	public Player getRandomOnlinePlayer() {
-		@SuppressWarnings("unchecked")
-		ArrayList<Player> players = (ArrayList<Player>) Bukkit.getOnlinePlayers();
-		if (!players.isEmpty()) {
-			return players.get(ThreadLocalRandom.current().nextInt(players.size()));
-		} else {
-			return null;
-		}
 	}
 
 	@SuppressWarnings("deprecation")

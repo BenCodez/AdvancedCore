@@ -143,6 +143,9 @@ public class MySQL {
 			}
 
 		}, 10 * 1000, 500);
+
+		AdvancedCoreHook.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
+
 	}
 
 	public void addColumn(String column, DataType dataType) {
@@ -445,6 +448,10 @@ public class MySQL {
 		}
 	}
 
+	public boolean isIntColumn(String key) {
+		return intColumns.contains(key);
+	}
+
 	public boolean isUseBatchUpdates() {
 		return useBatchUpdates;
 	}
@@ -454,7 +461,6 @@ public class MySQL {
 
 		try {
 			useBatchUpdates = mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates();
-
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -478,8 +484,6 @@ public class MySQL {
 	public void removePlayer(String uuid) {
 		table.remove(uuid);
 	}
-
-	// private Object ob = new Object();
 
 	public void update(String index, String column, Object value, DataType dataType) {
 		if (value == null) {
@@ -508,7 +512,6 @@ public class MySQL {
 				query += " WHERE `uuid`=";
 				query += "'" + index + "';";
 
-				// AdvancedCoreHook.getInstance().extraDebug(query);
 				addToQue(query);
 			}
 		} else {
@@ -517,12 +520,10 @@ public class MySQL {
 	}
 
 	public void updateBatch() {
-
 		if (query.size() > 0) {
 			AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
 			String sql = "";
 			while (query.size() > 0) {
-
 				String text = query.poll();
 				if (!text.endsWith(";")) {
 					text += ";";
@@ -557,12 +558,7 @@ public class MySQL {
 				AdvancedCoreHook.getInstance().extraDebug("Failed to send query: " + sql);
 				e1.printStackTrace();
 			}
-
 		}
 
-	}
-
-	public boolean isIntColumn(String key) {
-		return intColumns.contains(key);
 	}
 }

@@ -179,6 +179,11 @@ public class Title {
 		send(player, title, subtitle, fadeInTime, stayTime, fadeOutTime);
 	}
 
+	public void send(Player player, String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
+		player.sendTitle(StringUtils.getInstance().colorize(title), StringUtils.getInstance().colorize(subtitle),
+				fadeInTime, stayTime, fadeOutTime);
+	}
+
 	/**
 	 * Sets the fade in time.
 	 *
@@ -239,6 +244,10 @@ public class Title {
 		updateSubtitle(player, subtitle);
 	}
 
+	public void updateSubtitle(Player player, String subtitle) {
+		player.sendTitle("", StringUtils.getInstance().colorize(subtitle), -1, -1, -1);
+	}
+
 	/**
 	 * Update times.
 	 *
@@ -249,6 +258,10 @@ public class Title {
 		updateTimes(player, fadeInTime, stayTime, fadeOutTime);
 	}
 
+	public void updateTimes(Player player, int fadeInTime, int stayTime, int fadeOutTime) {
+		player.sendTitle("", "", fadeInTime, stayTime, fadeOutTime);
+	}
+
 	/**
 	 * Update title.
 	 *
@@ -257,19 +270,6 @@ public class Title {
 	 */
 	public void updateTitle(Player player) {
 		updateTitle(player, title);
-	}
-
-	public void send(Player player, String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
-		player.sendTitle(StringUtils.getInstance().colorize(title), StringUtils.getInstance().colorize(subtitle),
-				fadeInTime, stayTime, fadeOutTime);
-	}
-
-	public void updateSubtitle(Player player, String subtitle) {
-		player.sendTitle("", StringUtils.getInstance().colorize(subtitle), -1, -1, -1);
-	}
-
-	public void updateTimes(Player player, int fadeInTime, int stayTime, int fadeOutTime) {
-		player.sendTitle("", "", fadeInTime, stayTime, fadeOutTime);
 	}
 
 	public void updateTitle(Player player, String title) {

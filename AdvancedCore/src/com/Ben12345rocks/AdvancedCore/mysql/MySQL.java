@@ -445,6 +445,10 @@ public class MySQL {
 		}
 	}
 
+	public boolean isIntColumn(String key) {
+		return intColumns.contains(key);
+	}
+
 	public boolean isUseBatchUpdates() {
 		return useBatchUpdates;
 	}
@@ -475,11 +479,11 @@ public class MySQL {
 		}
 	}
 
+	// private Object ob = new Object();
+
 	public void removePlayer(String uuid) {
 		table.remove(uuid);
 	}
-
-	// private Object ob = new Object();
 
 	public void update(String index, String column, Object value, DataType dataType) {
 		if (value == null) {
@@ -560,9 +564,5 @@ public class MySQL {
 
 		}
 
-	}
-
-	public boolean isIntColumn(String key) {
-		return intColumns.contains(key);
 	}
 }

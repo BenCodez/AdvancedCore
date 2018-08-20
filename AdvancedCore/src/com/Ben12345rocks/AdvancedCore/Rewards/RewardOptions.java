@@ -4,36 +4,37 @@ import java.util.HashMap;
 
 public class RewardOptions {
 
+	private boolean online = true;
+
+	private boolean giveOffline = true;
+
+	private boolean checkTimed = true;
+
+	private boolean ignoreChance = false;
+
+	private HashMap<String, String> placeholders = new HashMap<String, String>();
+
 	public RewardOptions() {
 	}
 
-	private boolean online = true;
-
-	public boolean isOnline() {
-		return online;
+	public HashMap<String, String> getPlaceholders() {
+		return placeholders;
 	}
 
-	public RewardOptions setOnline(boolean online) {
-		this.online = online;
-		return this;
+	public boolean isCheckTimed() {
+		return checkTimed;
 	}
-
-	private boolean giveOffline = true;
-	private boolean checkTimed = true;
-	private boolean ignoreChance = false;
-	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
 	public boolean isGiveOffline() {
 		return giveOffline;
 	}
 
-	public RewardOptions setGiveOffline(boolean giveOffline) {
-		this.giveOffline = giveOffline;
-		return this;
+	public boolean isIgnoreChance() {
+		return ignoreChance;
 	}
 
-	public boolean isCheckTimed() {
-		return checkTimed;
+	public boolean isOnline() {
+		return online;
 	}
 
 	public RewardOptions setCheckTimed(boolean checkTimed) {
@@ -41,8 +42,9 @@ public class RewardOptions {
 		return this;
 	}
 
-	public boolean isIgnoreChance() {
-		return ignoreChance;
+	public RewardOptions setGiveOffline(boolean giveOffline) {
+		this.giveOffline = giveOffline;
+		return this;
 	}
 
 	public RewardOptions setIgnoreChance(boolean ignoreChance) {
@@ -50,8 +52,9 @@ public class RewardOptions {
 		return this;
 	}
 
-	public HashMap<String, String> getPlaceholders() {
-		return placeholders;
+	public RewardOptions setOnline(boolean online) {
+		this.online = online;
+		return this;
 	}
 
 	public RewardOptions setPlaceholders(HashMap<String, String> placeholders) {
