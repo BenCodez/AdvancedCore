@@ -34,9 +34,9 @@ public class CraftBukkitHandle implements IServerHandle {
 			Object connection = ReflectionUtils.getFieldValue(playerConnection, handle);
 			ReflectionUtils.invokeMethod(sendPacket, connection, packetPlayOutChat);
 		} catch (Exception e) {
-
+			player.sendMessage(component.toPlainText());
 		}
-		player.sendMessage(component.toPlainText());
+
 	}
 
 	@Override
