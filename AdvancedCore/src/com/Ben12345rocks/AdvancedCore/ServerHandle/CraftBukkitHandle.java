@@ -8,7 +8,7 @@ public class CraftBukkitHandle implements IServerHandle {
 
 	@Override
 	public void sendMessage(Player player, BaseComponent component) {
-		player.sendMessage(component.toPlainText());
+		player.sendMessage(component.toLegacyText());
 	}
 
 	@Override
