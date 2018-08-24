@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.mysql.api.queries;
+package com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import com.Ben12345rocks.AdvancedCore.mysql.api.MySQL;
+import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL;
 import com.sun.rowset.CachedRowSetImpl;
 
 @SuppressWarnings("restriction")

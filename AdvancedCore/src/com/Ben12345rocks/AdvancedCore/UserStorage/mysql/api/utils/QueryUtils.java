@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.mysql.api.utils;
+package com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.utils;
 
 import java.util.Collection;
 

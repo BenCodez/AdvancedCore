@@ -23,15 +23,15 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.Objects.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Column;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.DataType;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
-import com.Ben12345rocks.AdvancedCore.mysql.api.queries.Query;
 import com.google.common.cache.CacheLoader;
 
 public class MySQL {
-	private com.Ben12345rocks.AdvancedCore.mysql.api.MySQL mysql;
+	private com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL mysql;
 
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
 
@@ -106,7 +106,7 @@ public class MySQL {
 		if (tablePrefix != null) {
 			name = tablePrefix + tableName;
 		}
-		mysql = new com.Ben12345rocks.AdvancedCore.mysql.api.MySQL(maxThreads);
+		mysql = new com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL(maxThreads);
 		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime)) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
 		}

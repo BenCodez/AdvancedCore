@@ -1,9 +1,9 @@
-package com.Ben12345rocks.AdvancedCore.mysql.api.queries;
+package com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.Ben12345rocks.AdvancedCore.mysql.api.utils.QueryUtils;
+import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.utils.QueryUtils;
 
 public class CreateTableQuery {
 

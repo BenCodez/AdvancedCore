@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.mysql.api;
+package com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api;
 
 import java.sql.Connection;
 import java.sql.SQLException;

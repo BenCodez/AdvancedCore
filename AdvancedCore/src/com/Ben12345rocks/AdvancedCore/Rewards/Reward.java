@@ -22,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Objects.User;
+import com.Ben12345rocks.AdvancedCore.Util.Annotation.AnnotationHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
@@ -44,7 +45,6 @@ public class Reward {
 	/** The file data. */
 	private RewardFileData fileData;
 
-	/** The reward type. */
 	private String rewardType;
 
 	private boolean forceOffline;
@@ -1492,6 +1492,8 @@ public class Reward {
 		randomCommand = getConfig().getRandomCommand();
 
 		server = getConfig().getServer();
+
+		new AnnotationHandler().load(getConfig().getConfigData(), this);
 	}
 
 	/**
