@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.Objects;
+package com.Ben12345rocks.AdvancedCore.UserManager;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -31,7 +31,6 @@ import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardBuilder;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;

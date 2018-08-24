@@ -1,15 +1,13 @@
-package com.Ben12345rocks.AdvancedCore.Listeners;
+package com.Ben12345rocks.AdvancedCore.TimeChecker.Events;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-
-import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
 
 // TODO: Auto-generated Javadoc
 /**
  * The Class DayChangeEvent.
  */
-public class PreDateChangedEvent extends Event {
+public class DayChangeEvent extends Event {
 
 	/** The Constant handlers. */
 	private static final HandlerList handlers = new HandlerList();
@@ -25,11 +23,11 @@ public class PreDateChangedEvent extends Event {
 
 	private boolean fake = false;
 
-	private TimeType timeType;
-
-	public PreDateChangedEvent(TimeType time) {
+	/**
+	 * Instantiates a new day change event.
+	 */
+	public DayChangeEvent() {
 		super(true);
-		this.timeType = time;
 	}
 
 	/*
@@ -42,27 +40,12 @@ public class PreDateChangedEvent extends Event {
 		return handlers;
 	}
 
-	/**
-	 * @return the timeType
-	 */
-	public TimeType getTimeType() {
-		return timeType;
-	}
-
 	public boolean isFake() {
 		return fake;
 	}
 
 	public void setFake(boolean fake) {
 		this.fake = fake;
-	}
-
-	/**
-	 * @param timeType
-	 *            the timeType to set
-	 */
-	public void setTimeType(TimeType timeType) {
-		this.timeType = timeType;
 	}
 
 }

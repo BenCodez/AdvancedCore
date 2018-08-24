@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.Objects;
+package com.Ben12345rocks.AdvancedCore.UserManager;
 
 // TODO: Auto-generated Javadoc
 /**

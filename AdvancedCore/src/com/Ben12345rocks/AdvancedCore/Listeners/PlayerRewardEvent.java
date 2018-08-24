@@ -3,9 +3,9 @@ package com.Ben12345rocks.AdvancedCore.Listeners;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import com.Ben12345rocks.AdvancedCore.Objects.User;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
+import com.Ben12345rocks.AdvancedCore.UserManager.User;
 
 // TODO: Auto-generated Javadoc
 /**

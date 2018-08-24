@@ -6,7 +6,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Objects.UserData;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserData;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 /**
