@@ -22,6 +22,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptManager;
 import com.Ben12345rocks.AdvancedCore.Util.Prompt.PromptReturnString;
@@ -211,6 +212,7 @@ public class StringRequester {
 				items.put(option, new ItemStack(Material.STONE, 1));
 			}
 		}
+		items = ArrayUtils.getInstance().sortByValuesStrItem(items);
 		request(player, method, currentValue, items, promptText, allowCustomOption, listener);
 	}
 }

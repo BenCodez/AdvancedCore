@@ -525,12 +525,12 @@ public class ArrayUtils {
 		return sortedMap;
 	}
 
-	public HashMap<String, ItemStack> sortByValuesStrItem(HashMap<String, ItemStack> unsortMap, final boolean order) {
+	public LinkedHashMap<String, ItemStack> sortByValuesStrItem(HashMap<String, ItemStack> unsortMap) {
 
 		ArrayList<String> sortedKeys = sort(new ArrayList<String>(unsortMap.keySet()));
 
 		// Maintaining insertion order with the help of LinkedList
-		HashMap<String, ItemStack> sortedMap = new LinkedHashMap<String, ItemStack>();
+		LinkedHashMap<String, ItemStack> sortedMap = new LinkedHashMap<String, ItemStack>();
 		for (String key : sortedKeys) {
 			sortedMap.put(key, unsortMap.get(key));
 		}
