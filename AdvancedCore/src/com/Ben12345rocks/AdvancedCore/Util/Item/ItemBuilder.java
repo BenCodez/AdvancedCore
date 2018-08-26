@@ -88,8 +88,7 @@ public class ItemBuilder {
 					currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
 				}
 
-				int dat = data.getInt("Data");
-				is = new ItemStack(material, currentAmount, (short) dat);
+				is = new ItemStack(material, currentAmount);
 				String name = data.getString("Name");
 				List<String> lore = data.getStringList("Lore");
 				if (name != null && !name.equals("")) {
@@ -166,24 +165,6 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder(Material m, int amount) {
 		is = new ItemStack(m, amount);
-	}
-
-	/**
-	 * Create a new ItemBuilder from scratch.
-	 *
-	 * @param m
-	 *            The material of the item.
-	 * @param amount
-	 *            The amount of the item.
-	 * @param s
-	 *            The durability of the item.
-	 */
-	public ItemBuilder(Material m, int amount, short s) {
-		is = new ItemStack(m, amount, s);
-	}
-
-	public ItemBuilder(Material m, short s) {
-		is = new ItemStack(m, 1, s);
 	}
 
 	/**
@@ -513,6 +494,7 @@ public class ItemBuilder {
 	 *
 	 * @return ItemBuilder
 	 */
+	@Deprecated
 	public ItemBuilder setDurability(short dur) {
 		is.setDurability(dur);
 		return this;
@@ -526,7 +508,7 @@ public class ItemBuilder {
 	 *            The color to put.
 	 * @return ItemBuilder
 	 */
-	@SuppressWarnings("deprecation")
+	@Deprecated
 	public ItemBuilder setDyeColor(DyeColor color) {
 		is.setDurability(color.getDyeData());
 		return this;
@@ -539,7 +521,9 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setInfinityDurability() {
-		is.setDurability(Short.MAX_VALUE);
+		ItemMeta meta = is.getItemMeta();
+		meta.setUnbreakable(true);
+		is.setItemMeta(meta);
 		return this;
 	}
 

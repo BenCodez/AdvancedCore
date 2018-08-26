@@ -327,8 +327,7 @@ public class MiscUtils {
 
 	public ItemStack setSkullOwner(OfflinePlayer player) {
 		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
-			return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1, (short) 3)).setSkullOwner(player)
-					.toItemStack(player);
+			return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1)).setSkullOwner(player).toItemStack(player);
 		} else {
 			return setSkullOwner(player.getName());
 		}

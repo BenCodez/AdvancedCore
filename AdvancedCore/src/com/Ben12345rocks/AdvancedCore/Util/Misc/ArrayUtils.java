@@ -14,6 +14,7 @@ import java.util.Set;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
@@ -519,6 +520,19 @@ public class ArrayUtils {
 		HashMap<String, Integer> sortedMap = new LinkedHashMap<String, Integer>();
 		for (Entry<String, Integer> entry : list) {
 			sortedMap.put(entry.getKey(), entry.getValue());
+		}
+
+		return sortedMap;
+	}
+
+	public HashMap<String, ItemStack> sortByValuesStrItem(HashMap<String, ItemStack> unsortMap, final boolean order) {
+
+		ArrayList<String> sortedKeys = sort(new ArrayList<String>(unsortMap.keySet()));
+
+		// Maintaining insertion order with the help of LinkedList
+		HashMap<String, ItemStack> sortedMap = new LinkedHashMap<String, ItemStack>();
+		for (String key : sortedKeys) {
+			sortedMap.put(key, unsortMap.get(key));
 		}
 
 		return sortedMap;

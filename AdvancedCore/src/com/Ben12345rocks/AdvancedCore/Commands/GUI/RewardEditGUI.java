@@ -561,16 +561,14 @@ public class RewardEditGUI {
 				ItemStack item = player.getItemInHand();
 				if (item != null && !item.getType().equals(Material.AIR)) {
 					String material = item.getType().toString();
-					@SuppressWarnings("deprecation")
-					int data = item.getData().getData();
 					int amount = item.getAmount();
+					@SuppressWarnings("deprecation")
 					int durability = item.getDurability();
 					String name = item.getItemMeta().getDisplayName();
 					ArrayList<String> lore = (ArrayList<String>) item.getItemMeta().getLore();
 					Map<Enchantment, Integer> enchants = item.getEnchantments();
 					String itemStack = material;
 					reward.getConfig().setItemAmount(itemStack, amount);
-					reward.getConfig().setItemData(itemStack, data);
 					reward.getConfig().setItemMaterial(itemStack, material);
 					reward.getConfig().setItemName(itemStack, name);
 					reward.getConfig().setItemLore(itemStack, lore);

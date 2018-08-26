@@ -40,6 +40,7 @@ public class BookManager implements Listener {
 		user.giveItem(item);
 
 		this.listener = new Listener() {
+			@SuppressWarnings("deprecation")
 			@EventHandler
 			public void bookEdit(PlayerEditBookEvent event) {
 				Player player = event.getPlayer();
