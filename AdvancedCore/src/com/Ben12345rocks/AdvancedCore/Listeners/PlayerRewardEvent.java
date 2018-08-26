@@ -43,6 +43,7 @@ public class PlayerRewardEvent extends Event {
 	 * @param player
 	 *            the player
 	 * @param rewardOptions
+	 *            rewardOptions
 	 */
 	public PlayerRewardEvent(Reward reward, User player, RewardOptions rewardOptions) {
 		super();

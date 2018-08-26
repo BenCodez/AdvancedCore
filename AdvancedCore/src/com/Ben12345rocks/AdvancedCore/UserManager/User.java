@@ -471,26 +471,10 @@ public class User {
 		}
 	}
 
-	/**
-	 * Give reward
-	 *
-	 * @param data
-	 *            Data
-	 * @param path
-	 *            Path
-	 */
 	public void giveReward(FileConfiguration data, String path, RewardOptions rewardOptions) {
 		RewardHandler.getInstance().giveReward(this, data, path, rewardOptions);
 	}
 
-	/**
-	 * Give reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @param online
-	 *            the online
-	 */
 	public void giveReward(Reward reward, RewardOptions rewardOptions) {
 		reward.giveReward(this, rewardOptions);
 	}

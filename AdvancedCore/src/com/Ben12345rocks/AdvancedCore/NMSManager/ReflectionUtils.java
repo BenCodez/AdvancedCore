@@ -48,19 +48,6 @@ public class ReflectionUtils {
 		}
 	}
 
-	/**
-	 * Invokes the specified method and makes it automatically accesible if it is
-	 * not
-	 *
-	 * @param method
-	 *            The method to invoke
-	 * @param the
-	 *            object the underlying method is invoked from
-	 * @param args
-	 *            the arguments used for the method call
-	 * @return The object returned by the method, returns null if the method return
-	 *         type is void
-	 */
 	public static Object invokeMethod(Method method, Object object, Object... args) {
 		try {
 			boolean a = !method.isAccessible();
@@ -77,17 +64,7 @@ public class ReflectionUtils {
 			return null;
 		}
 	}
-
-	/**
-	 * Removes a Modifer from the specified Field or Method
-	 *
-	 * @param fieldOrMethod
-	 *            The object that represents the Field / Method
-	 * @param modifierToRemove
-	 *            The modifier that should be removed see {@code Modifier} class for
-	 *            References
-	 * @return the old modifiers
-	 */
+	
 	public static int removeModifier(Object fieldOrMethod, int modifierToRemove) {
 		if (!(fieldOrMethod instanceof Field) || !(fieldOrMethod instanceof Method)) {
 			return -1;

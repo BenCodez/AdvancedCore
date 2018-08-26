@@ -216,16 +216,6 @@ public class RewardHandler {
 		giveReward(user, "", "", data, path, rewardOptions);
 	}
 
-	/**
-	 * Give reward
-	 *
-	 * @param user
-	 *            the user
-	 * @param reward
-	 *            the reward
-	 * @param online
-	 *            the online
-	 */
 	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
 
