@@ -1174,6 +1174,7 @@ public class Reward {
 				int money = getMoneyToGive();
 				phs.put("money", "" + money);
 				phs.put("exp", "" + exp);
+				phs.put("uuid", user.getUUID());
 				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 				giveRewardsRewards(user, placeholders);
 				givePriorityReward(user, placeholders);
