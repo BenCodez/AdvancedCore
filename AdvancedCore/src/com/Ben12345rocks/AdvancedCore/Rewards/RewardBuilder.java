@@ -16,10 +16,8 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 public class RewardBuilder {
 	private ConfigurationSection data;
-	private String prefix = "";
 	private String path;
 	private Reward reward;
-	private String suffix;
 	private RewardOptions rewardOptions;
 
 	public RewardBuilder(ConfigurationSection data, String path) {
@@ -87,7 +85,7 @@ public class RewardBuilder {
 	public void send(User user) {
 		if (reward == null) {
 			if (data != null) {
-				RewardHandler.getInstance().giveReward(user, prefix, suffix, data, path, rewardOptions);
+				RewardHandler.getInstance().giveReward(user, data, path, rewardOptions);
 			}
 		} else {
 			RewardHandler.getInstance().giveReward(user, reward, rewardOptions);
@@ -144,12 +142,12 @@ public class RewardBuilder {
 	}
 
 	public RewardBuilder withPrefix(String prefix) {
-		this.prefix = prefix;
+		this.rewardOptions.setPrefix(prefix);
 		return this;
 	}
 
 	public RewardBuilder withSuffix(String suffix) {
-		this.suffix = suffix;
+		this.rewardOptions.setSuffix(suffix);
 		return this;
 	}
 

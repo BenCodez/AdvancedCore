@@ -212,10 +212,6 @@ public class RewardHandler {
 		return rewards;
 	}
 
-	public void giveReward(User user, FileConfiguration data, String path, RewardOptions rewardOptions) {
-		giveReward(user, "", "", data, path, rewardOptions);
-	}
-
 	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
 
@@ -225,11 +221,6 @@ public class RewardHandler {
 			}
 		});
 
-	}
-
-	public void giveReward(User user, String prefix, ConfigurationSection data, String path,
-			RewardOptions rewardOptions) {
-		giveReward(user, prefix, "", data, path, rewardOptions);
 	}
 
 	public void giveReward(User user, String reward, RewardOptions rewardOptions) {
@@ -244,8 +235,7 @@ public class RewardHandler {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void giveReward(User user, String prefix, String suffix, ConfigurationSection data, String path,
-			RewardOptions rewardOptions) {
+	public void giveReward(User user, ConfigurationSection data, String path, RewardOptions rewardOptions) {
 		if (data == null) {
 			plugin.getPlugin().getLogger().warning("ConfigurationSection is null, failing to give reward");
 		}
@@ -258,11 +248,13 @@ public class RewardHandler {
 			}
 		} else if (data.isConfigurationSection(path)) {
 			String rewardName = "";
+			String prefix = rewardOptions.getPrefix();
 			if (prefix != null && !prefix.equals("")) {
 				rewardName += prefix + "_";
 			}
 			rewardName += path.replace(".", "_");
 
+			String suffix = rewardOptions.getSuffix();
 			if (suffix != null && !suffix.equals("")) {
 				rewardName += "_" + suffix;
 			}
