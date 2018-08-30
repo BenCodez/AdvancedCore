@@ -1140,6 +1140,12 @@ public class Reward {
 			}
 		}
 
+		if (!hasPermission(user)) {
+			plugin.debug(
+					user.getPlayerName() + " does not have permission " + getPermission() + " to get reward " + name);
+			return;
+		}
+
 		if (rewardOptions.isIgnoreChance() || checkChance()) {
 			giveRewardUser(user, rewardOptions.getPlaceholders());
 		}
@@ -1161,43 +1167,41 @@ public class Reward {
 	public void giveRewardUser(User user, HashMap<String, String> phs) {
 		Player player = user.getPlayer();
 		if (player != null || isForceOffline()) {
-			if (hasPermission(user)) {
-				if (phs == null) {
-					phs = new HashMap<String, String>();
-				}
-				final String playerName = user.getPlayerName();
-				phs.put("player", playerName);
-				LocalDateTime ldt = LocalDateTime.now();
-				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
-				phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
-				int exp = getExpToGive();
-				int money = getMoneyToGive();
-				phs.put("money", "" + money);
-				phs.put("exp", "" + exp);
-				phs.put("uuid", user.getUUID());
-				final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
-				giveRewardsRewards(user, placeholders);
-				givePriorityReward(user, placeholders);
-				giveRandom(user, true, placeholders);
-				runJavascript(user, true, placeholders);
-				giveMoney(user, money);
-				giveItems(user, placeholders);
-				giveExp(user, exp);
-				runCommands(user, placeholders);
-				givePotions(user);
-				sendTitle(user, placeholders);
-				sendActionBar(user, placeholders);
-				playSound(user);
-				playEffect(user);
-				sendBossBar(user, placeholders);
-				sendMessage(user, money, exp, placeholders);
-				checkChoiceRewards(user);
-				sendFirework(user);
-				giveLucky(user, placeholders);
-
-				plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
-
+			if (phs == null) {
+				phs = new HashMap<String, String>();
 			}
+			final String playerName = user.getPlayerName();
+			phs.put("player", playerName);
+			LocalDateTime ldt = LocalDateTime.now();
+			Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+			phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
+			int exp = getExpToGive();
+			int money = getMoneyToGive();
+			phs.put("money", "" + money);
+			phs.put("exp", "" + exp);
+			phs.put("uuid", user.getUUID());
+			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
+			giveRewardsRewards(user, placeholders);
+			givePriorityReward(user, placeholders);
+			giveRandom(user, true, placeholders);
+			runJavascript(user, true, placeholders);
+			giveMoney(user, money);
+			giveItems(user, placeholders);
+			giveExp(user, exp);
+			runCommands(user, placeholders);
+			givePotions(user);
+			sendTitle(user, placeholders);
+			sendActionBar(user, placeholders);
+			playSound(user);
+			playEffect(user);
+			sendBossBar(user, placeholders);
+			sendMessage(user, money, exp, placeholders);
+			checkChoiceRewards(user);
+			sendFirework(user);
+			giveLucky(user, placeholders);
+
+			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
+
 		}
 	}
 
