@@ -593,16 +593,8 @@ public class AdvancedCoreHook {
 			extraDebug = configData.getBoolean("ExtraDebug", false);
 			storageType = UserStorage.value(configData.getString("DataStorage", "SQLITE"));
 
-			if (storageType.equals(UserStorage.MYSQL)) {
-				Thread.getInstance().run(new Runnable() {
+			loadUserAPI(storageType);
 
-					@Override
-					public void run() {
-						setMysql(new MySQL(getPlugin().getName() + "_Users",
-								configData.getConfigurationSection("MySQL")));
-					}
-				});
-			}
 			timeHourOffSet = configData.getInt("TimeHourOffSet", 0);
 
 			createBackups = configData.getBoolean("CreateBackups", false);
@@ -661,7 +653,6 @@ public class AdvancedCoreHook {
 		loadUUIDs();
 		permPrefix = plugin.getName();
 		checkPlaceHolderAPI();
-		loadUserAPI(UserStorage.SQLITE);
 		loadHandle();
 		loadEconomy();
 		loadPermissions();
@@ -856,7 +847,13 @@ public class AdvancedCoreHook {
 			Table table = new Table("Users", columns, key);
 			database = new Database(plugin, "Users", table);
 		} else if (storageType.equals(UserStorage.MYSQL)) {
-			mysql = null;
+			Thread.getInstance().run(new Runnable() {
+
+				@Override
+				public void run() {
+					setMysql(new MySQL(getPlugin().getName() + "_Users", configData.getConfigurationSection("MySQL")));
+				}
+			});
 		}
 	}
 

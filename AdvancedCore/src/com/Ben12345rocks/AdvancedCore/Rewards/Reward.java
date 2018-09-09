@@ -992,8 +992,6 @@ public class Reward {
 		HashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
 		for (Entry<Integer, String> entry : luckyRewards.entrySet()) {
 			if (MiscUtils.getInstance().checkChance(1, entry.getKey())) {
-				// new RewardBuilder(getConfig().getData(),
-				// entry.getValue()).withPlaceHolder(placeholders).send(user);
 				map.put(entry.getValue(), entry.getKey());
 			}
 		}
@@ -1006,7 +1004,6 @@ public class Reward {
 							.send(user);
 					return;
 				}
-
 			} else {
 				for (Entry<String, Integer> entry : map.entrySet()) {
 					new RewardBuilder(getConfig().getConfigData(), entry.getKey()).withPlaceHolder(placeholders)
@@ -1167,6 +1164,8 @@ public class Reward {
 	public void giveRewardUser(User user, HashMap<String, String> phs) {
 		Player player = user.getPlayer();
 		if (player != null || isForceOffline()) {
+			
+			// placeholders
 			if (phs == null) {
 				phs = new HashMap<String, String>();
 			}
@@ -1180,8 +1179,10 @@ public class Reward {
 			phs.put("money", "" + money);
 			phs.put("exp", "" + exp);
 			phs.put("uuid", user.getUUID());
+			
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
-			giveRewardsRewards(user, placeholders);
+			
+			
 			givePriorityReward(user, placeholders);
 			giveRandom(user, true, placeholders);
 			runJavascript(user, true, placeholders);
@@ -1199,6 +1200,8 @@ public class Reward {
 			checkChoiceRewards(user);
 			sendFirework(user);
 			giveLucky(user, placeholders);
+			
+			giveRewardsRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 
