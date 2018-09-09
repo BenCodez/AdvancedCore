@@ -71,6 +71,13 @@ public abstract class BInventoryButton {
 		return data.get(key);
 	}
 
+	public Object getData(String key, Object defaultValue) {
+		if (data.containsKey(key)) {
+			return data.get(key);
+		}
+		return defaultValue;
+	}
+
 	/**
 	 * Gets the item.
 	 *

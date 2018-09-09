@@ -1,4 +1,4 @@
-package com.Ben12345rocks.AdvancedCore.Report;
+package com.Ben12345rocks.AdvancedCore.Backups;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,43 +11,33 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 // TODO: Auto-generated Javadoc
 /**
  * The Class Report.
  */
-public class Report {
+public class ZipCreator {
 
 	/** The instance. */
-	static Report instance = new Report();
+	static ZipCreator instance = new ZipCreator();
 
 	/**
 	 * Gets the single instance of Report.
 	 *
 	 * @return single instance of Report
 	 */
-	public static Report getInstance() {
+	public static ZipCreator getInstance() {
 		return instance;
 	}
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
-	/** The data. */
-	FileConfiguration data;
-
-	/** The d file. */
-	File dFile;
-
 	/**
 	 * Instantiates a new report.
 	 */
-	private Report() {
+	private ZipCreator() {
 	}
 
 	/**
@@ -58,7 +48,7 @@ public class Report {
 	 * @param fileList
 	 *            the file list
 	 */
-	public void addAllFiles(File dir, List<File> fileList) {
+	private void addAllFiles(File dir, List<File> fileList) {
 		try {
 			File[] files = dir.listFiles();
 			for (File file : files) {
@@ -95,7 +85,7 @@ public class Report {
 	 * @throws IOException
 	 *             Signals that an I/O exception has occurred.
 	 */
-	public void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
+	private void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
 
 		FileInputStream fis = new FileInputStream(file);
 
@@ -119,7 +109,7 @@ public class Report {
 	/**
 	 * Creates the.
 	 */
-	public void create() {
+	public void createReport() {
 		long time = Calendar.getInstance().getTime().getTime();
 		create(plugin.getPlugin().getDataFolder(), new File(plugin.getPlugin().getDataFolder(),
 				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"));
@@ -150,30 +140,7 @@ public class Report {
 		plugin.debug("---Done");
 	}
 
-	/**
-	 * Gets the data.
-	 *
-	 * @return the data
-	 */
-	public FileConfiguration getData() {
-		return data;
-	}
-
-	/**
-	 * Reload data.
-	 */
-	public void reloadData() {
-		data = YamlConfiguration.loadConfiguration(dFile);
-	}
-
-	/**
-	 * Save data.
-	 */
-	public void saveData() {
-		FilesManager.getInstance().editFile(dFile, data);
-	}
-
-	public void writeZipFile(List<File> fileList, File zipFile) {
+	private void writeZipFile(List<File> fileList, File zipFile) {
 
 		try {
 			File fileZipFolder = new File(
