@@ -63,8 +63,9 @@ public class ItemBuilder {
 			double chance = data.getDouble("Chance", 100);
 			if (checkChance(chance)) {
 				Material material = Material.STONE;
+				List<String> lore = data.getStringList("Lore");
 				try {
-					material = Material.valueOf(data.getString("Material"));
+					material = Material.valueOf(data.getString("Material").toUpperCase());
 				} catch (Exception e) {
 					AdvancedCoreHook.getInstance().getPlugin().getLogger()
 							.warning("Invalid material: " + data.getString("Material"));
@@ -75,6 +76,7 @@ public class ItemBuilder {
 						AdvancedCoreHook.getInstance().debug(ex);
 					}
 					validMaterial = false;
+					lore.add("&cInvalid material: " + material);
 				}
 
 				int amount = data.getInt("Amount");
@@ -90,7 +92,7 @@ public class ItemBuilder {
 
 				is = new ItemStack(material, currentAmount);
 				String name = data.getString("Name");
-				List<String> lore = data.getStringList("Lore");
+
 				if (name != null && !name.equals("")) {
 					setName(name);
 				}

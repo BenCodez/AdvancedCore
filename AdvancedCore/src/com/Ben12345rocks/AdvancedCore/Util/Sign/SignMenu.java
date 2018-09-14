@@ -16,7 +16,6 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
@@ -52,8 +51,7 @@ public class SignMenu {
 	public SignMenu(Plugin plugin) {
 		this.plugin = plugin;
 		this.inputReceivers = new ConcurrentHashMap<>();
-		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
-				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
+		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null) {
 			this.listen();
 		}
 	}
@@ -94,30 +92,24 @@ public class SignMenu {
 	}
 
 	private void listen() {
-		if (!NMSManager.getInstance().getVersion().contains("1.8")
-				&& !NMSManager.getInstance().getVersion().contains("1.9")
-				&& !NMSManager.getInstance().getVersion().contains("1.10")
-				&& !NMSManager.getInstance().getVersion().contains("1.11")) {
-			ProtocolLibrary.getProtocolManager()
-					.addPacketListener(new PacketAdapter(this.plugin, PacketType.Play.Client.UPDATE_SIGN) {
-						@Override
-						public void onPacketReceiving(PacketEvent event) {
-							try {
-								PacketContainer packet = event.getPacket();
-								Player player = event.getPlayer();
-								String[] text = packet.getStringArrays().read(0);
-								if (!inputReceivers.containsKey(player.getUniqueId())) {
-									return;
-								}
-								event.setCancelled(true);
-								inputReceivers.remove(player.getUniqueId()).receive(player, text);
-							} catch (Exception e) {
-
+		ProtocolLibrary.getProtocolManager()
+				.addPacketListener(new PacketAdapter(this.plugin, PacketType.Play.Client.UPDATE_SIGN) {
+					@Override
+					public void onPacketReceiving(PacketEvent event) {
+						try {
+							PacketContainer packet = event.getPacket();
+							Player player = event.getPlayer();
+							String[] text = packet.getStringArrays().read(0);
+							if (!inputReceivers.containsKey(player.getUniqueId())) {
+								return;
 							}
-						}
-					});
-		}
+							event.setCancelled(true);
+							inputReceivers.remove(player.getUniqueId()).receive(player, text);
+						} catch (Exception e) {
 
+						}
+					}
+				});
 	}
 
 	public void open(Player player, List<String> text, InputReceiver inputReceiver) {
