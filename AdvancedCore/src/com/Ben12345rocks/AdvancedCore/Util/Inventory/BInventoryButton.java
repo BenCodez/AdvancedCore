@@ -31,7 +31,7 @@ public abstract class BInventoryButton {
 	}
 
 	public BInventoryButton(ItemStack item) {
-		setItem(item);
+		setBuilder(new ItemBuilder(item));
 	}
 
 	/**
