@@ -221,6 +221,13 @@ public class BInventory implements Listener {
 	/** The buttons. */
 	private Map<Integer, BInventoryButton> buttons = new HashMap<Integer, BInventoryButton>();
 
+	/**
+	 * @param buttons the buttons to set
+	 */
+	public void setButtons(Map<Integer, BInventoryButton> buttons) {
+		this.buttons = buttons;
+	}
+
 	private Inventory inv;
 
 	private Player player;

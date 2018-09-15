@@ -534,6 +534,10 @@ public class RewardFileData {
 		return (ArrayList<String>) getConfigData().getList("Javascripts", new ArrayList<String>());
 	}
 
+	public void setJavascripts(ArrayList<String> value) {
+		set("Javascripts", value);
+	}
+
 	public String getJavascriptTrueRewardsPath() {
 		return "Javascript.TrueRewards";
 	}
@@ -678,6 +682,10 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getRandomCommand() {
 		return (ArrayList<String>) getConfigData().getList("RandomCommand", new ArrayList<String>());
+	}
+
+	public void setRandomCommand(ArrayList<String> value) {
+		set("RandomCommand", value);
 	}
 
 	public String getRandomFallBackRewardsPath() {
@@ -1216,4 +1224,25 @@ public class RewardFileData {
 	public void setWorlds(ArrayList<String> value) {
 		set("Worlds", value);
 	}
+
+	public void setDirectlyDefinedReward(boolean b) {
+		set("DirectlyDefinedReward", b);
+	}
+
+	public boolean isDirectlyDefinedReward() {
+		return getConfigData().getBoolean("DirectlyDefinedReward");
+	}
+
+	public void setPriority(ArrayList<String> value) {
+		set("Priority", value);
+	}
+
+	public void setActionBarMsg(String value) {
+		set("ActionBar.Message", value);
+	}
+
+	public void setActionBarDelay(int value) {
+		set("ActionBar.Delay", value);
+	}
+
 }

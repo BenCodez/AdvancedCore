@@ -356,6 +356,7 @@ public class Reward {
 			reward.getConfig().setData(section);
 			reward.getConfig().getFileData().options()
 					.header("Directly defined reward file. ANY EDITS HERE CAN GET OVERRIDDEN!");
+			reward.getConfig().setDirectlyDefinedReward(true);
 			RewardHandler.getInstance().updateReward(reward);
 		}
 	}

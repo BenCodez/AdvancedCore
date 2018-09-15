@@ -166,7 +166,8 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				RewardEditGUI.getInstance().openRewardGUI((Player) sender, args[1]);
+				RewardEditGUI.getInstance().openRewardGUI((Player) sender,
+						RewardHandler.getInstance().getReward(args[1]));
 			}
 		});
 
