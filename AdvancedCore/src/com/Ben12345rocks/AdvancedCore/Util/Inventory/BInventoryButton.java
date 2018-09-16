@@ -10,6 +10,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -51,6 +52,14 @@ public abstract class BInventoryButton {
 	public BInventoryButton addData(String key, Object object) {
 		getData().put(key, object);
 		return this;
+	}
+
+	public void setMeta(Player player, String str, Object ob) {
+		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
+	}
+
+	public Object getMeta(Player player, String str) {
+		return PlayerUtils.getInstance().getPlayerMeta(player, str);
 	}
 
 	/**

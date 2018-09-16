@@ -297,6 +297,14 @@ public class RewardEditGUI {
 				plugin.reload();
 			}
 		});
+		
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cEdit items")) {
+			
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIItems(player, reward);
+			}
+		});
 
 		inv.sort();
 		inv.openInventory(player);

@@ -126,7 +126,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 							.request(clickEvent.getPlayer());
 				}
 			});
-		}
+		} 
 	}
 
 	/**

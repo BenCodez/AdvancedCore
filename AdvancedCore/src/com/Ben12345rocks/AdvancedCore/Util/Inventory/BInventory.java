@@ -648,6 +648,10 @@ public class BInventory implements Listener {
 	public void setMeta(Player player, String str, Object ob) {
 		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
 	}
+	
+	public Object getMeta(Player player, String str) {
+		return PlayerUtils.getInstance().getPlayerMeta(player, str);
+	}
 
 	/**
 	 * @param nextItem
