@@ -107,6 +107,9 @@ public abstract class EditGUIButton extends BInventoryButton {
 						public void onInput(Player player, String add) {
 							@SuppressWarnings("unchecked")
 							ArrayList<String> list = (ArrayList<String>) getData("Value");
+							if (list == null) {
+								list = new ArrayList<String>();
+							}
 							list.add(add);
 							setValue(player, value);
 							sendMessage(player, "&cAdded " + add + " to " + getKey());
