@@ -2,9 +2,11 @@ package com.Ben12345rocks.AdvancedCore.Util.ValueRequest;
 
 import java.util.LinkedHashMap;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.Listener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
@@ -33,7 +35,13 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, String value) {
-				listener.onInput(player, value);
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						listener.onInput(player, value);
+					}
+				});
 			}
 		};
 		stringItemOptions = options;
@@ -44,7 +52,13 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, boolean value) {
-				listener.onInput(player, value);
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						listener.onInput(player, value);
+					}
+				});
 			}
 		};
 	}
@@ -54,7 +68,13 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, Number value) {
-				listener.onInput(player, value);
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						listener.onInput(player, value);
+					}
+				});
 			}
 		};
 		numberItemOptions = options;
@@ -65,7 +85,13 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, Number value) {
-				listener.onInput(player, value);
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						listener.onInput(player, value);
+					}
+				});
 			}
 		};
 		numberOptions = options;
@@ -76,7 +102,13 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, String value) {
-				listener.onInput(player, value);
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						listener.onInput(player, value);
+					}
+				});
 			}
 		};
 		stringOptions = options;

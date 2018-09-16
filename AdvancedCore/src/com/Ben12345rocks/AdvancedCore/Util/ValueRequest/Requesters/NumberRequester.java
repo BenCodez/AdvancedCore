@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.conversations.Conversable;
 import org.bukkit.conversations.ConversationContext;
@@ -185,7 +186,13 @@ public class NumberRequester {
 						String num = input;
 						try {
 							Number number = Double.valueOf(num);
-							listener.onInput((Player) conversable, number);
+							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+								@Override
+								public void run() {
+									listener.onInput((Player) conversable, number);
+								}
+							});
 						} catch (NumberFormatException ex) {
 							ex.printStackTrace();
 						}
