@@ -71,11 +71,6 @@ public class ItemBuilder {
 					material = Material.STONE;
 					AdvancedCoreHook.getInstance().getPlugin().getLogger()
 							.warning("Invalid material: " + data.getString("Material"));
-					try {
-						material = Material.valueOf(data.getName());
-					} catch (Exception ex) {
-						AdvancedCoreHook.getInstance().debug(ex);
-					}
 					validMaterial = false;
 					lore.add("&cInvalid material: " + material);
 				}
