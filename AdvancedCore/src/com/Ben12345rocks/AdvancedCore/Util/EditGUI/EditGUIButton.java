@@ -106,7 +106,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 						@Override
 						public void onInput(Player player, String add) {
 							@SuppressWarnings("unchecked")
-							ArrayList<String> list = (ArrayList<String>) getData("Value");
+							ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
 							if (list == null) {
 								list = new ArrayList<String>();
 							}
@@ -125,7 +125,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 					new ValueRequestBuilder(new Listener<String>() {
 						@Override
 						public void onInput(Player player, String add) {
-							ArrayList<String> list = (ArrayList<String>) getData("Value");
+							ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
 							list.remove(add);
 							setValue(player, value);
 							sendMessage(player, "&cRemoved " + add + " from " + getKey());
