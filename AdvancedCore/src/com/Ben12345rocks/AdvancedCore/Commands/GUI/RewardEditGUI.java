@@ -311,35 +311,6 @@ public class RewardEditGUI {
 	}
 
 	/**
-	 * Open reward GUI basic.
-	 *
-	 * @param player
-	 *            the player
-	 * @param reward
-	 *            the reward
-	 */
-	public void openRewardGUIBasic(Player player, Reward reward) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
-			player.sendMessage("You do not have enough permission to do this");
-			return;
-		}
-		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
-		setCurrentReward(player, reward);
-
-		inv.addButton(inv.getNextSlot(),
-				new BInventoryButton("Edit Items", new String[] {}, new ItemStack(Material.STONE)) {
-
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						Reward reward = getCurrentReward(player);
-						openRewardGUIItems(clickEvent.getPlayer(), reward);
-					}
-				});
-
-		inv.openInventory(player);
-	}
-
-	/**
 	 * Open reward GUI items.
 	 *
 	 * @param player
