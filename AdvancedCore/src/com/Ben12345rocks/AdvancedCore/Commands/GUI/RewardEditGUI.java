@@ -476,8 +476,12 @@ public class RewardEditGUI {
 			if (reward.getItems().size() > 0) {
 				lore.add("Items:");
 				for (String name : reward.getItems()) {
-					ItemStack item = reward.getItemStack(UserManager.getInstance().getUser(player), name);
-					lore.add(item.getType().toString() + ":" + item.getData().getData() + " " + item.getAmount());
+					try {
+						ItemStack item = reward.getItemStack(UserManager.getInstance().getUser(player), name);
+						lore.add(item.getType().toString() + ":" + item.getData().getData() + " " + item.getAmount());
+					} catch (Exception e) {
+						lore.add("&cInvalid item " + name);
+					}
 				}
 			}
 

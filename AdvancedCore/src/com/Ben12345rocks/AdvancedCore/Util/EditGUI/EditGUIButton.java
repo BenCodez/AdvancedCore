@@ -90,7 +90,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 				public void onInput(Player player, String value) {
 					setValue(player, value);
 				}
-			}, ArrayUtils.getInstance().convert(options)).currentValue(value.toString())
+			}, ArrayUtils.getInstance().convert(options)).currentValue(value.toString()).allowCustomOption(true)
 					.request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.LIST)) {
 			BInventory inv = new BInventory("Edit list: " + key);
