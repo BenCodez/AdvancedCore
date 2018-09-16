@@ -149,6 +149,17 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report",
+				"Create a zip file to send for debuging") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				ZipCreator.getInstance().createReport();
+				sender.sendMessage("Created Zip File!");
+
+			}
+		});
+
 		cmds.add(
 				new CommandHandler(new String[] { "UserRemove", "(uuid)" }, permPrefix + ".UserRemove", "Remove User") {
 
