@@ -64,12 +64,13 @@ public class ItemBuilder {
 			if (checkChance(chance)) {
 				Material material = Material.STONE;
 				List<String> lore = data.getStringList("Lore");
-				try {
-					material = Material.valueOf(data.getString("Material").toUpperCase());
-				} catch (Exception e) {
+
+				material = Material.getMaterial(data.getString("Material").toUpperCase());
+
+				if (material == null) {
+					material = Material.STONE;
 					AdvancedCoreHook.getInstance().getPlugin().getLogger()
 							.warning("Invalid material: " + data.getString("Material"));
-					AdvancedCoreHook.getInstance().debug(e);
 					try {
 						material = Material.valueOf(data.getName());
 					} catch (Exception ex) {
