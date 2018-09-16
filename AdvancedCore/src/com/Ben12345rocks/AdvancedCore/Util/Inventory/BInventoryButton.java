@@ -11,6 +11,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -60,6 +61,10 @@ public abstract class BInventoryButton {
 
 	public Object getMeta(Player player, String str) {
 		return PlayerUtils.getInstance().getPlayerMeta(player, str);
+	}
+
+	public void sendMessage(Player player, String msg) {
+		player.sendMessage(StringUtils.getInstance().colorize(msg));
 	}
 
 	/**

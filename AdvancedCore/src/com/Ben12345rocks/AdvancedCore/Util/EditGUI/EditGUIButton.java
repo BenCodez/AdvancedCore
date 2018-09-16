@@ -74,6 +74,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 				@Override
 				public void onInput(Player player, boolean value) {
 					setValue(player, value);
+					sendMessage(player, "&cSetting " + getKey() + " to " + value);
 				}
 			}).currentValue(value.toString()).request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.NUMBER)) {
@@ -81,6 +82,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 				@Override
 				public void onInput(Player player, Number number) {
 					setValue(player, number.doubleValue());
+					sendMessage(player, "&cSetting " + getKey() + " to " + value);
 				}
 			}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) value }).currentValue(value.toString())
 					.request(clickEvent.getPlayer());
@@ -89,6 +91,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 				@Override
 				public void onInput(Player player, String value) {
 					setValue(player, value);
+					sendMessage(player, "&cSetting " + getKey() + " to " + value);
 				}
 			}, ArrayUtils.getInstance().convert(options)).currentValue(value.toString()).allowCustomOption(true)
 					.request(clickEvent.getPlayer());
@@ -106,6 +109,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 							ArrayList<String> list = (ArrayList<String>) getData("Value");
 							list.add(add);
 							setValue(player, value);
+							sendMessage(player, "&cAdded " + add + " to " + getKey());
 						}
 					}, new String[] {}).request(clickEvent.getPlayer());
 				}
@@ -121,12 +125,13 @@ public abstract class EditGUIButton extends BInventoryButton {
 							ArrayList<String> list = (ArrayList<String>) getData("Value");
 							list.remove(add);
 							setValue(player, value);
+							sendMessage(player, "&cRemoved " + add + " from " + getKey());
 						}
 					}, ArrayUtils.getInstance().convert((ArrayList<String>) getData("Value")))
 							.request(clickEvent.getPlayer());
 				}
 			});
-		} 
+		}
 	}
 
 	/**
