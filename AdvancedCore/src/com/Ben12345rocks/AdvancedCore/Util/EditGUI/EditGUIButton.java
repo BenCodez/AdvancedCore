@@ -17,6 +17,7 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.Listener;
 public abstract class EditGUIButton extends BInventoryButton {
 
 	private String key;
+
 	/**
 	 * @return the key
 	 */
@@ -25,7 +26,8 @@ public abstract class EditGUIButton extends BInventoryButton {
 	}
 
 	/**
-	 * @param key the key to set
+	 * @param key
+	 *            the key to set
 	 */
 	public void setKey(String key) {
 		this.key = key;
@@ -33,6 +35,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 
 	private Object value;
 
+	@SuppressWarnings("unchecked")
 	public EditGUIButton(ItemBuilder item, String key, Object value, EditGUIValueType type) {
 		super(item);
 		setValueType(type);
@@ -40,8 +43,10 @@ public abstract class EditGUIButton extends BInventoryButton {
 		this.value = value;
 		if (!type.equals(EditGUIValueType.LIST)) {
 			getBuilder().setName("&cSet " + type.toString() + " for " + key);
+			getBuilder().addLoreLine("&cCurrent value: " + value);
 		} else {
 			getBuilder().setName("&cEdit list for " + key);
+			getBuilder().addLoreLine(ArrayUtils.getInstance().makeStringList((ArrayList<String>) value));
 		}
 	}
 
@@ -77,7 +82,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 				public void onInput(Player player, Number number) {
 					setValue(player, number.doubleValue());
 				}
-			}, new Number[] { 0, 10, 25, 50, 100, 500, 1000 }).currentValue(value.toString())
+			}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) value }).currentValue(value.toString())
 					.request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.STRING)) {
 			new ValueRequestBuilder(new Listener<String>() {
