@@ -65,7 +65,15 @@ public class ItemBuilder {
 				Material material = Material.STONE;
 				List<String> lore = data.getStringList("Lore");
 
-				material = Material.getMaterial(data.getString("Material").toUpperCase());
+				material = Material.matchMaterial(data.getString("Material").toUpperCase());
+
+				// temp
+				if (material == null) {
+					material = Material.matchMaterial(data.getString("Material"), true);
+					if (material != null) {
+						AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Found legacy material name: " + data.getString("Material") + ", please update this to prevent this message");
+					}
+				}
 
 				if (material == null) {
 					material = Material.STONE;
