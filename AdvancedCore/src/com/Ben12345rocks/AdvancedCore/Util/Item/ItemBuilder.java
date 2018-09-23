@@ -24,7 +24,10 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
@@ -137,6 +140,14 @@ public class ItemBuilder {
 					setSkullOwner(skull);
 				}
 
+				for (String pot : data.getConfigurationSection("Potions").getKeys(false)) {
+					PotionEffectType type = PotionEffectType.getByName(pot);
+					if (type != null) {
+						addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
+								data.getInt("Potions." + pot + ".Amplifier", 1));
+					}
+				}
+
 				setUnbreakable(data.getBoolean("Unbreakable", false));
 
 				slot = data.getInt("Slot", -1);
@@ -176,6 +187,13 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder(Material m, int amount) {
 		is = new ItemStack(m, amount);
+	}
+
+	public ItemBuilder addPotionEffect(PotionEffectType type, int duration, int amplifier) {
+		PotionMeta meta = (PotionMeta) is.getItemMeta();
+		meta.addCustomEffect(new PotionEffect(type, duration, amplifier), false);
+		is.setItemMeta(meta);
+		return this;
 	}
 
 	/**
@@ -475,7 +493,7 @@ public class ItemBuilder {
 	public Collection<AttributeModifier> getAttributeModifiers(Attribute att) {
 		return is.getItemMeta().getAttributeModifiers(att);
 	}
-	
+
 	public boolean hasAttributes() {
 		return is.getItemMeta().hasAttributeModifiers();
 	}

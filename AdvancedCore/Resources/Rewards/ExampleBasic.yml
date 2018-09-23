@@ -59,6 +59,11 @@ Items:
     Enchants:
       DURABILITY: 1
       
+    # Potions:
+      # SPEED:
+        # Duration: 20
+        # Amplifier: 1
+      
 # Amount of money to give, requires vault
 # Use 0 to give none
 # Money is not per world
