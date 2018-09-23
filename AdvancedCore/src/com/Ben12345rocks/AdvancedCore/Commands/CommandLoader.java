@@ -172,16 +172,6 @@ public class CommandLoader {
 					}
 				});
 
-		cmds.add(new CommandHandler(new String[] { "Rewards", "(Reward)" }, permPrefix + ".RewardEdit",
-				"Open GUI Reward", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				RewardEditGUI.getInstance().openRewardGUI((Player) sender,
-						RewardHandler.getInstance().getReward(args[1]));
-			}
-		});
-
 		cmds.add(new CommandHandler(new String[] { "ClearCache" }, permPrefix + ".ClearCache", "Clear MySQL Cache") {
 
 			@Override
