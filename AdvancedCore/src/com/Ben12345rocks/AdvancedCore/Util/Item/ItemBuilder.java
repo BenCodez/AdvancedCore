@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Item;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,6 +15,8 @@ import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -27,6 +30,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.google.common.collect.Multimap;
 
 /**
  * Easily create itemstacks, without messing your hands.
@@ -71,7 +75,8 @@ public class ItemBuilder {
 				if (material == null) {
 					material = Material.matchMaterial(data.getString("Material"), true);
 					if (material != null) {
-						AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Found legacy material name: " + data.getString("Material") + ", please update this to prevent this message");
+						AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Found legacy material name: "
+								+ data.getString("Material") + ", please update this to prevent this message");
 					}
 				}
 
@@ -454,6 +459,25 @@ public class ItemBuilder {
 		im.setLore(lore);
 		is.setItemMeta(im);
 		return this;
+	}
+
+	public ItemBuilder addAttributeModifier(Attribute att, AttributeModifier modifier) {
+		ItemMeta im = is.getItemMeta();
+		im.addAttributeModifier(att, modifier);
+		is.setItemMeta(im);
+		return this;
+	}
+
+	public Multimap<Attribute, AttributeModifier> getAttributeModifiers() {
+		return is.getItemMeta().getAttributeModifiers();
+	}
+
+	public Collection<AttributeModifier> getAttributeModifiers(Attribute att) {
+		return is.getItemMeta().getAttributeModifiers(att);
+	}
+	
+	public boolean hasAttributes() {
+		return is.getItemMeta().hasAttributeModifiers();
 	}
 
 	/**
