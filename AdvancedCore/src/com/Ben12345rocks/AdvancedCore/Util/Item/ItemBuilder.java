@@ -146,6 +146,9 @@ public class ItemBuilder {
 						if (type != null) {
 							addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
 									data.getInt("Potions." + pot + ".Amplifier", 1));
+						} else {
+							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+									.warning("Invalid potion effect type: " + pot);
 						}
 					}
 				}
