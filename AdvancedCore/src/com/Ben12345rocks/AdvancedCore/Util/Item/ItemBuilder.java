@@ -140,11 +140,13 @@ public class ItemBuilder {
 					setSkullOwner(skull);
 				}
 
-				for (String pot : data.getConfigurationSection("Potions").getKeys(false)) {
-					PotionEffectType type = PotionEffectType.getByName(pot);
-					if (type != null) {
-						addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
-								data.getInt("Potions." + pot + ".Amplifier", 1));
+				if (data.isConfigurationSection("Potions")) {
+					for (String pot : data.getConfigurationSection("Potions").getKeys(false)) {
+						PotionEffectType type = PotionEffectType.getByName(pot);
+						if (type != null) {
+							addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
+									data.getInt("Potions." + pot + ".Amplifier", 1));
+						}
 					}
 				}
 
