@@ -95,7 +95,7 @@ public class UserManager {
 
 	public String getProperName(String name) {
 
-		for (String s : plugin.getUuids().keySet()) {
+		for (String s : plugin.getUuidNameCache().values()) {
 			if (s.equalsIgnoreCase(name)) {
 				return s;
 			}
@@ -194,7 +194,7 @@ public class UserManager {
 			return exist;
 		}
 
-		for (String s : plugin.getUuids().keySet()) {
+		for (String s : plugin.getUuidNameCache().values()) {
 			if (s.equalsIgnoreCase(name)) {
 				// plugin.extraDebug("Found " + name + " loaded in uuid map");
 				return true;

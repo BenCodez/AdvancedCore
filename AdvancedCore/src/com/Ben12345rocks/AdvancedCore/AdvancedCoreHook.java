@@ -72,7 +72,7 @@ public class AdvancedCoreHook {
 		return instance;
 	}
 
-	private ConcurrentHashMap<String, String> uuids;
+	private ConcurrentHashMap<String, String> uuidNameCache;
 
 	private SignMenu signMenu;
 	private JavaPlugin plugin;
@@ -387,8 +387,8 @@ public class AdvancedCoreHook {
 		return UserManager.getInstance();
 	}
 
-	public ConcurrentHashMap<String, String> getUuids() {
-		return uuids;
+	public ConcurrentHashMap<String, String> getUuidNameCache() {
+		return uuidNameCache;
 	}
 
 	/**
@@ -736,7 +736,7 @@ public class AdvancedCoreHook {
 					@Override
 					public void reload() {
 						ArrayList<String> players = new ArrayList<String>();
-						for (String name : AdvancedCoreHook.getInstance().getUuids().keySet()) {
+						for (String name : AdvancedCoreHook.getInstance().getUuidNameCache().values()) {
 							if (!players.contains(name)) {
 								players.add(name);
 							}
@@ -777,7 +777,7 @@ public class AdvancedCoreHook {
 			@Override
 			public void reload() {
 				ArrayList<String> uuids = new ArrayList<String>();
-				for (String name : AdvancedCoreHook.getInstance().getUuids().values()) {
+				for (String name : AdvancedCoreHook.getInstance().getUuidNameCache().keySet()) {
 					if (!uuids.contains(name)) {
 						uuids.add(name);
 					}
@@ -859,7 +859,7 @@ public class AdvancedCoreHook {
 
 	private void loadUUIDs() {
 
-		uuids = new ConcurrentHashMap<String, String>();
+		uuidNameCache = new ConcurrentHashMap<String, String>();
 
 		addUserStartup(new UserStartup() {
 
@@ -879,7 +879,7 @@ public class AdvancedCoreHook {
 				String uuid = user.getUUID();
 				String name = user.getData().getString("PlayerName");
 				boolean add = true;
-				if (uuids.containsValue(uuid)) {
+				if (uuidNameCache.containsKey(uuid)) {
 					debug("Duplicate uuid? " + uuid);
 				}
 
@@ -887,7 +887,7 @@ public class AdvancedCoreHook {
 					debug("Invalid player name: " + uuid);
 					add = false;
 				} else {
-					if (uuids.containsKey(name)) {
+					if (uuidNameCache.containsValue(name)) {
 						debug("Duplicate player name?" + name);
 					}
 				}
@@ -916,7 +916,7 @@ public class AdvancedCoreHook {
 				}
 
 				if (add) {
-					uuids.put(name, uuid);
+					uuidNameCache.put(uuid, name);
 				}
 			}
 		});

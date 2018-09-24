@@ -71,7 +71,8 @@ public class PlayerJoinEvent implements Listener {
 						user.setLastOnline(System.currentTimeMillis());
 						user.updateName();
 					}
-					AdvancedCoreHook.getInstance().getUuids().put(player.getName(), player.getUniqueId().toString());
+					AdvancedCoreHook.getInstance().getUuidNameCache().put(player.getUniqueId().toString(),
+							player.getName());
 
 				}
 			}

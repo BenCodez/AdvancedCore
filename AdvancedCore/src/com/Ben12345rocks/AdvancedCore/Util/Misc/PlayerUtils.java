@@ -76,8 +76,8 @@ public class PlayerUtils {
 			return "";
 		}
 
-		if (plugin.getUuids().containsValue(uuid)) {
-			for (Entry<String, String> entry : plugin.getUuids().entrySet()) {
+		if (plugin.getUuidNameCache().containsKey(uuid)) {
+			for (Entry<String, String> entry : plugin.getUuidNameCache().entrySet()) {
 				if (entry.getValue().equals(uuid)) {
 					String n = entry.getKey();
 					if (n != null && !n.isEmpty() && !n.equalsIgnoreCase("Error getting name")) {
@@ -156,16 +156,11 @@ public class PlayerUtils {
 	}
 
 	private String getUUIDLookup(String playerName) {
-		ConcurrentHashMap<String, String> uuids = plugin.getUuids();
+		ConcurrentHashMap<String, String> uuids = plugin.getUuidNameCache();
 		if (uuids != null) {
-			String uuid = uuids.get(playerName);
-			if (uuid != null) {
-				return uuid;
-			} else {
-				for (Entry<String, String> entry : uuids.entrySet()) {
-					if (entry.getKey().equalsIgnoreCase(playerName)) {
-						return entry.getValue();
-					}
+			for (Entry<String, String> entry : uuids.entrySet()) {
+				if (entry.getValue().equalsIgnoreCase(playerName)) {
+					return entry.getKey();
 				}
 			}
 		}
@@ -174,7 +169,7 @@ public class PlayerUtils {
 			User user = UserManager.getInstance().getUser(new UUID(uuid));
 			String name = user.getData().getString("PlayerName");
 			if (name.equals(playerName)) {
-				plugin.getUuids().put(playerName, uuid);
+				plugin.getUuidNameCache().put(uuid, playerName);
 				return uuid;
 			}
 		}
