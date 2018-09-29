@@ -59,7 +59,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.PluginMessage.PluginMessage;
 import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
-import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
+import com.Ben12345rocks.AdvancedCore.Util.Updater.UpdateDownloader;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 import net.milkbowl.vault.economy.Economy;
@@ -150,7 +150,7 @@ public class AdvancedCoreHook {
 			@Override
 			public void run() {
 				if (isAutoDownload() && getResourceId() != 0) {
-					SpigetUpdater.getInstance().checkAutoDownload(getPlugin(), getResourceId());
+					UpdateDownloader.getInstance().checkAutoDownload(getPlugin(), getResourceId());
 				}
 			}
 		});

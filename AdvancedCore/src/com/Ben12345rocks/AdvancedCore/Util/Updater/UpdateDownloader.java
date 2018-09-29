@@ -13,15 +13,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 
-public class SpigetUpdater {
+public class UpdateDownloader {
 
-	private static SpigetUpdater instance = new SpigetUpdater();
+	private static UpdateDownloader instance = new UpdateDownloader();
 
-	public static SpigetUpdater getInstance() {
+	public static UpdateDownloader getInstance() {
 		return instance;
 	}
 
-	private SpigetUpdater() {
+	private UpdateDownloader() {
 	}
 
 	public void checkAutoDownload(JavaPlugin plugin, int resourceId) {
@@ -46,7 +46,7 @@ public class SpigetUpdater {
 		}
 	}
 
-	public void download(URL url, File target) throws IOException {
+	private void download(URL url, File target) throws IOException {
 		target.getParentFile().mkdirs();
 		target.createNewFile();
 		ReadableByteChannel rbc = Channels.newChannel(url.openStream());

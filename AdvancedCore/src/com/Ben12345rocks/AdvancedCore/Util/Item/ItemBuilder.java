@@ -232,9 +232,7 @@ public class ItemBuilder {
 		}
 		HashMap<Enchantment, Integer> enchantments = new HashMap<Enchantment, Integer>();
 		for (String enchant : enchants.keySet()) {
-			enchantments.put(
-					Enchantment.getByKey(new NamespacedKey(AdvancedCoreHook.getInstance().getPlugin(), enchant)),
-					enchants.get(enchant));
+			enchantments.put(Enchantment.getByKey(NamespacedKey.minecraft(enchant)), enchants.get(enchant));
 		}
 		return addEnchantments(enchantments);
 	}

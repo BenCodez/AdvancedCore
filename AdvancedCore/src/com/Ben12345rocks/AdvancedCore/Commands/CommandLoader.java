@@ -26,7 +26,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Updater.SpigetUpdater;
+import com.Ben12345rocks.AdvancedCore.Util.Updater.UpdateDownloader;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
@@ -205,7 +205,7 @@ public class CommandLoader {
 				public void execute(CommandSender sender, String[] args) {
 					sender.sendMessage(StringUtils.getInstance().colorize(
 							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
-					SpigetUpdater.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
+					UpdateDownloader.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
 							AdvancedCoreHook.getInstance().getResourceId());
 					sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
 				}
@@ -221,7 +221,7 @@ public class CommandLoader {
 					if (AdvancedCoreHook.getInstance().isEnableJenkins()) {
 						sender.sendMessage(StringUtils.getInstance().colorize(
 								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
-						SpigetUpdater.getInstance().downloadFromJenkins(AdvancedCoreHook.getInstance().getJenkinsSite(),
+						UpdateDownloader.getInstance().downloadFromJenkins(AdvancedCoreHook.getInstance().getJenkinsSite(),
 								AdvancedCoreHook.getInstance().getPlugin().getName());
 						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
 					} else {
