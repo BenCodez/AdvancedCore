@@ -54,10 +54,9 @@ Items:
     - 'Line 1'
     
     # Enchants
-    # List of 1.10 Encahants can be found at
-    # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/enchantments/Enchantment.html
+    # use vanilla names
     Enchants:
-      DURABILITY: 1
+      unbreaking: 1
       
     # Potions:
       # SPEED:
