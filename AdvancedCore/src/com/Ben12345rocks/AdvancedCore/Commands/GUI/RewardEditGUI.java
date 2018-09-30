@@ -59,14 +59,6 @@ public class RewardEditGUI {
 		return (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 	}
 
-	/**
-	 * Open reward GUI.
-	 *
-	 * @param player
-	 *            the player
-	 * @param rewardName
-	 *            the reward name
-	 */
 	public void openRewardGUI(Player player, Reward reward) {
 		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
@@ -297,9 +289,9 @@ public class RewardEditGUI {
 				plugin.reload();
 			}
 		});
-		
+
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cEdit items")) {
-			
+
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				openRewardGUIItems(player, reward);
