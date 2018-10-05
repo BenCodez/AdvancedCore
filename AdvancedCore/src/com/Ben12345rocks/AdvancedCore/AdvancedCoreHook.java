@@ -192,9 +192,13 @@ public class AdvancedCoreHook {
 	public void debug(Exception e) {
 		if (debug) {
 			e.printStackTrace();
-			loadLogger();
-			if (logger != null && logDebugToFile) {
-				logger.logToFile(e.toString());
+			if (logger != null) {
+				if (logDebugToFile) {
+					String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
+					logger.logToFile(str + " [" + plugin.getName() + "] ExceptionDebug: " + e.getMessage());
+				}
+			} else {
+				loadLogger();
 			}
 		}
 	}
@@ -209,11 +213,14 @@ public class AdvancedCoreHook {
 	 */
 	public void debug(Plugin plug, String msg) {
 		if (debug) {
-			loadLogger();
 			plug.getLogger().info("Debug: " + msg);
-			if (logger != null && logDebugToFile) {
-				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-				logger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
+			if (logger != null) {
+				if (logDebugToFile) {
+					String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
+					logger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
+				}
+			} else {
+				loadLogger();
 			}
 			if (debugIngame) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
@@ -1174,8 +1181,14 @@ public class AdvancedCoreHook {
 	}
 
 	private boolean setupPermissions() {
+		if (plugin.getServer().getPluginManager().getPlugin("Vault") == null) {
+			return false;
+		}
 		RegisteredServiceProvider<Permission> rsp = plugin.getServer().getServicesManager()
 				.getRegistration(Permission.class);
+		if (rsp == null) {
+			return false;
+		}
 		perms = rsp.getProvider();
 		return perms != null;
 		/*
