@@ -140,6 +140,10 @@ public class ItemBuilder {
 					setSkullOwner(skull);
 				}
 
+				if (data.getBoolean("Glow")) {
+					addGlow();
+				}
+
 				if (data.isConfigurationSection("Potions")) {
 					for (String pot : data.getConfigurationSection("Potions").getKeys(false)) {
 						PotionEffectType type = PotionEffectType.getByName(pot);
@@ -235,6 +239,14 @@ public class ItemBuilder {
 			enchantments.put(Enchantment.getByKey(NamespacedKey.minecraft(enchant)), enchants.get(enchant));
 		}
 		return addEnchantments(enchantments);
+	}
+
+	public ItemBuilder addGlow() {
+		ItemMeta meta = is.getItemMeta();
+		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+		is.setItemMeta(meta);
+		is.addUnsafeEnchantment(Enchantment.LUCK, 1);
+		return this;
 	}
 
 	/**

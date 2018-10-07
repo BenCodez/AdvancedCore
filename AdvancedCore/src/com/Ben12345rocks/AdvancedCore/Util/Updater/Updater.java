@@ -114,7 +114,7 @@ public class Updater {
 		try {
 			HttpsURLConnection connection = (HttpsURLConnection) new URL(
 					"https://api.spigotmc.org/legacy/update.php?resource=" + RESOURCE_ID).openConnection();
-			int timed_out = 1250; // check if API is avaible, set your time as you want
+			int timed_out = 1250;
 			connection.setConnectTimeout(timed_out);
 			connection.setReadTimeout(timed_out);
 			this.version = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
@@ -127,21 +127,6 @@ public class Updater {
 		}
 		result = UpdateResult.FAIL_SPIGOT;
 	}
-
-	/*
-	 * private void run() { connection.setDoOutput(true); try {
-	 * connection.setRequestMethod(REQUEST_METHOD);
-	 * connection.getOutputStream().write(WRITE_STRING.getBytes("UTF-8")); } catch
-	 * (ProtocolException e1) { result = UpdateResult.FAIL_SPIGOT; } catch
-	 * (UnsupportedEncodingException e) { result = UpdateResult.FAIL_SPIGOT; } catch
-	 * (IOException e) { result = UpdateResult.FAIL_SPIGOT; } String version; try {
-	 * version = new BufferedReader(new
-	 * InputStreamReader(connection.getInputStream())).readLine(); if (version ==
-	 * null) { result = UpdateResult.FAIL_SPIGOT; return; } } catch (Exception e) {
-	 * result = UpdateResult.BAD_RESOURCEID; return; } if (version.length() <= 7) {
-	 * this.version = version; version.replace("[^A-Za-z]", "").replace("|", "");
-	 * versionCheck(); return; } result = UpdateResult.BAD_RESOURCEID; }
-	 */
 
 	/**
 	 * Should update.
