@@ -212,28 +212,6 @@ public class RewardHandler {
 		return rewards;
 	}
 
-	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				reward.giveReward(user, rewardOptions);
-			}
-		});
-
-	}
-
-	public void giveReward(User user, String reward, RewardOptions rewardOptions) {
-		if (!reward.equals("")) {
-			if (reward.startsWith("/")) {
-				MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward,
-						rewardOptions.getPlaceholders());
-				return;
-			}
-			giveReward(user, getReward(reward), rewardOptions);
-		}
-	}
-
 	@SuppressWarnings("unchecked")
 	public void giveReward(User user, ConfigurationSection data, String path, RewardOptions rewardOptions) {
 		if (data == null) {
@@ -277,6 +255,28 @@ public class RewardHandler {
 
 		} else {
 			giveReward(user, data.getString(path, ""), rewardOptions);
+		}
+	}
+
+	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				reward.giveReward(user, rewardOptions);
+			}
+		});
+
+	}
+
+	public void giveReward(User user, String reward, RewardOptions rewardOptions) {
+		if (!reward.equals("")) {
+			if (reward.startsWith("/")) {
+				MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward,
+						rewardOptions.getPlaceholders());
+				return;
+			}
+			giveReward(user, getReward(reward), rewardOptions);
 		}
 	}
 

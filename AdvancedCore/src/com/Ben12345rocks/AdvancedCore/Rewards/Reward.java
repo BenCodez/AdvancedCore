@@ -1165,7 +1165,7 @@ public class Reward {
 	public void giveRewardUser(User user, HashMap<String, String> phs) {
 		Player player = user.getPlayer();
 		if (player != null || isForceOffline()) {
-			
+
 			// placeholders
 			if (phs == null) {
 				phs = new HashMap<String, String>();
@@ -1180,10 +1180,9 @@ public class Reward {
 			phs.put("money", "" + money);
 			phs.put("exp", "" + exp);
 			phs.put("uuid", user.getUUID());
-			
+
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
-			
-			
+
 			givePriorityReward(user, placeholders);
 			giveRandom(user, true, placeholders);
 			runJavascript(user, true, placeholders);
@@ -1201,7 +1200,7 @@ public class Reward {
 			checkChoiceRewards(user);
 			sendFirework(user);
 			giveLucky(user, placeholders);
-			
+
 			giveRewardsRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);

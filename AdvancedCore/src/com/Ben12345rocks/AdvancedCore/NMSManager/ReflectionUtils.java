@@ -64,7 +64,7 @@ public class ReflectionUtils {
 			return null;
 		}
 	}
-	
+
 	public static int removeModifier(Object fieldOrMethod, int modifierToRemove) {
 		if (!(fieldOrMethod instanceof Field) || !(fieldOrMethod instanceof Method)) {
 			return -1;

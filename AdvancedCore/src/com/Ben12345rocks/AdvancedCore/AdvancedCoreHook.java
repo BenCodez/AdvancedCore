@@ -102,13 +102,6 @@ public class AdvancedCoreHook {
 
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
-	/**
-	 * @return the options
-	 */
-	public AdvancedCoreConfigOptions getOptions() {
-		return options;
-	}
-
 	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
 
 	private AdvancedCoreHook() {
@@ -263,6 +256,13 @@ public class AdvancedCoreHook {
 		return mysql;
 	}
 
+	/**
+	 * @return the options
+	 */
+	public AdvancedCoreConfigOptions getOptions() {
+		return options;
+	}
+
 	public Permission getPerms() {
 		return perms;
 	}
@@ -398,26 +398,6 @@ public class AdvancedCoreHook {
 	private void loadConfig() {
 		getOptions().load();
 		loadUserAPI(getOptions().getStorageType());
-	}
-
-	public void loadVault() {
-		Bukkit.getScheduler().runTaskLater(getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				if (setupEconomy()) {
-					plugin.getLogger().info("Successfully hooked into vault economy!");
-				} else {
-					plugin.getLogger().warning("Failed to hook into vault");
-				}
-
-				if (setupPermissions()) {
-					plugin.getLogger().info("Hooked into vault permissions");
-				} else {
-					plugin.getLogger().warning("Failed to hook into vault permissions");
-				}
-			}
-		}, 5);
 	}
 
 	public void loadEvents() {
@@ -715,6 +695,26 @@ public class AdvancedCoreHook {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void loadVault() {
+		Bukkit.getScheduler().runTaskLater(getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				if (setupEconomy()) {
+					plugin.getLogger().info("Successfully hooked into vault economy!");
+				} else {
+					plugin.getLogger().warning("Failed to hook into vault");
+				}
+
+				if (setupPermissions()) {
+					plugin.getLogger().info("Hooked into vault permissions");
+				} else {
+					plugin.getLogger().warning("Failed to hook into vault permissions");
+				}
+			}
+		}, 5);
 	}
 
 	private void loadVersionFile() {

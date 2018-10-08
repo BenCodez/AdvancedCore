@@ -186,13 +186,14 @@ public class NumberRequester {
 						String num = input;
 						try {
 							Number number = Double.valueOf(num);
-							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(),
+									new Runnable() {
 
-								@Override
-								public void run() {
-									listener.onInput((Player) conversable, number);
-								}
-							});
+										@Override
+										public void run() {
+											listener.onInput((Player) conversable, number);
+										}
+									});
 						} catch (NumberFormatException ex) {
 							ex.printStackTrace();
 						}

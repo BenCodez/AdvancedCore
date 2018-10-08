@@ -106,15 +106,6 @@ public class ZipCreator {
 		fis.close();
 	}
 
-	/**
-	 * Creates the.
-	 */
-	public void createReport() {
-		long time = Calendar.getInstance().getTime().getTime();
-		create(plugin.getPlugin().getDataFolder(), new File(plugin.getPlugin().getDataFolder(),
-				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"));
-	}
-
 	public void create(File directory, File zipFileLocation) {
 		if (zipFileLocation.exists()) {
 			zipFileLocation.delete();
@@ -138,6 +129,15 @@ public class ZipCreator {
 
 		writeZipFile(fileList, zipFileLocation);
 		plugin.debug("---Done");
+	}
+
+	/**
+	 * Creates the.
+	 */
+	public void createReport() {
+		long time = Calendar.getInstance().getTime().getTime();
+		create(plugin.getPlugin().getDataFolder(), new File(plugin.getPlugin().getDataFolder(),
+				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"));
 	}
 
 	private void writeZipFile(List<File> fileList, File zipFile) {

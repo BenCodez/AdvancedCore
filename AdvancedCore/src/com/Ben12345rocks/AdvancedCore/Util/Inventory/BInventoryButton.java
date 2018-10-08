@@ -55,18 +55,6 @@ public abstract class BInventoryButton {
 		return this;
 	}
 
-	public void setMeta(Player player, String str, Object ob) {
-		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
-	}
-
-	public Object getMeta(Player player, String str) {
-		return PlayerUtils.getInstance().getPlayerMeta(player, str);
-	}
-
-	public void sendMessage(Player player, String msg) {
-		player.sendMessage(StringUtils.getInstance().colorize(msg));
-	}
-
 	/**
 	 * @return the builder
 	 */
@@ -108,6 +96,10 @@ public abstract class BInventoryButton {
 		return builder.toItemStack(player);
 	}
 
+	public Object getMeta(Player player, String str) {
+		return PlayerUtils.getInstance().getPlayerMeta(player, str);
+	}
+
 	/**
 	 * Gets the slot.
 	 *
@@ -124,6 +116,10 @@ public abstract class BInventoryButton {
 	 *            the click event
 	 */
 	public abstract void onClick(ClickEvent clickEvent);
+
+	public void sendMessage(Player player, String msg) {
+		player.sendMessage(StringUtils.getInstance().colorize(msg));
+	}
 
 	/**
 	 * @param builder
@@ -145,6 +141,10 @@ public abstract class BInventoryButton {
 	 */
 	public void setItem(ItemStack item) {
 		builder = new ItemBuilder(item);
+	}
+
+	public void setMeta(Player player, String str, Object ob) {
+		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
 	}
 
 	/**

@@ -221,14 +221,6 @@ public class BInventory implements Listener {
 	/** The buttons. */
 	private Map<Integer, BInventoryButton> buttons = new HashMap<Integer, BInventoryButton>();
 
-	/**
-	 * @param buttons
-	 *            the buttons to set
-	 */
-	public void setButtons(Map<Integer, BInventoryButton> buttons) {
-		this.buttons = buttons;
-	}
-
 	private Inventory inv;
 
 	private Player player;
@@ -324,6 +316,10 @@ public class BInventory implements Listener {
 	 */
 	public int getMaxInvSize() {
 		return maxInvSize;
+	}
+
+	public Object getMeta(Player player, String str) {
+		return PlayerUtils.getInstance().getPlayerMeta(player, str);
 	}
 
 	/**
@@ -619,6 +615,14 @@ public class BInventory implements Listener {
 	}
 
 	/**
+	 * @param buttons
+	 *            the buttons to set
+	 */
+	public void setButtons(Map<Integer, BInventoryButton> buttons) {
+		this.buttons = buttons;
+	}
+
+	/**
 	 * Sets the inventory name.
 	 *
 	 * @param inventoryName
@@ -648,10 +652,6 @@ public class BInventory implements Listener {
 	 */
 	public void setMeta(Player player, String str, Object ob) {
 		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
-	}
-
-	public Object getMeta(Player player, String str) {
-		return PlayerUtils.getInstance().getPlayerMeta(player, str);
 	}
 
 	/**

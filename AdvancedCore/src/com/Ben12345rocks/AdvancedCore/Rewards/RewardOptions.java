@@ -17,6 +17,13 @@ public class RewardOptions {
 	private String prefix = "";
 	private String suffix = "";
 
+	public RewardOptions() {
+	}
+
+	public HashMap<String, String> getPlaceholders() {
+		return placeholders;
+	}
+
 	/**
 	 * @return the prefix
 	 */
@@ -25,33 +32,10 @@ public class RewardOptions {
 	}
 
 	/**
-	 * @param prefix
-	 *            the prefix to set
-	 */
-	public void setPrefix(String prefix) {
-		this.prefix = prefix;
-	}
-
-	/**
 	 * @return the suffix
 	 */
 	public String getSuffix() {
 		return suffix;
-	}
-
-	/**
-	 * @param suffix
-	 *            the suffix to set
-	 */
-	public void setSuffix(String suffix) {
-		this.suffix = suffix;
-	}
-
-	public RewardOptions() {
-	}
-
-	public HashMap<String, String> getPlaceholders() {
-		return placeholders;
 	}
 
 	public boolean isCheckTimed() {
@@ -93,6 +77,22 @@ public class RewardOptions {
 	public RewardOptions setPlaceholders(HashMap<String, String> placeholders) {
 		this.placeholders = placeholders;
 		return this;
+	}
+
+	/**
+	 * @param prefix
+	 *            the prefix to set
+	 */
+	public void setPrefix(String prefix) {
+		this.prefix = prefix;
+	}
+
+	/**
+	 * @param suffix
+	 *            the suffix to set
+	 */
+	public void setSuffix(String suffix) {
+		this.suffix = suffix;
 	}
 
 }

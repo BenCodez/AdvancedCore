@@ -198,10 +198,10 @@ public class ItemBuilder {
 		is = new ItemStack(m, amount);
 	}
 
-	public ItemBuilder addPotionEffect(PotionEffectType type, int duration, int amplifier) {
-		PotionMeta meta = (PotionMeta) is.getItemMeta();
-		meta.addCustomEffect(new PotionEffect(type, duration, amplifier), false);
-		is.setItemMeta(meta);
+	public ItemBuilder addAttributeModifier(Attribute att, AttributeModifier modifier) {
+		ItemMeta im = is.getItemMeta();
+		im.addAttributeModifier(att, modifier);
+		is.setItemMeta(im);
 		return this;
 	}
 
@@ -241,14 +241,6 @@ public class ItemBuilder {
 		return addEnchantments(enchantments);
 	}
 
-	public ItemBuilder addGlow() {
-		ItemMeta meta = is.getItemMeta();
-		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-		is.setItemMeta(meta);
-		is.addUnsafeEnchantment(Enchantment.LUCK, 1);
-		return this;
-	}
-
 	/**
 	 * Add multiple enchants at once.
 	 *
@@ -260,6 +252,14 @@ public class ItemBuilder {
 		for (Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
 			addEnchant(entry.getKey(), entry.getValue());
 		}
+		return this;
+	}
+
+	public ItemBuilder addGlow() {
+		ItemMeta meta = is.getItemMeta();
+		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+		is.setItemMeta(meta);
+		is.addUnsafeEnchantment(Enchantment.LUCK, 1);
 		return this;
 	}
 
@@ -314,6 +314,13 @@ public class ItemBuilder {
 
 	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
 		placeholders.put(toReplace, replaceWith);
+		return this;
+	}
+
+	public ItemBuilder addPotionEffect(PotionEffectType type, int duration, int amplifier) {
+		PotionMeta meta = (PotionMeta) is.getItemMeta();
+		meta.addCustomEffect(new PotionEffect(type, duration, amplifier), false);
+		is.setItemMeta(meta);
 		return this;
 	}
 
@@ -388,6 +395,14 @@ public class ItemBuilder {
 		return is.getAmount();
 	}
 
+	public Multimap<Attribute, AttributeModifier> getAttributeModifiers() {
+		return is.getItemMeta().getAttributeModifiers();
+	}
+
+	public Collection<AttributeModifier> getAttributeModifiers(Attribute att) {
+		return is.getItemMeta().getAttributeModifiers(att);
+	}
+
 	public ArrayList<String> getLore() {
 		if (hasCustomLore()) {
 			List<String> lore = is.getItemMeta().getLore();
@@ -441,6 +456,10 @@ public class ItemBuilder {
 		return slot;
 	}
 
+	public boolean hasAttributes() {
+		return is.getItemMeta().hasAttributeModifiers();
+	}
+
 	public boolean hasCustomDisplayName() {
 		if (hasItemMeta()) {
 			return is.getItemMeta().hasDisplayName();
@@ -492,25 +511,6 @@ public class ItemBuilder {
 		im.setLore(lore);
 		is.setItemMeta(im);
 		return this;
-	}
-
-	public ItemBuilder addAttributeModifier(Attribute att, AttributeModifier modifier) {
-		ItemMeta im = is.getItemMeta();
-		im.addAttributeModifier(att, modifier);
-		is.setItemMeta(im);
-		return this;
-	}
-
-	public Multimap<Attribute, AttributeModifier> getAttributeModifiers() {
-		return is.getItemMeta().getAttributeModifiers();
-	}
-
-	public Collection<AttributeModifier> getAttributeModifiers(Attribute att) {
-		return is.getItemMeta().getAttributeModifiers(att);
-	}
-
-	public boolean hasAttributes() {
-		return is.getItemMeta().hasAttributeModifiers();
 	}
 
 	/**

@@ -221,7 +221,8 @@ public class CommandLoader {
 					if (AdvancedCoreHook.getInstance().getOptions().isEnableJenkins()) {
 						sender.sendMessage(StringUtils.getInstance().colorize(
 								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
-						UpdateDownloader.getInstance().downloadFromJenkins(AdvancedCoreHook.getInstance().getJenkinsSite(),
+						UpdateDownloader.getInstance().downloadFromJenkins(
+								AdvancedCoreHook.getInstance().getJenkinsSite(),
 								AdvancedCoreHook.getInstance().getPlugin().getName());
 						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
 					} else {

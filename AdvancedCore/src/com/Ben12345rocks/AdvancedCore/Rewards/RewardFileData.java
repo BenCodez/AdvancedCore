@@ -534,10 +534,6 @@ public class RewardFileData {
 		return (ArrayList<String>) getConfigData().getList("Javascripts", new ArrayList<String>());
 	}
 
-	public void setJavascripts(ArrayList<String> value) {
-		set("Javascripts", value);
-	}
-
 	public String getJavascriptTrueRewardsPath() {
 		return "Javascript.TrueRewards";
 	}
@@ -682,10 +678,6 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getRandomCommand() {
 		return (ArrayList<String>) getConfigData().getList("RandomCommand", new ArrayList<String>());
-	}
-
-	public void setRandomCommand(ArrayList<String> value) {
-		set("RandomCommand", value);
 	}
 
 	public String getRandomFallBackRewardsPath() {
@@ -866,6 +858,10 @@ public class RewardFileData {
 
 	}
 
+	public boolean isDirectlyDefinedReward() {
+		return getConfigData().getBoolean("DirectlyDefinedReward");
+	}
+
 	public boolean isRewardFile() {
 		return dFile != null;
 	}
@@ -894,6 +890,14 @@ public class RewardFileData {
 		} else {
 			plugin.debug("Editing invalid reward: " + reward.getName());
 		}
+	}
+
+	public void setActionBarDelay(int value) {
+		set("ActionBar.Delay", value);
+	}
+
+	public void setActionBarMsg(String value) {
+		set("ActionBar.Message", value);
 	}
 
 	/**
@@ -930,6 +934,11 @@ public class RewardFileData {
 		this.configData = configData;
 	}
 
+	/*
+	 * public void setData(ConfigurationSection value) { getFileData().set("",
+	 * value); reward.loadValues(); }
+	 */
+
 	public void setData(ConfigurationSection value) {
 		// getFileData().set("", value);
 		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
@@ -939,10 +948,9 @@ public class RewardFileData {
 		reward.loadValues();
 	}
 
-	/*
-	 * public void setData(ConfigurationSection value) { getFileData().set("",
-	 * value); reward.loadValues(); }
-	 */
+	public void setDirectlyDefinedReward(boolean b) {
+		set("DirectlyDefinedReward", b);
+	}
 
 	/**
 	 * Sets the exp.
@@ -1074,6 +1082,10 @@ public class RewardFileData {
 		set("Items." + item + ".Name", value);
 	}
 
+	public void setJavascripts(ArrayList<String> value) {
+		set("Javascripts", value);
+	}
+
 	/**
 	 * Sets the max exp.
 	 *
@@ -1178,6 +1190,14 @@ public class RewardFileData {
 		set("Potions." + potion + ".Duration", value);
 	}
 
+	public void setPriority(ArrayList<String> value) {
+		set("Priority", value);
+	}
+
+	public void setRandomCommand(ArrayList<String> value) {
+		set("RandomCommand", value);
+	}
+
 	/**
 	 * Sets the require permission.
 	 *
@@ -1223,26 +1243,6 @@ public class RewardFileData {
 	 */
 	public void setWorlds(ArrayList<String> value) {
 		set("Worlds", value);
-	}
-
-	public void setDirectlyDefinedReward(boolean b) {
-		set("DirectlyDefinedReward", b);
-	}
-
-	public boolean isDirectlyDefinedReward() {
-		return getConfigData().getBoolean("DirectlyDefinedReward");
-	}
-
-	public void setPriority(ArrayList<String> value) {
-		set("Priority", value);
-	}
-
-	public void setActionBarMsg(String value) {
-		set("ActionBar.Message", value);
-	}
-
-	public void setActionBarDelay(int value) {
-		set("ActionBar.Delay", value);
 	}
 
 }

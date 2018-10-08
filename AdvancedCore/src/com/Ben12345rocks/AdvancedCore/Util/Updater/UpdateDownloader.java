@@ -25,7 +25,8 @@ public class UpdateDownloader {
 	}
 
 	public void checkAutoDownload(JavaPlugin plugin, int resourceId) {
-		Updater updater = new Updater(plugin, resourceId, !AdvancedCoreHook.getInstance().getOptions().isAutoDownload());
+		Updater updater = new Updater(plugin, resourceId,
+				!AdvancedCoreHook.getInstance().getOptions().isAutoDownload());
 		switch (updater.getResult()) {
 		case UPDATE_AVAILABLE:
 			plugin.getLogger()

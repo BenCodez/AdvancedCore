@@ -172,13 +172,14 @@ public class StringRequester {
 
 					@Override
 					public void onInput(ConversationContext context, Conversable conversable, String input) {
-						Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+						Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(),
+								new Runnable() {
 
-							@Override
-							public void run() {
-								listener.onInput((Player) conversable, input);
-							}
-						});
+									@Override
+									public void run() {
+										listener.onInput((Player) conversable, input);
+									}
+								});
 
 					}
 				});

@@ -18,22 +18,11 @@ public abstract class EditGUIButton extends BInventoryButton {
 
 	private String key;
 
-	/**
-	 * @return the key
-	 */
-	public String getKey() {
-		return key;
-	}
-
-	/**
-	 * @param key
-	 *            the key to set
-	 */
-	public void setKey(String key) {
-		this.key = key;
-	}
-
 	private Object value;
+
+	private EditGUIValueType type;
+
+	private ArrayList<String> options = new ArrayList<String>();
 
 	@SuppressWarnings("unchecked")
 	public EditGUIButton(ItemBuilder item, String key, Object value, EditGUIValueType type) {
@@ -50,20 +39,18 @@ public abstract class EditGUIButton extends BInventoryButton {
 		}
 	}
 
-	private EditGUIValueType type;
-
-	public EditGUIButton setValueType(EditGUIValueType type) {
-		this.type = type;
-		return this;
+	/**
+	 * @return the key
+	 */
+	public String getKey() {
+		return key;
 	}
 
-	private ArrayList<String> options = new ArrayList<String>();
-
-	public EditGUIButton setOptions(String... str) {
-		for (String s : str) {
-			options.add(s);
-		}
-		return this;
+	/**
+	 * @return the type
+	 */
+	public EditGUIValueType getType() {
+		return type;
 	}
 
 	@Override
@@ -139,10 +126,18 @@ public abstract class EditGUIButton extends BInventoryButton {
 	}
 
 	/**
-	 * @return the type
+	 * @param key
+	 *            the key to set
 	 */
-	public EditGUIValueType getType() {
-		return type;
+	public void setKey(String key) {
+		this.key = key;
+	}
+
+	public EditGUIButton setOptions(String... str) {
+		for (String s : str) {
+			options.add(s);
+		}
+		return this;
 	}
 
 	/**
@@ -154,5 +149,10 @@ public abstract class EditGUIButton extends BInventoryButton {
 	}
 
 	public abstract void setValue(Player player, Object value);
+
+	public EditGUIButton setValueType(EditGUIValueType type) {
+		this.type = type;
+		return this;
+	}
 
 }
