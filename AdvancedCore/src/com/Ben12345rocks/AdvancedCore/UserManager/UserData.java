@@ -251,7 +251,7 @@ public class UserData {
 			AdvancedCoreHook.getInstance().debug("No key/value: " + key + " to " + value);
 			return;
 		}
-		if (AdvancedCoreHook.getInstance().isExtraDebug()) {
+		if (AdvancedCoreHook.getInstance().getOptions().isExtraDebug()) {
 			AdvancedCoreHook.getInstance()
 					.debug("Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "'");
 		}

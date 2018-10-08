@@ -198,7 +198,7 @@ public class CommandLoader {
 			}
 		});
 
-		if (AdvancedCoreHook.getInstance().getResourceId() != 0) {
+		if (AdvancedCoreHook.getInstance().getOptions().getResourceId() != 0) {
 			cmds.add(new CommandHandler(new String[] { "Download" }, permPrefix + ".Download", "Download from spigot") {
 
 				@Override
@@ -206,7 +206,7 @@ public class CommandLoader {
 					sender.sendMessage(StringUtils.getInstance().colorize(
 							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
 					UpdateDownloader.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
-							AdvancedCoreHook.getInstance().getResourceId());
+							AdvancedCoreHook.getInstance().getOptions().getResourceId());
 					sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
 				}
 			});
@@ -218,7 +218,7 @@ public class CommandLoader {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					if (AdvancedCoreHook.getInstance().isEnableJenkins()) {
+					if (AdvancedCoreHook.getInstance().getOptions().isEnableJenkins()) {
 						sender.sendMessage(StringUtils.getInstance().colorize(
 								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
 						UpdateDownloader.getInstance().downloadFromJenkins(AdvancedCoreHook.getInstance().getJenkinsSite(),

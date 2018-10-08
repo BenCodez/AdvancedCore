@@ -326,7 +326,7 @@ public class PlayerUtils {
 			return userExist;
 		}
 
-		if (AdvancedCoreHook.getInstance().isCheckNameMojang()) {
+		if (AdvancedCoreHook.getInstance().getOptions().isCheckNameMojang()) {
 			// plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 			if (p.hasPlayedBefore()) {

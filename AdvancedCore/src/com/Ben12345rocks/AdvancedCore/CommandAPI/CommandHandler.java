@@ -194,7 +194,7 @@ public abstract class CommandHandler {
 	 * @return the help line
 	 */
 	public TextComponent getHelpLine(String command) {
-		String line = plugin.getHelpLine();
+		String line = plugin.getOptions().getHelpLine();
 
 		String commandText = getHelpLineCommand(command);
 		line = line.replace("%Command%", commandText);
@@ -357,7 +357,7 @@ public abstract class CommandHandler {
 				if (this.args[i].equalsIgnoreCase("(number)")) {
 					if (!ignoreNumberCheck && !StringUtils.getInstance().isInt(args[i])) {
 						sender.sendMessage(StringUtils.getInstance()
-								.colorize(plugin.getFormatNotNumber().replace("%arg%", args[i])));
+								.colorize(plugin.getOptions().getFormatNotNumber().replace("%arg%", args[i])));
 						return true;
 					}
 				} else if (this.args[i].equalsIgnoreCase("Player")) {
@@ -374,7 +374,7 @@ public abstract class CommandHandler {
 			}
 
 			if (!hasPerm(sender)) {
-				sender.sendMessage(StringUtils.getInstance().colorize(plugin.getFormatNoPerms()));
+				sender.sendMessage(StringUtils.getInstance().colorize(plugin.getOptions().getFormatNoPerms()));
 				plugin.getPlugin().getLogger().log(Level.INFO,
 						sender.getName() + " was denied access to command, required permission: " + perm);
 				return true;

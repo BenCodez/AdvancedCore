@@ -77,34 +77,19 @@ public class AdvancedCoreHook {
 	private SignMenu signMenu;
 	private JavaPlugin plugin;
 	private boolean placeHolderAPIEnabled;
+
 	private boolean timerLoaded = false;
-	private boolean debug = false;
-	private boolean debugIngame = false;
-	private boolean logDebugToFile = true;
-	private String defaultRequestMethod = "ANVIL";
-	private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
-	private String formatNoPerms = "&cYou do not have enough permission!";
-	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
-	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	private Database database;
 	private MySQL mysql;
-	private UserStorage storageType = UserStorage.SQLITE;
-	private String permPrefix;
+
 	private IServerHandle serverHandle;
 	private Logger logger;
-	private boolean sendScoreboards = true;
-	private int resourceId = 0;
-	private boolean extraDebug = false;
-	private boolean disableCheckOnWorldChange = false;
+
 	private Timer timer = new Timer();
-	private boolean autoDownload = false;
+
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
 	private String version = "";
 	private String buildTime = "";
-	private boolean autoKillInvs = true;
-	private String prevPageTxt = "&aPrevious Page";
-	private String nextPageTxt = "&aNext Page";
-	private boolean checkNameMojang = false;
 
 	private String jenkinsSite = "";
 
@@ -115,23 +100,16 @@ public class AdvancedCoreHook {
 
 	private Permission perms;
 
-	private boolean alternateUUIDLookUp;
+	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
-	private boolean purgeOldData = false;
-
-	private int purgeMinimumDays = 90;
-
-	private ConfigurationSection configData;
+	/**
+	 * @return the options
+	 */
+	public AdvancedCoreConfigOptions getOptions() {
+		return options;
+	}
 
 	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
-
-	private String formatInvFull;
-
-	private int timeHourOffSet = 0;
-
-	private boolean createBackups = true;
-
-	private boolean enableJenkins;
 
 	private AdvancedCoreHook() {
 	}
@@ -141,7 +119,7 @@ public class AdvancedCoreHook {
 	}
 
 	public void allowDownloadingFromSpigot(int resourceId) {
-		this.resourceId = resourceId;
+		getOptions().setResourceId(resourceId);
 	}
 
 	private void checkAutoUpdate() {
@@ -149,8 +127,8 @@ public class AdvancedCoreHook {
 
 			@Override
 			public void run() {
-				if (isAutoDownload() && getResourceId() != 0) {
-					UpdateDownloader.getInstance().checkAutoDownload(getPlugin(), getResourceId());
+				if (getOptions().isAutoDownload() && getOptions().getResourceId() != 0) {
+					UpdateDownloader.getInstance().checkAutoDownload(getPlugin(), getOptions().getResourceId());
 				}
 			}
 		});
@@ -190,10 +168,10 @@ public class AdvancedCoreHook {
 	 *            Exception
 	 */
 	public void debug(Exception e) {
-		if (debug) {
+		if (getOptions().isDebug()) {
 			e.printStackTrace();
 			if (logger != null) {
-				if (logDebugToFile) {
+				if (getOptions().isLogDebugToFile()) {
 					String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
 					logger.logToFile(str + " [" + plugin.getName() + "] ExceptionDebug: " + e.getMessage());
 				}
@@ -212,17 +190,17 @@ public class AdvancedCoreHook {
 	 *            Debug message
 	 */
 	public void debug(Plugin plug, String msg) {
-		if (debug) {
+		if (getOptions().isDebug()) {
 			plug.getLogger().info("Debug: " + msg);
 			if (logger != null) {
-				if (logDebugToFile) {
+				if (getOptions().isLogDebugToFile()) {
 					String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
 					logger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
 				}
 			} else {
 				loadLogger();
 			}
-			if (debugIngame) {
+			if (getOptions().isDebugIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (player.hasPermission(plugin.getName() + ".Debug")) {
 						player.sendMessage(
@@ -244,53 +222,19 @@ public class AdvancedCoreHook {
 	}
 
 	public void extraDebug(Plugin plug, String msg) {
-		if (extraDebug) {
+		if (getOptions().isExtraDebug()) {
 			debug(plug, "[Extra] " + msg);
 		}
 	}
 
 	public void extraDebug(String msg) {
-		if (extraDebug) {
+		if (getOptions().isExtraDebug()) {
 			debug(plugin, "[Extra] " + msg);
 		}
 	}
 
-	/**
-	 * @return the configData
-	 */
-	public ConfigurationSection getConfigData() {
-		return configData;
-	}
-
-	public String getDefaultRequestMethod() {
-		return defaultRequestMethod;
-	}
-
-	public ArrayList<String> getDisabledRequestMethods() {
-		return disabledRequestMethods;
-	}
-
 	public Economy getEcon() {
 		return econ;
-	}
-
-	/**
-	 * @return the formatInvFull
-	 */
-	public String getFormatInvFull() {
-		return formatInvFull;
-	}
-
-	public String getFormatNoPerms() {
-		return formatNoPerms;
-	}
-
-	public String getFormatNotNumber() {
-		return formatNotNumber;
-	}
-
-	public String getHelpLine() {
-		return helpLine;
 	}
 
 	public HashMap<String, Object> getJavascriptEngine() {
@@ -319,35 +263,12 @@ public class AdvancedCoreHook {
 		return mysql;
 	}
 
-	public String getNextPageTxt() {
-		return nextPageTxt;
-	}
-
-	public String getPermPrefix() {
-		return permPrefix;
-	}
-
 	public Permission getPerms() {
 		return perms;
 	}
 
 	public JavaPlugin getPlugin() {
 		return plugin;
-	}
-
-	public String getPrevPageTxt() {
-		return prevPageTxt;
-	}
-
-	public int getPurgeMinimumDays() {
-		return purgeMinimumDays;
-	}
-
-	/**
-	 * @return the resourceId
-	 */
-	public int getResourceId() {
-		return resourceId;
 	}
 
 	public Server getServer() {
@@ -372,15 +293,11 @@ public class AdvancedCoreHook {
 	}
 
 	public UserStorage getStorageType() {
-		return storageType;
+		return getOptions().getStorageType();
 	}
 
 	public String getTime() {
 		return buildTime;
-	}
-
-	public int getTimeHourOffSet() {
-		return timeHourOffSet;
 	}
 
 	/**
@@ -433,75 +350,8 @@ public class AdvancedCoreHook {
 		return null;
 	}
 
-	public boolean isAlternateUUIDLookUp() {
-		return alternateUUIDLookUp;
-	}
-
-	/**
-	 * @return the autoDownload
-	 */
-	public boolean isAutoDownload() {
-		return autoDownload;
-	}
-
-	public boolean isAutoKillInvs() {
-		return autoKillInvs;
-	}
-
-	/**
-	 * @return the checkNameMojang
-	 */
-	public boolean isCheckNameMojang() {
-		return checkNameMojang;
-	}
-
-	public boolean isCreateBackups() {
-		return createBackups;
-	}
-
-	public boolean isDebug() {
-		return debug;
-	}
-
-	public boolean isDebugIngame() {
-		return debugIngame;
-	}
-
-	/**
-	 * @return the dsiableCheckOnWorldChange
-	 */
-	public boolean isDisableCheckOnWorldChange() {
-		return disableCheckOnWorldChange;
-	}
-
-	public boolean isEnableJenkins() {
-		return enableJenkins;
-	}
-
-	/**
-	 * @return the extraDebug
-	 */
-	public boolean isExtraDebug() {
-		return extraDebug;
-	}
-
-	public boolean isLogDebugToFile() {
-		return logDebugToFile;
-	}
-
 	public boolean isPlaceHolderAPIEnabled() {
 		return placeHolderAPIEnabled;
-	}
-
-	public boolean isPurgeOldData() {
-		return purgeOldData;
-	}
-
-	/**
-	 * @return the sendScoreboards
-	 */
-	public boolean isSendScoreboards() {
-		return sendScoreboards;
 	}
 
 	public boolean isTimerLoaded() {
@@ -545,81 +395,26 @@ public class AdvancedCoreHook {
 
 	}
 
-	/**
-	 * Load AdvancedCore hook without most things loaded
-	 *
-	 * Avoid using this unless you really want to
-	 *
-	 * @param plugin
-	 *            Plugin that is hooking in
-	 */
-	public void loadBasicHook(JavaPlugin plugin) {
-		this.plugin = plugin;
-		loadSignAPI();
-		loadUUIDs();
-		permPrefix = plugin.getName();
-		checkPlaceHolderAPI();
-		loadHandle();
-		loadEconomy();
-		loadPermissions();
-		ServerData.getInstance().setup();
-		loadRewards();
-		RewardHandler.getInstance().checkDelayedTimedRewards();
-		loadAutoUpdateCheck();
-		loadVersionFile();
-
-		userStartup();
-		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
-	}
-
-	@SuppressWarnings("unchecked")
 	private void loadConfig() {
-		if (configData != null) {
-			debug = configData.getBoolean("Debug", false);
-			debugIngame = configData.getBoolean("DebugInGame", false);
-			defaultRequestMethod = configData.getString("RequestAPI.DefaultMethod", "Anvil");
-			disabledRequestMethods = (ArrayList<String>) configData.getList("RequestAPI.DisabledMethods",
-					new ArrayList<String>());
-
-			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
-			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
-			formatInvFull = configData.getString("Format.InvFull", "&cInventory full, dropping items on ground");
-
-			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
-			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
-			sendScoreboards = configData.getBoolean("SendScoreboards", true);
-			alternateUUIDLookUp = configData.getBoolean("AlternateUUIDLookup", false);
-			autoKillInvs = configData.getBoolean("AutoKillInvs", true);
-			prevPageTxt = configData.getString("Format.PrevPage", "&aPrevious Page");
-			nextPageTxt = configData.getString("Format.NextPage", "&aNext Page");
-			purgeOldData = configData.getBoolean("PurgeOldData");
-			purgeMinimumDays = configData.getInt("PurgeMin", 90);
-			checkNameMojang = configData.getBoolean("CheckNameMojang", true);
-			disableCheckOnWorldChange = configData.getBoolean("DisableCheckOnWorldChange");
-			autoDownload = configData.getBoolean("AutoDownload", false);
-			extraDebug = configData.getBoolean("ExtraDebug", false);
-			storageType = UserStorage.value(configData.getString("DataStorage", "SQLITE"));
-
-			loadUserAPI(storageType);
-
-			timeHourOffSet = configData.getInt("TimeHourOffSet", 0);
-
-			createBackups = configData.getBoolean("CreateBackups", false);
-
-			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
-
-		}
+		getOptions().load();
+		loadUserAPI(getOptions().getStorageType());
 	}
 
-	public void loadEconomy() {
+	public void loadVault() {
 		Bukkit.getScheduler().runTaskLater(getPlugin(), new Runnable() {
 
 			@Override
 			public void run() {
 				if (setupEconomy()) {
-					plugin.getLogger().info("Successfully hooked into Vault!");
+					plugin.getLogger().info("Successfully hooked into vault economy!");
 				} else {
-					plugin.getLogger().warning("Failed to hook into Vault");
+					plugin.getLogger().warning("Failed to hook into vault");
+				}
+
+				if (setupPermissions()) {
+					plugin.getLogger().info("Hooked into vault permissions");
+				} else {
+					plugin.getLogger().warning("Failed to hook into vault permissions");
 				}
 			}
 		}, 5);
@@ -658,11 +453,10 @@ public class AdvancedCoreHook {
 		this.plugin = plugin;
 		loadSignAPI();
 		loadUUIDs();
-		permPrefix = plugin.getName();
+		getOptions().setPermPrefix(plugin.getName());
 		checkPlaceHolderAPI();
 		loadHandle();
-		loadEconomy();
-		loadPermissions();
+		loadVault();
 		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
@@ -683,39 +477,15 @@ public class AdvancedCoreHook {
 		Bukkit.getPluginManager().registerEvents(BackupHandle.getInstance(), getPlugin());
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
-
-		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
-
-			@Override
-			public void run() {
-				if (NMSManager.getInstance().isVersion("1.7", "1.8")) {
-					plugin.getLogger().warning(
-							"Detected using an old version, the plugin may not function properly, this version is also not fully supported");
-				}
-			}
-		}, 20l);
 	}
 
 	/**
 	 * Load logger
 	 */
 	public void loadLogger() {
-		if (logDebugToFile && logger == null) {
+		if (getOptions().isLogDebugToFile() && logger == null) {
 			logger = new Logger(plugin, new File(plugin.getDataFolder(), "Log" + File.separator + "Log.txt"));
 		}
-	}
-
-	public void loadPermissions() {
-		Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
-
-			@Override
-			public void run() {
-				if (setupPermissions()) {
-					plugin.getLogger().info("Hooked into Vault permissions");
-				}
-			}
-		}, 2);
-
 	}
 
 	/**
@@ -858,7 +628,8 @@ public class AdvancedCoreHook {
 
 				@Override
 				public void run() {
-					setMysql(new MySQL(getPlugin().getName() + "_Users", configData.getConfigurationSection("MySQL")));
+					setMysql(new MySQL(getPlugin().getName() + "_Users",
+							getOptions().getConfigData().getConfigurationSection("MySQL")));
 				}
 			});
 		}
@@ -986,96 +757,12 @@ public class AdvancedCoreHook {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
 	}
 
-	public void setAlternateUUIDLookUp(boolean alternateUUIDLookUp) {
-		this.alternateUUIDLookUp = alternateUUIDLookUp;
-	}
-
-	/**
-	 * @param autoDownload
-	 *            the autoDownload to set
-	 */
-	public void setAutoDownload(boolean autoDownload) {
-		this.autoDownload = autoDownload;
-	}
-
-	public void setAutoKillInvs(boolean autoKillInvs) {
-		this.autoKillInvs = autoKillInvs;
-	}
-
-	/**
-	 * @param checkNameMojang
-	 *            the checkNameMojang to set
-	 */
-	public void setCheckNameMojang(boolean checkNameMojang) {
-		this.checkNameMojang = checkNameMojang;
-	}
-
 	/**
 	 * @param configData
 	 *            the configData to set
 	 */
 	public void setConfigData(ConfigurationSection configData) {
-		this.configData = configData;
-	}
-
-	public void setCreateBackups(boolean createBackups) {
-		this.createBackups = createBackups;
-	}
-
-	public void setDebug(boolean debug) {
-		this.debug = debug;
-	}
-
-	public void setDebugIngame(boolean debugIngame) {
-		this.debugIngame = debugIngame;
-	}
-
-	public void setDefaultRequestMethod(String defaultRequestMethod) {
-		this.defaultRequestMethod = defaultRequestMethod;
-	}
-
-	/**
-	 * @param disableCheckOnWorldChange
-	 *            the dsiableCheckOnWorldChange to set
-	 */
-	public void setDisableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
-		this.disableCheckOnWorldChange = disableCheckOnWorldChange;
-	}
-
-	public void setDisabledRequestMethods(ArrayList<String> disabledRequestMethods) {
-		this.disabledRequestMethods = disabledRequestMethods;
-	}
-
-	public void setEnableJenkins(boolean enableJenkins) {
-		this.enableJenkins = enableJenkins;
-	}
-
-	/**
-	 * @param extraDebug
-	 *            the extraDebug to set
-	 */
-	public void setExtraDebug(boolean extraDebug) {
-		this.extraDebug = extraDebug;
-	}
-
-	/**
-	 * @param formatInvFull
-	 *            the formatInvFull to set
-	 */
-	public void setFormatInvFull(String formatInvFull) {
-		this.formatInvFull = formatInvFull;
-	}
-
-	public void setFormatNoPerms(String formatNoPerms) {
-		this.formatNoPerms = formatNoPerms;
-	}
-
-	public void setFormatNotNumber(String formatNotNumber) {
-		this.formatNotNumber = formatNotNumber;
-	}
-
-	public void setHelpLine(String helpLine) {
-		this.helpLine = helpLine;
+		getOptions().setConfigData(configData);
 	}
 
 	/**
@@ -1098,10 +785,6 @@ public class AdvancedCoreHook {
 		this.jenkinsSite = jenkinsSite;
 	}
 
-	public void setLogDebugToFile(boolean logDebugToFile) {
-		this.logDebugToFile = logDebugToFile;
-	}
-
 	/**
 	 * @param mysql
 	 *            the mysql to set
@@ -1115,52 +798,8 @@ public class AdvancedCoreHook {
 		this.mysql = mysql;
 	}
 
-	public void setNextPageTxt(String nextPageTxt) {
-		this.nextPageTxt = nextPageTxt;
-	}
-
-	public void setPermPrefix(String permPrefix) {
-		this.permPrefix = permPrefix;
-	}
-
 	public void setPlugin(JavaPlugin plugin) {
 		this.plugin = plugin;
-	}
-
-	public void setPrevPageTxt(String prevPageTxt) {
-		this.prevPageTxt = prevPageTxt;
-	}
-
-	public void setPurgeMinimumDays(int purgeMinimumDays) {
-		this.purgeMinimumDays = purgeMinimumDays;
-	}
-
-	public void setPurgeOldData(boolean purgeOldData) {
-		this.purgeOldData = purgeOldData;
-	}
-
-	/**
-	 * @param resourceId
-	 *            the resourceId to set
-	 */
-	public void setResourceId(int resourceId) {
-		this.resourceId = resourceId;
-	}
-
-	/**
-	 * @param sendScoreboards
-	 *            the sendScoreboards to set
-	 */
-	public void setSendScoreboards(boolean sendScoreboards) {
-		this.sendScoreboards = sendScoreboards;
-	}
-
-	public void setStorageType(UserStorage storageType) {
-		this.storageType = storageType;
-	}
-
-	public void setTimeHourOffSet(int timeHourOffSet) {
-		this.timeHourOffSet = timeHourOffSet;
 	}
 
 	/**

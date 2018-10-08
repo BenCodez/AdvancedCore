@@ -71,7 +71,7 @@ public class TimeChecker {
 	}
 
 	public LocalDateTime getTime() {
-		return LocalDateTime.now().plusHours(AdvancedCoreHook.getInstance().getTimeHourOffSet());
+		return LocalDateTime.now().plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet());
 	}
 
 	/**
@@ -110,7 +110,7 @@ public class TimeChecker {
 	}
 
 	public boolean hasTimeOffSet() {
-		return AdvancedCoreHook.getInstance().getTimeHourOffSet() != 0;
+		return AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet() != 0;
 	}
 
 	/**

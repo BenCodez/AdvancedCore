@@ -154,7 +154,7 @@ public class UserManager {
 	}
 
 	public void purgeOldPlayers() {
-		if (plugin.isPurgeOldData()) {
+		if (plugin.getOptions().isPurgeOldData()) {
 			plugin.addUserStartup(new UserStartup() {
 
 				@Override
@@ -169,7 +169,7 @@ public class UserManager {
 
 				@Override
 				public void onStartUp(User user) {
-					int daysOld = plugin.getPurgeMinimumDays();
+					int daysOld = plugin.getOptions().getPurgeMinimumDays();
 					int days = user.getNumberOfDaysSinceLogin();
 					if (days == -1) {
 						// fix ones with no last online

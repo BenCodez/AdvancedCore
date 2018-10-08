@@ -74,7 +74,7 @@ public class NumberRequester {
 		if ((options != null && options.size() != 0) && method.equals(InputMethod.ANVIL)) {
 			method = InputMethod.INVENTORY;
 		}
-		if (AdvancedCoreHook.getInstance().getDisabledRequestMethods().contains(method.toString())) {
+		if (AdvancedCoreHook.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
 			player.sendMessage("Disabled method: " + method.toString());
 		}
 		if (method.equals(InputMethod.INVENTORY)) {

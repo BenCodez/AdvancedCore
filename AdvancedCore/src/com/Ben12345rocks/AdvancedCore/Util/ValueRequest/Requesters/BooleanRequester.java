@@ -52,7 +52,7 @@ public class BooleanRequester {
 	 */
 	public void request(Player player, InputMethod method, String currentValue, String promptText,
 			BooleanListener listener) {
-		if (AdvancedCoreHook.getInstance().getDisabledRequestMethods().contains(method.toString())) {
+		if (AdvancedCoreHook.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
 			player.sendMessage("Disabled method: " + method.toString());
 		}
 		if (method.equals(InputMethod.SIGN)) {

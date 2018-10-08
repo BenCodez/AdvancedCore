@@ -38,7 +38,7 @@ public class BackupHandle implements Listener {
 			return;
 		}
 
-		if (!AdvancedCoreHook.getInstance().isCreateBackups()) {
+		if (!AdvancedCoreHook.getInstance().getOptions().isCreateBackups()) {
 			return;
 		}
 

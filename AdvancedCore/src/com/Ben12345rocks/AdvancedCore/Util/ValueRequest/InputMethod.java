@@ -35,7 +35,7 @@ public enum InputMethod {
 			}
 		}
 		try {
-			return valueOf(AdvancedCoreHook.getInstance().getDefaultRequestMethod());
+			return valueOf(AdvancedCoreHook.getInstance().getOptions().getDefaultRequestMethod());
 		} catch (Exception ex) {
 			return CHAT;
 		}

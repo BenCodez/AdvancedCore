@@ -42,7 +42,7 @@ public class WorldChangeEvent implements Listener {
 
 			@Override
 			public void run() {
-				if (AdvancedCoreHook.getInstance().isDisableCheckOnWorldChange() || event.getPlayer() == null) {
+				if (AdvancedCoreHook.getInstance().getOptions().isDisableCheckOnWorldChange() || event.getPlayer() == null) {
 					return;
 				}
 				Player player = event.getPlayer();

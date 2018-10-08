@@ -184,7 +184,7 @@ public class SimpleScoreboard {
 	 *            the players
 	 */
 	public void send(Player... players) {
-		if (AdvancedCoreHook.getInstance().isSendScoreboards()) {
+		if (AdvancedCoreHook.getInstance().getOptions().isSendScoreboards()) {
 			for (Player p : players) {
 				if (p != null) {
 					p.setScoreboard(scoreboard);

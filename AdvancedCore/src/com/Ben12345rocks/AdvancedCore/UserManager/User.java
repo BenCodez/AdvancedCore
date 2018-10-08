@@ -348,7 +348,7 @@ public class User {
 	public InputMethod getUserInputMethod() {
 		String inputMethod = getInputMethod();
 		if (inputMethod == null) {
-			return InputMethod.getMethod(AdvancedCoreHook.getInstance().getDefaultRequestMethod());
+			return InputMethod.getMethod(AdvancedCoreHook.getInstance().getOptions().getDefaultRequestMethod());
 		}
 		return InputMethod.getMethod(inputMethod);
 
@@ -402,7 +402,7 @@ public class User {
 					}
 					if (full) {
 						String msg = StringUtils.getInstance()
-								.colorize(AdvancedCoreHook.getInstance().getFormatInvFull());
+								.colorize(AdvancedCoreHook.getInstance().getOptions().getFormatInvFull());
 						if (!msg.isEmpty()) {
 							player.sendMessage(msg);
 						}
@@ -508,7 +508,7 @@ public class User {
 	}
 
 	public boolean isBanned() {
-		if (AdvancedCoreHook.getInstance().isCheckNameMojang()) {
+		if (AdvancedCoreHook.getInstance().getOptions().isCheckNameMojang()) {
 			OfflinePlayer p = getOfflinePlayer();
 			if (p != null) {
 				return p.isBanned();

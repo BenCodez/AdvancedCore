@@ -60,7 +60,7 @@ public class RewardEditGUI {
 	}
 
 	public void openRewardGUI(Player player, Reward reward) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -311,7 +311,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIItems(Player player, Reward reward) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -404,7 +404,7 @@ public class RewardEditGUI {
 	 */
 	@SuppressWarnings("deprecation")
 	public void openRewardsGUI(Player player) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getPermPrefix() + ".RewardEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}

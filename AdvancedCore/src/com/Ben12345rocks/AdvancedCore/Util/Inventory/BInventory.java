@@ -222,7 +222,8 @@ public class BInventory implements Listener {
 	private Map<Integer, BInventoryButton> buttons = new HashMap<Integer, BInventoryButton>();
 
 	/**
-	 * @param buttons the buttons to set
+	 * @param buttons
+	 *            the buttons to set
 	 */
 	public void setButtons(Map<Integer, BInventoryButton> buttons) {
 		this.buttons = buttons;
@@ -507,7 +508,7 @@ public class BInventory implements Listener {
 				public void run() {
 					if (player != null) {
 						if (player.getOpenInventory() == null) {
-							if (AdvancedCoreHook.getInstance().isAutoKillInvs()) {
+							if (AdvancedCoreHook.getInstance().getOptions().isAutoKillInvs()) {
 								destroy();
 							}
 						}
@@ -597,11 +598,11 @@ public class BInventory implements Listener {
 		}
 		if (prevItem == null) {
 			prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1)
-					.setName(AdvancedCoreHook.getInstance().getPrevPageTxt()).toItemStack(player);
+					.setName(AdvancedCoreHook.getInstance().getOptions().getPrevPageTxt()).toItemStack(player);
 		}
 		if (nextItem == null) {
 			nextItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1)
-					.setName(AdvancedCoreHook.getInstance().getNextPageTxt()).toItemStack(player);
+					.setName(AdvancedCoreHook.getInstance().getOptions().getNextPageTxt()).toItemStack(player);
 		}
 
 		inv.setItem(maxInvSize - 9, prevItem);
@@ -648,7 +649,7 @@ public class BInventory implements Listener {
 	public void setMeta(Player player, String str, Object ob) {
 		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
 	}
-	
+
 	public Object getMeta(Player player, String str) {
 		return PlayerUtils.getInstance().getPlayerMeta(player, str);
 	}
