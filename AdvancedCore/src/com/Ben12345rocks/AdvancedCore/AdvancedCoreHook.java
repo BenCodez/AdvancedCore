@@ -405,6 +405,7 @@ public class AdvancedCoreHook {
 		loadHandle();
 		loadVault();
 		loadEvents();
+		TimeChecker.getInstance().loadTimer(2);
 		ServerData.getInstance().setup();
 		loadRewards();
 		loadValueRequestInputCommands();
