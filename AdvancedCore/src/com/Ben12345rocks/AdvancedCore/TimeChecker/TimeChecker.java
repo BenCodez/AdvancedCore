@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
@@ -131,6 +133,29 @@ public class TimeChecker {
 			return false;
 		}
 		return true;
+	}
+
+	private boolean timerLoaded = false;
+
+	public void loadTimer(int minutes) {
+		if (!timerLoaded) {
+			timerLoaded = true;
+			new Timer().schedule(new TimerTask() {
+
+				@Override
+				public void run() {
+					if (plugin != null) {
+						update();
+					} else {
+						cancel();
+						timerLoaded = false;
+					}
+
+				}
+			}, 60 * 1000, minutes * 60 * 1000);
+		} else {
+			AdvancedCoreHook.getInstance().debug("Timer is already loaded");
+		}
 	}
 
 	/**

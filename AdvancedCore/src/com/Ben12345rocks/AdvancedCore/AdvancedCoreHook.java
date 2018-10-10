@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -78,7 +77,6 @@ public class AdvancedCoreHook {
 	private JavaPlugin plugin;
 	private boolean placeHolderAPIEnabled;
 
-	private boolean timerLoaded = false;
 	private Database database;
 	private MySQL mysql;
 
@@ -354,10 +352,6 @@ public class AdvancedCoreHook {
 		return placeHolderAPIEnabled;
 	}
 
-	public boolean isTimerLoaded() {
-		return timerLoaded;
-	}
-
 	public void loadAutoUpdateCheck() {
 		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
 
@@ -366,33 +360,6 @@ public class AdvancedCoreHook {
 				checkAutoUpdate();
 			}
 		}, 20, 20 * 1000 * 60 * 60);
-	}
-
-	/**
-	 * Load background
-	 *
-	 * @param minutes
-	 *            Minutes
-	 */
-	public void loadBackgroundTimer(int minutes) {
-		if (!timerLoaded) {
-			timerLoaded = true;
-			new Timer().schedule(new TimerTask() {
-
-				@Override
-				public void run() {
-					if (plugin != null) {
-						update();
-					} else {
-						cancel();
-					}
-
-				}
-			}, 60 * 1000, minutes * 60 * 1000);
-		} else {
-			debug("Timer is already loaded");
-		}
-
 	}
 
 	private void loadConfig() {
@@ -440,7 +407,6 @@ public class AdvancedCoreHook {
 		loadEvents();
 		ServerData.getInstance().setup();
 		loadRewards();
-		loadBackgroundTimer(2);
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
@@ -738,10 +704,10 @@ public class AdvancedCoreHook {
 		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		loadConfig();
-		update();
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
 			getMysql().clearCache();
 		}
+		TimeChecker.getInstance().update();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
@@ -802,11 +768,6 @@ public class AdvancedCoreHook {
 		this.plugin = plugin;
 	}
 
-	/**
-	 * Setup economy.
-	 *
-	 * @return true, if successful
-	 */
 	private boolean setupEconomy() {
 		if (plugin.getServer().getPluginManager().getPlugin("Vault") == null) {
 			return false;
@@ -830,18 +791,6 @@ public class AdvancedCoreHook {
 		}
 		perms = rsp.getProvider();
 		return perms != null;
-		/*
-		 * RegisteredServiceProvider<Permission> rsp =
-		 * Bukkit.getServer().getServicesManager() .getRegistration(Permission.class);
-		 * perms = rsp.getProvider(); return perms != null;
-		 */
-	}
-
-	/**
-	 * Update.
-	 */
-	public void update() {
-		TimeChecker.getInstance().update();
 	}
 
 	public void userStartup() {
