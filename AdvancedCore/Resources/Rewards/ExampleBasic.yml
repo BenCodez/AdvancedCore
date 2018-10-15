@@ -83,6 +83,9 @@ EXP: 100
 # Commands to run
 # Use %player% for player name
 # Set to Console: [] for no commands
+# You can also do this:
+# Commands:
+# - say hi
 Commands:
   # Commands here will be run by console
   Console:
@@ -93,7 +96,6 @@ Commands:
 
 # The messages are sent when rewards above are given to user
 # set to '' to give no message
-# If no value is set, default in Format.yml is used
 Messages:
   Player: '&aMessage on reward'
   Broadcast: '&aThis is a broadcast'

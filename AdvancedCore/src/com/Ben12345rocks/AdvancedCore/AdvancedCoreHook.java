@@ -672,7 +672,7 @@ public class AdvancedCoreHook {
 				if (setupEconomy()) {
 					plugin.getLogger().info("Successfully hooked into vault economy!");
 				} else {
-					plugin.getLogger().warning("Failed to hook into vault");
+					plugin.getLogger().warning("Failed to hook into vault economy");
 				}
 
 				if (setupPermissions()) {
