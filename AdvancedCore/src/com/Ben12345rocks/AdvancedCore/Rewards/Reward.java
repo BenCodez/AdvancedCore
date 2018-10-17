@@ -349,7 +349,7 @@ public class Reward {
 			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
 				if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != section
 						.getKeys(true).size()) {
-					plugin.getPlugin().getLogger().warning(
+					AdvancedCoreHook.getInstance().debug(
 							"Detected a reward file edited when it should be edited where directly defined, overriding");
 				}
 			}
