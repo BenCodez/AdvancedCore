@@ -269,7 +269,7 @@ public class Reward {
 	 *            the reward
 	 */
 	public Reward(String reward) {
-		load(new File(plugin.getPlugin().getDataFolder(), "Rewards"), reward);
+		load(RewardHandler.getInstance().getDefaultFolder(), reward);
 	}
 
 	public Reward(String name, ConfigurationSection section) {
@@ -341,15 +341,14 @@ public class Reward {
 	}
 
 	private void checkRewardFile() {
-		if (!getConfig().isRewardFile()) {
-			String rewardName = name;
-			Reward reward = RewardHandler.getInstance().getReward(rewardName);
+		if (!getConfig().hasRewardFile()) {
+			Reward reward = RewardHandler.getInstance().getReward(name);
 			ConfigurationSection section = getConfig().getConfigData();
 
 			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
 				if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != section
 						.getKeys(true).size()) {
-					AdvancedCoreHook.getInstance().debug(
+					plugin.getPlugin().getLogger().warning(
 							"Detected a reward file edited when it should be edited where directly defined, overriding");
 				}
 			}
@@ -357,6 +356,7 @@ public class Reward {
 			reward.getConfig().getFileData().options()
 					.header("Directly defined reward file. ANY EDITS HERE CAN GET OVERRIDDEN!");
 			reward.getConfig().setDirectlyDefinedReward(true);
+			reward.getConfig().save(reward.getConfig().getFileData());
 			RewardHandler.getInstance().updateReward(reward);
 		}
 	}

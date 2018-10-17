@@ -27,8 +27,23 @@ public class RewardFileData {
 	/** The reward. */
 	private Reward reward;
 
-	/** The d file. */
-	private File dFile;
+	/** The data file. */
+	private File dataFile;
+
+	/**
+	 * @return the dFile
+	 */
+	public File getDataFile() {
+		return dataFile;
+	}
+
+	/**
+	 * @param dFile
+	 *            the dFile to set
+	 */
+	public void setDataFile(File dFile) {
+		this.dataFile = dFile;
+	}
 
 	/** The data. */
 	private FileConfiguration fileData;
@@ -49,7 +64,7 @@ public class RewardFileData {
 	 */
 	public RewardFileData(Reward reward, File rewardFolder) {
 		this.reward = reward;
-		dFile = reward.getFile();
+		dataFile = reward.getFile();
 
 		if (!rewardFolder.isDirectory()) {
 			rewardFolder = rewardFolder.getParentFile();
@@ -863,14 +878,14 @@ public class RewardFileData {
 	}
 
 	public boolean isRewardFile() {
-		return dFile != null;
+		return dataFile != null && !isDirectlyDefinedReward();
 	}
 
 	/**
 	 * Reload.
 	 */
 	public void reload() {
-		fileData = YamlConfiguration.loadConfiguration(dFile);
+		fileData = YamlConfiguration.loadConfiguration(dataFile);
 		configData = fileData.getConfigurationSection("");
 	}
 
@@ -885,11 +900,15 @@ public class RewardFileData {
 	public void set(String path, Object value) {
 		if (fileData != null) {
 			fileData.set(path, value);
-			FilesManager.getInstance().editFile(dFile, fileData);
+			save(fileData);
 			reload();
 		} else {
 			plugin.debug("Editing invalid reward: " + reward.getName());
 		}
+	}
+
+	public void save(FileConfiguration fileData) {
+		FilesManager.getInstance().editFile(dataFile, fileData);
 	}
 
 	public void setActionBarDelay(int value) {
@@ -1222,13 +1241,13 @@ public class RewardFileData {
 	 * Setup.
 	 */
 	public void setup() {
-		fileData = YamlConfiguration.loadConfiguration(dFile);
+		fileData = YamlConfiguration.loadConfiguration(dataFile);
 
-		if (!dFile.exists()) {
+		if (!dataFile.exists()) {
 			try {
-				fileData.save(dFile);
+				fileData.save(dataFile);
 			} catch (IOException e) {
-				plugin.getPlugin().getLogger().severe(ChatColor.RED + "Could not create " + dFile.getAbsolutePath());
+				plugin.getPlugin().getLogger().severe(ChatColor.RED + "Could not create " + dataFile.getAbsolutePath());
 
 			}
 		}
@@ -1243,6 +1262,10 @@ public class RewardFileData {
 	 */
 	public void setWorlds(ArrayList<String> value) {
 		set("Worlds", value);
+	}
+
+	public boolean hasRewardFile() {
+		return dataFile != null;
 	}
 
 }

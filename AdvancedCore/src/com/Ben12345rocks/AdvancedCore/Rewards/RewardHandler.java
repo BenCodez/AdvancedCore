@@ -164,7 +164,7 @@ public class RewardHandler {
 			reward = "EmptyName";
 		}
 
-		return new Reward(defaultFolder, reward);
+		return new Reward(reward);
 	}
 
 	/**

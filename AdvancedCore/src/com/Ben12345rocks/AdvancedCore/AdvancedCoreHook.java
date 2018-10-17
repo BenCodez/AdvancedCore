@@ -407,7 +407,7 @@ public class AdvancedCoreHook {
 		loadEvents();
 		TimeChecker.getInstance().loadTimer(2);
 		ServerData.getInstance().setup();
-		loadRewards();
+		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
@@ -433,13 +433,6 @@ public class AdvancedCoreHook {
 		if (getOptions().isLogDebugToFile() && logger == null) {
 			logger = new Logger(plugin, new File(plugin.getDataFolder(), "Log" + File.separator + "Log.txt"));
 		}
-	}
-
-	/**
-	 * Setup Reward Files
-	 */
-	public void loadRewards() {
-		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
 	}
 
 	private void loadSignAPI() {
