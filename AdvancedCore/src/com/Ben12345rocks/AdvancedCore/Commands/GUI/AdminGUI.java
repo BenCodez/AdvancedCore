@@ -64,7 +64,7 @@ public class AdminGUI {
 	 *            the player
 	 */
 	public void openGUI(Player player) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".AdminEdit")) {
+		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".Admin")) {
 			player.sendMessage("Not enough permissions");
 			return;
 		}
