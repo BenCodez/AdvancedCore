@@ -114,7 +114,7 @@ public class Updater {
 		try {
 			HttpsURLConnection connection = (HttpsURLConnection) new URL(
 					"https://api.spigotmc.org/legacy/update.php?resource=" + RESOURCE_ID).openConnection();
-			int timed_out = 1250;
+			int timed_out = 2000;
 			connection.setConnectTimeout(timed_out);
 			connection.setReadTimeout(timed_out);
 			this.version = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
