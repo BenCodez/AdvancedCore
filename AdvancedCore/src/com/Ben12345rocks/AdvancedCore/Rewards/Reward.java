@@ -313,6 +313,7 @@ public class Reward {
 	 */
 	public void checkChoiceRewards(User user) {
 		if (isEnableChoices()) {
+			checkRewardFile();
 			String choice = user.getChoicePreference(getName());
 			if (choice.isEmpty()) {
 				user.addUnClaimedChoiceReward(getName());
