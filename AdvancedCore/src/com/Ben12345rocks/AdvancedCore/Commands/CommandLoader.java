@@ -301,8 +301,8 @@ public class CommandLoader {
 				User user = UserManager.getInstance().getUser((Player) sender);
 				user.setChoicePreference(args[2], args[3]);
 
-				user.sendMessage(AdvancedCoreHook.getInstance().getOptions().getChoiceRewardPreferenceSet(), "choice",
-						args[3]);
+				user.sendMessage(AdvancedCoreHook.getInstance().getOptions().getFormatChoiceRewardsPreferenceSet(),
+						"choice", args[3]);
 			}
 		});
 

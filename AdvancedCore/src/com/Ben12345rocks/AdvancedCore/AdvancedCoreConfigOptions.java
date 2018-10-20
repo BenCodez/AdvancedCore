@@ -18,23 +18,8 @@ public class AdvancedCoreConfigOptions {
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	private String permPrefix;
-	
-	private String choiceRewardPreferenceSet = "&aPreference set to %choice%";
-	
 
-	/**
-	 * @return the choiceRewardPreferenceSet
-	 */
-	public String getChoiceRewardPreferenceSet() {
-		return choiceRewardPreferenceSet;
-	}
-
-	/**
-	 * @param choiceRewardPreferenceSet the choiceRewardPreferenceSet to set
-	 */
-	public void setChoiceRewardPreferenceSet(String choiceRewardPreferenceSet) {
-		this.choiceRewardPreferenceSet = choiceRewardPreferenceSet;
-	}
+	private String formatChoiceRewardsPreferenceSet = "&aPreference set to %choice%";
 
 	private boolean extraDebug = false;
 
@@ -271,6 +256,8 @@ public class AdvancedCoreConfigOptions {
 			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
 			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
 			formatInvFull = configData.getString("Format.InvFull", "&cInventory full, dropping items on ground");
+			formatChoiceRewardsPreferenceSet = configData.getString("Format.ChoiceRewards.PreferenceSet",
+					"&aPreference set to %choice%");
 
 			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
 			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
@@ -294,6 +281,20 @@ public class AdvancedCoreConfigOptions {
 			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
 
 		}
+	}
+
+	/**
+	 * @return the formatChoiceRewardsPreferenceSet
+	 */
+	public String getFormatChoiceRewardsPreferenceSet() {
+		return formatChoiceRewardsPreferenceSet;
+	}
+
+	/**
+	 * @param formatChoiceRewardsPreferenceSet the formatChoiceRewardsPreferenceSet to set
+	 */
+	public void setFormatChoiceRewardsPreferenceSet(String formatChoiceRewardsPreferenceSet) {
+		this.formatChoiceRewardsPreferenceSet = formatChoiceRewardsPreferenceSet;
 	}
 
 	/**

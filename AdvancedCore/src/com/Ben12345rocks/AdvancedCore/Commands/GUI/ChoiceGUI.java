@@ -130,7 +130,7 @@ public class ChoiceGUI {
 					User user = (User) getInv().getData("User");
 					user.setChoicePreference((String) getInv().getData("Reward"), (String) getData("Choice"));
 
-					user.sendMessage(plugin.getOptions().getChoiceRewardPreferenceSet(), "choice",
+					user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice",
 							(String) getData("Choice"));
 				}
 			}.addData("Choice", choice));
