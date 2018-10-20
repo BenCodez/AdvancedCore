@@ -18,6 +18,23 @@ public class AdvancedCoreConfigOptions {
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	private String permPrefix;
+	
+	private String choiceRewardPreferenceSet = "&aPreference set to %choice%";
+	
+
+	/**
+	 * @return the choiceRewardPreferenceSet
+	 */
+	public String getChoiceRewardPreferenceSet() {
+		return choiceRewardPreferenceSet;
+	}
+
+	/**
+	 * @param choiceRewardPreferenceSet the choiceRewardPreferenceSet to set
+	 */
+	public void setChoiceRewardPreferenceSet(String choiceRewardPreferenceSet) {
+		this.choiceRewardPreferenceSet = choiceRewardPreferenceSet;
+	}
 
 	private boolean extraDebug = false;
 

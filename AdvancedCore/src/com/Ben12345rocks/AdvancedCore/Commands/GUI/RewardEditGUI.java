@@ -434,9 +434,8 @@ public class RewardEditGUI {
 				lore.add("Javascript: true");
 				lore.add("Expression: " + reward.getJavascriptExpression());
 			}
-			if (reward.isChoiceRewardsEnabled()) {
-				lore.add("ChoiceRewards: true");
-				lore.add("Rewards: " + ArrayUtils.getInstance().makeStringList(reward.getChoiceRewardsRewards()));
+			if (reward.isEnableChoices()) {
+				lore.add("EnableChoices: true");
 			}
 			if (reward.getWorlds().size() > 0) {
 				lore.add("Worlds: " + ArrayUtils.getInstance().makeStringList(reward.getWorlds()));

@@ -94,13 +94,45 @@ Javascripts: []
 # Will only execute first possible reward that can be given
 Priority: []
   
+  
 # Let the user pick a reward file to get
 # User can only pick one
-ChoiceRewards:
-  Enabled: false
-  Rewards:
-  - Iron
-  - Gold
+EnableChoices: false
+Choices:
+  Diamond:
+    DisplayItem:
+      Name: '&c3 Diamonds'
+      Material: DIAMOND
+      Amount: 3
+    Rewards:
+      Items:
+        Diamond:
+          Material: 'DIAMOND'
+          Amount: 3
+      Messages:
+        Player: '&aYou picked %choice%'
+  Iron:
+    DisplayItem:
+      Name: '&c15 Iron Ingots'
+      Material: IRON_INGOT
+      Amount: 15
+    Rewards:
+      Items:
+        Iron:
+          Material: 'IRON_INGOT'
+          Amount: 15
+      Messages:
+        Player: '&aYou picked %choice%'
+    
+# Only for some GUI's
+# Requires for choice rewards
+# not a reward
+DisplayItem:
+  Material: 'DIAMOND'
+  Name: '&aAdvancedReward'
+  Amount: 1
+  
+  
 
 # Worlds to give this reward in
 # Player will be given this world once he is in this world

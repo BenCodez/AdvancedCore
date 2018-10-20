@@ -109,6 +109,20 @@ public abstract class BInventoryButton {
 		return slot;
 	}
 
+	public void onClick(ClickEvent event, BInventory inv) {
+		onClick(event);
+		this.inv = inv;
+	}
+
+	private BInventory inv;
+
+	/**
+	 * @return the inv
+	 */
+	public BInventory getInv() {
+		return inv;
+	}
+
 	/**
 	 * On click.
 	 *

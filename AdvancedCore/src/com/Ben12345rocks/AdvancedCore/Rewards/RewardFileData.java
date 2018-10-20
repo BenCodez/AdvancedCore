@@ -154,18 +154,27 @@ public class RewardFileData {
 	 *
 	 * @return the choice rewards enabled
 	 */
-	public boolean getChoiceRewardsEnabled() {
-		return getConfigData().getBoolean("ChoiceRewards.Enabled");
+	public boolean getEnableChoices() {
+		return getConfigData().getBoolean("EnableChoices");
 	}
 
-	/**
-	 * Gets the choice rewards rewards.
-	 *
-	 * @return the choice rewards rewards
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getChoiceRewardsRewards() {
-		return (ArrayList<String>) getConfigData().getList("ChoiceRewards.Rewards", new ArrayList<String>());
+	public Set<String> getChoices() {
+		if (getConfigData().isConfigurationSection("Choices")) {
+			return getConfigData().getConfigurationSection("Choices").getKeys(false);
+		}
+		return new HashSet<String>();
+	}
+
+	public String getChoicesRewardsPath(String choice) {
+		return "Choices." + choice + ".Rewards";
+	}
+
+	public ConfigurationSection getChoicesItem(String choice) {
+		return getConfigData().getConfigurationSection("Choices." + choice + ".DisplayItem");
+	}
+
+	public ConfigurationSection getDisplayItem() {
+		return getConfigData().getConfigurationSection("DisplayItem");
 	}
 
 	/**

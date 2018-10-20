@@ -237,6 +237,31 @@ public class BInventory implements Listener {
 	}
 
 	/**
+	 * @return the data
+	 */
+	public HashMap<String, Object> getData() {
+		return data;
+	}
+
+	public Object getData(String key) {
+		return data.get(key);
+	}
+
+	public Object getData(String key, Object defaultValue) {
+		if (data.containsKey(key)) {
+			return data.get(key);
+		}
+		return defaultValue;
+	}
+
+	private HashMap<String, Object> data = new HashMap<String, Object>();
+
+	public BInventory addData(String key, Object object) {
+		getData().put(key, object);
+		return this;
+	}
+
+	/**
 	 * Adds the button.
 	 *
 	 * @param button
@@ -417,7 +442,7 @@ public class BInventory implements Listener {
 									@Override
 									public void run() {
 										try {
-											button.onClick(new ClickEvent(event, button));
+											onClick(event, button);
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -441,7 +466,7 @@ public class BInventory implements Listener {
 									@Override
 									public void run() {
 										try {
-											button.onClick(new ClickEvent(event, button));
+											onClick(event, button);
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -479,7 +504,7 @@ public class BInventory implements Listener {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
 						player.closeInventory();
 						try {
-							b.onClick(new ClickEvent(event, b));
+							onClick(event, b);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -488,6 +513,10 @@ public class BInventory implements Listener {
 
 			}
 		}
+	}
+	
+	private void onClick(InventoryClickEvent event, BInventoryButton b) {
+		b.onClick(new ClickEvent(event, b), this);
 	}
 
 	// event handling

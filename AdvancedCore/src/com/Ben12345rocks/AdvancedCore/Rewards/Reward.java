@@ -158,14 +158,27 @@ public class Reward {
 	/** The javascript expression. */
 	private String javascriptExpression;
 
-	/** The choice rewards rewards. */
-	private ArrayList<String> choiceRewardsRewards;
-
 	/** The items and amounts given. */
 	private HashMap<String, Integer> itemsAndAmountsGiven;
 
 	/** The choice rewards enabled. */
-	private boolean choiceRewardsEnabled;
+	private boolean enableChoices;
+
+	private Set<String> choices;
+
+	/**
+	 * @return the enableChoices
+	 */
+	public boolean isEnableChoices() {
+		return enableChoices;
+	}
+
+	/**
+	 * @return the choices
+	 */
+	public Set<String> getChoices() {
+		return choices;
+	}
 
 	/** The firework enabled. */
 	private boolean fireworkEnabled;
@@ -299,12 +312,20 @@ public class Reward {
 	 *            the user
 	 */
 	public void checkChoiceRewards(User user) {
-		if (isChoiceRewardsEnabled()) {
-			Player player = user.getPlayer();
-			if (player != null) {
-				user.addChoiceReward(this);
+		if (isEnableChoices()) {
+			String choice = user.getChoicePreference(getName());
+			if (choice.isEmpty()) {
+				user.addUnClaimedChoiceReward(getName());
+			} else {
+				giveChoicesReward(user, choice);
 			}
 		}
+	}
+	
+	public void giveChoicesReward(User user, String choice) {
+		RewardBuilder reward = new RewardBuilder(getConfig().getConfigData(), getConfig().getChoicesRewardsPath(choice));
+		reward.withPrefix(getName());
+		reward.send(user);
 	}
 
 	/**
@@ -346,8 +367,8 @@ public class Reward {
 			ConfigurationSection section = getConfig().getConfigData();
 
 			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
-				if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != section
-						.getKeys(true).size()+1) {
+				if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
+						.size() != section.getKeys(true).size() + 1) {
 					plugin.getPlugin().getLogger().warning(
 							"Detected a reward file edited when it should be edited where directly defined, overriding");
 				}
@@ -491,15 +512,6 @@ public class Reward {
 	 */
 	public double getChance() {
 		return chance;
-	}
-
-	/**
-	 * Gets the choice rewards rewards.
-	 *
-	 * @return the choice rewards rewards
-	 */
-	public ArrayList<String> getChoiceRewardsRewards() {
-		return choiceRewardsRewards;
 	}
 
 	/**
@@ -1232,15 +1244,6 @@ public class Reward {
 	}
 
 	/**
-	 * Checks if is choice rewards enabled.
-	 *
-	 * @return true, if is choice rewards enabled
-	 */
-	public boolean isChoiceRewardsEnabled() {
-		return choiceRewardsEnabled;
-	}
-
-	/**
 	 * Checks if is delay enabled.
 	 *
 	 * @return true, if is delay enabled
@@ -1391,13 +1394,17 @@ public class Reward {
 		forceOffline = getConfig().getForceOffline();
 
 		setDelayEnabled(getConfig().getDelayedEnabled());
-		setDelayHours(getConfig().getDelayedHours());
-		setDelayMinutes(getConfig().getDelayedMinutes());
-		setDelaySeconds(getConfig().getDelayedSeconds());
+		if (delayEnabled) {
+			setDelayHours(getConfig().getDelayedHours());
+			setDelayMinutes(getConfig().getDelayedMinutes());
+			setDelaySeconds(getConfig().getDelayedSeconds());
+		}
 
 		setTimedEnabled(getConfig().getTimedEnabled());
-		setTimedHour(getConfig().getTimedHour());
-		setTimedMinute(getConfig().getTimedMinute());
+		if (timedEnabled) {
+			setTimedHour(getConfig().getTimedHour());
+			setTimedMinute(getConfig().getTimedMinute());
+		}
 
 		javascripts = getConfig().getJavascripts();
 
@@ -1434,11 +1441,13 @@ public class Reward {
 		setActionBarDelay(getConfig().getActionBarDelay());
 
 		setBossBarEnabled(getConfig().getBossBarEnabled());
-		setBossBarMessage(getConfig().getBossBarMessage());
-		setBossBarColor(getConfig().getBossBarColor());
-		setBossBarStyle(getConfig().getBossBarStyle());
-		setBossBarProgress(getConfig().getBossBarProgress());
-		setBossBarDelay(getConfig().getBossBarDelay());
+		if (bossBarEnabled) {
+			setBossBarMessage(getConfig().getBossBarMessage());
+			setBossBarColor(getConfig().getBossBarColor());
+			setBossBarStyle(getConfig().getBossBarStyle());
+			setBossBarProgress(getConfig().getBossBarProgress());
+			setBossBarDelay(getConfig().getBossBarDelay());
+		}
 
 		broadcastMsg = getConfig().getMessagesBroadcast();
 
@@ -1446,16 +1455,21 @@ public class Reward {
 
 		setJavascriptEnabled(getConfig().getJavascriptEnabled());
 		setJavascriptExpression(getConfig().getJavascriptExpression());
-		setChoiceRewardsEnabled(getConfig().getChoiceRewardsEnabled());
-		setChoiceRewardsRewards(getConfig().getChoiceRewardsRewards());
+
+		enableChoices = getConfig().getEnableChoices();
+		if (enableChoices) {
+			choices = getConfig().getChoices();
+		}
 
 		fireworkEnabled = getConfig().getFireworkEnabled();
-		fireworkColors = getConfig().getFireworkColors();
-		fireworkFadeOutColors = getConfig().getFireworkColorsFadeOut();
-		fireworkPower = getConfig().getFireworkPower();
-		fireworkTypes = getConfig().getFireworkTypes();
-		fireworkTrail = getConfig().getFireworkTrail();
-		fireworkFlicker = getConfig().getFireworkFlicker();
+		if (fireworkEnabled) {
+			fireworkColors = getConfig().getFireworkColors();
+			fireworkFadeOutColors = getConfig().getFireworkColorsFadeOut();
+			fireworkPower = getConfig().getFireworkPower();
+			fireworkTypes = getConfig().getFireworkTypes();
+			fireworkTrail = getConfig().getFireworkTrail();
+			fireworkFlicker = getConfig().getFireworkFlicker();
+		}
 
 		if (getWorlds().size() == 0) {
 			usesWorlds = false;
@@ -1464,22 +1478,28 @@ public class Reward {
 		}
 
 		titleEnabled = getConfig().getTitleEnabled();
-		titleTitle = getConfig().getTitleTitle();
-		titleSubTitle = getConfig().getTitleSubTitle();
-		titleFadeIn = getConfig().getTitleFadeIn();
-		titleShowTime = getConfig().getTitleShowTime();
-		titleFadeOut = getConfig().getTitleFadeOut();
+		if (titleEnabled) {
+			titleTitle = getConfig().getTitleTitle();
+			titleSubTitle = getConfig().getTitleSubTitle();
+			titleFadeIn = getConfig().getTitleFadeIn();
+			titleShowTime = getConfig().getTitleShowTime();
+			titleFadeOut = getConfig().getTitleFadeOut();
+		}
 
 		soundEnabled = getConfig().getSoundEnabled();
-		soundSound = getConfig().getSoundSound();
-		soundPitch = getConfig().getSoundPitch();
-		soundVolume = getConfig().getSoundVolume();
+		if (soundEnabled) {
+			soundSound = getConfig().getSoundSound();
+			soundPitch = getConfig().getSoundPitch();
+			soundVolume = getConfig().getSoundVolume();
+		}
 
 		effectEnabled = getConfig().getEffectEnabled();
-		effectEffect = getConfig().getEffectEffect();
-		effectData = getConfig().getEffectData();
-		effectParticles = getConfig().getEffectParticles();
-		effectRadius = getConfig().getEffectRadius();
+		if (effectEnabled) {
+			effectEffect = getConfig().getEffectEffect();
+			effectData = getConfig().getEffectData();
+			effectParticles = getConfig().getEffectParticles();
+			effectRadius = getConfig().getEffectRadius();
+		}
 
 		priority = getConfig().getPriority();
 
@@ -1781,26 +1801,6 @@ public class Reward {
 	 */
 	public void setChance(double chance) {
 		this.chance = chance;
-	}
-
-	/**
-	 * Sets the choice rewards enabled.
-	 *
-	 * @param choiceRewardsEnabled
-	 *            the new choice rewards enabled
-	 */
-	public void setChoiceRewardsEnabled(boolean choiceRewardsEnabled) {
-		this.choiceRewardsEnabled = choiceRewardsEnabled;
-	}
-
-	/**
-	 * Sets the choice rewards rewards.
-	 *
-	 * @param choiceRewardsRewards
-	 *            the new choice rewards rewards
-	 */
-	public void setChoiceRewardsRewards(ArrayList<String> choiceRewardsRewards) {
-		this.choiceRewardsRewards = choiceRewardsRewards;
 	}
 
 	/**

@@ -10,6 +10,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Backups.ZipCreator;
 import com.Ben12345rocks.AdvancedCore.CommandAPI.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.AdminGUI;
+import com.Ben12345rocks.AdvancedCore.Commands.GUI.ChoiceGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.RewardEditGUI;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.UserGUI;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
@@ -274,31 +275,47 @@ public class CommandLoader {
 	public ArrayList<CommandHandler> getBasicCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
 
-		cmds.add(new CommandHandler(new String[] { "SelectChoiceReward" }, permPrefix + ".SelectChoiceReward",
+		cmds.add(new CommandHandler(new String[] { "Choices" }, permPrefix + ".Choices",
 				"Let user select his choice reward", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-						ArrayUtils.getInstance().convert(
-
-								UserManager.getInstance().getUser(sender.getName()).getChoiceRewards()),
-						true, new StringListener() {
-
-							@Override
-							public void onInput(Player player, String value) {
-								selectChoiceReward(sender, value);
-							}
-						});
+				ChoiceGUI.getInstance().openClaimChoices((Player) sender);
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "SelectChoiceReward", "(Reward)" },
-				permPrefix + ".SelectChoiceReward", "Let user select his choice reward", false) {
+		cmds.add(new CommandHandler(new String[] { "Choices", "SetPreference", "(ChoiceReward)" },
+				permPrefix + ".ChoicesPreference", "Let user pick his choice preferneces", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				selectChoiceReward(sender, args[1]);
+				ChoiceGUI.getInstance().openPreferenceReward((Player) sender, args[2]);
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)" },
+				permPrefix + ".ChoicesPreference", "Let user pick his choice preferneces", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				User user = UserManager.getInstance().getUser((Player) sender);
+				user.setChoicePreference(args[2], args[3]);
+
+				user.sendMessage(AdvancedCoreHook.getInstance().getOptions().getChoiceRewardPreferenceSet(), "choice",
+						args[3]);
+			}
+		});
+
+		cmds.add(new CommandHandler(
+				new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)", "(Player)" },
+				permPrefix + ".ChoicesSetPreferenceOther", "Let user pick his choice preferneces", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				User user = UserManager.getInstance().getUser(args[4]);
+				user.setChoicePreference(args[2], args[3]);
+
+				user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
 			}
 		});
 
@@ -409,33 +426,5 @@ public class CommandLoader {
 			cmd.setAdvancedCoreCommand(true);
 		}
 		return cmds;
-	}
-
-	/**
-	 * Load commands.
-	 */
-	public void loadCommands() {
-
-	}
-
-	public void selectChoiceReward(CommandSender sender, final String rewardSt) {
-		Reward reward = RewardHandler.getInstance().getReward(rewardSt);
-		User user = UserManager.getInstance().getUser((Player) sender);
-		if (user.getChoiceRewards().contains(reward.getName())) {
-			new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-					ArrayUtils.getInstance().convert(reward.getChoiceRewardsRewards()), false, new StringListener() {
-
-						@Override
-						public void onInput(Player player, String value) {
-							User user = UserManager.getInstance().getUser(player);
-							RewardHandler.getInstance().giveReward(user, value, new RewardOptions());
-							ArrayList<String> rewards = user.getChoiceRewards();
-							rewards.remove(rewardSt);
-							user.setChoiceRewards(rewards);
-						}
-					});
-		} else {
-			sender.sendMessage("No rewards to choose");
-		}
 	}
 }

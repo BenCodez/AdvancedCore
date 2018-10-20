@@ -147,18 +147,6 @@ public class User {
 
 	}
 
-	/**
-	 * Adds the choice reward.
-	 *
-	 * @param reward
-	 *            the reward
-	 */
-	public void addChoiceReward(Reward reward) {
-		ArrayList<String> choiceRewards = getChoiceRewards();
-		choiceRewards.add(reward.getRewardName());
-		setChoiceRewards(choiceRewards);
-	}
-
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
 		synchronized (AdvancedCoreHook.getInstance()) {
 			ArrayList<String> offlineRewards = getOfflineRewards();
@@ -245,10 +233,6 @@ public class User {
 			}
 		});
 
-	}
-
-	public ArrayList<String> getChoiceRewards() {
-		return getUserData().getStringList("ChoiceRewards");
 	}
 
 	public UserData getData() {
@@ -675,13 +659,6 @@ public class User {
 		getData().remove();
 	}
 
-	public void saveData() {
-		setChoiceRewards(getChoiceRewards());
-		setOfflineRewards(getOfflineRewards());
-		setTimedRewards(getTimedRewards());
-		setInputMethod(getInputMethod());
-	}
-
 	/**
 	 * Send action bar.
 	 *
@@ -800,6 +777,10 @@ public class User {
 		sendMessage(StringUtils.getInstance().replacePlaceHolder(msg, placeholders));
 	}
 
+	public void sendMessage(String msg, String toReplace, String replace) {
+		sendMessage(StringUtils.getInstance().replacePlaceHolder(msg, toReplace, replace));
+	}
+
 	/**
 	 * Send message.
 	 *
@@ -847,10 +828,6 @@ public class User {
 
 	public void setCheckWorld(boolean b) {
 		getData().setString("CheckWorld", "" + b);
-	}
-
-	public void setChoiceRewards(ArrayList<String> choiceRewards) {
-		data.setStringList("ChoiceRewards", choiceRewards);
 	}
 
 	public void setInputMethod(String inputMethod) {
@@ -908,6 +885,66 @@ public class User {
 				getData().setString("PlayerName", getPlayerName());
 			}
 		}
+	}
+
+	public String getChoicePreference(String rewardName) {
+		ArrayList<String> data = getChoicePreferenceData();
+
+		for (String str : data) {
+			String[] data1 = str.split(":");
+			if (data1.length > 1) {
+				if (data1[0].equals(rewardName)) {
+					return data1[1];
+				}
+			}
+		}
+		return "";
+	}
+
+	public ArrayList<String> getChoicePreferenceData() {
+		return getData().getStringList("ChoicePreference");
+	}
+
+	public void setChoicePreference(String reward, String preference) {
+		ArrayList<String> data = getChoicePreferenceData();
+		ArrayList<String> choices = new ArrayList<String>();
+
+		boolean added = false;
+		for (String str : data) {
+			String[] data1 = str.split(":");
+			if (data1.length > 1) {
+				if (data1[0].equals(reward)) {
+					choices.add(reward + ":" + preference);
+					added = true;
+				} else {
+					choices.add(str);
+				}
+			}
+		}
+		if (!added) {
+			choices.add(reward + ":" + preference);
+		}
+		getData().setStringList("ChoicePreference", choices);
+	}
+
+	public void addUnClaimedChoiceReward(String name) {
+		ArrayList<String> choices = getUnClaimedChoices();
+		choices.add(name);
+		setUnClaimedChoice(choices);
+	}
+
+	public ArrayList<String> getUnClaimedChoices() {
+		return getData().getStringList("UnClaimedChoices");
+	}
+
+	public void setUnClaimedChoice(ArrayList<String> rewards) {
+		getData().setStringList("UnClaimedChoices", rewards);
+	}
+
+	public void removeUnClaimedChoiceReward(String name) {
+		ArrayList<String> choices = getUnClaimedChoices();
+		choices.remove(name);
+		setUnClaimedChoice(choices);
 	}
 
 }
