@@ -4,7 +4,6 @@ com.Ben12345rocks.AdvancedCore.CommandAPI
 com.Ben12345rocks.AdvancedCore.Commands
 com.Ben12345rocks.AdvancedCore.Commands.Executor
 com.Ben12345rocks.AdvancedCore.Commands.GUI
-com.Ben12345rocks.AdvancedCore.Commands.TabComplete
 com.Ben12345rocks.AdvancedCore.Data
 com.Ben12345rocks.AdvancedCore.Exceptions
 com.Ben12345rocks.AdvancedCore.Listeners
