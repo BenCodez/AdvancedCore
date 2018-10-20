@@ -537,6 +537,25 @@ public class AdvancedCoreHook {
 			}
 		});
 
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(ChoiceReward)", options) {
+
+			@Override
+			public void reload() {
+				ArrayList<String> rewards = new ArrayList<String>();
+				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+					if (reward.isEnableChoices()) {
+						rewards.add(reward.getRewardName());
+					}
+				}
+				setReplace(rewards);
+			}
+
+			@Override
+			public void updateReplacements() {
+
+			}
+		});
+
 		ArrayList<String> method = new ArrayList<String>();
 		for (InputMethod me : InputMethod.values()) {
 			method.add(me.toString());
