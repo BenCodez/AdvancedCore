@@ -110,8 +110,8 @@ public abstract class BInventoryButton {
 	}
 
 	public void onClick(ClickEvent event, BInventory inv) {
-		onClick(event);
 		this.inv = inv;
+		onClick(event);
 	}
 
 	private BInventory inv;
