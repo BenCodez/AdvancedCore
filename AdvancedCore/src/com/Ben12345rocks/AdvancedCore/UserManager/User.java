@@ -568,9 +568,13 @@ public class User {
 	public void playEffect(String effectName, int data, int particles, int radius) {
 		Player player = getPlayer();
 		if ((player != null) && (effectName != null)) {
-			Effect effect = Effect.valueOf(effectName);
-			for (int i = 0; i < particles; i++) {
-				player.getWorld().playEffect(player.getLocation(), effect, data, radius);
+			try {
+				Effect effect = Effect.valueOf(effectName);
+				for (int i = 0; i < particles; i++) {
+					player.getWorld().playEffect(player.getLocation(), effect, data, radius);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 
 		}

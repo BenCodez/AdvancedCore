@@ -210,7 +210,7 @@ Sound:
 # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Effect.html
 Effect:
   Enabled: false
-  Effect: 'EXPLOSION'
+  Effect: 'EXPLOSION_NORMAL'
   # Ususally speed
   Data: 1
   Particles: 10
