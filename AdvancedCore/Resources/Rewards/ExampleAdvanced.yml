@@ -220,10 +220,9 @@ Firework:
   Enabled: false
   Power: 2
   # Colors can be found here:
-  # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html
+  # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/DyeColor.html
   Colors:
-  - GRAY
-  - SILVER
+  - BLUE
   FadeOutColor: 
   - RED
   Trail: true

@@ -91,7 +91,7 @@ public class FireworkHandler implements Listener {
 						builder.withFade(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
 						plugin.getPlugin().getLogger().info(color
-								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/DyeColor.html");
 					}
 				}
 				for (String type : types) {
