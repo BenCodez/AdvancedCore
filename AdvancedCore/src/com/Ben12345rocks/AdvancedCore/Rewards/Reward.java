@@ -326,6 +326,7 @@ public class Reward {
 	public void giveChoicesReward(User user, String choice) {
 		RewardBuilder reward = new RewardBuilder(getConfig().getConfigData(), getConfig().getChoicesRewardsPath(choice));
 		reward.withPrefix(getName());
+		reward.withPlaceHolder("choice", choice);
 		reward.send(user);
 	}
 
