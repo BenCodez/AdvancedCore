@@ -285,7 +285,7 @@ public class CommandLoader {
 		});
 
 		cmds.add(new CommandHandler(new String[] { "Choices", "SetPreference", "(ChoiceReward)" },
-				permPrefix + ".ChoicesPreference", "Let user pick his choice preferneces", false) {
+				permPrefix + ".ChoicesPreference", "Let user pick his choice preferences", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -294,7 +294,7 @@ public class CommandLoader {
 		});
 
 		cmds.add(new CommandHandler(new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)" },
-				permPrefix + ".ChoicesPreference", "Let user pick his choice preferneces", false) {
+				permPrefix + ".ChoicesPreference", "Let user pick his choice preferences", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -308,7 +308,7 @@ public class CommandLoader {
 
 		cmds.add(new CommandHandler(
 				new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)", "(Player)" },
-				permPrefix + ".ChoicesSetPreferenceOther", "Let user pick his choice preferneces", false) {
+				permPrefix + ".ChoicesSetPreferenceOther", "Let user pick his choice preferences", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {

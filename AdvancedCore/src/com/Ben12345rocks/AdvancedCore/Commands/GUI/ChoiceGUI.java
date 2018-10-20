@@ -116,7 +116,7 @@ public class ChoiceGUI {
 		for (String choice : reward.getChoices()) {
 			ItemBuilder builder = new ItemBuilder(reward.getConfig().getChoicesItem(choice));
 			if (user.getChoicePreference(rewardName).equalsIgnoreCase(choice)) {
-				builder.addLoreLine("&aCurrent preference");
+				builder.addLoreLine("&cCurrent preference");
 			} else {
 				builder.addLoreLine("&aClick to set as preference");
 			}
