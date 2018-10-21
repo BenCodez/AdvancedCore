@@ -37,7 +37,6 @@ public class UserManager {
 	public UserManager() {
 	}
 
-	
 	public ArrayList<String> getAllPlayerNames() {
 		ArrayList<String> names = new ArrayList<String>();
 		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {

@@ -73,34 +73,54 @@ public class AdvancedCoreHook {
 		return instance;
 	}
 
-	@Getter private ConcurrentHashMap<String, String> uuidNameCache;
+	@Getter
+	private ConcurrentHashMap<String, String> uuidNameCache;
 
-	@Getter private SignMenu signMenu;
-	@Getter @Setter private JavaPlugin plugin;
-	@Getter private boolean placeHolderAPIEnabled;
+	@Getter
+	private SignMenu signMenu;
+	@Getter
+	@Setter
+	private JavaPlugin plugin;
+	@Getter
+	private boolean placeHolderAPIEnabled;
 
 	private Database database;
-	@Getter private MySQL mysql;
+	@Getter
+	private MySQL mysql;
 
-	@Getter private IServerHandle serverHandle;
-	@Getter private Logger logger;
+	@Getter
+	private IServerHandle serverHandle;
+	@Getter
+	private Logger logger;
 
-	@Getter private Timer timer = new Timer();
+	@Getter
+	private Timer timer = new Timer();
 
-	@Getter @Setter private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
-	@Getter private String version = "";
-	@Getter private String buildTime = "";
+	@Getter
+	@Setter
+	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
+	@Getter
+	private String version = "";
+	@Getter
+	private String buildTime = "";
 
-	@Getter @Setter private String jenkinsSite = "";
+	@Getter
+	@Setter
+	private String jenkinsSite = "";
 
-	@Getter @Setter private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
+	@Getter
+	@Setter
+	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
-	@Getter private Economy econ = null;
+	@Getter
+	private Economy econ = null;
 
-	@Getter private Permission perms;
+	@Getter
+	private Permission perms;
 
-	@Getter private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
+	@Getter
+	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
 	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
 

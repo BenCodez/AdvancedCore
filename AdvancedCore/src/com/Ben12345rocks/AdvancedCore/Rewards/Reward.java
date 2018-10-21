@@ -166,20 +166,6 @@ public class Reward {
 
 	private Set<String> choices;
 
-	/**
-	 * @return the enableChoices
-	 */
-	public boolean isEnableChoices() {
-		return enableChoices;
-	}
-
-	/**
-	 * @return the choices
-	 */
-	public Set<String> getChoices() {
-		return choices;
-	}
-
 	/** The firework enabled. */
 	private boolean fireworkEnabled;
 
@@ -321,14 +307,6 @@ public class Reward {
 				giveChoicesReward(user, choice);
 			}
 		}
-	}
-
-	public void giveChoicesReward(User user, String choice) {
-		RewardBuilder reward = new RewardBuilder(getConfig().getConfigData(),
-				getConfig().getChoicesRewardsPath(choice));
-		reward.withPrefix(getName());
-		reward.withPlaceHolder("choice", choice);
-		reward.send(user);
 	}
 
 	/**
@@ -515,6 +493,13 @@ public class Reward {
 	 */
 	public double getChance() {
 		return chance;
+	}
+
+	/**
+	 * @return the choices
+	 */
+	public Set<String> getChoices() {
+		return choices;
 	}
 
 	/**
@@ -977,6 +962,14 @@ public class Reward {
 		return worlds;
 	}
 
+	public void giveChoicesReward(User user, String choice) {
+		RewardBuilder reward = new RewardBuilder(getConfig().getConfigData(),
+				getConfig().getChoicesRewardsPath(choice));
+		reward.withPrefix(getName());
+		reward.withPlaceHolder("choice", choice);
+		reward.send(user);
+	}
+
 	/**
 	 * Give exp.
 	 *
@@ -1267,6 +1260,13 @@ public class Reward {
 	 */
 	public boolean isEffectEnabled() {
 		return effectEnabled;
+	}
+
+	/**
+	 * @return the enableChoices
+	 */
+	public boolean isEnableChoices() {
+		return enableChoices;
 	}
 
 	/**

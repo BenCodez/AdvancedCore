@@ -54,7 +54,6 @@ public class PlayerRewardEvent extends Event {
 
 	/*
 	 * (non-Javadoc)
-	 *
 	 * @see org.bukkit.event.Event#getHandlers()
 	 */
 	@Override

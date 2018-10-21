@@ -30,21 +30,6 @@ public class RewardFileData {
 	/** The data file. */
 	private File dataFile;
 
-	/**
-	 * @return the dFile
-	 */
-	public File getDataFile() {
-		return dataFile;
-	}
-
-	/**
-	 * @param dFile
-	 *            the dFile to set
-	 */
-	public void setDataFile(File dFile) {
-		this.dataFile = dFile;
-	}
-
 	/** The data. */
 	private FileConfiguration fileData;
 
@@ -149,15 +134,6 @@ public class RewardFileData {
 		return getConfigData().getDouble("Chance");
 	}
 
-	/**
-	 * Gets the choice rewards enabled.
-	 *
-	 * @return the choice rewards enabled
-	 */
-	public boolean getEnableChoices() {
-		return getConfigData().getBoolean("EnableChoices");
-	}
-
 	public Set<String> getChoices() {
 		if (getConfigData().isConfigurationSection("Choices")) {
 			return getConfigData().getConfigurationSection("Choices").getKeys(false);
@@ -165,16 +141,12 @@ public class RewardFileData {
 		return new HashSet<String>();
 	}
 
-	public String getChoicesRewardsPath(String choice) {
-		return "Choices." + choice + ".Rewards";
-	}
-
 	public ConfigurationSection getChoicesItem(String choice) {
 		return getConfigData().getConfigurationSection("Choices." + choice + ".DisplayItem");
 	}
 
-	public ConfigurationSection getDisplayItem() {
-		return getConfigData().getConfigurationSection("DisplayItem");
+	public String getChoicesRewardsPath(String choice) {
+		return "Choices." + choice + ".Rewards";
 	}
 
 	/**
@@ -204,6 +176,13 @@ public class RewardFileData {
 
 	public ConfigurationSection getConfigData() {
 		return configData;
+	}
+
+	/**
+	 * @return the dFile
+	 */
+	public File getDataFile() {
+		return dataFile;
 	}
 
 	/**
@@ -237,6 +216,10 @@ public class RewardFileData {
 		return getConfigData().getInt("Delayed.Seconds");
 	}
 
+	public ConfigurationSection getDisplayItem() {
+		return getConfigData().getConfigurationSection("DisplayItem");
+	}
+
 	/**
 	 * Gets the effect data.
 	 *
@@ -266,15 +249,6 @@ public class RewardFileData {
 	}
 
 	/**
-	 * Gets the data.
-	 *
-	 * @return the data
-	 */
-	/*
-	 * private FileConfiguration getFileData() { return fileData; }
-	 */
-
-	/**
 	 * Gets the effect particles.
 	 *
 	 * @return the effect particles
@@ -290,6 +264,24 @@ public class RewardFileData {
 	 */
 	public int getEffectRadius() {
 		return getConfigData().getInt("Effect.Radius");
+	}
+
+	/**
+	 * Gets the data.
+	 *
+	 * @return the data
+	 */
+	/*
+	 * private FileConfiguration getFileData() { return fileData; }
+	 */
+
+	/**
+	 * Gets the choice rewards enabled.
+	 *
+	 * @return the choice rewards enabled
+	 */
+	public boolean getEnableChoices() {
+		return getConfigData().getBoolean("EnableChoices");
 	}
 
 	/**
@@ -882,6 +874,10 @@ public class RewardFileData {
 
 	}
 
+	public boolean hasRewardFile() {
+		return dataFile != null;
+	}
+
 	public boolean isDirectlyDefinedReward() {
 		return getConfigData().getBoolean("DirectlyDefinedReward");
 	}
@@ -896,6 +892,10 @@ public class RewardFileData {
 	public void reload() {
 		fileData = YamlConfiguration.loadConfiguration(dataFile);
 		configData = fileData.getConfigurationSection("");
+	}
+
+	public void save(FileConfiguration fileData) {
+		FilesManager.getInstance().editFile(dataFile, fileData);
 	}
 
 	/**
@@ -914,10 +914,6 @@ public class RewardFileData {
 		} else {
 			plugin.debug("Editing invalid reward: " + reward.getName());
 		}
-	}
-
-	public void save(FileConfiguration fileData) {
-		FilesManager.getInstance().editFile(dataFile, fileData);
 	}
 
 	public void setActionBarDelay(int value) {
@@ -974,6 +970,14 @@ public class RewardFileData {
 			set(entry.getKey(), entry.getValue());
 		}
 		reward.loadValues();
+	}
+
+	/**
+	 * @param dFile
+	 *            the dFile to set
+	 */
+	public void setDataFile(File dFile) {
+		this.dataFile = dFile;
 	}
 
 	public void setDirectlyDefinedReward(boolean b) {
@@ -1271,10 +1275,6 @@ public class RewardFileData {
 	 */
 	public void setWorlds(ArrayList<String> value) {
 		set("Worlds", value);
-	}
-
-	public boolean hasRewardFile() {
-		return dataFile != null;
 	}
 
 }

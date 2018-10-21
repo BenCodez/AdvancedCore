@@ -34,15 +34,25 @@ public abstract class CommandHandler {
 
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
-	@Getter @Setter private String[] args;
+	@Getter
+	@Setter
+	private String[] args;
 
-	@Getter @Setter private String perm;
+	@Getter
+	@Setter
+	private String perm;
 
-	@Getter @Setter private String helpMessage;
+	@Getter
+	@Setter
+	private String helpMessage;
 
-	@Getter @Setter private boolean allowConsole = true;
+	@Getter
+	@Setter
+	private boolean allowConsole = true;
 
-	@Getter @Setter private boolean advancedCoreCommand = false;
+	@Getter
+	@Setter
+	private boolean advancedCoreCommand = false;
 
 	private boolean ignoreNumberCheck = false;
 

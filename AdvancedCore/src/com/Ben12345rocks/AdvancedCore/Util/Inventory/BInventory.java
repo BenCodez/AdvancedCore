@@ -42,24 +42,31 @@ public class BInventory implements Listener {
 	public class ClickEvent {
 
 		/** The player. */
-		@Getter private Player player;
+		@Getter
+		private Player player;
 
 		/** The event. */
-		@Getter private InventoryClickEvent event;
+		@Getter
+		private InventoryClickEvent event;
 
 		/** The click type. */
-		@Getter private ClickType click;
+		@Getter
+		private ClickType click;
 
 		/** The inventory. */
-		@Getter private Inventory inventory;
+		@Getter
+		private Inventory inventory;
 
 		/** The slot. */
-		@Getter private int slot;
+		@Getter
+		private int slot;
 
 		/** The clicked item. */
-		@Getter private ItemStack clickedItem;
+		@Getter
+		private ItemStack clickedItem;
 
-		@Getter private BInventoryButton button;
+		@Getter
+		private BInventoryButton button;
 
 		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
 			this.event = event;
@@ -157,6 +164,8 @@ public class BInventory implements Listener {
 
 	private Player player;
 
+	private HashMap<String, Object> data = new HashMap<String, Object>();
+
 	/**
 	 * Instantiates a new b inventory.
 	 *
@@ -166,31 +175,6 @@ public class BInventory implements Listener {
 	public BInventory(String name) {
 		setInventoryName(name);
 		Bukkit.getPluginManager().registerEvents(this, AdvancedCoreHook.getInstance().getPlugin());
-	}
-
-	/**
-	 * @return the data
-	 */
-	public HashMap<String, Object> getData() {
-		return data;
-	}
-
-	public Object getData(String key) {
-		return data.get(key);
-	}
-
-	public Object getData(String key, Object defaultValue) {
-		if (data.containsKey(key)) {
-			return data.get(key);
-		}
-		return defaultValue;
-	}
-
-	private HashMap<String, Object> data = new HashMap<String, Object>();
-
-	public BInventory addData(String key, Object object) {
-		getData().put(key, object);
-		return this;
 	}
 
 	/**
@@ -219,6 +203,11 @@ public class BInventory implements Listener {
 		getButtons().put(position, button);
 	}
 
+	public BInventory addData(String key, Object object) {
+		getData().put(key, object);
+		return this;
+	}
+
 	/**
 	 * Destroy.
 	 */
@@ -233,6 +222,24 @@ public class BInventory implements Listener {
 	 */
 	public Map<Integer, BInventoryButton> getButtons() {
 		return buttons;
+	}
+
+	/**
+	 * @return the data
+	 */
+	public HashMap<String, Object> getData() {
+		return data;
+	}
+
+	public Object getData(String key) {
+		return data.get(key);
+	}
+
+	public Object getData(String key, Object defaultValue) {
+		if (data.containsKey(key)) {
+			return data.get(key);
+		}
+		return defaultValue;
 	}
 
 	/**
@@ -333,6 +340,10 @@ public class BInventory implements Listener {
 	 */
 	public boolean isPages() {
 		return pages;
+	}
+
+	private void onClick(InventoryClickEvent event, BInventoryButton b) {
+		b.onClick(new ClickEvent(event, b), this);
 	}
 
 	/**
@@ -445,10 +456,6 @@ public class BInventory implements Listener {
 
 			}
 		}
-	}
-
-	private void onClick(InventoryClickEvent event, BInventoryButton b) {
-		b.onClick(new ClickEvent(event, b), this);
 	}
 
 	// event handling

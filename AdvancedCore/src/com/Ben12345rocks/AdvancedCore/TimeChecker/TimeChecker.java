@@ -35,6 +35,8 @@ public class TimeChecker {
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
+	private boolean timerLoaded = false;
+
 	/**
 	 * Instantiates a new time checker.
 	 */
@@ -134,8 +136,6 @@ public class TimeChecker {
 		}
 		return true;
 	}
-
-	private boolean timerLoaded = false;
 
 	public void loadTimer(int minutes) {
 		if (!timerLoaded) {

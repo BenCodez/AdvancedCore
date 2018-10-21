@@ -6,7 +6,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 public abstract class UserStartup {
-	@Getter @Setter private ArrayList<User> users = new ArrayList<User>();
+	@Getter
+	@Setter
+	private ArrayList<User> users = new ArrayList<User>();
 
 	public abstract void onFinish();
 

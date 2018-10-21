@@ -82,7 +82,6 @@ public class ServerData extends YMLFile {
 
 	/*
 	 * (non-Javadoc)
-	 *
 	 * @see com.Ben12345rocks.AdvancedCore.YML.YMLFile#onFileCreation()
 	 */
 	@Override

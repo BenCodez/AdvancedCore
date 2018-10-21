@@ -654,6 +654,13 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public ItemBuilder setNameIfNotExist(String name) {
+		if (!hasCustomDisplayName()) {
+			setName(name);
+		}
+		return this;
+	}
+
 	public ItemBuilder setPlaceholders(HashMap<String, String> placeholders) {
 		this.placeholders = placeholders;
 		return this;
@@ -750,12 +757,5 @@ public class ItemBuilder {
 
 	public ItemStack toItemStack(Player player) {
 		return toItemStack((OfflinePlayer) player);
-	}
-
-	public ItemBuilder setNameIfNotExist(String name) {
-		if (!hasCustomDisplayName()) {
-			setName(name);
-		}
-		return this;
 	}
 }

@@ -28,13 +28,13 @@ public class UpdateDownloader {
 		Updater updater = new Updater(plugin, resourceId,
 				!AdvancedCoreHook.getInstance().getOptions().isAutoDownload());
 		switch (updater.getResult()) {
-		case UPDATE_AVAILABLE:
-			plugin.getLogger()
-					.info("Downloaded jar automaticly, restart to update. Note: Updates take 30-40 minutes to load");
-			download(plugin, resourceId);
-			break;
-		default:
-			break;
+			case UPDATE_AVAILABLE:
+				plugin.getLogger().info(
+						"Downloaded jar automaticly, restart to update. Note: Updates take 30-40 minutes to load");
+				download(plugin, resourceId);
+				break;
+			default:
+				break;
 		}
 	}
 

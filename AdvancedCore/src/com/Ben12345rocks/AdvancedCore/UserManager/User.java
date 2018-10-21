@@ -168,6 +168,12 @@ public class User {
 		loadTimedDelayedTimer(epochMilli);
 	}
 
+	public void addUnClaimedChoiceReward(String name) {
+		ArrayList<String> choices = getUnClaimedChoices();
+		choices.add(name);
+		setUnClaimedChoice(choices);
+	}
+
 	public void checkDelayedTimedRewards() {
 		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, ArrayList<Long>> timed = getTimedRewards();
@@ -237,6 +243,24 @@ public class User {
 			}
 		});
 
+	}
+
+	public String getChoicePreference(String rewardName) {
+		ArrayList<String> data = getChoicePreferenceData();
+
+		for (String str : data) {
+			String[] data1 = str.split(":");
+			if (data1.length > 1) {
+				if (data1[0].equals(rewardName)) {
+					return data1[1];
+				}
+			}
+		}
+		return "";
+	}
+
+	public ArrayList<String> getChoicePreferenceData() {
+		return getData().getStringList("ChoicePreference");
 	}
 
 	public UserData getData() {
@@ -327,6 +351,10 @@ public class User {
 			}
 		}
 		return timedRewards;
+	}
+
+	public ArrayList<String> getUnClaimedChoices() {
+		return getData().getStringList("UnClaimedChoices");
 	}
 
 	public UserData getUserData() {
@@ -667,6 +695,12 @@ public class User {
 		getData().remove();
 	}
 
+	public void removeUnClaimedChoiceReward(String name) {
+		ArrayList<String> choices = getUnClaimedChoices();
+		choices.remove(name);
+		setUnClaimedChoice(choices);
+	}
+
 	/**
 	 * Send action bar.
 	 *
@@ -838,6 +872,28 @@ public class User {
 		getData().setString("CheckWorld", "" + b);
 	}
 
+	public void setChoicePreference(String reward, String preference) {
+		ArrayList<String> data = getChoicePreferenceData();
+		ArrayList<String> choices = new ArrayList<String>();
+
+		boolean added = false;
+		for (String str : data) {
+			String[] data1 = str.split(":");
+			if (data1.length > 1) {
+				if (data1[0].equals(reward)) {
+					choices.add(reward + ":" + preference);
+					added = true;
+				} else {
+					choices.add(str);
+				}
+			}
+		}
+		if (!added) {
+			choices.add(reward + ":" + preference);
+		}
+		getData().setStringList("ChoicePreference", choices);
+	}
+
 	public void setInputMethod(String inputMethod) {
 		data.setString("InputMethod", inputMethod);
 	}
@@ -873,6 +929,10 @@ public class User {
 		data.setStringList("TimedRewards", timedRewards);
 	}
 
+	public void setUnClaimedChoice(ArrayList<String> rewards) {
+		getData().setStringList("UnClaimedChoices", rewards);
+	}
+
 	public void setUserInputMethod(InputMethod method) {
 		setInputMethod(method.toString());
 	}
@@ -893,66 +953,6 @@ public class User {
 				getData().setString("PlayerName", getPlayerName());
 			}
 		}
-	}
-
-	public String getChoicePreference(String rewardName) {
-		ArrayList<String> data = getChoicePreferenceData();
-
-		for (String str : data) {
-			String[] data1 = str.split(":");
-			if (data1.length > 1) {
-				if (data1[0].equals(rewardName)) {
-					return data1[1];
-				}
-			}
-		}
-		return "";
-	}
-
-	public ArrayList<String> getChoicePreferenceData() {
-		return getData().getStringList("ChoicePreference");
-	}
-
-	public void setChoicePreference(String reward, String preference) {
-		ArrayList<String> data = getChoicePreferenceData();
-		ArrayList<String> choices = new ArrayList<String>();
-
-		boolean added = false;
-		for (String str : data) {
-			String[] data1 = str.split(":");
-			if (data1.length > 1) {
-				if (data1[0].equals(reward)) {
-					choices.add(reward + ":" + preference);
-					added = true;
-				} else {
-					choices.add(str);
-				}
-			}
-		}
-		if (!added) {
-			choices.add(reward + ":" + preference);
-		}
-		getData().setStringList("ChoicePreference", choices);
-	}
-
-	public void addUnClaimedChoiceReward(String name) {
-		ArrayList<String> choices = getUnClaimedChoices();
-		choices.add(name);
-		setUnClaimedChoice(choices);
-	}
-
-	public ArrayList<String> getUnClaimedChoices() {
-		return getData().getStringList("UnClaimedChoices");
-	}
-
-	public void setUnClaimedChoice(ArrayList<String> rewards) {
-		getData().setStringList("UnClaimedChoices", rewards);
-	}
-
-	public void removeUnClaimedChoiceReward(String name) {
-		ArrayList<String> choices = getUnClaimedChoices();
-		choices.remove(name);
-		setUnClaimedChoice(choices);
 	}
 
 }

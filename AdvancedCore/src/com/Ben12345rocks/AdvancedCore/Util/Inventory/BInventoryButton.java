@@ -27,6 +27,8 @@ public abstract class BInventoryButton {
 
 	private HashMap<String, Object> data = new HashMap<String, Object>();
 
+	private BInventory inv;
+
 	public BInventoryButton(ItemBuilder item) {
 		setBuilder(item);
 		slot = item.getSlot();
@@ -81,6 +83,13 @@ public abstract class BInventoryButton {
 	}
 
 	/**
+	 * @return the inv
+	 */
+	public BInventory getInv() {
+		return inv;
+	}
+
+	/**
 	 * Gets the item.
 	 *
 	 * @return the item
@@ -109,20 +118,6 @@ public abstract class BInventoryButton {
 		return slot;
 	}
 
-	public void onClick(ClickEvent event, BInventory inv) {
-		this.inv = inv;
-		onClick(event);
-	}
-
-	private BInventory inv;
-
-	/**
-	 * @return the inv
-	 */
-	public BInventory getInv() {
-		return inv;
-	}
-
 	/**
 	 * On click.
 	 *
@@ -130,6 +125,11 @@ public abstract class BInventoryButton {
 	 *            the click event
 	 */
 	public abstract void onClick(ClickEvent clickEvent);
+
+	public void onClick(ClickEvent event, BInventory inv) {
+		this.inv = inv;
+		onClick(event);
+	}
 
 	public void sendMessage(Player player, String msg) {
 		player.sendMessage(StringUtils.getInstance().colorize(msg));

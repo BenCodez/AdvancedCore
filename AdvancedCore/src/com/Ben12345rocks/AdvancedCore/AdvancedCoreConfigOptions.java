@@ -11,51 +11,109 @@ import lombok.Setter;
 
 public class AdvancedCoreConfigOptions {
 
-	@Getter @Setter private boolean debug = false;
+	@Getter
+	@Setter
+	private boolean debug = false;
 
-	@Getter @Setter private boolean debugIngame = false;
-	@Getter @Setter private boolean logDebugToFile = true;
-	@Getter @Setter private String defaultRequestMethod = "ANVIL";
-	@Getter @Setter private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
-	@Getter @Setter private String formatNoPerms = "&cYou do not have enough permission!";
-	@Getter @Setter private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
-	@Getter @Setter private String helpLine = "&3&l%Command% - &3%HelpMessage%";
-	@Getter @Setter private String permPrefix;
+	@Getter
+	@Setter
+	private boolean debugIngame = false;
+	@Getter
+	@Setter
+	private boolean logDebugToFile = true;
+	@Getter
+	@Setter
+	private String defaultRequestMethod = "ANVIL";
+	@Getter
+	@Setter
+	private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
+	@Getter
+	@Setter
+	private String formatNoPerms = "&cYou do not have enough permission!";
+	@Getter
+	@Setter
+	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
+	@Getter
+	@Setter
+	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
+	@Getter
+	@Setter
+	private String permPrefix;
 
-	@Getter @Setter private String formatChoiceRewardsPreferenceSet = "&aPreference set to %choice%";
+	@Getter
+	@Setter
+	private String formatChoiceRewardsPreferenceSet = "&aPreference set to %choice%";
 
-	@Getter @Setter private boolean extraDebug = false;
+	@Getter
+	@Setter
+	private boolean extraDebug = false;
 
-	@Getter @Setter private boolean disableCheckOnWorldChange = false;
-	@Getter @Setter private boolean sendScoreboards = true;
+	@Getter
+	@Setter
+	private boolean disableCheckOnWorldChange = false;
+	@Getter
+	@Setter
+	private boolean sendScoreboards = true;
 
-	@Getter @Setter private boolean autoKillInvs = true;
+	@Getter
+	@Setter
+	private boolean autoKillInvs = true;
 
-	@Getter @Setter private String prevPageTxt = "&aPrevious Page";
-	@Getter @Setter private String nextPageTxt = "&aNext Page";
-	@Getter @Setter private boolean checkNameMojang = false;
-	@Getter @Setter private boolean alternateUUIDLookUp;
+	@Getter
+	@Setter
+	private String prevPageTxt = "&aPrevious Page";
+	@Getter
+	@Setter
+	private String nextPageTxt = "&aNext Page";
+	@Getter
+	@Setter
+	private boolean checkNameMojang = false;
+	@Getter
+	@Setter
+	private boolean alternateUUIDLookUp;
 
-	@Getter @Setter private boolean purgeOldData = false;
+	@Getter
+	@Setter
+	private boolean purgeOldData = false;
 
-	@Getter @Setter private int purgeMinimumDays = 90;
+	@Getter
+	@Setter
+	private int purgeMinimumDays = 90;
 
-	@Getter @Setter private String formatInvFull;
+	@Getter
+	@Setter
+	private String formatInvFull;
 
-	@Getter @Setter private int timeHourOffSet = 0;
+	@Getter
+	@Setter
+	private int timeHourOffSet = 0;
 
-	@Getter @Setter private boolean createBackups = true;
+	@Getter
+	@Setter
+	private boolean createBackups = true;
 
-	@Getter @Setter private boolean enableJenkins;
+	@Getter
+	@Setter
+	private boolean enableJenkins;
 
-	@Getter @Setter private ConfigurationSection configData;
+	@Getter
+	@Setter
+	private ConfigurationSection configData;
 
-	@Getter @Setter private boolean autoDownload = false;
+	@Getter
+	@Setter
+	private boolean autoDownload = false;
 
-	@Getter @Setter private UserStorage storageType = UserStorage.SQLITE;
-	@Getter @Setter private int resourceId = 0;
+	@Getter
+	@Setter
+	private UserStorage storageType = UserStorage.SQLITE;
+	@Getter
+	@Setter
+	private int resourceId = 0;
 
-	@Getter @Setter private boolean processRewards = true;
+	@Getter
+	@Setter
+	private boolean processRewards = true;
 
 	public AdvancedCoreConfigOptions() {
 	}

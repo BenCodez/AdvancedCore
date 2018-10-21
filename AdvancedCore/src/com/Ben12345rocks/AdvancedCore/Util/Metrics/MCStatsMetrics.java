@@ -64,7 +64,6 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
-		 *
 		 * @see java.lang.Object#equals(java.lang.Object)
 		 */
 		@Override
@@ -97,7 +96,6 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
-		 *
 		 * @see java.lang.Object#hashCode()
 		 */
 		@Override
@@ -144,7 +142,6 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
-		 *
 		 * @see java.lang.Object#equals(java.lang.Object)
 		 */
 		@Override
@@ -175,7 +172,6 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
-		 *
 		 * @see java.lang.Object#hashCode()
 		 */
 		@Override

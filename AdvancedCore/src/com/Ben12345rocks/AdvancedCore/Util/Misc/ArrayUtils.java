@@ -105,6 +105,17 @@ public class ArrayUtils {
 		return txt;
 	}
 
+	public boolean containsIgnoreCase(ArrayList<String> set, String str) {
+		str = str.toLowerCase();
+		for (String text : set) {
+			text = text.toLowerCase();
+			if (text.equals(str)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Sets the contains ignore case.
 	 *
@@ -115,17 +126,6 @@ public class ArrayUtils {
 	 * @return true, if successful
 	 */
 	public boolean containsIgnoreCase(Set<String> set, String str) {
-		str = str.toLowerCase();
-		for (String text : set) {
-			text = text.toLowerCase();
-			if (text.equals(str)) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	public boolean containsIgnoreCase(ArrayList<String> set, String str) {
 		str = str.toLowerCase();
 		for (String text : set) {
 			text = text.toLowerCase();

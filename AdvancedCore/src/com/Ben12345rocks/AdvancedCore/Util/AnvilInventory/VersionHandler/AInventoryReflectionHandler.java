@@ -53,7 +53,6 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
-	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#getInventory()
 	 */
@@ -64,7 +63,6 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
-	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#loadClasses()
 	 */
@@ -79,7 +77,6 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
-	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#open(org.bukkit.entity.Player, java.util.HashMap)
 	 */
