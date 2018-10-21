@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
@@ -135,6 +136,17 @@ public class ChoiceGUI {
 				}
 			}.addData("Choice", choice));
 		}
+
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&cRemove preference")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				User user = (User) getInv().getData("User");
+				user.setChoicePreference((String) getInv().getData("Reward"), "");
+
+				user.sendMessage("&cRemoved choice reward preference");
+			}
+		}.addData("Choice", ""));
 		inv.addData("User", user);
 		inv.addData("Reward", rewardName);
 

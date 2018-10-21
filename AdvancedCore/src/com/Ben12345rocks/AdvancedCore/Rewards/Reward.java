@@ -315,7 +315,7 @@ public class Reward {
 		if (isEnableChoices()) {
 			checkRewardFile();
 			String choice = user.getChoicePreference(getName());
-			if (choice.isEmpty()) {
+			if (choice.isEmpty() || choice.equalsIgnoreCase("none")) {
 				user.addUnClaimedChoiceReward(getName());
 			} else {
 				giveChoicesReward(user, choice);
