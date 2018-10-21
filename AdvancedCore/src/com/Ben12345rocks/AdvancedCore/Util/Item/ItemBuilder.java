@@ -71,8 +71,9 @@ public class ItemBuilder {
 			if (checkChance(chance)) {
 				Material material = Material.STONE;
 				List<String> lore = data.getStringList("Lore");
-
-				material = Material.matchMaterial(data.getString("Material").toUpperCase());
+				String[] path = data.getCurrentPath().split(".");
+				String pathMaterial = path[path.length - 1];
+				material = Material.matchMaterial(data.getString("Material", pathMaterial).toUpperCase());
 
 				// temp
 				if (material == null) {
