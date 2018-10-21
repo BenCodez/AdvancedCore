@@ -29,6 +29,8 @@ import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
+import lombok.Getter;
+
 /**
  * The Class BInventory.
  */
@@ -40,67 +42,33 @@ public class BInventory implements Listener {
 	public class ClickEvent {
 
 		/** The player. */
-		private Player player;
+		@Getter private Player player;
 
 		/** The event. */
-		private InventoryClickEvent event;
+		@Getter private InventoryClickEvent event;
 
 		/** The click type. */
-		private ClickType clickType;
+		@Getter private ClickType click;
 
 		/** The inventory. */
-		private Inventory inventory;
+		@Getter private Inventory inventory;
 
 		/** The slot. */
-		private int slot;
+		@Getter private int slot;
 
 		/** The clicked item. */
-		private ItemStack clickedItem;
+		@Getter private ItemStack clickedItem;
 
-		private BInventoryButton button;
+		@Getter private BInventoryButton button;
 
 		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
 			this.event = event;
 			player = (Player) event.getWhoClicked();
-			clickType = event.getClick();
+			click = event.getClick();
 			inventory = event.getInventory();
 			clickedItem = event.getCurrentItem();
 			slot = event.getSlot();
 			button = b;
-		}
-
-		/**
-		 * @return the button
-		 */
-		public BInventoryButton getButton() {
-			return button;
-		}
-
-		/**
-		 * Gets the click.
-		 *
-		 * @return the click
-		 */
-		public ClickType getClick() {
-			return clickType;
-		}
-
-		/**
-		 * Gets the clicked item.
-		 *
-		 * @return the clicked item
-		 */
-		public ItemStack getClickedItem() {
-			return clickedItem;
-		}
-
-		/**
-		 * Gets the click type.
-		 *
-		 * @return the click type
-		 */
-		public ClickType getClickType() {
-			return clickType;
 		}
 
 		/**
@@ -110,24 +78,6 @@ public class BInventory implements Listener {
 		 */
 		public ItemStack getCurrentItem() {
 			return clickedItem;
-		}
-
-		/**
-		 * Gets the event.
-		 *
-		 * @return the event
-		 */
-		public InventoryClickEvent getEvent() {
-			return event;
-		}
-
-		/**
-		 * Gets the inventory.
-		 *
-		 * @return the inventory
-		 */
-		public Inventory getInventory() {
-			return inventory;
 		}
 
 		/**
@@ -152,24 +102,6 @@ public class BInventory implements Listener {
 		 */
 		public Object getMeta(String str) {
 			return PlayerUtils.getInstance().getPlayerMeta(player, str);
-		}
-
-		/**
-		 * Gets the player.
-		 *
-		 * @return the player
-		 */
-		public Player getPlayer() {
-			return player;
-		}
-
-		/**
-		 * Gets the slot.
-		 *
-		 * @return the slot
-		 */
-		public int getSlot() {
-			return slot;
 		}
 
 		/**
@@ -514,7 +446,7 @@ public class BInventory implements Listener {
 			}
 		}
 	}
-	
+
 	private void onClick(InventoryClickEvent event, BInventoryButton b) {
 		b.onClick(new ClickEvent(event, b), this);
 	}

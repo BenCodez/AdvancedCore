@@ -61,6 +61,8 @@ import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.UpdateDownloader;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.permission.Permission;
 
@@ -71,34 +73,34 @@ public class AdvancedCoreHook {
 		return instance;
 	}
 
-	private ConcurrentHashMap<String, String> uuidNameCache;
+	@Getter private ConcurrentHashMap<String, String> uuidNameCache;
 
-	private SignMenu signMenu;
-	private JavaPlugin plugin;
-	private boolean placeHolderAPIEnabled;
+	@Getter private SignMenu signMenu;
+	@Getter @Setter private JavaPlugin plugin;
+	@Getter private boolean placeHolderAPIEnabled;
 
 	private Database database;
-	private MySQL mysql;
+	@Getter private MySQL mysql;
 
-	private IServerHandle serverHandle;
-	private Logger logger;
+	@Getter private IServerHandle serverHandle;
+	@Getter private Logger logger;
 
-	private Timer timer = new Timer();
+	@Getter private Timer timer = new Timer();
 
-	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
-	private String version = "";
-	private String buildTime = "";
+	@Getter @Setter private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
+	@Getter private String version = "";
+	@Getter private String buildTime = "";
 
-	private String jenkinsSite = "";
+	@Getter @Setter private String jenkinsSite = "";
 
-	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
+	@Getter @Setter private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	/** The econ. */
-	private Economy econ = null;
+	@Getter private Economy econ = null;
 
-	private Permission perms;
+	@Getter private Permission perms;
 
-	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
+	@Getter private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
 	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
 
@@ -224,61 +226,8 @@ public class AdvancedCoreHook {
 		}
 	}
 
-	public Economy getEcon() {
-		return econ;
-	}
-
-	public HashMap<String, Object> getJavascriptEngine() {
-		return javascriptEngine;
-	}
-
-	/**
-	 * @return the javascriptEngineRequests
-	 */
-	public ArrayList<JavascriptPlaceholderRequest> getJavascriptEngineRequests() {
-		return javascriptEngineRequests;
-	}
-
-	public String getJenkinsSite() {
-		return jenkinsSite;
-	}
-
-	public Logger getLogger() {
-		return logger;
-	}
-
-	/**
-	 * @return the mysql
-	 */
-	public MySQL getMysql() {
-		return mysql;
-	}
-
-	/**
-	 * @return the options
-	 */
-	public AdvancedCoreConfigOptions getOptions() {
-		return options;
-	}
-
-	public Permission getPerms() {
-		return perms;
-	}
-
-	public JavaPlugin getPlugin() {
-		return plugin;
-	}
-
 	public Server getServer() {
 		return getPlugin().getServer();
-	}
-
-	public IServerHandle getServerHandle() {
-		return serverHandle;
-	}
-
-	public SignMenu getSignMenu() {
-		return this.signMenu;
 	}
 
 	public Table getSQLiteUserTable() {
@@ -294,30 +243,8 @@ public class AdvancedCoreHook {
 		return getOptions().getStorageType();
 	}
 
-	public String getTime() {
-		return buildTime;
-	}
-
-	/**
-	 * @return the timer
-	 */
-	public Timer getTimer() {
-		return timer;
-	}
-
 	public UserManager getUserManager() {
 		return UserManager.getInstance();
-	}
-
-	public ConcurrentHashMap<String, String> getUuidNameCache() {
-		return uuidNameCache;
-	}
-
-	/**
-	 * @return the version
-	 */
-	public String getVersion() {
-		return version;
 	}
 
 	private YamlConfiguration getVersionFile() {
@@ -346,10 +273,6 @@ public class AdvancedCoreHook {
 			e.printStackTrace();
 		}
 		return null;
-	}
-
-	public boolean isPlaceHolderAPIEnabled() {
-		return placeHolderAPIEnabled;
 	}
 
 	public void loadAutoUpdateCheck() {
@@ -423,7 +346,7 @@ public class AdvancedCoreHook {
 
 		Bukkit.getPluginManager().registerEvents(BackupHandle.getInstance(), getPlugin());
 
-		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getTime() + "'");
+		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "'");
 	}
 
 	/**
@@ -745,26 +668,6 @@ public class AdvancedCoreHook {
 	}
 
 	/**
-	 * @param javascriptEngine
-	 *            the javascriptEngine to set
-	 */
-	public void setJavascriptEngine(HashMap<String, Object> javascriptEngine) {
-		this.javascriptEngine = javascriptEngine;
-	}
-
-	/**
-	 * @param javascriptEngineRequests
-	 *            the javascriptEngineRequests to set
-	 */
-	public void setJavascriptEngineRequests(ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests) {
-		this.javascriptEngineRequests = javascriptEngineRequests;
-	}
-
-	public void setJenkinsSite(String jenkinsSite) {
-		this.jenkinsSite = jenkinsSite;
-	}
-
-	/**
 	 * @param mysql
 	 *            the mysql to set
 	 */
@@ -775,10 +678,6 @@ public class AdvancedCoreHook {
 			this.mysql = null;
 		}
 		this.mysql = mysql;
-	}
-
-	public void setPlugin(JavaPlugin plugin) {
-		this.plugin = plugin;
 	}
 
 	private boolean setupEconomy() {

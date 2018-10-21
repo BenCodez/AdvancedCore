@@ -6,7 +6,6 @@ package com.Ben12345rocks.AdvancedCore.UserManager;
  */
 public class UUID {
 
-	/** The uuid. */
 	private String uuid;
 
 	/**

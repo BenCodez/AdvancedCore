@@ -18,6 +18,8 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -30,22 +32,17 @@ import net.md_5.bungee.api.chat.TextComponent;
  */
 public abstract class CommandHandler {
 
-	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
-	/** The args. */
-	private String[] args;
+	@Getter @Setter private String[] args;
 
-	/** The perm. */
-	private String perm;
+	@Getter @Setter private String perm;
 
-	/** The help message. */
-	private String helpMessage;
+	@Getter @Setter private String helpMessage;
 
-	/** The allow console. */
-	private boolean allowConsole = true;
+	@Getter @Setter private boolean allowConsole = true;
 
-	private boolean advancedCoreCommand = false;
+	@Getter @Setter private boolean advancedCoreCommand = false;
 
 	private boolean ignoreNumberCheck = false;
 
@@ -178,15 +175,6 @@ public abstract class CommandHandler {
 	public abstract void execute(CommandSender sender, String[] args);
 
 	/**
-	 * Gets the args.
-	 *
-	 * @return the args
-	 */
-	public String[] getArgs() {
-		return args;
-	}
-
-	/**
 	 * Gets the help line.
 	 *
 	 * @param command
@@ -230,24 +218,6 @@ public abstract class CommandHandler {
 			}
 		}
 		return commandText;
-	}
-
-	/**
-	 * Gets the help message.
-	 *
-	 * @return the help message
-	 */
-	public String getHelpMessage() {
-		return helpMessage;
-	}
-
-	/**
-	 * Gets the perm.
-	 *
-	 * @return the perm
-	 */
-	public String getPerm() {
-		return perm;
 	}
 
 	public ArrayList<String> getTabCompleteOptions(CommandSender sender, String[] args, int argNum,
@@ -308,7 +278,6 @@ public abstract class CommandHandler {
 	public boolean hasPerm(CommandSender sender) {
 		/*
 		 * boolean hasPerm = false;
-		 *
 		 * if (!perm.equals("")) { for (String perm : this.perm.split("\\|")) { if
 		 * (sender.hasPermission(perm)) { hasPerm = true; } } } else { hasPerm = true; }
 		 * return hasPerm;
@@ -319,17 +288,6 @@ public abstract class CommandHandler {
 	public CommandHandler ignoreNumberCheck() {
 		ignoreNumberCheck = true;
 		return this;
-	}
-
-	public boolean isAdvancedCoreCommand() {
-		return advancedCoreCommand;
-	}
-
-	/**
-	 * @return the allowConsole
-	 */
-	public boolean isAllowConsole() {
-		return allowConsole;
 	}
 
 	public boolean isPlayer(CommandSender sender) {
@@ -417,30 +375,6 @@ public abstract class CommandHandler {
 		} else {
 			sender.sendMessage(StringUtils.getInstance().compToString(comp));
 		}
-	}
-
-	public void setAdvancedCoreCommand(boolean advancedCoreCommand) {
-		this.advancedCoreCommand = advancedCoreCommand;
-	}
-
-	public CommandHandler setAllowConsole(boolean allowConsole) {
-		this.allowConsole = allowConsole;
-		return this;
-	}
-
-	public CommandHandler setArgs(String[] args) {
-		this.args = args;
-		return this;
-	}
-
-	public CommandHandler setHelpMessage(String helpMessage) {
-		this.helpMessage = helpMessage;
-		return this;
-	}
-
-	public CommandHandler setPerm(String perm) {
-		this.perm = perm;
-		return this;
 	}
 
 }
