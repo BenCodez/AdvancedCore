@@ -6,258 +6,58 @@ import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStorage;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class AdvancedCoreConfigOptions {
 
-	private boolean debug = false;
+	@Getter @Setter private boolean debug = false;
 
-	private boolean debugIngame = false;
-	private boolean logDebugToFile = true;
-	private String defaultRequestMethod = "ANVIL";
-	private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
-	private String formatNoPerms = "&cYou do not have enough permission!";
-	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
-	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
-	private String permPrefix;
+	@Getter @Setter private boolean debugIngame = false;
+	@Getter @Setter private boolean logDebugToFile = true;
+	@Getter @Setter private String defaultRequestMethod = "ANVIL";
+	@Getter @Setter private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
+	@Getter @Setter private String formatNoPerms = "&cYou do not have enough permission!";
+	@Getter @Setter private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
+	@Getter @Setter private String helpLine = "&3&l%Command% - &3%HelpMessage%";
+	@Getter @Setter private String permPrefix;
 
-	private String formatChoiceRewardsPreferenceSet = "&aPreference set to %choice%";
+	@Getter @Setter private String formatChoiceRewardsPreferenceSet = "&aPreference set to %choice%";
 
-	private boolean extraDebug = false;
+	@Getter @Setter private boolean extraDebug = false;
 
-	private boolean disableCheckOnWorldChange = false;
-	private boolean sendScoreboards = true;
+	@Getter @Setter private boolean disableCheckOnWorldChange = false;
+	@Getter @Setter private boolean sendScoreboards = true;
 
-	private boolean autoKillInvs = true;
+	@Getter @Setter private boolean autoKillInvs = true;
 
-	private String prevPageTxt = "&aPrevious Page";
-	private String nextPageTxt = "&aNext Page";
-	private boolean checkNameMojang = false;
-	private boolean alternateUUIDLookUp;
+	@Getter @Setter private String prevPageTxt = "&aPrevious Page";
+	@Getter @Setter private String nextPageTxt = "&aNext Page";
+	@Getter @Setter private boolean checkNameMojang = false;
+	@Getter @Setter private boolean alternateUUIDLookUp;
 
-	private boolean purgeOldData = false;
+	@Getter @Setter private boolean purgeOldData = false;
 
-	private int purgeMinimumDays = 90;
+	@Getter @Setter private int purgeMinimumDays = 90;
 
-	private String formatInvFull;
+	@Getter @Setter private String formatInvFull;
 
-	private int timeHourOffSet = 0;
+	@Getter @Setter private int timeHourOffSet = 0;
 
-	private boolean createBackups = true;
+	@Getter @Setter private boolean createBackups = true;
 
-	private boolean enableJenkins;
+	@Getter @Setter private boolean enableJenkins;
 
-	private ConfigurationSection configData;
+	@Getter @Setter private ConfigurationSection configData;
 
-	private boolean autoDownload = false;
+	@Getter @Setter private boolean autoDownload = false;
 
-	private UserStorage storageType = UserStorage.SQLITE;
-	private int resourceId = 0;
+	@Getter @Setter private UserStorage storageType = UserStorage.SQLITE;
+	@Getter @Setter private int resourceId = 0;
 
-	private boolean processRewards = true;
-
-	/**
-	 * @return the processRewards
-	 */
-	public boolean isProcessRewards() {
-		return processRewards;
-	}
-
-	/**
-	 * @param processRewards the processRewards to set
-	 */
-	public void setProcessRewards(boolean processRewards) {
-		this.processRewards = processRewards;
-	}
+	@Getter @Setter private boolean processRewards = true;
 
 	public AdvancedCoreConfigOptions() {
-	}
-
-	/**
-	 * @return the configData
-	 */
-	public ConfigurationSection getConfigData() {
-		return configData;
-	}
-
-	/**
-	 * @return the defaultRequestMethod
-	 */
-	public String getDefaultRequestMethod() {
-		return defaultRequestMethod;
-	}
-
-	/**
-	 * @return the disabledRequestMethods
-	 */
-	public ArrayList<String> getDisabledRequestMethods() {
-		return disabledRequestMethods;
-	}
-
-	/**
-	 * @return the formatInvFull
-	 */
-	public String getFormatInvFull() {
-		return formatInvFull;
-	}
-
-	/**
-	 * @return the formatNoPerms
-	 */
-	public String getFormatNoPerms() {
-		return formatNoPerms;
-	}
-
-	/**
-	 * @return the formatNotNumber
-	 */
-	public String getFormatNotNumber() {
-		return formatNotNumber;
-	}
-
-	/**
-	 * @return the helpLine
-	 */
-	public String getHelpLine() {
-		return helpLine;
-	}
-
-	/**
-	 * @return the nextPageTxt
-	 */
-	public String getNextPageTxt() {
-		return nextPageTxt;
-	}
-
-	/**
-	 * @return the permPrefix
-	 */
-	public String getPermPrefix() {
-		return permPrefix;
-	}
-
-	/**
-	 * @return the prevPageTxt
-	 */
-	public String getPrevPageTxt() {
-		return prevPageTxt;
-	}
-
-	/**
-	 * @return the purgeMinimumDays
-	 */
-	public int getPurgeMinimumDays() {
-		return purgeMinimumDays;
-	}
-
-	/**
-	 * @return the resourceId
-	 */
-	public int getResourceId() {
-		return resourceId;
-	}
-
-	/**
-	 * @return the storageType
-	 */
-	public UserStorage getStorageType() {
-		return storageType;
-	}
-
-	/**
-	 * @return the timeHourOffSet
-	 */
-	public int getTimeHourOffSet() {
-		return timeHourOffSet;
-	}
-
-	/**
-	 * @return the alternateUUIDLookUp
-	 */
-	public boolean isAlternateUUIDLookUp() {
-		return alternateUUIDLookUp;
-	}
-
-	/**
-	 * @return the autoDownload
-	 */
-	public boolean isAutoDownload() {
-		return autoDownload;
-	}
-
-	/**
-	 * @return the autoKillInvs
-	 */
-	public boolean isAutoKillInvs() {
-		return autoKillInvs;
-	}
-
-	/**
-	 * @return the checkNameMojang
-	 */
-	public boolean isCheckNameMojang() {
-		return checkNameMojang;
-	}
-
-	/**
-	 * @return the createBackups
-	 */
-	public boolean isCreateBackups() {
-		return createBackups;
-	}
-
-	/**
-	 * @return the debug
-	 */
-	public boolean isDebug() {
-		return debug;
-	}
-
-	/**
-	 * @return the debugIngame
-	 */
-	public boolean isDebugIngame() {
-		return debugIngame;
-	}
-
-	/**
-	 * @return the disableCheckOnWorldChange
-	 */
-	public boolean isDisableCheckOnWorldChange() {
-		return disableCheckOnWorldChange;
-	}
-
-	/**
-	 * @return the enableJenkins
-	 */
-	public boolean isEnableJenkins() {
-		return enableJenkins;
-	}
-
-	/**
-	 * @return the extraDebug
-	 */
-	public boolean isExtraDebug() {
-		return extraDebug;
-	}
-
-	/**
-	 * @return the logDebugToFile
-	 */
-	public boolean isLogDebugToFile() {
-		return logDebugToFile;
-	}
-
-	/**
-	 * @return the purgeOldData
-	 */
-	public boolean isPurgeOldData() {
-		return purgeOldData;
-	}
-
-	/**
-	 * @return the sendScoreboards
-	 */
-	public boolean isSendScoreboards() {
-		return sendScoreboards;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -299,236 +99,4 @@ public class AdvancedCoreConfigOptions {
 
 		}
 	}
-
-	/**
-	 * @return the formatChoiceRewardsPreferenceSet
-	 */
-	public String getFormatChoiceRewardsPreferenceSet() {
-		return formatChoiceRewardsPreferenceSet;
-	}
-
-	/**
-	 * @param formatChoiceRewardsPreferenceSet
-	 *            the formatChoiceRewardsPreferenceSet to set
-	 */
-	public void setFormatChoiceRewardsPreferenceSet(String formatChoiceRewardsPreferenceSet) {
-		this.formatChoiceRewardsPreferenceSet = formatChoiceRewardsPreferenceSet;
-	}
-
-	/**
-	 * @param alternateUUIDLookUp
-	 *            the alternateUUIDLookUp to set
-	 */
-	public void setAlternateUUIDLookUp(boolean alternateUUIDLookUp) {
-		this.alternateUUIDLookUp = alternateUUIDLookUp;
-	}
-
-	/**
-	 * @param autoDownload
-	 *            the autoDownload to set
-	 */
-	public void setAutoDownload(boolean autoDownload) {
-		this.autoDownload = autoDownload;
-	}
-
-	/**
-	 * @param autoKillInvs
-	 *            the autoKillInvs to set
-	 */
-	public void setAutoKillInvs(boolean autoKillInvs) {
-		this.autoKillInvs = autoKillInvs;
-	}
-
-	/**
-	 * @param checkNameMojang
-	 *            the checkNameMojang to set
-	 */
-	public void setCheckNameMojang(boolean checkNameMojang) {
-		this.checkNameMojang = checkNameMojang;
-	}
-
-	/**
-	 * @param configData
-	 *            the configData to set
-	 */
-	public void setConfigData(ConfigurationSection configData) {
-		this.configData = configData;
-	}
-
-	/**
-	 * @param createBackups
-	 *            the createBackups to set
-	 */
-	public void setCreateBackups(boolean createBackups) {
-		this.createBackups = createBackups;
-	}
-
-	/**
-	 * @param debug
-	 *            the debug to set
-	 */
-	public void setDebug(boolean debug) {
-		this.debug = debug;
-	}
-
-	/**
-	 * @param debugIngame
-	 *            the debugIngame to set
-	 */
-	public void setDebugIngame(boolean debugIngame) {
-		this.debugIngame = debugIngame;
-	}
-
-	/**
-	 * @param defaultRequestMethod
-	 *            the defaultRequestMethod to set
-	 */
-	public void setDefaultRequestMethod(String defaultRequestMethod) {
-		this.defaultRequestMethod = defaultRequestMethod;
-	}
-
-	/**
-	 * @param disableCheckOnWorldChange
-	 *            the disableCheckOnWorldChange to set
-	 */
-	public void setDisableCheckOnWorldChange(boolean disableCheckOnWorldChange) {
-		this.disableCheckOnWorldChange = disableCheckOnWorldChange;
-	}
-
-	/**
-	 * @param disabledRequestMethods
-	 *            the disabledRequestMethods to set
-	 */
-	public void setDisabledRequestMethods(ArrayList<String> disabledRequestMethods) {
-		this.disabledRequestMethods = disabledRequestMethods;
-	}
-
-	/**
-	 * @param enableJenkins
-	 *            the enableJenkins to set
-	 */
-	public void setEnableJenkins(boolean enableJenkins) {
-		this.enableJenkins = enableJenkins;
-	}
-
-	/**
-	 * @param extraDebug
-	 *            the extraDebug to set
-	 */
-	public void setExtraDebug(boolean extraDebug) {
-		this.extraDebug = extraDebug;
-	}
-
-	/**
-	 * @param formatInvFull
-	 *            the formatInvFull to set
-	 */
-	public void setFormatInvFull(String formatInvFull) {
-		this.formatInvFull = formatInvFull;
-	}
-
-	/**
-	 * @param formatNoPerms
-	 *            the formatNoPerms to set
-	 */
-	public void setFormatNoPerms(String formatNoPerms) {
-		this.formatNoPerms = formatNoPerms;
-	}
-
-	/**
-	 * @param formatNotNumber
-	 *            the formatNotNumber to set
-	 */
-	public void setFormatNotNumber(String formatNotNumber) {
-		this.formatNotNumber = formatNotNumber;
-	}
-
-	/**
-	 * @param helpLine
-	 *            the helpLine to set
-	 */
-	public void setHelpLine(String helpLine) {
-		this.helpLine = helpLine;
-	}
-
-	/**
-	 * @param logDebugToFile
-	 *            the logDebugToFile to set
-	 */
-	public void setLogDebugToFile(boolean logDebugToFile) {
-		this.logDebugToFile = logDebugToFile;
-	}
-
-	/**
-	 * @param nextPageTxt
-	 *            the nextPageTxt to set
-	 */
-	public void setNextPageTxt(String nextPageTxt) {
-		this.nextPageTxt = nextPageTxt;
-	}
-
-	/**
-	 * @param permPrefix
-	 *            the permPrefix to set
-	 */
-	public void setPermPrefix(String permPrefix) {
-		this.permPrefix = permPrefix;
-	}
-
-	/**
-	 * @param prevPageTxt
-	 *            the prevPageTxt to set
-	 */
-	public void setPrevPageTxt(String prevPageTxt) {
-		this.prevPageTxt = prevPageTxt;
-	}
-
-	/**
-	 * @param purgeMinimumDays
-	 *            the purgeMinimumDays to set
-	 */
-	public void setPurgeMinimumDays(int purgeMinimumDays) {
-		this.purgeMinimumDays = purgeMinimumDays;
-	}
-
-	/**
-	 * @param purgeOldData
-	 *            the purgeOldData to set
-	 */
-	public void setPurgeOldData(boolean purgeOldData) {
-		this.purgeOldData = purgeOldData;
-	}
-
-	/**
-	 * @param resourceId
-	 *            the resourceId to set
-	 */
-	public void setResourceId(int resourceId) {
-		this.resourceId = resourceId;
-	}
-
-	/**
-	 * @param sendScoreboards
-	 *            the sendScoreboards to set
-	 */
-	public void setSendScoreboards(boolean sendScoreboards) {
-		this.sendScoreboards = sendScoreboards;
-	}
-
-	/**
-	 * @param storageType
-	 *            the storageType to set
-	 */
-	public void setStorageType(UserStorage storageType) {
-		this.storageType = storageType;
-	}
-
-	/**
-	 * @param timeHourOffSet
-	 *            the timeHourOffSet to set
-	 */
-	public void setTimeHourOffSet(int timeHourOffSet) {
-		this.timeHourOffSet = timeHourOffSet;
-	}
-
 }
