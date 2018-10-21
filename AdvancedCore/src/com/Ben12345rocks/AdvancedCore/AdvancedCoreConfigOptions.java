@@ -52,6 +52,22 @@ public class AdvancedCoreConfigOptions {
 	private UserStorage storageType = UserStorage.SQLITE;
 	private int resourceId = 0;
 
+	private boolean processRewards = true;
+
+	/**
+	 * @return the processRewards
+	 */
+	public boolean isProcessRewards() {
+		return processRewards;
+	}
+
+	/**
+	 * @param processRewards the processRewards to set
+	 */
+	public void setProcessRewards(boolean processRewards) {
+		this.processRewards = processRewards;
+	}
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -279,6 +295,7 @@ public class AdvancedCoreConfigOptions {
 			createBackups = configData.getBoolean("CreateBackups", false);
 
 			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
+			processRewards = configData.getBoolean("ProcessRewards", true);
 
 		}
 	}
@@ -291,7 +308,8 @@ public class AdvancedCoreConfigOptions {
 	}
 
 	/**
-	 * @param formatChoiceRewardsPreferenceSet the formatChoiceRewardsPreferenceSet to set
+	 * @param formatChoiceRewardsPreferenceSet
+	 *            the formatChoiceRewardsPreferenceSet to set
 	 */
 	public void setFormatChoiceRewardsPreferenceSet(String formatChoiceRewardsPreferenceSet) {
 		this.formatChoiceRewardsPreferenceSet = formatChoiceRewardsPreferenceSet;

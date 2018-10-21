@@ -198,6 +198,10 @@ public class User {
 	 * Check offline rewards.
 	 */
 	public void checkOfflineRewards() {
+		if (!AdvancedCoreHook.getInstance().getOptions().isProcessRewards()) {
+			AdvancedCoreHook.getInstance().debug("Processing rewards is disabled");
+			return;
+		}
 		setCheckWorld(false);
 		final ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());

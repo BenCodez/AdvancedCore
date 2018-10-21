@@ -322,9 +322,10 @@ public class Reward {
 			}
 		}
 	}
-	
+
 	public void giveChoicesReward(User user, String choice) {
-		RewardBuilder reward = new RewardBuilder(getConfig().getConfigData(), getConfig().getChoicesRewardsPath(choice));
+		RewardBuilder reward = new RewardBuilder(getConfig().getConfigData(),
+				getConfig().getChoicesRewardsPath(choice));
 		reward.withPrefix(getName());
 		reward.withPlaceHolder("choice", choice);
 		reward.send(user);
@@ -1097,6 +1098,11 @@ public class Reward {
 	}
 
 	public void giveReward(User user, RewardOptions rewardOptions) {
+		if (!AdvancedCoreHook.getInstance().getOptions().isProcessRewards()) {
+			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Processing rewards is disabled");
+			return;
+		}
+
 		if (rewardOptions == null) {
 			rewardOptions = new RewardOptions();
 		}
