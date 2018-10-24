@@ -41,27 +41,21 @@ public class BInventory implements Listener {
 	 */
 	public class ClickEvent {
 
-		/** The player. */
 		@Getter
 		private Player player;
 
-		/** The event. */
 		@Getter
 		private InventoryClickEvent event;
 
-		/** The click type. */
 		@Getter
 		private ClickType click;
 
-		/** The inventory. */
 		@Getter
 		private Inventory inventory;
 
-		/** The slot. */
 		@Getter
 		private int slot;
 
-		/** The clicked item. */
 		@Getter
 		private ItemStack clickedItem;
 

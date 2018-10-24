@@ -80,8 +80,9 @@
 						</goals>
 						<configuration>
 							<addOutputDirectory>false</addOutputDirectory>
-							<outputDirectory>${project.basedir}/target/classes</outputDirectory>
+							<outputDirectory>${project.basedir}/target/delombok</outputDirectory>
 							<sourceDirectory>${project.basedir}/src</sourceDirectory>
+							<verbose>true</verbose>
 						</configuration>
 					</execution>
 				</executions>
@@ -146,6 +147,9 @@
 							<goal>jar</goal>
 						</goals>
 						<phase>deploy</phase>
+						<configuration>
+							<sourcepath>${project.basedir}/target/delombok</sourcepath>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

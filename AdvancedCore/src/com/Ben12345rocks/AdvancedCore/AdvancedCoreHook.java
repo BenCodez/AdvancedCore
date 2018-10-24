@@ -112,7 +112,6 @@ public class AdvancedCoreHook {
 	@Setter
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
-	/** The econ. */
 	@Getter
 	private Economy econ = null;
 
