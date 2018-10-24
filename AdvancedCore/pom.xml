@@ -82,7 +82,6 @@
 							<addOutputDirectory>false</addOutputDirectory>
 							<outputDirectory>${project.basedir}/target/delombok</outputDirectory>
 							<sourceDirectory>${project.basedir}/src</sourceDirectory>
-							<verbose>true</verbose>
 						</configuration>
 					</execution>
 				</executions>
