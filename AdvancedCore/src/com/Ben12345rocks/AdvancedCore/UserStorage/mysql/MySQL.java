@@ -472,12 +472,12 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-
 		if (!containsKey(uuid)) {
 			synchronized (object1) {
-				// AdvancedCoreHook.getInstance().debug("Load: " + uuid);
 				loadPlayer(uuid);
 			}
+		} else if (AdvancedCoreHook.getInstance().getOptions().isClearCacheOnJoin()) {
+			removePlayer(uuid);
 		}
 	}
 

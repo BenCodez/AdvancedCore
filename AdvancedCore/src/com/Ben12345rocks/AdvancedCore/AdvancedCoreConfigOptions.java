@@ -115,6 +115,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean processRewards = true;
 
+	@Getter
+	@Setter
+	private boolean clearCacheOnJoin;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -154,7 +158,7 @@ public class AdvancedCoreConfigOptions {
 
 			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
 			processRewards = configData.getBoolean("ProcessRewards", true);
-
+			clearCacheOnJoin = configData.getBoolean("ClearCacheOnJoin", false);
 		}
 	}
 }
