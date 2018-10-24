@@ -74,7 +74,7 @@
 				<executions>
 					<execution>
 						<id>delombok</id>
-						<phase>generate-sources</phase>
+						<phase>deploy</phase>
 						<goals>
 							<goal>delombok</goal>
 						</goals>
