@@ -468,7 +468,13 @@ public class MySQL {
 
 	private void loadPlayer(String uuid) {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
-		// AdvancedCoreHook.getInstance().extraDebug("Loading player: " + uuid);
+	}
+
+	public void playerJoin(String uuid) {
+		if (AdvancedCoreHook.getInstance().getOptions().isClearCacheOnJoin()) {
+			removePlayer(uuid);
+		}
+		loadPlayerIfNeeded(uuid);
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
@@ -476,8 +482,6 @@ public class MySQL {
 			synchronized (object1) {
 				loadPlayer(uuid);
 			}
-		} else if (AdvancedCoreHook.getInstance().getOptions().isClearCacheOnJoin()) {
-			removePlayer(uuid);
 		}
 	}
 

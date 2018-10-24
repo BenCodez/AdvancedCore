@@ -58,9 +58,7 @@ public class PlayerJoinEvent implements Listener {
 					if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
 							&& AdvancedCoreHook.getInstance().getMysql() != null) {
 						if (userExist) {
-							AdvancedCoreHook.getInstance().getMysql()
-									.loadPlayerIfNeeded(player.getUniqueId().toString());
-
+							AdvancedCoreHook.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
 						}
 					}
 
