@@ -150,6 +150,17 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "UserEditValue", "(player)", "(string)", "(string)" },
+				permPrefix + ".UserEditValue", "Open UserGUI", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				User user = UserManager.getInstance().getUser(args[1]);
+				user.getData().setString(args[2], args[3]);
+				sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " + args[1]);
+			}
+		});
+
 		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report",
 				"Create a zip file to send for debuging") {
 

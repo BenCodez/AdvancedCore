@@ -15,6 +15,9 @@ import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIValueType;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
@@ -22,7 +25,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
-import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequestBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.StringListener;
 
 /**
@@ -90,6 +92,7 @@ public class UserGUI {
 			return;
 		}
 		BInventory inv = new BInventory("UserGUI: " + playerName);
+		inv.addData("player", playerName);
 		inv.addButton(new BInventoryButton("Give Reward File", new String[] {}, new ItemStack(Material.STONE)) {
 
 			@Override
@@ -120,23 +123,17 @@ public class UserGUI {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				Player player = clickEvent.getPlayer();
-				BInventory inv = new BInventory("Edit Data, click to change");
+				EditGUI inv = new EditGUI("Edit Data, click to change");
 				final User user = UserManager.getInstance().getUser(playerName);
 				for (final String key : user.getData().getKeys()) {
 					String value = user.getData().getString(key);
-					inv.addButton(new BInventoryButton(new ItemBuilder(Material.STONE).setName(key + " = " + value)) {
+					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value), key,
+							value, EditGUIValueType.STRING) {
 
 						@Override
-						public void onClick(ClickEvent clickEvent) {
-							new ValueRequestBuilder(new StringListener() {
-
-								@Override
-								public void onInput(Player player, String newValue) {
-									user.getData().setString(key, newValue);
-									user.getData().updatePlayerData();
-									openUserGUI(player, playerName);
-								}
-							}, new String[] {}).allowCustomOption(true).currentValue(value).request(player);
+						public void setValue(Player player, Object value) {
+							user.getData().setString(key, (String) value);
+							openUserGUI(player, playerName);
 						}
 					});
 				}

@@ -31,10 +31,14 @@ public abstract class EditGUIButton extends BInventoryButton {
 		this.key = key;
 		this.value = value;
 		if (!type.equals(EditGUIValueType.LIST)) {
-			getBuilder().setName("&cSet " + type.toString() + " for " + key);
+			if (!getBuilder().hasCustomDisplayName()) {
+				getBuilder().setName("&cSet " + type.toString() + " for " + key);
+			}
 			getBuilder().addLoreLine("&cCurrent value: " + value);
 		} else {
-			getBuilder().setName("&cEdit list for " + key);
+			if (!getBuilder().hasCustomDisplayName()) {
+				getBuilder().setName("&cEdit list for " + key);
+			}
 			getBuilder().addLoreLine(ArrayUtils.getInstance().makeStringList((ArrayList<String>) value));
 		}
 	}

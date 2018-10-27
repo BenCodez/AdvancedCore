@@ -281,10 +281,4 @@ public class UserData {
 		}
 		setString(key, str);
 	}
-
-	public void updatePlayerData() {
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			AdvancedCoreHook.getInstance().getMysql().removePlayer(user.getUUID());
-		}
-	}
 }
