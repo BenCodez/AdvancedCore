@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
@@ -118,6 +117,7 @@ public class ChoiceGUI {
 			ItemBuilder builder = new ItemBuilder(reward.getConfig().getChoicesItem(choice));
 			if (user.getChoicePreference(rewardName).equalsIgnoreCase(choice)) {
 				builder.addLoreLine("&cCurrent preference");
+				builder.addLoreLine("&c&lClick to remove");
 			} else {
 				builder.addLoreLine("&aClick to set as preference");
 			}
@@ -129,24 +129,18 @@ public class ChoiceGUI {
 				@Override
 				public void onClick(ClickEvent clickEvent) {
 					User user = (User) getInv().getData("User");
-					user.setChoicePreference((String) getInv().getData("Reward"), (String) getData("Choice"));
+					String rewardName = (String) getInv().getData("Reward");
+					String choice = (String) getData("Choice");
+					if (user.getChoicePreference(rewardName).equals(choice)) {
+						choice = "";
+					}
+					user.setChoicePreference(rewardName, choice);
 
-					user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice",
-							(String) getData("Choice"));
+					user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice", choice);
 				}
 			}.addData("Choice", choice));
 		}
 
-		inv.addButton(new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&cRemove preference")) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				User user = (User) getInv().getData("User");
-				user.setChoicePreference((String) getInv().getData("Reward"), "");
-
-				user.sendMessage("&cRemoved choice reward preference");
-			}
-		}.addData("Choice", ""));
 		inv.addData("User", user);
 		inv.addData("Reward", rewardName);
 
