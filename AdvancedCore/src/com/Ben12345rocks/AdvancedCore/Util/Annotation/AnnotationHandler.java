@@ -93,6 +93,14 @@ public class AnnotationHandler {
 					field.set(classToLoad, value);
 				}
 
+				ConfigDataConfigurationSection confAnnotation = field
+						.getAnnotation(ConfigDataConfigurationSection.class);
+				if (confAnnotation != null) {
+					ConfigurationSection value = config.getConfigurationSection(confAnnotation.path());
+
+					field.set(classToLoad, value);
+				}
+
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
