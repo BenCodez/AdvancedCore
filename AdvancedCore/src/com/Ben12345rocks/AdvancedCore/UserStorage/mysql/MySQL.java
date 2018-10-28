@@ -470,19 +470,19 @@ public class MySQL {
 		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
 	}
 
-	public void playerJoin(String uuid) {
-		if (AdvancedCoreHook.getInstance().getOptions().isClearCacheOnJoin()) {
-			removePlayer(uuid);
-		}
-		loadPlayerIfNeeded(uuid);
-	}
-
 	public void loadPlayerIfNeeded(String uuid) {
 		if (!containsKey(uuid)) {
 			synchronized (object1) {
 				loadPlayer(uuid);
 			}
 		}
+	}
+
+	public void playerJoin(String uuid) {
+		if (AdvancedCoreHook.getInstance().getOptions().isClearCacheOnJoin()) {
+			removePlayer(uuid);
+		}
+		loadPlayerIfNeeded(uuid);
 	}
 
 	public void removePlayer(String uuid) {

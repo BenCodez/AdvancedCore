@@ -174,13 +174,6 @@ public class User {
 		setUnClaimedChoice(choices);
 	}
 
-	public void clearCache() {
-		if (AdvancedCoreHook.getInstance().getOptions().getStorageType().equals(UserStorage.MYSQL)
-				&& AdvancedCoreHook.getInstance().getMysql() != null) {
-			AdvancedCoreHook.getInstance().getMysql().removePlayer(getUUID());
-		}
-	}
-
 	public void checkDelayedTimedRewards() {
 		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, ArrayList<Long>> timed = getTimedRewards();
@@ -236,6 +229,13 @@ public class User {
 			}
 		}, 5l);
 
+	}
+
+	public void clearCache() {
+		if (AdvancedCoreHook.getInstance().getOptions().getStorageType().equals(UserStorage.MYSQL)
+				&& AdvancedCoreHook.getInstance().getMysql() != null) {
+			AdvancedCoreHook.getInstance().getMysql().removePlayer(getUUID());
+		}
 	}
 
 	public void closeInv() {
