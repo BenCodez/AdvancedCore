@@ -132,7 +132,7 @@ public class ChoiceGUI {
 					String rewardName = (String) getInv().getData("Reward");
 					String choice = (String) getData("Choice");
 					if (user.getChoicePreference(rewardName).equals(choice)) {
-						choice = "";
+						choice = "none";
 					}
 					user.setChoicePreference(rewardName, choice);
 
