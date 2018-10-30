@@ -370,8 +370,10 @@ public class RewardHandler {
 			plugin.getPlugin().getDataFolder().mkdir();
 		}
 
-		copyFile("ExampleBasic.yml");
-		copyFile("ExampleAdvanced.yml");
+		if (AdvancedCoreHook.getInstance().getOptions().isLoadDefaultRewards()) {
+			copyFile("ExampleBasic.yml");
+			copyFile("ExampleAdvanced.yml");
+		}
 	}
 
 	public void updateReward(Reward reward) {

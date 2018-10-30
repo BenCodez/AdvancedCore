@@ -118,6 +118,10 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	private boolean clearCacheOnJoin;
+	
+	@Getter
+	@Setter
+	private boolean loadDefaultRewards = true;
 
 	public AdvancedCoreConfigOptions() {
 	}
