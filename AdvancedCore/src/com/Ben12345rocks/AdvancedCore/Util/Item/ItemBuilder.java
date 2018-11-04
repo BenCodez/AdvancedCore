@@ -69,18 +69,29 @@ public class ItemBuilder {
 		} else {
 			double chance = data.getDouble("Chance", 100);
 			if (checkChance(chance)) {
-				Material material = Material.STONE;
+				Material material = null;
 				List<String> lore = data.getStringList("Lore");
+				String materialStr = data.getString("Material", data.getName());
 
-				material = Material.matchMaterial(data.getString("Material", data.getName()).toUpperCase());
+				if (!NMSManager.getInstance().isVersion("1.12")) {
+					material = Material.matchMaterial(materialStr.toUpperCase());
 
-				// temp
-				if (material == null) {
-					material = Material.matchMaterial(data.getString("Material"), true);
-					if (material != null) {
-						AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Found legacy material name: "
-								+ data.getString("Material") + ", please update this to prevent this message");
+					// temp
+					if (material == null) {
+						material = Material.matchMaterial(materialStr, true);
+						if (material != null) {
+							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+									.warning("Found legacy material name: " + materialStr
+											+ ", please update this to prevent this message");
+						}
 					}
+				} else {
+					if (materialStr.equalsIgnoreCase("PLAYER_HEAD")) {
+						materialStr = "SKULL";
+					} else if (materialStr.equalsIgnoreCase("CLOCK")) {
+						materialStr = "WATCH";
+					}
+					material = Material.valueOf(materialStr);
 				}
 
 				if (material == null) {
@@ -668,16 +679,11 @@ public class ItemBuilder {
 
 	public ItemBuilder setSkullOwner(OfflinePlayer offlinePlayer) {
 		if (offlinePlayer != null) {
-			String version = NMSManager.getInstance().getVersion();
-			if (!version.contains("1_8")) {
-				try {
-					SkullMeta im = (SkullMeta) is.getItemMeta();
-					im.setOwningPlayer(offlinePlayer);
-					is.setItemMeta(im);
-				} catch (Exception expected) {
-					setSkullOwner(offlinePlayer.getName());
-				}
-			} else {
+			try {
+				SkullMeta im = (SkullMeta) is.getItemMeta();
+				im.setOwningPlayer(offlinePlayer);
+				is.setItemMeta(im);
+			} catch (Exception expected) {
 				setSkullOwner(offlinePlayer.getName());
 			}
 		}

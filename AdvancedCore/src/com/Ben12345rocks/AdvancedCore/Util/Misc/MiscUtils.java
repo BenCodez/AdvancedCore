@@ -22,6 +22,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 
 import net.md_5.bungee.api.ChatColor;
@@ -327,7 +328,13 @@ public class MiscUtils {
 
 	public ItemStack setSkullOwner(OfflinePlayer player) {
 		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
-			return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1)).setSkullOwner(player).toItemStack(player);
+			if (!NMSManager.getInstance().isVersion("1.12")) {
+				return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1)).setSkullOwner(player)
+						.toItemStack(player);
+			} else {
+				return new ItemBuilder(new ItemStack(Material.valueOf("SKULL"), 1)).setSkullOwner(player)
+						.toItemStack(player);
+			}
 		} else {
 			return setSkullOwner(player.getName());
 		}
@@ -342,7 +349,11 @@ public class MiscUtils {
 	 */
 	@Deprecated
 	public ItemStack setSkullOwner(String playerName) {
-		return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1, (short) 3)).setSkullOwner(playerName)
-				.toItemStack();
+		if (!NMSManager.getInstance().isVersion("1.12")) {
+			return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1, (short) 3)).setSkullOwner(playerName)
+					.toItemStack();
+		} else {
+			return new ItemBuilder(new ItemStack(Material.valueOf("SKULL"), 1)).setSkullOwner(playerName).toItemStack();
+		}
 	}
 }
