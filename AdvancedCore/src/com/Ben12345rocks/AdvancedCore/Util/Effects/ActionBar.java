@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import net.md_5.bungee.api.ChatMessageType;
@@ -75,7 +76,9 @@ public class ActionBar {
 	 *            the message
 	 */
 	public void sendActionBar(Player player, String message) {
-		player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+		if (!NMSManager.getInstance().isVersion("1.7", "1.8", "1.9", "1.10", "1.11", "1.12")) {
+			player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+		}
 	}
 
 	/**
