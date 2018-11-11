@@ -54,7 +54,7 @@ public class BossBar {
 						bossBar.removePlayer(player);
 					}
 				}
-			}, delay ^ 20);
+			}, delay * 20);
 		}
 	}
 
