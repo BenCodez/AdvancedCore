@@ -50,7 +50,7 @@ public class BossBar {
 
 				@Override
 				public void run() {
-					if (bossBar != null) {
+					if (bossBar != null && player != null) {
 						bossBar.removePlayer(player);
 					}
 				}
