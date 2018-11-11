@@ -59,6 +59,26 @@ public abstract class CommandHandler {
 	public CommandHandler() {
 	}
 
+	public CommandHandler withArgs(String... args) {
+		this.args = args;
+		return this;
+	}
+
+	public CommandHandler withPerm(String perm) {
+		this.perm = perm;
+		return this;
+	}
+
+	public CommandHandler withHelpMessage(String helpMessage) {
+		this.helpMessage = helpMessage;
+		return this;
+	}
+
+	public CommandHandler noConsole() {
+		this.allowConsole = false;
+		return this;
+	}
+
 	/**
 	 * Instantiates a new command handler.
 	 *
