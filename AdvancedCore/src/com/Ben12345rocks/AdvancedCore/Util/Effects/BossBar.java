@@ -9,14 +9,16 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
+import lombok.Getter;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class BossBar.
  */
 public class BossBar {
 
-	/** The boss bar. */
-	public org.bukkit.boss.BossBar bossBar;
+	@Getter
+	private org.bukkit.boss.BossBar bossBar;
 
 	/**
 	 * Instantiates a new boss bar.
@@ -45,8 +47,21 @@ public class BossBar {
 		bossBar.removeAll();
 	}
 
+	public void removePlayer(Player player) {
+		bossBar.removePlayer(player);
+	}
+
+	public void send() {
+		bossBar.setVisible(true);
+	}
+
 	public void send(int delay) {
 		bossBar.setVisible(true);
+
+		hideInDelay(delay);
+	}
+
+	private void hideInDelay(int delay) {
 		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
 			@Override
@@ -67,13 +82,7 @@ public class BossBar {
 	public void send(Player player, int delay) {
 		bossBar.addPlayer(player);
 		bossBar.setVisible(true);
-		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				hide();
-			}
-		}, delay);
+		hideInDelay(delay);
 	}
 
 	public void setColor(String barColor) {
