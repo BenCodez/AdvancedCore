@@ -45,15 +45,17 @@ public class BossBar {
 	public void addPlayer(final Player player, int delay) {
 		bossBar.addPlayer(player);
 
-		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+		if (delay > 0) {
+			Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
-			@Override
-			public void run() {
-				if (bossBar != null) {
-					bossBar.removePlayer(player);
+				@Override
+				public void run() {
+					if (bossBar != null) {
+						bossBar.removePlayer(player);
+					}
 				}
-			}
-		}, delay ^ 20);
+			}, delay ^ 20);
+		}
 	}
 
 	public void hide() {
