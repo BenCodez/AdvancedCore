@@ -74,16 +74,20 @@ public class ItemBuilder {
 				String materialStr = data.getString("Material", data.getName());
 
 				if (!NMSManager.getInstance().isVersion("1.12")) {
-					material = Material.matchMaterial(materialStr.toUpperCase());
+					try {
+						material = Material.matchMaterial(materialStr.toUpperCase());
 
-					// temp
-					if (material == null) {
-						material = Material.matchMaterial(materialStr, true);
-						if (material != null) {
-							AdvancedCoreHook.getInstance().getPlugin().getLogger()
-									.warning("Found legacy material name: " + materialStr
-											+ ", please update this to prevent this message");
+						// temp
+						if (material == null) {
+							material = Material.matchMaterial(materialStr, true);
+							if (material != null) {
+								AdvancedCoreHook.getInstance().getPlugin().getLogger()
+										.warning("Found legacy material name: " + materialStr
+												+ ", please update this to prevent this message");
+							}
 						}
+					} catch (NoSuchMethodError e) {
+						material = Material.valueOf(materialStr.toUpperCase());
 					}
 				} else {
 					if (materialStr.equalsIgnoreCase("PLAYER_HEAD")) {
