@@ -195,11 +195,6 @@
 			<url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
 		</repository>
 		<repository>
-			<id>mrten-releases</id>
-			<name>Mrten's Release Repo</name>
-			<url>http://repo.mrten.nl/content/repositories/releases/</url>
-		</repository>
-		<repository>
 			<id>dmulloy2-repo</id>
 			<url>http://repo.dmulloy2.net/content/groups/public/</url>
 		</repository>
