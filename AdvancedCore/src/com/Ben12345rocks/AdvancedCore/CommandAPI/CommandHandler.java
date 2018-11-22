@@ -93,9 +93,9 @@ public abstract class CommandHandler {
 		helpMessage = "Unknown Help Message";
 	}
 
-	public boolean isCommand(String cmd) {
+	public boolean isCommand(String arg) {
 		if (getArgs().length > 0) {
-			if (cmd.endsWith(getArgs()[0])) {
+			if (getArgs()[0].equalsIgnoreCase(arg)) {
 				return true;
 			}
 		}
@@ -315,12 +315,6 @@ public abstract class CommandHandler {
 	}
 
 	public boolean hasPerm(CommandSender sender) {
-		/*
-		 * boolean hasPerm = false;
-		 * if (!perm.equals("")) { for (String perm : this.perm.split("\\|")) { if
-		 * (sender.hasPermission(perm)) { hasPerm = true; } } } else { hasPerm = true; }
-		 * return hasPerm;
-		 */
 		return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
 	}
 
