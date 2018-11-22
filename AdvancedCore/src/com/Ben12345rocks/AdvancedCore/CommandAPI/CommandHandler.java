@@ -93,6 +93,15 @@ public abstract class CommandHandler {
 		helpMessage = "Unknown Help Message";
 	}
 
+	public boolean isCommand(String cmd) {
+		if (getArgs().length > 0) {
+			if (cmd.endsWith(getArgs()[0])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Instantiates a new command handler.
 	 *
