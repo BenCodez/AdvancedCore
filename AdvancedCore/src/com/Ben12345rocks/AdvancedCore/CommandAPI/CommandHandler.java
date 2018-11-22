@@ -95,9 +95,12 @@ public abstract class CommandHandler {
 
 	public boolean isCommand(String arg) {
 		if (getArgs().length > 0) {
-			if (getArgs()[0].equalsIgnoreCase(arg)) {
-				return true;
+			for (String str : getArgs()[0].split("&")) {
+				if (str.equalsIgnoreCase(arg)) {
+					return true;
+				}
 			}
+			
 		} else if (arg.isEmpty() && getArgs().length == 0) {
 			return true;
 		}
