@@ -98,6 +98,8 @@ public abstract class CommandHandler {
 			if (getArgs()[0].equalsIgnoreCase(arg)) {
 				return true;
 			}
+		} else if (arg.isEmpty() && getArgs().length == 0) {
+			return true;
 		}
 		return false;
 	}
