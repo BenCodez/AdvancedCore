@@ -29,21 +29,24 @@ public class UpdateDownloader {
 				!AdvancedCoreHook.getInstance().getOptions().isAutoDownload());
 		switch (updater.getResult()) {
 			case UPDATE_AVAILABLE:
+				download(plugin, resourceId);
 				plugin.getLogger().info(
 						"Downloaded jar automaticly, restart to update. Note: Updates take 30-40 minutes to load");
-				download(plugin, resourceId);
 				break;
 			default:
 				break;
 		}
 	}
 
-	public void download(Plugin plugin, int resourceId) {
+	public boolean download(Plugin plugin, int resourceId) {
 		try {
 			download(new URL("https://api.spiget.org/v2/resources/" + resourceId + "/download"),
 					new File(Bukkit.getServer().getUpdateFolderFile(), plugin.getDescription().getName() + ".jar"));
+			return true;
 		} catch (IOException e) { // TODO Auto-generated catch block
+			plugin.getLogger().warning("Unable to download jar");
 			e.printStackTrace();
+			return false;
 		}
 	}
 

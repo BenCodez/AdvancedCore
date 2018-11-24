@@ -217,9 +217,12 @@ public class CommandLoader {
 				public void execute(CommandSender sender, String[] args) {
 					sender.sendMessage(StringUtils.getInstance().colorize(
 							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
-					UpdateDownloader.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
-							AdvancedCoreHook.getInstance().getOptions().getResourceId());
-					sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
+					if (UpdateDownloader.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
+							AdvancedCoreHook.getInstance().getOptions().getResourceId())) {
+						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
+					} else {
+						sendMessage(sender, "&cFailed to download jar.");
+					}
 				}
 			});
 		}
