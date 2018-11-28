@@ -279,6 +279,47 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "SetRequestMethod", "(RequestMethod)" },
+				permPrefix + ".SetRequestMethod", "SetRequestMethod", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+
+				User user = UserManager.getInstance().getUser((Player) sender);
+				InputMethod method = InputMethod.getMethod(args[1]);
+				if (method == null) {
+					user.sendMessage("&cInvalid request method: " + args[1]);
+				} else {
+					user.setUserInputMethod(method);
+					user.sendMessage("&cRequest method set to " + method.toString());
+				}
+
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "SetRequestMethod" }, permPrefix + ".SetRequestMethod",
+				"SetRequestMethod", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				ArrayList<String> methods = new ArrayList<String>();
+				for (InputMethod method : InputMethod.values()) {
+					methods.add(method.toString());
+				}
+				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
+						ArrayUtils.getInstance().convert(methods), false, new StringListener() {
+
+							@Override
+							public void onInput(Player player, String value) {
+								User user = UserManager.getInstance().getUser(player);
+								user.setUserInputMethod(InputMethod.getMethod(value));
+
+							}
+						});
+
+			}
+		});
+
 		for (CommandHandler cmd : cmds) {
 			cmd.setAdvancedCoreCommand(true);
 		}
@@ -330,47 +371,6 @@ public class CommandLoader {
 				user.setChoicePreference(args[2], args[3]);
 
 				user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
-			}
-		});
-
-		cmds.add(new CommandHandler(new String[] { "SetRequestMethod", "(RequestMethod)" },
-				permPrefix + ".SetRequestMethod", "SetRequestMethod", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-
-				User user = UserManager.getInstance().getUser((Player) sender);
-				InputMethod method = InputMethod.getMethod(args[1]);
-				if (method == null) {
-					user.sendMessage("&cInvalid request method: " + args[1]);
-				} else {
-					user.setUserInputMethod(method);
-					user.sendMessage("&cRequest method set to " + method.toString());
-				}
-
-			}
-		});
-
-		cmds.add(new CommandHandler(new String[] { "SetRequestMethod" }, permPrefix + ".SetRequestMethod",
-				"SetRequestMethod", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				ArrayList<String> methods = new ArrayList<String>();
-				for (InputMethod method : InputMethod.values()) {
-					methods.add(method.toString());
-				}
-				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-						ArrayUtils.getInstance().convert(methods), false, new StringListener() {
-
-							@Override
-							public void onInput(Player player, String value) {
-								User user = UserManager.getInstance().getUser(player);
-								user.setUserInputMethod(InputMethod.getMethod(value));
-
-							}
-						});
-
 			}
 		});
 
