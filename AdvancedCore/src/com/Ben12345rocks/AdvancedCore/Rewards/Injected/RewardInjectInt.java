@@ -1,5 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Rewards.Injected;
 
+import java.util.HashMap;
+
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
@@ -11,7 +13,7 @@ public abstract class RewardInjectInt extends RewardInject {
 
 	@Getter
 	@Setter
-	private int defaultValue;
+	private int defaultValue = 0;
 
 	public RewardInjectInt(String path) {
 		super(path);
@@ -23,12 +25,12 @@ public abstract class RewardInjectInt extends RewardInject {
 	}
 
 	@Override
-	public void onRewardRequest(User user, ConfigurationSection data) {
+	public void onRewardRequest(User user, ConfigurationSection data, HashMap<String,String> placeholders) {
 		if (data.isInt(getPath())) {
-			onRewardRequest(user, data.getInt(getPath(), getDefaultValue()));
+			onRewardRequest(user, data.getInt(getPath(), getDefaultValue()),placeholders);
 		}
 	}
 
-	public abstract void onRewardRequest(User user, int num);
+	public abstract void onRewardRequest(User user, int num, HashMap<String, String> placeholders);
 
 }

@@ -1217,20 +1217,15 @@ public class Reward {
 
 			giveRewardsRewards(user, placeholders);
 
-			giveInjectedRewards(user);
+			giveInjectedRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 		}
 	}
 
-	public void giveInjectedRewards(User user) {
-		for (String key : getConfig().getConfigData().getKeys(false)) {
-			for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
-				if (inject.getPath().equals(key)) {
-					plugin.debug("Using injected reward " + key);
-					inject.onRewardRequest(user, getConfig().getConfigData());
-				}
-			}
+	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
+		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
+			inject.onRewardRequest(user, getConfig().getConfigData(), placeholders);
 		}
 	}
 

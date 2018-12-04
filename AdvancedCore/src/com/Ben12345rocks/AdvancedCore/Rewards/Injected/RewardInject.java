@@ -1,5 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Rewards.Injected;
 
+import java.util.HashMap;
+
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
@@ -16,5 +18,5 @@ public abstract class RewardInject {
 		this.path = path;
 	}
 
-	public abstract void onRewardRequest(User user, ConfigurationSection data);
+	public abstract void onRewardRequest(User user, ConfigurationSection data, HashMap<String,String> placeholders);
 }
