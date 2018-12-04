@@ -24,7 +24,9 @@ public abstract class RewardInjectString extends RewardInject {
 
 	@Override
 	public void onRewardRequest(User user, ConfigurationSection data) {
-		onRewardRequest(user, data.getString(getPath(), getDefaultValue()));
+		if (data.isString(getPath())) {
+			onRewardRequest(user, data.getString(getPath(), getDefaultValue()));
+		}
 	}
 
 	public abstract void onRewardRequest(User user, String value);

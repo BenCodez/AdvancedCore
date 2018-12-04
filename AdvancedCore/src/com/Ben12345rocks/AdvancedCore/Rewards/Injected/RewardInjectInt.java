@@ -24,7 +24,9 @@ public abstract class RewardInjectInt extends RewardInject {
 
 	@Override
 	public void onRewardRequest(User user, ConfigurationSection data) {
-		onRewardRequest(user, data.getInt(getPath(), getDefaultValue()));
+		if (data.isInt(getPath())) {
+			onRewardRequest(user, data.getInt(getPath(), getDefaultValue()));
+		}
 	}
 
 	public abstract void onRewardRequest(User user, int num);
