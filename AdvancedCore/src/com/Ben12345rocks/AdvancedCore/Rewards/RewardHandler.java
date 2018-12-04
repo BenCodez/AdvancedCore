@@ -14,6 +14,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
