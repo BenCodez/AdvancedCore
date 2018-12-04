@@ -1,5 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Rewards;
 
+import com.Ben12345rocks.AdvancedCore.UserManager.User;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,5 +23,5 @@ public abstract class RewardInject {
 		this.defaultValue = defaultValue;
 	}
 
-	public abstract void onRewardRequest(Object value);
+	public abstract void onRewardRequest(User user, Object value);
 }
