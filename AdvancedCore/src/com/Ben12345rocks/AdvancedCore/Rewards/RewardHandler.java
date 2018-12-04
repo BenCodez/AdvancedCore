@@ -19,10 +19,15 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 
+import lombok.Getter;
+
 /**
  * The Class RewardHandler.
  */
 public class RewardHandler {
+
+	@Getter
+	private ArrayList<RewardInject> injectedRewards = new ArrayList<RewardInject>();
 
 	/** The instance. */
 	static RewardHandler instance = new RewardHandler();
@@ -238,19 +243,6 @@ public class RewardHandler {
 			}
 			ConfigurationSection section = data.getConfigurationSection(path);
 			Reward reward = new Reward(rewardName, section);
-			/*
-			 * Reward reward; if (!rewardExist(rewardName)) { reward = new
-			 * Reward(rewardName); } else { reward = getReward(rewardName); } if
-			 * (reward.getConfig().getData().getConfigurationSection("").getKeys(true).size(
-			 * ) != 0) { if
-			 * (!reward.getConfig().getData().getConfigurationSection("").getKeys(true)
-			 * .equals(section.getKeys(true))) { plugin.getPlugin().getLogger().warning(
-			 * "Detected a reward file edited when it should be edited where directly defined, overriding"
-			 * ); } } reward.getConfig().setData(section);
-			 * reward.getConfig().getData().options().header(
-			 * "Directly defined reward file from path: '" + path +
-			 * "' ANY EDITS HERE CAN GET OVERRIDDEN!"); updateReward(reward);
-			 */
 			giveReward(user, reward, rewardOptions);
 
 		} else {
