@@ -750,12 +750,10 @@ public class ItemBuilder {
 
 	public ItemStack toItemStack(OfflinePlayer player) {
 		if (player != null) {
-			if (!placeholders.isEmpty()) {
-				setName(StringUtils.getInstance().replaceJavascript(player,
-						StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
-				setLore(ArrayUtils.getInstance().replaceJavascript(player,
-						ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
-			}
+			setName(StringUtils.getInstance().replaceJavascript(player,
+					StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
+			setLore(ArrayUtils.getInstance().replaceJavascript(player,
+					ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
 			if (!getSkull().equals("")) {
 				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(getSkull(), "player", player.getName()));
 			}
