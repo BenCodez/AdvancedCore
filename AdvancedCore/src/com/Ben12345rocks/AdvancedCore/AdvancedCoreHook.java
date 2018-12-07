@@ -148,13 +148,20 @@ public class AdvancedCoreHook {
 	}
 
 	private void checkPlaceHolderAPI() {
-		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-			placeHolderAPIEnabled = true;
-			debug("PlaceholderAPI found, will attempt to parse placeholders");
-		} else {
-			placeHolderAPIEnabled = false;
-			debug("PlaceholderAPI not found, PlaceholderAPI placeholders will not work");
-		}
+		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+					placeHolderAPIEnabled = true;
+					debug("PlaceholderAPI found, will attempt to parse placeholders");
+				} else {
+					placeHolderAPIEnabled = false;
+					debug("PlaceholderAPI not found, PlaceholderAPI placeholders will not work");
+				}
+			}
+		});
+
 	}
 
 	public void checkPluginUpdate() {
