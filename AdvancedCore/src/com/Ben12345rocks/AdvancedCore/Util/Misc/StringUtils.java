@@ -205,8 +205,13 @@ public class StringUtils {
 	}
 
 	public String replaceJavascript(OfflinePlayer player, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-		return replaceJavascript(text, engine);
+
+		if (player.isOnline()) {
+			return replaceJavascript(player.getPlayer(), text);
+		} else {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			return replaceJavascript(text, engine);
+		}
 	}
 
 	public String replaceJavascript(Player player, String text) {
