@@ -755,6 +755,7 @@ public class ItemBuilder {
 			if (!getSkull().equals("")) {
 				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(getSkull(), "player", player.getName()));
 			}
+			AdvancedCoreHook.getInstance().debug("Parsing item");
 		} else {
 			return toItemStack();
 		}
