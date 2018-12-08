@@ -747,6 +747,7 @@ public class ItemBuilder {
 	}
 
 	public ItemStack toItemStack(OfflinePlayer player) {
+		AdvancedCoreHook.getInstance().debug("Parsing item");
 		if (player != null) {
 			setName(StringUtils.getInstance().replaceJavascript(player,
 					StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
@@ -755,7 +756,7 @@ public class ItemBuilder {
 			if (!getSkull().equals("")) {
 				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(getSkull(), "player", player.getName()));
 			}
-			AdvancedCoreHook.getInstance().debug("Parsing item");
+			AdvancedCoreHook.getInstance().debug("Parsing item 2");
 		} else {
 			return toItemStack();
 		}
@@ -763,6 +764,6 @@ public class ItemBuilder {
 	}
 
 	public ItemStack toItemStack(Player player) {
-		return toItemStack((OfflinePlayer) player);
+		return toItemStack(player);
 	}
 }
