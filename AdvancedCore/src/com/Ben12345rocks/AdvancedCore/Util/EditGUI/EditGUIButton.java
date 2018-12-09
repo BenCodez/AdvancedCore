@@ -26,6 +26,7 @@ public class EditGUIButton extends BInventoryButton {
 
 	public EditGUIButton(ItemBuilder item, EditGUIValue editer) {
 		super(item);
+		this.editer = editer;
 	}
 
 	@Deprecated
