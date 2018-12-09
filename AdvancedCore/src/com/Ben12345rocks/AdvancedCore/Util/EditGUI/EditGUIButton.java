@@ -97,7 +97,7 @@ public class EditGUIButton extends BInventoryButton {
 	@Override
 	public ItemStack getItem(Player player) {
 		ItemBuilder builder = getBuilder();
-		if (getEditer() instanceof EditGUIValueList) {
+		if (!(getEditer() instanceof EditGUIValueList)) {
 			if (!builder.hasCustomDisplayName()) {
 				builder.setName("&cSet " + getEditer().getKey());
 			}
