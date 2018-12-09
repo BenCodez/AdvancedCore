@@ -804,17 +804,18 @@ public class Reward {
 			phs.put("exp", "" + exp);
 			phs.put("uuid", user.getUUID());
 
-			ArrayList<String> itemsAndAmounts = new ArrayList<String>();
-			for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
-				itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
-			}
-			String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
+			
 
 			
 			
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 			giveItems(user, placeholders);
+			ArrayList<String> itemsAndAmounts = new ArrayList<String>();
+			for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
+				itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
+			}
+			String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
 			placeholders.put("itemsandamount", itemsAndAmountsMsg);
 			placeholders.put("items", ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
