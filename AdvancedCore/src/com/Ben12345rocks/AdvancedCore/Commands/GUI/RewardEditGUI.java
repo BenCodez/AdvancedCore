@@ -285,7 +285,7 @@ public class RewardEditGUI {
 			if (injectReward.isEditable()) {
 				for (EditGUIButton b : injectReward.getEditButtons()) {
 					b.setCurrentValue(reward.getConfig().getConfigData().get(b.getKey()));
-					inv.addButton(b);
+					inv.addButton(b.clone());
 				}
 			}
 		}

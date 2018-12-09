@@ -148,4 +148,14 @@ public abstract class EditGUIButton extends BInventoryButton {
 		return this;
 	}
 
+	@Override
+	public EditGUIButton clone() {
+		return new EditGUIButton(getBuilder(), getKey(), getCurrentValue(), getType()) {
+
+			@Override
+			public void setValue(Player player, Object value) {
+				setValue(player, value);
+			}
+		};
+	}
 }
