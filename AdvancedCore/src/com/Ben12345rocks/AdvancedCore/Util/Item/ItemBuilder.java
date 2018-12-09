@@ -644,6 +644,11 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public ItemBuilder removeLore() {
+		setLore(new String[0]);
+		return this;
+	}
+
 	/**
 	 * Re-sets the lore.
 	 *

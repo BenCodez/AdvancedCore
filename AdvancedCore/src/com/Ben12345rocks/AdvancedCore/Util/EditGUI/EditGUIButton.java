@@ -43,23 +43,20 @@ public abstract class EditGUIButton extends BInventoryButton {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void loadItemData() {
-		if (!type.equals(EditGUIValueType.LIST)) {
-			if (!getBuilder().hasCustomDisplayName()) {
-				getBuilder().setName("&cSet " + type.toString() + " for " + key);
-			}
-			getBuilder().addLoreLine("&cCurrent value: " + getCurrentValue());
-		} else {
-			if (!getBuilder().hasCustomDisplayName()) {
-				getBuilder().setName("&cEdit list for " + key);
-			}
-			getBuilder().addLoreLine(ArrayUtils.getInstance().makeStringList((ArrayList<String>) getCurrentValue()));
-		}
-	}
-
 	public ItemStack getItem(Player player) {
-		loadItemData();
-		return super.getItem(player);
+		ItemBuilder builder = getBuilder().clone();
+		if (!type.equals(EditGUIValueType.LIST)) {
+			if (!builder.hasCustomDisplayName()) {
+				builder.setName("&cSet " + type.toString() + " for " + key);
+			}
+			builder.addLoreLine("&cCurrent value: " + getCurrentValue());
+		} else {
+			if (!builder.hasCustomDisplayName()) {
+				builder.setName("&cEdit list for " + key);
+			}
+			builder.addLoreLine(ArrayUtils.getInstance().makeStringList((ArrayList<String>) getCurrentValue()));
+		}
+		return builder.toItemStack(player);
 	}
 
 	@Override
@@ -75,6 +72,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 			}).currentValue(currentValue.toString()).request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.NUMBER)) {
 			new ValueRequestBuilder(new Listener<Number>() {
+
 				@Override
 				public void onInput(Player player, Number number) {
 					setValue(player, number.doubleValue());
@@ -91,7 +89,9 @@ public abstract class EditGUIButton extends BInventoryButton {
 				}
 			}, ArrayUtils.getInstance().convert(options)).currentValue(currentValue.toString()).allowCustomOption(true)
 					.request(clickEvent.getPlayer());
-		} else if (type.equals(EditGUIValueType.LIST)) {
+		} else if (type.equals(EditGUIValueType.LIST))
+
+		{
 			BInventory inv = new BInventory("Edit list: " + key);
 			inv.setMeta(clickEvent.getPlayer(), "Value", currentValue);
 			inv.addButton(new BInventoryButton(new ItemBuilder(Material.EMERALD_BLOCK).setName("&cAdd value")) {
