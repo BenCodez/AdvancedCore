@@ -639,7 +639,7 @@ public class RewardFileData {
 	 * @return the permission
 	 */
 	public String getPermission() {
-		return getConfigData().getString("Permission", "AdvancedCore.Reward." + reward.getName());
+		return getConfigData().getString("Permission", "AdvancedCore.Reward." + reward.getRewardName());
 	}
 
 	/**

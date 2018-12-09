@@ -104,16 +104,8 @@ public class Reward {
 	/** The console commands. */
 	private ArrayList<String> consoleCommands;
 
-	private ArrayList<String> randomCommand;
-
 	/** The player commands. */
 	private ArrayList<String> playerCommands;
-
-	/** The reward msg. */
-	private String rewardMsg;
-
-	/** The broadcast msg. */
-	private String broadcastMsg;
 
 	/** The permission. */
 	private String permission;
@@ -302,15 +294,6 @@ public class Reward {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Gets the broadcast msg.
-	 *
-	 * @return the broadcast msg
-	 */
-	public String getBroadcastMsg() {
-		return broadcastMsg;
 	}
 
 	/**
@@ -531,19 +514,6 @@ public class Reward {
 	 */
 	public double getRandomChance() {
 		return randomChance;
-	}
-
-	public ArrayList<String> getRandomCommand() {
-		return randomCommand;
-	}
-
-	/**
-	 * Gets the reward msg.
-	 *
-	 * @return the reward msg
-	 */
-	public String getRewardMsg() {
-		return rewardMsg;
 	}
 
 	/**
@@ -804,11 +774,6 @@ public class Reward {
 			phs.put("exp", "" + exp);
 			phs.put("uuid", user.getUUID());
 
-			
-
-			
-			
-
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 			giveItems(user, placeholders);
 			ArrayList<String> itemsAndAmounts = new ArrayList<String>();
@@ -817,11 +782,12 @@ public class Reward {
 			}
 			String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
 			placeholders.put("itemsandamount", itemsAndAmountsMsg);
-			placeholders.put("items", ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
+			placeholders.put("items",
+					ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
 			giveRandom(user, true, placeholders);
 			giveMoney(user, money);
-			
+
 			giveExp(user, exp);
 			runCommands(user, placeholders);
 			checkChoiceRewards(user);
@@ -982,10 +948,6 @@ public class Reward {
 		setConsoleCommands(getConfig().getCommandsConsole());
 		setPlayerCommands(getConfig().getCommandsPlayer());
 
-		setRewardMsg(getConfig().getMessagesPlayer());
-
-		broadcastMsg = getConfig().getMessagesBroadcast();
-
 		permission = getConfig().getPermission();
 
 		enableChoices = getConfig().getEnableChoices();
@@ -1013,8 +975,6 @@ public class Reward {
 
 		onlyOneLucky = getConfig().getOnlyOneLucky();
 
-		randomCommand = getConfig().getRandomCommand();
-
 		server = getConfig().getServer();
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
@@ -1032,16 +992,6 @@ public class Reward {
 		MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), getConsoleCommands(), placeholders);
 
 		user.preformCommand(getPlayerCommands(), placeholders);
-	}
-
-	/**
-	 * Sets the broadcast msg.
-	 *
-	 * @param broadcastMsg
-	 *            the new broadcast msg
-	 */
-	public void setBroadcastMsg(String broadcastMsg) {
-		this.broadcastMsg = broadcastMsg;
 	}
 
 	/**
@@ -1236,16 +1186,6 @@ public class Reward {
 	 */
 	public void setRequirePermission(boolean requirePermission) {
 		this.requirePermission = requirePermission;
-	}
-
-	/**
-	 * Sets the reward msg.
-	 *
-	 * @param rewardMsg
-	 *            the new reward msg
-	 */
-	public void setRewardMsg(String rewardMsg) {
-		this.rewardMsg = rewardMsg;
 	}
 
 	/**
