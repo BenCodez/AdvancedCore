@@ -17,6 +17,8 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIValueType;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueBoolean;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
@@ -211,46 +213,35 @@ public class RewardEditGUI {
 			}
 		});
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Permission", reward.getPermission(),
-				EditGUIValueType.STRING) {
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueString("Permission", reward.getPermission()) {
 
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setPermission((String) value);
-				plugin.reload();
-			}
-		});
+					@Override
+					public void setValue(Player player, String value) {
+						getCurrentReward(player).getConfig().setPermission(value);
+						plugin.reload();
+					}
+				}));
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "RequirePermission",
-				reward.isRequirePermission(), EditGUIValueType.BOOLEAN) {
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueBoolean("RequirePermission", reward.isRequirePermission()) {
 
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setRequirePermission((boolean) value);
-				plugin.reload();
-			}
-		});
+					@Override
+					public void setValue(Player player, boolean value) {
+						getCurrentReward(player).getConfig().setRequirePermission(value);
+						plugin.reload();
+					}
+				}));
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "ForceOffline", reward.isForceOffline(),
-				EditGUIValueType.BOOLEAN) {
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueBoolean("ForceOffline", reward.isForceOffline()) {
 
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setRequirePermission((boolean) value);
-				plugin.reload();
-			}
-		});
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "RandomCommand", reward.getRandomCommand(),
-				EditGUIValueType.LIST) {
-
-			@SuppressWarnings("unchecked")
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setRandomCommand((ArrayList<String>) value);
-				plugin.reload();
-			}
-		});
+					@Override
+					public void setValue(Player player, boolean value) {
+						getCurrentReward(player).getConfig().setRequirePermission((boolean) value);
+						plugin.reload();
+					}
+				}));
 
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cEdit items")) {
 
