@@ -83,7 +83,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 				@Override
 				public void onInput(Player player, Number number) {
 					setValue(player, number.doubleValue());
-					sendMessage(player, "&cSetting " + getKey() + " to " + currentValue);
+					sendMessage(player, "&cSetting " + getKey() + " to " + number.doubleValue());
 				}
 			}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) currentValue })
 					.currentValue(currentValue.toString()).request(clickEvent.getPlayer());
@@ -96,7 +96,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 				@Override
 				public void onInput(Player player, Number number) {
 					setValue(player, number.intValue());
-					sendMessage(player, "&cSetting " + getKey() + " to " + currentValue);
+					sendMessage(player, "&cSetting " + getKey() + " to " + number.intValue());
 				}
 			}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) currentValue })
 					.currentValue(currentValue.toString()).request(clickEvent.getPlayer());
