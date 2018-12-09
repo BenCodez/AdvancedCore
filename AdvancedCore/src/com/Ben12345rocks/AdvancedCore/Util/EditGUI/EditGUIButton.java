@@ -44,7 +44,7 @@ public class EditGUIButton extends BInventoryButton {
 
 					@Override
 					public void setValue(Player player, boolean value) {
-						setValue(player, value);
+						setV(player, value);
 					}
 				};
 				break;
@@ -53,7 +53,7 @@ public class EditGUIButton extends BInventoryButton {
 
 					@Override
 					public void setValue(Player player, Number value) {
-						setValue(player, value.doubleValue());
+						setV(player, value.doubleValue());
 					}
 				};
 				break;
@@ -62,7 +62,7 @@ public class EditGUIButton extends BInventoryButton {
 
 					@Override
 					public void setValue(Player player, Number value) {
-						setValue(player, value.intValue());
+						setV(player, value.intValue());
 					}
 				};
 				break;
@@ -71,7 +71,7 @@ public class EditGUIButton extends BInventoryButton {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
-						setValue(player, value);
+						setV(player, value);
 					}
 				};
 				break;
@@ -80,7 +80,7 @@ public class EditGUIButton extends BInventoryButton {
 
 					@Override
 					public void setValue(Player player, Number value) {
-						setValue(player, value.doubleValue());
+						setV(player, value.doubleValue());
 					}
 				};
 				break;
@@ -89,7 +89,7 @@ public class EditGUIButton extends BInventoryButton {
 
 					@Override
 					public void setValue(Player player, String value) {
-						setValue(player, value);
+						setV(player, value);
 					}
 				};
 				break;
@@ -97,6 +97,10 @@ public class EditGUIButton extends BInventoryButton {
 				break;
 
 		}
+	}
+
+	private void setV(Player player, Object value) {
+		setValue(player, value);
 	}
 
 	@SuppressWarnings("unchecked")
