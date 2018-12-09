@@ -45,17 +45,17 @@ public abstract class EditGUIButton extends BInventoryButton {
 	@SuppressWarnings("unchecked")
 	@Override
 	public ItemStack getItem(Player player) {
-		ItemBuilder builder = getBuilder().clone();
+		ItemBuilder builder = getBuilder();
 		if (!type.equals(EditGUIValueType.LIST)) {
 			if (!builder.hasCustomDisplayName()) {
 				builder.setName("&cSet " + type.toString() + " for " + key);
 			}
-			builder.addLoreLine("&cCurrent value: " + getCurrentValue());
+			builder.setLore("&cCurrent value: " + getCurrentValue());
 		} else {
 			if (!builder.hasCustomDisplayName()) {
 				builder.setName("&cEdit list for " + key);
 			}
-			builder.addLoreLine(ArrayUtils.getInstance().makeStringList((ArrayList<String>) getCurrentValue()));
+			builder.setLore(ArrayUtils.getInstance().makeStringList((ArrayList<String>) getCurrentValue()));
 		}
 		return builder.toItemStack(player);
 	}
