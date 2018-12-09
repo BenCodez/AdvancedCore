@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Util.EditGUI;
 
 import java.util.ArrayList;
 
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -26,6 +27,11 @@ public class EditGUIButton extends BInventoryButton {
 
 	public EditGUIButton(ItemBuilder item, EditGUIValue editer) {
 		super(item);
+		this.editer = editer;
+	}
+
+	public EditGUIButton(EditGUIValue editer) {
+		super(new ItemBuilder(Material.PAPER));
 		this.editer = editer;
 	}
 
