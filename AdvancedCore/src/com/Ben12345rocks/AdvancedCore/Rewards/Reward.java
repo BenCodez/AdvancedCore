@@ -810,14 +810,17 @@ public class Reward {
 			}
 			String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
 
-			phs.put("itemsandamount", itemsAndAmountsMsg);
-			phs.put("items", ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
+			
+			
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
+			giveItems(user, placeholders);
+			placeholders.put("itemsandamount", itemsAndAmountsMsg);
+			placeholders.put("items", ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
 			giveRandom(user, true, placeholders);
 			giveMoney(user, money);
-			giveItems(user, placeholders);
+			
 			giveExp(user, exp);
 			runCommands(user, placeholders);
 			checkChoiceRewards(user);
