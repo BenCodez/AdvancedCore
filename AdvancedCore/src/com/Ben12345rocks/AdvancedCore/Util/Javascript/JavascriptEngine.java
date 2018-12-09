@@ -122,7 +122,6 @@ public class JavascriptEngine {
 			engine.put("AdvancedCore", AdvancedCoreHook.getInstance());
 			engine.put("Console", Bukkit.getConsoleSender());
 			engine.put("UserManager", UserManager.getInstance());
-			addToEngine("SystemTime", System.currentTimeMillis());
 
 			engineAPI.putAll(AdvancedCoreHook.getInstance().getJavascriptEngine());
 
