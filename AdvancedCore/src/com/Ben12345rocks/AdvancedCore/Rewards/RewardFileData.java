@@ -35,7 +35,8 @@ public class RewardFileData {
 
 	private ConfigurationSection configData;
 
-	public RewardFileData(ConfigurationSection section) {
+	public RewardFileData(Reward reward, ConfigurationSection section) {
+		this.reward = reward;
 		configData = section;
 	}
 

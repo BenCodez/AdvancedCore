@@ -906,7 +906,7 @@ public class Reward {
 
 	public void load(String name, ConfigurationSection section) {
 		this.name = name;
-		fileData = new RewardFileData(section);
+		fileData = new RewardFileData(this, section);
 		loadValues();
 	}
 
