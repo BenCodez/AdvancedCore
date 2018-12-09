@@ -14,7 +14,7 @@ public abstract class RewardInjectConfigurationSection extends RewardInject {
 
 	@Override
 	public void onRewardRequest(User user, ConfigurationSection data, HashMap<String, String> placeholders) {
-		if (data.isInt(getPath())) {
+		if (data.isConfigurationSection(getPath())) {
 			onRewardRequested(user, data.getConfigurationSection(getPath()), placeholders);
 		}
 	}
