@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
@@ -34,23 +35,31 @@ public abstract class EditGUIButton extends BInventoryButton {
 	@Getter
 	private ArrayList<String> options = new ArrayList<String>();
 
-	@SuppressWarnings("unchecked")
 	public EditGUIButton(ItemBuilder item, String key, Object value, EditGUIValueType type) {
 		super(item);
 		setValueType(type);
 		this.key = key;
 		this.currentValue = value;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void loadItemData() {
 		if (!type.equals(EditGUIValueType.LIST)) {
 			if (!getBuilder().hasCustomDisplayName()) {
 				getBuilder().setName("&cSet " + type.toString() + " for " + key);
 			}
-			getBuilder().addLoreLine("&cCurrent value: " + value);
+			getBuilder().addLoreLine("&cCurrent value: " + getCurrentValue());
 		} else {
 			if (!getBuilder().hasCustomDisplayName()) {
 				getBuilder().setName("&cEdit list for " + key);
 			}
-			getBuilder().addLoreLine(ArrayUtils.getInstance().makeStringList((ArrayList<String>) value));
+			getBuilder().addLoreLine(ArrayUtils.getInstance().makeStringList((ArrayList<String>) getCurrentValue()));
 		}
+	}
+
+	public ItemStack getItem(Player player) {
+		loadItemData();
+		return super.getItem(player);
 	}
 
 	@Override
