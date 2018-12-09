@@ -63,6 +63,9 @@ public abstract class EditGUIButton extends BInventoryButton {
 	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (type.equals(EditGUIValueType.BOOLEAN)) {
+			if (getCurrentValue() == null) {
+				setCurrentValue("false");
+			}
 			new ValueRequestBuilder(new BooleanListener() {
 
 				@Override
@@ -72,6 +75,9 @@ public abstract class EditGUIButton extends BInventoryButton {
 				}
 			}).currentValue(currentValue.toString()).request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.NUMBER)) {
+			if (getCurrentValue() == null) {
+				setCurrentValue(0);
+			}
 			new ValueRequestBuilder(new Listener<Number>() {
 
 				@Override
@@ -82,6 +88,9 @@ public abstract class EditGUIButton extends BInventoryButton {
 			}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) currentValue })
 					.currentValue(currentValue.toString()).request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.STRING)) {
+			if (getCurrentValue() == null) {
+				setCurrentValue("");
+			}
 			new ValueRequestBuilder(new Listener<String>() {
 				@Override
 				public void onInput(Player player, String value) {
@@ -90,9 +99,10 @@ public abstract class EditGUIButton extends BInventoryButton {
 				}
 			}, ArrayUtils.getInstance().convert(options)).currentValue(currentValue.toString()).allowCustomOption(true)
 					.request(clickEvent.getPlayer());
-		} else if (type.equals(EditGUIValueType.LIST))
-
-		{
+		} else if (type.equals(EditGUIValueType.LIST)) {
+			if (getCurrentValue() == null) {
+				setCurrentValue(new ArrayList<String>());
+			}
 			BInventory inv = new BInventory("Edit list: " + key);
 			inv.setMeta(clickEvent.getPlayer(), "Value", currentValue);
 			inv.addButton(new BInventoryButton(new ItemBuilder(Material.EMERALD_BLOCK).setName("&cAdd value")) {
