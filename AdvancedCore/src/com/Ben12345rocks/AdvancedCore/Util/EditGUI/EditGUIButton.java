@@ -43,6 +43,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 	}
 
 	@SuppressWarnings("unchecked")
+	@Override
 	public ItemStack getItem(Player player) {
 		ItemBuilder builder = getBuilder().clone();
 		if (!type.equals(EditGUIValueType.LIST)) {
