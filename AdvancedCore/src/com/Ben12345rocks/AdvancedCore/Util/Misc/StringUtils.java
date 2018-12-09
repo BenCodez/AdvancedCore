@@ -200,8 +200,12 @@ public class StringUtils {
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-		return replaceJavascript(text, engine);
+		if (player instanceof Player) {
+			return replaceJavascript((Player) player, text);
+		} else {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			return replaceJavascript(text, engine);
+		}
 	}
 
 	public String replaceJavascript(OfflinePlayer player, String text) {
