@@ -413,7 +413,7 @@ public class RewardHandler {
 						section.getInt("Delay", 30));
 			}
 		}.addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), "ActionBar.Delay", null, EditGUIValueType.NUMBER) {
+				new EditGUIButton(new ItemBuilder(Material.PAPER), "ActionBar.Delay", null, EditGUIValueType.INT) {
 
 					@Override
 					public void setValue(Player player, Object value) {
