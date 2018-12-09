@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
@@ -18,11 +19,16 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectConfigurationSection;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
-import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIValueType;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueList;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueNumber;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
+import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -406,30 +412,213 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
 
 			@Override
-			public void onRewardRequested(User user, ConfigurationSection section,
+			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				user.sendActionBar(
 						StringUtils.getInstance().replacePlaceHolder(section.getString("Message", ""), placeholders),
 						section.getInt("Delay", 30));
 			}
 		}.addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), "ActionBar.Delay", null, EditGUIValueType.INT) {
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("ActionBar.Delay", null) {
 
 					@Override
-					public void setValue(Player player, Object value) {
+					public void setValue(Player player, Number num) {
 						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().setActionBarDelay((int) value);
+						reward.getConfig().set(getKey(), num.intValue());
 						plugin.reload();
 					}
-				}).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "ActionBar.Message", null,
-						EditGUIValueType.STRING) {
+				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+						new EditGUIValueString("ActionBar.Message", null) {
 
-					@Override
-					public void setValue(Player player, Object value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().setActionBarMsg((String) value);
-						plugin.reload();
+							@Override
+							public void setValue(Player player, String value) {
+								Reward reward = (Reward) getInv().getData("Reward");
+								reward.getConfig().set(getKey(), value);
+								plugin.reload();
+							}
+						})));
+
+		injectedRewards.add(new RewardInjectStringList("Javascripts") {
+
+			@Override
+			public void onRewardRequest(Reward reward, User user, ArrayList<String> list,
+					HashMap<String, String> placeholders) {
+				if (!list.isEmpty()) {
+					JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getPlayer());
+					for (String str : list) {
+						engine.execute(StringUtils.getInstance().replacePlaceHolder(str, placeholders));
 					}
-				}));
+				}
+			}
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Javascripts", null) {
+
+			@Override
+			public void setValue(Player player, ArrayList<String> value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value);
+				plugin.reload();
+			}
+		})));
+
+		injectedRewards.add(new RewardInjectConfigurationSection("Javascript") {
+
+			@Override
+			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+
+				if (section.getBoolean("Enabled")) {
+					if (new JavascriptEngine().addPlayer(user.getPlayer()).getBooleanValue(StringUtils.getInstance()
+							.replacePlaceHolder(section.getString("Expression"), placeholders))) {
+						new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName()).send(user);
+					} else {
+						new RewardBuilder(section, "FalseRewards").withPrefix(reward.getName()).send(user);
+					}
+				}
+
+			}
+		});
+
+		injectedRewards.add(new RewardInjectStringList("RandomCommand") {
+
+			@Override
+			public void onRewardRequest(Reward r, User user, ArrayList<String> list,
+					HashMap<String, String> placeholders) {
+				if (list.size() > 0) {
+					MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),
+							list.get(ThreadLocalRandom.current().nextInt(list.size())), placeholders);
+				}
+			}
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomCommand", null) {
+
+			@Override
+			public void setValue(Player player, ArrayList<String> value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value);
+				plugin.reload();
+			}
+		})));
+
+		injectedRewards.add(new RewardInjectStringList("Priority") {
+
+			@Override
+			public void onRewardRequest(Reward r, User user, ArrayList<String> list,
+					HashMap<String, String> placeholders) {
+				for (String str : list) {
+					Reward reward = RewardHandler.getInstance().getReward(str);
+					if (reward.canGiveReward(user)) {
+						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true).send(user);
+						return;
+					}
+				}
+			}
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Priority", null) {
+
+			@Override
+			public void setValue(Player player, ArrayList<String> value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value);
+				plugin.reload();
+			}
+		})));
+
+		injectedRewards.add(new RewardInjectConfigurationSection("Potions") {
+
+			@Override
+			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+
+				for (String potion : section.getKeys(false)) {
+					user.givePotionEffect(potion, section.getInt(potion + ".Duration", 1),
+							section.getInt(potion + ".Amplifier", 1));
+
+				}
+
+			}
+		});
+
+		injectedRewards.add(new RewardInjectConfigurationSection("Title") {
+
+			@Override
+			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+
+				if (section.getBoolean("Enabled")) {
+					user.sendTitle(
+							StringUtils.getInstance().replacePlaceHolder(section.getString("Title"), placeholders),
+
+							StringUtils.getInstance().replacePlaceHolder(section.getString("SubTitle"), placeholders),
+
+							section.getInt("FadeIn", 10), section.getInt("ShowTime", 50),
+							section.getInt("FadeOut", 10));
+				}
+
+			}
+		});
+
+		injectedRewards.add(new RewardInjectConfigurationSection("BossBar") {
+
+			@Override
+			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+
+				if (section.getBoolean("Enabled")) {
+					user.sendBossBar(
+							StringUtils.getInstance().replacePlaceHolder(section.getString("Message", ""),
+									placeholders),
+							section.getString("Color", "BLUE"), section.getString("Style", "SOLID"),
+							section.getDouble("Progress", .5), section.getInt("Delay", 30));
+				}
+
+			}
+		});
+
+		injectedRewards.add(new RewardInjectConfigurationSection("Sound") {
+
+			@Override
+			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+
+				if (section.getBoolean("Enabled")) {
+					try {
+						user.playSound(section.getString("Sound"), (float) section.getDouble("Volume", 1.0),
+								(float) section.getDouble("Pitch", 1.0));
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}
+				}
+
+			}
+		});
+
+		injectedRewards.add(new RewardInjectConfigurationSection("Effect") {
+
+			@Override
+			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				if (section.getBoolean("Enabled")) {
+					user.playParticle(section.getString("Effect"), section.getInt("Data", 1),
+							section.getInt("Particles", 1), section.getInt("Radius", 5));
+				}
+
+			}
+		});
+
+		injectedRewards.add(new RewardInjectConfigurationSection("Firework") {
+
+			@SuppressWarnings("unchecked")
+			@Override
+			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				if (section.getBoolean("Enabled")) {
+					FireworkHandler.getInstance().launchFirework(user.getPlayer().getLocation(),
+							section.getInt("Power", 1),
+							(ArrayList<String>) section.getList("Colors", new ArrayList<String>()),
+							(ArrayList<String>) section.getList("FadeOutColor", new ArrayList<String>()),
+							section.getBoolean("Trail"), section.getBoolean("Flicker"),
+							(ArrayList<String>) section.getList("Types", new ArrayList<String>()));
+				}
+
+			}
+		});
 	}
 }

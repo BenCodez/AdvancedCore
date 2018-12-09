@@ -22,7 +22,7 @@ public class EditGUI extends BInventory {
 		for (BInventoryButton button : map.values()) {
 			if (button instanceof EditGUIButton) {
 				EditGUIButton b = (EditGUIButton) button;
-				buttons.put(b.getKey(), b);
+				buttons.put(b.getEditer().getKey(), b);
 			} else {
 				addButton(button);
 			}

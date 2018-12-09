@@ -24,9 +24,7 @@ import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.Util.Annotation.AnnotationHandler;
-import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
-import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -111,47 +109,14 @@ public class Reward {
 	/** The player commands. */
 	private ArrayList<String> playerCommands;
 
-	/** The potions. */
-	private Set<String> potions;
-
-	/** The potions duration. */
-	private HashMap<String, Integer> potionsDuration;
-
-	/** The potions amplifier. */
-	private HashMap<String, Integer> potionsAmplifier;
-
 	/** The reward msg. */
 	private String rewardMsg;
-
-	/** The boss bar enabled. */
-	private boolean bossBarEnabled;
-
-	/** The boss bar message. */
-	private String bossBarMessage;
-
-	/** The boss bar color. */
-	private String bossBarColor;
-
-	/** The boss bar style. */
-	private String bossBarStyle;
-
-	/** The boss bar delay. */
-	private int bossBarDelay;
-
-	/** The boss bar progress. */
-	private double bossBarProgress;
 
 	/** The broadcast msg. */
 	private String broadcastMsg;
 
 	/** The permission. */
 	private String permission;
-
-	/** The javascript enabled. */
-	private boolean javascriptEnabled;
-
-	/** The javascript expression. */
-	private String javascriptExpression;
 
 	/** The items and amounts given. */
 	private HashMap<String, Integer> itemsAndAmountsGiven;
@@ -161,78 +126,8 @@ public class Reward {
 
 	private Set<String> choices;
 
-	/** The firework enabled. */
-	private boolean fireworkEnabled;
-
-	/** The firework flicker. */
-	private boolean fireworkFlicker;
-
-	/** The firework trail. */
-	private boolean fireworkTrail;
-
-	/** The firework power. */
-	private int fireworkPower;
-
-	/** The firework colors. */
-	private ArrayList<String> fireworkColors;
-
-	/** The firework fade out colors. */
-	private ArrayList<String> fireworkFadeOutColors;
-
-	/** The firework types. */
-	private ArrayList<String> fireworkTypes;
-
 	/** The uses worlds. */
 	private boolean usesWorlds;
-
-	/** The title enabled. */
-	private boolean titleEnabled;
-
-	/** The title title. */
-	private String titleTitle;
-
-	/** The title sub title. */
-	private String titleSubTitle;
-
-	/** The title fade in. */
-	private int titleFadeIn;
-
-	/** The title show time. */
-	private int titleShowTime;
-
-	/** The title fade out. */
-	private int titleFadeOut;
-
-	/** The sound enabled. */
-	private boolean soundEnabled;
-
-	/** The sound sound. */
-	private String soundSound;
-
-	/** The sound volume. */
-	private float soundVolume;
-
-	/** The sound pitch. */
-	private float soundPitch;
-
-	/** The effect enabled. */
-	private boolean effectEnabled;
-
-	/** The effect effect. */
-	private String effectEffect;
-
-	/** The effect data. */
-	private int effectData;
-
-	/** The effect particles. */
-	private int effectParticles;
-
-	/** The effect radius. */
-	private int effectRadius;
-
-	private ArrayList<String> javascripts;
-
-	private ArrayList<String> priority;
 
 	private HashMap<Integer, String> luckyRewards;
 
@@ -410,51 +305,6 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the boss bar color.
-	 *
-	 * @return the boss bar color
-	 */
-	public String getBossBarColor() {
-		return bossBarColor;
-	}
-
-	/**
-	 * Gets the boss bar delay.
-	 *
-	 * @return the boss bar delay
-	 */
-	public int getBossBarDelay() {
-		return bossBarDelay;
-	}
-
-	/**
-	 * Gets the boss bar message.
-	 *
-	 * @return the boss bar message
-	 */
-	public String getBossBarMessage() {
-		return bossBarMessage;
-	}
-
-	/**
-	 * Gets the boss bar progress.
-	 *
-	 * @return the boss bar progress
-	 */
-	public double getBossBarProgress() {
-		return bossBarProgress;
-	}
-
-	/**
-	 * Gets the boss bar style.
-	 *
-	 * @return the boss bar style
-	 */
-	public String getBossBarStyle() {
-		return bossBarStyle;
-	}
-
-	/**
 	 * Gets the broadcast msg.
 	 *
 	 * @return the broadcast msg
@@ -523,42 +373,6 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the effect data.
-	 *
-	 * @return the effect data
-	 */
-	public int getEffectData() {
-		return effectData;
-	}
-
-	/**
-	 * Gets the effect effect.
-	 *
-	 * @return the effect effect
-	 */
-	public String getEffectEffect() {
-		return effectEffect;
-	}
-
-	/**
-	 * Gets the effect particles.
-	 *
-	 * @return the effect particles
-	 */
-	public int getEffectParticles() {
-		return effectParticles;
-	}
-
-	/**
-	 * Gets the effect radius.
-	 *
-	 * @return the effect radius
-	 */
-	public int getEffectRadius() {
-		return effectRadius;
-	}
-
-	/**
 	 * Gets the .
 	 *
 	 * @return the exp
@@ -590,42 +404,6 @@ public class Reward {
 		return file;
 	}
 
-	/**
-	 * Gets the firework colors.
-	 *
-	 * @return the firework colors
-	 */
-	public ArrayList<String> getFireworkColors() {
-		return fireworkColors;
-	}
-
-	/**
-	 * Gets the firework fade out colors.
-	 *
-	 * @return the firework fade out colors
-	 */
-	public ArrayList<String> getFireworkFadeOutColors() {
-		return fireworkFadeOutColors;
-	}
-
-	/**
-	 * Gets the firework power.
-	 *
-	 * @return the firework power
-	 */
-	public int getFireworkPower() {
-		return fireworkPower;
-	}
-
-	/**
-	 * Gets the firework types.
-	 *
-	 * @return the firework types
-	 */
-	public ArrayList<String> getFireworkTypes() {
-		return fireworkTypes;
-	}
-
 	public ItemStack getItem() {
 		return new ItemStack(Material.STONE);
 	}
@@ -651,22 +429,6 @@ public class Reward {
 	public ItemStack getItemStack(User user, String item) {
 		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getOfflinePlayer())
 				.toItemStack(user.getPlayer());
-	}
-
-	/**
-	 * Gets the javascript expression.
-	 *
-	 * @return the javascript expression
-	 */
-	public String getJavascriptExpression() {
-		return javascriptExpression;
-	}
-
-	/**
-	 * @return the javascripts
-	 */
-	public ArrayList<String> getJavascripts() {
-		return javascripts;
 	}
 
 	/**
@@ -763,40 +525,6 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the potions.
-	 *
-	 * @return the potions
-	 */
-	public Set<String> getPotions() {
-		return potions;
-	}
-
-	/**
-	 * Gets the potions amplifier.
-	 *
-	 * @return the potions amplifier
-	 */
-	public HashMap<String, Integer> getPotionsAmplifier() {
-		return potionsAmplifier;
-	}
-
-	/**
-	 * Gets the potions duration.
-	 *
-	 * @return the potions duration
-	 */
-	public HashMap<String, Integer> getPotionsDuration() {
-		return potionsDuration;
-	}
-
-	/**
-	 * @return the priority
-	 */
-	public ArrayList<String> getPriority() {
-		return priority;
-	}
-
-	/**
 	 * Gets the random chance.
 	 *
 	 * @return the random chance
@@ -841,33 +569,6 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the sound pitch.
-	 *
-	 * @return the sound pitch
-	 */
-	public double getSoundPitch() {
-		return soundPitch;
-	}
-
-	/**
-	 * Gets the sound sound.
-	 *
-	 * @return the sound sound
-	 */
-	public String getSoundSound() {
-		return soundSound;
-	}
-
-	/**
-	 * Gets the sound volume.
-	 *
-	 * @return the sound volume
-	 */
-	public double getSoundVolume() {
-		return soundVolume;
-	}
-
-	/**
 	 * Gets the timed hour.
 	 *
 	 * @return the timed hour
@@ -883,51 +584,6 @@ public class Reward {
 	 */
 	public int getTimedMinute() {
 		return timedMinute;
-	}
-
-	/**
-	 * Gets the title fade in.
-	 *
-	 * @return the title fade in
-	 */
-	public int getTitleFadeIn() {
-		return titleFadeIn;
-	}
-
-	/**
-	 * Gets the title fade out.
-	 *
-	 * @return the title fade out
-	 */
-	public int getTitleFadeOut() {
-		return titleFadeOut;
-	}
-
-	/**
-	 * Gets the title show time.
-	 *
-	 * @return the title show time
-	 */
-	public int getTitleShowTime() {
-		return titleShowTime;
-	}
-
-	/**
-	 * Gets the title sub title.
-	 *
-	 * @return the title sub title
-	 */
-	public String getTitleSubTitle() {
-		return titleSubTitle;
-	}
-
-	/**
-	 * Gets the title title.
-	 *
-	 * @return the title title
-	 */
-	public String getTitleTitle() {
-		return titleTitle;
 	}
 
 	/**
@@ -1009,29 +665,6 @@ public class Reward {
 	 */
 	public void giveMoney(User user, int money) {
 		user.giveMoney(money);
-	}
-
-	/**
-	 * Give potions.
-	 *
-	 * @param user
-	 *            the user
-	 */
-	public void givePotions(User user) {
-		for (String potionName : getPotions()) {
-			user.givePotionEffect(potionName, getPotionsDuration().get(potionName),
-					getPotionsAmplifier().get(potionName));
-		}
-	}
-
-	public void givePriorityReward(User user, final HashMap<String, String> placeholders) {
-		for (String str : getPriority()) {
-			Reward reward = RewardHandler.getInstance().getReward(str);
-			if (reward.canGiveReward(user)) {
-				new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true).send(user);
-				return;
-			}
-		}
 	}
 
 	/**
@@ -1173,21 +806,13 @@ public class Reward {
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 
-			givePriorityReward(user, placeholders);
 			giveRandom(user, true, placeholders);
-			runJavascript(user, true, placeholders);
 			giveMoney(user, money);
 			giveItems(user, placeholders);
 			giveExp(user, exp);
 			runCommands(user, placeholders);
-			givePotions(user);
-			sendTitle(user, placeholders);
-			playSound(user);
-			playEffect(user);
-			sendBossBar(user, placeholders);
 			sendMessage(user, money, exp, placeholders);
 			checkChoiceRewards(user);
-			sendFirework(user);
 			giveLucky(user, placeholders);
 
 			giveRewardsRewards(user, placeholders);
@@ -1200,7 +825,7 @@ public class Reward {
 
 	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
 		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
-			inject.onRewardRequest(user, getConfig().getConfigData(), placeholders);
+			inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
 		}
 	}
 
@@ -1219,30 +844,12 @@ public class Reward {
 	}
 
 	/**
-	 * Checks if is boss bar enabled.
-	 *
-	 * @return true, if is boss bar enabled
-	 */
-	public boolean isBossBarEnabled() {
-		return bossBarEnabled;
-	}
-
-	/**
 	 * Checks if is delay enabled.
 	 *
 	 * @return true, if is delay enabled
 	 */
 	public boolean isDelayEnabled() {
 		return delayEnabled;
-	}
-
-	/**
-	 * Checks if is effect enabled.
-	 *
-	 * @return true, if is effect enabled
-	 */
-	public boolean isEffectEnabled() {
-		return effectEnabled;
 	}
 
 	/**
@@ -1253,46 +860,10 @@ public class Reward {
 	}
 
 	/**
-	 * Checks if is firework enabled.
-	 *
-	 * @return true, if is firework enabled
-	 */
-	public boolean isFireworkEnabled() {
-		return fireworkEnabled;
-	}
-
-	/**
-	 * Checks if is firework flicker.
-	 *
-	 * @return true, if is firework flicker
-	 */
-	public boolean isFireworkFlicker() {
-		return fireworkFlicker;
-	}
-
-	/**
-	 * Checks if is firework trail.
-	 *
-	 * @return true, if is firework trail
-	 */
-	public boolean isFireworkTrail() {
-		return fireworkTrail;
-	}
-
-	/**
 	 * @return the forceOffline
 	 */
 	public boolean isForceOffline() {
 		return forceOffline;
-	}
-
-	/**
-	 * Checks if is javascript enabled.
-	 *
-	 * @return true, if is javascript enabled
-	 */
-	public boolean isJavascriptEnabled() {
-		return javascriptEnabled;
 	}
 
 	/**
@@ -1319,30 +890,12 @@ public class Reward {
 	}
 
 	/**
-	 * Checks if is sound enabled.
-	 *
-	 * @return true, if is sound enabled
-	 */
-	public boolean isSoundEnabled() {
-		return soundEnabled;
-	}
-
-	/**
 	 * Checks if is timed enabled.
 	 *
 	 * @return true, if is timed enabled
 	 */
 	public boolean isTimedEnabled() {
 		return timedEnabled;
-	}
-
-	/**
-	 * Checks if is title enabled.
-	 *
-	 * @return true, if is title enabled
-	 */
-	public boolean isTitleEnabled() {
-		return titleEnabled;
 	}
 
 	/**
@@ -1397,8 +950,6 @@ public class Reward {
 			setTimedMinute(getConfig().getTimedMinute());
 		}
 
-		javascripts = getConfig().getJavascripts();
-
 		setChance(getConfig().getChance());
 		setRandomChance(getConfig().getRandomChance());
 		randomPickRandom = getConfig().getRandomPickRandom();
@@ -1419,45 +970,15 @@ public class Reward {
 		setConsoleCommands(getConfig().getCommandsConsole());
 		setPlayerCommands(getConfig().getCommandsPlayer());
 
-		potions = getConfig().getPotions();
-		potionsDuration = new HashMap<String, Integer>();
-		potionsAmplifier = new HashMap<String, Integer>();
-		for (String potion : potions) {
-			potionsDuration.put(potion, getConfig().getPotionsDuration(potion));
-			potionsAmplifier.put(potion, getConfig().getPotionsAmplifier(potion));
-		}
-
 		setRewardMsg(getConfig().getMessagesPlayer());
-
-		setBossBarEnabled(getConfig().getBossBarEnabled());
-		if (bossBarEnabled) {
-			setBossBarMessage(getConfig().getBossBarMessage());
-			setBossBarColor(getConfig().getBossBarColor());
-			setBossBarStyle(getConfig().getBossBarStyle());
-			setBossBarProgress(getConfig().getBossBarProgress());
-			setBossBarDelay(getConfig().getBossBarDelay());
-		}
 
 		broadcastMsg = getConfig().getMessagesBroadcast();
 
 		permission = getConfig().getPermission();
 
-		setJavascriptEnabled(getConfig().getJavascriptEnabled());
-		setJavascriptExpression(getConfig().getJavascriptExpression());
-
 		enableChoices = getConfig().getEnableChoices();
 		if (enableChoices) {
 			choices = getConfig().getChoices();
-		}
-
-		fireworkEnabled = getConfig().getFireworkEnabled();
-		if (fireworkEnabled) {
-			fireworkColors = getConfig().getFireworkColors();
-			fireworkFadeOutColors = getConfig().getFireworkColorsFadeOut();
-			fireworkPower = getConfig().getFireworkPower();
-			fireworkTypes = getConfig().getFireworkTypes();
-			fireworkTrail = getConfig().getFireworkTrail();
-			fireworkFlicker = getConfig().getFireworkFlicker();
 		}
 
 		if (getWorlds().size() == 0) {
@@ -1465,32 +986,6 @@ public class Reward {
 		} else {
 			usesWorlds = true;
 		}
-
-		titleEnabled = getConfig().getTitleEnabled();
-		if (titleEnabled) {
-			titleTitle = getConfig().getTitleTitle();
-			titleSubTitle = getConfig().getTitleSubTitle();
-			titleFadeIn = getConfig().getTitleFadeIn();
-			titleShowTime = getConfig().getTitleShowTime();
-			titleFadeOut = getConfig().getTitleFadeOut();
-		}
-
-		soundEnabled = getConfig().getSoundEnabled();
-		if (soundEnabled) {
-			soundSound = getConfig().getSoundSound();
-			soundPitch = getConfig().getSoundPitch();
-			soundVolume = getConfig().getSoundVolume();
-		}
-
-		effectEnabled = getConfig().getEffectEnabled();
-		if (effectEnabled) {
-			effectEffect = getConfig().getEffectEffect();
-			effectData = getConfig().getEffectData();
-			effectParticles = getConfig().getEffectParticles();
-			effectRadius = getConfig().getEffectRadius();
-		}
-
-		priority = getConfig().getPriority();
 
 		luckyRewards = new HashMap<Integer, String>();
 
@@ -1514,34 +1009,6 @@ public class Reward {
 	}
 
 	/**
-	 * Play effect.
-	 *
-	 * @param user
-	 *            the user
-	 */
-	public void playEffect(User user) {
-		if (effectEnabled) {
-			user.playParticle(effectEffect, effectData, effectParticles, effectRadius);
-		}
-	}
-
-	/**
-	 * Play sound.
-	 *
-	 * @param user
-	 *            the user
-	 */
-	public void playSound(User user) {
-		if (soundEnabled) {
-			try {
-				user.playSound(soundSound, soundVolume, soundPitch);
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
-		}
-	}
-
-	/**
 	 * Run commands.
 	 *
 	 * @param user
@@ -1553,70 +1020,6 @@ public class Reward {
 		MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), getConsoleCommands(), placeholders);
 
 		user.preformCommand(getPlayerCommands(), placeholders);
-
-		if (randomCommand.size() > 0) {
-			MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),
-					randomCommand.get(ThreadLocalRandom.current().nextInt(randomCommand.size())), placeholders);
-		}
-	}
-
-	/**
-	 * Run javascript.
-	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 * @param placeholders
-	 *            placeholders
-	 */
-	public void runJavascript(User user, boolean online, HashMap<String, String> placeholders) {
-		if (isJavascriptEnabled()) {
-			if (new JavascriptEngine().addPlayer(user.getPlayer()).getBooleanValue(
-					StringUtils.getInstance().replacePlaceHolder(getJavascriptExpression(), placeholders))) {
-				new RewardBuilder(getConfig().getConfigData(), getConfig().getJavascriptTrueRewardsPath())
-						.withPrefix(name).send(user);
-			} else {
-				new RewardBuilder(getConfig().getConfigData(), getConfig().getJavascriptFalseRewardsPath())
-						.withPrefix(name).send(user);
-			}
-		}
-
-		if (!getJavascripts().isEmpty()) {
-			JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getPlayer());
-			for (String str : getJavascripts()) {
-				engine.execute(StringUtils.getInstance().replacePlaceHolder(str, placeholders));
-			}
-		}
-	}
-
-	/**
-	 * Send boss bar.
-	 *
-	 * @param user
-	 *            the user
-	 * @param placeholders
-	 *            placeholders
-	 */
-	public void sendBossBar(User user, HashMap<String, String> placeholders) {
-		if (isBossBarEnabled()) {
-			user.sendBossBar(StringUtils.getInstance().replacePlaceHolder(getBossBarMessage(), placeholders),
-					getBossBarColor(), getBossBarStyle(), getBossBarProgress(), getBossBarDelay());
-		}
-	}
-
-	/**
-	 * Send firework.
-	 *
-	 * @param user
-	 *            the user
-	 */
-	public void sendFirework(User user) {
-		if (isFireworkEnabled()) {
-			FireworkHandler.getInstance().launchFirework(user.getPlayer().getLocation(), getFireworkPower(),
-					getFireworkColors(), getFireworkFadeOutColors(), isFireworkTrail(), isFireworkFlicker(),
-					getFireworkTypes());
-		}
 	}
 
 	/**
@@ -1659,84 +1062,6 @@ public class Reward {
 				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
 		user.sendMessage(msg, placeholders);
-	}
-
-	/**
-	 * Send title.
-	 *
-	 * @param user
-	 *            the user
-	 * @param placeholders
-	 *            placeholders
-	 */
-	public void sendTitle(User user, HashMap<String, String> placeholders) {
-		if (titleEnabled) {
-			user.sendTitle(StringUtils.getInstance().replacePlaceHolder(titleTitle, placeholders),
-
-					StringUtils.getInstance().replacePlaceHolder(titleSubTitle, placeholders),
-
-					titleFadeIn, titleShowTime, titleFadeOut);
-		}
-	}
-
-	/**
-	 * Sets the boss bar color.
-	 *
-	 * @param bossBarColor
-	 *            the new boss bar color
-	 */
-	public void setBossBarColor(String bossBarColor) {
-		this.bossBarColor = bossBarColor;
-	}
-
-	/**
-	 * Sets the boss bar delay.
-	 *
-	 * @param bossBarDelay
-	 *            the new boss bar delay
-	 */
-	public void setBossBarDelay(int bossBarDelay) {
-		this.bossBarDelay = bossBarDelay;
-	}
-
-	/**
-	 * Sets the boss bar enabled.
-	 *
-	 * @param bossBarEnabled
-	 *            the new boss bar enabled
-	 */
-	public void setBossBarEnabled(boolean bossBarEnabled) {
-		this.bossBarEnabled = bossBarEnabled;
-	}
-
-	/**
-	 * Sets the boss bar message.
-	 *
-	 * @param bossBarMessage
-	 *            the new boss bar message
-	 */
-	public void setBossBarMessage(String bossBarMessage) {
-		this.bossBarMessage = bossBarMessage;
-	}
-
-	/**
-	 * Sets the boss bar progress.
-	 *
-	 * @param bossBarProgress
-	 *            the new boss bar progress
-	 */
-	public void setBossBarProgress(double bossBarProgress) {
-		this.bossBarProgress = bossBarProgress;
-	}
-
-	/**
-	 * Sets the boss bar style.
-	 *
-	 * @param bossBarStyle
-	 *            the new boss bar style
-	 */
-	public void setBossBarStyle(String bossBarStyle) {
-		this.bossBarStyle = bossBarStyle;
 	}
 
 	/**
@@ -1808,56 +1133,6 @@ public class Reward {
 	}
 
 	/**
-	 * Sets the effect data.
-	 *
-	 * @param effectData
-	 *            the new effect data
-	 */
-	public void setEffectData(int effectData) {
-		this.effectData = effectData;
-	}
-
-	/**
-	 * Sets the effect effect.
-	 *
-	 * @param effectEffect
-	 *            the new effect effect
-	 */
-	public void setEffectEffect(String effectEffect) {
-		this.effectEffect = effectEffect;
-	}
-
-	/**
-	 * Sets the effect enabled.
-	 *
-	 * @param effectEnabled
-	 *            the new effect enabled
-	 */
-	public void setEffectEnabled(boolean effectEnabled) {
-		this.effectEnabled = effectEnabled;
-	}
-
-	/**
-	 * Sets the effect particles.
-	 *
-	 * @param effectParticles
-	 *            the new effect particles
-	 */
-	public void setEffectParticles(int effectParticles) {
-		this.effectParticles = effectParticles;
-	}
-
-	/**
-	 * Sets the effect radius.
-	 *
-	 * @param effectRadius
-	 *            the new effect radius
-	 */
-	public void setEffectRadius(int effectRadius) {
-		this.effectRadius = effectRadius;
-	}
-
-	/**
 	 * Sets the exp.
 	 *
 	 * @param exp
@@ -1865,76 +1140,6 @@ public class Reward {
 	 */
 	public void setExp(int exp) {
 		this.exp = exp;
-	}
-
-	/**
-	 * Sets the firework colors.
-	 *
-	 * @param fireworkColors
-	 *            the new firework colors
-	 */
-	public void setFireworkColors(ArrayList<String> fireworkColors) {
-		this.fireworkColors = fireworkColors;
-	}
-
-	/**
-	 * Sets the firework enabled.
-	 *
-	 * @param fireworkEnabled
-	 *            the new firework enabled
-	 */
-	public void setFireworkEnabled(boolean fireworkEnabled) {
-		this.fireworkEnabled = fireworkEnabled;
-	}
-
-	/**
-	 * Sets the firework fade out colors.
-	 *
-	 * @param fireworkFadeOutColors
-	 *            the new firework fade out colors
-	 */
-	public void setFireworkFadeOutColors(ArrayList<String> fireworkFadeOutColors) {
-		this.fireworkFadeOutColors = fireworkFadeOutColors;
-	}
-
-	/**
-	 * Sets the firework flicker.
-	 *
-	 * @param fireworkFlicker
-	 *            the new firework flicker
-	 */
-	public void setFireworkFlicker(boolean fireworkFlicker) {
-		this.fireworkFlicker = fireworkFlicker;
-	}
-
-	/**
-	 * Sets the firework power.
-	 *
-	 * @param fireworkPower
-	 *            the new firework power
-	 */
-	public void setFireworkPower(int fireworkPower) {
-		this.fireworkPower = fireworkPower;
-	}
-
-	/**
-	 * Sets the firework trail.
-	 *
-	 * @param fireworkTrail
-	 *            the new firework trail
-	 */
-	public void setFireworkTrail(boolean fireworkTrail) {
-		this.fireworkTrail = fireworkTrail;
-	}
-
-	/**
-	 * Sets the firework types.
-	 *
-	 * @param fireworkTypes
-	 *            the new firework types
-	 */
-	public void setFireworkTypes(ArrayList<String> fireworkTypes) {
-		this.fireworkTypes = fireworkTypes;
 	}
 
 	/**
@@ -1963,34 +1168,6 @@ public class Reward {
 	 */
 	public void setItemsAndAmountsGiven(HashMap<String, Integer> itemsAndAmountsGiven) {
 		this.itemsAndAmountsGiven = itemsAndAmountsGiven;
-	}
-
-	/**
-	 * Sets the javascript enabled.
-	 *
-	 * @param javascriptEnabled
-	 *            the new javascript enabled
-	 */
-	public void setJavascriptEnabled(boolean javascriptEnabled) {
-		this.javascriptEnabled = javascriptEnabled;
-	}
-
-	/**
-	 * Sets the javascript expression.
-	 *
-	 * @param javascriptExpression
-	 *            the new javascript expression
-	 */
-	public void setJavascriptExpression(String javascriptExpression) {
-		this.javascriptExpression = javascriptExpression;
-	}
-
-	/**
-	 * @param javascripts
-	 *            the javascripts to set
-	 */
-	public void setJavascripts(ArrayList<String> javascripts) {
-		this.javascripts = javascripts;
 	}
 
 	/**
@@ -2064,36 +1241,6 @@ public class Reward {
 	}
 
 	/**
-	 * Sets the potions.
-	 *
-	 * @param potions
-	 *            the new potions
-	 */
-	public void setPotions(Set<String> potions) {
-		this.potions = potions;
-	}
-
-	/**
-	 * Sets the potions amplifier.
-	 *
-	 * @param potionsAmplifier
-	 *            the potions amplifier
-	 */
-	public void setPotionsAmplifier(HashMap<String, Integer> potionsAmplifier) {
-		this.potionsAmplifier = potionsAmplifier;
-	}
-
-	/**
-	 * Sets the potions duration.
-	 *
-	 * @param potionsDuration
-	 *            the potions duration
-	 */
-	public void setPotionsDuration(HashMap<String, Integer> potionsDuration) {
-		this.potionsDuration = potionsDuration;
-	}
-
-	/**
 	 * Sets the random chance.
 	 *
 	 * @param randomChance
@@ -2142,46 +1289,6 @@ public class Reward {
 	}
 
 	/**
-	 * Sets the sound enabled.
-	 *
-	 * @param soundEnabled
-	 *            the new sound enabled
-	 */
-	public void setSoundEnabled(boolean soundEnabled) {
-		this.soundEnabled = soundEnabled;
-	}
-
-	/**
-	 * Sets the sound pitch.
-	 *
-	 * @param soundPitch
-	 *            the new sound pitch
-	 */
-	public void setSoundPitch(float soundPitch) {
-		this.soundPitch = soundPitch;
-	}
-
-	/**
-	 * Sets the sound sound.
-	 *
-	 * @param soundSound
-	 *            the new sound sound
-	 */
-	public void setSoundSound(String soundSound) {
-		this.soundSound = soundSound;
-	}
-
-	/**
-	 * Sets the sound volume.
-	 *
-	 * @param soundVolume
-	 *            the new sound volume
-	 */
-	public void setSoundVolume(float soundVolume) {
-		this.soundVolume = soundVolume;
-	}
-
-	/**
 	 * Sets the timed enabled.
 	 *
 	 * @param timedEnabled
@@ -2209,66 +1316,6 @@ public class Reward {
 	 */
 	public void setTimedMinute(int timedMinute) {
 		this.timedMinute = timedMinute;
-	}
-
-	/**
-	 * Sets the title enabled.
-	 *
-	 * @param titleEnabled
-	 *            the new title enabled
-	 */
-	public void setTitleEnabled(boolean titleEnabled) {
-		this.titleEnabled = titleEnabled;
-	}
-
-	/**
-	 * Sets the title fade in.
-	 *
-	 * @param titleFadeIn
-	 *            the new title fade in
-	 */
-	public void setTitleFadeIn(int titleFadeIn) {
-		this.titleFadeIn = titleFadeIn;
-	}
-
-	/**
-	 * Sets the title fade out.
-	 *
-	 * @param titleFadeOut
-	 *            the new title fade out
-	 */
-	public void setTitleFadeOut(int titleFadeOut) {
-		this.titleFadeOut = titleFadeOut;
-	}
-
-	/**
-	 * Sets the title show time.
-	 *
-	 * @param titleShowTime
-	 *            the new title show time
-	 */
-	public void setTitleShowTime(int titleShowTime) {
-		this.titleShowTime = titleShowTime;
-	}
-
-	/**
-	 * Sets the title sub title.
-	 *
-	 * @param titleSubTitle
-	 *            the new title sub title
-	 */
-	public void setTitleSubTitle(String titleSubTitle) {
-		this.titleSubTitle = titleSubTitle;
-	}
-
-	/**
-	 * Sets the title title.
-	 *
-	 * @param titleTitle
-	 *            the new title title
-	 */
-	public void setTitleTitle(String titleTitle) {
-		this.titleTitle = titleTitle;
 	}
 
 	/**

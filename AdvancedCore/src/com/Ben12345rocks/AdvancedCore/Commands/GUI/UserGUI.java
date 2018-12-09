@@ -17,7 +17,7 @@ import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
-import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIValueType;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryButton;
@@ -127,15 +127,15 @@ public class UserGUI {
 				final User user = UserManager.getInstance().getUser(playerName);
 				for (final String key : user.getData().getKeys()) {
 					String value = user.getData().getString(key);
-					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value), key,
-							value, EditGUIValueType.STRING) {
+					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
+							new EditGUIValueString(key, value) {
 
-						@Override
-						public void setValue(Player player, Object value) {
-							user.getData().setString(key, (String) value);
-							openUserGUI(player, playerName);
-						}
-					});
+								@Override
+								public void setValue(Player player, String value) {
+									user.getData().setString(key, (String) value);
+									openUserGUI(player, playerName);
+								}
+							}));
 				}
 
 				inv.openInventory(player);

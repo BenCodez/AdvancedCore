@@ -60,6 +60,7 @@ public class RewardEditGUI {
 		return (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 	}
 
+	@SuppressWarnings("deprecation")
 	public void openRewardGUI(Player player, Reward reward) {
 		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
@@ -145,7 +146,7 @@ public class RewardEditGUI {
 				getCurrentReward(player).getConfig().setRewardType(str);
 				plugin.reload();
 			}
-		}.setOptions("BOTH", "OFFLINE", "ONLINE"));
+		}.addOptions("BOTH", "OFFLINE", "ONLINE"));
 
 		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Worlds", reward.getWorlds(),
 				EditGUIValueType.LIST) {
@@ -251,28 +252,6 @@ public class RewardEditGUI {
 			}
 		});
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Javascripts", reward.getJavascripts(),
-				EditGUIValueType.LIST) {
-
-			@SuppressWarnings("unchecked")
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setJavascripts((ArrayList<String>) value);
-				plugin.reload();
-			}
-		});
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Priority", reward.getPriority(),
-				EditGUIValueType.LIST) {
-
-			@SuppressWarnings("unchecked")
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setPriority((ArrayList<String>) value);
-				plugin.reload();
-			}
-		});
-
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cEdit items")) {
 
 			@Override
@@ -284,7 +263,7 @@ public class RewardEditGUI {
 		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
 			if (injectReward.isEditable()) {
 				for (EditGUIButton b : injectReward.getEditButtons()) {
-					b.setCurrentValue(reward.getConfig().getConfigData().get(b.getKey()));
+					b.getEditer().setCurrentValue(reward.getConfig().getConfigData().get(b.getEditer().getKey()));
 					inv.addButton(b);
 				}
 			}
