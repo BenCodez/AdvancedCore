@@ -19,6 +19,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectConfigurationSection;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectString;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
@@ -409,6 +410,42 @@ public class RewardHandler {
 	}
 
 	public void loadInjectedRewards() {
+
+		injectedRewards.add(new RewardInjectString("Messages.Player") {
+
+			@Override
+			public void onRewardRequest(Reward reward, User user, String value, HashMap<String, String> placeholders) {
+				user.sendMessage(value, placeholders);
+			}
+		}.addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Messages.Player", null) {
+
+					@Override
+					public void setValue(Player player, String value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				})));
+
+		injectedRewards.add(new RewardInjectString("Messages.Broadcast") {
+
+			@Override
+			public void onRewardRequest(Reward reward, User user, String value, HashMap<String, String> placeholders) {
+				MiscUtils.getInstance().broadcast(StringUtils.getInstance().replacePlaceHolders(user.getPlayer(),
+						StringUtils.getInstance().replacePlaceHolder(value, placeholders)));
+			}
+		}.addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Messages.Broadcast", null) {
+
+					@Override
+					public void setValue(Player player, String value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				})));
+
 		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
 
 			@Override

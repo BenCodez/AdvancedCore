@@ -26,9 +26,10 @@ public abstract class EditGUIValue {
 
 	public abstract void onClick(ClickEvent event);
 
-	public void addOptions(String[] str) {
+	public EditGUIValue addOptions(String... str) {
 		for (String s : str) {
 			options.add(s);
 		}
+		return this;
 	}
 }

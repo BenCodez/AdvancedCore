@@ -804,6 +804,15 @@ public class Reward {
 			phs.put("exp", "" + exp);
 			phs.put("uuid", user.getUUID());
 
+			ArrayList<String> itemsAndAmounts = new ArrayList<String>();
+			for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
+				itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
+			}
+			String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
+
+			phs.put("itemsandamount", itemsAndAmountsMsg);
+			phs.put("items", ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
+
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 
 			giveRandom(user, true, placeholders);
@@ -811,7 +820,6 @@ public class Reward {
 			giveItems(user, placeholders);
 			giveExp(user, exp);
 			runCommands(user, placeholders);
-			sendMessage(user, money, exp, placeholders);
 			checkChoiceRewards(user);
 			giveLucky(user, placeholders);
 
@@ -1020,48 +1028,6 @@ public class Reward {
 		MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), getConsoleCommands(), placeholders);
 
 		user.preformCommand(getPlayerCommands(), placeholders);
-	}
-
-	/**
-	 * Send message.
-	 *
-	 * @param user
-	 *            the user
-	 * @param money
-	 *            the money
-	 * @param exp
-	 *            the exp
-	 * @param placeholders
-	 *            placeholders
-	 */
-	public void sendMessage(User user, int money, int exp, HashMap<String, String> placeholders) {
-		ArrayList<String> itemsAndAmounts = new ArrayList<String>();
-		for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
-			itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
-		}
-		String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
-
-		String broadcastMsg = StringUtils.getInstance().replacePlaceHolder(this.broadcastMsg, placeholders);
-		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "player", user.getPlayerName());
-
-		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "money", "" + money);
-		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "exp", "" + exp);
-		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "itemsandamount", itemsAndAmountsMsg);
-		broadcastMsg = StringUtils.getInstance().replacePlaceHolder(broadcastMsg, "items",
-				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
-
-		MiscUtils.getInstance()
-				.broadcast(StringUtils.getInstance().replacePlaceHolders(user.getPlayer(), broadcastMsg));
-
-		String msg = StringUtils.getInstance().replacePlaceHolder(rewardMsg, "player", user.getPlayerName());
-
-		msg = StringUtils.getInstance().replacePlaceHolder(msg, "money", "" + money);
-		msg = StringUtils.getInstance().replacePlaceHolder(msg, "exp", "" + exp);
-		msg = StringUtils.getInstance().replacePlaceHolder(msg, "itemsandamount", itemsAndAmountsMsg);
-		msg = StringUtils.getInstance().replacePlaceHolder(msg, "items",
-				ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
-
-		user.sendMessage(msg, placeholders);
 	}
 
 	/**

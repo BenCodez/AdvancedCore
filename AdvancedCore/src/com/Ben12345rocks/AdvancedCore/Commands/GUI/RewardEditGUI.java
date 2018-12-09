@@ -16,8 +16,9 @@ import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
-import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIValueType;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueBoolean;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueList;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueNumber;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
@@ -62,7 +63,6 @@ public class RewardEditGUI {
 		return (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 	}
 
-	@SuppressWarnings("deprecation")
 	public void openRewardGUI(Player player, Reward reward) {
 		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
@@ -73,145 +73,114 @@ public class RewardEditGUI {
 		setCurrentReward(player, reward);
 		inv.addData("Reward", reward);
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Money", reward.getMoney(),
-				EditGUIValueType.NUMBER) {
-
-			@Override
-			public void setValue(Player player, Object value) {
-				int num = (int) value;
-				getCurrentReward(player).getConfig().setMoney(num);
-				plugin.reload();
-			}
-		});
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "MinMoney", reward.getMinMoney(),
-				EditGUIValueType.NUMBER) {
-
-			@Override
-			public void setValue(Player player, Object value) {
-				int num = (int) value;
-				getCurrentReward(player).getConfig().setMinMoney(num);
-				plugin.reload();
-			}
-		});
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "MaxMoney", reward.getMaxMoney(),
-				EditGUIValueType.NUMBER) {
-
-			@Override
-			public void setValue(Player player, Object value) {
-				int num = (int) value;
-				getCurrentReward(player).getConfig().setMaxMoney(num);
-				plugin.reload();
-			}
-		});
-
 		inv.addButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), "Exp", reward.getExp(), EditGUIValueType.NUMBER) {
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money", reward.getMoney()) {
 
 					@Override
-					public void setValue(Player player, Object value) {
-						int num = (int) value;
-						getCurrentReward(player).getConfig().setEXP(num);
+					public void setValue(Player player, Number num) {
+						getCurrentReward(player).getConfig().setMoney(num.intValue());
 						plugin.reload();
 					}
-				});
+				}));
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "MinExp", reward.getMinExp(),
-				EditGUIValueType.NUMBER) {
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueNumber("MinMoney", reward.getMinMoney()) {
 
-			@Override
-			public void setValue(Player player, Object value) {
-				int num = (int) value;
-				getCurrentReward(player).getConfig().setMinExp(num);
-				plugin.reload();
-			}
-		});
+					@Override
+					public void setValue(Player player, Number num) {
+						getCurrentReward(player).getConfig().setMinMoney(num.intValue());
+						plugin.reload();
+					}
+				}));
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "MaxExp", reward.getMaxExp(),
-				EditGUIValueType.NUMBER) {
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueNumber("MaxMoney", reward.getMaxMoney()) {
 
-			@Override
-			public void setValue(Player player, Object value) {
-				int num = (int) value;
-				getCurrentReward(player).getConfig().setMaxExp(num);
-				plugin.reload();
-			}
-		});
+					@Override
+					public void setValue(Player player, Number num) {
+						getCurrentReward(player).getConfig().setMaxMoney(num.intValue());
+						plugin.reload();
+					}
+				}));
+		inv.addButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Exp", reward.getExp()) {
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "RewardType", reward.getRewardType(),
-				EditGUIValueType.STRING) {
+					@Override
+					public void setValue(Player player, Number num) {
+						getCurrentReward(player).getConfig().setEXP(num.intValue());
+						plugin.reload();
+					}
+				}));
 
-			@Override
-			public void setValue(Player player, Object value) {
-				String str = (String) value;
-				getCurrentReward(player).getConfig().setRewardType(str);
-				plugin.reload();
-			}
-		}.addOptions("BOTH", "OFFLINE", "ONLINE"));
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueNumber("MinExp", reward.getMinExp()) {
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Worlds", reward.getWorlds(),
-				EditGUIValueType.LIST) {
+					@Override
+					public void setValue(Player player, Number num) {
+						getCurrentReward(player).getConfig().setMinExp(num.intValue());
+						plugin.reload();
+					}
+				}));
 
-			@SuppressWarnings("unchecked")
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setWorlds((ArrayList<String>) value);
-				plugin.reload();
-			}
-		});
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueNumber("MaxExp", reward.getMaxExp()) {
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Chance", reward.getChance(),
-				EditGUIValueType.NUMBER) {
+					@Override
+					public void setValue(Player player, Number num) {
+						getCurrentReward(player).getConfig().setMaxExp(num.intValue());
+						plugin.reload();
+					}
+				}));
 
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setChance((double) value);
-				plugin.reload();
-			}
-		});
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueString("RewardType", reward.getRewardType()) {
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Commands.Console",
-				reward.getConsoleCommands(), EditGUIValueType.LIST) {
+					@Override
+					public void setValue(Player player, String value) {
+						getCurrentReward(player).getConfig().setRewardType(value);
+						plugin.reload();
+					}
+				}.addOptions("BOTH", "OFFLINE", "ONLINE")));
 
-			@SuppressWarnings("unchecked")
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setCommandsConsole((ArrayList<String>) value);
-				plugin.reload();
-			}
-		});
+		inv.addButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Worlds", reward.getWorlds()) {
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Commands.Player", reward.getPlayerCommands(),
-				EditGUIValueType.LIST) {
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						getCurrentReward(player).getConfig().setWorlds((ArrayList<String>) value);
+						plugin.reload();
+					}
+				}));
 
-			@SuppressWarnings("unchecked")
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setCommandsPlayer((ArrayList<String>) value);
-				plugin.reload();
-			}
-		});
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueNumber("Chance", reward.getChance()) {
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Messages.Broadcast", reward.getBroadcastMsg(),
-				EditGUIValueType.STRING) {
+					@Override
+					public void setValue(Player player, Number num) {
+						getCurrentReward(player).getConfig().setChance(num.doubleValue());
+						plugin.reload();
+					}
+				}));
 
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setMessagesBroadcast((String) value);
-				plugin.reload();
-			}
-		});
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueList("Commands.Console", reward.getConsoleCommands()) {
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Messages.Player", reward.getRewardMsg(),
-				EditGUIValueType.STRING) {
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						getCurrentReward(player).getConfig().setCommandsConsole((ArrayList<String>) value);
+						plugin.reload();
+					}
+				}));
 
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setMessagesPlayer((String) value);
-				plugin.reload();
-			}
-		});
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueList("Commands.Player", reward.getConsoleCommands()) {
+
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						getCurrentReward(player).getConfig().setCommandsPlayer((ArrayList<String>) value);
+						plugin.reload();
+					}
+				}));
 
 		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 				new EditGUIValueString("Permission", reward.getPermission()) {

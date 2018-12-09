@@ -26,9 +26,10 @@ public abstract class RewardInjectString extends RewardInject {
 	}
 
 	@Override
-	public void onRewardRequest(Reward reward, User user, ConfigurationSection data, HashMap<String,String> placeholders) {
-		if (data.isString(getPath())) {
-			onRewardRequest(reward, user, data.getString(getPath(), getDefaultValue()),placeholders);
+	public void onRewardRequest(Reward reward, User user, ConfigurationSection data,
+			HashMap<String, String> placeholders) {
+		if (data.isString(getPath()) && !data.getString(getPath(), "").isEmpty()) {
+			onRewardRequest(reward, user, data.getString(getPath(), getDefaultValue()), placeholders);
 		}
 	}
 
