@@ -357,6 +357,7 @@ public class AdvancedCoreHook {
 		TimeChecker.getInstance().loadTimer(2);
 		ServerData.getInstance().setup();
 		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
+		RewardHandler.getInstance().loadInjectedRewards();
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();

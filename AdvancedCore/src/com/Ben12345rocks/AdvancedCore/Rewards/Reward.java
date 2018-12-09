@@ -123,12 +123,6 @@ public class Reward {
 	/** The reward msg. */
 	private String rewardMsg;
 
-	/** The action bar msg. */
-	private String actionBarMsg;
-
-	/** The action bar delay. */
-	private int actionBarDelay;
-
 	/** The boss bar enabled. */
 	private boolean bossBarEnabled;
 
@@ -413,24 +407,6 @@ public class Reward {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Gets the action bar delay.
-	 *
-	 * @return the action bar delay
-	 */
-	public int getActionBarDelay() {
-		return actionBarDelay;
-	}
-
-	/**
-	 * Gets the action bar msg.
-	 *
-	 * @return the action bar msg
-	 */
-	public String getActionBarMsg() {
-		return actionBarMsg;
 	}
 
 	/**
@@ -1206,7 +1182,6 @@ public class Reward {
 			runCommands(user, placeholders);
 			givePotions(user);
 			sendTitle(user, placeholders);
-			sendActionBar(user, placeholders);
 			playSound(user);
 			playEffect(user);
 			sendBossBar(user, placeholders);
@@ -1453,8 +1428,6 @@ public class Reward {
 		}
 
 		setRewardMsg(getConfig().getMessagesPlayer());
-		setActionBarMsg(getConfig().getActionBarMessage());
-		setActionBarDelay(getConfig().getActionBarDelay());
 
 		setBossBarEnabled(getConfig().getBossBarEnabled());
 		if (bossBarEnabled) {
@@ -1618,19 +1591,6 @@ public class Reward {
 	}
 
 	/**
-	 * Send action bar.
-	 *
-	 * @param user
-	 *            the user
-	 * @param placeholders
-	 *            placeholders
-	 */
-	public void sendActionBar(User user, HashMap<String, String> placeholders) {
-		user.sendActionBar(StringUtils.getInstance().replacePlaceHolder(getActionBarMsg(), placeholders),
-				getActionBarDelay());
-	}
-
-	/**
 	 * Send boss bar.
 	 *
 	 * @param user
@@ -1717,26 +1677,6 @@ public class Reward {
 
 					titleFadeIn, titleShowTime, titleFadeOut);
 		}
-	}
-
-	/**
-	 * Sets the action bar delay.
-	 *
-	 * @param actionBarDelay
-	 *            the new action bar delay
-	 */
-	public void setActionBarDelay(int actionBarDelay) {
-		this.actionBarDelay = actionBarDelay;
-	}
-
-	/**
-	 * Sets the action bar msg.
-	 *
-	 * @param actionBarMsg
-	 *            the new action bar msg
-	 */
-	public void setActionBarMsg(String actionBarMsg) {
-		this.actionBarMsg = actionBarMsg;
 	}
 
 	/**

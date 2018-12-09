@@ -9,16 +9,23 @@ import java.util.Map.Entry;
 import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectConfigurationSection;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIValueType;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
 
@@ -393,5 +400,36 @@ public class RewardHandler {
 			}
 		}
 		return false;
+	}
+
+	public void loadInjectedRewards() {
+		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
+
+			@Override
+			public void onRewardRequested(User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				user.sendActionBar(
+						StringUtils.getInstance().replacePlaceHolder(section.getString("Message", ""), placeholders),
+						section.getInt("Delay", 30));
+			}
+		}.addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), "ActionBar.Delay", null, EditGUIValueType.NUMBER) {
+
+					@Override
+					public void setValue(Player player, Object value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().setActionBarDelay((int) value);
+						plugin.reload();
+					}
+				}).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "ActionBar.Message", null,
+						EditGUIValueType.STRING) {
+
+					@Override
+					public void setValue(Player player, Object value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().setActionBarMsg((String) value);
+						plugin.reload();
+					}
+				}));
 	}
 }

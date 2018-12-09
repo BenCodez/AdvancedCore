@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
@@ -67,6 +68,7 @@ public class RewardEditGUI {
 		EditGUI inv = new EditGUI("Reward: " + reward.getRewardName());
 
 		setCurrentReward(player, reward);
+		inv.addData("Reward", reward);
 
 		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "Money", reward.getMoney(),
 				EditGUIValueType.NUMBER) {
@@ -271,25 +273,6 @@ public class RewardEditGUI {
 			}
 		});
 
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "ActionBar.Message", reward.getActionBarMsg(),
-				EditGUIValueType.STRING) {
-
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setActionBarMsg((String) value);
-				plugin.reload();
-			}
-		});
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), "ActionBar.Delay", reward.getActionBarDelay(),
-				EditGUIValueType.NUMBER) {
-
-			@Override
-			public void setValue(Player player, Object value) {
-				getCurrentReward(player).getConfig().setActionBarDelay((int) value);
-				plugin.reload();
-			}
-		});
-
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cEdit items")) {
 
 			@Override
@@ -297,6 +280,15 @@ public class RewardEditGUI {
 				openRewardGUIItems(player, reward);
 			}
 		});
+
+		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
+			if (injectReward.isEditable()) {
+				for (EditGUIButton b : injectReward.getEditButtons()) {
+					b.setCurrentValue(reward.getConfig().getConfigData().get(b.getKey()));
+					inv.addButton(b);
+				}
+			}
+		}
 
 		inv.sort();
 		inv.openInventory(player);
@@ -402,7 +394,6 @@ public class RewardEditGUI {
 	 * @param player
 	 *            the player
 	 */
-	@SuppressWarnings("deprecation")
 	public void openRewardsGUI(Player player) {
 		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
@@ -414,133 +405,6 @@ public class RewardEditGUI {
 			ArrayList<String> lore = new ArrayList<String>();
 			if (reward.getConfig().isDirectlyDefinedReward()) {
 				lore.add("&cReward is directly defined, can not edit");
-			}
-			if (reward.isDelayEnabled()) {
-				lore.add("DelayEnabled: true");
-				lore.add("Delay: " + reward.getDelayHours() + ":" + reward.getDelayMinutes());
-			}
-			if (reward.isTimedEnabled()) {
-				lore.add("TimedEnabled: true");
-				lore.add("Timed: " + reward.getTimedHour() + ":" + reward.getTimedMinute());
-			}
-			if (reward.getChance() != 0 && reward.getChance() != 100) {
-				lore.add("Chance: " + reward.getChance());
-			}
-			if (reward.isRequirePermission()) {
-				lore.add("RequirePermission: true");
-				lore.add("Permssion: " + reward.getPermission());
-			}
-			if (reward.isJavascriptEnabled()) {
-				lore.add("Javascript: true");
-				lore.add("Expression: " + reward.getJavascriptExpression());
-			}
-			if (reward.isEnableChoices()) {
-				lore.add("EnableChoices: true");
-			}
-			if (reward.getWorlds().size() > 0) {
-				lore.add("Worlds: " + ArrayUtils.getInstance().makeStringList(reward.getWorlds()));
-			}
-			if (!reward.getRewardType().equals("BOTH")) {
-				lore.add("RewardType: " + reward.getRewardType());
-			}
-			if (reward.getItems().size() > 0) {
-				lore.add("Items:");
-				for (String name : reward.getItems()) {
-					try {
-						ItemStack item = reward.getItemStack(UserManager.getInstance().getUser(player), name);
-						lore.add(item.getType().toString() + ":" + item.getData().getData() + " " + item.getAmount());
-					} catch (Exception e) {
-						lore.add("&cInvalid item " + name);
-					}
-				}
-			}
-
-			if (reward.getMoney() != 0) {
-				lore.add("Money: " + reward.getMoney());
-			}
-
-			if (reward.getMaxMoney() != 0) {
-				lore.add("MaxMoney: " + reward.getMaxMoney());
-			}
-
-			if (reward.getMinMoney() != 0) {
-				lore.add("MinMoney: " + reward.getMinMoney());
-			}
-
-			if (reward.getExp() != 0) {
-				lore.add("Exp: " + reward.getExp());
-			}
-
-			if (reward.getMaxExp() != 0) {
-				lore.add("MaxExp: " + reward.getMaxExp());
-			}
-
-			if (reward.getMinExp() != 0) {
-				lore.add("MinExp: " + reward.getMinExp());
-			}
-
-			if (reward.getConsoleCommands().size() > 0) {
-				lore.add("ConsoleCommands:");
-				lore.addAll(reward.getConsoleCommands());
-			}
-			if (reward.getPlayerCommands().size() > 0) {
-				lore.add("PlayerCommands:");
-				lore.addAll(reward.getPlayerCommands());
-			}
-			if (reward.getPotions().size() > 0) {
-				lore.add("Potions:");
-				for (String potion : reward.getPotions()) {
-					lore.add(potion + " " + reward.getPotionsDuration().get(potion) + " "
-							+ reward.getPotionsAmplifier().get(potion));
-				}
-			}
-
-			if (reward.isTitleEnabled()) {
-				lore.add("TitleEnabled: true");
-				lore.add("TitleTitle: " + reward.getTitleTitle());
-				lore.add("TitleSubTitle: " + reward.getTitleSubTitle());
-				lore.add("Timings: " + reward.getTitleFadeIn() + " " + reward.getTitleShowTime() + " "
-						+ reward.getTitleFadeOut());
-			}
-
-			if (reward.isBossBarEnabled()) {
-				lore.add("BossBarEnabled: true");
-				lore.add("BossBarMessage: " + reward.getBossBarMessage());
-				lore.add("Color/Style/Progress/Delay: " + reward.getBossBarColor() + "/" + reward.getBossBarStyle()
-						+ "/" + reward.getBossBarProgress() + "/" + reward.getBossBarDelay());
-			}
-			if (reward.isSoundEnabled()) {
-				lore.add("SoundEnabled: true");
-				lore.add("Sound/Volume/Pitch: " + reward.getSoundSound() + "/" + reward.getSoundVolume() + "/"
-						+ reward.getSoundPitch());
-			}
-
-			if (reward.isEffectEnabled()) {
-				lore.add("EffectEnabled: true");
-				lore.add("Effect/Data/Particles/Radius: " + reward.getEffectEffect() + "/" + reward.getEffectData()
-						+ "/" + reward.getEffectParticles() + "/" + reward.getEffectRadius());
-			}
-
-			if (reward.isFireworkEnabled()) {
-				lore.add("Firework: true");
-				lore.add("Power: " + reward.getFireworkPower());
-				lore.add("Colors: " + ArrayUtils.getInstance().makeStringList(reward.getFireworkColors()));
-				lore.add(
-						"FadeOutColors: " + ArrayUtils.getInstance().makeStringList(reward.getFireworkFadeOutColors()));
-				lore.add("Types: " + ArrayUtils.getInstance().makeStringList(reward.getFireworkTypes()));
-				lore.add("Trail: " + reward.isFireworkTrail());
-				lore.add("Flicker: " + reward.isFireworkFlicker());
-			}
-
-			if (reward.getActionBarMsg() != null) {
-				lore.add("ActioBarMessage/Delay: " + reward.getActionBarMsg() + "/" + reward.getActionBarDelay());
-			}
-
-			if (!reward.getRewardMsg().equals("")) {
-				lore.add("MessagesReward: " + reward.getRewardMsg());
-			}
-			if (!reward.getBroadcastMsg().equals("")) {
-				lore.add("Broadcast: " + reward.getBroadcastMsg());
 			}
 
 			inv.addButton(count, new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),

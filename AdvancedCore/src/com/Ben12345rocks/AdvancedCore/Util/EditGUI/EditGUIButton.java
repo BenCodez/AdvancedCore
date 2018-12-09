@@ -14,14 +14,24 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequestBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.Listener;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public abstract class EditGUIButton extends BInventoryButton {
 
+	@Getter
+	@Setter
 	private String key;
 
-	private Object value;
+	@Getter
+	@Setter
+	private Object currentValue;
 
+	@Getter
+	@Setter
 	private EditGUIValueType type;
 
+	@Getter
 	private ArrayList<String> options = new ArrayList<String>();
 
 	@SuppressWarnings("unchecked")
@@ -29,7 +39,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 		super(item);
 		setValueType(type);
 		this.key = key;
-		this.value = value;
+		this.currentValue = value;
 		if (!type.equals(EditGUIValueType.LIST)) {
 			if (!getBuilder().hasCustomDisplayName()) {
 				getBuilder().setName("&cSet " + type.toString() + " for " + key);
@@ -43,20 +53,6 @@ public abstract class EditGUIButton extends BInventoryButton {
 		}
 	}
 
-	/**
-	 * @return the key
-	 */
-	public String getKey() {
-		return key;
-	}
-
-	/**
-	 * @return the type
-	 */
-	public EditGUIValueType getType() {
-		return type;
-	}
-
 	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (type.equals(EditGUIValueType.BOOLEAN)) {
@@ -67,16 +63,16 @@ public abstract class EditGUIButton extends BInventoryButton {
 					setValue(player, value);
 					sendMessage(player, "&cSetting " + getKey() + " to " + value);
 				}
-			}).currentValue(value.toString()).request(clickEvent.getPlayer());
+			}).currentValue(currentValue.toString()).request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.NUMBER)) {
 			new ValueRequestBuilder(new Listener<Number>() {
 				@Override
 				public void onInput(Player player, Number number) {
 					setValue(player, number.doubleValue());
-					sendMessage(player, "&cSetting " + getKey() + " to " + value);
+					sendMessage(player, "&cSetting " + getKey() + " to " + currentValue);
 				}
-			}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) value }).currentValue(value.toString())
-					.request(clickEvent.getPlayer());
+			}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) currentValue })
+					.currentValue(currentValue.toString()).request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.STRING)) {
 			new ValueRequestBuilder(new Listener<String>() {
 				@Override
@@ -84,11 +80,11 @@ public abstract class EditGUIButton extends BInventoryButton {
 					setValue(player, value);
 					sendMessage(player, "&cSetting " + getKey() + " to " + value);
 				}
-			}, ArrayUtils.getInstance().convert(options)).currentValue(value.toString()).allowCustomOption(true)
+			}, ArrayUtils.getInstance().convert(options)).currentValue(currentValue.toString()).allowCustomOption(true)
 					.request(clickEvent.getPlayer());
 		} else if (type.equals(EditGUIValueType.LIST)) {
 			BInventory inv = new BInventory("Edit list: " + key);
-			inv.setMeta(clickEvent.getPlayer(), "Value", value);
+			inv.setMeta(clickEvent.getPlayer(), "Value", currentValue);
 			inv.addButton(new BInventoryButton(new ItemBuilder(Material.EMERALD_BLOCK).setName("&cAdd value")) {
 
 				@Override
@@ -102,7 +98,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 								list = new ArrayList<String>();
 							}
 							list.add(add);
-							setValue(player, value);
+							setValue(player, currentValue);
 							sendMessage(player, "&cAdded " + add + " to " + getKey());
 						}
 					}, new String[] {}).request(clickEvent.getPlayer());
@@ -118,7 +114,7 @@ public abstract class EditGUIButton extends BInventoryButton {
 						public void onInput(Player player, String add) {
 							ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
 							list.remove(add);
-							setValue(player, value);
+							setValue(player, currentValue);
 							sendMessage(player, "&cRemoved " + add + " from " + getKey());
 						}
 					}, ArrayUtils.getInstance().convert((ArrayList<String>) getData("Value")))
@@ -129,27 +125,11 @@ public abstract class EditGUIButton extends BInventoryButton {
 		}
 	}
 
-	/**
-	 * @param key
-	 *            the key to set
-	 */
-	public void setKey(String key) {
-		this.key = key;
-	}
-
 	public EditGUIButton setOptions(String... str) {
 		for (String s : str) {
 			options.add(s);
 		}
 		return this;
-	}
-
-	/**
-	 * @param type
-	 *            the type to set
-	 */
-	public void setType(EditGUIValueType type) {
-		this.type = type;
 	}
 
 	public abstract void setValue(Player player, Object value);
