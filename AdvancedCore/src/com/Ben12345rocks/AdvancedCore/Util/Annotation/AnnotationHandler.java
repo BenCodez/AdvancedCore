@@ -72,6 +72,23 @@ public class AnnotationHandler {
 
 				}
 
+				ConfigDataDouble doubleAnnotation = field.getAnnotation(ConfigDataDouble.class);
+				if (doubleAnnotation != null) {
+					double defaultValue = intAnnotation.defaultValue();
+					if (defaultValue == 0) {
+						try {
+							double v = field.getInt(classToLoad);
+							defaultValue = v;
+						} catch (Exception e) {
+
+						}
+					}
+					double value = config.getDouble(intAnnotation.path(), defaultValue);
+
+					field.set(classToLoad, value);
+
+				}
+
 				ConfigDataListString listAnnotation = field.getAnnotation(ConfigDataListString.class);
 				if (listAnnotation != null) {
 					ArrayList<String> defaultValue = new ArrayList<String>();
