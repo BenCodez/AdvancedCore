@@ -83,7 +83,7 @@ public class AnnotationHandler {
 
 						}
 					}
-					double value = config.getDouble(intAnnotation.path(), defaultValue);
+					double value = config.getDouble(doubleAnnotation.path(), defaultValue);
 
 					field.set(classToLoad, value);
 
