@@ -74,10 +74,10 @@ public class AnnotationHandler {
 
 				ConfigDataDouble doubleAnnotation = field.getAnnotation(ConfigDataDouble.class);
 				if (doubleAnnotation != null) {
-					double defaultValue = intAnnotation.defaultValue();
+					double defaultValue = doubleAnnotation.defaultValue();
 					if (defaultValue == 0) {
 						try {
-							double v = field.getInt(classToLoad);
+							double v = field.getDouble(classToLoad);
 							defaultValue = v;
 						} catch (Exception e) {
 
