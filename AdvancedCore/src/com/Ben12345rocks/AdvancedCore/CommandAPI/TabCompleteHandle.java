@@ -9,9 +9,15 @@ public abstract class TabCompleteHandle {
 	@Getter
 	@Setter
 	private String toReplace;
+
 	@Getter
 	@Setter
-	private ArrayList<String> replace;
+	private ArrayList<String> replace = new ArrayList<String>();
+
+	public TabCompleteHandle(String toReplace) {
+		this.toReplace = toReplace;
+		reload();
+	}
 
 	public TabCompleteHandle(String toReplace, ArrayList<String> replace) {
 		this.toReplace = toReplace;
