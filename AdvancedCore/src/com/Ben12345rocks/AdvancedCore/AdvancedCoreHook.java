@@ -469,6 +469,7 @@ public class AdvancedCoreHook {
 		options = new ArrayList<String>();
 		TabCompleteHandler.getInstance().addTabCompleteOption("(List)", options);
 		TabCompleteHandler.getInstance().addTabCompleteOption("(String)", options);
+		TabCompleteHandler.getInstance().addTabCompleteOption("(Text)", options);
 		TabCompleteHandler.getInstance().addTabCompleteOption("(Number)", options);
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(Reward)", options) {
 
