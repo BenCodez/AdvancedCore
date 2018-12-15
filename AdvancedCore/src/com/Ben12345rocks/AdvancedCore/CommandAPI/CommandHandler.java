@@ -100,7 +100,7 @@ public abstract class CommandHandler {
 					return true;
 				}
 			}
-			
+
 		} else if (arg.isEmpty() && getArgs().length == 0) {
 			return true;
 		}
@@ -387,6 +387,10 @@ public abstract class CommandHandler {
 			return true;
 		}
 		return false;
+	}
+
+	public int parseInt(String arg) {
+		return Integer.parseInt(arg);
 	}
 
 	public void sendMessage(CommandSender sender, ArrayList<String> msg) {
