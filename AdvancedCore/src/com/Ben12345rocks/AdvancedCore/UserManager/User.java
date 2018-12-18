@@ -8,7 +8,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TimerTask;
@@ -156,14 +155,10 @@ public class User {
 		}
 	}
 
-	public synchronized void addTimedReward(Reward reward, long epochMilli) {
-		HashMap<String, ArrayList<Long>> timed = getTimedRewards();
-		ArrayList<Long> times = timed.get(reward.getRewardName());
-		if (times == null) {
-			times = new ArrayList<Long>();
-		}
-		times.add(epochMilli);
-		timed.put(reward.getRewardName(), times);
+	public synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
+		HashMap<String, Long> timed = getTimedRewards();
+		timed.put(reward.getRewardName() + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders),
+				epochMilli);
 		setTimedRewards(timed);
 		loadTimedDelayedTimer(epochMilli);
 	}
@@ -176,26 +171,31 @@ public class User {
 
 	public void checkDelayedTimedRewards() {
 		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
-		HashMap<String, ArrayList<Long>> timed = getTimedRewards();
-		for (Entry<String, ArrayList<Long>> entry : timed.entrySet()) {
-			ArrayList<Long> times = entry.getValue();
-			ListIterator<Long> iterator = times.listIterator();
-			while (iterator.hasNext()) {
-				long time = iterator.next();
-				if (time != 0) {
-					Date timeDate = new Date(time);
-					if (new Date().after(timeDate)) {
-						new RewardBuilder(RewardHandler.getInstance().getReward(entry.getKey())).setCheckTimed(false)
-								.withPlaceHolder("date",
-										"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
-								.send(this);
-						AdvancedCoreHook.getInstance()
-								.debug("Giving timed/delayed reward " + entry.getKey() + " for " + getPlayerName());
-						iterator.remove();
+		HashMap<String, Long> timed = getTimedRewards();
+		for (Entry<String, Long> entry : timed.entrySet()) {
+			long time = entry.getValue();
+
+			if (time != 0) {
+				Date timeDate = new Date(time);
+				if (new Date().after(timeDate)) {
+					String[] data = entry.getKey().split("%placeholders%");
+					String rewardName = data[0];
+					String placeholders = "";
+					if (data.length <= 1) {
+						placeholders = data[1];
 					}
+					new RewardBuilder(RewardHandler.getInstance().getReward(rewardName)).setCheckTimed(false)
+							.withPlaceHolder(ArrayUtils.getInstance().fromString(placeholders))
+							.withPlaceHolder("date",
+									"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
+							.send(this);
+					AdvancedCoreHook.getInstance()
+							.debug("Giving timed/delayed reward " + entry.getKey() + " for " + getPlayerName());
+				} else {
+					timed.put(entry.getKey(), time);
 				}
 			}
-			timed.put(entry.getKey(), times);
+
 		}
 		setTimedRewards(timed);
 	}
@@ -341,20 +341,16 @@ public class User {
 		}
 	}
 
-	public HashMap<String, ArrayList<Long>> getTimedRewards() {
+	public HashMap<String, Long> getTimedRewards() {
 		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards");
-		HashMap<String, ArrayList<Long>> timedRewards = new HashMap<String, ArrayList<Long>>();
+		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
 		for (String str : timedReward) {
 			String[] data = str.split("//");
 			if (data.length > 1) {
-				String rewardName = data[0];
+				String name = data[0];
 
 				String timeStr = data[1];
-				ArrayList<Long> t = new ArrayList<Long>();
-				for (String ti : timeStr.split("&")) {
-					t.add(Long.valueOf(ti));
-				}
-				timedRewards.put(rewardName, t);
+				timedRewards.put(name, Long.valueOf(timeStr));
 			}
 		}
 		return timedRewards;
@@ -917,21 +913,15 @@ public class User {
 		this.playerName = playerName;
 	}
 
-	public void setTimedRewards(HashMap<String, ArrayList<Long>> timed) {
+	public void setTimedRewards(HashMap<String, Long> timed) {
 		ArrayList<String> timedRewards = new ArrayList<String>();
-		for (Entry<String, ArrayList<Long>> entry : timed.entrySet()) {
-			if (entry.getValue().size() > 0) {
-				String str = "";
-				str += entry.getKey() + "//";
-				for (int i = 0; i < entry.getValue().size(); i++) {
-					if (i != 0) {
-						str += "&";
-					}
-					long time = entry.getValue().get(i);
-					str += time;
-				}
-				timedRewards.add(str);
-			}
+		for (Entry<String, Long> entry : timed.entrySet()) {
+
+			String str = "";
+			str += entry.getKey() + "//";
+			str += entry.getValue();
+			timedRewards.add(str);
+
 		}
 		data.setStringList("TimedRewards", timedRewards);
 	}

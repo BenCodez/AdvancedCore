@@ -198,7 +198,7 @@ public class Reward {
 	 *            the user
 	 * @return true, if successful
 	 */
-	public boolean checkDelayed(User user) {
+	public boolean checkDelayed(User user, HashMap<String, String> placeholders) {
 		if (!isDelayEnabled()) {
 			return false;
 		}
@@ -208,7 +208,7 @@ public class Reward {
 		time = time.plus(getDelayMinutes(), ChronoUnit.MINUTES);
 		time = time.plus(getDelaySeconds(), ChronoUnit.SECONDS);
 		checkRewardFile();
-		user.addTimedReward(this, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+		user.addTimedReward(this, placeholders, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
 		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours, " + getDelayMinutes() + " minutes, "
 				+ getDelaySeconds() + " seconds (" + time.toString() + ")");
@@ -259,7 +259,7 @@ public class Reward {
 	 *            the user
 	 * @return true, if successful
 	 */
-	public boolean checkTimed(User user) {
+	public boolean checkTimed(User user, HashMap<String, String> placeholders) {
 		if (!isTimedEnabled()) {
 			return false;
 		}
@@ -272,7 +272,7 @@ public class Reward {
 			time = time.plusDays(1);
 		}
 		checkRewardFile();
-		user.addTimedReward(this, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+		user.addTimedReward(this, placeholders, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
 		plugin.debug("Giving reward " + name + " at " + time.toString());
 		return true;
@@ -689,11 +689,11 @@ public class Reward {
 		}
 
 		if (rewardOptions.isCheckTimed()) {
-			if (checkDelayed(user)) {
+			if (checkDelayed(user, rewardOptions.getPlaceholders())) {
 				return;
 			}
 
-			if (checkTimed(user)) {
+			if (checkTimed(user, rewardOptions.getPlaceholders())) {
 				return;
 			}
 		}

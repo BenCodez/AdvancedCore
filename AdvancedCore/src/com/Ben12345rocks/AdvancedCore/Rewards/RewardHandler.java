@@ -123,11 +123,9 @@ public class RewardHandler {
 						@Override
 						public void onStartUp(User user) {
 							try {
-								HashMap<String, ArrayList<Long>> timed = user.getTimedRewards();
-								for (Entry<String, ArrayList<Long>> entry : timed.entrySet()) {
-									for (Long time : entry.getValue()) {
-										user.loadTimedDelayedTimer(time.longValue());
-									}
+								HashMap<String, Long> timed = user.getTimedRewards();
+								for (Entry<String, Long> entry : timed.entrySet()) {
+									user.loadTimedDelayedTimer(entry.getValue().longValue());
 								}
 							} catch (Exception ex) {
 								plugin.debug("Failed to update delayed/timed for: " + user.getUUID());
