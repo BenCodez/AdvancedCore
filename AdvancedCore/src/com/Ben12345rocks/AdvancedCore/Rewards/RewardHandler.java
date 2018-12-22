@@ -6,8 +6,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.TimerTask;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -43,6 +43,10 @@ public class RewardHandler {
 
 	@Getter
 	private ArrayList<RewardInject> injectedRewards = new ArrayList<RewardInject>();
+
+	public void addInjectedReward(RewardInject inject) {
+		injectedRewards.add(inject);
+	}
 
 	/** The instance. */
 	static RewardHandler instance = new RewardHandler();
@@ -655,5 +659,9 @@ public class RewardHandler {
 
 			}
 		});
+
+		for (RewardInject reward : injectedRewards) {
+			reward.setInternalReward(true);
+		}
 	}
 }

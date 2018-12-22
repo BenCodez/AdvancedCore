@@ -17,6 +17,10 @@ public abstract class RewardInject {
 	@Setter
 	private String path;
 
+	@Getter
+	@Setter
+	private boolean internalReward = false;
+
 	public boolean isEditable() {
 		return !editButtons.isEmpty();
 	}
@@ -29,7 +33,8 @@ public abstract class RewardInject {
 		this.path = path;
 	}
 
-	public abstract void onRewardRequest(Reward reward, User user, ConfigurationSection data, HashMap<String, String> placeholders);
+	public abstract void onRewardRequest(Reward reward, User user, ConfigurationSection data,
+			HashMap<String, String> placeholders);
 
 	public RewardInject addEditButton(EditGUIButton button) {
 		editButtons.add(button);
