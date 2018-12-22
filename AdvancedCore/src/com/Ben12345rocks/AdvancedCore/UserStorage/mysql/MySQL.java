@@ -270,13 +270,14 @@ public class MySQL {
 			int columnCount = 0;
 			if (metadata != null) {
 				columnCount = metadata.getColumnCount();
+
+				for (int i = 1; i <= columnCount; i++) {
+					String columnName = metadata.getColumnName(i);
+					columns.add(columnName);
+				}
+				return columns;
 			}
 
-			for (int i = 1; i <= columnCount; i++) {
-				String columnName = metadata.getColumnName(i);
-				columns.add(columnName);
-			}
-			return columns;
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

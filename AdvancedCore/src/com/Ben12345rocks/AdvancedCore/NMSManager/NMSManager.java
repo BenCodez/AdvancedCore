@@ -318,6 +318,9 @@ public class NMSManager {
 	 * @return the class[]
 	 */
 	public Class<?>[] toPrimitiveTypeArray(Class<?>[] classes) {
+		if (classes == null) {
+			return null;
+		}
 		int a = classes != null ? classes.length : 0;
 		Class<?>[] types = new Class<?>[a];
 		for (int i = 0; i < a; i++) {
