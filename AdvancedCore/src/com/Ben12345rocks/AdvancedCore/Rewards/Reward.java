@@ -803,7 +803,11 @@ public class Reward {
 
 	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
 		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
-			inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+			try {
+				inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
