@@ -30,6 +30,9 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * The Class Reward.
  */
@@ -38,97 +41,140 @@ public class Reward {
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
-	/** The name. */
+	@Getter
+	@Setter
 	private String name;
 
-	/** The file data. */
-	private RewardFileData fileData;
+	@Getter
+	@Setter
+	private RewardFileData config;
 
+	@Getter
+	@Setter
 	private String rewardType;
 
+	@Getter
+	@Setter
 	private boolean forceOffline;
 
-	/** The delay enabled. */
+	@Getter
+	@Setter
 	private boolean delayEnabled;
 
-	/** The delay hours. */
+	@Getter
+	@Setter
 	private int delayHours;
 
-	/** The delay minutes. */
+	@Getter
+	@Setter
 	private int delayMinutes;
 
+	@Getter
+	@Setter
 	private int delaySeconds;
 
-	/** The timed enabled. */
+	@Getter
+	@Setter
 	private boolean timedEnabled;
 
-	/** The timed hour. */
+	@Getter
+	@Setter
 	private int timedHour;
 
-	/** The timed minute. */
+	@Getter
+	@Setter
 	private int timedMinute;
 
-	/** The chance. */
+	@Getter
+	@Setter
 	private double chance;
 
-	/** The random chance. */
+	@Getter
+	@Setter
 	private double randomChance;
 
-	/** The require permission. */
+	@Getter
+	@Setter
 	private boolean requirePermission;
 
-	/** The worlds. */
+	@Getter
+	@Setter
 	private ArrayList<String> worlds;
 
-	/** The items. */
+	@Getter
+	@Setter
 	private Set<String> items;
 
-	/** The money. */
+	@Getter
+	@Setter
 	private int money;
 
-	/** The Min money. */
+	@Getter
+	@Setter
 	private int MinMoney;
 
-	/** The Max money. */
+	@Getter
+	@Setter
 	private int MaxMoney;
 
-	/** The exp. */
+	@Getter
+	@Setter
 	private int exp;
 
-	/** The min exp. */
+	@Getter
+	@Setter
 	private int minExp;
 
-	/** The max exp. */
+	@Getter
+	@Setter
 	private int maxExp;
 
-	/** The console commands. */
+	@Getter
+	@Setter
 	private ArrayList<String> consoleCommands;
 
-	/** The player commands. */
+	@Getter
+	@Setter
 	private ArrayList<String> playerCommands;
 
-	/** The permission. */
+	@Getter
+	@Setter
 	private String permission;
 
-	/** The items and amounts given. */
+	@Getter
+	@Setter
 	private HashMap<String, Integer> itemsAndAmountsGiven;
 
-	/** The choice rewards enabled. */
+	@Getter
+	@Setter
 	private boolean enableChoices;
-
+	
+	@Getter
+	@Setter
 	private Set<String> choices;
 
-	/** The uses worlds. */
+	@Getter
+	@Setter
 	private boolean usesWorlds;
-
+	
+	@Getter
+	@Setter
 	private HashMap<Integer, String> luckyRewards;
-
+	
+	@Getter
+	@Setter
 	private boolean onlyOneLucky;
-
+	
+	@Getter
+	@Setter
 	private String server;
-
+	
+	@Getter
+	@Setter
 	private File file;
-
+	
+	@Getter
+	@Setter
 	private boolean randomPickRandom;
 
 	/**
@@ -297,74 +343,6 @@ public class Reward {
 	}
 
 	/**
-	 * Gets the chance.
-	 *
-	 * @return the chance
-	 */
-	public double getChance() {
-		return chance;
-	}
-
-	/**
-	 * @return the choices
-	 */
-	public Set<String> getChoices() {
-		return choices;
-	}
-
-	/**
-	 * Gets the config.
-	 *
-	 * @return the config
-	 */
-	public RewardFileData getConfig() {
-		return fileData;
-	}
-
-	/**
-	 * Gets the console commands.
-	 *
-	 * @return the console commands
-	 */
-	public ArrayList<String> getConsoleCommands() {
-		return consoleCommands;
-	}
-
-	/**
-	 * Gets the delay hours.
-	 *
-	 * @return the delay hours
-	 */
-	public int getDelayHours() {
-		return delayHours;
-	}
-
-	/**
-	 * Gets the delay minutes.
-	 *
-	 * @return the delay minutes
-	 */
-	public int getDelayMinutes() {
-		return delayMinutes;
-	}
-
-	/**
-	 * @return the delaySeconds
-	 */
-	public int getDelaySeconds() {
-		return delaySeconds;
-	}
-
-	/**
-	 * Gets the .
-	 *
-	 * @return the exp
-	 */
-	public int getExp() {
-		return exp;
-	}
-
-	/**
 	 * Gets the exp to give.
 	 *
 	 * @return the exp to give
@@ -380,90 +358,13 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * @return the file
-	 */
-	public File getFile() {
-		return file;
-	}
-
 	public ItemStack getItem() {
 		return new ItemStack(Material.STONE);
-	}
-
-	/**
-	 * Gets the items.
-	 *
-	 * @return the items
-	 */
-	public Set<String> getItems() {
-		return items;
-	}
-
-	/**
-	 * Gets the items and amounts given.
-	 *
-	 * @return the items and amounts given
-	 */
-	public HashMap<String, Integer> getItemsAndAmountsGiven() {
-		return itemsAndAmountsGiven;
 	}
 
 	public ItemStack getItemStack(User user, String item) {
 		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getOfflinePlayer())
 				.toItemStack(user.getPlayer());
-	}
-
-	/**
-	 * @return the luckyRewards
-	 */
-	public HashMap<Integer, String> getLuckyRewards() {
-		return luckyRewards;
-	}
-
-	/**
-	 * Gets the max exp.
-	 *
-	 * @return the max exp
-	 */
-	public int getMaxExp() {
-		return maxExp;
-	}
-
-	/**
-	 * Gets the max money.
-	 *
-	 * @return the max money
-	 */
-	public int getMaxMoney() {
-		return MaxMoney;
-	}
-
-	/**
-	 * Gets the min exp.
-	 *
-	 * @return the min exp
-	 */
-	public int getMinExp() {
-		return minExp;
-	}
-
-	/**
-	 * Gets the min money.
-	 *
-	 * @return the min money
-	 */
-	public int getMinMoney() {
-		return MinMoney;
-	}
-
-	/**
-	 * Gets the money.
-	 *
-	 * @return the money
-	 */
-	public int getMoney() {
-		return money;
 	}
 
 	/**
@@ -483,86 +384,12 @@ public class Reward {
 	}
 
 	/**
-	 * @return the name
-	 */
-	public String getName() {
-		return name;
-	}
-
-	/**
-	 * Gets the permission.
-	 *
-	 * @return the permission
-	 */
-	public String getPermission() {
-		return permission;
-	}
-
-	/**
-	 * Gets the player commands.
-	 *
-	 * @return the player commands
-	 */
-	public ArrayList<String> getPlayerCommands() {
-		return playerCommands;
-	}
-
-	/**
-	 * Gets the random chance.
-	 *
-	 * @return the random chance
-	 */
-	public double getRandomChance() {
-		return randomChance;
-	}
-
-	/**
 	 * Gets the reward name.
 	 *
 	 * @return the reward name
 	 */
 	public String getRewardName() {
 		return name;
-	}
-
-	/**
-	 * Gets the reward type.
-	 *
-	 * @return the reward type
-	 */
-	public String getRewardType() {
-		return rewardType;
-	}
-
-	public String getServer() {
-		return server;
-	}
-
-	/**
-	 * Gets the timed hour.
-	 *
-	 * @return the timed hour
-	 */
-	public int getTimedHour() {
-		return timedHour;
-	}
-
-	/**
-	 * Gets the timed minute.
-	 *
-	 * @return the timed minute
-	 */
-	public int getTimedMinute() {
-		return timedMinute;
-	}
-
-	/**
-	 * Gets the worlds.
-	 *
-	 * @return the worlds
-	 */
-	public ArrayList<String> getWorlds() {
-		return worlds;
 	}
 
 	public void giveChoicesReward(User user, String choice) {
@@ -775,10 +602,10 @@ public class Reward {
 			phs.put("uuid", user.getUUID());
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
-			
+
 			// give items ahead for placeholders
 			giveItems(user, placeholders);
-			
+
 			// item placeholders
 			ArrayList<String> itemsAndAmounts = new ArrayList<String>();
 			for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
@@ -789,17 +616,16 @@ public class Reward {
 			placeholders.put("items",
 					ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-			
 			// non injectable rewards
 			giveMoney(user, money);
 			giveExp(user, exp);
 			checkChoiceRewards(user);
-			
+
 			// possible future injectable rewards
 			giveRandom(user, true, placeholders);
 			runCommands(user, placeholders);
 			giveLucky(user, placeholders);
-			
+
 			// injected rewards
 			giveInjectedRewards(user, placeholders);
 
@@ -836,70 +662,6 @@ public class Reward {
 	}
 
 	/**
-	 * Checks if is delay enabled.
-	 *
-	 * @return true, if is delay enabled
-	 */
-	public boolean isDelayEnabled() {
-		return delayEnabled;
-	}
-
-	/**
-	 * @return the enableChoices
-	 */
-	public boolean isEnableChoices() {
-		return enableChoices;
-	}
-
-	/**
-	 * @return the forceOffline
-	 */
-	public boolean isForceOffline() {
-		return forceOffline;
-	}
-
-	/**
-	 * @return the onlyOneLucky
-	 */
-	public boolean isOnlyOneLucky() {
-		return onlyOneLucky;
-	}
-
-	/**
-	 * @return the randomPickRandom
-	 */
-	public boolean isRandomPickRandom() {
-		return randomPickRandom;
-	}
-
-	/**
-	 * Checks if is require permission.
-	 *
-	 * @return true, if is require permission
-	 */
-	public boolean isRequirePermission() {
-		return requirePermission;
-	}
-
-	/**
-	 * Checks if is timed enabled.
-	 *
-	 * @return true, if is timed enabled
-	 */
-	public boolean isTimedEnabled() {
-		return timedEnabled;
-	}
-
-	/**
-	 * Checks if is uses worlds.
-	 *
-	 * @return true, if is uses worlds
-	 */
-	public boolean isUsesWorlds() {
-		return usesWorlds;
-	}
-
-	/**
 	 * Load.
 	 *
 	 * @param folder
@@ -914,13 +676,12 @@ public class Reward {
 		} else {
 			file = folder;
 		}
-		fileData = new RewardFileData(this, folder);
+		config = new RewardFileData(this, folder);
 		loadValues();
 	}
 
 	public void load(String name, ConfigurationSection section) {
-		this.name = name;
-		fileData = new RewardFileData(this, section);
+		config = new RewardFileData(this, section);
 		loadValues();
 	}
 
@@ -1006,258 +767,6 @@ public class Reward {
 		MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), getConsoleCommands(), placeholders);
 
 		user.preformCommand(getPlayerCommands(), placeholders);
-	}
-
-	/**
-	 * Sets the chance.
-	 *
-	 * @param chance
-	 *            the new chance
-	 */
-	public void setChance(double chance) {
-		this.chance = chance;
-	}
-
-	/**
-	 * Sets the console commands.
-	 *
-	 * @param consoleCommands
-	 *            the new console commands
-	 */
-	public void setConsoleCommands(ArrayList<String> consoleCommands) {
-		this.consoleCommands = consoleCommands;
-	}
-
-	/**
-	 * Sets the delay enabled.
-	 *
-	 * @param delayEnabled
-	 *            the new delay enabled
-	 */
-	public void setDelayEnabled(boolean delayEnabled) {
-		this.delayEnabled = delayEnabled;
-	}
-
-	/**
-	 * Sets the delay hours.
-	 *
-	 * @param delayHours
-	 *            the new delay hours
-	 */
-	public void setDelayHours(int delayHours) {
-		this.delayHours = delayHours;
-	}
-
-	/**
-	 * Sets the delay minutes.
-	 *
-	 * @param delayMinutes
-	 *            the new delay minutes
-	 */
-	public void setDelayMinutes(int delayMinutes) {
-		this.delayMinutes = delayMinutes;
-	}
-
-	/**
-	 * @param delaySeconds
-	 *            the delaySeconds to set
-	 */
-	public void setDelaySeconds(int delaySeconds) {
-		this.delaySeconds = delaySeconds;
-	}
-
-	/**
-	 * Sets the exp.
-	 *
-	 * @param exp
-	 *            the new exp
-	 */
-	public void setExp(int exp) {
-		this.exp = exp;
-	}
-
-	/**
-	 * @param forceOffline
-	 *            the forceOffline to set
-	 */
-	public void setForceOffline(boolean forceOffline) {
-		this.forceOffline = forceOffline;
-	}
-
-	/**
-	 * Sets the items.
-	 *
-	 * @param items
-	 *            the new items
-	 */
-	public void setItems(Set<String> items) {
-		this.items = items;
-	}
-
-	/**
-	 * Sets the items and amounts given.
-	 *
-	 * @param itemsAndAmountsGiven
-	 *            the items and amounts given
-	 */
-	public void setItemsAndAmountsGiven(HashMap<String, Integer> itemsAndAmountsGiven) {
-		this.itemsAndAmountsGiven = itemsAndAmountsGiven;
-	}
-
-	/**
-	 * Sets the max exp.
-	 *
-	 * @param maxExp
-	 *            the new max exp
-	 */
-	public void setMaxExp(int maxExp) {
-		this.maxExp = maxExp;
-	}
-
-	/**
-	 * Sets the max money.
-	 *
-	 * @param maxMoney
-	 *            the new max money
-	 */
-	public void setMaxMoney(int maxMoney) {
-		MaxMoney = maxMoney;
-	}
-
-	/**
-	 * Sets the min exp.
-	 *
-	 * @param minExp
-	 *            the new min exp
-	 */
-	public void setMinExp(int minExp) {
-		this.minExp = minExp;
-	}
-
-	/**
-	 * Sets the min money.
-	 *
-	 * @param minMoney
-	 *            the new min money
-	 */
-	public void setMinMoney(int minMoney) {
-		MinMoney = minMoney;
-	}
-
-	/**
-	 * Sets the money.
-	 *
-	 * @param money
-	 *            the new money
-	 */
-	public void setMoney(int money) {
-		this.money = money;
-	}
-
-	/**
-	 * Sets the permission.
-	 *
-	 * @param permission
-	 *            the new permission
-	 */
-	public void setPermission(String permission) {
-		this.permission = permission;
-	}
-
-	/**
-	 * Sets the player commands.
-	 *
-	 * @param playerCommands
-	 *            the new player commands
-	 */
-	public void setPlayerCommands(ArrayList<String> playerCommands) {
-		this.playerCommands = playerCommands;
-	}
-
-	/**
-	 * Sets the random chance.
-	 *
-	 * @param randomChance
-	 *            the new random chance
-	 */
-	public void setRandomChance(double randomChance) {
-		this.randomChance = randomChance;
-	}
-
-	/**
-	 * @param randomPickRandom
-	 *            the randomPickRandom to set
-	 */
-	public void setRandomPickRandom(boolean randomPickRandom) {
-		this.randomPickRandom = randomPickRandom;
-	}
-
-	/**
-	 * Sets the require permission.
-	 *
-	 * @param requirePermission
-	 *            the new require permission
-	 */
-	public void setRequirePermission(boolean requirePermission) {
-		this.requirePermission = requirePermission;
-	}
-
-	/**
-	 * Sets the reward type.
-	 *
-	 * @param rewardType
-	 *            the new reward type
-	 */
-	public void setRewardType(String rewardType) {
-		this.rewardType = rewardType;
-	}
-
-	/**
-	 * Sets the timed enabled.
-	 *
-	 * @param timedEnabled
-	 *            the new timed enabled
-	 */
-	public void setTimedEnabled(boolean timedEnabled) {
-		this.timedEnabled = timedEnabled;
-	}
-
-	/**
-	 * Sets the timed hour.
-	 *
-	 * @param timedHour
-	 *            the new timed hour
-	 */
-	public void setTimedHour(int timedHour) {
-		this.timedHour = timedHour;
-	}
-
-	/**
-	 * Sets the timed minute.
-	 *
-	 * @param timedMinute
-	 *            the new timed minute
-	 */
-	public void setTimedMinute(int timedMinute) {
-		this.timedMinute = timedMinute;
-	}
-
-	/**
-	 * @param usesWorlds
-	 *            the usesWorlds to set
-	 */
-	public void setUsesWorlds(boolean usesWorlds) {
-		this.usesWorlds = usesWorlds;
-	}
-
-	/**
-	 * Sets the worlds.
-	 *
-	 * @param worlds
-	 *            the new worlds
-	 */
-	public void setWorlds(ArrayList<String> worlds) {
-		this.worlds = worlds;
 	}
 
 }
