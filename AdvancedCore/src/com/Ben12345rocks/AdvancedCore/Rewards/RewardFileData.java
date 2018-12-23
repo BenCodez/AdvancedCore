@@ -60,73 +60,6 @@ public class RewardFileData {
 	}
 
 	/**
-	 * Gets the action bar delay.
-	 *
-	 * @return the action bar delay
-	 */
-	public int getActionBarDelay() {
-		return getConfigData().getInt("ActionBar.Delay");
-	}
-
-	/**
-	 * Gets the action bar message.
-	 *
-	 * @return the action bar message
-	 */
-	public String getActionBarMessage() {
-		return getConfigData().getString("ActionBar.Message");
-	}
-
-	/**
-	 * Gets the boss bar color.
-	 *
-	 * @return the boss bar color
-	 */
-	public String getBossBarColor() {
-		return getConfigData().getString("BossBar.Color");
-	}
-
-	/**
-	 * Gets the boss bar delay.
-	 *
-	 * @return the boss bar delay
-	 */
-	public int getBossBarDelay() {
-		return getConfigData().getInt("BossBar.Delay");
-	}
-
-	public boolean getBossBarEnabled() {
-		return getConfigData().getBoolean("BossBar.Enabled");
-	}
-
-	/**
-	 * Gets the boss bar message.
-	 *
-	 * @return the boss bar message
-	 */
-	public String getBossBarMessage() {
-		return getConfigData().getString("BossBar.Message", "");
-	}
-
-	/**
-	 * Gets the boss bar progress.
-	 *
-	 * @return the boss bar progress
-	 */
-	public double getBossBarProgress() {
-		return getConfigData().getDouble("BossBar.Progress");
-	}
-
-	/**
-	 * Gets the boss bar style.
-	 *
-	 * @return the boss bar style
-	 */
-	public String getBossBarStyle() {
-		return getConfigData().getString("BossBar.Style");
-	}
-
-	/**
 	 * Gets the chance.
 	 *
 	 * @return the chance
@@ -222,52 +155,6 @@ public class RewardFileData {
 	}
 
 	/**
-	 * Gets the effect data.
-	 *
-	 * @return the effect data
-	 */
-	public int getEffectData() {
-		return getConfigData().getInt("Effect.Data");
-	}
-
-	/**
-	 * Gets the effect effect.
-	 *
-	 * @return the effect effect
-	 */
-	public String getEffectEffect() {
-		return getConfigData().getString("Effect.Effect", "");
-
-	}
-
-	/**
-	 * Gets the effect enabled.
-	 *
-	 * @return the effect enabled
-	 */
-	public boolean getEffectEnabled() {
-		return getConfigData().getBoolean("Effect.Enabled");
-	}
-
-	/**
-	 * Gets the effect particles.
-	 *
-	 * @return the effect particles
-	 */
-	public int getEffectParticles() {
-		return getConfigData().getInt("Effect.Particles");
-	}
-
-	/**
-	 * Gets the effect radius.
-	 *
-	 * @return the effect radius
-	 */
-	public int getEffectRadius() {
-		return getConfigData().getInt("Effect.Radius");
-	}
-
-	/**
 	 * Gets the data.
 	 *
 	 * @return the data
@@ -296,72 +183,6 @@ public class RewardFileData {
 
 	public FileConfiguration getFileData() {
 		return fileData;
-	}
-
-	/**
-	 * Gets the firework colors.
-	 *
-	 * @return the firework colors
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkColors() {
-		return (ArrayList<String>) getConfigData().getList("Firework.Colors", new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the firework colors fade out.
-	 *
-	 * @return the firework colors fade out
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkColorsFadeOut() {
-		return (ArrayList<String>) getConfigData().getList("Firework.FadeOutColor", new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the firework enabled.
-	 *
-	 * @return the firework enabled
-	 */
-	public boolean getFireworkEnabled() {
-		return getConfigData().getBoolean("Firework.Enabled");
-	}
-
-	/**
-	 * Gets the firework flicker.
-	 *
-	 * @return the firework flicker
-	 */
-	public boolean getFireworkFlicker() {
-		return getConfigData().getBoolean("Firework.Flicker");
-	}
-
-	/**
-	 * Gets the firework power.
-	 *
-	 * @return the firework power
-	 */
-	public int getFireworkPower() {
-		return getConfigData().getInt("Firework.Power");
-	}
-
-	/**
-	 * Gets the firework trail.
-	 *
-	 * @return the firework trail
-	 */
-	public boolean getFireworkTrail() {
-		return getConfigData().getBoolean("Firework.Trail");
-	}
-
-	/**
-	 * Gets the firework types.
-	 *
-	 * @return the firework types
-	 */
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getFireworkTypes() {
-		return (ArrayList<String>) getConfigData().getList("Firework.Types", new ArrayList<String>());
 	}
 
 	public boolean getForceOffline() {
@@ -524,37 +345,6 @@ public class RewardFileData {
 		return getConfigData().getString("Items." + item + ".Skull");
 	}
 
-	/**
-	 * Gets the javascript enabled.
-	 *
-	 * @return the javascript enabled
-	 */
-	public boolean getJavascriptEnabled() {
-		return getConfigData().getBoolean("Javascript.Enabled");
-	}
-
-	/**
-	 * Gets the javascript expression.
-	 *
-	 * @return the javascript expression
-	 */
-	public String getJavascriptExpression() {
-		return getConfigData().getString("Javascript.Expression", "");
-	}
-
-	public String getJavascriptFalseRewardsPath() {
-		return "Javascript.FalseRewards";
-	}
-
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getJavascripts() {
-		return (ArrayList<String>) getConfigData().getList("Javascripts", new ArrayList<String>());
-	}
-
-	public String getJavascriptTrueRewardsPath() {
-		return "Javascript.TrueRewards";
-	}
-
 	public Set<String> getLuckyRewards() {
 		if (getConfigData().getConfigurationSection("Lucky") != null) {
 			return getConfigData().getConfigurationSection("Lucky").getKeys(false);
@@ -583,24 +373,6 @@ public class RewardFileData {
 	 */
 	public int getMaxMoney() {
 		return getConfigData().getInt("MaxMoney");
-	}
-
-	/**
-	 * Gets the messages broadcast.
-	 *
-	 * @return the messages broadcast
-	 */
-	public String getMessagesBroadcast() {
-		return getConfigData().getString("Messages.Broadcast", "");
-	}
-
-	/**
-	 * Gets the messages reward.
-	 *
-	 * @return the messages reward
-	 */
-	public String getMessagesPlayer() {
-		return getConfigData().getString("Messages.Player", getConfigData().getString("Messages.Reward", ""));
 	}
 
 	/**
@@ -643,41 +415,6 @@ public class RewardFileData {
 		return getConfigData().getString("Permission", "AdvancedCore.Reward." + reward.getRewardName());
 	}
 
-	/**
-	 * Gets the potions.
-	 *
-	 * @return the potions
-	 */
-	public Set<String> getPotions() {
-		try {
-			return getConfigData().getConfigurationSection("Potions").getKeys(false);
-		} catch (Exception ex) {
-			return new HashSet<String>();
-		}
-	}
-
-	/**
-	 * Gets the potions amplifier.
-	 *
-	 * @param potion
-	 *            the potion
-	 * @return the potions amplifier
-	 */
-	public int getPotionsAmplifier(String potion) {
-		return getConfigData().getInt("Potions." + potion + ".Amplifier");
-	}
-
-	/**
-	 * Gets the potions duration.
-	 *
-	 * @param potion
-	 *            the potion
-	 * @return the potions duration
-	 */
-	public int getPotionsDuration(String potion) {
-		return getConfigData().getInt("Potions." + potion + ".Duration");
-	}
-
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getPriority() {
 		return (ArrayList<String>) getConfigData().getList("Priority", new ArrayList<String>());
@@ -690,11 +427,6 @@ public class RewardFileData {
 	 */
 	public double getRandomChance() {
 		return getConfigData().getDouble("Random.Chance");
-	}
-
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getRandomCommand() {
-		return (ArrayList<String>) getConfigData().getList("RandomCommand", new ArrayList<String>());
 	}
 
 	public String getRandomFallBackRewardsPath() {
@@ -747,42 +479,6 @@ public class RewardFileData {
 	}
 
 	/**
-	 * Gets the sound enabled.
-	 *
-	 * @return the sound enabled
-	 */
-	public boolean getSoundEnabled() {
-		return getConfigData().getBoolean("Sound.Enabled");
-	}
-
-	/**
-	 * Gets the sound pitch.
-	 *
-	 * @return the sound pitch
-	 */
-	public float getSoundPitch() {
-		return (float) getConfigData().getDouble("Sound.Pitch");
-	}
-
-	/**
-	 * Gets the sound sound.
-	 *
-	 * @return the sound sound
-	 */
-	public String getSoundSound() {
-		return getConfigData().getString("Sound.Sound");
-	}
-
-	/**
-	 * Gets the sound volume.
-	 *
-	 * @return the sound volume
-	 */
-	public float getSoundVolume() {
-		return (float) getConfigData().getDouble("Sound.Volume");
-	}
-
-	/**
 	 * Gets the timed enabled.
 	 *
 	 * @return the timed enabled
@@ -807,60 +503,6 @@ public class RewardFileData {
 	 */
 	public int getTimedMinute() {
 		return getConfigData().getInt("Timed.Minute");
-	}
-
-	/**
-	 * Gets the title enabled.
-	 *
-	 * @return the title enabled
-	 */
-	public boolean getTitleEnabled() {
-		return getConfigData().getBoolean("Title.Enabled");
-	}
-
-	/**
-	 * Gets the title fade in.
-	 *
-	 * @return the title fade in
-	 */
-	public int getTitleFadeIn() {
-		return getConfigData().getInt("Title.FadeIn");
-	}
-
-	/**
-	 * Gets the title fade out.
-	 *
-	 * @return the title fade out
-	 */
-	public int getTitleFadeOut() {
-		return getConfigData().getInt("Title.FadeOut");
-	}
-
-	/**
-	 * Gets the title show time.
-	 *
-	 * @return the title show time
-	 */
-	public int getTitleShowTime() {
-		return getConfigData().getInt("Title.ShowTime");
-	}
-
-	/**
-	 * Gets the title sub title.
-	 *
-	 * @return the title sub title
-	 */
-	public String getTitleSubTitle() {
-		return getConfigData().getString("Title.SubTitle");
-	}
-
-	/**
-	 * Gets the title title.
-	 *
-	 * @return the title title
-	 */
-	public String getTitleTitle() {
-		return getConfigData().getString("Title.Title");
 	}
 
 	/**
@@ -915,14 +557,6 @@ public class RewardFileData {
 		} else {
 			plugin.debug("Editing invalid reward: " + reward.getName());
 		}
-	}
-
-	public void setActionBarDelay(int value) {
-		set("ActionBar.Delay", value);
-	}
-
-	public void setActionBarMsg(String value) {
-		set("ActionBar.Message", value);
 	}
 
 	/**
@@ -1115,10 +749,6 @@ public class RewardFileData {
 		set("Items." + item + ".Name", value);
 	}
 
-	public void setJavascripts(ArrayList<String> value) {
-		set("Javascripts", value);
-	}
-
 	/**
 	 * Sets the max exp.
 	 *
@@ -1137,26 +767,6 @@ public class RewardFileData {
 	 */
 	public void setMaxMoney(int value) {
 		set("MaxMoney", value);
-	}
-
-	/**
-	 * Sets the messages broadcast.
-	 *
-	 * @param value
-	 *            the new messages broadcast
-	 */
-	public void setMessagesBroadcast(String value) {
-		set("Messages.Broadcast", value);
-	}
-
-	/**
-	 * Sets the messages reward.
-	 *
-	 * @param value
-	 *            the new messages reward
-	 */
-	public void setMessagesPlayer(String value) {
-		set("Messages.Player", value);
 	}
 
 	/**
@@ -1197,38 +807,6 @@ public class RewardFileData {
 	 */
 	public void setPermission(String perm) {
 		set("Permission", perm);
-	}
-
-	/**
-	 * Sets the potions amplifier.
-	 *
-	 * @param potion
-	 *            the potion
-	 * @param value
-	 *            the value
-	 */
-	public void setPotionsAmplifier(String potion, int value) {
-		set("Potions." + potion + ".Amplifier", value);
-	}
-
-	/**
-	 * Sets the potions duration.
-	 *
-	 * @param potion
-	 *            the potion
-	 * @param value
-	 *            the value
-	 */
-	public void setPotionsDuration(String potion, int value) {
-		set("Potions." + potion + ".Duration", value);
-	}
-
-	public void setPriority(ArrayList<String> value) {
-		set("Priority", value);
-	}
-
-	public void setRandomCommand(ArrayList<String> value) {
-		set("RandomCommand", value);
 	}
 
 	/**

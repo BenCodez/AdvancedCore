@@ -5,6 +5,7 @@ import java.util.HashMap;
 
 import org.bukkit.configuration.ConfigurationSection;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 
@@ -28,12 +29,15 @@ public abstract class RewardInjectStringList extends RewardInject {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void onRewardRequest(Reward reward, User user, ConfigurationSection data, HashMap<String,String> placeholders) {
+	public void onRewardRequest(Reward reward, User user, ConfigurationSection data,
+			HashMap<String, String> placeholders) {
 		if (data.isList(getPath())) {
+			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath());
 			onRewardRequest(reward, user, (ArrayList<String>) data.getList(getPath(), getDefaultValue()), placeholders);
 		}
 	}
 
-	public abstract void onRewardRequest(Reward reward, User user, ArrayList<String> num, HashMap<String, String> placeholders);
+	public abstract void onRewardRequest(Reward reward, User user, ArrayList<String> num,
+			HashMap<String, String> placeholders);
 
 }

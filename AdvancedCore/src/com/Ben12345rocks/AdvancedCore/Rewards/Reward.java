@@ -775,7 +775,11 @@ public class Reward {
 			phs.put("uuid", user.getUUID());
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
+			
+			// give items ahead for placeholders
 			giveItems(user, placeholders);
+			
+			// item placeholders
 			ArrayList<String> itemsAndAmounts = new ArrayList<String>();
 			for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
 				itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
@@ -785,17 +789,22 @@ public class Reward {
 			placeholders.put("items",
 					ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-			giveRandom(user, true, placeholders);
+			
+			// non injectable rewards
 			giveMoney(user, money);
-
 			giveExp(user, exp);
-			runCommands(user, placeholders);
 			checkChoiceRewards(user);
+			
+			// possible future injectable rewards
+			giveRandom(user, true, placeholders);
+			runCommands(user, placeholders);
 			giveLucky(user, placeholders);
-
-			giveRewardsRewards(user, placeholders);
-
+			
+			// injected rewards
 			giveInjectedRewards(user, placeholders);
+
+			// execute reward within reward
+			giveRewardsRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 		}
@@ -804,6 +813,7 @@ public class Reward {
 	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
 		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
 			try {
+				plugin.extraDebug(getRewardName() + ": Attempting to give " + inject.getPath());
 				inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
 			} catch (Exception e) {
 				e.printStackTrace();
