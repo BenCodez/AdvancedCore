@@ -158,11 +158,9 @@ public class User {
 	public synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
 		HashMap<String, Long> timed = getTimedRewards();
 		String rewardName = reward.getRewardName();
-		while (timed.containsKey(rewardName)) {
-			rewardName += "(-)";
-		}
-		timed.put(rewardName + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders),
-				epochMilli);
+		rewardName += "(-)" + System.currentTimeMillis();
+
+		timed.put(rewardName + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders), epochMilli);
 		setTimedRewards(timed);
 		loadTimedDelayedTimer(epochMilli);
 	}
@@ -185,7 +183,7 @@ public class User {
 				if (new Date().after(timeDate)) {
 					String[] data = entry.getKey().split("%placeholders%");
 					String rewardName = data[0];
-					rewardName = rewardName.replaceAll("(-)", "");
+					rewardName = rewardName.split("(-)")[0];
 					String placeholders = "";
 					if (data.length > 1) {
 						placeholders = data[1];
