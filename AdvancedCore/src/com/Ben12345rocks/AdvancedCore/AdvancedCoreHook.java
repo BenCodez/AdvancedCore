@@ -524,6 +524,23 @@ public class AdvancedCoreHook {
 			times.add(ty.toString());
 		}
 		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
+
+		TabCompleteHandler.getInstance()
+				.addTabCompleteOption(new TabCompleteHandle("(DataKeys)", new ArrayList<String>()) {
+
+					@Override
+					public void reload() {
+
+					}
+
+					@Override
+					public void updateReplacements() {
+						for (Player p : Bukkit.getOnlinePlayers()) {
+							User user = UserManager.getInstance().getUser(p);
+							setReplace(user.getData().getKeys());
+						}
+					}
+				});
 	}
 
 	public void loadUserAPI(UserStorage storageType) {
