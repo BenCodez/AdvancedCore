@@ -161,7 +161,7 @@ public class User {
 		while (timed.containsKey(rewardName)) {
 			rewardName += "(-)";
 		}
-		timed.put(reward.getRewardName() + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders),
+		timed.put(rewardName + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders),
 				epochMilli);
 		setTimedRewards(timed);
 		loadTimedDelayedTimer(epochMilli);
