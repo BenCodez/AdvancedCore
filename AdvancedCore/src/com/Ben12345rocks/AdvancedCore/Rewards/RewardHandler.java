@@ -173,6 +173,9 @@ public class RewardHandler {
 	 * @return the reward
 	 */
 	public Reward getReward(String reward) {
+		if (reward == null) {
+			reward = "";
+		}
 		reward = reward.replace(" ", "_");
 
 		for (Reward rewardFile : getRewards()) {
