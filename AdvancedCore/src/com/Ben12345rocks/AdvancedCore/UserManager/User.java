@@ -190,7 +190,8 @@ public class User {
 									"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
 							.send(this);
 					AdvancedCoreHook.getInstance()
-							.debug("Giving timed/delayed reward " + entry.getKey() + " for " + getPlayerName());
+							.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
+									+ " with placeholders " + ArrayUtils.getInstance().fromString(placeholders));
 				} else {
 					timed.put(entry.getKey(), time);
 				}
