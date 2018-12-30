@@ -172,7 +172,7 @@ public class User {
 	public void checkDelayedTimedRewards() {
 		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
-		HashMap<String, Long> newTimed = getTimedRewards();
+		HashMap<String, Long> newTimed = new HashMap<String, Long>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 			long time = entry.getValue();
 
