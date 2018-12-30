@@ -172,6 +172,7 @@ public class User {
 	public void checkDelayedTimedRewards() {
 		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
+		HashMap<String, Long> newTimed = getTimedRewards();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 			long time = entry.getValue();
 
@@ -193,12 +194,12 @@ public class User {
 							.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
 									+ " with placeholders " + ArrayUtils.getInstance().fromString(placeholders));
 				} else {
-					timed.put(entry.getKey(), time);
+					newTimed.put(entry.getKey(), time);
 				}
 			}
 
 		}
-		setTimedRewards(timed);
+		setTimedRewards(newTimed);
 	}
 
 	/**
