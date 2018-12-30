@@ -31,6 +31,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * The Class BInventory.
@@ -160,6 +161,15 @@ public class BInventory implements Listener {
 	private Player player;
 
 	private HashMap<String, Object> data = new HashMap<String, Object>();
+
+	@Getter
+	@Setter
+	private boolean playerSound = true;
+
+	public BInventory noSound() {
+		playerSound = false;
+		return this;
+	}
 
 	/**
 	 * Instantiates a new b inventory.
@@ -338,12 +348,14 @@ public class BInventory implements Listener {
 	}
 
 	private void onClick(InventoryClickEvent event, BInventoryButton b) {
-		Sound sound = AdvancedCoreHook.getInstance().getOptions().getClickSoundSound();
-		if (sound != null) {
-			Player player = (Player) (event.getWhoClicked());
-			player.playSound(player.getLocation(), sound,
-					(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundVolume(),
-					(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundPitch());
+		if (playerSound) {
+			Sound sound = AdvancedCoreHook.getInstance().getOptions().getClickSoundSound();
+			if (sound != null) {
+				Player player = (Player) (event.getWhoClicked());
+				player.playSound(player.getLocation(), sound,
+						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundVolume(),
+						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundPitch());
+			}
 		}
 		b.onClick(new ClickEvent(event, b), this);
 	}
