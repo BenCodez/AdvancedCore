@@ -682,6 +682,7 @@ public class Reward {
 
 	public void load(String name, ConfigurationSection section) {
 		config = new RewardFileData(this, section);
+		this.name = name;
 		loadValues();
 	}
 
