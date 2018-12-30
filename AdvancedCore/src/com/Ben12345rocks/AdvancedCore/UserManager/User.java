@@ -182,7 +182,7 @@ public class User {
 					String[] data = entry.getKey().split("%placeholders%");
 					String rewardName = data[0];
 					String placeholders = "";
-					if (data.length <= 1) {
+					if (data.length > 1) {
 						placeholders = data[1];
 					}
 					new RewardBuilder(RewardHandler.getInstance().getReward(rewardName)).setCheckTimed(false)
