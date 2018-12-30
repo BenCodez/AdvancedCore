@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -337,6 +338,13 @@ public class BInventory implements Listener {
 	}
 
 	private void onClick(InventoryClickEvent event, BInventoryButton b) {
+		Sound sound = AdvancedCoreHook.getInstance().getOptions().getClickSoundSound();
+		if (sound != null) {
+			Player player = (Player) (event.getWhoClicked());
+			player.playSound(player.getLocation(), sound,
+					(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundVolume(),
+					(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundPitch());
+		}
 		b.onClick(new ClickEvent(event, b), this);
 	}
 

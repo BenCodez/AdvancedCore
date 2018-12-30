@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore;
 
 import java.util.ArrayList;
 
+import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStorage;
@@ -118,10 +119,22 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	private boolean clearCacheOnJoin;
-	
+
 	@Getter
 	@Setter
 	private boolean loadDefaultRewards = true;
+
+	@Getter
+	@Setter
+	private Sound clickSoundSound = Sound.UI_BUTTON_CLICK;
+
+	@Getter
+	@Setter
+	private double clickSoundVolume = 1;
+
+	@Getter
+	@Setter
+	private double clickSoundPitch = 1;
 
 	public AdvancedCoreConfigOptions() {
 	}
@@ -163,6 +176,23 @@ public class AdvancedCoreConfigOptions {
 			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
 			processRewards = configData.getBoolean("ProcessRewards", true);
 			clearCacheOnJoin = configData.getBoolean("ClearCacheOnJoin", false);
+
+			ConfigurationSection soundData = configData.getConfigurationSection("ClickSound");
+			if (soundData != null) {
+				try {
+					String str = configData.getString("Sound", "UI_BUTTON_CLICK");
+					if (str.equalsIgnoreCase("none")) {
+						clickSoundSound = null;
+					} else {
+						clickSoundVolume = configData.getDouble("Volume", 1);
+						clickSoundPitch = configData.getDouble("Pitch", 1);
+					}
+					clickSoundSound = Sound.valueOf(str);
+				} catch (Exception e) {
+					e.printStackTrace();
+					clickSoundSound = Sound.UI_BUTTON_CLICK;
+				}
+			}
 		}
 	}
 }
