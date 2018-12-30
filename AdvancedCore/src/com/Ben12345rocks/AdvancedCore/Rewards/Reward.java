@@ -148,7 +148,7 @@ public class Reward {
 	@Getter
 	@Setter
 	private boolean enableChoices;
-	
+
 	@Getter
 	@Setter
 	private Set<String> choices;
@@ -156,23 +156,23 @@ public class Reward {
 	@Getter
 	@Setter
 	private boolean usesWorlds;
-	
+
 	@Getter
 	@Setter
 	private HashMap<Integer, String> luckyRewards;
-	
+
 	@Getter
 	@Setter
 	private boolean onlyOneLucky;
-	
+
 	@Getter
 	@Setter
 	private String server;
-	
+
 	@Getter
 	@Setter
 	private File file;
-	
+
 	@Getter
 	@Setter
 	private boolean randomPickRandom;
@@ -237,13 +237,6 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * Check delayed.
-	 *
-	 * @param user
-	 *            the user
-	 * @return true, if successful
-	 */
 	public boolean checkDelayed(User user, HashMap<String, String> placeholders) {
 		if (!isDelayEnabled()) {
 			return false;
@@ -298,13 +291,6 @@ public class Reward {
 		return true;
 	}
 
-	/**
-	 * Check timed.
-	 *
-	 * @param user
-	 *            the user
-	 * @return true, if successful
-	 */
 	public boolean checkTimed(User user, HashMap<String, String> placeholders) {
 		if (!isTimedEnabled()) {
 			return false;
