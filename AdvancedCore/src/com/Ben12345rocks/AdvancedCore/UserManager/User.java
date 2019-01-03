@@ -351,6 +351,7 @@ public class User {
 		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
 		for (String str : timedReward) {
 			String[] data = str.split("//");
+			AdvancedCoreHook.getInstance().extraDebug("TimedReward: " + str);
 			if (data.length > 1) {
 				String name = data[0];
 
