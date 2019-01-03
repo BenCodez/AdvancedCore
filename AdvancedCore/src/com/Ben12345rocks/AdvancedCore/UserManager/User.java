@@ -350,7 +350,7 @@ public class User {
 		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards");
 		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
 		for (String str : timedReward) {
-			String[] data = str.split("//");
+			String[] data = str.split("%ExecutionTime/%");
 			AdvancedCoreHook.getInstance().extraDebug("TimedReward: " + str);
 			if (data.length > 1) {
 				String name = data[0];
@@ -924,7 +924,7 @@ public class User {
 		for (Entry<String, Long> entry : timed.entrySet()) {
 
 			String str = "";
-			str += entry.getKey() + "//";
+			str += entry.getKey() + "%ExecutionTime/%";
 			str += entry.getValue();
 			timedRewards.add(str);
 
