@@ -132,7 +132,7 @@ public class UserGUI {
 
 								@Override
 								public void setValue(Player player, String value) {
-									user.getData().setString(key, (String) value);
+									user.getData().setString(key, value);
 									openUserGUI(player, playerName);
 								}
 							}));

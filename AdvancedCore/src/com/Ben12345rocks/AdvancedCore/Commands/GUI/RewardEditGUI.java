@@ -147,7 +147,7 @@ public class RewardEditGUI {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
-						getCurrentReward(player).getConfig().setWorlds((ArrayList<String>) value);
+						getCurrentReward(player).getConfig().setWorlds(value);
 						plugin.reload();
 					}
 				}));
@@ -167,7 +167,7 @@ public class RewardEditGUI {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
-						getCurrentReward(player).getConfig().setCommandsConsole((ArrayList<String>) value);
+						getCurrentReward(player).getConfig().setCommandsConsole(value);
 						plugin.reload();
 					}
 				}));
@@ -177,7 +177,7 @@ public class RewardEditGUI {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
-						getCurrentReward(player).getConfig().setCommandsPlayer((ArrayList<String>) value);
+						getCurrentReward(player).getConfig().setCommandsPlayer(value);
 						plugin.reload();
 					}
 				}));
@@ -207,7 +207,7 @@ public class RewardEditGUI {
 
 					@Override
 					public void setValue(Player player, boolean value) {
-						getCurrentReward(player).getConfig().setRequirePermission((boolean) value);
+						getCurrentReward(player).getConfig().setRequirePermission(value);
 						plugin.reload();
 					}
 				}));

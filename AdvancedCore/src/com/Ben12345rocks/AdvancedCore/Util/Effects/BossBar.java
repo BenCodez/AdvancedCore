@@ -63,6 +63,16 @@ public class BossBar {
 		bossBar.removeAll();
 	}
 
+	private void hideInDelay(int delay) {
+		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				hide();
+			}
+		}, delay);
+	}
+
 	public void removePlayer(Player player) {
 		bossBar.removePlayer(player);
 	}
@@ -75,16 +85,6 @@ public class BossBar {
 		bossBar.setVisible(true);
 
 		hideInDelay(delay);
-	}
-
-	private void hideInDelay(int delay) {
-		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				hide();
-			}
-		}, delay);
 	}
 
 	/**

@@ -59,26 +59,6 @@ public abstract class CommandHandler {
 	public CommandHandler() {
 	}
 
-	public CommandHandler withArgs(String... args) {
-		this.args = args;
-		return this;
-	}
-
-	public CommandHandler withPerm(String perm) {
-		this.perm = perm;
-		return this;
-	}
-
-	public CommandHandler withHelpMessage(String helpMessage) {
-		this.helpMessage = helpMessage;
-		return this;
-	}
-
-	public CommandHandler noConsole() {
-		this.allowConsole = false;
-		return this;
-	}
-
 	/**
 	 * Instantiates a new command handler.
 	 *
@@ -91,20 +71,6 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		helpMessage = "Unknown Help Message";
-	}
-
-	public boolean isCommand(String arg) {
-		if (getArgs().length > 0) {
-			for (String str : getArgs()[0].split("&")) {
-				if (str.equalsIgnoreCase(arg)) {
-					return true;
-				}
-			}
-
-		} else if (arg.isEmpty() && getArgs().length == 0) {
-			return true;
-		}
-		return false;
 	}
 
 	/**
@@ -328,8 +294,31 @@ public abstract class CommandHandler {
 		return this;
 	}
 
+	public boolean isCommand(String arg) {
+		if (getArgs().length > 0) {
+			for (String str : getArgs()[0].split("&")) {
+				if (str.equalsIgnoreCase(arg)) {
+					return true;
+				}
+			}
+
+		} else if (arg.isEmpty() && getArgs().length == 0) {
+			return true;
+		}
+		return false;
+	}
+
 	public boolean isPlayer(CommandSender sender) {
 		return sender instanceof Player;
+	}
+
+	public CommandHandler noConsole() {
+		this.allowConsole = false;
+		return this;
+	}
+
+	public int parseInt(String arg) {
+		return Integer.parseInt(arg);
 	}
 
 	/**
@@ -389,10 +378,6 @@ public abstract class CommandHandler {
 		return false;
 	}
 
-	public int parseInt(String arg) {
-		return Integer.parseInt(arg);
-	}
-
 	public void sendMessage(CommandSender sender, ArrayList<String> msg) {
 		sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().colorize(msg)));
 	}
@@ -417,6 +402,21 @@ public abstract class CommandHandler {
 		} else {
 			sender.sendMessage(StringUtils.getInstance().compToString(comp));
 		}
+	}
+
+	public CommandHandler withArgs(String... args) {
+		this.args = args;
+		return this;
+	}
+
+	public CommandHandler withHelpMessage(String helpMessage) {
+		this.helpMessage = helpMessage;
+		return this;
+	}
+
+	public CommandHandler withPerm(String perm) {
+		this.perm = perm;
+		return this;
 	}
 
 }

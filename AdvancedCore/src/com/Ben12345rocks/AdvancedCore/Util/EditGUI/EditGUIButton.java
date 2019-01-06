@@ -25,13 +25,13 @@ public class EditGUIButton extends BInventoryButton {
 	@Setter
 	private EditGUIValue editer;
 
-	public EditGUIButton(ItemBuilder item, EditGUIValue editer) {
-		super(item);
+	public EditGUIButton(EditGUIValue editer) {
+		super(new ItemBuilder(Material.PAPER));
 		this.editer = editer;
 	}
 
-	public EditGUIButton(EditGUIValue editer) {
-		super(new ItemBuilder(Material.PAPER));
+	public EditGUIButton(ItemBuilder item, EditGUIValue editer) {
+		super(item);
 		this.editer = editer;
 	}
 
@@ -99,8 +99,9 @@ public class EditGUIButton extends BInventoryButton {
 		}
 	}
 
-	private void setV(Player player, Object value) {
-		setValue(player, value);
+	public EditGUIButton addOptions(String... str) {
+		getEditer().addOptions(str);
+		return this;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -127,9 +128,8 @@ public class EditGUIButton extends BInventoryButton {
 		getEditer().onClick(clickEvent);
 	}
 
-	public EditGUIButton addOptions(String... str) {
-		getEditer().addOptions(str);
-		return this;
+	private void setV(Player player, Object value) {
+		setValue(player, value);
 	}
 
 	public void setValue(Player player, Object value) {

@@ -27,6 +27,9 @@ public abstract class RewardInjectStringList extends RewardInject {
 		this.defaultValue = defaultValue;
 	}
 
+	public abstract void onRewardRequest(Reward reward, User user, ArrayList<String> num,
+			HashMap<String, String> placeholders);
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void onRewardRequest(Reward reward, User user, ConfigurationSection data,
@@ -36,8 +39,5 @@ public abstract class RewardInjectStringList extends RewardInject {
 			onRewardRequest(reward, user, (ArrayList<String>) data.getList(getPath(), getDefaultValue()), placeholders);
 		}
 	}
-
-	public abstract void onRewardRequest(Reward reward, User user, ArrayList<String> num,
-			HashMap<String, String> placeholders);
 
 }

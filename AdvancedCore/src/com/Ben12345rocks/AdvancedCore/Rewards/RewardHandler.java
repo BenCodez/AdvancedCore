@@ -41,13 +41,6 @@ import lombok.Getter;
  */
 public class RewardHandler {
 
-	@Getter
-	private ArrayList<RewardInject> injectedRewards = new ArrayList<RewardInject>();
-
-	public void addInjectedReward(RewardInject inject) {
-		injectedRewards.add(inject);
-	}
-
 	/** The instance. */
 	static RewardHandler instance = new RewardHandler();
 
@@ -59,6 +52,9 @@ public class RewardHandler {
 	public static RewardHandler getInstance() {
 		return instance;
 	}
+
+	@Getter
+	private ArrayList<RewardInject> injectedRewards = new ArrayList<RewardInject>();
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
@@ -78,6 +74,10 @@ public class RewardHandler {
 	private RewardHandler() {
 		rewardFolders = new ArrayList<File>();
 		setDefaultFolder(new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Rewards"));
+	}
+
+	public void addInjectedReward(RewardInject inject) {
+		injectedRewards.add(inject);
 	}
 
 	/**
@@ -317,107 +317,6 @@ public class RewardHandler {
 
 		return false;
 
-	}
-
-	/**
-	 * Load rewards.
-	 */
-	public void loadRewards() {
-		rewards = Collections.synchronizedList(new ArrayList<Reward>());
-		setupExample();
-		for (File file : rewardFolders) {
-			for (String reward : getRewardNames(file)) {
-				if (!reward.equals("")) {
-					if (!rewardExist(reward)) {
-						try {
-							rewards.add(new Reward(file, reward));
-							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
-						} catch (Exception e) {
-							plugin.getPlugin().getLogger()
-									.severe("Failed to load reward file " + reward + ".yml: " + e.getMessage());
-							e.printStackTrace();
-						}
-					} else {
-						plugin.getPlugin().getLogger().warning("Detected that a reward file named " + reward
-								+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
-					}
-				} else {
-					plugin.getPlugin().getLogger().warning(
-							"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
-				}
-			}
-		}
-		plugin.debug("Loaded rewards");
-
-	}
-
-	/**
-	 * Reward exist.
-	 *
-	 * @param reward
-	 *            the reward
-	 * @return true, if successful
-	 */
-	public boolean rewardExist(String reward) {
-		if (reward.equals("")) {
-			return false;
-		}
-		for (Reward rewardName : getRewards()) {
-			if (rewardName.getName().equalsIgnoreCase(reward)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Sets the default folder.
-	 *
-	 * @param defaultFolder
-	 *            the new default folder
-	 */
-	public void setDefaultFolder(File defaultFolder) {
-		this.defaultFolder = defaultFolder;
-	}
-
-	/**
-	 * Setup example.
-	 */
-	public void setupExample() {
-		if (!plugin.getPlugin().getDataFolder().exists()) {
-			plugin.getPlugin().getDataFolder().mkdir();
-		}
-
-		if (AdvancedCoreHook.getInstance().getOptions().isLoadDefaultRewards()) {
-			copyFile("ExampleBasic.yml");
-			copyFile("ExampleAdvanced.yml");
-		}
-	}
-
-	public void updateReward(Reward reward) {
-		for (int i = getRewards().size() - 1; i >= 0; i--) {
-			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
-				getRewards().set(i, reward);
-				return;
-			}
-		}
-		getRewards().add(reward);
-	}
-
-	/*
-	 * private void updateReward(Reward reward) { for (int i = getRewards().size() -
-	 * 1; i >= 0; i--) { if
-	 * (getRewards().get(i).getFile().getName().equals(reward.getFile().getName()))
-	 * { getRewards().set(i, reward); return; } } getRewards().add(reward); }
-	 */
-
-	public boolean usesTimed() {
-		for (Reward reward : getRewards()) {
-			if (reward.isTimedEnabled() || reward.isDelayEnabled()) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	public void loadInjectedRewards() {
@@ -672,5 +571,106 @@ public class RewardHandler {
 		for (RewardInject reward : injectedRewards) {
 			reward.setInternalReward(true);
 		}
+	}
+
+	/**
+	 * Load rewards.
+	 */
+	public void loadRewards() {
+		rewards = Collections.synchronizedList(new ArrayList<Reward>());
+		setupExample();
+		for (File file : rewardFolders) {
+			for (String reward : getRewardNames(file)) {
+				if (!reward.equals("")) {
+					if (!rewardExist(reward)) {
+						try {
+							rewards.add(new Reward(file, reward));
+							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
+						} catch (Exception e) {
+							plugin.getPlugin().getLogger()
+									.severe("Failed to load reward file " + reward + ".yml: " + e.getMessage());
+							e.printStackTrace();
+						}
+					} else {
+						plugin.getPlugin().getLogger().warning("Detected that a reward file named " + reward
+								+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
+					}
+				} else {
+					plugin.getPlugin().getLogger().warning(
+							"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
+				}
+			}
+		}
+		plugin.debug("Loaded rewards");
+
+	}
+
+	/**
+	 * Reward exist.
+	 *
+	 * @param reward
+	 *            the reward
+	 * @return true, if successful
+	 */
+	public boolean rewardExist(String reward) {
+		if (reward.equals("")) {
+			return false;
+		}
+		for (Reward rewardName : getRewards()) {
+			if (rewardName.getName().equalsIgnoreCase(reward)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Sets the default folder.
+	 *
+	 * @param defaultFolder
+	 *            the new default folder
+	 */
+	public void setDefaultFolder(File defaultFolder) {
+		this.defaultFolder = defaultFolder;
+	}
+
+	/**
+	 * Setup example.
+	 */
+	public void setupExample() {
+		if (!plugin.getPlugin().getDataFolder().exists()) {
+			plugin.getPlugin().getDataFolder().mkdir();
+		}
+
+		if (AdvancedCoreHook.getInstance().getOptions().isLoadDefaultRewards()) {
+			copyFile("ExampleBasic.yml");
+			copyFile("ExampleAdvanced.yml");
+		}
+	}
+
+	/*
+	 * private void updateReward(Reward reward) { for (int i = getRewards().size() -
+	 * 1; i >= 0; i--) { if
+	 * (getRewards().get(i).getFile().getName().equals(reward.getFile().getName()))
+	 * { getRewards().set(i, reward); return; } } getRewards().add(reward); }
+	 */
+
+	public void updateReward(Reward reward) {
+		for (int i = getRewards().size() - 1; i >= 0; i--) {
+			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
+				getRewards().set(i, reward);
+				return;
+			}
+		}
+		getRewards().add(reward);
+	}
+
+	public boolean usesTimed() {
+		for (Reward reward : getRewards()) {
+			if (reward.isTimedEnabled() || reward.isDelayEnabled()) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

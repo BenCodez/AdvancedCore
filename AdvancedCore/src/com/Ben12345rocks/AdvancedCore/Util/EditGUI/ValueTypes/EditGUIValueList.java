@@ -18,7 +18,6 @@ public abstract class EditGUIValueList extends EditGUIValue {
 		setKey(key);
 		setCurrentValue(value);
 	}
-	public abstract void setValue(Player player, ArrayList<String> value);
 
 	@Override
 	public void onClick(ClickEvent clickEvent) {
@@ -65,4 +64,6 @@ public abstract class EditGUIValueList extends EditGUIValue {
 		});
 		inv.openInventory(clickEvent.getPlayer());
 	}
+
+	public abstract void setValue(Player player, ArrayList<String> value);
 }

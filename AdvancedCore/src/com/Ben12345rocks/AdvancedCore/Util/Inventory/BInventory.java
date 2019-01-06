@@ -166,11 +166,6 @@ public class BInventory implements Listener {
 	@Setter
 	private boolean playerSound = true;
 
-	public BInventory noSound() {
-		playerSound = false;
-		return this;
-	}
-
 	/**
 	 * Instantiates a new b inventory.
 	 *
@@ -345,6 +340,11 @@ public class BInventory implements Listener {
 	 */
 	public boolean isPages() {
 		return pages;
+	}
+
+	public BInventory noSound() {
+		playerSound = false;
+		return this;
 	}
 
 	private void onClick(InventoryClickEvent event, BInventoryButton b) {

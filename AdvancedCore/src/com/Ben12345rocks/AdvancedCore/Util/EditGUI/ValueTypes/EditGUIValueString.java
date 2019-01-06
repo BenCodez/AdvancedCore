@@ -9,12 +9,11 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequestBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.Listener;
 
 public abstract class EditGUIValueString extends EditGUIValue {
-	
+
 	public EditGUIValueString(String key, Object value) {
 		setKey(key);
 		setCurrentValue(value);
 	}
-	public abstract void setValue(Player player, String value);
 
 	@Override
 	public void onClick(ClickEvent clickEvent) {
@@ -30,4 +29,6 @@ public abstract class EditGUIValueString extends EditGUIValue {
 		}, ArrayUtils.getInstance().convert(getOptions())).currentValue(getCurrentValue().toString())
 				.allowCustomOption(true).request(clickEvent.getPlayer());
 	}
+
+	public abstract void setValue(Player player, String value);
 }

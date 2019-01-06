@@ -21,10 +21,6 @@ public abstract class RewardInject {
 	@Setter
 	private boolean internalReward = false;
 
-	public boolean isEditable() {
-		return !editButtons.isEmpty();
-	}
-
 	@Getter
 	@Setter
 	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
@@ -33,11 +29,15 @@ public abstract class RewardInject {
 		this.path = path;
 	}
 
-	public abstract void onRewardRequest(Reward reward, User user, ConfigurationSection data,
-			HashMap<String, String> placeholders);
-
 	public RewardInject addEditButton(EditGUIButton button) {
 		editButtons.add(button);
 		return this;
 	}
+
+	public boolean isEditable() {
+		return !editButtons.isEmpty();
+	}
+
+	public abstract void onRewardRequest(Reward reward, User user, ConfigurationSection data,
+			HashMap<String, String> placeholders);
 }

@@ -13,8 +13,6 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 		setCurrentValue(value);
 	}
 
-	public abstract void setValue(Player player, boolean value);
-
 	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
@@ -29,5 +27,7 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 			}
 		}).currentValue(getCurrentValue().toString()).request(clickEvent.getPlayer());
 	}
+
+	public abstract void setValue(Player player, boolean value);
 
 }

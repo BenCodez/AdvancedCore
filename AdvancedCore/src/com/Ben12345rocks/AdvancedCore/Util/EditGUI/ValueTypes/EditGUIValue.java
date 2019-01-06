@@ -19,12 +19,10 @@ public abstract class EditGUIValue {
 
 	@Getter
 	private ArrayList<String> options = new ArrayList<String>();
-	
+
 	@Getter
 	@Setter
 	private BInventory inv;
-
-	public abstract void onClick(ClickEvent event);
 
 	public EditGUIValue addOptions(String... str) {
 		for (String s : str) {
@@ -32,4 +30,6 @@ public abstract class EditGUIValue {
 		}
 		return this;
 	}
+
+	public abstract void onClick(ClickEvent event);
 }

@@ -398,6 +398,17 @@ public class Reward {
 		user.giveExp(exp);
 	}
 
+	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
+		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
+			try {
+				plugin.extraDebug(getRewardName() + ": Attempting to give " + inject.getPath());
+				inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	/**
 	 * Give items.
 	 *
@@ -619,17 +630,6 @@ public class Reward {
 			giveRewardsRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
-		}
-	}
-
-	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
-		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
-			try {
-				plugin.extraDebug(getRewardName() + ": Attempting to give " + inject.getPath());
-				inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
 		}
 	}
 

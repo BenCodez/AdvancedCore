@@ -27,7 +27,8 @@ public abstract class RewardInjectDouble extends RewardInject {
 	}
 
 	@Override
-	public void onRewardRequest(Reward reward, User user, ConfigurationSection data, HashMap<String, String> placeholders) {
+	public void onRewardRequest(Reward reward, User user, ConfigurationSection data,
+			HashMap<String, String> placeholders) {
 		if (data.isDouble(getPath())) {
 			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath());
 			onRewardRequest(reward, user, data.getDouble(getPath(), getDefaultValue()), placeholders);

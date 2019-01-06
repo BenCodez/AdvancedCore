@@ -497,6 +497,21 @@ public class ItemBuilder {
 		return validMaterial;
 	}
 
+	public ItemStack parsePlaceholders(OfflinePlayer player) {
+		if (player != null) {
+			setName(StringUtils.getInstance().replaceJavascript(player,
+					StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
+			setLore(ArrayUtils.getInstance().replaceJavascript(player,
+					ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
+			if (!getSkull().equals("")) {
+				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(getSkull(), "player", player.getName()));
+			}
+		} else {
+			return toItemStack();
+		}
+		return is;
+	}
+
 	/**
 	 * Remove a certain enchant from the item.
 	 *
@@ -506,6 +521,11 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder removeEnchantment(Enchantment ench) {
 		is.removeEnchantment(ench);
+		return this;
+	}
+
+	public ItemBuilder removeLore() {
+		setLore(new String[0]);
 		return this;
 	}
 
@@ -644,11 +664,6 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public ItemBuilder removeLore() {
-		setLore(new String[0]);
-		return this;
-	}
-
 	/**
 	 * Re-sets the lore.
 	 *
@@ -757,20 +772,5 @@ public class ItemBuilder {
 
 	public ItemStack toItemStack(Player player) {
 		return parsePlaceholders(player);
-	}
-
-	public ItemStack parsePlaceholders(OfflinePlayer player) {
-		if (player != null) {
-			setName(StringUtils.getInstance().replaceJavascript(player,
-					StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
-			setLore(ArrayUtils.getInstance().replaceJavascript(player,
-					ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
-			if (!getSkull().equals("")) {
-				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(getSkull(), "player", player.getName()));
-			}
-		} else {
-			return toItemStack();
-		}
-		return is;
 	}
 }

@@ -26,6 +26,8 @@ public abstract class RewardInjectBoolean extends RewardInject {
 		this.defaultValue = defaultValue;
 	}
 
+	public abstract void onRewardRequest(Reward reward, User user, boolean num, HashMap<String, String> placeholders);
+
 	@Override
 	public void onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
@@ -34,7 +36,5 @@ public abstract class RewardInjectBoolean extends RewardInject {
 			onRewardRequest(reward, user, data.getBoolean(getPath(), isDefaultValue()), placeholders);
 		}
 	}
-
-	public abstract void onRewardRequest(Reward reward, User user, boolean num, HashMap<String, String> placeholders);
 
 }

@@ -14,8 +14,6 @@ public abstract class EditGUIValueNumber extends EditGUIValue {
 		setCurrentValue(value);
 	}
 
-	public abstract void setValue(Player player, Number num);
-
 	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
@@ -32,4 +30,6 @@ public abstract class EditGUIValueNumber extends EditGUIValue {
 		}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) getCurrentValue() })
 				.currentValue(getCurrentValue().toString()).request(clickEvent.getPlayer());
 	}
+
+	public abstract void setValue(Player player, Number num);
 }

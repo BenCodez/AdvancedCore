@@ -63,6 +63,9 @@ public class User {
 
 	private UserData data;
 
+	@Getter
+	private ItemBuilder playerHead = null;
+
 	/**
 	 * Instantiates a new user.
 	 *
@@ -171,14 +174,6 @@ public class User {
 		ArrayList<String> choices = getUnClaimedChoices();
 		choices.add(name);
 		setUnClaimedChoice(choices);
-	}
-
-	@Getter
-	private ItemBuilder playerHead = null;
-
-	@SuppressWarnings("deprecation")
-	public void preloadSkull() {
-		playerHead = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName());
 	}
 
 	public void checkDelayedTimedRewards() {
@@ -707,6 +702,11 @@ public class User {
 				}
 			});
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	public void preloadSkull() {
+		playerHead = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName());
 	}
 
 	public void remove() {
