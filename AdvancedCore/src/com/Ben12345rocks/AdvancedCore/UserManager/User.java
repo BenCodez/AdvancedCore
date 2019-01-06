@@ -14,6 +14,7 @@ import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -39,6 +40,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
+import lombok.Getter;
 import net.md_5.bungee.api.chat.TextComponent;
 
 /**
@@ -169,6 +171,14 @@ public class User {
 		ArrayList<String> choices = getUnClaimedChoices();
 		choices.add(name);
 		setUnClaimedChoice(choices);
+	}
+
+	@Getter
+	private ItemBuilder playerHead = null;
+
+	@SuppressWarnings("deprecation")
+	public void preloadSkull() {
+		playerHead = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName());
 	}
 
 	public void checkDelayedTimedRewards() {
