@@ -62,7 +62,7 @@ public class User {
 
 	private UserData data;
 
-	private ItemBuilder playerHead = null;
+	private ItemStack playerHead = null;
 
 	/**
 	 * Instantiates a new user.
@@ -704,10 +704,10 @@ public class User {
 
 	@SuppressWarnings("deprecation")
 	public void preloadSkull() {
-		playerHead = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName());
+		playerHead = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack();
 	}
 
-	public ItemBuilder getPlayerHead() {
+	public ItemStack getPlayerHead() {
 		if (playerHead == null) {
 			preloadSkull();
 		}
