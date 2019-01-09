@@ -574,6 +574,7 @@ public class BInventory implements Listener {
 
 		for (BInventoryButton b : pageButtons) {
 			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
+			AdvancedCoreHook.getInstance().debug("Setting item");
 		}
 		if (prevItem == null) {
 			prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1)
