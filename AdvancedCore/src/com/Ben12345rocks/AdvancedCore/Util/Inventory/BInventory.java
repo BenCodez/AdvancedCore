@@ -521,6 +521,7 @@ public class BInventory implements Listener {
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem(player);
 				inv.setItem(pair.getKey(), item);
+				AdvancedCoreHook.getInstance().debug("Setting item");
 			}
 
 			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
