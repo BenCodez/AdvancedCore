@@ -521,7 +521,6 @@ public class BInventory implements Listener {
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem(player);
 				inv.setItem(pair.getKey(), item);
-				AdvancedCoreHook.getInstance().debug("Setting item");
 			}
 
 			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
@@ -574,7 +573,6 @@ public class BInventory implements Listener {
 
 		for (BInventoryButton b : pageButtons) {
 			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
-			AdvancedCoreHook.getInstance().debug("Setting item");
 		}
 		if (prevItem == null) {
 			prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1)
