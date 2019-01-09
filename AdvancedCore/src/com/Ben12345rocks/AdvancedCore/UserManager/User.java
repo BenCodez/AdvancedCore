@@ -40,7 +40,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
-import lombok.Getter;
 import net.md_5.bungee.api.chat.TextComponent;
 
 /**
@@ -63,7 +62,6 @@ public class User {
 
 	private UserData data;
 
-	@Getter
 	private ItemBuilder playerHead = null;
 
 	/**
@@ -707,6 +705,13 @@ public class User {
 	@SuppressWarnings("deprecation")
 	public void preloadSkull() {
 		playerHead = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName());
+	}
+
+	public ItemBuilder getPlayerHead() {
+		if (playerHead == null) {
+			preloadSkull();
+		}
+		return playerHead;
 	}
 
 	public void remove() {
