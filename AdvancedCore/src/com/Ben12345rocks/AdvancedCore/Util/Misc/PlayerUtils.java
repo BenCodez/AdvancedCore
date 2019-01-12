@@ -50,7 +50,7 @@ public class PlayerUtils {
 		}
 	}
 
-	private HashMap<String, Object> skulls;
+	private HashMap<String, Object> skulls = new HashMap<String, Object>();
 
 	private Class<?> craftItemStackClass = ReflectionUtils
 			.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack");
