@@ -1,7 +1,5 @@
 package com.Ben12345rocks.AdvancedCore.Util.Misc;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,8 +15,6 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -34,63 +30,19 @@ public class PlayerUtils {
 	}
 
 	private PlayerUtils() {
-		if (asNMSCopy == null) {
-			try {
-				asNMSCopy = craftItemStackClass.getMethod("asNMSCopy", ItemStack.class);
-			} catch (NoSuchMethodException | SecurityException e) {
-				e.printStackTrace();
-			}
-		}
-		if (asBukkitCopy == null) {
-			try {
-				asBukkitCopy = craftItemStackClass.getMethod("asBukkitCopy", ItemStackClass);
-			} catch (NoSuchMethodException | SecurityException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 
-	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
-
-	private Class<?> craftItemStackClass = ReflectionUtils
-			.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack");
-	private Class<?> ItemStackClass = ReflectionUtils.getClassForName("net.minecraft.server.v1_13_R2.ItemStack");
-	private Method asNMSCopy;
-	private Method asBukkitCopy;
-
-	@SuppressWarnings("deprecation")
-	public void loadSkull(String playerName) {
-		try {
-			skulls.put(playerName, asNMSCopy.invoke(asNMSCopy,
-					new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack()));
-		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void loadSkullAsync(final String playerName) {
-		Thread.getInstance().run(new Runnable() {
-
-			@Override
-			public void run() {
-				loadSkull(playerName);
-			}
-		});
-	}
+	private ConcurrentHashMap<String, ItemStack> skulls = new ConcurrentHashMap<String, ItemStack>();
 
 	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName) {
 		if (skulls.containsKey(playerName)) {
-			try {
-				return (ItemStack) asBukkitCopy.invoke(asBukkitCopy, skulls.get(playerName));
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-					| SecurityException e) {
-				e.printStackTrace();
-			}
+			return skulls.get(playerName);
 		} else {
-			loadSkullAsync(playerName);
+			ItemStack item = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
+			skulls.put(playerName, item);
+			return item;
 		}
-		return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
 	}
 
 	/** The plugin. */
