@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.UserManager;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -707,9 +708,10 @@ public class User {
 	@SuppressWarnings("deprecation")
 	public void preloadSkull() {
 		try {
-			playerHead = NMSManager.getInstance().getNMSClass("Inventory.CraftItemStack").getMethod("asNMSCopy", ItemStack.class)
-					.invoke(this,
-							new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack());
+			Method method = NMSManager.getInstance().getNMSClass("Inventory.CraftItemStack").getMethod("asNMSCopy",
+					ItemStack.class);
+			playerHead = method.invoke(method,
+					new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack());
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
 				| SecurityException e) {
 			e.printStackTrace();
