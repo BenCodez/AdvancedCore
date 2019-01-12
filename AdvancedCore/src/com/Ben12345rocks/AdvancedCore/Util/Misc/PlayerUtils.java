@@ -41,6 +41,20 @@ public class PlayerUtils {
 		}
 	}
 
+	public void loadSkulls() {
+		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				for (String playerName : UserManager.getInstance().getAllPlayerNames()) {
+					plugin.extraDebug("Loading skull: " + playerName);
+					loadPlayerSkull(playerName);
+				}
+				plugin.debug("All skulls loaded");
+			}
+		});
+	}
+
 	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName) {
 		if (skulls.containsKey(playerName)) {

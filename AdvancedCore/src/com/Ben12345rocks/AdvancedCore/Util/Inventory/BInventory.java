@@ -523,13 +523,7 @@ public class BInventory implements Listener {
 				inv.setItem(pair.getKey(), item);
 			}
 
-			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-
-				@Override
-				public void run() {
-					player.openInventory(inv);
-				}
-			});
+			openInv(player, inv);
 
 		} else {
 			maxPage = getHighestSlot() / (maxInvSize - 9);
@@ -550,10 +544,6 @@ public class BInventory implements Listener {
 	 *            the page
 	 */
 	private void openInventory(Player player, int page) {
-		if (player.isSleeping()) {
-			AdvancedCoreHook.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
-			return;
-		}
 		BInventory inventory = this;
 		this.player = player;
 		inv = Bukkit.createInventory(player, maxInvSize, inventory.getInventoryName());
@@ -587,6 +577,10 @@ public class BInventory implements Listener {
 
 		inv.setItem(maxInvSize - 1, nextItem);
 
+		openInv(player, inv);
+	}
+
+	private void openInv(Player player, Inventory inv) {
 		Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
 			@Override

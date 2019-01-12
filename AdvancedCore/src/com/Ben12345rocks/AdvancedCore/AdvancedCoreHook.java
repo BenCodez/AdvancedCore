@@ -368,32 +368,7 @@ public class AdvancedCoreHook {
 
 		loadConfig();
 
-		addUserStartup(new UserStartup() {
-
-			@Override
-			public void onStartUp(User user) {
-				Thread.getInstance().run(new Runnable() {
-
-					@Override
-					public void run() {
-						PlayerUtils.getInstance().loadPlayerSkull(user.getPlayerName());
-					}
-				});
-
-			}
-
-			@Override
-			public void onStart() {
-				// TODO Auto-generated method stub
-
-			}
-
-			@Override
-			public void onFinish() {
-				// TODO Auto-generated method stub
-
-			}
-		});
+		PlayerUtils.getInstance().loadSkulls();
 
 		UserManager.getInstance().purgeOldPlayers();
 
