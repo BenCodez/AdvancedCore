@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.UserManager;
 
+import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -19,7 +20,6 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
@@ -28,6 +28,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardBuilder;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
@@ -63,7 +64,7 @@ public class User {
 
 	private UserData data;
 
-	private net.minecraft.server.v1_13_R2.ItemStack playerHead = null;
+	private Object playerHead = null;
 
 	/**
 	 * Instantiates a new user.
@@ -705,15 +706,30 @@ public class User {
 
 	@SuppressWarnings("deprecation")
 	public void preloadSkull() {
-		playerHead = CraftItemStack
-				.asNMSCopy(new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack());
+		try {
+			playerHead = NMSManager.getInstance().getNMSClass("CraftItemStack").getMethod("asNMSCopy", ItemStack.class)
+					.invoke(this,
+							new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack());
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
+				| SecurityException e) {
+			e.printStackTrace();
+		}
 	}
 
+	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerHead() {
 		if (playerHead == null) {
 			preloadSkull();
 		}
-		return CraftItemStack.asBukkitCopy(playerHead);
+		try {
+			return (ItemStack) NMSManager.getInstance().getNMSClass("CraftItemStack")
+					.getMethod("asBukkitCopy", NMSManager.getInstance().getNMSClass("ItemStack"))
+					.invoke(this, playerHead);
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
+				| SecurityException e) {
+			e.printStackTrace();
+		}
+		return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack();
 	}
 
 	public void remove() {
