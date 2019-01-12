@@ -82,7 +82,7 @@ public class PlayerUtils {
 	public ItemStack getPlayerSkull(String playerName) {
 		if (skulls.containsKey(playerName)) {
 			try {
-				return (ItemStack) asBukkitCopy.invoke(asBukkitCopy, playerName);
+				return (ItemStack) asBukkitCopy.invoke(asBukkitCopy, skulls.get(playerName));
 			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
 					| SecurityException e) {
 				e.printStackTrace();
