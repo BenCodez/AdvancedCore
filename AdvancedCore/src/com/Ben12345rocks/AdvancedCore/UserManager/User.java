@@ -29,7 +29,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
+import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardBuilder;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
@@ -708,7 +708,7 @@ public class User {
 	@SuppressWarnings("deprecation")
 	public void preloadSkull() {
 		try {
-			Method method = NMSManager.getInstance().getNMSClass("inventory.CraftItemStack").getMethod("asNMSCopy",
+			Method method = ReflectionUtils.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack").getMethod("asNMSCopy",
 					ItemStack.class);
 			playerHead = method.invoke(method,
 					new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack());
@@ -724,8 +724,10 @@ public class User {
 			preloadSkull();
 		}
 		try {
-			return (ItemStack) NMSManager.getInstance().getNMSClass("inventory.CraftItemStack")
-					.getMethod("asBukkitCopy", NMSManager.getInstance().getNMSClass("ItemStack"))
+			return (ItemStack) ReflectionUtils
+					.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack")
+					.getMethod("asBukkitCopy",
+							ReflectionUtils.getClassForName("net.minecraft.server.v1_13_R2.ItemStack"))
 					.invoke(this, playerHead);
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
 				| SecurityException e) {
