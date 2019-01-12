@@ -55,6 +55,7 @@ import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Table;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.PluginMessage.PluginMessage;
 import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
@@ -368,6 +369,26 @@ public class AdvancedCoreHook {
 		loadConfig();
 
 		UserManager.getInstance().purgeOldPlayers();
+
+		addUserStartup(new UserStartup() {
+
+			@Override
+			public void onStartUp(User user) {
+				PlayerUtils.getInstance().loadSkullAsync(user.getPlayerName());
+			}
+
+			@Override
+			public void onStart() {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void onFinish() {
+				// TODO Auto-generated method stub
+
+			}
+		});
 
 		userStartup();
 

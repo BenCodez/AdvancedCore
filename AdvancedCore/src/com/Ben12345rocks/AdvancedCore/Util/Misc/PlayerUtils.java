@@ -1,21 +1,28 @@
 package com.Ben12345rocks.AdvancedCore.Util.Misc;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.google.common.collect.Iterables;
 
 public class PlayerUtils {
@@ -26,11 +33,68 @@ public class PlayerUtils {
 		return instance;
 	}
 
+	private PlayerUtils() {
+		if (asNMSCopy == null) {
+			try {
+				asNMSCopy = craftItemStackClass.getMethod("asNMSCopy", ItemStack.class);
+			} catch (NoSuchMethodException | SecurityException e) {
+				e.printStackTrace();
+			}
+		}
+		if (asBukkitCopy == null) {
+			try {
+				asBukkitCopy = craftItemStackClass.getMethod("asBukkitCopy", ItemStackClass);
+			} catch (NoSuchMethodException | SecurityException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private HashMap<String, Object> skulls;
+
+	private Class<?> craftItemStackClass = ReflectionUtils
+			.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack");
+	private Class<?> ItemStackClass = ReflectionUtils.getClassForName("net.minecraft.server.v1_13_R2.ItemStack");
+	private Method asNMSCopy;
+	private Method asBukkitCopy;
+
+	@SuppressWarnings("deprecation")
+	public void loadSkull(String playerName) {
+		try {
+			skulls.put(playerName, asNMSCopy.invoke(asNMSCopy,
+					new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack()));
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void loadSkullAsync(final String playerName) {
+		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				loadSkull(playerName);
+			}
+		});
+	}
+
+	@SuppressWarnings("deprecation")
+	public ItemStack getPlayerSkull(String playerName) {
+		if (skulls.containsKey(playerName)) {
+			try {
+				return (ItemStack) asBukkitCopy.invoke(asBukkitCopy, playerName);
+			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
+					| SecurityException e) {
+				e.printStackTrace();
+			}
+		} else {
+			loadSkullAsync(playerName);
+		}
+		return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
+	}
+
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
-
-	private PlayerUtils() {
-	}
 
 	/**
 	 * Gets the player meta.

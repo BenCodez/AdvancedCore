@@ -1,7 +1,5 @@
 package com.Ben12345rocks.AdvancedCore.UserManager;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -16,7 +14,6 @@ import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -29,7 +26,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardBuilder;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
@@ -65,8 +61,6 @@ public class User {
 
 	private UserData data;
 
-	private Object playerHead = null;
-
 	/**
 	 * Instantiates a new user.
 	 *
@@ -81,6 +75,10 @@ public class User {
 		loadData();
 		uuid = player.getUniqueId().toString();
 		setPlayerName(player.getName());
+	}
+
+	public ItemStack getPlayerSkull() {
+		return PlayerUtils.getInstance().getPlayerSkull(playerName);
 	}
 
 	/**
@@ -703,37 +701,6 @@ public class User {
 				}
 			});
 		}
-	}
-
-	@SuppressWarnings("deprecation")
-	public void preloadSkull() {
-		try {
-			Method method = ReflectionUtils.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack").getMethod("asNMSCopy",
-					ItemStack.class);
-			playerHead = method.invoke(method,
-					new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack());
-		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
-				| SecurityException e) {
-			e.printStackTrace();
-		}
-	}
-
-	@SuppressWarnings("deprecation")
-	public ItemStack getPlayerHead() {
-		if (playerHead == null) {
-			preloadSkull();
-		}
-		try {
-			return (ItemStack) ReflectionUtils
-					.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack")
-					.getMethod("asBukkitCopy",
-							ReflectionUtils.getClassForName("net.minecraft.server.v1_13_R2.ItemStack"))
-					.invoke(this, playerHead);
-		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
-				| SecurityException e) {
-			e.printStackTrace();
-		}
-		return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack();
 	}
 
 	public void remove() {
