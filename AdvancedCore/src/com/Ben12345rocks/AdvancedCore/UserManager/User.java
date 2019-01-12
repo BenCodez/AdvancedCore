@@ -19,6 +19,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
@@ -62,7 +63,7 @@ public class User {
 
 	private UserData data;
 
-	private ItemStack playerHead = null;
+	private net.minecraft.server.v1_13_R2.ItemStack playerHead = null;
 
 	/**
 	 * Instantiates a new user.
@@ -704,14 +705,15 @@ public class User {
 
 	@SuppressWarnings("deprecation")
 	public void preloadSkull() {
-		playerHead = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack();
+		playerHead = CraftItemStack
+				.asNMSCopy(new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack());
 	}
 
 	public ItemStack getPlayerHead() {
 		if (playerHead == null) {
 			preloadSkull();
 		}
-		return playerHead;
+		return CraftItemStack.asBukkitCopy(playerHead);
 	}
 
 	public void remove() {
