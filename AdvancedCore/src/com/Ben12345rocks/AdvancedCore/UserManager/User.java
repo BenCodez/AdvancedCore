@@ -708,7 +708,7 @@ public class User {
 	@SuppressWarnings("deprecation")
 	public void preloadSkull() {
 		try {
-			Method method = NMSManager.getInstance().getNMSClass("Inventory.CraftItemStack").getMethod("asNMSCopy",
+			Method method = NMSManager.getInstance().getNMSClass("inventory.CraftItemStack").getMethod("asNMSCopy",
 					ItemStack.class);
 			playerHead = method.invoke(method,
 					new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(getPlayerName()).toItemStack());
@@ -724,7 +724,7 @@ public class User {
 			preloadSkull();
 		}
 		try {
-			return (ItemStack) NMSManager.getInstance().getNMSClass("Inventory.CraftItemStack")
+			return (ItemStack) NMSManager.getInstance().getNMSClass("inventory.CraftItemStack")
 					.getMethod("asBukkitCopy", NMSManager.getInstance().getNMSClass("ItemStack"))
 					.invoke(this, playerHead);
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
