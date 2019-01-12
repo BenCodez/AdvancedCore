@@ -35,6 +35,13 @@ public class PlayerUtils {
 	private ConcurrentHashMap<String, ItemStack> skulls = new ConcurrentHashMap<String, ItemStack>();
 
 	@SuppressWarnings("deprecation")
+	public void loadPlayerSkull(String playerName) {
+		if (!skulls.containsKey(playerName)) {
+			skulls.put(playerName, new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack());
+		}
+	}
+
+	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName) {
 		if (skulls.containsKey(playerName)) {
 			return skulls.get(playerName);
