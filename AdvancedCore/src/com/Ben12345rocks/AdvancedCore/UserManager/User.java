@@ -77,7 +77,7 @@ public class User {
 		setPlayerName(player.getName());
 	}
 
-	public ItemStack getPlayerSkull() {
+	public ItemStack getPlayerHead() {
 		return PlayerUtils.getInstance().getPlayerSkull(playerName);
 	}
 
