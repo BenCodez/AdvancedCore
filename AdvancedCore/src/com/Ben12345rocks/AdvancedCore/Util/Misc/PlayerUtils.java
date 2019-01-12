@@ -3,7 +3,6 @@ package com.Ben12345rocks.AdvancedCore.Util.Misc;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -19,6 +18,7 @@ import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -50,7 +50,7 @@ public class PlayerUtils {
 		}
 	}
 
-	private HashMap<String, Object> skulls = new HashMap<String, Object>();
+	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
 
 	private Class<?> craftItemStackClass = ReflectionUtils
 			.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack");
@@ -69,7 +69,7 @@ public class PlayerUtils {
 	}
 
 	public void loadSkullAsync(final String playerName) {
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+		Thread.getInstance().run(new Runnable() {
 
 			@Override
 			public void run() {
