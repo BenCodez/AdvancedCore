@@ -136,6 +136,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private double clickSoundPitch = 1;
 
+	@Getter
+	@Setter
+	private boolean preloadSkulls;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -176,6 +180,7 @@ public class AdvancedCoreConfigOptions {
 			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
 			processRewards = configData.getBoolean("ProcessRewards", true);
 			clearCacheOnJoin = configData.getBoolean("ClearCacheOnJoin", false);
+			preloadSkulls = configData.getBoolean("PreloadSkulls", true);
 
 			ConfigurationSection soundData = configData.getConfigurationSection("ClickSound");
 			if (soundData != null) {

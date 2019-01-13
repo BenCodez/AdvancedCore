@@ -368,7 +368,9 @@ public class AdvancedCoreHook {
 
 		loadConfig();
 
-		PlayerUtils.getInstance().loadSkulls();
+		if (getOptions().isPreloadSkulls()) {
+			PlayerUtils.getInstance().loadSkulls();
+		}
 
 		UserManager.getInstance().purgeOldPlayers();
 
