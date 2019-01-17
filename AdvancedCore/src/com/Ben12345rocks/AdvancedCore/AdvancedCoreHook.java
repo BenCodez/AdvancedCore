@@ -16,6 +16,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
@@ -123,6 +124,9 @@ public class AdvancedCoreHook {
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
 	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
+
+	@Getter
+	private ArrayList<String> bannedPlayers = new ArrayList<String>();
 
 	private AdvancedCoreHook() {
 	}
@@ -375,6 +379,10 @@ public class AdvancedCoreHook {
 		UserManager.getInstance().purgeOldPlayers();
 
 		userStartup();
+
+		for (OfflinePlayer p : Bukkit.getBannedPlayers()) {
+			bannedPlayers.add(p.getUniqueId().toString());
+		}
 
 		Bukkit.getPluginManager().registerEvents(BackupHandle.getInstance(), getPlugin());
 
