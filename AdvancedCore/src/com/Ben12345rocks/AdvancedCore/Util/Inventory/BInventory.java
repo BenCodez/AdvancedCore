@@ -347,16 +347,19 @@ public class BInventory implements Listener {
 		return this;
 	}
 
-	private void onClick(InventoryClickEvent event, BInventoryButton b) {
+	private void playSound(Player player) {
 		if (playerSound) {
 			Sound sound = AdvancedCoreHook.getInstance().getOptions().getClickSoundSound();
 			if (sound != null) {
-				Player player = (Player) (event.getWhoClicked());
 				player.playSound(player.getLocation(), sound,
 						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundVolume(),
 						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundPitch());
 			}
 		}
+	}
+
+	private void onClick(InventoryClickEvent event, BInventoryButton b) {
+		playSound((Player) event.getWhoClicked());
 		b.onClick(new ClickEvent(event, b), this);
 	}
 
@@ -444,6 +447,7 @@ public class BInventory implements Listener {
 
 									@Override
 									public void run() {
+										playSound(player);
 										openInventory(player, nextPage);
 									}
 								});
@@ -461,6 +465,7 @@ public class BInventory implements Listener {
 
 									@Override
 									public void run() {
+										playSound(player);
 										openInventory(player, nextPage);
 									}
 								});
