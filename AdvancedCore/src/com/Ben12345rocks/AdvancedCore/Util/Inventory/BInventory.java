@@ -378,7 +378,7 @@ public class BInventory implements Listener {
 				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 
 			event.setCancelled(true);
-			Player player = (Player) event.getWhoClicked();
+			final Player player = (Player) event.getWhoClicked();
 
 			if (AdvancedCoreHook.getInstance().getServerHandle() instanceof SpigotHandle) {
 				// spigot only method
@@ -436,10 +436,17 @@ public class BInventory implements Listener {
 				} else if (slot == maxInvSize - 9) {
 					if (page > 1) {
 
-						int nextPage = page - 1;
+						final int nextPage = page - 1;
 						player.closeInventory();
 
-						openInventory(player, nextPage);
+						Bukkit.getServer().getScheduler()
+								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+									@Override
+									public void run() {
+										openInventory(player, nextPage);
+									}
+								});
 					}
 				} else if (slot == maxInvSize - 1) {
 					// AdvancedCoreHook.getInstance().debug(maxPage + " " +
@@ -447,17 +454,21 @@ public class BInventory implements Listener {
 					if (maxPage > page) {
 						player.closeInventory();
 
-						int nextPage = page + 1;
+						final int nextPage = page + 1;
 
-						openInventory(player, nextPage);
-						AdvancedCoreHook.getInstance().debug("Opening inv");
+						Bukkit.getServer().getScheduler()
+								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+									@Override
+									public void run() {
+										openInventory(player, nextPage);
+									}
+								});
 					}
 
 				}
 
-				for (
-
-				BInventoryButton b : pageButtons) {
+				for (BInventoryButton b : pageButtons) {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
 						player.closeInventory();
 						try {
