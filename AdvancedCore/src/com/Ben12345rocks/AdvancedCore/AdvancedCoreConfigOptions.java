@@ -66,9 +66,12 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	private String nextPageTxt = "&aNext Page";
+
+	@Deprecated
 	@Getter
 	@Setter
 	private boolean checkNameMojang = false;
+	
 	@Getter
 	@Setter
 	private boolean alternateUUIDLookUp;
@@ -167,7 +170,11 @@ public class AdvancedCoreConfigOptions {
 			nextPageTxt = configData.getString("Format.NextPage", "&aNext Page");
 			purgeOldData = configData.getBoolean("PurgeOldData");
 			purgeMinimumDays = configData.getInt("PurgeMin", 90);
-			checkNameMojang = configData.getBoolean("CheckNameMojang", true);
+			checkNameMojang = configData.getBoolean("CheckNameMojang", false);
+			if (checkNameMojang) {
+				AdvancedCoreHook.getInstance().getPlugin().getLogger()
+						.info("Using mojang name lookups allowed, disable if you run into issues");
+			}
 			disableCheckOnWorldChange = configData.getBoolean("DisableCheckOnWorldChange");
 			autoDownload = configData.getBoolean("AutoDownload", false);
 			extraDebug = configData.getBoolean("ExtraDebug", false);
