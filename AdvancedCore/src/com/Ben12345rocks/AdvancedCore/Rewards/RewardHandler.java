@@ -445,6 +445,26 @@ public class RewardHandler {
 			}
 		})));
 
+		injectedRewards.add(new RewardInjectStringList("RandomReward") {
+
+			@Override
+			public void onRewardRequest(Reward r, User user, ArrayList<String> list,
+					HashMap<String, String> placeholders) {
+				if (list.size() > 0) {
+					giveReward(user, list.get(ThreadLocalRandom.current().nextInt(list.size())),
+							new RewardOptions().setPlaceholders(placeholders));
+				}
+			}
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomReward", null) {
+
+			@Override
+			public void setValue(Player player, ArrayList<String> value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value);
+				plugin.reload();
+			}
+		})));
+
 		injectedRewards.add(new RewardInjectStringList("Priority") {
 
 			@Override

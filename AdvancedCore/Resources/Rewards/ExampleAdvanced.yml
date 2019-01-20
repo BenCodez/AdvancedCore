@@ -57,6 +57,9 @@ Random:
 # Will give one command from the list
 RandomCommand: []
 
+# Will give one reward from the list of rewards
+RandomReward: []
+
 # Require permission to give this reward file
 # Permission is AdvancedCore.Reward.(REWARDNAME) by default
 # E.g: AdvancedCore.Reward.ExampleReward
