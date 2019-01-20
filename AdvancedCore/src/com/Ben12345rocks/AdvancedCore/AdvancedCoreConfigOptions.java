@@ -71,7 +71,7 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	private boolean checkNameMojang = false;
-	
+
 	@Getter
 	@Setter
 	private boolean alternateUUIDLookUp;

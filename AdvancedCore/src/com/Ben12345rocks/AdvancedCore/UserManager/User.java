@@ -77,10 +77,6 @@ public class User {
 		setPlayerName(player.getName());
 	}
 
-	public ItemStack getPlayerHead() {
-		return PlayerUtils.getInstance().getPlayerSkull(playerName);
-	}
-
 	/**
 	 * Instantiates a new user.
 	 *
@@ -335,6 +331,10 @@ public class User {
 			return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		}
 		return null;
+	}
+
+	public ItemStack getPlayerHead() {
+		return PlayerUtils.getInstance().getPlayerSkull(playerName);
 	}
 
 	/**

@@ -29,45 +29,13 @@ public class PlayerUtils {
 		return instance;
 	}
 
-	private PlayerUtils() {
-	}
-
 	private ConcurrentHashMap<String, ItemStack> skulls = new ConcurrentHashMap<String, ItemStack>();
-
-	@SuppressWarnings("deprecation")
-	public void loadPlayerSkull(String playerName) {
-		if (!skulls.containsKey(playerName)) {
-			skulls.put(playerName, new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack());
-		}
-	}
-
-	public void loadSkulls() {
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				for (String playerName : UserManager.getInstance().getAllPlayerNames()) {
-					plugin.extraDebug("Loading skull: " + playerName);
-					loadPlayerSkull(playerName);
-				}
-				plugin.debug("All skulls loaded");
-			}
-		});
-	}
-
-	@SuppressWarnings("deprecation")
-	public ItemStack getPlayerSkull(String playerName) {
-		if (skulls.containsKey(playerName)) {
-			return skulls.get(playerName);
-		} else {
-			ItemStack item = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
-			skulls.put(playerName, item);
-			return item;
-		}
-	}
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+
+	private PlayerUtils() {
+	}
 
 	/**
 	 * Gets the player meta.
@@ -86,22 +54,6 @@ public class PlayerUtils {
 		}
 		return null;
 	}
-
-	/*
-	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
-	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
-	 * String name = "";
-	 * java.util.UUID u = java.util.UUID.fromString(uuid); Player player =
-	 * Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
-	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
-	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
-	 * Thread.getInstance().getThread().getName(u); } } else { name =
-	 * player.getName(); }
-	 * if (name.equals("")) { name = UserManager.getInstance().getUser(new
-	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
-	 * name; } name = "Error getting name"; } return name;
-	 * }
-	 */
 
 	public String getPlayerName(User user, String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null") || uuid.isEmpty()) {
@@ -141,6 +93,17 @@ public class PlayerUtils {
 
 	}
 
+	@SuppressWarnings("deprecation")
+	public ItemStack getPlayerSkull(String playerName) {
+		if (skulls.containsKey(playerName)) {
+			return skulls.get(playerName);
+		} else {
+			ItemStack item = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
+			skulls.put(playerName, item);
+			return item;
+		}
+	}
+
 	public Player getRandomOnlinePlayer() {
 		@SuppressWarnings("unchecked")
 		ArrayList<Player> players = (ArrayList<Player>) Bukkit.getOnlinePlayers();
@@ -150,6 +113,22 @@ public class PlayerUtils {
 			return null;
 		}
 	}
+
+	/*
+	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
+	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
+	 * String name = "";
+	 * java.util.UUID u = java.util.UUID.fromString(uuid); Player player =
+	 * Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
+	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
+	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
+	 * Thread.getInstance().getThread().getName(u); } } else { name =
+	 * player.getName(); }
+	 * if (name.equals("")) { name = UserManager.getInstance().getUser(new
+	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
+	 * name; } name = "Error getting name"; } return name;
+	 * }
+	 */
 
 	public Player getRandomPlayer() {
 		return Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
@@ -367,8 +346,29 @@ public class PlayerUtils {
 				return true;
 			}
 		}
-		plugin.extraDebug("Player not exists");
+		plugin.extraDebug("Player " + name + " does not exist");
 		return false;
+	}
+
+	@SuppressWarnings("deprecation")
+	public void loadPlayerSkull(String playerName) {
+		if (!skulls.containsKey(playerName)) {
+			skulls.put(playerName, new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack());
+		}
+	}
+
+	public void loadSkulls() {
+		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				for (String playerName : UserManager.getInstance().getAllPlayerNames()) {
+					plugin.extraDebug("Loading skull: " + playerName);
+					loadPlayerSkull(playerName);
+				}
+				plugin.debug("All skulls loaded");
+			}
+		});
 	}
 
 	/**

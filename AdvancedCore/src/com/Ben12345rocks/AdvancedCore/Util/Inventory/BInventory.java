@@ -499,6 +499,16 @@ public class BInventory implements Listener {
 		return;
 	}
 
+	private void openInv(Player player, Inventory inv) {
+		Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				player.openInventory(inv);
+			}
+		});
+	}
+
 	/**
 	 * Open inventory.
 	 *
@@ -578,16 +588,6 @@ public class BInventory implements Listener {
 		inv.setItem(maxInvSize - 1, nextItem);
 
 		openInv(player, inv);
-	}
-
-	private void openInv(Player player, Inventory inv) {
-		Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				player.openInventory(inv);
-			}
-		});
 	}
 
 	/**
