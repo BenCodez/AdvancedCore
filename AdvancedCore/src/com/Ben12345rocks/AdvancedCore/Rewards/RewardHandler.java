@@ -189,6 +189,10 @@ public class RewardHandler {
 			reward = "EmptyName";
 		}
 
+		if (reward.equalsIgnoreCase("examplebasic") || reward.equalsIgnoreCase("exampleadvanced")) {
+			plugin.getPlugin().getLogger().warning("Using example rewards as a reward, becarefull");
+		}
+
 		return new Reward(reward);
 	}
 

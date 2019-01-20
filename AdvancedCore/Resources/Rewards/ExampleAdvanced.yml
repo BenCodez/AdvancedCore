@@ -10,6 +10,7 @@
 
 # You can just remove values you don't want (just delete it)
 # If you just want money just have a reward file containg only "Money: 100", for example
+# Don't use this file as a reward, example only
 
 # This is the advanced example, if you only want an item or command then look
 # at the basic example, you can simply copy and paste from here what you want
@@ -30,7 +31,6 @@ Timed:
   Minute: 0
 
 # Chance out of 100
-# Must be an integer
 # Set to 0 or 100 for always, or delete this line to disable chance
 # Will not give any rewards below unless chance is lucky or disabled
 Chance: 40
@@ -46,6 +46,7 @@ Random:
   # If this value is true it will pick a random reward in the Rewards list
   # if false, all rewards are given
   # Value is true if not specified
+  # Can also use RandomReward (a few lines below) to give a random reward only
   PickRandom: true
   # Rewards if chance is lucky, can be random depending in option above
   # Don't set this reward as a possible reward, may cause infinite loop
@@ -62,7 +63,7 @@ RandomReward: []
 
 # Require permission to give this reward file
 # Permission is AdvancedCore.Reward.(REWARDNAME) by default
-# E.g: AdvancedCore.Reward.ExampleReward
+# E.g: AdvancedCore.Reward.ExampleAdvanced
 RequirePermission: false
 
 # Permission required
@@ -128,14 +129,12 @@ Choices:
         Player: '&aYou picked %choice%'
     
 # Only for some GUI's
-# Requires for choice rewards
+# Required for choice rewards
 # not a reward
 DisplayItem:
   Material: 'DIAMOND'
   Name: '&aAdvancedReward'
   Amount: 1
-  
-  
 
 # Worlds to give this reward in
 # Player will be given this world once he is in this world
