@@ -22,6 +22,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
@@ -115,6 +116,11 @@ public class ItemBuilder {
 					currentAmount = amount;
 				} else {
 					currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
+				}
+
+				int power = data.getInt("Power", -1);
+				if (power > 0) {
+					setFireworkPower(power);
 				}
 
 				is = new ItemStack(material, currentAmount);
@@ -510,6 +516,18 @@ public class ItemBuilder {
 			return toItemStack();
 		}
 		return is;
+	}
+
+	public ItemBuilder setFireworkPower(int power) {
+		try {
+			FireworkMeta meta = (FireworkMeta) is.getItemMeta();
+			meta.setPower(power);
+			is.setItemMeta(meta);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return this;
 	}
 
 	/**

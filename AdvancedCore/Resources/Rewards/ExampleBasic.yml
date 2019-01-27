@@ -58,6 +58,9 @@ Items:
     Enchants:
       unbreaking: 1
       
+    # Set power of firework
+    #Power: 1
+      
     # Potions:
       # SPEED:
         # Duration: 20
@@ -69,14 +72,14 @@ Items:
 # Use negative to take money
 Money: 1000
 
-# Pick random number between min and max amount
+# Pick random number between min and max money amount
 #MinMoney: 100
 #MaxMoney: 3000
 
 # Give player experience
 EXP: 100
 
-# Pick a random number between min and max amount to give
+# Pick a random number between min and max EXP amount to give
 #MinEXP: 100
 #MaxEXP: 1000
 
