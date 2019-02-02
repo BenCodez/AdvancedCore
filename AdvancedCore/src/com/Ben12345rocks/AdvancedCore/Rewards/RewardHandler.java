@@ -243,8 +243,8 @@ public class RewardHandler {
 
 	@SuppressWarnings("unchecked")
 	public void giveReward(User user, ConfigurationSection data, String path, RewardOptions rewardOptions) {
-		if (rewardOptions.isOnline() && !user.isOnline()) {
-			rewardOptions.setOnline(false);
+		if (rewardOptions.isOnlineSet()) {
+			rewardOptions.setOnline(user.isOnline());
 		}
 		if (data == null) {
 			plugin.getPlugin().getLogger().warning("ConfigurationSection is null, failing to give reward");

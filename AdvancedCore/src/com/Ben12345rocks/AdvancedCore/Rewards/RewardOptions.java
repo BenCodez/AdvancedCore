@@ -2,9 +2,15 @@ package com.Ben12345rocks.AdvancedCore.Rewards;
 
 import java.util.HashMap;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class RewardOptions {
 
 	private boolean online = true;
+	@Getter
+	@Setter
+	private boolean onlineSet = false;
 
 	private boolean giveOffline = true;
 
@@ -71,6 +77,7 @@ public class RewardOptions {
 
 	public RewardOptions setOnline(boolean online) {
 		this.online = online;
+		this.onlineSet = true;
 		return this;
 	}
 
