@@ -143,6 +143,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean preloadSkulls;
 
+	@Getter
+	@Setter
+	private boolean waitUntilLoggedIn;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -188,6 +192,8 @@ public class AdvancedCoreConfigOptions {
 			processRewards = configData.getBoolean("ProcessRewards", true);
 			clearCacheOnJoin = configData.getBoolean("ClearCacheOnJoin", false);
 			preloadSkulls = configData.getBoolean("PreloadSkulls", true);
+
+			waitUntilLoggedIn = configData.getBoolean("WaitUntilLoggedIn", true);
 
 			ConfigurationSection soundData = configData.getConfigurationSection("ClickSound");
 			if (soundData != null) {

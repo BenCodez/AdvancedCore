@@ -48,6 +48,10 @@ public class PlayerJoinEvent implements Listener {
 
 			@Override
 			public void run() {
+				if (AdvancedCoreHook.getInstance().isAuthMeLoaded()
+						&& AdvancedCoreHook.getInstance().getOptions().isWaitUntilLoggedIn()) {
+					return;
+				}
 
 				Player player = event.getPlayer();
 

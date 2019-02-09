@@ -31,6 +31,7 @@ import com.Ben12345rocks.AdvancedCore.CommandAPI.TabCompleteHandle;
 import com.Ben12345rocks.AdvancedCore.CommandAPI.TabCompleteHandler;
 import com.Ben12345rocks.AdvancedCore.Commands.Executor.ValueRequestInputCommand;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
+import com.Ben12345rocks.AdvancedCore.Listeners.AuthMeLogin;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerJoinEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.PluginUpdateVersionEvent;
 import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
@@ -127,6 +128,9 @@ public class AdvancedCoreHook {
 
 	@Getter
 	private ArrayList<String> bannedPlayers = new ArrayList<String>();
+
+	@Getter
+	private boolean authMeLoaded = false;
 
 	private AdvancedCoreHook() {
 	}
@@ -385,6 +389,11 @@ public class AdvancedCoreHook {
 		}
 
 		Bukkit.getPluginManager().registerEvents(BackupHandle.getInstance(), getPlugin());
+
+		if (Bukkit.getPluginManager().getPlugin("authme") != null) {
+			authMeLoaded = true;
+			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(), getPlugin());
+		}
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "'");
 	}
