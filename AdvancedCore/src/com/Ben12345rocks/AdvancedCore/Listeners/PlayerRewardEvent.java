@@ -46,7 +46,7 @@ public class PlayerRewardEvent extends Event {
 	 *            rewardOptions
 	 */
 	public PlayerRewardEvent(Reward reward, User player, RewardOptions rewardOptions) {
-		super();
+		super(true);
 		setPlayer(player);
 		setReward(reward);
 		setRewardOptions(rewardOptions);

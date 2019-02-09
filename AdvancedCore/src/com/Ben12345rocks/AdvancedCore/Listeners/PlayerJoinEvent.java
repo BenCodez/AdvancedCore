@@ -51,30 +51,43 @@ public class PlayerJoinEvent implements Listener {
 
 				Player player = event.getPlayer();
 
-				if (player != null
-						&& UserManager.getInstance().getAllUUIDs().contains(player.getUniqueId().toString())) {
-					boolean userExist = UserManager.getInstance()
-							.userExist(new UUID(event.getPlayer().getUniqueId().toString()));
-					if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
-							&& AdvancedCoreHook.getInstance().getMysql() != null) {
-						if (userExist) {
-							AdvancedCoreHook.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
-						}
-					}
+				if (player != null) {
+					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(player);
+					Bukkit.getPluginManager().callEvent(login);
 
-					if (userExist) {
-						User user = UserManager.getInstance().getUser(player);
-
-						user.checkOfflineRewards();
-						user.setLastOnline(System.currentTimeMillis());
-						user.updateName();
+					if (login.isCancelled()) {
+						return;
 					}
-					AdvancedCoreHook.getInstance().getUuidNameCache().put(player.getUniqueId().toString(),
-							player.getName());
 
 				}
+
 			}
 		}, 10L);
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+	public void onJoin(AdvancedCoreLoginEvent event) {
+		if (event.isUserInStorage()) {
+			Player player = event.getPlayer();
+			boolean userExist = UserManager.getInstance()
+					.userExist(new UUID(event.getPlayer().getUniqueId().toString()));
+			if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
+					&& AdvancedCoreHook.getInstance().getMysql() != null) {
+				if (userExist) {
+					AdvancedCoreHook.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
+				}
+			}
+
+			if (userExist) {
+				User user = UserManager.getInstance().getUser(player);
+
+				user.checkOfflineRewards();
+				user.setLastOnline(System.currentTimeMillis());
+				user.updateName();
+			}
+			AdvancedCoreHook.getInstance().getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
+
+		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
