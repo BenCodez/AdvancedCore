@@ -294,6 +294,12 @@ public abstract class CommandHandler {
 		return this;
 	}
 
+	private int argOffSet = 0;
+
+	public void setArgSet(int arg) {
+		argOffSet = arg;
+	}
+
 	public boolean isCommand(String arg) {
 		if (getArgs().length > 0) {
 			for (String str : getArgs()[0].split("&")) {
@@ -331,6 +337,18 @@ public abstract class CommandHandler {
 	 * @return true, if successful
 	 */
 	public boolean runCommand(CommandSender sender, String[] args) {
+		String[] list = new String[args.length + argOffSet];
+		if (argOffSet != 0) {
+			if (argOffSet < 0) {
+				for (int i = 0; i < args.length && i - argOffSet < args.length; i++) {
+					list[i] = args[i - argOffSet];
+				}
+			}
+		}
+		for (int i = 0; i < list.length; i++) {
+			args[i] = list[i];
+		}
+
 		if (args.length >= this.args.length) {
 			if (this.args.length != args.length && !hasArg("(list)")) {
 				return false;
