@@ -257,6 +257,7 @@ public class Table {
 	}
 
 	public List<Column> getRowsNames() {
+		checkColumn(new Column("PlayerName", DataType.STRING));
 		List<Column> result = new ArrayList<Column>();
 		String query = "SELECT PlayerName FROM " + getName();
 
