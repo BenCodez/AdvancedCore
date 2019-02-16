@@ -187,10 +187,6 @@
 			<url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
 		</repository>
 		<repository>
-			<id>vault-repo</id>
-			<url>http://nexus.hc.to/content/repositories/pub_releases</url>
-		</repository>
-		<repository>
 			<id>placeholderapi</id>
 			<url>http://repo.extendedclip.com/content/repositories/placeholderapi/</url>
 		</repository>
@@ -206,10 +202,6 @@
 			<id>bungee-repo</id>
 			<url>https://oss.sonatype.org/content/groups/public/</url>
 		</repository>
-		<repository>
-			<id>Auth-me</id>
-			<url>https://repo.codemc.org/repository/maven-public/</url>
-		</repository>
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -222,7 +214,8 @@
 			<groupId>net.milkbowl.vault</groupId>
 			<artifactId>VaultAPI</artifactId>
 			<version>1.6</version>
-			<scope>provided</scope>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/Jars/Vault.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>me.clip</groupId>
@@ -266,7 +259,8 @@
 			<groupId>fr.xephi</groupId>
 			<artifactId>authme</artifactId>
 			<version>LATEST</version>
-			<scope>provided</scope>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/Jars/AuthMe-5.4.0.jar</systemPath>
 		</dependency>
 	</dependencies>
 </project>
