@@ -330,17 +330,7 @@ public abstract class CommandHandler {
 	 *            the args
 	 * @return true, if successful
 	 */
-	public boolean runCommand(CommandSender sender, String[] argsOld) {
-
-		if (argsOld.length > 0 && argsOld[0].equalsIgnoreCase("AdvancedCore")) {
-			String[] list = new String[argsOld.length - 1];
-			for (int i = 1; i < argsOld.length; i++) {
-				list[i - 1] = argsOld[i];
-			}
-			argsOld = list;
-		}
-		String[] args = argsOld;
-
+	public boolean runCommand(CommandSender sender, String[] args) {
 		if (args.length >= this.args.length) {
 			if (this.args.length != args.length && !hasArg("(list)")) {
 				return false;
@@ -375,11 +365,20 @@ public abstract class CommandHandler {
 				return true;
 			}
 
+			if (args.length > 0 && args[0].equalsIgnoreCase("AdvancedCore")) {
+				String[] list = new String[args.length - 1];
+				for (int i = 1; i < args.length; i++) {
+					list[i - 1] = args[i];
+				}
+				args = list;
+			}
+			String[] argsNew = args;
+
 			Bukkit.getServer().getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
 
 				@Override
 				public void run() {
-					execute(sender, args);
+					execute(sender, argsNew);
 				}
 			});
 
