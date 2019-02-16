@@ -205,7 +205,8 @@ public class MiscUtils {
 	 * @return the day from mili
 	 */
 	public int getDayFromMili(long time) {
-		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getDayOfMonth();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
+				.plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet()).getDayOfMonth();
 	}
 
 	/**
@@ -216,7 +217,8 @@ public class MiscUtils {
 	 * @return the hour from mili
 	 */
 	public int getHourFromMili(long time) {
-		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getHour();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
+				.plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet()).getHour();
 	}
 
 	/**
@@ -227,7 +229,8 @@ public class MiscUtils {
 	 * @return the minutes from mili
 	 */
 	public int getMinutesFromMili(long time) {
-		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getMinute();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
+				.plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet()).getMinute();
 	}
 
 	/**
@@ -238,7 +241,8 @@ public class MiscUtils {
 	 * @return the month from mili
 	 */
 	public int getMonthFromMili(long time) {
-		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getMonthValue();
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
+				.plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet()).getMonthValue();
 	}
 
 	/**
