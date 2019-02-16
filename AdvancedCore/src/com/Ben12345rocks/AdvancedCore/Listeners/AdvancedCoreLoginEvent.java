@@ -27,7 +27,6 @@ public class AdvancedCoreLoginEvent extends Event {
 		return handlers;
 	}
 
-	/** The player. */
 	@Getter
 	@Setter
 	private Player player;
