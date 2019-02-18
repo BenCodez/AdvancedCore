@@ -424,7 +424,23 @@ public abstract class CommandHandler {
 	}
 
 	public CommandHandler withPerm(String perm) {
-		this.perm = perm;
+		if (!this.perm.isEmpty()) {
+			this.perm = this.perm + "|" + perm;
+		} else {
+			this.perm = perm;
+		}
+		return this;
+	}
+
+	public CommandHandler withPerm(String perm, boolean add) {
+		if (!add) {
+			return this;
+		}
+		if (!this.perm.isEmpty()) {
+			this.perm = this.perm + "|" + perm;
+		} else {
+			this.perm = perm;
+		}
 		return this;
 	}
 
