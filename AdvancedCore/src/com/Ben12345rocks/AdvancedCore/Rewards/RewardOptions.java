@@ -102,4 +102,9 @@ public class RewardOptions {
 		this.suffix = suffix;
 	}
 
+	public RewardOptions addPlaceholder(String arg1, String arg2) {
+		getPlaceholders().put(arg1, arg2);
+		return this;
+	}
+
 }

@@ -108,6 +108,18 @@ public class CommandLoader {
 				sender.sendMessage("Gave " + args[2] + " the reward file " + args[1]);
 			}
 		});
+		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)", "(Text)", "(Text)" },
+				permPrefix + ".GiveReward", "Give a player a reward file", true) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				User user = UserManager.getInstance().getUser(args[2]);
+				RewardHandler.getInstance().giveReward(user, args[1],
+						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
+
+				sender.sendMessage("Gave " + args[2] + " the reward file " + args[1]);
+			}
+		});
 		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report", "Create Report File") {
 
 			@Override
