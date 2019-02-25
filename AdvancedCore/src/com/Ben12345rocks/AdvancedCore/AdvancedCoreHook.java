@@ -220,14 +220,6 @@ public class AdvancedCoreHook {
 	public void debug(Plugin plug, String msg) {
 		if (getOptions().isDebug()) {
 			plug.getLogger().info("Debug: " + msg);
-			if (logger != null) {
-				if (getOptions().isLogDebugToFile()) {
-					String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-					logger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
-				}
-			} else {
-				loadLogger();
-			}
 			if (getOptions().isDebugIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (player.hasPermission(plugin.getName() + ".Debug")) {
@@ -236,6 +228,14 @@ public class AdvancedCoreHook {
 					}
 				}
 			}
+		}
+		if (logger != null) {
+			if (getOptions().isLogDebugToFile()) {
+				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
+				logger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
+			}
+		} else {
+			loadLogger();
 		}
 	}
 
