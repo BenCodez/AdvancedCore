@@ -402,7 +402,7 @@ public class AdvancedCoreHook {
 	 * Load logger
 	 */
 	public void loadLogger() {
-		if (getOptions().isLogDebugToFile() && logger == null) {
+		if (getOptions().isLogDebugToFile() && logger == null && plugin != null) {
 			logger = new Logger(plugin, new File(plugin.getDataFolder(), "Log" + File.separator + "Log.txt"));
 		}
 	}
