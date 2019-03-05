@@ -347,17 +347,6 @@ public class BInventory implements Listener {
 		return this;
 	}
 
-	private void playSound(Player player) {
-		if (playerSound) {
-			Sound sound = AdvancedCoreHook.getInstance().getOptions().getClickSoundSound();
-			if (sound != null) {
-				player.playSound(player.getLocation(), sound,
-						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundVolume(),
-						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundPitch());
-			}
-		}
-	}
-
 	private void onClick(InventoryClickEvent event, BInventoryButton b) {
 		playSound((Player) event.getWhoClicked());
 		b.onClick(new ClickEvent(event, b), this);
@@ -604,6 +593,17 @@ public class BInventory implements Listener {
 		inv.setItem(maxInvSize - 1, nextItem);
 
 		openInv(player, inv);
+	}
+
+	private void playSound(Player player) {
+		if (playerSound) {
+			Sound sound = AdvancedCoreHook.getInstance().getOptions().getClickSoundSound();
+			if (sound != null) {
+				player.playSound(player.getLocation(), sound,
+						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundVolume(),
+						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundPitch());
+			}
+		}
 	}
 
 	/**

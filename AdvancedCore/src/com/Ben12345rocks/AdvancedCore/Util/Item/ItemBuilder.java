@@ -518,18 +518,6 @@ public class ItemBuilder {
 		return is;
 	}
 
-	public ItemBuilder setFireworkPower(int power) {
-		try {
-			FireworkMeta meta = (FireworkMeta) is.getItemMeta();
-			meta.setPower(power);
-			is.setItemMeta(meta);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return this;
-	}
-
 	/**
 	 * Remove a certain enchant from the item.
 	 *
@@ -627,6 +615,18 @@ public class ItemBuilder {
 	@Deprecated
 	public ItemBuilder setDyeColor(DyeColor color) {
 		is.setDurability(color.getDyeData());
+		return this;
+	}
+
+	public ItemBuilder setFireworkPower(int power) {
+		try {
+			FireworkMeta meta = (FireworkMeta) is.getItemMeta();
+			meta.setPower(power);
+			is.setItemMeta(meta);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 		return this;
 	}
 

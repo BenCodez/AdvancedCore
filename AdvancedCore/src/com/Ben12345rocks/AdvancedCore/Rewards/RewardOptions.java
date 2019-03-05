@@ -26,6 +26,11 @@ public class RewardOptions {
 	public RewardOptions() {
 	}
 
+	public RewardOptions addPlaceholder(String arg1, String arg2) {
+		getPlaceholders().put(arg1, arg2);
+		return this;
+	}
+
 	public HashMap<String, String> getPlaceholders() {
 		return placeholders;
 	}
@@ -100,11 +105,6 @@ public class RewardOptions {
 	 */
 	public void setSuffix(String suffix) {
 		this.suffix = suffix;
-	}
-
-	public RewardOptions addPlaceholder(String arg1, String arg2) {
-		getPlaceholders().put(arg1, arg2);
-		return this;
 	}
 
 }

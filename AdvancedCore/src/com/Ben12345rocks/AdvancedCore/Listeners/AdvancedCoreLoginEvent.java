@@ -39,10 +39,6 @@ public class AdvancedCoreLoginEvent extends Event {
 		setPlayer(player);
 	}
 
-	public boolean isUserInStorage() {
-		return UserManager.getInstance().getAllUUIDs().contains(player.getUniqueId().toString());
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * @see org.bukkit.event.Event#getHandlers()
@@ -59,6 +55,10 @@ public class AdvancedCoreLoginEvent extends Event {
 	 */
 	public boolean isCancelled() {
 		return cancelled;
+	}
+
+	public boolean isUserInStorage() {
+		return UserManager.getInstance().getAllUUIDs().contains(player.getUniqueId().toString());
 	}
 
 	/**

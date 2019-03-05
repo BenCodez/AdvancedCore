@@ -34,6 +34,31 @@ public class PlayerJoinEvent implements Listener {
 		PlayerJoinEvent.plugin = plugin;
 	}
 
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+	public void onJoin(AdvancedCoreLoginEvent event) {
+		if (event.isUserInStorage()) {
+			Player player = event.getPlayer();
+			boolean userExist = UserManager.getInstance()
+					.userExist(new UUID(event.getPlayer().getUniqueId().toString()));
+			if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
+					&& AdvancedCoreHook.getInstance().getMysql() != null) {
+				if (userExist) {
+					AdvancedCoreHook.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
+				}
+			}
+
+			if (userExist) {
+				User user = UserManager.getInstance().getUser(player);
+
+				user.checkOfflineRewards();
+				user.setLastOnline(System.currentTimeMillis());
+				user.updateName();
+			}
+			AdvancedCoreHook.getInstance().getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
+
+		}
+	}
+
 	/**
 	 * On player login.
 	 *
@@ -67,31 +92,6 @@ public class PlayerJoinEvent implements Listener {
 
 			}
 		}, 10L);
-	}
-
-	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-	public void onJoin(AdvancedCoreLoginEvent event) {
-		if (event.isUserInStorage()) {
-			Player player = event.getPlayer();
-			boolean userExist = UserManager.getInstance()
-					.userExist(new UUID(event.getPlayer().getUniqueId().toString()));
-			if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
-					&& AdvancedCoreHook.getInstance().getMysql() != null) {
-				if (userExist) {
-					AdvancedCoreHook.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
-				}
-			}
-
-			if (userExist) {
-				User user = UserManager.getInstance().getUser(player);
-
-				user.checkOfflineRewards();
-				user.setLastOnline(System.currentTimeMillis());
-				user.updateName();
-			}
-			AdvancedCoreHook.getInstance().getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
-
-		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
