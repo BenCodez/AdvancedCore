@@ -27,6 +27,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.inventory.meta.tags.CustomItemTagContainer;
+import org.bukkit.inventory.meta.tags.ItemTagType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -42,6 +44,8 @@ import com.google.common.collect.Multimap;
  * Credit to NonameSL for creating this
  *
  * Modified by Ben12345rocks
+ * 
+ * @param <T>
  *
  */
 public class ItemBuilder {
@@ -628,6 +632,24 @@ public class ItemBuilder {
 		}
 
 		return this;
+	}
+
+	public ItemBuilder setCustomData(String key, String value) {
+		NamespacedKey namespace = new NamespacedKey(AdvancedCoreHook.getInstance().getPlugin(), key);
+		ItemMeta itemMeta = is.getItemMeta();
+		itemMeta.getCustomTagContainer().setCustomTag(namespace, ItemTagType.STRING, value);
+		is.setItemMeta(itemMeta);
+		return this;
+	}
+
+	public String getCustomData(String key) {
+		NamespacedKey namespace = new NamespacedKey(AdvancedCoreHook.getInstance().getPlugin(), key);
+		ItemMeta itemMeta = is.getItemMeta();
+		CustomItemTagContainer tagContainer = itemMeta.getCustomTagContainer();
+		if (tagContainer.hasCustomTag(namespace, ItemTagType.STRING)) {
+			return tagContainer.getCustomTag(namespace, ItemTagType.STRING);
+		}
+		return null;
 	}
 
 	/**
