@@ -131,7 +131,7 @@ public class AdvancedCoreHook {
 
 	@Getter
 	private boolean authMeLoaded = false;
-
+	
 	private AdvancedCoreHook() {
 	}
 

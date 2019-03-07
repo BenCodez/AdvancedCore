@@ -580,12 +580,22 @@ public class BInventory implements Listener {
 			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
 		}
 		if (prevItem == null) {
-			prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1)
-					.setName(AdvancedCoreHook.getInstance().getOptions().getPrevPageTxt()).toItemStack(player);
+			if (AdvancedCoreHook.getInstance().getOptions().getPrevItem() != null) {
+				prevItem = new ItemBuilder(AdvancedCoreHook.getInstance().getOptions().getPrevItem())
+						.toItemStack(player);
+			} else {
+				prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aPrevious Page")
+						.toItemStack(player);
+			}
 		}
 		if (nextItem == null) {
-			nextItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1)
-					.setName(AdvancedCoreHook.getInstance().getOptions().getNextPageTxt()).toItemStack(player);
+			if (AdvancedCoreHook.getInstance().getOptions().getNextItem() != null) {
+				prevItem = new ItemBuilder(AdvancedCoreHook.getInstance().getOptions().getNextItem())
+						.toItemStack(player);
+			} else {
+				nextItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aNext Page")
+						.toItemStack(player);
+			}
 		}
 
 		inv.setItem(maxInvSize - 9, prevItem);

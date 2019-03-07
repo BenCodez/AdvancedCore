@@ -60,13 +60,6 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean autoKillInvs = true;
 
-	@Getter
-	@Setter
-	private String prevPageTxt = "&aPrevious Page";
-	@Getter
-	@Setter
-	private String nextPageTxt = "&aNext Page";
-
 	@Deprecated
 	@Getter
 	@Setter
@@ -147,6 +140,14 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean waitUntilLoggedIn;
 
+	@Getter
+	@Setter
+	private ConfigurationSection prevItem;
+
+	@Getter
+	@Setter
+	private ConfigurationSection nextItem;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -170,8 +171,8 @@ public class AdvancedCoreConfigOptions {
 			sendScoreboards = configData.getBoolean("SendScoreboards", true);
 			alternateUUIDLookUp = configData.getBoolean("AlternateUUIDLookup", false);
 			autoKillInvs = configData.getBoolean("AutoKillInvs", true);
-			prevPageTxt = configData.getString("Format.PrevPage", "&aPrevious Page");
-			nextPageTxt = configData.getString("Format.NextPage", "&aNext Page");
+			prevItem = configData.getConfigurationSection("Format.PrevItem");
+			nextItem = configData.getConfigurationSection("Format.NextItem");
 			purgeOldData = configData.getBoolean("PurgeOldData");
 			purgeMinimumDays = configData.getInt("PurgeMin", 90);
 			checkNameMojang = configData.getBoolean("CheckNameMojang", false);
