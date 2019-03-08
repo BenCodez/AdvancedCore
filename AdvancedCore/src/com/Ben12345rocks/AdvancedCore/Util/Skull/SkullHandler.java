@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -54,21 +55,29 @@ public class SkullHandler {
 	}
 
 	@SuppressWarnings("deprecation")
-	public void loadSkull(String playerName) {
+	public void loadSkull(final String playerName) {
 		if (playerName == null || playerName.isEmpty()) {
-			AdvancedCoreHook.getInstance().debug("Invalid skull name");
+			// AdvancedCoreHook.getInstance().debug("Invalid skull name");
 			return;
 		}
-		ItemStack s = new ItemStack(Material.PLAYER_HEAD, 1);
-		SkullMeta meta = (SkullMeta) s.getItemMeta();
-		meta.setOwner(playerName);
-		s.setItemMeta(meta);
+		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
-		try {
-			skulls.put(playerName, asNMSCopy.invoke(null, s));
-		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-			e.printStackTrace();
-		}
+			@Override
+			public void run() {
+				ItemStack s = new ItemStack(Material.PLAYER_HEAD, 1);
+				SkullMeta meta = (SkullMeta) s.getItemMeta();
+				meta.setOwner(playerName);
+				s.setItemMeta(meta);
+
+				try {
+					skulls.put(playerName, asNMSCopy.invoke(null, s));
+				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+					e.printStackTrace();
+				}
+				AdvancedCoreHook.getInstance().debug("Loading skull: " + playerName);
+
+			}
+		});
 
 	}
 
