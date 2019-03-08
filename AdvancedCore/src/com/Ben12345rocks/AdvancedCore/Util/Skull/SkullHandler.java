@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 
@@ -54,7 +55,11 @@ public class SkullHandler {
 
 	@SuppressWarnings("deprecation")
 	public void loadSkull(String playerName) {
-		org.bukkit.inventory.ItemStack s = new org.bukkit.inventory.ItemStack(Material.PLAYER_HEAD, 1);
+		if (playerName == null || playerName.isEmpty()) {
+			AdvancedCoreHook.getInstance().debug("Invalid skull name");
+			return;
+		}
+		ItemStack s = new ItemStack(Material.PLAYER_HEAD, 1);
 		SkullMeta meta = (SkullMeta) s.getItemMeta();
 		meta.setOwner(playerName);
 		s.setItemMeta(meta);
