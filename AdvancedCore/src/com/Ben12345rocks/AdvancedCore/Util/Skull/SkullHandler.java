@@ -14,6 +14,9 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.Thread.Thread;
+import com.Ben12345rocks.AdvancedCore.UserManager.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 
 public class SkullHandler {
 
@@ -47,6 +50,24 @@ public class SkullHandler {
 		} catch (SecurityException | NoSuchMethodException e) {
 			e.printStackTrace();
 		}
+
+		AdvancedCoreHook.getInstance().addUserStartup(new UserStartup() {
+
+			@Override
+			public void onStartUp(User user) {
+				loadSkull(user.getPlayerName());
+			}
+
+			@Override
+			public void onStart() {
+
+			}
+
+			@Override
+			public void onFinish() {
+
+			}
+		});
 	}
 
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
@@ -91,6 +112,7 @@ public class SkullHandler {
 
 	}
 
+	@SuppressWarnings("deprecation")
 	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
 		if (hasSkull(playerName)) {
 			try {
@@ -99,8 +121,10 @@ public class SkullHandler {
 				e.printStackTrace();
 			}
 
+		} else {
+			loadSkull(playerName);
 		}
-		return null;
+		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
 	}
 
 	public boolean hasSkull(String playerName) {
