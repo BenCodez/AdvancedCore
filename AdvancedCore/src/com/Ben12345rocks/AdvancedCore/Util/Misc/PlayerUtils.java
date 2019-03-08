@@ -19,6 +19,7 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Skull.SkullHandler;
 import com.google.common.collect.Iterables;
 
 public class PlayerUtils {
@@ -28,8 +29,6 @@ public class PlayerUtils {
 	public static PlayerUtils getInstance() {
 		return instance;
 	}
-
-	private ConcurrentHashMap<String, ItemStack> skulls = new ConcurrentHashMap<String, ItemStack>();
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
@@ -95,11 +94,11 @@ public class PlayerUtils {
 
 	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName) {
-		if (skulls.containsKey(playerName)) {
-			return skulls.get(playerName);
+		if (SkullHandler.getInstance().hasSkull(playerName)) {
+			return SkullHandler.getInstance().getItemStack(playerName);
 		} else {
 			ItemStack item = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
-			skulls.put(playerName, item);
+			SkullHandler.getInstance().loadSkull(playerName);
 			return item;
 		}
 	}
@@ -348,27 +347,6 @@ public class PlayerUtils {
 		}
 		plugin.extraDebug("Player " + name + " does not exist");
 		return false;
-	}
-
-	@SuppressWarnings("deprecation")
-	public void loadPlayerSkull(String playerName) {
-		if (!skulls.containsKey(playerName)) {
-			skulls.put(playerName, new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack());
-		}
-	}
-
-	public void loadSkulls() {
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				for (String playerName : UserManager.getInstance().getAllPlayerNames()) {
-					plugin.extraDebug("Loading skull: " + playerName);
-					loadPlayerSkull(playerName);
-				}
-				plugin.debug("All skulls loaded");
-			}
-		});
 	}
 
 	/**

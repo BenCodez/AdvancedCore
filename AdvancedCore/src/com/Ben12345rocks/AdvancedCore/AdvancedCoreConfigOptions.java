@@ -134,10 +134,6 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	private boolean preloadSkulls;
-
-	@Getter
-	@Setter
 	private boolean waitUntilLoggedIn;
 
 	@Getter
@@ -192,7 +188,6 @@ public class AdvancedCoreConfigOptions {
 			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
 			processRewards = configData.getBoolean("ProcessRewards", true);
 			clearCacheOnJoin = configData.getBoolean("ClearCacheOnJoin", false);
-			preloadSkulls = configData.getBoolean("PreloadSkulls", true);
 
 			waitUntilLoggedIn = configData.getBoolean("WaitUntilLoggedIn", true);
 

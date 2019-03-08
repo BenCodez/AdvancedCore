@@ -57,7 +57,6 @@ import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Table;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.PluginMessage.PluginMessage;
 import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
@@ -131,7 +130,7 @@ public class AdvancedCoreHook {
 
 	@Getter
 	private boolean authMeLoaded = false;
-	
+
 	private AdvancedCoreHook() {
 	}
 
@@ -375,10 +374,6 @@ public class AdvancedCoreHook {
 		loadTabComplete();
 
 		loadConfig();
-
-		if (getOptions().isPreloadSkulls()) {
-			PlayerUtils.getInstance().loadSkulls();
-		}
 
 		UserManager.getInstance().purgeOldPlayers();
 
