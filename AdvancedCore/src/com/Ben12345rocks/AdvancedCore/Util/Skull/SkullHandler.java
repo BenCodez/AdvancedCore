@@ -1,6 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack;
@@ -17,7 +17,7 @@ public class SkullHandler {
 		return instance;
 	}
 
-	private HashMap<String, ItemStack> skulls = new HashMap<String, ItemStack>();
+	private ConcurrentHashMap<String, ItemStack> skulls = new ConcurrentHashMap<String, ItemStack>();
 
 	public void loadSkull(Player player) {
 		loadSkull(player.getName());
