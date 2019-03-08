@@ -60,6 +60,9 @@ public class SkullHandler {
 			// AdvancedCoreHook.getInstance().debug("Invalid skull name");
 			return;
 		}
+		if (hasSkull(playerName)) {
+			return;
+		}
 		Thread.getInstance().run(new Runnable() {
 
 			@Override
@@ -94,7 +97,12 @@ public class SkullHandler {
 	}
 
 	public boolean hasSkull(String playerName) {
-		return skulls.containsKey(playerName);
+		if (skulls.containsKey(playerName)) {
+			if (skulls.get(playerName) != null) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 }
