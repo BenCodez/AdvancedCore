@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
+import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 
 public class SkullHandler {
 
@@ -24,8 +24,7 @@ public class SkullHandler {
 	}
 
 	public void load() {
-		craftItemStack = NMSManager.getInstance()
-				.getNMSClass("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack");
+		craftItemStack = ReflectionUtils.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack");
 		try {
 			asNMSCopy = craftItemStack.getDeclaredField("asNMSCopy");
 			asNMSCopy.setAccessible(true);
