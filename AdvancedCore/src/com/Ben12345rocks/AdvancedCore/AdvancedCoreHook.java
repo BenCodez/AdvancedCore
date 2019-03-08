@@ -60,6 +60,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.PluginMessage.PluginMessage;
 import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
+import com.Ben12345rocks.AdvancedCore.Util.Skull.SkullHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.UpdateDownloader;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
@@ -355,6 +356,8 @@ public class AdvancedCoreHook {
 	 */
 	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
+
+		SkullHandler.getInstance().load();
 		loadSignAPI();
 		loadUUIDs();
 		getOptions().setPermPrefix(plugin.getName());
