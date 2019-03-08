@@ -4,7 +4,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -13,6 +12,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 
 public class SkullHandler {
 
@@ -60,7 +60,7 @@ public class SkullHandler {
 			// AdvancedCoreHook.getInstance().debug("Invalid skull name");
 			return;
 		}
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+		Thread.getInstance().run(new Runnable() {
 
 			@Override
 			public void run() {
