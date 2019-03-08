@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
-import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Material;
@@ -8,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 
 public class SkullHandler {
@@ -16,26 +18,30 @@ public class SkullHandler {
 
 	@SuppressWarnings("rawtypes")
 	private Class craftItemStack;
-	private Field asNMSCopy;
-	private Field asBukkitCopy;
+	@SuppressWarnings("rawtypes")
+	private Class itemStack;
+	private Method asNMSCopy;
+	private Method asBukkitCopy;
 
 	public static SkullHandler getInstance() {
 		return instance;
 	}
 
+	@SuppressWarnings("unchecked")
 	public void load() {
 		craftItemStack = ReflectionUtils.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack");
+		itemStack = NMSManager.getInstance().getNMSClass("ItemStack");
 		try {
-			asNMSCopy = craftItemStack.getDeclaredField("asNMSCopy");
+			asNMSCopy = craftItemStack.getDeclaredMethod("asNMSCopy", ItemStack.class);
 			asNMSCopy.setAccessible(true);
-		} catch (NoSuchFieldException | SecurityException e) {
+		} catch (SecurityException | NoSuchMethodException e) {
 			e.printStackTrace();
 		}
 
 		try {
-			asBukkitCopy = craftItemStack.getDeclaredField("asBukkitCopy");
+			asBukkitCopy = craftItemStack.getDeclaredMethod("asBukkitCopy", itemStack);
 			asBukkitCopy.setAccessible(true);
-		} catch (NoSuchFieldException | SecurityException e) {
+		} catch (SecurityException | NoSuchMethodException e) {
 			e.printStackTrace();
 		}
 	}
@@ -54,19 +60,21 @@ public class SkullHandler {
 		s.setItemMeta(meta);
 
 		try {
-			skulls.put(playerName, asNMSCopy.get(s));
-		} catch (IllegalArgumentException | IllegalAccessException e) {
+			skulls.put(playerName, asNMSCopy.invoke(null, s));
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			e.printStackTrace();
 		}
+
 	}
 
 	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
 		if (hasSkull(playerName)) {
 			try {
-				return (ItemStack) asBukkitCopy.get(skulls.get(playerName));
-			} catch (IllegalArgumentException | IllegalAccessException e) {
+				return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
+			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 				e.printStackTrace();
 			}
+
 		}
 		return null;
 	}
