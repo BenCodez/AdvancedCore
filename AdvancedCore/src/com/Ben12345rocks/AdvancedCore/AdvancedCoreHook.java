@@ -357,7 +357,6 @@ public class AdvancedCoreHook {
 	public void loadHook(JavaPlugin plugin) {
 		this.plugin = plugin;
 
-		SkullHandler.getInstance().load();
 		loadSignAPI();
 		loadUUIDs();
 		getOptions().setPermPrefix(plugin.getName());
@@ -379,6 +378,8 @@ public class AdvancedCoreHook {
 		loadConfig();
 
 		UserManager.getInstance().purgeOldPlayers();
+
+		SkullHandler.getInstance().load();
 
 		userStartup();
 

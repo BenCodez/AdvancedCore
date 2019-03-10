@@ -51,23 +51,25 @@ public class SkullHandler {
 			e.printStackTrace();
 		}
 
-		AdvancedCoreHook.getInstance().addUserStartup(new UserStartup() {
+		if (AdvancedCoreHook.getInstance().getOptions().isPreloadSkulls()) {
+			AdvancedCoreHook.getInstance().addUserStartup(new UserStartup() {
 
-			@Override
-			public void onStartUp(User user) {
-				loadSkull(user.getPlayerName());
-			}
+				@Override
+				public void onStartUp(User user) {
+					loadSkull(user.getPlayerName());
+				}
 
-			@Override
-			public void onStart() {
+				@Override
+				public void onStart() {
 
-			}
+				}
 
-			@Override
-			public void onFinish() {
+				@Override
+				public void onFinish() {
 
-			}
-		});
+				}
+			});
+		}
 	}
 
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();

@@ -144,6 +144,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private ConfigurationSection nextItem;
 
+	@Getter
+	@Setter
+	private boolean preloadSkulls = true;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -190,6 +194,8 @@ public class AdvancedCoreConfigOptions {
 			clearCacheOnJoin = configData.getBoolean("ClearCacheOnJoin", false);
 
 			waitUntilLoggedIn = configData.getBoolean("WaitUntilLoggedIn", true);
+
+			preloadSkulls = configData.getBoolean("PreloadSkulls", true);
 
 			ConfigurationSection soundData = configData.getConfigurationSection("ClickSound");
 			if (soundData != null) {
