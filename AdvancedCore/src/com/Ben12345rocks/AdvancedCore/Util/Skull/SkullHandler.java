@@ -103,7 +103,7 @@ public class SkullHandler {
 						} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 							e.printStackTrace();
 						}
-						AdvancedCoreHook.getInstance().debug("Loading skull: " + playerName);
+						AdvancedCoreHook.getInstance().extraDebug("Loading skull: " + playerName);
 
 					}
 				});
