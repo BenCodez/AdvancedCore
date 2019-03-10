@@ -44,8 +44,6 @@ import com.google.common.collect.Multimap;
  * Credit to NonameSL for creating this
  *
  * Modified by Ben12345rocks
- * 
- * @param <T>
  *
  */
 public class ItemBuilder {
