@@ -52,7 +52,7 @@ public class SkullThread {
 		}
 
 		public void startup() {
-			synchronized (SkullThread.getInstance()) {
+			synchronized (SkullThread.getInstance().getThread()) {
 				for (String name : UserManager.getInstance().getAllPlayerNames()) {
 					SkullHandler.getInstance().loadSkull(name);
 					try {
