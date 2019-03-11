@@ -8,12 +8,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+
+import lombok.Getter;
 
 public class SkullHandler {
 
@@ -23,6 +24,7 @@ public class SkullHandler {
 	private Class craftItemStack;
 	@SuppressWarnings("rawtypes")
 	private Class itemStack;
+	@Getter
 	private Method asNMSCopy;
 	private Method asBukkitCopy;
 
@@ -60,47 +62,15 @@ public class SkullHandler {
 
 	}
 
+	@Getter
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
 
 	public void loadSkull(Player player) {
 		loadSkull(player.getName());
 	}
 
-	@SuppressWarnings("deprecation")
 	public void loadSkull(final String playerName) {
-		if (playerName == null || playerName.isEmpty()) {
-			// AdvancedCoreHook.getInstance().debug("Invalid skull name");
-			return;
-		}
-		if (hasSkull(playerName)) {
-			return;
-		}
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				SkullThread.getInstance().run(new Runnable() {
-
-					@Override
-					public void run() {
-						ItemStack s = new ItemStack(Material.PLAYER_HEAD, 1);
-						SkullMeta meta = (SkullMeta) s.getItemMeta();
-						meta.setOwner(playerName);
-						s.setItemMeta(meta);
-
-						try {
-							skulls.put(playerName, asNMSCopy.invoke(null, s));
-						} catch (Exception e) {
-							AdvancedCoreHook.getInstance().extraDebug("Failed loading skull: " + playerName);
-							e.printStackTrace();
-						}
-						AdvancedCoreHook.getInstance().extraDebug("Loading skull: " + playerName);
-
-					}
-				});
-			}
-		});
-
+		SkullThread.getInstance().getThread().load(playerName);
 	}
 
 	@SuppressWarnings("deprecation")

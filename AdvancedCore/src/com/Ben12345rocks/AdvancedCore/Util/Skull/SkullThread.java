@@ -2,6 +2,11 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
 import java.util.Arrays;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.NameFetcher;
@@ -48,6 +53,51 @@ public class SkullThread {
 		public void run(Runnable run) {
 			synchronized (SkullThread.getInstance()) {
 				run.run();
+			}
+		}
+
+		public void load(String playerName) {
+			synchronized (SkullThread.getInstance().getThread()) {
+				if (playerName == null || playerName.isEmpty()) {
+					// AdvancedCoreHook.getInstance().debug("Invalid skull name");
+					return;
+				}
+				if (SkullHandler.getInstance().hasSkull(playerName)) {
+					return;
+				}
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+					@Override
+					public void run() {
+						SkullThread.getInstance().run(new Runnable() {
+
+							@SuppressWarnings("deprecation")
+							@Override
+							public void run() {
+								ItemStack s = new ItemStack(Material.PLAYER_HEAD, 1);
+								SkullMeta meta = (SkullMeta) s.getItemMeta();
+								meta.setOwner(playerName);
+								s.setItemMeta(meta);
+
+								try {
+									SkullHandler.getInstance().getSkulls().put(playerName,
+											SkullHandler.getInstance().getAsNMSCopy().invoke(null, s));
+								} catch (Exception e) {
+									AdvancedCoreHook.getInstance()
+											.extraDebug("Failed loading skull: " + playerName + ", waiting 10 minutes");
+									AdvancedCoreHook.getInstance().debug(e);
+									try {
+										sleep(600000);
+									} catch (InterruptedException e1) {
+										e1.printStackTrace();
+									}
+								}
+								AdvancedCoreHook.getInstance().extraDebug("Loading skull: " + playerName);
+
+							}
+						});
+					}
+				});
 			}
 		}
 
