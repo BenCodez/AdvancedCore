@@ -48,13 +48,15 @@ public class SkullHandler {
 			e.printStackTrace();
 		}
 
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+		if (AdvancedCoreHook.getInstance().getOptions().isPreloadSkulls()) {
+			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
-			@Override
-			public void run() {
-				SkullThread.getInstance().getThread().startup();
-			}
-		});
+				@Override
+				public void run() {
+					SkullThread.getInstance().getThread().startup();
+				}
+			});
+		}
 
 	}
 
