@@ -13,8 +13,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 
 public class SkullHandler {
@@ -50,20 +48,7 @@ public class SkullHandler {
 			e.printStackTrace();
 		}
 
-		Thread.getInstance().run(new Runnable() {
-
-			@Override
-			public void run() {
-				for (String name : UserManager.getInstance().getAllPlayerNames()) {
-					loadSkull(name);
-					try {
-						wait(1000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		});
+		SkullThread.getInstance().getThread().startup();
 
 	}
 

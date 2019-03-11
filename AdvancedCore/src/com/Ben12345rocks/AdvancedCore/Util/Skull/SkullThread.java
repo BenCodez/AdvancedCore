@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 import java.util.Arrays;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.NameFetcher;
 
 /**
@@ -47,6 +48,19 @@ public class SkullThread {
 		public void run(Runnable run) {
 			synchronized (SkullThread.getInstance()) {
 				run.run();
+			}
+		}
+
+		public void startup() {
+			synchronized (SkullThread.getInstance()) {
+				for (String name : UserManager.getInstance().getAllPlayerNames()) {
+					SkullHandler.getInstance().loadSkull(name);
+					try {
+						wait(1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
 			}
 		}
 	}
