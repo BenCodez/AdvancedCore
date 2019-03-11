@@ -13,7 +13,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
-import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
@@ -91,7 +90,7 @@ public class SkullHandler {
 
 			@Override
 			public void run() {
-				Thread.getInstance().run(new Runnable() {
+				SkullThread.getInstance().run(new Runnable() {
 
 					@Override
 					public void run() {
@@ -102,7 +101,8 @@ public class SkullHandler {
 
 						try {
 							skulls.put(playerName, asNMSCopy.invoke(null, s));
-						} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+						} catch (Exception e) {
+							AdvancedCoreHook.getInstance().extraDebug("Failed loading skull: " + playerName);
 							e.printStackTrace();
 						}
 						AdvancedCoreHook.getInstance().extraDebug("Loading skull: " + playerName);
