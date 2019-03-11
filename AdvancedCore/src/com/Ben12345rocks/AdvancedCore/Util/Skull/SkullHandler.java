@@ -48,7 +48,13 @@ public class SkullHandler {
 			e.printStackTrace();
 		}
 
-		SkullThread.getInstance().getThread().startup();
+		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				SkullThread.getInstance().getThread().startup();
+			}
+		});
 
 	}
 
