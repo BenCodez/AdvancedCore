@@ -47,11 +47,6 @@ public class SkullThread {
 		public void run(Runnable run) {
 			synchronized (SkullThread.getInstance()) {
 				run.run();
-				try {
-					wait(1000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
 			}
 		}
 	}

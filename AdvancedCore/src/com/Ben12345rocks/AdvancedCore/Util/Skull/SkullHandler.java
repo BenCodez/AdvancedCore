@@ -13,8 +13,8 @@ import org.bukkit.inventory.meta.SkullMeta;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
-import com.Ben12345rocks.AdvancedCore.UserManager.User;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
+import com.Ben12345rocks.AdvancedCore.Thread.Thread;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 
 public class SkullHandler {
@@ -50,25 +50,21 @@ public class SkullHandler {
 			e.printStackTrace();
 		}
 
-		if (AdvancedCoreHook.getInstance().getOptions().isPreloadSkulls()) {
-			AdvancedCoreHook.getInstance().addUserStartup(new UserStartup() {
+		Thread.getInstance().run(new Runnable() {
 
-				@Override
-				public void onStartUp(User user) {
-					loadSkull(user.getPlayerName());
+			@Override
+			public void run() {
+				for (String name : UserManager.getInstance().getAllPlayerNames()) {
+					loadSkull(name);
+					try {
+						wait(1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
+			}
+		});
 
-				@Override
-				public void onStart() {
-
-				}
-
-				@Override
-				public void onFinish() {
-
-				}
-			});
-		}
 	}
 
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
