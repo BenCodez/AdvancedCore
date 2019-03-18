@@ -107,7 +107,7 @@ public class SkullThread {
 					SkullHandler.getInstance().loadSkull(name);
 
 					try {
-						sleep(1000);
+						sleep(1100);
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
