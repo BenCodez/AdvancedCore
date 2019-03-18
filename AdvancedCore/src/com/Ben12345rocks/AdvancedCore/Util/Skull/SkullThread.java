@@ -83,8 +83,8 @@ public class SkullThread {
 									SkullHandler.getInstance().getSkulls().put(playerName,
 											SkullHandler.getInstance().getAsNMSCopy().invoke(null, s));
 								} catch (Exception e) {
-									AdvancedCoreHook.getInstance()
-											.extraDebug("Failed loading skull: " + playerName + ", waiting 10 minutes");
+									AdvancedCoreHook.getInstance().getPlugin().getLogger()
+											.info("Failed to preload skull: " + playerName + ", waiting 10 minutes");
 									AdvancedCoreHook.getInstance().debug(e);
 									try {
 										sleep(600000);
