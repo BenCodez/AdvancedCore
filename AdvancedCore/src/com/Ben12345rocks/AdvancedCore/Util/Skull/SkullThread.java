@@ -52,12 +52,18 @@ public class SkullThread {
 		 */
 		public void run(Runnable run) {
 			synchronized (SkullThread.getInstance()) {
+				if (!AdvancedCoreHook.getInstance().getPlugin().isEnabled()) {
+					return;
+				}
 				run.run();
 			}
 		}
 
 		public void load(String playerName) {
 			synchronized (SkullThread.getInstance().getThread()) {
+				if (!AdvancedCoreHook.getInstance().getPlugin().isEnabled()) {
+					return;
+				}
 				if (playerName == null || playerName.isEmpty()) {
 					// AdvancedCoreHook.getInstance().debug("Invalid skull name");
 					return;
