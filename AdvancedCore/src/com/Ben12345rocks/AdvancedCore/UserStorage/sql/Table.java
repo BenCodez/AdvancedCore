@@ -165,36 +165,38 @@ public class Table {
 		List<Column> result = new ArrayList<>();
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
 		try {
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-			String value = "";
-			if (column.getValue() != null) {
-				value = column.getValue().toString();
-			}
-			if (column.dataType == DataType.STRING) {
-				s.setString(1, value);
-			} else if (column.dataType == DataType.INTEGER) {
-				s.setInt(1, Integer.parseInt(value));
-			} else {
-				s.setFloat(1, Float.parseFloat(value));
-			}
-			ResultSet rs = s.executeQuery();
-			try {
-				for (int i = 0; i < getColumns().size(); i++) {
-					Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).dataType,
-							getColumns().get(i).limit);
-					if (rCol.dataType == DataType.STRING) {
-						rCol.setValue(rs.getString(i + 1));
-					} else if (rCol.dataType == DataType.INTEGER) {
-						rCol.setValue(rs.getInt(i + 1));
-					} else {
-						rCol.setValue(rs.getFloat(i + 1));
-					}
-					result.add(rCol);
+			synchronized (object) {
+				PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+				String value = "";
+				if (column.getValue() != null) {
+					value = column.getValue().toString();
 				}
-				sqLite.close(s, rs);
-			} catch (SQLException e) {
-				s.close();
-				return null;
+				if (column.dataType == DataType.STRING) {
+					s.setString(1, value);
+				} else if (column.dataType == DataType.INTEGER) {
+					s.setInt(1, Integer.parseInt(value));
+				} else {
+					s.setFloat(1, Float.parseFloat(value));
+				}
+				ResultSet rs = s.executeQuery();
+				try {
+					for (int i = 0; i < getColumns().size(); i++) {
+						Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).dataType,
+								getColumns().get(i).limit);
+						if (rCol.dataType == DataType.STRING) {
+							rCol.setValue(rs.getString(i + 1));
+						} else if (rCol.dataType == DataType.INTEGER) {
+							rCol.setValue(rs.getInt(i + 1));
+						} else {
+							rCol.setValue(rs.getFloat(i + 1));
+						}
+						result.add(rCol);
+					}
+					sqLite.close(s, rs);
+				} catch (SQLException e) {
+					s.close();
+					return null;
+				}
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -410,36 +412,40 @@ public class Table {
 		this.sqLite = sqLite;
 	}
 
+	private Object object = new Object();
+
 	public void update(Column primaryKey, List<Column> columns) {
 		for (Column c : columns) {
 			checkColumn(c);
 		}
 		if (containsKey(primaryKey)) {
-			String query = "UPDATE " + getName() + " SET ";
-			for (Column column : columns) {
-				if (column.dataType == DataType.STRING) {
-					query += "`" + column.getName() + "`='" + column.getValue().toString() + "'";
-				} else {
-					query += "`" + column.getName() + "`=" + column.getValue().toString();
+			synchronized (object) {
+				String query = "UPDATE " + getName() + " SET ";
+				for (Column column : columns) {
+					if (column.dataType == DataType.STRING) {
+						query += "`" + column.getName() + "`='" + column.getValue().toString() + "'";
+					} else {
+						query += "`" + column.getName() + "`=" + column.getValue().toString();
+					}
+					if (columns.indexOf(column) == columns.size() - 1) {
+						query += " ";
+					} else {
+						query += ", ";
+					}
 				}
-				if (columns.indexOf(column) == columns.size() - 1) {
-					query += " ";
+				query += "WHERE `" + primaryKey.getName() + "`=";
+				if (primaryKey.dataType == DataType.STRING) {
+					query += "'" + primaryKey.getValue().toString() + "'";
 				} else {
-					query += ", ";
+					query += primaryKey.getValue().toString();
 				}
-			}
-			query += "WHERE `" + primaryKey.getName() + "`=";
-			if (primaryKey.dataType == DataType.STRING) {
-				query += "'" + primaryKey.getValue().toString() + "'";
-			} else {
-				query += primaryKey.getValue().toString();
-			}
-			try {
-				PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-				s.executeUpdate();
-				s.close();
-			} catch (SQLException e) {
-				e.printStackTrace();
+				try {
+					PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+					s.executeUpdate();
+					s.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
 			}
 		} else {
 			insert(columns);
