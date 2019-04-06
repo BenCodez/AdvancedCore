@@ -156,6 +156,7 @@ public abstract class CommandHandler {
 						return true;
 					}
 				}
+				
 			}
 			// plugin.debug("Tab: "
 			// + Utils.getInstance().makeStringList(

@@ -43,6 +43,9 @@ public class BossBar {
 	}
 
 	public void addPlayer(final Player player, int delay) {
+		if (player == null) {
+			return;
+		}
 		bossBar.addPlayer(player);
 
 		if (delay > 0) {
@@ -102,7 +105,9 @@ public class BossBar {
 	}
 
 	public void setColor(String barColor) {
-		bossBar.setColor(BarColor.valueOf(barColor));
+		if (barColor != null) {
+			bossBar.setColor(BarColor.valueOf(barColor));
+		}
 	}
 
 	public void setProgress(double progress) {
@@ -116,11 +121,16 @@ public class BossBar {
 	}
 
 	public void setStyle(String barStyle) {
-		bossBar.setStyle(BarStyle.valueOf(barStyle));
+		if (barStyle != null) {
+			bossBar.setStyle(BarStyle.valueOf(barStyle));
+		}
 	}
 
 	public void setTitle(String title) {
-		bossBar.setTitle(StringUtils.getInstance().colorize(title));
+		if (title != null) {
+			bossBar.setTitle(StringUtils.getInstance().colorize(title));
+		}
+
 	}
 
 	public void setVisible(boolean visible) {
