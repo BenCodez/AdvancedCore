@@ -43,21 +43,25 @@ public class BossBar {
 	}
 
 	public void addPlayer(final Player player, int delay) {
-		if (player == null) {
-			return;
-		}
-		bossBar.addPlayer(player);
+		try {
+			if (player == null) {
+				return;
+			}
+			bossBar.addPlayer(player);
 
-		if (delay > 0) {
-			Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+			if (delay > 0) {
+				Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
 
-				@Override
-				public void run() {
-					if (bossBar != null && player != null) {
-						bossBar.removePlayer(player);
+					@Override
+					public void run() {
+						if (bossBar != null && player != null) {
+							bossBar.removePlayer(player);
+						}
 					}
-				}
-			}, delay * 20);
+				}, delay * 20);
+			}
+		} catch (Exception e) {
+			AdvancedCoreHook.getInstance().debug(e);
 		}
 	}
 
