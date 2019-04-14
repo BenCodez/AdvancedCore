@@ -195,7 +195,7 @@ public class AdvancedCoreConfigOptions {
 
 			waitUntilLoggedIn = configData.getBoolean("WaitUntilLoggedIn", true);
 
-			preloadSkulls = configData.getBoolean("PreloadSkulls", true);
+			preloadSkulls = configData.getBoolean("PreloadSkulls", false);
 
 			ConfigurationSection soundData = configData.getConfigurationSection("ClickSound");
 			if (soundData != null) {
