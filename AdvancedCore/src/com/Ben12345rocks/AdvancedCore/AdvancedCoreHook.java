@@ -266,6 +266,9 @@ public class AdvancedCoreHook {
 	}
 
 	public Table getSQLiteUserTable() {
+		if (database == null) {
+			loadUserAPI(getStorageType());
+		}
 		for (Table table : database.getTables()) {
 			if (table.getName().equalsIgnoreCase("Users")) {
 				return table;
