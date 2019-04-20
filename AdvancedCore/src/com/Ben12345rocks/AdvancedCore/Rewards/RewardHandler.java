@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.TimerTask;
 import java.util.concurrent.ThreadLocalRandom;
@@ -19,6 +20,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectConfigurationSection;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectKeys;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectString;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
@@ -592,6 +594,18 @@ public class RewardHandler {
 							(ArrayList<String>) section.getList("Types", new ArrayList<String>()));
 				}
 
+			}
+		});
+
+		injectedRewards.add(new RewardInjectKeys("RandomItem") {
+
+			@Override
+			public void onRewardRequested(Reward reward, User user, Set<String> section, ConfigurationSection data,
+					HashMap<String, String> placeholders) {
+				if (section.size() > 0) {
+					user.giveItem(new ItemBuilder(data.getConfigurationSection(
+							ArrayUtils.getInstance().pickRandom(ArrayUtils.getInstance().convert(section)))));
+				}
 			}
 		});
 

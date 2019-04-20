@@ -405,6 +405,10 @@ public class User {
 		}
 	}
 
+	public void giveItem(ItemBuilder builder) {
+		giveItem(builder.toItemStack(getPlayer()));
+	}
+
 	/**
 	 * Give item.
 	 *

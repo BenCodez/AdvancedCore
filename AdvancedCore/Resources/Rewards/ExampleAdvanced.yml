@@ -61,6 +61,15 @@ RandomCommand: []
 # Will give one reward from the list of rewards
 RandomReward: []
 
+# Give one of the following items
+RandomItem:
+  Diamond:
+    Material: DIAMOND
+    Amount: 1
+  Iron:
+    Material: IRON_INGOT
+    Amount: 10
+
 # Require permission to give this reward file
 # Permission is AdvancedCore.Reward.(REWARDNAME) by default
 # E.g: AdvancedCore.Reward.ExampleAdvanced

@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -269,6 +270,13 @@ public class ArrayUtils {
 			}
 		}
 		return map;
+	}
+
+	public String pickRandom(ArrayList<String> list) {
+		if (list != null) {
+			return list.get(ThreadLocalRandom.current().nextInt(list.size()));
+		}
+		return "";
 	}
 
 	public String makeString(HashMap<String, String> placeholders) {
