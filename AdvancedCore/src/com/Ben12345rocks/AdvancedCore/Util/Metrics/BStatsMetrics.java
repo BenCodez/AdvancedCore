@@ -22,10 +22,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 /**
  * bStats collects some data for plugin authors.
@@ -49,11 +49,10 @@ public class BStatsMetrics {
 			super(chartId);
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
-			JSONObject values = new JSONObject();
+		protected JsonObject getChartData() {
+			JsonObject data = new JsonObject();
+			JsonObject values = new JsonObject();
 			HashMap<Country, Integer> map = getValues(new HashMap<Country, Integer>());
 			if (map == null || map.isEmpty()) {
 				// Null = skip the chart
@@ -65,13 +64,13 @@ public class BStatsMetrics {
 					continue; // Skip this invalid
 				}
 				allSkipped = false;
-				values.put(entry.getKey().getCountryIsoTag(), entry.getValue());
+				values.addProperty(entry.getKey().getCountryIsoTag(), entry.getValue());
 			}
 			if (allSkipped) {
 				// Null = skip the chart
 				return null;
 			}
-			data.put("values", values);
+			data.add("values", values);
 			return data;
 		}
 
@@ -102,11 +101,10 @@ public class BStatsMetrics {
 			super(chartId);
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
-			JSONObject values = new JSONObject();
+		protected JsonObject getChartData() {
+			JsonObject data = new JsonObject();
+			JsonObject values = new JsonObject();
 			HashMap<String, Integer> map = getValues(new HashMap<String, Integer>());
 			if (map == null || map.isEmpty()) {
 				// Null = skip the chart
@@ -118,13 +116,13 @@ public class BStatsMetrics {
 					continue; // Skip this invalid
 				}
 				allSkipped = false;
-				values.put(entry.getKey(), entry.getValue());
+				values.addProperty(entry.getKey(), entry.getValue());
 			}
 			if (allSkipped) {
 				// Null = skip the chart
 				return null;
 			}
-			data.put("values", values);
+			data.add("values", values);
 			return data;
 		}
 
@@ -701,19 +699,18 @@ public class BStatsMetrics {
 			this.chartId = chartId;
 		}
 
-		protected abstract JSONObject getChartData();
+		protected abstract JsonObject getChartData();
 
-		@SuppressWarnings("unchecked")
-		protected JSONObject getRequestJsonObject() {
-			JSONObject chart = new JSONObject();
-			chart.put("chartId", chartId);
+		protected JsonObject getRequestJsonObject() {
+			JsonObject chart = new JsonObject();
+			chart.addProperty("chartId", chartId);
 			try {
-				JSONObject data = getChartData();
+				JsonObject data = getChartData();
 				if (data == null) {
 					// If the data is null we don't send the chart.
 					return null;
 				}
-				chart.put("data", data);
+				chart.add("data", data);
 			} catch (Exception e) {
 				if (logFailedRequests) {
 					hook.debug("Failed to get data for custom chart with id " + chartId);
@@ -741,11 +738,10 @@ public class BStatsMetrics {
 			super(chartId);
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
-			JSONObject values = new JSONObject();
+		protected JsonObject getChartData() {
+			JsonObject data = new JsonObject();
+			JsonObject values = new JsonObject();
 			HashMap<String, Integer> map = getValues(new HashMap<String, Integer>());
 			if (map == null || map.isEmpty()) {
 				// Null = skip the chart
@@ -757,13 +753,13 @@ public class BStatsMetrics {
 					continue; // Skip this invalid
 				}
 				allSkipped = false;
-				values.put(entry.getKey(), entry.getValue());
+				values.addProperty(entry.getKey(), entry.getValue());
 			}
 			if (allSkipped) {
 				// Null = skip the chart
 				return null;
 			}
-			data.put("values", values);
+			data.add("values", values);
 			return data;
 		}
 
@@ -794,17 +790,16 @@ public class BStatsMetrics {
 			super(chartId);
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
+		protected JsonObject getChartData() {
+			JsonObject data = new JsonObject();
 			Country value = getValue();
 
 			if (value == null) {
 				// Null = skip the chart
 				return null;
 			}
-			data.put("value", value.getCountryIsoTag());
+			data.addProperty("value", value.getCountryIsoTag());
 			return data;
 		}
 
@@ -832,16 +827,15 @@ public class BStatsMetrics {
 			super(chartId);
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
+		protected JsonObject getChartData() {
+			JsonObject data = new JsonObject();
 			String value = getValue();
 			if (value == null || value.isEmpty()) {
 				// Null = skip the chart
 				return null;
 			}
-			data.put("value", value);
+			data.addProperty("value", value);
 			return data;
 		}
 
@@ -868,16 +862,15 @@ public class BStatsMetrics {
 			super(chartId);
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
-		protected JSONObject getChartData() {
-			JSONObject data = new JSONObject();
+		protected JsonObject getChartData() {
+			JsonObject data = new JsonObject();
 			int value = getValue();
 			if (value == 0) {
 				// Null = skip the chart
 				return null;
 			}
-			data.put("value", value);
+			data.addProperty("value", value);
 			return data;
 		}
 
@@ -932,7 +925,7 @@ public class BStatsMetrics {
 	 * @throws Exception
 	 *             If the request failed.
 	 */
-	private static void sendData(JSONObject data) throws Exception {
+	private static void sendData(JsonObject data) throws Exception {
 		if (data == null) {
 			throw new IllegalArgumentException("Data cannot be null!");
 		}
@@ -1060,26 +1053,25 @@ public class BStatsMetrics {
 	 *
 	 * @return The plugin specific data.
 	 */
-	@SuppressWarnings("unchecked")
-	public JSONObject getPluginData() {
-		JSONObject data = new JSONObject();
+	public JsonObject getPluginData() {
+		JsonObject data = new JsonObject();
 
 		String pluginName = plugin.getDescription().getName();
 		String pluginVersion = plugin.getDescription().getVersion();
 
-		data.put("pluginName", pluginName); // Append the name of the plugin
-		data.put("pluginVersion", pluginVersion); // Append the version of the
-													// plugin
-		JSONArray customCharts = new JSONArray();
+		data.addProperty("pluginName", pluginName); // Append the name of the plugin
+		data.addProperty("pluginVersion", pluginVersion); // Append the version of the
+		// plugin
+		JsonArray customCharts = new JsonArray();
 		for (CustomChart customChart : charts) {
 			// Add the data of the custom charts
-			JSONObject chart = customChart.getRequestJsonObject();
+			JsonObject chart = customChart.getRequestJsonObject();
 			if (chart == null) { // If the chart is null, we skip it
 				continue;
 			}
 			customCharts.add(chart);
 		}
-		data.put("customCharts", customCharts);
+		data.add("customCharts", customCharts);
 
 		return data;
 	}
@@ -1089,8 +1081,7 @@ public class BStatsMetrics {
 	 *
 	 * @return The server specific data.
 	 */
-	@SuppressWarnings("unchecked")
-	private JSONObject getServerData() {
+	private JsonObject getServerData() {
 		// Minecraft specific data
 		int playerAmount = Bukkit.getOnlinePlayers().size();
 		int onlineMode = Bukkit.getOnlineMode() ? 1 : 0;
@@ -1104,19 +1095,19 @@ public class BStatsMetrics {
 		String osVersion = System.getProperty("os.version");
 		int coreCount = Runtime.getRuntime().availableProcessors();
 
-		JSONObject data = new JSONObject();
+		JsonObject data = new JsonObject();
 
-		data.put("serverUUID", serverUUID);
+		data.addProperty("serverUUID", serverUUID);
 
-		data.put("playerAmount", playerAmount);
-		data.put("onlineMode", onlineMode);
-		data.put("bukkitVersion", bukkitVersion);
+		data.addProperty("playerAmount", playerAmount);
+		data.addProperty("onlineMode", onlineMode);
+		data.addProperty("bukkitVersion", bukkitVersion);
 
-		data.put("javaVersion", javaVersion);
-		data.put("osName", osName);
-		data.put("osArch", osArch);
-		data.put("osVersion", osVersion);
-		data.put("coreCount", coreCount);
+		data.addProperty("javaVersion", javaVersion);
+		data.addProperty("osName", osName);
+		data.addProperty("osArch", osArch);
+		data.addProperty("osVersion", osVersion);
+		data.addProperty("coreCount", coreCount);
 
 		return data;
 	}
@@ -1157,15 +1148,14 @@ public class BStatsMetrics {
 	/**
 	 * Collects the data and sends it afterwards.
 	 */
-	@SuppressWarnings("unchecked")
 	private void submitData() {
 		// Create a new thread for the connection to the bStats server
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				final JSONObject data = getServerData();
+				final JsonObject data = getServerData();
 
-				JSONArray pluginData = new JSONArray();
+				JsonArray pluginData = new JsonArray();
 				// Search for all other bStats Metrics classes to get their
 				// plugin data
 				for (Class<?> service : Bukkit.getServicesManager().getKnownServices()) {
@@ -1177,13 +1167,13 @@ public class BStatsMetrics {
 					}
 					// Found one!
 					try {
-						pluginData.add(
-								service.getMethod("getPluginData").invoke(Bukkit.getServicesManager().load(service)));
+						pluginData.add(service.getMethod("getPluginData")
+								.invoke(Bukkit.getServicesManager().load(service)).toString());
 					} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
 					}
 				}
 
-				data.put("plugins", pluginData);
+				data.add("plugins", pluginData);
 				try {
 					// Send the data
 					sendData(data);
