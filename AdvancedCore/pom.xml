@@ -110,6 +110,16 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
+							<relocations>
+								<relocation>
+									<pattern>com.zaxxer.HikariCP</pattern>
+									<shadedPattern>${project.groupId}.${project.artifactId}.HikariCP</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.zaxxer.hikari</pattern>
+									<shadedPattern>${project.groupId}.${project.artifactId}.hikari</shadedPattern>
+								</relocation>
+							</relocations>
 							<artifactSet>
 								<!-- Lets exclude google code, because the server already has this 
 									code in it (guava, etc) -->
