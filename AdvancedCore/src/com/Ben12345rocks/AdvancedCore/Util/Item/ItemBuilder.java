@@ -27,8 +27,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.inventory.meta.tags.CustomItemTagContainer;
-import org.bukkit.inventory.meta.tags.ItemTagType;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -635,7 +635,7 @@ public class ItemBuilder {
 	public ItemBuilder setCustomData(String key, String value) {
 		NamespacedKey namespace = new NamespacedKey(AdvancedCoreHook.getInstance().getPlugin(), key);
 		ItemMeta itemMeta = is.getItemMeta();
-		itemMeta.getCustomTagContainer().setCustomTag(namespace, ItemTagType.STRING, value);
+		itemMeta.getPersistentDataContainer().set(namespace, PersistentDataType.STRING, value);
 		is.setItemMeta(itemMeta);
 		return this;
 	}
@@ -643,9 +643,9 @@ public class ItemBuilder {
 	public String getCustomData(String key) {
 		NamespacedKey namespace = new NamespacedKey(AdvancedCoreHook.getInstance().getPlugin(), key);
 		ItemMeta itemMeta = is.getItemMeta();
-		CustomItemTagContainer tagContainer = itemMeta.getCustomTagContainer();
-		if (tagContainer.hasCustomTag(namespace, ItemTagType.STRING)) {
-			return tagContainer.getCustomTag(namespace, ItemTagType.STRING);
+		PersistentDataContainer tagContainer = itemMeta.getPersistentDataContainer();
+		if (tagContainer.has(namespace, PersistentDataType.STRING)) {
+			return tagContainer.get(namespace, PersistentDataType.STRING);
 		}
 		return null;
 	}
