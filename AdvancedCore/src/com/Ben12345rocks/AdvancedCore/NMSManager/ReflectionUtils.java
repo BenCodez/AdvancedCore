@@ -24,7 +24,7 @@ public class ReflectionUtils {
 
 	public static Class<?> getClassForName(String name) {
 		try {
-			return Class.forName(name);
+			return Class.forName(name.replaceAll("/", "."));
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
