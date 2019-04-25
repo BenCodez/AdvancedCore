@@ -34,7 +34,8 @@ public class SkullHandler {
 
 	@SuppressWarnings("unchecked")
 	public void load() {
-		craftItemStack = ReflectionUtils.getClassForName("org.bukkit.craftbukkit.v1_13_R2.inventory.CraftItemStack");
+		craftItemStack = ReflectionUtils.getClassForName(
+				"org.bukkit.craftbukkit.v" + NMSManager.getInstance().getVersion() + ".inventory.CraftItemStack");
 		itemStack = NMSManager.getInstance().getNMSClass("ItemStack");
 		try {
 			asNMSCopy = craftItemStack.getDeclaredMethod("asNMSCopy", ItemStack.class);
