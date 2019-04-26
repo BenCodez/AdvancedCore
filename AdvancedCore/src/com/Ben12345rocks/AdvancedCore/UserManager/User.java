@@ -455,7 +455,7 @@ public class User {
 	/**
 	 * Give user money, needs vault installed
 	 *
-	 * @param money
+	 * @param m
 	 *            Amount of money to give
 	 */
 	public void giveMoney(double m) {
