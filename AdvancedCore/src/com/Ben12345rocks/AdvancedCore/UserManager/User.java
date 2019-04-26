@@ -458,14 +458,30 @@ public class User {
 	 * @param money
 	 *            Amount of money to give
 	 */
-	public void giveMoney(double money) {
+	public void giveMoney(double m) {
 		if (hook.getEcon() != null) {
 			try {
-				if (money > 0) {
-					hook.getEcon().depositPlayer(getOfflinePlayer(), money);
-				} else if (money < 0) {
-					money = money * -1;
-					hook.getEcon().withdrawPlayer(getOfflinePlayer(), money);
+				if (m > 0) {
+					final double money = m;
+					Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+						@Override
+						public void run() {
+							hook.getEcon().depositPlayer(getOfflinePlayer(), money);
+						}
+					});
+
+				} else if (m < 0) {
+					m = m * -1;
+					final double money = m;
+					Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+						@Override
+						public void run() {
+							hook.getEcon().withdrawPlayer(getOfflinePlayer(), money);
+						}
+					});
+
 				}
 			} catch (IllegalStateException e) {
 				e.printStackTrace();
