@@ -244,7 +244,7 @@
 		<dependency>
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
-			<version>LATEST</version>
+			<version>3.2.0</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
