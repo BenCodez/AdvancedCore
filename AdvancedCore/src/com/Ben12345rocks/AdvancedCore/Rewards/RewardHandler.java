@@ -257,7 +257,10 @@ public class RewardHandler {
 			return;
 		}
 		if (data.isList(path)) {
-			for (String reward : (ArrayList<String>) data.getList(path, new ArrayList<String>())) {
+			ArrayList<String> rewards = (ArrayList<String>) data.getList(path, new ArrayList<String>());
+			plugin.debug("Giving list of rewards (" + ArrayUtils.getInstance().makeStringList(rewards) + ") from "
+					+ path + ", Options: " + rewardOptions.toString());
+			for (String reward : rewards) {
 				giveReward(user, reward, rewardOptions);
 			}
 		} else if (data.isConfigurationSection(path)) {
@@ -274,10 +277,13 @@ public class RewardHandler {
 			}
 			ConfigurationSection section = data.getConfigurationSection(path);
 			Reward reward = new Reward(rewardName, section);
+			plugin.debug("Giving reward " + path + ", Options: " + rewardOptions.toString());
 			giveReward(user, reward, rewardOptions);
 
 		} else {
-			giveReward(user, data.getString(path, ""), rewardOptions);
+			String reward = data.getString(path, "");
+			plugin.debug("Giving reward " + reward + " from path " + path + ", Options: " + rewardOptions.toString());
+			giveReward(user, reward, rewardOptions);
 		}
 	}
 

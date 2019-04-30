@@ -2,6 +2,8 @@ package com.Ben12345rocks.AdvancedCore.Rewards;
 
 import java.util.HashMap;
 
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -105,6 +107,20 @@ public class RewardOptions {
 	 */
 	public void setSuffix(String suffix) {
 		this.suffix = suffix;
+	}
+
+	@Override
+	public String toString() {
+		String str = "Online: " + online + ", ";
+		str += "OnlineSet: " + onlineSet + ", ";
+		str += "GiveOffline: " + giveOffline + ", ";
+		str += "CheckTimed" + checkTimed + ", ";
+		str += "IgnoreChance" + ignoreChance + ", ";
+		str += "Placeholders" + ArrayUtils.getInstance().makeString(placeholders) + ", ";
+		str += "Prefix" + prefix + ", ";
+		str += "Suffix" + suffix;
+		return str;
+
 	}
 
 }
