@@ -65,7 +65,7 @@ public class ItemBuilder {
 						"ConfigurationSection can not be null! You are probably missing a section in your config.");
 			} catch (IllegalArgumentException e) {
 				AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
-						"Error occoured while obtaining item, turn debug on to see full stacktrace: " + e.toString());
+						"Error occurred while obtaining item, turn debug on to see full stacktrace: " + e.toString());
 				AdvancedCoreHook.getInstance().debug(e);
 			}
 			setBlank();
