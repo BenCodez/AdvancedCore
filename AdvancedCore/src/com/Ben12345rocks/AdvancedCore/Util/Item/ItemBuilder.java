@@ -259,7 +259,12 @@ public class ItemBuilder {
 		}
 		HashMap<Enchantment, Integer> enchantments = new HashMap<Enchantment, Integer>();
 		for (String enchant : enchants.keySet()) {
-			enchantments.put(Enchantment.getByKey(NamespacedKey.minecraft(enchant)), enchants.get(enchant));
+			try {
+				enchantments.put(Enchantment.getByKey(NamespacedKey.minecraft(enchant)), enchants.get(enchant));
+			} catch (Exception e) {
+				AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to add enchantment: " + enchant);
+				e.printStackTrace();
+			}
 		}
 		return addEnchantments(enchantments);
 	}
