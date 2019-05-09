@@ -590,7 +590,7 @@ public class BInventory implements Listener {
 		}
 		if (nextItem == null) {
 			if (AdvancedCoreHook.getInstance().getOptions().getNextItem() != null) {
-				prevItem = new ItemBuilder(AdvancedCoreHook.getInstance().getOptions().getNextItem())
+				nextItem = new ItemBuilder(AdvancedCoreHook.getInstance().getOptions().getNextItem())
 						.toItemStack(player);
 			} else {
 				nextItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aNext Page")
