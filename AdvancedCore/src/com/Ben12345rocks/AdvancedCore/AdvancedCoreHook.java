@@ -547,6 +547,17 @@ public class AdvancedCoreHook {
 		for (TimeType ty : TimeType.values()) {
 			times.add(ty.toString());
 		}
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(DataKeys)") {
+
+			@Override
+			public void updateReplacements() {
+				setReplace(UserManager.getInstance().getRandomUser().getData().getKeys());
+			}
+
+			@Override
+			public void reload() {
+			}
+		});
 		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
 	}
 

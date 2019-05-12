@@ -222,4 +222,11 @@ public class UserManager {
 
 		return false;
 	}
+
+	public User getRandomUser() {
+		if (getAllUUIDs().size() > 0) {
+			getUser(getAllUUIDs().get(0));
+		}
+		return null;
+	}
 }
