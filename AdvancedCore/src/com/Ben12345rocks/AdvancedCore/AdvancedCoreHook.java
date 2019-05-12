@@ -376,7 +376,7 @@ public class AdvancedCoreHook {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
 		loadVersionFile();
-		loadTabComplete();
+		
 
 		loadConfig();
 
@@ -385,6 +385,7 @@ public class AdvancedCoreHook {
 		SkullHandler.getInstance().load();
 
 		userStartup();
+		loadTabComplete();
 
 		for (OfflinePlayer p : Bukkit.getBannedPlayers()) {
 			bannedPlayers.add(p.getUniqueId().toString());
