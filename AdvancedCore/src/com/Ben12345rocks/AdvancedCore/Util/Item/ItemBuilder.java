@@ -33,10 +33,11 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.google.common.collect.Multimap;
+
+import lombok.Getter;
 
 /**
  * Easily create itemstacks, without messing your hands.
@@ -50,7 +51,10 @@ public class ItemBuilder {
 	private ItemStack is;
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 	private int slot = -1;
+	@Getter
 	private boolean validMaterial = true;
+	@Getter
+	private boolean legacy = false;
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -76,29 +80,21 @@ public class ItemBuilder {
 				List<String> lore = data.getStringList("Lore");
 				String materialStr = data.getString("Material", data.getName());
 
-				if (!NMSManager.getInstance().isVersion("1.12")) {
-					try {
-						material = Material.matchMaterial(materialStr.toUpperCase());
+				try {
+					material = Material.matchMaterial(materialStr.toUpperCase());
 
-						// temp
-						if (material == null) {
-							material = Material.matchMaterial(materialStr, true);
-							if (material != null) {
-								AdvancedCoreHook.getInstance().getPlugin().getLogger()
-										.warning("Found legacy material name: " + materialStr
-												+ ", please update this to prevent this message");
-							}
+					// temp
+					if (material == null) {
+						material = Material.matchMaterial(materialStr, true);
+						if (material != null) {
+							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+									.warning("Found legacy material name: " + materialStr
+											+ ", please update this to prevent this message and prevent issues");
+							legacy = true;
 						}
-					} catch (NoSuchMethodError e) {
-						material = Material.valueOf(materialStr.toUpperCase());
 					}
-				} else {
-					if (materialStr.equalsIgnoreCase("PLAYER_HEAD")) {
-						materialStr = "SKULL";
-					} else if (materialStr.equalsIgnoreCase("CLOCK")) {
-						materialStr = "WATCH";
-					}
-					material = Material.valueOf(materialStr);
+				} catch (NoSuchMethodError e) {
+					material = Material.valueOf(materialStr.toUpperCase());
 				}
 
 				if (material == null) {
@@ -504,10 +500,6 @@ public class ItemBuilder {
 
 	public boolean hasItemMeta() {
 		return is.hasItemMeta();
-	}
-
-	public boolean isValidMaterial() {
-		return validMaterial;
 	}
 
 	public ItemStack parsePlaceholders(OfflinePlayer player) {
