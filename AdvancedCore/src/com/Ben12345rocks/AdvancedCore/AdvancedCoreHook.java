@@ -551,7 +551,14 @@ public class AdvancedCoreHook {
 
 			@Override
 			public void updateReplacements() {
-				setReplace(UserManager.getInstance().getRandomUser().getData().getKeys());
+
+				try {
+					User user = UserManager.getInstance().getRandomUser();
+					if (user != null) {
+						setReplace(user.getData().getKeys());
+					}
+				} catch (Exception e) {
+				}
 			}
 
 			@Override
