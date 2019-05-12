@@ -162,7 +162,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "UserEditValue", "(player)", "(DataKeys)", "(string)" },
+		cmds.add(new CommandHandler(new String[] { "UserEditValue", "(player)", "(string)", "(string)" },
 				permPrefix + ".UserEditValue", "Open UserGUI", false) {
 
 			@Override
