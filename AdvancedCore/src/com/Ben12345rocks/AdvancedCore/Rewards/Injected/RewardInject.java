@@ -23,6 +23,13 @@ public abstract class RewardInject {
 
 	@Getter
 	@Setter
+	private boolean synchronize = false;
+
+	@Getter
+	private Object object;
+
+	@Getter
+	@Setter
 	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
 
 	public RewardInject(String path) {
@@ -36,6 +43,12 @@ public abstract class RewardInject {
 
 	public boolean isEditable() {
 		return !editButtons.isEmpty();
+	}
+
+	public RewardInject synchronize() {
+		synchronize = true;
+		object = new Object();
+		return this;
 	}
 
 	public abstract void onRewardRequest(Reward reward, User user, ConfigurationSection data,

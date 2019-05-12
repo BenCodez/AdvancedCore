@@ -402,7 +402,13 @@ public class Reward {
 		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
 			try {
 				plugin.extraDebug(getRewardName() + ": Attempting to give " + inject.getPath());
-				inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+				if (inject.isSynchronize()) {
+					synchronized (inject.getObject()) {
+						inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+					}
+				} else {
+					inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

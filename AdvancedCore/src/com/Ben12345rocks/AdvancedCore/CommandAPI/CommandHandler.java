@@ -156,7 +156,7 @@ public abstract class CommandHandler {
 						return true;
 					}
 				}
-				
+
 			}
 			// plugin.debug("Tab: "
 			// + Utils.getInstance().makeStringList(
@@ -346,7 +346,7 @@ public abstract class CommandHandler {
 								.colorize(plugin.getOptions().getFormatNotNumber().replace("%arg%", args[i])));
 						return true;
 					}
-				} else if (this.args[i].equalsIgnoreCase("Player")) {
+				} else if (this.args[i].equalsIgnoreCase("(Player)")) {
 					if (args[i].equalsIgnoreCase("@p")) {
 						args[i] = sender.getName();
 					} else if (args[i].equalsIgnoreCase("@r")) {
