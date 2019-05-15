@@ -162,6 +162,9 @@ public class TimeChecker {
 	 * Update.
 	 */
 	public void update() {
+		if (plugin.getPlugin() == null) {
+			return;
+		}
 		if (hasTimeOffSet()) {
 			plugin.extraDebug(getTime().getHour() + ":" + getTime().getMinute());
 		}
