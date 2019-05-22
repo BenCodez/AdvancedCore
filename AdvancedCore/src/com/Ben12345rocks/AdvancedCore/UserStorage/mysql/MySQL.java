@@ -527,42 +527,44 @@ public class MySQL {
 
 	public void updateBatch() {
 		if (query.size() > 0) {
-			AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
-			String sql = "";
-			while (query.size() > 0) {
-				String text = query.poll();
-				if (!text.endsWith(";")) {
-					text += ";";
-				}
-				sql += text;
-			}
-
-			try {
-				if (useBatchUpdates) {
-					Connection conn = mysql.getConnectionManager().getConnection();
-					Statement st = conn.createStatement();
-					for (String str : sql.split(";")) {
-						st.addBatch(str);
+			synchronized (object3) {
+				AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
+				String sql = "";
+				while (query.size() > 0) {
+					String text = query.poll();
+					if (!text.endsWith(";")) {
+						text += ";";
 					}
-					st.executeBatch();
-					st.close();
-					conn.close();
-				} else {
-					for (String text : sql.split(";")) {
-						try {
-							Query query = new Query(mysql, text);
-							query.executeUpdateAsync();
-						} catch (SQLException e) {
-							AdvancedCoreHook.getInstance().getPlugin().getLogger()
-									.severe("Error occoured while executing sql: " + e.toString()
-											+ ", turn debug on to see full stacktrace");
-							AdvancedCoreHook.getInstance().debug(e);
+					sql += text;
+				}
+
+				try {
+					if (useBatchUpdates) {
+						Connection conn = mysql.getConnectionManager().getConnection();
+						Statement st = conn.createStatement();
+						for (String str : sql.split(";")) {
+							st.addBatch(str);
+						}
+						st.executeBatch();
+						st.close();
+						conn.close();
+					} else {
+						for (String text : sql.split(";")) {
+							try {
+								Query query = new Query(mysql, text);
+								query.executeUpdateAsync();
+							} catch (SQLException e) {
+								AdvancedCoreHook.getInstance().getPlugin().getLogger()
+										.severe("Error occoured while executing sql: " + e.toString()
+												+ ", turn debug on to see full stacktrace");
+								AdvancedCoreHook.getInstance().debug(e);
+							}
 						}
 					}
+				} catch (SQLException e1) {
+					AdvancedCoreHook.getInstance().extraDebug("Failed to send query: " + sql);
+					e1.printStackTrace();
 				}
-			} catch (SQLException e1) {
-				AdvancedCoreHook.getInstance().extraDebug("Failed to send query: " + sql);
-				e1.printStackTrace();
 			}
 		}
 
