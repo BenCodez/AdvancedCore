@@ -156,16 +156,17 @@ public class MySQL {
 			try {
 				Query query = new Query(mysql, sql);
 				query.executeUpdate();
+
+				getColumns().add(column);
+
+				Column col = new Column(column, dataType);
+				for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
+					entry.getValue().add(col);
+				}
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
 
-			getColumns().add(column);
-
-			Column col = new Column(column, dataType);
-			for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
-				entry.getValue().add(col);
-			}
 		}
 	}
 
@@ -495,10 +496,9 @@ public class MySQL {
 			AdvancedCoreHook.getInstance().extraDebug("Mysql value null: " + column);
 			return;
 		}
-
-		checkColumn(column, dataType);
-		if (getUuids().contains(index)) {
-			synchronized (object2) {
+		synchronized (object2) {
+			checkColumn(column, dataType);
+			if (getUuids().contains(index)) {
 
 				for (Column col : getExact(index)) {
 					if (col.getName().equals(column)) {
@@ -518,9 +518,10 @@ public class MySQL {
 				query += "'" + index + "';";
 
 				addToQue(query);
+
+			} else {
+				insert(index, column, value, dataType);
 			}
-		} else {
-			insert(index, column, value, dataType);
 		}
 	}
 
