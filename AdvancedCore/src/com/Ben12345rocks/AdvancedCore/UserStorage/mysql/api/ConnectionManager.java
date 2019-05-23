@@ -71,6 +71,7 @@ public class ConnectionManager {
 		dataSource.close();
 	}
 
+	
 	public Connection getConnection() {
 		try {
 			if (isClosed()) {
