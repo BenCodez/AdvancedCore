@@ -27,7 +27,7 @@ public class ConnectionManager {
 		this.username = username;
 		this.password = password;
 		this.database = database;
-		connectionTimeout = 30000;
+		connectionTimeout = 50000;
 		maximumPoolsize = 5;
 		// maxConnections = 1;
 
@@ -40,7 +40,7 @@ public class ConnectionManager {
 		this.username = username;
 		this.password = password;
 		this.database = database;
-		connectionTimeout = 30000;
+		connectionTimeout = 50000;
 		if (maxConnections > 5) {
 			maximumPoolsize = maxConnections;
 		} else {
@@ -71,7 +71,6 @@ public class ConnectionManager {
 		dataSource.close();
 	}
 
-	
 	public Connection getConnection() {
 		try {
 			if (isClosed()) {
@@ -80,7 +79,9 @@ public class ConnectionManager {
 			}
 			return dataSource.getConnection();
 		} catch (SQLException e) {
-			e.printStackTrace();
+			AdvancedCoreHook.getInstance().getPlugin().getLogger().severe("Failed to get mysql connection");
+			AdvancedCoreHook.getInstance().debug(e);
+			open();
 		}
 		return null;
 	}
@@ -173,6 +174,7 @@ public class ConnectionManager {
 			config.addDataSourceProperty("prepStmtCacheSqlLimit", 2048);
 			config.addDataSourceProperty("useServerPrepStmts", true);
 			dataSource = new HikariDataSource(config);
+			dataSource.setLeakDetectionThreshold(60 * 1000);
 			return true;
 		} catch (Exception e) {
 			e.printStackTrace();

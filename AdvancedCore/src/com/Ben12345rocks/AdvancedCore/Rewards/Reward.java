@@ -619,7 +619,7 @@ public class Reward {
 			placeholders.put("items",
 					ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-			// non injectable rewards
+			// non injectable rewards?
 			giveMoney(user, money);
 			giveExp(user, exp);
 			checkChoiceRewards(user);

@@ -545,7 +545,8 @@ public class MySQL {
 						st.addBatch(str);
 					}
 					st.executeBatch();
-
+					st.close();
+					conn.close();
 				} else {
 					for (String text : sql.split(";")) {
 						try {

@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL;
 import com.sun.rowset.CachedRowSetImpl;
 
@@ -125,8 +126,10 @@ public class Query {
 			}
 			resultSet = sql.executeQuery();
 			rowSet.populate(resultSet);
+			sql.close();
 
 		} catch (SQLException e) {
+			AdvancedCoreHook.getInstance().debug(e);
 		}
 
 		return rowSet;
@@ -173,9 +176,12 @@ public class Query {
 			if (addBatch) {
 				sql.addBatch();
 			}
-			return sql.executeUpdate();
+			int num = sql.executeUpdate();
+			sql.close();
+			return num;
 
 		} catch (SQLException e) {
+			AdvancedCoreHook.getInstance().debug(e);
 		}
 
 		return 0;
