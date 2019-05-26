@@ -13,6 +13,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
@@ -122,6 +123,7 @@ public class JavascriptEngine {
 			engine.put("AdvancedCore", AdvancedCoreHook.getInstance());
 			engine.put("Console", Bukkit.getConsoleSender());
 			engine.put("UserManager", UserManager.getInstance());
+			engine.put("RewardHandler", RewardHandler.getInstance());
 
 			engineAPI.putAll(AdvancedCoreHook.getInstance().getJavascriptEngine());
 

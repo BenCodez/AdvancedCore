@@ -91,7 +91,7 @@ public class RewardHandler {
 		Collections.sort(injectedRewards, new Comparator<RewardInject>() {
 			@Override
 			public int compare(RewardInject o1, RewardInject o2) {
-				return Integer.compare(o1.getPriority(), o2.getPriority());
+				return Integer.compare(o2.getPriority(), o1.getPriority());
 			}
 		});
 	}
