@@ -87,11 +87,11 @@ public class RewardHandler {
 		sortInjectedRewards();
 	}
 
-	private void sortInjectedRewards() {
+	public void sortInjectedRewards() {
 		Collections.sort(injectedRewards, new Comparator<RewardInject>() {
 			@Override
 			public int compare(RewardInject o1, RewardInject o2) {
-				return Integer.compare(o2.getPriority(), o1.getPriority());
+				return Integer.compare(o1.getPriority(), o2.getPriority());
 			}
 		});
 	}
@@ -924,6 +924,8 @@ public class RewardHandler {
 				}
 			}
 		}
+		
+		sortInjectedRewards();
 		plugin.debug("Loaded rewards");
 
 	}
