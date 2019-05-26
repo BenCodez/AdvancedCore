@@ -107,30 +107,6 @@ public class Reward {
 
 	@Getter
 	@Setter
-	private int money;
-
-	@Getter
-	@Setter
-	private int MinMoney;
-
-	@Getter
-	@Setter
-	private int MaxMoney;
-
-	@Getter
-	@Setter
-	private int exp;
-
-	@Getter
-	@Setter
-	private int minExp;
-
-	@Getter
-	@Setter
-	private int maxExp;
-
-	@Getter
-	@Setter
 	private ArrayList<String> consoleCommands;
 
 	@Getter
@@ -328,22 +304,6 @@ public class Reward {
 		return false;
 	}
 
-	/**
-	 * Gets the exp to give.
-	 *
-	 * @return the exp to give
-	 */
-	public int getExpToGive() {
-		int amount = getExp();
-		int maxAmount = getMaxExp();
-		int minAmount = getMinExp();
-		if ((maxAmount == 0) && (minAmount == 0)) {
-			return amount;
-		} else {
-			return ThreadLocalRandom.current().nextInt(minAmount, maxAmount);
-		}
-	}
-
 	public ItemStack getItem() {
 		return new ItemStack(Material.STONE);
 	}
@@ -351,22 +311,6 @@ public class Reward {
 	public ItemStack getItemStack(User user, String item) {
 		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getOfflinePlayer())
 				.toItemStack(user.getPlayer());
-	}
-
-	/**
-	 * Gets the money to give.
-	 *
-	 * @return the money to give
-	 */
-	public int getMoneyToGive() {
-		int amount = getMoney();
-		int maxAmount = getMaxMoney();
-		int minAmount = getMinMoney();
-		if ((maxAmount == 0) && (minAmount == 0)) {
-			return amount;
-		} else {
-			return ThreadLocalRandom.current().nextInt(minAmount, maxAmount);
-		}
 	}
 
 	/**
@@ -398,19 +342,42 @@ public class Reward {
 		user.giveExp(exp);
 	}
 
-	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
+	public void giveInjectedRewards(User user, HashMap<String, String> placeholders, boolean placeholder) {
 		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
-			try {
-				plugin.extraDebug(getRewardName() + ": Attempting to give " + inject.getPath());
-				if (inject.isSynchronize()) {
-					synchronized (inject.getObject()) {
-						inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+			boolean Addplaceholder = inject.isAddAsPlaceholder();
+			if (Addplaceholder == placeholder) {
+				try {
+					Object obj = null;
+					plugin.extraDebug(getRewardName() + ": Attempting to give " + inject.getPath());
+					if (inject.isSynchronize()) {
+						synchronized (inject.getObject()) {
+							obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+						}
+					} else {
+						obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
 					}
-				} else {
-					inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+					if (Addplaceholder) {
+						String placeholderName = inject.getPlaceholderName();
+						String value = "";
+						if (obj instanceof Boolean) {
+							Boolean b = (Boolean) obj;
+							value = b.toString();
+						} else if (obj instanceof String) {
+							String b = (String) obj;
+							value = b;
+						} else if (obj instanceof Double) {
+							Double b = (Double) obj;
+							value = b.toString();
+						} else if (obj instanceof Integer) {
+							Integer b = (Integer) obj;
+							value = b.toString();
+						}
+						plugin.extraDebug("Adding placeholder " + placeholderName + ":" + value);
+						placeholders.put(placeholderName, value);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
 		}
 	}
@@ -598,10 +565,6 @@ public class Reward {
 			LocalDateTime ldt = LocalDateTime.now();
 			Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 			phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
-			int exp = getExpToGive();
-			int money = getMoneyToGive();
-			phs.put("money", "" + money);
-			phs.put("exp", "" + exp);
 			phs.put("uuid", user.getUUID());
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
@@ -619,9 +582,12 @@ public class Reward {
 			placeholders.put("items",
 					ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
+			// injected rewards
+			giveInjectedRewards(user, placeholders, true);
+
 			// non injectable rewards?
-			giveMoney(user, money);
-			giveExp(user, exp);
+			// giveMoney(user, money);
+			// giveExp(user, exp);
 			checkChoiceRewards(user);
 
 			// possible future injectable rewards
@@ -629,11 +595,10 @@ public class Reward {
 			runCommands(user, placeholders);
 			giveLucky(user, placeholders);
 
-			// injected rewards
-			giveInjectedRewards(user, placeholders);
-
 			// execute reward within reward
 			giveRewardsRewards(user, placeholders);
+
+			giveInjectedRewards(user, placeholders, false);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 		}
@@ -704,14 +669,6 @@ public class Reward {
 		setWorlds(getConfig().getWorlds());
 
 		setItems(getConfig().getItems());
-
-		setMoney(getConfig().getMoney());
-		setMinMoney(getConfig().getMinMoney());
-		setMaxMoney(getConfig().getMaxMoney());
-
-		setExp(getConfig().getEXP());
-		setMinExp(getConfig().getMinExp());
-		setMaxExp(getConfig().getMaxExp());
 
 		setConsoleCommands(getConfig().getCommandsConsole());
 		setPlayerCommands(getConfig().getCommandsPlayer());

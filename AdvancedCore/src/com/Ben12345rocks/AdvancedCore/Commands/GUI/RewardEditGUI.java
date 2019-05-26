@@ -73,65 +73,6 @@ public class RewardEditGUI {
 		setCurrentReward(player, reward);
 		inv.addData("Reward", reward);
 
-		inv.addButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money", reward.getMoney()) {
-
-					@Override
-					public void setValue(Player player, Number num) {
-						getCurrentReward(player).getConfig().setMoney(num.intValue());
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueNumber("MinMoney", reward.getMinMoney()) {
-
-					@Override
-					public void setValue(Player player, Number num) {
-						getCurrentReward(player).getConfig().setMinMoney(num.intValue());
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueNumber("MaxMoney", reward.getMaxMoney()) {
-
-					@Override
-					public void setValue(Player player, Number num) {
-						getCurrentReward(player).getConfig().setMaxMoney(num.intValue());
-						plugin.reload();
-					}
-				}));
-		inv.addButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Exp", reward.getExp()) {
-
-					@Override
-					public void setValue(Player player, Number num) {
-						getCurrentReward(player).getConfig().setEXP(num.intValue());
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueNumber("MinExp", reward.getMinExp()) {
-
-					@Override
-					public void setValue(Player player, Number num) {
-						getCurrentReward(player).getConfig().setMinExp(num.intValue());
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueNumber("MaxExp", reward.getMaxExp()) {
-
-					@Override
-					public void setValue(Player player, Number num) {
-						getCurrentReward(player).getConfig().setMaxExp(num.intValue());
-						plugin.reload();
-					}
-				}));
-
 		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 				new EditGUIValueString("RewardType", reward.getRewardType()) {
 

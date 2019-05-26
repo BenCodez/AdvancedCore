@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TimerTask;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -20,6 +20,8 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectConfigurationSection;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectDouble;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectInt;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectKeys;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectString;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
@@ -334,13 +336,122 @@ public class RewardHandler {
 
 	}
 
+	public RewardInject getInjectedReward(String injected) {
+		for (RewardInject reward : injectedRewards) {
+			if (reward.getPath().equalsIgnoreCase(injected)) {
+				return reward;
+			}
+		}
+		return null;
+	}
+
 	public void loadInjectedRewards() {
+
+		injectedRewards.add(new RewardInjectDouble("Money", 0) {
+
+			@Override
+			public Double onRewardRequest(Reward reward, User user, double num, HashMap<String, String> placeholders) {
+				user.giveMoney(num);
+				return null;
+			}
+		}.asPlaceholder("Money").addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money", null) {
+
+					@Override
+					public void setValue(Player player, Number value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value.intValue());
+						plugin.reload();
+					}
+				})));
+
+		injectedRewards.add(new RewardInjectConfigurationSection("Money") {
+
+			@Override
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				double minMoney = section.getDouble("Min", 0);
+				double maxMoney = section.getDouble("Max", 0);
+				double value = ThreadLocalRandom.current().nextDouble(minMoney, maxMoney);
+				user.giveMoney(value);
+				return "" + value;
+			}
+		}.asPlaceholder("Money").addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money.Min", null) {
+
+					@Override
+					public void setValue(Player player, Number num) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), num.intValue());
+						plugin.reload();
+					}
+				})).addEditButton(
+						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money.Max", null) {
+
+							@Override
+							public void setValue(Player player, Number value) {
+								Reward reward = (Reward) getInv().getData("Reward");
+								reward.getConfig().set(getKey(), value.intValue());
+								plugin.reload();
+							}
+						})));
+
+		injectedRewards.add(new RewardInjectInt("EXP", 0) {
+
+			@Override
+			public Integer onRewardRequest(Reward reward, User user, int num, HashMap<String, String> placeholders) {
+				user.giveExp(num);
+				return null;
+			}
+		}.asPlaceholder("EXP")
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP", null) {
+
+					@Override
+					public void setValue(Player player, Number value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value.intValue());
+						plugin.reload();
+					}
+				})));
+
+		injectedRewards.add(new RewardInjectConfigurationSection("EXP") {
+
+			@Override
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				int minEXP = section.getInt("Min", 0);
+				int maxEXP = section.getInt("Max", 0);
+				int value = ThreadLocalRandom.current().nextInt(minEXP, maxEXP);
+				user.giveExp(value);
+				return "" + value;
+			}
+		}.asPlaceholder("EXP").addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Min", null) {
+
+					@Override
+					public void setValue(Player player, Number num) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), num.intValue());
+						plugin.reload();
+					}
+				})).addEditButton(
+						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Max", null) {
+
+							@Override
+							public void setValue(Player player, Number value) {
+								Reward reward = (Reward) getInv().getData("Reward");
+								reward.getConfig().set(getKey(), value.intValue());
+								plugin.reload();
+							}
+						})));
 
 		injectedRewards.add(new RewardInjectString("Messages.Player") {
 
 			@Override
-			public void onRewardRequest(Reward reward, User user, String value, HashMap<String, String> placeholders) {
+			public String onRewardRequest(Reward reward, User user, String value,
+					HashMap<String, String> placeholders) {
 				user.sendMessage(value, placeholders);
+				return null;
 			}
 		}.addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Messages.Player", null) {
@@ -356,9 +467,11 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectString("Messages.Broadcast") {
 
 			@Override
-			public void onRewardRequest(Reward reward, User user, String value, HashMap<String, String> placeholders) {
+			public String onRewardRequest(Reward reward, User user, String value,
+					HashMap<String, String> placeholders) {
 				MiscUtils.getInstance().broadcast(StringUtils.getInstance().replacePlaceHolders(user.getPlayer(),
 						StringUtils.getInstance().replacePlaceHolder(value, placeholders)));
+				return null;
 			}
 		}.addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Messages.Broadcast", null) {
@@ -374,11 +487,12 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
 
 			@Override
-			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				user.sendActionBar(
 						StringUtils.getInstance().replacePlaceHolder(section.getString("Message", ""), placeholders),
 						section.getInt("Delay", 30));
+				return null;
 			}
 		}.addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("ActionBar.Delay", null) {
@@ -403,7 +517,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("Javascripts") {
 
 			@Override
-			public void onRewardRequest(Reward reward, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward reward, User user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (!list.isEmpty()) {
 					JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getPlayer());
@@ -411,6 +525,7 @@ public class RewardHandler {
 						engine.execute(StringUtils.getInstance().replacePlaceHolder(str, placeholders));
 					}
 				}
+				return null;
 			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Javascripts", null) {
 
@@ -425,7 +540,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Javascript") {
 
 			@Override
-			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
@@ -436,6 +551,7 @@ public class RewardHandler {
 						new RewardBuilder(section, "FalseRewards").withPrefix(reward.getName()).send(user);
 					}
 				}
+				return null;
 
 			}
 		});
@@ -443,12 +559,13 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("RandomCommand") {
 
 			@Override
-			public void onRewardRequest(Reward r, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward r, User user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (list.size() > 0) {
 					MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),
 							list.get(ThreadLocalRandom.current().nextInt(list.size())), placeholders);
 				}
+				return null;
 			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomCommand", null) {
 
@@ -463,12 +580,13 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("RandomReward") {
 
 			@Override
-			public void onRewardRequest(Reward r, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward r, User user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (list.size() > 0) {
 					giveReward(user, list.get(ThreadLocalRandom.current().nextInt(list.size())),
 							new RewardOptions().setPlaceholders(placeholders));
 				}
+				return null;
 			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomReward", null) {
 
@@ -483,15 +601,16 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("Priority") {
 
 			@Override
-			public void onRewardRequest(Reward r, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward r, User user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				for (String str : list) {
 					Reward reward = RewardHandler.getInstance().getReward(str);
 					if (reward.canGiveReward(user)) {
 						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true).send(user);
-						return;
+						return null;
 					}
 				}
+				return null;
 			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Priority", null) {
 
@@ -506,14 +625,14 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Potions") {
 
 			@Override
-			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				for (String potion : section.getKeys(false)) {
 					user.givePotionEffect(potion, section.getInt(potion + ".Duration", 1),
 							section.getInt(potion + ".Amplifier", 1));
-
 				}
+				return null;
 
 			}
 		});
@@ -521,7 +640,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Title") {
 
 			@Override
-			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
@@ -533,6 +652,7 @@ public class RewardHandler {
 							section.getInt("FadeIn", 10), section.getInt("ShowTime", 50),
 							section.getInt("FadeOut", 10));
 				}
+				return null;
 
 			}
 		});
@@ -540,7 +660,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("BossBar") {
 
 			@Override
-			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
@@ -550,6 +670,7 @@ public class RewardHandler {
 							section.getString("Color", "BLUE"), section.getString("Style", "SOLID"),
 							section.getDouble("Progress", .5), section.getInt("Delay", 30));
 				}
+				return null;
 
 			}
 		});
@@ -557,7 +678,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Sound") {
 
 			@Override
-			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
@@ -568,6 +689,7 @@ public class RewardHandler {
 						ex.printStackTrace();
 					}
 				}
+				return null;
 
 			}
 		});
@@ -575,12 +697,13 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Effect") {
 
 			@Override
-			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				if (section.getBoolean("Enabled")) {
 					user.playParticle(section.getString("Effect"), section.getInt("Data", 1),
 							section.getInt("Particles", 1), section.getInt("Radius", 5));
 				}
+				return null;
 
 			}
 		});
@@ -589,7 +712,7 @@ public class RewardHandler {
 
 			@SuppressWarnings("unchecked")
 			@Override
-			public void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				if (section.getBoolean("Enabled")) {
 					FireworkHandler.getInstance().launchFirework(user.getPlayer().getLocation(),
@@ -599,6 +722,7 @@ public class RewardHandler {
 							section.getBoolean("Trail"), section.getBoolean("Flicker"),
 							(ArrayList<String>) section.getList("Types", new ArrayList<String>()));
 				}
+				return null;
 
 			}
 		});
@@ -606,12 +730,13 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectKeys("RandomItem") {
 
 			@Override
-			public void onRewardRequested(Reward reward, User user, Set<String> section, ConfigurationSection data,
+			public String onRewardRequested(Reward reward, User user, Set<String> section, ConfigurationSection data,
 					HashMap<String, String> placeholders) {
 				if (section.size() > 0) {
 					user.giveItem(new ItemBuilder(data.getConfigurationSection(
 							ArrayUtils.getInstance().pickRandom(ArrayUtils.getInstance().convert(section)))));
 				}
+				return null;
 			}
 		});
 

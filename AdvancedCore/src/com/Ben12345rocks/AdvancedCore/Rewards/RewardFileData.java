@@ -750,56 +750,6 @@ public class RewardFileData {
 	}
 
 	/**
-	 * Sets the max exp.
-	 *
-	 * @param value
-	 *            the new max exp
-	 */
-	public void setMaxExp(int value) {
-		set("MaxEXP", value);
-	}
-
-	/**
-	 * Sets the max money.
-	 *
-	 * @param value
-	 *            the new max money
-	 */
-	public void setMaxMoney(int value) {
-		set("MaxMoney", value);
-	}
-
-	/**
-	 * Sets the min exp.
-	 *
-	 * @param value
-	 *            the new min exp
-	 */
-	public void setMinExp(int value) {
-		set("MinEXP", value);
-	}
-
-	/**
-	 * Sets the min money.
-	 *
-	 * @param value
-	 *            the new min money
-	 */
-	public void setMinMoney(int value) {
-		set("MinMoney", value);
-	}
-
-	/**
-	 * Sets the money.
-	 *
-	 * @param value
-	 *            the new money
-	 */
-	public void setMoney(int value) {
-		set("Money", value);
-	}
-
-	/**
 	 * Sets the permission.
 	 *
 	 * @param perm

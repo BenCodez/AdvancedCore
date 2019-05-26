@@ -150,7 +150,7 @@ public class MySQL {
 
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
-			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
+			String sql = "ALTER TABLE " + getName() + " ADD COLUMN '" + column + "' text" + ";";
 
 			AdvancedCoreHook.getInstance().debug("Adding column: " + column);
 			try {
@@ -426,8 +426,8 @@ public class MySQL {
 		synchronized (object2) {
 			String query = "INSERT " + getName() + " ";
 
-			query += "set uuid='" + index + "', ";
-			query += column + "='" + value.toString() + "';";
+			query += "set uuid='" + index + "', '";
+			query += column + "'='" + value.toString() + "';";
 			// AdvancedCoreHook.getInstance().extraDebug(query);
 
 			try {
@@ -462,7 +462,10 @@ public class MySQL {
 		columns = getColumnsQueury();
 
 		try {
-			useBatchUpdates = mysql.getConnectionManager().getConnection().getMetaData().supportsBatchUpdates();
+			Connection con = mysql.getConnectionManager().getConnection();
+			useBatchUpdates = con.getMetaData().supportsBatchUpdates();
+			con.close();
+
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

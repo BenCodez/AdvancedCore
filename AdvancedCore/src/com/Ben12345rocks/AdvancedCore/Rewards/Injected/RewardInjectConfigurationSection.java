@@ -15,15 +15,16 @@ public abstract class RewardInjectConfigurationSection extends RewardInject {
 	}
 
 	@Override
-	public void onRewardRequest(Reward reward, User user, ConfigurationSection data,
+	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
 		if (data.isConfigurationSection(getPath())) {
 			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath());
-			onRewardRequested(reward, user, data.getConfigurationSection(getPath()), placeholders);
+			return onRewardRequested(reward, user, data.getConfigurationSection(getPath()), placeholders);
 		}
+		return null;
 	}
 
-	public abstract void onRewardRequested(Reward reward, User user, ConfigurationSection section,
+	public abstract String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 			HashMap<String, String> placeholders);
 
 }

@@ -29,6 +29,12 @@ public abstract class RewardInject {
 	private Object object;
 
 	@Getter
+	private boolean addAsPlaceholder = false;
+
+	@Getter
+	private String placeholderName;
+
+	@Getter
 	@Setter
 	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
 
@@ -51,6 +57,12 @@ public abstract class RewardInject {
 		return this;
 	}
 
-	public abstract void onRewardRequest(Reward reward, User user, ConfigurationSection data,
+	public RewardInject asPlaceholder(String placeholderName) {
+		addAsPlaceholder = true;
+		this.placeholderName = placeholderName;
+		return this;
+	}
+
+	public abstract Object onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
 }

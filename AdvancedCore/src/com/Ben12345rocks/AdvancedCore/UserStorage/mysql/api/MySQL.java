@@ -3,8 +3,6 @@ package com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
-
 public class MySQL {
 
 	private ConnectionManager connectionManager;
@@ -34,7 +32,6 @@ public class MySQL {
 			long lifeTime) {
 		connectionManager = new ConnectionManager(host, port, username, password, database, maxConnections, useSSL,
 				lifeTime);
-		AdvancedCoreHook.getInstance().extraDebug("Connecting mysql...");
 		return connectionManager.open();
 	}
 
