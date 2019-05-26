@@ -166,7 +166,7 @@ public class TimeChecker {
 			return;
 		}
 		if (hasTimeOffSet()) {
-			plugin.extraDebug(getTime().getHour() + ":" + getTime().getMinute());
+			plugin.extraDebug("TimeHourOffSet: " + getTime().getHour() + ":" + getTime().getMinute());
 		}
 
 		boolean dayChanged = false;
