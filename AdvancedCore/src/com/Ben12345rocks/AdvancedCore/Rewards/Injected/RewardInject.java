@@ -38,6 +38,9 @@ public abstract class RewardInject {
 	@Setter
 	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
 
+	@Getter
+	private int priority = 50;
+
 	public RewardInject(String path) {
 		this.path = path;
 	}
@@ -54,6 +57,11 @@ public abstract class RewardInject {
 	public RewardInject synchronize() {
 		synchronize = true;
 		object = new Object();
+		return this;
+	}
+
+	public RewardInject priority(int priority) {
+		this.priority = priority;
 		return this;
 	}
 

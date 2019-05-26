@@ -73,29 +73,30 @@ Items:
 Money: 1000
 
 # Pick random number between min and max money amount
-#MinMoney: 100
-#MaxMoney: 3000
+#Money:
+#  Min: 100
+#  Max: 3000
 
 # Give player experience
 EXP: 100
 
 # Pick a random number between min and max EXP amount to give
-#MinEXP: 100
-#MaxEXP: 1000
+#EXP:
+#  Min: 100
+#  Max: 1000
 
 # Commands to run
 # Use %player% for player name
-# Set to Console: [] for no commands
-# You can also do this:
-# Commands:
-# - say hi
+# Remove for no commands
 Commands:
+- say hi
+#Commands:
   # Commands here will be run by console
-  Console:
-  - 'say %player% was lucky'
+#  Console:
+#  - 'say %player% was lucky'
   # Commands here are run by player
-  #Player:
-  #- 'vote total'
+#  Player:
+#  - 'vote total'
 
 # The messages are sent when rewards above are given to user
 # set to '' to give no message

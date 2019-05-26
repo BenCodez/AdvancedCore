@@ -29,7 +29,7 @@ public abstract class RewardInjectDouble extends RewardInject {
 	@Override
 	public Double onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
-		if (data.isDouble(getPath())) {
+		if (data.isDouble(getPath()) || data.isInt(getPath())) {
 			double value = data.getDouble(getPath(), getDefaultValue());
 			AdvancedCoreHook.getInstance()
 					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);

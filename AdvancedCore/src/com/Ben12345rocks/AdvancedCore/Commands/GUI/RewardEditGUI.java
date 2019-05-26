@@ -104,26 +104,6 @@ public class RewardEditGUI {
 				}));
 
 		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueList("Commands.Console", reward.getConsoleCommands()) {
-
-					@Override
-					public void setValue(Player player, ArrayList<String> value) {
-						getCurrentReward(player).getConfig().setCommandsConsole(value);
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueList("Commands.Player", reward.getConsoleCommands()) {
-
-					@Override
-					public void setValue(Player player, ArrayList<String> value) {
-						getCurrentReward(player).getConfig().setCommandsPlayer(value);
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 				new EditGUIValueString("Permission", reward.getPermission()) {
 
 					@Override

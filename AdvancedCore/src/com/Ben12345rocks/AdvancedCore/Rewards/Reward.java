@@ -8,10 +8,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -28,7 +26,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -91,10 +88,6 @@ public class Reward {
 
 	@Getter
 	@Setter
-	private double randomChance;
-
-	@Getter
-	@Setter
 	private boolean requirePermission;
 
 	@Getter
@@ -104,14 +97,6 @@ public class Reward {
 	@Getter
 	@Setter
 	private Set<String> items;
-
-	@Getter
-	@Setter
-	private ArrayList<String> consoleCommands;
-
-	@Getter
-	@Setter
-	private ArrayList<String> playerCommands;
 
 	@Getter
 	@Setter
@@ -135,23 +120,11 @@ public class Reward {
 
 	@Getter
 	@Setter
-	private HashMap<Integer, String> luckyRewards;
-
-	@Getter
-	@Setter
-	private boolean onlyOneLucky;
-
-	@Getter
-	@Setter
 	private String server;
 
 	@Getter
 	@Setter
 	private File file;
-
-	@Getter
-	@Setter
-	private boolean randomPickRandom;
 
 	/**
 	 * Instantiates a new reward.
@@ -228,15 +201,6 @@ public class Reward {
 		plugin.debug("Giving reward " + name + " in " + getDelayHours() + " hours, " + getDelayMinutes() + " minutes, "
 				+ getDelaySeconds() + " seconds (" + time.toString() + ")");
 		return true;
-	}
-
-	/**
-	 * Check random chance.
-	 *
-	 * @return true, if successful
-	 */
-	public boolean checkRandomChance() {
-		return MiscUtils.getInstance().checkChance(getRandomChance(), 100);
 	}
 
 	private void checkRewardFile() {
@@ -348,7 +312,8 @@ public class Reward {
 			if (Addplaceholder == placeholder) {
 				try {
 					Object obj = null;
-					plugin.extraDebug(getRewardName() + ": Attempting to give " + inject.getPath());
+					plugin.extraDebug(
+							getRewardName() + ": Attempting to give " + inject.getPath() + ":" + inject.getPriority());
 					if (inject.isSynchronize()) {
 						synchronized (inject.getObject()) {
 							obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
@@ -397,31 +362,6 @@ public class Reward {
 		}
 	}
 
-	public void giveLucky(User user, HashMap<String, String> placeholders) {
-		HashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
-		for (Entry<Integer, String> entry : luckyRewards.entrySet()) {
-			if (MiscUtils.getInstance().checkChance(1, entry.getKey())) {
-				map.put(entry.getValue(), entry.getKey());
-			}
-		}
-
-		map = ArrayUtils.getInstance().sortByValuesStr(map, false);
-		if (map.size() > 0) {
-			if (isOnlyOneLucky()) {
-				for (Entry<String, Integer> entry : map.entrySet()) {
-					new RewardBuilder(getConfig().getConfigData(), entry.getKey()).withPlaceHolder(placeholders)
-							.send(user);
-					return;
-				}
-			} else {
-				for (Entry<String, Integer> entry : map.entrySet()) {
-					new RewardBuilder(getConfig().getConfigData(), entry.getKey()).withPlaceHolder(placeholders)
-							.send(user);
-				}
-			}
-		}
-	}
-
 	/**
 	 * Give money.
 	 *
@@ -432,39 +372,6 @@ public class Reward {
 	 */
 	public void giveMoney(User user, int money) {
 		user.giveMoney(money);
-	}
-
-	/**
-	 * Give random.
-	 *
-	 * @param user
-	 *            the user
-	 * @param online
-	 *            the online
-	 * @param placeholders
-	 *            placeholders
-	 */
-	public void giveRandom(User user, boolean online, HashMap<String, String> placeholders) {
-		if (checkRandomChance()) {
-			if (isRandomPickRandom()) {
-				ArrayList<String> rewards = getConfig().getRandomRewards();
-				if (rewards != null) {
-					if (rewards.size() > 0) {
-						String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
-						if (!reward.equals("")) {
-							RewardHandler.getInstance().giveReward(user, reward,
-									new RewardOptions().setOnline(online).setPlaceholders(placeholders));
-						}
-					}
-				}
-			} else {
-				new RewardBuilder(getConfig().getConfigData(), getConfig().getRandomRewardsPath()).withPrefix(name)
-						.withPlaceHolder(placeholders).send(user);
-			}
-		} else {
-			new RewardBuilder(getConfig().getConfigData(), getConfig().getRandomFallBackRewardsPath()).withPrefix(name)
-					.withPlaceHolder(placeholders).send(user);
-		}
 	}
 
 	public void giveReward(User user, RewardOptions rewardOptions) {
@@ -539,11 +446,6 @@ public class Reward {
 		}
 	}
 
-	private void giveRewardsRewards(User user, HashMap<String, String> placeholders) {
-		new RewardBuilder(getConfig().getConfigData(), "Rewards").withPrefix(name).withPlaceHolder(placeholders)
-				.send(user);
-	}
-
 	/**
 	 * Give reward user.
 	 *
@@ -586,17 +488,7 @@ public class Reward {
 			giveInjectedRewards(user, placeholders, true);
 
 			// non injectable rewards?
-			// giveMoney(user, money);
-			// giveExp(user, exp);
 			checkChoiceRewards(user);
-
-			// possible future injectable rewards
-			giveRandom(user, true, placeholders);
-			runCommands(user, placeholders);
-			giveLucky(user, placeholders);
-
-			// execute reward within reward
-			giveRewardsRewards(user, placeholders);
 
 			giveInjectedRewards(user, placeholders, false);
 
@@ -662,16 +554,12 @@ public class Reward {
 		}
 
 		setChance(getConfig().getChance());
-		setRandomChance(getConfig().getRandomChance());
-		randomPickRandom = getConfig().getRandomPickRandom();
 
 		setRequirePermission(getConfig().getRequirePermission());
 		setWorlds(getConfig().getWorlds());
 
 		setItems(getConfig().getItems());
 
-		setConsoleCommands(getConfig().getCommandsConsole());
-		setPlayerCommands(getConfig().getCommandsPlayer());
 
 		permission = getConfig().getPermission();
 
@@ -686,37 +574,9 @@ public class Reward {
 			usesWorlds = true;
 		}
 
-		luckyRewards = new HashMap<Integer, String>();
-
-		for (String str : getConfig().getLuckyRewards()) {
-			if (StringUtils.getInstance().isInt(str)) {
-				int num = Integer.parseInt(str);
-				if (num > 0) {
-					String path = getConfig().getLuckyRewardsPath(num);
-					luckyRewards.put(num, path);
-				}
-			}
-		}
-
-		onlyOneLucky = getConfig().getOnlyOneLucky();
-
 		server = getConfig().getServer();
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
-	}
-
-	/**
-	 * Run commands.
-	 *
-	 * @param user
-	 *            the user
-	 * @param placeholders
-	 *            placeholders
-	 */
-	public void runCommands(User user, HashMap<String, String> placeholders) {
-		MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), getConsoleCommands(), placeholders);
-
-		user.preformCommand(getPlayerCommands(), placeholders);
 	}
 
 }
