@@ -172,15 +172,6 @@ public class RewardFileData {
 		return getConfigData().getBoolean("EnableChoices");
 	}
 
-	/**
-	 * Gets the exp.
-	 *
-	 * @return the exp
-	 */
-	public int getEXP() {
-		return getConfigData().getInt("EXP");
-	}
-
 	public FileConfiguration getFileData() {
 		return fileData;
 	}
@@ -345,67 +336,6 @@ public class RewardFileData {
 		return getConfigData().getString("Items." + item + ".Skull");
 	}
 
-	public Set<String> getLuckyRewards() {
-		if (getConfigData().getConfigurationSection("Lucky") != null) {
-			return getConfigData().getConfigurationSection("Lucky").getKeys(false);
-		} else {
-			return new HashSet<String>();
-		}
-	}
-
-	public String getLuckyRewardsPath(int num) {
-		return "Lucky." + num;
-	}
-
-	/**
-	 * Gets the max exp.
-	 *
-	 * @return the max exp
-	 */
-	public int getMaxExp() {
-		return getConfigData().getInt("MaxEXP");
-	}
-
-	/**
-	 * Gets the max money.
-	 *
-	 * @return the max money
-	 */
-	public int getMaxMoney() {
-		return getConfigData().getInt("MaxMoney");
-	}
-
-	/**
-	 * Gets the min exp.
-	 *
-	 * @return the min exp
-	 */
-	public int getMinExp() {
-		return getConfigData().getInt("MinEXP");
-	}
-
-	/**
-	 * Gets the min money.
-	 *
-	 * @return the min money
-	 */
-	public int getMinMoney() {
-		return getConfigData().getInt("MinMoney");
-	}
-
-	/**
-	 * Gets the money.
-	 *
-	 * @return the money
-	 */
-	public int getMoney() {
-		return getConfigData().getInt("Money");
-	}
-
-	public boolean getOnlyOneLucky() {
-		return getConfigData().getBoolean("OnlyOneLucky");
-	}
-
 	/**
 	 * Gets the permission.
 	 *
@@ -418,32 +348,6 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getPriority() {
 		return (ArrayList<String>) getConfigData().getList("Priority", new ArrayList<String>());
-	}
-
-	/**
-	 * Gets the random chance.
-	 *
-	 * @return the random chance
-	 */
-	public double getRandomChance() {
-		return getConfigData().getDouble("Random.Chance");
-	}
-
-	public String getRandomFallBackRewardsPath() {
-		return "Random.FallBack";
-	}
-
-	public boolean getRandomPickRandom() {
-		return getConfigData().getBoolean("Random.PickRandom", true);
-	}
-
-	@SuppressWarnings("unchecked")
-	public ArrayList<String> getRandomRewards() {
-		return (ArrayList<String>) getConfigData().getList("Random.Rewards", new ArrayList<String>());
-	}
-
-	public String getRandomRewardsPath() {
-		return "Random.Rewards";
 	}
 
 	/**
@@ -617,16 +521,6 @@ public class RewardFileData {
 
 	public void setDirectlyDefinedReward(boolean b) {
 		set("DirectlyDefinedReward", b);
-	}
-
-	/**
-	 * Sets the exp.
-	 *
-	 * @param value
-	 *            the new exp
-	 */
-	public void setEXP(int value) {
-		set("EXP", value);
 	}
 
 	/**
