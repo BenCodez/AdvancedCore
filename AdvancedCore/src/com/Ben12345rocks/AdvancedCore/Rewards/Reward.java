@@ -356,7 +356,7 @@ public class Reward {
 					} else {
 						obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
 					}
-					if (Addplaceholder) {
+					if (Addplaceholder && obj != null) {
 						String placeholderName = inject.getPlaceholderName();
 						String value = "";
 						if (obj instanceof Boolean) {
