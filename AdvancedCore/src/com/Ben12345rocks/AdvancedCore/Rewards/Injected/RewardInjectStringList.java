@@ -38,7 +38,7 @@ public abstract class RewardInjectStringList extends RewardInject {
 		if (data.isList(getPath())) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());
 			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: "
-					+ ArrayUtils.getInstance().convert(value));
+					+ ArrayUtils.getInstance().makeStringList(value));
 			return onRewardRequest(reward, user, value, placeholders);
 
 		}
