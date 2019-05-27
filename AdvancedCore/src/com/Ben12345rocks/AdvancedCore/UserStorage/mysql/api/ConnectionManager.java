@@ -174,7 +174,6 @@ public class ConnectionManager {
 			config.addDataSourceProperty("prepStmtCacheSqlLimit", 2048);
 			config.addDataSourceProperty("useServerPrepStmts", true);
 			dataSource = new HikariDataSource(config);
-			dataSource.setLeakDetectionThreshold(60 * 1000);
 			AdvancedCoreHook.getInstance().extraDebug("Connecting mysql...");
 			return true;
 		} catch (Exception e) {
