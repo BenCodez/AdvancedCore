@@ -150,7 +150,7 @@ public class MySQL {
 
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
-			String sql = "ALTER TABLE " + getName() + " ADD COLUMN '" + column + "' text" + ";";
+			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
 			AdvancedCoreHook.getInstance().debug("Adding column: " + column);
 			try {
