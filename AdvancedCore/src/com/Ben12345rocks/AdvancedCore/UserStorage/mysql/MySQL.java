@@ -350,6 +350,7 @@ public class MySQL {
 	public ArrayList<String> getNamesQuery() {
 		ArrayList<String> uuids = new ArrayList<String>();
 
+		checkColumn("PlayerName", DataType.STRING);
 		ArrayList<Column> rows = getRowsNameQuery();
 		if (rows != null) {
 			for (Column c : rows) {
@@ -509,12 +510,12 @@ public class MySQL {
 					}
 				}
 
-				String query = "UPDATE " + getName() + " SET ";
+				String query = "UPDATE " + getName() + " SET '";
 
 				if (dataType == DataType.STRING) {
-					query += "`" + column + "`='" + value.toString() + "'";
+					query += column + "'='" + value.toString() + "'";
 				} else {
-					query += "`" + column + "`=" + value;
+					query += column + "`=" + value;
 
 				}
 				query += " WHERE `uuid`=";
