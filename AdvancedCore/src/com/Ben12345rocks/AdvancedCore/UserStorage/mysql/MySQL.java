@@ -510,12 +510,12 @@ public class MySQL {
 					}
 				}
 
-				String query = "UPDATE " + getName() + " SET '";
+				String query = "UPDATE " + getName() + " SET ";
 
 				if (dataType == DataType.STRING) {
-					query += column + "'='" + value.toString() + "'";
+					query += column + "='" + value.toString() + "'";
 				} else {
-					query += column + "`=" + value;
+					query += column + "=" + value;
 
 				}
 				query += " WHERE `uuid`=";
