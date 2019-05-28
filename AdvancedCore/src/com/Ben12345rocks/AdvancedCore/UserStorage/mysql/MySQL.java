@@ -427,8 +427,8 @@ public class MySQL {
 		synchronized (object2) {
 			String query = "INSERT " + getName() + " ";
 
-			query += "set uuid='" + index + "', '";
-			query += column + "'='" + value.toString() + "';";
+			query += "set uuid='" + index + "', ";
+			query += column + "='" + value.toString() + "';";
 			// AdvancedCoreHook.getInstance().extraDebug(query);
 
 			try {
