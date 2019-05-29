@@ -405,6 +405,10 @@ public class Reward {
 		boolean checkServer = checkServer();
 		boolean checkWorld = checkWorld(user);
 
+		if (!rewardOptions.isOnlineSet()) {
+			rewardOptions.setOnline(user.isOnline());
+		}
+
 		if (((!rewardOptions.isOnline() && !user.isOnline()) || !checkWorld || !checkServer) && !isForceOffline()) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
@@ -559,7 +563,6 @@ public class Reward {
 		setWorlds(getConfig().getWorlds());
 
 		setItems(getConfig().getItems());
-
 
 		permission = getConfig().getPermission();
 
