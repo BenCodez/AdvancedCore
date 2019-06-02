@@ -869,20 +869,22 @@ public class RewardHandler {
 			public String onRewardRequest(Reward r, User user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (list.size() > 0) {
-					giveReward(user, list.get(ThreadLocalRandom.current().nextInt(list.size())),
-							new RewardOptions().setPlaceholders(placeholders));
+					String reward = list.get(ThreadLocalRandom.current().nextInt(list.size()));
+					giveReward(user, reward, new RewardOptions().setPlaceholders(placeholders));
+					return reward;
 				}
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomReward", null) {
+		}.asPlaceholder("RandomReward").priority(90).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomReward", null) {
 
-			@Override
-			public void setValue(Player player, ArrayList<String> value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
-				plugin.reload();
-			}
-		})));
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				})));
 
 		injectedRewards.add(new RewardInjectStringList("Priority") {
 
@@ -894,20 +896,21 @@ public class RewardHandler {
 					if (reward.canGiveReward(user, new RewardOptions())) {
 						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true)
 								.setIgnoreChance(true).send(user);
-						return null;
+						return reward.getName();
 					}
 				}
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Priority", null) {
+		}.asPlaceholder("Priority").addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Priority", null) {
 
-			@Override
-			public void setValue(Player player, ArrayList<String> value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
-				plugin.reload();
-			}
-		})));
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				})));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Potions") {
 
@@ -1020,12 +1023,13 @@ public class RewardHandler {
 			public String onRewardRequested(Reward reward, User user, Set<String> section, ConfigurationSection data,
 					HashMap<String, String> placeholders) {
 				if (section.size() > 0) {
-					user.giveItem(new ItemBuilder(data.getConfigurationSection(
-							ArrayUtils.getInstance().pickRandom(ArrayUtils.getInstance().convert(section)))));
+					String item = ArrayUtils.getInstance().pickRandom(ArrayUtils.getInstance().convert(section));
+					user.giveItem(new ItemBuilder(data.getConfigurationSection(item)));
+					return item;
 				}
 				return null;
 			}
-		});
+		}.asPlaceholder("RandomItem").priority(90));
 
 		for (RewardInject reward : injectedRewards) {
 			reward.setInternalReward(true);
