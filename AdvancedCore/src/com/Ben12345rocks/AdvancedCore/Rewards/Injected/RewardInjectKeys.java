@@ -18,7 +18,7 @@ public abstract class RewardInjectKeys extends RewardInject {
 	@Override
 	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
-		if (data.isConfigurationSection(getPath())) {
+		if (data.isConfigurationSection(getPath()) || isAlwaysForce()) {
 			Set<String> value = data.getConfigurationSection(getPath()).getKeys(false);
 			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath());
 			return onRewardRequested(reward, user, value, data.getConfigurationSection(getPath()), placeholders);

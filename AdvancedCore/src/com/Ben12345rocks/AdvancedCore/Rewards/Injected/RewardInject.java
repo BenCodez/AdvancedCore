@@ -35,6 +35,9 @@ public abstract class RewardInject {
 	private String placeholderName;
 
 	@Getter
+	private boolean alwaysForce = false;
+
+	@Getter
 	@Setter
 	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
 
@@ -62,6 +65,11 @@ public abstract class RewardInject {
 
 	public RewardInject priority(int priority) {
 		this.priority = priority;
+		return this;
+	}
+
+	public RewardInject alwaysForce() {
+		this.alwaysForce = true;
 		return this;
 	}
 

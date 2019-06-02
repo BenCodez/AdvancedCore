@@ -28,7 +28,7 @@ public abstract class RequirementInjectString extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if (data.isString(getPath()) && !data.getString(getPath(), "").isEmpty()) {
+		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty()) || isAlwaysForce()) {
 			String value = data.getString(getPath(), getDefaultValue());
 			AdvancedCoreHook.getInstance()
 					.extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: " + value);
@@ -38,7 +38,6 @@ public abstract class RequirementInjectString extends RequirementInject {
 		return true;
 	}
 
-	public abstract boolean onRequirementsRequest(Reward reward, User user, String value,
-			RewardOptions rewardOptions);
+	public abstract boolean onRequirementsRequest(Reward reward, User user, String value, RewardOptions rewardOptions);
 
 }

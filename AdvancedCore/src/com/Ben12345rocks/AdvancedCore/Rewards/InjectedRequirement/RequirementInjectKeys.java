@@ -18,7 +18,7 @@ public abstract class RequirementInjectKeys extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if (data.isConfigurationSection(getPath())) {
+		if (data.isConfigurationSection(getPath()) || isAlwaysForce()) {
 			Set<String> value = data.getConfigurationSection(getPath()).getKeys(false);
 			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath());
 			return onRequirementsRequested(reward, user, value, data.getConfigurationSection(getPath()), rewardOptions);

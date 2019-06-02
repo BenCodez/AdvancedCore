@@ -59,6 +59,14 @@ public abstract class RequirementInject {
 		return this;
 	}
 
+	public RequirementInject alwaysForce() {
+		this.alwaysForce = true;
+		return this;
+	}
+
+	@Getter
+	private boolean alwaysForce = false;
+
 	public abstract boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
 			RewardOptions rewardOptions);
 }

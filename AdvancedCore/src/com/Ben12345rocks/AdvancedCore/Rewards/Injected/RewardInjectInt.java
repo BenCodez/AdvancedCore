@@ -29,9 +29,10 @@ public abstract class RewardInjectInt extends RewardInject {
 	@Override
 	public Integer onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
-		if (data.isInt(getPath())) {
+		if (data.isInt(getPath()) || isAlwaysForce()) {
 			int value = data.getInt(getPath(), getDefaultValue());
-			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath()+ ", value: " + value);
+			AdvancedCoreHook.getInstance()
+					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);
 			Integer re = onRewardRequest(reward, user, value, placeholders);
 			if (re == null) {
 				return value;

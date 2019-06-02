@@ -788,7 +788,7 @@ public class RewardHandler {
 				return null;
 
 			}
-		}.priority(5));
+		}.priority(5).alwaysForce());
 
 		injectedRewards.add(new RewardInjectStringList("RandomCommand") {
 
