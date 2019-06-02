@@ -31,7 +31,7 @@ public abstract class RequirementInjectDouble extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if (data.isDouble(getPath()) || data.isInt(getPath()) || isAlwaysForce()) {
+		if (data.isDouble(getPath()) || data.isInt(getPath()) ||(isAlwaysForce() && data.contains(getPath(), true))) {
 			double value = data.getDouble(getPath(), getDefaultValue());
 			AdvancedCoreHook.getInstance()
 					.extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: " + value);

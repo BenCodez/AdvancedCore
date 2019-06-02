@@ -35,7 +35,7 @@ public abstract class RewardInjectStringList extends RewardInject {
 	@Override
 	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
-		if (data.isList(getPath()) || isAlwaysForce()) {
+		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());
 			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: "
 					+ ArrayUtils.getInstance().makeStringList(value));

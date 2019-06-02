@@ -32,7 +32,7 @@ public abstract class RewardInjectBoolean extends RewardInject {
 	@Override
 	public Boolean onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
-		if (data.isBoolean(getPath()) || isAlwaysForce()) {
+		if (data.isBoolean(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			boolean value = data.getBoolean(getPath(), isDefaultValue());
 			AdvancedCoreHook.getInstance()
 					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);
