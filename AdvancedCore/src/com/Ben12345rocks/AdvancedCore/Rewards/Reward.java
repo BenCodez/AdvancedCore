@@ -47,10 +47,6 @@ public class Reward {
 
 	@Getter
 	@Setter
-	private String rewardType;
-
-	@Getter
-	@Setter
 	private boolean forceOffline;
 
 	@Getter
@@ -360,7 +356,7 @@ public class Reward {
 		if (!rewardOptions.isIgnoreRequirements()) {
 			for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
 				try {
-					plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
+					plugin.extraDebug(getRewardName() + ": Checking requirement " + inject.getPath() + ":" + inject.getPriority());
 					if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
 						plugin.extraDebug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
 								+ inject.isAllowReattempt());
@@ -386,28 +382,9 @@ public class Reward {
 		}
 
 		if (canGive) {
-			giveRewardReward(user, rewardOptions);
+			plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
+			giveRewardUser(user, rewardOptions.getPlaceholders());
 		}
-	}
-
-	public void giveRewardReward(User user, RewardOptions rewardOptions) {
-		plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
-
-		String type = getRewardType();
-		if (rewardOptions.isOnline()) {
-			if (type.equalsIgnoreCase("offline")) {
-				plugin.debug("Reward Type Don't match");
-				return;
-			}
-		} else {
-			if (type.equalsIgnoreCase("online")) {
-				plugin.debug("Reward Type Don't match");
-				return;
-			}
-		}
-
-		giveRewardUser(user, rewardOptions.getPlaceholders());
-
 	}
 
 	/**
@@ -484,8 +461,6 @@ public class Reward {
 	}
 
 	public void loadValues() {
-		setRewardType(getConfig().getRewardType());
-
 		forceOffline = getConfig().getForceOffline();
 
 		setDelayEnabled(getConfig().getDelayedEnabled());

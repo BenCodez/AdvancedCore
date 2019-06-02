@@ -478,6 +478,34 @@ public class RewardHandler {
 					}
 				})));
 
+		injectedRequirements.add(new RequirementInjectString("RewardType", "BOTH") {
+
+			@Override
+			public boolean onRequirementsRequest(Reward reward, User user, String type, RewardOptions rewardOptions) {
+				if (rewardOptions.isOnline()) {
+					if (type.equalsIgnoreCase("offline")) {
+						plugin.debug("Reward Type Don't match");
+						return false;
+					}
+				} else {
+					if (type.equalsIgnoreCase("online")) {
+						plugin.debug("Reward Type Don't match");
+						return false;
+					}
+				}
+				return true;
+			}
+		}.priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("RewardType", null) {
+
+					@Override
+					public void setValue(Player player, String value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				}.addOptions("ONLINE", "OFFLINE", "BOTH"))));
+
 		for (RequirementInject reward : injectedRequirements) {
 			reward.setInternalReward(true);
 		}
