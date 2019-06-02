@@ -27,9 +27,13 @@ import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectInt;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectKeys;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectString;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectDouble;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectString;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueBoolean;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueList;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueNumber;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
@@ -38,6 +42,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
@@ -61,6 +66,9 @@ public class RewardHandler {
 
 	@Getter
 	private ArrayList<RewardInject> injectedRewards = new ArrayList<RewardInject>();
+
+	@Getter
+	private ArrayList<RequirementInject> injectedRequirements = new ArrayList<RequirementInject>();
 
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
@@ -87,10 +95,24 @@ public class RewardHandler {
 		sortInjectedRewards();
 	}
 
+	public void addInjectedRequirements(RequirementInject inject) {
+		injectedRequirements.add(inject);
+		sortInjectedRequirements();
+	}
+
 	public void sortInjectedRewards() {
 		Collections.sort(injectedRewards, new Comparator<RewardInject>() {
 			@Override
 			public int compare(RewardInject o1, RewardInject o2) {
+				return Integer.compare(o2.getPriority(), o1.getPriority());
+			}
+		});
+	}
+
+	public void sortInjectedRequirements() {
+		Collections.sort(injectedRequirements, new Comparator<RequirementInject>() {
+			@Override
+			public int compare(RequirementInject o1, RequirementInject o2) {
 				return Integer.compare(o2.getPriority(), o1.getPriority());
 			}
 		});
@@ -262,12 +284,12 @@ public class RewardHandler {
 		if (rewardOptions.isOnlineSet()) {
 			rewardOptions.setOnline(user.isOnline());
 		}
-		if (data == null) {
-			plugin.getPlugin().getLogger().warning("ConfigurationSection is null, failing to give reward");
-			return;
-		}
 		if (path == null) {
 			plugin.getPlugin().getLogger().warning("Path is null, failing to give reward");
+			return;
+		}
+		if (data == null) {
+			plugin.getPlugin().getLogger().warning("ConfigurationSection is null, failing to give reward: " + path);
 			return;
 		}
 		if (data.isList(path)) {
@@ -346,6 +368,69 @@ public class RewardHandler {
 
 		return false;
 
+	}
+
+	public void loadInjectedRequirements() {
+		injectedRequirements.add(new RequirementInjectDouble("Chance", 100) {
+
+			@Override
+			public boolean onRequirementsRequest(Reward reward, User user, double num, RewardOptions rewardOptions) {
+				if (rewardOptions.isIgnoreChance()) {
+					return true;
+				}
+				return MiscUtils.getInstance().checkChance(num, 100);
+			}
+		}.priority(100).addEditButton(new EditGUIButton(new EditGUIValueNumber("Chacne", null) {
+
+			@Override
+			public void setValue(Player player, Number value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value.intValue());
+				plugin.reload();
+			}
+		})));
+
+		injectedRequirements.add(new RequirementInjectString("Permission", "") {
+
+			@Override
+			public boolean onRequirementsRequest(Reward reward, User user, String str, RewardOptions rewardOptions) {
+				if (str.isEmpty()) {
+					return true;
+				}
+				if (!reward.getConfig().getRequirePermission()) {
+					return true;
+				}
+				boolean perm = PlayerUtils.getInstance().hasServerPermission(user.getPlayerName(), str);
+				if (!perm) {
+					plugin.debug(user.getPlayerName() + " does not have permission " + str + " to get reward "
+							+ reward.getName());
+					return false;
+				}
+				return true;
+			}
+		}.priority(100).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Permission", null) {
+
+			@Override
+			public void setValue(Player player, String value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value);
+				plugin.reload();
+			}
+		})).addEditButton(new EditGUIButton(new EditGUIValueBoolean("RequirePermission", null) {
+
+			@Override
+			public void setValue(Player player, boolean value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value);
+				plugin.reload();
+			}
+		})));
+
+		for (RequirementInject reward : injectedRequirements) {
+			reward.setInternalReward(true);
+		}
+
+		sortInjectedRequirements();
 	}
 
 	public void loadInjectedRewards() {
@@ -673,7 +758,7 @@ public class RewardHandler {
 						if (rewards != null) {
 							if (rewards.size() > 0) {
 								String reward1 = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
-								if (!reward.equals("")) {
+								if (!reward1.equals("")) {
 									RewardHandler.getInstance().giveReward(user, reward1,
 											new RewardOptions().setPlaceholders(placeholders));
 								}
@@ -754,7 +839,7 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				for (String str : list) {
 					Reward reward = RewardHandler.getInstance().getReward(str);
-					if (reward.canGiveReward(user)) {
+					if (reward.canGiveReward(user, new RewardOptions())) {
 						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true).send(user);
 						return null;
 					}
@@ -924,7 +1009,7 @@ public class RewardHandler {
 				}
 			}
 		}
-		
+
 		sortInjectedRewards();
 		plugin.debug("Loaded rewards");
 

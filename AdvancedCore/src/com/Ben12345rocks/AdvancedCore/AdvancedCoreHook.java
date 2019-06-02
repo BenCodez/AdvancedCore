@@ -371,12 +371,12 @@ public class AdvancedCoreHook {
 		ServerData.getInstance().setup();
 		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
 		RewardHandler.getInstance().loadInjectedRewards();
+		RewardHandler.getInstance().loadInjectedRequirements();
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
 		loadVersionFile();
-		
 
 		loadConfig();
 

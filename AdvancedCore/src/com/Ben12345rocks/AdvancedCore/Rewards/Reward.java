@@ -20,12 +20,11 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.Util.Annotation.AnnotationHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -84,23 +83,11 @@ public class Reward {
 
 	@Getter
 	@Setter
-	private double chance;
-
-	@Getter
-	@Setter
-	private boolean requirePermission;
-
-	@Getter
-	@Setter
 	private ArrayList<String> worlds;
 
 	@Getter
 	@Setter
 	private Set<String> items;
-
-	@Getter
-	@Setter
-	private String permission;
 
 	@Getter
 	@Setter
@@ -152,20 +139,11 @@ public class Reward {
 		load(name, section);
 	}
 
-	public boolean canGiveReward(User user) {
-		if (hasPermission(user) && checkChance()) {
+	public boolean canGiveReward(User user, RewardOptions options) {
+		if (checkRequirements(user, options)) {
 			return true;
 		}
 		return false;
-	}
-
-	/**
-	 * Check chance.
-	 *
-	 * @return true, if successful
-	 */
-	public boolean checkChance() {
-		return MiscUtils.getInstance().checkChance(getChance(), 100);
 	}
 
 	/**
@@ -306,44 +284,43 @@ public class Reward {
 		user.giveExp(exp);
 	}
 
-	public void giveInjectedRewards(User user, HashMap<String, String> placeholders, boolean placeholder) {
+	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
 		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
 			boolean Addplaceholder = inject.isAddAsPlaceholder();
-			if (Addplaceholder == placeholder) {
-				try {
-					Object obj = null;
-					plugin.extraDebug(
-							getRewardName() + ": Attempting to give " + inject.getPath() + ":" + inject.getPriority());
-					if (inject.isSynchronize()) {
-						synchronized (inject.getObject()) {
-							obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
-						}
-					} else {
+			try {
+				Object obj = null;
+				plugin.extraDebug(
+						getRewardName() + ": Attempting to give " + inject.getPath() + ":" + inject.getPriority());
+				if (inject.isSynchronize()) {
+					synchronized (inject.getObject()) {
 						obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
 					}
-					if (Addplaceholder && obj != null) {
-						String placeholderName = inject.getPlaceholderName();
-						String value = "";
-						if (obj instanceof Boolean) {
-							Boolean b = (Boolean) obj;
-							value = b.toString();
-						} else if (obj instanceof String) {
-							String b = (String) obj;
-							value = b;
-						} else if (obj instanceof Double) {
-							Double b = (Double) obj;
-							value = b.toString();
-						} else if (obj instanceof Integer) {
-							Integer b = (Integer) obj;
-							value = b.toString();
-						}
-						plugin.extraDebug("Adding placeholder " + placeholderName + ":" + value);
-						placeholders.put(placeholderName, value);
-					}
-				} catch (Exception e) {
-					e.printStackTrace();
+				} else {
+					obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
 				}
+				if (Addplaceholder && obj != null) {
+					String placeholderName = inject.getPlaceholderName();
+					String value = "";
+					if (obj instanceof Boolean) {
+						Boolean b = (Boolean) obj;
+						value = b.toString();
+					} else if (obj instanceof String) {
+						String b = (String) obj;
+						value = b;
+					} else if (obj instanceof Double) {
+						Double b = (Double) obj;
+						value = b.toString();
+					} else if (obj instanceof Integer) {
+						Integer b = (Integer) obj;
+						value = b.toString();
+					}
+					plugin.extraDebug("Adding placeholder " + placeholderName + ":" + value);
+					placeholders.put(placeholderName, value);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
+
 		}
 	}
 
@@ -439,15 +416,27 @@ public class Reward {
 			}
 		}
 
-		if (!hasPermission(user)) {
-			plugin.debug(
-					user.getPlayerName() + " does not have permission " + getPermission() + " to get reward " + name);
+		if (!checkRequirements(user, rewardOptions)) {
 			return;
 		}
 
-		if (rewardOptions.isIgnoreChance() || checkChance()) {
-			giveRewardUser(user, rewardOptions.getPlaceholders());
+		giveRewardUser(user, rewardOptions.getPlaceholders());
+
+	}
+
+	public boolean checkRequirements(User user, RewardOptions rewardOptions) {
+		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+			try {
+				if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
+					return false;
+				}
+			} catch (Exception e) {
+				plugin.debug("Failed to check requirement");
+				e.printStackTrace();
+				return false;
+			}
 		}
+		return true;
 	}
 
 	/**
@@ -459,6 +448,7 @@ public class Reward {
 	 *            placeholders
 	 */
 	public void giveRewardUser(User user, HashMap<String, String> phs) {
+
 		Player player = user.getPlayer();
 		if (player != null || isForceOffline()) {
 
@@ -488,30 +478,13 @@ public class Reward {
 			placeholders.put("items",
 					ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
 
-			// injected rewards
-			giveInjectedRewards(user, placeholders, true);
-
 			// non injectable rewards?
 			checkChoiceRewards(user);
 
-			giveInjectedRewards(user, placeholders, false);
+			giveInjectedRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 		}
-	}
-
-	/**
-	 * Checks for permission.
-	 *
-	 * @param user
-	 *            the user
-	 * @return true, if successful
-	 */
-	public boolean hasPermission(User user) {
-		if (!isRequirePermission()) {
-			return true;
-		}
-		return PlayerUtils.getInstance().hasServerPermission(user.getPlayerName(), permission);
 	}
 
 	/**
@@ -557,15 +530,9 @@ public class Reward {
 			setTimedMinute(getConfig().getTimedMinute());
 		}
 
-		setChance(getConfig().getChance());
-
-		setRequirePermission(getConfig().getRequirePermission());
 		setWorlds(getConfig().getWorlds());
 
 		setItems(getConfig().getItems());
-
-		permission = getConfig().getPermission();
-
 		enableChoices = getConfig().getEnableChoices();
 		if (enableChoices) {
 			choices = getConfig().getChoices();

@@ -13,12 +13,12 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueBoolean;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueList;
-import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueNumber;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
@@ -94,36 +94,6 @@ public class RewardEditGUI {
 				}));
 
 		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueNumber("Chance", reward.getChance()) {
-
-					@Override
-					public void setValue(Player player, Number num) {
-						getCurrentReward(player).getConfig().setChance(num.doubleValue());
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueString("Permission", reward.getPermission()) {
-
-					@Override
-					public void setValue(Player player, String value) {
-						getCurrentReward(player).getConfig().setPermission(value);
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueBoolean("RequirePermission", reward.isRequirePermission()) {
-
-					@Override
-					public void setValue(Player player, boolean value) {
-						getCurrentReward(player).getConfig().setRequirePermission(value);
-						plugin.reload();
-					}
-				}));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 				new EditGUIValueBoolean("ForceOffline", reward.isForceOffline()) {
 
 					@Override
@@ -140,6 +110,15 @@ public class RewardEditGUI {
 				openRewardGUIItems(player, reward);
 			}
 		});
+
+		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
+			if (injectReward.isEditable()) {
+				for (EditGUIButton b : injectReward.getEditButtons()) {
+					b.getEditer().setCurrentValue(reward.getConfig().getConfigData().get(b.getEditer().getKey()));
+					inv.addButton(b);
+				}
+			}
+		}
 
 		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
 			if (injectReward.isEditable()) {
