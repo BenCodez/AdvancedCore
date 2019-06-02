@@ -464,6 +464,7 @@ public class RewardHandler {
 					return true;
 				}
 
+				user.setCheckWorld(true);
 				return false;
 			}
 		}.priority(100).allowReattempt()

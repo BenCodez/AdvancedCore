@@ -99,10 +99,6 @@ public class Reward {
 
 	@Getter
 	@Setter
-	private boolean usesWorlds;
-
-	@Getter
-	@Setter
 	private File file;
 
 	/**
@@ -361,6 +357,8 @@ public class Reward {
 			try {
 				plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
 				if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
+					plugin.extraDebug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
+							+ inject.allowReattempt());
 					canGive = false;
 					if (inject.isAllowReattempt()) {
 						allowOffline = true;
@@ -381,9 +379,6 @@ public class Reward {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
 				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
-				if (!usesWorlds) {
-					user.setCheckWorld(true);
-				}
 			}
 			return;
 		}
@@ -508,12 +503,6 @@ public class Reward {
 		enableChoices = getConfig().getEnableChoices();
 		if (enableChoices) {
 			choices = getConfig().getChoices();
-		}
-
-		if (getConfig().getWorlds().size() == 0) {
-			usesWorlds = false;
-		} else {
-			usesWorlds = true;
 		}
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
