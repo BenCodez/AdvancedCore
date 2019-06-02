@@ -23,13 +23,6 @@ public abstract class RequirementInject {
 
 	@Getter
 	@Setter
-	private boolean synchronize = false;
-
-	@Getter
-	private Object object;
-
-	@Getter
-	@Setter
 	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
 
 	@Getter
@@ -48,12 +41,6 @@ public abstract class RequirementInject {
 		return !editButtons.isEmpty();
 	}
 
-	public RequirementInject synchronize() {
-		synchronize = true;
-		object = new Object();
-		return this;
-	}
-
 	public RequirementInject priority(int priority) {
 		this.priority = priority;
 		return this;
@@ -61,6 +48,14 @@ public abstract class RequirementInject {
 
 	public RequirementInject alwaysForce() {
 		this.alwaysForce = true;
+		return this;
+	}
+
+	@Getter
+	private boolean allowReattempt = false;
+
+	public RequirementInject allowReattempt() {
+		this.allowReattempt = true;
 		return this;
 	}
 

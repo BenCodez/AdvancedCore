@@ -83,10 +83,6 @@ public class Reward {
 
 	@Getter
 	@Setter
-	private ArrayList<String> worlds;
-
-	@Getter
-	@Setter
 	private Set<String> items;
 
 	@Getter
@@ -104,10 +100,6 @@ public class Reward {
 	@Getter
 	@Setter
 	private boolean usesWorlds;
-
-	@Getter
-	@Setter
-	private String server;
 
 	@Getter
 	@Setter
@@ -140,10 +132,19 @@ public class Reward {
 	}
 
 	public boolean canGiveReward(User user, RewardOptions options) {
-		if (checkRequirements(user, options)) {
-			return true;
+		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+			try {
+				plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
+				if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), options)) {
+					return false;
+				}
+			} catch (Exception e) {
+				plugin.debug("Failed to check requirement");
+				e.printStackTrace();
+				return false;
+			}
 		}
-		return false;
+		return true;
 	}
 
 	/**
@@ -181,7 +182,7 @@ public class Reward {
 		return true;
 	}
 
-	private void checkRewardFile() {
+	public void checkRewardFile() {
 		if (!getConfig().hasRewardFile()) {
 			Reward reward = RewardHandler.getInstance().getReward(name);
 			ConfigurationSection section = getConfig().getConfigData();
@@ -202,13 +203,6 @@ public class Reward {
 		}
 	}
 
-	public boolean checkServer() {
-		if (server != null && !server.isEmpty()) {
-			return Bukkit.getServer().getName().equals(server);
-		}
-		return true;
-	}
-
 	public boolean checkTimed(User user, HashMap<String, String> placeholders) {
 		if (!isTimedEnabled()) {
 			return false;
@@ -226,24 +220,6 @@ public class Reward {
 
 		plugin.debug("Giving reward " + name + " at " + time.toString());
 		return true;
-	}
-
-	public boolean checkWorld(User user) {
-		if (!isUsesWorlds()) {
-			return true;
-		}
-
-		Player player = user.getPlayer();
-		if (player == null) {
-			return false;
-		}
-		checkRewardFile();
-		String world = player.getWorld().getName();
-		if (getWorlds().contains(world)) {
-			return true;
-		}
-
-		return false;
 	}
 
 	public ItemStack getItem() {
@@ -379,25 +355,42 @@ public class Reward {
 			}
 		}
 
-		boolean checkServer = checkServer();
-		boolean checkWorld = checkWorld(user);
+		boolean allowOffline = false;
+		boolean canGive = true;
+		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+			try {
+				plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
+				if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
+					canGive = false;
+					if (inject.isAllowReattempt()) {
+						allowOffline = true;
+					}
+				}
+			} catch (Exception e) {
+				plugin.debug("Failed to check requirement");
+				e.printStackTrace();
+				canGive = false;
+			}
+		}
 
 		if (!rewardOptions.isOnlineSet()) {
 			rewardOptions.setOnline(user.isOnline());
 		}
 
-		if (((!rewardOptions.isOnline() && !user.isOnline()) || !checkWorld || !checkServer) && !isForceOffline()) {
+		if (((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline) && !isForceOffline()) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
 				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
-				if (!checkWorld) {
+				if (!usesWorlds) {
 					user.setCheckWorld(true);
 				}
 			}
 			return;
 		}
 
-		giveRewardReward(user, rewardOptions);
+		if (canGive) {
+			giveRewardReward(user, rewardOptions);
+		}
 	}
 
 	public void giveRewardReward(User user, RewardOptions rewardOptions) {
@@ -416,27 +409,8 @@ public class Reward {
 			}
 		}
 
-		if (!checkRequirements(user, rewardOptions)) {
-			return;
-		}
-
 		giveRewardUser(user, rewardOptions.getPlaceholders());
 
-	}
-
-	public boolean checkRequirements(User user, RewardOptions rewardOptions) {
-		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
-			try {
-				if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
-					return false;
-				}
-			} catch (Exception e) {
-				plugin.debug("Failed to check requirement");
-				e.printStackTrace();
-				return false;
-			}
-		}
-		return true;
 	}
 
 	/**
@@ -530,21 +504,17 @@ public class Reward {
 			setTimedMinute(getConfig().getTimedMinute());
 		}
 
-		setWorlds(getConfig().getWorlds());
-
 		setItems(getConfig().getItems());
 		enableChoices = getConfig().getEnableChoices();
 		if (enableChoices) {
 			choices = getConfig().getChoices();
 		}
 
-		if (getWorlds().size() == 0) {
+		if (getConfig().getWorlds().size() == 0) {
 			usesWorlds = false;
 		} else {
 			usesWorlds = true;
 		}
-
-		server = getConfig().getServer();
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
 	}

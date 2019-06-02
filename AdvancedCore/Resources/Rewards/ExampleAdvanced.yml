@@ -75,9 +75,7 @@ RandomItem:
 # E.g: AdvancedCore.Reward.ExampleAdvanced
 RequirePermission: false
 
-# Permission required
-# If none is set, default permission is
-# AdvancedCore.Reward.(REWARDNAME)
+# Permission that must be required if RequirePermission is true
 Permission: 'AdvancedCore.Reward.ExampleAdvanced'
 
 # Javascript

@@ -30,6 +30,7 @@ import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectDouble;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectString;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectStringList;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
@@ -408,23 +409,73 @@ public class RewardHandler {
 				}
 				return true;
 			}
-		}.priority(100).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Permission", null) {
+		}.priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Permission", null) {
+
+					@Override
+					public void setValue(Player player, String value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				})).addEditButton(new EditGUIButton(new EditGUIValueBoolean("RequirePermission", null) {
+
+					@Override
+					public void setValue(Player player, boolean value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				})));
+
+		injectedRequirements.add(new RequirementInjectString("Server", "") {
 
 			@Override
-			public void setValue(Player player, String value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
-				plugin.reload();
+			public boolean onRequirementsRequest(Reward reward, User user, String str, RewardOptions rewardOptions) {
+				return Bukkit.getServer().getName().equals(str);
 			}
-		})).addEditButton(new EditGUIButton(new EditGUIValueBoolean("RequirePermission", null) {
+		}.priority(100).allowReattempt().addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Server", null) {
+
+					@Override
+					public void setValue(Player player, String value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				}.addOptions(Bukkit.getServer().getName()))));
+
+		injectedRequirements.add(new RequirementInjectStringList("Worlds", new ArrayList<String>()) {
 
 			@Override
-			public void setValue(Player player, boolean value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
-				plugin.reload();
+			public boolean onRequirementsRequest(Reward reward, User user, ArrayList<String> worlds,
+					RewardOptions rewardOptions) {
+				if (worlds.isEmpty()) {
+					return true;
+				}
+
+				Player player = user.getPlayer();
+				if (player == null) {
+					return false;
+				}
+				reward.checkRewardFile();
+				String world = player.getWorld().getName();
+				if (worlds.contains(world)) {
+					return true;
+				}
+
+				return false;
 			}
-		})));
+		}.priority(100).allowReattempt()
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Worlds", null) {
+
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value);
+						plugin.reload();
+					}
+				})));
 
 		for (RequirementInject reward : injectedRequirements) {
 			reward.setInternalReward(true);

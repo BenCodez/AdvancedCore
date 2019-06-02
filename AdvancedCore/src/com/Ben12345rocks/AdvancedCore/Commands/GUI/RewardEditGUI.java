@@ -18,7 +18,6 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueBoolean;
-import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueList;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
@@ -82,16 +81,6 @@ public class RewardEditGUI {
 						plugin.reload();
 					}
 				}.addOptions("BOTH", "OFFLINE", "ONLINE")));
-
-		inv.addButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Worlds", reward.getWorlds()) {
-
-					@Override
-					public void setValue(Player player, ArrayList<String> value) {
-						getCurrentReward(player).getConfig().setWorlds(value);
-						plugin.reload();
-					}
-				}));
 
 		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 				new EditGUIValueBoolean("ForceOffline", reward.isForceOffline()) {
