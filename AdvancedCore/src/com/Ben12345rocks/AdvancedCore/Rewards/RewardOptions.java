@@ -20,6 +20,9 @@ public class RewardOptions {
 
 	private boolean ignoreChance = false;
 
+	@Getter
+	private boolean ignoreRequirements = false;
+
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
 	private String prefix = "";
@@ -79,6 +82,11 @@ public class RewardOptions {
 
 	public RewardOptions setIgnoreChance(boolean ignoreChance) {
 		this.ignoreChance = ignoreChance;
+		return this;
+	}
+
+	public RewardOptions setIgnoreRequirements(boolean ignoreRequirements) {
+		this.ignoreRequirements = ignoreRequirements;
 		return this;
 	}
 

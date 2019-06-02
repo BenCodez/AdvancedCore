@@ -357,21 +357,23 @@ public class Reward {
 
 		boolean allowOffline = false;
 		boolean canGive = true;
-		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
-			try {
-				plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
-				if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
-					plugin.extraDebug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
-							+ inject.allowReattempt());
-					canGive = false;
-					if (inject.isAllowReattempt()) {
-						allowOffline = true;
+		if (!rewardOptions.isIgnoreRequirements()) {
+			for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+				try {
+					plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
+					if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
+						plugin.extraDebug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
+								+ inject.allowReattempt());
+						canGive = false;
+						if (inject.isAllowReattempt()) {
+							allowOffline = true;
+						}
 					}
+				} catch (Exception e) {
+					plugin.debug("Failed to check requirement");
+					e.printStackTrace();
+					canGive = false;
 				}
-			} catch (Exception e) {
-				plugin.debug("Failed to check requirement");
-				e.printStackTrace();
-				canGive = false;
 			}
 		}
 

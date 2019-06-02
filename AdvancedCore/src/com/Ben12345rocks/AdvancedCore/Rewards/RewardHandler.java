@@ -892,7 +892,8 @@ public class RewardHandler {
 				for (String str : list) {
 					Reward reward = RewardHandler.getInstance().getReward(str);
 					if (reward.canGiveReward(user, new RewardOptions())) {
-						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true).send(user);
+						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true)
+								.setIgnoreChance(true).send(user);
 						return null;
 					}
 				}
