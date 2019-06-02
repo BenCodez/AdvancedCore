@@ -363,7 +363,7 @@ public class Reward {
 					plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
 					if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
 						plugin.extraDebug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
-								+ inject.allowReattempt());
+								+ inject.isAllowReattempt());
 						canGive = false;
 						if (inject.isAllowReattempt()) {
 							allowOffline = true;
