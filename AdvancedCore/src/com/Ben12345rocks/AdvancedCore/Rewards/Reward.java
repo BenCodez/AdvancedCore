@@ -351,6 +351,10 @@ public class Reward {
 			}
 		}
 
+		if (!rewardOptions.isOnlineSet()) {
+			rewardOptions.setOnline(user.isOnline());
+		}
+
 		boolean allowOffline = false;
 		boolean canGive = true;
 		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
@@ -369,10 +373,6 @@ public class Reward {
 				e.printStackTrace();
 				canGive = false;
 			}
-		}
-
-		if (!rewardOptions.isOnlineSet()) {
-			rewardOptions.setOnline(user.isOnline());
 		}
 
 		if (((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline) && !isForceOffline()) {
