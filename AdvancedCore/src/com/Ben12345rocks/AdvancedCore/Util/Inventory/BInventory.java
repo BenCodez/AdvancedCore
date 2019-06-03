@@ -462,15 +462,26 @@ public class BInventory implements Listener {
 
 				}
 
-				for (BInventoryButton b : pageButtons) {
+				for (
+
+				BInventoryButton b : pageButtons) {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
 						player.closeInventory();
-						try {
-							onClick(event, b);
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
+						Bukkit.getServer().getScheduler()
+								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+									@Override
+									public void run() {
+										try {
+											onClick(event, b);
+										} catch (Exception e) {
+											e.printStackTrace();
+										}
+									}
+								});
+
 					}
+
 				}
 
 			}
