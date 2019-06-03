@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -62,6 +63,17 @@ public class SkullHandler {
 			});
 		}
 
+		Bukkit.getScheduler().runTaskTimerAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+
+			@Override
+			public void run() {
+				if (!queue.isEmpty()) {
+					AdvancedCoreHook.getInstance().debug("Checking skull queue");
+					checkQue();
+				}
+			}
+		}, 5 * 60 * 1000, 5 * 60 * 1000);
+
 	}
 
 	@Getter
@@ -98,5 +110,17 @@ public class SkullHandler {
 		}
 		return false;
 	}
+
+	public void checkQue() {
+		for (String str : queue) {
+			loadSkull(str);
+		}
+	}
+
+	public void addToLoadkingQue(String playerName) {
+		queue.add(playerName);
+	}
+
+	private ArrayList<String> queue = new ArrayList<String>();
 
 }

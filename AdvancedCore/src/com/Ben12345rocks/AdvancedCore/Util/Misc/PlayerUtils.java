@@ -98,7 +98,7 @@ public class PlayerUtils {
 			return SkullHandler.getInstance().getItemStack(playerName);
 		} else {
 			ItemStack item = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
-			SkullHandler.getInstance().loadSkull(playerName);
+			SkullHandler.getInstance().addToLoadkingQue(playerName);
 			return item;
 		}
 	}
