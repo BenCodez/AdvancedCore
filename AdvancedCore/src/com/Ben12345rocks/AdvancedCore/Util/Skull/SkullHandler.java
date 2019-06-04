@@ -72,7 +72,7 @@ public class SkullHandler {
 					checkQue();
 				}
 			}
-		}, 5 * 60 * 1000, 3 * 60 * 1000);
+		}, 5 * 60 * 1000, 30 * 1000);
 
 	}
 
@@ -118,7 +118,9 @@ public class SkullHandler {
 	}
 
 	public void addToLoadkingQue(String playerName) {
-		queue.add(playerName);
+		if (!queue.contains(playerName)) {
+			queue.add(playerName);
+		}
 	}
 
 	private ArrayList<String> queue = new ArrayList<String>();
