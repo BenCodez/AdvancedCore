@@ -161,6 +161,9 @@ RewardType: 'BOTH'
 # Does not support all rewards
 # ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING
 ForceOffline: false
+
+# Vault group required to get reward 
+#VaultGroup: 'NORMAL'
   
 # Potions to give on reward
 Potions:
