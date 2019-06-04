@@ -72,7 +72,7 @@ public class SkullHandler {
 					checkQue();
 				}
 			}
-		}, 5 * 60 * 1000, 30 * 1000);
+		}, 60 * 1000, 30 * 1000);
 
 	}
 
