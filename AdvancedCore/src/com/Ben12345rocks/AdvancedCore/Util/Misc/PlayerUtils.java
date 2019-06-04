@@ -92,14 +92,21 @@ public class PlayerUtils {
 
 	}
 
-	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName) {
+		return getPlayerSkull(playerName, true);
+	}
+
+	@SuppressWarnings("deprecation")
+	public ItemStack getPlayerSkull(String playerName, boolean force) {
 		if (SkullHandler.getInstance().hasSkull(playerName)) {
 			return SkullHandler.getInstance().getItemStack(playerName);
 		} else {
-			ItemStack item = new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
 			SkullHandler.getInstance().addToLoadkingQue(playerName);
-			return item;
+			if (force) {
+				return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
+			} else {
+				return new ItemBuilder(Material.PLAYER_HEAD, 1).toItemStack();
+			}
 		}
 	}
 

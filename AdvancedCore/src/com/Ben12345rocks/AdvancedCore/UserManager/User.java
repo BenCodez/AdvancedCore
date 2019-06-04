@@ -334,7 +334,7 @@ public class User {
 	}
 
 	public ItemStack getPlayerHead() {
-		return PlayerUtils.getInstance().getPlayerSkull(playerName);
+		return PlayerUtils.getInstance().getPlayerSkull(playerName, false);
 	}
 
 	/**
