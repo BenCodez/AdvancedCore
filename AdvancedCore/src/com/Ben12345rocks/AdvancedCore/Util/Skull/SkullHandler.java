@@ -63,17 +63,6 @@ public class SkullHandler {
 			});
 		}
 
-		Bukkit.getScheduler().runTaskTimerAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
-
-			@Override
-			public void run() {
-				if (!queue.isEmpty()) {
-					AdvancedCoreHook.getInstance().debug("Checking skull queue");
-					checkQue();
-				}
-			}
-		}, 60 * 1000, 30 * 1000);
-
 	}
 
 	@Getter
@@ -110,19 +99,5 @@ public class SkullHandler {
 		}
 		return false;
 	}
-
-	public void checkQue() {
-		for (String str : queue) {
-			loadSkull(str);
-		}
-	}
-
-	public void addToLoadkingQue(String playerName) {
-		if (!queue.contains(playerName)) {
-			queue.add(playerName);
-		}
-	}
-
-	private ArrayList<String> queue = new ArrayList<String>();
 
 }

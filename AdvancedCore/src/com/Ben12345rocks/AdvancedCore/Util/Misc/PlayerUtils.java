@@ -101,7 +101,13 @@ public class PlayerUtils {
 		if (SkullHandler.getInstance().hasSkull(playerName)) {
 			return SkullHandler.getInstance().getItemStack(playerName);
 		} else {
-			SkullHandler.getInstance().addToLoadkingQue(playerName);
+			Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+
+				@Override
+				public void run() {
+					SkullHandler.getInstance().loadSkull(playerName);
+				}
+			});
 			if (force) {
 				return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
 			} else {
