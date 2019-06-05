@@ -356,7 +356,8 @@ public class Reward {
 		if (!rewardOptions.isIgnoreRequirements()) {
 			for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
 				try {
-					plugin.extraDebug(getRewardName() + ": Checking requirement " + inject.getPath() + ":" + inject.getPriority());
+					plugin.extraDebug(getRewardName() + ": Checking requirement " + inject.getPath() + ":"
+							+ inject.getPriority());
 					if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
 						plugin.extraDebug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
 								+ inject.isAllowReattempt());
@@ -410,6 +411,10 @@ public class Reward {
 			Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 			phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
 			phs.put("uuid", user.getUUID());
+
+			for (RewardPlaceholderHandle handle : RewardHandler.getInstance().getPlaceholders()) {
+				phs.put(handle.getKey(), handle.getValue(this, user));
+			}
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 

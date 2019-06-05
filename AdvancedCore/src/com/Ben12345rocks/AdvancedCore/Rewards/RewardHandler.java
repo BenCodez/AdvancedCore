@@ -71,6 +71,9 @@ public class RewardHandler {
 	@Getter
 	private ArrayList<RequirementInject> injectedRequirements = new ArrayList<RequirementInject>();
 
+	@Getter
+	private ArrayList<RewardPlaceholderHandle> placeholders = new ArrayList<RewardPlaceholderHandle>();
+
 	/** The plugin. */
 	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
 
@@ -94,6 +97,10 @@ public class RewardHandler {
 	public void addInjectedReward(RewardInject inject) {
 		injectedRewards.add(inject);
 		sortInjectedRewards();
+	}
+
+	public void addPlaceholder(RewardPlaceholderHandle handle) {
+		placeholders.add(handle);
 	}
 
 	public void addInjectedRequirements(RequirementInject inject) {

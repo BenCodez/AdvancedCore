@@ -1,0 +1,19 @@
+package com.Ben12345rocks.AdvancedCore.Rewards;
+
+import com.Ben12345rocks.AdvancedCore.UserManager.User;
+
+import lombok.Getter;
+import lombok.Setter;
+
+public abstract class RewardPlaceholderHandle {
+	@Getter
+	@Setter
+	private String key;
+	
+	public RewardPlaceholderHandle(String key) {
+		this.key = key;
+	}
+	
+	public abstract String getValue(Reward reward, User user);
+
+}
