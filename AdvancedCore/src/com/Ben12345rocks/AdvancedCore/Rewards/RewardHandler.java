@@ -539,6 +539,22 @@ public class RewardHandler {
 					})));
 		}
 
+		injectedRequirements.add(new RequirementInjectString("JavascriptExpression", "") {
+
+			@Override
+			public boolean onRequirementsRequest(Reward reward, User user, String expression,
+					RewardOptions rewardOptions) {
+				if (expression.equals("")) {
+					return true;
+				}
+				if (new JavascriptEngine().addPlayer(user.getPlayer()).getBooleanValue(
+						StringUtils.getInstance().replacePlaceHolder(expression, rewardOptions.getPlaceholders()))) {
+					return true;
+				}
+				return false;
+			}
+		}.priority(90));
+
 		for (RequirementInject reward : injectedRequirements) {
 			reward.setInternalReward(true);
 		}

@@ -101,6 +101,9 @@ Javascript:
 # not possible with commands
 Javascripts: []
 
+# Javascript expression which must be true in order to give this reward
+JavascriptExpression: ''
+
 # List of reward files to try and execute
 # Will only execute first possible reward that can be given
 Priority: []
