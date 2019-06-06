@@ -26,19 +26,19 @@ public abstract class RewardInjectBoolean extends RewardInject {
 		this.defaultValue = defaultValue;
 	}
 
-	public abstract Boolean onRewardRequest(Reward reward, User user, boolean num,
+	public abstract String onRewardRequest(Reward reward, User user, boolean num,
 			HashMap<String, String> placeholders);
 
 	@Override
-	public Boolean onRewardRequest(Reward reward, User user, ConfigurationSection data,
+	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
 		if (data.isBoolean(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			boolean value = data.getBoolean(getPath(), isDefaultValue());
 			AdvancedCoreHook.getInstance()
 					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);
-			Boolean re = onRewardRequest(reward, user, value, placeholders);
+			String re = onRewardRequest(reward, user, value, placeholders);
 			if (re == null) {
-				return value;
+				return "" + value;
 			} else {
 				return re;
 			}

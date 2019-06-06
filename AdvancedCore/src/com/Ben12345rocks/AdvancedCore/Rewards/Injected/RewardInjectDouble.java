@@ -27,15 +27,15 @@ public abstract class RewardInjectDouble extends RewardInject {
 	}
 
 	@Override
-	public Double onRewardRequest(Reward reward, User user, ConfigurationSection data,
+	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
 		if (data.isDouble(getPath()) || data.isInt(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			double value = data.getDouble(getPath(), getDefaultValue());
 			AdvancedCoreHook.getInstance()
 					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);
-			Double d = onRewardRequest(reward, user, value, placeholders);
+			String d = onRewardRequest(reward, user, value, placeholders);
 			if (d == null) {
-				return value;
+				return "" + value;
 			} else {
 				return d;
 			}
@@ -43,6 +43,6 @@ public abstract class RewardInjectDouble extends RewardInject {
 		return null;
 	}
 
-	public abstract Double onRewardRequest(Reward reward, User user, double num, HashMap<String, String> placeholders);
+	public abstract String onRewardRequest(Reward reward, User user, double num, HashMap<String, String> placeholders);
 
 }

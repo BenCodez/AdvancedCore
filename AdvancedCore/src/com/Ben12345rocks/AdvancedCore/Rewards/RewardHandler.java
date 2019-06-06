@@ -573,7 +573,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectDouble("Money", 0) {
 
 			@Override
-			public Double onRewardRequest(Reward reward, User user, double num, HashMap<String, String> placeholders) {
+			public String onRewardRequest(Reward reward, User user, double num, HashMap<String, String> placeholders) {
 				user.giveMoney(num);
 				return null;
 			}
@@ -622,7 +622,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectInt("EXP", 0) {
 
 			@Override
-			public Integer onRewardRequest(Reward reward, User user, int num, HashMap<String, String> placeholders) {
+			public String onRewardRequest(Reward reward, User user, int num, HashMap<String, String> placeholders) {
 				user.giveExp(num);
 				return null;
 			}
