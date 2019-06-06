@@ -543,7 +543,7 @@ public class RewardHandler {
 							reward.getConfig().set(getKey(), value);
 							plugin.reload();
 						}
-					})));
+					}.addOptions(AdvancedCoreHook.getInstance().getPerms().getGroups()))));
 		}
 
 		injectedRequirements.add(new RequirementInjectString("JavascriptExpression", "") {
