@@ -307,18 +307,6 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * Give money.
-	 *
-	 * @param user
-	 *            the user
-	 * @param money
-	 *            the money
-	 */
-	public void giveMoney(User user, int money) {
-		user.giveMoney(money);
-	}
-
 	public void giveReward(User user, RewardOptions rewardOptions) {
 		if (!AdvancedCoreHook.getInstance().getOptions().isProcessRewards()) {
 			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Processing rewards is disabled");
@@ -364,6 +352,8 @@ public class Reward {
 						canGive = false;
 						if (inject.isAllowReattempt()) {
 							allowOffline = true;
+						} else {
+							return;
 						}
 					}
 				} catch (Exception e) {
