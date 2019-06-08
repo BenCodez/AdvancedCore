@@ -124,6 +124,7 @@ public class RewardOptions {
 		str += "GiveOffline: " + giveOffline + ", ";
 		str += "CheckTimed" + checkTimed + ", ";
 		str += "IgnoreChance" + ignoreChance + ", ";
+		str += "IgnoreRequirements" + ignoreRequirements + ", ";
 		str += "Placeholders" + ArrayUtils.getInstance().makeString(placeholders) + ", ";
 		str += "Prefix" + prefix + ", ";
 		str += "Suffix" + suffix;
