@@ -513,39 +513,6 @@ public class RewardHandler {
 					}
 				}.addOptions("ONLINE", "OFFLINE", "BOTH"))));
 
-		if (AdvancedCoreHook.getInstance().getPerms() != null) {
-			injectedRequirements.add(new RequirementInjectString("VaultGroup", "") {
-
-				@Override
-				public boolean onRequirementsRequest(Reward reward, User user, String type,
-						RewardOptions rewardOptions) {
-					if (type.equals("")) {
-						return true;
-					}
-					String group = "";
-					if (!rewardOptions.isGiveOffline() && user.isOnline()) {
-						group = AdvancedCoreHook.getInstance().getPerms().getPrimaryGroup(user.getPlayer());
-					} else {
-						group = AdvancedCoreHook.getInstance().getPerms().getPrimaryGroup(null,
-								user.getOfflinePlayer());
-					}
-					if (group.equalsIgnoreCase(type)) {
-						return true;
-					}
-					return false;
-				}
-			}.priority(100).addEditButton(
-					new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("VaultGroup", null) {
-
-						@Override
-						public void setValue(Player player, String value) {
-							Reward reward = (Reward) getInv().getData("Reward");
-							reward.getConfig().set(getKey(), value);
-							plugin.reload();
-						}
-					}.addOptions(AdvancedCoreHook.getInstance().getPerms().getGroups()))));
-		}
-
 		injectedRequirements.add(new RequirementInjectString("JavascriptExpression", "") {
 
 			@Override

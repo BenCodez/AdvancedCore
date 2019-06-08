@@ -16,6 +16,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.command.CommandMap;
@@ -38,6 +39,8 @@ import com.Ben12345rocks.AdvancedCore.Listeners.WorldChangeEvent;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
+import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectString;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
@@ -54,7 +57,10 @@ import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Column;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.DataType;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Database;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Table;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
+import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -665,6 +671,37 @@ public class AdvancedCoreHook {
 
 				if (setupPermissions()) {
 					plugin.getLogger().info("Hooked into vault permissions");
+
+					RewardHandler.getInstance().addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
+
+						@Override
+						public boolean onRequirementsRequest(Reward reward, User user, String type,
+								RewardOptions rewardOptions) {
+							if (type.equals("")) {
+								return true;
+							}
+							String group = "";
+							if (!rewardOptions.isGiveOffline() && user.isOnline()) {
+								group = AdvancedCoreHook.getInstance().getPerms().getPrimaryGroup(user.getPlayer());
+							} else {
+								group = AdvancedCoreHook.getInstance().getPerms().getPrimaryGroup(null,
+										user.getOfflinePlayer());
+							}
+							if (group.equalsIgnoreCase(type)) {
+								return true;
+							}
+							return false;
+						}
+					}.priority(100).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+							new EditGUIValueString("VaultGroup", null) {
+
+								@Override
+								public void setValue(Player player, String value) {
+									Reward reward = (Reward) getInv().getData("Reward");
+									reward.getConfig().set(getKey(), value);
+									reload();
+								}
+							}.addOptions(AdvancedCoreHook.getInstance().getPerms().getGroups()))));
 				} else {
 					plugin.getLogger().warning("Failed to hook into vault permissions");
 				}
