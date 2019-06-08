@@ -539,7 +539,7 @@ public class BInventory implements Listener {
 		BInventory inventory = this;
 		this.player = player;
 
-		if (inventory.getHighestSlot() >= maxInvSize) {
+		if (inventory.getHighestSlot() > maxInvSize) {
 			pages = true;
 		}
 		if (!pages) {
