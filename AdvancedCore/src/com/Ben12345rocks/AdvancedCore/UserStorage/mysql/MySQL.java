@@ -500,9 +500,9 @@ public class MySQL {
 			AdvancedCoreHook.getInstance().extraDebug("Mysql value null: " + column);
 			return;
 		}
-		synchronized (object2) {
-			checkColumn(column, dataType);
-			if (getUuids().contains(index)) {
+		checkColumn(column, dataType);
+		if (getUuids().contains(index)) {
+			synchronized (object2) {
 
 				for (Column col : getExact(index)) {
 					if (col.getName().equals(column)) {
@@ -522,11 +522,12 @@ public class MySQL {
 				query += "'" + index + "';";
 
 				addToQue(query);
-
-			} else {
-				insert(index, column, value, dataType);
 			}
+
+		} else {
+			insert(index, column, value, dataType);
 		}
+
 	}
 
 	public void updateBatch() {
