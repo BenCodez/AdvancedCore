@@ -10,6 +10,7 @@ com.Ben12345rocks.AdvancedCore.Listeners
 com.Ben12345rocks.AdvancedCore.NMSManager
 com.Ben12345rocks.AdvancedCore.Rewards
 com.Ben12345rocks.AdvancedCore.Rewards.Injected
+com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement
 com.Ben12345rocks.AdvancedCore.ServerHandle
 com.Ben12345rocks.AdvancedCore.Thread
 com.Ben12345rocks.AdvancedCore.TimeChecker
