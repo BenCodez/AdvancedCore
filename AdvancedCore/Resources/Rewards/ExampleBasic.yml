@@ -57,6 +57,10 @@ Items:
     # use vanilla names
     Enchants:
       unbreaking: 1
+     
+    # Hide enchants     
+    #ItemFlags:
+    #- HIDE_ENCHANTS
       
     # Set power of firework
     #Power: 1
