@@ -403,7 +403,7 @@ public class RewardHandler {
 			@Override
 			public boolean onRequirementsRequest(Reward reward, User user, String str, RewardOptions rewardOptions) {
 				if (str.isEmpty()) {
-					return true;
+					str = "AdvancedCore.Reward." + reward.getName();
 				}
 				if (!reward.getConfig().getRequirePermission()) {
 					return true;
@@ -855,7 +855,7 @@ public class RewardHandler {
 			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				if (MiscUtils.getInstance().checkChance(section.getDouble("Chance", 100), 100)) {
-					if (section.getBoolean("PickRandom", false)) {
+					if (section.getBoolean("PickRandom", true)) {
 						ArrayList<String> rewards = (ArrayList<String>) section.getList("Rewards",
 								new ArrayList<String>());
 						if (rewards != null) {
