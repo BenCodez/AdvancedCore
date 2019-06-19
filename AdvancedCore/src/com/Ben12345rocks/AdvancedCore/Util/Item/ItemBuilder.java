@@ -116,12 +116,11 @@ public class ItemBuilder {
 					currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
 				}
 
+				is = new ItemStack(material, currentAmount);
 				int power = data.getInt("Power", -1);
 				if (power > 0) {
 					setFireworkPower(power);
 				}
-
-				is = new ItemStack(material, currentAmount);
 				String name = data.getString("Name");
 
 				if (name != null && !name.equals("")) {
