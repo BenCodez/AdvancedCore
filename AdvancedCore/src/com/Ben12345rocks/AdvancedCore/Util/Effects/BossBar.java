@@ -66,8 +66,10 @@ public class BossBar {
 	}
 
 	public void hide() {
-		bossBar.setVisible(false);
-		bossBar.removeAll();
+		if (bossBar != null) {
+			bossBar.setVisible(false);
+			bossBar.removeAll();
+		}
 	}
 
 	private void hideInDelay(int delay) {
