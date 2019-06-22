@@ -325,7 +325,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadUserAPI(getOptions().getStorageType());
 	}
 
-	public void loadEvents() {
+	public void loadAdvancedCoreEvents() {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
 		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), this);
 		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
@@ -359,7 +359,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		checkPlaceHolderAPI();
 		loadHandle();
 		loadVault();
-		loadEvents();
+		loadAdvancedCoreEvents();
 		TimeChecker.getInstance().loadTimer(2);
 		ServerData.getInstance().setup();
 		RewardHandler.getInstance().addRewardFolder(new File(this.getDataFolder(), "Rewards"));
