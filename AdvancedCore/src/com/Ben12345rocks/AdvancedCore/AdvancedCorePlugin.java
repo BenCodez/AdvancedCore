@@ -350,9 +350,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Load AdvancedCore hook
-	 *
-	 * @param this
-	 *            Plugin that is hooking in
 	 */
 	public void loadHook() {
 
