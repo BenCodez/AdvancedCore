@@ -714,6 +714,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		javaPlugin = this;
 		onPreLoad();
 		loadHook();
+		onPostLoad();
 	}
 
 	public abstract void onPostLoad();
