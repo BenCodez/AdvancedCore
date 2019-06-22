@@ -9,7 +9,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
@@ -42,7 +42,7 @@ public class RewardEditGUI {
 		return instance;
 	}
 
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new reward GUI.
@@ -62,7 +62,7 @@ public class RewardEditGUI {
 	}
 
 	public void openRewardGUI(Player player, Reward reward) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
+		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -120,7 +120,7 @@ public class RewardEditGUI {
 	 *            the reward
 	 */
 	public void openRewardGUIItems(Player player, Reward reward) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
+		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
@@ -212,7 +212,7 @@ public class RewardEditGUI {
 	 *            the player
 	 */
 	public void openRewardsGUI(Player player) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
+		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}

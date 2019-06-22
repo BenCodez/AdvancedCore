@@ -6,7 +6,7 @@ import java.util.Set;
 
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
@@ -33,7 +33,7 @@ public class ChoiceGUI {
 		return instance;
 	}
 
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new user GUI.

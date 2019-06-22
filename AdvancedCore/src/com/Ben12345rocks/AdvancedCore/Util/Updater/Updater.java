@@ -8,7 +8,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -123,7 +123,7 @@ public class Updater {
 			return;
 		} catch (Exception e) {
 			result = UpdateResult.FAIL_SPIGOT;
-			AdvancedCoreHook.getInstance().debug(e);
+			AdvancedCorePlugin.getInstance().debug(e);
 		}
 		result = UpdateResult.FAIL_SPIGOT;
 	}

@@ -18,7 +18,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.FireworkExplodeEvent;
 import org.bukkit.inventory.meta.FireworkMeta;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 
 public class FireworkHandler implements Listener {
 
@@ -37,7 +37,7 @@ public class FireworkHandler implements Listener {
 	private ConcurrentLinkedQueue<Firework> fireWorks = new ConcurrentLinkedQueue<Firework>();
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new FireworkHandler.
@@ -65,7 +65,7 @@ public class FireworkHandler implements Listener {
 	 */
 	public void launchFirework(Location loc, int power, ArrayList<String> colors, ArrayList<String> fadeOutColor,
 			boolean trail, boolean flicker, ArrayList<String> types) {
-		Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+		Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -82,7 +82,7 @@ public class FireworkHandler implements Listener {
 					try {
 						builder.withColor(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
-						plugin.getPlugin().getLogger().info(color
+						plugin.getLogger().info(color
 								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
 					}
 				}
@@ -90,7 +90,7 @@ public class FireworkHandler implements Listener {
 					try {
 						builder.withFade(DyeColor.valueOf(color).getColor());
 					} catch (Exception ex) {
-						plugin.getPlugin().getLogger().info(color
+						plugin.getLogger().info(color
 								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/DyeColor.html");
 					}
 				}
@@ -98,7 +98,7 @@ public class FireworkHandler implements Listener {
 					try {
 						builder.with(Type.valueOf(type));
 					} catch (Exception ex) {
-						plugin.getPlugin().getLogger().info(type
+						plugin.getLogger().info(type
 								+ " is not a valid Firework Effect, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html");
 					}
 				}
@@ -127,7 +127,7 @@ public class FireworkHandler implements Listener {
 		if (event.getEntity() instanceof Firework) {
 			Firework fw = event.getEntity();
 			if (fireWorks.contains(fw)) {
-				Bukkit.getScheduler().runTaskLaterAsynchronously(plugin.getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 					@Override
 					public void run() {

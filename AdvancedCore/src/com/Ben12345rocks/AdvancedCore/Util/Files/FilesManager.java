@@ -7,7 +7,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Thread.FileThread;
 
 // TODO: Auto-generated Javadoc
@@ -29,7 +29,7 @@ public class FilesManager {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new files manager.

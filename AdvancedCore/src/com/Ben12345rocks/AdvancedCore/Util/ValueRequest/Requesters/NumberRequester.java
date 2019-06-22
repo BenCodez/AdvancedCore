@@ -12,7 +12,7 @@ import org.bukkit.conversations.ConversationFactory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
@@ -74,7 +74,7 @@ public class NumberRequester {
 		if ((options != null && options.size() != 0) && method.equals(InputMethod.ANVIL)) {
 			method = InputMethod.INVENTORY;
 		}
-		if (AdvancedCoreHook.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
+		if (AdvancedCorePlugin.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
 			player.sendMessage("Disabled method: " + method.toString());
 		}
 		if (method.equals(InputMethod.INVENTORY)) {
@@ -163,7 +163,7 @@ public class NumberRequester {
 					String option = num.toString();
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput Number "
+							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Number "
 									+ option));
 					user.sendJson(comp);
 				}
@@ -171,12 +171,12 @@ public class NumberRequester {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput Number "
+							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Number "
 									+ option));
 					user.sendJson(comp);
 				}
 			} else {
-				ConversationFactory convoFactory = new ConversationFactory(AdvancedCoreHook.getInstance().getPlugin())
+				ConversationFactory convoFactory = new ConversationFactory(AdvancedCorePlugin.getInstance())
 						.withModality(true).withEscapeSequence("cancel").withTimeout(60);
 				PromptManager prompt = new PromptManager(promptText + " Current value: " + currentValue, convoFactory);
 				prompt.stringPrompt(player, new PromptReturnString() {
@@ -186,7 +186,7 @@ public class NumberRequester {
 						String num = input;
 						try {
 							Number number = Double.valueOf(num);
-							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(),
+							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 									new Runnable() {
 
 										@Override

@@ -25,7 +25,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardBuilder;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
@@ -55,7 +55,7 @@ public class User {
 	/** The uuid. */
 	private String uuid;
 
-	private AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
+	private AdvancedCorePlugin hook = AdvancedCorePlugin.getInstance();
 
 	private boolean loadName = true;
 
@@ -147,7 +147,7 @@ public class User {
 	}
 
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
-		synchronized (AdvancedCoreHook.getInstance()) {
+		synchronized (AdvancedCorePlugin.getInstance()) {
 			ArrayList<String> offlineRewards = getOfflineRewards();
 			offlineRewards
 					.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders));
@@ -172,7 +172,7 @@ public class User {
 	}
 
 	public void checkDelayedTimedRewards() {
-		AdvancedCoreHook.getInstance().debug("Checking timed/delayed for " + getPlayerName());
+		AdvancedCorePlugin.getInstance().debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
 		HashMap<String, Long> newTimed = new HashMap<String, Long>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
@@ -193,7 +193,7 @@ public class User {
 							.withPlaceHolder("date",
 									"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
 							.send(this);
-					AdvancedCoreHook.getInstance()
+					AdvancedCorePlugin.getInstance()
 							.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
 									+ " with placeholders " + ArrayUtils.getInstance().fromString(placeholders));
 				} else {
@@ -209,8 +209,8 @@ public class User {
 	 * Check offline rewards.
 	 */
 	public void checkOfflineRewards() {
-		if (!AdvancedCoreHook.getInstance().getOptions().isProcessRewards()) {
-			AdvancedCoreHook.getInstance().debug("Processing rewards is disabled");
+		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
+			AdvancedCorePlugin.getInstance().debug("Processing rewards is disabled");
 			return;
 		}
 		setCheckWorld(false);
@@ -237,9 +237,9 @@ public class User {
 	}
 
 	public void clearCache() {
-		if (AdvancedCoreHook.getInstance().getOptions().getStorageType().equals(UserStorage.MYSQL)
-				&& AdvancedCoreHook.getInstance().getMysql() != null) {
-			AdvancedCoreHook.getInstance().getMysql().removePlayer(getUUID());
+		if (AdvancedCorePlugin.getInstance().getOptions().getStorageType().equals(UserStorage.MYSQL)
+				&& AdvancedCorePlugin.getInstance().getMysql() != null) {
+			AdvancedCorePlugin.getInstance().getMysql().removePlayer(getUUID());
 		}
 	}
 
@@ -355,7 +355,7 @@ public class User {
 		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
 		for (String str : timedReward) {
 			String[] data = str.split("%ExecutionTime/%");
-			AdvancedCoreHook.getInstance().extraDebug("TimedReward: " + str);
+			AdvancedCorePlugin.getInstance().extraDebug("TimedReward: " + str);
 			if (data.length > 1) {
 				String name = data[0];
 
@@ -377,7 +377,7 @@ public class User {
 	public InputMethod getUserInputMethod() {
 		String inputMethod = getInputMethod();
 		if (inputMethod == null) {
-			return InputMethod.getMethod(AdvancedCoreHook.getInstance().getOptions().getDefaultRequestMethod());
+			return InputMethod.getMethod(AdvancedCorePlugin.getInstance().getOptions().getDefaultRequestMethod());
 		}
 		return InputMethod.getMethod(inputMethod);
 
@@ -435,7 +435,7 @@ public class User {
 					}
 					if (full) {
 						String msg = StringUtils.getInstance()
-								.colorize(AdvancedCoreHook.getInstance().getOptions().getFormatInvFull());
+								.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
 						if (!msg.isEmpty()) {
 							player.sendMessage(msg);
 						}
@@ -561,7 +561,7 @@ public class User {
 	}
 
 	public boolean isBanned() {
-		if (AdvancedCoreHook.getInstance().getBannedPlayers().contains(getUUID())) {
+		if (AdvancedCorePlugin.getInstance().getBannedPlayers().contains(getUUID())) {
 			return true;
 		}
 		return false;
@@ -602,7 +602,7 @@ public class User {
 			delay = 0;
 		}
 		delay += 500;
-		AdvancedCoreHook.getInstance().getTimer().schedule(new TimerTask() {
+		AdvancedCorePlugin.getInstance().getTimer().schedule(new TimerTask() {
 
 			@Override
 			public void run() {
@@ -684,7 +684,7 @@ public class User {
 			final Player player = getPlayer();
 			if (player != null) {
 				for (final String cmd : cmds) {
-					AdvancedCoreHook.getInstance()
+					AdvancedCorePlugin.getInstance()
 							.debug("Executing player command for " + getPlayerName() + ": " + cmd);
 					Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
@@ -702,7 +702,7 @@ public class User {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringUtils.getInstance().replaceJavascript(getPlayer(),
 					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
-			AdvancedCoreHook.getInstance().debug("Executing player command for " + getPlayerName() + ": " + command);
+			AdvancedCorePlugin.getInstance().debug("Executing player command for " + getPlayerName() + ": " + command);
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
@@ -717,7 +717,7 @@ public class User {
 	}
 
 	public void remove() {
-		AdvancedCoreHook.getInstance().debug("Removing " + getUUID() + " (" + getPlayerName() + ") from storage...");
+		AdvancedCorePlugin.getInstance().debug("Removing " + getUUID() + " (" + getPlayerName() + ") from storage...");
 		getData().remove();
 	}
 
@@ -794,7 +794,7 @@ public class User {
 		if ((player != null) && (messages != null)) {
 			for (TextComponent txt : messages) {
 				txt.setText(StringUtils.getInstance().replaceJavascript(getPlayer(), txt.getText()));
-				AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, txt);
+				AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player, txt);
 			}
 		}
 	}
@@ -809,7 +809,7 @@ public class User {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
 			message.setText(StringUtils.getInstance().replaceJavascript(getPlayer(), message.getText()));
-			AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player, message);
+			AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player, message);
 		}
 	}
 
@@ -834,7 +834,7 @@ public class User {
 		if ((player != null) && (msg != null)) {
 			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
-					AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player,
+					AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
 							StringUtils.getInstance().parseJson(StringUtils.getInstance().parseText(player, str)));
 				}
 			}

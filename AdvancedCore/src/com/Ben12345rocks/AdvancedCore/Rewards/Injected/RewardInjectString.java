@@ -4,7 +4,7 @@ import java.util.HashMap;
 
 import org.bukkit.configuration.ConfigurationSection;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 
@@ -31,7 +31,7 @@ public abstract class RewardInjectString extends RewardInject {
 			HashMap<String, String> placeholders) {
 		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty()) ||(isAlwaysForce() && data.contains(getPath(), true))) {
 			String value = data.getString(getPath(), getDefaultValue());
-			AdvancedCoreHook.getInstance()
+			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);
 			String re = onRewardRequest(reward, user, value, placeholders);
 			if (re == null) {

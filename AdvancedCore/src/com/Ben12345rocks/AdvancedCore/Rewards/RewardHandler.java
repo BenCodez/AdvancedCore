@@ -18,7 +18,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectConfigurationSection;
@@ -75,7 +75,7 @@ public class RewardHandler {
 	private ArrayList<RewardPlaceholderHandle> placeholders = new ArrayList<RewardPlaceholderHandle>();
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/** The rewards. */
 	private List<Reward> rewards;
@@ -91,7 +91,7 @@ public class RewardHandler {
 	 */
 	private RewardHandler() {
 		rewardFolders = new ArrayList<File>();
-		setDefaultFolder(new File(AdvancedCoreHook.getInstance().getPlugin().getDataFolder(), "Rewards"));
+		setDefaultFolder(new File(AdvancedCorePlugin.getInstance().getDataFolder(), "Rewards"));
 	}
 
 	public void addInjectedReward(RewardInject inject) {
@@ -196,9 +196,9 @@ public class RewardHandler {
 	 *            the file name
 	 */
 	private void copyFile(String fileName) {
-		File file = new File(plugin.getPlugin().getDataFolder(), "Rewards" + File.separator + fileName);
+		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator + fileName);
 		if (!file.exists()) {
-			plugin.getPlugin().saveResource("Rewards" + File.separator + fileName, true);
+			plugin.saveResource("Rewards" + File.separator + fileName, true);
 		}
 	}
 
@@ -231,12 +231,12 @@ public class RewardHandler {
 		}
 
 		if (reward.equals("")) {
-			plugin.getPlugin().getLogger().warning("Tried to get any empty reward file name, renaming to EmptyName");
+			plugin.getLogger().warning("Tried to get any empty reward file name, renaming to EmptyName");
 			reward = "EmptyName";
 		}
 
 		if (reward.equalsIgnoreCase("examplebasic") || reward.equalsIgnoreCase("exampleadvanced")) {
-			plugin.getPlugin().getLogger().warning("Using example rewards as a reward, becarefull");
+			plugin.getLogger().warning("Using example rewards as a reward, becarefull");
 		}
 
 		return new Reward(reward);
@@ -293,11 +293,11 @@ public class RewardHandler {
 			rewardOptions.setOnline(user.isOnline());
 		}
 		if (path == null) {
-			plugin.getPlugin().getLogger().warning("Path is null, failing to give reward");
+			plugin.getLogger().warning("Path is null, failing to give reward");
 			return;
 		}
 		if (data == null) {
-			plugin.getPlugin().getLogger().warning("ConfigurationSection is null, failing to give reward: " + path);
+			plugin.getLogger().warning("ConfigurationSection is null, failing to give reward: " + path);
 			return;
 		}
 		if (data.isList(path)) {
@@ -333,7 +333,7 @@ public class RewardHandler {
 
 	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
 		if (Bukkit.isPrimaryThread()) {
-			Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -1103,16 +1103,16 @@ public class RewardHandler {
 							rewards.add(new Reward(file, reward));
 							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
 						} catch (Exception e) {
-							plugin.getPlugin().getLogger()
+							plugin.getLogger()
 									.severe("Failed to load reward file " + reward + ".yml: " + e.getMessage());
 							e.printStackTrace();
 						}
 					} else {
-						plugin.getPlugin().getLogger().warning("Detected that a reward file named " + reward
+						plugin.getLogger().warning("Detected that a reward file named " + reward
 								+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
 					}
 				} else {
-					plugin.getPlugin().getLogger().warning(
+					plugin.getLogger().warning(
 							"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
 				}
 			}
@@ -1156,11 +1156,11 @@ public class RewardHandler {
 	 * Setup example.
 	 */
 	public void setupExample() {
-		if (!plugin.getPlugin().getDataFolder().exists()) {
-			plugin.getPlugin().getDataFolder().mkdir();
+		if (!plugin.getDataFolder().exists()) {
+			plugin.getDataFolder().mkdir();
 		}
 
-		if (AdvancedCoreHook.getInstance().getOptions().isLoadDefaultRewards()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isLoadDefaultRewards()) {
 			copyFile("ExampleBasic.yml");
 			copyFile("ExampleAdvanced.yml");
 		}

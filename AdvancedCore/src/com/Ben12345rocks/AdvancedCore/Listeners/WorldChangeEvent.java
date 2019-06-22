@@ -7,7 +7,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
@@ -42,7 +42,7 @@ public class WorldChangeEvent implements Listener {
 
 			@Override
 			public void run() {
-				if (AdvancedCoreHook.getInstance().getOptions().isDisableCheckOnWorldChange()
+				if (AdvancedCorePlugin.getInstance().getOptions().isDisableCheckOnWorldChange()
 						|| event.getPlayer() == null) {
 					return;
 				}

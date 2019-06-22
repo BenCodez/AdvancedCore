@@ -5,7 +5,7 @@ import java.io.File;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserData;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
@@ -23,14 +23,14 @@ public class FileThread {
 			synchronized (FileThread.getInstance()) {
 				try {
 					File dFile = new File(
-							AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
+							AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
 							uuid + ".yml");
 					if (dFile.exists()) {
 						dFile.delete();
 					}
 
 				} catch (Exception e) {
-					AdvancedCoreHook.getInstance().debug(e);
+					AdvancedCorePlugin.getInstance().debug(e);
 				}
 			}
 		}
@@ -44,9 +44,9 @@ public class FileThread {
 						return data;
 					}
 				} catch (Exception e) {
-					AdvancedCoreHook.getInstance().debug(e);
+					AdvancedCorePlugin.getInstance().debug(e);
 				}
-				AdvancedCoreHook.getInstance().getPlugin().getLogger()
+				AdvancedCorePlugin.getInstance().getLogger()
 						.warning("Filed to load " + uuid + ".yml, turn debug on to see full stacktraces");
 				return null;
 			}
@@ -57,7 +57,7 @@ public class FileThread {
 			synchronized (FileThread.getInstance()) {
 				try {
 					File dFile = new File(
-							AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
+							AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
 							uuid + ".yml");
 					FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 					if (!dFile.exists()) {
@@ -65,9 +65,9 @@ public class FileThread {
 					}
 					return dFile;
 				} catch (Exception e) {
-					AdvancedCoreHook.getInstance().debug(e);
+					AdvancedCorePlugin.getInstance().debug(e);
 				}
-				AdvancedCoreHook.getInstance().getPlugin().getLogger()
+				AdvancedCorePlugin.getInstance().getLogger()
 						.warning("Failed to load " + uuid + ".yml, turn debug on to see full stacktraces");
 				return null;
 			}
@@ -77,12 +77,12 @@ public class FileThread {
 			synchronized (FileThread.getInstance()) {
 				try {
 					File dFile = new File(
-							AdvancedCoreHook.getInstance().getPlugin().getDataFolder() + File.separator + "Data",
+							AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
 							uuid + ".yml");
 					return dFile.exists();
 
 				} catch (Exception e) {
-					AdvancedCoreHook.getInstance().debug(e);
+					AdvancedCorePlugin.getInstance().debug(e);
 				}
 				return false;
 			}
@@ -121,9 +121,9 @@ public class FileThread {
 					data.set(path, value);
 					data.save(dFile);
 				} catch (Exception e) {
-					AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
+					AdvancedCorePlugin.getInstance().getLogger().warning(
 							"Failed to set a value for " + uuid + ".yml, turn debug on to see full stacktraces");
-					AdvancedCoreHook.getInstance().debug(e);
+					AdvancedCorePlugin.getInstance().debug(e);
 				}
 			}
 
@@ -143,7 +143,7 @@ public class FileThread {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/** The thread. */
 	private ReadThread thread;

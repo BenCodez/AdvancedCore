@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilClickEventHandler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory.AnvilSlot;
@@ -132,8 +132,8 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 						.invoke(activeContainerField.get(p), p);
 			}
 		} catch (Exception e) {
-			AdvancedCoreHook.getInstance().debug(e);
-			AdvancedCoreHook.getInstance().debug("Failed to use AnvilGUI");
+			AdvancedCorePlugin.getInstance().debug(e);
+			AdvancedCorePlugin.getInstance().debug("Failed to use AnvilGUI");
 
 		}
 	}

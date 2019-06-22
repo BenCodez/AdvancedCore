@@ -9,7 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -52,7 +52,7 @@ public class BookManager implements Listener {
 				}
 				final String input = st;
 				BookSign listener = (BookSign) PlayerUtils.getInstance().getPlayerMeta(player, "BookManager");
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -71,7 +71,7 @@ public class BookManager implements Listener {
 			}
 
 		};
-		Bukkit.getPluginManager().registerEvents(this.listener, AdvancedCoreHook.getInstance().getPlugin());
+		Bukkit.getPluginManager().registerEvents(this.listener, AdvancedCorePlugin.getInstance());
 	}
 
 	/**

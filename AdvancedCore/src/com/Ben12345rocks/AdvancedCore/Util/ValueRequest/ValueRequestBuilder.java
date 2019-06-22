@@ -6,7 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.Listener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
@@ -35,7 +35,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, String value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -52,7 +52,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, boolean value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -68,7 +68,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, Number value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -85,7 +85,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, Number value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -102,7 +102,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, String value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {

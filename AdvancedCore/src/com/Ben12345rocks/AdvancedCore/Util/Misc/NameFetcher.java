@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -37,7 +37,7 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
 			String cause = (String) response.get("cause").getAsString();
 			String errorMessage = (String) response.get("errorMessage").getAsString();
 			if (errorMessage != null && errorMessage.equals("TooManyRequestsException")) {
-				AdvancedCoreHook.getInstance().debug("Sent too many requests");
+				AdvancedCorePlugin.getInstance().debug("Sent too many requests");
 			}
 			if (cause != null && cause.length() > 0) {
 				throw new IllegalStateException(errorMessage);

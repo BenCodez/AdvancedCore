@@ -23,7 +23,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -883,7 +883,7 @@ public class BStatsMetrics {
 
 	}
 
-	static AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
+	static AdvancedCorePlugin hook = AdvancedCorePlugin.getInstance();
 
 	// The version of this bStats class
 	public static final int B_STATS_VERSION = 1;

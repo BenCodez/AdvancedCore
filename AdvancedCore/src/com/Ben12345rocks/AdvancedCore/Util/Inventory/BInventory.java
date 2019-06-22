@@ -24,7 +24,7 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -117,7 +117,7 @@ public class BInventory implements Listener {
 		}
 
 		public void runSync(Runnable run) {
-			Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), run);
+			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), run);
 		}
 	}
 
@@ -174,7 +174,7 @@ public class BInventory implements Listener {
 	 */
 	public BInventory(String name) {
 		setInventoryName(name);
-		Bukkit.getPluginManager().registerEvents(this, AdvancedCoreHook.getInstance().getPlugin());
+		Bukkit.getPluginManager().registerEvents(this, AdvancedCorePlugin.getInstance());
 	}
 
 	/**
@@ -372,7 +372,7 @@ public class BInventory implements Listener {
 			event.setCancelled(true);
 			final Player player = (Player) event.getWhoClicked();
 
-			if (AdvancedCoreHook.getInstance().getServerHandle() instanceof SpigotHandle) {
+			if (AdvancedCorePlugin.getInstance().getServerHandle() instanceof SpigotHandle) {
 				// spigot only method
 				if (event.getClickedInventory() != null
 						&& !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
@@ -386,7 +386,7 @@ public class BInventory implements Listener {
 					if (event.getSlot() == buttonSlot) {
 						player.closeInventory();
 						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 									@Override
 									public void run() {
@@ -410,7 +410,7 @@ public class BInventory implements Listener {
 					if (button != null) {
 						player.closeInventory();
 						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 									@Override
 									public void run() {
@@ -432,7 +432,7 @@ public class BInventory implements Listener {
 						player.closeInventory();
 
 						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 									@Override
 									public void run() {
@@ -442,7 +442,7 @@ public class BInventory implements Listener {
 								});
 					}
 				} else if (slot == maxInvSize - 1) {
-					// AdvancedCoreHook.getInstance().debug(maxPage + " " +
+					// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
 					// page);
 					if (maxPage > page) {
 						player.closeInventory();
@@ -450,7 +450,7 @@ public class BInventory implements Listener {
 						final int nextPage = page + 1;
 
 						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 									@Override
 									public void run() {
@@ -468,7 +468,7 @@ public class BInventory implements Listener {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
 						player.closeInventory();
 						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 									@Override
 									public void run() {
@@ -496,13 +496,13 @@ public class BInventory implements Listener {
 		}
 		if (inv != null && inv.equals(inv) && player != null
 				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
-			Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+			Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
 					if (player != null) {
 						if (player.getOpenInventory() == null) {
-							if (AdvancedCoreHook.getInstance().getOptions().isAutoKillInvs()) {
+							if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
 								destroy();
 							}
 						}
@@ -516,7 +516,7 @@ public class BInventory implements Listener {
 	}
 
 	private void openInv(Player player, Inventory inv) {
-		Bukkit.getScheduler().runTask(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+		Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 			@Override
 			public void run() {
@@ -533,7 +533,7 @@ public class BInventory implements Listener {
 	 */
 	public void openInventory(Player player) {
 		if (player.isSleeping()) {
-			AdvancedCoreHook.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
+			AdvancedCorePlugin.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
 			return;
 		}
 		BInventory inventory = this;
@@ -591,8 +591,8 @@ public class BInventory implements Listener {
 			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
 		}
 		if (prevItem == null) {
-			if (AdvancedCoreHook.getInstance().getOptions().getPrevItem() != null) {
-				prevItem = new ItemBuilder(AdvancedCoreHook.getInstance().getOptions().getPrevItem())
+			if (AdvancedCorePlugin.getInstance().getOptions().getPrevItem() != null) {
+				prevItem = new ItemBuilder(AdvancedCorePlugin.getInstance().getOptions().getPrevItem())
 						.toItemStack(player);
 			} else {
 				prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aPrevious Page")
@@ -600,8 +600,8 @@ public class BInventory implements Listener {
 			}
 		}
 		if (nextItem == null) {
-			if (AdvancedCoreHook.getInstance().getOptions().getNextItem() != null) {
-				nextItem = new ItemBuilder(AdvancedCoreHook.getInstance().getOptions().getNextItem())
+			if (AdvancedCorePlugin.getInstance().getOptions().getNextItem() != null) {
+				nextItem = new ItemBuilder(AdvancedCorePlugin.getInstance().getOptions().getNextItem())
 						.toItemStack(player);
 			} else {
 				nextItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aNext Page")
@@ -618,11 +618,11 @@ public class BInventory implements Listener {
 
 	private void playSound(Player player) {
 		if (playerSound) {
-			Sound sound = AdvancedCoreHook.getInstance().getOptions().getClickSoundSound();
+			Sound sound = AdvancedCorePlugin.getInstance().getOptions().getClickSoundSound();
 			if (sound != null) {
 				player.playSound(player.getLocation(), sound,
-						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundVolume(),
-						(float) AdvancedCoreHook.getInstance().getOptions().getClickSoundPitch());
+						(float) AdvancedCorePlugin.getInstance().getOptions().getClickSoundVolume(),
+						(float) AdvancedCorePlugin.getInstance().getOptions().getClickSoundPitch());
 			}
 		}
 	}

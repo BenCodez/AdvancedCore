@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.bukkit.configuration.ConfigurationSection;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -108,7 +108,7 @@ public class MySQL {
 		}
 		mysql = new com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL(maxThreads);
 		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime)) {
-			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to connect to MySQL");
+			AdvancedCorePlugin.getInstance().getLogger().warning("Failed to connect to MySQL");
 		}
 		try {
 			Query q = new Query(mysql, "USE " + database + ";");
@@ -144,7 +144,7 @@ public class MySQL {
 
 		}, 10 * 1000, 500);
 
-		AdvancedCoreHook.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
+		AdvancedCorePlugin.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
 
 	}
 
@@ -152,7 +152,7 @@ public class MySQL {
 		synchronized (object3) {
 			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
-			AdvancedCoreHook.getInstance().debug("Adding column: " + column);
+			AdvancedCorePlugin.getInstance().debug("Adding column: " + column);
 			try {
 				Query query = new Query(mysql, sql);
 				query.executeUpdate();
@@ -178,7 +178,7 @@ public class MySQL {
 
 	public void alterColumnType(String column, String newType) {
 		checkColumn(column, DataType.STRING);
-		AdvancedCoreHook.getInstance().debug("Altering column " + column + " to " + newType);
+		AdvancedCorePlugin.getInstance().debug("Altering column " + column + " to " + newType);
 		if (newType.contains("INT")) {
 			addToQue(
 					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
@@ -202,13 +202,13 @@ public class MySQL {
 	}
 
 	public void clearCache() {
-		AdvancedCoreHook.getInstance().debug("Clearing cache");
+		AdvancedCorePlugin.getInstance().debug("Clearing cache");
 		table.clear();
 		clearCacheBasic();
 	}
 
 	public void clearCacheBasic() {
-		AdvancedCoreHook.getInstance().debug("Clearing cache basic");
+		AdvancedCorePlugin.getInstance().debug("Clearing cache basic");
 		columns.clear();
 		columns.addAll(getColumnsQueury());
 		uuids.clear();
@@ -287,9 +287,9 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-		// AdvancedCoreHook.getInstance().debug("Get Exact: " + uuid);
+		// AdvancedCorePlugin.getInstance().debug("Get Exact: " + uuid);
 		loadPlayerIfNeeded(uuid);
-		// AdvancedCoreHook.getInstance().debug("test one: " + uuid);
+		// AdvancedCorePlugin.getInstance().debug("test one: " + uuid);
 		return table.get(uuid);
 	}
 
@@ -429,7 +429,7 @@ public class MySQL {
 
 			query += "set uuid='" + index + "', ";
 			query += column + "='" + value.toString() + "';";
-			// AdvancedCoreHook.getInstance().extraDebug(query);
+			// AdvancedCorePlugin.getInstance().extraDebug(query);
 
 			try {
 				uuids.add(index);
@@ -438,11 +438,11 @@ public class MySQL {
 						index));
 			} catch (SQLException e) {
 				if (e.getMessage().contains("Duplicate entry")) {
-					AdvancedCoreHook.getInstance().getPlugin().getLogger()
+					AdvancedCorePlugin.getInstance().getLogger()
 							.severe("Error occoured while inserting user " + index
 									+ ", duplicate entry. Turn debug on in order to see the error. " + column + ":"
 									+ value);
-					AdvancedCoreHook.getInstance().debug(e);
+					AdvancedCorePlugin.getInstance().debug(e);
 
 				} else {
 					e.printStackTrace();
@@ -485,7 +485,7 @@ public class MySQL {
 	}
 
 	public void playerJoin(String uuid) {
-		if (AdvancedCoreHook.getInstance().getOptions().isClearCacheOnJoin()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isClearCacheOnJoin()) {
 			removePlayer(uuid);
 		}
 		loadPlayerIfNeeded(uuid);
@@ -497,7 +497,7 @@ public class MySQL {
 
 	public void update(String index, String column, Object value, DataType dataType) {
 		if (value == null) {
-			AdvancedCoreHook.getInstance().extraDebug("Mysql value null: " + column);
+			AdvancedCorePlugin.getInstance().extraDebug("Mysql value null: " + column);
 			return;
 		}
 		checkColumn(column, dataType);
@@ -532,7 +532,7 @@ public class MySQL {
 
 	public void updateBatch() {
 		if (query.size() > 0) {
-			AdvancedCoreHook.getInstance().extraDebug("Query Size: " + query.size());
+			AdvancedCorePlugin.getInstance().extraDebug("Query Size: " + query.size());
 			String sql = "";
 			while (query.size() > 0) {
 				String text = query.poll();
@@ -558,15 +558,15 @@ public class MySQL {
 							Query query = new Query(mysql, text);
 							query.executeUpdateAsync();
 						} catch (SQLException e) {
-							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+							AdvancedCorePlugin.getInstance().getLogger()
 									.severe("Error occoured while executing sql: " + e.toString()
 											+ ", turn debug on to see full stacktrace");
-							AdvancedCoreHook.getInstance().debug(e);
+							AdvancedCorePlugin.getInstance().debug(e);
 						}
 					}
 				}
 			} catch (SQLException e1) {
-				AdvancedCoreHook.getInstance().extraDebug("Failed to send query: " + sql);
+				AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
 				e1.printStackTrace();
 			}
 		}

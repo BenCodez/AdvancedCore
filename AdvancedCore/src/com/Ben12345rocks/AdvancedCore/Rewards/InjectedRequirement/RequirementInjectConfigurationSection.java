@@ -2,7 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement;
 
 import org.bukkit.configuration.ConfigurationSection;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
@@ -17,7 +17,7 @@ public abstract class RequirementInjectConfigurationSection extends RequirementI
 	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
 		if (data.isConfigurationSection(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
-			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath());
+			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath());
 			return onRequirementsRequested(reward, user, data.getConfigurationSection(getPath()), rewardOptions);
 		}
 		return true;

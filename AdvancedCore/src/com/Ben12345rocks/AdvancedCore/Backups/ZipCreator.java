@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -32,7 +32,7 @@ public class ZipCreator {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new report.
@@ -56,8 +56,8 @@ public class ZipCreator {
 				if (file.isDirectory()) {
 					plugin.debug("directory:" + file.getCanonicalPath());
 					if (!file.getAbsolutePath()
-							.contains(AdvancedCoreHook.getInstance().getPlugin().getName() + File.separator + "Backups")
-							&& !file.getAbsolutePath().contains(AdvancedCoreHook.getInstance().getPlugin().getName()
+							.contains(AdvancedCorePlugin.getInstance().getName() + File.separator + "Backups")
+							&& !file.getAbsolutePath().contains(AdvancedCorePlugin.getInstance().getName()
 									+ File.separator + "Reports")) {
 						addAllFiles(file, fileList);
 					}
@@ -136,7 +136,7 @@ public class ZipCreator {
 	 */
 	public void createReport() {
 		long time = Calendar.getInstance().getTime().getTime();
-		create(plugin.getPlugin().getDataFolder(), new File(plugin.getPlugin().getDataFolder(),
+		create(plugin.getDataFolder(), new File(plugin.getDataFolder(),
 				"Reports" + File.separator + "Reports." + Long.toString(time) + ".zip"));
 	}
 
@@ -144,7 +144,7 @@ public class ZipCreator {
 
 		try {
 			File fileZipFolder = new File(
-					plugin.getPlugin().getDataFolder().getAbsolutePath() + File.separator + "Reports");
+					plugin.getDataFolder().getAbsolutePath() + File.separator + "Reports");
 			if (!fileZipFolder.exists()) {
 				fileZipFolder.mkdirs();
 			}
@@ -160,7 +160,7 @@ public class ZipCreator {
 				}
 			}
 
-			plugin.getPlugin().getLogger().info("Created zip file at " + zipFile.getAbsolutePath());
+			plugin.getLogger().info("Created zip file at " + zipFile.getAbsolutePath());
 
 			zos.close();
 			fos.close();

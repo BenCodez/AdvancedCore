@@ -13,7 +13,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 /**
@@ -22,7 +22,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 public class RewardFileData {
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/** The reward. */
 	private Reward reward;
@@ -683,7 +683,7 @@ public class RewardFileData {
 			try {
 				fileData.save(dataFile);
 			} catch (IOException e) {
-				plugin.getPlugin().getLogger().severe(ChatColor.RED + "Could not create " + dataFile.getAbsolutePath());
+				plugin.getLogger().severe(ChatColor.RED + "Could not create " + dataFile.getAbsolutePath());
 
 			}
 		}

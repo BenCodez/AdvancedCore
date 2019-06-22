@@ -9,7 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
@@ -52,8 +52,8 @@ public class SkullHandler {
 			e.printStackTrace();
 		}
 
-		if (AdvancedCoreHook.getInstance().getOptions().isPreloadSkulls()) {
-			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+		if (AdvancedCorePlugin.getInstance().getOptions().isPreloadSkulls()) {
+			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {

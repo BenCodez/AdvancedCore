@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
@@ -35,8 +35,8 @@ public class PluginMessage implements PluginMessageListener {
 	@Override
 	public void onPluginMessageReceived(String channel, Player player, byte[] message) {
 		// plugin.getLogger().info("Got plugin message " + channel + " : " + message);
-		if (!channel.equals(AdvancedCoreHook.getInstance().getPlugin().getName().toLowerCase() + ":"
-				+ AdvancedCoreHook.getInstance().getPlugin().getName().toLowerCase())) {
+		if (!channel.equals(AdvancedCorePlugin.getInstance().getName().toLowerCase() + ":"
+				+ AdvancedCorePlugin.getInstance().getName().toLowerCase())) {
 			return;
 		}
 		ByteArrayDataInput in = ByteStreams.newDataInput(message);
@@ -63,7 +63,7 @@ public class PluginMessage implements PluginMessageListener {
 
 	public void sendPluginMessage(Player p, String channel, String... messageData) {
 		if (p == null) {
-			AdvancedCoreHook.getInstance().debug("Can't send plugin message, player == null");
+			AdvancedCorePlugin.getInstance().debug("Can't send plugin message, player == null");
 			return;
 		}
 		ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
@@ -74,9 +74,9 @@ public class PluginMessage implements PluginMessageListener {
 			for (String message : messageData) {
 				out.writeUTF(message);
 			}
-			p.sendPluginMessage(AdvancedCoreHook.getInstance().getPlugin(),
-					AdvancedCoreHook.getInstance().getPlugin().getName().toLowerCase() + ":"
-							+ AdvancedCoreHook.getInstance().getPlugin().getName().toLowerCase(),
+			p.sendPluginMessage(AdvancedCorePlugin.getInstance(),
+					AdvancedCorePlugin.getInstance().getName().toLowerCase() + ":"
+							+ AdvancedCorePlugin.getInstance().getName().toLowerCase(),
 					byteOutStream.toByteArray());
 			out.close();
 		} catch (Exception e) {

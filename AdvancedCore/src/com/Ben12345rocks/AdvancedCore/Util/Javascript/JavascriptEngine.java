@@ -12,7 +12,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -33,7 +33,7 @@ public class JavascriptEngine {
 			addToEngine("PlayerUUID", p.getUniqueId().toString());
 			addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(p));
 
-			for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+			for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
 				addToEngine(request.getStr(), request.getObject(p));
 			}
 		} else {
@@ -49,7 +49,7 @@ public class JavascriptEngine {
 		addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
 		addToEngine("CommandSender", player);
 
-		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+		for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
 			addToEngine(request.getStr(), request.getObject(player));
 		}
 
@@ -66,7 +66,7 @@ public class JavascriptEngine {
 		addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
 		addToEngine("CommandSender", player);
 
-		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+		for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
 			addToEngine(request.getStr(), request.getObject(player));
 		}
 		return this;
@@ -78,7 +78,7 @@ public class JavascriptEngine {
 		addToEngine("AdvancedCoreUser", user);
 		// addToEngine("CommandSender", player);
 
-		for (JavascriptPlaceholderRequest request : AdvancedCoreHook.getInstance().getJavascriptEngineRequests()) {
+		for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
 			addToEngine(request.getStr(), request.getObject(user.getOfflinePlayer()));
 		}
 
@@ -110,7 +110,7 @@ public class JavascriptEngine {
 			try {
 				return ((boolean) result);
 			} catch (Exception e) {
-				AdvancedCoreHook.getInstance().debug(e);
+				AdvancedCorePlugin.getInstance().debug(e);
 			}
 		}
 		return false;
@@ -120,12 +120,12 @@ public class JavascriptEngine {
 		if (!expression.equals("")) {
 			ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
 			engine.put("Bukkit", Bukkit.getServer());
-			engine.put("AdvancedCore", AdvancedCoreHook.getInstance());
+			engine.put("AdvancedCore", AdvancedCorePlugin.getInstance());
 			engine.put("Console", Bukkit.getConsoleSender());
 			engine.put("UserManager", UserManager.getInstance());
 			engine.put("RewardHandler", RewardHandler.getInstance());
 
-			engineAPI.putAll(AdvancedCoreHook.getInstance().getJavascriptEngine());
+			engineAPI.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
 
 			for (Entry<String, Object> entry : engineAPI.entrySet()) {
 				engine.put(entry.getKey(), entry.getValue());
@@ -134,9 +134,9 @@ public class JavascriptEngine {
 			try {
 				return engine.eval(expression);
 			} catch (ScriptException e) {
-				AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
+				AdvancedCorePlugin.getInstance().getLogger().warning(
 						"Error occoured while evaluating javascript, turn debug on to see stacktrace: " + e.toString());
-				AdvancedCoreHook.getInstance().debug(e);
+				AdvancedCorePlugin.getInstance().debug(e);
 			}
 		}
 		return null;
@@ -148,7 +148,7 @@ public class JavascriptEngine {
 			try {
 				return result.toString();
 			} catch (Exception e) {
-				AdvancedCoreHook.getInstance().debug(e);
+				AdvancedCorePlugin.getInstance().debug(e);
 			}
 		}
 		return "";

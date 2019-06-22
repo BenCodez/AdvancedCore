@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.Events.DateChangedEvent;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.Events.DayChangeEvent;
@@ -33,7 +33,7 @@ public class TimeChecker {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	private boolean timerLoaded = false;
 
@@ -49,33 +49,33 @@ public class TimeChecker {
 
 	public void forceChanged(TimeType time, boolean fake) {
 		plugin.debug("Executing time change events: " + time.toString());
-		plugin.getPlugin().getLogger().info("Time change: " + time.toString() + ", Fake: " + fake);
+		plugin.getLogger().info("Time change: " + time.toString() + ", Fake: " + fake);
 		PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
 		preDateChanged.setFake(fake);
-		plugin.getPlugin().getServer().getPluginManager().callEvent(preDateChanged);
+		plugin.getServer().getPluginManager().callEvent(preDateChanged);
 		if (time.equals(TimeType.DAY)) {
 			DayChangeEvent dayChange = new DayChangeEvent();
 			dayChange.setFake(fake);
-			plugin.getPlugin().getServer().getPluginManager().callEvent(dayChange);
+			plugin.getServer().getPluginManager().callEvent(dayChange);
 		} else if (time.equals(TimeType.WEEK)) {
 			WeekChangeEvent weekChange = new WeekChangeEvent();
 			weekChange.setFake(fake);
-			plugin.getPlugin().getServer().getPluginManager().callEvent(weekChange);
+			plugin.getServer().getPluginManager().callEvent(weekChange);
 		} else if (time.equals(TimeType.MONTH)) {
 			MonthChangeEvent monthChange = new MonthChangeEvent();
 			monthChange.setFake(fake);
-			plugin.getPlugin().getServer().getPluginManager().callEvent(monthChange);
+			plugin.getServer().getPluginManager().callEvent(monthChange);
 		}
 
 		DateChangedEvent dateChanged = new DateChangedEvent(time);
 		dateChanged.setFake(fake);
-		plugin.getPlugin().getServer().getPluginManager().callEvent(dateChanged);
+		plugin.getServer().getPluginManager().callEvent(dateChanged);
 
 		plugin.debug("Finished executing time change events: " + time.toString());
 	}
 
 	public LocalDateTime getTime() {
-		return LocalDateTime.now().plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet());
+		return LocalDateTime.now().plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet());
 	}
 
 	/**
@@ -114,7 +114,7 @@ public class TimeChecker {
 	}
 
 	public boolean hasTimeOffSet() {
-		return AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet() != 0;
+		return AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet() != 0;
 	}
 
 	/**
@@ -154,7 +154,7 @@ public class TimeChecker {
 				}
 			}, 60 * 1000, minutes * 60 * 1000);
 		} else {
-			AdvancedCoreHook.getInstance().debug("Timer is already loaded");
+			AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
 		}
 	}
 
@@ -162,7 +162,7 @@ public class TimeChecker {
 	 * Update.
 	 */
 	public void update() {
-		if (plugin.getPlugin() == null) {
+		if (plugin == null) {
 			return;
 		}
 		if (hasTimeOffSet()) {

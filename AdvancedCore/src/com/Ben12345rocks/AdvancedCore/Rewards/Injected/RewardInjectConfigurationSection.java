@@ -4,7 +4,7 @@ import java.util.HashMap;
 
 import org.bukkit.configuration.ConfigurationSection;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 
@@ -18,7 +18,7 @@ public abstract class RewardInjectConfigurationSection extends RewardInject {
 	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
 		if (data.isConfigurationSection(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
-			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath());
+			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath());
 			return onRewardRequested(reward, user, data.getConfigurationSection(getPath()), placeholders);
 		}
 		return null;

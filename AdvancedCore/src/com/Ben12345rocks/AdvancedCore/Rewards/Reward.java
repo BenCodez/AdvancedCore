@@ -17,7 +17,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Listeners.PlayerRewardEvent;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
@@ -35,7 +35,7 @@ import lombok.Setter;
 public class Reward {
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	@Getter
 	@Setter
@@ -182,7 +182,7 @@ public class Reward {
 			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
 				if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
 						.size() != section.getKeys(true).size() + 1) {
-					plugin.getPlugin().getLogger().warning(
+					plugin.getLogger().warning(
 							"Detected a reward file edited when it should be edited where directly defined, overriding");
 				}
 			}
@@ -308,8 +308,8 @@ public class Reward {
 	}
 
 	public void giveReward(User user, RewardOptions rewardOptions) {
-		if (!AdvancedCoreHook.getInstance().getOptions().isProcessRewards()) {
-			AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Processing rewards is disabled");
+		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
+			AdvancedCorePlugin.getInstance().getLogger().warning("Processing rewards is disabled");
 			return;
 		}
 

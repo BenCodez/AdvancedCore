@@ -12,7 +12,7 @@ import org.bukkit.conversations.ConversationFactory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
@@ -74,7 +74,7 @@ public class StringRequester {
 		if ((options != null && options.size() != 0) && method.equals(InputMethod.ANVIL)) {
 			method = InputMethod.INVENTORY;
 		}
-		if (AdvancedCoreHook.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
+		if (AdvancedCorePlugin.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
 			player.sendMessage("Disabled method: " + method.toString());
 		}
 		if (method.equals(InputMethod.INVENTORY)) {
@@ -152,7 +152,7 @@ public class StringRequester {
 				for (String option : options.keySet()) {
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput String "
+							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput String "
 									+ option));
 					user.sendJson(comp);
 				}
@@ -160,19 +160,19 @@ public class StringRequester {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput String "
+							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput String "
 									+ option));
 					user.sendJson(comp);
 				}
 			} else {
-				ConversationFactory convoFactory = new ConversationFactory(AdvancedCoreHook.getInstance().getPlugin())
+				ConversationFactory convoFactory = new ConversationFactory(AdvancedCorePlugin.getInstance())
 						.withModality(true).withEscapeSequence("cancel").withTimeout(60);
 				PromptManager prompt = new PromptManager(promptText + " Current value: " + currentValue, convoFactory);
 				prompt.stringPrompt(player, new PromptReturnString() {
 
 					@Override
 					public void onInput(ConversationContext context, Conversable conversable, String input) {
-						Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(),
+						Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
 
 									@Override
@@ -195,7 +195,7 @@ public class StringRequester {
 				}
 			});
 		} else if (method.equals(InputMethod.SIGN)) {
-			AdvancedCoreHook.getInstance().getSignMenu().open(player.getUniqueId(), new String[] { "", "", "", "" },
+			AdvancedCorePlugin.getInstance().getSignMenu().open(player.getUniqueId(), new String[] { "", "", "", "" },
 					new InputReceiver() {
 
 						@Override

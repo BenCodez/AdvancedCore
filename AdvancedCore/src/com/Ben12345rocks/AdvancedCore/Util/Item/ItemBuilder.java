@@ -32,7 +32,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.google.common.collect.Multimap;
@@ -68,9 +68,9 @@ public class ItemBuilder {
 				throw new IllegalArgumentException(
 						"ConfigurationSection can not be null! You are probably missing a section in your config.");
 			} catch (IllegalArgumentException e) {
-				AdvancedCoreHook.getInstance().getPlugin().getLogger().warning(
+				AdvancedCorePlugin.getInstance().getLogger().warning(
 						"Error occurred while obtaining item, turn debug on to see full stacktrace: " + e.toString());
-				AdvancedCoreHook.getInstance().debug(e);
+				AdvancedCorePlugin.getInstance().debug(e);
 			}
 			setBlank();
 		} else {
@@ -87,7 +87,7 @@ public class ItemBuilder {
 					if (material == null) {
 						material = Material.matchMaterial(materialStr, true);
 						if (material != null) {
-							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+							AdvancedCorePlugin.getInstance().getLogger()
 									.warning("Found legacy material name: " + materialStr
 											+ ", please update this to prevent this message and prevent issues");
 							legacy = true;
@@ -99,7 +99,7 @@ public class ItemBuilder {
 
 				if (material == null) {
 					material = Material.STONE;
-					AdvancedCoreHook.getInstance().getPlugin().getLogger()
+					AdvancedCorePlugin.getInstance().getLogger()
 							.warning("Invalid material: " + data.getString("Material"));
 					validMaterial = false;
 					lore.add("&cInvalid material: " + material);
@@ -169,7 +169,7 @@ public class ItemBuilder {
 							addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
 									data.getInt("Potions." + pot + ".Amplifier", 1));
 						} else {
-							AdvancedCoreHook.getInstance().getPlugin().getLogger()
+							AdvancedCorePlugin.getInstance().getLogger()
 									.warning("Invalid potion effect type: " + pot);
 						}
 					}
@@ -257,7 +257,7 @@ public class ItemBuilder {
 			try {
 				enchantments.put(Enchantment.getByKey(NamespacedKey.minecraft(enchant)), enchants.get(enchant));
 			} catch (Exception e) {
-				AdvancedCoreHook.getInstance().getPlugin().getLogger().warning("Failed to add enchantment: " + enchant);
+				AdvancedCorePlugin.getInstance().getLogger().warning("Failed to add enchantment: " + enchant);
 				e.printStackTrace();
 			}
 		}
@@ -292,7 +292,7 @@ public class ItemBuilder {
 			meta.addItemFlags(ItemFlag.valueOf(flag));
 			is.setItemMeta(meta);
 		} catch (Exception ex) {
-			AdvancedCoreHook.getInstance().debug("Invalid flag: " + flag);
+			AdvancedCorePlugin.getInstance().debug("Invalid flag: " + flag);
 		}
 		return this;
 	}
@@ -629,7 +629,7 @@ public class ItemBuilder {
 	}
 
 	public ItemBuilder setCustomData(String key, String value) {
-		NamespacedKey namespace = new NamespacedKey(AdvancedCoreHook.getInstance().getPlugin(), key);
+		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
 		ItemMeta itemMeta = is.getItemMeta();
 		itemMeta.getPersistentDataContainer().set(namespace, PersistentDataType.STRING, value);
 		is.setItemMeta(itemMeta);
@@ -637,7 +637,7 @@ public class ItemBuilder {
 	}
 
 	public String getCustomData(String key) {
-		NamespacedKey namespace = new NamespacedKey(AdvancedCoreHook.getInstance().getPlugin(), key);
+		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
 		ItemMeta itemMeta = is.getItemMeta();
 		PersistentDataContainer tagContainer = itemMeta.getPersistentDataContainer();
 		if (tagContainer.has(namespace, PersistentDataType.STRING)) {

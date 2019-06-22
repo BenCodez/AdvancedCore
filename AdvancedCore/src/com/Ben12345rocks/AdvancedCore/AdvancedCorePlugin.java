@@ -18,7 +18,6 @@ import java.util.zip.ZipInputStream;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.Server;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -75,11 +74,30 @@ import lombok.Setter;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.permission.Permission;
 
-public class AdvancedCoreHook {
-	private static AdvancedCoreHook instance = new AdvancedCoreHook();
+public abstract class AdvancedCorePlugin extends JavaPlugin {
 
-	public static AdvancedCoreHook getInstance() {
-		return instance;
+	private static AdvancedCorePlugin javaPlugin;
+
+	@Override
+	public void onEnable() {
+		javaPlugin = this;
+		onLoad();
+		loadHook();
+	}
+
+	@Override
+	public void onDisable() {
+		onUnLoad();
+	}
+
+	public abstract void onLoad();
+
+	public abstract void onPostLoad();
+
+	public abstract void onUnLoad();
+
+	public static AdvancedCorePlugin getInstance() {
+		return javaPlugin;
 	}
 
 	@Getter
@@ -87,9 +105,7 @@ public class AdvancedCoreHook {
 
 	@Getter
 	private SignMenu signMenu;
-	@Getter
-	@Setter
-	private JavaPlugin plugin;
+
 	@Getter
 	private boolean placeHolderAPIEnabled;
 
@@ -100,7 +116,7 @@ public class AdvancedCoreHook {
 	@Getter
 	private IServerHandle serverHandle;
 	@Getter
-	private Logger logger;
+	private Logger pluginLogger;
 
 	@Getter
 	private Timer timer = new Timer();
@@ -138,9 +154,6 @@ public class AdvancedCoreHook {
 	@Getter
 	private boolean authMeLoaded = false;
 
-	private AdvancedCoreHook() {
-	}
-
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
@@ -150,12 +163,12 @@ public class AdvancedCoreHook {
 	}
 
 	private void checkAutoUpdate() {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
 				if (getOptions().isAutoDownload() && getOptions().getResourceId() != 0) {
-					UpdateDownloader.getInstance().checkAutoDownload(getPlugin(), getOptions().getResourceId());
+					UpdateDownloader.getInstance().checkAutoDownload(javaPlugin, getOptions().getResourceId());
 				}
 			}
 		});
@@ -163,7 +176,7 @@ public class AdvancedCoreHook {
 	}
 
 	private void checkPlaceHolderAPI() {
-		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
+		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -180,16 +193,16 @@ public class AdvancedCoreHook {
 	}
 
 	public void checkPluginUpdate() {
-		Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable() {
+		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
-				String version = ServerData.getInstance().getPluginVersion(plugin);
-				if (!version.equals(plugin.getDescription().getVersion())) {
-					PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(plugin, version);
+				String version = ServerData.getInstance().getPluginVersion(javaPlugin);
+				if (!version.equals(javaPlugin.getDescription().getVersion())) {
+					PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(javaPlugin, version);
 					Bukkit.getServer().getPluginManager().callEvent(event);
 				}
-				ServerData.getInstance().setPluginVersion(plugin);
+				ServerData.getInstance().setPluginVersion(javaPlugin);
 			}
 		});
 
@@ -204,10 +217,10 @@ public class AdvancedCoreHook {
 	public void debug(Exception e) {
 		if (getOptions().isDebug()) {
 			e.printStackTrace();
-			if (logger != null) {
+			if (pluginLogger != null) {
 				if (getOptions().isLogDebugToFile()) {
 					String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-					logger.logToFile(str + " [" + plugin.getName() + "] ExceptionDebug: " + e.getMessage());
+					pluginLogger.logToFile(str + " [" + this.getName() + "] ExceptionDebug: " + e.getMessage());
 				}
 			} else {
 				loadLogger();
@@ -228,17 +241,17 @@ public class AdvancedCoreHook {
 			plug.getLogger().info("Debug: " + msg);
 			if (getOptions().isDebugIngame()) {
 				for (Player player : Bukkit.getOnlinePlayers()) {
-					if (player.hasPermission(plugin.getName() + ".Debug")) {
+					if (player.hasPermission(this.getName() + ".Debug")) {
 						player.sendMessage(
 								StringUtils.getInstance().colorize("&c" + plug.getName() + " Debug: " + msg));
 					}
 				}
 			}
 		}
-		if (logger != null) {
+		if (pluginLogger != null) {
 			if (getOptions().isLogDebugToFile()) {
 				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-				logger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
+				pluginLogger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
 			}
 		} else {
 			loadLogger();
@@ -252,7 +265,7 @@ public class AdvancedCoreHook {
 	 *            Debug message
 	 */
 	public void debug(String msg) {
-		debug(plugin, msg);
+		debug(this, msg);
 	}
 
 	public void extraDebug(Plugin plug, String msg) {
@@ -263,12 +276,8 @@ public class AdvancedCoreHook {
 
 	public void extraDebug(String msg) {
 		if (getOptions().isExtraDebug()) {
-			debug(plugin, "[Extra] " + msg);
+			debug(this, "[Extra] " + msg);
 		}
-	}
-
-	public Server getServer() {
-		return getPlugin().getServer();
 	}
 
 	public Table getSQLiteUserTable() {
@@ -320,7 +329,7 @@ public class AdvancedCoreHook {
 	}
 
 	public void loadAutoUpdateCheck() {
-		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
+		Bukkit.getScheduler().runTaskTimerAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -330,14 +339,14 @@ public class AdvancedCoreHook {
 	}
 
 	private void loadConfig() {
-		getOptions().load();
+		getOptions().load(this);
 		loadUserAPI(getOptions().getStorageType());
 	}
 
 	public void loadEvents() {
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(plugin), plugin);
-		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), plugin);
-		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(plugin), plugin);
+		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
+		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), this);
+		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
 	}
 
 	private void loadHandle() {
@@ -348,7 +357,7 @@ public class AdvancedCoreHook {
 		} catch (Exception ex) {
 			serverHandle = new CraftBukkitHandle();
 			debug("Detected using craftbukkit");
-			plugin.getLogger().info("Detected server running craftbukkit. It is recommended to use spigot instead");
+			getLogger().info("Detected server running craftbukkit. It is recommended to use spigot instead");
 		}
 		if (Bukkit.getOnlineMode()) {
 			debug("Server in online mode");
@@ -360,22 +369,21 @@ public class AdvancedCoreHook {
 	/**
 	 * Load AdvancedCore hook
 	 *
-	 * @param plugin
+	 * @param this
 	 *            Plugin that is hooking in
 	 */
-	public void loadHook(JavaPlugin plugin) {
-		this.plugin = plugin;
+	public void loadHook() {
 
 		loadSignAPI();
 		loadUUIDs();
-		getOptions().setPermPrefix(plugin.getName());
+		getOptions().setPermPrefix(this.getName());
 		checkPlaceHolderAPI();
 		loadHandle();
 		loadVault();
 		loadEvents();
 		TimeChecker.getInstance().loadTimer(2);
 		ServerData.getInstance().setup();
-		RewardHandler.getInstance().addRewardFolder(new File(plugin.getDataFolder(), "Rewards"));
+		RewardHandler.getInstance().addRewardFolder(new File(this.getDataFolder(), "Rewards"));
 		RewardHandler.getInstance().loadInjectedRewards();
 		RewardHandler.getInstance().loadInjectedRequirements();
 		loadValueRequestInputCommands();
@@ -397,11 +405,11 @@ public class AdvancedCoreHook {
 			bannedPlayers.add(p.getUniqueId().toString());
 		}
 
-		Bukkit.getPluginManager().registerEvents(BackupHandle.getInstance(), getPlugin());
+		Bukkit.getPluginManager().registerEvents(BackupHandle.getInstance(), this);
 
 		if (Bukkit.getPluginManager().getPlugin("authme") != null) {
 			authMeLoaded = true;
-			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(), getPlugin());
+			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(), this);
 		}
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "'");
@@ -411,8 +419,8 @@ public class AdvancedCoreHook {
 	 * Load logger
 	 */
 	public void loadLogger() {
-		if (getOptions().isLogDebugToFile() && logger == null && plugin != null) {
-			logger = new Logger(plugin, new File(plugin.getDataFolder(), "Log" + File.separator + "Log.txt"));
+		if (getOptions().isLogDebugToFile() && pluginLogger == null) {
+			pluginLogger = new Logger(this, new File(this.getDataFolder(), "Log" + File.separator + "Log.txt"));
 		}
 	}
 
@@ -420,7 +428,7 @@ public class AdvancedCoreHook {
 		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
 				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
 			try {
-				this.signMenu = new SignMenu(plugin);
+				this.signMenu = new SignMenu(this);
 			} catch (Exception e) {
 				debug(e);
 			}
@@ -434,7 +442,7 @@ public class AdvancedCoreHook {
 					@Override
 					public void reload() {
 						ArrayList<String> players = new ArrayList<String>();
-						for (String name : AdvancedCoreHook.getInstance().getUuidNameCache().values()) {
+						for (String name : getUuidNameCache().values()) {
 							if (!players.contains(name)) {
 								players.add(name);
 							}
@@ -475,7 +483,7 @@ public class AdvancedCoreHook {
 			@Override
 			public void reload() {
 				ArrayList<String> uuids = new ArrayList<String>();
-				for (String name : AdvancedCoreHook.getInstance().getUuidNameCache().keySet()) {
+				for (String name : getUuidNameCache().keySet()) {
 					if (!uuids.contains(name)) {
 						uuids.add(name);
 					}
@@ -563,13 +571,13 @@ public class AdvancedCoreHook {
 			Column key = new Column("uuid", DataType.STRING);
 			columns.add(key);
 			Table table = new Table("Users", columns, key);
-			database = new Database(plugin, "Users", table);
+			database = new Database(this, "Users", table);
 		} else if (storageType.equals(UserStorage.MYSQL)) {
 			Thread.getInstance().run(new Runnable() {
 
 				@Override
 				public void run() {
-					setMysql(new MySQL(getPlugin().getName() + "_Users",
+					setMysql(new MySQL(javaPlugin.getName() + "_Users",
 							getOptions().getConfigData().getConfigurationSection("MySQL")));
 				}
 			});
@@ -651,26 +659,26 @@ public class AdvancedCoreHook {
 			bukkitCommandMap.setAccessible(true);
 			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
 
-			commandMap.register(plugin.getName() + "valuerequestinput",
-					new ValueRequestInputCommand(plugin.getName() + "valuerequestinput"));
+			commandMap.register(this.getName() + "valuerequestinput",
+					new ValueRequestInputCommand(this.getName() + "valuerequestinput"));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void loadVault() {
-		Bukkit.getScheduler().runTaskLater(getPlugin(), new Runnable() {
+		Bukkit.getScheduler().runTaskLater(this, new Runnable() {
 
 			@Override
 			public void run() {
 				if (setupEconomy()) {
-					plugin.getLogger().info("Successfully hooked into vault economy!");
+					getLogger().info("Successfully hooked into vault economy!");
 				} else {
-					plugin.getLogger().warning("Failed to hook into vault economy");
+					getLogger().warning("Failed to hook into vault economy");
 				}
 
 				if (setupPermissions()) {
-					plugin.getLogger().info("Hooked into vault permissions");
+					getLogger().info("Hooked into vault permissions");
 
 					RewardHandler.getInstance().addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
 
@@ -682,10 +690,9 @@ public class AdvancedCoreHook {
 							}
 							String group = "";
 							if (!rewardOptions.isGiveOffline() && user.isOnline()) {
-								group = AdvancedCoreHook.getInstance().getPerms().getPrimaryGroup(user.getPlayer());
+								group = getPerms().getPrimaryGroup(user.getPlayer());
 							} else {
-								group = AdvancedCoreHook.getInstance().getPerms().getPrimaryGroup(null,
-										user.getOfflinePlayer());
+								group = getPerms().getPrimaryGroup(null, user.getOfflinePlayer());
 							}
 							if (group.equalsIgnoreCase(type)) {
 								return true;
@@ -701,9 +708,9 @@ public class AdvancedCoreHook {
 									reward.getConfig().set(getKey(), value);
 									reload();
 								}
-							}.addOptions(AdvancedCoreHook.getInstance().getPerms().getGroups()))));
+							}.addOptions(getPerms().getGroups()))));
 				} else {
-					plugin.getLogger().warning("Failed to hook into vault permissions");
+					getLogger().warning("Failed to hook into vault permissions");
 				}
 			}
 		}, 5);
@@ -716,11 +723,10 @@ public class AdvancedCoreHook {
 	}
 
 	public void registerBungeeChannels() {
-		getServer().getMessenger().registerOutgoingPluginChannel(getPlugin(),
-				getPlugin().getName().toLowerCase() + ":" + getPlugin().getName().toLowerCase());
-		getServer().getMessenger().registerIncomingPluginChannel(getPlugin(),
-				getPlugin().getName().toLowerCase() + ":" + getPlugin().getName().toLowerCase(),
-				PluginMessage.getInstance());
+		getServer().getMessenger().registerOutgoingPluginChannel(this,
+				this.getName().toLowerCase() + ":" + this.getName().toLowerCase());
+		getServer().getMessenger().registerIncomingPluginChannel(this,
+				this.getName().toLowerCase() + ":" + this.getName().toLowerCase(), PluginMessage.getInstance());
 	}
 
 	/**
@@ -771,10 +777,10 @@ public class AdvancedCoreHook {
 	}
 
 	private boolean setupEconomy() {
-		if (plugin.getServer().getPluginManager().getPlugin("Vault") == null) {
+		if (this.getServer().getPluginManager().getPlugin("Vault") == null) {
 			return false;
 		}
-		RegisteredServiceProvider<Economy> rsp = plugin.getServer().getServicesManager().getRegistration(Economy.class);
+		RegisteredServiceProvider<Economy> rsp = this.getServer().getServicesManager().getRegistration(Economy.class);
 		if (rsp == null) {
 			return false;
 		}
@@ -783,10 +789,10 @@ public class AdvancedCoreHook {
 	}
 
 	private boolean setupPermissions() {
-		if (plugin.getServer().getPluginManager().getPlugin("Vault") == null) {
+		if (getServer().getPluginManager().getPlugin("Vault") == null) {
 			return false;
 		}
-		RegisteredServiceProvider<Permission> rsp = plugin.getServer().getServicesManager()
+		RegisteredServiceProvider<Permission> rsp = this.getServer().getServicesManager()
 				.getRegistration(Permission.class);
 		if (rsp == null) {
 			return false;
@@ -796,7 +802,7 @@ public class AdvancedCoreHook {
 	}
 
 	public void userStartup() {
-		Bukkit.getScheduler().runTaskLaterAsynchronously(getPlugin(), new Runnable() {
+		Bukkit.getScheduler().runTaskLaterAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {

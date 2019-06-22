@@ -15,7 +15,7 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
@@ -184,7 +184,7 @@ public class SimpleScoreboard {
 	 *            the players
 	 */
 	public void send(Player... players) {
-		if (AdvancedCoreHook.getInstance().getOptions().isSendScoreboards()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isSendScoreboards()) {
 			for (Player p : players) {
 				if (p != null) {
 					p.setScoreboard(scoreboard);

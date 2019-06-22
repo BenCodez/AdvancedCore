@@ -12,7 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -32,7 +32,7 @@ import net.md_5.bungee.api.chat.TextComponent;
  */
 public abstract class CommandHandler {
 
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	@Getter
 	@Setter
@@ -361,7 +361,7 @@ public abstract class CommandHandler {
 
 			if (!hasPerm(sender)) {
 				sender.sendMessage(StringUtils.getInstance().colorize(plugin.getOptions().getFormatNoPerms()));
-				plugin.getPlugin().getLogger().log(Level.INFO,
+				plugin.getLogger().log(Level.INFO,
 						sender.getName() + " was denied access to command, required permission: " + perm);
 				return true;
 			}
@@ -375,7 +375,7 @@ public abstract class CommandHandler {
 			}
 			String[] argsNew = args;
 
-			Bukkit.getServer().getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+			Bukkit.getServer().getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {

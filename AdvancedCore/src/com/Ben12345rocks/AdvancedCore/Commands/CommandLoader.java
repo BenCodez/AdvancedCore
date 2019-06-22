@@ -6,7 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Backups.ZipCreator;
 import com.Ben12345rocks.AdvancedCore.CommandAPI.CommandHandler;
 import com.Ben12345rocks.AdvancedCore.Commands.GUI.AdminGUI;
@@ -200,9 +200,9 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-					if (AdvancedCoreHook.getInstance().getMysql() != null) {
-						AdvancedCoreHook.getInstance().getMysql().clearCache();
+				if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+					if (AdvancedCorePlugin.getInstance().getMysql() != null) {
+						AdvancedCorePlugin.getInstance().getMysql().clearCache();
 						sender.sendMessage(StringUtils.getInstance().colorize("&cCache cleared"));
 					} else {
 						sender.sendMessage(StringUtils.getInstance().colorize("&cMySQL not loaded"));
@@ -222,15 +222,15 @@ public class CommandLoader {
 			}
 		});
 
-		if (AdvancedCoreHook.getInstance().getOptions().getResourceId() != 0) {
+		if (AdvancedCorePlugin.getInstance().getOptions().getResourceId() != 0) {
 			cmds.add(new CommandHandler(new String[] { "Download" }, permPrefix + ".Download", "Download from spigot") {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
 					sender.sendMessage(StringUtils.getInstance().colorize(
 							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
-					if (UpdateDownloader.getInstance().download(AdvancedCoreHook.getInstance().getPlugin(),
-							AdvancedCoreHook.getInstance().getOptions().getResourceId())) {
+					if (UpdateDownloader.getInstance().download(AdvancedCorePlugin.getInstance(),
+							AdvancedCorePlugin.getInstance().getOptions().getResourceId())) {
 						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
 					} else {
 						sendMessage(sender, "&cFailed to download jar.");
@@ -239,18 +239,18 @@ public class CommandLoader {
 			});
 		}
 
-		if (!AdvancedCoreHook.getInstance().getJenkinsSite().isEmpty()) {
+		if (!AdvancedCorePlugin.getInstance().getJenkinsSite().isEmpty()) {
 			cmds.add(new CommandHandler(new String[] { "DownloadJenkins" }, permPrefix + ".Download",
 					"Download from jenkins. Please use at your own risk") {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					if (AdvancedCoreHook.getInstance().getOptions().isEnableJenkins()) {
+					if (AdvancedCorePlugin.getInstance().getOptions().isEnableJenkins()) {
 						sender.sendMessage(StringUtils.getInstance().colorize(
 								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
 						UpdateDownloader.getInstance().downloadFromJenkins(
-								AdvancedCoreHook.getInstance().getJenkinsSite(),
-								AdvancedCoreHook.getInstance().getPlugin().getName());
+								AdvancedCorePlugin.getInstance().getJenkinsSite(),
+								AdvancedCorePlugin.getInstance().getName());
 						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
 					} else {
 						sendMessage(sender,
@@ -368,7 +368,7 @@ public class CommandLoader {
 				User user = UserManager.getInstance().getUser((Player) sender);
 				user.setChoicePreference(args[2], args[3]);
 
-				user.sendMessage(AdvancedCoreHook.getInstance().getOptions().getFormatChoiceRewardsPreferenceSet(),
+				user.sendMessage(AdvancedCorePlugin.getInstance().getOptions().getFormatChoiceRewardsPreferenceSet(),
 						"choice", args[3]);
 			}
 		});

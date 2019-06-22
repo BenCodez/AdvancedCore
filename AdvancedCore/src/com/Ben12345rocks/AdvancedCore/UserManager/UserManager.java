@@ -7,7 +7,7 @@ import java.util.List;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Column;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
@@ -29,7 +29,7 @@ public class UserManager {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new user manager.
@@ -39,7 +39,7 @@ public class UserManager {
 
 	public ArrayList<String> getAllPlayerNames() {
 		ArrayList<String> names = new ArrayList<String>();
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			for (String uuid : getAllUUIDs()) {
 				User user = UserManager.getInstance().getUser(new UUID(uuid));
 				String name = user.getPlayerName();
@@ -47,16 +47,16 @@ public class UserManager {
 					names.add(name);
 				}
 			}
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-			ArrayList<String> data = AdvancedCoreHook.getInstance().getSQLiteUserTable().getNames();
+		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			ArrayList<String> data = AdvancedCorePlugin.getInstance().getSQLiteUserTable().getNames();
 			for (String name : data) {
 				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 					names.add(name);
 				}
 			}
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
 			ArrayList<String> data = ArrayUtils.getInstance()
-					.convert(AdvancedCoreHook.getInstance().getMysql().getNames());
+					.convert(AdvancedCorePlugin.getInstance().getMysql().getNames());
 			for (String name : data) {
 				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 					names.add(name);
@@ -67,8 +67,8 @@ public class UserManager {
 	}
 
 	public ArrayList<String> getAllUUIDs() {
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-			File folder = new File(plugin.getPlugin().getDataFolder() + File.separator + "Data");
+		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			File folder = new File(plugin.getDataFolder() + File.separator + "Data");
 			String[] fileNames = folder.list();
 			ArrayList<String> uuids = new ArrayList<String>();
 			if (fileNames != null) {
@@ -80,15 +80,15 @@ public class UserManager {
 				}
 			}
 			return uuids;
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-			List<Column> cols = AdvancedCoreHook.getInstance().getSQLiteUserTable().getRows();
+		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			List<Column> cols = AdvancedCorePlugin.getInstance().getSQLiteUserTable().getRows();
 			ArrayList<String> uuids = new ArrayList<String>();
 			for (Column col : cols) {
 				uuids.add((String) col.getValue());
 			}
 			return uuids;
-		} else if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			return ArrayUtils.getInstance().convert(AdvancedCoreHook.getInstance().getMysql().getUuids());
+		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			return ArrayUtils.getInstance().convert(AdvancedCorePlugin.getInstance().getMysql().getUuids());
 		}
 		return new ArrayList<String>();
 	}
@@ -138,7 +138,7 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public User getUser(String playerName) {
-		return new User(plugin.getPlugin(), getProperName(playerName));
+		return new User(plugin, getProperName(playerName));
 	}
 
 	/**
@@ -150,7 +150,7 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public User getUser(UUID uuid) {
-		return new User(plugin.getPlugin(), uuid);
+		return new User(plugin, uuid);
 	}
 
 	public void purgeOldPlayers() {
@@ -182,9 +182,9 @@ public class UserManager {
 				}
 			});
 		}
-		if (AdvancedCoreHook.getInstance().getStorageType().equals(UserStorage.MYSQL)
-				&& AdvancedCoreHook.getInstance().getMysql() != null) {
-			AdvancedCoreHook.getInstance().getMysql().clearCacheBasic();
+		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
+				&& AdvancedCorePlugin.getInstance().getMysql() != null) {
+			AdvancedCorePlugin.getInstance().getMysql().clearCacheBasic();
 		}
 	}
 

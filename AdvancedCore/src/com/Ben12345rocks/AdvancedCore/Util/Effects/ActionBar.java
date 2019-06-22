@@ -4,7 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
@@ -16,7 +16,7 @@ import net.md_5.bungee.api.chat.TextComponent;
  */
 public class ActionBar {
 
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/** The duration. */
 	private int duration;
@@ -102,7 +102,7 @@ public class ActionBar {
 				public void run() {
 					sendActionBar(player, "");
 				}
-			}.runTaskLater(plugin.getPlugin(), duration + 1);
+			}.runTaskLater(plugin, duration + 1);
 		}
 
 		// Re-sends the messages every 3 seconds so it doesn't go away from the
@@ -115,7 +115,7 @@ public class ActionBar {
 				public void run() {
 					sendActionBar(player, message);
 				}
-			}.runTaskLater(plugin.getPlugin(), sched);
+			}.runTaskLater(plugin, sched);
 		}
 	}
 

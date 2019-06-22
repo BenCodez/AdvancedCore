@@ -14,7 +14,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -31,7 +31,7 @@ public class PlayerUtils {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	private PlayerUtils() {
 	}
@@ -47,7 +47,7 @@ public class PlayerUtils {
 	 */
 	public Object getPlayerMeta(Player player, String str) {
 		for (MetadataValue meta : player.getMetadata(str)) {
-			if (meta.getOwningPlugin().equals(plugin.getPlugin())) {
+			if (meta.getOwningPlugin().equals(plugin)) {
 				return meta.value();
 			}
 		}
@@ -101,7 +101,7 @@ public class PlayerUtils {
 		if (SkullHandler.getInstance().hasSkull(playerName)) {
 			return SkullHandler.getInstance().getItemStack(playerName);
 		} else {
-			Bukkit.getScheduler().runTaskAsynchronously(plugin.getPlugin(), new Runnable() {
+			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -249,7 +249,7 @@ public class PlayerUtils {
 	 * @return true, if successful
 	 */
 	public boolean hasPermission(CommandSender sender, String perm) {
-		return sender.hasPermission(plugin.getPlugin().getName() + "." + perm);
+		return sender.hasPermission(plugin.getName() + "." + perm);
 	}
 
 	/**
@@ -262,7 +262,7 @@ public class PlayerUtils {
 	 * @return true, if successful
 	 */
 	public boolean hasPermission(Player player, String perm) {
-		return player.hasPermission(plugin.getPlugin().getName() + "." + perm);
+		return player.hasPermission(plugin.getName() + "." + perm);
 	}
 
 	/**
@@ -280,7 +280,7 @@ public class PlayerUtils {
 		}
 		Player player = Bukkit.getPlayer(playerName);
 		if (player != null) {
-			return player.hasPermission(plugin.getPlugin().getName() + "." + perm);
+			return player.hasPermission(plugin.getName() + "." + perm);
 		}
 		return false;
 	}
@@ -350,7 +350,7 @@ public class PlayerUtils {
 			return userExist;
 		}
 
-		if (AdvancedCoreHook.getInstance().getOptions().isCheckNameMojang()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isCheckNameMojang()) {
 			// plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 			if (p.hasPlayedBefore()) {
@@ -373,7 +373,7 @@ public class PlayerUtils {
 	 *            the value
 	 */
 	public void setPlayerMeta(Player player, String str, Object value) {
-		player.removeMetadata(str, plugin.getPlugin());
+		player.removeMetadata(str, plugin);
 		player.setMetadata(str, new MetadataValue() {
 
 			@Override
@@ -426,7 +426,7 @@ public class PlayerUtils {
 
 			@Override
 			public Plugin getOwningPlugin() {
-				return plugin.getPlugin();
+				return plugin;
 			}
 
 			@Override

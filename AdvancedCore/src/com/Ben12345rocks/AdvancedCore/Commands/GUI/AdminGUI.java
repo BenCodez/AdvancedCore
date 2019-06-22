@@ -7,7 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
@@ -33,7 +33,7 @@ public class AdminGUI {
 		return instance;
 	}
 
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/** The plugin GU is. */
 	private ArrayList<BInventoryButton> pluginGUIs;
@@ -64,7 +64,7 @@ public class AdminGUI {
 	 *            the player
 	 */
 	public void openGUI(Player player) {
-		if (!player.hasPermission(AdvancedCoreHook.getInstance().getOptions().getPermPrefix() + ".Admin")) {
+		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".Admin")) {
 			player.sendMessage("Not enough permissions");
 			return;
 		}

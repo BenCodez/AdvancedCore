@@ -7,7 +7,7 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.NameFetcher;
 
@@ -52,7 +52,7 @@ public class SkullThread {
 		 */
 		public void run(Runnable run) {
 			synchronized (SkullThread.getInstance()) {
-				if (!AdvancedCoreHook.getInstance().getPlugin().isEnabled()) {
+				if (!plugin.isEnabled()) {
 					return;
 				}
 				run.run();
@@ -61,7 +61,7 @@ public class SkullThread {
 
 		public void load(String playerName) {
 			synchronized (SkullThread.getInstance().getThread()) {
-				if (!AdvancedCoreHook.getInstance().getPlugin().isEnabled()) {
+				if (!plugin.isEnabled()) {
 					return;
 				}
 				if (playerName == null || playerName.isEmpty()) {
@@ -71,7 +71,7 @@ public class SkullThread {
 				if (SkullHandler.getInstance().hasSkull(playerName)) {
 					return;
 				}
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 					@Override
 					public void run() {
@@ -89,16 +89,16 @@ public class SkullThread {
 									SkullHandler.getInstance().getSkulls().put(playerName,
 											SkullHandler.getInstance().getAsNMSCopy().invoke(null, s));
 								} catch (Exception e) {
-									AdvancedCoreHook.getInstance().getPlugin().getLogger()
+									plugin.getLogger()
 											.info("Failed to preload skull: " + playerName + ", waiting 10 minutes");
-									AdvancedCoreHook.getInstance().debug(e);
+									plugin.debug(e);
 									try {
 										sleep(600000);
 									} catch (InterruptedException e1) {
 										e1.printStackTrace();
 									}
 								}
-								AdvancedCoreHook.getInstance().extraDebug("Loading skull: " + playerName);
+								plugin.extraDebug("Loading skull: " + playerName);
 
 							}
 						});
@@ -135,7 +135,7 @@ public class SkullThread {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/** The thread. */
 	private ReadThread thread;

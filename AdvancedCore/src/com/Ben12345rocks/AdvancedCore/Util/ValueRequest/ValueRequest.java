@@ -5,7 +5,7 @@ import java.util.LinkedHashMap;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.NumberListener;
@@ -20,7 +20,7 @@ import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Requesters.StringRequest
 public class ValueRequest {
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/** The method. */
 	private InputMethod method = null;

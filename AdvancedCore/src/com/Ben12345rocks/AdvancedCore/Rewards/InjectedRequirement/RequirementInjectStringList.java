@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 import org.bukkit.configuration.ConfigurationSection;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
@@ -37,7 +37,7 @@ public abstract class RequirementInjectStringList extends RequirementInject {
 			RewardOptions rewardOptions) {
 		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());
-			AdvancedCoreHook.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: "
+			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: "
 					+ ArrayUtils.getInstance().makeStringList(value));
 			return onRequirementsRequest(reward, user, value, rewardOptions);
 

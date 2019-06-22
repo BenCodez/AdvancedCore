@@ -23,7 +23,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -235,7 +235,7 @@ public class MCStatsMetrics {
 		buffer.append('&').append(encode(key)).append('=').append(encode(value));
 	}
 
-	AdvancedCoreHook hook = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin hook = AdvancedCorePlugin.getInstance();
 
 	/** The configuration. */
 	private final YamlConfiguration configuration;

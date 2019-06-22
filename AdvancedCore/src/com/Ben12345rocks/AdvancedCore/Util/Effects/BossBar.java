@@ -6,7 +6,7 @@ import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
@@ -50,7 +50,7 @@ public class BossBar {
 			bossBar.addPlayer(player);
 
 			if (delay > 0) {
-				Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -61,7 +61,7 @@ public class BossBar {
 				}, delay * 20);
 			}
 		} catch (Exception e) {
-			AdvancedCoreHook.getInstance().debug(e);
+			AdvancedCorePlugin.getInstance().debug(e);
 		}
 	}
 
@@ -73,7 +73,7 @@ public class BossBar {
 	}
 
 	private void hideInDelay(int delay) {
-		Bukkit.getScheduler().runTaskLater(AdvancedCoreHook.getInstance().getPlugin(), new Runnable() {
+		Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 			@Override
 			public void run() {

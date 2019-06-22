@@ -152,7 +152,7 @@ public class AdvancedCoreConfigOptions {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void load() {
+	public void load(AdvancedCorePlugin plugin) {
 		if (getConfigData() != null) {
 			debug = configData.getBoolean("Debug", false);
 			debugIngame = configData.getBoolean("DebugInGame", false);
@@ -177,7 +177,7 @@ public class AdvancedCoreConfigOptions {
 			purgeMinimumDays = configData.getInt("PurgeMin", 90);
 			checkNameMojang = configData.getBoolean("CheckNameMojang", false);
 			if (checkNameMojang) {
-				AdvancedCoreHook.getInstance().getPlugin().getLogger()
+				plugin.getLogger()
 						.info("Using mojang name lookups allowed, disable if you run into issues");
 			}
 			disableCheckOnWorldChange = configData.getBoolean("DisableCheckOnWorldChange");

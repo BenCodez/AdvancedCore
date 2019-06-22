@@ -2,7 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement;
 
 import org.bukkit.configuration.ConfigurationSection;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
@@ -30,7 +30,7 @@ public abstract class RequirementInjectString extends RequirementInject {
 			RewardOptions rewardOptions) {
 		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			String value = data.getString(getPath(), getDefaultValue());
-			AdvancedCoreHook.getInstance()
+			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: " + value);
 			return onRequirementsRequest(reward, user, value, rewardOptions);
 

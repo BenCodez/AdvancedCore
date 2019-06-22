@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.bukkit.command.CommandSender;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
 public class TabCompleteHandler {
@@ -16,7 +16,7 @@ public class TabCompleteHandler {
 		return instance;
 	}
 
-	private AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	private AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	private ConcurrentLinkedQueue<TabCompleteHandle> tabCompletes = new ConcurrentLinkedQueue<TabCompleteHandle>();
 

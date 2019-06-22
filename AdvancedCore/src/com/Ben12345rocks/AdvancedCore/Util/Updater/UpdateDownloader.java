@@ -11,7 +11,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 
 public class UpdateDownloader {
 
@@ -26,7 +26,7 @@ public class UpdateDownloader {
 
 	public void checkAutoDownload(JavaPlugin plugin, int resourceId) {
 		Updater updater = new Updater(plugin, resourceId,
-				!AdvancedCoreHook.getInstance().getOptions().isAutoDownload());
+				!AdvancedCorePlugin.getInstance().getOptions().isAutoDownload());
 		switch (updater.getResult()) {
 			case UPDATE_AVAILABLE:
 				download(plugin, resourceId);
@@ -66,7 +66,7 @@ public class UpdateDownloader {
 					new URL("http://" + site + "/job/" + projectName + "/lastSuccessfulBuild/artifact/" + projectName
 							+ "/target/" + projectName + ".jar"),
 					new File(Bukkit.getServer().getUpdateFolderFile(),
-							AdvancedCoreHook.getInstance().getPlugin().getDescription().getName() + ".jar"));
+							AdvancedCorePlugin.getInstance().getDescription().getName() + ".jar"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

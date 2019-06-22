@@ -2,7 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Thread;
 
 import java.util.Arrays;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.NameFetcher;
 
 /**
@@ -21,7 +21,7 @@ public class Thread {
 			try {
 				return fet.call().get(uuid);
 			} catch (Exception e) {
-				// AdvancedCoreHook.getInstance().debug(e);
+				// AdvancedCorePlugin.getInstance().debug(e);
 				return "";
 			}
 		}
@@ -64,7 +64,7 @@ public class Thread {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/** The thread. */
 	private ReadThread thread;

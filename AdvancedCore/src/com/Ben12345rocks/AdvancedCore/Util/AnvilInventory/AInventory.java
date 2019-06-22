@@ -15,7 +15,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryReflectionHandler;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.AInventoryVersionHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
@@ -268,11 +268,11 @@ public class AInventory {
 							if (handler == null) {
 								handler = (AnvilClickEventHandler) PlayerUtils.getInstance().getPlayerMeta(player,
 										"AInventory");
-								// AdvancedCoreHook.getInstance().debug("Anvil
+								// AdvancedCorePlugin.getInstance().debug("Anvil
 								// handler was null, fixing...");
 							}
 
-							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCoreHook.getInstance().getPlugin(),
+							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 									new Runnable() {
 
 										@Override
@@ -280,7 +280,7 @@ public class AInventory {
 											if (handler == null) {
 												handler = (AnvilClickEventHandler) PlayerUtils.getInstance()
 														.getPlayerMeta(player, "AInventory");
-												// AdvancedCoreHook.getInstance()
+												// AdvancedCorePlugin.getInstance()
 												// .debug("Anvil handler was
 												// null, fixing...");
 											}
@@ -316,7 +316,7 @@ public class AInventory {
 			}
 		};
 
-		Bukkit.getPluginManager().registerEvents(listener, AdvancedCoreHook.getInstance().getPlugin());
+		Bukkit.getPluginManager().registerEvents(listener, AdvancedCorePlugin.getInstance());
 	}
 
 	/**

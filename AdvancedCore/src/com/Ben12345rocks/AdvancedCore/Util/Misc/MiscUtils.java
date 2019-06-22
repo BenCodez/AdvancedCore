@@ -21,7 +21,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 
@@ -36,7 +36,7 @@ public class MiscUtils {
 	}
 
 	/** The plugin. */
-	AdvancedCoreHook plugin = AdvancedCoreHook.getInstance();
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	private MiscUtils() {
 	}
@@ -61,7 +61,7 @@ public class MiscUtils {
 					consoleMsg = msg;
 				}
 				for (String str : msg.split("%NewLine%")) {
-					AdvancedCoreHook.getInstance().getServerHandle().sendMessage(player,
+					AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
 							StringUtils.getInstance().parseJson(str));
 				}
 			}
@@ -93,7 +93,7 @@ public class MiscUtils {
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 					@Override
 					public void run() {
@@ -112,7 +112,7 @@ public class MiscUtils {
 					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
 
 			plugin.debug("Executing console command: " + command);
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -134,7 +134,7 @@ public class MiscUtils {
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 					@Override
 					public void run() {
@@ -157,7 +157,7 @@ public class MiscUtils {
 			final String cmd = StringUtils.getInstance().replacePlaceHolder(command, placeholders);
 
 			plugin.debug("Executing console command: " + command);
-			Bukkit.getScheduler().runTask(plugin.getPlugin(), new Runnable() {
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -206,7 +206,7 @@ public class MiscUtils {
 	 */
 	public int getDayFromMili(long time) {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
-				.plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet()).getDayOfMonth();
+				.plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet()).getDayOfMonth();
 	}
 
 	/**
@@ -218,7 +218,7 @@ public class MiscUtils {
 	 */
 	public int getHourFromMili(long time) {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
-				.plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet()).getHour();
+				.plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet()).getHour();
 	}
 
 	/**
@@ -230,7 +230,7 @@ public class MiscUtils {
 	 */
 	public int getMinutesFromMili(long time) {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
-				.plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet()).getMinute();
+				.plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet()).getMinute();
 	}
 
 	/**
@@ -242,7 +242,7 @@ public class MiscUtils {
 	 */
 	public int getMonthFromMili(long time) {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
-				.plusHours(AdvancedCoreHook.getInstance().getOptions().getTimeHourOffSet()).getMonthValue();
+				.plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet()).getMonthValue();
 	}
 
 	/**

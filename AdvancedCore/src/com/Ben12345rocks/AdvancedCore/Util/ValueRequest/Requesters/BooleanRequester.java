@@ -6,7 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCoreHook;
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.AInventory;
@@ -52,7 +52,7 @@ public class BooleanRequester {
 	 */
 	public void request(Player player, InputMethod method, String currentValue, String promptText,
 			BooleanListener listener) {
-		if (AdvancedCoreHook.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
+		if (AdvancedCorePlugin.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
 			player.sendMessage("Disabled method: " + method.toString());
 		}
 		if (method.equals(InputMethod.SIGN)) {
@@ -126,12 +126,12 @@ public class BooleanRequester {
 			TextComponent comp = new TextComponent(option);
 			PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestBoolean", listener);
 			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND, "/"
-					+ AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput Boolean " + option));
+					+ AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Boolean " + option));
 			user.sendJson(comp);
 			option = "False";
 			comp = new TextComponent(option);
 			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND, "/"
-					+ AdvancedCoreHook.getInstance().getPlugin().getName() + "valuerequestinput Boolean " + option));
+					+ AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Boolean " + option));
 			user.sendJson(comp);
 		} else if (method.equals(InputMethod.BOOK)) {
 
