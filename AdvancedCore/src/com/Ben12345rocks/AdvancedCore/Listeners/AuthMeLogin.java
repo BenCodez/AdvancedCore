@@ -17,13 +17,17 @@ public class AuthMeLogin implements Listener {
 
 			@Override
 			public void run() {
-				if (AuthMeApi.getInstance().isAuthenticated(event.getPlayer())
-						&& AdvancedCorePlugin.getInstance().getOptions().isWaitUntilLoggedIn()) {
-					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(event.getPlayer());
-					Bukkit.getPluginManager().callEvent(login);
+				if (event.getPlayer() != null) {
+					if (AuthMeApi.getInstance().isAuthenticated(event.getPlayer())
+							&& AdvancedCorePlugin.getInstance().getOptions().isWaitUntilLoggedIn()) {
+						AdvancedCorePlugin.getInstance().debug(
+								"Authme Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+						AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(event.getPlayer());
+						Bukkit.getPluginManager().callEvent(login);
+					}
 				}
 			}
-		}, 20l);
+		}, 40l);
 
 	}
 }
