@@ -81,7 +81,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		javaPlugin = this;
-		onLoad();
+		onPreLoad();
 		loadHook();
 	}
 
