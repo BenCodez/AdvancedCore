@@ -57,8 +57,8 @@ public class ZipCreator {
 					plugin.debug("directory:" + file.getCanonicalPath());
 					if (!file.getAbsolutePath()
 							.contains(AdvancedCorePlugin.getInstance().getName() + File.separator + "Backups")
-							&& !file.getAbsolutePath().contains(AdvancedCorePlugin.getInstance().getName()
-									+ File.separator + "Reports")) {
+							&& !file.getAbsolutePath().contains(
+									AdvancedCorePlugin.getInstance().getName() + File.separator + "Reports")) {
 						addAllFiles(file, fileList);
 					}
 
@@ -143,8 +143,7 @@ public class ZipCreator {
 	private void writeZipFile(List<File> fileList, File zipFile) {
 
 		try {
-			File fileZipFolder = new File(
-					plugin.getDataFolder().getAbsolutePath() + File.separator + "Reports");
+			File fileZipFolder = new File(plugin.getDataFolder().getAbsolutePath() + File.separator + "Reports");
 			if (!fileZipFolder.exists()) {
 				fileZipFolder.mkdirs();
 			}

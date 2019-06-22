@@ -272,13 +272,6 @@ public class ArrayUtils {
 		return map;
 	}
 
-	public String pickRandom(ArrayList<String> list) {
-		if (list != null) {
-			return list.get(ThreadLocalRandom.current().nextInt(list.size()));
-		}
-		return "";
-	}
-
 	public String makeString(HashMap<String, String> placeholders) {
 		String str = "";
 		int count = 0;
@@ -340,6 +333,13 @@ public class ArrayUtils {
 			string = list.get(0);
 		}
 		return string;
+	}
+
+	public String pickRandom(ArrayList<String> list) {
+		if (list != null) {
+			return list.get(ThreadLocalRandom.current().nextInt(list.size()));
+		}
+		return "";
 	}
 
 	/**

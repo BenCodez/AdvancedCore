@@ -87,9 +87,8 @@ public class ItemBuilder {
 					if (material == null) {
 						material = Material.matchMaterial(materialStr, true);
 						if (material != null) {
-							AdvancedCorePlugin.getInstance().getLogger()
-									.warning("Found legacy material name: " + materialStr
-											+ ", please update this to prevent this message and prevent issues");
+							AdvancedCorePlugin.getInstance().getLogger().warning("Found legacy material name: "
+									+ materialStr + ", please update this to prevent this message and prevent issues");
 							legacy = true;
 						}
 					}
@@ -169,8 +168,7 @@ public class ItemBuilder {
 							addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
 									data.getInt("Potions." + pot + ".Amplifier", 1));
 						} else {
-							AdvancedCorePlugin.getInstance().getLogger()
-									.warning("Invalid potion effect type: " + pot);
+							AdvancedCorePlugin.getInstance().getLogger().warning("Invalid potion effect type: " + pot);
 						}
 					}
 				}
@@ -426,6 +424,16 @@ public class ItemBuilder {
 		return is.getItemMeta().getAttributeModifiers(att);
 	}
 
+	public String getCustomData(String key) {
+		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
+		ItemMeta itemMeta = is.getItemMeta();
+		PersistentDataContainer tagContainer = itemMeta.getPersistentDataContainer();
+		if (tagContainer.has(namespace, PersistentDataType.STRING)) {
+			return tagContainer.get(namespace, PersistentDataType.STRING);
+		}
+		return null;
+	}
+
 	public ArrayList<String> getLore() {
 		if (hasCustomLore()) {
 			List<String> lore = is.getItemMeta().getLore();
@@ -588,6 +596,14 @@ public class ItemBuilder {
 		setAmount(0);
 	}
 
+	public ItemBuilder setCustomData(String key, String value) {
+		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
+		ItemMeta itemMeta = is.getItemMeta();
+		itemMeta.getPersistentDataContainer().set(namespace, PersistentDataType.STRING, value);
+		is.setItemMeta(itemMeta);
+		return this;
+	}
+
 	/**
 	 * Change the durability of the item.
 	 *
@@ -626,24 +642,6 @@ public class ItemBuilder {
 		}
 
 		return this;
-	}
-
-	public ItemBuilder setCustomData(String key, String value) {
-		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
-		ItemMeta itemMeta = is.getItemMeta();
-		itemMeta.getPersistentDataContainer().set(namespace, PersistentDataType.STRING, value);
-		is.setItemMeta(itemMeta);
-		return this;
-	}
-
-	public String getCustomData(String key) {
-		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
-		ItemMeta itemMeta = is.getItemMeta();
-		PersistentDataContainer tagContainer = itemMeta.getPersistentDataContainer();
-		if (tagContainer.has(namespace, PersistentDataType.STRING)) {
-			return tagContainer.get(namespace, PersistentDataType.STRING);
-		}
-		return null;
 	}
 
 	/**

@@ -31,6 +31,8 @@ public class Table {
 
 	private SQLite sqLite;
 
+	private Object object = new Object();
+
 	public Table(String name, Collection<Column> columns) {
 		this.name = name;
 		this.columns.addAll(columns);
@@ -411,8 +413,6 @@ public class Table {
 	public void setSqLite(SQLite sqLite) {
 		this.sqLite = sqLite;
 	}
-
-	private Object object = new Object();
 
 	public void update(Column primaryKey, List<Column> columns) {
 		for (Column c : columns) {

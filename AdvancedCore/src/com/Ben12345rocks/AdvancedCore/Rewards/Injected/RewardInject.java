@@ -53,21 +53,6 @@ public abstract class RewardInject {
 		return this;
 	}
 
-	public boolean isEditable() {
-		return !editButtons.isEmpty();
-	}
-
-	public RewardInject synchronize() {
-		synchronize = true;
-		object = new Object();
-		return this;
-	}
-
-	public RewardInject priority(int priority) {
-		this.priority = priority;
-		return this;
-	}
-
 	public RewardInject alwaysForce() {
 		this.alwaysForce = true;
 		return this;
@@ -79,6 +64,21 @@ public abstract class RewardInject {
 		return this;
 	}
 
+	public boolean isEditable() {
+		return !editButtons.isEmpty();
+	}
+
 	public abstract Object onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
+
+	public RewardInject priority(int priority) {
+		this.priority = priority;
+		return this;
+	}
+
+	public RewardInject synchronize() {
+		synchronize = true;
+		object = new Object();
+		return this;
+	}
 }

@@ -152,16 +152,14 @@ public class StringRequester {
 				for (String option : options.keySet()) {
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput String "
-									+ option));
+							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput String " + option));
 					user.sendJson(comp);
 				}
 				if (allowCustomOption) {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput String "
-									+ option));
+							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput String " + option));
 					user.sendJson(comp);
 				}
 			} else {
@@ -172,14 +170,13 @@ public class StringRequester {
 
 					@Override
 					public void onInput(ConversationContext context, Conversable conversable, String input) {
-						Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
-								new Runnable() {
+						Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-									@Override
-									public void run() {
-										listener.onInput((Player) conversable, input);
-									}
-								});
+							@Override
+							public void run() {
+								listener.onInput((Player) conversable, input);
+							}
+						});
 
 					}
 				});

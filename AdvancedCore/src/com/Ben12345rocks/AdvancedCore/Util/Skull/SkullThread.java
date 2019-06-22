@@ -32,33 +32,6 @@ public class SkullThread {
 			}
 		}
 
-		@Override
-		public void run() {
-			while (true) {
-				try {
-					sleep(50);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-					System.exit(0);
-				}
-			}
-		}
-
-		/**
-		 * Run.
-		 *
-		 * @param run
-		 *            the run
-		 */
-		public void run(Runnable run) {
-			synchronized (SkullThread.getInstance()) {
-				if (!plugin.isEnabled()) {
-					return;
-				}
-				run.run();
-			}
-		}
-
 		public void load(String playerName) {
 			synchronized (SkullThread.getInstance().getThread()) {
 				if (!plugin.isEnabled()) {
@@ -104,6 +77,33 @@ public class SkullThread {
 						});
 					}
 				});
+			}
+		}
+
+		@Override
+		public void run() {
+			while (true) {
+				try {
+					sleep(50);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					System.exit(0);
+				}
+			}
+		}
+
+		/**
+		 * Run.
+		 *
+		 * @param run
+		 *            the run
+		 */
+		public void run(Runnable run) {
+			synchronized (SkullThread.getInstance()) {
+				if (!plugin.isEnabled()) {
+					return;
+				}
+				run.run();
 			}
 		}
 

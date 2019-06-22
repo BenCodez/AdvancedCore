@@ -385,8 +385,8 @@ public class BInventory implements Listener {
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (event.getSlot() == buttonSlot) {
 						player.closeInventory();
-						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
+								new Runnable() {
 
 									@Override
 									public void run() {
@@ -409,8 +409,8 @@ public class BInventory implements Listener {
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (button != null) {
 						player.closeInventory();
-						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
+								new Runnable() {
 
 									@Override
 									public void run() {
@@ -431,8 +431,8 @@ public class BInventory implements Listener {
 						final int nextPage = page - 1;
 						player.closeInventory();
 
-						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
+								new Runnable() {
 
 									@Override
 									public void run() {
@@ -449,8 +449,8 @@ public class BInventory implements Listener {
 
 						final int nextPage = page + 1;
 
-						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
+								new Runnable() {
 
 									@Override
 									public void run() {
@@ -467,8 +467,8 @@ public class BInventory implements Listener {
 				BInventoryButton b : pageButtons) {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
 						player.closeInventory();
-						Bukkit.getServer().getScheduler()
-								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
+								new Runnable() {
 
 									@Override
 									public void run() {

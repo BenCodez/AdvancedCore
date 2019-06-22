@@ -28,9 +28,6 @@ public abstract class RequirementInjectStringList extends RequirementInject {
 		this.defaultValue = defaultValue;
 	}
 
-	public abstract boolean onRequirementsRequest(Reward reward, User user, ArrayList<String> num,
-			RewardOptions rewardOptions);
-
 	@SuppressWarnings("unchecked")
 	@Override
 	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
@@ -44,5 +41,8 @@ public abstract class RequirementInjectStringList extends RequirementInject {
 		}
 		return true;
 	}
+
+	public abstract boolean onRequirementsRequest(Reward reward, User user, ArrayList<String> num,
+			RewardOptions rewardOptions);
 
 }

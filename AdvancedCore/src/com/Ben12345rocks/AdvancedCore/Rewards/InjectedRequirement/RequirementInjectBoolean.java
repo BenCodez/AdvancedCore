@@ -25,9 +25,6 @@ public abstract class RequirementInjectBoolean extends RequirementInject {
 		this.defaultValue = defaultValue;
 	}
 
-	public abstract boolean onRequirementsRequest(Reward reward, User user, boolean num,
-			RewardOptions rewardOptions);
-
 	@Override
 	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
@@ -40,5 +37,7 @@ public abstract class RequirementInjectBoolean extends RequirementInject {
 		}
 		return true;
 	}
+
+	public abstract boolean onRequirementsRequest(Reward reward, User user, boolean num, RewardOptions rewardOptions);
 
 }

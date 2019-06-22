@@ -78,24 +78,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private static AdvancedCorePlugin javaPlugin;
 
-	@Override
-	public void onEnable() {
-		javaPlugin = this;
-		onPreLoad();
-		loadHook();
-	}
-
-	@Override
-	public void onDisable() {
-		onUnLoad();
-	}
-
-	public abstract void onPreLoad();
-
-	public abstract void onPostLoad();
-
-	public abstract void onUnLoad();
-
 	public static AdvancedCorePlugin getInstance() {
 		return javaPlugin;
 	}
@@ -110,11 +92,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private boolean placeHolderAPIEnabled;
 
 	private Database database;
+
 	@Getter
 	private MySQL mysql;
 
 	@Getter
 	private IServerHandle serverHandle;
+
 	@Getter
 	private Logger pluginLogger;
 
@@ -126,9 +110,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
 	@Getter
 	private String version = "";
+
 	@Getter
 	private String buildTime = "";
-
 	@Getter
 	@Setter
 	private String jenkinsSite = "";
@@ -139,10 +123,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private Economy econ = null;
-
 	@Getter
 	private Permission perms;
-
 	@Getter
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
@@ -721,6 +703,24 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		version = conf.getString("version", "Unknown");
 		buildTime = conf.getString("time", "Unknown");
 	}
+
+	@Override
+	public void onDisable() {
+		onUnLoad();
+	}
+
+	@Override
+	public void onEnable() {
+		javaPlugin = this;
+		onPreLoad();
+		loadHook();
+	}
+
+	public abstract void onPostLoad();
+
+	public abstract void onPreLoad();
+
+	public abstract void onUnLoad();
 
 	public void registerBungeeChannels() {
 		getServer().getMessenger().registerOutgoingPluginChannel(this,

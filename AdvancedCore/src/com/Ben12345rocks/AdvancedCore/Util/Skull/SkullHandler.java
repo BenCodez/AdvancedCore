@@ -20,16 +20,44 @@ public class SkullHandler {
 
 	private static SkullHandler instance = new SkullHandler();
 
+	public static SkullHandler getInstance() {
+		return instance;
+	}
+
 	@SuppressWarnings("rawtypes")
 	private Class craftItemStack;
 	@SuppressWarnings("rawtypes")
 	private Class itemStack;
 	@Getter
 	private Method asNMSCopy;
+
 	private Method asBukkitCopy;
 
-	public static SkullHandler getInstance() {
-		return instance;
+	@Getter
+	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
+
+	@SuppressWarnings("deprecation")
+	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
+		if (hasSkull(playerName)) {
+			try {
+				return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
+			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+				e.printStackTrace();
+			}
+
+		} else {
+			loadSkull(playerName);
+		}
+		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
+	}
+
+	public boolean hasSkull(String playerName) {
+		if (skulls.containsKey(playerName)) {
+			if (skulls.get(playerName) != null) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -64,39 +92,12 @@ public class SkullHandler {
 
 	}
 
-	@Getter
-	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
-
 	public void loadSkull(Player player) {
 		loadSkull(player.getName());
 	}
 
 	public void loadSkull(final String playerName) {
 		SkullThread.getInstance().getThread().load(playerName);
-	}
-
-	@SuppressWarnings("deprecation")
-	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
-		if (hasSkull(playerName)) {
-			try {
-				return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				e.printStackTrace();
-			}
-
-		} else {
-			loadSkull(playerName);
-		}
-		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
-	}
-
-	public boolean hasSkull(String playerName) {
-		if (skulls.containsKey(playerName)) {
-			if (skulls.get(playerName) != null) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 }

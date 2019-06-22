@@ -9,11 +9,11 @@ public abstract class RewardPlaceholderHandle {
 	@Getter
 	@Setter
 	private String key;
-	
+
 	public RewardPlaceholderHandle(String key) {
 		this.key = key;
 	}
-	
+
 	public abstract String getValue(Reward reward, User user);
 
 }

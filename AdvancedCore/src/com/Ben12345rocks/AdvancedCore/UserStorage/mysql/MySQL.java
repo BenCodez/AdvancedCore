@@ -438,10 +438,8 @@ public class MySQL {
 						index));
 			} catch (SQLException e) {
 				if (e.getMessage().contains("Duplicate entry")) {
-					AdvancedCorePlugin.getInstance().getLogger()
-							.severe("Error occoured while inserting user " + index
-									+ ", duplicate entry. Turn debug on in order to see the error. " + column + ":"
-									+ value);
+					AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while inserting user " + index
+							+ ", duplicate entry. Turn debug on in order to see the error. " + column + ":" + value);
 					AdvancedCorePlugin.getInstance().debug(e);
 
 				} else {
@@ -558,9 +556,8 @@ public class MySQL {
 							Query query = new Query(mysql, text);
 							query.executeUpdateAsync();
 						} catch (SQLException e) {
-							AdvancedCorePlugin.getInstance().getLogger()
-									.severe("Error occoured while executing sql: " + e.toString()
-											+ ", turn debug on to see full stacktrace");
+							AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while executing sql: "
+									+ e.toString() + ", turn debug on to see full stacktrace");
 							AdvancedCorePlugin.getInstance().debug(e);
 						}
 					}

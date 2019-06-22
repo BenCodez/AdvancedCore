@@ -30,12 +30,12 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
 			HttpURLConnection connection = (HttpURLConnection) new URL(PROFILE_URL + uuid.toString().replace("-", ""))
 					.openConnection();
 			JsonObject response = (JsonObject) jsonParser.parse(new InputStreamReader(connection.getInputStream()));
-			String name = (String) response.get("name").getAsString();
+			String name = response.get("name").getAsString();
 			if (name == null) {
 				continue;
 			}
-			String cause = (String) response.get("cause").getAsString();
-			String errorMessage = (String) response.get("errorMessage").getAsString();
+			String cause = response.get("cause").getAsString();
+			String errorMessage = response.get("errorMessage").getAsString();
 			if (errorMessage != null && errorMessage.equals("TooManyRequestsException")) {
 				AdvancedCorePlugin.getInstance().debug("Sent too many requests");
 			}

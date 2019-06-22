@@ -125,13 +125,13 @@ public class BooleanRequester {
 			String option = "True";
 			TextComponent comp = new TextComponent(option);
 			PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestBoolean", listener);
-			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND, "/"
-					+ AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Boolean " + option));
+			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
+					"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Boolean " + option));
 			user.sendJson(comp);
 			option = "False";
 			comp = new TextComponent(option);
-			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND, "/"
-					+ AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Boolean " + option));
+			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
+					"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Boolean " + option));
 			user.sendJson(comp);
 		} else if (method.equals(InputMethod.BOOK)) {
 

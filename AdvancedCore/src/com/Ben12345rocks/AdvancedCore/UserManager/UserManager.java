@@ -103,6 +103,13 @@ public class UserManager {
 		return name;
 	}
 
+	public User getRandomUser() {
+		if (getAllUUIDs().size() > 0) {
+			getUser(getAllUUIDs().get(0));
+		}
+		return null;
+	}
+
 	public User getUser(java.util.UUID uuid) {
 		return getUser(new UUID(uuid.toString()));
 	}
@@ -221,12 +228,5 @@ public class UserManager {
 		}
 
 		return false;
-	}
-
-	public User getRandomUser() {
-		if (getAllUUIDs().size() > 0) {
-			getUser(getAllUUIDs().get(0));
-		}
-		return null;
 	}
 }

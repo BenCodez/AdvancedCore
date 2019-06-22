@@ -177,8 +177,7 @@ public class AdvancedCoreConfigOptions {
 			purgeMinimumDays = configData.getInt("PurgeMin", 90);
 			checkNameMojang = configData.getBoolean("CheckNameMojang", false);
 			if (checkNameMojang) {
-				plugin.getLogger()
-						.info("Using mojang name lookups allowed, disable if you run into issues");
+				plugin.getLogger().info("Using mojang name lookups allowed, disable if you run into issues");
 			}
 			disableCheckOnWorldChange = configData.getBoolean("DisableCheckOnWorldChange");
 			autoDownload = configData.getBoolean("AutoDownload", false);

@@ -29,7 +29,8 @@ public abstract class RewardInjectString extends RewardInject {
 	@Override
 	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
-		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty()) ||(isAlwaysForce() && data.contains(getPath(), true))) {
+		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty())
+				|| (isAlwaysForce() && data.contains(getPath(), true))) {
 			String value = data.getString(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);

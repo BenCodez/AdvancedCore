@@ -103,8 +103,10 @@ public class PlayerJoinEvent implements Listener {
 		 * Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 		 * @Override public void run() { if (Bukkit.getPlayer(UUID.fromString(uuid)) ==
 		 * null) { if
-		 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-		 * AdvancedCorePlugin.getInstance().getMysql().removePlayer(uuid); } } } }, 100L);
+		 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL))
+		 * {
+		 * AdvancedCorePlugin.getInstance().getMysql().removePlayer(uuid); } } } },
+		 * 100L);
 		 */
 	}
 }

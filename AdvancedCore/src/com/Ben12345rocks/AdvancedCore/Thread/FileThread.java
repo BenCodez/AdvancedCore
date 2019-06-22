@@ -22,8 +22,7 @@ public class FileThread {
 		public void deletePlayerFile(String uuid) {
 			synchronized (FileThread.getInstance()) {
 				try {
-					File dFile = new File(
-							AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
+					File dFile = new File(AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
 							uuid + ".yml");
 					if (dFile.exists()) {
 						dFile.delete();
@@ -56,8 +55,7 @@ public class FileThread {
 		public File getPlayerFile(String uuid) {
 			synchronized (FileThread.getInstance()) {
 				try {
-					File dFile = new File(
-							AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
+					File dFile = new File(AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
 							uuid + ".yml");
 					FileConfiguration data = YamlConfiguration.loadConfiguration(dFile);
 					if (!dFile.exists()) {
@@ -76,8 +74,7 @@ public class FileThread {
 		public boolean hasPlayerFile(String uuid) {
 			synchronized (FileThread.getInstance()) {
 				try {
-					File dFile = new File(
-							AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
+					File dFile = new File(AdvancedCorePlugin.getInstance().getDataFolder() + File.separator + "Data",
 							uuid + ".yml");
 					return dFile.exists();
 

@@ -94,6 +94,11 @@ public class RewardHandler {
 		setDefaultFolder(new File(AdvancedCorePlugin.getInstance().getDataFolder(), "Rewards"));
 	}
 
+	public void addInjectedRequirements(RequirementInject inject) {
+		injectedRequirements.add(inject);
+		sortInjectedRequirements();
+	}
+
 	public void addInjectedReward(RewardInject inject) {
 		injectedRewards.add(inject);
 		sortInjectedRewards();
@@ -101,29 +106,6 @@ public class RewardHandler {
 
 	public void addPlaceholder(RewardPlaceholderHandle handle) {
 		placeholders.add(handle);
-	}
-
-	public void addInjectedRequirements(RequirementInject inject) {
-		injectedRequirements.add(inject);
-		sortInjectedRequirements();
-	}
-
-	public void sortInjectedRewards() {
-		Collections.sort(injectedRewards, new Comparator<RewardInject>() {
-			@Override
-			public int compare(RewardInject o1, RewardInject o2) {
-				return Integer.compare(o2.getPriority(), o1.getPriority());
-			}
-		});
-	}
-
-	public void sortInjectedRequirements() {
-		Collections.sort(injectedRequirements, new Comparator<RequirementInject>() {
-			@Override
-			public int compare(RequirementInject o1, RequirementInject o2) {
-				return Integer.compare(o2.getPriority(), o1.getPriority());
-			}
-		});
 	}
 
 	/**
@@ -1164,6 +1146,24 @@ public class RewardHandler {
 			copyFile("ExampleBasic.yml");
 			copyFile("ExampleAdvanced.yml");
 		}
+	}
+
+	public void sortInjectedRequirements() {
+		Collections.sort(injectedRequirements, new Comparator<RequirementInject>() {
+			@Override
+			public int compare(RequirementInject o1, RequirementInject o2) {
+				return Integer.compare(o2.getPriority(), o1.getPriority());
+			}
+		});
+	}
+
+	public void sortInjectedRewards() {
+		Collections.sort(injectedRewards, new Comparator<RewardInject>() {
+			@Override
+			public int compare(RewardInject o1, RewardInject o2) {
+				return Integer.compare(o2.getPriority(), o1.getPriority());
+			}
+		});
 	}
 
 	/*

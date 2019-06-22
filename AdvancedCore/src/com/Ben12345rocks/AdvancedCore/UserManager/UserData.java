@@ -163,7 +163,8 @@ public class UserData {
 		}
 		/*
 		 * if (AdvancedCorePlugin.getInstance().isExtraDebug()) {
-		 * AdvancedCorePlugin.getInstance() .debug("Extra: Failed to get string from: '" +
+		 * AdvancedCorePlugin.getInstance() .debug("Extra: Failed to get string from: '"
+		 * +
 		 * key + "' for '" + user.getPlayerName() + "'"); }
 		 */
 		return "";

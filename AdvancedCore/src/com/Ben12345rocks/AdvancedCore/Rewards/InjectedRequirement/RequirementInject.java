@@ -28,6 +28,12 @@ public abstract class RequirementInject {
 	@Getter
 	private int priority = 50;
 
+	@Getter
+	private boolean allowReattempt = false;
+
+	@Getter
+	private boolean alwaysForce = false;
+
 	public RequirementInject(String path) {
 		this.path = path;
 	}
@@ -37,12 +43,8 @@ public abstract class RequirementInject {
 		return this;
 	}
 
-	public boolean isEditable() {
-		return !editButtons.isEmpty();
-	}
-
-	public RequirementInject priority(int priority) {
-		this.priority = priority;
+	public RequirementInject allowReattempt() {
+		this.allowReattempt = true;
 		return this;
 	}
 
@@ -51,17 +53,15 @@ public abstract class RequirementInject {
 		return this;
 	}
 
-	@Getter
-	private boolean allowReattempt = false;
-
-	public RequirementInject allowReattempt() {
-		this.allowReattempt = true;
-		return this;
+	public boolean isEditable() {
+		return !editButtons.isEmpty();
 	}
-
-	@Getter
-	private boolean alwaysForce = false;
 
 	public abstract boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
 			RewardOptions rewardOptions);
+
+	public RequirementInject priority(int priority) {
+		this.priority = priority;
+		return this;
+	}
 }
