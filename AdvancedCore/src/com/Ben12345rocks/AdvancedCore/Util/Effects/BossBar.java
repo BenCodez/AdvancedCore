@@ -1,5 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.Effects;
 
+import java.util.List;
+
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
@@ -40,6 +42,10 @@ public class BossBar {
 
 	public void addPlayer(Player player) {
 		bossBar.addPlayer(player);
+	}
+	
+	public List<Player> getPlayers() {
+		return bossBar.getPlayers();
 	}
 
 	public void addPlayer(final Player player, int delay) {
