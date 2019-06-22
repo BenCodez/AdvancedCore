@@ -43,10 +43,6 @@ public class BossBar {
 	public void addPlayer(Player player) {
 		bossBar.addPlayer(player);
 	}
-	
-	public List<Player> getPlayers() {
-		return bossBar.getPlayers();
-	}
 
 	public void addPlayer(final Player player, int delay) {
 		try {
@@ -69,6 +65,10 @@ public class BossBar {
 		} catch (Exception e) {
 			AdvancedCorePlugin.getInstance().debug(e);
 		}
+	}
+
+	public List<Player> getPlayers() {
+		return bossBar.getPlayers();
 	}
 
 	public void hide() {

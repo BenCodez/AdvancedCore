@@ -20,8 +20,8 @@ public class AuthMeLogin implements Listener {
 				if (event.getPlayer() != null) {
 					if (AuthMeApi.getInstance().isAuthenticated(event.getPlayer())
 							&& AdvancedCorePlugin.getInstance().getOptions().isWaitUntilLoggedIn()) {
-						AdvancedCorePlugin.getInstance().debug(
-								"Authme Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+						AdvancedCorePlugin.getInstance().debug("Authme Login: " + event.getPlayer().getName() + " ("
+								+ event.getPlayer().getUniqueId() + ")");
 						AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(event.getPlayer());
 						Bukkit.getPluginManager().callEvent(login);
 					}

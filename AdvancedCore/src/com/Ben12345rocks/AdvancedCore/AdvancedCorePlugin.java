@@ -310,6 +310,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return null;
 	}
 
+	public void loadAdvancedCoreEvents() {
+		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
+		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), this);
+		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
+	}
+
 	public void loadAutoUpdateCheck() {
 		Bukkit.getScheduler().runTaskTimerAsynchronously(this, new Runnable() {
 
@@ -323,12 +329,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private void loadConfig() {
 		getOptions().load(this);
 		loadUserAPI(getOptions().getStorageType());
-	}
-
-	public void loadAdvancedCoreEvents() {
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
-		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), this);
-		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
 	}
 
 	private void loadHandle() {
