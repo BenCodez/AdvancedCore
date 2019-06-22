@@ -67,8 +67,6 @@ public class PlayerJoinEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final PlayerLoginEvent event) {
-		AdvancedCorePlugin.getInstance().debug(
-				"Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 			@Override
