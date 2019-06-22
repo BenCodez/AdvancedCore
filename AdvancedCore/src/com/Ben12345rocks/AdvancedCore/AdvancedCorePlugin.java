@@ -90,7 +90,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		onUnLoad();
 	}
 
-	public abstract void onLoad();
+	public abstract void onPreLoad();
 
 	public abstract void onPostLoad();
 
