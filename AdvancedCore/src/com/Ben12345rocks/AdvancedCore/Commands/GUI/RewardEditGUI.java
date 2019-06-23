@@ -77,7 +77,7 @@ public class RewardEditGUI {
 					@Override
 					public void setValue(Player player, boolean value) {
 						getCurrentReward(player).getConfig().setRequirePermission(value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				}));
 
@@ -156,7 +156,7 @@ public class RewardEditGUI {
 						reward.getConfig().setItemEnchant(itemStack, entry.getKey().getKey().getKey(),
 								entry.getValue().intValue());
 					}
-					plugin.reload();
+					plugin.reloadAdvancedCore();
 				}
 			}
 
@@ -187,7 +187,7 @@ public class RewardEditGUI {
 								reward.getConfig().set("Items." + item, null);
 								player.closeInventory();
 								player.sendMessage("Removed item");
-								plugin.reload();
+								plugin.reloadAdvancedCore();
 
 							}
 

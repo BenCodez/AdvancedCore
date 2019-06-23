@@ -22,6 +22,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -339,7 +340,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		} catch (Exception ex) {
 			serverHandle = new CraftBukkitHandle();
 			debug("Detected using craftbukkit");
-			getLogger().info("Detected server running craftbukkit. It is recommended to use spigot instead");
+			getLogger().warning("Detected server running craftbukkit. It is recommended to use spigot instead");
 		}
 		if (Bukkit.getOnlineMode()) {
 			debug("Server in online mode");
@@ -392,6 +393,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "'");
+	}
+
+	public void registerEvents(Listener listener) {
+		Bukkit.getPluginManager().registerEvents(listener, this);
 	}
 
 	/**
@@ -685,7 +690,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 								public void setValue(Player player, String value) {
 									Reward reward = (Reward) getInv().getData("Reward");
 									reward.getConfig().set(getKey(), value);
-									reload();
+									reloadAdvancedCore();
 								}
 							}.addOptions(getPerms().getGroups()))));
 				} else {
@@ -730,7 +735,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	/**
 	 * Reload
 	 */
-	public void reload() {
+	public void reloadAdvancedCore() {
 		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		loadConfig();
@@ -798,6 +803,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		perms = rsp.getProvider();
 		return perms != null;
 	}
+
+	public abstract void reload();
 
 	public void userStartup() {
 		Bukkit.getScheduler().runTaskLaterAsynchronously(this, new Runnable() {

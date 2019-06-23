@@ -376,7 +376,7 @@ public class RewardHandler {
 			public void setValue(Player player, Number value) {
 				Reward reward = (Reward) getInv().getData("Reward");
 				reward.getConfig().set(getKey(), value.intValue());
-				plugin.reload();
+				plugin.reloadAdvancedCore();
 			}
 		})));
 
@@ -405,7 +405,7 @@ public class RewardHandler {
 					public void setValue(Player player, String value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})).addEditButton(new EditGUIButton(new EditGUIValueBoolean("RequirePermission", null) {
 
@@ -413,7 +413,7 @@ public class RewardHandler {
 					public void setValue(Player player, boolean value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})));
 
@@ -430,7 +430,7 @@ public class RewardHandler {
 					public void setValue(Player player, String value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				}.addOptions(Bukkit.getServer().getName()))));
 
@@ -463,7 +463,7 @@ public class RewardHandler {
 					public void setValue(Player player, ArrayList<String> value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})));
 
@@ -491,7 +491,7 @@ public class RewardHandler {
 					public void setValue(Player player, String value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				}.addOptions("ONLINE", "OFFLINE", "BOTH"))));
 
@@ -533,7 +533,7 @@ public class RewardHandler {
 					public void setValue(Player player, Number value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value.intValue());
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})));
 
@@ -555,7 +555,7 @@ public class RewardHandler {
 					public void setValue(Player player, Number num) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), num.intValue());
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})).addEditButton(
 						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money.Max", null) {
@@ -564,7 +564,7 @@ public class RewardHandler {
 							public void setValue(Player player, Number value) {
 								Reward reward = (Reward) getInv().getData("Reward");
 								reward.getConfig().set(getKey(), value.intValue());
-								plugin.reload();
+								plugin.reloadAdvancedCore();
 							}
 						})));
 
@@ -582,7 +582,7 @@ public class RewardHandler {
 					public void setValue(Player player, Number value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value.intValue());
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})));
 
@@ -604,7 +604,7 @@ public class RewardHandler {
 					public void setValue(Player player, Number num) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), num.intValue());
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})).addEditButton(
 						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Max", null) {
@@ -613,7 +613,7 @@ public class RewardHandler {
 							public void setValue(Player player, Number value) {
 								Reward reward = (Reward) getInv().getData("Reward");
 								reward.getConfig().set(getKey(), value.intValue());
-								plugin.reload();
+								plugin.reloadAdvancedCore();
 							}
 						})));
 
@@ -632,7 +632,7 @@ public class RewardHandler {
 					public void setValue(Player player, String value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})));
 
@@ -652,7 +652,7 @@ public class RewardHandler {
 					public void setValue(Player player, String value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})));
 
@@ -673,7 +673,7 @@ public class RewardHandler {
 					public void setValue(Player player, Number num) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), num.intValue());
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 						new EditGUIValueString("ActionBar.Message", null) {
@@ -682,7 +682,7 @@ public class RewardHandler {
 							public void setValue(Player player, String value) {
 								Reward reward = (Reward) getInv().getData("Reward");
 								reward.getConfig().set(getKey(), value);
-								plugin.reload();
+								plugin.reloadAdvancedCore();
 							}
 						})));
 
@@ -702,7 +702,7 @@ public class RewardHandler {
 			public void setValue(Player player, ArrayList<String> value) {
 				Reward reward = (Reward) getInv().getData("Reward");
 				reward.getConfig().set(getKey(), value);
-				plugin.reload();
+				plugin.reloadAdvancedCore();
 			}
 		})));
 
@@ -732,7 +732,7 @@ public class RewardHandler {
 					public void setValue(Player player, ArrayList<String> value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 						new EditGUIValueList("Commands.Player", null) {
@@ -741,7 +741,7 @@ public class RewardHandler {
 							public void setValue(Player player, ArrayList<String> value) {
 								Reward reward = (Reward) getInv().getData("Reward");
 								reward.getConfig().set(getKey(), value);
-								plugin.reload();
+								plugin.reloadAdvancedCore();
 							}
 						})));
 
@@ -764,7 +764,7 @@ public class RewardHandler {
 			public void setValue(Player player, ArrayList<String> value) {
 				Reward reward = (Reward) getInv().getData("Reward");
 				reward.getConfig().set(getKey(), value);
-				plugin.reload();
+				plugin.reloadAdvancedCore();
 			}
 		})));
 
@@ -892,7 +892,7 @@ public class RewardHandler {
 			public void setValue(Player player, ArrayList<String> value) {
 				Reward reward = (Reward) getInv().getData("Reward");
 				reward.getConfig().set(getKey(), value);
-				plugin.reload();
+				plugin.reloadAdvancedCore();
 			}
 		})));
 
@@ -915,7 +915,7 @@ public class RewardHandler {
 					public void setValue(Player player, ArrayList<String> value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})));
 
@@ -941,7 +941,7 @@ public class RewardHandler {
 					public void setValue(Player player, ArrayList<String> value) {
 						Reward reward = (Reward) getInv().getData("Reward");
 						reward.getConfig().set(getKey(), value);
-						plugin.reload();
+						plugin.reloadAdvancedCore();
 					}
 				})));
 
