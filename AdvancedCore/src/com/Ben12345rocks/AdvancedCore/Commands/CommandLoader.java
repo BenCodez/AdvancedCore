@@ -332,6 +332,30 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "User", "(player)", "SetData", "(text)", "(text)" },
+				permPrefix + ".SetData", "Set user data") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				User user = UserManager.getInstance().getUser(args[1]);
+				user.getData().setString(args[3], args[4]);
+				sender.sendMessage(
+						StringUtils.getInstance().colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ViewData" }, permPrefix + ".ViewData",
+				"View playerdata") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				User user = UserManager.getInstance().getUser(args[1]);
+				for (String key : user.getData().getKeys()) {
+					user.sendMessage("&c&l" + key + " &c" + user.getData().getString(key));
+				}
+			}
+		});
+
 		for (CommandHandler cmd : cmds) {
 			cmd.setAdvancedCoreCommand(true);
 		}
