@@ -305,7 +305,6 @@ public class RewardHandler {
 			Reward reward = new Reward(rewardName, section);
 			plugin.debug("Giving reward " + path + ", Options: " + rewardOptions.toString());
 			giveReward(user, reward, rewardOptions);
-
 		} else {
 			String reward = data.getString(path, "");
 			plugin.debug("Giving reward " + reward + " from path " + path + ", Options: " + rewardOptions.toString());
@@ -314,6 +313,7 @@ public class RewardHandler {
 	}
 
 	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
+		// make sure reward is async to avoid issues
 		if (Bukkit.isPrimaryThread()) {
 			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 

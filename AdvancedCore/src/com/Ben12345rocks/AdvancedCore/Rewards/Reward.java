@@ -347,7 +347,7 @@ public class Reward {
 					plugin.extraDebug(getRewardName() + ": Checking requirement " + inject.getPath() + ":"
 							+ inject.getPriority());
 					if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
-						plugin.extraDebug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
+						plugin.debug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
 								+ inject.isAllowReattempt());
 						canGive = false;
 						if (inject.isAllowReattempt()) {
