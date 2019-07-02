@@ -21,10 +21,9 @@
 Items:
   # Item
   # This is not item display name
-  # No 2 names the same
+  # No duplicate names
   Diamond:
     # Item Material
-    # List of material for 1.10: 
     # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
     Material: 'DIAMOND'
     # Item data value (Eg 1:4, data is 4)

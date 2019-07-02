@@ -109,7 +109,7 @@ public class CommandLoader {
 			}
 		});
 		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)", "(Text)", "(Text)" },
-				permPrefix + ".GiveReward", "Give a player a reward file", true) {
+				permPrefix + ".GiveReward", "Give a player a reward file and set a placeholder", true) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -180,7 +180,6 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				ZipCreator.getInstance().createReport();
 				sender.sendMessage("Created Zip File!");
-
 			}
 		});
 

@@ -115,6 +115,8 @@ AdvancedPriority:
   # This name can be anything, but they need to be different
   Reward1:
     Chance: 50
+    # Any other requirement here
+    # If any requirement fails, the next will be attempted
     Messages:
       Player: 'You got first reward'
   Reward2:
@@ -163,9 +165,7 @@ DisplayItem:
   Name: '&aAdvancedReward'
   Amount: 1
 
-# Worlds to give this reward in
-# Player will be given this world once he is in this world
-# This may not work with money
+# Will execute rewards in one of the given worlds when player is in reward
 Worlds:
 - 'world1'
 - 'world2'
@@ -188,7 +188,7 @@ ForceOffline: false
 # Potions to give on reward
 Potions:
   # Potion effect name
-  # 1.10 potions can be found here:
+  # Potions can be found here:
   # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/potion/PotionEffectType.html
   ABSORPTION:
     # Duration in seconds
