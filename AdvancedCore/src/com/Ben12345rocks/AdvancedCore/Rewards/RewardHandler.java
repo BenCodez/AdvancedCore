@@ -1084,11 +1084,11 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				for (String keys : section.getKeys(false)) {
 
-					Reward reward = RewardHandler.getInstance().getReward(section, "AdvancedPriority." + keys,
-							new RewardOptions());
+					Reward reward = RewardHandler.getInstance().getReward(section, keys, new RewardOptions());
 					if (reward.canGiveReward(user, new RewardOptions())) {
-						new RewardBuilder(section, "AdvancedPriority." + keys).withPlaceHolder(placeholders)
-								.setIgnoreChance(true).setIgnoreRequirements(true).send(user);
+						new RewardBuilder(section, keys).withPlaceHolder(placeholders).setIgnoreChance(true)
+								.setIgnoreRequirements(true).withPrefix(reward1.getName() + "_AdvancedPriority")
+								.send(user);
 						return reward.getName();
 					}
 				}
