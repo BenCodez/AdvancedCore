@@ -1086,9 +1086,8 @@ public class RewardHandler {
 
 					Reward reward = RewardHandler.getInstance().getReward(section, keys, new RewardOptions());
 					if (reward.canGiveReward(user, new RewardOptions())) {
-						new RewardBuilder(section, keys).withPlaceHolder(placeholders).setIgnoreChance(true)
-								.setIgnoreRequirements(true).withPrefix(reward1.getName() + "_AdvancedPriority")
-								.send(user);
+						reward.giveReward(user, new RewardOptions().withPlaceHolder(placeholders).setIgnoreChance(true)
+								.setIgnoreRequirements(true).setPrefix(reward1.getName() + "_AdvancedPriority"));
 						return reward.getName();
 					}
 				}

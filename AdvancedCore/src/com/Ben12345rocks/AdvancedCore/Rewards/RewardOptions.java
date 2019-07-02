@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Rewards;
 
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
@@ -105,16 +106,18 @@ public class RewardOptions {
 	 * @param prefix
 	 *            the prefix to set
 	 */
-	public void setPrefix(String prefix) {
+	public RewardOptions setPrefix(String prefix) {
 		this.prefix = prefix;
+		return this;
 	}
 
 	/**
 	 * @param suffix
 	 *            the suffix to set
 	 */
-	public void setSuffix(String suffix) {
+	public RewardOptions setSuffix(String suffix) {
 		this.suffix = suffix;
+		return this;
 	}
 
 	@Override
@@ -130,6 +133,13 @@ public class RewardOptions {
 		str += "Suffix" + suffix;
 		return str;
 
+	}
+
+	public RewardOptions withPlaceHolder(HashMap<String, String> placeholders2) {
+		for (Entry<String, String> entry : placeholders2.entrySet()) {
+			placeholders.put(entry.getKey(), entry.getValue());
+		}
+		return this;
 	}
 
 }
