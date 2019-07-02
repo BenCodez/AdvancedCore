@@ -22,6 +22,14 @@ public class RewardOptions {
 	private boolean ignoreChance = false;
 
 	@Getter
+	private boolean forceOffline = false;
+
+	public RewardOptions forceOffline() {
+		forceOffline = true;
+		return this;
+	}
+
+	@Getter
 	private boolean ignoreRequirements = false;
 
 	private HashMap<String, String> placeholders = new HashMap<String, String>();

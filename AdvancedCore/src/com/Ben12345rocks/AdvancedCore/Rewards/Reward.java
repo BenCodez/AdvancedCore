@@ -364,7 +364,8 @@ public class Reward {
 			}
 		}
 
-		if (((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline) && !isForceOffline()) {
+		if (((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline)
+				&& (!isForceOffline() && !rewardOptions.isForceOffline())) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
 				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
@@ -372,7 +373,7 @@ public class Reward {
 			return;
 		}
 
-		if (canGive) {
+		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
 			plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 			giveRewardUser(user, rewardOptions.getPlaceholders());
 		}
