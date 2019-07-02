@@ -108,7 +108,24 @@ JavascriptExpression: ''
 # Will only execute first possible reward that can be given
 Priority: []
   
-  
+AdvancedPriority:
+  # Similar to priority, but no need to have to use reward files
+  # Add requirements under each reward
+  # Will go in order from list here and try to run each of the following rewards...
+  # This name can be anything, but they need to be different
+  Reward1:
+    Chance: 50
+    Messages:
+      Player: 'You got first reward'
+  Reward2:
+    Chance: 20
+    Messages:
+      Player: 'You got second reward'
+  # Fallback, 100% chance
+  Fallback:
+    Messages:
+      Player: 'You got unlucky'
+    
 # Let the user pick a reward file to get
 # User can only pick one
 EnableChoices: false

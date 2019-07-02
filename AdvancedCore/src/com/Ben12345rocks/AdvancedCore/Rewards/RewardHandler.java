@@ -312,6 +312,33 @@ public class RewardHandler {
 		}
 	}
 
+	public Reward getReward(ConfigurationSection data, String path, RewardOptions rewardOptions) {
+		if (path == null) {
+			plugin.getLogger().warning("Path is null, failing to give reward");
+			return null;
+		}
+		if (data == null) {
+			plugin.getLogger().warning("ConfigurationSection is null, failing to give reward: " + path);
+			return null;
+		}
+		if (data.isConfigurationSection(path)) {
+			String rewardName = "";
+			String prefix = rewardOptions.getPrefix();
+			if (prefix != null && !prefix.equals("")) {
+				rewardName += prefix + "_";
+			}
+			rewardName += path.replace(".", "_");
+
+			String suffix = rewardOptions.getSuffix();
+			if (suffix != null && !suffix.equals("")) {
+				rewardName += "_" + suffix;
+			}
+			ConfigurationSection section = data.getConfigurationSection(path);
+			return new Reward(rewardName, section);
+		}
+		return null;
+	}
+
 	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
 		// make sure reward is async to avoid issues
 		if (Bukkit.isPrimaryThread()) {
@@ -928,7 +955,7 @@ public class RewardHandler {
 					Reward reward = RewardHandler.getInstance().getReward(str);
 					if (reward.canGiveReward(user, new RewardOptions())) {
 						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true)
-								.setIgnoreChance(true).send(user);
+								.setIgnoreRequirements(true).send(user);
 						return reward.getName();
 					}
 				}
@@ -1049,6 +1076,26 @@ public class RewardHandler {
 
 			}
 		});
+
+		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedPriority") {
+
+			@Override
+			public String onRewardRequested(Reward reward1, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				for (String keys : section.getKeys(false)) {
+
+					Reward reward = RewardHandler.getInstance().getReward(section, "AdvancedPriority." + keys,
+							new RewardOptions());
+					if (reward.canGiveReward(user, new RewardOptions())) {
+						new RewardBuilder(section, "AdvancedPriority." + keys).withPlaceHolder(placeholders)
+								.setIgnoreChance(true).setIgnoreRequirements(true).send(user);
+						return reward.getName();
+					}
+				}
+				return null;
+
+			}
+		}.priority(10));
 
 		injectedRewards.add(new RewardInjectKeys("RandomItem") {
 

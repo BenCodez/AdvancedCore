@@ -113,6 +113,11 @@ public class RewardBuilder {
 		return this;
 	}
 
+	public RewardBuilder setIgnoreRequirements(boolean ignoreRequirements) {
+		getRewardOptions().setIgnoreRequirements(ignoreRequirements);
+		return this;
+	}
+
 	public RewardBuilder setOnline(boolean online) {
 		getRewardOptions().setOnline(online);
 		return this;
