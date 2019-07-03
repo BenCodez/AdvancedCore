@@ -804,7 +804,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return perms != null;
 	}
 
-	public abstract void reload();
+	public abstract void onReload();
 
 	public void userStartup() {
 		Bukkit.getScheduler().runTaskLaterAsynchronously(this, new Runnable() {
