@@ -31,6 +31,7 @@ import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInj
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectDouble;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectString;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectStringList;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectValidator;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
@@ -397,7 +398,7 @@ public class RewardHandler {
 				}
 				return MiscUtils.getInstance().checkChance(num, 100);
 			}
-		}.priority(100).addEditButton(new EditGUIButton(new EditGUIValueNumber("Chacne", null) {
+		}.priority(100).addEditButton(new EditGUIButton(new EditGUIValueNumber("Chance", null) {
 
 			@Override
 			public void setValue(Player player, Number value) {
@@ -405,7 +406,15 @@ public class RewardHandler {
 				reward.getConfig().set(getKey(), value.intValue());
 				plugin.reloadAdvancedCore();
 			}
-		})));
+		})).validator(new RequirementInjectValidator() {
+			
+			@Override
+			public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+				if (data.getDouble("Chance", 0) == 100) {
+					warning(reward, inject, "Chance is 100, if intended then remove the chance option, as it's unneeded");
+				}
+			}
+		}));
 
 		injectedRequirements.add(new RequirementInjectString("Permission", "") {
 
@@ -442,7 +451,17 @@ public class RewardHandler {
 						reward.getConfig().set(getKey(), value);
 						plugin.reloadAdvancedCore();
 					}
-				})));
+				})).validator(new RequirementInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+						if (data.getBoolean("RequirePermission", false)) {
+							if (!data.getString("Permission", "").isEmpty()) {
+								warning(reward, inject, "Detected permission set but RequirePermission is false");
+							}
+						}
+					}
+				}));
 
 		injectedRequirements.add(new RequirementInjectString("Server", "") {
 
@@ -1128,7 +1147,9 @@ public class RewardHandler {
 				if (!reward.equals("")) {
 					if (!rewardExist(reward)) {
 						try {
-							rewards.add(new Reward(file, reward));
+							Reward reward1 = new Reward(file, reward);
+							reward1.validate();
+							rewards.add(reward1);
 							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
 						} catch (Exception e) {
 							plugin.getLogger()

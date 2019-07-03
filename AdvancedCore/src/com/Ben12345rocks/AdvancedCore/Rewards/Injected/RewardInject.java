@@ -1,10 +1,10 @@
 package com.Ben12345rocks.AdvancedCore.Rewards.Injected;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.bukkit.configuration.ConfigurationSection;
 
+import com.Ben12345rocks.AdvancedCore.Rewards.Inject;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
@@ -12,14 +12,7 @@ import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
 import lombok.Getter;
 import lombok.Setter;
 
-public abstract class RewardInject {
-	@Getter
-	@Setter
-	private String path;
-
-	@Getter
-	@Setter
-	private boolean internalReward = false;
+public abstract class RewardInject extends Inject {
 
 	@Getter
 	@Setter
@@ -38,19 +31,24 @@ public abstract class RewardInject {
 	private boolean alwaysForce = false;
 
 	@Getter
-	@Setter
-	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
-
-	@Getter
-	private int priority = 50;
+	private RewardInjectValidator validate;
 
 	public RewardInject(String path) {
-		this.path = path;
+		super(path);
 	}
 
 	public RewardInject addEditButton(EditGUIButton button) {
-		editButtons.add(button);
+		getEditButtons().add(button);
 		return this;
+	}
+
+	public RewardInject validator(RewardInjectValidator validate) {
+		this.validate = validate;
+		return this;
+	}
+
+	public void validate(Reward reward, ConfigurationSection data) {
+		validate.onValidate(reward, this, data);
 	}
 
 	public RewardInject alwaysForce() {
@@ -65,14 +63,14 @@ public abstract class RewardInject {
 	}
 
 	public boolean isEditable() {
-		return !editButtons.isEmpty();
+		return !getEditButtons().isEmpty();
 	}
 
 	public abstract Object onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
 
 	public RewardInject priority(int priority) {
-		this.priority = priority;
+		setPriority(priority);
 		return this;
 	}
 

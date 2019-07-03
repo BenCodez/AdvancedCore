@@ -379,6 +379,15 @@ public class Reward {
 		}
 	}
 
+	public void validate() {
+		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+			inject.validate(this, getConfig().getConfigData());
+		}
+		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
+			inject.validate(this, getConfig().getConfigData());
+		}
+	}
+
 	/**
 	 * Give reward user.
 	 *

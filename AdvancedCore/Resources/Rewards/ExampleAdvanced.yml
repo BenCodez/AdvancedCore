@@ -32,9 +32,11 @@ Timed:
 
 # Chance out of 100
 # Set to 0 or 100 for always, or delete this line to disable chance
-# Will not give any rewards below unless chance is lucky or disabled
+# Will not give any rewards unless chance is lucky or disabled
 Chance: 40
 
+######## RECOMMEND using AdvancedPriority, easier to understand
+#
 # Advanced Random Rewards, just ignore this if you don't want fancy chance rewards
 # This is to give random rewards, with fallback
 # Rewards defined in this reward file below are still given regardless of this below
@@ -106,8 +108,11 @@ JavascriptExpression: ''
 
 # List of reward files to try and execute
 # Will only execute first possible reward that can be given
+# Recommend using AdvancedPriority (same thing but can avoid having multiple files)
 Priority: []
   
+# Advanced example
+# 50% chance for reward1, if reward1 not given then 20% chance to get reward2, if reward2 not given then fallback
 AdvancedPriority:
   # Similar to priority, but no need to have to use reward files
   # Add requirements under each reward
