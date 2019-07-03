@@ -87,8 +87,10 @@ public class ItemBuilder {
 					if (material == null) {
 						material = Material.matchMaterial(materialStr, true);
 						if (material != null) {
-							AdvancedCorePlugin.getInstance().getLogger().warning("Found legacy material name: "
-									+ materialStr + ", please update this to prevent this message and prevent issues");
+							AdvancedCorePlugin.getInstance().getLogger()
+									.warning("Found legacy material name: " + materialStr
+											+ ", please update this to prevent this message and prevent issues, path: "
+											+ data.getCurrentPath());
 							legacy = true;
 						}
 					}
