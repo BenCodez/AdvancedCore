@@ -28,7 +28,9 @@ public abstract class RequirementInject extends Inject {
 	}
 
 	public void validate(Reward reward, ConfigurationSection data) {
-		validate.onValidate(reward, this, data);
+		if (validate != null) {
+			validate.onValidate(reward, this, data);
+		}
 	}
 
 	public RequirementInject allowReattempt() {

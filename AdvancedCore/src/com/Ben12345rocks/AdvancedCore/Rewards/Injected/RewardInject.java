@@ -48,7 +48,9 @@ public abstract class RewardInject extends Inject {
 	}
 
 	public void validate(Reward reward, ConfigurationSection data) {
-		validate.onValidate(reward, this, data);
+		if (validate != null) {
+			validate.onValidate(reward, this, data);
+		}
 	}
 
 	public RewardInject alwaysForce() {
