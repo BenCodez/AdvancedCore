@@ -27,6 +27,7 @@ import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectInt;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectKeys;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectString;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectValidator;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectDouble;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectString;
@@ -407,11 +408,18 @@ public class RewardHandler {
 				plugin.reloadAdvancedCore();
 			}
 		})).validator(new RequirementInjectValidator() {
-			
+
 			@Override
 			public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
-				if (data.getDouble("Chance", 0) == 100) {
-					warning(reward, inject, "Chance is 100, if intended then remove the chance option, as it's unneeded");
+				if (data.getDouble(inject.getPath(), 0) == 100) {
+					warning(reward, inject,
+							"Chance is 100, if intended then remove the chance option, as it's unneeded");
+				} else if (data.getDouble(inject.getPath(), 0) > 100) {
+					warning(reward, inject, "Chance is greater than 100, this will always give the reward");
+				} else if (data.getDouble(inject.getPath(), 1) == 0) {
+					warning(reward, inject, "Chance can not be 0");
+				} else if (data.getDouble(inject.getPath(), 1) < 0) {
+					warning(reward, inject, "Chance can not be negative");
 				}
 			}
 		}));
@@ -455,7 +463,7 @@ public class RewardHandler {
 
 					@Override
 					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
-						if (data.getBoolean("RequirePermission", false)) {
+						if (!data.getBoolean("RequirePermission", false)) {
 							if (!data.getString("Permission", "").isEmpty()) {
 								warning(reward, inject, "Detected permission set but RequirePermission is false");
 							}
@@ -511,7 +519,19 @@ public class RewardHandler {
 						reward.getConfig().set(getKey(), value);
 						plugin.reloadAdvancedCore();
 					}
-				})));
+				})).validator(new RequirementInjectValidator() {
+
+					@Override
+					@SuppressWarnings("unchecked")
+					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+						ArrayList<String> list = (ArrayList<String>) data.getList("Worlds", null);
+						if (list != null) {
+							if (list.isEmpty()) {
+								warning(reward, inject, "No worlds were listed");
+							}
+						}
+					}
+				}));
 
 		injectedRequirements.add(new RequirementInjectString("RewardType", "BOTH") {
 
@@ -555,7 +575,18 @@ public class RewardHandler {
 				}
 				return false;
 			}
-		}.priority(90));
+		}.priority(90).validator(new RequirementInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+				String str = data.getString("JavascriptExpression", null);
+				if (str != null) {
+					if (str.isEmpty()) {
+						warning(reward, inject, "No javascript expression set");
+					}
+				}
+			}
+		}));
 
 		for (RequirementInject reward : injectedRequirements) {
 			reward.setInternalReward(true);
@@ -581,7 +612,15 @@ public class RewardHandler {
 						reward.getConfig().set(getKey(), value.intValue());
 						plugin.reloadAdvancedCore();
 					}
-				})));
+				})).validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getDouble(inject.getPath(), -1) == 0) {
+							warning(reward, inject, "Money can not be 0");
+						}
+					}
+				}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Money") {
 
@@ -612,7 +651,16 @@ public class RewardHandler {
 								reward.getConfig().set(getKey(), value.intValue());
 								plugin.reloadAdvancedCore();
 							}
-						})));
+						}))
+				.validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getDouble("Money.Max", -1) == 0) {
+							warning(reward, inject, "Maxium money can not be 0");
+						}
+					}
+				}));
 
 		injectedRewards.add(new RewardInjectInt("EXP", 0) {
 
@@ -630,7 +678,15 @@ public class RewardHandler {
 						reward.getConfig().set(getKey(), value.intValue());
 						plugin.reloadAdvancedCore();
 					}
-				})));
+				})).validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getDouble(inject.getPath(), -1) == 0) {
+							warning(reward, inject, "EXP can not be 0");
+						}
+					}
+				}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("EXP") {
 
@@ -661,7 +717,16 @@ public class RewardHandler {
 								reward.getConfig().set(getKey(), value.intValue());
 								plugin.reloadAdvancedCore();
 							}
-						})));
+						}))
+				.validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getDouble("EXP.Max", -1) == 0) {
+							warning(reward, inject, "Max EXP can not be 0");
+						}
+					}
+				}));
 
 		injectedRewards.add(new RewardInjectString("Messages.Player") {
 
@@ -680,7 +745,16 @@ public class RewardHandler {
 						reward.getConfig().set(getKey(), value);
 						plugin.reloadAdvancedCore();
 					}
-				})));
+				})).validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getString(inject.getPath()).isEmpty()) {
+							warning(reward, inject, "No player message set");
+						}
+
+					}
+				}));
 
 		injectedRewards.add(new RewardInjectString("Messages.Broadcast") {
 
@@ -700,7 +774,15 @@ public class RewardHandler {
 						reward.getConfig().set(getKey(), value);
 						plugin.reloadAdvancedCore();
 					}
-				})));
+				})).validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getString(inject.getPath()).isEmpty()) {
+							warning(reward, inject, "No broadcast was set");
+						}
+					}
+				}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
 
@@ -730,7 +812,23 @@ public class RewardHandler {
 								reward.getConfig().set(getKey(), value);
 								plugin.reloadAdvancedCore();
 							}
-						})));
+						}))
+				.validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						String str = data.getString("ActionBar.Message");
+						int delay = data.getInt("ActionBar.Delay", -1);
+						if (str != null && str.isEmpty()) {
+							warning(reward, inject, "No actionbar message set");
+						}
+						if (delay == -1) {
+							warning(reward, inject, "No actionbar delay set");
+						} else if (delay == 0) {
+							warning(reward, inject, "Actionbar delay can not be 0");
+						}
+					}
+				}));
 
 		injectedRewards.add(new RewardInjectStringList("Commands") {
 
@@ -750,7 +848,21 @@ public class RewardHandler {
 				reward.getConfig().set(getKey(), value);
 				plugin.reloadAdvancedCore();
 			}
-		})));
+		})).validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				List<String> list = data.getStringList(inject.getPath());
+				if (list != null && list.isEmpty()) {
+					warning(reward, inject, "No commands listed");
+				}
+				for (String str : list) {
+					if (str.startsWith("/")) {
+						warning(reward, inject, "Commands can not start with /");
+					}
+				}
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Commands") {
 

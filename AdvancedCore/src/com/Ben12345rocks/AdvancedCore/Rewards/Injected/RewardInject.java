@@ -48,7 +48,7 @@ public abstract class RewardInject extends Inject {
 	}
 
 	public void validate(Reward reward, ConfigurationSection data) {
-		if (validate != null) {
+		if (validate != null && data.contains(getPath())) {
 			validate.onValidate(reward, this, data);
 		}
 	}

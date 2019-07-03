@@ -28,7 +28,7 @@ public abstract class RequirementInject extends Inject {
 	}
 
 	public void validate(Reward reward, ConfigurationSection data) {
-		if (validate != null) {
+		if (validate != null && data.contains(getPath())) {
 			validate.onValidate(reward, this, data);
 		}
 	}
