@@ -363,9 +363,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadAdvancedCoreEvents();
 		TimeChecker.getInstance().loadTimer(2);
 		ServerData.getInstance().setup();
-		RewardHandler.getInstance().addRewardFolder(new File(this.getDataFolder(), "Rewards"));
+
 		RewardHandler.getInstance().loadInjectedRewards();
 		RewardHandler.getInstance().loadInjectedRequirements();
+		RewardHandler.getInstance().addRewardFolder(new File(this.getDataFolder(), "Rewards"));
+
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
 		RewardHandler.getInstance().checkDelayedTimedRewards();

@@ -380,6 +380,9 @@ public class Reward {
 	}
 
 	public void validate() {
+		if (getName().equalsIgnoreCase("examplebasic") || getName().equalsIgnoreCase("exampleadvanced")) {
+			return;
+		}
 		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
 			inject.validate(this, getConfig().getConfigData());
 		}

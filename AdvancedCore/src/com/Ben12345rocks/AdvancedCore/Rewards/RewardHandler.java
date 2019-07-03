@@ -1280,6 +1280,7 @@ public class RewardHandler {
 		}
 
 		sortInjectedRewards();
+		sortInjectedRequirements();
 		plugin.debug("Loaded rewards");
 
 	}
