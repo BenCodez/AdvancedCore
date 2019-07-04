@@ -37,6 +37,7 @@ com.Ben12345rocks.AdvancedCore.Util.Javascript
 com.Ben12345rocks.AdvancedCore.Util.Logger
 com.Ben12345rocks.AdvancedCore.Util.Metrics
 com.Ben12345rocks.AdvancedCore.Util.Misc
+com.Ben12345rocks.AdvancedCore.Util.Placeholder
 com.Ben12345rocks.AdvancedCore.Util.PluginMessage
 com.Ben12345rocks.AdvancedCore.Util.Prompt
 com.Ben12345rocks.AdvancedCore.Util.Scoreboards
