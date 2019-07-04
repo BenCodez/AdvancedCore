@@ -852,13 +852,17 @@ public class RewardHandler {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				List<String> list = data.getStringList(inject.getPath());
-				if (list != null && list.isEmpty()) {
-					warning(reward, inject, "No commands listed");
-				}
-				for (String str : list) {
-					if (str.startsWith("/")) {
-						warning(reward, inject, "Commands can not start with /");
+				if (data.isList(inject.getPath())) {
+					List<String> list = data.getStringList(inject.getPath());
+					if (list != null) {
+						if (list.isEmpty()) {
+							warning(reward, inject, "No commands listed");
+						}
+						for (String str : list) {
+							if (str.startsWith("/")) {
+								warning(reward, inject, "Commands can not start with /");
+							}
+						}
 					}
 				}
 			}
@@ -1052,7 +1056,18 @@ public class RewardHandler {
 				reward.getConfig().set(getKey(), value);
 				plugin.reloadAdvancedCore();
 			}
-		})));
+		})).validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				List<String> list = data.getStringList(inject.getPath());
+				if (list.size() == 0) {
+					warning(reward, inject, "No rewards listed for random reward");
+				} else if (list.size() == 1) {
+					warning(reward, inject, "Only one reward listed for random reward");
+				}
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectStringList("RandomReward") {
 
