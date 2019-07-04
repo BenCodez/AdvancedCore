@@ -195,6 +195,33 @@ public class RewardHandler {
 		return defaultFolder;
 	}
 
+	public Reward getReward(ConfigurationSection data, String path, RewardOptions rewardOptions) {
+		if (path == null) {
+			plugin.getLogger().warning("Path is null, failing to give reward");
+			return null;
+		}
+		if (data == null) {
+			plugin.getLogger().warning("ConfigurationSection is null, failing to give reward: " + path);
+			return null;
+		}
+		if (data.isConfigurationSection(path)) {
+			String rewardName = "";
+			String prefix = rewardOptions.getPrefix();
+			if (prefix != null && !prefix.equals("")) {
+				rewardName += prefix + "_";
+			}
+			rewardName += path.replace(".", "_");
+
+			String suffix = rewardOptions.getSuffix();
+			if (suffix != null && !suffix.equals("")) {
+				rewardName += "_" + suffix;
+			}
+			ConfigurationSection section = data.getConfigurationSection(path);
+			return new Reward(rewardName, section);
+		}
+		return null;
+	}
+
 	/**
 	 * Gets the reward.
 	 *
@@ -312,33 +339,6 @@ public class RewardHandler {
 			plugin.debug("Giving reward " + reward + " from path " + path + ", Options: " + rewardOptions.toString());
 			giveReward(user, reward, rewardOptions);
 		}
-	}
-
-	public Reward getReward(ConfigurationSection data, String path, RewardOptions rewardOptions) {
-		if (path == null) {
-			plugin.getLogger().warning("Path is null, failing to give reward");
-			return null;
-		}
-		if (data == null) {
-			plugin.getLogger().warning("ConfigurationSection is null, failing to give reward: " + path);
-			return null;
-		}
-		if (data.isConfigurationSection(path)) {
-			String rewardName = "";
-			String prefix = rewardOptions.getPrefix();
-			if (prefix != null && !prefix.equals("")) {
-				rewardName += prefix + "_";
-			}
-			rewardName += path.replace(".", "_");
-
-			String suffix = rewardOptions.getSuffix();
-			if (suffix != null && !suffix.equals("")) {
-				rewardName += "_" + suffix;
-			}
-			ConfigurationSection section = data.getConfigurationSection(path);
-			return new Reward(rewardName, section);
-		}
-		return null;
 	}
 
 	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {

@@ -70,7 +70,7 @@ public abstract class YMLFile {
 	 * On file creation.
 	 */
 	public abstract void onFileCreation();
-	
+
 	/**
 	 * Reload data.
 	 */

@@ -42,17 +42,6 @@ public abstract class RewardInject extends Inject {
 		return this;
 	}
 
-	public RewardInject validator(RewardInjectValidator validate) {
-		this.validate = validate;
-		return this;
-	}
-
-	public void validate(Reward reward, ConfigurationSection data) {
-		if (validate != null && data.contains(getPath())) {
-			validate.onValidate(reward, this, data);
-		}
-	}
-
 	public RewardInject alwaysForce() {
 		this.alwaysForce = true;
 		return this;
@@ -79,6 +68,17 @@ public abstract class RewardInject extends Inject {
 	public RewardInject synchronize() {
 		synchronize = true;
 		object = new Object();
+		return this;
+	}
+
+	public void validate(Reward reward, ConfigurationSection data) {
+		if (validate != null && data.contains(getPath())) {
+			validate.onValidate(reward, this, data);
+		}
+	}
+
+	public RewardInject validator(RewardInjectValidator validate) {
+		this.validate = validate;
 		return this;
 	}
 }

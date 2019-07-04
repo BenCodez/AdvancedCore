@@ -10,7 +10,8 @@ public abstract class RequirementInjectValidator {
 	public abstract void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data);
 
 	public void warning(Reward reward, RequirementInject inject, String str) {
-		AdvancedCorePlugin.getInstance().getLogger().warning(reward.getName() + ", Directly Defined: "
-				+ reward.getConfig().isDirectlyDefinedReward() + " Path: " + inject.getPath() + " : " + str);
+		AdvancedCorePlugin.getInstance().getLogger()
+				.warning("RequirementInject Validator: " + reward.getName() + ", Directly Defined: "
+						+ reward.getConfig().isDirectlyDefinedReward() + " Path: " + inject.getPath() + " : " + str);
 	}
 }

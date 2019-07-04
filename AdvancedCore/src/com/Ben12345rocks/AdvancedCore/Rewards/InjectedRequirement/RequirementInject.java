@@ -18,6 +18,9 @@ public abstract class RequirementInject extends Inject {
 	@Getter
 	private boolean alwaysForce = false;
 
+	@Getter
+	private RequirementInjectValidator validate;
+
 	public RequirementInject(String path) {
 		super(path);
 	}
@@ -25,12 +28,6 @@ public abstract class RequirementInject extends Inject {
 	public RequirementInject addEditButton(EditGUIButton button) {
 		getEditButtons().add(button);
 		return this;
-	}
-
-	public void validate(Reward reward, ConfigurationSection data) {
-		if (validate != null && data.contains(getPath())) {
-			validate.onValidate(reward, this, data);
-		}
 	}
 
 	public RequirementInject allowReattempt() {
@@ -47,19 +44,22 @@ public abstract class RequirementInject extends Inject {
 		return !getEditButtons().isEmpty();
 	}
 
-	@Getter
-	private RequirementInjectValidator validate;
-
-	public RequirementInject validator(RequirementInjectValidator validate) {
-		this.validate = validate;
-		return this;
-	}
-
 	public abstract boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
 			RewardOptions rewardOptions);
 
 	public RequirementInject priority(int priority) {
 		setPriority(priority);
+		return this;
+	}
+
+	public void validate(Reward reward, ConfigurationSection data) {
+		if (validate != null && data.contains(getPath())) {
+			validate.onValidate(reward, this, data);
+		}
+	}
+
+	public RequirementInject validator(RequirementInjectValidator validate) {
+		this.validate = validate;
 		return this;
 	}
 }

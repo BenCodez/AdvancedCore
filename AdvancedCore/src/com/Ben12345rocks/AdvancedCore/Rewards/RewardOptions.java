@@ -24,17 +24,13 @@ public class RewardOptions {
 	@Getter
 	private boolean forceOffline = false;
 
-	public RewardOptions forceOffline() {
-		forceOffline = true;
-		return this;
-	}
-
 	@Getter
 	private boolean ignoreRequirements = false;
 
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
 	private String prefix = "";
+
 	private String suffix = "";
 
 	public RewardOptions() {
@@ -42,6 +38,11 @@ public class RewardOptions {
 
 	public RewardOptions addPlaceholder(String arg1, String arg2) {
 		getPlaceholders().put(arg1, arg2);
+		return this;
+	}
+
+	public RewardOptions forceOffline() {
+		forceOffline = true;
 		return this;
 	}
 

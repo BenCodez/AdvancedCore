@@ -22,8 +22,6 @@ public class Inject {
 	@Getter
 	@Setter
 	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
-	
-	
 
 	public Inject(String path) {
 		this.path = path;

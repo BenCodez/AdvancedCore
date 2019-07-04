@@ -397,10 +397,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "'");
 	}
 
-	public void registerEvents(Listener listener) {
-		Bukkit.getPluginManager().registerEvents(listener, this);
-	}
-
 	/**
 	 * Load logger
 	 */
@@ -734,6 +730,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				this.getName().toLowerCase() + ":" + this.getName().toLowerCase(), PluginMessage.getInstance());
 	}
 
+	public void registerEvents(Listener listener) {
+		Bukkit.getPluginManager().registerEvents(listener, this);
+	}
+
+	public abstract void reload();
+
 	/**
 	 * Reload
 	 */
@@ -805,8 +807,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		perms = rsp.getProvider();
 		return perms != null;
 	}
-
-	public abstract void reload();
 
 	public void userStartup() {
 		Bukkit.getScheduler().runTaskLaterAsynchronously(this, new Runnable() {

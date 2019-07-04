@@ -379,18 +379,6 @@ public class Reward {
 		}
 	}
 
-	public void validate() {
-		if (getName().equalsIgnoreCase("examplebasic") || getName().equalsIgnoreCase("exampleadvanced")) {
-			return;
-		}
-		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
-			inject.validate(this, getConfig().getConfigData());
-		}
-		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
-			inject.validate(this, getConfig().getConfigData());
-		}
-	}
-
 	/**
 	 * Give reward user.
 	 *
@@ -491,6 +479,18 @@ public class Reward {
 		}
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
+	}
+
+	public void validate() {
+		if (getName().equalsIgnoreCase("examplebasic") || getName().equalsIgnoreCase("exampleadvanced")) {
+			return;
+		}
+		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+			inject.validate(this, getConfig().getConfigData());
+		}
+		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
+			inject.validate(this, getConfig().getConfigData());
+		}
 	}
 
 }

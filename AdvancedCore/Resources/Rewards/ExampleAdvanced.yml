@@ -170,7 +170,7 @@ DisplayItem:
   Name: '&aAdvancedReward'
   Amount: 1
 
-# Will execute rewards in one of the given worlds when player is in reward
+# Will execute rewards in one of the given worlds when player is in world
 Worlds:
 - 'world1'
 - 'world2'
