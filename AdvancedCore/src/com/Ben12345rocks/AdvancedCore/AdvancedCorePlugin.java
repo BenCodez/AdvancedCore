@@ -593,7 +593,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}
 
 				if (name == null || name.equals("") || name.equals("Error getting name")) {
-					debug("Invalid player name: " + uuid);
+					extraDebug("Invalid player name: " + uuid);
 					add = false;
 				} else {
 					if (uuidNameCache.containsValue(name)) {
