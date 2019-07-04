@@ -106,3 +106,6 @@ Commands:
 Messages:
   Player: '&aMessage on reward'
   Broadcast: '&aThis is a broadcast'
+  
+# Can also do this
+#Message: '&aMessage to player'

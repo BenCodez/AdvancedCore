@@ -728,6 +728,33 @@ public class RewardHandler {
 					}
 				}));
 
+		injectedRewards.add(new RewardInjectString("Message") {
+
+			@Override
+			public String onRewardRequest(Reward reward, User user, String value,
+					HashMap<String, String> placeholders) {
+				user.sendMessage(value, placeholders);
+				return null;
+			}
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Message", null) {
+
+			@Override
+			public void setValue(Player player, String value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value);
+				plugin.reloadAdvancedCore();
+			}
+		})).validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.getString(inject.getPath()).isEmpty()) {
+					warning(reward, inject, "No player message set");
+				}
+
+			}
+		}));
+
 		injectedRewards.add(new RewardInjectString("Messages.Player") {
 
 			@Override
