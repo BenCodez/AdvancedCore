@@ -253,38 +253,50 @@ public class Reward {
 	}
 
 	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
-		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
+		for (final RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
 			boolean Addplaceholder = inject.isAddAsPlaceholder();
 			try {
 				Object obj = null;
 				plugin.extraDebug(
 						getRewardName() + ": Attempting to give " + inject.getPath() + ":" + inject.getPriority());
-				if (inject.isSynchronize()) {
-					synchronized (inject.getObject()) {
+				if (!inject.isPostReward()) {
+					if (inject.isSynchronize()) {
+						synchronized (inject.getObject()) {
+							obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+						}
+					} else {
 						obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
 					}
-				} else {
-					obj = inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
-				}
-				if (Addplaceholder && obj != null) {
-					String placeholderName = inject.getPlaceholderName();
-					String value = "";
-					if (obj instanceof Boolean) {
-						Boolean b = (Boolean) obj;
-						value = b.toString();
-					} else if (obj instanceof String) {
-						String b = (String) obj;
-						value = b;
-					} else if (obj instanceof Double) {
-						Double b = (Double) obj;
-						value = b.toString();
-					} else if (obj instanceof Integer) {
-						Integer b = (Integer) obj;
-						value = b.toString();
+					if (Addplaceholder && obj != null) {
+						String placeholderName = inject.getPlaceholderName();
+						String value = "";
+						if (obj instanceof Boolean) {
+							Boolean b = (Boolean) obj;
+							value = b.toString();
+						} else if (obj instanceof String) {
+							String b = (String) obj;
+							value = b;
+						} else if (obj instanceof Double) {
+							Double b = (Double) obj;
+							value = b.toString();
+						} else if (obj instanceof Integer) {
+							Integer b = (Integer) obj;
+							value = b.toString();
+						}
+						plugin.extraDebug("Adding placeholder " + placeholderName + ":" + value);
+						placeholders.put(placeholderName, value);
 					}
-					plugin.extraDebug("Adding placeholder " + placeholderName + ":" + value);
-					placeholders.put(placeholderName, value);
+				} else {
+					final Reward r = this;
+					Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+						@Override
+						public void run() {
+							inject.onRewardRequest(r, user, getConfig().getConfigData(), placeholders);
+						}
+					});
 				}
+
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

@@ -1062,7 +1062,7 @@ public class RewardHandler {
 				return null;
 
 			}
-		}.priority(5).alwaysForce());
+		}.priority(5).alwaysForce().postReward());
 
 		injectedRewards.add(new RewardInjectStringList("RandomCommand") {
 
@@ -1117,7 +1117,7 @@ public class RewardHandler {
 						reward.getConfig().set(getKey(), value);
 						plugin.reloadAdvancedCore();
 					}
-				})));
+				})).postReward());
 
 		injectedRewards.add(new RewardInjectStringList("Priority") {
 
@@ -1143,7 +1143,7 @@ public class RewardHandler {
 						reward.getConfig().set(getKey(), value);
 						plugin.reloadAdvancedCore();
 					}
-				})));
+				})).postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Potions") {
 
@@ -1267,7 +1267,7 @@ public class RewardHandler {
 				return null;
 
 			}
-		}.priority(10));
+		}.priority(10).postReward());
 
 		injectedRewards.add(new RewardInjectKeys("RandomItem") {
 

@@ -47,6 +47,14 @@ public abstract class RewardInject extends Inject {
 		return this;
 	}
 
+	@Getter
+	private boolean postReward = false;
+
+	public RewardInject postReward() {
+		postReward = true;
+		return this;
+	}
+
 	public RewardInject asPlaceholder(String placeholderName) {
 		addAsPlaceholder = true;
 		this.placeholderName = placeholderName;
