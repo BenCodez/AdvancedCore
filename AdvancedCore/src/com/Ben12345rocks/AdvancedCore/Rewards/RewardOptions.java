@@ -111,19 +111,11 @@ public class RewardOptions {
 		return this;
 	}
 
-	/**
-	 * @param prefix
-	 *            the prefix to set
-	 */
 	public RewardOptions setPrefix(String prefix) {
 		this.prefix = prefix;
 		return this;
 	}
 
-	/**
-	 * @param suffix
-	 *            the suffix to set
-	 */
 	public RewardOptions setSuffix(String suffix) {
 		this.suffix = suffix;
 		return this;
