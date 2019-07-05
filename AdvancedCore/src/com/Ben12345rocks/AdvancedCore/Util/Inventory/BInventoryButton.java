@@ -13,6 +13,8 @@ import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
+import lombok.Getter;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class BInventoryButton.
@@ -107,6 +109,14 @@ public abstract class BInventoryButton {
 
 	public Object getMeta(Player player, String str) {
 		return PlayerUtils.getInstance().getPlayerMeta(player, str);
+	}
+
+	@Getter
+	private boolean closeInv = true;
+
+	public BInventoryButton dontClose() {
+		closeInv = false;
+		return this;
 	}
 
 	/**

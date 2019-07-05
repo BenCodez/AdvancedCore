@@ -20,6 +20,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -131,6 +132,14 @@ public class BInventory implements Listener {
 	 */
 	public static void openInventory(Player player, BInventory inventory) {
 		inventory.openInventory(player);
+	}
+
+	@Getter
+	private boolean closeInv = true;
+
+	public BInventory dontClose() {
+		closeInv = false;
+		return this;
 	}
 
 	private ItemStack prevItem;
@@ -352,6 +361,21 @@ public class BInventory implements Listener {
 		b.onClick(new ClickEvent(event, b), this);
 	}
 
+	@EventHandler
+	public void onInvOpen(InventoryOpenEvent event) {
+		if (event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
+			if (!event.getInventory().equals(inv) && AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
+				destroy();
+			}
+		}
+	}
+
+	public void closeInv(Player p, BInventoryButton b) {
+		if (!closeInv || !b.isCloseInv()) {
+			p.closeInventory();
+		}
+	}
+
 	/**
 	 * On inventory click.
 	 *
@@ -384,7 +408,8 @@ public class BInventory implements Listener {
 				for (int buttonSlot : getButtons().keySet()) {
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (event.getSlot() == buttonSlot) {
-						player.closeInventory();
+
+						closeInv(player, button);
 						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
 
@@ -408,7 +433,7 @@ public class BInventory implements Listener {
 					int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (button != null) {
-						player.closeInventory();
+						closeInv(player, button);
 						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
 
@@ -429,7 +454,7 @@ public class BInventory implements Listener {
 					if (page > 1) {
 
 						final int nextPage = page - 1;
-						player.closeInventory();
+						closeInv(player, null);
 
 						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
@@ -445,7 +470,7 @@ public class BInventory implements Listener {
 					// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
 					// page);
 					if (maxPage > page) {
-						player.closeInventory();
+						closeInv(player, null);
 
 						final int nextPage = page + 1;
 
@@ -466,7 +491,7 @@ public class BInventory implements Listener {
 
 				BInventoryButton b : pageButtons) {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
-						player.closeInventory();
+						closeInv(player, b);
 						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
 
