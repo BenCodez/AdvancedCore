@@ -135,7 +135,6 @@ public class BInventory implements Listener {
 	}
 
 	@Getter
-	@Setter
 	private boolean closeInv = true;
 
 	public BInventory dontClose() {
@@ -274,6 +273,11 @@ public class BInventory implements Listener {
 	 */
 	public String getInventoryName() {
 		return inventoryName;
+	}
+
+	public BInventory setCloseInv(boolean value) {
+		closeInv = value;
+		return this;
 	}
 
 	/**
