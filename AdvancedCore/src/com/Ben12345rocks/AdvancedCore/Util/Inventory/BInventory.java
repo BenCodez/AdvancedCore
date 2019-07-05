@@ -371,7 +371,7 @@ public class BInventory implements Listener {
 	}
 
 	public void closeInv(Player p, BInventoryButton b) {
-		if (!closeInv || !b.isCloseInv()) {
+		if (closeInv && b.isCloseInv()) {
 			p.closeInventory();
 		}
 	}
