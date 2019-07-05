@@ -14,6 +14,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
+import lombok.Setter;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -112,6 +113,7 @@ public abstract class BInventoryButton {
 	}
 
 	@Getter
+	@Setter
 	private boolean closeInv = true;
 
 	public BInventoryButton dontClose() {

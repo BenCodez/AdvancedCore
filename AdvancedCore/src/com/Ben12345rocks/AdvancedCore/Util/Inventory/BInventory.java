@@ -135,6 +135,7 @@ public class BInventory implements Listener {
 	}
 
 	@Getter
+	@Setter
 	private boolean closeInv = true;
 
 	public BInventory dontClose() {
