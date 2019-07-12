@@ -1259,9 +1259,12 @@ public class RewardHandler {
 
 					Reward reward = RewardHandler.getInstance().getReward(section, keys, new RewardOptions());
 					if (reward.canGiveReward(user, new RewardOptions())) {
+						plugin.extraDebug("AdvancedPriority: Giving reward " + reward.getName());
 						reward.giveReward(user, new RewardOptions().withPlaceHolder(placeholders).setIgnoreChance(true)
 								.setIgnoreRequirements(true).setPrefix(reward1.getName() + "_AdvancedPriority"));
 						return reward.getName();
+					} else {
+						plugin.extraDebug("AdvancedPriority: Can't give reward " + reward.getName());
 					}
 				}
 				return null;
