@@ -351,6 +351,12 @@ public class Reward {
 			rewardOptions.setOnline(user.isOnline());
 		}
 
+		for (RewardPlaceholderHandle handle : RewardHandler.getInstance().getPlaceholders()) {
+			if (handle.isPreProcess()) {
+				rewardOptions.addPlaceholder(handle.getKey(), handle.getValue(this, user));
+			}
+		}
+
 		boolean allowOffline = false;
 		boolean canGive = true;
 		if (!rewardOptions.isIgnoreRequirements()) {
@@ -416,7 +422,9 @@ public class Reward {
 			phs.put("uuid", user.getUUID());
 
 			for (RewardPlaceholderHandle handle : RewardHandler.getInstance().getPlaceholders()) {
-				phs.put(handle.getKey(), handle.getValue(this, user));
+				if (!handle.isPreProcess()) {
+					phs.put(handle.getKey(), handle.getValue(this, user));
+				}
 			}
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
