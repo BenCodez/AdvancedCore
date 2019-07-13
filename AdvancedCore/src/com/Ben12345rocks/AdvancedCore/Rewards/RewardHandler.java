@@ -811,6 +811,32 @@ public class RewardHandler {
 					}
 				}));
 
+		injectedRewards.add(new RewardInjectString("Command") {
+
+			@Override
+			public String onRewardRequest(Reward reward, User user, String value,
+					HashMap<String, String> placeholders) {
+				MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), value, placeholders);
+				return null;
+			}
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Command", null) {
+
+			@Override
+			public void setValue(Player player, String value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value);
+				plugin.reloadAdvancedCore();
+			}
+		})).validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.getString(inject.getPath()).startsWith("/")) {
+					warning(reward, inject, "Can't start with command with /");
+				}
+			}
+		}));
+
 		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
 
 			@Override
@@ -1245,6 +1271,17 @@ public class RewardHandler {
 							section.getBoolean("Trail"), section.getBoolean("Flicker"),
 							(ArrayList<String>) section.getList("Types", new ArrayList<String>()));
 				}
+				return null;
+
+			}
+		});
+		
+		injectedRewards.add(new RewardInjectConfigurationSection("Item") {
+
+			@Override
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				user.giveItem(new ItemBuilder(section));
 				return null;
 
 			}
