@@ -368,9 +368,12 @@ public class BInventory implements Listener {
 
 	@EventHandler
 	public void onInvOpen(InventoryOpenEvent event) {
-		if (event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
-			if (!event.getInventory().equals(inv) && AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
-				destroy();
+		if (player != null && event.getPlayer() != null) {
+			if (event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
+				if (!event.getInventory().equals(inv)
+						&& AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
+					destroy();
+				}
 			}
 		}
 	}
