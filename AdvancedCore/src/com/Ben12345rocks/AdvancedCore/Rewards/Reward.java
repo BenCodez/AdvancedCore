@@ -5,10 +5,8 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
@@ -24,7 +22,6 @@ import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInj
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.Util.Annotation.AnnotationHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -76,14 +73,6 @@ public class Reward {
 	@Getter
 	@Setter
 	private int timedMinute;
-
-	@Getter
-	@Setter
-	private Set<String> items;
-
-	@Getter
-	@Setter
-	private HashMap<String, Integer> itemsAndAmountsGiven;
 
 	@Getter
 	@Setter
@@ -304,21 +293,6 @@ public class Reward {
 		}
 	}
 
-	/**
-	 * Give items.
-	 *
-	 * @param user
-	 *            the user
-	 * @param placeholders
-	 *            placeholders
-	 */
-	public void giveItems(User user, HashMap<String, String> placeholders) {
-		itemsAndAmountsGiven = new HashMap<String, Integer>();
-		for (String item : getItems()) {
-			user.giveItem(getItemStack(user, item), placeholders);
-		}
-	}
-
 	public void giveReward(User user, RewardOptions rewardOptions) {
 		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
 			AdvancedCorePlugin.getInstance().getLogger().warning("Processing rewards is disabled");
@@ -429,19 +403,6 @@ public class Reward {
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 
-			// give items ahead for placeholders
-			giveItems(user, placeholders);
-
-			// item placeholders
-			ArrayList<String> itemsAndAmounts = new ArrayList<String>();
-			for (Entry<String, Integer> entry : itemsAndAmountsGiven.entrySet()) {
-				itemsAndAmounts.add(entry.getValue() + " " + entry.getKey());
-			}
-			String itemsAndAmountsMsg = ArrayUtils.getInstance().makeStringList(itemsAndAmounts);
-			placeholders.put("itemsandamount", itemsAndAmountsMsg);
-			placeholders.put("items",
-					ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(getItems())));
-
 			// non injectable rewards?
 			checkChoiceRewards(user);
 
@@ -492,7 +453,6 @@ public class Reward {
 			setTimedMinute(getConfig().getTimedMinute());
 		}
 
-		setItems(getConfig().getItems());
 		enableChoices = getConfig().getEnableChoices();
 		if (enableChoices) {
 			choices = getConfig().getChoices();

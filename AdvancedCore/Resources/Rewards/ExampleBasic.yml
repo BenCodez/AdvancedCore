@@ -17,6 +17,11 @@
 # You can simply copy and paste from here what you want
 # in other reward files, that is the way they are designed
 
+# If true:
+# Only allow one item with chance to go through
+# If no chance specificied it will only give the first item
+OnlyOneItemChance: false
+
 # Items to give to user
 Items:
   # Item
@@ -42,6 +47,9 @@ Items:
     
     # Max amount of items
     #MaxAmount: 4
+    
+    # Chance for this specific item
+    #Chance: 30
     
     # Item name
     # Remove this value to have no name

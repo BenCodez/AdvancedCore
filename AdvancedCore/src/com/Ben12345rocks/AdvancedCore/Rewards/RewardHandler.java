@@ -1275,7 +1275,7 @@ public class RewardHandler {
 
 			}
 		});
-		
+
 		injectedRewards.add(new RewardInjectConfigurationSection("Item") {
 
 			@Override
@@ -1285,7 +1285,31 @@ public class RewardHandler {
 				return null;
 
 			}
-		});
+		}.validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				String material = data.getString("Item.Material", "");
+				if (material.isEmpty()) {
+					warning(reward, inject, "No material is set on item");
+				} else {
+					try {
+						Material m = Material.matchMaterial(material.toUpperCase());
+
+						// change legacy item
+						if (m == null) {
+							m = Material.matchMaterial(material, true);
+							if (material != null) {
+								warning(reward, inject,
+										"Found legacy material: " + material + ", please update material");
+							}
+						}
+					} catch (NoSuchMethodError e) {
+					}
+				}
+
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedPriority") {
 
@@ -1321,7 +1345,78 @@ public class RewardHandler {
 				}
 				return null;
 			}
-		}.asPlaceholder("RandomItem").priority(90));
+		}.asPlaceholder("RandomItem").priority(90).validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				for (String item : data.getConfigurationSection("RandomItem").getKeys(false)) {
+					String material = data.getString("RandomItem." + item + ".Material", "");
+					if (material.isEmpty()) {
+						warning(reward, inject, "No material is set on item: " + item);
+					} else {
+						try {
+							Material m = Material.matchMaterial(material.toUpperCase());
+
+							// change legacy item
+							if (m == null) {
+								m = Material.matchMaterial(material, true);
+								if (material != null) {
+									warning(reward, inject,
+											"Found legacy material: " + material + ", please update material");
+								}
+							}
+						} catch (NoSuchMethodError e) {
+						}
+					}
+
+				}
+			}
+		}));
+
+		injectedRewards.add(new RewardInjectKeys("Items") {
+
+			@Override
+			public String onRewardRequested(Reward reward, User user, Set<String> section, ConfigurationSection data,
+					HashMap<String, String> placeholders) {
+				boolean oneChance = reward.getConfig().getConfigData().getBoolean("OnlyOneItemChance", false);
+				if (section.size() > 0) {
+					for (String str : section) {
+						ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(str));
+						user.giveItem(builder);
+						if (builder.isChancePass() && oneChance) {
+							return null;
+						}
+					}
+				}
+				return null;
+			}
+		}.priority(90).validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				for (String item : data.getConfigurationSection("Items").getKeys(false)) {
+					String material = data.getString("Items." + item + ".Material", "");
+					if (material.isEmpty()) {
+						warning(reward, inject, "No material is set on item: " + item);
+					} else {
+						try {
+							Material m = Material.matchMaterial(material.toUpperCase());
+
+							// change legacy item
+							if (m == null) {
+								m = Material.matchMaterial(material, true);
+								if (material != null) {
+									warning(reward, inject,
+											"Found legacy material: " + material + ", please update material");
+								}
+							}
+						} catch (NoSuchMethodError e) {
+						}
+					}
+
+				}
+			}
+		}));
 
 		for (RewardInject reward : injectedRewards) {
 			reward.setInternalReward(true);

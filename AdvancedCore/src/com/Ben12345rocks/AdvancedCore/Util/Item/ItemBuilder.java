@@ -38,6 +38,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.google.common.collect.Multimap;
 
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Easily create itemstacks, without messing your hands.
@@ -76,6 +77,7 @@ public class ItemBuilder {
 		} else {
 			double chance = data.getDouble("Chance", 100);
 			if (checkChance(chance)) {
+				chancePass = true;
 				Material material = null;
 				List<String> lore = data.getStringList("Lore");
 				String materialStr = data.getString("Material", data.getName());
@@ -180,9 +182,14 @@ public class ItemBuilder {
 				slot = data.getInt("Slot", -1);
 			} else {
 				setBlank();
+				chancePass = false;
 			}
 		}
 	}
+
+	@Getter
+	@Setter
+	private boolean chancePass = true;
 
 	/**
 	 * Create a new ItemBuilder over an existing itemstack.

@@ -1,11 +1,8 @@
 package com.Ben12345rocks.AdvancedCore.Commands.GUI;
 
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -14,7 +11,6 @@ import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueBoolean;
@@ -81,14 +77,6 @@ public class RewardEditGUI {
 					}
 				}));
 
-		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cEdit items")) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				openRewardGUIItems(player, reward);
-			}
-		});
-
 		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
 			if (injectReward.isEditable()) {
 				for (EditGUIButton b : injectReward.getEditButtons()) {
@@ -108,100 +96,6 @@ public class RewardEditGUI {
 		}
 
 		inv.sort();
-		inv.openInventory(player);
-	}
-
-	/**
-	 * Open reward GUI items.
-	 *
-	 * @param player
-	 *            the player
-	 * @param reward
-	 *            the reward
-	 */
-	public void openRewardGUIItems(Player player, Reward reward) {
-		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
-			player.sendMessage("You do not have enough permission to do this");
-			return;
-		}
-		BInventory inv = new BInventory("Reward: " + reward.getRewardName());
-		setCurrentReward(player, reward);
-		ArrayList<String> lore = new ArrayList<String>();
-		lore.add("&cAdd current item inhand");
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Add item", ArrayUtils.getInstance().convert(lore),
-				new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Reward reward = getCurrentReward(player);
-				Player player = event.getWhoClicked();
-
-				@SuppressWarnings("deprecation")
-				ItemStack item = player.getItemInHand();
-				if (item != null && !item.getType().equals(Material.AIR)) {
-					String material = item.getType().toString();
-					int amount = item.getAmount();
-					@SuppressWarnings("deprecation")
-					int durability = item.getDurability();
-					String name = item.getItemMeta().getDisplayName();
-					ArrayList<String> lore = (ArrayList<String>) item.getItemMeta().getLore();
-					Map<Enchantment, Integer> enchants = item.getEnchantments();
-					String itemStack = material;
-					reward.getConfig().setItemAmount(itemStack, amount);
-					reward.getConfig().setItemMaterial(itemStack, material);
-					reward.getConfig().setItemName(itemStack, name);
-					reward.getConfig().setItemLore(itemStack, lore);
-					reward.getConfig().setItemDurability(itemStack, durability);
-					for (Entry<Enchantment, Integer> entry : enchants.entrySet()) {
-						reward.getConfig().setItemEnchant(itemStack, entry.getKey().getKey().getKey(),
-								entry.getValue().intValue());
-					}
-					plugin.reloadAdvancedCore();
-				}
-			}
-
-		});
-
-		lore = new ArrayList<String>();
-		inv.addButton(inv.getNextSlot(), new BInventoryButton("Remove item", ArrayUtils.getInstance().convert(lore),
-				new ItemStack(Material.STONE)) {
-
-			@Override
-			public void onClick(ClickEvent event) {
-				Reward reward = getCurrentReward(player);
-				Player player = event.getWhoClicked();
-				String rewardName = reward.getRewardName();
-				BInventory inv = new BInventory("RewardRemoveItem: " + rewardName);
-
-				int slot = 0;
-				for (String item : reward.getItems()) {
-					inv.addButton(slot, new BInventoryButton(item, new String[0],
-							reward.getItemStack(UserManager.getInstance().getUser(player), item)) {
-
-						@Override
-						public void onClick(ClickEvent event) {
-							if (event.getWhoClicked() instanceof Player) {
-								Player player = event.getWhoClicked();
-								String item = event.getCurrentItem().getItemMeta().getDisplayName();
-								Reward reward = (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
-								reward.getConfig().set("Items." + item, null);
-								player.closeInventory();
-								player.sendMessage("Removed item");
-								plugin.reloadAdvancedCore();
-
-							}
-
-						}
-					});
-					slot++;
-				}
-
-				inv.openInventory(player);
-
-			}
-
-		});
-
 		inv.openInventory(player);
 	}
 
