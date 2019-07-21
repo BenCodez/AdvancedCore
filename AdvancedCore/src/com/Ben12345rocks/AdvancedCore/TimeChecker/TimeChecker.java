@@ -49,7 +49,7 @@ public class TimeChecker {
 
 	public void forceChanged(TimeType time, boolean fake) {
 		plugin.debug("Executing time change events: " + time.toString());
-		plugin.getLogger().info("Time change: " + time.toString() + ", Fake: " + fake);
+		plugin.getLogger().info("Time change event: " + time.toString() + ", Fake: " + fake);
 		PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
 		preDateChanged.setFake(fake);
 		plugin.getServer().getPluginManager().callEvent(preDateChanged);

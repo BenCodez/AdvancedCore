@@ -10,6 +10,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
 /**
@@ -109,6 +110,19 @@ public abstract class YMLFile {
 			}
 		}
 
-		data = YamlConfiguration.loadConfiguration(dFile);
+		try {
+			data = YamlConfiguration.loadConfiguration(dFile);
+		} catch (Exception e) {
+			e.printStackTrace();
+			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to load " + dFile.getName());
+			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+				@Override
+				public void run() {
+					AdvancedCorePlugin.getInstance().getLogger()
+							.severe("Detected failure to load files on startup, see server log for details");
+				}
+			});
+		}
 	}
 }
