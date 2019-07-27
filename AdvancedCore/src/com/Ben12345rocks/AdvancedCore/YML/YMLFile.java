@@ -81,6 +81,9 @@ public abstract class YMLFile {
 		try {
 			data = YamlConfiguration.loadConfiguration(dFile);
 			failedToRead = false;
+			if (data.getConfigurationSection("").getKeys(false).size() == 0) {
+				failedToRead = true;
+			}
 		} catch (Exception e) {
 			failedToRead = true;
 			e.printStackTrace();
@@ -116,6 +119,7 @@ public abstract class YMLFile {
 	 * Setup.
 	 */
 	public void setup() {
+		failedToRead = false;
 		getdFile().getParentFile().mkdirs();
 
 		if (!dFile.exists()) {
@@ -129,7 +133,10 @@ public abstract class YMLFile {
 
 		try {
 			data = YamlConfiguration.loadConfiguration(dFile);
-			failedToRead = false;
+			if (data.getConfigurationSection("").getKeys(false).size() == 0) {
+				failedToRead = true;
+			}
+
 		} catch (Exception e) {
 			failedToRead = true;
 			e.printStackTrace();
