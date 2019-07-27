@@ -13,6 +13,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Files.FilesManager;
 
+import lombok.Getter;
+
 /**
  * The Class YMLFile.
  */
@@ -112,7 +114,9 @@ public abstract class YMLFile {
 
 		try {
 			data = YamlConfiguration.loadConfiguration(dFile);
+			failedToRead = false;
 		} catch (Exception e) {
+			failedToRead = true;
 			e.printStackTrace();
 			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to load " + dFile.getName());
 			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
@@ -125,4 +129,7 @@ public abstract class YMLFile {
 			});
 		}
 	}
+
+	@Getter
+	private boolean failedToRead = false;
 }
