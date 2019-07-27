@@ -78,7 +78,22 @@ public abstract class YMLFile {
 	 * Reload data.
 	 */
 	public void reloadData() {
-		data = YamlConfiguration.loadConfiguration(dFile);
+		try {
+			data = YamlConfiguration.loadConfiguration(dFile);
+			failedToRead = false;
+		} catch (Exception e) {
+			failedToRead = true;
+			e.printStackTrace();
+			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to load " + dFile.getName());
+			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+				@Override
+				public void run() {
+					AdvancedCorePlugin.getInstance().getLogger()
+							.severe("Detected failure to load files on startup, see server log for details");
+				}
+			});
+		}
 	}
 
 	/**
