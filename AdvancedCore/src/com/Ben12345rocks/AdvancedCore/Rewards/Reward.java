@@ -7,7 +7,6 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Set;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -76,14 +75,6 @@ public class Reward {
 
 	@Getter
 	@Setter
-	private boolean enableChoices;
-
-	@Getter
-	@Setter
-	private Set<String> choices;
-
-	@Getter
-	@Setter
 	private File file;
 
 	/**
@@ -126,24 +117,6 @@ public class Reward {
 			}
 		}
 		return true;
-	}
-
-	/**
-	 * Check choice rewards.
-	 *
-	 * @param user
-	 *            the user
-	 */
-	public void checkChoiceRewards(User user) {
-		if (isEnableChoices()) {
-			checkRewardFile();
-			String choice = user.getChoicePreference(getName());
-			if (choice.isEmpty() || choice.equalsIgnoreCase("none")) {
-				user.addUnClaimedChoiceReward(getName());
-			} else {
-				giveChoicesReward(user, choice);
-			}
-		}
 	}
 
 	public boolean checkDelayed(User user, HashMap<String, String> placeholders) {
@@ -219,26 +192,6 @@ public class Reward {
 	 */
 	public String getRewardName() {
 		return name;
-	}
-
-	public void giveChoicesReward(User user, String choice) {
-		RewardBuilder reward = new RewardBuilder(getConfig().getConfigData(),
-				getConfig().getChoicesRewardsPath(choice));
-		reward.withPrefix(getName());
-		reward.withPlaceHolder("choice", choice);
-		reward.send(user);
-	}
-
-	/**
-	 * Give exp.
-	 *
-	 * @param user
-	 *            the user
-	 * @param exp
-	 *            the exp
-	 */
-	public void giveExp(User user, int exp) {
-		user.giveExp(exp);
 	}
 
 	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
@@ -403,9 +356,6 @@ public class Reward {
 
 			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
 
-			// non injectable rewards?
-			checkChoiceRewards(user);
-
 			giveInjectedRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
@@ -451,11 +401,6 @@ public class Reward {
 		if (timedEnabled) {
 			setTimedHour(getConfig().getTimedHour());
 			setTimedMinute(getConfig().getTimedMinute());
-		}
-
-		enableChoices = getConfig().getEnableChoices();
-		if (enableChoices) {
-			choices = getConfig().getChoices();
 		}
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);

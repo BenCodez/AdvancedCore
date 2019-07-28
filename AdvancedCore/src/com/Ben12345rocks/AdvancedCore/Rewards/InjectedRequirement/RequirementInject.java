@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement;
 
 import org.bukkit.configuration.ConfigurationSection;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.Inject;
 import com.Ben12345rocks.AdvancedCore.Rewards.Reward;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
@@ -56,6 +57,14 @@ public abstract class RequirementInject extends Inject {
 		if (validate != null && data.contains(getPath())) {
 			validate.onValidate(reward, this, data);
 		}
+	}
+
+	public void debug(String str) {
+		AdvancedCorePlugin.getInstance().debug(str);
+	}
+
+	public void extraDebug(String str) {
+		AdvancedCorePlugin.getInstance().extraDebug(str);
 	}
 
 	public RequirementInject validator(RequirementInjectValidator validate) {

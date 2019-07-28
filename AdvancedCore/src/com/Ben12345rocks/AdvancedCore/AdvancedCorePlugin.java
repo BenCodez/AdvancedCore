@@ -515,7 +515,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			public void reload() {
 				ArrayList<String> rewards = new ArrayList<String>();
 				for (Reward reward : RewardHandler.getInstance().getRewards()) {
-					if (reward.isEnableChoices()) {
+					if (reward.getConfig().getEnableChoices()) {
 						rewards.add(reward.getRewardName());
 					}
 				}

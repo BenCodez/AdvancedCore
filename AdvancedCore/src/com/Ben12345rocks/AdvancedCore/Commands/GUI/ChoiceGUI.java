@@ -54,7 +54,7 @@ public class ChoiceGUI {
 
 		for (String rewardName : unClaimedChoices) {
 			Reward reward = RewardHandler.getInstance().getReward(rewardName);
-			if (reward.isEnableChoices()) {
+			if (reward.getConfig().getEnableChoices()) {
 				inv.addButton(new BInventoryButton(new ItemBuilder(reward.getConfig().getDisplayItem())) {
 
 					@Override
@@ -69,7 +69,7 @@ public class ChoiceGUI {
 	}
 
 	public void openClaimChoices(Player player, Reward reward) {
-		if (!reward.isEnableChoices()) {
+		if (!reward.getConfig().getEnableChoices()) {
 			player.sendMessage("Choice rewards not enabled");
 			return;
 		}
@@ -78,7 +78,7 @@ public class ChoiceGUI {
 
 		BInventory inv = new BInventory("Pick reward");
 
-		for (String choice : reward.getChoices()) {
+		for (String choice : reward.getConfig().getChoices()) {
 			ItemBuilder builder = new ItemBuilder(reward.getConfig().getChoicesItem(choice))
 					.setNameIfNotExist("&a" + choice);
 
@@ -91,7 +91,7 @@ public class ChoiceGUI {
 					String choice = (String) getData("Choice");
 
 					user.removeUnClaimedChoiceReward(reward.getName());
-					reward.giveChoicesReward(user, choice);
+					RewardHandler.getInstance().giveChoicesReward(reward, user, choice);
 
 				}
 			}.addData("Choice", choice));
@@ -104,7 +104,7 @@ public class ChoiceGUI {
 
 	public void openPreferenceReward(Player player, String rewardName) {
 		Reward reward = RewardHandler.getInstance().getReward(rewardName);
-		if (!reward.isEnableChoices()) {
+		if (!reward.getConfig().getEnableChoices()) {
 			player.sendMessage("Choice rewards not enabled");
 			return;
 		}
@@ -113,7 +113,7 @@ public class ChoiceGUI {
 
 		BInventory inv = new BInventory("Select Preference");
 
-		for (String choice : reward.getChoices()) {
+		for (String choice : reward.getConfig().getChoices()) {
 			ItemBuilder builder = new ItemBuilder(reward.getConfig().getChoicesItem(choice));
 			if (user.getChoicePreference(rewardName).equalsIgnoreCase(choice)) {
 				builder.addLoreLine("&cCurrent preference");

@@ -21,6 +21,7 @@ import org.bukkit.entity.Player;
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Exceptions.FileDirectoryException;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInject;
+import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectBoolean;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectConfigurationSection;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectDouble;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectInt;
@@ -1373,6 +1374,37 @@ public class RewardHandler {
 			}
 		}));
 
+		injectedRewards.add(new RewardInjectBoolean("EnableChoices") {
+
+			@Override
+			public String onRewardRequest(Reward reward, User user, boolean value,
+					HashMap<String, String> placeholders) {
+				if (value) {
+					debug("Checking choice rewards");
+					reward.checkRewardFile();
+					String choice = user.getChoicePreference(reward.getName());
+					if (choice.isEmpty() || choice.equalsIgnoreCase("none")) {
+						debug("No choice specified");
+						user.addUnClaimedChoiceReward(reward.getName());
+					} else {
+						giveChoicesReward(reward, user, choice);
+					}
+				}
+				return null;
+			}
+
+		}.priority(10).validator(new RewardInjectValidator() {
+			
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.getBoolean("EnableChoices")) {
+					if (data.getConfigurationSection("Choices").getKeys(false).size() <= 1) {
+						 warning(reward, inject, "Not enough choices for choice rewards, 1 or less is not a choice");
+					}
+				}
+			}
+		}));
+
 		injectedRewards.add(new RewardInjectKeys("Items") {
 
 			@Override
@@ -1423,6 +1455,14 @@ public class RewardHandler {
 		}
 
 		sortInjectedRewards();
+	}
+
+	public void giveChoicesReward(Reward mainReward, User user, String choice) {
+		RewardBuilder reward = new RewardBuilder(mainReward.getConfig().getConfigData(),
+				mainReward.getConfig().getChoicesRewardsPath(choice));
+		reward.withPrefix(mainReward.getName());
+		reward.withPlaceHolder("choice", choice);
+		reward.send(user);
 	}
 
 	/**
@@ -1531,6 +1571,7 @@ public class RewardHandler {
 	 */
 
 	public void updateReward(Reward reward) {
+		reward.validate();
 		for (int i = getRewards().size() - 1; i >= 0; i--) {
 			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
 				getRewards().set(i, reward);
@@ -1538,6 +1579,7 @@ public class RewardHandler {
 			}
 		}
 		getRewards().add(reward);
+
 	}
 
 	public boolean usesTimed() {
