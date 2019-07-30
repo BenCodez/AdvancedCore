@@ -208,7 +208,8 @@ public class PlayerUtils {
 				return true;
 			}
 
-			if (plugin.getPerms() != null) {
+			if (plugin.getPerms() != null
+					&& !AdvancedCorePlugin.getInstance().getOptions().isDisableVaultPermissions()) {
 				boolean hasPerm = false;
 				for (String permission : perm.split("\\|")) {
 

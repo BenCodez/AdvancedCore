@@ -110,6 +110,10 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private boolean disableVaultPermissions = false;
+
+	@Getter
+	@Setter
 	private boolean processRewards = true;
 
 	@Getter
@@ -212,6 +216,8 @@ public class AdvancedCoreConfigOptions {
 					clickSoundSound = Sound.UI_BUTTON_CLICK;
 				}
 			}
+
+			disableVaultPermissions = configData.getBoolean("DisableVaultPermissions", false);
 		}
 	}
 }
