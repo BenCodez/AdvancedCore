@@ -3,9 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 import java.util.Arrays;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -50,13 +48,9 @@ public class SkullThread {
 					public void run() {
 						SkullThread.getInstance().run(new Runnable() {
 
-							@SuppressWarnings("deprecation")
 							@Override
 							public void run() {
-								ItemStack s = new ItemStack(Material.PLAYER_HEAD, 1);
-								SkullMeta meta = (SkullMeta) s.getItemMeta();
-								meta.setOwner(playerName);
-								s.setItemMeta(meta);
+								ItemStack s = SkullHandler.getInstance().getSkull(playerName);
 
 								try {
 									SkullHandler.getInstance().getSkulls().put(playerName,

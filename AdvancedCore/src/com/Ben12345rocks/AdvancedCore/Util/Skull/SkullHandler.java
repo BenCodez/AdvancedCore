@@ -1,18 +1,24 @@
 package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Base64;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 
 import lombok.Getter;
 
@@ -36,7 +42,6 @@ public class SkullHandler {
 	@Getter
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
 
-	@SuppressWarnings("deprecation")
 	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
 		if (hasSkull(playerName)) {
 			try {
@@ -48,7 +53,17 @@ public class SkullHandler {
 		} else {
 			loadSkull(playerName);
 		}
-		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
+		return getSkull(playerName);
+
+	}
+
+	@SuppressWarnings("deprecation")
+	public ItemStack getSkull(String playerName) {
+		if (playerName.startsWith("url:")) {
+			return getHead(playerName.substring("url:".length()));
+		} else {
+			return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
+		}
 	}
 
 	public boolean hasSkull(String playerName) {
@@ -58,6 +73,25 @@ public class SkullHandler {
 			}
 		}
 		return false;
+	}
+
+	public ItemStack getHead(String url) {
+		ItemStack head = new ItemStack(Material.PLAYER_HEAD, 1);
+		ItemMeta headMeta = head.getItemMeta();
+		GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+		byte[] encodedData = Base64.getEncoder()
+				.encode((String.format("{\"textures\":{\"SKIN\":{\"url\":\"%s\"}}}", url).getBytes()));
+		profile.getProperties().put("textures", new Property("textures", new String(encodedData)));
+		Field profileField = null;
+		try {
+			profileField = headMeta.getClass().getDeclaredField("profile");
+			profileField.setAccessible(true);
+			profileField.set(headMeta, profile);
+		} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+			e.printStackTrace();
+		}
+		head.setItemMeta(headMeta);
+		return head;
 	}
 
 	@SuppressWarnings("unchecked")
