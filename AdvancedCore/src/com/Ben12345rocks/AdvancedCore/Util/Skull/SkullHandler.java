@@ -1,5 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -17,8 +18,6 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
-import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.properties.Property;
 
 import lombok.Getter;
 
@@ -75,19 +74,35 @@ public class SkullHandler {
 		return false;
 	}
 
+	@SuppressWarnings("rawtypes")
+	private Class gameProfile;
+
+	@SuppressWarnings("rawtypes")
+	private Class property;
+	@SuppressWarnings("rawtypes")
+	private Constructor gameProfileConstructor;
+	@SuppressWarnings("rawtypes")
+	private Constructor propertyConstructor;
+	private Method gameProfileGetProperties;
+
 	public ItemStack getHead(String url) {
 		ItemStack head = new ItemStack(Material.PLAYER_HEAD, 1);
 		ItemMeta headMeta = head.getItemMeta();
-		GameProfile profile = new GameProfile(UUID.randomUUID(), null);
-		byte[] encodedData = Base64.getEncoder()
-				.encode((String.format("{\"textures\":{\"SKIN\":{\"url\":\"%s\"}}}", url).getBytes()));
-		profile.getProperties().put("textures", new Property("textures", new String(encodedData)));
-		Field profileField = null;
+
 		try {
+			// GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+			Object profile = gameProfileConstructor.newInstance(UUID.randomUUID(), null);
+			byte[] encodedData = Base64.getEncoder()
+					.encode((String.format("{\"textures\":{\"SKIN\":{\"url\":\"%s\"}}}", url).getBytes()));
+
+			gameProfileGetProperties.invoke(gameProfile, "textures",
+					propertyConstructor.newInstance("textures", new String(encodedData)));
+			Field profileField = null;
 			profileField = headMeta.getClass().getDeclaredField("profile");
 			profileField.setAccessible(true);
 			profileField.set(headMeta, profile);
-		} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+		} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException
+				| InvocationTargetException | InstantiationException e) {
 			e.printStackTrace();
 		}
 		head.setItemMeta(headMeta);
@@ -97,6 +112,12 @@ public class SkullHandler {
 	@SuppressWarnings("unchecked")
 	public void load() {
 		try {
+			gameProfile = ReflectionUtils.getClassForName("ccom.mojang.authlib.GameProfile");
+			property = ReflectionUtils.getClassForName("com.mojang.authlib.properties.Property");
+			gameProfileConstructor = gameProfile.getConstructor(UUID.class, String.class);
+			propertyConstructor = property.getConstructor(String.class, String.class);
+			gameProfileGetProperties = gameProfile.getMethod("getProperties", gameProfile);
+
 			craftItemStack = ReflectionUtils.getClassForName(
 					"org.bukkit.craftbukkit." + NMSManager.getInstance().getVersion() + "inventory.CraftItemStack");
 			itemStack = NMSManager.getInstance().getNMSClass("ItemStack");
