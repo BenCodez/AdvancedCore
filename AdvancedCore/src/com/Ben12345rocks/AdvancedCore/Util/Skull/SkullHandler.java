@@ -41,6 +41,7 @@ public class SkullHandler {
 	@Getter
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
 
+	@SuppressWarnings("deprecation")
 	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
 		if (hasSkull(playerName)) {
 			try {
@@ -52,7 +53,7 @@ public class SkullHandler {
 		} else {
 			loadSkull(playerName);
 		}
-		return getSkull(playerName);
+		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
 
 	}
 

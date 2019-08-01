@@ -35,6 +35,7 @@ import org.bukkit.potion.PotionEffectType;
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Skull.SkullHandler;
 import com.google.common.collect.Multimap;
 
 import lombok.Getter;
@@ -765,12 +766,7 @@ public class ItemBuilder {
 	@Deprecated
 	public ItemBuilder setSkullOwner(String owner) {
 		if (owner != null && !owner.isEmpty()) {
-			try {
-				SkullMeta im = (SkullMeta) is.getItemMeta();
-				im.setOwner(owner);
-				is.setItemMeta(im);
-			} catch (ClassCastException expected) {
-			}
+			is = SkullHandler.getInstance().getItemStack(owner);
 		}
 		return this;
 	}
