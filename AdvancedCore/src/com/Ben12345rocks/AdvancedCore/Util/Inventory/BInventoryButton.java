@@ -14,7 +14,6 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
-import lombok.Setter;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -162,10 +161,6 @@ public abstract class BInventoryButton {
 	public void setItem(ItemBuilder builder) {
 		this.builder = builder;
 	}
-
-	@Getter
-	@Setter
-	private boolean cancelClick = true;
 
 	/**
 	 * Sets the item.

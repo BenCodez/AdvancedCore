@@ -378,14 +378,10 @@ public class BInventory implements Listener {
 		}
 	}
 
-	public boolean closeInv(Player p, BInventoryButton b) {
+	public void closeInv(Player p, BInventoryButton b) {
 		if (closeInv && (b != null && b.isCloseInv())) {
 			p.closeInventory();
-		} else if (b != null && b.isCancelClick()) {
-			return true;
 		}
-		return false;
-
 	}
 
 	/**
@@ -421,7 +417,7 @@ public class BInventory implements Listener {
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (event.getSlot() == buttonSlot) {
 
-						event.setCancelled(closeInv(player, button));
+						closeInv(player, button);
 						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
 
@@ -445,7 +441,7 @@ public class BInventory implements Listener {
 					int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
 					BInventoryButton button = getButtons().get(buttonSlot);
 					if (button != null) {
-						event.setCancelled(closeInv(player, button));
+						closeInv(player, button);
 						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
 
@@ -466,7 +462,7 @@ public class BInventory implements Listener {
 					if (page > 1) {
 
 						final int nextPage = page - 1;
-						event.setCancelled(closeInv(player, null));
+						closeInv(player, null);
 
 						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
@@ -482,7 +478,7 @@ public class BInventory implements Listener {
 					// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
 					// page);
 					if (maxPage > page) {
-						event.setCancelled(closeInv(player, null));
+						closeInv(player, null);
 
 						final int nextPage = page + 1;
 
@@ -503,7 +499,7 @@ public class BInventory implements Listener {
 
 				BInventoryButton b : pageButtons) {
 					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
-						event.setCancelled(closeInv(player, b));
+						closeInv(player, b);
 						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 								new Runnable() {
 
