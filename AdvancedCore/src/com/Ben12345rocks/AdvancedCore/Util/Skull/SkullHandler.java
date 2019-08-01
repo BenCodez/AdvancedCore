@@ -116,7 +116,7 @@ public class SkullHandler {
 			property = ReflectionUtils.getClassForName("com.mojang.authlib.properties.Property");
 			gameProfileConstructor = gameProfile.getConstructor(UUID.class, String.class);
 			propertyConstructor = property.getConstructor(String.class, String.class);
-			gameProfileGetProperties = gameProfile.getMethod("getProperties", gameProfile);
+			gameProfileGetProperties = gameProfile.getDeclaredMethod("getProperties");
 
 			craftItemStack = ReflectionUtils.getClassForName(
 					"org.bukkit.craftbukkit." + NMSManager.getInstance().getVersion() + "inventory.CraftItemStack");
