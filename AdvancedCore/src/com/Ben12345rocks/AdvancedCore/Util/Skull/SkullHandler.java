@@ -112,7 +112,7 @@ public class SkullHandler {
 	@SuppressWarnings("unchecked")
 	public void load() {
 		try {
-			gameProfile = ReflectionUtils.getClassForName("ccom.mojang.authlib.GameProfile");
+			gameProfile = ReflectionUtils.getClassForName("com.mojang.authlib.GameProfile");
 			property = ReflectionUtils.getClassForName("com.mojang.authlib.properties.Property");
 			gameProfileConstructor = gameProfile.getConstructor(UUID.class, String.class);
 			propertyConstructor = property.getConstructor(String.class, String.class);
