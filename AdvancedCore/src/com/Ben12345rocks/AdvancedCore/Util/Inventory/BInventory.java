@@ -430,7 +430,6 @@ public class BInventory implements Listener {
 										}
 									}
 								});
-						destroy();
 						return;
 					}
 
@@ -454,7 +453,6 @@ public class BInventory implements Listener {
 										}
 									}
 								});
-						destroy();
 						return;
 					}
 
