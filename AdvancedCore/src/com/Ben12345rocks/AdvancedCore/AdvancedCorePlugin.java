@@ -395,7 +395,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
-				+ NMSManager.getInstance().getVersion());
+				+ Bukkit.getVersion());
 	}
 
 	/**
