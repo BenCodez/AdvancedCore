@@ -394,7 +394,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(), this);
 		}
 
-		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "'");
+		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
+				+ NMSManager.getInstance().getVersion());
 	}
 
 	/**
