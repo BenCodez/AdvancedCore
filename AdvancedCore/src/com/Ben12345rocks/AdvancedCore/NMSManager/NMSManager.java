@@ -302,9 +302,8 @@ public class NMSManager {
 	}
 
 	public boolean isVersion(String... versions) {
-		String serverVersion = getVersion();
-		for (String str : versions) {
-			String version =  str.replaceAll(".", "_");
+		String serverVersion = Bukkit.getVersion();
+		for (String version : versions) {
 			if (serverVersion.contains(version)) {
 				return true;
 			}
