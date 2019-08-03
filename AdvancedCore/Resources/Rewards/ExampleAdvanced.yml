@@ -34,28 +34,6 @@ Timed:
 # Set to 0 or 100 for always, or delete this line to disable chance
 # Will not give any rewards unless chance is lucky or disabled
 Chance: 40
-
-######## RECOMMEND using AdvancedPriority, easier to understand
-#
-# Advanced Random Rewards, just ignore this if you don't want fancy chance rewards
-# This is to give random rewards, with fallback
-# Rewards defined in this reward file below are still given regardless of this below
-Random:
-  # Chance to give a randomly selected reward below (from list), will only give random reward
-  # if lucky (according to chance)
-  # Works same as chance above
-  Chance: 40
-  # If this value is true it will pick a random reward in the Rewards list
-  # if false, all rewards are given
-  # Value is true if not specified
-  # Can also use RandomReward (a few lines below) to give a random reward only
-  PickRandom: true
-  # Rewards if chance is lucky, can be random depending in option above
-  # Don't set this reward as a possible reward, may cause infinite loop
-  Rewards: []
-  # A list of fall back rewards if chance is unlucky
-  # Don't set this reward as a reward, may cause infinite loop
-  FallBack: [] 
   
 # Will give one command from the list
 RandomCommand: []
@@ -81,7 +59,7 @@ RequirePermission: false
 Permission: 'AdvancedCore.Reward.ExampleAdvanced'
 
 # Javascript
-# Do not use this unless you know what you are doing
+# Only use this if you know what you are doing
 # 
 # Bukkit API placeholders:
 # Using "BukkitServer" in your javascript will return Bukkit.getServer()
@@ -161,14 +139,6 @@ Choices:
           Amount: 15
       Messages:
         Player: '&aYou picked %choice%'
-    
-# Only for some GUI's
-# Required for choice rewards
-# not a reward
-DisplayItem:
-  Material: 'DIAMOND'
-  Name: '&aAdvancedReward'
-  Amount: 1
 
 # Will execute rewards in one of the given worlds when player is in world
 Worlds:
@@ -274,6 +244,8 @@ ActionBar:
   Message: '&cThis is an actionbar!'
   # Delay until action bar goes away (in ticks)
   Delay: 30
+
+# Lucky rewards  
   
 OnlyOneLucky: false
 # The example below would give a 1 in 10 chance of receiving an extra $100, and a 1 in 50 chance of an extra $1000.
@@ -287,7 +259,40 @@ Lucky:
       Player: 'You were lucky and received an extra $1000!'
     Money: 1000
     
+# Only for some GUI's
+# Required for choice rewards
+# not a reward
+DisplayItem:
+  Material: 'DIAMOND'
+  Name: '&aAdvancedReward'
+  Amount: 1
+    
 # Ability for server option, very rare cases
 #Server: 'Minecraft Server'
+
+#############################################
+# RECOMMEND using AdvancedPriority
+# as it easier to use
+#############################################
+#
+# Advanced Random Rewards, just ignore this if you don't want fancy chance rewards
+# This is to give random rewards, with fallback
+# Rewards defined in this reward file below are still given regardless of this below
+Random:
+  # Chance to give a randomly selected reward below (from list), will only give random reward
+  # if lucky (according to chance)
+  # Works same as chance above
+  Chance: 40
+  # If this value is true it will pick a random reward in the Rewards list
+  # if false, all rewards are given
+  # Value is true if not specified
+  # Can also use RandomReward (a few lines below) to give a random reward only
+  PickRandom: true
+  # Rewards if chance is lucky, can be random depending in option above
+  # Don't set this reward as a possible reward, may cause infinite loop
+  Rewards: []
+  # A list of fall back rewards if chance is unlucky
+  # Don't set this reward as a reward, may cause infinite loop
+  FallBack: [] 
     
   
