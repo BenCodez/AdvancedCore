@@ -302,9 +302,10 @@ public class NMSManager {
 	}
 
 	public boolean isVersion(String... versions) {
+		String serverVersion = getVersion();
 		for (String str : versions) {
 			String version =  str.replaceAll(".", "_");
-			if (getVersion().contains(version)) {
+			if (serverVersion.contains(version)) {
 				return true;
 			}
 		}
