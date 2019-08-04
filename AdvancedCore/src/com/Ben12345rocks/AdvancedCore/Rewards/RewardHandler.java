@@ -833,7 +833,7 @@ public class RewardHandler {
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
 				if (data.getString(inject.getPath()).startsWith("/")) {
-					warning(reward, inject, "Can't start with command with /");
+					warning(reward, inject, "Can't start command with /");
 				}
 			}
 		}));

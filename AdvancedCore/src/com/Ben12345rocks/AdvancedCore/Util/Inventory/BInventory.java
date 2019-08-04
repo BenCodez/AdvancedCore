@@ -223,6 +223,11 @@ public class BInventory implements Listener {
 	 */
 	public void destroy() {
 		HandlerList.unregisterAll(this);
+		if (player != null) {
+			AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for " + player.getUniqueId());
+		} else {
+			AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for null");
+		}
 	}
 
 	/**
