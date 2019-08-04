@@ -65,12 +65,18 @@ public class SkullThread {
 										e1.printStackTrace();
 									}
 								}
-								plugin.extraDebug("Loading skull: " + playerName);
+								plugin.extraDebug("Loaded skull: " + playerName);
 
 							}
 						});
 					}
 				});
+			}
+		}
+
+		public void checkQueue() {
+			while (!SkullHandler.getInstance().getSkullQueue().isEmpty()) {
+				load(SkullHandler.getInstance().getSkullQueue().poll());
 			}
 		}
 
@@ -83,6 +89,7 @@ public class SkullThread {
 					e.printStackTrace();
 					System.exit(0);
 				}
+				checkQueue();
 			}
 		}
 

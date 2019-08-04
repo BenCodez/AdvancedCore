@@ -2,6 +2,8 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -151,7 +153,10 @@ public class SkullHandler {
 	}
 
 	public void loadSkull(final String playerName) {
-		SkullThread.getInstance().getThread().load(playerName);
+		skullQueue.add(playerName);
 	}
+	
+	@Getter
+	private Queue<String> skullQueue = new LinkedList<String>();
 
 }

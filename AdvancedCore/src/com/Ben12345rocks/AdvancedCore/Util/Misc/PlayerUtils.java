@@ -101,13 +101,7 @@ public class PlayerUtils {
 		if (SkullHandler.getInstance().hasSkull(playerName)) {
 			return SkullHandler.getInstance().getItemStack(playerName);
 		} else {
-			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					SkullHandler.getInstance().loadSkull(playerName);
-				}
-			});
+			SkullHandler.getInstance().loadSkull(playerName);
 			if (force) {
 				return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
 			} else {
