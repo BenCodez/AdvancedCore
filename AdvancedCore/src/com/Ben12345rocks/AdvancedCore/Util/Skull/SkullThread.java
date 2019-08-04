@@ -89,7 +89,6 @@ public class SkullThread {
 					e.printStackTrace();
 					System.exit(0);
 				}
-				checkQueue();
 			}
 		}
 
@@ -163,6 +162,14 @@ public class SkullThread {
 	public void loadThread() {
 		thread = new ReadThread();
 		thread.start();
+
+		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				getThread().checkQueue();
+			}
+		}, 1000, 1000 * 10);
 	}
 
 	/**

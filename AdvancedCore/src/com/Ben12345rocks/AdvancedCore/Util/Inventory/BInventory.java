@@ -22,6 +22,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -366,18 +367,6 @@ public class BInventory implements Listener {
 		b.onClick(new ClickEvent(event, b), this);
 	}
 
-	@EventHandler
-	public void onInvOpen(InventoryOpenEvent event) {
-		if (player != null && event.getPlayer() != null) {
-			if (event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
-				if (!event.getInventory().equals(inv)
-						&& AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
-					destroy();
-				}
-			}
-		}
-	}
-
 	public void closeInv(Player p, BInventoryButton b) {
 		if (closeInv && (b != null && b.isCloseInv())) {
 			p.closeInventory();
@@ -519,20 +508,68 @@ public class BInventory implements Listener {
 		}
 	}
 
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+	public void onPlayerQuit(PlayerQuitEvent event) {
+		if (!(event.getPlayer() instanceof Player)) {
+			return;
+		}
+		if (player != null && event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
+			Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+				@Override
+				public void run() {
+					if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
+						destroy();
+					}
+				}
+			}, 10l);
+		}
+
+		return;
+	}
+
 	// event handling
 	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
 	public void onInventoryClose(InventoryCloseEvent event) {
 		if (!(event.getPlayer() instanceof Player)) {
 			return;
 		}
-		if (inv != null && inv.equals(inv) && player != null
+		if (inv != null && event.getInventory().equals(inv) && player != null
 				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
 			Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
 					if (player != null) {
-						if (player.getOpenInventory() == null) {
+						if (player.getOpenInventory() == null
+								|| !player.getOpenInventory().getTopInventory().equals(inv)) {
+							if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
+								destroy();
+							}
+						}
+					}
+				}
+			}, 10l);
+
+		}
+
+		return;
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+	public void onInventoryOpen(InventoryOpenEvent event) {
+		if (!(event.getPlayer() instanceof Player)) {
+			return;
+		}
+		if (inv != null && !event.getInventory().equals(inv) && player != null
+				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
+			Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+				@Override
+				public void run() {
+					if (player != null) {
+						if (player.getOpenInventory() == null
+								|| !player.getOpenInventory().getTopInventory().equals(inv)) {
 							if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
 								destroy();
 							}
