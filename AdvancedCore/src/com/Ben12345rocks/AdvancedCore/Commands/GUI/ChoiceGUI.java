@@ -94,7 +94,7 @@ public class ChoiceGUI {
 					user.removeUnClaimedChoiceReward(reward.getName());
 					RewardHandler.getInstance().giveChoicesReward(reward, user, choice);
 					if (user.getUnClaimedChoices().size() > 0) {
-						openClaimChoices(clickEvent.getPlayer(), reward);
+						openClaimChoices(clickEvent.getPlayer());
 					} else {
 						clickEvent.getPlayer().closeInventory();
 					}
