@@ -74,12 +74,6 @@ public class SkullThread {
 			}
 		}
 
-		public void checkQueue() {
-			while (!SkullHandler.getInstance().getSkullQueue().isEmpty()) {
-				load(SkullHandler.getInstance().getSkullQueue().poll());
-			}
-		}
-
 		@Override
 		public void run() {
 			while (true) {
@@ -162,14 +156,6 @@ public class SkullThread {
 	public void loadThread() {
 		thread = new ReadThread();
 		thread.start();
-
-		Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
-
-			@Override
-			public void run() {
-				getThread().checkQueue();
-			}
-		}, 1000, 1000 * 10);
 	}
 
 	/**
