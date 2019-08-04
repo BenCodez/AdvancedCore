@@ -181,7 +181,7 @@ public abstract class BInventoryButton {
 	 *
 	 * @param slot
 	 *            the new slot
-	 * @return
+	 * @return Return button
 	 */
 	public BInventoryButton setSlot(int slot) {
 		this.slot = slot;
