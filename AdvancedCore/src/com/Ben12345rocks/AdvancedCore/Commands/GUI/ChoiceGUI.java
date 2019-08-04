@@ -77,6 +77,7 @@ public class ChoiceGUI {
 		User user = UserManager.getInstance().getUser(player);
 
 		BInventory inv = new BInventory("Pick reward");
+		inv.dontClose();
 
 		for (String choice : reward.getConfig().getChoices()) {
 			ItemBuilder builder = new ItemBuilder(reward.getConfig().getChoicesItem(choice))
@@ -92,7 +93,11 @@ public class ChoiceGUI {
 
 					user.removeUnClaimedChoiceReward(reward.getName());
 					RewardHandler.getInstance().giveChoicesReward(reward, user, choice);
-
+					if (user.getUnClaimedChoices().size() > 0) {
+						openClaimChoices(clickEvent.getPlayer(), reward);
+					} else {
+						clickEvent.getPlayer().closeInventory();
+					}
 				}
 			}.addData("Choice", choice));
 		}
