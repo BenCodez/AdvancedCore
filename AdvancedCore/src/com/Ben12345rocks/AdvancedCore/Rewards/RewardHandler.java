@@ -1414,7 +1414,7 @@ public class RewardHandler {
 				if (section.size() > 0) {
 					for (String str : section) {
 						ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(str));
-						user.giveItem(builder);
+						user.giveItem(builder.setPlaceholders(placeholders));
 						if (builder.isChancePass() && oneChance) {
 							return null;
 						}
