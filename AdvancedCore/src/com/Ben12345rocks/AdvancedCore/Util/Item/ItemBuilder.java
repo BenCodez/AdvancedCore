@@ -56,6 +56,7 @@ public class ItemBuilder {
 	private boolean validMaterial = true;
 	@Getter
 	private boolean legacy = false;
+	private String skull = "";
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -156,9 +157,10 @@ public class ItemBuilder {
 					addItemFlag(flag);
 				}
 
-				String skull = data.getString("Skull", "");
+				skull = data.getString("Skull", "");
 				if (!skull.equals("")) {
 					setSkullOwner(skull);
+
 				}
 
 				if (data.getBoolean("Glow")) {
@@ -524,8 +526,8 @@ public class ItemBuilder {
 					StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
 			setLore(ArrayUtils.getInstance().replaceJavascript(player,
 					ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
-			if (!getSkull().equals("")) {
-				setSkullOwner(StringUtils.getInstance().replacePlaceHolder(getSkull(), "player", player.getName()));
+			if (skull.equalsIgnoreCase("player")) {
+				setSkullOwner(player.getName());
 			}
 		} else {
 			return toItemStack();
