@@ -526,8 +526,9 @@ public class ItemBuilder {
 					StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
 			setLore(ArrayUtils.getInstance().replaceJavascript(player,
 					ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
-			if (skull.equalsIgnoreCase("player")) {
-				setSkullOwner(player.getName());
+			if (skull.contains("%")) {
+				setSkullOwner(StringUtils.getInstance().replaceJavascript(player,
+						StringUtils.getInstance().replacePlaceHolder(skull, placeholders)));
 			}
 		} else {
 			return toItemStack();
