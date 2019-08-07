@@ -536,6 +536,12 @@ public class ItemBuilder {
 		return is;
 	}
 
+	@Override
+	public String toString() {
+		return is.toString();
+
+	}
+
 	/**
 	 * Remove a certain enchant from the item.
 	 *

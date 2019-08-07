@@ -1394,12 +1394,12 @@ public class RewardHandler {
 			}
 
 		}.priority(10).validator(new RewardInjectValidator() {
-			
+
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
 				if (data.getBoolean("EnableChoices")) {
 					if (data.getConfigurationSection("Choices").getKeys(false).size() <= 1) {
-						 warning(reward, inject, "Not enough choices for choice rewards, 1 or less is not a choice");
+						warning(reward, inject, "Not enough choices for choice rewards, 1 or less is not a choice");
 					}
 				}
 			}
@@ -1415,6 +1415,7 @@ public class RewardHandler {
 					for (String str : section) {
 						ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(str));
 						user.giveItem(builder.setPlaceholders(placeholders));
+						debug("Giving item " + str + ":" + builder.toString());
 						if (builder.isChancePass() && oneChance) {
 							return null;
 						}
@@ -1441,8 +1442,17 @@ public class RewardHandler {
 									warning(reward, inject,
 											"Found legacy material: " + material + ", please update material");
 								}
+							} else {
+								warning(reward, inject, "Invalid material set: " + material);
 							}
 						} catch (NoSuchMethodError e) {
+						}
+					}
+
+					if (data.getInt("Items." + item + ".Amount", 0) == 0) {
+						if (data.getInt("Items." + item + ".MinAmount", 0) == 0
+								&& data.getInt("Items." + item + ".MaxAmount") == 0) {
+							warning(reward, inject, "No amount on item: " + item);
 						}
 					}
 
