@@ -1435,15 +1435,15 @@ public class RewardHandler {
 						try {
 							Material m = Material.matchMaterial(material.toUpperCase());
 
-							// change legacy item
+							// check legacy
 							if (m == null) {
 								m = Material.matchMaterial(material, true);
-								if (material != null) {
+								if (m != null) {
 									warning(reward, inject,
 											"Found legacy material: " + material + ", please update material");
+								} else {
+									warning(reward, inject, "Invalid material set: " + material);
 								}
-							} else {
-								warning(reward, inject, "Invalid material set: " + material);
 							}
 						} catch (NoSuchMethodError e) {
 						}
