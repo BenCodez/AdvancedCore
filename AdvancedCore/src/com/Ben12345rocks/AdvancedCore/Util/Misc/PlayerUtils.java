@@ -202,7 +202,7 @@ public class PlayerUtils {
 				return true;
 			}
 
-			if (plugin.getPerms() != null && !AdvancedCorePlugin.getInstance().getOptions().isDisableVaultPermissions()
+			if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getPerms() != null
 					&& plugin.getPerms().isEnabled()) {
 				boolean hasPerm = false;
 				for (String permission : perm.split("\\|")) {
@@ -217,15 +217,12 @@ public class PlayerUtils {
 			} else {
 				boolean hasPerm = false;
 
-				if (!perm.equals("")) {
-					for (String permission : perm.split("\\|")) {
-						if (sender.hasPermission(permission)) {
-							hasPerm = true;
-						}
+				for (String permission : perm.split("\\|")) {
+					if (sender.hasPermission(permission)) {
+						hasPerm = true;
 					}
-				} else {
-					hasPerm = true;
 				}
+
 				return hasPerm;
 			}
 

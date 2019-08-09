@@ -110,7 +110,7 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	private boolean disableVaultPermissions = false;
+	private boolean useVaultPermissions = false;
 
 	@Getter
 	@Setter
@@ -217,7 +217,7 @@ public class AdvancedCoreConfigOptions {
 				}
 			}
 
-			disableVaultPermissions = configData.getBoolean("DisableVaultPermissions", false);
+			useVaultPermissions = configData.getBoolean("UseVaultPermissions", false);
 		}
 	}
 }
