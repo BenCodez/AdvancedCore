@@ -374,6 +374,9 @@ public class BInventory implements Listener {
 
 	public void closeInv(Player p, BInventoryButton b) {
 		if (closeInv && (b != null && b.isCloseInv())) {
+			if (p.getOpenInventory().getTopInventory().equals(inv)) {
+				destroy();
+			}
 			p.closeInventory();
 		}
 	}
@@ -554,7 +557,7 @@ public class BInventory implements Listener {
 						}
 					}
 				}
-			}, 10l);
+			}, 100l);
 
 		}
 
@@ -581,7 +584,7 @@ public class BInventory implements Listener {
 						}
 					}
 				}
-			}, 10l);
+			}, 100l);
 
 		}
 
