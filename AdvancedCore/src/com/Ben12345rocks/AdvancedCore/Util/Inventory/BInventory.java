@@ -411,110 +411,116 @@ public class BInventory implements Listener {
 				}
 			}
 
-			if (!pages) {
-				for (int buttonSlot : getButtons().keySet()) {
-					BInventoryButton button = getButtons().get(buttonSlot);
-					if (event.getSlot() == buttonSlot) {
+			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-						closeInv(player, button);
-						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
-								new Runnable() {
+				@Override
+				public void run() {
+					if (!pages) {
+						for (int buttonSlot : getButtons().keySet()) {
+							BInventoryButton button = getButtons().get(buttonSlot);
+							if (event.getSlot() == buttonSlot) {
 
-									@Override
-									public void run() {
-										try {
-											onClick(event, button);
-										} catch (Exception e) {
-											e.printStackTrace();
-										}
-									}
-								});
-						return;
+								closeInv(player, button);
+								Bukkit.getServer().getScheduler()
+										.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+											@Override
+											public void run() {
+												try {
+													onClick(event, button);
+												} catch (Exception e) {
+													e.printStackTrace();
+												}
+											}
+										});
+								return;
+							}
+
+						}
+					} else {
+						int slot = event.getSlot();
+						if (slot < maxInvSize - 9) {
+							int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
+							BInventoryButton button = getButtons().get(buttonSlot);
+							if (button != null) {
+								closeInv(player, button);
+								Bukkit.getServer().getScheduler()
+										.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+											@Override
+											public void run() {
+												try {
+													onClick(event, button);
+												} catch (Exception e) {
+													e.printStackTrace();
+												}
+											}
+										});
+								return;
+							}
+
+						} else if (slot == maxInvSize - 9) {
+							if (page > 1) {
+
+								final int nextPage = page - 1;
+								closeInv(player, null);
+
+								Bukkit.getServer().getScheduler()
+										.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+											@Override
+											public void run() {
+												playSound(player);
+												openInventory(player, nextPage);
+											}
+										});
+							}
+						} else if (slot == maxInvSize - 1) {
+							// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
+							// page);
+							if (maxPage > page) {
+								closeInv(player, null);
+
+								final int nextPage = page + 1;
+
+								Bukkit.getServer().getScheduler()
+										.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+											@Override
+											public void run() {
+												playSound(player);
+												openInventory(player, nextPage);
+											}
+										});
+							}
+
+						}
+
+						for (
+
+						BInventoryButton b : pageButtons) {
+							if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
+								closeInv(player, b);
+								Bukkit.getServer().getScheduler()
+										.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+											@Override
+											public void run() {
+												try {
+													onClick(event, b);
+												} catch (Exception e) {
+													e.printStackTrace();
+												}
+											}
+										});
+
+							}
+
+						}
 					}
-
 				}
-			} else {
-				int slot = event.getSlot();
-				if (slot < maxInvSize - 9) {
-					int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
-					BInventoryButton button = getButtons().get(buttonSlot);
-					if (button != null) {
-						closeInv(player, button);
-						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
-								new Runnable() {
+			});
 
-									@Override
-									public void run() {
-										try {
-											onClick(event, button);
-										} catch (Exception e) {
-											e.printStackTrace();
-										}
-									}
-								});
-						return;
-					}
-
-				} else if (slot == maxInvSize - 9) {
-					if (page > 1) {
-
-						final int nextPage = page - 1;
-						closeInv(player, null);
-
-						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
-								new Runnable() {
-
-									@Override
-									public void run() {
-										playSound(player);
-										openInventory(player, nextPage);
-									}
-								});
-					}
-				} else if (slot == maxInvSize - 1) {
-					// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
-					// page);
-					if (maxPage > page) {
-						closeInv(player, null);
-
-						final int nextPage = page + 1;
-
-						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
-								new Runnable() {
-
-									@Override
-									public void run() {
-										playSound(player);
-										openInventory(player, nextPage);
-									}
-								});
-					}
-
-				}
-
-				for (
-
-				BInventoryButton b : pageButtons) {
-					if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
-						closeInv(player, b);
-						Bukkit.getServer().getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
-								new Runnable() {
-
-									@Override
-									public void run() {
-										try {
-											onClick(event, b);
-										} catch (Exception e) {
-											e.printStackTrace();
-										}
-									}
-								});
-
-					}
-
-				}
-
-			}
 		}
 	}
 
