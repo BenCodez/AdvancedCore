@@ -370,6 +370,10 @@ public class User {
 		return getData().getStringList("UnClaimedChoices");
 	}
 
+	public boolean hasChoices() {
+		return getUnClaimedChoices().size() > 0;
+	}
+
 	public UserData getUserData() {
 		return data;
 	}
