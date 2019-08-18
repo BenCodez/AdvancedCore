@@ -137,24 +137,42 @@ public class Reward {
 	}
 
 	public void checkRewardFile() {
-		if (!getConfig().hasRewardFile()) {
-			Reward reward = RewardHandler.getInstance().getReward(name);
-			ConfigurationSection section = getConfig().getConfigData();
+		checkRewardFile(true);
+	}
 
-			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
-				if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
-						.size() != section.getKeys(true).size() + 1) {
-					plugin.getLogger().warning(
-							"Detected a reward file edited when it should be edited where directly defined, overriding");
-				}
+	public boolean isRewardFileMatching() {
+		Reward reward = RewardHandler.getInstance().getReward(name);
+		ConfigurationSection section = getConfig().getConfigData();
+		if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
+			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
+					.size() != section.getKeys(true).size() + 1) {
+				return false;
 			}
-			reward.getConfig().setData(section);
-			reward.getConfig().getFileData().options()
-					.header("Directly defined reward file. ANY EDITS HERE CAN GET OVERRIDDEN!");
-			reward.getConfig().setDirectlyDefinedReward(true);
-			reward.getConfig().save(reward.getConfig().getFileData());
-			RewardHandler.getInstance().updateReward(reward);
 		}
+		return true;
+	}
+
+	public void checkRewardFile(boolean forceCheck) {
+		if (!getConfig().hasRewardFile()) {
+			if (!isRewardFileMatching()) {
+				plugin.getLogger().warning(
+						"Detected a reward file edited when it should be edited where directly defined, overriding");
+			}
+			setRewardFile();
+		} else if (forceCheck && !isRewardFileMatching()) {
+			setRewardFile();
+		}
+	}
+
+	private void setRewardFile() {
+		Reward reward = RewardHandler.getInstance().getReward(name);
+		ConfigurationSection section = getConfig().getConfigData();
+		reward.getConfig().setData(section);
+		reward.getConfig().getFileData().options()
+				.header("Directly defined reward file. ANY EDITS HERE CAN GET OVERRIDDEN!");
+		reward.getConfig().setDirectlyDefinedReward(true);
+		reward.getConfig().save(reward.getConfig().getFileData());
+		RewardHandler.getInstance().updateReward(reward);
 	}
 
 	public boolean checkTimed(User user, HashMap<String, String> placeholders) {
