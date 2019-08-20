@@ -602,7 +602,7 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequest(Reward reward, User user, double num, HashMap<String, String> placeholders) {
 				user.giveMoney(num);
-				return null;
+				return "" + (int) num;
 			}
 		}.asPlaceholder("Money").priority(100).addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money", null) {
@@ -632,7 +632,7 @@ public class RewardHandler {
 				double maxMoney = section.getDouble("Max", 0);
 				double value = ThreadLocalRandom.current().nextDouble(minMoney, maxMoney);
 				user.giveMoney(value);
-				return "" + value;
+				return "" + (float) value;
 			}
 		}.asPlaceholder("Money").priority(100).addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money.Min", null) {
