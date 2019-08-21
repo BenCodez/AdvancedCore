@@ -691,6 +691,32 @@ public class RewardHandler {
 					}
 				}));
 
+		injectedRewards.add(new RewardInjectInt("EXPLevels", 0) {
+
+			@Override
+			public String onRewardRequest(Reward reward, User user, int num, HashMap<String, String> placeholders) {
+				user.giveExpLevels(num);
+				return null;
+			}
+		}.asPlaceholder("EXP").priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXPLevels", null) {
+
+					@Override
+					public void setValue(Player player, Number value) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), value.intValue());
+						plugin.reloadAdvancedCore();
+					}
+				})).validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getDouble(inject.getPath(), -1) == 0) {
+							warning(reward, inject, "EXP can not be 0");
+						}
+					}
+				}));
+
 		injectedRewards.add(new RewardInjectConfigurationSection("EXP") {
 
 			@Override
@@ -713,6 +739,46 @@ public class RewardHandler {
 					}
 				})).addEditButton(
 						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Max", null) {
+
+							@Override
+							public void setValue(Player player, Number value) {
+								Reward reward = (Reward) getInv().getData("Reward");
+								reward.getConfig().set(getKey(), value.intValue());
+								plugin.reloadAdvancedCore();
+							}
+						}))
+				.validator(new RewardInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getDouble("EXP.Max", -1) == 0) {
+							warning(reward, inject, "Max EXP can not be 0");
+						}
+					}
+				}));
+
+		injectedRewards.add(new RewardInjectConfigurationSection("EXPLevels") {
+
+			@Override
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				int minEXP = section.getInt("Min", 0);
+				int maxEXP = section.getInt("Max", 0);
+				int value = ThreadLocalRandom.current().nextInt(minEXP, maxEXP);
+				user.giveExpLevels(value);
+				return "" + value;
+			}
+		}.asPlaceholder("EXP").priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXPLevels.Min", null) {
+
+					@Override
+					public void setValue(Player player, Number num) {
+						Reward reward = (Reward) getInv().getData("Reward");
+						reward.getConfig().set(getKey(), num.intValue());
+						plugin.reloadAdvancedCore();
+					}
+				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+						new EditGUIValueNumber("EXPLevels.Max", null) {
 
 							@Override
 							public void setValue(Player player, Number value) {

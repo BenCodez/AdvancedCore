@@ -88,13 +88,23 @@ Money: 1000
 #  Min: 100
 #  Max: 3000
 
-# Give player experience
-EXP: 100
+#######
+# Experience rewards
+#######
+# Give player experience (not levels)
+#EXP: 100
 
 # Pick a random number between min and max EXP amount to give
 #EXP:
 #  Min: 100
 #  Max: 1000
+
+EXPLevels: 3
+
+# Random amount of EXP levels between 3 to 7
+# EXPLevels:
+  # Min: 3
+  # Max: 7
 
 # Commands to run
 # Use %player% for player name
