@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Rewards;
 
 import java.io.File;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -632,7 +633,8 @@ public class RewardHandler {
 				double maxMoney = section.getDouble("Max", 0);
 				double value = ThreadLocalRandom.current().nextDouble(minMoney, maxMoney);
 				user.giveMoney(value);
-				return "" + (float) value;
+				DecimalFormat f = new DecimalFormat("##.00");
+				return "" + f.format(value);
 			}
 		}.asPlaceholder("Money").priority(100).addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money.Min", null) {
