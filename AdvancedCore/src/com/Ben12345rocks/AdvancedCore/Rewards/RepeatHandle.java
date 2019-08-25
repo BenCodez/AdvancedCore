@@ -70,10 +70,12 @@ public class RepeatHandle {
 							return;
 						} else {
 							giveReward(user, true);
+							cancel();
 							return;
 						}
 					} else {
 						giveReward(user, false);
+						cancel();
 						return;
 					}
 
@@ -84,10 +86,12 @@ public class RepeatHandle {
 							return;
 						} else {
 							giveReward(user, true);
+							cancel();
 							return;
 						}
 					} else {
 						giveReward(user, false);
+						cancel();
 						return;
 					}
 				}
