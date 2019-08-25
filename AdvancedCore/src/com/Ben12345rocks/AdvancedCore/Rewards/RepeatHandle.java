@@ -3,10 +3,13 @@ package com.Ben12345rocks.AdvancedCore.Rewards;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -44,6 +47,31 @@ public class RepeatHandle {
 	private boolean autoStop = false;
 
 	private Timer timer;
+
+	private int globalAmount = 0;
+
+	public void giveRepeatAll() {
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				if (amount > 0) {
+					if (globalAmount >= amount) {
+						cancel();
+						return;
+					}
+					globalAmount++;
+				}
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					User user = UserManager.getInstance().getUser(p);
+					giveReward(user, false);
+					cancel();
+					return;
+				}
+			}
+		}, timeBetween);
+
+	}
 
 	public void giveRepeat(User user) {
 		if (repeatOnStartup) {

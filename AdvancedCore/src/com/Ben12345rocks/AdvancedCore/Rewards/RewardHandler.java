@@ -36,7 +36,6 @@ import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInj
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectStringList;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectValidator;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
-import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStartup;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueBoolean;
@@ -1559,9 +1558,7 @@ public class RewardHandler {
 							reward1.validate();
 							if (reward1.getRepeatHandle().isEnabled()
 									&& reward1.getRepeatHandle().isRepeatOnStartup()) {
-								for (Player p : Bukkit.getOnlinePlayers()) {
-									reward1.getRepeatHandle().giveRepeat(UserManager.getInstance().getUser(p));
-								}
+								reward1.getRepeatHandle().giveRepeatAll();
 							}
 							rewards.add(reward1);
 							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
