@@ -1557,7 +1557,7 @@ public class RewardHandler {
 							Reward reward1 = new Reward(file, reward);
 							reward1.validate();
 							if (reward1.getRepeatHandle().isEnabled()
-									&& reward1.getRepeatHandle().isRepeatOnStartup()) {
+									&& reward1.getRepeatHandle().isRepeatOnStartup() && !reward1.getConfig().isDirectlyDefinedReward()) {
 								reward1.getRepeatHandle().giveRepeatAll();
 							}
 							rewards.add(reward1);
