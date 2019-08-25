@@ -5,6 +5,7 @@ import java.util.TimerTask;
 
 import org.bukkit.configuration.ConfigurationSection;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 
 import lombok.Getter;
@@ -45,6 +46,10 @@ public class RepeatHandle {
 	private Timer timer;
 
 	public void giveRepeat(User user) {
+		if (repeatOnStartup) {
+			return;
+		}
+		AdvancedCorePlugin.getInstance().debug("Giving repeat reward in " + timeBetween);
 		timer.schedule(new TimerTask() {
 
 			@Override
@@ -54,6 +59,7 @@ public class RepeatHandle {
 					if (cAmount >= amount) {
 						user.setRepeatAmount(reward, 0);
 						cancel();
+						return;
 					}
 					// add amount
 					user.setRepeatAmount(reward, cAmount + 1);
@@ -75,6 +81,7 @@ public class RepeatHandle {
 					if (autoStop) {
 						if (!reward.canGiveReward(user, new RewardOptions())) {
 							cancel();
+							return;
 						} else {
 							giveReward(user, true);
 							return;
@@ -89,6 +96,8 @@ public class RepeatHandle {
 	}
 
 	public void giveReward(User user, boolean bypassRequirement) {
+		AdvancedCorePlugin.getInstance()
+				.debug("Giving repeat reward " + reward.getName() + " for " + user.getPlayerName());
 		if (bypassRequirement) {
 			reward.giveReward(user, new RewardOptions().setIgnoreRequirements(false).setIgnoreChance(false));
 		} else {
