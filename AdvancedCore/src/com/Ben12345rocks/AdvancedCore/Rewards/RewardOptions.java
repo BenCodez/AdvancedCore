@@ -15,6 +15,9 @@ public class RewardOptions {
 	@Setter
 	private boolean onlineSet = false;
 
+	@Getter
+	private boolean checkRepeat = true;
+
 	private boolean giveOffline = true;
 
 	private boolean checkTimed = true;
@@ -82,6 +85,11 @@ public class RewardOptions {
 
 	public RewardOptions setCheckTimed(boolean checkTimed) {
 		this.checkTimed = checkTimed;
+		return this;
+	}
+
+	public RewardOptions setCheckRepeat(boolean checkRepeat) {
+		this.checkRepeat = checkRepeat;
 		return this;
 	}
 

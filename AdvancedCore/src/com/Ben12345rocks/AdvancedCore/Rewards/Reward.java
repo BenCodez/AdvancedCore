@@ -341,7 +341,7 @@ public class Reward {
 
 		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
 			plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
-			giveRewardUser(user, rewardOptions.getPlaceholders());
+			giveRewardUser(user, rewardOptions.getPlaceholders(), rewardOptions);
 		}
 	}
 
@@ -352,8 +352,9 @@ public class Reward {
 	 *            the user
 	 * @param phs
 	 *            placeholders
+	 * @param rewardOptions rewardOptions
 	 */
-	public void giveRewardUser(User user, HashMap<String, String> phs) {
+	public void giveRewardUser(User user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 
 		Player player = user.getPlayer();
 		if (player != null || isForceOffline()) {
@@ -381,8 +382,10 @@ public class Reward {
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
 
-			if (repeatHandle.isEnabled() && !repeatHandle.isRepeatOnStartup()) {
-				repeatHandle.giveRepeat(user);
+			if (rewardOptions.isCheckRepeat()) {
+				if (repeatHandle.isEnabled() && !repeatHandle.isRepeatOnStartup()) {
+					repeatHandle.giveRepeat(user);
+				}
 			}
 		}
 	}
