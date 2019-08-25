@@ -74,6 +74,9 @@ public class Reward {
 	private int timedMinute;
 
 	@Getter
+	private RepeatHandle repeatHandle;
+
+	@Getter
 	@Setter
 	private File file;
 
@@ -377,6 +380,10 @@ public class Reward {
 			giveInjectedRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
+
+			if (repeatHandle.isEnabled() && !repeatHandle.isRepeatOnStartup()) {
+				repeatHandle.giveRepeat(user);
+			}
 		}
 	}
 
@@ -420,6 +427,8 @@ public class Reward {
 			setTimedHour(getConfig().getTimedHour());
 			setTimedMinute(getConfig().getTimedMinute());
 		}
+
+		repeatHandle = new RepeatHandle(this);
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
 	}

@@ -294,5 +294,24 @@ Random:
   # A list of fall back rewards if chance is unlucky
   # Don't set this reward as a reward, may cause infinite loop
   FallBack: [] 
-    
   
+################################################
+# REPEAT REWARDS
+# Meant for advanced uses
+# Rewards do not persist on shutdown
+################################################
+Repeat:
+  Enabled: true
+  # Time in milliseconds 1000 = 1 second
+  TimeBetween: 60000
+  # Number of times to repeat
+  # set to -1 for no limit
+  Amount: -1
+  # Start repeating on startup, otherwise it will only repeat
+  # of reward be given
+  # If true, the reward will not repeat when executed
+  # Will execute for every player online at time of execution
+  RepeatOnStartup: false
+  # If a reward requirement fails to pass, the reward
+  # will stop repeating
+  AutoStop: true

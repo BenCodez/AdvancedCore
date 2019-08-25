@@ -961,6 +961,14 @@ public class User {
 		setInputMethod(method.toString());
 	}
 
+	public void setRepeatAmount(Reward reward, int amount) {
+		getData().setInt("Repeat" + reward.getName(), amount);
+	}
+
+	public int getRepeatAmount(Reward reward) {
+		return getData().getInt("Repeat" + reward.getName());
+	}
+
 	/**
 	 * Sets the uuid.
 	 *
