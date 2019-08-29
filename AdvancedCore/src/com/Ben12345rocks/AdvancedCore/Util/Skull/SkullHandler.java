@@ -151,13 +151,15 @@ public class SkullHandler {
 	}
 
 	public void loadSkull(final String playerName) {
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+		if (AdvancedCorePlugin.getInstance().isEnabled()) {
+			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-			@Override
-			public void run() {
-				SkullThread.getInstance().getThread().load(playerName);
-			}
-		});
+				@Override
+				public void run() {
+					SkullThread.getInstance().getThread().load(playerName);
+				}
+			});
+		}
 	}
 
 }
