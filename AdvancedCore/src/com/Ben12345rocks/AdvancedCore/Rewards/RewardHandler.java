@@ -430,16 +430,17 @@ public class RewardHandler {
 
 			@Override
 			public boolean onRequirementsRequest(Reward reward, User user, String str, RewardOptions rewardOptions) {
-				if (str.isEmpty()) {
-					str = "AdvancedCore.Reward." + reward.getName();
-				}
 				if (!reward.getConfig().getRequirePermission()) {
 					return true;
 				}
+				if (str.isEmpty()) {
+					str = plugin.getName() + ".Reward." + reward.getName();
+				}
+
 				boolean perm = PlayerUtils.getInstance().hasServerPermission(user.getPlayerName(), str);
 				if (!perm) {
-					plugin.debug(user.getPlayerName() + " does not have permission " + str + " to get reward "
-							+ reward.getName());
+					plugin.getLogger().info(user.getPlayerName() + " does not have permission " + str
+							+ " to get reward " + reward.getName());
 					return false;
 				}
 				return true;
@@ -1556,8 +1557,8 @@ public class RewardHandler {
 						try {
 							Reward reward1 = new Reward(file, reward);
 							reward1.validate();
-							if (reward1.getRepeatHandle().isEnabled()
-									&& reward1.getRepeatHandle().isRepeatOnStartup() && !reward1.getConfig().isDirectlyDefinedReward()) {
+							if (reward1.getRepeatHandle().isEnabled() && reward1.getRepeatHandle().isRepeatOnStartup()
+									&& !reward1.getConfig().isDirectlyDefinedReward()) {
 								reward1.getRepeatHandle().giveRepeatAll();
 							}
 							rewards.add(reward1);
