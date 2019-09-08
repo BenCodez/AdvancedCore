@@ -329,8 +329,12 @@ public class PlayerUtils {
 		return false;
 	}
 
-	@SuppressWarnings("deprecation")
 	public boolean isValidUser(String name) {
+		return isValidUser(name, false);
+	}
+
+	@SuppressWarnings("deprecation")
+	public boolean isValidUser(String name, boolean checkServer) {
 		Player player = Bukkit.getPlayerExact(name);
 		if (player != null) {
 			return true;
@@ -342,7 +346,7 @@ public class PlayerUtils {
 			return userExist;
 		}
 
-		if (AdvancedCorePlugin.getInstance().getOptions().isCheckNameMojang()) {
+		if (checkServer || AdvancedCorePlugin.getInstance().getOptions().isCheckNameMojang()) {
 			// plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 			if (p.hasPlayedBefore()) {
