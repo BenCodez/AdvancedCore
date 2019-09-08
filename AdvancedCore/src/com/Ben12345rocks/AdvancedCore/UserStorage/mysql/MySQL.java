@@ -30,6 +30,8 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.google.common.cache.CacheLoader;
 
+import lombok.Getter;
+
 public class MySQL {
 	private com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL mysql;
 
@@ -49,6 +51,7 @@ public class MySQL {
 	// ConcurrentMap<String, ArrayList<Column>> table = new
 	// ConcurrentHashMap<String, ArrayList<Column>>();
 
+	@Getter
 	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
 	private String name;
