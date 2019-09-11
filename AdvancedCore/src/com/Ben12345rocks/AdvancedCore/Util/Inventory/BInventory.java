@@ -390,6 +390,8 @@ public class BInventory implements Listener {
 			if (p.getOpenInventory().getTopInventory().equals(inv)) {
 				destroy();
 				p.closeInventory();
+				p.updateInventory();
+				p.setItemOnCursor(new ItemStack(Material.AIR));
 			}
 		}
 	}
@@ -414,7 +416,6 @@ public class BInventory implements Listener {
 			event.setResult(Result.DENY);
 			final Player player = (Player) event.getWhoClicked();
 			player.setItemOnCursor(new ItemStack(Material.AIR));
-			player.updateInventory();
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
 					BInventoryButton button = getButtons().get(buttonSlot);
@@ -474,7 +475,7 @@ public class BInventory implements Listener {
 										openInventory(player, nextPage);
 									}
 								});
-					}
+					} 
 				} else if (slot == maxInvSize - 1) {
 					// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
 					// page);
