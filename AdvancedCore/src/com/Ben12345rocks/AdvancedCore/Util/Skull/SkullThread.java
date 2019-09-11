@@ -93,7 +93,7 @@ public class SkullThread {
 		 *            the run
 		 */
 		public void run(Runnable run) {
-			synchronized (SkullThread.getInstance()) {
+			synchronized (obj) {
 				if (!plugin.isEnabled()) {
 					return;
 				}
@@ -115,6 +115,8 @@ public class SkullThread {
 			}
 		}
 	}
+
+	private Object obj = new Object();
 
 	/** The instance. */
 	static SkullThread instance = new SkullThread();

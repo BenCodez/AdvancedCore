@@ -411,7 +411,7 @@ public class BInventory implements Listener {
 		if (this.inv != null && inv.equals(this.inv) && player != null
 				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 			event.setCancelled(true);
-			event.setResult(Result.DEFAULT);
+			event.setResult(Result.DENY);
 			final Player player = (Player) event.getWhoClicked();
 			player.setItemOnCursor(new ItemStack(Material.AIR));
 			player.updateInventory();
