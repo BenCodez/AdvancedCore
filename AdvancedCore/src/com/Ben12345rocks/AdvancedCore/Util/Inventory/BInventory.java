@@ -21,8 +21,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
@@ -401,6 +399,7 @@ public class BInventory implements Listener {
 			event.setCancelled(true);
 			event.setResult(Result.DEFAULT);
 			final Player player = (Player) event.getWhoClicked();
+			player.setItemOnCursor(new ItemStack(Material.AIR));
 			player.updateInventory();
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
