@@ -21,6 +21,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
@@ -380,6 +381,20 @@ public class BInventory implements Listener {
 		}
 	}
 
+	@EventHandler
+	public void onInvenDrag(InventoryDragEvent event) {
+		if (!(event.getWhoClicked() instanceof Player)) {
+			return;
+		}
+
+		Inventory inv = event.getInventory();
+
+		if (this.inv != null && inv.equals(this.inv) && player != null
+				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
+			event.setCancelled(true);
+		}
+	}
+
 	/**
 	 * On inventory click.
 	 *
@@ -397,9 +412,8 @@ public class BInventory implements Listener {
 		if (this.inv != null && inv.equals(this.inv) && player != null
 				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 			event.setCancelled(true);
-			event.setResult(Result.DENY);
+			event.setResult(Result.DEFAULT);
 			final Player player = (Player) event.getWhoClicked();
-
 			if (!pages) {
 				for (int buttonSlot : getButtons().keySet()) {
 					BInventoryButton button = getButtons().get(buttonSlot);
