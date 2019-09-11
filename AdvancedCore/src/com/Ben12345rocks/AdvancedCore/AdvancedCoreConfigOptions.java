@@ -152,6 +152,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean preloadSkulls = true;
 
+	@Getter
+	@Setter
+	private boolean loadSkulls = true;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -199,6 +203,7 @@ public class AdvancedCoreConfigOptions {
 			waitUntilLoggedIn = configData.getBoolean("WaitUntilLoggedIn", true);
 
 			preloadSkulls = configData.getBoolean("PreloadSkulls", false);
+			loadSkulls = configData.getBoolean("LoadSkulls", true);
 
 			ConfigurationSection soundData = configData.getConfigurationSection("ClickSound");
 			if (soundData != null) {
