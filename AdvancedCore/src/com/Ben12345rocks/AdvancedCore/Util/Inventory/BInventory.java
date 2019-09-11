@@ -22,13 +22,11 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
-import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
@@ -398,18 +396,9 @@ public class BInventory implements Listener {
 
 		if (this.inv != null && inv.equals(this.inv) && player != null
 				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
-
 			event.setCancelled(true);
 			event.setResult(Result.DENY);
 			final Player player = (Player) event.getWhoClicked();
-
-			if (AdvancedCorePlugin.getInstance().getServerHandle() instanceof SpigotHandle) {
-				// spigot only method
-				if (event.getClickedInventory() != null
-						&& !event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
-					return;
-				}
-			}
 
 			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
@@ -565,7 +554,7 @@ public class BInventory implements Listener {
 						}
 					}
 				}
-			}, 100l);
+			}, 10000l);
 
 		}
 
@@ -592,7 +581,7 @@ public class BInventory implements Listener {
 						}
 					}
 				}
-			}, 100l);
+			}, 10000l);
 
 		}
 
