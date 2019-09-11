@@ -217,11 +217,25 @@ public class BInventory implements Listener {
 		return this;
 	}
 
+	private boolean destroy = false;
+
 	/**
 	 * Destroy.
 	 */
 	public void destroy() {
-		HandlerList.unregisterAll(this);
+		if (destroy) {
+			return;
+		}
+		destroy = true;
+		final BInventory b = this;
+		Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+			@Override
+			public void run() {
+				HandlerList.unregisterAll(b);
+			}
+		}, 200l);
+
 		if (player != null) {
 			AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for " + player.getUniqueId());
 		} else {
@@ -375,8 +389,8 @@ public class BInventory implements Listener {
 		if (closeInv && (b != null && b.isCloseInv())) {
 			if (p.getOpenInventory().getTopInventory().equals(inv)) {
 				destroy();
+				p.closeInventory();
 			}
-			p.closeInventory();
 		}
 	}
 
