@@ -2,7 +2,8 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -150,7 +151,9 @@ public class SkullHandler {
 			@Override
 			public void run() {
 				for (String str : skullsToLoad) {
-					SkullThread.getInstance().getThread().load(str);
+					if (!getSkulls().contains(str)) {
+						SkullThread.getInstance().getThread().load(str);
+					}
 				}
 			}
 		}, 10 * 20, 20 * 20);
@@ -161,7 +164,7 @@ public class SkullHandler {
 		loadSkull(player.getName());
 	}
 
-	private ArrayList<String> skullsToLoad = new ArrayList<String>();
+	private Set<String> skullsToLoad = new HashSet<String>();
 
 	public void loadSkull(final String playerName) {
 		if (AdvancedCorePlugin.getInstance().isEnabled()
