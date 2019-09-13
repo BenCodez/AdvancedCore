@@ -422,7 +422,7 @@ public class BInventory implements Listener {
 			event.setResult(Result.DENY);
 			player.setItemOnCursor(new ItemStack(Material.AIR));
 			final Player player = (Player) event.getWhoClicked();
-			if (isCloseInv() || pages) {
+			if (isCloseInv()) {
 				closeInv(player, null);
 			}
 			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
@@ -466,7 +466,6 @@ public class BInventory implements Listener {
 							if (page > 1) {
 
 								final int nextPage = page - 1;
-								closeInv(player, null);
 
 								playSound(player);
 								openInventory(player, nextPage);
@@ -476,7 +475,6 @@ public class BInventory implements Listener {
 							// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
 							// page);
 							if (maxPage > page) {
-								closeInv(player, null);
 
 								final int nextPage = page + 1;
 
