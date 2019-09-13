@@ -388,7 +388,13 @@ public class BInventory implements Listener {
 	public void closeInv(Player p, BInventoryButton b) {
 		if (closeInv && (b != null && b.isCloseInv())) {
 			if (p.getOpenInventory().getTopInventory().equals(inv)) {
-				p.closeInventory();
+				Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+					@Override
+					public void run() {
+						p.closeInventory();
+					}
+				});
 				destroy();
 			}
 		}
