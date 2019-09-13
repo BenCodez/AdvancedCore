@@ -386,7 +386,7 @@ public class BInventory implements Listener {
 	}
 
 	public void closeInv(Player p, BInventoryButton b) {
-		if (closeInv && (b != null && b.isCloseInv())) {
+		if ((closeInv && (b != null && b.isCloseInv())) || pages) {
 			if (p.getOpenInventory().getTopInventory().equals(inv)) {
 				Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
@@ -422,7 +422,7 @@ public class BInventory implements Listener {
 			event.setResult(Result.DENY);
 			player.setItemOnCursor(new ItemStack(Material.AIR));
 			final Player player = (Player) event.getWhoClicked();
-			if (isCloseInv()) {
+			if (isCloseInv() || pages) {
 				closeInv(player, null);
 			}
 			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
