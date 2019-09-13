@@ -409,9 +409,11 @@ public class BInventory implements Listener {
 		}
 
 		Inventory inv = event.getInventory();
+		if (!this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
+			return;
+		}
 
-		if (this.inv != null && inv.equals(this.inv) && player != null
-				&& this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
+		if (this.inv != null && inv.equals(this.inv)) {
 			event.setCancelled(true);
 			event.setResult(Result.DENY);
 			final Player player = (Player) event.getWhoClicked();
@@ -475,7 +477,7 @@ public class BInventory implements Listener {
 										openInventory(player, nextPage);
 									}
 								});
-					} 
+					}
 				} else if (slot == maxInvSize - 1) {
 					// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
 					// page);
@@ -563,7 +565,7 @@ public class BInventory implements Listener {
 						}
 					}
 				}
-			}, 10000l);
+			}, 1000l);
 
 		}
 
@@ -590,7 +592,7 @@ public class BInventory implements Listener {
 						}
 					}
 				}
-			}, 10000l);
+			}, 1000l);
 
 		}
 
