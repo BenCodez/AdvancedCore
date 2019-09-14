@@ -611,6 +611,12 @@ public class MySQL {
 				AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
 				e1.printStackTrace();
 			}
+
+			try {
+				mysql.getThreadPool().awaitTermination(60, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 
 	}

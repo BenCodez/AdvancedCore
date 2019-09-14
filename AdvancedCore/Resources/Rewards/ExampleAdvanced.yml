@@ -299,6 +299,7 @@ Random:
 # REPEAT REWARDS
 # Meant for advanced uses
 # Rewards do not persist on shutdown
+# Not tested in all situations yet, use at your own risk
 ################################################
 Repeat:
   Enabled: true
