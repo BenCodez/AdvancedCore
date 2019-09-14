@@ -512,7 +512,7 @@ public class BInventory implements Listener {
 			return;
 		}
 		if (player != null && event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
-			Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+			Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
@@ -534,7 +534,7 @@ public class BInventory implements Listener {
 		}
 		if (inv != null && event.getInventory().equals(inv) && player != null
 				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
-			Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+			Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
@@ -561,7 +561,7 @@ public class BInventory implements Listener {
 		}
 		if (inv != null && !event.getInventory().equals(inv) && player != null
 				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
-			Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+			Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
