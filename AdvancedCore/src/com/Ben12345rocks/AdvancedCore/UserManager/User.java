@@ -350,6 +350,10 @@ public class User {
 		}
 	}
 
+	public int getRepeatAmount(Reward reward) {
+		return getData().getInt("Repeat" + reward.getName());
+	}
+
 	public HashMap<String, Long> getTimedRewards() {
 		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards");
 		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
@@ -368,10 +372,6 @@ public class User {
 
 	public ArrayList<String> getUnClaimedChoices() {
 		return getData().getStringList("UnClaimedChoices");
-	}
-
-	public boolean hasChoices() {
-		return getUnClaimedChoices().size() > 0;
 	}
 
 	public UserData getUserData() {
@@ -406,6 +406,15 @@ public class User {
 		Player player = getPlayer();
 		if (player != null) {
 			player.giveExp(exp);
+		}
+	}
+
+	public void giveExpLevels(int num) {
+		Player p = getPlayer();
+		if (p != null) {
+			for (int i = 0; i < num; i++) {
+				p.setExp(p.getExp() + p.getExpToLevel());
+			}
 		}
 	}
 
@@ -534,6 +543,10 @@ public class User {
 
 	public void giveReward(Reward reward, RewardOptions rewardOptions) {
 		reward.giveReward(this, rewardOptions);
+	}
+
+	public boolean hasChoices() {
+		return getUnClaimedChoices().size() > 0;
 	}
 
 	/**
@@ -940,6 +953,10 @@ public class User {
 		this.playerName = playerName;
 	}
 
+	public void setRepeatAmount(Reward reward, int amount) {
+		getData().setInt("Repeat" + reward.getName(), amount);
+	}
+
 	public void setTimedRewards(HashMap<String, Long> timed) {
 		ArrayList<String> timedRewards = new ArrayList<String>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
@@ -961,14 +978,6 @@ public class User {
 		setInputMethod(method.toString());
 	}
 
-	public void setRepeatAmount(Reward reward, int amount) {
-		getData().setInt("Repeat" + reward.getName(), amount);
-	}
-
-	public int getRepeatAmount(Reward reward) {
-		return getData().getInt("Repeat" + reward.getName());
-	}
-
 	/**
 	 * Sets the uuid.
 	 *
@@ -983,15 +992,6 @@ public class User {
 		if (getData().hasData()) {
 			if (!getData().getString("PlayerName").equals(getPlayerName())) {
 				getData().setString("PlayerName", getPlayerName());
-			}
-		}
-	}
-
-	public void giveExpLevels(int num) {
-		Player p = getPlayer();
-		if (p != null) {
-			for (int i = 0; i < num; i++) {
-				p.setExp(p.getExp() + p.getExpToLevel());
 			}
 		}
 	}

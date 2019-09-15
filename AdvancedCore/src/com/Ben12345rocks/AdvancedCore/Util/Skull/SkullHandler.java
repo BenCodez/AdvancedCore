@@ -38,6 +38,8 @@ public class SkullHandler {
 	@Getter
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
 
+	private Set<String> skullsToLoad = new HashSet<String>();
+
 	@SuppressWarnings("deprecation")
 	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
 		if (hasSkull(playerName)) {
@@ -59,15 +61,6 @@ public class SkullHandler {
 
 		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
 
-	}
-
-	public boolean hasSkull(String playerName) {
-		if (skulls.containsKey(playerName)) {
-			if (skulls.get(playerName) != null) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	/*
@@ -104,6 +97,15 @@ public class SkullHandler {
 	 * return head;
 	 * }
 	 */
+
+	public boolean hasSkull(String playerName) {
+		if (skulls.containsKey(playerName)) {
+			if (skulls.get(playerName) != null) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	@SuppressWarnings("unchecked")
 	public void load() {
@@ -163,8 +165,6 @@ public class SkullHandler {
 	public void loadSkull(Player player) {
 		loadSkull(player.getName());
 	}
-
-	private Set<String> skullsToLoad = new HashSet<String>();
 
 	public void loadSkull(final String playerName) {
 		if (AdvancedCorePlugin.getInstance().isEnabled()

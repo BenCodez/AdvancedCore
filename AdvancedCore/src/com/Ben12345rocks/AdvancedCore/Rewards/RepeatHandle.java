@@ -15,21 +15,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class RepeatHandle {
-	public RepeatHandle(Reward reward) {
-		this.reward = reward;
-		timer = new Timer();
-		ConfigurationSection data = reward.getConfig().getConfigData().getConfigurationSection("Repeat");
-		if (data != null) {
-			enabled = data.getBoolean("Enabled", false);
-			timeBetween = data.getLong("TimeBetween", 0);
-			amount = data.getInt("Amount", -1);
-			repeatOnStartup = data.getBoolean("RepeatOnStartup", false);
-			autoStop = data.getBoolean("AutoStop", true);
-		}
-	}
-
 	@Getter
 	private Reward reward;
+
 	@Getter
 	@Setter
 	private boolean enabled = false;
@@ -45,32 +33,21 @@ public class RepeatHandle {
 	@Getter
 	@Setter
 	private boolean autoStop = false;
-
 	private Timer timer;
 
 	private int globalAmount = 0;
 
-	public void giveRepeatAll() {
-		timer.schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				if (amount > 0) {
-					if (globalAmount >= amount) {
-						cancel();
-						return;
-					}
-					globalAmount++;
-				}
-				for (Player p : Bukkit.getOnlinePlayers()) {
-					User user = UserManager.getInstance().getUser(p);
-					giveReward(user, false);
-					cancel();
-					return;
-				}
-			}
-		}, timeBetween);
-
+	public RepeatHandle(Reward reward) {
+		this.reward = reward;
+		timer = new Timer();
+		ConfigurationSection data = reward.getConfig().getConfigData().getConfigurationSection("Repeat");
+		if (data != null) {
+			enabled = data.getBoolean("Enabled", false);
+			timeBetween = data.getLong("TimeBetween", 0);
+			amount = data.getInt("Amount", -1);
+			repeatOnStartup = data.getBoolean("RepeatOnStartup", false);
+			autoStop = data.getBoolean("AutoStop", true);
+		}
 	}
 
 	public void giveRepeat(User user) {
@@ -125,6 +102,29 @@ public class RepeatHandle {
 				}
 			}
 		}, timeBetween);
+	}
+
+	public void giveRepeatAll() {
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				if (amount > 0) {
+					if (globalAmount >= amount) {
+						cancel();
+						return;
+					}
+					globalAmount++;
+				}
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					User user = UserManager.getInstance().getUser(p);
+					giveReward(user, false);
+					cancel();
+					return;
+				}
+			}
+		}, timeBetween);
+
 	}
 
 	public void giveReward(User user, boolean bypassRequirement) {

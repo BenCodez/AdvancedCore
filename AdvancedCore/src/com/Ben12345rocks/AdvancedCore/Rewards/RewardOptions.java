@@ -83,13 +83,13 @@ public class RewardOptions {
 		return online;
 	}
 
-	public RewardOptions setCheckTimed(boolean checkTimed) {
-		this.checkTimed = checkTimed;
+	public RewardOptions setCheckRepeat(boolean checkRepeat) {
+		this.checkRepeat = checkRepeat;
 		return this;
 	}
 
-	public RewardOptions setCheckRepeat(boolean checkRepeat) {
-		this.checkRepeat = checkRepeat;
+	public RewardOptions setCheckTimed(boolean checkTimed) {
+		this.checkTimed = checkTimed;
 		return this;
 	}
 

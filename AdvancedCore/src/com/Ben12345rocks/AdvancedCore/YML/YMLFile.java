@@ -26,6 +26,9 @@ public abstract class YMLFile {
 	/** The d file. */
 	private File dFile;
 
+	@Getter
+	private boolean failedToRead = false;
+
 	/**
 	 * Instantiates a new YML file.
 	 *
@@ -151,7 +154,4 @@ public abstract class YMLFile {
 			});
 		}
 	}
-
-	@Getter
-	private boolean failedToRead = false;
 }

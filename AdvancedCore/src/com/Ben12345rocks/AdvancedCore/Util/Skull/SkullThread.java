@@ -116,8 +116,6 @@ public class SkullThread {
 		}
 	}
 
-	private Object obj = new Object();
-
 	/** The instance. */
 	static SkullThread instance = new SkullThread();
 
@@ -129,6 +127,8 @@ public class SkullThread {
 	public static SkullThread getInstance() {
 		return instance;
 	}
+
+	private Object obj = new Object();
 
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();

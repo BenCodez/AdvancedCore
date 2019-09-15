@@ -31,6 +31,9 @@ public abstract class BInventoryButton {
 
 	private BInventory inv;
 
+	@Getter
+	private boolean closeInv = true;
+
 	public BInventoryButton(ItemBuilder item) {
 		setBuilder(item);
 		slot = item.getSlot();
@@ -56,6 +59,11 @@ public abstract class BInventoryButton {
 
 	public BInventoryButton addData(String key, Object object) {
 		getData().put(key, object);
+		return this;
+	}
+
+	public BInventoryButton dontClose() {
+		closeInv = false;
 		return this;
 	}
 
@@ -111,19 +119,6 @@ public abstract class BInventoryButton {
 		return PlayerUtils.getInstance().getPlayerMeta(player, str);
 	}
 
-	@Getter
-	private boolean closeInv = true;
-
-	public BInventoryButton setCloseInv(boolean value) {
-		closeInv = value;
-		return this;
-	}
-
-	public BInventoryButton dontClose() {
-		closeInv = false;
-		return this;
-	}
-
 	/**
 	 * Gets the slot.
 	 *
@@ -156,6 +151,11 @@ public abstract class BInventoryButton {
 	 */
 	public void setBuilder(ItemBuilder builder) {
 		this.builder = builder;
+	}
+
+	public BInventoryButton setCloseInv(boolean value) {
+		closeInv = value;
+		return this;
 	}
 
 	public void setItem(ItemBuilder builder) {

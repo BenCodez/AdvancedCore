@@ -34,6 +34,9 @@ public abstract class RewardInject extends Inject {
 	@Getter
 	private RewardInjectValidator validate;
 
+	@Getter
+	private boolean postReward = false;
+
 	public RewardInject(String path) {
 		super(path);
 	}
@@ -48,18 +51,18 @@ public abstract class RewardInject extends Inject {
 		return this;
 	}
 
-	@Getter
-	private boolean postReward = false;
-
-	public RewardInject postReward() {
-		postReward = true;
-		return this;
-	}
-
 	public RewardInject asPlaceholder(String placeholderName) {
 		addAsPlaceholder = true;
 		this.placeholderName = placeholderName;
 		return this;
+	}
+
+	public void debug(String str) {
+		AdvancedCorePlugin.getInstance().debug(str);
+	}
+
+	public void extraDebug(String str) {
+		AdvancedCorePlugin.getInstance().extraDebug(str);
 	}
 
 	public boolean isEditable() {
@@ -68,6 +71,11 @@ public abstract class RewardInject extends Inject {
 
 	public abstract Object onRewardRequest(Reward reward, User user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
+
+	public RewardInject postReward() {
+		postReward = true;
+		return this;
+	}
 
 	public RewardInject priority(int priority) {
 		setPriority(priority);
@@ -84,14 +92,6 @@ public abstract class RewardInject extends Inject {
 		if (validate != null && data.contains(getPath())) {
 			validate.onValidate(reward, this, data);
 		}
-	}
-
-	public void debug(String str) {
-		AdvancedCorePlugin.getInstance().debug(str);
-	}
-	
-	public void extraDebug(String str) {
-		AdvancedCorePlugin.getInstance().extraDebug(str);
 	}
 
 	public RewardInject validator(RewardInjectValidator validate) {

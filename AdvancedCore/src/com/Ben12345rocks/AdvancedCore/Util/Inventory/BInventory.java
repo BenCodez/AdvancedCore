@@ -137,11 +137,6 @@ public class BInventory implements Listener {
 	@Getter
 	private boolean closeInv = true;
 
-	public BInventory dontClose() {
-		closeInv = false;
-		return this;
-	}
-
 	private ItemStack prevItem;
 
 	private ItemStack nextItem;
@@ -174,6 +169,10 @@ public class BInventory implements Listener {
 	@Getter
 	@Setter
 	private boolean playerSound = true;
+
+	private boolean destroy = false;
+
+	private long lastPressTime = 0;
 
 	/**
 	 * Instantiates a new b inventory.
@@ -217,7 +216,20 @@ public class BInventory implements Listener {
 		return this;
 	}
 
-	private boolean destroy = false;
+	public void closeInv(Player p, BInventoryButton b) {
+		if ((closeInv && (b != null && b.isCloseInv())) || pages) {
+			if (p.getOpenInventory().getTopInventory().equals(inv)) {
+				Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+					@Override
+					public void run() {
+						p.closeInventory();
+					}
+				});
+				destroy();
+			}
+		}
+	}
 
 	/**
 	 * Destroy.
@@ -241,6 +253,11 @@ public class BInventory implements Listener {
 		} else {
 			AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for null");
 		}
+	}
+
+	public BInventory dontClose() {
+		closeInv = false;
+		return this;
 	}
 
 	/**
@@ -294,11 +311,6 @@ public class BInventory implements Listener {
 		return inventoryName;
 	}
 
-	public BInventory setCloseInv(boolean value) {
-		closeInv = value;
-		return this;
-	}
-
 	/**
 	 * Gets the inventory size.
 	 *
@@ -337,8 +349,6 @@ public class BInventory implements Listener {
 		}
 		return getHighestSlot() + 1;
 	}
-
-	private long lastPressTime = 0;
 
 	/**
 	 * @return the pageButtons
@@ -385,21 +395,6 @@ public class BInventory implements Listener {
 	private void onClick(InventoryClickEvent event, BInventoryButton b) {
 		playSound((Player) event.getWhoClicked());
 		b.onClick(new ClickEvent(event, b), this);
-	}
-
-	public void closeInv(Player p, BInventoryButton b) {
-		if ((closeInv && (b != null && b.isCloseInv())) || pages) {
-			if (p.getOpenInventory().getTopInventory().equals(inv)) {
-				Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-					@Override
-					public void run() {
-						p.closeInventory();
-					}
-				});
-				destroy();
-			}
-		}
 	}
 
 	/**
@@ -521,26 +516,6 @@ public class BInventory implements Listener {
 		}
 	}
 
-	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-	public void onPlayerQuit(PlayerQuitEvent event) {
-		if (!(event.getPlayer() instanceof Player)) {
-			return;
-		}
-		if (player != null && event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
-			Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-				@Override
-				public void run() {
-					if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
-						destroy();
-					}
-				}
-			}, 10l);
-		}
-
-		return;
-	}
-
 	// event handling
 	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
 	public void onInventoryClose(InventoryCloseEvent event) {
@@ -591,6 +566,26 @@ public class BInventory implements Listener {
 				}
 			}, 1000l);
 
+		}
+
+		return;
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+	public void onPlayerQuit(PlayerQuitEvent event) {
+		if (!(event.getPlayer() instanceof Player)) {
+			return;
+		}
+		if (player != null && event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
+			Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+				@Override
+				public void run() {
+					if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
+						destroy();
+					}
+				}
+			}, 10l);
 		}
 
 		return;
@@ -714,6 +709,11 @@ public class BInventory implements Listener {
 	 */
 	public void setButtons(Map<Integer, BInventoryButton> buttons) {
 		this.buttons = buttons;
+	}
+
+	public BInventory setCloseInv(boolean value) {
+		closeInv = value;
+		return this;
 	}
 
 	/**

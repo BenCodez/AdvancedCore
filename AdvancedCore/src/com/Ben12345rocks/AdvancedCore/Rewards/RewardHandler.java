@@ -300,6 +300,14 @@ public class RewardHandler {
 		return rewards;
 	}
 
+	public void giveChoicesReward(Reward mainReward, User user, String choice) {
+		RewardBuilder reward = new RewardBuilder(mainReward.getConfig().getConfigData(),
+				mainReward.getConfig().getChoicesRewardsPath(choice));
+		reward.withPrefix(mainReward.getName());
+		reward.withPlaceHolder("choice", choice);
+		reward.send(user);
+	}
+
 	@SuppressWarnings("unchecked")
 	public void giveReward(User user, ConfigurationSection data, String path, RewardOptions rewardOptions) {
 		if (rewardOptions.isOnlineSet()) {
@@ -1534,14 +1542,6 @@ public class RewardHandler {
 		}
 
 		sortInjectedRewards();
-	}
-
-	public void giveChoicesReward(Reward mainReward, User user, String choice) {
-		RewardBuilder reward = new RewardBuilder(mainReward.getConfig().getConfigData(),
-				mainReward.getConfig().getChoicesRewardsPath(choice));
-		reward.withPrefix(mainReward.getName());
-		reward.withPlaceHolder("choice", choice);
-		reward.send(user);
 	}
 
 	/**

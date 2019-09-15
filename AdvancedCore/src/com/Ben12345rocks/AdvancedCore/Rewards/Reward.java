@@ -143,18 +143,6 @@ public class Reward {
 		checkRewardFile(true);
 	}
 
-	public boolean isRewardFileMatching() {
-		Reward reward = RewardHandler.getInstance().getReward(name);
-		ConfigurationSection section = getConfig().getConfigData();
-		if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
-			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
-					.size() != section.getKeys(true).size() + 1) {
-				return false;
-			}
-		}
-		return true;
-	}
-
 	public void checkRewardFile(boolean forceCheck) {
 		if (!getConfig().hasRewardFile()) {
 			if (!isRewardFileMatching()) {
@@ -165,17 +153,6 @@ public class Reward {
 		} else if (forceCheck && !isRewardFileMatching()) {
 			setRewardFile();
 		}
-	}
-
-	private void setRewardFile() {
-		Reward reward = RewardHandler.getInstance().getReward(name);
-		ConfigurationSection section = getConfig().getConfigData();
-		reward.getConfig().setData(section);
-		reward.getConfig().getFileData().options()
-				.header("Directly defined reward file. ANY EDITS HERE CAN GET OVERRIDDEN!");
-		reward.getConfig().setDirectlyDefinedReward(true);
-		reward.getConfig().save(reward.getConfig().getFileData());
-		RewardHandler.getInstance().updateReward(reward);
 	}
 
 	public boolean checkTimed(User user, HashMap<String, String> placeholders) {
@@ -352,7 +329,8 @@ public class Reward {
 	 *            the user
 	 * @param phs
 	 *            placeholders
-	 * @param rewardOptions rewardOptions
+	 * @param rewardOptions
+	 *            rewardOptions
 	 */
 	public void giveRewardUser(User user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 
@@ -388,6 +366,18 @@ public class Reward {
 				}
 			}
 		}
+	}
+
+	public boolean isRewardFileMatching() {
+		Reward reward = RewardHandler.getInstance().getReward(name);
+		ConfigurationSection section = getConfig().getConfigData();
+		if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
+			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
+					.size() != section.getKeys(true).size() + 1) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -434,6 +424,17 @@ public class Reward {
 		repeatHandle = new RepeatHandle(this);
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
+	}
+
+	private void setRewardFile() {
+		Reward reward = RewardHandler.getInstance().getReward(name);
+		ConfigurationSection section = getConfig().getConfigData();
+		reward.getConfig().setData(section);
+		reward.getConfig().getFileData().options()
+				.header("Directly defined reward file. ANY EDITS HERE CAN GET OVERRIDDEN!");
+		reward.getConfig().setDirectlyDefinedReward(true);
+		reward.getConfig().save(reward.getConfig().getFileData());
+		RewardHandler.getInstance().updateReward(reward);
 	}
 
 	public void validate() {

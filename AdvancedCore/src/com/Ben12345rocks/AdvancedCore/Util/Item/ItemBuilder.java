@@ -58,6 +58,10 @@ public class ItemBuilder {
 	private boolean legacy = false;
 	private String skull = "";
 
+	@Getter
+	@Setter
+	private boolean chancePass = true;
+
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
 	 *
@@ -188,10 +192,6 @@ public class ItemBuilder {
 			}
 		}
 	}
-
-	@Getter
-	@Setter
-	private boolean chancePass = true;
 
 	/**
 	 * Create a new ItemBuilder over an existing itemstack.
@@ -536,12 +536,6 @@ public class ItemBuilder {
 		return is;
 	}
 
-	@Override
-	public String toString() {
-		return is.toString();
-
-	}
-
 	/**
 	 * Remove a certain enchant from the item.
 	 *
@@ -822,5 +816,11 @@ public class ItemBuilder {
 
 	public ItemStack toItemStack(Player player) {
 		return parsePlaceholders(player);
+	}
+
+	@Override
+	public String toString() {
+		return is.toString();
+
 	}
 }
