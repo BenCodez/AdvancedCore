@@ -423,16 +423,21 @@ public class BInventory implements Listener {
 			event.setCancelled(true);
 			event.setResult(Result.DENY);
 			player.setItemOnCursor(new ItemStack(Material.AIR));
+			player.updateInventory();
 			final Player player = (Player) event.getWhoClicked();
-			if (isCloseInv()) {
-				closeInv(player, null);
-			}
+
+			// prevent spam clicking
 			long cTime = System.currentTimeMillis();
-			if (cTime - lastPressTime < 300) {
+			if (cTime - lastPressTime < 500) {
 				player.closeInventory();
+				player.updateInventory();
 				return;
 			}
 			lastPressTime = cTime;
+
+			if (isCloseInv()) {
+				closeInv(player, null);
+			}
 			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
