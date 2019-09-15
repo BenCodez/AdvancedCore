@@ -429,7 +429,8 @@ public class BInventory implements Listener {
 			// prevent spam clicking, to avoid issues
 			long cTime = System.currentTimeMillis();
 			if (cTime - lastPressTime < 70) {
-				AdvancedCorePlugin.getInstance().debug(player.getName() + " spam clicking GUI, closing inventory");
+				AdvancedCorePlugin.getInstance()
+						.debug(player.getName() + " spam clicking GUI, closing inventory to prevent exploits");
 				player.closeInventory();
 				player.updateInventory();
 				return;
