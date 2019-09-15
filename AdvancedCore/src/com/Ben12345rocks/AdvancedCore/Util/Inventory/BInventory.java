@@ -338,6 +338,8 @@ public class BInventory implements Listener {
 		return getHighestSlot() + 1;
 	}
 
+	private long lastPressTime = 0;
+
 	/**
 	 * @return the pageButtons
 	 */
@@ -425,6 +427,12 @@ public class BInventory implements Listener {
 			if (isCloseInv()) {
 				closeInv(player, null);
 			}
+			long cTime = System.currentTimeMillis();
+			if (cTime - lastPressTime < 300) {
+				player.closeInventory();
+				return;
+			}
+			lastPressTime = cTime;
 			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
