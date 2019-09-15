@@ -61,14 +61,17 @@ public class JavascriptEngine {
 	}
 
 	public JavascriptEngine addPlayer(Player player) {
-		addToEngine("Player", player);
-		addToEngine("PlayerName", player.getName());
-		addToEngine("PlayerUUID", player.getUniqueId().toString());
-		addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
-		addToEngine("CommandSender", player);
+		if (player != null) {
+			addToEngine("Player", player);
+			addToEngine("PlayerName", player.getName());
+			addToEngine("PlayerUUID", player.getUniqueId().toString());
+			addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
+			addToEngine("CommandSender", player);
 
-		for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
-			addToEngine(request.getStr(), request.getObject(player));
+			for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance()
+					.getJavascriptEngineRequests()) {
+				addToEngine(request.getStr(), request.getObject(player));
+			}
 		}
 		return this;
 	}
