@@ -229,6 +229,7 @@ public class User {
 					}
 					RewardHandler.getInstance().giveReward(user, args[0],
 							new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
+									.setCheckRepeat(false)
 									.setPlaceholders(ArrayUtils.getInstance().fromString(placeholders)));
 				}
 			}
