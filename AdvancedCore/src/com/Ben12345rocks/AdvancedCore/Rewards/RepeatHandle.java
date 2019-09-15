@@ -131,10 +131,10 @@ public class RepeatHandle {
 		AdvancedCorePlugin.getInstance()
 				.debug("Giving repeat reward " + reward.getName() + " for " + user.getPlayerName());
 		if (bypassRequirement) {
-			reward.giveReward(user,
-					new RewardOptions().setIgnoreRequirements(false).setIgnoreChance(false).setCheckRepeat(false));
+			reward.giveReward(user, new RewardOptions().setIgnoreRequirements(false).setIgnoreChance(false)
+					.setCheckRepeat(false).forceOffline());
 		} else {
-			reward.giveReward(user, new RewardOptions().setCheckRepeat(false));
+			reward.giveReward(user, new RewardOptions().setCheckRepeat(false).forceOffline());
 		}
 		giveRepeat(user);
 	}
