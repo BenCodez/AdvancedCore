@@ -613,7 +613,7 @@ public class MySQL {
 			}
 
 			try {
-				mysql.getThreadPool().awaitTermination(60, TimeUnit.SECONDS);
+				mysql.getThreadPool().awaitTermination(3, TimeUnit.MINUTES);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
