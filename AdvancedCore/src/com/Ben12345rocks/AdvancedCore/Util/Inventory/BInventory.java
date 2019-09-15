@@ -428,7 +428,7 @@ public class BInventory implements Listener {
 
 			// prevent spam clicking
 			long cTime = System.currentTimeMillis();
-			if (cTime - lastPressTime < 500) {
+			if (cTime - lastPressTime < 100) {
 				player.closeInventory();
 				player.updateInventory();
 				return;
