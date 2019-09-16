@@ -36,7 +36,11 @@ public class PluginUtils {
 	public long getMemory() {
 		Runtime runTime = Runtime.getRuntime();
 		long allocatedMemory = (runTime.totalMemory() - runTime.freeMemory());
-		return (Runtime.getRuntime().maxMemory() - allocatedMemory) / 1048576;
+		return allocatedMemory / (1024 * 1024);
+	}
+
+	public long getFreeMemory() {
+		return Runtime.getRuntime().freeMemory() / (1024 * 1024);
 	}
 
 }
