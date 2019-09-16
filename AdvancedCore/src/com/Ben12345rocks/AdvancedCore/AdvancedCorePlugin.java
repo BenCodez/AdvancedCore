@@ -396,9 +396,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
-				+ Bukkit.getVersion() + " Total RAM: "
-				+ (Runtime.getRuntime().maxMemory() - Runtime.getRuntime().totalMemory()) / (1024 * 1024));
-		debug("" + PluginUtils.getInstance().getFreeMemory());
+				+ Bukkit.getVersion() + " Total RAM: " + PluginUtils.getInstance().getMemory() + " Free RAM: "
+				+ Runtime.getRuntime().freeMemory());
 	}
 
 	/**

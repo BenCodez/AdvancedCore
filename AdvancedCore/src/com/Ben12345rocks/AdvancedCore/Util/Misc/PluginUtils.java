@@ -33,8 +33,9 @@ public class PluginUtils {
 		Bukkit.getPluginManager().registerEvents(listener, plugin);
 	}
 
-	public long getFreeMemory() {
-		long allocatedMemory = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+	public long getMemory() {
+		Runtime runTime = Runtime.getRuntime();
+		long allocatedMemory = (runTime.totalMemory() - runTime.freeMemory());
 		return (Runtime.getRuntime().maxMemory() - allocatedMemory) / 1048576;
 	}
 

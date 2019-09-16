@@ -17,6 +17,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.NMSManager.ReflectionUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PluginUtils;
 
 import lombok.Getter;
 
@@ -172,7 +173,7 @@ public class SkullHandler {
 
 	public void loadSkull(final String playerName) {
 		if (AdvancedCorePlugin.getInstance().isEnabled() && AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()
-				&& Runtime.getRuntime().freeMemory() > 800) {
+				&& Runtime.getRuntime().freeMemory() > 500 && PluginUtils.getInstance().getMemory() > 1000) {
 			timer.schedule(new TimerTask() {
 
 				@Override
