@@ -171,8 +171,8 @@ public class SkullHandler {
 	}
 
 	public void loadSkull(final String playerName) {
-		if (AdvancedCorePlugin.getInstance().isEnabled()
-				&& AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) {
+		if (AdvancedCorePlugin.getInstance().isEnabled() && AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()
+				&& Runtime.getRuntime().freeMemory() > 800) {
 			timer.schedule(new TimerTask() {
 
 				@Override
