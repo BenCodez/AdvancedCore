@@ -63,6 +63,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.PluginUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.PluginMessage.PluginMessage;
 import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
@@ -396,10 +397,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
 				+ Bukkit.getVersion() + " Total RAM: "
-				+ (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024));
-		debug("" + Runtime.getRuntime().totalMemory() / (1024 * 1024));
-		debug("" + Runtime.getRuntime().freeMemory() / (1024 * 1024));
-		debug("" + Runtime.getRuntime().maxMemory() / (1024 * 1024));
+				+ (Runtime.getRuntime().maxMemory() - Runtime.getRuntime().totalMemory()) / (1024 * 1024));
+		debug("" + PluginUtils.getInstance().getFreeMemory());
 	}
 
 	/**
