@@ -2,7 +2,10 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -37,7 +40,7 @@ public class SkullHandler {
 	@Getter
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
 
-	private Set<String> skullsToLoad = ConcurrentHashMap.newKeySet();
+	private Set<String> skullsToLoad = new HashSet<String>();
 
 	@SuppressWarnings("deprecation")
 	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
@@ -97,6 +100,8 @@ public class SkullHandler {
 	 * }
 	 */
 
+	private Timer timer = new Timer();
+
 	public boolean hasSkull(String playerName) {
 		if (skulls.containsKey(playerName)) {
 			if (skulls.get(playerName) != null) {
@@ -147,7 +152,7 @@ public class SkullHandler {
 			});
 		}
 
-		Bukkit.getScheduler().runTaskTimerAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+		timer.schedule(new TimerTask() {
 
 			@Override
 			public void run() {
@@ -157,7 +162,7 @@ public class SkullHandler {
 					}
 				}
 			}
-		}, 10 * 20, 20 * 20);
+		}, 6 * 10000, 20 * 1000);
 
 	}
 
@@ -168,7 +173,13 @@ public class SkullHandler {
 	public void loadSkull(final String playerName) {
 		if (AdvancedCorePlugin.getInstance().isEnabled()
 				&& AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) {
-			skullsToLoad.add(playerName);
+			timer.schedule(new TimerTask() {
+
+				@Override
+				public void run() {
+					skullsToLoad.add(playerName);
+				}
+			}, 0);
 
 		}
 	}
