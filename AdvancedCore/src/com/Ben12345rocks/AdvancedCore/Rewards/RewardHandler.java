@@ -1504,35 +1504,39 @@ public class RewardHandler {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				for (String item : data.getConfigurationSection("Items").getKeys(false)) {
-					String material = data.getString("Items." + item + ".Material", "");
-					if (material.isEmpty()) {
-						warning(reward, inject, "No material is set on item: " + item);
-					} else {
-						try {
-							Material m = Material.matchMaterial(material.toUpperCase());
+				if (data.isConfigurationSection("Items")) {
+					for (String item : data.getConfigurationSection("Items").getKeys(false)) {
+						String material = data.getString("Items." + item + ".Material", "");
+						if (material.isEmpty()) {
+							warning(reward, inject, "No material is set on item: " + item);
+						} else {
+							try {
+								Material m = Material.matchMaterial(material.toUpperCase());
 
-							// check legacy
-							if (m == null) {
-								m = Material.matchMaterial(material, true);
-								if (m != null) {
-									warning(reward, inject,
-											"Found legacy material: " + material + ", please update material");
-								} else {
-									warning(reward, inject, "Invalid material set: " + material);
+								// check legacy
+								if (m == null) {
+									m = Material.matchMaterial(material, true);
+									if (m != null) {
+										warning(reward, inject,
+												"Found legacy material: " + material + ", please update material");
+									} else {
+										warning(reward, inject, "Invalid material set: " + material);
+									}
 								}
+							} catch (NoSuchMethodError e) {
 							}
-						} catch (NoSuchMethodError e) {
 						}
-					}
 
-					if (data.getInt("Items." + item + ".Amount", 0) == 0) {
-						if (data.getInt("Items." + item + ".MinAmount", 0) == 0
-								&& data.getInt("Items." + item + ".MaxAmount") == 0) {
-							warning(reward, inject, "No amount on item: " + item);
+						if (data.getInt("Items." + item + ".Amount", 0) == 0) {
+							if (data.getInt("Items." + item + ".MinAmount", 0) == 0
+									&& data.getInt("Items." + item + ".MaxAmount") == 0) {
+								warning(reward, inject, "No amount on item: " + item);
+							}
 						}
-					}
 
+					}
+				} else {
+					warning(reward, inject, "Invalid item section");
 				}
 			}
 		}));

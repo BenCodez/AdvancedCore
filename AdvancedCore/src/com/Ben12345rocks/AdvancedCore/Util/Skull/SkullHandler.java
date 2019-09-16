@@ -2,7 +2,6 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,7 +37,7 @@ public class SkullHandler {
 	@Getter
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
 
-	private Set<String> skullsToLoad = new HashSet<String>();
+	private Set<String> skullsToLoad = ConcurrentHashMap.newKeySet();
 
 	@SuppressWarnings("deprecation")
 	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
