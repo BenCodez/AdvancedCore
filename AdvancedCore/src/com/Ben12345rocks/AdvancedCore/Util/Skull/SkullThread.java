@@ -42,35 +42,62 @@ public class SkullThread {
 				if (SkullHandler.getInstance().hasSkull(playerName)) {
 					return;
 				}
-				Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+				if (Bukkit.isPrimaryThread()) {
+					Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
-					@Override
-					public void run() {
-						SkullThread.getInstance().run(new Runnable() {
+						@Override
+						public void run() {
+							SkullThread.getInstance().run(new Runnable() {
 
-							@Override
-							public void run() {
-								ItemStack s = SkullHandler.getInstance().getSkull(playerName);
+								@Override
+								public void run() {
+									ItemStack s = SkullHandler.getInstance().getSkull(playerName);
 
-								try {
-									SkullHandler.getInstance().getSkulls().put(playerName,
-											SkullHandler.getInstance().getAsNMSCopy().invoke(null, s));
-								} catch (Exception e) {
-									plugin.getLogger()
-											.info("Failed to preload skull: " + playerName + ", waiting 10 minutes");
-									plugin.debug(e);
 									try {
-										sleep(600000);
-									} catch (InterruptedException e1) {
-										e1.printStackTrace();
+										SkullHandler.getInstance().getSkulls().put(playerName,
+												SkullHandler.getInstance().getAsNMSCopy().invoke(null, s));
+									} catch (Exception e) {
+										plugin.getLogger().info(
+												"Failed to preload skull: " + playerName + ", waiting 10 minutes");
+										plugin.debug(e);
+										try {
+											sleep(600000);
+										} catch (InterruptedException e1) {
+											e1.printStackTrace();
+										}
 									}
-								}
-								plugin.extraDebug("Loaded skull: " + playerName);
+									plugin.extraDebug("Loaded skull: " + playerName);
 
+								}
+							});
+						}
+					});
+
+				} else {
+					SkullThread.getInstance().run(new Runnable() {
+
+						@Override
+						public void run() {
+							ItemStack s = SkullHandler.getInstance().getSkull(playerName);
+
+							try {
+								SkullHandler.getInstance().getSkulls().put(playerName,
+										SkullHandler.getInstance().getAsNMSCopy().invoke(null, s));
+							} catch (Exception e) {
+								plugin.getLogger()
+										.info("Failed to preload skull: " + playerName + ", waiting 10 minutes");
+								plugin.debug(e);
+								try {
+									sleep(600000);
+								} catch (InterruptedException e1) {
+									e1.printStackTrace();
+								}
 							}
-						});
-					}
-				});
+							plugin.extraDebug("Loaded skull: " + playerName);
+
+						}
+					});
+				}
 			}
 		}
 
