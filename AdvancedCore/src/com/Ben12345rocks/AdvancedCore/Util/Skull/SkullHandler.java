@@ -2,11 +2,11 @@ package com.Ben12345rocks.AdvancedCore.Util.Skull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -41,7 +41,7 @@ public class SkullHandler {
 	@Getter
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();
 
-	private Set<String> skullsToLoad = new HashSet<String>();
+	Queue<String> skullsToLoad = new ConcurrentLinkedQueue<String>();
 
 	@SuppressWarnings("deprecation")
 	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
@@ -158,7 +158,7 @@ public class SkullHandler {
 			@Override
 			public void run() {
 				for (String str : skullsToLoad) {
-					if (!getSkulls().contains(str)) {
+					if (!getSkulls().containsKey(str)) {
 						SkullThread.getInstance().getThread().load(str);
 					}
 				}
@@ -179,12 +179,18 @@ public class SkullHandler {
 
 					@Override
 					public void run() {
-						skullsToLoad.add(playerName);
+						add(playerName);
 					}
 				}, 0);
 			} else {
-				skullsToLoad.add(playerName);
+				add(playerName);
 			}
+		}
+	}
+
+	private void add(String playerName) {
+		if (skullsToLoad.contains(playerName) && getSkulls().containsKey(playerName)) {
+			skullsToLoad.add(playerName);
 		}
 	}
 
