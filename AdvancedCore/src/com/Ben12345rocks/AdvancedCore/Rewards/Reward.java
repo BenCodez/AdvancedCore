@@ -343,6 +343,7 @@ public class Reward {
 			}
 			final String playerName = user.getPlayerName();
 			phs.put("player", playerName);
+			phs.put("@p", playerName);
 			LocalDateTime ldt = LocalDateTime.now();
 			Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 			phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
