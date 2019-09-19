@@ -13,5 +13,6 @@ public @interface ConfigDataBoolean {
 	boolean defaultValue() default false;
 
 	String path();
+	String secondPath();
 
 }

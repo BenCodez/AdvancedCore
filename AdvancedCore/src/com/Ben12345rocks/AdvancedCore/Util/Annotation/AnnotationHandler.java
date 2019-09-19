@@ -31,7 +31,8 @@ public class AnnotationHandler {
 
 						}
 					}
-					String value = config.getString(stringAnnotation.path(), defaultValue);
+					String value = config.getString(stringAnnotation.path(),
+							config.getString(stringAnnotation.secondPath(), defaultValue));
 
 					field.set(classToLoad, value);
 
@@ -49,7 +50,8 @@ public class AnnotationHandler {
 						}
 
 					}
-					boolean value = config.getBoolean(booleanAnnotation.path(), defaultValue);
+					boolean value = config.getBoolean(booleanAnnotation.path(),
+							config.getBoolean(booleanAnnotation.secondPath(), defaultValue));
 
 					field.set(classToLoad, value);
 
@@ -66,7 +68,8 @@ public class AnnotationHandler {
 
 						}
 					}
-					int value = config.getInt(intAnnotation.path(), defaultValue);
+					int value = config.getInt(intAnnotation.path(),
+							config.getInt(intAnnotation.secondPath(), defaultValue));
 
 					field.set(classToLoad, value);
 
@@ -83,7 +86,8 @@ public class AnnotationHandler {
 
 						}
 					}
-					double value = config.getDouble(doubleAnnotation.path(), defaultValue);
+					double value = config.getDouble(doubleAnnotation.path(),
+							config.getDouble(doubleAnnotation.secondPath(), defaultValue));
 
 					field.set(classToLoad, value);
 
@@ -98,22 +102,32 @@ public class AnnotationHandler {
 					} catch (Exception e) {
 
 					}
-					ArrayList<String> value = (ArrayList<String>) config.getList(listAnnotation.path(), defaultValue);
+					ArrayList<String> value = (ArrayList<String>) config.getList(listAnnotation.path(),
+							config.getList(listAnnotation.secondPath(), defaultValue));
 
 					field.set(classToLoad, value);
 				}
 
 				ConfigDataKeys setAnnotation = field.getAnnotation(ConfigDataKeys.class);
 				if (listAnnotation != null) {
-					Set<String> value = config.getConfigurationSection(setAnnotation.path()).getKeys(false);
-
+					Set<String> value = null;
+					if (config.isConfigurationSection(setAnnotation.path())) {
+						value = config.getConfigurationSection(setAnnotation.path()).getKeys(false);
+					} else if (config.isConfigurationSection(setAnnotation.secondPath())) {
+						value = config.getConfigurationSection(setAnnotation.secondPath()).getKeys(false);
+					}
 					field.set(classToLoad, value);
 				}
 
 				ConfigDataConfigurationSection confAnnotation = field
 						.getAnnotation(ConfigDataConfigurationSection.class);
 				if (confAnnotation != null) {
-					ConfigurationSection value = config.getConfigurationSection(confAnnotation.path());
+					ConfigurationSection value = null;
+					if (config.isConfigurationSection(confAnnotation.path())) {
+						value = config.getConfigurationSection(confAnnotation.path());
+					} else if (config.isConfigurationSection(confAnnotation.secondPath())) {
+						value = config.getConfigurationSection(confAnnotation.secondPath());
+					}
 
 					field.set(classToLoad, value);
 				}

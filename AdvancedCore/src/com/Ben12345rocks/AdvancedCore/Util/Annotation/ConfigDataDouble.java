@@ -13,4 +13,5 @@ public @interface ConfigDataDouble {
 	double defaultValue() default 0;
 
 	String path();
+	String secondPath();
 }

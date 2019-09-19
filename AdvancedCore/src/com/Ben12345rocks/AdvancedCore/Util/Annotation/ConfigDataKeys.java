@@ -12,4 +12,6 @@ import java.lang.annotation.Target;
 public @interface ConfigDataKeys {
 
 	String path();
+
+	String secondPath();
 }

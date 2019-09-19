@@ -13,4 +13,6 @@ public @interface ConfigDataString {
 	String defaultValue() default "";
 
 	String path();
+
+	String secondPath();
 }
