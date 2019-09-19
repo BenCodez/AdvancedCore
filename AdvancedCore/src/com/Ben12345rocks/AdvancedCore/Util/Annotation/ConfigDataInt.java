@@ -13,5 +13,5 @@ public @interface ConfigDataInt {
 	int defaultValue() default 0;
 
 	String path();
-	String secondPath();
+	String secondPath()default "";
 }

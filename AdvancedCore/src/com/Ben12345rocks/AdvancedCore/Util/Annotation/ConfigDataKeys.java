@@ -13,5 +13,5 @@ public @interface ConfigDataKeys {
 
 	String path();
 
-	String secondPath();
+	String secondPath()default "";
 }
