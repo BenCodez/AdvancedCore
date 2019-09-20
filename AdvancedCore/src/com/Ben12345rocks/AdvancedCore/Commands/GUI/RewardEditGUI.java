@@ -111,29 +111,29 @@ public class RewardEditGUI {
 			return;
 		}
 		BInventory inv = new BInventory("Rewards");
-		int count = 0;
 		for (Reward reward : RewardHandler.getInstance().getRewards()) {
-			ArrayList<String> lore = new ArrayList<String>();
-			if (reward.getConfig().isDirectlyDefinedReward()) {
-				lore.add("&cReward is directly defined, can not edit");
-			}
-
-			inv.addButton(count, new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),
-					new ItemStack(Material.STONE)) {
-
-				@Override
-				public void onClick(ClickEvent event) {
-					Player player = event.getWhoClicked();
-
-					Reward reward = (Reward) getData("Reward");
-					if (!reward.getConfig().isDirectlyDefinedReward()) {
-						openRewardGUI(player, reward);
-					} else {
-						player.sendMessage("Can't edit this reward, directly defined reward");
-					}
+			if (!reward.getConfig().isDirectlyDefinedReward()) {
+				ArrayList<String> lore = new ArrayList<String>();
+				if (reward.getConfig().isDirectlyDefinedReward()) {
+					lore.add("&cReward is directly defined, can not edit");
 				}
-			}.addData("Reward", reward));
-			count++;
+
+				inv.addButton(new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),
+						new ItemStack(Material.STONE)) {
+
+					@Override
+					public void onClick(ClickEvent event) {
+						Player player = event.getWhoClicked();
+
+						Reward reward = (Reward) getData("Reward");
+						if (!reward.getConfig().isDirectlyDefinedReward()) {
+							openRewardGUI(player, reward);
+						} else {
+							player.sendMessage("Can't edit this reward, directly defined reward");
+						}
+					}
+				}.addData("Reward", reward));
+			}
 		}
 
 		inv.openInventory(player);
