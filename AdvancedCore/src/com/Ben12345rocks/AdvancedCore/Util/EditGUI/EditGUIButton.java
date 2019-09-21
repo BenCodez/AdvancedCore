@@ -117,7 +117,10 @@ public class EditGUIButton extends BInventoryButton {
 			if (!builder.hasCustomDisplayName()) {
 				builder.setName("&cEdit list for " + getEditer().getKey());
 			}
-			builder.setLore(ArrayUtils.getInstance().makeStringList((ArrayList<String>) getEditer().getCurrentValue()));
+			if (getEditer().getCurrentValue() instanceof ArrayList<?>) {
+				builder.setLore(
+						ArrayUtils.getInstance().makeStringList((ArrayList<String>) getEditer().getCurrentValue()));
+			}
 		}
 		return builder.toItemStack(player);
 	}
