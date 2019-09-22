@@ -23,7 +23,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -199,69 +198,51 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 *            Exception
 	 */
 	public void debug(Exception e) {
-		if (getOptions().isDebug()) {
+		if (getOptions().getDebug().equals(DebugLevel.INFO)) {
 			e.printStackTrace();
+		}
+		if (getOptions().isLogDebugToFile()) {
 			if (pluginLogger != null) {
-				if (getOptions().isLogDebugToFile()) {
-					String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-					pluginLogger.logToFile(str + " [" + this.getName() + "] ExceptionDebug: " + e.getMessage());
-				}
+				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
+				pluginLogger.logToFile(str + " [" + this.getName() + "] ExceptionDebug: " + e.getMessage());
 			} else {
 				loadLogger();
 			}
 		}
 	}
 
-	/**
-	 * Show debug in console, file, and/or ingame
-	 *
-	 * @param plug
-	 *            Plugin
-	 * @param msg
-	 *            Debug message
-	 */
-	public void debug(Plugin plug, String msg) {
-		if (getOptions().isDebug()) {
-			plug.getLogger().info("Debug: " + msg);
-			if (getOptions().isDebugIngame()) {
-				for (Player player : Bukkit.getOnlinePlayers()) {
-					if (player.hasPermission(this.getName() + ".Debug")) {
-						player.sendMessage(
-								StringUtils.getInstance().colorize("&c" + plug.getName() + " Debug: " + msg));
-					}
+	public void debug(DebugLevel debugLevel, String debug) {
+		if (debugLevel.equals(DebugLevel.EXTRA)) {
+			debug = "ExtraDebug: " + debug;
+		} else if (debugLevel.equals(DebugLevel.INFO)) {
+			debug = "Debug: " + debug;
+		}
+		if (getOptions().getDebug().isDebug()) {
+			getLogger().info(debug);
+		}
+		if (getOptions().isDebugIngame()) {
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				if (player.hasPermission(this.getName() + ".Debug")) {
+					player.sendMessage(StringUtils.getInstance().colorize("&c" + getName() + " Debug: " + debug));
 				}
 			}
 		}
-		if (pluginLogger != null) {
-			if (getOptions().isLogDebugToFile()) {
+		if (getOptions().isLogDebugToFile()) {
+			if (pluginLogger != null) {
 				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-				pluginLogger.logToFile(str + " [" + plug.getName() + "] Debug: " + msg);
+				pluginLogger.logToFile(str + ":" + debug);
+			} else {
+				loadLogger();
 			}
-		} else {
-			loadLogger();
 		}
 	}
 
-	/**
-	 * Show debug in console, file, and/or ingame
-	 *
-	 * @param msg
-	 *            Debug message
-	 */
-	public void debug(String msg) {
-		debug(this, msg);
+	public void debug(String debug) {
+		debug(DebugLevel.INFO, debug);
 	}
 
-	public void extraDebug(Plugin plug, String msg) {
-		if (getOptions().isExtraDebug()) {
-			debug(plug, "[Extra] " + msg);
-		}
-	}
-
-	public void extraDebug(String msg) {
-		if (getOptions().isExtraDebug()) {
-			debug(this, "[Extra] " + msg);
-		}
+	public void extraDebug(String debug) {
+		debug(DebugLevel.EXTRA, debug);
 	}
 
 	public Table getSQLiteUserTable() {

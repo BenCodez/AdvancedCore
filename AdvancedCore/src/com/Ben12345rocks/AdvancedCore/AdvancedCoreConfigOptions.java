@@ -14,7 +14,7 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	private boolean debug = false;
+	private DebugLevel debug = DebugLevel.NONE;
 
 	@Getter
 	@Setter
@@ -64,10 +64,6 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	private boolean checkNameMojang = false;
-
-	@Getter
-	@Setter
-	private boolean alternateUUIDLookUp;
 
 	@Getter
 	@Setter
@@ -162,7 +158,14 @@ public class AdvancedCoreConfigOptions {
 	@SuppressWarnings("unchecked")
 	public void load(AdvancedCorePlugin plugin) {
 		if (getConfigData() != null) {
-			debug = configData.getBoolean("Debug", false);
+			debug = DebugLevel.getDebug(configData.getString("Debug", "NONE"));
+			if (configData.getBoolean("Debug", false)) {
+				if (configData.getBoolean("ExtraDebug", false)) {
+					debug = DebugLevel.EXTRA;
+				} else {
+					debug = DebugLevel.INFO;
+				}
+			}
 			debugIngame = configData.getBoolean("DebugInGame", false);
 			defaultRequestMethod = configData.getString("RequestAPI.DefaultMethod", "Anvil");
 			disabledRequestMethods = (ArrayList<String>) configData.getList("RequestAPI.DisabledMethods",
@@ -177,7 +180,6 @@ public class AdvancedCoreConfigOptions {
 			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
 			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
 			sendScoreboards = configData.getBoolean("SendScoreboards", true);
-			alternateUUIDLookUp = configData.getBoolean("AlternateUUIDLookup", false);
 			autoKillInvs = configData.getBoolean("AutoKillInvs", true);
 			prevItem = configData.getConfigurationSection("Format.PrevItem");
 			nextItem = configData.getConfigurationSection("Format.NextItem");
