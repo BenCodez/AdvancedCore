@@ -218,7 +218,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			debug = "Debug: " + debug;
 		}
 		if (getOptions().getDebug().isDebug()) {
-			getLogger().info(debug);
+			if (getOptions().getDebug().equals(DebugLevel.EXTRA)
+					|| (getOptions().getDebug().equals(DebugLevel.INFO) && debugLevel.equals(DebugLevel.INFO))) {
+				getLogger().info(debug);
+			}
 		}
 		if (getOptions().isDebugIngame()) {
 			for (Player player : Bukkit.getOnlinePlayers()) {
@@ -379,6 +382,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
 				+ Bukkit.getVersion() + " Total RAM: " + PluginUtils.getInstance().getMemory() + " Free RAM: "
 				+ PluginUtils.getInstance().getFreeMemory());
+
+		debug(DebugLevel.INFO, "Debug Level: " + getOptions().getDebug().toString());
 	}
 
 	/**
