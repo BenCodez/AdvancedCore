@@ -158,7 +158,7 @@ public class AdvancedCoreConfigOptions {
 	@SuppressWarnings("unchecked")
 	public void load(AdvancedCorePlugin plugin) {
 		if (getConfigData() != null) {
-			debug = DebugLevel.getDebug(configData.getString("Debug", "NONE"));
+			debug = DebugLevel.getDebug(configData.getString("DebugLevel", "NONE"));
 			if (configData.getBoolean("Debug", false)) {
 				if (configData.getBoolean("ExtraDebug", false)) {
 					debug = DebugLevel.EXTRA;
