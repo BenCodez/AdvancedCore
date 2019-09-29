@@ -24,9 +24,9 @@ import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Updater.UpdateDownloader;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequest;
@@ -202,12 +202,12 @@ public class CommandLoader {
 				if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
 					if (AdvancedCorePlugin.getInstance().getMysql() != null) {
 						AdvancedCorePlugin.getInstance().getMysql().clearCache();
-						sender.sendMessage(StringUtils.getInstance().colorize("&cCache cleared"));
+						sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared"));
 					} else {
-						sender.sendMessage(StringUtils.getInstance().colorize("&cMySQL not loaded"));
+						sender.sendMessage(StringParser.getInstance().colorize("&cMySQL not loaded"));
 					}
 				} else {
-					sender.sendMessage(StringUtils.getInstance().colorize("&cCurrent storage type not mysql"));
+					sender.sendMessage(StringParser.getInstance().colorize("&cCurrent storage type not mysql"));
 				}
 			}
 		});
@@ -226,11 +226,11 @@ public class CommandLoader {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					sender.sendMessage(StringUtils.getInstance().colorize(
+					sender.sendMessage(StringParser.getInstance().colorize(
 							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
 					if (UpdateDownloader.getInstance().download(AdvancedCorePlugin.getInstance(),
 							AdvancedCorePlugin.getInstance().getOptions().getResourceId())) {
-						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
+						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar."));
 					} else {
 						sendMessage(sender, "&cFailed to download jar.");
 					}
@@ -245,12 +245,12 @@ public class CommandLoader {
 				@Override
 				public void execute(CommandSender sender, String[] args) {
 					if (AdvancedCorePlugin.getInstance().getOptions().isEnableJenkins()) {
-						sender.sendMessage(StringUtils.getInstance().colorize(
+						sender.sendMessage(StringParser.getInstance().colorize(
 								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
 						UpdateDownloader.getInstance().downloadFromJenkins(
 								AdvancedCorePlugin.getInstance().getJenkinsSite(),
 								AdvancedCorePlugin.getInstance().getName());
-						sender.sendMessage(StringUtils.getInstance().colorize("&cDownloaded jar."));
+						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar."));
 					} else {
 						sendMessage(sender,
 								"&cNot enabled, please enable to use this. Note: USE THESE DEV BUILDS AT YOUR OWN RISK");
@@ -339,7 +339,7 @@ public class CommandLoader {
 				User user = UserManager.getInstance().getUser(args[1]);
 				user.getData().setString(args[3], args[4]);
 				sender.sendMessage(
-						StringUtils.getInstance().colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
+						StringParser.getInstance().colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
 			}
 		});
 

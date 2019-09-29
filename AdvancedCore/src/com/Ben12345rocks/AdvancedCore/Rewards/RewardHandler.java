@@ -45,10 +45,10 @@ import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.MiscUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
 
@@ -581,7 +581,7 @@ public class RewardHandler {
 					return true;
 				}
 				if (new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(
-						StringUtils.getInstance().replacePlaceHolder(expression, rewardOptions.getPlaceholders()))) {
+						StringParser.getInstance().replacePlaceHolder(expression, rewardOptions.getPlaceholders()))) {
 					return true;
 				}
 				return false;
@@ -866,8 +866,8 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequest(Reward reward, User user, String value,
 					HashMap<String, String> placeholders) {
-				MiscUtils.getInstance().broadcast(StringUtils.getInstance().replacePlaceHolders(user.getPlayer(),
-						StringUtils.getInstance().replacePlaceHolder(value, placeholders)));
+				MiscUtils.getInstance().broadcast(StringParser.getInstance().replacePlaceHolders(user.getPlayer(),
+						StringParser.getInstance().replacePlaceHolder(value, placeholders)));
 				return null;
 			}
 		}.addEditButton(
@@ -921,7 +921,7 @@ public class RewardHandler {
 			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				user.sendActionBar(
-						StringUtils.getInstance().replacePlaceHolder(section.getString("Message", ""), placeholders),
+						StringParser.getInstance().replacePlaceHolder(section.getString("Message", ""), placeholders),
 						section.getInt("Delay", 30));
 				return null;
 			}
@@ -1046,7 +1046,7 @@ public class RewardHandler {
 				if (!list.isEmpty()) {
 					JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
 					for (String str : list) {
-						engine.execute(StringUtils.getInstance().replacePlaceHolder(str, placeholders));
+						engine.execute(StringParser.getInstance().replacePlaceHolder(str, placeholders));
 					}
 				}
 				return null;
@@ -1068,7 +1068,7 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
-					if (new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(StringUtils
+					if (new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(StringParser
 							.getInstance().replacePlaceHolder(section.getString("Expression"), placeholders))) {
 						new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName()).send(user);
 					} else {
@@ -1088,7 +1088,7 @@ public class RewardHandler {
 				HashMap<Integer, String> luckyRewards = new HashMap<Integer, String>();
 
 				for (String str : section.getKeys(false)) {
-					if (StringUtils.getInstance().isInt(str)) {
+					if (StringParser.getInstance().isInt(str)) {
 						int num = Integer.parseInt(str);
 						if (num > 0) {
 							String path = "Lucky." + num;
@@ -1272,9 +1272,9 @@ public class RewardHandler {
 
 				if (section.getBoolean("Enabled")) {
 					user.sendTitle(
-							StringUtils.getInstance().replacePlaceHolder(section.getString("Title"), placeholders),
+							StringParser.getInstance().replacePlaceHolder(section.getString("Title"), placeholders),
 
-							StringUtils.getInstance().replacePlaceHolder(section.getString("SubTitle"), placeholders),
+							StringParser.getInstance().replacePlaceHolder(section.getString("SubTitle"), placeholders),
 
 							section.getInt("FadeIn", 10), section.getInt("ShowTime", 50),
 							section.getInt("FadeOut", 10));
@@ -1292,7 +1292,7 @@ public class RewardHandler {
 
 				if (section.getBoolean("Enabled")) {
 					user.sendBossBar(
-							StringUtils.getInstance().replacePlaceHolder(section.getString("Message", ""),
+							StringParser.getInstance().replacePlaceHolder(section.getString("Message", ""),
 									placeholders),
 							section.getString("Color", "BLUE"), section.getString("Style", "SOLID"),
 							section.getDouble("Progress", .5), section.getInt("Delay", 30));

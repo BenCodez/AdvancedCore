@@ -33,8 +33,8 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.google.common.collect.Multimap;
 
 import lombok.Getter;
@@ -522,13 +522,13 @@ public class ItemBuilder {
 
 	public ItemStack parsePlaceholders(OfflinePlayer player) {
 		if (player != null) {
-			setName(StringUtils.getInstance().replaceJavascript(player,
-					StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
+			setName(StringParser.getInstance().replaceJavascript(player,
+					StringParser.getInstance().replacePlaceHolder(getName(), placeholders)));
 			setLore(ArrayUtils.getInstance().replaceJavascript(player,
 					ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
 			if (skull.contains("%")) {
-				setSkullOwner(StringUtils.getInstance().replaceJavascript(player,
-						StringUtils.getInstance().replacePlaceHolder(skull, placeholders)));
+				setSkullOwner(StringParser.getInstance().replaceJavascript(player,
+						StringParser.getInstance().replacePlaceHolder(skull, placeholders)));
 			}
 		} else {
 			return toItemStack();
@@ -728,7 +728,7 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder setName(String name) {
 		ItemMeta im = is.getItemMeta();
-		im.setDisplayName(StringUtils.getInstance().colorize(name));
+		im.setDisplayName(StringParser.getInstance().colorize(name));
 		is.setItemMeta(im);
 		return this;
 	}
@@ -803,8 +803,8 @@ public class ItemBuilder {
 	 */
 	@Deprecated
 	public ItemStack toItemStack() {
-		setName(StringUtils.getInstance()
-				.replaceJavascript(StringUtils.getInstance().replacePlaceHolder(getName(), placeholders)));
+		setName(StringParser.getInstance()
+				.replaceJavascript(StringParser.getInstance().replacePlaceHolder(getName(), placeholders)));
 		setLore(ArrayUtils.getInstance()
 				.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
 		return is;

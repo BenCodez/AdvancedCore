@@ -24,6 +24,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 
 import net.md_5.bungee.api.ChatColor;
 
@@ -55,14 +56,14 @@ public class MiscUtils {
 		if (broadcastMsg != null && !broadcastMsg.equals("")) {
 			String consoleMsg = "";
 			for (Player player : players) {
-				String msg = StringUtils.getInstance()
-						.colorize(StringUtils.getInstance().replacePlaceHolders(player, broadcastMsg));
+				String msg = StringParser.getInstance()
+						.colorize(StringParser.getInstance().replacePlaceHolders(player, broadcastMsg));
 				if (consoleMsg.isEmpty()) {
 					consoleMsg = msg;
 				}
 				for (String str : msg.split("%NewLine%")) {
 					AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
-							StringUtils.getInstance().parseJson(str));
+							StringParser.getInstance().parseJson(str));
 				}
 			}
 			Bukkit.getServer().getConsoleSender().sendMessage(consoleMsg);
@@ -108,8 +109,8 @@ public class MiscUtils {
 
 	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
-			final String cmd = StringUtils.getInstance().replaceJavascript(player,
-					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+			final String cmd = StringParser.getInstance().replaceJavascript(player,
+					StringParser.getInstance().replacePlaceHolder(command, placeholders));
 
 			plugin.debug("Executing console command: " + command);
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
@@ -149,12 +150,12 @@ public class MiscUtils {
 		if (command != null && !command.isEmpty()) {
 			Player p = Bukkit.getPlayer(playerName);
 			if (p != null) {
-				command = StringUtils.getInstance().replaceJavascript(p, command);
+				command = StringParser.getInstance().replaceJavascript(p, command);
 			}
 			if (command.startsWith("/")) {
 				command.replaceFirst("/", "");
 			}
-			final String cmd = StringUtils.getInstance().replacePlaceHolder(command, placeholders);
+			final String cmd = StringParser.getInstance().replacePlaceHolder(command, placeholders);
 
 			plugin.debug("Executing console command: " + command);
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {

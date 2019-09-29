@@ -2,7 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Placeholder;
 
 import org.bukkit.OfflinePlayer;
 
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 
 import lombok.Getter;
 
@@ -29,7 +29,7 @@ public abstract class PlaceHolder<T> {
 
 	public boolean matches(String identifier) {
 		if (isUseStartsWith()) {
-			if (StringUtils.getInstance().startsWithIgnoreCase(identifier, getIdentifier())) {
+			if (StringParser.getInstance().startsWithIgnoreCase(identifier, getIdentifier())) {
 				return true;
 			}
 		} else {

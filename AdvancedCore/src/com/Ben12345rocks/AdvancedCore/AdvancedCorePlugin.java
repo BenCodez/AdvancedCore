@@ -62,8 +62,8 @@ import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PluginUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.PluginMessage.PluginMessage;
 import com.Ben12345rocks.AdvancedCore.Util.Sign.SignMenu;
 import com.Ben12345rocks.AdvancedCore.Util.Skull.SkullHandler;
@@ -226,7 +226,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (getOptions().isDebugIngame()) {
 			for (Player player : Bukkit.getOnlinePlayers()) {
 				if (player.hasPermission(this.getName() + ".Debug")) {
-					player.sendMessage(StringUtils.getInstance().colorize("&c" + getName() + " Debug: " + debug));
+					player.sendMessage(StringParser.getInstance().colorize("&c" + getName() + " Debug: " + debug));
 				}
 			}
 		}

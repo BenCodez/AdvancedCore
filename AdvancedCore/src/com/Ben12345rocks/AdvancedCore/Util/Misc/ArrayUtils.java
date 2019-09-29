@@ -20,6 +20,7 @@ import org.bukkit.inventory.ItemStack;
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
@@ -50,7 +51,7 @@ public class ArrayUtils {
 		}
 
 		for (int i = 0; i < list.size(); i++) {
-			list.set(i, StringUtils.getInstance().colorize(list.get(i)));
+			list.set(i, StringParser.getInstance().colorize(list.get(i)));
 		}
 		return list;
 	}
@@ -68,7 +69,7 @@ public class ArrayUtils {
 		}
 
 		for (int i = 0; i < list.size(); i++) {
-			list.set(i, StringUtils.getInstance().colorize(list.get(i)));
+			list.set(i, StringParser.getInstance().colorize(list.get(i)));
 		}
 		return list;
 	}
@@ -86,7 +87,7 @@ public class ArrayUtils {
 		}
 
 		for (int i = 0; i < list.length; i++) {
-			list[i] = StringUtils.getInstance().colorize(list[i]);
+			list[i] = StringParser.getInstance().colorize(list[i]);
 		}
 		return list;
 	}
@@ -101,7 +102,7 @@ public class ArrayUtils {
 	public ArrayList<String> comptoString(ArrayList<TextComponent> comps) {
 		ArrayList<String> txt = new ArrayList<String>();
 		for (TextComponent comp : comps) {
-			txt.add(StringUtils.getInstance().compToString(comp));
+			txt.add(StringParser.getInstance().compToString(comp));
 		}
 		return txt;
 	}
@@ -395,7 +396,7 @@ public class ArrayUtils {
 	public ArrayList<String> replaceIgnoreCase(ArrayList<String> list, String toReplace, String replaceWith) {
 		ArrayList<String> newList = new ArrayList<String>();
 		for (String msg : list) {
-			newList.add(StringUtils.getInstance().replaceIgnoreCase(msg, toReplace, replaceWith));
+			newList.add(StringParser.getInstance().replaceIgnoreCase(msg, toReplace, replaceWith));
 		}
 		return newList;
 	}
@@ -407,7 +408,7 @@ public class ArrayUtils {
 	public ArrayList<String> replaceJavascript(ArrayList<String> list, JavascriptEngine engine) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(str, engine));
+			msg.add(StringParser.getInstance().replaceJavascript(str, engine));
 		}
 		return msg;
 	}
@@ -415,7 +416,7 @@ public class ArrayUtils {
 	public ArrayList<String> replaceJavascript(CommandSender sender, ArrayList<String> list) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(sender, str));
+			msg.add(StringParser.getInstance().replaceJavascript(sender, str));
 		}
 		return msg;
 	}
@@ -423,7 +424,7 @@ public class ArrayUtils {
 	public ArrayList<String> replaceJavascript(OfflinePlayer player, ArrayList<String> list) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(player, str));
+			msg.add(StringParser.getInstance().replaceJavascript(player, str));
 		}
 		return msg;
 	}
@@ -431,7 +432,7 @@ public class ArrayUtils {
 	public ArrayList<String> replaceJavascript(Player player, ArrayList<String> list) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(player, str));
+			msg.add(StringParser.getInstance().replaceJavascript(player, str));
 		}
 		return msg;
 	}
@@ -439,7 +440,7 @@ public class ArrayUtils {
 	public ArrayList<String> replaceJavascript(User user, ArrayList<String> list) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {
-			msg.add(StringUtils.getInstance().replaceJavascript(user, str));
+			msg.add(StringParser.getInstance().replaceJavascript(user, str));
 		}
 		return msg;
 	}
@@ -447,7 +448,7 @@ public class ArrayUtils {
 	public ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
 		ArrayList<String> newList = new ArrayList<String>();
 		for (int i = 0; i < list.size(); i++) {
-			newList.add(StringUtils.getInstance().replacePlaceHolder(list.get(i), placeholders));
+			newList.add(StringParser.getInstance().replacePlaceHolder(list.get(i), placeholders));
 		}
 		return newList;
 	}

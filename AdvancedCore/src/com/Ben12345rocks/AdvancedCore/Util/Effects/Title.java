@@ -3,7 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Effects;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -180,7 +180,7 @@ public class Title {
 	}
 
 	public void send(Player player, String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
-		player.sendTitle(StringUtils.getInstance().colorize(title), StringUtils.getInstance().colorize(subtitle),
+		player.sendTitle(StringParser.getInstance().colorize(title), StringParser.getInstance().colorize(subtitle),
 				fadeInTime, stayTime, fadeOutTime);
 	}
 
@@ -245,7 +245,7 @@ public class Title {
 	}
 
 	public void updateSubtitle(Player player, String subtitle) {
-		player.sendTitle("", StringUtils.getInstance().colorize(subtitle), -1, -1, -1);
+		player.sendTitle("", StringParser.getInstance().colorize(subtitle), -1, -1, -1);
 	}
 
 	/**
@@ -273,6 +273,6 @@ public class Title {
 	}
 
 	public void updateTitle(Player player, String title) {
-		player.sendTitle(StringUtils.getInstance().colorize(title), "", -1, -1, -1);
+		player.sendTitle(StringParser.getInstance().colorize(title), "", -1, -1, -1);
 	}
 }

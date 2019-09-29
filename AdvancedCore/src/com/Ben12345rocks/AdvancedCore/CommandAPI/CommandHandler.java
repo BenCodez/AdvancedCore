@@ -14,9 +14,9 @@ import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -200,7 +200,7 @@ public abstract class CommandHandler {
 		if (getHelpMessage() != "") {
 			line = line.replace("%HelpMessage%", getHelpMessage());
 		}
-		TextComponent txt = StringUtils.getInstance().stringToComp(line);
+		TextComponent txt = StringParser.getInstance().stringToComp(line);
 		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
 		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA).create()));
@@ -341,8 +341,8 @@ public abstract class CommandHandler {
 					return false;
 				}
 				if (this.args[i].equalsIgnoreCase("(number)")) {
-					if (!ignoreNumberCheck && !StringUtils.getInstance().isInt(args[i])) {
-						sender.sendMessage(StringUtils.getInstance()
+					if (!ignoreNumberCheck && !StringParser.getInstance().isInt(args[i])) {
+						sender.sendMessage(StringParser.getInstance()
 								.colorize(plugin.getOptions().getFormatNotNumber().replace("%arg%", args[i])));
 						return true;
 					}
@@ -355,12 +355,12 @@ public abstract class CommandHandler {
 				}
 			}
 			if (!(sender instanceof Player) && !allowConsole) {
-				sender.sendMessage(StringUtils.getInstance().colorize("&cMust be a player to do this"));
+				sender.sendMessage(StringParser.getInstance().colorize("&cMust be a player to do this"));
 				return true;
 			}
 
 			if (!hasPerm(sender)) {
-				sender.sendMessage(StringUtils.getInstance().colorize(plugin.getOptions().getFormatNoPerms()));
+				sender.sendMessage(StringParser.getInstance().colorize(plugin.getOptions().getFormatNoPerms()));
 				plugin.getLogger().log(Level.INFO,
 						sender.getName() + " was denied access to command, required permission: " + perm);
 				return true;
@@ -393,7 +393,7 @@ public abstract class CommandHandler {
 	}
 
 	public void sendMessage(CommandSender sender, String msg) {
-		sender.sendMessage(StringUtils.getInstance().colorize(msg));
+		sender.sendMessage(StringParser.getInstance().colorize(msg));
 	}
 
 	public void sendMessageJson(CommandSender sender, ArrayList<TextComponent> comp) {
@@ -410,7 +410,7 @@ public abstract class CommandHandler {
 			Player player = (Player) sender;
 			UserManager.getInstance().getUser(player).sendJson(comp);
 		} else {
-			sender.sendMessage(StringUtils.getInstance().compToString(comp));
+			sender.sendMessage(StringParser.getInstance().compToString(comp));
 		}
 	}
 

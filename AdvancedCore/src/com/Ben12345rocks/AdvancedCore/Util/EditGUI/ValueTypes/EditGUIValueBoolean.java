@@ -3,7 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory.ClickEvent;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.ValueRequestBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners.BooleanListener;
 
@@ -23,7 +23,7 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 			@Override
 			public void onInput(Player player, boolean value) {
 				setValue(player, value);
-				player.sendMessage(StringUtils.getInstance().colorize("&cSetting " + getKey() + " to " + value));
+				player.sendMessage(StringParser.getInstance().colorize("&cSetting " + getKey() + " to " + value));
 			}
 		}).currentValue(getCurrentValue().toString()).request(clickEvent.getPlayer());
 	}

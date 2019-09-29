@@ -34,9 +34,9 @@ import com.Ben12345rocks.AdvancedCore.Util.Effects.ActionBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.BossBar;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.Title;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
 import net.md_5.bungee.api.chat.TextComponent;
@@ -447,7 +447,7 @@ public class User {
 						player.getWorld().dropItem(player.getLocation(), me.getValue());
 					}
 					if (full) {
-						String msg = StringUtils.getInstance()
+						String msg = StringParser.getInstance()
 								.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
 						if (!msg.isEmpty()) {
 							player.sendMessage(msg);
@@ -717,8 +717,8 @@ public class User {
 
 	public void preformCommand(String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
-			final String cmd = StringUtils.getInstance().replaceJavascript(getPlayer(),
-					StringUtils.getInstance().replacePlaceHolder(command, placeholders));
+			final String cmd = StringParser.getInstance().replaceJavascript(getPlayer(),
+					StringParser.getInstance().replacePlaceHolder(command, placeholders));
 			AdvancedCorePlugin.getInstance().debug("Executing player command for " + getPlayerName() + ": " + command);
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
@@ -759,7 +759,7 @@ public class User {
 			if (player != null) {
 
 				try {
-					ActionBar actionBar = new ActionBar(StringUtils.getInstance().replaceJavascript(getPlayer(), msg),
+					ActionBar actionBar = new ActionBar(StringParser.getInstance().replaceJavascript(getPlayer(), msg),
 							delay);
 					actionBar.send(player);
 				} catch (Exception ex) {
@@ -789,7 +789,7 @@ public class User {
 			Player player = getPlayer();
 			if (player != null) {
 				try {
-					BossBar bossBar = new BossBar(StringUtils.getInstance().replaceJavascript(getPlayer(), msg), color,
+					BossBar bossBar = new BossBar(StringParser.getInstance().replaceJavascript(getPlayer(), msg), color,
 							style, progress);
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
@@ -810,7 +810,7 @@ public class User {
 		Player player = getPlayer();
 		if ((player != null) && (messages != null)) {
 			for (TextComponent txt : messages) {
-				txt.setText(StringUtils.getInstance().replaceJavascript(getPlayer(), txt.getText()));
+				txt.setText(StringParser.getInstance().replaceJavascript(getPlayer(), txt.getText()));
 				AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player, txt);
 			}
 		}
@@ -825,7 +825,7 @@ public class User {
 	public void sendJson(TextComponent message) {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
-			message.setText(StringUtils.getInstance().replaceJavascript(getPlayer(), message.getText()));
+			message.setText(StringParser.getInstance().replaceJavascript(getPlayer(), message.getText()));
 			AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player, message);
 		}
 	}
@@ -847,23 +847,23 @@ public class User {
 	 *            the msg
 	 */
 	public void sendMessage(String msg) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		Player player = getPlayer();
 		if ((player != null) && (msg != null)) {
 			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
 					AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
-							StringUtils.getInstance().parseJson(StringUtils.getInstance().parseText(player, str)));
+							StringParser.getInstance().parseJson(StringParser.getInstance().parseText(player, str)));
 				}
 			}
 		}
 	}
 
 	public void sendMessage(String msg, HashMap<String, String> placeholders) {
-		sendMessage(StringUtils.getInstance().replacePlaceHolder(msg, placeholders));
+		sendMessage(StringParser.getInstance().replacePlaceHolder(msg, placeholders));
 	}
 
 	public void sendMessage(String msg, String toReplace, String replace) {
-		sendMessage(StringUtils.getInstance().replacePlaceHolder(msg, toReplace, replace));
+		sendMessage(StringParser.getInstance().replacePlaceHolder(msg, toReplace, replace));
 	}
 
 	/**
@@ -901,8 +901,8 @@ public class User {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			try {
-				Title titleObject = new Title(StringUtils.getInstance().replaceJavascript(getPlayer(), title),
-						StringUtils.getInstance().replaceJavascript(getPlayer(), subTitle), fadeIn, showTime, fadeOut);
+				Title titleObject = new Title(StringParser.getInstance().replaceJavascript(getPlayer(), title),
+						StringParser.getInstance().replaceJavascript(getPlayer(), subTitle), fadeIn, showTime, fadeOut);
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");

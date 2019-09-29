@@ -6,7 +6,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -33,7 +33,7 @@ public class ActionBar {
 	 *            the duration
 	 */
 	public ActionBar(String msg, int duration) {
-		setMsg(StringUtils.getInstance().colorize(msg));
+		setMsg(StringParser.getInstance().colorize(msg));
 		setDuration(duration);
 	}
 

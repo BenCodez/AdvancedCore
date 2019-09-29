@@ -28,8 +28,8 @@ import org.bukkit.inventory.ItemStack;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.StringUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -723,7 +723,7 @@ public class BInventory implements Listener {
 	 *            the new inventory name
 	 */
 	public void setInventoryName(String inventoryName) {
-		this.inventoryName = StringUtils.getInstance().colorize(inventoryName);
+		this.inventoryName = StringParser.getInstance().colorize(inventoryName);
 	}
 
 	/**
