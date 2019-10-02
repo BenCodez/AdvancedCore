@@ -164,11 +164,12 @@ public class ArrayUtils {
 	/**
 	 * Convert.
 	 *
-	 * @param set
+	 * @param set1
 	 *            the set
 	 * @return the array list
 	 */
-	public ArrayList<String> convert(Set<String> set) {
+	public ArrayList<String> convert(Set<String> set1) {
+		Set<String> set = new HashSet<String>(set1);
 		ArrayList<String> list = new ArrayList<String>();
 		for (String st : set) {
 			list.add(st);

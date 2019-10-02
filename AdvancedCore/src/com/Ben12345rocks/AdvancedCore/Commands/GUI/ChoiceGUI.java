@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
@@ -96,7 +97,14 @@ public class ChoiceGUI {
 					if (user.getUnClaimedChoices().size() > 0) {
 						openClaimChoices(clickEvent.getPlayer());
 					} else {
-						clickEvent.getPlayer().closeInventory();
+						Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+							@Override
+							public void run() {
+								clickEvent.getPlayer().closeInventory();
+							}
+						});
+
 					}
 				}
 			}.addData("Choice", choice));
