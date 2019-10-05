@@ -295,6 +295,10 @@ public class MySQL {
 		// AdvancedCorePlugin.getInstance().debug("test one: " + uuid);
 		return table.get(uuid);
 	}
+	
+	public void clearCache(String uuid) {
+		table.remove(uuid);
+	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
 		ArrayList<Column> result = new ArrayList<>();
