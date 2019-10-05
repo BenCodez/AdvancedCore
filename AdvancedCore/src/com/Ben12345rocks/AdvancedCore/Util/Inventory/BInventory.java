@@ -410,6 +410,9 @@ public class BInventory implements Listener {
 		}
 
 		Inventory inv = event.getInventory();
+		if (this.player == null) {
+			return;
+		}
 		if (!this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 			return;
 		}
