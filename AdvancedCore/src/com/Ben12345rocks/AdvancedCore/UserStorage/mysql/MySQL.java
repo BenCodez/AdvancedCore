@@ -405,7 +405,7 @@ public class MySQL {
 		return result;
 	}
 
-	public Set<String> getUuids() {
+	public synchronized Set<String> getUuids() {
 		if (uuids == null || uuids.size() == 0) {
 			uuids.clear();
 			uuids.addAll(getUuidsQuery());
