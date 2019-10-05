@@ -7,12 +7,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -56,9 +56,9 @@ public class MySQL {
 
 	private String name;
 
-	private Set<String> uuids = Collections.synchronizedSet(new HashSet<String>());
+	private Set<String> uuids = ConcurrentHashMap.newKeySet();
 
-	private Set<String> names = Collections.synchronizedSet(new HashSet<String>());
+	private Set<String> names = ConcurrentHashMap.newKeySet();
 
 	private boolean useBatchUpdates = true;
 
