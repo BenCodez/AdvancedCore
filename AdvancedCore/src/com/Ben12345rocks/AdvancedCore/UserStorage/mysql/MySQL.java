@@ -72,8 +72,6 @@ public class MySQL {
 
 	private Object object4 = new Object();
 
-	private Object object5 = new Object();
-
 	private List<String> intColumns;
 
 	public MySQL(String tableName, ConfigurationSection section) {
@@ -250,11 +248,8 @@ public class MySQL {
 
 	public void deletePlayer(String uuid) {
 		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
-		synchronized (object5) {
-			uuids.remove(uuid);
-			names.remove(
-					PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(uuid)), uuid));
-		}
+		uuids.remove(uuid);
+		names.remove(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(uuid)), uuid));
 		this.query.add(q);
 		removePlayer(uuid);
 		clearCacheBasic();
@@ -411,14 +406,12 @@ public class MySQL {
 	}
 
 	public Set<String> getUuids() {
-		synchronized (object5) {
-			if (uuids == null || uuids.size() == 0) {
-				uuids.clear();
-				uuids.addAll(getUuidsQuery());
-				return uuids;
-			}
+		if (uuids == null || uuids.size() == 0) {
+			uuids.clear();
+			uuids.addAll(getUuidsQuery());
 			return uuids;
 		}
+		return uuids;
 	}
 
 	public ArrayList<String> getUuidsQuery() {

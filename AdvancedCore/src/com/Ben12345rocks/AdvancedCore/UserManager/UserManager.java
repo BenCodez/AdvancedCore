@@ -88,10 +88,18 @@ public class UserManager {
 			}
 			return uuids;
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			return ArrayUtils.getInstance().convert(AdvancedCorePlugin.getInstance().getMysql().getUuids());
+			synchronized (obj) {
+				ArrayList<String> uuids = new ArrayList<String>();
+				for (String uuid : AdvancedCorePlugin.getInstance().getMysql().getUuids()) {
+					uuids.add(uuid);
+				}
+				return uuids;
+			}
 		}
 		return new ArrayList<String>();
 	}
+
+	private Object obj = new Object();
 
 	public String getProperName(String name) {
 
