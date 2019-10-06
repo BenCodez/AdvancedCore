@@ -361,7 +361,9 @@ public class MySQL {
 		ArrayList<Column> rows = getRowsNameQuery();
 		if (rows != null) {
 			for (Column c : rows) {
-				uuids.add((String) c.getValue());
+				if (c.getValue() != null) {
+					uuids.add((String) c.getValue());
+				}
 			}
 		}
 
@@ -419,7 +421,9 @@ public class MySQL {
 
 		ArrayList<Column> rows = getRowsQuery();
 		for (Column c : rows) {
-			uuids.add((String) c.getValue());
+			if (c.getValue() != null) {
+				uuids.add((String) c.getValue());
+			}
 		}
 
 		return uuids;
