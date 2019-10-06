@@ -3,7 +3,6 @@ package com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -74,13 +73,11 @@ public class ConnectionManager {
 	public Connection getConnection() {
 		try {
 			if (isClosed()) {
-				AdvancedCorePlugin.getInstance().debug("Connection closed... opening....");
 				open();
 			}
 			return dataSource.getConnection();
 		} catch (SQLException e) {
-			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to get mysql connection");
-			AdvancedCorePlugin.getInstance().debug(e);
+			e.printStackTrace();
 			open();
 		}
 		return null;
@@ -174,7 +171,6 @@ public class ConnectionManager {
 			config.addDataSourceProperty("prepStmtCacheSqlLimit", 2048);
 			config.addDataSourceProperty("useServerPrepStmts", true);
 			dataSource = new HikariDataSource(config);
-			AdvancedCorePlugin.getInstance().extraDebug("Connecting mysql...");
 			return true;
 		} catch (Exception e) {
 			e.printStackTrace();
