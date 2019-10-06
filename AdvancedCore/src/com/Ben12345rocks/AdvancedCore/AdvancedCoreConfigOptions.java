@@ -152,6 +152,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean loadSkulls = true;
 
+	@Setter
+	@Getter
+	private String server = "";
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -225,6 +229,7 @@ public class AdvancedCoreConfigOptions {
 			}
 
 			useVaultPermissions = configData.getBoolean("UseVaultPermissions", false);
+			server = configData.getString("Server", "");
 		}
 	}
 }

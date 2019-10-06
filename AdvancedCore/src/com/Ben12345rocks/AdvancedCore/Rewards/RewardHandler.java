@@ -486,7 +486,7 @@ public class RewardHandler {
 
 			@Override
 			public boolean onRequirementsRequest(Reward reward, User user, String str, RewardOptions rewardOptions) {
-				return Bukkit.getServer().getName().equals(str);
+				return str.equalsIgnoreCase(AdvancedCorePlugin.getInstance().getOptions().getServer());
 			}
 		}.priority(100).allowReattempt().addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Server", null) {
