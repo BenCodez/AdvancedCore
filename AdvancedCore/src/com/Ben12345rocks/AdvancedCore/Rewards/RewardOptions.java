@@ -36,6 +36,9 @@ public class RewardOptions {
 
 	private String suffix = "";
 
+	@Getter
+	private String server = "";
+
 	public RewardOptions() {
 	}
 
@@ -121,6 +124,11 @@ public class RewardOptions {
 
 	public RewardOptions setPrefix(String prefix) {
 		this.prefix = prefix;
+		return this;
+	}
+
+	public RewardOptions setServer(String server) {
+		this.server = server;
 		return this;
 	}
 
