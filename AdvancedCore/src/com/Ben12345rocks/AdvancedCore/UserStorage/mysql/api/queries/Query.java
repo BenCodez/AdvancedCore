@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL;
 import com.sun.rowset.CachedRowSetImpl;
 
@@ -129,7 +128,7 @@ public class Query {
 			sql.close();
 
 		} catch (SQLException e) {
-			AdvancedCorePlugin.getInstance().debug(e);
+			e.printStackTrace();
 		}
 
 		return rowSet;
@@ -181,7 +180,7 @@ public class Query {
 			return num;
 
 		} catch (SQLException e) {
-			AdvancedCorePlugin.getInstance().debug(e);
+			e.printStackTrace();
 		}
 
 		return 0;
