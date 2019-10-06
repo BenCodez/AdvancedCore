@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Rewards;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
 import lombok.Getter;
@@ -129,6 +130,13 @@ public class RewardOptions {
 
 	public RewardOptions setServer(String server) {
 		this.server = server;
+		return this;
+	}
+
+	public RewardOptions setServer(boolean b) {
+		if (b) {
+			this.server = AdvancedCorePlugin.getInstance().getOptions().getServer();
+		}
 		return this;
 	}
 
