@@ -1516,7 +1516,12 @@ public class RewardHandler {
 					for (String item : data.getConfigurationSection("Items").getKeys(false)) {
 						String material = data.getString("Items." + item + ".Material", "");
 						if (material.isEmpty()) {
-							warning(reward, inject, "No material is set on item: " + item);
+							try {
+								Material.valueOf(item);
+							} catch (Exception e) {
+								warning(reward, inject, "No material is set on item: " + item);
+							}
+
 						} else {
 							try {
 								Material m = Material.matchMaterial(material.toUpperCase());
