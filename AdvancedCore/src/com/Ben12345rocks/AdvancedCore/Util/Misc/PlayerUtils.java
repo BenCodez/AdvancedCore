@@ -353,10 +353,11 @@ public class PlayerUtils {
 		if (checkServer || AdvancedCorePlugin.getInstance().getOptions().isCheckNameMojang()) {
 			// plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
-			if (p.hasPlayedBefore()) {
+			if (p.hasPlayedBefore() || p.isOnline() || p.getLastPlayed() != 0) {
 				// plugin.extraDebug(name + " has joined before");
 				return true;
 			}
+
 		}
 		plugin.extraDebug("Player " + name + " does not exist");
 		return false;
