@@ -225,7 +225,10 @@ public class MySQL {
 	}
 
 	public boolean containsKey(String uuid) {
-		return table.containsKey(uuid);
+		if (table.containsKey(uuid) || uuids.contains(uuid)) {
+			return true;
+		}
+		return false;
 	}
 
 	public boolean containsKeyQuery(String index) {
