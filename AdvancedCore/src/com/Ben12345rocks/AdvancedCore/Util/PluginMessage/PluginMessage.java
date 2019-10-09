@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
@@ -63,7 +64,8 @@ public class PluginMessage implements PluginMessageListener {
 
 	public void sendPluginMessage(Player p, String channel, String... messageData) {
 		if (p == null) {
-			AdvancedCorePlugin.getInstance().debug("Can't send plugin message, player == null");
+			AdvancedCorePlugin.getInstance().debug("Can't send plugin message, player == null, " + channel + " data: "
+					+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(messageData)));
 			return;
 		}
 		ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
