@@ -584,7 +584,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}
 
 				if (name == null || name.equals("") || name.equals("Error getting name")) {
-					//extraDebug("Invalid player name: " + uuid);
+					// extraDebug("Invalid player name: " + uuid);
 					add = false;
 				} else {
 					if (uuidNameCache.containsValue(name)) {
@@ -816,9 +816,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				ArrayList<User> users = new ArrayList<User>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					users.add(user);
-					for (UserStartup start : userStartup) {
-						start.onStartUp(user);
+					if (user != null) {
+						users.add(user);
+						for (UserStartup start : userStartup) {
+							start.onStartUp(user);
+						}
 					}
 				}
 				for (UserStartup start : userStartup) {
