@@ -442,7 +442,7 @@ public class MySQL {
 			String query = "INSERT " + getName() + " ";
 
 			query += "set uuid='" + index + "', ";
-			query += column + "='" + value.toString() + "';";
+			query += column + "='" + value.toString() + "'";
 			// AdvancedCorePlugin.getInstance().extraDebug(query);
 
 			try {
