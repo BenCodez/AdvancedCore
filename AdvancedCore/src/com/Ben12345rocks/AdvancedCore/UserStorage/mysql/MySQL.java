@@ -231,6 +231,13 @@ public class MySQL {
 		return false;
 	}
 
+	public boolean containsTableKey(String uuid) {
+		if (table.containsKey(uuid)) {
+			return true;
+		}
+		return false;
+	}
+
 	public boolean containsKeyQuery(String index) {
 		String sql = "SELECT uuid FROM " + getName() + ";";
 		try {
@@ -489,7 +496,7 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (!containsKey(uuid)) {
+		if (!containsTableKey(uuid)) {
 			synchronized (object1) {
 				loadPlayer(uuid);
 			}
