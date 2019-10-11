@@ -276,6 +276,9 @@ public class User {
 	}
 
 	public UserData getData() {
+		if (data == null) {
+			loadData();
+		}
 		return data;
 	}
 
