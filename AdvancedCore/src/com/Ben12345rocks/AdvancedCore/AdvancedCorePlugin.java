@@ -597,20 +597,24 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}
 
 				if (getStorageType().equals(UserStorage.MYSQL)) {
-					boolean delete = true;
-					for (Column col : user.getData().getMySqlRow()) {
-						if (!col.getName().equals("uuid") && !col.getName().equalsIgnoreCase("playername")) {
-							if (col.getValue() != null) {
-								if (!col.getValue().toString().isEmpty()) {
-									delete = false;
+					try {
+						boolean delete = true;
+						for (Column col : user.getData().getMySqlRow()) {
+							if (!col.getName().equals("uuid") && !col.getName().equalsIgnoreCase("playername")) {
+								if (col.getValue() != null) {
+									if (!col.getValue().toString().isEmpty()) {
+										delete = false;
+									}
 								}
 							}
 						}
-					}
-					if (delete) {
-						add = false;
-						debug("Deleting " + uuid);
-						getMysql().deletePlayer(uuid);
+						if (delete) {
+							add = false;
+							debug("Deleting " + uuid);
+							getMysql().deletePlayer(uuid);
+						}
+					} catch (Exception e) {
+
 					}
 
 				}
