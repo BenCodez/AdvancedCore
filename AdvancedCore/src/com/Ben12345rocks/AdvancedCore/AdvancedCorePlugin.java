@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
@@ -599,19 +600,22 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				if (getStorageType().equals(UserStorage.MYSQL)) {
 					try {
 						boolean delete = true;
-						for (Column col : user.getData().getMySqlRow()) {
-							if (!col.getName().equals("uuid") && !col.getName().equalsIgnoreCase("playername")) {
-								if (col.getValue() != null) {
-									if (!col.getValue().toString().isEmpty()) {
-										delete = false;
+						List<Column> list = user.getData().getMySqlRow();
+						if (list != null) {
+							for (Column col : list) {
+								if (!col.getName().equals("uuid") && !col.getName().equalsIgnoreCase("playername")) {
+									if (col.getValue() != null) {
+										if (!col.getValue().toString().isEmpty()) {
+											delete = false;
+										}
 									}
 								}
 							}
-						}
-						if (delete) {
-							add = false;
-							debug("Deleting " + uuid);
-							getMysql().deletePlayer(uuid);
+							if (delete) {
+								add = false;
+								debug("Deleting " + uuid);
+								getMysql().deletePlayer(uuid);
+							}
 						}
 					} catch (Exception e) {
 						debug(e);
