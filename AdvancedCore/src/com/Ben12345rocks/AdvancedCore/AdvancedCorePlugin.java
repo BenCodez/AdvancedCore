@@ -614,7 +614,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 							getMysql().deletePlayer(uuid);
 						}
 					} catch (Exception e) {
-
+						debug(e);
 					}
 
 				}
