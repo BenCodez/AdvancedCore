@@ -109,7 +109,7 @@ public class AnnotationHandler {
 				}
 
 				ConfigDataKeys setAnnotation = field.getAnnotation(ConfigDataKeys.class);
-				if (listAnnotation != null) {
+				if (setAnnotation != null) {
 					Set<String> value = null;
 					if (config.isConfigurationSection(setAnnotation.path())) {
 						value = config.getConfigurationSection(setAnnotation.path()).getKeys(false);
