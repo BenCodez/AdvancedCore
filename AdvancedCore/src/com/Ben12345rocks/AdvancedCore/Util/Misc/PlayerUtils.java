@@ -350,7 +350,7 @@ public class PlayerUtils {
 			return userExist;
 		}
 
-		if (checkServer || AdvancedCorePlugin.getInstance().getOptions().isCheckNameMojang()) {
+		if (checkServer) {
 			// plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 			if (p.hasPlayedBefore() || p.isOnline() || p.getLastPlayed() != 0) {

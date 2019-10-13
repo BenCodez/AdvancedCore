@@ -60,11 +60,6 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean autoKillInvs = true;
 
-	@Deprecated
-	@Getter
-	@Setter
-	private boolean checkNameMojang = false;
-
 	@Getter
 	@Setter
 	private boolean purgeOldData = false;
@@ -189,10 +184,6 @@ public class AdvancedCoreConfigOptions {
 			nextItem = configData.getConfigurationSection("Format.NextItem");
 			purgeOldData = configData.getBoolean("PurgeOldData");
 			purgeMinimumDays = configData.getInt("PurgeMin", 90);
-			checkNameMojang = configData.getBoolean("CheckNameMojang", false);
-			if (checkNameMojang) {
-				plugin.getLogger().info("Using mojang name lookups allowed, disable if you run into issues");
-			}
 			disableCheckOnWorldChange = configData.getBoolean("DisableCheckOnWorldChange");
 			autoDownload = configData.getBoolean("AutoDownload", false);
 			extraDebug = configData.getBoolean("ExtraDebug", false);
