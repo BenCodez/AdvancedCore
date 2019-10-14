@@ -88,6 +88,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private ConcurrentHashMap<String, String> uuidNameCache;
 
 	@Getter
+	@Setter
+	private boolean loadRewards = true;
+
+	@Getter
 	private SignMenu signMenu;
 
 	@Getter
@@ -352,7 +356,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		RewardHandler.getInstance().loadInjectedRewards();
 		RewardHandler.getInstance().loadInjectedRequirements();
-		RewardHandler.getInstance().addRewardFolder(new File(this.getDataFolder(), "Rewards"));
+		if (loadRewards) {
+			RewardHandler.getInstance().addRewardFolder(new File(this.getDataFolder(), "Rewards"));
+		}
 
 		loadValueRequestInputCommands();
 		checkPluginUpdate();

@@ -21,7 +21,7 @@ public class AdvancedCoreConfigOptions {
 	private boolean debugIngame = false;
 	@Getter
 	@Setter
-	private boolean logDebugToFile = true;
+	private boolean logDebugToFile = false;
 	@Getter
 	@Setter
 	private String defaultRequestMethod = "ANVIL";
