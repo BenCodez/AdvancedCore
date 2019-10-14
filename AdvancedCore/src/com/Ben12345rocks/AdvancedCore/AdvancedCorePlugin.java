@@ -339,6 +339,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	@Getter
+	@Setter
+	private boolean loadServerData = true;
+
 	/**
 	 * Load AdvancedCore hook
 	 */
@@ -351,8 +355,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadHandle();
 		loadVault();
 		loadAdvancedCoreEvents();
-		TimeChecker.getInstance().loadTimer(2);
-		ServerData.getInstance().setup();
+		if (loadServerData) {
+			TimeChecker.getInstance().loadTimer(2);
+			ServerData.getInstance().setup();
+		}
 
 		RewardHandler.getInstance().loadInjectedRewards();
 		RewardHandler.getInstance().loadInjectedRequirements();
