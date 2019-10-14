@@ -181,6 +181,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void checkPluginUpdate() {
+		if (!loadServerData) {
+			return;
+		}
 		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
 
 			@Override
