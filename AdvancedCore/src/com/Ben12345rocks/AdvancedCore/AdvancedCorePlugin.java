@@ -319,7 +319,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private void loadConfig() {
 		getOptions().load(this);
-		loadUserAPI(getOptions().getStorageType());
+		if (loadUserData) {
+			loadUserAPI(getOptions().getStorageType());
+		}
 	}
 
 	private void loadHandle() {
@@ -342,6 +344,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	@Setter
 	private boolean loadServerData = true;
+
+	@Getter
+	@Setter
+	private boolean loadUserData = true;
 
 	/**
 	 * Load AdvancedCore hook
