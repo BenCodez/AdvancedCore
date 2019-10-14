@@ -118,6 +118,12 @@ public abstract class YMLFile {
 		}
 	}
 
+	private boolean created = false;
+
+	public boolean isJustCreated() {
+		return created;
+	}
+
 	/**
 	 * Setup.
 	 */
@@ -129,6 +135,7 @@ public abstract class YMLFile {
 			try {
 				getdFile().createNewFile();
 				onFileCreation();
+				created = true;
 			} catch (IOException e) {
 				Bukkit.getServer().getLogger().severe(ChatColor.RED + "Could not create " + getdFile().getName() + "!");
 			}
