@@ -225,14 +225,14 @@ public class MySQL {
 	}
 
 	public boolean containsKey(String uuid) {
-		if (table.containsKey(uuid) || uuids.contains(uuid)) {
+		if (table.containsKey(uuid)) {
 			return true;
 		}
 		return false;
 	}
 
-	public boolean containsTableKey(String uuid) {
-		if (table.containsKey(uuid)) {
+	public boolean containsUUID(String uuid) {
+		if (table.containsKey(uuid) || uuids.contains(uuid)) {
 			return true;
 		}
 		return false;
@@ -496,7 +496,7 @@ public class MySQL {
 	}
 
 	public void loadPlayerIfNeeded(String uuid) {
-		if (!containsTableKey(uuid)) {
+		if (!containsKey(uuid)) {
 			synchronized (object1) {
 				loadPlayer(uuid);
 			}
