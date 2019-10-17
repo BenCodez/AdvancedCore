@@ -520,7 +520,7 @@ public class MySQL {
 			return;
 		}
 		checkColumn(column, dataType);
-		if (getUuids().contains(index)) {
+		if (getUuids().contains(index) || containsKey(index)) {
 			synchronized (object2) {
 
 				for (Column col : getExact(index)) {
