@@ -16,6 +16,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 
 public class JavascriptEngine {
 	private HashMap<String, Object> engineAPI;
@@ -128,6 +129,7 @@ public class JavascriptEngine {
 			engine.put("Console", Bukkit.getConsoleSender());
 			engine.put("UserManager", UserManager.getInstance());
 			engine.put("RewardHandler", RewardHandler.getInstance());
+			engine.put("StringParser", StringParser.getInstance());
 
 			engineAPI.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
 
