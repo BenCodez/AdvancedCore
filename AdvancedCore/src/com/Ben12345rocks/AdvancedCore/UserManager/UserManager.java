@@ -215,14 +215,6 @@ public class UserManager {
 				return true;
 			}
 		}
-
-		for (String uuid : getAllUUIDs()) {
-			User user1 = getUser(new UUID(uuid));
-			if (user1.getPlayerName().equalsIgnoreCase(name)) {
-				// plugin.extraDebug("Found " + name + " in database");
-				return true;
-			}
-		}
 		return false;
 	}
 
