@@ -459,7 +459,7 @@ public class MySQL {
 
 					@Override
 					public void call(Integer result, SQLException thrown) {
-						loadPlayer(index);
+						loadPlayerIfNeeded(index);
 					}
 				});
 				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
