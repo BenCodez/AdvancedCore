@@ -23,6 +23,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries.Callback;
 import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Column;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.DataType;
@@ -444,7 +445,7 @@ public class MySQL {
 
 	}
 
-	public void insertQuery(String index, String column, Object value, DataType dataType) {
+	public void insertQuery(final String index, String column, Object value, DataType dataType) {
 		synchronized (object2) {
 			String query = "INSERT " + getName() + " ";
 
@@ -454,7 +455,13 @@ public class MySQL {
 
 			try {
 				uuids.add(index);
-				new Query(mysql, query).executeUpdateAsync();
+				new Query(mysql, query).executeUpdateAsync(new Callback<Integer, SQLException>() {
+
+					@Override
+					public void call(Integer result, SQLException thrown) {
+						loadPlayer(index);
+					}
+				});
 				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
 						index));
 			} catch (SQLException e) {
