@@ -455,6 +455,8 @@ public class MySQL {
 
 			try {
 				uuids.add(index);
+				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
+						index));
 				new Query(mysql, query).executeUpdateAsync(new Callback<Integer, SQLException>() {
 
 					@Override
@@ -462,8 +464,6 @@ public class MySQL {
 						loadPlayerIfNeeded(index);
 					}
 				});
-				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
-						index));
 			} catch (SQLException e) {
 				if (e.getMessage().contains("Duplicate entry")) {
 					AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while inserting user " + index
@@ -504,6 +504,7 @@ public class MySQL {
 
 	public void loadPlayerIfNeeded(String uuid) {
 		if (!containsKey(uuid)) {
+			AdvancedCorePlugin.getInstance().debug("Caching " + uuid);
 			synchronized (object1) {
 				loadPlayer(uuid);
 			}
