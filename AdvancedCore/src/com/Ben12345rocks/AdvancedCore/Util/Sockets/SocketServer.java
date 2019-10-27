@@ -7,10 +7,7 @@ import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-
-import org.bukkit.Bukkit;
-
-import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
+import java.util.TimerTask;
 
 import lombok.Getter;
 
@@ -54,13 +51,13 @@ public abstract class SocketServer extends Thread {
 				writer.flush();
 
 				final String msg = dis.readUTF();
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+				new TimerTask() {
 
 					@Override
 					public void run() {
 						onReceive(msg.split("%||%"));
 					}
-				});
+				};
 
 				dis.close();
 				writer.close();
