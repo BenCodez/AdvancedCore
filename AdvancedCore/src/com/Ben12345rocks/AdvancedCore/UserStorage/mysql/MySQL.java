@@ -504,7 +504,7 @@ public class MySQL {
 
 	public void loadPlayerIfNeeded(String uuid) {
 		if (!containsKey(uuid)) {
-			AdvancedCorePlugin.getInstance().debug("Caching " + uuid);
+			//AdvancedCorePlugin.getInstance().debug("Caching " + uuid);
 			synchronized (object1) {
 				loadPlayer(uuid);
 			}

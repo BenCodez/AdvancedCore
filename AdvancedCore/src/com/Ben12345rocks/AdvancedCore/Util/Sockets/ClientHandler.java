@@ -10,18 +10,34 @@ public class ClientHandler {
 	private Socket clientSocket;
 	private PrintWriter out;
 	private BufferedReader in;
+	private String host;
+	private int port;
+	private boolean connected = false;
 
 	public ClientHandler(String host, int port) {
+		this.host = host;
+		this.port = port;
+	}
+
+	private void connect() {
 		try {
+			if (clientSocket != null) {
+				clientSocket.close();
+			}
 			clientSocket = new Socket(host, port);
 			out = new PrintWriter(clientSocket.getOutputStream(), true);
 			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			connected = true;
 		} catch (IOException e) {
 			e.printStackTrace();
+			connected = false;
 		}
 	}
 
 	public String sendMessage(String... msgs) {
+		if (!connected || !clientSocket.isBound()) {
+			connect();
+		}
 		if (msgs.length == 0) {
 			return "";
 		}
