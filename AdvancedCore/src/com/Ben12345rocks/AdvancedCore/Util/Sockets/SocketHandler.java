@@ -12,7 +12,7 @@ public class SocketHandler {
 
 	public SocketHandler(String threadName, String host, int port) {
 		server = new SocketServer(threadName, host, port) {
-			
+
 			@Override
 			public void onReceive(String[] data) {
 				for (SocketReceiver r : receiving) {
@@ -22,8 +22,12 @@ public class SocketHandler {
 		};
 		receiving = new ArrayList<SocketReceiver>();
 	}
-	
+
 	public void closeConnection() {
 		server.close();
+	}
+
+	public void add(SocketReceiver receive) {
+		receiving.add(receive);
 	}
 }
