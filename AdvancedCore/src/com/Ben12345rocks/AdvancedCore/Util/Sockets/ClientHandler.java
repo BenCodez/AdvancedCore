@@ -10,10 +10,8 @@ public class ClientHandler {
 	private Socket clientSocket;
 	private PrintWriter out;
 	private BufferedReader in;
-	private String version;
 
-	public ClientHandler(String version, String host, int port) {
-		this.version = version;
+	public ClientHandler(String host, int port) {
 		try {
 			clientSocket = new Socket(host, port);
 			out = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -23,20 +21,15 @@ public class ClientHandler {
 		}
 	}
 
-	public boolean sendMessage(String msg) {
+	public String sendMessage(String msg) {
 		out.println(msg);
-		String resp;
+		String resp = null;
 		try {
 			resp = in.readLine();
-			if (resp.equals(version)) {
-				return true;
-			} else {
-				return false;
-			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return false;
+		return resp;
 	}
 
 	public void stopConnection() {
