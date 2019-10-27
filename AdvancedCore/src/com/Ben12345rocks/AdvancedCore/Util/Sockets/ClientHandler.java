@@ -21,7 +21,15 @@ public class ClientHandler {
 		}
 	}
 
-	public String sendMessage(String msg) {
+	public String sendMessage(String... msgs) {
+		if (msgs.length == 0) {
+			return "";
+		}
+		String msg = msgs[0];
+		for (int i = 1; i < msgs.length; i++) {
+			msg += "%||%";
+			msg += msgs[i];
+		}
 		out.println(msg);
 		String resp = null;
 		try {
