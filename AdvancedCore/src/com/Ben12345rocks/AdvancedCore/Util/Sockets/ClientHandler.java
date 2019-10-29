@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.Sockets;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -41,8 +42,13 @@ public class ClientHandler {
 			msg += "%||%";
 			msg += msgs[i];
 		}
-		out.println(msg);
-		System.out.println(msg);
+		try {
+			DataOutputStream ds = new DataOutputStream(clientSocket.getOutputStream());
+			ds.writeUTF(msg);
+			ds.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 		String resp = null;
 		try {
 			resp = in.readLine();
