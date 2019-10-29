@@ -74,6 +74,7 @@ public abstract class SocketServer extends Thread {
 	public void close() {
 		try {
 			server.close();
+			running = false;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
