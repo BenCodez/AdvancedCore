@@ -453,8 +453,8 @@ public class MySQL {
 			// AdvancedCorePlugin.getInstance().extraDebug(query);
 
 			try {
-				new Query(mysql, query).executeUpdate();
 				uuids.add(index);
+				new Query(mysql, query).executeUpdate();
 				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
 						index));
 			} catch (SQLException e) {
