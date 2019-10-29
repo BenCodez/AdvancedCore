@@ -47,6 +47,7 @@ public class ClientHandler {
 			msg += msgs[i];
 		}
 		out.println(msg);
+		System.out.println(msg);
 		String resp = null;
 		try {
 			resp = in.readLine();

@@ -51,6 +51,7 @@ public abstract class SocketServer extends Thread {
 				writer.flush();
 
 				final String msg = dis.readUTF();
+				System.out.println(msg);
 				new TimerTask() {
 
 					@Override
