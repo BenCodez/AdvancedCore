@@ -456,7 +456,7 @@ public class MySQL {
 				uuids.add(index);
 				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
 						index));
-				new Query(mysql, query).executeUpdateAsync();
+				new Query(mysql, query).executeUpdate();
 			} catch (SQLException e) {
 				if (e.getMessage().contains("Duplicate entry")) {
 					AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while inserting user " + index
