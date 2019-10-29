@@ -12,7 +12,6 @@ public class ClientHandler {
 	private BufferedReader in;
 	private String host;
 	private int port;
-	private boolean connected = false;
 
 	public ClientHandler(String host, int port) {
 		this.host = host;
@@ -27,17 +26,13 @@ public class ClientHandler {
 			clientSocket = new Socket(host, port);
 			out = new PrintWriter(clientSocket.getOutputStream(), true);
 			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			connected = true;
 		} catch (IOException e) {
 			e.printStackTrace();
-			connected = false;
 		}
 	}
 
 	public String sendMessage(String... msgs) {
-		if (!connected || !clientSocket.isBound()) {
-			connect();
-		}
+		connect();
 		if (msgs.length == 0) {
 			return "";
 		}
@@ -54,6 +49,7 @@ public class ClientHandler {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		stopConnection();
 		return resp;
 	}
 
