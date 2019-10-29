@@ -1,9 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.Sockets;
 
-import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -20,13 +18,11 @@ public abstract class SocketServer extends Thread {
 	private boolean running = true;
 
 	private ServerSocket server;
-	private String version;
 
 	public abstract void onReceive(String[] data);
 
 	public SocketServer(String version, String host, int port) {
 		super(version);
-		this.version = version;
 		this.host = host;
 		this.port = port;
 		try {
@@ -45,12 +41,6 @@ public abstract class SocketServer extends Thread {
 				Socket socket = server.accept();
 				socket.setSoTimeout(5000); // Don't hang on slow connections.
 				DataInputStream dis = new DataInputStream(socket.getInputStream());
-				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-
-				// Send them plugin version
-				writer.write(version);
-				writer.newLine();
-				writer.flush();
 
 				final String msg = dis.readUTF();
 				System.out.println(msg);
@@ -63,7 +53,6 @@ public abstract class SocketServer extends Thread {
 				};
 
 				dis.close();
-				writer.close();
 				socket.close();
 			} catch (Exception ex) {
 				ex.printStackTrace();

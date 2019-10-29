@@ -32,11 +32,8 @@ public class ClientHandler {
 		}
 	}
 
-	public String sendMessage(String... msgs) {
+	public void sendMessage(String... msgs) {
 		connect();
-		if (msgs.length == 0) {
-			return "";
-		}
 		String msg = msgs[0];
 		for (int i = 1; i < msgs.length; i++) {
 			msg += "%||%";
@@ -49,14 +46,6 @@ public class ClientHandler {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		String resp = null;
-		try {
-			resp = in.readLine();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		stopConnection();
-		return resp;
 	}
 
 	public void stopConnection() {
