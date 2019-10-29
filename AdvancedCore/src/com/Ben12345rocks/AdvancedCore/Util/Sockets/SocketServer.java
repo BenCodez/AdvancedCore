@@ -32,6 +32,7 @@ public abstract class SocketServer extends Thread {
 		try {
 			server = new ServerSocket();
 			server.bind(new InetSocketAddress(host, port));
+			start();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
