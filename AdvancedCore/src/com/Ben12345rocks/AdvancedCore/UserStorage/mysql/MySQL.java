@@ -166,7 +166,7 @@ public class MySQL {
 				for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
 					entry.getValue().add(col);
 				}
-			} catch (SQLException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 
@@ -497,7 +497,7 @@ public class MySQL {
 
 	public void loadPlayerIfNeeded(String uuid) {
 		if (!containsKey(uuid)) {
-			//AdvancedCorePlugin.getInstance().debug("Caching " + uuid);
+			// AdvancedCorePlugin.getInstance().debug("Caching " + uuid);
 			synchronized (object1) {
 				loadPlayer(uuid);
 			}
