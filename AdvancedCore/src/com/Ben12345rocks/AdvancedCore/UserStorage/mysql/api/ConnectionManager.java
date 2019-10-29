@@ -170,6 +170,7 @@ public class ConnectionManager {
 			config.addDataSourceProperty("prepStmtCacheSize", 500);
 			config.addDataSourceProperty("prepStmtCacheSqlLimit", 2048);
 			config.addDataSourceProperty("useServerPrepStmts", true);
+			config.setAutoCommit(true);
 			dataSource = new HikariDataSource(config);
 			return true;
 		} catch (Exception e) {
