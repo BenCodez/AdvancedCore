@@ -444,7 +444,7 @@ public class MySQL {
 
 	}
 
-	public void insertQuery(final String index, String column, Object value, DataType dataType) {
+	public void insertQuery(String index, String column, Object value, DataType dataType) {
 		synchronized (object2) {
 			String query = "INSERT " + getName() + " ";
 
@@ -453,10 +453,10 @@ public class MySQL {
 			// AdvancedCorePlugin.getInstance().extraDebug(query);
 
 			try {
+				new Query(mysql, query).executeUpdate();
 				uuids.add(index);
 				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
 						index));
-				new Query(mysql, query).executeUpdate();
 			} catch (SQLException e) {
 				if (e.getMessage().contains("Duplicate entry")) {
 					AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while inserting user " + index
@@ -521,7 +521,7 @@ public class MySQL {
 			return;
 		}
 		checkColumn(column, dataType);
-		if (getUuids().contains(index) || containsKey(index)) {
+		if (getUuids().contains(index)) {
 			synchronized (object2) {
 
 				for (Column col : getExact(index)) {
