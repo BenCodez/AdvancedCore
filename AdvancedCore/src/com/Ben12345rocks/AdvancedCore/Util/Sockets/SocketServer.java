@@ -41,7 +41,8 @@ public abstract class SocketServer extends Thread {
 	@Override
 	public void run() {
 		while (running) {
-			try (Socket socket = server.accept()) {
+			try {
+				Socket socket = server.accept();
 				socket.setSoTimeout(5000); // Don't hang on slow connections.
 				DataInputStream dis = new DataInputStream(socket.getInputStream());
 				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
