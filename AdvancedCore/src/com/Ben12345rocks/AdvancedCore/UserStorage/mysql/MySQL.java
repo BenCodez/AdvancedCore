@@ -23,7 +23,6 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
-import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries.Callback;
 import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Column;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.DataType;
@@ -457,13 +456,7 @@ public class MySQL {
 				uuids.add(index);
 				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
 						index));
-				new Query(mysql, query).executeUpdateAsync(new Callback<Integer, SQLException>() {
-
-					@Override
-					public void call(Integer result, SQLException thrown) {
-						loadPlayerIfNeeded(index);
-					}
-				});
+				new Query(mysql, query).executeUpdateAsync();
 			} catch (SQLException e) {
 				if (e.getMessage().contains("Duplicate entry")) {
 					AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while inserting user " + index
