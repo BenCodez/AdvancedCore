@@ -43,7 +43,6 @@ public abstract class SocketServer extends Thread {
 				DataInputStream dis = new DataInputStream(socket.getInputStream());
 
 				final String msg = dis.readUTF();
-				System.out.println(msg);
 				new TimerTask() {
 
 					@Override

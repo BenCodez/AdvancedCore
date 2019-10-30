@@ -35,7 +35,6 @@ public class ClientHandler {
 		try {
 			DataOutputStream ds = new DataOutputStream(clientSocket.getOutputStream());
 			ds.writeUTF(msg);
-			System.out.println("out: " + msgs);
 			ds.close();
 		} catch (IOException e1) {
 			e1.printStackTrace();
