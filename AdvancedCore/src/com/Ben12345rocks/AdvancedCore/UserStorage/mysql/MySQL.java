@@ -26,6 +26,7 @@ import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
 import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries.Query;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Column;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.DataType;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.google.common.cache.CacheLoader;
@@ -155,7 +156,8 @@ public class MySQL {
 		synchronized (object3) {
 			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
-			AdvancedCorePlugin.getInstance().debug("Adding column: " + column);
+			AdvancedCorePlugin.getInstance().debug("Adding column: " + column + " Current columns: "
+					+ ArrayUtils.getInstance().makeStringList((ArrayList<String>) getColumns()));
 			try {
 				Query query = new Query(mysql, sql);
 				query.executeUpdate();
