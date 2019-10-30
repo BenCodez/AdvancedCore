@@ -237,7 +237,7 @@ public class User {
 	}
 
 	public void clearCache() {
-		if (AdvancedCorePlugin.getInstance().getOptions().getStorageType().equals(UserStorage.MYSQL)
+		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
 				&& AdvancedCorePlugin.getInstance().getMysql() != null) {
 			AdvancedCorePlugin.getInstance().getMysql().removePlayer(getUUID());
 		}
