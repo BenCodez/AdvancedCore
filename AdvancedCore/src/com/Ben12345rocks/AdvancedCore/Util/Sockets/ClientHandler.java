@@ -29,7 +29,7 @@ public class ClientHandler {
 		connect();
 		String msg = msgs[0];
 		for (int i = 1; i < msgs.length; i++) {
-			msg += "%||%";
+			msg += "%line%";
 			msg += msgs[i];
 		}
 		try {

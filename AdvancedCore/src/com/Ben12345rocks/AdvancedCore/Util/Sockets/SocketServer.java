@@ -47,7 +47,7 @@ public abstract class SocketServer extends Thread {
 
 					@Override
 					public void run() {
-						onReceive(msg.split("%||%"));
+						onReceive(msg.split("%line%"));
 					}
 				};
 
