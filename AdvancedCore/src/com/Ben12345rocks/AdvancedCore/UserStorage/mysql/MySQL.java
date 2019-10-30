@@ -198,8 +198,8 @@ public class MySQL {
 
 	public void checkColumn(String column, DataType dataType) {
 		synchronized (object4) {
-			if (!getColumns().contains(column)) {
-				if (!getColumnsQueury().contains(column)) {
+			if (!ArrayUtils.getInstance().containsIgnoreCase((ArrayList<String>) getColumns(), column)) {
+				if (!ArrayUtils.getInstance().containsIgnoreCase(getColumnsQueury(), column)) {
 					addColumn(column, dataType);
 				}
 			}
