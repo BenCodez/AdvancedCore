@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.Sockets;
 
 import java.util.ArrayList;
+import java.util.TimerTask;
 
 import lombok.Getter;
 
@@ -11,16 +12,23 @@ public class SocketHandler {
 	private ArrayList<SocketReceiver> receiving;
 
 	public SocketHandler(String threadName, String host, int port) {
-		server = new SocketServer(threadName, host, port) {
+		receiving = new ArrayList<SocketReceiver>();
+		new TimerTask() {
 
 			@Override
-			public void onReceive(String[] data) {
-				for (SocketReceiver r : receiving) {
-					r.onReceive(data);
-				}
+			public void run() {
+				server = new SocketServer(threadName, host, port) {
+
+					@Override
+					public void onReceive(String[] data) {
+						for (SocketReceiver r : receiving) {
+							r.onReceive(data);
+						}
+					}
+				};
 			}
 		};
-		receiving = new ArrayList<SocketReceiver>();
+
 	}
 
 	public void closeConnection() {
