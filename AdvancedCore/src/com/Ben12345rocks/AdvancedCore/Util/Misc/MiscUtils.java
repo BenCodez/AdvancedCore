@@ -54,11 +54,11 @@ public class MiscUtils {
 
 	public void broadcast(String broadcastMsg, ArrayList<Player> players) {
 		if (broadcastMsg != null && !broadcastMsg.equals("")) {
-			String consoleMsg = "";
+			String consoleMsg = broadcastMsg;
 			for (Player player : players) {
 				String msg = StringParser.getInstance()
 						.colorize(StringParser.getInstance().replacePlaceHolders(player, broadcastMsg));
-				if (consoleMsg.isEmpty()) {
+				if (consoleMsg.equals(broadcastMsg)) {
 					consoleMsg = msg;
 				}
 				for (String str : msg.split("%NewLine%")) {
