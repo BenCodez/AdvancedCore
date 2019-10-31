@@ -9,12 +9,19 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import lombok.Getter;
+import lombok.Setter;
 
 public abstract class SocketServer extends Thread {
+	
 	@Getter
 	private String host;
+	
 	@Getter
 	private int port;
+	
+	@Getter
+	@Setter
+	private int socketDelay = 4000;
 
 	private boolean running = true;
 
@@ -50,7 +57,7 @@ public abstract class SocketServer extends Thread {
 					public void run() {
 						onReceive(msg.split("%line%"));
 					}
-				}, 0);
+				}, socketDelay);
 
 				dis.close();
 				socket.close();
