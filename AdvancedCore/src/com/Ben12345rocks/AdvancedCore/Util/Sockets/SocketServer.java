@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import lombok.Getter;
 
@@ -46,13 +44,7 @@ public abstract class SocketServer extends Thread {
 				DataInputStream dis = new DataInputStream(socket.getInputStream());
 
 				final String msg = dis.readUTF();
-				new Timer().schedule(new TimerTask() {
-
-					@Override
-					public void run() {
-						onReceive(msg.split("%line%"));
-					}
-				}, 0);
+				onReceive(msg.split("%line%"));
 
 				dis.close();
 				socket.close();
@@ -60,6 +52,7 @@ public abstract class SocketServer extends Thread {
 				ex.printStackTrace();
 			}
 		}
+
 	}
 
 	public void close() {
