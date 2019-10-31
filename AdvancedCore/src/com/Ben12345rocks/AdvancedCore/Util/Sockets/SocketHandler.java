@@ -1,6 +1,8 @@
 package com.Ben12345rocks.AdvancedCore.Util.Sockets;
 
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import lombok.Getter;
 
@@ -18,7 +20,19 @@ public class SocketHandler {
 			@Override
 			public void onReceive(String[] data) {
 				for (SocketReceiver r : receiving) {
-					r.onReceive(data);
+					TimerTask task = new TimerTask() {
+
+						@Override
+						public void run() {
+							r.onReceive(data);
+						}
+					};
+					if (r.getSocketDelay() > 0) {
+						new Timer().schedule(task, r.getSocketDelay());
+					} else {
+						new Timer().schedule(task, 0);
+					}
+
 				}
 			}
 		};
