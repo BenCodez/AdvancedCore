@@ -29,6 +29,8 @@ public abstract class YMLFile {
 	@Getter
 	private boolean failedToRead = false;
 
+	private boolean created = false;
+
 	/**
 	 * Instantiates a new YML file.
 	 *
@@ -70,6 +72,10 @@ public abstract class YMLFile {
 	 */
 	public File getdFile() {
 		return dFile;
+	}
+
+	public boolean isJustCreated() {
+		return created;
 	}
 
 	/**
@@ -116,12 +122,6 @@ public abstract class YMLFile {
 		for (Entry<String, Object> entry : map.entrySet()) {
 			this.data.set(entry.getKey(), entry.getValue());
 		}
-	}
-
-	private boolean created = false;
-
-	public boolean isJustCreated() {
-		return created;
 	}
 
 	/**

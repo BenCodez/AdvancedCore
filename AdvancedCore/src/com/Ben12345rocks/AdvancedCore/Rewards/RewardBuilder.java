@@ -74,13 +74,6 @@ public class RewardBuilder {
 		}
 	}
 
-	public RewardBuilder setServer(boolean b) {
-		if (b) {
-			getRewardOptions().setServer(b);
-		}
-		return this;
-	}
-
 	public void send(OfflinePlayer p) {
 		send(UserManager.getInstance().getUser(p));
 	}
@@ -140,6 +133,13 @@ public class RewardBuilder {
 
 	public RewardBuilder setRewardOptions(RewardOptions rewardOptions) {
 		this.rewardOptions = rewardOptions;
+		return this;
+	}
+
+	public RewardBuilder setServer(boolean b) {
+		if (b) {
+			getRewardOptions().setServer(b);
+		}
 		return this;
 	}
 

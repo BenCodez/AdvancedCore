@@ -43,27 +43,12 @@ public class SkullHandler {
 
 	Queue<String> skullsToLoad = new ConcurrentLinkedQueue<String>();
 
-	@SuppressWarnings("deprecation")
-	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
-		if (hasSkull(playerName)) {
-			try {
-				return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				e.printStackTrace();
-			}
+	private Timer timer = new Timer();
 
-		} else {
-			loadSkull(playerName);
+	private void add(String playerName) {
+		if (skullsToLoad.contains(playerName) && getSkulls().containsKey(playerName)) {
+			skullsToLoad.add(playerName);
 		}
-		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
-
-	}
-
-	@SuppressWarnings("deprecation")
-	public ItemStack getSkull(String playerName) {
-
-		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
-
 	}
 
 	/*
@@ -101,7 +86,28 @@ public class SkullHandler {
 	 * }
 	 */
 
-	private Timer timer = new Timer();
+	@SuppressWarnings("deprecation")
+	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
+		if (hasSkull(playerName)) {
+			try {
+				return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
+			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+				e.printStackTrace();
+			}
+
+		} else {
+			loadSkull(playerName);
+		}
+		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
+
+	}
+
+	@SuppressWarnings("deprecation")
+	public ItemStack getSkull(String playerName) {
+
+		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
+
+	}
 
 	public boolean hasSkull(String playerName) {
 		if (skulls.containsKey(playerName)) {
@@ -185,12 +191,6 @@ public class SkullHandler {
 			} else {
 				add(playerName);
 			}
-		}
-	}
-
-	private void add(String playerName) {
-		if (skullsToLoad.contains(playerName) && getSkulls().containsKey(playerName)) {
-			skullsToLoad.add(playerName);
 		}
 	}
 

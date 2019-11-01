@@ -128,15 +128,15 @@ public class RewardOptions {
 		return this;
 	}
 
-	public RewardOptions setServer(String server) {
-		this.server = server;
-		return this;
-	}
-
 	public RewardOptions setServer(boolean b) {
 		if (b) {
 			this.server = AdvancedCorePlugin.getInstance().getOptions().getServer();
 		}
+		return this;
+	}
+
+	public RewardOptions setServer(String server) {
+		this.server = server;
 		return this;
 	}
 

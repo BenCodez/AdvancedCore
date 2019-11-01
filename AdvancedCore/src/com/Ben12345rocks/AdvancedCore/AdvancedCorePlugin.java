@@ -142,6 +142,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private boolean authMeLoaded = false;
 
+	@Getter
+	@Setter
+	private boolean loadServerData = true;
+
+	@Getter
+	@Setter
+	private boolean loadUserData = true;
+
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
@@ -199,26 +207,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	}
 
-	/**
-	 * Show exception in console if debug is on
-	 *
-	 * @param e
-	 *            Exception
-	 */
-	public void debug(Exception e) {
-		if (getOptions().getDebug().equals(DebugLevel.INFO)) {
-			e.printStackTrace();
-		}
-		if (getOptions().isLogDebugToFile()) {
-			if (pluginLogger != null) {
-				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-				pluginLogger.logToFile(str + " [" + this.getName() + "] ExceptionDebug: " + e.getMessage());
-			} else {
-				loadLogger();
-			}
-		}
-	}
-
 	public void debug(DebugLevel debugLevel, String debug) {
 		if (debugLevel.equals(DebugLevel.EXTRA)) {
 			debug = "ExtraDebug: " + debug;
@@ -242,6 +230,26 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			if (pluginLogger != null) {
 				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
 				pluginLogger.logToFile(str + ":" + debug);
+			} else {
+				loadLogger();
+			}
+		}
+	}
+
+	/**
+	 * Show exception in console if debug is on
+	 *
+	 * @param e
+	 *            Exception
+	 */
+	public void debug(Exception e) {
+		if (getOptions().getDebug().equals(DebugLevel.INFO)) {
+			e.printStackTrace();
+		}
+		if (getOptions().isLogDebugToFile()) {
+			if (pluginLogger != null) {
+				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
+				pluginLogger.logToFile(str + " [" + this.getName() + "] ExceptionDebug: " + e.getMessage());
 			} else {
 				loadLogger();
 			}
@@ -343,14 +351,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			debug("Server in offline mode");
 		}
 	}
-
-	@Getter
-	@Setter
-	private boolean loadServerData = true;
-
-	@Getter
-	@Setter
-	private boolean loadUserData = true;
 
 	/**
 	 * Load AdvancedCore hook

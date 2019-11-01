@@ -22,6 +22,14 @@ public class PluginUtils {
 	private PluginUtils() {
 	}
 
+	public long getFreeMemory() {
+		return Runtime.getRuntime().freeMemory() / (1024 * 1024);
+	}
+
+	public long getMemory() {
+		return Runtime.getRuntime().totalMemory() / (1024 * 1024);
+	}
+
 	public void registerCommands(JavaPlugin plugin, String commandText, CommandExecutor executor, TabCompleter tab) {
 		plugin.getCommand(commandText).setExecutor(executor);
 		if (tab != null) {
@@ -31,14 +39,6 @@ public class PluginUtils {
 
 	public void registerEvents(Listener listener, JavaPlugin plugin) {
 		Bukkit.getPluginManager().registerEvents(listener, plugin);
-	}
-
-	public long getMemory() {
-		return Runtime.getRuntime().totalMemory() / (1024 * 1024);
-	}
-
-	public long getFreeMemory() {
-		return Runtime.getRuntime().freeMemory() / (1024 * 1024);
 	}
 
 }

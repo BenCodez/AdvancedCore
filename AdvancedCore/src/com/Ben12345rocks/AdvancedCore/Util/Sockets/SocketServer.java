@@ -20,8 +20,6 @@ public abstract class SocketServer extends Thread {
 
 	private ServerSocket server;
 
-	public abstract void onReceive(String[] data);
-
 	public SocketServer(String version, String host, int port) {
 		super(version);
 		this.host = host;
@@ -34,6 +32,17 @@ public abstract class SocketServer extends Thread {
 			e.printStackTrace();
 		}
 	}
+
+	public void close() {
+		try {
+			server.close();
+			running = false;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public abstract void onReceive(String[] data);
 
 	@Override
 	public void run() {
@@ -53,14 +62,5 @@ public abstract class SocketServer extends Thread {
 			}
 		}
 
-	}
-
-	public void close() {
-		try {
-			server.close();
-			running = false;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 }

@@ -22,67 +22,27 @@ public class MessageBuilder {
 		this.text = text;
 	}
 
-	public MessageBuilder replacePlaceholder(String toReplace, String replaceWith) {
-		setText(StringParser.getInstance().replacePlaceHolder(text, toReplace, replaceWith));
-		return this;
-	}
-
-	public MessageBuilder replacePlaceholder(HashMap<String, String> placeholders) {
-		setText(StringParser.getInstance().replacePlaceHolder(text, placeholders));
-		return this;
-	}
-
-	public MessageBuilder replacePlaceholder(HashMap<String, String> placeholders, boolean ignoreCase) {
-		setText(StringParser.getInstance().replacePlaceHolder(text, placeholders, ignoreCase));
-		return this;
-	}
-
-	public MessageBuilder replacePlaceholder(String toReplace, String replaceWith, boolean ignoreCase) {
-		setText(StringParser.getInstance().replacePlaceHolder(text, toReplace, replaceWith, ignoreCase));
-		return this;
-	}
-
-	public MessageBuilder replaceJavascript(User user) {
-		setText(StringParser.getInstance().replaceJavascript(user, getText()));
-		return this;
-	}
-
-	public MessageBuilder replaceJavascript(OfflinePlayer player) {
-		setText(StringParser.getInstance().replaceJavascript(player, getText()));
-		return this;
-	}
-
-	public MessageBuilder replaceJavascript(CommandSender sender) {
-		setText(StringParser.getInstance().replaceJavascript(sender, getText()));
-		return this;
-	}
-
-	public MessageBuilder replaceJavascript() {
-		setText(StringParser.getInstance().replaceJavascript(getText()));
-		return this;
-	}
-
-	public MessageBuilder replaceJavascript(JavascriptEngine engine) {
-		setText(StringParser.getInstance().replaceJavascript(getText(), engine));
-		return this;
-	}
-
 	public MessageBuilder colorize() {
 		setText(StringParser.getInstance().colorize(getText()));
 		return this;
 	}
 
-	public MessageBuilder parseText(Player player, HashMap<String, String> placeholders) {
-		if (placeholders != null) {
-			replacePlaceholder(placeholders);
-		}
-		replaceJavascript((OfflinePlayer) player);
-		replacePlaceHolders(player);
+	public MessageBuilder parseText() {
+		replaceJavascript();
 		colorize();
 		return this;
 	}
 
-	public MessageBuilder parseText(Player player) {
+	public MessageBuilder parseText(HashMap<String, String> placeholders) {
+		if (placeholders != null) {
+			replacePlaceholder(placeholders);
+		}
+		replaceJavascript();
+		colorize();
+		return this;
+	}
+
+	public MessageBuilder parseText(OfflinePlayer player) {
 		parseText(player, null);
 		return this;
 	}
@@ -96,23 +56,63 @@ public class MessageBuilder {
 		return this;
 	}
 
-	public MessageBuilder parseText(OfflinePlayer player) {
+	public MessageBuilder parseText(Player player) {
 		parseText(player, null);
 		return this;
 	}
 
-	public MessageBuilder parseText(HashMap<String, String> placeholders) {
+	public MessageBuilder parseText(Player player, HashMap<String, String> placeholders) {
 		if (placeholders != null) {
 			replacePlaceholder(placeholders);
 		}
-		replaceJavascript();
+		replaceJavascript((OfflinePlayer) player);
+		replacePlaceHolders(player);
 		colorize();
 		return this;
 	}
 
-	public MessageBuilder parseText() {
-		replaceJavascript();
-		colorize();
+	public MessageBuilder replaceJavascript() {
+		setText(StringParser.getInstance().replaceJavascript(getText()));
+		return this;
+	}
+
+	public MessageBuilder replaceJavascript(CommandSender sender) {
+		setText(StringParser.getInstance().replaceJavascript(sender, getText()));
+		return this;
+	}
+
+	public MessageBuilder replaceJavascript(JavascriptEngine engine) {
+		setText(StringParser.getInstance().replaceJavascript(getText(), engine));
+		return this;
+	}
+
+	public MessageBuilder replaceJavascript(OfflinePlayer player) {
+		setText(StringParser.getInstance().replaceJavascript(player, getText()));
+		return this;
+	}
+
+	public MessageBuilder replaceJavascript(User user) {
+		setText(StringParser.getInstance().replaceJavascript(user, getText()));
+		return this;
+	}
+
+	public MessageBuilder replacePlaceholder(HashMap<String, String> placeholders) {
+		setText(StringParser.getInstance().replacePlaceHolder(text, placeholders));
+		return this;
+	}
+
+	public MessageBuilder replacePlaceholder(HashMap<String, String> placeholders, boolean ignoreCase) {
+		setText(StringParser.getInstance().replacePlaceHolder(text, placeholders, ignoreCase));
+		return this;
+	}
+
+	public MessageBuilder replacePlaceholder(String toReplace, String replaceWith) {
+		setText(StringParser.getInstance().replacePlaceHolder(text, toReplace, replaceWith));
+		return this;
+	}
+
+	public MessageBuilder replacePlaceholder(String toReplace, String replaceWith, boolean ignoreCase) {
+		setText(StringParser.getInstance().replacePlaceHolder(text, toReplace, replaceWith, ignoreCase));
 		return this;
 	}
 
@@ -128,12 +128,12 @@ public class MessageBuilder {
 		return this;
 	}
 
-	public TextComponent toTextComponent() {
-		return StringParser.getInstance().parseJson(getText());
-	}
-
 	@Override
 	public String toString() {
 		return getText();
+	}
+
+	public TextComponent toTextComponent() {
+		return StringParser.getInstance().parseJson(getText());
 	}
 }

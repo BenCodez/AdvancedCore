@@ -31,6 +31,8 @@ public class UserManager {
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
+	private Object obj = new Object();
+
 	/**
 	 * Instantiates a new user manager.
 	 */
@@ -98,8 +100,6 @@ public class UserManager {
 		}
 		return new ArrayList<String>();
 	}
-
-	private Object obj = new Object();
 
 	public String getProperName(String name) {
 

@@ -212,6 +212,10 @@ public class MySQL {
 		clearCacheBasic();
 	}
 
+	public void clearCache(String uuid) {
+		table.remove(uuid);
+	}
+
 	public void clearCacheBasic() {
 		AdvancedCorePlugin.getInstance().debug("Clearing cache basic");
 		columns.clear();
@@ -233,13 +237,6 @@ public class MySQL {
 		return false;
 	}
 
-	public boolean containsUUID(String uuid) {
-		if (table.containsKey(uuid) || uuids.contains(uuid)) {
-			return true;
-		}
-		return false;
-	}
-
 	public boolean containsKeyQuery(String index) {
 		String sql = "SELECT uuid FROM " + getName() + ";";
 		try {
@@ -254,6 +251,13 @@ public class MySQL {
 
 		} catch (SQLException ex) {
 			ex.printStackTrace();
+		}
+		return false;
+	}
+
+	public boolean containsUUID(String uuid) {
+		if (table.containsKey(uuid) || uuids.contains(uuid)) {
+			return true;
 		}
 		return false;
 	}
@@ -306,10 +310,6 @@ public class MySQL {
 		loadPlayerIfNeeded(uuid);
 		// AdvancedCorePlugin.getInstance().debug("test one: " + uuid);
 		return table.get(uuid);
-	}
-
-	public void clearCache(String uuid) {
-		table.remove(uuid);
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {

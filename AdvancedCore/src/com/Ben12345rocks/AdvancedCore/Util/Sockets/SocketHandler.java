@@ -39,11 +39,11 @@ public class SocketHandler {
 
 	}
 
-	public void closeConnection() {
-		server.close();
-	}
-
 	public void add(SocketReceiver receive) {
 		receiving.add(receive);
+	}
+
+	public void closeConnection() {
+		server.close();
 	}
 }
