@@ -447,29 +447,22 @@ public class MySQL {
 	}
 
 	public void insertQuery(String index, String column, Object value, DataType dataType) {
-		synchronized (object2) {
-			String query = "INSERT " + getName() + " ";
+		uuids.add(index);
+		String query = "INSERT " + getName() + " ";
 
-			query += "set uuid='" + index + "', ";
-			query += column + "='" + value.toString() + "';";
-			// AdvancedCorePlugin.getInstance().extraDebug(query);
+		query += "set uuid='" + index + "', ";
+		query += column + "='" + value.toString() + "';";
+		// AdvancedCorePlugin.getInstance().extraDebug(query);
 
-			try {
-				uuids.add(index);
-				new Query(mysql, query).executeUpdate();
-				names.add(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)),
-						index));
-			} catch (SQLException e) {
-				if (e.getMessage().contains("Duplicate entry")) {
-					AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while inserting user " + index
-							+ ", duplicate entry. Turn debug on in order to see the error. " + column + ":" + value);
-					AdvancedCorePlugin.getInstance().debug(e);
-
-				} else {
-					e.printStackTrace();
-				}
-			}
+		try {
+			new Query(mysql, query).executeUpdate();
+			names.add(
+					PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)), index));
+		} catch (Exception e) {
+			AdvancedCorePlugin.getInstance().debug(e);
+			AdvancedCorePlugin.getInstance().debug("Failed to insert player " + index);
 		}
+
 	}
 
 	public boolean isIntColumn(String key) {
@@ -522,9 +515,8 @@ public class MySQL {
 			return;
 		}
 		checkColumn(column, dataType);
-		if (getUuids().contains(index)) {
-			synchronized (object2) {
-
+		synchronized (object2) {
+			if (getUuids().contains(index) || containsKeyQuery(index)) {
 				for (Column col : getExact(index)) {
 					if (col.getName().equals(column)) {
 						col.setValue(value);
@@ -543,10 +535,9 @@ public class MySQL {
 				query += "'" + index + "';";
 
 				addToQue(query);
+			} else {
+				insert(index, column, value, dataType);
 			}
-
-		} else {
-			insert(index, column, value, dataType);
 		}
 
 	}
