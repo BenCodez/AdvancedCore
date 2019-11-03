@@ -44,6 +44,7 @@ com.Ben12345rocks.AdvancedCore.Util.Prompt
 com.Ben12345rocks.AdvancedCore.Util.Scoreboards
 com.Ben12345rocks.AdvancedCore.Util.Sign
 com.Ben12345rocks.AdvancedCore.Util.Skull
+com.Ben12345rocks.AdvancedCore.Util.Sockets
 com.Ben12345rocks.AdvancedCore.Util.Updater
 com.Ben12345rocks.AdvancedCore.Util.ValueRequest
 com.Ben12345rocks.AdvancedCore.Util.ValueRequest.Listeners
