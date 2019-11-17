@@ -1,7 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.Sockets;
 
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 
@@ -13,10 +12,10 @@ public class ClientHandler {
 	private int port;
 	private EncryptionHandler encryptionHandler;
 
-	public ClientHandler(String host, int port, File encryptionFile) {
+	public ClientHandler(String host, int port, EncryptionHandler handle) {
 		this.host = host;
 		this.port = port;
-		encryptionHandler = new EncryptionHandler(encryptionFile);
+		encryptionHandler = handle;
 	}
 
 	private void connect() {

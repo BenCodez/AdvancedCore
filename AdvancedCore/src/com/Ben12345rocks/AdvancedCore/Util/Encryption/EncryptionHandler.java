@@ -56,9 +56,9 @@ public class EncryptionHandler {
 			String encrypted = encrypt("This is a classified message!");
 
 			String decrypted = decrypt(encrypted);
-
-			System.out.println("Decrypted: " + decrypted);
-
+			if (!encrypted.equals(decrypted)) {
+				System.out.println("VotingPlugin: Encryption/Decrypted failed: " + decrypted);
+			}
 		} catch (NoSuchAlgorithmException e) {
 			System.out.println("No Such Algorithm:" + e.getMessage());
 			e.printStackTrace();
@@ -75,10 +75,10 @@ public class EncryptionHandler {
 	}
 
 	private void loadKey(File file) throws IOException {
-		//FileReader fileReader = new FileReader(file);
+		// FileReader fileReader = new FileReader(file);
 		String str = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
 		key = new SecretKeySpec(Base64.getDecoder().decode(str), "DES");
-	//	fileReader.close();
+		// fileReader.close();
 	}
 
 	public String encrypt(String str) {
