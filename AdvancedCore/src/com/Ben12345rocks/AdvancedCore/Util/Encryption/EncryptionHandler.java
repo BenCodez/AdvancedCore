@@ -1,7 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.Encryption;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,7 +23,6 @@ public class EncryptionHandler {
 
 	private void generateKey() throws NoSuchAlgorithmException {
 		KeyGenerator keyGenerator = KeyGenerator.getInstance("DES");
-		keyGenerator.init(128);
 		key = keyGenerator.generateKey();
 
 	}
@@ -77,10 +75,10 @@ public class EncryptionHandler {
 	}
 
 	private void loadKey(File file) throws IOException {
-		FileReader fileReader = new FileReader(file);
+		//FileReader fileReader = new FileReader(file);
 		String str = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
 		key = new SecretKeySpec(Base64.getDecoder().decode(str), "DES");
-		fileReader.close();
+	//	fileReader.close();
 	}
 
 	public String encrypt(String str) {
