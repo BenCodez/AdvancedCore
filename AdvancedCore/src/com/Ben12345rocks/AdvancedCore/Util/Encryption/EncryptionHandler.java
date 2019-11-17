@@ -14,8 +14,6 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.sun.mail.util.BASE64DecoderStream;
-
 public class EncryptionHandler {
 	private static Cipher ecipher;
 	private static Cipher dcipher;
@@ -103,28 +101,15 @@ public class EncryptionHandler {
 	}
 
 	public String decrypt(String str) {
-
 		try {
-
 			// decode with base64 to get bytes
-
-			byte[] dec = BASE64DecoderStream.decode(str.getBytes());
-
+			byte[] dec = Base64.getDecoder().decode(str.getBytes());
 			byte[] utf8 = dcipher.doFinal(dec);
-
 			// create new string based on the specified charset
-
 			return new String(utf8, "UTF8");
-
-		}
-
-		catch (Exception e) {
-
+		} catch (Exception e) {
 			e.printStackTrace();
-
 		}
-
 		return null;
-
 	}
 }
