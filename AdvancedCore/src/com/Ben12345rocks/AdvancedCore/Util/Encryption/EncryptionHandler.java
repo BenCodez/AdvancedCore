@@ -61,13 +61,13 @@ public class EncryptionHandler {
 
 		} catch (NoSuchAlgorithmException e) {
 			System.out.println("No Such Algorithm:" + e.getMessage());
-			return;
+			e.printStackTrace();
 		} catch (NoSuchPaddingException e) {
 			System.out.println("No Such Padding:" + e.getMessage());
-			return;
+			e.printStackTrace();
 		} catch (InvalidKeyException e) {
 			System.out.println("Invalid Key:" + e.getMessage());
-			return;
+			e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
