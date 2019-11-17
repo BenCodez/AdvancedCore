@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -14,7 +15,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.sun.mail.util.BASE64DecoderStream;
-import com.sun.mail.util.BASE64EncoderStream;
 
 public class EncryptionHandler {
 	private static Cipher ecipher;
@@ -94,22 +94,12 @@ public class EncryptionHandler {
 
 			byte[] enc = ecipher.doFinal(utf8);
 
-			// encode to base64
-
-			enc = BASE64EncoderStream.encode(enc);
-
-			return new String(enc);
-
-		}
-
-		catch (Exception e) {
-
+			String encString = new String(Base64.getEncoder().encodeToString(enc));
+			return new String(encString);
+		} catch (Exception e) {
 			e.printStackTrace();
-
 		}
-
 		return null;
-
 	}
 
 	public String decrypt(String str) {
