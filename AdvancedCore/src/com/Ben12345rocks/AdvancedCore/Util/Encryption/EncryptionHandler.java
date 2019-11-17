@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -76,9 +78,8 @@ public class EncryptionHandler {
 
 	private void loadKey(File file) throws IOException {
 		FileReader fileReader = new FileReader(file);
-		char[] strings = new char[1];
-		fileReader.read(strings);
-		key = new SecretKeySpec(Base64.getDecoder().decode(new String(strings).getBytes()), "DES");
+		String str = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
+		key = new SecretKeySpec(Base64.getDecoder().decode(str), "DES");
 		fileReader.close();
 	}
 
