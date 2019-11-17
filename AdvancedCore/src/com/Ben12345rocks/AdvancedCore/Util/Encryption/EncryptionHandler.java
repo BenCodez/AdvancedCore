@@ -21,13 +21,15 @@ public class EncryptionHandler {
 	private static SecretKey key;
 
 	private void generateKey() throws NoSuchAlgorithmException {
-		key = KeyGenerator.getInstance("DES").generateKey();
+		KeyGenerator keyGenerator = KeyGenerator.getInstance("DES");
+		keyGenerator.init(128);
+		key = keyGenerator.generateKey();
 
 	}
 
 	private void save(File file) throws IOException {
 		FileWriter fileWriter = new FileWriter(file);
-		fileWriter.write(new String(key.getEncoded()));
+		fileWriter.write(Base64.getEncoder().withoutPadding().encodeToString(key.getEncoded()));
 		fileWriter.close();
 		key.getEncoded();
 
@@ -76,7 +78,7 @@ public class EncryptionHandler {
 		FileReader fileReader = new FileReader(file);
 		char[] strings = new char[1];
 		fileReader.read(strings);
-		key = new SecretKeySpec(new String(strings).getBytes(), "DES");
+		key = new SecretKeySpec(Base64.getDecoder().decode(new String(strings).getBytes()), "DES");
 		fileReader.close();
 	}
 
