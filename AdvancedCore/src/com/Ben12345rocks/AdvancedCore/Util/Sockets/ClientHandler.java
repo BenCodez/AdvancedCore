@@ -1,17 +1,22 @@
 package com.Ben12345rocks.AdvancedCore.Util.Sockets;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
+
+import com.Ben12345rocks.AdvancedCore.Util.Encryption.EncryptionHandler;
 
 public class ClientHandler {
 	private Socket clientSocket;
 	private String host;
 	private int port;
+	private EncryptionHandler encryptionHandler;
 
-	public ClientHandler(String host, int port) {
+	public ClientHandler(String host, int port, File encryptionFile) {
 		this.host = host;
 		this.port = port;
+		encryptionHandler = new EncryptionHandler(encryptionFile);
 	}
 
 	private void connect() {
@@ -32,9 +37,10 @@ public class ClientHandler {
 			msg += "%line%";
 			msg += msgs[i];
 		}
+		String encrypted = encryptionHandler.encrypt(msg);
 		try {
 			DataOutputStream ds = new DataOutputStream(clientSocket.getOutputStream());
-			ds.writeUTF(msg);
+			ds.writeUTF(encrypted);
 			ds.close();
 		} catch (IOException e1) {
 			e1.printStackTrace();

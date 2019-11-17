@@ -1,10 +1,13 @@
 package com.Ben12345rocks.AdvancedCore.Util.Sockets;
 
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+
+import com.Ben12345rocks.AdvancedCore.Util.Encryption.EncryptionHandler;
 
 import lombok.Getter;
 
@@ -20,10 +23,13 @@ public abstract class SocketServer extends Thread {
 
 	private ServerSocket server;
 
-	public SocketServer(String version, String host, int port) {
+	private EncryptionHandler encryptionHandler;
+
+	public SocketServer(String version, String host, int port, File encryptionFile) {
 		super(version);
 		this.host = host;
 		this.port = port;
+		encryptionHandler = new EncryptionHandler(encryptionFile);
 		try {
 			server = new ServerSocket();
 			server.bind(new InetSocketAddress(host, port));
@@ -52,7 +58,7 @@ public abstract class SocketServer extends Thread {
 				socket.setSoTimeout(5000); // Don't hang on slow connections.
 				DataInputStream dis = new DataInputStream(socket.getInputStream());
 
-				final String msg = dis.readUTF();
+				final String msg = encryptionHandler.decrypt(dis.readUTF());
 				onReceive(msg.split("%line%"));
 
 				dis.close();
