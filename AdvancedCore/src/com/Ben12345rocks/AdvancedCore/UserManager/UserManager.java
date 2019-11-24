@@ -92,8 +92,12 @@ public class UserManager {
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
 			synchronized (obj) {
 				ArrayList<String> uuids = new ArrayList<String>();
-				for (String uuid : AdvancedCorePlugin.getInstance().getMysql().getUuids()) {
-					uuids.add(uuid);
+				try {
+					for (String uuid : AdvancedCorePlugin.getInstance().getMysql().getUuids()) {
+						uuids.add(uuid);
+					}
+				} catch (NullPointerException e) {
+					e.printStackTrace();
 				}
 				return uuids;
 			}
