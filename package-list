@@ -30,6 +30,7 @@ com.Ben12345rocks.AdvancedCore.Util.Book
 com.Ben12345rocks.AdvancedCore.Util.EditGUI
 com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes
 com.Ben12345rocks.AdvancedCore.Util.Effects
+com.Ben12345rocks.AdvancedCore.Util.Encryption
 com.Ben12345rocks.AdvancedCore.Util.Files
 com.Ben12345rocks.AdvancedCore.Util.Inventory
 com.Ben12345rocks.AdvancedCore.Util.Item
