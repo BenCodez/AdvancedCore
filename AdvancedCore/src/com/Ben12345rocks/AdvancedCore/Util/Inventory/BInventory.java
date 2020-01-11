@@ -420,12 +420,16 @@ public class BInventory implements Listener {
 		if (this.inv != null && inv.equals(this.inv)) {
 			event.setCancelled(true);
 			event.setResult(Result.DENY);
+			if (event.isShiftClick()) {
+				event.setCurrentItem(new ItemStack(Material.AIR));
+			}
 			player.setItemOnCursor(new ItemStack(Material.AIR));
 			player.updateInventory();
 			final Player player = (Player) event.getWhoClicked();
 			if (isCloseInv()) {
 				closeInv(player, null);
 			}
+			
 
 			// prevent spam clicking, to avoid issues
 			long cTime = System.currentTimeMillis();
