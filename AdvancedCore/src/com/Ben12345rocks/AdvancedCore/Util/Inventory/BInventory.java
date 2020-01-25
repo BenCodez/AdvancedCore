@@ -246,7 +246,7 @@ public class BInventory implements Listener {
 			public void run() {
 				HandlerList.unregisterAll(b);
 			}
-		}, 200l);
+		}, 500l);
 
 		if (player != null) {
 			AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for " + player.getUniqueId());
