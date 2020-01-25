@@ -224,9 +224,10 @@ public class BInventory implements Listener {
 					@Override
 					public void run() {
 						p.closeInventory();
+						destroy();
 					}
 				});
-				destroy();
+
 			}
 		}
 	}
@@ -245,14 +246,15 @@ public class BInventory implements Listener {
 			@Override
 			public void run() {
 				HandlerList.unregisterAll(b);
+				if (player != null) {
+					AdvancedCorePlugin.getInstance()
+							.extraDebug("Disabling inventory listeners for " + player.getUniqueId());
+				} else {
+					AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for null");
+				}
 			}
 		}, 500l);
 
-		if (player != null) {
-			AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for " + player.getUniqueId());
-		} else {
-			AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for null");
-		}
 	}
 
 	public BInventory dontClose() {
@@ -429,7 +431,6 @@ public class BInventory implements Listener {
 			if (isCloseInv()) {
 				closeInv(player, null);
 			}
-			
 
 			// prevent spam clicking, to avoid issues
 			long cTime = System.currentTimeMillis();
