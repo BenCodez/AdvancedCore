@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
@@ -133,7 +134,13 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
-		loadData();
+		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+			@Override
+			public void run() {
+				loadData();
+			}
+		});
 
 		// tempoary to improve performance from old tables
 		// addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
@@ -298,7 +305,7 @@ public class MySQL {
 				return columns;
 			}
 
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return columns;
