@@ -134,13 +134,7 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-			@Override
-			public void run() {
-				loadData();
-			}
-		});
+		loadData();
 
 		// tempoary to improve performance from old tables
 		// addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
@@ -188,18 +182,24 @@ public class MySQL {
 		// }
 	}
 
-	public void alterColumnType(String column, String newType) {
-		checkColumn(column, DataType.STRING);
-		AdvancedCorePlugin.getInstance().debug("Altering column " + column + " to " + newType);
-		if (newType.contains("INT")) {
-			addToQue(
-					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
-			if (!intColumns.contains(column)) {
-				intColumns.add(column);
-				ServerData.getInstance().setIntColumns(intColumns);
+	public void alterColumnType(final String column, final String newType) {
+		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+			@Override
+			public void run() {
+				checkColumn(column, DataType.STRING);
+				AdvancedCorePlugin.getInstance().debug("Altering column " + column + " to " + newType);
+				if (newType.contains("INT")) {
+					addToQue("UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column
+							+ ", '')) = '';");
+					if (!intColumns.contains(column)) {
+						intColumns.add(column);
+						ServerData.getInstance().setIntColumns(intColumns);
+					}
+				}
+				addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
 			}
-		}
-		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
+		});
 
 	}
 
