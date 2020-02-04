@@ -17,7 +17,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
@@ -183,24 +182,17 @@ public class MySQL {
 	}
 
 	public void alterColumnType(final String column, final String newType) {
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-			@Override
-			public void run() {
-				checkColumn(column, DataType.STRING);
-				AdvancedCorePlugin.getInstance().debug("Altering column " + column + " to " + newType);
-				if (newType.contains("INT")) {
-					addToQue("UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column
-							+ ", '')) = '';");
-					if (!intColumns.contains(column)) {
-						intColumns.add(column);
-						ServerData.getInstance().setIntColumns(intColumns);
-					}
-				}
-				addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
+		checkColumn(column, DataType.STRING);
+		AdvancedCorePlugin.getInstance().debug("Altering column " + column + " to " + newType);
+		if (newType.contains("INT")) {
+			addToQue(
+					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
+			if (!intColumns.contains(column)) {
+				intColumns.add(column);
+				ServerData.getInstance().setIntColumns(intColumns);
 			}
-		});
-
+		}
+		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
 	}
 
 	public void checkColumn(String column, DataType dataType) {
