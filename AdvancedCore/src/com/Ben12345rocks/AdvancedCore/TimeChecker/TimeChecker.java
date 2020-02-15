@@ -7,6 +7,8 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.bukkit.Bukkit;
+
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Data.ServerData;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.Events.DateChangedEvent;
@@ -47,31 +49,38 @@ public class TimeChecker {
 		forceChanged(time, true);
 	}
 
-	public void forceChanged(TimeType time, boolean fake) {
-		plugin.debug("Executing time change events: " + time.toString());
-		plugin.getLogger().info("Time change event: " + time.toString() + ", Fake: " + fake);
-		PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
-		preDateChanged.setFake(fake);
-		plugin.getServer().getPluginManager().callEvent(preDateChanged);
-		if (time.equals(TimeType.DAY)) {
-			DayChangeEvent dayChange = new DayChangeEvent();
-			dayChange.setFake(fake);
-			plugin.getServer().getPluginManager().callEvent(dayChange);
-		} else if (time.equals(TimeType.WEEK)) {
-			WeekChangeEvent weekChange = new WeekChangeEvent();
-			weekChange.setFake(fake);
-			plugin.getServer().getPluginManager().callEvent(weekChange);
-		} else if (time.equals(TimeType.MONTH)) {
-			MonthChangeEvent monthChange = new MonthChangeEvent();
-			monthChange.setFake(fake);
-			plugin.getServer().getPluginManager().callEvent(monthChange);
-		}
+	public void forceChanged(final TimeType time, final boolean fake) {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
-		DateChangedEvent dateChanged = new DateChangedEvent(time);
-		dateChanged.setFake(fake);
-		plugin.getServer().getPluginManager().callEvent(dateChanged);
+			@Override
+			public void run() {
+				plugin.debug("Executing time change events: " + time.toString());
+				plugin.getLogger().info("Time change event: " + time.toString() + ", Fake: " + fake);
+				PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
+				preDateChanged.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(preDateChanged);
+				if (time.equals(TimeType.DAY)) {
+					DayChangeEvent dayChange = new DayChangeEvent();
+					dayChange.setFake(fake);
+					plugin.getServer().getPluginManager().callEvent(dayChange);
+				} else if (time.equals(TimeType.WEEK)) {
+					WeekChangeEvent weekChange = new WeekChangeEvent();
+					weekChange.setFake(fake);
+					plugin.getServer().getPluginManager().callEvent(weekChange);
+				} else if (time.equals(TimeType.MONTH)) {
+					MonthChangeEvent monthChange = new MonthChangeEvent();
+					monthChange.setFake(fake);
+					plugin.getServer().getPluginManager().callEvent(monthChange);
+				}
 
-		plugin.debug("Finished executing time change events: " + time.toString());
+				DateChangedEvent dateChanged = new DateChangedEvent(time);
+				dateChanged.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(dateChanged);
+
+				plugin.debug("Finished executing time change events: " + time.toString());
+			}
+		});
+
 	}
 
 	public LocalDateTime getTime() {
