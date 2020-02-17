@@ -1405,7 +1405,7 @@ public class RewardHandler {
 				for (String keys : section.getKeys(false)) {
 
 					Reward reward = RewardHandler.getInstance().getReward(section, keys, new RewardOptions());
-					if (reward.canGiveReward(user, new RewardOptions())) {
+					if (reward != null && reward.canGiveReward(user, new RewardOptions())) {
 						plugin.extraDebug("AdvancedPriority: Giving reward " + reward.getName());
 						reward.giveReward(user, new RewardOptions().withPlaceHolder(placeholders).setIgnoreChance(true)
 								.setIgnoreRequirements(true).setPrefix(reward1.getName() + "_AdvancedPriority"));
