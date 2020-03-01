@@ -183,6 +183,11 @@ public class ItemBuilder {
 					}
 				}
 
+				int customModelData = data.getInt("CustomModelData", -1);
+				if (customModelData != -1) {
+					setCustomModelData(customModelData);
+				}
+
 				setUnbreakable(data.getBoolean("Unbreakable", false));
 
 				slot = data.getInt("Slot", -1);
@@ -191,6 +196,11 @@ public class ItemBuilder {
 				chancePass = false;
 			}
 		}
+	}
+
+	public ItemBuilder setCustomModelData(int data) {
+		is.getItemMeta().setCustomModelData(data);
+		return this;
 	}
 
 	/**

@@ -536,7 +536,7 @@ public class User {
 				@Override
 				public void run() {
 					player.addPotionEffect(
-							new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier), true);
+							new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier));
 				}
 			});
 

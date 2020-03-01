@@ -68,6 +68,9 @@ Items:
     # Hide enchants     
     #ItemFlags:
     #- HIDE_ENCHANTS
+    
+    # CustomModelData nbt tag
+    #CustomModelData: 100
       
     # Set power of firework
     #Power: 1
