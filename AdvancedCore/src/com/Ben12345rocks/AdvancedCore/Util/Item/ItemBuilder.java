@@ -199,7 +199,9 @@ public class ItemBuilder {
 	}
 
 	public ItemBuilder setCustomModelData(int data) {
-		is.getItemMeta().setCustomModelData(data);
+		ItemMeta im = is.getItemMeta();
+		im.setCustomModelData(data);
+		is.setItemMeta(im);
 		return this;
 	}
 
