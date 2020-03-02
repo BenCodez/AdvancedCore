@@ -201,7 +201,6 @@ public class ItemBuilder {
 	public ItemBuilder setCustomModelData(int data) {
 		ItemMeta im = is.getItemMeta();
 		im.setCustomModelData(data);
-		AdvancedCorePlugin.getInstance().debug("Setting custommodeldata " + data);
 		is.setItemMeta(im);
 		return this;
 	}
