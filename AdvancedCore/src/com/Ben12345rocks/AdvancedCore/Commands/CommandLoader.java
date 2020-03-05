@@ -337,7 +337,11 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				User user = UserManager.getInstance().getUser(args[1]);
-				user.getData().setString(args[3], args[4]);
+				String data = args[4];
+				if (data.equalsIgnoreCase("\"\"")) {
+					data = "";
+				}
+				user.getData().setString(args[3], data);
 				sender.sendMessage(
 						StringParser.getInstance().colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
 			}
