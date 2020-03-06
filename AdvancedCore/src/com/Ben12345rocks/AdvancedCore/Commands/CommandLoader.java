@@ -354,7 +354,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				User user = UserManager.getInstance().getUser(args[1]);
 				for (String key : user.getData().getKeys()) {
-					user.sendMessage("&c&l" + key + " &c" + user.getData().getString(key));
+					sendMessage(sender, "&c&l" + key + " &c" + user.getData().getString(key));
 				}
 			}
 		});
