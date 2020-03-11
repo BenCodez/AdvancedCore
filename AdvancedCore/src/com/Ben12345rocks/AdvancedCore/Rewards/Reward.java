@@ -146,8 +146,8 @@ public class Reward {
 	public void checkRewardFile(boolean forceCheck) {
 		if (!getConfig().hasRewardFile()) {
 			if (!isRewardFileMatching()) {
-				plugin.getLogger().warning(
-						"Detected a reward file edited when it should be edited where directly defined, overriding");
+				plugin.getLogger().warning("Detected a reward file " + getName()
+						+ " edited when it should be edited where directly defined, overriding");
 			}
 			setRewardFile();
 		} else if (forceCheck && !isRewardFileMatching()) {
