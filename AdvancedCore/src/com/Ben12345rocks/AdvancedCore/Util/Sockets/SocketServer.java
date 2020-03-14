@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Encryption.EncryptionHandler;
 
 import lombok.Getter;
@@ -63,7 +64,7 @@ public abstract class SocketServer extends Thread {
 				dis.close();
 				socket.close();
 			} catch (Exception ex) {
-				ex.printStackTrace();
+				AdvancedCorePlugin.getInstance().debug(ex);
 			}
 		}
 
