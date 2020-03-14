@@ -40,8 +40,8 @@ public abstract class SocketServer extends Thread {
 
 	public void close() {
 		try {
-			server.close();
 			running = false;
+			server.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
