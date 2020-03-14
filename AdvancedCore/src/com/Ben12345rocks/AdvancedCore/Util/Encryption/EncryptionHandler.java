@@ -53,10 +53,11 @@ public class EncryptionHandler {
 
 			dcipher.init(Cipher.DECRYPT_MODE, key);
 
+			String msg = "This is a classified message!";
 			String encrypted = encrypt("This is a classified message!");
 
 			String decrypted = decrypt(encrypted);
-			if (!encrypted.equals(decrypted)) {
+			if (!msg.equals(decrypted)) {
 				System.out.println("VotingPlugin: Encryption/Decrypted failed: " + decrypted);
 			}
 		} catch (NoSuchAlgorithmException e) {
