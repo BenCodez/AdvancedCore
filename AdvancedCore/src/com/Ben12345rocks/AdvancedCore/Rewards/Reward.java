@@ -282,6 +282,7 @@ public class Reward {
 			}
 		}
 
+		// Check requirements
 		boolean allowOffline = false;
 		boolean canGive = true;
 		if (!rewardOptions.isIgnoreRequirements()) {
@@ -307,6 +308,7 @@ public class Reward {
 			}
 		}
 
+		// save reward for offline
 		if (((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline)
 				&& (!isForceOffline() && !rewardOptions.isForceOffline())) {
 			if (rewardOptions.isGiveOffline()) {
@@ -316,6 +318,7 @@ public class Reward {
 			return;
 		}
 
+		// give reward
 		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
 			plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
 			giveRewardUser(user, rewardOptions.getPlaceholders(), rewardOptions);
