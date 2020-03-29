@@ -226,6 +226,12 @@ public class UserData {
 		if (key.equals("")) {
 			AdvancedCorePlugin.getInstance().debug("No key: " + key + " to " + value);
 			return;
+		} else if (key.contains(" ")) {
+			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
+		}
+		if (AdvancedCorePlugin.getInstance().getOptions().isExtraDebug()) {
+			AdvancedCorePlugin.getInstance()
+					.debug("Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "'");
 		}
 		/*
 		 * if (AdvancedCorePlugin.getInstance().isExtraDebug()) {
@@ -251,6 +257,8 @@ public class UserData {
 		if (key.equals("") && value != null) {
 			AdvancedCorePlugin.getInstance().debug("No key/value: " + key + " to " + value);
 			return;
+		} else if (key.contains(" ")) {
+			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
 		if (AdvancedCorePlugin.getInstance().getOptions().isExtraDebug()) {
 			AdvancedCorePlugin.getInstance()
