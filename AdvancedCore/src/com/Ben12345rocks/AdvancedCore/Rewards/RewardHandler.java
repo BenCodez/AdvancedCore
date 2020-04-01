@@ -891,7 +891,7 @@ public class RewardHandler {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.getString(inject.getPath()).isEmpty()) {
+						if (data.getString(inject.getPath(), "Empty").isEmpty()) {
 							warning(reward, inject, "No broadcast was set");
 						}
 					}
