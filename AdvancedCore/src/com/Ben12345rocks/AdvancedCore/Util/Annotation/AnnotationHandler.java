@@ -55,8 +55,13 @@ public class AnnotationHandler {
 						}
 
 					}
-					boolean value = config.getBoolean(booleanAnnotation.path(),
-							config.getBoolean(booleanAnnotation.secondPath(), defaultValue));
+					boolean value = false;
+					if (!booleanAnnotation.secondPath().isEmpty()) {
+						value = config.getBoolean(booleanAnnotation.path(),
+								config.getBoolean(booleanAnnotation.secondPath(), defaultValue));
+					} else {
+						value = config.getBoolean(booleanAnnotation.path(), defaultValue);
+					}
 
 					field.set(classToLoad, value);
 
@@ -73,8 +78,13 @@ public class AnnotationHandler {
 
 						}
 					}
-					int value = config.getInt(intAnnotation.path(),
-							config.getInt(intAnnotation.secondPath(), defaultValue));
+					int value = 0;
+					if (!intAnnotation.secondPath().isEmpty()) {
+						value = config.getInt(intAnnotation.path(),
+								config.getInt(intAnnotation.secondPath(), defaultValue));
+					} else {
+						value = config.getInt(intAnnotation.path(), defaultValue);
+					}
 
 					field.set(classToLoad, value);
 
@@ -91,8 +101,13 @@ public class AnnotationHandler {
 
 						}
 					}
-					double value = config.getDouble(doubleAnnotation.path(),
-							config.getDouble(doubleAnnotation.secondPath(), defaultValue));
+					double value = 0;
+					if (!doubleAnnotation.secondPath().isEmpty()) {
+						value = config.getDouble(doubleAnnotation.path(),
+								config.getDouble(doubleAnnotation.secondPath(), defaultValue));
+					} else {
+						value = config.getDouble(doubleAnnotation.path(), defaultValue);
+					}
 
 					field.set(classToLoad, value);
 
@@ -107,8 +122,13 @@ public class AnnotationHandler {
 					} catch (Exception e) {
 
 					}
-					ArrayList<String> value = (ArrayList<String>) config.getList(listAnnotation.path(),
-							config.getList(listAnnotation.secondPath(), defaultValue));
+					ArrayList<String> value = null;
+					if (!listAnnotation.secondPath().isEmpty()) {
+						value = (ArrayList<String>) config.getList(listAnnotation.path(),
+								config.getList(listAnnotation.secondPath(), defaultValue));
+					} else {
+						value = (ArrayList<String>) config.getList(listAnnotation.path(), defaultValue);
+					}
 
 					field.set(classToLoad, value);
 				}
