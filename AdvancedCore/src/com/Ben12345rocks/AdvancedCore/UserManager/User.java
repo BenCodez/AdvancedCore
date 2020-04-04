@@ -419,7 +419,7 @@ public class User {
 		Player p = getPlayer();
 		if (p != null) {
 			for (int i = 0; i < num; i++) {
-				p.setTotalExperience((int) (p.getTotalExperience() + p.getExpToLevel()));
+				p.setExp(1);
 			}
 		}
 	}
