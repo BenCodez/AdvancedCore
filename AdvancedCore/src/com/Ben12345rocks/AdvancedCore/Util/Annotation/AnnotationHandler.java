@@ -31,8 +31,13 @@ public class AnnotationHandler {
 
 						}
 					}
-					String value = config.getString(stringAnnotation.path(),
-							config.getString(stringAnnotation.secondPath(), defaultValue));
+					String value = "";
+					if (!stringAnnotation.secondPath().isEmpty()) {
+						value = config.getString(stringAnnotation.path(),
+								config.getString(stringAnnotation.secondPath(), defaultValue));
+					} else {
+						value = config.getString(stringAnnotation.path(), defaultValue);
+					}
 
 					field.set(classToLoad, value);
 
