@@ -418,9 +418,7 @@ public class User {
 	public void giveExpLevels(int num) {
 		Player p = getPlayer();
 		if (p != null) {
-			for (int i = 0; i < num; i++) {
-				p.setExp(1);
-			}
+			p.setLevel(p.getLevel() + num);
 		}
 	}
 
