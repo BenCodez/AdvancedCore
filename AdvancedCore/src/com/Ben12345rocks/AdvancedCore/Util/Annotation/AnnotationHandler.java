@@ -25,7 +25,7 @@ public class AnnotationHandler {
 					String defaultValue = stringAnnotation.defaultValue();
 					if (defaultValue.isEmpty()) {
 						try {
-							String v = (String) field.get(clazz);
+							String v = (String) field.get(classToLoad);
 							defaultValue = v;
 						} catch (Exception e) {
 
@@ -43,7 +43,7 @@ public class AnnotationHandler {
 					boolean defaultValue = booleanAnnotation.defaultValue();
 					if (!defaultValue) {
 						try {
-							boolean v = field.getBoolean(clazz);
+							boolean v = field.getBoolean(classToLoad);
 							defaultValue = v;
 						} catch (Exception e) {
 
@@ -62,7 +62,7 @@ public class AnnotationHandler {
 					int defaultValue = intAnnotation.defaultValue();
 					if (defaultValue == 0) {
 						try {
-							int v = field.getInt(clazz);
+							int v = field.getInt(classToLoad);
 							defaultValue = v;
 						} catch (Exception e) {
 
@@ -80,7 +80,7 @@ public class AnnotationHandler {
 					double defaultValue = doubleAnnotation.defaultValue();
 					if (defaultValue == 0) {
 						try {
-							double v = field.getDouble(clazz);
+							double v = field.getDouble(classToLoad);
 							defaultValue = v;
 						} catch (Exception e) {
 
@@ -97,7 +97,7 @@ public class AnnotationHandler {
 				if (listAnnotation != null) {
 					ArrayList<String> defaultValue = new ArrayList<String>();
 					try {
-						ArrayList<String> v = (ArrayList<String>) field.get(clazz);
+						ArrayList<String> v = (ArrayList<String>) field.get(classToLoad);
 						defaultValue = v;
 					} catch (Exception e) {
 
