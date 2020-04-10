@@ -361,6 +361,17 @@ public class StringParser {
 		}
 	}
 
+	public String replacePlaceHolders(OfflinePlayer player, String text) {
+		if (player == null) {
+			return text;
+		}
+		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
+			return PlaceholderAPI.setBracketPlaceholders(player, PlaceholderAPI.setPlaceholders(player, text));
+		} else {
+			return text;
+		}
+	}
+
 	/**
 	 * Round decimals.
 	 *
