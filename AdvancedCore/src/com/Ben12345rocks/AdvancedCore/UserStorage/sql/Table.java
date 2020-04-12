@@ -7,8 +7,17 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 
+import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.db.SQLite;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
+import com.google.common.cache.CacheLoader;
+
+import lombok.Getter;
 
 public class Table {
 
@@ -25,6 +34,15 @@ public class Table {
 		}
 	}
 
+	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
+			.build(new CacheLoader<String, ArrayList<Column>>() {
+
+				@Override
+				public ArrayList<Column> load(String key) {
+					return getExactQuery(new Column("uuid", key, DataType.STRING));
+				}
+			});
+
 	private String name;
 	private List<Column> columns = new ArrayList<>();
 	private Column primaryKey;
@@ -33,16 +51,29 @@ public class Table {
 
 	private Object object = new Object();
 
+	private void loadTimer() {
+		new Timer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				updateBatch();
+			}
+
+		}, 10 * 1000, 500);
+	}
+
 	public Table(String name, Collection<Column> columns) {
 		this.name = name;
 		this.columns.addAll(columns);
 		primaryKey = this.columns.get(0);
+		loadTimer();
 	}
 
 	public Table(String name, Collection<Column> columns, Column primaryKey) {
 		this.name = name;
 		this.primaryKey = primaryKey;
 		this.columns.addAll(columns);
+		loadTimer();
 	}
 
 	public Table(String name, Column... columns) {
@@ -51,6 +82,7 @@ public class Table {
 			this.columns.add(column);
 		}
 		primaryKey = this.columns.get(0);
+		loadTimer();
 	}
 
 	public Table(String name, Column primaryKey, Column... columns) {
@@ -59,6 +91,7 @@ public class Table {
 		for (Column column : columns) {
 			this.columns.add(column);
 		}
+		loadTimer();
 	}
 
 	public void addColoumn(Column column) {
@@ -162,9 +195,39 @@ public class Table {
 		return columns;
 	}
 
-	public List<Column> getExact(Column column) {
+	public ArrayList<Column> getExact(Column column) {
+		String uuid = column.getValue().toString();
+		// AdvancedCorePlugin.getInstance().debug("Get Exact: " + uuid);
+		loadPlayerIfNeeded(uuid);
+		// AdvancedCorePlugin.getInstance().debug("test one: " + uuid);
+		return table.get(uuid);
+	}
+
+	public boolean containsKey(String uuid) {
+		if (table.containsKey(uuid)) {
+			return true;
+		}
+		return false;
+	}
+
+	private void loadPlayer(String uuid) {
+		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+	}
+
+	private Object object1 = new Object();
+
+	public void loadPlayerIfNeeded(String uuid) {
+		if (!containsKey(uuid)) {
+			// AdvancedCorePlugin.getInstance().debug("Caching " + uuid);
+			synchronized (object1) {
+				loadPlayer(uuid);
+			}
+		}
+	}
+
+	public ArrayList<Column> getExactQuery(Column column) {
 		checkColumns();
-		List<Column> result = new ArrayList<>();
+		ArrayList<Column> result = new ArrayList<Column>();
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
 		try {
 			synchronized (object) {
@@ -224,7 +287,7 @@ public class Table {
 		return primaryKey;
 	}
 
-	public String getQuery() {
+	public String getCreateQuery() {
 		String query = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
 		for (Column column : getColumns()) {
 			query += "`" + column.name + "` ";
@@ -418,8 +481,16 @@ public class Table {
 		for (Column c : columns) {
 			checkColumn(c);
 		}
-		if (containsKey(primaryKey)) {
+		if (containsKey(primaryKey.getValue().toString()) || containsKey(primaryKey)) {
 			synchronized (object) {
+				for (Column col : getExact(primaryKey)) {
+					for (Column column : columns) {
+						if (col.getName().equals(column.getName())) {
+							col.setValue(column.getValue());
+						}
+					}
+				}
+
 				String query = "UPDATE " + getName() + " SET ";
 				for (Column column : columns) {
 					if (column.dataType == DataType.STRING) {
@@ -439,17 +510,51 @@ public class Table {
 				} else {
 					query += primaryKey.getValue().toString();
 				}
-				try {
-					PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-					s.executeUpdate();
-					s.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
+				addToQue(query);
 			}
 		} else {
 			insert(columns);
 		}
+	}
+
+	@Getter
+	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
+
+	public void addToQue(String query) {
+		this.query.add(query);
+	}
+
+	public void updateBatch() {
+		if (query.size() > 0) {
+			AdvancedCorePlugin.getInstance().extraDebug("Query Size: " + query.size());
+			String sql = "";
+			while (query.size() > 0) {
+				String text = query.poll();
+				if (!text.endsWith(";")) {
+					text += ";";
+				}
+				sql += text;
+			}
+
+			try {
+				for (String text : sql.split(";")) {
+					try {
+						PreparedStatement s = sqLite.getSQLConnection().prepareStatement(text);
+						s.executeUpdate();
+						s.close();
+					} catch (SQLException e) {
+						AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while executing sql: "
+								+ e.toString() + ", turn debug on to see full stacktrace");
+						AdvancedCorePlugin.getInstance().debug(e);
+					}
+				}
+
+			} catch (Exception e1) {
+				AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
+				e1.printStackTrace();
+			}
+		}
+
 	}
 
 }
