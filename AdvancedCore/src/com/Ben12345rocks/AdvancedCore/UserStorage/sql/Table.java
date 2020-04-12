@@ -505,8 +505,9 @@ public class Table {
 		for (Column c : columns) {
 			checkColumn(c);
 		}
-		if (containsKey(primaryKey.getValue().toString()) || containsKey(primaryKey)) {
-			synchronized (object) {
+		synchronized (object) {
+			if (containsKey(primaryKey.getValue().toString()) || containsKey(primaryKey)) {
+
 				for (Column col : getExact(primaryKey)) {
 					for (Column column : columns) {
 						if (col.getName().equals(column.getName())) {
@@ -535,9 +536,10 @@ public class Table {
 					query += primaryKey.getValue().toString();
 				}
 				addToQue(query);
+
+			} else {
+				insert(columns);
 			}
-		} else {
-			insert(columns);
 		}
 	}
 
