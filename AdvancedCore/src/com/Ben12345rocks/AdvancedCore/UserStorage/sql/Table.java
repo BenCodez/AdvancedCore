@@ -507,7 +507,7 @@ public class Table {
 		}
 		synchronized (object) {
 			if (containsKey(primaryKey.getValue().toString()) || containsKey(primaryKey)) {
-
+				loadPlayerIfNeeded(primaryKey.getValue().toString());
 				for (Column col : getExact(primaryKey)) {
 					for (Column column : columns) {
 						if (col.getName().equals(column.getName())) {
@@ -539,6 +539,7 @@ public class Table {
 
 			} else {
 				insert(columns);
+				loadPlayer(primaryKey.getValue().toString());
 			}
 		}
 	}
@@ -581,6 +582,10 @@ public class Table {
 			}
 		}
 
+	}
+
+	public void clearCache() {
+		table.clear();
 	}
 
 }
