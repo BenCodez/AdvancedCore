@@ -33,7 +33,7 @@ public class Database {
 		tables.add(table);
 		table.setSqLite(sqLite);
 		try {
-			PreparedStatement statement = sqLite.getSQLConnection().prepareStatement(table.getCreateQuery());
+			PreparedStatement statement = sqLite.getSQLConnection().prepareStatement(table.getQuery());
 			statement.executeUpdate();
 			statement.close();
 		} catch (SQLException e) {
@@ -50,7 +50,7 @@ public class Database {
 	}
 
 	public String getTableQuery() {
-		return tables.get(0).getCreateQuery();
+		return tables.get(0).getQuery();
 	}
 
 	public List<Table> getTables() {
