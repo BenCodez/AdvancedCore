@@ -388,6 +388,23 @@ public class Table {
 		return getTableColumns().contains(column.getName());
 	}
 
+	public boolean containsKeyQuery(String index) {
+		String sql = "SELECT uuid FROM " + getName() + ";";
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
+			ResultSet rs = s.executeQuery();
+			while (rs.next()) {
+				if (rs.getString("uuid").equals(index)) {
+					return true;
+				}
+			}
+
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+		}
+		return false;
+	}
+
 	public void insert(List<Column> columns) {
 		for (Column c : columns) {
 			checkColumn(c);
@@ -506,7 +523,8 @@ public class Table {
 			checkColumn(c);
 		}
 		synchronized (object) {
-			if (containsKey(primaryKey.getValue().toString()) || containsKey(primaryKey)) {
+			if (containsKey(primaryKey.getValue().toString()) || containsKey(primaryKey)
+					|| containsKeyQuery(primaryKey.getValue().toString())) {
 				loadPlayerIfNeeded(primaryKey.getValue().toString());
 				for (Column col : getExact(primaryKey)) {
 					for (Column column : columns) {
