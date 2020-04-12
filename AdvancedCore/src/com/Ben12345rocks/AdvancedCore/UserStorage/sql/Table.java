@@ -582,6 +582,7 @@ public class Table {
 
 			try {
 				for (String text : sql.split(";")) {
+					AdvancedCorePlugin.getInstance().debug(text);
 					try {
 						PreparedStatement s = sqLite.getSQLConnection().prepareStatement(text);
 						s.executeUpdate();
