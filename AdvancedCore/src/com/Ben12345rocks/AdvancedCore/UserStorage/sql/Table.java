@@ -211,7 +211,9 @@ public class Table {
 	}
 
 	private void loadPlayer(String uuid) {
-		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		if (playerExists(uuid)) {
+			table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
+		}
 	}
 
 	private Object object1 = new Object();
@@ -223,6 +225,18 @@ public class Table {
 				loadPlayer(uuid);
 			}
 		}
+	}
+
+	public boolean playerExists(String uuid) {
+		List<Column> cols = AdvancedCorePlugin.getInstance().getSQLiteUserTable().getRows();
+		ArrayList<String> uuids = new ArrayList<String>();
+		for (Column col : cols) {
+			uuids.add((String) col.getValue());
+		}
+		if (uuids.contains(uuid)) {
+			return true;
+		}
+		return false;
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
