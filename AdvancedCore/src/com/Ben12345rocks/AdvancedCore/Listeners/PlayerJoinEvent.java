@@ -40,10 +40,12 @@ public class PlayerJoinEvent implements Listener {
 			Player player = event.getPlayer();
 			boolean userExist = UserManager.getInstance()
 					.userExist(new UUID(event.getPlayer().getUniqueId().toString()));
-			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
-					&& AdvancedCorePlugin.getInstance().getMysql() != null) {
-				if (userExist) {
+			if (userExist) {
+				if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
+						&& AdvancedCorePlugin.getInstance().getMysql() != null) {
 					AdvancedCorePlugin.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
+				} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+					AdvancedCorePlugin.getInstance().getSQLiteUserTable().playerJoin(player.getUniqueId().toString());
 				}
 			}
 
@@ -98,6 +100,10 @@ public class PlayerJoinEvent implements Listener {
 	public void onPlayerQuit(PlayerQuitEvent event) {
 		AdvancedCorePlugin.getInstance()
 				.debug("Logout: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			AdvancedCorePlugin.getInstance().getSQLiteUserTable()
+					.removePlayer(event.getPlayer().getUniqueId().toString());
+		}
 		/*
 		 * final String uuid = event.getPlayer().getPlayer().getUniqueId().toString();
 		 * Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {

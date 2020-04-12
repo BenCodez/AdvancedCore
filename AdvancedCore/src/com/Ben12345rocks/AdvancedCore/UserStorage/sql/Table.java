@@ -477,6 +477,16 @@ public class Table {
 		this.sqLite = sqLite;
 	}
 
+	public void playerJoin(String uuid) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isClearCacheOnJoin()) {
+			removePlayer(uuid);
+		}
+	}
+
+	public void removePlayer(String uuid) {
+		table.remove(uuid);
+	}
+
 	public void update(Column primaryKey, List<Column> columns) {
 		for (Column c : columns) {
 			checkColumn(c);
