@@ -557,7 +557,6 @@ public class Table {
 
 			} else {
 				insert(columns);
-				loadPlayer(primaryKey.getValue().toString());
 			}
 		}
 	}
