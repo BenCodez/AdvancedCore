@@ -349,6 +349,10 @@ public class PlayerUtils {
 		if (userExist) {
 			return userExist;
 		}
+		
+		if (name.isEmpty()) {
+			return false;
+		}
 
 		if (checkServer) {
 			// plugin.extraDebug("Checking offline player: " + name);
