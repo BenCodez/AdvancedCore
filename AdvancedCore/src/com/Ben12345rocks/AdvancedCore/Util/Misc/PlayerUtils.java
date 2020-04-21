@@ -61,15 +61,10 @@ public class PlayerUtils {
 		}
 
 		if (plugin.getUuidNameCache().containsKey(uuid)) {
-			for (Entry<String, String> entry : plugin.getUuidNameCache().entrySet()) {
-				if (entry.getValue().equals(uuid)) {
-					String n = entry.getKey();
-					if (n != null && !n.isEmpty() && !n.equalsIgnoreCase("Error getting name")) {
-						return n;
-					}
-				}
+			String n = plugin.getUuidNameCache().get(uuid);
+			if (n != null && !n.isEmpty() && !n.equalsIgnoreCase("Error getting name")) {
+				return n;
 			}
-
 		}
 
 		String name = "";
@@ -349,7 +344,7 @@ public class PlayerUtils {
 		if (userExist) {
 			return userExist;
 		}
-		
+
 		if (name.isEmpty()) {
 			return false;
 		}
