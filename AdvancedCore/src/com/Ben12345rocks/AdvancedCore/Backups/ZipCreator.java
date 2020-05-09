@@ -154,7 +154,11 @@ public class ZipCreator {
 			for (File file : fileList) {
 				if (!file.isDirectory()) { // we only zip files, not directories
 					if (!file.getAbsolutePath().equals(zipFile.getAbsolutePath())) {
-						addToZip(file, zos);
+						try {
+							addToZip(file, zos);
+						} catch (FileNotFoundException e) {
+							e.printStackTrace();
+						}
 					}
 				}
 			}
