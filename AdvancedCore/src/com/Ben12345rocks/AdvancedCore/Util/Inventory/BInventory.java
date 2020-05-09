@@ -422,7 +422,8 @@ public class BInventory implements Listener {
 		if (this.inv != null && inv.equals(this.inv)) {
 			event.setCancelled(true);
 			event.setResult(Result.DENY);
-			if (event.isShiftClick()) {
+			if (event.isShiftClick() && event.getClickedInventory() != null
+					&& event.getClickedInventory().equals(this.inv)) {
 				event.setCurrentItem(new ItemStack(Material.AIR));
 			}
 			player.setItemOnCursor(new ItemStack(Material.AIR));
