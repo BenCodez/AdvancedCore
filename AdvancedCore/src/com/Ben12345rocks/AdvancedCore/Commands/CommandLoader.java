@@ -206,8 +206,12 @@ public class CommandLoader {
 					} else {
 						sender.sendMessage(StringParser.getInstance().colorize("&cMySQL not loaded"));
 					}
+				} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+					AdvancedCorePlugin.getInstance().getSQLiteUserTable().clearCache();
+					sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared"));
 				} else {
-					sender.sendMessage(StringParser.getInstance().colorize("&cCurrent storage type not mysql"));
+					sender.sendMessage(
+							StringParser.getInstance().colorize("&cCurrent storage type does not have a cache"));
 				}
 			}
 		});

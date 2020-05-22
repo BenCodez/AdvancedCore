@@ -44,6 +44,8 @@ public class PlayerJoinEvent implements Listener {
 				if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
 						&& AdvancedCorePlugin.getInstance().getMysql() != null) {
 					AdvancedCorePlugin.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
+				} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+					AdvancedCorePlugin.getInstance().getSQLiteUserTable().playerJoin(player.getUniqueId().toString());
 				}
 			}
 
@@ -98,15 +100,15 @@ public class PlayerJoinEvent implements Listener {
 	public void onPlayerQuit(PlayerQuitEvent event) {
 		AdvancedCorePlugin.getInstance()
 				.debug("Logout: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
-		/*
-		 * final String uuid = event.getPlayer().getPlayer().getUniqueId().toString();
-		 * Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
-		 * @Override public void run() { if (Bukkit.getPlayer(UUID.fromString(uuid)) ==
-		 * null) { if
-		 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL))
-		 * {
-		 * AdvancedCorePlugin.getInstance().getMysql().removePlayer(uuid); } } } },
-		 * 100L);
-		 */
+
+		if (AdvancedCorePlugin.getInstance().getOptions().isClearCacheOnLeave()) {
+			Player player = event.getPlayer();
+			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
+					&& AdvancedCorePlugin.getInstance().getMysql() != null) {
+				AdvancedCorePlugin.getInstance().getMysql().removePlayer(player.getUniqueId().toString());
+			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+				AdvancedCorePlugin.getInstance().getSQLiteUserTable().removePlayer(player.getUniqueId().toString());
+			}
+		}
 	}
 }
