@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.db.SQLite;
@@ -17,7 +18,7 @@ import com.google.common.cache.CacheLoader;
 public class Table {
 
 	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
-			.build(new CacheLoader<String, ArrayList<Column>>() {
+			.expireAfterAccess(30, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
 
 				@Override
 				public ArrayList<Column> load(String key) {
