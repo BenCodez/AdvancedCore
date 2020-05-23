@@ -730,6 +730,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			getLogger().info("Shutting down mysql, query size: " + getMysql().getQuery().size());
 			getMysql().updateBatchShutdown();
 		}
+		timer.cancel();
 		onUnLoad();
 
 	}
