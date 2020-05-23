@@ -240,9 +240,9 @@ public class User {
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
 				&& AdvancedCorePlugin.getInstance().getMysql() != null) {
 			AdvancedCorePlugin.getInstance().getMysql().removePlayer(getUUID());
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+		} /*else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			AdvancedCorePlugin.getInstance().getSQLiteUserTable().removePlayer(getUUID());
-		}
+		}*/
 	}
 
 	public void closeInv() {

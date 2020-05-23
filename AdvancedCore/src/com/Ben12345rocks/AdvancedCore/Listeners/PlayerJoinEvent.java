@@ -44,9 +44,9 @@ public class PlayerJoinEvent implements Listener {
 				if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
 						&& AdvancedCorePlugin.getInstance().getMysql() != null) {
 					AdvancedCorePlugin.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
-				} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+				} /*else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 					AdvancedCorePlugin.getInstance().getSQLiteUserTable().playerJoin(player.getUniqueId().toString());
-				}
+				}*/
 			}
 
 			if (userExist) {
@@ -106,9 +106,9 @@ public class PlayerJoinEvent implements Listener {
 			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
 					&& AdvancedCorePlugin.getInstance().getMysql() != null) {
 				AdvancedCorePlugin.getInstance().getMysql().removePlayer(player.getUniqueId().toString());
-			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			} /*else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 				AdvancedCorePlugin.getInstance().getSQLiteUserTable().removePlayer(player.getUniqueId().toString());
-			}
+			}*/
 		}
 	}
 }

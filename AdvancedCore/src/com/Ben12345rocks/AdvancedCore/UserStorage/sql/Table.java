@@ -7,24 +7,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.UserStorage.sql.db.SQLite;
-import com.Ben12345rocks.AdvancedCore.Util.Misc.CompatibleCacheBuilder;
-import com.google.common.cache.CacheLoader;
 
 public class Table {
-
-	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
-			.expireAfterAccess(30, TimeUnit.MINUTES).build(new CacheLoader<String, ArrayList<Column>>() {
-
-				@Override
-				public ArrayList<Column> load(String key) {
-					return (ArrayList<Column>) getExactQuery(new Column("uuid", key, DataType.STRING));
-				}
-			});
 
 	private static String getStringType(DataType dataType) {
 		switch (dataType) {
@@ -176,57 +162,9 @@ public class Table {
 		return columns;
 	}
 
-	private void loadPlayer(Column column) {
-		table.put(column.getValue().toString(), getExactQuery(column));
-	}
-
-	public void loadPlayerIfNeeded(Column column) {
-		if (!containsKey(column.getValue().toString()) && containsKeyQuery(column.getName())) {
-			// AdvancedCorePlugin.getInstance().debug("Caching " + uuid);
-			loadPlayer(column);
-
-		}
-	}
-
-	public boolean containsKey(String uuid) {
-		if (table.containsKey(uuid)) {
-			return true;
-		}
-		return false;
-	}
-
-	public boolean containsKeyQuery(String index) {
-		String sql = "SELECT uuid FROM " + getName() + ";";
-		try {
-
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
-
-			ResultSet rs = s.executeQuery();
-			while (rs.next()) {
-				if (rs.getString("uuid").equals(index)) {
-					return true;
-				}
-			}
-			s.close();
-
-		} catch (SQLException ex) {
-			ex.printStackTrace();
-		}
-		return false;
-	}
-
-	public ArrayList<Column> getExact(Column column) {
-		loadPlayerIfNeeded(column);
-		if (table.containsKey(column.getValue().toString())) {
-			return table.get(column.getValue().toString());
-		} else {
-			return getExactQuery(column);
-		}
-	}
-
-	public ArrayList<Column> getExactQuery(Column column) {
+	public List<Column> getExact(Column column) {
 		checkColumns();
-		ArrayList<Column> result = new ArrayList<Column>();
+		List<Column> result = new ArrayList<>();
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
 		try {
 			synchronized (object) {
@@ -373,49 +311,42 @@ public class Table {
 		return getTableColumns().contains(column.getName());
 	}
 
-	public void clearCache() {
-		table.clear();
-	}
-
-	public void insert(String uuid, ArrayList<Column> columns) {
+	public void insert(List<Column> columns) {
 		for (Column c : columns) {
 			checkColumn(c);
 		}
-		synchronized (object) {
-			String query = "INSERT OR REPLACE INTO " + getName() + " (";
-			for (Column column : columns) {
-				if (columns.indexOf(column) < columns.size() - 1) {
-					query += "`" + column.getName() + "`, ";
-				} else {
-					query += "`" + column.getName() + "`) ";
-				}
+		String query = "INSERT OR REPLACE INTO " + getName() + " (";
+		for (Column column : columns) {
+			if (columns.indexOf(column) < columns.size() - 1) {
+				query += "`" + column.getName() + "`, ";
+			} else {
+				query += "`" + column.getName() + "`) ";
 			}
-			query += "VALUES (";
+		}
+		query += "VALUES (";
+		for (int i = 0; i < columns.size(); i++) {
+			if (i < columns.size() - 1) {
+				query += "?, ";
+			} else {
+				query += "?)";
+			}
+		}
+		query += ";";
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			for (int i = 0; i < columns.size(); i++) {
-				if (i < columns.size() - 1) {
-					query += "?, ";
+				if (columns.get(i).dataType == DataType.STRING) {
+					s.setString(i + 1, columns.get(i).getValue().toString());
+				} else if (columns.get(i).dataType == DataType.INTEGER) {
+					s.setInt(i + 1, Integer.parseInt(columns.get(i).getValue().toString()));
 				} else {
-					query += "?)";
+					s.setFloat(i + 1, Float.parseFloat(columns.get(i).getValue().toString()));
 				}
 			}
-			query += ";";
-			try {
-				PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-				for (int i = 0; i < columns.size(); i++) {
-					if (columns.get(i).dataType == DataType.STRING) {
-						s.setString(i + 1, columns.get(i).getValue().toString());
-					} else if (columns.get(i).dataType == DataType.INTEGER) {
-						s.setInt(i + 1, Integer.parseInt(columns.get(i).getValue().toString()));
-					} else {
-						s.setFloat(i + 1, Float.parseFloat(columns.get(i).getValue().toString()));
-					}
-				}
-				s.executeUpdate();
-				s.close();
-				loadPlayer(new Column("uuid", uuid, DataType.STRING));
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+			s.executeUpdate();
+			s.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 
 	}
@@ -483,17 +414,12 @@ public class Table {
 		this.sqLite = sqLite;
 	}
 
-	public void update(Column primaryKey, ArrayList<Column> columns) {
+	public void update(Column primaryKey, List<Column> columns) {
 		for (Column c : columns) {
 			checkColumn(c);
 		}
-		synchronized (object) {
-			if (containsKey(primaryKey)) {
-				loadPlayerIfNeeded(primaryKey);
-				ArrayList<Column> cols = table.get(primaryKey.getValue().toString());
-				if (cols == null) {
-					cols = new ArrayList<Column>();
-				}
+		if (containsKey(primaryKey)) {
+			synchronized (object) {
 				String query = "UPDATE " + getName() + " SET ";
 				for (Column column : columns) {
 					if (column.dataType == DataType.STRING) {
@@ -506,19 +432,7 @@ public class Table {
 					} else {
 						query += ", ";
 					}
-					boolean exists = false;
-					for (int i = 0; i < cols.size(); i++) {
-						if (cols.get(i).getName().equals(column.getName())) {
-							cols.set(i, column);
-							exists = true;
-						}
-					}
-					if (!exists) {
-						cols.add(column);
-					}
 				}
-				table.put(primaryKey.getValue().toString(), cols);
-
 				query += "WHERE `" + primaryKey.getName() + "`=";
 				if (primaryKey.dataType == DataType.STRING) {
 					query += "'" + primaryKey.getValue().toString() + "'";
@@ -532,20 +446,10 @@ public class Table {
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
-			} else {
-				insert(primaryKey.getValue().toString(), columns);
 			}
+		} else {
+			insert(columns);
 		}
-	}
-
-	public void playerJoin(String uuid) {
-		if (AdvancedCorePlugin.getInstance().getOptions().isClearCacheOnJoin()) {
-			removePlayer(uuid);
-		}
-	}
-
-	public void removePlayer(String uuid) {
-		table.remove(uuid);
 	}
 
 }
