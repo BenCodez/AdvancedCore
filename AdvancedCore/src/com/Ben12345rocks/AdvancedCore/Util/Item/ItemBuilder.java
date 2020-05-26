@@ -62,6 +62,15 @@ public class ItemBuilder {
 	@Setter
 	private boolean chancePass = true;
 
+	@Getter
+	@Setter
+	private boolean checkLoreLength = true;
+
+	public ItemBuilder dontCheckLoreLength() {
+		checkLoreLength = false;
+		return this;
+	}
+
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
 	 *
@@ -202,6 +211,29 @@ public class ItemBuilder {
 		ItemMeta im = is.getItemMeta();
 		im.setCustomModelData(data);
 		is.setItemMeta(im);
+		return this;
+	}
+
+	private ItemBuilder checkLoreLength() {
+		ArrayList<String> currentLore = getLore();
+		ArrayList<String> newLore = new ArrayList<String>();
+		for (String lore : currentLore) {
+			StringBuilder builder = new StringBuilder();
+			int count = 0;
+			for (char character : lore.toCharArray()) {
+				if (count > 30 && character == ' ') {
+					builder.append(character);
+					newLore.add(builder.toString());
+					builder = new StringBuilder();
+					count = 0;
+				} else {
+					count++;
+					builder.append(character);
+				}
+			}
+			newLore.add(builder.toString());
+		}
+		setLore(newLore);
 		return this;
 	}
 
@@ -815,6 +847,9 @@ public class ItemBuilder {
 	 */
 	@Deprecated
 	public ItemStack toItemStack() {
+		if (checkLoreLength) {
+			checkLoreLength();
+		}
 		setName(StringParser.getInstance()
 				.replaceJavascript(StringParser.getInstance().replacePlaceHolder(getName(), placeholders)));
 		setLore(ArrayUtils.getInstance()
@@ -823,10 +858,16 @@ public class ItemBuilder {
 	}
 
 	public ItemStack toItemStack(OfflinePlayer player) {
+		if (checkLoreLength) {
+			checkLoreLength();
+		}
 		return parsePlaceholders(player);
 	}
 
 	public ItemStack toItemStack(Player player) {
+		if (checkLoreLength) {
+			checkLoreLength();
+		}
 		return parsePlaceholders(player);
 	}
 
