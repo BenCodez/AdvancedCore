@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
@@ -223,8 +224,9 @@ public class ItemBuilder {
 			for (char character : lore.toCharArray()) {
 				if (count > 30 && character == ' ') {
 					builder.append(character);
-					newLore.add(builder.toString());
-					builder = new StringBuilder();
+					String str = builder.toString();
+					newLore.add(str);
+					builder = new StringBuilder(ChatColor.getLastColors(str));
 					count = 0;
 				} else {
 					count++;
