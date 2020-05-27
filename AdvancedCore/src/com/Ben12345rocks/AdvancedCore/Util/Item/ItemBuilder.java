@@ -59,6 +59,8 @@ public class ItemBuilder {
 	private boolean legacy = false;
 	private String skull = "";
 
+	private int loreLength = -1;
+
 	@Getter
 	@Setter
 	private boolean chancePass = true;
@@ -70,6 +72,18 @@ public class ItemBuilder {
 	public ItemBuilder dontCheckLoreLength() {
 		checkLoreLength = false;
 		return this;
+	}
+
+	public ItemBuilder setLoreLength(int length) {
+		loreLength = length;
+		return this;
+	}
+
+	public int getLoreLength() {
+		if (loreLength < 0) {
+			return AdvancedCorePlugin.getInstance().getOptions().getNewLoreLength();
+		}
+		return loreLength;
 	}
 
 	/**
@@ -216,13 +230,14 @@ public class ItemBuilder {
 	}
 
 	private ItemBuilder checkLoreLength() {
+		int loreLength = getLoreLength();
 		ArrayList<String> currentLore = getLore();
 		ArrayList<String> newLore = new ArrayList<String>();
 		for (String lore : currentLore) {
 			StringBuilder builder = new StringBuilder();
 			int count = 0;
 			for (char character : lore.toCharArray()) {
-				if (count > AdvancedCorePlugin.getInstance().getOptions().getNewLoreLength() && character == ' ') {
+				if (count > loreLength && character == ' ') {
 					builder.append(character);
 					String str = builder.toString();
 					newLore.add(str);
