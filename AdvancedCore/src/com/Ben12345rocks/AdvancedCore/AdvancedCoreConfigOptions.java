@@ -110,7 +110,7 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	private boolean clearCacheOnJoin;
-	
+
 	@Getter
 	@Setter
 	private boolean clearCacheOnLeave;
@@ -130,6 +130,10 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	private double clickSoundPitch = 1;
+
+	@Getter
+	@Setter
+	private int newLoreLength = 30;
 
 	@Getter
 	@Setter
@@ -226,6 +230,8 @@ public class AdvancedCoreConfigOptions {
 
 			useVaultPermissions = configData.getBoolean("UseVaultPermissions", false);
 			server = configData.getString("Server", "");
+
+			newLoreLength = configData.getInt("NewLoreLength", 30);
 		}
 	}
 }

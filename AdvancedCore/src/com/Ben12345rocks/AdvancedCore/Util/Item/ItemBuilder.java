@@ -222,7 +222,7 @@ public class ItemBuilder {
 			StringBuilder builder = new StringBuilder();
 			int count = 0;
 			for (char character : lore.toCharArray()) {
-				if (count > 30 && character == ' ') {
+				if (count > AdvancedCorePlugin.getInstance().getOptions().getNewLoreLength() && character == ' ') {
 					builder.append(character);
 					String str = builder.toString();
 					newLore.add(str);
