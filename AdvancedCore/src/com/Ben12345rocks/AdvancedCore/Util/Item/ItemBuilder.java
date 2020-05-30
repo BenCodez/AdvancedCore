@@ -1,7 +1,6 @@
 package com.Ben12345rocks.AdvancedCore.Util.Item;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
