@@ -251,6 +251,9 @@ public class ItemBuilder {
 			newLore.add(builder.toString());
 		}
 		setLore(newLore);
+		for (String str : newLore) {
+			AdvancedCorePlugin.getInstance().debug(str);
+		}
 		return this;
 	}
 
