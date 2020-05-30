@@ -237,22 +237,16 @@ public class ItemBuilder {
 			StringBuilder builder = new StringBuilder();
 			int count = 0;
 			for (char character : lore.toCharArray()) {
+				count++;
+				builder.append(character);
 				if (count > loreLength && character == ' ') {
-					builder.append(character);
 					String str = builder.toString();
 					newLore.add(str);
 					builder = new StringBuilder(ChatColor.getLastColors(str));
 					count = 0;
-				} else {
-					count++;
-					builder.append(character);
 				}
-				AdvancedCorePlugin.getInstance().debug("" + count + " " + builder.toString());
 			}
 			newLore.add(builder.toString());
-		}
-		for (String str : newLore) {
-			AdvancedCorePlugin.getInstance().debug(str);
 		}
 		setLore(newLore);
 		return this;
