@@ -769,8 +769,6 @@ public class ItemBuilder {
 		ItemMeta im = is.getItemMeta();
 		im.setLore(ArrayUtils.getInstance().colorize(list));
 		is.setItemMeta(im);
-
-		AdvancedCorePlugin.getInstance().debug(ArrayUtils.getInstance().makeStringList(getLore()));
 		return this;
 	}
 
