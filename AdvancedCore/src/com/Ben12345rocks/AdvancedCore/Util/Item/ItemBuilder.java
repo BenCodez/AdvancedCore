@@ -775,7 +775,7 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLore(String... lore) {
-		return setLore(Arrays.asList(lore));
+		return setLore(ArrayUtils.getInstance().convert(lore));
 	}
 
 	/**
