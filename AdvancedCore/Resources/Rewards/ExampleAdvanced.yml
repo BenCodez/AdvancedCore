@@ -58,6 +58,11 @@ RequirePermission: false
 # Permission that must be required if RequirePermission is true
 Permission: 'AdvancedCore.Reward.ExampleAdvanced'
 
+# Amount of time to still allow the reward to be executed
+# if reward is saved offline
+# Time in minutes
+#RewardExpiration: 1440
+
 # Javascript
 # Only use this if you know what you are doing
 # 

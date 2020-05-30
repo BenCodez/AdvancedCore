@@ -32,6 +32,7 @@ import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectValidator;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectDouble;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectInt;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectString;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectStringList;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectValidator;
@@ -433,6 +434,30 @@ public class RewardHandler {
 				}
 			}
 		}));
+
+		injectedRequirements.add(new RequirementInjectInt("RewardExpiration", -1) {
+
+			@Override
+			public boolean onRequirementsRequest(Reward reward, User user, int num, RewardOptions rewardOptions) {
+				if (rewardOptions.getPlaceholders().containsKey("ExecDate") && num > 0) {
+					long execDate = Long.parseLong(rewardOptions.getPlaceholders().get("ExecDate"));
+					if (execDate + num * 60 * 1000 > System.currentTimeMillis()) {
+						return true;
+					} else {
+						return false;
+					}
+				}
+				return true;
+			}
+		}.priority(100).addEditButton(new EditGUIButton(new EditGUIValueNumber("RewardExpiration", null) {
+
+			@Override
+			public void setValue(Player player, Number value) {
+				Reward reward = (Reward) getInv().getData("Reward");
+				reward.getConfig().set(getKey(), value.intValue());
+				plugin.reloadAdvancedCore();
+			}
+		})));
 
 		injectedRequirements.add(new RequirementInjectString("Permission", "") {
 

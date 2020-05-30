@@ -193,6 +193,7 @@ public class Reward {
 	}
 
 	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
+
 		for (final RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
 			boolean Addplaceholder = inject.isAddAsPlaceholder();
 			try {
@@ -252,6 +253,10 @@ public class Reward {
 
 		if (rewardOptions == null) {
 			rewardOptions = new RewardOptions();
+		}
+
+		if (!rewardOptions.getPlaceholders().containsKey("ExecDate")) {
+			rewardOptions.addPlaceholder("ExecDate", "" + System.currentTimeMillis());
 		}
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user, rewardOptions);
