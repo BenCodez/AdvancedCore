@@ -240,12 +240,18 @@ public class ItemBuilder {
 				builder.append(character);
 				if (count > loreLength && character == ' ') {
 					String str = builder.toString();
-					newLore.add(str);
-					builder = new StringBuilder(ChatColor.getLastColors(str));
+					builder = new StringBuilder();
+					builder.append(ChatColor.getLastColors(str));
+					if (!ChatColor.stripColor(str).isEmpty()) {
+						newLore.add(str);
+					}
 					count = 0;
 				}
 			}
-			newLore.add(builder.toString());
+			String s = builder.toString();
+			if (!ChatColor.stripColor(s).isEmpty()) {
+				newLore.add(builder.toString());
+			}
 		}
 		setLore(newLore);
 		return this;
@@ -763,7 +769,7 @@ public class ItemBuilder {
 		ItemMeta im = is.getItemMeta();
 		im.setLore(ArrayUtils.getInstance().colorize(list));
 		is.setItemMeta(im);
-		
+
 		AdvancedCorePlugin.getInstance().debug(ArrayUtils.getInstance().makeStringList(getLore()));
 		return this;
 	}
