@@ -247,6 +247,7 @@ public class ItemBuilder {
 					count++;
 					builder.append(character);
 				}
+				AdvancedCorePlugin.getInstance().debug("" + count + " " + builder.toString());
 			}
 			newLore.add(builder.toString());
 		}
