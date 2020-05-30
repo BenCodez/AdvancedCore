@@ -250,10 +250,10 @@ public class ItemBuilder {
 			}
 			newLore.add(builder.toString());
 		}
-		setLore(newLore);
 		for (String str : newLore) {
 			AdvancedCorePlugin.getInstance().debug(str);
 		}
+		setLore(newLore);
 		return this;
 	}
 
