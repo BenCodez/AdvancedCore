@@ -88,7 +88,7 @@ public class CommandLoader {
 						@Override
 						public void run() {
 							Bukkit.getServer().dispatchCommand(sender, StringParser.getInstance()
-									.replacePlaceHolder(cmd, "(player)", user.getPlayerName()));
+									.replacePlaceHolder(cmd, "player", user.getPlayerName()));
 						}
 					});
 
