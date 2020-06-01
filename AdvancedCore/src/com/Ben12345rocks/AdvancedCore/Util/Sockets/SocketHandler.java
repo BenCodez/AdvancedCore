@@ -21,20 +21,22 @@ public class SocketHandler {
 
 			@Override
 			public void onReceive(String[] data) {
-				for (SocketReceiver r : receiving) {
-					TimerTask task = new TimerTask() {
+				if (data.length > 0) {
+					for (SocketReceiver r : receiving) {
+						TimerTask task = new TimerTask() {
 
-						@Override
-						public void run() {
-							r.onReceive(data);
+							@Override
+							public void run() {
+								r.onReceive(data[0], data);
+							}
+						};
+						if (r.getSocketDelay() > 0) {
+							new Timer().schedule(task, r.getSocketDelay());
+						} else {
+							new Timer().schedule(task, 0);
 						}
-					};
-					if (r.getSocketDelay() > 0) {
-						new Timer().schedule(task, r.getSocketDelay());
-					} else {
-						new Timer().schedule(task, 0);
-					}
 
+					}
 				}
 			}
 		};
