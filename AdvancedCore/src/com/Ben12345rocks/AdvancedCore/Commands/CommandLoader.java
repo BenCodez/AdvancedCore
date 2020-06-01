@@ -77,13 +77,21 @@ public class CommandLoader {
 				for (int i = 2; i < args.length; i++) {
 					str += args[i] + " ";
 				}
+				final String cmd = str;
 				ArrayList<User> users = new ArrayList<User>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 					User user = UserManager.getInstance().getUser(new UUID(uuid));
 					users.add(user);
 
-					Bukkit.getServer().dispatchCommand(sender,
-							StringParser.getInstance().replacePlaceHolder(str, "(player)", user.getPlayerName()));
+					Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+						@Override
+						public void run() {
+							Bukkit.getServer().dispatchCommand(sender, StringParser.getInstance()
+									.replacePlaceHolder(cmd, "(player)", user.getPlayerName()));
+						}
+					});
+
 				}
 			}
 		});
