@@ -216,18 +216,21 @@ public class BInventory implements Listener {
 		return this;
 	}
 
+	public void forceClose(Player p) {
+		Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+			@Override
+			public void run() {
+				p.closeInventory();
+				destroy();
+			}
+		});
+	}
+
 	public void closeInv(Player p, BInventoryButton b) {
 		if ((closeInv && (b != null && b.isCloseInv())) || pages) {
 			if (p.getOpenInventory().getTopInventory().equals(inv)) {
-				Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-					@Override
-					public void run() {
-						p.closeInventory();
-						destroy();
-					}
-				});
-
+				forceClose(p);
 			}
 		}
 	}
