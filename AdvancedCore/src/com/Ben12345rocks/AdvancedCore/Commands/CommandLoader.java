@@ -190,29 +190,32 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "UserEditValue", "(player)", "(string)", "(string)" },
-				permPrefix + ".UserEditValue", "Edit user data", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				User user = UserManager.getInstance().getUser(args[1]);
-				user.getData().setString(args[2], args[3]);
-				sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " + args[1]);
-			}
-		});
-
-		cmds.add(new CommandHandler(new String[] { "UserEditValue", "All", "(string)", "(string)" },
-				permPrefix + ".UserEditValue", "Edit all user data", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
-					user.getData().setString(args[2], args[3]);
-				}
-				sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " + args[1]);
-			}
-		});
+		/*
+		 * cmds.add(new CommandHandler(new String[] { "UserEditValue", "(player)",
+		 * "(string)", "(string)" },
+		 * permPrefix + ".UserEditValue", "Edit user data", false) {
+		 * @Override
+		 * public void execute(CommandSender sender, String[] args) {
+		 * User user = UserManager.getInstance().getUser(args[1]);
+		 * user.getData().setString(args[2], args[3]);
+		 * sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " +
+		 * args[1]);
+		 * }
+		 * });
+		 * cmds.add(new CommandHandler(new String[] { "UserEditValue", "All",
+		 * "(string)", "(string)" },
+		 * permPrefix + ".UserEditValue", "Edit all user data", false) {
+		 * @Override
+		 * public void execute(CommandSender sender, String[] args) {
+		 * for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+		 * User user = UserManager.getInstance().getUser(new UUID(uuid));
+		 * user.getData().setString(args[2], args[3]);
+		 * }
+		 * sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " +
+		 * args[1]);
+		 * }
+		 * });
+		 */
 
 		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report",
 				"Create a zip file to send for debuging") {
@@ -378,6 +381,25 @@ public class CommandLoader {
 							}
 						});
 
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "User", "All", "SetData", "(text)", "(text)" },
+				permPrefix + ".SetAllData", "Set all users data") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				String data = args[4];
+				if (data.equalsIgnoreCase("\"\"")) {
+					data = "";
+				}
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					user.getData().setString(args[3], data);
+
+				}
+				sender.sendMessage(
+						StringParser.getInstance().colorize("&cSet all users " + args[3] + " to " + args[4]));
 			}
 		});
 
