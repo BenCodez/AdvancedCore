@@ -201,7 +201,7 @@ public class AdvancedCoreConfigOptions {
 
 			createBackups = configData.getBoolean("CreateBackups", false);
 
-			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled");
+			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled", true);
 			processRewards = configData.getBoolean("ProcessRewards", true);
 			clearCacheOnJoin = configData.getBoolean("ClearCacheOnJoin", false);
 			clearCacheOnLeave = configData.getBoolean("ClearCacheOnLeave", false);

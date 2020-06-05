@@ -87,14 +87,15 @@ public class CommandLoader {
 
 						@Override
 						public void run() {
-							Bukkit.getServer().dispatchCommand(sender, StringParser.getInstance()
-									.replacePlaceHolder(cmd, "player", user.getPlayerName()));
+							Bukkit.getServer().dispatchCommand(sender,
+									StringParser.getInstance().replacePlaceHolder(cmd, "player", user.getPlayerName()));
 						}
 					});
 
 				}
 			}
 		});
+
 		cmds.add(new CommandHandler(new String[] { "GiveAll", "(reward)" }, permPrefix + ".GiveAll",
 				"Give all users a reward") {
 
@@ -190,12 +191,25 @@ public class CommandLoader {
 		});
 
 		cmds.add(new CommandHandler(new String[] { "UserEditValue", "(player)", "(string)", "(string)" },
-				permPrefix + ".UserEditValue", "Open UserGUI", false) {
+				permPrefix + ".UserEditValue", "Edit user data", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				User user = UserManager.getInstance().getUser(args[1]);
 				user.getData().setString(args[2], args[3]);
+				sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " + args[1]);
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "UserEditValue", "All", "(string)", "(string)" },
+				permPrefix + ".UserEditValue", "Edit all user data", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					user.getData().setString(args[2], args[3]);
+				}
 				sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " + args[1]);
 			}
 		});
@@ -267,7 +281,7 @@ public class CommandLoader {
 							AdvancedCorePlugin.getInstance().getOptions().getResourceId())) {
 						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar."));
 					} else {
-						sendMessage(sender, "&cFailed to download jar.");
+						sendMessage(sender, "&cFailed to download jar");
 					}
 				}
 			});
@@ -279,13 +293,14 @@ public class CommandLoader {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					if (AdvancedCorePlugin.getInstance().getOptions().isEnableJenkins()) {
+					if (AdvancedCorePlugin.getInstance().getOptions().isEnableJenkins()
+							&& !AdvancedCorePlugin.getInstance().getJenkinsSite().isEmpty()) {
 						sender.sendMessage(StringParser.getInstance().colorize(
 								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
 						UpdateDownloader.getInstance().downloadFromJenkins(
 								AdvancedCorePlugin.getInstance().getJenkinsSite(),
 								AdvancedCorePlugin.getInstance().getName());
-						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar."));
+						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar"));
 					} else {
 						sendMessage(sender,
 								"&cNot enabled, please enable to use this. Note: USE THESE DEV BUILDS AT YOUR OWN RISK");
