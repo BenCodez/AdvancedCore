@@ -49,7 +49,7 @@ public abstract class CommandHandler {
 	@Getter
 	@Setter
 	private boolean allowConsole = true;
-	
+
 	@Getter
 	@Setter
 	private boolean forceConsole = false;
@@ -111,7 +111,7 @@ public abstract class CommandHandler {
 		this.helpMessage = helpMessage;
 		this.allowConsole = allowConsole;
 	}
-	
+
 	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole, boolean forceConsole) {
 		this.args = args;
 		this.perm = perm;
@@ -370,7 +370,7 @@ public abstract class CommandHandler {
 				sender.sendMessage(StringParser.getInstance().colorize("&cMust be a player to do this"));
 				return true;
 			}
-			
+
 			if (sender instanceof Player && forceConsole) {
 				sender.sendMessage(StringParser.getInstance().colorize("&cConsole command only"));
 				return true;

@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.conversations.Conversable;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.ConversationFactory;

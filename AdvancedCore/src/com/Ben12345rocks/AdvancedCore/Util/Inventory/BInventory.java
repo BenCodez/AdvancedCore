@@ -10,10 +10,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event.Result;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
@@ -216,17 +214,6 @@ public class BInventory implements Listener {
 		return this;
 	}
 
-	public void forceClose(Player p) {
-		Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-			@Override
-			public void run() {
-				p.closeInventory();
-				destroy();
-			}
-		});
-	}
-
 	public void closeInv(Player p, BInventoryButton b) {
 		if ((closeInv && (b != null && b.isCloseInv())) || pages) {
 			if (p.getOpenInventory().getTopInventory().equals(inv)) {
@@ -263,6 +250,17 @@ public class BInventory implements Listener {
 	public BInventory dontClose() {
 		closeInv = false;
 		return this;
+	}
+
+	public void forceClose(Player p) {
+		Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+			@Override
+			public void run() {
+				p.closeInventory();
+				destroy();
+			}
+		});
 	}
 
 	/**

@@ -21,20 +21,6 @@ public class EncryptionHandler {
 
 	private static SecretKey key;
 
-	private void generateKey() throws NoSuchAlgorithmException {
-		KeyGenerator keyGenerator = KeyGenerator.getInstance("DES");
-		key = keyGenerator.generateKey();
-
-	}
-
-	private void save(File file) throws IOException {
-		FileWriter fileWriter = new FileWriter(file);
-		fileWriter.write(Base64.getEncoder().withoutPadding().encodeToString(key.getEncoded()));
-		fileWriter.close();
-		key.getEncoded();
-
-	}
-
 	public EncryptionHandler(File file) {
 		try {
 			if (file.exists()) {
@@ -75,11 +61,17 @@ public class EncryptionHandler {
 
 	}
 
-	private void loadKey(File file) throws IOException {
-		// FileReader fileReader = new FileReader(file);
-		String str = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
-		key = new SecretKeySpec(Base64.getDecoder().decode(str), "DES");
-		// fileReader.close();
+	public String decrypt(String str) {
+		try {
+			// decode with base64 to get bytes
+			byte[] dec = Base64.getDecoder().decode(str.getBytes());
+			byte[] utf8 = dcipher.doFinal(dec);
+			// create new string based on the specified charset
+			return new String(utf8, "UTF8");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	public String encrypt(String str) {
@@ -102,16 +94,24 @@ public class EncryptionHandler {
 		return null;
 	}
 
-	public String decrypt(String str) {
-		try {
-			// decode with base64 to get bytes
-			byte[] dec = Base64.getDecoder().decode(str.getBytes());
-			byte[] utf8 = dcipher.doFinal(dec);
-			// create new string based on the specified charset
-			return new String(utf8, "UTF8");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
+	private void generateKey() throws NoSuchAlgorithmException {
+		KeyGenerator keyGenerator = KeyGenerator.getInstance("DES");
+		key = keyGenerator.generateKey();
+
+	}
+
+	private void loadKey(File file) throws IOException {
+		// FileReader fileReader = new FileReader(file);
+		String str = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
+		key = new SecretKeySpec(Base64.getDecoder().decode(str), "DES");
+		// fileReader.close();
+	}
+
+	private void save(File file) throws IOException {
+		FileWriter fileWriter = new FileWriter(file);
+		fileWriter.write(Base64.getEncoder().withoutPadding().encodeToString(key.getEncoded()));
+		fileWriter.close();
+		key.getEncoded();
+
 	}
 }

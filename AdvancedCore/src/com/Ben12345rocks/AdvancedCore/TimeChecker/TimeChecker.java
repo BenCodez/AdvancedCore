@@ -24,8 +24,6 @@ public class TimeChecker {
 
 	/** The instance. */
 	static TimeChecker instance = new TimeChecker();
-	
-	private Timer timer = new Timer();
 
 	/**
 	 * Gets the single instance of TimeChecker.
@@ -35,6 +33,8 @@ public class TimeChecker {
 	public static TimeChecker getInstance() {
 		return instance;
 	}
+
+	private Timer timer = new Timer();
 
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();

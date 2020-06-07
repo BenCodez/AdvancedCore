@@ -9,13 +9,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Color;
 import org.bukkit.DyeColor;
-import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
@@ -39,6 +35,7 @@ import com.google.common.collect.Multimap;
 
 import lombok.Getter;
 import lombok.Setter;
+import net.md_5.bungee.api.ChatColor;
 
 /**
  * Easily create itemstacks, without messing your hands.
@@ -67,23 +64,6 @@ public class ItemBuilder {
 	@Getter
 	@Setter
 	private boolean checkLoreLength = true;
-
-	public ItemBuilder dontCheckLoreLength() {
-		checkLoreLength = false;
-		return this;
-	}
-
-	public ItemBuilder setLoreLength(int length) {
-		loreLength = length;
-		return this;
-	}
-
-	public int getLoreLength() {
-		if (loreLength < 0) {
-			return AdvancedCorePlugin.getInstance().getOptions().getNewLoreLength();
-		}
-		return loreLength;
-	}
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -219,42 +199,6 @@ public class ItemBuilder {
 				chancePass = false;
 			}
 		}
-	}
-
-	public ItemBuilder setCustomModelData(int data) {
-		ItemMeta im = is.getItemMeta();
-		im.setCustomModelData(data);
-		is.setItemMeta(im);
-		return this;
-	}
-
-	private ItemBuilder checkLoreLength() {
-		int loreLength = getLoreLength();
-		ArrayList<String> currentLore = getLore();
-		ArrayList<String> newLore = new ArrayList<String>();
-		for (String lore : currentLore) {
-			StringBuilder builder = new StringBuilder();
-			int count = 0;
-			for (char character : lore.toCharArray()) {
-				count++;
-				builder.append(character);
-				if (count > loreLength && character == ' ') {
-					String str = builder.toString();
-					builder = new StringBuilder();
-					builder.append(ChatColor.getLastColors(str));
-					if (!ChatColor.stripColor(str).isEmpty()) {
-						newLore.add(str);
-					}
-					count = 0;
-				}
-			}
-			String s = builder.toString();
-			if (!ChatColor.stripColor(s).isEmpty()) {
-				newLore.add(builder.toString());
-			}
-		}
-		setLore(newLore);
-		return this;
 	}
 
 	/**
@@ -434,6 +378,35 @@ public class ItemBuilder {
 		}
 	}
 
+	private ItemBuilder checkLoreLength() {
+		int loreLength = getLoreLength();
+		ArrayList<String> currentLore = getLore();
+		ArrayList<String> newLore = new ArrayList<String>();
+		for (String lore : currentLore) {
+			StringBuilder builder = new StringBuilder();
+			int count = 0;
+			for (char character : lore.toCharArray()) {
+				count++;
+				builder.append(character);
+				if (count > loreLength && character == ' ') {
+					String str = builder.toString();
+					builder = new StringBuilder();
+					builder.append(ChatColor.getLastColors(str));
+					if (!ChatColor.stripColor(str).isEmpty()) {
+						newLore.add(str);
+					}
+					count = 0;
+				}
+			}
+			String s = builder.toString();
+			if (!ChatColor.stripColor(s).isEmpty()) {
+				newLore.add(builder.toString());
+			}
+		}
+		setLore(newLore);
+		return this;
+	}
+
 	/**
 	 * Clone the ItemBuilder into a new one.
 	 *
@@ -475,6 +448,11 @@ public class ItemBuilder {
 
 		return data;
 
+	}
+
+	public ItemBuilder dontCheckLoreLength() {
+		checkLoreLength = false;
+		return this;
 	}
 
 	@Override
@@ -520,6 +498,13 @@ public class ItemBuilder {
 		}
 		return new ArrayList<String>();
 
+	}
+
+	public int getLoreLength() {
+		if (loreLength < 0) {
+			return AdvancedCorePlugin.getInstance().getOptions().getNewLoreLength();
+		}
+		return loreLength;
 	}
 
 	public String getName() {
@@ -680,6 +665,13 @@ public class ItemBuilder {
 		return this;
 	}
 
+	public ItemBuilder setCustomModelData(int data) {
+		ItemMeta im = is.getItemMeta();
+		im.setCustomModelData(data);
+		is.setItemMeta(im);
+		return this;
+	}
+
 	/**
 	 * Change the durability of the item.
 	 *
@@ -781,6 +773,11 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder setLore(String... lore) {
 		return setLore(ArrayUtils.getInstance().convert(lore));
+	}
+
+	public ItemBuilder setLoreLength(int length) {
+		loreLength = length;
+		return this;
 	}
 
 	/**

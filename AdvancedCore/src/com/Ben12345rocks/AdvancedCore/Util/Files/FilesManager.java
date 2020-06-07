@@ -4,11 +4,12 @@ import java.io.File;
 import java.io.IOException;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Thread.FileThread;
+
+import net.md_5.bungee.api.ChatColor;
 
 // TODO: Auto-generated Javadoc
 /**

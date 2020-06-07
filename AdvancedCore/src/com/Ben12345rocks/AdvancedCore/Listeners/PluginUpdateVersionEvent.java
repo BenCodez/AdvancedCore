@@ -1,6 +1,5 @@
 package com.Ben12345rocks.AdvancedCore.Listeners;
 
-import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 

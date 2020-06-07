@@ -341,16 +341,7 @@ public class StringParser {
 		}
 	}
 
-	/**
-	 * Replace place holders.
-	 *
-	 * @param player
-	 *            the player
-	 * @param text
-	 *            the text
-	 * @return the string
-	 */
-	public String replacePlaceHolders(Player player, String text) {
+	public String replacePlaceHolders(OfflinePlayer player, String text) {
 		if (player == null) {
 			return text;
 		}
@@ -361,7 +352,16 @@ public class StringParser {
 		}
 	}
 
-	public String replacePlaceHolders(OfflinePlayer player, String text) {
+	/**
+	 * Replace place holders.
+	 *
+	 * @param player
+	 *            the player
+	 * @param text
+	 *            the text
+	 * @return the string
+	 */
+	public String replacePlaceHolders(Player player, String text) {
 		if (player == null) {
 			return text;
 		}

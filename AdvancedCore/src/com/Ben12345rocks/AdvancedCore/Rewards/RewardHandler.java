@@ -14,7 +14,6 @@ import java.util.TimerTask;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;

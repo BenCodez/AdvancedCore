@@ -13,11 +13,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -25,6 +22,7 @@ import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
+import com.comphenix.net.sf.cglib.core.Block;
 
 import net.md_5.bungee.api.ChatColor;
 
