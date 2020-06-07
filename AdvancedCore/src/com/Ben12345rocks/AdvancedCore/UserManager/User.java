@@ -13,7 +13,9 @@ import java.util.Map.Entry;
 import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Effect;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -36,9 +38,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
-import com.comphenix.protocol.wrappers.EnumWrappers.Particle;
 
-import javafx.scene.effect.Effect;
 import net.md_5.bungee.api.chat.TextComponent;
 
 /**

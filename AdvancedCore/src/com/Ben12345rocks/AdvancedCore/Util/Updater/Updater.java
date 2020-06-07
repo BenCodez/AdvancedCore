@@ -8,8 +8,6 @@ import javax.net.ssl.HttpsURLConnection;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
-
 // TODO: Auto-generated Javadoc
 /**
  * The Class Updater.
@@ -123,7 +121,7 @@ public class Updater {
 			return;
 		} catch (Exception e) {
 			result = UpdateResult.FAIL_SPIGOT;
-			AdvancedCorePlugin.getInstance().debug(e);
+			// AdvancedCorePlugin.getInstance().debug(e);
 		}
 		result = UpdateResult.FAIL_SPIGOT;
 	}

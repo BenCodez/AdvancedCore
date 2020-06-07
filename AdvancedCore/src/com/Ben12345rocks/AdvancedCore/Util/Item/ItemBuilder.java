@@ -9,9 +9,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.DyeColor;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
@@ -35,7 +39,6 @@ import com.google.common.collect.Multimap;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.md_5.bungee.api.ChatColor;
 
 /**
  * Easily create itemstacks, without messing your hands.
@@ -224,13 +227,13 @@ public class ItemBuilder {
 	/**
 	 * Create a new ItemBuilder from scratch.
 	 *
-	 * @param m
+	 * @param material
 	 *            The material of the item.
 	 * @param amount
 	 *            The amount of the item.
 	 */
-	public ItemBuilder(Material m, int amount) {
-		is = new ItemStack(m, amount);
+	public ItemBuilder(Material material, int amount) {
+		is = new ItemStack(material, amount);
 	}
 
 	public ItemBuilder addAttributeModifier(Attribute att, AttributeModifier modifier) {

@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -151,7 +152,7 @@ public class PlayerUtils {
 			return null;
 		}
 
-		Player player = Bukkit.getPlayer(playerName);
+		Player player = Bukkit.getPlayerExact(playerName);
 		if (player != null) {
 			return player.getUniqueId().toString();
 		}

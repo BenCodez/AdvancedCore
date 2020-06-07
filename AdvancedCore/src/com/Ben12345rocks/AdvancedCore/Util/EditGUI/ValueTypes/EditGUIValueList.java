@@ -2,6 +2,7 @@ package com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes;
 
 import java.util.ArrayList;
 
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventory;
