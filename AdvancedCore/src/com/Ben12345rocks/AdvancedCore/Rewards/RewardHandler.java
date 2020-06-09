@@ -238,6 +238,20 @@ public class RewardHandler {
 		}
 		reward = reward.replace(" ", "_");
 
+		/*
+		 * if (rewardOptions != null) {
+		 * String prefix = rewardOptions.getPrefix();
+		 * if (prefix != null && !prefix.equals("")) {
+		 * String str = reward;
+		 * reward = prefix + "_" + str;
+		 * }
+		 * String suffix = rewardOptions.getSuffix();
+		 * if (suffix != null && !suffix.equals("")) {
+		 * reward += "_" + suffix;
+		 * }
+		 * }
+		 */
+
 		for (Reward rewardFile : getRewards()) {
 			if (rewardFile.getName().equalsIgnoreCase(reward)) {
 				return rewardFile;
@@ -1193,7 +1207,6 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
-
 				new RewardBuilder(reward.getConfig().getConfigData(), "Rewards").withPrefix(reward.getName())
 						.withPlaceHolder(placeholders).send(user);
 				return null;
