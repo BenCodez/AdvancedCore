@@ -86,8 +86,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return javaPlugin;
 	}
 
-	private boolean enabled = true;
-
 	@Getter
 	private ConcurrentHashMap<String, String> uuidNameCache;
 
@@ -325,7 +323,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void loadAutoUpdateCheck() {
 		long delay = 1000 * 60 * 60;
 		timer.schedule(new TimerTask() {
-			
+
 			@Override
 			public void run() {
 				checkAutoUpdate();
@@ -741,7 +739,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		Thread.getInstance().getThread().interrupt();
 		FileThread.getInstance().getThread().interrupt();
-		enabled = false;
 	}
 
 	@Override
