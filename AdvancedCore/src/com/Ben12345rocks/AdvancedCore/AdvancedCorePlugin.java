@@ -12,6 +12,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -44,6 +45,7 @@ import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInj
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
+import com.Ben12345rocks.AdvancedCore.Thread.FileThread;
 import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
@@ -83,6 +85,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public static AdvancedCorePlugin getInstance() {
 		return javaPlugin;
 	}
+
+	private boolean enabled = true;
 
 	@Getter
 	private ConcurrentHashMap<String, String> uuidNameCache;
@@ -319,13 +323,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void loadAutoUpdateCheck() {
-		Bukkit.getScheduler().runTaskTimerAsynchronously(this, new Runnable() {
-
+		long delay = 1000 * 60 * 60;
+		timer.schedule(new TimerTask() {
+			
 			@Override
 			public void run() {
 				checkAutoUpdate();
 			}
-		}, 20, 20 * 1000 * 60 * 60);
+		}, delay, delay);
 	}
 
 	private void loadConfig() {
@@ -726,6 +731,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
+
 		if (getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 			getLogger().info("Shutting down mysql, query size: " + getMysql().getQuery().size());
 			getMysql().updateBatchShutdown();
@@ -733,6 +739,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		timer.cancel();
 		onUnLoad();
 
+		Thread.getInstance().getThread().interrupt();
+		FileThread.getInstance().getThread().interrupt();
+		enabled = false;
 	}
 
 	@Override

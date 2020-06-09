@@ -87,7 +87,7 @@ public class FileThread {
 
 		@Override
 		public void run() {
-			while (true) {
+			while (!thread.isInterrupted()) {
 				try {
 					sleep(50);
 				} catch (InterruptedException e) {
