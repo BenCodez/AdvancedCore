@@ -35,6 +35,7 @@ public abstract class SocketServer extends Thread {
 			server.bind(new InetSocketAddress(host, port));
 			start();
 		} catch (IOException e) {
+			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to bind to " + host + ":" + port);
 			e.printStackTrace();
 		}
 	}
