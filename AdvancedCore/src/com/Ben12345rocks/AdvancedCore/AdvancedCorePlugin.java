@@ -45,7 +45,6 @@ import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInj
 import com.Ben12345rocks.AdvancedCore.ServerHandle.CraftBukkitHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.IServerHandle;
 import com.Ben12345rocks.AdvancedCore.ServerHandle.SpigotHandle;
-import com.Ben12345rocks.AdvancedCore.Thread.FileThread;
 import com.Ben12345rocks.AdvancedCore.Thread.Thread;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeChecker;
 import com.Ben12345rocks.AdvancedCore.TimeChecker.TimeType;
@@ -737,8 +736,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		timer.cancel();
 		onUnLoad();
 
-		Thread.getInstance().getThread().interrupt();
-		FileThread.getInstance().getThread().interrupt();
+		//Thread.getInstance().getThread().interrupt();
+		//FileThread.getInstance().getThread().interrupt();
 	}
 
 	@Override
