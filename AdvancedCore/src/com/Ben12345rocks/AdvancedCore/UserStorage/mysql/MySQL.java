@@ -95,6 +95,8 @@ public class MySQL {
 			tableName = section.getString("Name", "");
 		}
 
+		String str = section.getString("Line", "");
+
 		if (maxSize >= 0) {
 			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20, TimeUnit.MINUTES)
 					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
@@ -111,7 +113,7 @@ public class MySQL {
 			name = tablePrefix + tableName;
 		}
 		mysql = new com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL(maxThreads);
-		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime)) {
+		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str)) {
 			AdvancedCorePlugin.getInstance().getLogger().warning("Failed to connect to MySQL");
 		}
 		try {

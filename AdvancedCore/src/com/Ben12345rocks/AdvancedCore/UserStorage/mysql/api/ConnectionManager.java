@@ -19,6 +19,7 @@ public class ConnectionManager {
 	private boolean useSSL = false;
 	// private int maxConnections;
 	private long maxLifetimeMs;
+	private String str = "";
 
 	public ConnectionManager(String host, String port, String username, String password, String database) {
 		this.host = host;
@@ -33,7 +34,7 @@ public class ConnectionManager {
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
-			int maxConnections, boolean useSSL, long lifeTime) {
+			int maxConnections, boolean useSSL, long lifeTime, String str) {
 		this.host = host;
 		this.port = port;
 		this.username = username;
@@ -48,6 +49,7 @@ public class ConnectionManager {
 		this.useSSL = useSSL;
 		this.maxLifetimeMs = lifeTime;
 		// this.maxConnections = maxConnections;
+		this.str = str;
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
@@ -159,7 +161,7 @@ public class ConnectionManager {
 			config.setUsername(username);
 			config.setPassword(password);
 			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=" + useSSL
-					+ "&allowMultiQueries=true&rewriteBatchedStatements=true&useDynamicCharsetInfo=false");
+					+ "&allowMultiQueries=true&rewriteBatchedStatements=true&useDynamicCharsetInfo=false" + str);
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(maximumPoolsize);
