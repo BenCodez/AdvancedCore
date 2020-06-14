@@ -88,8 +88,10 @@ public class Table {
 		for (String col : getTableColumns()) {
 			boolean has = false;
 			for (int i = 0; i < columns.size(); i++) {
-				if (col.equals(columns.get(i).getName())) {
-					has = true;
+				if (col != null) {
+					if (col.equals(columns.get(i).getName())) {
+						has = true;
+					}
 				}
 			}
 			if (!has) {
