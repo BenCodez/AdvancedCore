@@ -120,6 +120,18 @@ public class BInventory implements Listener {
 		public void runSync(Runnable run) {
 			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), run);
 		}
+
+		public void closeInventory() {
+			runSync(new Runnable() {
+
+				@Override
+				public void run() {
+					if (player != null) {
+						player.closeInventory();
+					}
+				}
+			});
+		}
 	}
 
 	/**
