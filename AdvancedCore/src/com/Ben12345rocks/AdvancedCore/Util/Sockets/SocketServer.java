@@ -65,6 +65,8 @@ public abstract class SocketServer extends Thread {
 				dis.close();
 				socket.close();
 			} catch (Exception ex) {
+				AdvancedCorePlugin.getInstance().getLogger()
+						.severe("Error occured while receiving socket message, enable debug for stacktraces");
 				AdvancedCorePlugin.getInstance().debug(ex);
 			}
 		}
