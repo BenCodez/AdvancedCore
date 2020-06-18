@@ -64,6 +64,10 @@ Items:
     # use vanilla names
     Enchants:
       unbreaking: 1
+      
+    # Skull options
+    #Skull: 'PLAYERNAME'
+    #SkullTexture: 'SKULLTEXTURE'
      
     # Hide enchants     
     #ItemFlags:

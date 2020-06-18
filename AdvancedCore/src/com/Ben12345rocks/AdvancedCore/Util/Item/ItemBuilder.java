@@ -7,8 +7,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
@@ -171,6 +173,10 @@ public class ItemBuilder {
 				if (!skull.equals("")) {
 					setSkullOwner(skull);
 
+				}
+				String texture = data.getString("SkullTexture", "");
+				if (!texture.equals("")) {
+					setHeadFromValue(texture);
 				}
 
 				if (data.getBoolean("Glow")) {
@@ -854,6 +860,18 @@ public class ItemBuilder {
 			is.setItemMeta(meta);
 		} catch (NoSuchMethodError e) {
 
+		}
+		return this;
+	}
+
+	@SuppressWarnings("deprecation")
+	public ItemBuilder setHeadFromValue(String value) {
+		try {
+			is = Bukkit.getUnsafe().modifyItemStack(new ItemStack(Material.PLAYER_HEAD),
+					"{SkullOwner:{Id:\"" + UUID.nameUUIDFromBytes(value.getBytes())
+							+ "\",Properties:{textures:[{Value:\"" + value + "\"}]}}}");
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		return this;
 	}
