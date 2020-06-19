@@ -30,6 +30,10 @@ public class ClientHandler {
 	}
 
 	public void sendMessage(String... msgs) {
+		sendMessage(false, msgs);
+	}
+
+	public void sendMessage(boolean debug, String... msgs) {
 		connect();
 		String msg = msgs[0];
 		for (int i = 1; i < msgs.length; i++) {

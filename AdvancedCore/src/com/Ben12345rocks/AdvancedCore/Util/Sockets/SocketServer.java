@@ -25,11 +25,15 @@ public abstract class SocketServer extends Thread {
 
 	private EncryptionHandler encryptionHandler;
 
-	public SocketServer(String version, String host, int port, EncryptionHandler handle) {
+	@Getter
+	private boolean debug = false;
+
+	public SocketServer(String version, String host, int port, EncryptionHandler handle, boolean debug) {
 		super(version);
 		this.host = host;
 		this.port = port;
 		encryptionHandler = handle;
+		this.debug = debug;
 		try {
 			server = new ServerSocket();
 			server.bind(new InetSocketAddress(host, port));
@@ -61,7 +65,9 @@ public abstract class SocketServer extends Thread {
 
 				final String msg = encryptionHandler.decrypt(dis.readUTF());
 				onReceive(msg.split("%line%"));
-
+				if (debug) {
+					System.out.println("Socket Receiving: " + msg);
+				}
 				dis.close();
 				socket.close();
 			} catch (Exception ex) {
