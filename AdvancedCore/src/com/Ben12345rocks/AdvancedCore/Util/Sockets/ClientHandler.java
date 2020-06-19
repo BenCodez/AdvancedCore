@@ -11,11 +11,19 @@ public class ClientHandler {
 	private String host;
 	private int port;
 	private EncryptionHandler encryptionHandler;
+	private boolean debug = false;
 
 	public ClientHandler(String host, int port, EncryptionHandler handle) {
 		this.host = host;
 		this.port = port;
 		encryptionHandler = handle;
+	}
+	
+	public ClientHandler(String host, int port, EncryptionHandler handle,boolean debug) {
+		this.host = host;
+		this.port = port;
+		encryptionHandler = handle;
+		this.debug = debug;
 	}
 
 	private void connect() {
@@ -30,7 +38,7 @@ public class ClientHandler {
 	}
 
 	public void sendMessage(String... msgs) {
-		sendMessage(false, msgs);
+		sendMessage(debug, msgs);
 	}
 
 	public void sendMessage(boolean debug, String... msgs) {
