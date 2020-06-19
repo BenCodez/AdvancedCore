@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.Socket;
 
 import com.Ben12345rocks.AdvancedCore.Util.Encryption.EncryptionHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
 public class ClientHandler {
 	private Socket clientSocket;
@@ -18,8 +19,8 @@ public class ClientHandler {
 		this.port = port;
 		encryptionHandler = handle;
 	}
-	
-	public ClientHandler(String host, int port, EncryptionHandler handle,boolean debug) {
+
+	public ClientHandler(String host, int port, EncryptionHandler handle, boolean debug) {
 		this.host = host;
 		this.port = port;
 		encryptionHandler = handle;
@@ -42,6 +43,9 @@ public class ClientHandler {
 	}
 
 	public void sendMessage(boolean debug, String... msgs) {
+		if (debug) {
+			System.out.println("Socket Sending: " + ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(msgs)));
+		}
 		connect();
 		String msg = msgs[0];
 		for (int i = 1; i < msgs.length; i++) {
