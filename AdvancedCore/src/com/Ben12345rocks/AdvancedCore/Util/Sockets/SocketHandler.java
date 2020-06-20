@@ -41,6 +41,8 @@ public class SocketHandler {
 						}
 
 					}
+				} else {
+					System.out.print("Socket data invalid");
 				}
 			}
 		};

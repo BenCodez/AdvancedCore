@@ -64,10 +64,10 @@ public abstract class SocketServer extends Thread {
 				DataInputStream dis = new DataInputStream(socket.getInputStream());
 
 				final String msg = encryptionHandler.decrypt(dis.readUTF());
-				onReceive(msg.split("%line%"));
 				if (debug) {
 					System.out.println("Socket Receiving: " + msg);
 				}
+				onReceive(msg.split("%line%"));
 				dis.close();
 				socket.close();
 			} catch (Exception ex) {

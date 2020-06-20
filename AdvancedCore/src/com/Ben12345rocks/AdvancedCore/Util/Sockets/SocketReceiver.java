@@ -16,7 +16,7 @@ public abstract class SocketReceiver {
 	}
 
 	public void onReceive(String ident, String[] data) {
-		if (ident.isEmpty() || ident.equalsIgnoreCase(this.ident)) {
+		if (this.ident.isEmpty() || ident.equalsIgnoreCase(this.ident)) {
 			onReceive(data);
 		}
 	}
