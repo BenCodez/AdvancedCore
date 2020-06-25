@@ -14,14 +14,26 @@ public class SocketHandler {
 	@Getter
 	private ArrayList<SocketReceiver> receiving;
 
-	public SocketHandler(String threadName, String host, int port, EncryptionHandler handle,boolean debug) {
+	public SocketHandler(String threadName, String host, int port, EncryptionHandler handle) {
+		start(threadName, host, port, handle, false);
+	}
+
+	public SocketHandler(String threadName, String host, int port, EncryptionHandler handle, boolean debug) {
 		start(threadName, host, port, handle, debug);
 	}
-	
-	public void start(String threadName, String host, int port, EncryptionHandler handle,boolean debug) {
+
+	public void add(SocketReceiver receive) {
+		receiving.add(receive);
+	}
+
+	public void closeConnection() {
+		server.close();
+	}
+
+	public void start(String threadName, String host, int port, EncryptionHandler handle, boolean debug) {
 		receiving = new ArrayList<SocketReceiver>();
 
-		server = new SocketServer(threadName, host, port, handle,debug) {
+		server = new SocketServer(threadName, host, port, handle, debug) {
 
 			@Override
 			public void onReceive(String[] data) {
@@ -46,17 +58,5 @@ public class SocketHandler {
 				}
 			}
 		};
-	}
-	
-	public SocketHandler(String threadName, String host, int port, EncryptionHandler handle) {
-		start(threadName, host, port, handle, false);
-	}
-
-	public void add(SocketReceiver receive) {
-		receiving.add(receive);
-	}
-
-	public void closeConnection() {
-		server.close();
 	}
 }

@@ -38,13 +38,10 @@ public class ClientHandler {
 		}
 	}
 
-	public void sendMessage(String... msgs) {
-		sendMessage(debug, msgs);
-	}
-
 	public void sendMessage(boolean debug, String... msgs) {
 		if (debug) {
-			System.out.println("Socket Sending: " + ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(msgs)));
+			System.out.println("Socket Sending: "
+					+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(msgs)));
 		}
 		connect();
 		String msg = msgs[0];
@@ -60,6 +57,10 @@ public class ClientHandler {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
+	}
+
+	public void sendMessage(String... msgs) {
+		sendMessage(debug, msgs);
 	}
 
 	public void stopConnection() {

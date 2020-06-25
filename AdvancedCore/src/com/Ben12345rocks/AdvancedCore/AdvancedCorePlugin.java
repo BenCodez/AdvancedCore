@@ -736,8 +736,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		timer.cancel();
 		onUnLoad();
 
-		//Thread.getInstance().getThread().interrupt();
-		//FileThread.getInstance().getThread().interrupt();
+		// Thread.getInstance().getThread().interrupt();
+		// FileThread.getInstance().getThread().interrupt();
 	}
 
 	@Override

@@ -721,6 +721,18 @@ public class ItemBuilder {
 		return this;
 	}
 
+	@SuppressWarnings("deprecation")
+	public ItemBuilder setHeadFromValue(String value) {
+		try {
+			is = Bukkit.getUnsafe().modifyItemStack(new ItemStack(Material.PLAYER_HEAD),
+					"{SkullOwner:{Id:\"" + UUID.nameUUIDFromBytes(value.getBytes())
+							+ "\",Properties:{textures:[{Value:\"" + value + "\"}]}}}");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return this;
+	}
+
 	/**
 	 * Sets infinity durability on the item by setting the durability to
 	 * Short.MAX_VALUE.
@@ -860,18 +872,6 @@ public class ItemBuilder {
 			is.setItemMeta(meta);
 		} catch (NoSuchMethodError e) {
 
-		}
-		return this;
-	}
-
-	@SuppressWarnings("deprecation")
-	public ItemBuilder setHeadFromValue(String value) {
-		try {
-			is = Bukkit.getUnsafe().modifyItemStack(new ItemStack(Material.PLAYER_HEAD),
-					"{SkullOwner:{Id:\"" + UUID.nameUUIDFromBytes(value.getBytes())
-							+ "\",Properties:{textures:[{Value:\"" + value + "\"}]}}}");
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 		return this;
 	}
