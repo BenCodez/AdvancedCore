@@ -7,10 +7,11 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL;
-import com.sun.rowset.CachedRowSetImpl;
+import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetProvider;
 
-@SuppressWarnings("restriction")
+import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL;
+
 public class Query {
 
 	private MySQL mysql;
@@ -111,7 +112,7 @@ public class Query {
 	 *             SQLException
 	 */
 	public ResultSet executeQuery() throws SQLException {
-		CachedRowSetImpl rowSet = new CachedRowSetImpl();
+		CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
 		ResultSet resultSet = null;
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
