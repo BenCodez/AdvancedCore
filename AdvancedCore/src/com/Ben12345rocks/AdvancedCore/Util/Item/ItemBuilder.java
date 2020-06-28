@@ -183,12 +183,19 @@ public class ItemBuilder {
 					addGlow();
 				}
 
+				Color color = null;
+				if (data.isConfigurationSection("PotionColor")) {
+					ConfigurationSection potionColor = data.getConfigurationSection("PotionColor");
+					color = Color.fromRGB(potionColor.getInt("Red", 0), potionColor.getInt("Green", 0),
+							potionColor.getInt("Blue", 0));
+				}
+
 				if (data.isConfigurationSection("Potions")) {
 					for (String pot : data.getConfigurationSection("Potions").getKeys(false)) {
 						PotionEffectType type = PotionEffectType.getByName(pot);
 						if (type != null) {
 							addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
-									data.getInt("Potions." + pot + ".Amplifier", 1));
+									data.getInt("Potions." + pot + ".Amplifier", 1), color);
 						} else {
 							AdvancedCorePlugin.getInstance().getLogger().warning("Invalid potion effect type: " + pot);
 						}
@@ -366,9 +373,12 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public ItemBuilder addPotionEffect(PotionEffectType type, int duration, int amplifier) {
+	public ItemBuilder addPotionEffect(PotionEffectType type, int duration, int amplifier, Color color) {
 		PotionMeta meta = (PotionMeta) is.getItemMeta();
 		meta.addCustomEffect(new PotionEffect(type, duration, amplifier), false);
+		if (color != null) {
+			meta.setColor(color);
+		}
 		is.setItemMeta(meta);
 		return this;
 	}

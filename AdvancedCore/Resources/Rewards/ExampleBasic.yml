@@ -78,11 +78,18 @@ Items:
       
     # Set power of firework
     #Power: 1
+    
+    # Color of potion bottle
+    # 0-255
+    #PotionColor:
+      #Red: 0
+      #Green: 0
+      #Blue: 0
       
-    # Potions:
-      # SPEED:
-        # Duration: 20
-        # Amplifier: 1
+    #Potions:
+      #SPEED:
+        #Duration: 20
+        #Amplifier: 1
       
 # Amount of money to give, requires vault
 # Use 0 to give none
