@@ -3,6 +3,7 @@ package com.Ben12345rocks.AdvancedCore.Util.Messages;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.bukkit.OfflinePlayer;
@@ -30,6 +31,19 @@ public class StringParser {
 	private StringParser() {
 	}
 
+	private final Pattern pattern = Pattern.compile("(?<!\\\\)(#[a-fA-F0-9]{6})");
+
+	public String formatHex(String message) {
+		Matcher matcher = pattern.matcher(message); // Creates a matcher with the given pattern & message
+
+		while (matcher.find()) { // Searches the message for something that matches the pattern
+			String color = message.substring(matcher.start(), matcher.end()); // Extracts the color from the message
+			message = message.replace(color, "" + ChatColor.of(color)); // Places the color in the message
+		}
+
+		return message; // Returns the message
+	}
+
 	/**
 	 * Colorize.
 	 *
@@ -50,6 +64,7 @@ public class StringParser {
 				.replace("{RESET}", "§r").replace("{STRIKE}", "§m").replace("{STRIKETHROUGH}", "§m")
 				.replace("{UNDERLINE}", "§n");
 
+		format = formatHex(format);
 		return ChatColor.translateAlternateColorCodes('&', format);
 	}
 
