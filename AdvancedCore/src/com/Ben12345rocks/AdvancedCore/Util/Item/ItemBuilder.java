@@ -24,6 +24,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
@@ -267,9 +268,15 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder addEnchant(Enchantment ench, int level) {
 		if (ench != null) {
-			ItemMeta im = is.getItemMeta();
-			im.addEnchant(ench, level, true);
-			is.setItemMeta(im);
+			if (is.getType().equals(Material.ENCHANTED_BOOK)) {
+				EnchantmentStorageMeta im = (EnchantmentStorageMeta)is.getItemMeta();
+				im.addStoredEnchant(ench, level, true);
+				is.setItemMeta(im);
+			} else {
+				ItemMeta im = is.getItemMeta();
+				im.addEnchant(ench, level, true);
+				is.setItemMeta(im);
+			}
 		}
 		return this;
 	}
