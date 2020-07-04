@@ -195,7 +195,9 @@ public class SkullHandler {
 			} else {
 				add(playerName);
 			}
-		} 
+		} else {
+			AdvancedCorePlugin.getInstance().extraDebug("Not loading skull");
+		}
 	}
 
 }
