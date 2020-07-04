@@ -735,6 +735,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 		timer.cancel();
 		onUnLoad();
+		SkullHandler.getInstance().close();
 
 		// Thread.getInstance().getThread().interrupt();
 		// FileThread.getInstance().getThread().interrupt();
