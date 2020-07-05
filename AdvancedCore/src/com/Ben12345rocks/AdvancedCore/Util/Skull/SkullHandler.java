@@ -44,7 +44,7 @@ public class SkullHandler {
 	Queue<String> skullsToLoad = new ConcurrentLinkedQueue<String>();
 
 	private Timer timer = new Timer();
-	
+
 	public void close() {
 		timer.cancel();
 	}
@@ -182,21 +182,24 @@ public class SkullHandler {
 	}
 
 	public void loadSkull(final String playerName) {
-		if (AdvancedCorePlugin.getInstance().isEnabled() && AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()
-				&& Runtime.getRuntime().freeMemory() > 500 && PluginUtils.getInstance().getMemory() > 2000) {
-			if (Bukkit.isPrimaryThread()) {
-				timer.schedule(new TimerTask() {
+		if (AdvancedCorePlugin.getInstance().isEnabled()
+				&& AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) {
+			if (Runtime.getRuntime().freeMemory() > 500 && PluginUtils.getInstance().getMemory() > 800) {
+				if (Bukkit.isPrimaryThread()) {
+					timer.schedule(new TimerTask() {
 
-					@Override
-					public void run() {
-						add(playerName);
-					}
-				}, 0);
+						@Override
+						public void run() {
+							add(playerName);
+						}
+					}, 0);
+				} else {
+					add(playerName);
+				}
 			} else {
-				add(playerName);
+				AdvancedCorePlugin.getInstance().extraDebug("Not loading skull, not alot of free ram available, free "
+						+ Runtime.getRuntime().freeMemory() + ", allocated " + PluginUtils.getInstance().getMemory());
 			}
-		} else {
-			AdvancedCorePlugin.getInstance().extraDebug("Not loading skull");
 		}
 	}
 
