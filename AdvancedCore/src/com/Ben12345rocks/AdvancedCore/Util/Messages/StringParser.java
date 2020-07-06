@@ -141,6 +141,10 @@ public class StringParser {
 			return false;
 		}
 	}
+	
+	public boolean containsJson(String msg) {
+		return containsIgnorecase(msg, "[Text=\"");
+	}
 
 	public TextComponent parseJson(String msg) {
 		TextComponent comp = new TextComponent("");
