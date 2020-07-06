@@ -50,7 +50,7 @@ public class SkullHandler {
 	}
 
 	private void add(String playerName) {
-		if (skullsToLoad.contains(playerName) && getSkulls().containsKey(playerName)) {
+		if (!skullsToLoad.contains(playerName) && !getSkulls().containsKey(playerName)) {
 			skullsToLoad.add(playerName);
 		}
 	}
@@ -152,6 +152,8 @@ public class SkullHandler {
 		} catch (SecurityException | NoSuchMethodException e) {
 			e.printStackTrace();
 		}
+		
+		SkullThread.getInstance().loadThread();
 
 		if (AdvancedCorePlugin.getInstance().getOptions().isPreloadSkulls()) {
 			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
@@ -200,7 +202,7 @@ public class SkullHandler {
 				AdvancedCorePlugin.getInstance().extraDebug("Not loading skull, not alot of free ram available, free "
 						+ Runtime.getRuntime().freeMemory() + ", allocated " + PluginUtils.getInstance().getMemory());
 			}
-		}
+		} 
 	}
 
 }
