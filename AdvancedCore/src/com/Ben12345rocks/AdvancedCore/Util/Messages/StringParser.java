@@ -159,27 +159,22 @@ public class StringParser {
 			postMessage = msg.substring(endIndex + "\"]".length());
 
 			String text = msg.substring(startIndex + "[Text=\"".length(), middle);
-			if (containsJson(text)) {
-				text = parseJson(text).getText();
-			}
 			int secondMiddle = msg.indexOf("=\"", middle);
 			String type = msg.substring(middle + "\",".length(), secondMiddle);
 			String typeData = msg.substring(secondMiddle + "=\"".length(), endIndex);
-			if (containsJson(typeData)) {
-				typeData = parseJson(typeData).getText();
-			}
 
 			comp.addExtra(parseJson(preMessage));
 
-			TextComponent t = new TextComponent(TextComponent.fromLegacyText(text));
+			TextComponent t = new TextComponent(parseJson(text));
 			if (type.equalsIgnoreCase("hover")) {
-				t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(typeData).create()));
+				t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+						new ComponentBuilder(parseJson(typeData)).create()));
 			} else if (type.equalsIgnoreCase("command")) {
-				t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, typeData));
+				t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, parseJson(typeData).getText()));
 			} else if (type.equalsIgnoreCase("url")) {
-				t.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, typeData));
+				t.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, parseJson(typeData).getText()));
 			} else if (type.equalsIgnoreCase("suggest_command")) {
-				t.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, typeData));
+				t.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, parseJson(typeData).getText()));
 			}
 
 			comp.addExtra(t);
