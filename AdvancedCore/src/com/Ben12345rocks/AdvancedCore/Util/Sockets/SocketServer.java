@@ -6,7 +6,6 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.Ben12345rocks.AdvancedCore.Util.Encryption.EncryptionHandler;
 
 import lombok.Getter;
@@ -39,7 +38,7 @@ public abstract class SocketServer extends Thread {
 			server.bind(new InetSocketAddress(host, port));
 			start();
 		} catch (IOException e) {
-			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to bind to " + host + ":" + port);
+			System.out.println("Failed to bind to " + host + ":" + port);
 			e.printStackTrace();
 		}
 	}
@@ -71,9 +70,8 @@ public abstract class SocketServer extends Thread {
 				dis.close();
 				socket.close();
 			} catch (Exception ex) {
-				AdvancedCorePlugin.getInstance().getLogger()
-						.severe("Error occured while receiving socket message, enable debug for stacktraces");
-				AdvancedCorePlugin.getInstance().debug(ex);
+				System.out.println("Error occured while receiving socket message, enable debug for stacktraces");
+				ex.printStackTrace();
 			}
 		}
 
