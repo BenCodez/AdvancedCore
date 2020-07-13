@@ -70,7 +70,7 @@ public abstract class SocketServer extends Thread {
 				dis.close();
 				socket.close();
 			} catch (Exception ex) {
-				System.out.println("Error occured while receiving socket message, enable debug for stacktraces");
+				System.out.println("Error occured while receiving socket message");
 				ex.printStackTrace();
 			}
 		}
