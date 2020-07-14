@@ -1405,7 +1405,9 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
-				user.giveItem(new ItemBuilder(section));
+				ItemBuilder builder = new ItemBuilder(section);
+				builder.setCheckLoreLength(false);
+				user.giveItem(builder);
 				return null;
 
 			}
@@ -1464,7 +1466,9 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				if (section.size() > 0) {
 					String item = ArrayUtils.getInstance().pickRandom(ArrayUtils.getInstance().convert(section));
-					user.giveItem(new ItemBuilder(data.getConfigurationSection(item)));
+					ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
+					builder.setCheckLoreLength(false);
+					user.giveItem(builder);
 					return item;
 				}
 				return null;
@@ -1537,6 +1541,7 @@ public class RewardHandler {
 				if (section.size() > 0) {
 					for (String str : section) {
 						ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(str));
+						builder.setCheckLoreLength(false);
 						user.giveItem(builder.setPlaceholders(placeholders));
 						debug("Giving item " + str + ":" + builder.toString());
 						if (builder.isChancePass() && oneChance) {
