@@ -7,6 +7,9 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetProvider;
+
 import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL;
 
 public class Query {
@@ -109,6 +112,7 @@ public class Query {
 	 *             SQLException
 	 */
 	public ResultSet executeQuery() throws SQLException {
+		CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
 		ResultSet resultSet = null;
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
@@ -121,13 +125,14 @@ public class Query {
 				sql.addBatch();
 			}
 			resultSet = sql.executeQuery();
+			rowSet.populate(resultSet);
 			sql.close();
 
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 
-		return resultSet;
+		return rowSet;
 	}
 
 	/**
