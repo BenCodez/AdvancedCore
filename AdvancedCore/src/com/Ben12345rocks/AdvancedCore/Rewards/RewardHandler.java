@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
@@ -1454,6 +1455,49 @@ public class RewardHandler {
 						plugin.extraDebug("AdvancedPriority: Can't give reward " + reward.getName());
 					}
 				}
+				return null;
+
+			}
+		}.priority(10).postReward());
+
+		injectedRewards.add(new RewardInjectConfigurationSection("SpecialChance") {
+
+			@Override
+			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				double totalChance = 0;
+				LinkedHashMap<Double, String> map = new LinkedHashMap<Double, String>();
+				for (String key : section.getKeys(false)) {
+					if (StringParser.getInstance().isDouble(key)) {
+						double chance = Double.valueOf(key);
+						totalChance += chance;
+						map.put(chance, key);
+					}
+				}
+
+				Set<Entry<Double, String>> copy = new HashSet<Entry<Double, String>>(map.entrySet());
+				double currentNum = 0;
+				map.clear();
+				for (Entry<Double, String> entry : copy) {
+					currentNum += entry.getKey();
+					map.put(currentNum, entry.getValue());
+				}
+
+				double randomNum = ThreadLocalRandom.current().nextDouble(totalChance);
+
+				for (Entry<Double, String> entry : map.entrySet()) {
+					if (randomNum <= entry.getKey()) {
+						new RewardBuilder(section, entry.getValue()).withPrefix(reward.getName())
+								.withPlaceHolder(placeholders).withPlaceHolder("chance", "" + entry.getKey()).send(user);
+						
+						AdvancedCorePlugin.getInstance().debug("Giving special chance: " + entry.getValue()
+								+ ", Random numuber: " + randomNum + ", Total chance: " + totalChance);
+						return null;
+					}
+				}
+
+				AdvancedCorePlugin.getInstance().debug("Failed to give special chance");
+
 				return null;
 
 			}

@@ -115,6 +115,25 @@ AdvancedPriority:
   Fallback:
     Messages:
       Player: 'You got unlucky'
+      
+# Special chance
+# percentage is caculated with all numbers added up
+# E.g. below:
+# Total is 100, so 5 is 5 out of 100, and so on
+SpecialChance:
+  5:
+    # rewards here
+    Commands:
+    - say 5
+  15:
+    Commands:
+    - say 15
+  30:
+    Commands:
+    - say 30
+  50:
+    Commands:
+    - say 50
     
 # Let the user pick a reward file to get
 # User can only pick one

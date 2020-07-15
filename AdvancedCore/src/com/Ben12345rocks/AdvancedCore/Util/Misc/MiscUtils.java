@@ -8,8 +8,13 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
@@ -83,6 +88,33 @@ public class MiscUtils {
 		} else {
 			return false;
 		}
+	}
+
+	public LinkedHashMap<Double, String> sortByKeys(LinkedHashMap<Double, String> topVoterAllTime,
+			final boolean order) {
+
+		List<Entry<Double, String>> list = new LinkedList<Entry<Double, String>>(topVoterAllTime.entrySet());
+
+		// Sorting the list based on values
+		Collections.sort(list, new Comparator<Entry<Double, String>>() {
+			@Override
+			public int compare(Entry<Double, String> o1, Entry<Double, String> o2) {
+				if (order) {
+					return o1.getKey().compareTo(o2.getKey());
+				} else {
+					return o2.getKey().compareTo(o1.getKey());
+
+				}
+			}
+		});
+
+		// Maintaining insertion order with the help of LinkedList
+		LinkedHashMap<Double, String> sortedMap = new LinkedHashMap<Double, String>();
+		for (Entry<Double, String> entry : list) {
+			sortedMap.put(entry.getKey(), entry.getValue());
+		}
+
+		return sortedMap;
 	}
 
 	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds,
