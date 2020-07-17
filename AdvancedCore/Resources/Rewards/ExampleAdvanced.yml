@@ -120,6 +120,8 @@ AdvancedPriority:
 # percentage is caculated with all numbers added up
 # E.g. below:
 # Total is 100, so 5 is 5 out of 100, and so on
+# The number represents a weight value essentially
+# Decimals are allowed as well, no duplicates
 SpecialChance:
   5:
     # rewards here

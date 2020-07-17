@@ -367,7 +367,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadVault();
 		loadAdvancedCoreEvents();
 		if (loadServerData) {
-			TimeChecker.getInstance().loadTimer(2);
+			TimeChecker.getInstance().loadTimer(1);
 			ServerData.getInstance().setup();
 		}
 
