@@ -7,21 +7,23 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetProvider;
+
 import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL;
 
 public class Query {
 
 	private MySQL mysql;
 	private Connection connection;
-	private String sqlString;
-	private PreparedStatement sql;
+	private String sql;
 	private boolean addBatch = false;
 
 	private HashMap<Integer, Object> paramters = new HashMap<Integer, Object>();
 
-	public Query(MySQL mysql, String sqlString) throws SQLException {
+	public Query(MySQL mysql, String sql) throws SQLException {
 		this.mysql = mysql;
-		this.sqlString = sqlString;
+		this.sql = sql;
 	}
 
 	/**
@@ -46,9 +48,8 @@ public class Query {
 	 *             SQLException
 	 */
 	public int[] executeBatch() throws SQLException {
-		try {
-			Connection conn = mysql.getConnectionManager().getConnection();
-			sql = conn.prepareStatement(this.sqlString);
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(this.sql);) {
 
 			for (Entry<Integer, Object> entry : paramters.entrySet()) {
 				sql.setObject(entry.getKey(), entry.getValue());
@@ -111,12 +112,12 @@ public class Query {
 	 *             SQLException
 	 */
 	public ResultSet executeQuery() throws SQLException {
-		// CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
+		CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
 		ResultSet resultSet = null;
 
-		try {
-			Connection conn = mysql.getConnectionManager().getConnection();
-			sql = conn.prepareStatement(this.sqlString);
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(this.sql);) {
+
 			for (Entry<Integer, Object> entry : paramters.entrySet()) {
 				sql.setObject(entry.getKey(), entry.getValue());
 			}
@@ -124,22 +125,14 @@ public class Query {
 				sql.addBatch();
 			}
 			resultSet = sql.executeQuery();
-			// rowSet.populate(resultSet);
-			// sql.close();
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		return resultSet;
-	}
-
-	public void close() {
-		try {
+			rowSet.populate(resultSet);
 			sql.close();
+
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+
+		return rowSet;
 	}
 
 	/**
@@ -175,9 +168,8 @@ public class Query {
 	 *             SQLException
 	 */
 	public int executeUpdate() throws SQLException {
-		try {
-			Connection conn = mysql.getConnectionManager().getConnection();
-			sql = conn.prepareStatement(this.sqlString);
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(this.sql);) {
 			for (Entry<Integer, Object> entry : paramters.entrySet()) {
 				sql.setObject(entry.getKey(), entry.getValue());
 			}
