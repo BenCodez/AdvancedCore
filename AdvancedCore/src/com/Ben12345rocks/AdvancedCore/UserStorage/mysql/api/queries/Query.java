@@ -113,7 +113,7 @@ public class Query {
 	 *             SQLException
 	 */
 	public ResultSet executeQuery() throws SQLException {
-		Locale.setDefault(Locale.US);
+		Locale.setDefault(Locale.ENGLISH);
 		CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
 		ResultSet resultSet = null;
 		
