@@ -240,7 +240,7 @@
 		<dependency>
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
-			<version>3.4.5</version>
+			<version>LATEST</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
