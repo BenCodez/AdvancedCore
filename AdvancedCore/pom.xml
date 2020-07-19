@@ -269,12 +269,5 @@
 			<scope>system</scope>
 			<systemPath>${project.basedir}/Jars/AuthMe-5.4.0.jar</systemPath>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.github.vldrus/cachedrowset-wrapper -->
-		<dependency>
-			<groupId>com.github.vldrus</groupId>
-			<artifactId>cachedrowset-wrapper</artifactId>
-			<version>1.0.2</version>
-			<scope>compile</scope>
-		</dependency>
 	</dependencies>
 </project>

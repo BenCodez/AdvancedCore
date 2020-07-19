@@ -246,6 +246,8 @@ public class MySQL {
 			ResultSet rs = query.executeQuery();
 			while (rs.next()) {
 				if (rs.getString("uuid").equals(index)) {
+					query.close();
+					rs.close();
 					return true;
 				}
 			}
@@ -296,6 +298,8 @@ public class MySQL {
 					String columnName = metadata.getColumnName(i);
 					columns.add(columnName);
 				}
+				query.close();
+				rs.close();
 				return columns;
 			}
 
@@ -338,6 +342,8 @@ public class MySQL {
 				// System.out.println(rCol.getValue());
 				result.add(rCol);
 			}
+			sql.close();
+			rs.close();
 			return result;
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -395,6 +401,8 @@ public class MySQL {
 				Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
 				result.add(rCol);
 			}
+			query.close();
+			rs.close();
 		} catch (SQLException e) {
 		}
 
@@ -413,6 +421,8 @@ public class MySQL {
 				Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
 				result.add(rCol);
 			}
+			query.close();
+			rs.close();
 		} catch (SQLException e) {
 			return null;
 		}
