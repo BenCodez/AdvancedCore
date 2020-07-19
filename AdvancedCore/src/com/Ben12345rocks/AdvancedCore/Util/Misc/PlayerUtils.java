@@ -106,9 +106,9 @@ public class PlayerUtils {
 
 	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName, boolean force) {
-		String skullMaterial = "PLAYER_HEAD";
+		Material skullMaterial = Material.PLAYER_HEAD;
 		if (NMSManager.getInstance().isVersion("1.12")) {
-			skullMaterial = "SKULL";
+			skullMaterial = Material.PAPER;
 		}
 		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) {
 			if (SkullHandler.getInstance().hasSkull(playerName)) {
@@ -116,13 +116,13 @@ public class PlayerUtils {
 			} else {
 				SkullHandler.getInstance().loadSkull(playerName);
 				if (force) {
-					return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
+					return new ItemBuilder(skullMaterial, 1).setSkullOwner(playerName).toItemStack();
 				} else {
-					return new ItemBuilder(Material.valueOf(skullMaterial), 1).toItemStack();
+					return new ItemBuilder(skullMaterial, 1).toItemStack();
 				}
 			}
 		} else {
-			return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
+			return new ItemBuilder(skullMaterial, 1).setSkullOwner(playerName).toItemStack();
 		}
 	}
 
