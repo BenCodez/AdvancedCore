@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map.Entry;
 
 import javax.sql.rowset.CachedRowSet;
@@ -112,8 +113,10 @@ public class Query {
 	 *             SQLException
 	 */
 	public ResultSet executeQuery() throws SQLException {
+		Locale.setDefault(Locale.US);
 		CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
 		ResultSet resultSet = null;
+		
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(this.sql);) {
