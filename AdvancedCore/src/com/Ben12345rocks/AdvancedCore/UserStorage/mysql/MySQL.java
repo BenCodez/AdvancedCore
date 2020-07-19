@@ -251,7 +251,8 @@ public class MySQL {
 					return true;
 				}
 			}
-
+			query.close();
+			rs.close();
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		}
@@ -302,6 +303,9 @@ public class MySQL {
 				rs.close();
 				return columns;
 			}
+			
+			query.close();
+			rs.close();
 
 		} catch (Exception e) {
 			e.printStackTrace();
