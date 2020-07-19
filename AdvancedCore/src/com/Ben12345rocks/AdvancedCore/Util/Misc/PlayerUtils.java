@@ -16,6 +16,7 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.UserManager.UUID;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
@@ -105,19 +106,23 @@ public class PlayerUtils {
 
 	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName, boolean force) {
+		String skullMaterial = "PLAYER_HEAD";
+		if (NMSManager.getInstance().isVersion("1.12")) {
+			skullMaterial = "SKULL";
+		}
 		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) {
 			if (SkullHandler.getInstance().hasSkull(playerName)) {
 				return SkullHandler.getInstance().getItemStack(playerName);
 			} else {
 				SkullHandler.getInstance().loadSkull(playerName);
 				if (force) {
-					return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
+					return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
 				} else {
-					return new ItemBuilder(Material.PLAYER_HEAD, 1).toItemStack();
+					return new ItemBuilder(Material.valueOf(skullMaterial), 1).toItemStack();
 				}
 			}
 		} else {
-			return new ItemBuilder(Material.PLAYER_HEAD, 1).setSkullOwner(playerName).toItemStack();
+			return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
 		}
 	}
 
