@@ -184,6 +184,9 @@ public class ItemBuilder {
 					addGlow();
 				}
 
+				checkLoreLength = data.getBoolean("CheckLoreLength", true);
+				loreLength = data.getInt("LoreLength", -1);
+
 				Color color = null;
 				if (data.isConfigurationSection("PotionColor")) {
 					ConfigurationSection potionColor = data.getConfigurationSection("PotionColor");
@@ -269,7 +272,7 @@ public class ItemBuilder {
 	public ItemBuilder addEnchant(Enchantment ench, int level) {
 		if (ench != null) {
 			if (is.getType().equals(Material.ENCHANTED_BOOK)) {
-				EnchantmentStorageMeta im = (EnchantmentStorageMeta)is.getItemMeta();
+				EnchantmentStorageMeta im = (EnchantmentStorageMeta) is.getItemMeta();
 				im.addStoredEnchant(ench, level, true);
 				is.setItemMeta(im);
 			} else {
