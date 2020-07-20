@@ -79,6 +79,11 @@ Items:
     # Set power of firework
     #Power: 1
     
+    # Whether or not to break lore into more than 1 line
+    # Disable for certain custom items if needed
+    #CheckLoreLenth: true
+    #LoreLength: -1
+    
     # Color of potion bottle
     # 0-255
     #PotionColor:
