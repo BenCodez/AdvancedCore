@@ -36,6 +36,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
+import com.Ben12345rocks.AdvancedCore.NMSManager.NMSManager;
 import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.google.common.collect.Multimap;
@@ -95,6 +96,11 @@ public class ItemBuilder {
 				Material material = null;
 				List<String> lore = data.getStringList("Lore");
 				String materialStr = data.getString("Material", data.getName());
+				if (NMSManager.getInstance().isVersion("1.12")) {
+					if (materialStr.equalsIgnoreCase("player_head")) {
+						materialStr = "PAPER";
+					}
+				}
 
 				try {
 					material = Material.matchMaterial(materialStr.toUpperCase());
