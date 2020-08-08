@@ -34,6 +34,14 @@ Timed:
 # Set to 0 or 100 for always, or delete this line to disable chance
 # Will not give any rewards unless chance is lucky or disabled
 Chance: 40
+
+# Player must be with a certain distance of said location
+#LocationDistance:
+#  World: world
+#  X: 0
+#  Y: 0
+#  Z: 0
+#  Distance: 10
   
 # Will give one command from the list
 RandomCommand: []

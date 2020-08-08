@@ -15,6 +15,7 @@ import java.util.TimerTask;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -32,6 +33,7 @@ import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectString;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectStringList;
 import com.Ben12345rocks.AdvancedCore.Rewards.Injected.RewardInjectValidator;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInject;
+import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectConfigurationSection;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectDouble;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectInt;
 import com.Ben12345rocks.AdvancedCore.Rewards.InjectedRequirement.RequirementInjectString;
@@ -644,6 +646,53 @@ public class RewardHandler {
 						warning(reward, inject, "No javascript expression set");
 					}
 				}
+			}
+		}));
+
+		injectedRequirements.add(new RequirementInjectConfigurationSection("LocationDistance") {
+			@Override
+			public boolean onRequirementsRequested(Reward reward, User user, ConfigurationSection section,
+					RewardOptions rewardOptions) {
+				if (!user.isOnline()) {
+					plugin.debug("user not online");
+					return false;
+				}
+				Location loc = new Location(Bukkit.getWorld(section.getString("World")), section.getInt("X"),
+						section.getInt("Y"), section.getInt("Z"));
+				Location pLoc = user.getPlayer().getLocation();
+				if (!loc.getWorld().getName().equals(pLoc.getWorld().getName())) {
+					plugin.debug("Worlds don't match");
+					return false;
+				}
+				if (pLoc.distance(loc) < section.getInt("Distance")) {
+					return true;
+				}
+				return false;
+			}
+		}.priority(90).validator(new RequirementInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+				if (!data.isConfigurationSection("LocationDistance")) {
+					return;
+
+				}
+
+				ConfigurationSection section = data.getConfigurationSection("LocationDistance");
+
+				try {
+				new Location(Bukkit.getWorld(section.getString("World")), section.getInt("X"),
+						section.getInt("Y"), section.getInt("Z"));
+				} catch (Exception e) {
+					warning(reward, inject, "Failed to get location for LocationDistance");
+					e.printStackTrace();
+				}
+				
+				if (section.getInt("Distance") < 0) {
+					warning(reward, inject, "Invalid distance for LocationDistance");
+				}
+
+				
 			}
 		}));
 
@@ -1488,8 +1537,9 @@ public class RewardHandler {
 				for (Entry<Double, String> entry : map.entrySet()) {
 					if (randomNum <= entry.getKey()) {
 						new RewardBuilder(section, entry.getValue()).withPrefix(reward.getName())
-								.withPlaceHolder(placeholders).withPlaceHolder("chance", "" + entry.getKey()).send(user);
-						
+								.withPlaceHolder(placeholders).withPlaceHolder("chance", "" + entry.getKey())
+								.send(user);
+
 						AdvancedCorePlugin.getInstance().debug("Giving special chance: " + entry.getValue()
 								+ ", Random numuber: " + randomNum + ", Total chance: " + totalChance);
 						return null;
