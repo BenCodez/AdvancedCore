@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -37,7 +36,7 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
 			String cause = response.get("cause").getAsString();
 			String errorMessage = response.get("errorMessage").getAsString();
 			if (errorMessage != null && errorMessage.equals("TooManyRequestsException")) {
-				AdvancedCorePlugin.getInstance().debug("Sent too many requests");
+				System.out.println("VotingPlugin NameFetcher: Sent too many requests");
 			}
 			if (cause != null && cause.length() > 0) {
 				throw new IllegalStateException(errorMessage);
