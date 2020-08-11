@@ -1,9 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.Misc;
 
-import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -127,13 +125,11 @@ public class PlayerUtils {
 	}
 
 	public Player getRandomOnlinePlayer() {
-		@SuppressWarnings("unchecked")
-		ArrayList<Player> players = (ArrayList<Player>) Bukkit.getOnlinePlayers();
-		if (!players.isEmpty()) {
-			return players.get(ThreadLocalRandom.current().nextInt(players.size()));
-		} else {
-			return null;
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			return player;
 		}
+
+		return null;
 	}
 
 	/*
