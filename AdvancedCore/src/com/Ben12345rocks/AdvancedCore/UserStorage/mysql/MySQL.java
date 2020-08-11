@@ -333,7 +333,7 @@ public class MySQL {
 
 	public ArrayList<Column> getExactQuery(Column column) {
 		ArrayList<Column> result = new ArrayList<>();
-		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?" + ";";
+		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`='" + column.getValue().toString() + "';";
 
 		try {
 			ResultSet rs = null;
