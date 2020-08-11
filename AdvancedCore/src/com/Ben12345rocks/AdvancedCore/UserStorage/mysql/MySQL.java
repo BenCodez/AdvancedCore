@@ -261,6 +261,7 @@ public class MySQL {
 			}
 			sql.close();
 			rs.close();
+			conn.close();
 
 		} catch (SQLException ex) {
 			ex.printStackTrace();
@@ -317,10 +318,12 @@ public class MySQL {
 				}
 				sql.close();
 				rs.close();
+				conn.close();
 				return columns;
 			}
 			sql.close();
 			rs.close();
+			conn.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -369,6 +372,7 @@ public class MySQL {
 			}
 			sql.close();
 			rs.close();
+			conn.close();
 			return result;
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -436,6 +440,7 @@ public class MySQL {
 			}
 			sql.close();
 			rs.close();
+			conn.close();
 		} catch (SQLException e) {
 		}
 
@@ -464,6 +469,7 @@ public class MySQL {
 			}
 			sql.close();
 			rs.close();
+			conn.close();
 		} catch (SQLException e) {
 			return null;
 		}
