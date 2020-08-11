@@ -2,13 +2,12 @@ package com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.queries;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import javax.sql.rowset.CachedRowSet;
-import javax.sql.rowset.RowSetProvider;
+//import javax.sql.rowset.CachedRowSet;
+//import javax.sql.rowset.RowSetProvider;
 
 import com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL;
 
@@ -111,7 +110,7 @@ public class Query {
 	 * @throws SQLException
 	 *             SQLException
 	 */
-	@Deprecated
+	/*@Deprecated
 	public ResultSet executeQuery() throws SQLException {
 		CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
 		ResultSet resultSet = null;
@@ -135,7 +134,7 @@ public class Query {
 		}
 
 		return rowSet;
-	}
+	}*/
 
 	/**
 	 * Execute a SQL query that does return a ResultSet asynchronously.
@@ -145,7 +144,7 @@ public class Query {
 	 * @param callback
 	 *            the callback to be executed once the query is done
 	 */
-	@Deprecated
+	/*@Deprecated
 	public void executeQueryAsync(final Callback<ResultSet, SQLException> callback) {
 		mysql.getThreadPool().submit(new Runnable() {
 
@@ -160,7 +159,7 @@ public class Query {
 			}
 
 		});
-	}
+	}*/
 
 	/**
 	 * Execute a SQL query that does not return a ResultSet.
