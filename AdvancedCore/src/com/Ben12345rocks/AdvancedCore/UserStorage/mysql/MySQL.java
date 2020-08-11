@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.UserStorage.mysql;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -239,16 +240,26 @@ public class MySQL {
 	}
 
 	public boolean containsKeyQuery(String index) {
-		String sql = "SELECT uuid FROM " + getName() + ";";
+		String sqlStr = "SELECT uuid FROM " + getName() + ";";
 		try {
-			Query query = new Query(mysql, sql);
+			ResultSet rs = null;
 
-			ResultSet rs = query.executeQuery();
+			Connection conn = mysql.getConnectionManager().getConnection();
+			PreparedStatement sql = conn.prepareStatement(sqlStr);
+
+			rs = sql.executeQuery();
+			/*
+			 * Query query = new Query(mysql, sql);
+			 * ResultSet rs = query.executeQuery();
+			 */
 			while (rs.next()) {
 				if (rs.getString("uuid").equals(index)) {
+					sql.close();
 					return true;
 				}
 			}
+			sql.close();
+
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		}
@@ -282,9 +293,16 @@ public class MySQL {
 	public ArrayList<String> getColumnsQueury() {
 		ArrayList<String> columns = new ArrayList<String>();
 		try {
-			Query query = new Query(mysql, "SELECT * FROM " + getName() + ";");
+			ResultSet rs = null;
 
-			ResultSet rs = query.executeQuery();
+			Connection conn = mysql.getConnectionManager().getConnection();
+			PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + ";");
+
+			rs = sql.executeQuery();
+			/*
+			 * Query query = new Query(mysql, "SELECT * FROM " + getName() + ";");
+			 * ResultSet rs = query.executeQuery();
+			 */
 
 			ResultSetMetaData metadata = rs.getMetaData();
 			int columnCount = 0;
@@ -295,8 +313,10 @@ public class MySQL {
 					String columnName = metadata.getColumnName(i);
 					columns.add(columnName);
 				}
+				sql.close();
 				return columns;
 			}
+			sql.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -316,11 +336,18 @@ public class MySQL {
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?" + ";";
 
 		try {
-			Query sql = new Query(mysql, query);
+			ResultSet rs = null;
 
-			sql.setParameter(1, column.getValue().toString());
+			Connection conn = mysql.getConnectionManager().getConnection();
+			PreparedStatement sql = conn.prepareStatement(query);
 
-			ResultSet rs = sql.executeQuery();
+			rs = sql.executeQuery();
+
+			/*
+			 * Query sql = new Query(mysql, query);
+			 * sql.setParameter(1, column.getValue().toString());
+			 * ResultSet rs = sql.executeQuery();
+			 */
 			rs.next();
 			for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
 				String columnName = rs.getMetaData().getColumnLabel(i);
@@ -336,6 +363,7 @@ public class MySQL {
 				// System.out.println(rCol.getValue());
 				result.add(rCol);
 			}
+			sql.close();
 			return result;
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -383,16 +411,25 @@ public class MySQL {
 
 	public ArrayList<Column> getRowsNameQuery() {
 		ArrayList<Column> result = new ArrayList<Column>();
-		String sql = "SELECT PlayerName FROM " + getName() + ";";
+		String sqlStr = "SELECT PlayerName FROM " + getName() + ";";
 
 		try {
-			Query query = new Query(mysql, sql);
-			ResultSet rs = query.executeQuery();
+			ResultSet rs = null;
+
+			Connection conn = mysql.getConnectionManager().getConnection();
+			PreparedStatement sql = conn.prepareStatement(sqlStr);
+
+			rs = sql.executeQuery();
+			/*
+			 * Query query = new Query(mysql, sql);
+			 * ResultSet rs = query.executeQuery();
+			 */
 
 			while (rs.next()) {
 				Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
 				result.add(rCol);
 			}
+			sql.close();
 		} catch (SQLException e) {
 		}
 
@@ -401,16 +438,25 @@ public class MySQL {
 
 	public ArrayList<Column> getRowsQuery() {
 		ArrayList<Column> result = new ArrayList<Column>();
-		String sql = "SELECT uuid FROM " + getName() + ";";
+		String sqlStr = "SELECT uuid FROM " + getName() + ";";
 
 		try {
-			Query query = new Query(mysql, sql);
-			ResultSet rs = query.executeQuery();
+			ResultSet rs = null;
+
+			Connection conn = mysql.getConnectionManager().getConnection();
+			PreparedStatement sql = conn.prepareStatement(sqlStr);
+
+			rs = sql.executeQuery();
+			/*
+			 * Query query = new Query(mysql, sql);
+			 * ResultSet rs = query.executeQuery();
+			 */
 
 			while (rs.next()) {
 				Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
 				result.add(rCol);
 			}
+			sql.close();
 		} catch (SQLException e) {
 			return null;
 		}

@@ -111,8 +111,8 @@ public class Query {
 	 * @throws SQLException
 	 *             SQLException
 	 */
+	@Deprecated
 	public ResultSet executeQuery() throws SQLException {
-		//Locale.setDefault(Locale.ENGLISH);
 		CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
 		ResultSet resultSet = null;
 		
@@ -145,6 +145,7 @@ public class Query {
 	 * @param callback
 	 *            the callback to be executed once the query is done
 	 */
+	@Deprecated
 	public void executeQueryAsync(final Callback<ResultSet, SQLException> callback) {
 		mysql.getThreadPool().submit(new Runnable() {
 
