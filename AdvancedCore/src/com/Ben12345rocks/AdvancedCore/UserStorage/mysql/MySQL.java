@@ -254,11 +254,13 @@ public class MySQL {
 			 */
 			while (rs.next()) {
 				if (rs.getString("uuid").equals(index)) {
-					
+					sql.close();
+					rs.close();
 					return true;
 				}
 			}
-			
+			sql.close();
+			rs.close();
 
 		} catch (SQLException ex) {
 			ex.printStackTrace();
@@ -313,10 +315,12 @@ public class MySQL {
 					String columnName = metadata.getColumnName(i);
 					columns.add(columnName);
 				}
-				
+				sql.close();
+				rs.close();
 				return columns;
 			}
-			
+			sql.close();
+			rs.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -363,7 +367,8 @@ public class MySQL {
 				// System.out.println(rCol.getValue());
 				result.add(rCol);
 			}
-			
+			sql.close();
+			rs.close();
 			return result;
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -429,7 +434,8 @@ public class MySQL {
 				Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
 				result.add(rCol);
 			}
-			
+			sql.close();
+			rs.close();
 		} catch (SQLException e) {
 		}
 
@@ -456,7 +462,8 @@ public class MySQL {
 				Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
 				result.add(rCol);
 			}
-			
+			sql.close();
+			rs.close();
 		} catch (SQLException e) {
 			return null;
 		}
