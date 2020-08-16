@@ -99,13 +99,17 @@ public class UserData {
 			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
 			List<Column> col = getMySqlRow();
-			for (Column c : col) {
-				keys.add(c.getName());
+			if (col != null && !col.isEmpty()) {
+				for (Column c : col) {
+					keys.add(c.getName());
+				}
 			}
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			List<Column> col = getSQLiteRow();
-			for (Column c : col) {
-				keys.add(c.getName());
+			if (col != null && !col.isEmpty()) {
+				for (Column c : col) {
+					keys.add(c.getName());
+				}
 			}
 		}
 
