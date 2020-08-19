@@ -144,6 +144,17 @@ public class ItemBuilder {
 				if (power > 0) {
 					setFireworkPower(power);
 				}
+				
+				skull = data.getString("Skull", "");
+				if (!skull.equals("")) {
+					setSkullOwner(skull);
+
+				}
+				String texture = data.getString("SkullTexture", "");
+				if (!texture.equals("")) {
+					setHeadFromValue(texture);
+				}
+				
 				String name = data.getString("Name");
 
 				if (name != null && !name.equals("")) {
@@ -174,16 +185,6 @@ public class ItemBuilder {
 				ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags", new ArrayList<String>());
 				for (String flag : itemFlags) {
 					addItemFlag(flag);
-				}
-
-				skull = data.getString("Skull", "");
-				if (!skull.equals("")) {
-					setSkullOwner(skull);
-
-				}
-				String texture = data.getString("SkullTexture", "");
-				if (!texture.equals("")) {
-					setHeadFromValue(texture);
 				}
 
 				if (data.getBoolean("Glow")) {
