@@ -390,8 +390,8 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public ItemBuilder addPlaceholder(HashMap<String, String> placeholders) {
-		placeholders.putAll(placeholders);
+	public ItemBuilder addPlaceholder(HashMap<String, String> placeholder) {
+		placeholders.putAll(placeholder);
 		return this;
 	}
 
