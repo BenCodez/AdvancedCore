@@ -144,9 +144,9 @@ public class ItemBuilder {
 				if (power > 0) {
 					setFireworkPower(power);
 				}
-				
+
 				skull = data.getString("Skull", "");
-				if (!skull.equals("")) {
+				if (!skull.equals("") && !skull.contains("%")) {
 					setSkullOwner(skull);
 
 				}
@@ -154,7 +154,7 @@ public class ItemBuilder {
 				if (!texture.equals("")) {
 					setHeadFromValue(texture);
 				}
-				
+
 				String name = data.getString("Name");
 
 				if (name != null && !name.equals("")) {
@@ -387,6 +387,11 @@ public class ItemBuilder {
 
 	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
 		placeholders.put(toReplace, replaceWith);
+		return this;
+	}
+
+	public ItemBuilder addPlaceholder(HashMap<String, String> placeholders) {
+		placeholders.putAll(placeholders);
 		return this;
 	}
 

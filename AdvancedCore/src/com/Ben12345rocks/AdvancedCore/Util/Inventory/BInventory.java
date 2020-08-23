@@ -179,6 +179,14 @@ public class BInventory implements Listener {
 	private HashMap<String, Object> data = new HashMap<String, Object>();
 
 	@Getter
+	private HashMap<String, String> placeholders = new HashMap<String, String>();
+
+	public BInventory addPlaceholder(String toReplace, String replaceWith) {
+		placeholders.put(toReplace, replaceWith);
+		return this;
+	}
+
+	@Getter
 	@Setter
 	private boolean playerSound = true;
 
@@ -645,7 +653,7 @@ public class BInventory implements Listener {
 		if (!pages) {
 			inv = Bukkit.createInventory(player, inventory.getInventorySize(), inventory.getInventoryName());
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
-				ItemStack item = pair.getValue().getItem(player);
+				ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 				inv.setItem(pair.getKey(), item);
 			}
 
@@ -680,7 +688,7 @@ public class BInventory implements Listener {
 			if (slot >= startSlot) {
 				slot -= startSlot;
 				if (slot < (maxInvSize - 9) && pair.getKey() < inventory.getButtons().size()) {
-					ItemStack item = pair.getValue().getItem(player);
+					ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 					inv.setItem(slot, item);
 				}
 			}
@@ -688,24 +696,24 @@ public class BInventory implements Listener {
 		}
 
 		for (BInventoryButton b : pageButtons) {
-			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player));
+			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player, getPlaceholders()));
 		}
 		if (prevItem == null) {
 			if (AdvancedCorePlugin.getInstance().getOptions().getPrevItem() != null) {
 				prevItem = new ItemBuilder(AdvancedCorePlugin.getInstance().getOptions().getPrevItem())
-						.toItemStack(player);
+						.addPlaceholder(getPlaceholders()).toItemStack(player);
 			} else {
 				prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aPrevious Page")
-						.toItemStack(player);
+						.addPlaceholder(getPlaceholders()).toItemStack(player);
 			}
 		}
 		if (nextItem == null) {
 			if (AdvancedCorePlugin.getInstance().getOptions().getNextItem() != null) {
 				nextItem = new ItemBuilder(AdvancedCorePlugin.getInstance().getOptions().getNextItem())
-						.toItemStack(player);
+						.addPlaceholder(getPlaceholders()).toItemStack(player);
 			} else {
 				nextItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aNext Page")
-						.toItemStack(player);
+						.addPlaceholder(getPlaceholders()).toItemStack(player);
 			}
 		}
 

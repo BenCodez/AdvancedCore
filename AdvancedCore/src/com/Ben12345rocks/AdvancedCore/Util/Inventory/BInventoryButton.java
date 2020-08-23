@@ -115,6 +115,10 @@ public abstract class BInventoryButton {
 		return builder.toItemStack(player);
 	}
 
+	public ItemStack getItem(Player player, HashMap<String, String> placeholders) {
+		return builder.addPlaceholder(placeholders).toItemStack(player);
+	}
+
 	public Object getMeta(Player player, String str) {
 		return PlayerUtils.getInstance().getPlayerMeta(player, str);
 	}
