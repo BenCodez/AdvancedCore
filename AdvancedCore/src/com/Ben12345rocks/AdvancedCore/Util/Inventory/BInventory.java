@@ -652,7 +652,8 @@ public class BInventory implements Listener {
 		}
 		if (!pages) {
 			inv = Bukkit.createInventory(player, inventory.getInventorySize(),
-					StringParser.getInstance().replacePlaceHolder(inventory.getInventoryName(), getPlaceholders()));
+					StringParser.getInstance().replaceJavascript(player, StringParser.getInstance()
+							.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 				inv.setItem(pair.getKey(), item);
@@ -681,8 +682,8 @@ public class BInventory implements Listener {
 	private void openInventory(Player player, int page) {
 		BInventory inventory = this;
 		this.player = player;
-		inv = Bukkit.createInventory(player, maxInvSize,
-				StringParser.getInstance().replacePlaceHolder(inventory.getInventoryName(), getPlaceholders()));
+		inv = Bukkit.createInventory(player, maxInvSize, StringParser.getInstance().replaceJavascript(player,
+				StringParser.getInstance().replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 		this.page = page;
 		int startSlot = (page - 1) * (maxInvSize - 9);
 		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
