@@ -689,7 +689,7 @@ public class MySQL {
 			}
 
 			try {
-				mysql.getThreadPool().awaitTermination(3, TimeUnit.MINUTES);
+				mysql.getThreadPool().awaitTermination(1, TimeUnit.MINUTES);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
