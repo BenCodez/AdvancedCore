@@ -58,7 +58,7 @@ public abstract class EditGUIValueList extends EditGUIValue {
 						setValue(player, list);
 						sendMessage(player, "&cRemoved " + add + " from " + getKey());
 					}
-				}, ArrayUtils.getInstance().convert((ArrayList<String>) getData("Value")))
+				}, ArrayUtils.getInstance().convert((ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value")))
 						.request(clickEvent.getPlayer());
 			}
 		});
