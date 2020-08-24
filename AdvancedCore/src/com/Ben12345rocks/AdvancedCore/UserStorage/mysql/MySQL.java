@@ -473,6 +473,7 @@ public class MySQL {
 			rs.close();
 			conn.close();
 		} catch (SQLException e) {
+			e.printStackTrace();
 			return null;
 		}
 
@@ -492,10 +493,14 @@ public class MySQL {
 		ArrayList<String> uuids = new ArrayList<String>();
 
 		ArrayList<Column> rows = getRowsQuery();
-		for (Column c : rows) {
-			if (c.getValue() != null) {
-				uuids.add((String) c.getValue());
+		if (rows != null) {
+			for (Column c : rows) {
+				if (c.getValue() != null) {
+					uuids.add((String) c.getValue());
+				}
 			}
+		} else {
+			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to fetch uuids");
 		}
 
 		return uuids;
