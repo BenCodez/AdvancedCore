@@ -1,6 +1,7 @@
 package com.Ben12345rocks.AdvancedCore.Util.EditGUI;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -106,8 +107,9 @@ public class EditGUIButton extends BInventoryButton {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public ItemStack getItem(Player player) {
+	public ItemStack getItem(Player player, HashMap<String,String> placeholders) {
 		ItemBuilder builder = getBuilder();
+		builder.addPlaceholder(placeholders);
 		if (!(getEditer() instanceof EditGUIValueList)) {
 			if (!builder.hasCustomDisplayName()) {
 				builder.setName("&cSet " + getEditer().getKey());
