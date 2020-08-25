@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
@@ -84,6 +85,16 @@ public class PluginMessage implements PluginMessageListener {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void sendPluginMessage(String channel, String... messageData) {
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			sendPluginMessage(p, channel, messageData);
+			return;
+		}
+
+		AdvancedCorePlugin.getInstance().debug("Can't send plugin message, player == null, " + channel + " data: "
+				+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(messageData)));
 	}
 
 }
