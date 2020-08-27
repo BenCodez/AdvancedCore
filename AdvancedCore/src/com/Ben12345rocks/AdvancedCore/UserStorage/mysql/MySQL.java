@@ -149,7 +149,7 @@ public class MySQL {
 				updateBatch();
 			}
 
-		}, 10 * 1000, 500);
+		}, 10 * 1000, 250);
 
 		AdvancedCorePlugin.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
 
