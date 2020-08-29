@@ -130,6 +130,7 @@ public class SkullThread {
 
 		public void startup() {
 			synchronized (SkullThread.getInstance().getThread()) {
+				AdvancedCorePlugin.getInstance().debug("Preloading skulls for all players");
 				for (String name : UserManager.getInstance().getAllPlayerNames()) {
 					SkullHandler.getInstance().loadSkull(name);
 

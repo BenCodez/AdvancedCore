@@ -169,9 +169,11 @@ public class SkullHandler {
 
 			@Override
 			public void run() {
-				for (String str : skullsToLoad) {
-					if (!getSkulls().containsKey(str)) {
-						SkullThread.getInstance().getThread().load(str);
+				if (AdvancedCorePlugin.getInstance().isEnabled()) {
+					for (String str : skullsToLoad) {
+						if (!getSkulls().containsKey(str)) {
+							SkullThread.getInstance().getThread().load(str);
+						}
 					}
 				}
 			}
@@ -184,9 +186,9 @@ public class SkullHandler {
 	}
 
 	public void loadSkull(final String playerName) {
-		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) {
-			if (PluginUtils.getInstance().getFreeMemory() > 300 && PluginUtils.getInstance().getMemory() > 800
-					&& AdvancedCorePlugin.getInstance().isEnabled()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()
+				&& AdvancedCorePlugin.getInstance().isEnabled()) {
+			if (PluginUtils.getInstance().getFreeMemory() > 300 && PluginUtils.getInstance().getMemory() > 800) {
 				if (Bukkit.isPrimaryThread()) {
 					timer.schedule(new TimerTask() {
 
