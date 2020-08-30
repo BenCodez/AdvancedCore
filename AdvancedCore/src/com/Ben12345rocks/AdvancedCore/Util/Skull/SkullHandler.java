@@ -189,6 +189,7 @@ public class SkullHandler {
 		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()
 				&& AdvancedCorePlugin.getInstance().isEnabled()) {
 			if (PluginUtils.getInstance().getFreeMemory() > 300 && PluginUtils.getInstance().getMemory() > 800) {
+				AdvancedCorePlugin.getInstance().extraDebug("Trying to load skull " + playerName);
 				if (Bukkit.isPrimaryThread()) {
 					timer.schedule(new TimerTask() {
 
