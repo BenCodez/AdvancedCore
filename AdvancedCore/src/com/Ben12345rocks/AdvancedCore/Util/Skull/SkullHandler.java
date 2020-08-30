@@ -171,14 +171,17 @@ public class SkullHandler {
 			public void run() {
 				AdvancedCorePlugin.getInstance().debug("Checking skulls");
 				if (AdvancedCorePlugin.getInstance().isEnabled()) {
-					for (String str : skullsToLoad) {
+					String str = skullsToLoad.poll();
+					while (str != null) {
 						if (!getSkulls().containsKey(str)) {
+							AdvancedCorePlugin.getInstance().debug("loading " + str);
 							SkullThread.getInstance().getThread().load(str);
 						}
+						str = skullsToLoad.poll();
 					}
 				}
 			}
-		}, 6 * 10000, 20 * 1000);
+		}, 30 * 1000, 20 * 1000);
 
 	}
 
