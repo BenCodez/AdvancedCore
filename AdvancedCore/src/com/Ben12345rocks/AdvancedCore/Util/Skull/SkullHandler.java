@@ -169,12 +169,10 @@ public class SkullHandler {
 
 			@Override
 			public void run() {
-				AdvancedCorePlugin.getInstance().debug("Checking skulls");
 				if (AdvancedCorePlugin.getInstance().isEnabled()) {
 					String str = skullsToLoad.poll();
 					while (str != null) {
 						if (!getSkulls().containsKey(str)) {
-							AdvancedCorePlugin.getInstance().debug("loading " + str);
 							SkullThread.getInstance().getThread().load(str);
 						}
 						str = skullsToLoad.poll();
