@@ -365,7 +365,7 @@ public class StringParser {
 			return text;
 		}
 		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setBracketPlaceholders(player, PlaceholderAPI.setPlaceholders(player, text));
+			return PlaceholderAPI.setPlaceholders(player, text);
 		} else {
 			return text;
 		}
@@ -385,7 +385,7 @@ public class StringParser {
 			return text;
 		}
 		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setBracketPlaceholders(player, PlaceholderAPI.setPlaceholders(player, text));
+			return PlaceholderAPI.setPlaceholders(player, text);
 		} else {
 			return text;
 		}
