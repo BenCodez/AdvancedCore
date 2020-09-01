@@ -22,6 +22,7 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -441,110 +442,112 @@ public class BInventory implements Listener {
 		if (!this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
 			return;
 		}
-
 		if (this.inv != null && inv.equals(this.inv)) {
 			event.setCancelled(true);
 			event.setResult(Result.DENY);
-			if (event.isShiftClick() && event.getClickedInventory() != null
-					&& event.getRawSlot() < event.getInventory().getSize()) {
-				event.setCurrentItem(new ItemStack(Material.AIR));
-			}
-			player.setItemOnCursor(new ItemStack(Material.AIR));
-			player.updateInventory();
-			final Player player = (Player) event.getWhoClicked();
-			if (isCloseInv()) {
-				closeInv(player, null);
-			}
+			if (event.getClickedInventory().getType() == InventoryType.CHEST) {
 
-			// prevent spam clicking, to avoid dupe issues on large servers
-			long cTime = System.currentTimeMillis();
-			if (cTime - lastPressTime < AdvancedCorePlugin.getInstance().getOptions().getSpamClickTime()) {
-				AdvancedCorePlugin.getInstance()
-						.debug(player.getName() + " spam clicking GUI, closing inventory to prevent exploits");
-				event.setCurrentItem(new ItemStack(Material.AIR));
-				player.closeInventory();
+				if (event.isShiftClick() && event.getClickedInventory() != null
+						&& event.getRawSlot() < event.getInventory().getSize()) {
+					event.setCurrentItem(new ItemStack(Material.AIR));
+				}
+				player.setItemOnCursor(new ItemStack(Material.AIR));
 				player.updateInventory();
-				return;
-			}
-			lastPressTime = cTime;
+				final Player player = (Player) event.getWhoClicked();
+				if (isCloseInv()) {
+					closeInv(player, null);
+				}
 
-			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+				// prevent spam clicking, to avoid dupe issues on large servers
+				long cTime = System.currentTimeMillis();
+				if (cTime - lastPressTime < AdvancedCorePlugin.getInstance().getOptions().getSpamClickTime()) {
+					AdvancedCorePlugin.getInstance()
+							.debug(player.getName() + " spam clicking GUI, closing inventory to prevent exploits");
+					event.setCurrentItem(new ItemStack(Material.AIR));
+					player.closeInventory();
+					player.updateInventory();
+					return;
+				}
+				lastPressTime = cTime;
 
-				@Override
-				public void run() {
-					if (!pages) {
-						for (int buttonSlot : getButtons().keySet()) {
-							BInventoryButton button = getButtons().get(buttonSlot);
-							if (event.getSlot() == buttonSlot) {
+				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-								closeInv(player, button);
+					@Override
+					public void run() {
+						if (!pages) {
+							for (int buttonSlot : getButtons().keySet()) {
+								BInventoryButton button = getButtons().get(buttonSlot);
+								if (event.getSlot() == buttonSlot) {
 
-								try {
-									onClick(event, button);
-								} catch (Exception e) {
-									e.printStackTrace();
+									closeInv(player, button);
+
+									try {
+										onClick(event, button);
+									} catch (Exception e) {
+										e.printStackTrace();
+									}
+
+								}
+
+							}
+						} else {
+							int slot = event.getSlot();
+							if (slot < maxInvSize - 9) {
+								int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
+								BInventoryButton button = getButtons().get(buttonSlot);
+								if (button != null) {
+									closeInv(player, button);
+
+									try {
+										onClick(event, button);
+									} catch (Exception e) {
+										e.printStackTrace();
+									}
+
+									return;
+								}
+
+							} else if (slot == maxInvSize - 9) {
+								if (page > 1) {
+
+									final int nextPage = page - 1;
+
+									playSound(player);
+									openInventory(player, nextPage);
+
+								}
+							} else if (slot == maxInvSize - 1) {
+								// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
+								// page);
+								if (maxPage > page) {
+
+									final int nextPage = page + 1;
+
+									playSound(player);
+									openInventory(player, nextPage);
+
 								}
 
 							}
 
-						}
-					} else {
-						int slot = event.getSlot();
-						if (slot < maxInvSize - 9) {
-							int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
-							BInventoryButton button = getButtons().get(buttonSlot);
-							if (button != null) {
-								closeInv(player, button);
+							for (BInventoryButton b : pageButtons) {
+								if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
+									closeInv(player, b);
 
-								try {
-									onClick(event, button);
-								} catch (Exception e) {
-									e.printStackTrace();
+									try {
+										onClick(event, b);
+									} catch (Exception e) {
+										e.printStackTrace();
+									}
+									return;
+
 								}
 
-								return;
 							}
-
-						} else if (slot == maxInvSize - 9) {
-							if (page > 1) {
-
-								final int nextPage = page - 1;
-
-								playSound(player);
-								openInventory(player, nextPage);
-
-							}
-						} else if (slot == maxInvSize - 1) {
-							// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
-							// page);
-							if (maxPage > page) {
-
-								final int nextPage = page + 1;
-
-								playSound(player);
-								openInventory(player, nextPage);
-
-							}
-
-						}
-
-						for (BInventoryButton b : pageButtons) {
-							if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
-								closeInv(player, b);
-
-								try {
-									onClick(event, b);
-								} catch (Exception e) {
-									e.printStackTrace();
-								}
-								return;
-
-							}
-
 						}
 					}
-				}
-			});
+				});
+			}
 
 		}
 	}
