@@ -162,6 +162,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@Getter
 	private int spamClickTime = 250;
+	
+	@Getter
+	@Setter
+	private String spamClickMessage = "";
 
 	public AdvancedCoreConfigOptions() {
 	}
@@ -237,7 +241,9 @@ public class AdvancedCoreConfigOptions {
 
 			newLoreLength = configData.getInt("NewLoreLength", 30);
 			
-			spamClickTime = configData.getInt("SpamClickTime", 250);
+			spamClickTime = configData.getInt("SpamClickTime", 350);
+			
+			spamClickMessage = configData.getString("SpamClickMessage", "");
 		}
 	}
 }

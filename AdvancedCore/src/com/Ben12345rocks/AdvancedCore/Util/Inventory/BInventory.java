@@ -276,14 +276,19 @@ public class BInventory implements Listener {
 	}
 
 	public void forceClose(Player p) {
-		Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+		if (Bukkit.isPrimaryThread()) {
+			p.closeInventory();
+			destroy();
+		} else {
+			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-			@Override
-			public void run() {
-				p.closeInventory();
-				destroy();
-			}
-		});
+				@Override
+				public void run() {
+					p.closeInventory();
+					destroy();
+				}
+			});
+		}
 	}
 
 	/**
@@ -464,8 +469,13 @@ public class BInventory implements Listener {
 					AdvancedCorePlugin.getInstance()
 							.debug(player.getName() + " spam clicking GUI, closing inventory to prevent exploits");
 					event.setCurrentItem(new ItemStack(Material.AIR));
-					player.closeInventory();
+					forceClose(player);
 					player.updateInventory();
+					String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
+					if (!msg.isEmpty()) {
+						player.sendMessage(StringParser.getInstance().colorize(msg));
+					}
+					destroy();
 					return;
 				}
 				lastPressTime = cTime;
