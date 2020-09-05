@@ -474,12 +474,17 @@ public class BInventory implements Listener {
 					Object ob = PlayerUtils.getInstance().getPlayerMeta(player, "AntiSpamClickTime");
 					if (ob != null) {
 						try {
-							long time = (long) ob;
+							long time = Long.valueOf(ob.toString());
 							// 20 seconds since last spam click
 							if (cTime - time > 20000) {
 								AdvancedCorePlugin.getInstance().getLogger()
 										.warning(player.getName() + " may be trying to spam click exploit on GUI");
 								forceClose(player);
+								
+								String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
+								if (!msg.isEmpty()) {
+									player.sendMessage(StringParser.getInstance().colorize(msg));
+								}
 							}
 
 						} catch (Exception e) {
@@ -487,10 +492,7 @@ public class BInventory implements Listener {
 						}
 					}
 					PlayerUtils.getInstance().setPlayerMeta(player, "AntiSpamClickTime", "" + cTime);
-					String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
-					if (!msg.isEmpty()) {
-						player.sendMessage(StringParser.getInstance().colorize(msg));
-					}
+					
 					return;
 				}
 				lastPressTime = cTime;
