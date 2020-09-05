@@ -468,14 +468,29 @@ public class BInventory implements Listener {
 				if (cTime - lastPressTime < AdvancedCorePlugin.getInstance().getOptions().getSpamClickTime()) {
 					AdvancedCorePlugin.getInstance()
 							.debug(player.getName() + " spam clicking GUI, closing inventory to prevent exploits");
+
 					event.setCurrentItem(new ItemStack(Material.AIR));
-					forceClose(player);
 					player.updateInventory();
+					Object ob = PlayerUtils.getInstance().getPlayerMeta(player, "AntiSpamClickTime");
+					if (ob != null) {
+						try {
+							long time = (long) ob;
+							// 20 seconds since last spam click
+							if (cTime - time > 20000) {
+								AdvancedCorePlugin.getInstance().getLogger()
+										.warning(player.getName() + " may be trying to spam click exploit on GUI");
+								forceClose(player);
+							}
+
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+					PlayerUtils.getInstance().setPlayerMeta(player, "AntiSpamClickTime", "" + cTime);
 					String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
 					if (!msg.isEmpty()) {
 						player.sendMessage(StringParser.getInstance().colorize(msg));
 					}
-					destroy();
 					return;
 				}
 				lastPressTime = cTime;
@@ -522,6 +537,7 @@ public class BInventory implements Listener {
 
 									final int nextPage = page - 1;
 
+									forceClose(player);
 									playSound(player);
 									openInventory(player, nextPage);
 
@@ -534,6 +550,7 @@ public class BInventory implements Listener {
 									final int nextPage = page + 1;
 
 									playSound(player);
+									forceClose(player);
 									openInventory(player, nextPage);
 
 								}
