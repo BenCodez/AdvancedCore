@@ -258,12 +258,14 @@ public class BInventory implements Listener {
 
 			@Override
 			public void run() {
-				HandlerList.unregisterAll(b);
-				if (player != null) {
-					AdvancedCorePlugin.getInstance()
-							.extraDebug("Disabling inventory listeners for " + player.getUniqueId());
-				} else {
-					AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for null");
+				if (AdvancedCorePlugin.getInstance().isEnabled()) {
+					HandlerList.unregisterAll(b);
+					if (player != null) {
+						AdvancedCorePlugin.getInstance()
+								.extraDebug("Disabling inventory listeners for " + player.getUniqueId());
+					} else {
+						AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for null");
+					}
 				}
 			}
 		}, 500l);
@@ -467,24 +469,25 @@ public class BInventory implements Listener {
 				long cTime = System.currentTimeMillis();
 				if (cTime - lastPressTime < AdvancedCorePlugin.getInstance().getOptions().getSpamClickTime()) {
 					AdvancedCorePlugin.getInstance()
-							.debug(player.getName() + " spam clicking GUI, closing inventory to prevent exploits");
+							.debug(player.getName() + " spam clicking GUI, preventing exploits");
 
-					event.setCurrentItem(new ItemStack(Material.AIR));
-					player.updateInventory();
 					Object ob = PlayerUtils.getInstance().getPlayerMeta(player, "AntiSpamClickTime");
 					if (ob != null) {
 						try {
 							long time = Long.valueOf(ob.toString());
 							// 20 seconds since last spam click
-							if (cTime - time > 20000) {
+							if (cTime - time < 20000) {
 								AdvancedCorePlugin.getInstance().getLogger()
 										.warning(player.getName() + " may be trying to spam click exploit on GUI");
+								player.updateInventory();
+								event.setCurrentItem(new ItemStack(Material.AIR));
 								forceClose(player);
-								
+
 								String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
 								if (!msg.isEmpty()) {
 									player.sendMessage(StringParser.getInstance().colorize(msg));
 								}
+								return;
 							}
 
 						} catch (Exception e) {
@@ -492,7 +495,7 @@ public class BInventory implements Listener {
 						}
 					}
 					PlayerUtils.getInstance().setPlayerMeta(player, "AntiSpamClickTime", "" + cTime);
-					
+
 					return;
 				}
 				lastPressTime = cTime;
