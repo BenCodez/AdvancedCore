@@ -278,16 +278,24 @@ public class BInventory implements Listener {
 	}
 
 	public void forceClose(Player p) {
+		forceClose(p, true);
+	}
+
+	public void forceClose(Player p, boolean destroy) {
 		if (Bukkit.isPrimaryThread()) {
 			p.closeInventory();
-			destroy();
+			if (destroy) {
+				destroy();
+			}
 		} else {
 			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
 					p.closeInventory();
-					destroy();
+					if (destroy) {
+						destroy();
+					}
 				}
 			});
 		}
@@ -470,31 +478,15 @@ public class BInventory implements Listener {
 				if (cTime - lastPressTime < AdvancedCorePlugin.getInstance().getOptions().getSpamClickTime()) {
 					AdvancedCorePlugin.getInstance()
 							.debug(player.getName() + " spam clicking GUI, preventing exploits");
-
-					Object ob = PlayerUtils.getInstance().getPlayerMeta(player, "AntiSpamClickTime");
-					if (ob != null) {
-						try {
-							long time = Long.valueOf(ob.toString());
-							// 20 seconds since last spam click
-							if (cTime - time < 20000) {
-								AdvancedCorePlugin.getInstance().getLogger()
-										.warning(player.getName() + " may be trying to spam click exploit on GUI");
-								player.updateInventory();
-								event.setCurrentItem(new ItemStack(Material.AIR));
-								forceClose(player);
-
-								String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
-								if (!msg.isEmpty()) {
-									player.sendMessage(StringParser.getInstance().colorize(msg));
-								}
-								return;
-							}
-
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
+					player.updateInventory();
+					event.setCurrentItem(new ItemStack(Material.AIR));
+					forceClose(player);
+					
+					// spam click message
+					String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
+					if (!msg.isEmpty()) {
+						player.sendMessage(StringParser.getInstance().colorize(msg));
 					}
-					PlayerUtils.getInstance().setPlayerMeta(player, "AntiSpamClickTime", "" + cTime);
 
 					return;
 				}
@@ -542,7 +534,7 @@ public class BInventory implements Listener {
 
 									final int nextPage = page - 1;
 
-									forceClose(player);
+									forceClose(player, false);
 									playSound(player);
 									openInventory(player, nextPage);
 
@@ -555,7 +547,7 @@ public class BInventory implements Listener {
 									final int nextPage = page + 1;
 
 									playSound(player);
-									forceClose(player);
+									forceClose(player, false);
 									openInventory(player, nextPage);
 
 								}
