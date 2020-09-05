@@ -239,7 +239,7 @@ public class BInventory implements Listener {
 
 	public void closeInv(Player p, BInventoryButton b) {
 		if ((closeInv && (b != null && b.isCloseInv())) || pages) {
-			if (p.getOpenInventory().getTopInventory().equals(inv)) {
+			if (p.getOpenInventory().getTopInventory().equals(inv) || pages) {
 				forceClose(p);
 			}
 		}
