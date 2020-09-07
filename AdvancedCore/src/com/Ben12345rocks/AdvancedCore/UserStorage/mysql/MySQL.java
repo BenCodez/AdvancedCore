@@ -575,6 +575,11 @@ public class MySQL {
 	}
 
 	public void update(String index, String column, Object value, DataType dataType) {
+		update(index, column, value, dataType, true);
+
+	}
+
+	public void update(String index, String column, Object value, DataType dataType, boolean queue) {
 		if (value == null) {
 			AdvancedCorePlugin.getInstance().extraDebug("Mysql value null: " + column);
 			return;
@@ -599,7 +604,16 @@ public class MySQL {
 				query += " WHERE `uuid`=";
 				query += "'" + index + "';";
 
-				addToQue(query);
+				if (queue) {
+					addToQue(query);
+				} else {
+					try {
+						Query q = new Query(mysql, query);
+						q.executeUpdateAsync();
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+				}
 			} else {
 				insert(index, column, value, dataType);
 			}
@@ -635,9 +649,9 @@ public class MySQL {
 							Query query = new Query(mysql, text);
 							query.executeUpdateAsync();
 						} catch (SQLException e) {
-							AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while executing sql: "
-									+ e.toString() + ", turn debug on to see full stacktrace");
-							AdvancedCorePlugin.getInstance().debug(e);
+							AdvancedCorePlugin.getInstance().getLogger()
+									.severe("Error occoured while executing sql: " + e.toString());
+							e.printStackTrace();
 						}
 					}
 				}

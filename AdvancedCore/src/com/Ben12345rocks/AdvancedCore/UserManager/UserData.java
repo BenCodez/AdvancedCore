@@ -222,11 +222,15 @@ public class UserData {
 		setString(key, "" + value);
 	}
 
-	public void setData(final String uuid, final String path, final Object value) {
+	private void setData(final String uuid, final String path, final Object value) {
 		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
 	public void setInt(final String key, final int value) {
+		setInt(key, value, true);
+	}
+
+	public void setInt(final String key, final int value, boolean queue) {
 		if (key.equals("")) {
 			AdvancedCorePlugin.getInstance().debug("No key: " + key + " to " + value);
 			return;
@@ -250,7 +254,7 @@ public class UserData {
 			columns.add(column);
 			AdvancedCorePlugin.getInstance().getSQLiteUserTable().update(primary, columns);
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			AdvancedCorePlugin.getInstance().getMysql().update(user.getUUID(), key, value, DataType.INTEGER);
+			AdvancedCorePlugin.getInstance().getMysql().update(user.getUUID(), key, value, DataType.INTEGER, queue);
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			setData(user.getUUID(), key, value);
 		}
@@ -258,6 +262,10 @@ public class UserData {
 	}
 
 	public void setString(final String key, final String value) {
+		setString(key, value, true);
+	}
+
+	public void setString(final String key, final String value, boolean queue) {
 		if (key.equals("") && value != null) {
 			AdvancedCorePlugin.getInstance().debug("No key/value: " + key + " to " + value);
 			return;
@@ -276,13 +284,17 @@ public class UserData {
 			columns.add(column);
 			AdvancedCorePlugin.getInstance().getSQLiteUserTable().update(primary, columns);
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			AdvancedCorePlugin.getInstance().getMysql().update(user.getUUID(), key, value, DataType.STRING);
+			AdvancedCorePlugin.getInstance().getMysql().update(user.getUUID(), key, value, DataType.STRING, queue);
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			setData(user.getUUID(), key, value);
 		}
 	}
 
 	public void setStringList(final String key, final ArrayList<String> value) {
+		setStringList(key, value, true);
+	}
+
+	public void setStringList(final String key, final ArrayList<String> value, boolean queue) {
 		// AdvancedCorePlugin.getInstance().debug("Setting " + key + " to " +
 		// value);
 		String str = "";
@@ -292,6 +304,6 @@ public class UserData {
 			}
 			str += value.get(i);
 		}
-		setString(key, str);
+		setString(key, str, queue);
 	}
 }
