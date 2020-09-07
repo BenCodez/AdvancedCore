@@ -460,7 +460,7 @@ public class BInventory implements Listener {
 		if (this.inv != null && inv.equals(this.inv)) {
 			event.setCancelled(true);
 			event.setResult(Result.DENY);
-			if (event.getClickedInventory().getType() == InventoryType.CHEST) {
+			if (event.getClickedInventory() != null && event.getClickedInventory().getType() == InventoryType.CHEST) {
 
 				if (event.isShiftClick() && event.getClickedInventory() != null
 						&& event.getRawSlot() < event.getInventory().getSize()) {
