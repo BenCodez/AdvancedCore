@@ -239,7 +239,7 @@ public class UserData {
 		}
 		if (AdvancedCorePlugin.getInstance().getOptions().isExtraDebug()) {
 			AdvancedCorePlugin.getInstance()
-					.debug("Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "'");
+					.debug("Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "' Queue: " + queue);
 		}
 		/*
 		 * if (AdvancedCorePlugin.getInstance().isExtraDebug()) {
@@ -274,7 +274,7 @@ public class UserData {
 		}
 		if (AdvancedCorePlugin.getInstance().getOptions().isExtraDebug()) {
 			AdvancedCorePlugin.getInstance()
-					.debug("Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "'");
+					.debug("Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "' Queue: " + queue);
 		}
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
