@@ -836,7 +836,7 @@ public class User {
 		return false;
 	}
 
-	public boolean isInAnyWorld(ArrayList<String> worlds) {
+	public boolean isInWorld(ArrayList<String> worlds) {
 		Player p = getPlayer();
 		if (p != null) {
 			for (String world : worlds) {
