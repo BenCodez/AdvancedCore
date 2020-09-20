@@ -33,7 +33,7 @@ public class BackupHandle implements Listener {
 	}
 
 	@EventHandler
-	public void onDateChange(DateChangedEvent e) {
+	public void onPostDateChange(DateChangedEvent e) {
 		if (!e.getTimeType().equals(TimeType.DAY)) {
 			return;
 		}

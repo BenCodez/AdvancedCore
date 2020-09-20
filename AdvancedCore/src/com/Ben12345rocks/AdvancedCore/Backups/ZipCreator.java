@@ -52,7 +52,9 @@ public class ZipCreator {
 		try {
 			File[] files = dir.listFiles();
 			for (File file : files) {
-				fileList.add(file);
+				if (file.getName() != null && !file.getName().equals("Users.db-journal")) {
+					fileList.add(file);
+				}
 				if (file.isDirectory()) {
 					plugin.debug("directory:" + file.getCanonicalPath());
 					if (!file.getAbsolutePath()
