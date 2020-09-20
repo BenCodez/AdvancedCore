@@ -43,7 +43,7 @@ public class PluginMessage implements PluginMessageListener {
 		}
 		ByteArrayDataInput in = ByteStreams.newDataInput(message);
 		ArrayList<String> list = new ArrayList<String>();
-		String subChannel = in.readUTF();
+		final String subChannel = in.readUTF();
 		int size = in.readInt();
 		for (int i = 0; i < size; i++) {
 			try {
@@ -55,11 +55,21 @@ public class PluginMessage implements PluginMessageListener {
 				e.printStackTrace();
 			}
 		}
-		for (PluginMessageHandler handle : pluginMessages) {
-			if (handle.getSubChannel().equalsIgnoreCase(subChannel)) {
-				handle.onRecieve(subChannel, list);
+		
+		final ArrayList<String> list1 = list;
+		
+		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+			
+			@Override
+			public void run() {
+				for (PluginMessageHandler handle : pluginMessages) {
+					if (handle.getSubChannel().equalsIgnoreCase(subChannel)) {
+						handle.onRecieve(subChannel, list1);
+					}
+				}
 			}
-		}
+		});
+		
 
 	}
 
