@@ -26,6 +26,11 @@ public class PlayerUtils {
 	/** The instance. */
 	static PlayerUtils instance = new PlayerUtils();
 
+	private static final BlockFace[] axis = { BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST };
+
+	private static final BlockFace[] radial = { BlockFace.NORTH, BlockFace.NORTH_EAST, BlockFace.EAST,
+			BlockFace.SOUTH_EAST, BlockFace.SOUTH, BlockFace.SOUTH_WEST, BlockFace.WEST, BlockFace.NORTH_WEST };
+
 	public static PlayerUtils getInstance() {
 		return instance;
 	}
@@ -53,17 +58,6 @@ public class PlayerUtils {
 		}
 		return null;
 	}
-
-	public BlockFace yawToFace(float yaw, boolean useSubCardinalDirections) {
-		if (useSubCardinalDirections)
-			return radial[Math.round(yaw / 45f) & 0x7].getOppositeFace();
-
-		return axis[Math.round(yaw / 90f) & 0x3].getOppositeFace();
-	}
-
-	private static final BlockFace[] axis = { BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST };
-	private static final BlockFace[] radial = { BlockFace.NORTH, BlockFace.NORTH_EAST, BlockFace.EAST,
-			BlockFace.SOUTH_EAST, BlockFace.SOUTH, BlockFace.SOUTH_WEST, BlockFace.WEST, BlockFace.NORTH_WEST };
 
 	public String getPlayerName(User user, String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null") || uuid.isEmpty()) {
@@ -132,6 +126,10 @@ public class PlayerUtils {
 		return null;
 	}
 
+	public Player getRandomPlayer() {
+		return Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
+	}
+
 	/*
 	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
 	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
@@ -147,10 +145,6 @@ public class PlayerUtils {
 	 * name; } name = "Error getting name"; } return name;
 	 * }
 	 */
-
-	public Player getRandomPlayer() {
-		return Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
-	}
 
 	/**
 	 * Gets the uuid.
@@ -452,6 +446,14 @@ public class PlayerUtils {
 			}
 
 		});
+	}
+
+	public BlockFace yawToFace(float yaw, boolean useSubCardinalDirections) {
+		if (useSubCardinalDirections) {
+			return radial[Math.round(yaw / 45f) & 0x7].getOppositeFace();
+		}
+
+		return axis[Math.round(yaw / 90f) & 0x3].getOppositeFace();
 	}
 
 }

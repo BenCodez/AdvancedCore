@@ -90,33 +90,6 @@ public class MiscUtils {
 		}
 	}
 
-	public LinkedHashMap<Double, String> sortByKeys(LinkedHashMap<Double, String> topVoterAllTime,
-			final boolean order) {
-
-		List<Entry<Double, String>> list = new LinkedList<Entry<Double, String>>(topVoterAllTime.entrySet());
-
-		// Sorting the list based on values
-		Collections.sort(list, new Comparator<Entry<Double, String>>() {
-			@Override
-			public int compare(Entry<Double, String> o1, Entry<Double, String> o2) {
-				if (order) {
-					return o1.getKey().compareTo(o2.getKey());
-				} else {
-					return o2.getKey().compareTo(o1.getKey());
-
-				}
-			}
-		});
-
-		// Maintaining insertion order with the help of LinkedList
-		LinkedHashMap<Double, String> sortedMap = new LinkedHashMap<Double, String>();
-		for (Entry<Double, String> entry : list) {
-			sortedMap.put(entry.getKey(), entry.getValue());
-		}
-
-		return sortedMap;
-	}
-
 	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds,
 			final HashMap<String, String> placeholders) {
 		if (cmds != null && !cmds.isEmpty()) {
@@ -381,5 +354,32 @@ public class MiscUtils {
 	public ItemStack setSkullOwner(String playerName) {
 		return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1, (short) 3)).setSkullOwner(playerName)
 				.toItemStack();
+	}
+
+	public LinkedHashMap<Double, String> sortByKeys(LinkedHashMap<Double, String> topVoterAllTime,
+			final boolean order) {
+
+		List<Entry<Double, String>> list = new LinkedList<Entry<Double, String>>(topVoterAllTime.entrySet());
+
+		// Sorting the list based on values
+		Collections.sort(list, new Comparator<Entry<Double, String>>() {
+			@Override
+			public int compare(Entry<Double, String> o1, Entry<Double, String> o2) {
+				if (order) {
+					return o1.getKey().compareTo(o2.getKey());
+				} else {
+					return o2.getKey().compareTo(o1.getKey());
+
+				}
+			}
+		});
+
+		// Maintaining insertion order with the help of LinkedList
+		LinkedHashMap<Double, String> sortedMap = new LinkedHashMap<Double, String>();
+		for (Entry<Double, String> entry : list) {
+			sortedMap.put(entry.getKey(), entry.getValue());
+		}
+
+		return sortedMap;
 	}
 }

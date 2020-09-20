@@ -158,11 +158,11 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@Getter
 	private String server = "";
-	
+
 	@Setter
 	@Getter
 	private int spamClickTime = 250;
-	
+
 	@Getter
 	@Setter
 	private String spamClickMessage = "";
@@ -240,9 +240,9 @@ public class AdvancedCoreConfigOptions {
 			server = configData.getString("Server", "");
 
 			newLoreLength = configData.getInt("NewLoreLength", 30);
-			
+
 			spamClickTime = configData.getInt("SpamClickTime", 350);
-			
+
 			spamClickMessage = configData.getString("SpamClickMessage", "");
 		}
 	}

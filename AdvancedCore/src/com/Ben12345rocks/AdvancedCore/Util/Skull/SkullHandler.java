@@ -45,14 +45,14 @@ public class SkullHandler {
 
 	private Timer timer = new Timer();
 
-	public void close() {
-		timer.cancel();
-	}
-
 	private void add(String playerName) {
 		if (!skullsToLoad.contains(playerName) && !getSkulls().containsKey(playerName)) {
 			skullsToLoad.add(playerName);
 		}
+	}
+
+	public void close() {
+		timer.cancel();
 	}
 
 	/*

@@ -182,11 +182,6 @@ public class BInventory implements Listener {
 	@Getter
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
-	public BInventory addPlaceholder(String toReplace, String replaceWith) {
-		placeholders.put(toReplace, replaceWith);
-		return this;
-	}
-
 	@Getter
 	@Setter
 	private boolean playerSound = true;
@@ -234,6 +229,11 @@ public class BInventory implements Listener {
 
 	public BInventory addData(String key, Object object) {
 		getData().put(key, object);
+		return this;
+	}
+
+	public BInventory addPlaceholder(String toReplace, String replaceWith) {
+		placeholders.put(toReplace, replaceWith);
 		return this;
 	}
 
@@ -481,7 +481,7 @@ public class BInventory implements Listener {
 					player.updateInventory();
 					event.setCurrentItem(new ItemStack(Material.AIR));
 					forceClose(player);
-					
+
 					// spam click message
 					String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
 					if (!msg.isEmpty()) {

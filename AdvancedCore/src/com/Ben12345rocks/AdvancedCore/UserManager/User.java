@@ -599,6 +599,28 @@ public class User {
 		return Boolean.valueOf(getData().getString("CheckWorld"));
 	}
 
+	public boolean isInWorld(ArrayList<String> worlds) {
+		Player p = getPlayer();
+		if (p != null) {
+			for (String world : worlds) {
+				if (p.getWorld().getName().equalsIgnoreCase(world)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	public boolean isInWorld(String world) {
+		Player p = getPlayer();
+		if (p != null) {
+			return p.getWorld().getName().equalsIgnoreCase(world);
+		}
+
+		return false;
+	}
+
 	/**
 	 * Checks if is online.
 	 *
@@ -825,28 +847,6 @@ public class User {
 				AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player, txt);
 			}
 		}
-	}
-
-	public boolean isInWorld(String world) {
-		Player p = getPlayer();
-		if (p != null) {
-			return p.getWorld().getName().equalsIgnoreCase(world);
-		}
-
-		return false;
-	}
-
-	public boolean isInWorld(ArrayList<String> worlds) {
-		Player p = getPlayer();
-		if (p != null) {
-			for (String world : worlds) {
-				if (p.getWorld().getName().equalsIgnoreCase(world)) {
-					return true;
-				}
-			}
-		}
-
-		return false;
 	}
 
 	/**

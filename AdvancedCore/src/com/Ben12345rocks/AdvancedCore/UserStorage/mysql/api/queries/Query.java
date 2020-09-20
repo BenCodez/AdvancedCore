@@ -110,31 +110,28 @@ public class Query {
 	 * @throws SQLException
 	 *             SQLException
 	 */
-	/*@Deprecated
-	public ResultSet executeQuery() throws SQLException {
-		CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
-		ResultSet resultSet = null;
-		
-
-		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement(this.sql);) {
-
-			for (Entry<Integer, Object> entry : paramters.entrySet()) {
-				sql.setObject(entry.getKey(), entry.getValue());
-			}
-			if (addBatch) {
-				sql.addBatch();
-			}
-			resultSet = sql.executeQuery();
-			rowSet.populate(resultSet);
-			sql.close();
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		return rowSet;
-	}*/
+	/*
+	 * @Deprecated
+	 * public ResultSet executeQuery() throws SQLException {
+	 * CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
+	 * ResultSet resultSet = null;
+	 * try (Connection conn = mysql.getConnectionManager().getConnection();
+	 * PreparedStatement sql = conn.prepareStatement(this.sql);) {
+	 * for (Entry<Integer, Object> entry : paramters.entrySet()) {
+	 * sql.setObject(entry.getKey(), entry.getValue());
+	 * }
+	 * if (addBatch) {
+	 * sql.addBatch();
+	 * }
+	 * resultSet = sql.executeQuery();
+	 * rowSet.populate(resultSet);
+	 * sql.close();
+	 * } catch (SQLException e) {
+	 * e.printStackTrace();
+	 * }
+	 * return rowSet;
+	 * }
+	 */
 
 	/**
 	 * Execute a SQL query that does return a ResultSet asynchronously.
@@ -144,22 +141,23 @@ public class Query {
 	 * @param callback
 	 *            the callback to be executed once the query is done
 	 */
-	/*@Deprecated
-	public void executeQueryAsync(final Callback<ResultSet, SQLException> callback) {
-		mysql.getThreadPool().submit(new Runnable() {
-
-			@Override
-			public void run() {
-				try {
-					ResultSet rs = executeQuery();
-					callback.call(rs, null);
-				} catch (SQLException e) {
-					callback.call(null, e);
-				}
-			}
-
-		});
-	}*/
+	/*
+	 * @Deprecated
+	 * public void executeQueryAsync(final Callback<ResultSet, SQLException>
+	 * callback) {
+	 * mysql.getThreadPool().submit(new Runnable() {
+	 * @Override
+	 * public void run() {
+	 * try {
+	 * ResultSet rs = executeQuery();
+	 * callback.call(rs, null);
+	 * } catch (SQLException e) {
+	 * callback.call(null, e);
+	 * }
+	 * }
+	 * });
+	 * }
+	 */
 
 	/**
 	 * Execute a SQL query that does not return a ResultSet.

@@ -107,7 +107,7 @@ public class EditGUIButton extends BInventoryButton {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public ItemStack getItem(Player player, HashMap<String,String> placeholders) {
+	public ItemStack getItem(Player player, HashMap<String, String> placeholders) {
 		ItemBuilder builder = getBuilder();
 		builder.addPlaceholder(placeholders);
 		if (!(getEditer() instanceof EditGUIValueList)) {

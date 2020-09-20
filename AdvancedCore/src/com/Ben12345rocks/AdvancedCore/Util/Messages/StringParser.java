@@ -28,20 +28,9 @@ public class StringParser {
 		return instance;
 	}
 
-	private StringParser() {
-	}
-
 	private final Pattern pattern = Pattern.compile("(?<!\\\\)(#[a-fA-F0-9]{6})");
 
-	public String formatHex(String message) {
-		Matcher matcher = pattern.matcher(message); // Creates a matcher with the given pattern & message
-
-		while (matcher.find()) { // Searches the message for something that matches the pattern
-			String color = message.substring(matcher.start(), matcher.end()); // Extracts the color from the message
-			message = message.replace(color, "" + ChatColor.of(color)); // Places the color in the message
-		}
-
-		return message; // Returns the message
+	private StringParser() {
 	}
 
 	/**
@@ -84,6 +73,21 @@ public class StringParser {
 			return false;
 		}
 		return str1.toLowerCase().contains(str2.toLowerCase());
+	}
+
+	public boolean containsJson(String msg) {
+		return containsIgnorecase(msg, "[Text=\"");
+	}
+
+	public String formatHex(String message) {
+		Matcher matcher = pattern.matcher(message); // Creates a matcher with the given pattern & message
+
+		while (matcher.find()) { // Searches the message for something that matches the pattern
+			String color = message.substring(matcher.start(), matcher.end()); // Extracts the color from the message
+			message = message.replace(color, "" + ChatColor.of(color)); // Places the color in the message
+		}
+
+		return message; // Returns the message
 	}
 
 	public String getProgressBar(int current, int max, int totalBars, String symbol, String completedColor,
@@ -140,10 +144,6 @@ public class StringParser {
 		} catch (NumberFormatException ex) {
 			return false;
 		}
-	}
-
-	public boolean containsJson(String msg) {
-		return containsIgnorecase(msg, "[Text=\"");
 	}
 
 	public TextComponent parseJson(String msg) {

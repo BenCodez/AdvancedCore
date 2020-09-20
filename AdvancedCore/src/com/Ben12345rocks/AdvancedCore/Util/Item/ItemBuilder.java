@@ -385,15 +385,15 @@ public class ItemBuilder {
 		return setLore(lore);
 	}
 
-	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
-		placeholders.put(toReplace, replaceWith);
-		return this;
-	}
-
 	public ItemBuilder addPlaceholder(HashMap<String, String> placeholders) {
 		if (placeholders != null) {
 			this.placeholders.putAll(placeholders);
 		}
+		return this;
+	}
+
+	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
+		placeholders.put(toReplace, replaceWith);
 		return this;
 	}
 

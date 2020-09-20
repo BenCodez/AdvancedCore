@@ -681,18 +681,17 @@ public class RewardHandler {
 				ConfigurationSection section = data.getConfigurationSection("LocationDistance");
 
 				try {
-				new Location(Bukkit.getWorld(section.getString("World")), section.getInt("X"),
-						section.getInt("Y"), section.getInt("Z"));
+					new Location(Bukkit.getWorld(section.getString("World")), section.getInt("X"), section.getInt("Y"),
+							section.getInt("Z"));
 				} catch (Exception e) {
 					warning(reward, inject, "Failed to get location for LocationDistance");
 					e.printStackTrace();
 				}
-				
+
 				if (section.getInt("Distance") < 0) {
 					warning(reward, inject, "Invalid distance for LocationDistance");
 				}
 
-				
 			}
 		}));
 
