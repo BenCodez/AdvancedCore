@@ -88,24 +88,25 @@ public class ZipCreator {
 	 *             Signals that an I/O exception has occurred.
 	 */
 	private void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
+		if (file.exists()) {
+			FileInputStream fis = new FileInputStream(file);
 
-		FileInputStream fis = new FileInputStream(file);
+			String zipFilePath = file.getPath();
 
-		String zipFilePath = file.getPath();
+			plugin.extraDebug("Writing '" + zipFilePath + "' to zip file");
 
-		plugin.extraDebug("Writing '" + zipFilePath + "' to zip file");
+			ZipEntry zipEntry = new ZipEntry(zipFilePath);
+			zos.putNextEntry(zipEntry);
 
-		ZipEntry zipEntry = new ZipEntry(zipFilePath);
-		zos.putNextEntry(zipEntry);
+			byte[] bytes = new byte[1024];
+			int length;
+			while ((length = fis.read(bytes)) >= 0) {
+				zos.write(bytes, 0, length);
+			}
 
-		byte[] bytes = new byte[1024];
-		int length;
-		while ((length = fis.read(bytes)) >= 0) {
-			zos.write(bytes, 0, length);
+			zos.closeEntry();
+			fis.close();
 		}
-
-		zos.closeEntry();
-		fis.close();
 	}
 
 	public void create(File directory, File zipFileLocation) {
@@ -154,7 +155,7 @@ public class ZipCreator {
 			ZipOutputStream zos = new ZipOutputStream(fos);
 
 			for (File file : fileList) {
-				if (!file.isDirectory()) { // we only zip files, not directories
+				if (file.exists() && !file.isDirectory()) { // we only zip files, not directories
 					if (!file.getAbsolutePath().equals(zipFile.getAbsolutePath())) {
 						try {
 							addToZip(file, zos);
