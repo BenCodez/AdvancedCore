@@ -132,6 +132,9 @@ public class UserGUI {
 
 								@Override
 								public void setValue(Player player, String value) {
+									if (value.equals("\"\"")) {
+										value = "";
+									}
 									user.getData().setString(key, value);
 									openUserGUI(player, playerName);
 								}
