@@ -204,7 +204,7 @@ public class ArrayUtils {
 		}
 	}
 
-	public ArrayList<BaseComponent> convert(BaseComponent[] list) {
+	public ArrayList<BaseComponent> convertBaseComponent(BaseComponent[] list) {
 		if (list == null) {
 			return null;
 		}
