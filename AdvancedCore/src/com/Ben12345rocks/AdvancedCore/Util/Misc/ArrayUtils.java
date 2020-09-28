@@ -21,6 +21,7 @@ import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptEngine;
 import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 
 public class ArrayUtils {
@@ -141,7 +142,6 @@ public class ArrayUtils {
 	 *            the list
 	 * @return the string[]
 	 */
-	@SuppressWarnings("unused")
 	public String[] convert(ArrayList<String> list) {
 		if (list == null) {
 			return null;
@@ -150,11 +150,19 @@ public class ArrayUtils {
 		for (int i = 0; i < list.size(); i++) {
 			string[i] = list.get(i);
 		}
-		if (string == null) {
+		return string;
+
+	}
+
+	public BaseComponent[] convertBaseComponent(ArrayList<BaseComponent> list) {
+		if (list == null) {
 			return null;
-		} else {
-			return string;
 		}
+		BaseComponent[] string = new BaseComponent[list.size()];
+		for (int i = 0; i < list.size(); i++) {
+			string[i] = list.get(i);
+		}
+		return string;
 	}
 
 	/**
