@@ -204,6 +204,17 @@ public class ArrayUtils {
 		}
 	}
 
+	public ArrayList<BaseComponent> convert(BaseComponent[] list) {
+		if (list == null) {
+			return null;
+		}
+		ArrayList<BaseComponent> newlist = new ArrayList<BaseComponent>();
+		for (BaseComponent element : list) {
+			newlist.add(element);
+		}
+		return newlist;
+	}
+
 	/**
 	 * Sets the to array.
 	 *
