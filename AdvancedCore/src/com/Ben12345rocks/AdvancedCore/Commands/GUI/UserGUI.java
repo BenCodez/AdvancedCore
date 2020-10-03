@@ -15,6 +15,7 @@ import com.Ben12345rocks.AdvancedCore.Rewards.RewardHandler;
 import com.Ben12345rocks.AdvancedCore.Rewards.RewardOptions;
 import com.Ben12345rocks.AdvancedCore.UserManager.User;
 import com.Ben12345rocks.AdvancedCore.UserManager.UserManager;
+import com.Ben12345rocks.AdvancedCore.UserManager.UserStorage;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUI;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
@@ -153,7 +154,13 @@ public class UserGUI {
 				Player player = clickEvent.getPlayer();
 				User user = UserManager.getInstance().getUser(player);
 				for (String key : user.getData().getKeys()) {
-					user.sendMessage("&c&l" + key + " &c" + user.getData().getString(key));
+					String str = user.getData().getString(key);
+					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
+						if (plugin.getMysql().isIntColumn(key)) {
+							str = "" + user.getData().getInt(key);
+						}
+					}
+					user.sendMessage("&c&l" + key + " &c" + str);
 				}
 			}
 		});
