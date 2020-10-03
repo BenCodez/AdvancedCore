@@ -47,6 +47,7 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@Deprecated
 	private boolean extraDebug = false;
 
 	@Getter
