@@ -237,15 +237,10 @@ public class UserData {
 		} else if (key.contains(" ")) {
 			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
-		if (AdvancedCorePlugin.getInstance().getOptions().isExtraDebug()) {
-			AdvancedCorePlugin.getInstance().debug(
-					"Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "' Queue: " + queue);
-		}
-		/*
-		 * if (AdvancedCorePlugin.getInstance().isExtraDebug()) {
-		 * AdvancedCorePlugin.getInstance() .debug("Extra: Setting " + key + " to '" +
-		 * value + "' for '" + user.getPlayerName() + "'"); }
-		 */
+		
+		AdvancedCorePlugin.getInstance().extraDebug(
+				"Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "' Queue: " + queue);
+
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
 			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);
@@ -272,10 +267,10 @@ public class UserData {
 		} else if (key.contains(" ")) {
 			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
-		if (AdvancedCorePlugin.getInstance().getOptions().isExtraDebug()) {
-			AdvancedCorePlugin.getInstance().debug(
-					"Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "' Queue: " + queue);
-		}
+		
+		AdvancedCorePlugin.getInstance().extraDebug(
+				"Extra: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "' Queue: " + queue);
+
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
 			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);
