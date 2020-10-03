@@ -215,10 +215,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			debug = "Debug: " + debug;
 		}
 		if (getOptions().getDebug().isDebug()) {
-			if (getOptions().getDebug().equals(DebugLevel.EXTRA)
-					|| (getOptions().getDebug().equals(DebugLevel.INFO) && debugLevel.equals(DebugLevel.INFO))) {
-				getLogger().info(debug);
-			}
+			getLogger().info(debug);
 		}
 		if (getOptions().isDebugIngame()) {
 			for (Player player : Bukkit.getOnlinePlayers()) {
@@ -228,12 +225,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		}
 		if (getOptions().isLogDebugToFile()) {
-			if (pluginLogger != null) {
-				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-				pluginLogger.logToFile(str + ":" + debug);
-			} else {
+			if (pluginLogger == null) {
 				loadLogger();
 			}
+			String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
+			pluginLogger.logToFile(str + ":" + debug);
 		}
 	}
 
