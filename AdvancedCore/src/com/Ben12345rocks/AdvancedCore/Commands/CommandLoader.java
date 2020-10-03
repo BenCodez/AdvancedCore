@@ -173,7 +173,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Users" }, permPrefix + ".UserEdit", "Open UserGUI", false) {
+		cmds.add(new CommandHandler(new String[] { "User" }, permPrefix + ".UserEdit", "Open UserGUI", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -181,7 +181,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Users", "(Player)" }, permPrefix + ".UserEdit", "Open UserGUI",
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)" }, permPrefix + ".UserEdit", "Open UserGUI",
 				false) {
 
 			@Override
