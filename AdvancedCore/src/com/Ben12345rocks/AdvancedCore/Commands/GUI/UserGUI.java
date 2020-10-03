@@ -128,6 +128,11 @@ public class UserGUI {
 				final User user = UserManager.getInstance().getUser(playerName);
 				for (final String key : user.getData().getKeys()) {
 					String value = user.getData().getString(key);
+					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
+						if (plugin.getMysql().isIntColumn(key)) {
+							value = "" + user.getData().getInt(key);
+						}
+					}
 					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
 							new EditGUIValueString(key, value) {
 
