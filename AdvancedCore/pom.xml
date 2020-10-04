@@ -183,7 +183,7 @@
 								<include>**/*</include>
 							</includes>
 							<repositoryName>AdvancedCore</repositoryName>
-							<repositoryOwner>Ben12345rocks</repositoryOwner>
+							<repositoryOwner>BenCodez</repositoryOwner>
 							<server>github</server>
 						</configuration>
 					</execution>
