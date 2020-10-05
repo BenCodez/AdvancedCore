@@ -665,42 +665,9 @@ public class MySQL {
 
 	public void updateBatchShutdown() {
 		if (query.size() > 0) {
-			AdvancedCorePlugin.getInstance().extraDebug("Query Size: " + query.size());
-			String sql = "";
-			while (query.size() > 0) {
-				String text = query.poll();
-				if (!text.endsWith(";")) {
-					text += ";";
-				}
-				sql += text;
-			}
-
-			try {
-				if (useBatchUpdates) {
-					Connection conn = mysql.getConnectionManager().getConnection();
-					Statement st = conn.createStatement();
-					for (String str : sql.split(";")) {
-						st.addBatch(str);
-					}
-					st.executeBatch();
-					st.close();
-					conn.close();
-				} else {
-					for (String text : sql.split(";")) {
-						try {
-							Query query = new Query(mysql, text);
-							query.executeUpdate();
-						} catch (SQLException e) {
-							AdvancedCorePlugin.getInstance().getLogger().severe("Error occoured while executing sql: "
-									+ e.toString() + ", turn debug on to see full stacktrace");
-							AdvancedCorePlugin.getInstance().debug(e);
-						}
-					}
-				}
-			} catch (SQLException e1) {
-				AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
-				e1.printStackTrace();
-			}
+			AdvancedCorePlugin.getInstance().getLogger().info("Shutting down mysql, queries to do: " + query.size()
+					+ ", if number is higher than 1000, then something may be wrong");
+			updateBatch();
 
 			try {
 				mysql.getThreadPool().awaitTermination(1, TimeUnit.MINUTES);
