@@ -726,7 +726,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void onDisable() {
 
 		if (getOptions().getStorageType().equals(UserStorage.MYSQL)) {
-			getLogger().info("Shutting down mysql, query size: " + getMysql().getQuery().size());
 			getMysql().updateBatchShutdown();
 		}
 		timer.cancel();
