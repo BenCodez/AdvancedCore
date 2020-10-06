@@ -670,7 +670,8 @@ public class MySQL {
 			updateBatch();
 
 			try {
-				mysql.getThreadPool().awaitTermination(1, TimeUnit.MINUTES);
+				mysql.getThreadPool().awaitTermination(30, TimeUnit.SECONDS);
+				mysql.getThreadPool().shutdown();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
