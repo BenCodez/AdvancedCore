@@ -727,6 +727,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		if (getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 			getMysql().updateBatchShutdown();
+			getMysql().close();
 		}
 		timer.cancel();
 		onUnLoad();
