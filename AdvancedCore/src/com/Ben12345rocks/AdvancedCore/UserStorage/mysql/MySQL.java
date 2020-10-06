@@ -623,7 +623,7 @@ public class MySQL {
 
 	public void updateBatch() {
 		if (query.size() > 0) {
-			AdvancedCorePlugin.getInstance().extraDebug("Query Size: " + query.size());
+			AdvancedCorePlugin.getInstance().extraDebug("Query Size: " + query.size() + ", usebatchupdates: " + useBatchUpdates);
 			String sql = "";
 			while (query.size() > 0) {
 				String text = query.poll();
