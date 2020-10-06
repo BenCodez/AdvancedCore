@@ -803,7 +803,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 */
 	public void setMysql(MySQL mysql) {
 		if (this.mysql != null) {
-			this.mysql.updateBatch();
+			this.mysql.updateBatchShutdown();
 			this.mysql.close();
 			this.mysql = null;
 		}
