@@ -29,7 +29,7 @@
 				<directory>Resources</directory>
 				<filtering>true</filtering>
 				<includes>
-					<include>version.yml</include>
+					<include>advancedcoreversion.yml</include>
 				</includes>
 			</resource>
 			<resource>
@@ -270,4 +270,21 @@
 			<systemPath>${project.basedir}/Jars/AuthMe-5.4.0.jar</systemPath>
 		</dependency>
 	</dependencies>
+	<profiles>
+		<profile>
+			<id>prod</id>
+			<properties>
+				<build.profile.id>prod</build.profile.id>
+			</properties>
+		</profile>
+		<profile>
+			<id>dev</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<build.profile.id>dev</build.profile.id>
+			</properties>
+		</profile>
+	</profiles>
 </project>
