@@ -1,7 +1,7 @@
 package com.Ben12345rocks.AdvancedCore;
 
 public enum DebugLevel {
-	NONE, INFO, EXTRA;
+	NONE, INFO, EXTRA, DEV;
 
 	public static DebugLevel getDebug(String str) {
 		for (DebugLevel d : values()) {
@@ -13,6 +13,6 @@ public enum DebugLevel {
 	}
 
 	public boolean isDebug() {
-		return this == INFO || this == EXTRA;
+		return this == INFO || this == EXTRA || this == DEV;
 	}
 }

@@ -213,6 +213,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			debug = "ExtraDebug: " + debug;
 		} else if (debugLevel.equals(DebugLevel.INFO)) {
 			debug = "Debug: " + debug;
+		} else if (debugLevel.equals(DebugLevel.DEV)) {
+			debug = "Developer Debug: " + debug;
 		}
 		if (getOptions().getDebug().isDebug()) {
 			getLogger().info(debug);
@@ -259,6 +261,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public void extraDebug(String debug) {
 		debug(DebugLevel.EXTRA, debug);
+	}
+	
+	public void devDebug(String debug) {
+		debug(DebugLevel.DEV, debug);
 	}
 
 	public Table getSQLiteUserTable() {
