@@ -37,8 +37,6 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		this.delay = delay;
 	}
 
-	public abstract ItemBuilder onUpdate(Player player);
-
 	private void cancel() {
 		timer.cancel();
 		timer = null;
@@ -72,5 +70,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 			}
 		}, delay, updateInterval);
 	}
+
+	public abstract ItemBuilder onUpdate(Player player);
 
 }

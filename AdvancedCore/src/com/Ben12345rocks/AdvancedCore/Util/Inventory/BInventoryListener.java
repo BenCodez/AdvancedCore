@@ -92,7 +92,6 @@ public class BInventoryListener implements Listener {
 						final int page = session.getPage();
 						final int maxPage = gui.getMaxPage();
 
-						
 						if (slot < maxInvSize - 9) {
 							int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
 							BInventoryButton button = gui.getButtons().get(buttonSlot);

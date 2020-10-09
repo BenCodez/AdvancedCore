@@ -237,9 +237,9 @@ public class UserData {
 		} else if (key.contains(" ")) {
 			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
-		
-		AdvancedCorePlugin.getInstance().extraDebug(
-				"Player Data: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "' Queue: " + queue);
+
+		AdvancedCorePlugin.getInstance().extraDebug("Player Data: Setting " + key + " to '" + value + "' for '"
+				+ user.getPlayerName() + "' Queue: " + queue);
 
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
@@ -267,9 +267,9 @@ public class UserData {
 		} else if (key.contains(" ")) {
 			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
-		
-		AdvancedCorePlugin.getInstance().extraDebug(
-				"Player Data: Setting " + key + " to '" + value + "' for '" + user.getPlayerName() + "' Queue: " + queue);
+
+		AdvancedCorePlugin.getInstance().extraDebug("Player Data: Setting " + key + " to '" + value + "' for '"
+				+ user.getPlayerName() + "' Queue: " + queue);
 
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();

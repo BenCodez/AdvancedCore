@@ -263,12 +263,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		debug(DebugLevel.INFO, debug);
 	}
 
-	public void extraDebug(String debug) {
-		debug(DebugLevel.EXTRA, debug);
-	}
-
 	public void devDebug(String debug) {
 		debug(DebugLevel.DEV, debug);
+	}
+
+	public void extraDebug(String debug) {
+		debug(DebugLevel.EXTRA, debug);
 	}
 
 	public Table getSQLiteUserTable() {

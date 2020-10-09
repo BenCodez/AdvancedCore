@@ -154,17 +154,6 @@ public class ArrayUtils {
 
 	}
 
-	public BaseComponent[] convertBaseComponent(ArrayList<BaseComponent> list) {
-		if (list == null) {
-			return null;
-		}
-		BaseComponent[] string = new BaseComponent[list.size()];
-		for (int i = 0; i < list.size(); i++) {
-			string[i] = list.get(i);
-		}
-		return string;
-	}
-
 	/**
 	 * Convert.
 	 *
@@ -202,6 +191,17 @@ public class ArrayUtils {
 		} else {
 			return newlist;
 		}
+	}
+
+	public BaseComponent[] convertBaseComponent(ArrayList<BaseComponent> list) {
+		if (list == null) {
+			return null;
+		}
+		BaseComponent[] string = new BaseComponent[list.size()];
+		for (int i = 0; i < list.size(); i++) {
+			string[i] = list.get(i);
+		}
+		return string;
 	}
 
 	public ArrayList<BaseComponent> convertBaseComponent(BaseComponent[] list) {

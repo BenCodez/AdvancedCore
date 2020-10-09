@@ -31,13 +31,6 @@ import lombok.Setter;
  */
 public class BInventory {
 
-	public boolean isOpen(Player p) {
-		if (GUISession.extractSession(p).getInventoryGUI() == this) {
-			return true;
-		}
-		return false;
-	}
-
 	/**
 	 * The Class ClickEvent.
 	 */
@@ -382,6 +375,13 @@ public class BInventory {
 		} else {
 			return 54;
 		}
+	}
+
+	public boolean isOpen(Player p) {
+		if (GUISession.extractSession(p).getInventoryGUI() == this) {
+			return true;
+		}
+		return false;
 	}
 
 	/**

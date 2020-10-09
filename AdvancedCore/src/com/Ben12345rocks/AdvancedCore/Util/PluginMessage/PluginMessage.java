@@ -55,11 +55,11 @@ public class PluginMessage implements PluginMessageListener {
 				e.printStackTrace();
 			}
 		}
-		
+
 		final ArrayList<String> list1 = list;
-		
+
 		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-			
+
 			@Override
 			public void run() {
 				for (PluginMessageHandler handle : pluginMessages) {
@@ -69,7 +69,6 @@ public class PluginMessage implements PluginMessageListener {
 				}
 			}
 		});
-		
 
 	}
 
