@@ -37,7 +37,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		this.delay = delay;
 	}
 
-	public abstract ItemStack onUpdate(Player player);
+	public abstract ItemBuilder onUpdate(Player player);
 
 	private void cancel() {
 		timer.cancel();
@@ -46,7 +46,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 
 	private void checkUpdate(Player p) {
 		if (getInv().isOpen(p)) {
-			final ItemStack item = onUpdate(p);
+			final ItemStack item = onUpdate(p).toItemStack(p);
 			if (item != null) {
 				Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
