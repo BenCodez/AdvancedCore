@@ -76,6 +76,8 @@ public class MySQL {
 
 	private List<String> intColumns;
 
+	private Timer timer = new Timer();
+
 	public MySQL(String tableName, ConfigurationSection section) {
 		intColumns = Collections.synchronizedList(ServerData.getInstance().getIntColumns());
 
@@ -142,17 +144,40 @@ public class MySQL {
 		// addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
 		alterColumnType("uuid", "VARCHAR(37)");
 
-		new Timer().schedule(new TimerTask() {
+		schedule();
+
+		AdvancedCorePlugin.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
+	}
+
+	@Getter
+	private long lastBackgroundCheck = 0;
+
+	public void schedule() {
+		timer.schedule(new TimerTask() {
 
 			@Override
 			public void run() {
-				updateBatch();
+				lastBackgroundCheck = System.currentTimeMillis();
+				try {
+					updateBatch();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 
 		}, 10 * 1000, 250);
-
-		AdvancedCorePlugin.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
-
+		timer.schedule(new TimerTask() {
+			
+			@Override
+			public void run() {
+				AdvancedCorePlugin.getInstance().extraDebug("Checking mysql background task");
+				if ((System.currentTimeMillis() - lastBackgroundCheck) > 10000) {
+					AdvancedCorePlugin.getInstance().getLogger().severe("MySQL background task not working, fixing");
+					cancel();
+					schedule();
+				}
+			}
+		}, 1000 * 60 * 5, 1000 * 60 * 5);
 	}
 
 	public void addColumn(String column, DataType dataType) {
