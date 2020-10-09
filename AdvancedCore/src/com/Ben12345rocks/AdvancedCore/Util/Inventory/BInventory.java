@@ -242,11 +242,29 @@ public class BInventory {
 		closeInv = false;
 		return this;
 	}
+	
+	private void closeUpdatingBInv() {
+		for (BInventoryButton b : getButtons().values()) {
+			if (b instanceof UpdatingBInventoryButton) {
+				UpdatingBInventoryButton ub = (UpdatingBInventoryButton) b;
+				ub.cancel();
+			}
+		}
+	}
 
 	public void forceClose(Player p) {
 		if (Bukkit.isPrimaryThread()) {
 			p.closeInventory();
+			
+			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+				
+				@Override
+				public void run() {
+					closeUpdatingBInv();
+				}
+			});
 		} else {
+			closeUpdatingBInv();
 			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
@@ -434,6 +452,10 @@ public class BInventory {
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 				inv.setItem(pair.getKey(), item);
+				if (pair.getValue() instanceof UpdatingBInventoryButton) {
+					UpdatingBInventoryButton b = (UpdatingBInventoryButton) pair.getValue();
+					b.loadTimer(player);
+				}
 			}
 
 			openInv(player, inv);
@@ -470,6 +492,10 @@ public class BInventory {
 				if (slot < (maxInvSize - 9) && pair.getKey() < inventory.getButtons().size()) {
 					ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 					inv.setItem(slot, item);
+					if (pair.getValue() instanceof UpdatingBInventoryButton) {
+						UpdatingBInventoryButton b = (UpdatingBInventoryButton) pair.getValue();
+						b.loadTimer(player);
+					}
 				}
 			}
 

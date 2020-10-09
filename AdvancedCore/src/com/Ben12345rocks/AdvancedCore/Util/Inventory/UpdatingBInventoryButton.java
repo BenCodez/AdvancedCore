@@ -37,7 +37,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		this.delay = delay;
 	}
 
-	private void cancel() {
+	public void cancel() {
 		timer.cancel();
 		timer = null;
 	}
