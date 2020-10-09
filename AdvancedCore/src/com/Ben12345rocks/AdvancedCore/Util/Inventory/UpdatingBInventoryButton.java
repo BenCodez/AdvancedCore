@@ -50,7 +50,15 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 
 					@Override
 					public void run() {
-						p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
+						try {
+							if (p != null) {
+								p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
+							}
+						} catch (Exception e) {
+							e.printStackTrace();
+							cancel();
+						}
+
 					}
 				});
 			} else {
