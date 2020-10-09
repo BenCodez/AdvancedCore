@@ -39,18 +39,27 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 
 	public abstract ItemStack onUpdate(Player player);
 
+	private void cancel() {
+		timer.cancel();
+		timer = null;
+	}
+
 	private void checkUpdate(Player p) {
 		if (getInv().isOpen(p)) {
-			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+			final ItemStack item = onUpdate(p);
+			if (item != null) {
+				Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-				@Override
-				public void run() {
-					p.getOpenInventory().getTopInventory().setItem(getSlot(), onUpdate(p));
-				}
-			});
+					@Override
+					public void run() {
+						p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
+					}
+				});
+			} else {
+				cancel();
+			}
 		} else {
-			timer.cancel();
-			timer = null;
+			cancel();
 		}
 	}
 
