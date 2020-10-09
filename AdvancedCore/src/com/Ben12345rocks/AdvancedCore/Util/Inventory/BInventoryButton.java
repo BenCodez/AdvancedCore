@@ -14,6 +14,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 
 import lombok.Getter;
+import lombok.Setter;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -29,6 +30,8 @@ public abstract class BInventoryButton {
 
 	private HashMap<String, Object> data = new HashMap<String, Object>();
 
+	@Getter
+	@Setter
 	private BInventory inv;
 
 	@Getter
@@ -90,13 +93,6 @@ public abstract class BInventoryButton {
 			return data.get(key);
 		}
 		return defaultValue;
-	}
-
-	/**
-	 * @return the inv
-	 */
-	public BInventory getInv() {
-		return inv;
 	}
 
 	/**

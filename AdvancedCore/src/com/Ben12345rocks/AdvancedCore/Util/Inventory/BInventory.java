@@ -454,6 +454,7 @@ public class BInventory {
 				inv.setItem(pair.getKey(), item);
 				if (pair.getValue() instanceof UpdatingBInventoryButton) {
 					UpdatingBInventoryButton b = (UpdatingBInventoryButton) pair.getValue();
+					b.setInv(this);
 					b.loadTimer(player);
 				}
 			}
@@ -494,6 +495,7 @@ public class BInventory {
 					inv.setItem(slot, item);
 					if (pair.getValue() instanceof UpdatingBInventoryButton) {
 						UpdatingBInventoryButton b = (UpdatingBInventoryButton) pair.getValue();
+						b.setInv(this);
 						b.loadTimer(player);
 					}
 				}
