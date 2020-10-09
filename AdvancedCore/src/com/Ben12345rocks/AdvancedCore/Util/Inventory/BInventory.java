@@ -396,7 +396,8 @@ public class BInventory {
 	}
 
 	public boolean isOpen(Player p) {
-		if (GUISession.extractSession(p).getInventoryGUI() == this) {
+		GUISession session = GUISession.extractSession(p);
+		if (session != null && session.getInventoryGUI() == this) {
 			return true;
 		}
 		return false;
