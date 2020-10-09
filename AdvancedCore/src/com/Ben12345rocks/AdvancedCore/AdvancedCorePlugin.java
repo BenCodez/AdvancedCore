@@ -123,8 +123,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private String buildTime = "";
 
 	@Getter
-	private String buildProfile = "";
-	@Getter
 	@Setter
 	private String jenkinsSite = "";
 
@@ -411,8 +409,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
-				+ Bukkit.getVersion() + " Build Profile: " + getBuildProfile() + " Total RAM: "
-				+ PluginUtils.getInstance().getMemory() + " Free RAM: " + PluginUtils.getInstance().getFreeMemory());
+				+ Bukkit.getVersion() + " Total RAM: " + PluginUtils.getInstance().getMemory() + " Free RAM: "
+				+ PluginUtils.getInstance().getFreeMemory());
 
 		debug(DebugLevel.INFO, "Debug Level: " + getOptions().getDebug().toString());
 	}
@@ -731,7 +729,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		YamlConfiguration conf = getVersionFile();
 		version = conf.getString("version", "Unknown");
 		buildTime = conf.getString("time", "Unknown");
-		buildProfile = conf.getString("profile", "");
 	}
 
 	@Override

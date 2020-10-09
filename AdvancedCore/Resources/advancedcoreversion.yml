@@ -1,3 +1,2 @@
 version: '${project.version}'
 time: '${timestamp}'
-profile: ${build.profile.id}
