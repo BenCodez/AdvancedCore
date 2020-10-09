@@ -61,6 +61,7 @@ import com.Ben12345rocks.AdvancedCore.UserStorage.sql.Table;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.EditGUIButton;
 import com.Ben12345rocks.AdvancedCore.Util.EditGUI.ValueTypes.EditGUIValueString;
 import com.Ben12345rocks.AdvancedCore.Util.Effects.FireworkHandler;
+import com.Ben12345rocks.AdvancedCore.Util.Inventory.BInventoryListener;
 import com.Ben12345rocks.AdvancedCore.Util.Item.ItemBuilder;
 import com.Ben12345rocks.AdvancedCore.Util.Javascript.JavascriptPlaceholderRequest;
 import com.Ben12345rocks.AdvancedCore.Util.Logger.Logger;
@@ -322,6 +323,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
 		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), this);
 		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
+		Bukkit.getPluginManager().registerEvents(new BInventoryListener(this), this);
 	}
 
 	public void loadAutoUpdateCheck() {

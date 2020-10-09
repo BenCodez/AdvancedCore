@@ -13,17 +13,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event.Result;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.HandlerList;
-import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -38,7 +29,14 @@ import lombok.Setter;
 /**
  * The Class BInventory.
  */
-public class BInventory implements Listener {
+public class BInventory {
+
+	public boolean isOpen(Player p) {
+		if (GUISession.extractSession(p).getInventoryGUI() == this) {
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * The Class ClickEvent.
@@ -162,9 +160,11 @@ public class BInventory implements Listener {
 	private boolean pages = false;
 
 	/** The page. */
+	@Getter
 	private int page = 1;
 
 	/** The max page. */
+	@Getter
 	private int maxPage = 1;
 
 	/** The inventory name. */
@@ -175,8 +175,6 @@ public class BInventory implements Listener {
 
 	private Inventory inv;
 
-	private Player player;
-
 	private HashMap<String, Object> data = new HashMap<String, Object>();
 
 	@Getter
@@ -186,8 +184,8 @@ public class BInventory implements Listener {
 	@Setter
 	private boolean playerSound = true;
 
-	private boolean destroy = false;
-
+	@Getter
+	@Setter
 	private long lastPressTime = 0;
 
 	/**
@@ -198,7 +196,8 @@ public class BInventory implements Listener {
 	 */
 	public BInventory(String name) {
 		setInventoryName(name);
-		Bukkit.getPluginManager().registerEvents(this, AdvancedCorePlugin.getInstance());
+		// Bukkit.getPluginManager().registerEvents(this,
+		// AdvancedCorePlugin.getInstance());
 	}
 
 	/**
@@ -212,6 +211,7 @@ public class BInventory implements Listener {
 		if (slot == -1) {
 			slot = getNextSlot();
 		}
+		button.setSlot(slot);
 		getButtons().put(slot, button);
 	}
 
@@ -245,57 +245,20 @@ public class BInventory implements Listener {
 		}
 	}
 
-	/**
-	 * Destroy.
-	 */
-	public void destroy() {
-		if (destroy) {
-			return;
-		}
-		destroy = true;
-		final BInventory b = this;
-		Bukkit.getScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-			@Override
-			public void run() {
-				if (AdvancedCorePlugin.getInstance().isEnabled()) {
-					HandlerList.unregisterAll(b);
-					if (player != null) {
-						AdvancedCorePlugin.getInstance()
-								.extraDebug("Disabling inventory listeners for " + player.getUniqueId());
-					} else {
-						AdvancedCorePlugin.getInstance().extraDebug("Disabling inventory listeners for null");
-					}
-				}
-			}
-		}, 500l);
-
-	}
-
 	public BInventory dontClose() {
 		closeInv = false;
 		return this;
 	}
 
 	public void forceClose(Player p) {
-		forceClose(p, true);
-	}
-
-	public void forceClose(Player p, boolean destroy) {
 		if (Bukkit.isPrimaryThread()) {
 			p.closeInventory();
-			if (destroy) {
-				destroy();
-			}
 		} else {
 			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
 					p.closeInventory();
-					if (destroy) {
-						destroy();
-					}
 				}
 			});
 		}
@@ -433,222 +396,9 @@ public class BInventory implements Listener {
 		return this;
 	}
 
-	private void onClick(InventoryClickEvent event, BInventoryButton b) {
+	public void onClick(InventoryClickEvent event, BInventoryButton b) {
 		playSound((Player) event.getWhoClicked());
 		b.onClick(new ClickEvent(event, b), this);
-	}
-
-	/**
-	 * On inventory click.
-	 *
-	 * @param event
-	 *            the event
-	 */
-	@EventHandler(priority = EventPriority.HIGHEST)
-	public void onInventoryClick(InventoryClickEvent event) {
-		if (!(event.getWhoClicked() instanceof Player)) {
-			return;
-		}
-
-		Inventory inv = event.getInventory();
-		if (this.player == null) {
-			return;
-		}
-		if (!this.player.getUniqueId().equals(((Player) event.getWhoClicked()).getUniqueId())) {
-			return;
-		}
-		if (this.inv != null && inv.equals(this.inv)) {
-			event.setCancelled(true);
-			event.setResult(Result.DENY);
-			if (event.getClickedInventory() != null && event.getClickedInventory().getType() == InventoryType.CHEST) {
-
-				if (event.isShiftClick() && event.getClickedInventory() != null
-						&& event.getRawSlot() < event.getInventory().getSize()) {
-					event.setCurrentItem(new ItemStack(Material.AIR));
-				}
-				player.setItemOnCursor(new ItemStack(Material.AIR));
-				player.updateInventory();
-				final Player player = (Player) event.getWhoClicked();
-				if (isCloseInv()) {
-					closeInv(player, null);
-				}
-
-				// prevent spam clicking, to avoid dupe issues on large servers
-				long cTime = System.currentTimeMillis();
-				if (cTime - lastPressTime < AdvancedCorePlugin.getInstance().getOptions().getSpamClickTime()) {
-					AdvancedCorePlugin.getInstance()
-							.debug(player.getName() + " spam clicking GUI, preventing exploits");
-					player.updateInventory();
-					event.setCurrentItem(new ItemStack(Material.AIR));
-					forceClose(player);
-
-					// spam click message
-					String msg = AdvancedCorePlugin.getInstance().getOptions().getSpamClickMessage();
-					if (!msg.isEmpty()) {
-						player.sendMessage(StringParser.getInstance().colorize(msg));
-					}
-
-					return;
-				}
-				lastPressTime = cTime;
-
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-					@Override
-					public void run() {
-						if (!pages) {
-							for (int buttonSlot : getButtons().keySet()) {
-								BInventoryButton button = getButtons().get(buttonSlot);
-								if (event.getSlot() == buttonSlot) {
-
-									closeInv(player, button);
-
-									try {
-										onClick(event, button);
-									} catch (Exception e) {
-										e.printStackTrace();
-									}
-
-								}
-
-							}
-						} else {
-							int slot = event.getSlot();
-							if (slot < maxInvSize - 9) {
-								int buttonSlot = (page - 1) * (maxInvSize - 9) + event.getSlot();
-								BInventoryButton button = getButtons().get(buttonSlot);
-								if (button != null) {
-									closeInv(player, button);
-
-									try {
-										onClick(event, button);
-									} catch (Exception e) {
-										e.printStackTrace();
-									}
-
-									return;
-								}
-
-							} else if (slot == maxInvSize - 9) {
-								if (page > 1) {
-
-									final int nextPage = page - 1;
-
-									forceClose(player, false);
-									playSound(player);
-									openInventory(player, nextPage);
-
-								}
-							} else if (slot == maxInvSize - 1) {
-								// AdvancedCorePlugin.getInstance().debug(maxPage + " " +
-								// page);
-								if (maxPage > page) {
-
-									final int nextPage = page + 1;
-
-									playSound(player);
-									forceClose(player, false);
-									openInventory(player, nextPage);
-
-								}
-
-							}
-
-							for (BInventoryButton b : pageButtons) {
-								if (slot == b.getSlot() + (getMaxInvSize() - 9)) {
-									closeInv(player, b);
-
-									try {
-										onClick(event, b);
-									} catch (Exception e) {
-										e.printStackTrace();
-									}
-									return;
-
-								}
-
-							}
-						}
-					}
-				});
-			}
-
-		}
-	}
-
-	// event handling
-	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-	public void onInventoryClose(InventoryCloseEvent event) {
-		if (!(event.getPlayer() instanceof Player)) {
-			return;
-		}
-		if (inv != null && event.getInventory().equals(inv) && player != null
-				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
-			Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-				@Override
-				public void run() {
-					if (player != null) {
-						if (player.getOpenInventory() == null
-								|| !player.getOpenInventory().getTopInventory().equals(inv)) {
-							if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
-								destroy();
-							}
-						}
-					}
-				}
-			}, 1000l);
-
-		}
-
-		return;
-	}
-
-	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-	public void onInventoryOpen(InventoryOpenEvent event) {
-		if (!(event.getPlayer() instanceof Player)) {
-			return;
-		}
-		if (inv != null && !event.getInventory().equals(inv) && player != null
-				&& player.getUniqueId().equals(((Player) event.getPlayer()).getUniqueId()) && !pages) {
-			Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-				@Override
-				public void run() {
-					if (player != null) {
-						if (player.getOpenInventory() == null
-								|| !player.getOpenInventory().getTopInventory().equals(inv)) {
-							if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
-								destroy();
-							}
-						}
-					}
-				}
-			}, 1000l);
-
-		}
-
-		return;
-	}
-
-	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-	public void onPlayerQuit(PlayerQuitEvent event) {
-		if (!(event.getPlayer() instanceof Player)) {
-			return;
-		}
-		if (player != null && event.getPlayer().getUniqueId().equals(player.getUniqueId())) {
-			Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-				@Override
-				public void run() {
-					if (AdvancedCorePlugin.getInstance().getOptions().isAutoKillInvs()) {
-						destroy();
-					}
-				}
-			}, 10l);
-		}
-
-		return;
 	}
 
 	private void openInv(Player player, Inventory inv) {
@@ -673,13 +423,12 @@ public class BInventory implements Listener {
 			return;
 		}
 		BInventory inventory = this;
-		this.player = player;
 
 		if (inventory.getHighestSlot() >= maxInvSize) {
 			pages = true;
 		}
 		if (!pages) {
-			inv = Bukkit.createInventory(player, inventory.getInventorySize(),
+			inv = Bukkit.createInventory(new GUISession(this, 1), inventory.getInventorySize(),
 					StringParser.getInstance().replaceJavascript(player, StringParser.getInstance()
 							.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
@@ -707,11 +456,11 @@ public class BInventory implements Listener {
 	 * @param page
 	 *            the page
 	 */
-	private void openInventory(Player player, int page) {
+	void openInventory(Player player, int page) {
 		BInventory inventory = this;
-		this.player = player;
-		inv = Bukkit.createInventory(player, maxInvSize, StringParser.getInstance().replaceJavascript(player,
-				StringParser.getInstance().replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
+		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize,
+				StringParser.getInstance().replaceJavascript(player, StringParser.getInstance()
+						.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 		this.page = page;
 		int startSlot = (page - 1) * (maxInvSize - 9);
 		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
@@ -755,7 +504,7 @@ public class BInventory implements Listener {
 		openInv(player, inv);
 	}
 
-	private void playSound(Player player) {
+	public void playSound(Player player) {
 		if (playerSound) {
 			Sound sound = AdvancedCorePlugin.getInstance().getOptions().getClickSoundSound();
 			if (sound != null) {
