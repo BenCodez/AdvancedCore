@@ -242,7 +242,7 @@ public class BInventory {
 		closeInv = false;
 		return this;
 	}
-	
+
 	private void closeUpdatingBInv() {
 		for (BInventoryButton b : getButtons().values()) {
 			if (b instanceof UpdatingBInventoryButton) {
@@ -255,9 +255,9 @@ public class BInventory {
 	public void forceClose(Player p) {
 		if (Bukkit.isPrimaryThread()) {
 			p.closeInventory();
-			
+
 			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-				
+
 				@Override
 				public void run() {
 					closeUpdatingBInv();
@@ -453,12 +453,12 @@ public class BInventory {
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 				inv.setItem(pair.getKey(), item);
-				if (pair.getValue() instanceof UpdatingBInventoryButton) {
-					UpdatingBInventoryButton b = (UpdatingBInventoryButton) pair.getValue();
-					b.setInv(this);
-					b.setSlot(pair.getKey());
-					b.loadTimer(player);
-				}
+
+				BInventoryButton b = pair.getValue();
+				b.setInv(this);
+				b.setSlot(pair.getKey());
+				b.load(player);
+
 			}
 
 			openInv(player, inv);
@@ -495,12 +495,11 @@ public class BInventory {
 				if (slot < (maxInvSize - 9) && pair.getKey() < inventory.getButtons().size()) {
 					ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 					inv.setItem(slot, item);
-					if (pair.getValue() instanceof UpdatingBInventoryButton) {
-						UpdatingBInventoryButton b = (UpdatingBInventoryButton) pair.getValue();
-						b.setInv(this);
-						b.setSlot(pair.getKey());
-						b.loadTimer(player);
-					}
+					
+					BInventoryButton b = pair.getValue();
+					b.setInv(this);
+					b.setSlot(pair.getKey());
+					b.load(player);
 				}
 			}
 

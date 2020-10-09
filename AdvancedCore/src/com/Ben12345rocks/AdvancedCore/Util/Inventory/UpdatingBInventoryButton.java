@@ -69,7 +69,8 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		}
 	}
 
-	public void loadTimer(Player p) {
+	@Override
+	public void load(Player p) {
 		timer.schedule(new TimerTask() {
 
 			@Override

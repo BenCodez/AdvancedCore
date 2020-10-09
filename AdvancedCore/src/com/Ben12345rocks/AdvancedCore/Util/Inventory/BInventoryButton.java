@@ -94,6 +94,9 @@ public abstract class BInventoryButton {
 		}
 		return defaultValue;
 	}
+	
+	public void load(Player p) {
+	}
 
 	/**
 	 * Gets the item.
