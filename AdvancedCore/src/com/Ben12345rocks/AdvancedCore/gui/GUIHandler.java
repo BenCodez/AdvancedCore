@@ -15,16 +15,20 @@ public abstract class GUIHandler {
 	public abstract void onBook(Player player);
 
 	public abstract void onChest(Player player);
-	
+
 	@Getter
-	private HashMap<String,Object> data = new HashMap<String,Object>();
-	
+	private HashMap<String, Object> data = new HashMap<String, Object>();
+
 	public void setData(String str, Object value) {
 		data.put(str, value);
 	}
-	
+
 	public String colorize(String str) {
 		return StringParser.getInstance().colorize(str);
+	}
+
+	public void sendMessage(CommandSender sender, String... message) {
+		sender.sendMessage(message);
 	}
 
 	@Getter
