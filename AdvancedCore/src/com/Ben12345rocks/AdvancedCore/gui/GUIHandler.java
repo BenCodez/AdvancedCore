@@ -1,11 +1,13 @@
 package com.Ben12345rocks.AdvancedCore.gui;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
+import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
 import lombok.Getter;
 
@@ -27,8 +29,12 @@ public abstract class GUIHandler {
 		return StringParser.getInstance().colorize(str);
 	}
 
-	public void sendMessage(CommandSender sender, String... message) {
-		sender.sendMessage(message);
+	public void sendMessage(String... message) {
+		player.sendMessage(message);
+	}
+
+	public void sendMessage(ArrayList<String> message) {
+		player.sendMessage(ArrayUtils.getInstance().convert(message));
 	}
 
 	@Getter
