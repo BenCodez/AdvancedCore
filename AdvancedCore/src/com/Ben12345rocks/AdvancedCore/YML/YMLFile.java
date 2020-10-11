@@ -124,6 +124,10 @@ public abstract class YMLFile {
 		}
 	}
 
+	public void loadValues() {
+
+	}
+
 	/**
 	 * Setup.
 	 */
@@ -146,6 +150,7 @@ public abstract class YMLFile {
 			if (data.getConfigurationSection("").getKeys(false).size() == 0) {
 				failedToRead = true;
 			}
+			loadValues();
 
 		} catch (Exception e) {
 			failedToRead = true;

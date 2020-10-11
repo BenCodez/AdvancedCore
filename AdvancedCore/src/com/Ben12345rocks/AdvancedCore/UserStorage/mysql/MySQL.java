@@ -170,7 +170,6 @@ public class MySQL {
 			
 			@Override
 			public void run() {
-				AdvancedCorePlugin.getInstance().extraDebug("Checking mysql background task");
 				if ((System.currentTimeMillis() - lastBackgroundCheck) > 10000) {
 					AdvancedCorePlugin.getInstance().getLogger().severe("MySQL background task not working, fixing");
 					cancel();
