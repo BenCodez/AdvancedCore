@@ -1,7 +1,11 @@
 package com.Ben12345rocks.AdvancedCore.gui;
 
+import java.util.HashMap;
+
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 
 import lombok.Getter;
 
@@ -11,6 +15,17 @@ public abstract class GUIHandler {
 	public abstract void onBook(Player player);
 
 	public abstract void onChest(Player player);
+	
+	@Getter
+	private HashMap<String,Object> data = new HashMap<String,Object>();
+	
+	public void setData(String str, Object value) {
+		data.put(str, value);
+	}
+	
+	public String colorize(String str) {
+		return StringParser.getInstance().colorize(str);
+	}
 
 	@Getter
 	private CommandSender player;
