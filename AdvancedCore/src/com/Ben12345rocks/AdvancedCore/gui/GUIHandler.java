@@ -19,6 +19,8 @@ public abstract class GUIHandler {
 	public abstract void onChest(Player player);
 	
 	public abstract ArrayList<String> getChat(CommandSender sender);
+	
+	public abstract void open();
 
 	@Getter
 	private HashMap<String, Object> data = new HashMap<String, Object>();
