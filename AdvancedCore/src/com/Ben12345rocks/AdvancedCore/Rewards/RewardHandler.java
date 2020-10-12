@@ -1516,11 +1516,12 @@ public class RewardHandler {
 				double totalChance = 0;
 				LinkedHashMap<Double, String> map = new LinkedHashMap<Double, String>();
 				for (String key : section.getKeys(false)) {
+					String path = key;
 					key = key.replaceAll("_", ".");
 					if (StringParser.getInstance().isDouble(key)) {
 						double chance = Double.valueOf(key);
 						totalChance += chance;
-						map.put(chance, key);
+						map.put(chance, path);
 					}
 				}
 
