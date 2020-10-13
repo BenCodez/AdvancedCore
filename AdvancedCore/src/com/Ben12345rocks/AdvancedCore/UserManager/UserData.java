@@ -26,8 +26,13 @@ public class UserData {
 		return FileThread.getInstance().getThread().getData(this, uuid);
 	}
 
+	@Deprecated
 	public int getInt(String key) {
 		return getInt(key, 0, true);
+	}
+	
+	public int getInt(String key, boolean waitForCache) {
+		return getInt(key, 0, waitForCache);
 	}
 
 	public int getInt(String key, int def, boolean waitForCache) {
@@ -129,6 +134,7 @@ public class UserData {
 				.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
 	}
 	
+	@Deprecated
 	public String getString(String key) {
 		return getString(key, true);
 	}

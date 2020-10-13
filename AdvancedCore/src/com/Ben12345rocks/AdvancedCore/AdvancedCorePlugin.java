@@ -606,7 +606,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			@Override
 			public void onStartUp(User user) {
 				String uuid = user.getUUID();
-				String name = user.getData().getString("PlayerName");
+				String name = user.getData().getString("PlayerName", true);
 				boolean add = true;
 				if (uuidNameCache.containsKey(uuid)) {
 					debug("Duplicate uuid? " + uuid);

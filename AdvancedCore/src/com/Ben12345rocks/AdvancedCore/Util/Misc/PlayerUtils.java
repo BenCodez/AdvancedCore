@@ -77,7 +77,7 @@ public class PlayerUtils {
 		java.util.UUID u = java.util.UUID.fromString(uuid);
 		Player player = Bukkit.getPlayer(u);
 
-		String storedName = user.getData().getString("PlayerName");
+		String storedName = user.getData().getString("PlayerName", true);
 		// String storedName = "";
 		if (player != null) {
 			name = player.getName();
@@ -191,7 +191,7 @@ public class PlayerUtils {
 
 		for (String uuid : UserManager.getInstance().getAllUUIDs()) {
 			User user = UserManager.getInstance().getUser(new UUID(uuid));
-			String name = user.getData().getString("PlayerName");
+			String name = user.getData().getString("PlayerName", true);
 			if (name.equals(playerName)) {
 				plugin.getUuidNameCache().put(uuid, playerName);
 				return uuid;

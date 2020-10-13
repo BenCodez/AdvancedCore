@@ -39,6 +39,7 @@ import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.PlayerUtils;
 import com.Ben12345rocks.AdvancedCore.Util.ValueRequest.InputMethod;
 
+import lombok.Getter;
 import net.md_5.bungee.api.chat.TextComponent;
 
 /**
@@ -290,11 +291,11 @@ public class User {
 	}
 
 	public String getInputMethod() {
-		return getUserData().getString("InputMethod");
+		return getUserData().getString("InputMethod", true);
 	}
 
 	public long getLastOnline() {
-		String d = getData().getString("LastOnline");
+		String d = getData().getString("LastOnline", true);
 		long time = 0;
 		if (d != null && !d.equals("")) {
 			time = Long.valueOf(d);
@@ -361,7 +362,7 @@ public class User {
 	}
 
 	public int getRepeatAmount(Reward reward) {
-		return getData().getInt("Repeat" + reward.getName());
+		return getData().getInt("Repeat" + reward.getName(), true);
 	}
 
 	public HashMap<String, Long> getTimedRewards() {
@@ -596,7 +597,7 @@ public class User {
 	}
 
 	public boolean isCheckWorld() {
-		return Boolean.valueOf(getData().getString("CheckWorld"));
+		return Boolean.valueOf(getData().getString("CheckWorld", true));
 	}
 
 	public boolean isInWorld(ArrayList<String> worlds) {
@@ -986,6 +987,13 @@ public class User {
 		this.playerName = playerName;
 	}
 
+	@Getter
+	private boolean waitForCache = true;
+
+	public void setWaitForCache(boolean b) {
+		waitForCache = b;
+	}
+
 	public void setRepeatAmount(Reward reward, int amount) {
 		getData().setInt("Repeat" + reward.getName(), amount);
 	}
@@ -1023,7 +1031,7 @@ public class User {
 
 	public void updateName() {
 		if (getData().hasData()) {
-			if (!getData().getString("PlayerName").equals(getPlayerName())) {
+			if (!getData().getString("PlayerName", true).equals(getPlayerName())) {
 				getData().setString("PlayerName", getPlayerName());
 			}
 		}

@@ -127,10 +127,10 @@ public class UserGUI {
 				EditGUI inv = new EditGUI("Edit Data, click to change");
 				final User user = UserManager.getInstance().getUser(playerName);
 				for (final String key : user.getData().getKeys()) {
-					String value = user.getData().getString(key);
+					String value = user.getData().getString(key,true);
 					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 						if (plugin.getMysql().isIntColumn(key)) {
-							value = "" + user.getData().getInt(key);
+							value = "" + user.getData().getInt(key,true);
 						}
 					}
 					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
@@ -159,10 +159,10 @@ public class UserGUI {
 				Player player = clickEvent.getPlayer();
 				User user = UserManager.getInstance().getUser(player);
 				for (String key : user.getData().getKeys()) {
-					String str = user.getData().getString(key);
+					String str = user.getData().getString(key,true);
 					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 						if (plugin.getMysql().isIntColumn(key)) {
-							str = "" + user.getData().getInt(key);
+							str = "" + user.getData().getInt(key,true);
 						}
 					}
 					user.sendMessage("&c&l" + key + " &c" + str);
