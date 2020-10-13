@@ -27,10 +27,10 @@ public class UserData {
 	}
 
 	public int getInt(String key) {
-		return getInt(key, 0);
+		return getInt(key, 0, true);
 	}
 
-	public int getInt(String key, int def) {
+	public int getInt(String key, int def, boolean waitForCache) {
 		if (!key.equals("")) {
 			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 				List<Column> row = getSQLiteRow();
@@ -55,7 +55,7 @@ public class UserData {
 				}
 
 			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-				List<Column> row = getMySqlRow();
+				List<Column> row = getMySqlRow(waitForCache);
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key)) {
@@ -73,7 +73,7 @@ public class UserData {
 							}
 						}
 					}
-				}
+				} 
 			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 				try {
 					return getData(user.getUUID()).getInt(key, def);
@@ -92,13 +92,17 @@ public class UserData {
 		return def;
 
 	}
-
+	
 	public ArrayList<String> getKeys() {
+		return getKeys(true);
+	}
+
+	public ArrayList<String> getKeys(boolean waitForCache) {
 		ArrayList<String> keys = new ArrayList<String>();
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			List<Column> col = getMySqlRow();
+			List<Column> col = getMySqlRow(waitForCache);
 			if (col != null && !col.isEmpty()) {
 				for (Column c : col) {
 					keys.add(c.getName());
@@ -116,16 +120,20 @@ public class UserData {
 		return keys;
 	}
 
-	public List<Column> getMySqlRow() {
-		return AdvancedCorePlugin.getInstance().getMysql().getExact(user.getUUID());
+	public List<Column> getMySqlRow(boolean waitForCache) {
+		return AdvancedCorePlugin.getInstance().getMysql().getExact(user.getUUID(),waitForCache);
 	}
 
 	public List<Column> getSQLiteRow() {
 		return AdvancedCorePlugin.getInstance().getSQLiteUserTable()
 				.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
 	}
-
+	
 	public String getString(String key) {
+		return getString(key, true);
+	}
+
+	public String getString(String key, boolean waitForCache) {
 		if (!key.equals("")) {
 			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 				List<Column> row = getSQLiteRow();
@@ -142,7 +150,7 @@ public class UserData {
 				}
 
 			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-				List<Column> row = getMySqlRow();
+				List<Column> row = getMySqlRow(waitForCache);
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key) && row.get(i).getDataType().equals(DataType.STRING)) {

@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.Ben12345rocks.AdvancedCore.AdvancedCorePlugin;
@@ -167,7 +168,7 @@ public class MySQL {
 
 		}, 10 * 1000, 250);
 		timer.schedule(new TimerTask() {
-			
+
 			@Override
 			public void run() {
 				if ((System.currentTimeMillis() - lastBackgroundCheck) > 10000) {
@@ -355,11 +356,20 @@ public class MySQL {
 
 	}
 
-	public ArrayList<Column> getExact(String uuid) {
-		// AdvancedCorePlugin.getInstance().debug("Get Exact: " + uuid);
-		loadPlayerIfNeeded(uuid);
-		// AdvancedCorePlugin.getInstance().debug("test one: " + uuid);
-		return table.get(uuid);
+	public ArrayList<Column> getExact(String uuid, boolean waitForCache) {
+		if (waitForCache || containsKey(uuid)) {
+			loadPlayerIfNeeded(uuid);
+			return table.get(uuid);
+		} else {
+			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+				@Override
+				public void run() {
+					loadPlayerIfNeeded(uuid);
+				}
+			});
+			return null;
+		}
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
@@ -611,7 +621,7 @@ public class MySQL {
 		checkColumn(column, dataType);
 		synchronized (object2) {
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
-				for (Column col : getExact(index)) {
+				for (Column col : getExact(index, true)) {
 					if (col.getName().equals(column)) {
 						col.setValue(value);
 					}

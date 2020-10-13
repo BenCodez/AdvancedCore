@@ -628,7 +628,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				if (getStorageType().equals(UserStorage.MYSQL)) {
 					try {
 						boolean delete = true;
-						List<Column> list = user.getData().getMySqlRow();
+						List<Column> list = user.getData().getMySqlRow(true);
 						if (list != null) {
 							for (Column col : list) {
 								if (!col.getName().equals("uuid") && !col.getName().equalsIgnoreCase("playername")) {
