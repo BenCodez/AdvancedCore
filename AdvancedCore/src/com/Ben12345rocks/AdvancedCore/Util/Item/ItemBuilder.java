@@ -305,7 +305,16 @@ public class ItemBuilder {
 		HashMap<Enchantment, Integer> enchantments = new HashMap<Enchantment, Integer>();
 		for (String enchant : enchants.keySet()) {
 			try {
-				enchantments.put(Enchantment.getByKey(NamespacedKey.minecraft(enchant)), enchants.get(enchant));
+				if (!NMSManager.getInstance().isVersion("1.12")) {
+					enchantments.put(Enchantment.getByKey(NamespacedKey.minecraft(enchant)), enchants.get(enchant));
+				} else {
+					for (Enchantment en : Enchantment.values()) {
+						if (en.toString().equalsIgnoreCase(enchant)) {
+							enchantments.put(en, enchants.get(enchant));
+						}
+					}
+					
+				}
 			} catch (Exception e) {
 				AdvancedCorePlugin.getInstance().getLogger().warning("Failed to add enchantment: " + enchant);
 				e.printStackTrace();
