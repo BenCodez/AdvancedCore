@@ -6,9 +6,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
@@ -235,6 +240,24 @@ public class PlayerUtils {
 		} else {
 			return true;
 		}
+	}
+	
+	public boolean canBreakBlock(Player p, Block b) {
+		BlockBreakEvent block = new BlockBreakEvent(b, p);
+		Bukkit.getPluginManager().callEvent(block);
+		if (!block.isCancelled()) {
+			return true;
+		}
+		return false;
+	}
+	
+	public boolean canInteract(Player p, Block clickedBlock, Action action, ItemStack item, BlockFace clickedFace) {
+		PlayerInteractEvent event = new PlayerInteractEvent(p, action, item, clickedBlock, clickedFace);
+		Bukkit.getPluginManager().callEvent(event);
+		if (event.useItemInHand().equals(Event.Result.DENY)) {
+			return false;
+		}
+		return true;
 	}
 
 	/**
