@@ -484,7 +484,7 @@ public class RewardHandler {
 					return true;
 				}
 				if (str.isEmpty()) {
-					str = plugin.getName() + ".Reward." + reward.getName();
+					str = "AdvancedCore.Reward." + reward.getName();
 				}
 
 				boolean perm = PlayerUtils.getInstance().hasServerPermission(user.getPlayerName(), str);
@@ -495,7 +495,7 @@ public class RewardHandler {
 				}
 				return true;
 			}
-		}.priority(100).addEditButton(
+		}.priority(100).alwaysForce().addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Permission", null) {
 
 					@Override
