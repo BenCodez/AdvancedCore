@@ -7,6 +7,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
@@ -541,16 +542,26 @@ public class MySQL {
 	}
 
 	public void insert(String index, String column, Object value, DataType dataType) {
-		insertQuery(index, column, value, dataType);
+		insertQuery(index, Arrays.asList(new Column(column, value, dataType)));
 
 	}
 
-	public void insertQuery(String index, String column, Object value, DataType dataType) {
+	public void insertQuery(String index, List<Column> cols) {
 		uuids.add(index);
 		String query = "INSERT " + getName() + " ";
 
 		query += "set uuid='" + index + "', ";
-		query += column + "='" + value.toString() + "';";
+
+		for (int i = 0; i < cols.size(); i++) {
+			Column col = cols.get(i);
+			if (i == cols.size() - 1) {
+				query += col.getName() + "='" + col.getValue().toString() + "';";
+			} else {
+				query += col.getName() + "='" + col.getValue().toString() + "', ";
+			}
+
+		}
+
 		// AdvancedCorePlugin.getInstance().extraDebug(query);
 
 		try {
@@ -610,7 +621,58 @@ public class MySQL {
 
 	public void update(String index, String column, Object value, DataType dataType) {
 		update(index, column, value, dataType, true);
+	}
 
+	public void update(String index, List<Column> cols, boolean queue) {
+		for (Column col : cols) {
+			checkColumn(col.getName(), col.getDataType());
+		}
+		synchronized (object2) {
+			if (getUuids().contains(index) || containsKeyQuery(index)) {
+				for (Column col : getExact(index, true)) {
+					for (Column newCol : cols) {
+						if (col.getName().equals(newCol.getName())) {
+							col.setValue(newCol.getValue());
+						}
+					}
+				}
+
+				String query = "UPDATE " + getName() + " SET ";
+
+				for (int i = 0; i < cols.size(); i++) {
+					Column col = cols.get(i);
+					if (i == cols.size() - 1) {
+						if (col.getDataType().equals(DataType.STRING)) {
+							query += col.getName() + "='" + col.getValue().toString() + "';";
+						} else {
+							query += col.getName() + "=" + col.getValue().toString() + ";";
+						}
+					} else {
+						if (col.getDataType().equals(DataType.STRING)) {
+							query += col.getName() + "='" + col.getValue().toString() + "', ";
+						} else {
+							query += col.getName() + "=" + col.getValue().toString() + ", ";
+						}
+
+					}
+				}
+				query += " WHERE `uuid`=";
+				query += "'" + index + "';";
+
+				if (queue) {
+					addToQue(query);
+				} else {
+					try {
+						Query q = new Query(mysql, query);
+						q.executeUpdateAsync();
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+				}
+			} else {
+				insertQuery(index, cols);
+			}
+		}
 	}
 
 	public void update(String index, String column, Object value, DataType dataType, boolean queue) {
