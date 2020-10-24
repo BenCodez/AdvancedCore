@@ -139,14 +139,18 @@ public class MySQL {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		
+		timer.schedule(new TimerTask() {
+			
+			@Override
+			public void run() {
+				loadData();
 
-		loadData();
+				schedule();
+			}
+		}, 5000l);
 
-		// tempoary to improve performance from old tables
-		// addToQue("ALTER TABLE " + getName() + " MODIFY uuid VARCHAR(37);");
-		alterColumnType("uuid", "VARCHAR(37)");
-
-		schedule();
+		
 
 		AdvancedCorePlugin.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
 	}
