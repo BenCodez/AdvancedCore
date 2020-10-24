@@ -123,7 +123,7 @@ public class MySQL {
 		}
 		try {
 			Query q = new Query(mysql, "USE " + database + ";");
-			q.executeUpdateAsync();
+			q.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -135,22 +135,14 @@ public class MySQL {
 		try {
 			query = new Query(mysql, sql);
 
-			query.executeUpdateAsync();
+			query.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		
-		timer.schedule(new TimerTask() {
-			
-			@Override
-			public void run() {
-				loadData();
 
-				schedule();
-			}
-		}, 5000l);
+		loadData();
 
-		
+		schedule();
 
 		AdvancedCorePlugin.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
 	}
@@ -279,8 +271,7 @@ public class MySQL {
 
 			rs = sql.executeQuery();
 			/*
-			 * Query query = new Query(mysql, sql);
-			 * ResultSet rs = query.executeQuery();
+			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
 			 */
 			while (rs.next()) {
 				if (rs.getString("uuid").equals(index)) {
@@ -333,8 +324,8 @@ public class MySQL {
 
 			rs = sql.executeQuery();
 			/*
-			 * Query query = new Query(mysql, "SELECT * FROM " + getName() + ";");
-			 * ResultSet rs = query.executeQuery();
+			 * Query query = new Query(mysql, "SELECT * FROM " + getName() + ";"); ResultSet
+			 * rs = query.executeQuery();
 			 */
 
 			ResultSetMetaData metadata = rs.getMetaData();
@@ -391,9 +382,8 @@ public class MySQL {
 			rs = sql.executeQuery();
 
 			/*
-			 * Query sql = new Query(mysql, query);
-			 * sql.setParameter(1, column.getValue().toString());
-			 * ResultSet rs = sql.executeQuery();
+			 * Query sql = new Query(mysql, query); sql.setParameter(1,
+			 * column.getValue().toString()); ResultSet rs = sql.executeQuery();
 			 */
 			if (rs.next()) {
 				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
@@ -471,8 +461,7 @@ public class MySQL {
 
 			rs = sql.executeQuery();
 			/*
-			 * Query query = new Query(mysql, sql);
-			 * ResultSet rs = query.executeQuery();
+			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
 			 */
 
 			while (rs.next()) {
@@ -500,8 +489,7 @@ public class MySQL {
 
 			rs = sql.executeQuery();
 			/*
-			 * Query query = new Query(mysql, sql);
-			 * ResultSet rs = query.executeQuery();
+			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
 			 */
 
 			while (rs.next()) {
