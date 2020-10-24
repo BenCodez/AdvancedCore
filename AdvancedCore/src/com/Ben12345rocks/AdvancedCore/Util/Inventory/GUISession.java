@@ -10,8 +10,7 @@ public class GUISession implements InventoryHolder {
 	 * Get the GUISession for a given inventory, or null if none exists for this
 	 * inventory
 	 *
-	 * @param inventory
-	 *            The inventory to get the GUISession from
+	 * @param inventory The inventory to get the GUISession from
 	 * @return The GUISession or null if none exists
 	 */
 	public static GUISession extractSession(Inventory inventory) {
@@ -29,8 +28,7 @@ public class GUISession implements InventoryHolder {
 	 * Extract the GUISession from the inventory currently being viewed by a player,
 	 * or null if none exists
 	 *
-	 * @param player
-	 *            The player who's open inventory to extract the GUISession from
+	 * @param player The player who's open inventory to extract the GUISession from
 	 * @return The GUISession or null if none exists
 	 */
 	public static GUISession extractSession(Player player) {
@@ -51,10 +49,8 @@ public class GUISession implements InventoryHolder {
 	/**
 	 * Construct a new GUISession
 	 *
-	 * @param inventoryGUI
-	 *            The inventory that this a session to view
-	 * @param page
-	 *            The page currently being viewed
+	 * @param inventoryGUI The inventory that this a session to view
+	 * @param page         The page currently being viewed
 	 */
 	public GUISession(BInventory inventoryGUI, int page) {
 		if (inventoryGUI == null) {
@@ -96,8 +92,7 @@ public class GUISession implements InventoryHolder {
 	/**
 	 * Set the page currently being viewed
 	 *
-	 * @param page
-	 *            The page
+	 * @param page The page
 	 */
 	public void setPage(int page) {
 		if (page < 1) {

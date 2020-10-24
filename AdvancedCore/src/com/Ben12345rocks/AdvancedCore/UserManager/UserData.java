@@ -30,7 +30,7 @@ public class UserData {
 	public int getInt(String key) {
 		return getInt(key, 0, true);
 	}
-	
+
 	public int getInt(String key, boolean waitForCache) {
 		return getInt(key, 0, waitForCache);
 	}
@@ -78,7 +78,7 @@ public class UserData {
 							}
 						}
 					}
-				} 
+				}
 			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 				try {
 					return getData(user.getUUID()).getInt(key, def);
@@ -97,7 +97,7 @@ public class UserData {
 		return def;
 
 	}
-	
+
 	public ArrayList<String> getKeys() {
 		return getKeys(true);
 	}
@@ -126,14 +126,14 @@ public class UserData {
 	}
 
 	public List<Column> getMySqlRow(boolean waitForCache) {
-		return AdvancedCorePlugin.getInstance().getMysql().getExact(user.getUUID(),waitForCache);
+		return AdvancedCorePlugin.getInstance().getMysql().getExact(user.getUUID(), waitForCache);
 	}
 
 	public List<Column> getSQLiteRow() {
 		return AdvancedCorePlugin.getInstance().getSQLiteUserTable()
 				.getExact(new Column("uuid", user.getUUID(), DataType.STRING));
 	}
-	
+
 	@Deprecated
 	public String getString(String key) {
 		return getString(key, true);
@@ -182,8 +182,7 @@ public class UserData {
 		/*
 		 * if (AdvancedCorePlugin.getInstance().isExtraDebug()) {
 		 * AdvancedCorePlugin.getInstance() .debug("Extra: Failed to get string from: '"
-		 * +
-		 * key + "' for '" + user.getPlayerName() + "'"); }
+		 * + key + "' for '" + user.getPlayerName() + "'"); }
 		 */
 		return "";
 	}

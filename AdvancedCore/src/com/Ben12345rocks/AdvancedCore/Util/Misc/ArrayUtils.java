@@ -38,8 +38,7 @@ public class ArrayUtils {
 	/**
 	 * Colorize.
 	 *
-	 * @param list
-	 *            the list
+	 * @param list the list
 	 * @return the array list
 	 */
 	public ArrayList<String> colorize(ArrayList<String> list) {
@@ -56,8 +55,7 @@ public class ArrayUtils {
 	/**
 	 * Colorize.
 	 *
-	 * @param list
-	 *            the list
+	 * @param list the list
 	 * @return the list
 	 */
 	public List<String> colorize(List<String> list) {
@@ -74,8 +72,7 @@ public class ArrayUtils {
 	/**
 	 * Colorize.
 	 *
-	 * @param list
-	 *            the list
+	 * @param list the list
 	 * @return the string[]
 	 */
 	public String[] colorize(String[] list) {
@@ -92,8 +89,7 @@ public class ArrayUtils {
 	/**
 	 * Compto string.
 	 *
-	 * @param comps
-	 *            the comps
+	 * @param comps the comps
 	 * @return the array list
 	 */
 	public ArrayList<String> comptoString(ArrayList<TextComponent> comps) {
@@ -118,10 +114,8 @@ public class ArrayUtils {
 	/**
 	 * Sets the contains ignore case.
 	 *
-	 * @param set
-	 *            the set
-	 * @param str
-	 *            the str
+	 * @param set the set
+	 * @param str the str
 	 * @return true, if successful
 	 */
 	public boolean containsIgnoreCase(Set<String> set, String str) {
@@ -138,8 +132,7 @@ public class ArrayUtils {
 	/**
 	 * Convert array.
 	 *
-	 * @param list
-	 *            the list
+	 * @param list the list
 	 * @return the string[]
 	 */
 	public String[] convert(ArrayList<String> list) {
@@ -157,8 +150,7 @@ public class ArrayUtils {
 	/**
 	 * Convert.
 	 *
-	 * @param set1
-	 *            the set
+	 * @param set1 the set
 	 * @return the array list
 	 */
 	public ArrayList<String> convert(Set<String> set1) {
@@ -173,8 +165,7 @@ public class ArrayUtils {
 	/**
 	 * Convert array.
 	 *
-	 * @param list
-	 *            the list
+	 * @param list the list
 	 * @return the array list
 	 */
 	@SuppressWarnings("unused")
@@ -218,8 +209,7 @@ public class ArrayUtils {
 	/**
 	 * Sets the to array.
 	 *
-	 * @param set
-	 *            the set
+	 * @param set the set
 	 * @return the string[]
 	 */
 	@SuppressWarnings("unused")
@@ -240,8 +230,7 @@ public class ArrayUtils {
 	/**
 	 * Convert.
 	 *
-	 * @param array
-	 *            the array
+	 * @param array the array
 	 * @return the user[]
 	 */
 	public User[] convertUsers(ArrayList<User> array) {
@@ -258,8 +247,7 @@ public class ArrayUtils {
 	/**
 	 * Convert set.
 	 *
-	 * @param set
-	 *            the set
+	 * @param set the set
 	 * @return the array list
 	 */
 	public ArrayList<User> convertUsers(Set<User> set) {
@@ -307,10 +295,8 @@ public class ArrayUtils {
 	/**
 	 * Make string.
 	 *
-	 * @param startIndex
-	 *            the start index
-	 * @param strs
-	 *            the strs
+	 * @param startIndex the start index
+	 * @param strs       the strs
 	 * @return the string
 	 */
 	public String makeString(int startIndex, String[] strs) {
@@ -329,8 +315,7 @@ public class ArrayUtils {
 	/**
 	 * Make string list.
 	 *
-	 * @param list
-	 *            the list
+	 * @param list the list
 	 * @return the string
 	 */
 	public String makeStringList(ArrayList<String> list) {
@@ -362,8 +347,7 @@ public class ArrayUtils {
 	/**
 	 * Removes the duplicates.
 	 *
-	 * @param list
-	 *            the list
+	 * @param list the list
 	 * @return the array list
 	 */
 	public ArrayList<String> removeDuplicates(ArrayList<String> list) {
@@ -377,12 +361,9 @@ public class ArrayUtils {
 	/**
 	 * Replace.
 	 *
-	 * @param list
-	 *            the list
-	 * @param toReplace
-	 *            the to replace
-	 * @param replaceWith
-	 *            the replace with
+	 * @param list        the list
+	 * @param toReplace   the to replace
+	 * @param replaceWith the replace with
 	 * @return the list
 	 */
 	public List<String> replace(List<String> list, String toReplace, String replaceWith) {
@@ -401,12 +382,9 @@ public class ArrayUtils {
 	/**
 	 * Replace ignore case.
 	 *
-	 * @param list
-	 *            the list
-	 * @param toReplace
-	 *            the to replace
-	 * @param replaceWith
-	 *            the replace with
+	 * @param list        the list
+	 * @param toReplace   the to replace
+	 * @param replaceWith the replace with
 	 * @return the array list
 	 */
 	public ArrayList<String> replaceIgnoreCase(ArrayList<String> list, String toReplace, String replaceWith) {
@@ -477,10 +455,8 @@ public class ArrayUtils {
 	/**
 	 * Sort by values.
 	 *
-	 * @param unsortMap
-	 *            the unsort map
-	 * @param order
-	 *            the order
+	 * @param unsortMap the unsort map
+	 * @param order     the order
 	 * @return the hash map
 	 */
 	public HashMap<User, Integer> sortByValues(HashMap<User, Integer> unsortMap, final boolean order) {

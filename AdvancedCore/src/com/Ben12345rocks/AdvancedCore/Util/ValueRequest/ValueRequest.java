@@ -34,8 +34,7 @@ public class ValueRequest {
 	/**
 	 * Instantiates a new value request.
 	 *
-	 * @param method
-	 *            the method
+	 * @param method the method
 	 */
 	public ValueRequest(InputMethod method) {
 		this.method = method;
@@ -44,10 +43,8 @@ public class ValueRequest {
 	/**
 	 * Request boolean.
 	 *
-	 * @param player
-	 *            the player
-	 * @param listener
-	 *            the listener
+	 * @param player   the player
+	 * @param listener the listener
 	 */
 	public void requestBoolean(Player player, BooleanListener listener) {
 		InputMethod input = method;
@@ -60,12 +57,9 @@ public class ValueRequest {
 	/**
 	 * Request boolean.
 	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param listener
-	 *            the listener
+	 * @param player       the player
+	 * @param currentValue the current value
+	 * @param listener     the listener
 	 */
 	public void requestBoolean(Player player, String currentValue, BooleanListener listener) {
 		InputMethod input = method;
@@ -88,10 +82,8 @@ public class ValueRequest {
 	/**
 	 * Request number.
 	 *
-	 * @param player
-	 *            the player
-	 * @param listener
-	 *            the listener
+	 * @param player   the player
+	 * @param listener the listener
 	 */
 	public void requestNumber(Player player, NumberListener listener) {
 		InputMethod input = method;
@@ -104,16 +96,11 @@ public class ValueRequest {
 	/**
 	 * Request number.
 	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param options
-	 *            the options
-	 * @param allowCustomOption
-	 *            the allow custom option
-	 * @param listener
-	 *            the listener
+	 * @param player            the player
+	 * @param currentValue      the current value
+	 * @param options           the options
+	 * @param allowCustomOption the allow custom option
+	 * @param listener          the listener
 	 */
 	public void requestNumber(Player player, String currentValue, Number[] options, boolean allowCustomOption,
 			NumberListener listener) {
@@ -128,14 +115,10 @@ public class ValueRequest {
 	/**
 	 * Request number.
 	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param options
-	 *            the options
-	 * @param listener
-	 *            the listener
+	 * @param player       the player
+	 * @param currentValue the current value
+	 * @param options      the options
+	 * @param listener     the listener
 	 */
 	public void requestNumber(Player player, String currentValue, Number[] options, NumberListener listener) {
 		InputMethod input = method;
@@ -158,16 +141,11 @@ public class ValueRequest {
 	/**
 	 * Request string.
 	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param options
-	 *            the options
-	 * @param allowCustomOption
-	 *            the allow custom option
-	 * @param listener
-	 *            the listener
+	 * @param player            the player
+	 * @param currentValue      the current value
+	 * @param options           the options
+	 * @param allowCustomOption the allow custom option
+	 * @param listener          the listener
 	 */
 	public void requestString(Player player, String currentValue, String[] options, boolean allowCustomOption,
 			StringListener listener) {
@@ -182,14 +160,10 @@ public class ValueRequest {
 	/**
 	 * Request string.
 	 *
-	 * @param player
-	 *            the player
-	 * @param currentValue
-	 *            the current value
-	 * @param options
-	 *            the options
-	 * @param listener
-	 *            the listener
+	 * @param player       the player
+	 * @param currentValue the current value
+	 * @param options      the options
+	 * @param listener     the listener
 	 */
 	public void requestString(Player player, String currentValue, String[] options, StringListener listener) {
 		InputMethod input = method;
@@ -202,10 +176,8 @@ public class ValueRequest {
 	/**
 	 * Request string.
 	 *
-	 * @param player
-	 *            the player
-	 * @param listener
-	 *            the listener
+	 * @param player   the player
+	 * @param listener the listener
 	 */
 	public void requestString(Player player, StringListener listener) {
 		InputMethod input = method;

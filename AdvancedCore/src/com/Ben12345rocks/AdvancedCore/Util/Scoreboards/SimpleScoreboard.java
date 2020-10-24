@@ -43,8 +43,7 @@ public class SimpleScoreboard {
 	/**
 	 * Instantiates a new simple scoreboard.
 	 *
-	 * @param title
-	 *            the title
+	 * @param title the title
 	 */
 	public SimpleScoreboard(String title) {
 
@@ -56,8 +55,7 @@ public class SimpleScoreboard {
 	/**
 	 * Adds the.
 	 *
-	 * @param text
-	 *            the text
+	 * @param text the text
 	 */
 	public void add(String text) {
 		text = StringParser.getInstance().colorize(text);
@@ -67,10 +65,8 @@ public class SimpleScoreboard {
 	/**
 	 * Adds the.
 	 *
-	 * @param text
-	 *            the text
-	 * @param score
-	 *            the score
+	 * @param text  the text
+	 * @param score the score
 	 */
 	public void add(String text, Integer score) {
 		Preconditions.checkArgument(text.length() < 48, "text cannot be over 48 characters in length");
@@ -119,8 +115,7 @@ public class SimpleScoreboard {
 	/**
 	 * Creates the team.
 	 *
-	 * @param text
-	 *            the text
+	 * @param text the text
 	 * @return the map. entry
 	 */
 	private Map.Entry<Team, String> createTeam(String text) {
@@ -142,8 +137,7 @@ public class SimpleScoreboard {
 	/**
 	 * Fix duplicates.
 	 *
-	 * @param text
-	 *            the text
+	 * @param text the text
 	 * @return the string
 	 */
 	private String fixDuplicates(String text) {
@@ -180,8 +174,7 @@ public class SimpleScoreboard {
 	/**
 	 * Send.
 	 *
-	 * @param players
-	 *            the players
+	 * @param players the players
 	 */
 	public void send(Player... players) {
 		if (AdvancedCorePlugin.getInstance().getOptions().isSendScoreboards()) {

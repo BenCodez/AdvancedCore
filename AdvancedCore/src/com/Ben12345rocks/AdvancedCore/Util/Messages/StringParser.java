@@ -36,8 +36,7 @@ public class StringParser {
 	/**
 	 * Colorize.
 	 *
-	 * @param format
-	 *            the format
+	 * @param format the format
 	 * @return the string
 	 */
 	public String colorize(String format) {
@@ -60,8 +59,7 @@ public class StringParser {
 	/**
 	 * Comp to string.
 	 *
-	 * @param comp
-	 *            the comp
+	 * @param comp the comp
 	 * @return the string
 	 */
 	public String compToString(TextComponent comp) {
@@ -128,8 +126,7 @@ public class StringParser {
 	/**
 	 * Checks if is int.
 	 *
-	 * @param st
-	 *            the st
+	 * @param st the st
 	 * @return true, if is int
 	 */
 	public boolean isInt(String st) {
@@ -216,12 +213,9 @@ public class StringParser {
 	/**
 	 * Replace ignore case.
 	 *
-	 * @param str
-	 *            the str
-	 * @param toReplace
-	 *            the to replace
-	 * @param replaceWith
-	 *            the replace with
+	 * @param str         the str
+	 * @param toReplace   the to replace
+	 * @param replaceWith the replace with
 	 * @return the string
 	 */
 	public String replaceIgnoreCase(String str, String toReplace, String replaceWith) {
@@ -335,12 +329,9 @@ public class StringParser {
 	/**
 	 * Replace place holder.
 	 *
-	 * @param str
-	 *            the str
-	 * @param toReplace
-	 *            the to replace
-	 * @param replaceWith
-	 *            the replace with
+	 * @param str         the str
+	 * @param toReplace   the to replace
+	 * @param replaceWith the replace with
 	 * @return the string
 	 */
 	public String replacePlaceHolder(String str, String toReplace, String replaceWith) {
@@ -374,10 +365,8 @@ public class StringParser {
 	/**
 	 * Replace place holders.
 	 *
-	 * @param player
-	 *            the player
-	 * @param text
-	 *            the text
+	 * @param player the player
+	 * @param text   the text
 	 * @return the string
 	 */
 	public String replacePlaceHolders(Player player, String text) {
@@ -394,10 +383,8 @@ public class StringParser {
 	/**
 	 * Round decimals.
 	 *
-	 * @param num
-	 *            the num
-	 * @param decimals
-	 *            the decimals
+	 * @param num      the num
+	 * @param decimals the decimals
 	 * @return the string
 	 */
 	public String roundDecimals(double num, int decimals) {
@@ -411,10 +398,8 @@ public class StringParser {
 	/**
 	 * Starts with ignore case.
 	 *
-	 * @param str1
-	 *            the str 1
-	 * @param str2
-	 *            the str 2
+	 * @param str1 the str 1
+	 * @param str2 the str 2
 	 * @return true, if successful
 	 */
 	public boolean startsWithIgnoreCase(String str1, String str2) {
@@ -424,8 +409,7 @@ public class StringParser {
 	/**
 	 * String to comp.
 	 *
-	 * @param string
-	 *            the string
+	 * @param string the string
 	 * @return the text component
 	 */
 	public TextComponent stringToComp(String string) {

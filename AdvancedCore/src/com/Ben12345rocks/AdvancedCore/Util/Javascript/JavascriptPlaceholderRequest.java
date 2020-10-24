@@ -20,8 +20,7 @@ public abstract class JavascriptPlaceholderRequest {
 	}
 
 	/**
-	 * @param str
-	 *            the str to set
+	 * @param str the str to set
 	 */
 	public void setStr(String str) {
 		this.str = str;

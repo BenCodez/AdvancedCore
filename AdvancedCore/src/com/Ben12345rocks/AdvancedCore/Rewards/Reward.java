@@ -83,10 +83,8 @@ public class Reward {
 	/**
 	 * Instantiates a new reward.
 	 *
-	 * @param file
-	 *            the file
-	 * @param reward
-	 *            the reward
+	 * @param file   the file
+	 * @param reward the reward
 	 */
 	public Reward(File file, String reward) {
 		load(file, reward);
@@ -95,8 +93,7 @@ public class Reward {
 	/**
 	 * Instantiates a new reward.
 	 *
-	 * @param reward
-	 *            the reward
+	 * @param reward the reward
 	 */
 	public Reward(String reward) {
 		load(RewardHandler.getInstance().getDefaultFolder(), reward);
@@ -333,12 +330,9 @@ public class Reward {
 	/**
 	 * Give reward user.
 	 *
-	 * @param user
-	 *            the user
-	 * @param phs
-	 *            placeholders
-	 * @param rewardOptions
-	 *            rewardOptions
+	 * @param user          the user
+	 * @param phs           placeholders
+	 * @param rewardOptions rewardOptions
 	 */
 	public void giveRewardUser(User user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 
@@ -392,10 +386,8 @@ public class Reward {
 	/**
 	 * Load.
 	 *
-	 * @param folder
-	 *            the folder
-	 * @param reward
-	 *            the reward
+	 * @param folder the folder
+	 * @param reward the reward
 	 */
 	public void load(File folder, String reward) {
 		name = reward;

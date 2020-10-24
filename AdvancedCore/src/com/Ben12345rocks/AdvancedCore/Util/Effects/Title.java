@@ -38,8 +38,7 @@ public class Title {
 	/**
 	 * Instantiates a new title.
 	 *
-	 * @param title
-	 *            the title
+	 * @param title the title
 	 */
 	public Title(String title) {
 		this.title = title;
@@ -48,10 +47,8 @@ public class Title {
 	/**
 	 * Instantiates a new title.
 	 *
-	 * @param title
-	 *            the title
-	 * @param subtitle
-	 *            the subtitle
+	 * @param title    the title
+	 * @param subtitle the subtitle
 	 */
 	public Title(String title, String subtitle) {
 		this.title = title;
@@ -61,16 +58,11 @@ public class Title {
 	/**
 	 * Instantiates a new title.
 	 *
-	 * @param title
-	 *            the title
-	 * @param subtitle
-	 *            the subtitle
-	 * @param fadeInTime
-	 *            the fade in time
-	 * @param stayTime
-	 *            the stay time
-	 * @param fadeOutTime
-	 *            the fade out time
+	 * @param title       the title
+	 * @param subtitle    the subtitle
+	 * @param fadeInTime  the fade in time
+	 * @param stayTime    the stay time
+	 * @param fadeOutTime the fade out time
 	 */
 	public Title(String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
 		this.title = title;
@@ -83,8 +75,7 @@ public class Title {
 	/**
 	 * Instantiates a new title.
 	 *
-	 * @param title
-	 *            the title
+	 * @param title the title
 	 */
 	public Title(Title title) {
 		// Copy title
@@ -107,8 +98,7 @@ public class Title {
 	/**
 	 * Clear title.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void clearTitle(Player player) {
 		player.sendTitle("", "", -1, -1, -1);
@@ -162,8 +152,7 @@ public class Title {
 	/**
 	 * Reset title.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void resetTitle(Player player) {
 		clearTitle(player);
@@ -172,8 +161,7 @@ public class Title {
 	/**
 	 * Send.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void send(Player player) {
 		send(player, title, subtitle, fadeInTime, stayTime, fadeOutTime);
@@ -187,8 +175,7 @@ public class Title {
 	/**
 	 * Sets the fade in time.
 	 *
-	 * @param time
-	 *            the new fade in time
+	 * @param time the new fade in time
 	 */
 	public void setFadeInTime(int time) {
 		fadeInTime = time;
@@ -197,8 +184,7 @@ public class Title {
 	/**
 	 * Sets the fade out time.
 	 *
-	 * @param time
-	 *            the new fade out time
+	 * @param time the new fade out time
 	 */
 	public void setFadeOutTime(int time) {
 		fadeOutTime = time;
@@ -207,8 +193,7 @@ public class Title {
 	/**
 	 * Sets the stay time.
 	 *
-	 * @param time
-	 *            the new stay time
+	 * @param time the new stay time
 	 */
 	public void setStayTime(int time) {
 		stayTime = time;
@@ -217,8 +202,7 @@ public class Title {
 	/**
 	 * Sets the subtitle.
 	 *
-	 * @param subtitle
-	 *            the new subtitle
+	 * @param subtitle the new subtitle
 	 */
 	public void setSubtitle(String subtitle) {
 		this.subtitle = subtitle;
@@ -227,8 +211,7 @@ public class Title {
 	/**
 	 * Sets the title.
 	 *
-	 * @param title
-	 *            the new title
+	 * @param title the new title
 	 */
 	public void setTitle(String title) {
 		this.title = title;
@@ -237,8 +220,7 @@ public class Title {
 	/**
 	 * Update subtitle.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void updateSubtitle(Player player) {
 		updateSubtitle(player, subtitle);
@@ -251,8 +233,7 @@ public class Title {
 	/**
 	 * Update times.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void updateTimes(Player player) {
 		updateTimes(player, fadeInTime, stayTime, fadeOutTime);
@@ -265,8 +246,7 @@ public class Title {
 	/**
 	 * Update title.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void updateTitle(Player player) {
 		updateTitle(player, title);

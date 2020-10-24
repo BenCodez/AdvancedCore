@@ -75,8 +75,7 @@ public class ItemBuilder {
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
 	 *
-	 * @param data
-	 *            ConfigurationSection
+	 * @param data ConfigurationSection
 	 */
 	public ItemBuilder(ConfigurationSection data) {
 		if (data == null) {
@@ -231,8 +230,7 @@ public class ItemBuilder {
 	/**
 	 * Create a new ItemBuilder over an existing itemstack.
 	 *
-	 * @param is
-	 *            The itemstack to create the ItemBuilder over.
+	 * @param is The itemstack to create the ItemBuilder over.
 	 */
 	public ItemBuilder(ItemStack is) {
 		this.is = is;
@@ -241,8 +239,7 @@ public class ItemBuilder {
 	/**
 	 * Create a new ItemBuilder from scratch.
 	 *
-	 * @param m
-	 *            The material to create the ItemBuilder with.
+	 * @param m The material to create the ItemBuilder with.
 	 */
 	public ItemBuilder(Material m) {
 		this(m, 1);
@@ -251,10 +248,8 @@ public class ItemBuilder {
 	/**
 	 * Create a new ItemBuilder from scratch.
 	 *
-	 * @param material
-	 *            The material of the item.
-	 * @param amount
-	 *            The amount of the item.
+	 * @param material The material of the item.
+	 * @param amount   The amount of the item.
 	 */
 	public ItemBuilder(Material material, int amount) {
 		is = new ItemStack(material, amount);
@@ -270,10 +265,8 @@ public class ItemBuilder {
 	/**
 	 * Add an enchant to the item.
 	 *
-	 * @param ench
-	 *            The enchant to add
-	 * @param level
-	 *            The level
+	 * @param ench  The enchant to add
+	 * @param level The level
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchant(Enchantment ench, int level) {
@@ -294,8 +287,7 @@ public class ItemBuilder {
 	/**
 	 * Add multiple enchants at once.
 	 *
-	 * @param enchants
-	 *            The enchants to add.
+	 * @param enchants The enchants to add.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchantments(HashMap<String, Integer> enchants) {
@@ -313,7 +305,7 @@ public class ItemBuilder {
 							enchantments.put(en, enchants.get(enchant));
 						}
 					}
-					
+
 				}
 			} catch (Exception e) {
 				AdvancedCorePlugin.getInstance().getLogger().warning("Failed to add enchantment: " + enchant);
@@ -326,8 +318,7 @@ public class ItemBuilder {
 	/**
 	 * Add multiple enchants at once.
 	 *
-	 * @param enchantments
-	 *            The enchants to add.
+	 * @param enchantments The enchants to add.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addEnchantments(Map<Enchantment, Integer> enchantments) {
@@ -359,8 +350,7 @@ public class ItemBuilder {
 	/**
 	 * Add a lore line.
 	 *
-	 * @param line
-	 *            The lore line to add.
+	 * @param line The lore line to add.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addLoreLine(String line) {
@@ -381,10 +371,8 @@ public class ItemBuilder {
 	/**
 	 * Add a lore line.
 	 *
-	 * @param line
-	 *            The lore line to add.
-	 * @param pos
-	 *            The index of where to put it.
+	 * @param line The lore line to add.
+	 * @param pos  The index of where to put it.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder addLoreLine(String line, int pos) {
@@ -640,8 +628,7 @@ public class ItemBuilder {
 	/**
 	 * Remove a certain enchant from the item.
 	 *
-	 * @param ench
-	 *            The enchantment to remove
+	 * @param ench The enchantment to remove
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder removeEnchantment(Enchantment ench) {
@@ -657,8 +644,7 @@ public class ItemBuilder {
 	/**
 	 * Remove a lore line.
 	 *
-	 * @param index
-	 *            The index of the lore line to remove.
+	 * @param index The index of the lore line to remove.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder removeLoreLine(int index) {
@@ -676,8 +662,7 @@ public class ItemBuilder {
 	/**
 	 * Remove a lore line.
 	 *
-	 * @param line
-	 *            The lore to remove.
+	 * @param line The lore to remove.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder removeLoreLine(String line) {
@@ -727,8 +712,7 @@ public class ItemBuilder {
 	/**
 	 * Change the durability of the item.
 	 *
-	 * @param dur
-	 *            The durability to set it to.
+	 * @param dur The durability to set it to.
 	 *
 	 * @return ItemBuilder
 	 */
@@ -742,8 +726,7 @@ public class ItemBuilder {
 	 * Sets the dye color on an item. <b>* Notice that this doesn't check for item
 	 * type, sets the literal data of the dyecolor as durability.</b>
 	 *
-	 * @param color
-	 *            The color to put.
+	 * @param color The color to put.
 	 * @return ItemBuilder
 	 */
 	@Deprecated
@@ -793,8 +776,7 @@ public class ItemBuilder {
 	 * Sets the armor color of a leather armor piece. Works only on leather armor
 	 * pieces.
 	 *
-	 * @param color
-	 *            The color to set it to.
+	 * @param color The color to set it to.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLeatherArmorColor(Color color) {
@@ -810,8 +792,7 @@ public class ItemBuilder {
 	/**
 	 * Re-sets the lore.
 	 *
-	 * @param lore
-	 *            The lore to set it to.
+	 * @param lore The lore to set it to.
 	 *
 	 * @return ItemBuilder
 	 */
@@ -831,8 +812,7 @@ public class ItemBuilder {
 	/**
 	 * Re-sets the lore.
 	 *
-	 * @param lore
-	 *            The lore to set it to.
+	 * @param lore The lore to set it to.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLore(String... lore) {
@@ -847,8 +827,7 @@ public class ItemBuilder {
 	/**
 	 * Set the displayname of the item.
 	 *
-	 * @param name
-	 *            The name to change it to.
+	 * @param name The name to change it to.
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setName(String name) {
@@ -886,8 +865,7 @@ public class ItemBuilder {
 	/**
 	 * Set the skull owner for the item. Works on skulls only.
 	 *
-	 * @param owner
-	 *            The name of the skull's owner.
+	 * @param owner The name of the skull's owner.
 	 * @return ItemBuilder
 	 */
 	@Deprecated

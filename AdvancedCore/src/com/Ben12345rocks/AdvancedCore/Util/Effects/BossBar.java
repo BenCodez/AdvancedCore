@@ -25,14 +25,10 @@ public class BossBar {
 	/**
 	 * Instantiates a new boss bar.
 	 *
-	 * @param msg
-	 *            the msg
-	 * @param barColor
-	 *            the bar color
-	 * @param barStyle
-	 *            the bar style
-	 * @param progress
-	 *            the progress
+	 * @param msg      the msg
+	 * @param barColor the bar color
+	 * @param barStyle the bar style
+	 * @param progress the progress
 	 */
 	public BossBar(String msg, String barColor, String barStyle, double progress) {
 		bossBar = Bukkit.createBossBar(StringParser.getInstance().colorize(msg), BarColor.valueOf(barColor),
@@ -105,10 +101,8 @@ public class BossBar {
 	/**
 	 * Send.
 	 *
-	 * @param player
-	 *            the player
-	 * @param delay
-	 *            the delay
+	 * @param player the player
+	 * @param delay  the delay
 	 */
 	public void send(Player player, int delay) {
 		bossBar.addPlayer(player);

@@ -15,33 +15,57 @@ import lombok.Getter;
 import net.md_5.bungee.api.chat.TextComponent;
 
 public abstract class GUIHandler {
-	public abstract void onChat(CommandSender player);
-
-	public abstract void onBook(Player player);
-
-	public abstract void onChest(Player player);
-
-	public abstract ArrayList<String> getChat(CommandSender sender);
-
-	public abstract void open();
-
 	@Getter
 	private HashMap<String, Object> data = new HashMap<String, Object>();
 
-	public void setData(String str, Object value) {
-		data.put(str, value);
+	@Getter
+	private CommandSender player;
+
+	public GUIHandler(CommandSender player) {
+		this.player = player;
 	}
 
 	public String colorize(String str) {
 		return StringParser.getInstance().colorize(str);
 	}
 
-	public void sendMessage(String... message) {
-		player.sendMessage(message);
+	public abstract ArrayList<String> getChat(CommandSender sender);
+
+	public abstract void onBook(Player player);
+
+	public abstract void onChat(CommandSender player);
+
+	public abstract void onChest(Player player);
+
+	public abstract void open();
+
+	public void open(GUIMethod method) {
+		if (player instanceof Player) {
+			switch (method) {
+			case BOOK:
+				onBook((Player) player);
+				return;
+			case CHAT:
+				onChat(player);
+				return;
+			case CHEST:
+				onChest((Player) player);
+				return;
+			default:
+				break;
+
+			}
+		} else {
+			onChat(player);
+		}
 	}
 
 	public void sendMessage(ArrayList<String> message) {
 		player.sendMessage(ArrayUtils.getInstance().convert(message));
+	}
+
+	public void sendMessage(String... message) {
+		player.sendMessage(message);
 	}
 
 	public void sendMessageJson(ArrayList<TextComponent> text) {
@@ -53,31 +77,7 @@ public abstract class GUIHandler {
 		}
 	}
 
-	@Getter
-	private CommandSender player;
-
-	public GUIHandler(CommandSender player) {
-		this.player = player;
-	}
-
-	public void open(GUIMethod method) {
-		if (player instanceof Player) {
-			switch (method) {
-				case BOOK:
-					onBook((Player) player);
-					return;
-				case CHAT:
-					onChat(player);
-					return;
-				case CHEST:
-					onChest((Player) player);
-					return;
-				default:
-					break;
-
-			}
-		} else {
-			onChat(player);
-		}
+	public void setData(String str, Object value) {
+		data.put(str, value);
 	}
 }

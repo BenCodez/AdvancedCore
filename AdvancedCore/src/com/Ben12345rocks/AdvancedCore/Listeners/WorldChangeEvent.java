@@ -22,8 +22,7 @@ public class WorldChangeEvent implements Listener {
 	/**
 	 * Instantiates a new world change event.
 	 *
-	 * @param plugin
-	 *            Plugin
+	 * @param plugin Plugin
 	 */
 	public WorldChangeEvent(Plugin plugin) {
 		WorldChangeEvent.plugin = plugin;
@@ -32,8 +31,7 @@ public class WorldChangeEvent implements Listener {
 	/**
 	 * On world change.
 	 *
-	 * @param event
-	 *            the event
+	 * @param event the event
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorldChange(PlayerChangedWorldEvent event) {

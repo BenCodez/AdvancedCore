@@ -24,8 +24,7 @@ public enum InputMethod {
 	/**
 	 * Gets the method.
 	 *
-	 * @param method
-	 *            the method
+	 * @param method the method
 	 * @return the method
 	 */
 	public static InputMethod getMethod(String method) {

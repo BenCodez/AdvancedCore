@@ -10,10 +10,8 @@ public abstract class BookSign {
 	/**
 	 * On book sign.
 	 *
-	 * @param player
-	 *            the player
-	 * @param input
-	 *            the input
+	 * @param player the player
+	 * @param input  the input
 	 */
 	public abstract void onBookSign(Player player, String input);
 }

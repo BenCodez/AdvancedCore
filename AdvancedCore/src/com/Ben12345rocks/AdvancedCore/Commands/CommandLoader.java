@@ -192,29 +192,21 @@ public class CommandLoader {
 
 		/*
 		 * cmds.add(new CommandHandler(new String[] { "UserEditValue", "(player)",
-		 * "(string)", "(string)" },
-		 * permPrefix + ".UserEditValue", "Edit user data", false) {
-		 * @Override
-		 * public void execute(CommandSender sender, String[] args) {
-		 * User user = UserManager.getInstance().getUser(args[1]);
-		 * user.getData().setString(args[2], args[3]);
-		 * sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " +
-		 * args[1]);
-		 * }
-		 * });
-		 * cmds.add(new CommandHandler(new String[] { "UserEditValue", "All",
-		 * "(string)", "(string)" },
-		 * permPrefix + ".UserEditValue", "Edit all user data", false) {
-		 * @Override
-		 * public void execute(CommandSender sender, String[] args) {
-		 * for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-		 * User user = UserManager.getInstance().getUser(new UUID(uuid));
-		 * user.getData().setString(args[2], args[3]);
-		 * }
-		 * sendMessage(sender, "&cSet " + args[2] + " to " + args[3] + " for " +
-		 * args[1]);
-		 * }
-		 * });
+		 * "(string)", "(string)" }, permPrefix + ".UserEditValue", "Edit user data",
+		 * false) {
+		 *
+		 * @Override public void execute(CommandSender sender, String[] args) { User
+		 * user = UserManager.getInstance().getUser(args[1]);
+		 * user.getData().setString(args[2], args[3]); sendMessage(sender, "&cSet " +
+		 * args[2] + " to " + args[3] + " for " + args[1]); } }); cmds.add(new
+		 * CommandHandler(new String[] { "UserEditValue", "All", "(string)", "(string)"
+		 * }, permPrefix + ".UserEditValue", "Edit all user data", false) {
+		 *
+		 * @Override public void execute(CommandSender sender, String[] args) { for
+		 * (String uuid : UserManager.getInstance().getAllUUIDs()) { User user =
+		 * UserManager.getInstance().getUser(new UUID(uuid));
+		 * user.getData().setString(args[2], args[3]); } sendMessage(sender, "&cSet " +
+		 * args[2] + " to " + args[3] + " for " + args[1]); } });
 		 */
 
 		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report",
@@ -253,10 +245,8 @@ public class CommandLoader {
 				} /*
 					 * else if
 					 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)
-					 * ) {
-					 * AdvancedCorePlugin.getInstance().getSQLiteUserTable().clearCache();
-					 * sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared"));
-					 * }
+					 * ) { AdvancedCorePlugin.getInstance().getSQLiteUserTable().clearCache();
+					 * sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared")); }
 					 */else {
 					sender.sendMessage(
 							StringParser.getInstance().colorize("&cCurrent storage type does not have a cache"));

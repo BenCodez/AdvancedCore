@@ -240,8 +240,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	/**
 	 * Show exception in console if debug is on
 	 *
-	 * @param e
-	 *            Exception
+	 * @param e Exception
 	 */
 	public void debug(Exception e) {
 		if (getOptions().getDebug().equals(DebugLevel.INFO)) {
@@ -792,24 +791,21 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	/**
 	 * Run.
 	 *
-	 * @param run
-	 *            the run
+	 * @param run the run
 	 */
 	public void run(Runnable run) {
 		com.Ben12345rocks.AdvancedCore.Thread.Thread.getInstance().run(run);
 	}
 
 	/**
-	 * @param configData
-	 *            the configData to set
+	 * @param configData the configData to set
 	 */
 	public void setConfigData(ConfigurationSection configData) {
 		getOptions().setConfigData(configData);
 	}
 
 	/**
-	 * @param mysql
-	 *            the mysql to set
+	 * @param mysql the mysql to set
 	 */
 	public void setMysql(MySQL mysql) {
 		if (this.mysql != null) {

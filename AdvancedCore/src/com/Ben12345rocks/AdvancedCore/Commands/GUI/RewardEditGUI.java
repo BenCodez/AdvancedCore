@@ -49,8 +49,7 @@ public class RewardEditGUI {
 	/**
 	 * Gets the current reward.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 * @return the current reward
 	 */
 	public Reward getCurrentReward(Player player) {
@@ -102,8 +101,7 @@ public class RewardEditGUI {
 	/**
 	 * Open rewards GUI.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void openRewardsGUI(Player player) {
 		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
@@ -142,10 +140,8 @@ public class RewardEditGUI {
 	/**
 	 * Sets the current reward.
 	 *
-	 * @param player
-	 *            the player
-	 * @param reward
-	 *            the reward
+	 * @param player the player
+	 * @param reward the reward
 	 */
 	private void setCurrentReward(Player player, Reward reward) {
 		PlayerUtils.getInstance().setPlayerMeta(player, "Reward", reward);

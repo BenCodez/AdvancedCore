@@ -28,8 +28,7 @@ public class Query {
 	/**
 	 * Add the current statement to the batch.
 	 *
-	 * @throws SQLException
-	 *             SQLException
+	 * @throws SQLException SQLException
 	 */
 	public void addBatch() throws SQLException {
 		if (connection.getAutoCommit()) {
@@ -43,8 +42,7 @@ public class Query {
 	 *
 	 * @return an array with updates rows
 	 *
-	 * @throws SQLException
-	 *             SQLException
+	 * @throws SQLException SQLException
 	 */
 	public int[] executeBatch() throws SQLException {
 		try (Connection conn = mysql.getConnectionManager().getConnection();
@@ -77,8 +75,7 @@ public class Query {
 	 * <p>
 	 * The query will be run in a separate thread.
 	 *
-	 * @param callback
-	 *            the callback to be executed once the query is done
+	 * @param callback the callback to be executed once the query is done
 	 */
 	public void executeBatchAsync(final Callback<int[], SQLException> callback) {
 		mysql.getThreadPool().submit(new Runnable() {
@@ -107,30 +104,18 @@ public class Query {
 	 *
 	 * @return the ResultSet
 	 *
-	 * @throws SQLException
-	 *             SQLException
+	 * @throws SQLException SQLException
 	 */
 	/*
-	 * @Deprecated
-	 * public ResultSet executeQuery() throws SQLException {
+	 * @Deprecated public ResultSet executeQuery() throws SQLException {
 	 * CachedRowSet rowSet = RowSetProvider.newFactory().createCachedRowSet();
-	 * ResultSet resultSet = null;
-	 * try (Connection conn = mysql.getConnectionManager().getConnection();
-	 * PreparedStatement sql = conn.prepareStatement(this.sql);) {
-	 * for (Entry<Integer, Object> entry : paramters.entrySet()) {
-	 * sql.setObject(entry.getKey(), entry.getValue());
-	 * }
-	 * if (addBatch) {
-	 * sql.addBatch();
-	 * }
-	 * resultSet = sql.executeQuery();
-	 * rowSet.populate(resultSet);
-	 * sql.close();
-	 * } catch (SQLException e) {
-	 * e.printStackTrace();
-	 * }
-	 * return rowSet;
-	 * }
+	 * ResultSet resultSet = null; try (Connection conn =
+	 * mysql.getConnectionManager().getConnection(); PreparedStatement sql =
+	 * conn.prepareStatement(this.sql);) { for (Entry<Integer, Object> entry :
+	 * paramters.entrySet()) { sql.setObject(entry.getKey(), entry.getValue()); } if
+	 * (addBatch) { sql.addBatch(); } resultSet = sql.executeQuery();
+	 * rowSet.populate(resultSet); sql.close(); } catch (SQLException e) {
+	 * e.printStackTrace(); } return rowSet; }
 	 */
 
 	/**
@@ -138,25 +123,15 @@ public class Query {
 	 * <p>
 	 * The query will be run in a separate thread.
 	 *
-	 * @param callback
-	 *            the callback to be executed once the query is done
+	 * @param callback the callback to be executed once the query is done
 	 */
 	/*
-	 * @Deprecated
-	 * public void executeQueryAsync(final Callback<ResultSet, SQLException>
-	 * callback) {
-	 * mysql.getThreadPool().submit(new Runnable() {
-	 * @Override
-	 * public void run() {
-	 * try {
-	 * ResultSet rs = executeQuery();
-	 * callback.call(rs, null);
-	 * } catch (SQLException e) {
-	 * callback.call(null, e);
-	 * }
-	 * }
-	 * });
-	 * }
+	 * @Deprecated public void executeQueryAsync(final Callback<ResultSet,
+	 * SQLException> callback) { mysql.getThreadPool().submit(new Runnable() {
+	 *
+	 * @Override public void run() { try { ResultSet rs = executeQuery();
+	 * callback.call(rs, null); } catch (SQLException e) { callback.call(null, e); }
+	 * } }); }
 	 */
 
 	/**
@@ -164,8 +139,7 @@ public class Query {
 	 *
 	 * @return number of rows changed
 	 *
-	 * @throws SQLException
-	 *             SQLException
+	 * @throws SQLException SQLException
 	 */
 	public int executeUpdate() throws SQLException {
 		try (Connection conn = mysql.getConnectionManager().getConnection();
@@ -202,8 +176,7 @@ public class Query {
 	 * <p>
 	 * The query will be run in a seperate thread.
 	 *
-	 * @param callback
-	 *            the callback to be executed once the query is done
+	 * @param callback the callback to be executed once the query is done
 	 */
 	public void executeUpdateAsync(final Callback<Integer, SQLException> callback) {
 		mysql.getThreadPool().submit(new Runnable() {
@@ -230,8 +203,7 @@ public class Query {
 	/**
 	 * Rollback the transaction.
 	 *
-	 * @throws SQLException
-	 *             SQLException
+	 * @throws SQLException SQLException
 	 */
 	public void rollback() throws SQLException {
 		if (connection != null) {
@@ -244,13 +216,10 @@ public class Query {
 	 * <p>
 	 * Parameters are defined using ? in the SQL query.
 	 *
-	 * @param index
-	 *            the index of the parameter to set (starts with 1)
-	 * @param value
-	 *            the value to set the parameter to
+	 * @param index the index of the parameter to set (starts with 1)
+	 * @param value the value to set the parameter to
 	 *
-	 * @throws SQLException
-	 *             SQLException
+	 * @throws SQLException SQLException
 	 */
 	public void setParameter(int index, Object value) throws SQLException {
 		paramters.put(index, value);

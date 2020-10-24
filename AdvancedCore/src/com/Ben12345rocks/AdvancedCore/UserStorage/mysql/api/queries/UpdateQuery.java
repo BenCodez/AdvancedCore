@@ -16,8 +16,7 @@ public class UpdateQuery {
 	/**
 	 * Create an update query.
 	 *
-	 * @param table
-	 *            the table to be updated
+	 * @param table the table to be updated
 	 */
 	public UpdateQuery(String table) {
 		this.table = table;
@@ -26,8 +25,7 @@ public class UpdateQuery {
 	/**
 	 * Add a where clause.
 	 *
-	 * @param expression
-	 *            the expression
+	 * @param expression the expression
 	 * @return the UpdateQuery object
 	 */
 	public UpdateQuery and(String expression) {
@@ -66,8 +64,7 @@ public class UpdateQuery {
 	 * MySQLAPIBukkit does not do any interpretation so you have to add apostrophes
 	 * yourself.
 	 *
-	 * @param column
-	 *            the column to set the value for
+	 * @param column the column to set the value for
 	 * @return the UpdateQuery object
 	 */
 	public UpdateQuery set(String column) {
@@ -81,10 +78,8 @@ public class UpdateQuery {
 	 * MySQLAPI does not do any interpretation so you have to add apostrophes
 	 * yourself.
 	 *
-	 * @param column
-	 *            the column to set the value for
-	 * @param value
-	 *            the value to set the column to
+	 * @param column the column to set the value for
+	 * @param value  the value to set the column to
 	 * @return the UpdateQuery object
 	 */
 	public UpdateQuery set(String column, String value) {
@@ -95,8 +90,7 @@ public class UpdateQuery {
 	/**
 	 * Add a where clause.
 	 *
-	 * @param expression
-	 *            the expression
+	 * @param expression the expression
 	 * @return the UpdateQuery object
 	 */
 	public UpdateQuery where(String expression) {

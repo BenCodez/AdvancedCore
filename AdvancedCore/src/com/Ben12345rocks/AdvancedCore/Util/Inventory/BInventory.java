@@ -91,10 +91,8 @@ public class BInventory {
 		/**
 		 * Gets the meta.
 		 *
-		 * @param player
-		 *            the player
-		 * @param str
-		 *            the str
+		 * @param player the player
+		 * @param str    the str
 		 * @return the meta
 		 */
 		public Object getMeta(Player player, String str) {
@@ -104,8 +102,7 @@ public class BInventory {
 		/**
 		 * Gets the meta.
 		 *
-		 * @param str
-		 *            the str
+		 * @param str the str
 		 * @return the meta
 		 */
 		public Object getMeta(String str) {
@@ -129,10 +126,8 @@ public class BInventory {
 	/**
 	 * Open inventory.
 	 *
-	 * @param player
-	 *            the player
-	 * @param inventory
-	 *            the inventory
+	 * @param player    the player
+	 * @param inventory the inventory
 	 */
 	public static void openInventory(Player player, BInventory inventory) {
 		inventory.openInventory(player);
@@ -184,8 +179,7 @@ public class BInventory {
 	/**
 	 * Instantiates a new b inventory.
 	 *
-	 * @param name
-	 *            the name
+	 * @param name the name
 	 */
 	public BInventory(String name) {
 		setInventoryName(name);
@@ -196,8 +190,7 @@ public class BInventory {
 	/**
 	 * Adds the button.
 	 *
-	 * @param button
-	 *            the button
+	 * @param button the button
 	 */
 	public void addButton(BInventoryButton button) {
 		int slot = button.getSlot();
@@ -211,10 +204,8 @@ public class BInventory {
 	/**
 	 * Adds the button.
 	 *
-	 * @param position
-	 *            the position
-	 * @param button
-	 *            the button
+	 * @param position the position
+	 * @param button   the button
 	 */
 	public void addButton(int position, BInventoryButton button) {
 		getButtons().put(position, button);
@@ -238,11 +229,6 @@ public class BInventory {
 		}
 	}
 
-	public BInventory dontClose() {
-		closeInv = false;
-		return this;
-	}
-
 	private void closeUpdatingBInv() {
 		for (BInventoryButton b : getButtons().values()) {
 			if (b instanceof UpdatingBInventoryButton) {
@@ -250,6 +236,11 @@ public class BInventory {
 				ub.cancel();
 			}
 		}
+	}
+
+	public BInventory dontClose() {
+		closeInv = false;
+		return this;
 	}
 
 	public void forceClose(Player p) {
@@ -433,8 +424,7 @@ public class BInventory {
 	/**
 	 * Open inventory.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void openInventory(Player player) {
 		if (player.isSleeping()) {
@@ -476,10 +466,8 @@ public class BInventory {
 	/**
 	 * Open inventory.
 	 *
-	 * @param player
-	 *            the player
-	 * @param page
-	 *            the page
+	 * @param player the player
+	 * @param page   the page
 	 */
 	void openInventory(Player player, int page) {
 		BInventory inventory = this;
@@ -495,7 +483,7 @@ public class BInventory {
 				if (slot < (maxInvSize - 9) && pair.getKey() < inventory.getButtons().size()) {
 					ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 					inv.setItem(slot, item);
-					
+
 					BInventoryButton b = pair.getValue();
 					b.setInv(this);
 					b.setSlot(pair.getKey());
@@ -546,8 +534,7 @@ public class BInventory {
 	}
 
 	/**
-	 * @param buttons
-	 *            the buttons to set
+	 * @param buttons the buttons to set
 	 */
 	public void setButtons(Map<Integer, BInventoryButton> buttons) {
 		this.buttons = buttons;
@@ -561,16 +548,14 @@ public class BInventory {
 	/**
 	 * Sets the inventory name.
 	 *
-	 * @param inventoryName
-	 *            the new inventory name
+	 * @param inventoryName the new inventory name
 	 */
 	public void setInventoryName(String inventoryName) {
 		this.inventoryName = StringParser.getInstance().colorize(inventoryName);
 	}
 
 	/**
-	 * @param maxInvSize
-	 *            the maxInvSize to set
+	 * @param maxInvSize the maxInvSize to set
 	 */
 	public void setMaxInvSize(int maxInvSize) {
 		this.maxInvSize = getProperSize(maxInvSize);
@@ -579,44 +564,37 @@ public class BInventory {
 	/**
 	 * Sets the meta.
 	 *
-	 * @param player
-	 *            the player
-	 * @param str
-	 *            the str
-	 * @param ob
-	 *            the ob
+	 * @param player the player
+	 * @param str    the str
+	 * @param ob     the ob
 	 */
 	public void setMeta(Player player, String str, Object ob) {
 		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
 	}
 
 	/**
-	 * @param nextItem
-	 *            the nextItem to set
+	 * @param nextItem the nextItem to set
 	 */
 	public void setNextItem(ItemStack nextItem) {
 		this.nextItem = nextItem;
 	}
 
 	/**
-	 * @param pageButtons
-	 *            the pageButtons to set
+	 * @param pageButtons the pageButtons to set
 	 */
 	public void setPageButtons(ArrayList<BInventoryButton> pageButtons) {
 		this.pageButtons = pageButtons;
 	}
 
 	/**
-	 * @param pages
-	 *            the pages to set
+	 * @param pages the pages to set
 	 */
 	public void setPages(boolean pages) {
 		this.pages = pages;
 	}
 
 	/**
-	 * @param prevItem
-	 *            the prevItem to set
+	 * @param prevItem the prevItem to set
 	 */
 	public void setPrevItem(ItemStack prevItem) {
 		this.prevItem = prevItem;

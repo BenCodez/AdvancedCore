@@ -21,10 +21,8 @@ public class Logger {
 	/**
 	 * Instantiates a new logger.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @param location
-	 *            the location
+	 * @param plugin   the plugin
+	 * @param location the location
 	 */
 	public Logger(Plugin plugin, File location) {
 		this.plugin = plugin;
@@ -34,8 +32,7 @@ public class Logger {
 	/**
 	 * Log to file.
 	 *
-	 * @param message
-	 *            the message
+	 * @param message the message
 	 */
 	public void logToFile(String message) {
 		try {

@@ -41,6 +41,7 @@ public class AdvancedCoreLoginEvent extends Event {
 
 	/*
 	 * (non-Javadoc)
+	 *
 	 * @see org.bukkit.event.Event#getHandlers()
 	 */
 	@Override
@@ -64,8 +65,7 @@ public class AdvancedCoreLoginEvent extends Event {
 	/**
 	 * Sets the cancelled.
 	 *
-	 * @param bln
-	 *            the new cancelled
+	 * @param bln the new cancelled
 	 */
 	public void setCancelled(boolean bln) {
 		cancelled = bln;

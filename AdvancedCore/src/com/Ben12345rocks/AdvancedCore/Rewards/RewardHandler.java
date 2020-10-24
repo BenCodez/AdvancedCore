@@ -119,8 +119,7 @@ public class RewardHandler {
 	/**
 	 * Adds the reward folder.
 	 *
-	 * @param file
-	 *            the file
+	 * @param file the file
 	 */
 	public void addRewardFolder(File file) {
 		file.mkdirs();
@@ -182,8 +181,7 @@ public class RewardHandler {
 	/**
 	 * Copy file.
 	 *
-	 * @param fileName
-	 *            the file name
+	 * @param fileName the file name
 	 */
 	private void copyFile(String fileName) {
 		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator + fileName);
@@ -231,8 +229,7 @@ public class RewardHandler {
 	/**
 	 * Gets the reward.
 	 *
-	 * @param reward
-	 *            the reward
+	 * @param reward the reward
 	 * @return the reward
 	 */
 	public Reward getReward(String reward) {
@@ -242,17 +239,10 @@ public class RewardHandler {
 		reward = reward.replace(" ", "_");
 
 		/*
-		 * if (rewardOptions != null) {
-		 * String prefix = rewardOptions.getPrefix();
-		 * if (prefix != null && !prefix.equals("")) {
-		 * String str = reward;
-		 * reward = prefix + "_" + str;
-		 * }
-		 * String suffix = rewardOptions.getSuffix();
-		 * if (suffix != null && !suffix.equals("")) {
-		 * reward += "_" + suffix;
-		 * }
-		 * }
+		 * if (rewardOptions != null) { String prefix = rewardOptions.getPrefix(); if
+		 * (prefix != null && !prefix.equals("")) { String str = reward; reward = prefix
+		 * + "_" + str; } String suffix = rewardOptions.getSuffix(); if (suffix != null
+		 * && !suffix.equals("")) { reward += "_" + suffix; } }
 		 */
 
 		for (Reward rewardFile : getRewards()) {
@@ -276,8 +266,7 @@ public class RewardHandler {
 	/**
 	 * Gets the reward files.
 	 *
-	 * @param folder
-	 *            the folder
+	 * @param folder the folder
 	 * @return the reward files
 	 */
 	public ArrayList<String> getRewardFiles(File folder) {
@@ -288,8 +277,7 @@ public class RewardHandler {
 	/**
 	 * Gets the reward names.
 	 *
-	 * @param file
-	 *            the file
+	 * @param file the file
 	 * @return the reward names
 	 */
 	public ArrayList<String> getRewardNames(File file) {
@@ -1743,8 +1731,7 @@ public class RewardHandler {
 	/**
 	 * Reward exist.
 	 *
-	 * @param reward
-	 *            the reward
+	 * @param reward the reward
 	 * @return true, if successful
 	 */
 	public boolean rewardExist(String reward) {
@@ -1762,8 +1749,7 @@ public class RewardHandler {
 	/**
 	 * Sets the default folder.
 	 *
-	 * @param defaultFolder
-	 *            the new default folder
+	 * @param defaultFolder the new default folder
 	 */
 	public void setDefaultFolder(File defaultFolder) {
 		this.defaultFolder = defaultFolder;

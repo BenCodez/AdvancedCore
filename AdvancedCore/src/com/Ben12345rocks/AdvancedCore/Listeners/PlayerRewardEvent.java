@@ -38,12 +38,9 @@ public class PlayerRewardEvent extends Event {
 	/**
 	 * Instantiates a new player reward event.
 	 *
-	 * @param reward
-	 *            the reward
-	 * @param player
-	 *            the player
-	 * @param rewardOptions
-	 *            rewardOptions
+	 * @param reward        the reward
+	 * @param player        the player
+	 * @param rewardOptions rewardOptions
 	 */
 	public PlayerRewardEvent(Reward reward, User player, RewardOptions rewardOptions) {
 		super(true);
@@ -54,6 +51,7 @@ public class PlayerRewardEvent extends Event {
 
 	/*
 	 * (non-Javadoc)
+	 *
 	 * @see org.bukkit.event.Event#getHandlers()
 	 */
 	@Override
@@ -98,8 +96,7 @@ public class PlayerRewardEvent extends Event {
 	/**
 	 * Sets the cancelled.
 	 *
-	 * @param bln
-	 *            the new cancelled
+	 * @param bln the new cancelled
 	 */
 	public void setCancelled(boolean bln) {
 		cancelled = bln;
@@ -108,8 +105,7 @@ public class PlayerRewardEvent extends Event {
 	/**
 	 * Sets the player.
 	 *
-	 * @param player
-	 *            the new player
+	 * @param player the new player
 	 */
 	public void setPlayer(User player) {
 		this.player = player;
@@ -118,16 +114,14 @@ public class PlayerRewardEvent extends Event {
 	/**
 	 * Sets the reward.
 	 *
-	 * @param reward
-	 *            the new reward
+	 * @param reward the new reward
 	 */
 	public void setReward(Reward reward) {
 		this.reward = reward;
 	}
 
 	/**
-	 * @param rewardOptions
-	 *            the rewardOptions to set
+	 * @param rewardOptions the rewardOptions to set
 	 */
 	public void setRewardOptions(RewardOptions rewardOptions) {
 		this.rewardOptions = rewardOptions;

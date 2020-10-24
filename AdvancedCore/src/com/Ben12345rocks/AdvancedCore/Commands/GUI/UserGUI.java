@@ -59,10 +59,8 @@ public class UserGUI {
 	/**
 	 * Adds the plugin button.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @param inv
-	 *            the inv
+	 * @param plugin the plugin
+	 * @param inv    the inv
 	 */
 	public synchronized void addPluginButton(Plugin plugin, BInventoryButton inv) {
 		extraButtons.put(plugin, inv);
@@ -71,8 +69,7 @@ public class UserGUI {
 	/**
 	 * Gets the current player.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 * @return the current player
 	 */
 	public String getCurrentPlayer(Player player) {
@@ -82,10 +79,8 @@ public class UserGUI {
 	/**
 	 * Open user GUI.
 	 *
-	 * @param player
-	 *            the player
-	 * @param playerName
-	 *            the player name
+	 * @param player     the player
+	 * @param playerName the player name
 	 */
 	public void openUserGUI(Player player, final String playerName) {
 		if (!player.hasPermission("AdvancedCore.UserEdit")) {
@@ -127,10 +122,10 @@ public class UserGUI {
 				EditGUI inv = new EditGUI("Edit Data, click to change");
 				final User user = UserManager.getInstance().getUser(playerName);
 				for (final String key : user.getData().getKeys()) {
-					String value = user.getData().getString(key,true);
+					String value = user.getData().getString(key, true);
 					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 						if (plugin.getMysql().isIntColumn(key)) {
-							value = "" + user.getData().getInt(key,true);
+							value = "" + user.getData().getInt(key, true);
 						}
 					}
 					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
@@ -159,10 +154,10 @@ public class UserGUI {
 				Player player = clickEvent.getPlayer();
 				User user = UserManager.getInstance().getUser(player);
 				for (String key : user.getData().getKeys()) {
-					String str = user.getData().getString(key,true);
+					String str = user.getData().getString(key, true);
 					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 						if (plugin.getMysql().isIntColumn(key)) {
-							str = "" + user.getData().getInt(key,true);
+							str = "" + user.getData().getInt(key, true);
 						}
 					}
 					user.sendMessage("&c&l" + key + " &c" + str);
@@ -180,8 +175,7 @@ public class UserGUI {
 	/**
 	 * Open users GUI.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void openUsersGUI(Player player) {
 		if (!player.hasPermission("AdvancedCore.UserEdit")) {
@@ -207,10 +201,8 @@ public class UserGUI {
 	/**
 	 * Sets the current player.
 	 *
-	 * @param player
-	 *            the player
-	 * @param playerName
-	 *            the player name
+	 * @param player     the player
+	 * @param playerName the player name
 	 */
 	private void setCurrentPlayer(Player player, String playerName) {
 		PlayerUtils.getInstance().setPlayerMeta(player, "UserGUI", playerName);

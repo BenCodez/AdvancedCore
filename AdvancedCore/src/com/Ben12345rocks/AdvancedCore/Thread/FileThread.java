@@ -100,8 +100,7 @@ public class FileThread {
 		/**
 		 * Run.
 		 *
-		 * @param run
-		 *            the run
+		 * @param run the run
 		 */
 		public void run(Runnable run) {
 			synchronized (FileThread.getInstance()) {
@@ -173,8 +172,7 @@ public class FileThread {
 	/**
 	 * Run.
 	 *
-	 * @param run
-	 *            the run
+	 * @param run the run
 	 */
 	public void run(Runnable run) {
 		getThread().run(run);

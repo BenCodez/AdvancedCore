@@ -45,8 +45,7 @@ public class ServerData extends YMLFile {
 	/**
 	 * Gets the plugin version.
 	 *
-	 * @param plugin
-	 *            the plugin
+	 * @param plugin the plugin
 	 * @return the plugin version
 	 */
 	public String getPluginVersion(Plugin plugin) {
@@ -82,6 +81,7 @@ public class ServerData extends YMLFile {
 
 	/*
 	 * (non-Javadoc)
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.YML.YMLFile#onFileCreation()
 	 */
 	@Override
@@ -101,8 +101,7 @@ public class ServerData extends YMLFile {
 	/**
 	 * Sets the plugin version.
 	 *
-	 * @param plugin
-	 *            the new plugin version
+	 * @param plugin the new plugin version
 	 */
 	public void setPluginVersion(Plugin plugin) {
 		getData().set("PluginVersions." + plugin.getName(), plugin.getDescription().getVersion());
@@ -112,8 +111,7 @@ public class ServerData extends YMLFile {
 	/**
 	 * Sets the prev day.
 	 *
-	 * @param day
-	 *            the new prev day
+	 * @param day the new prev day
 	 */
 	public void setPrevDay(int day) {
 		getData().set("PrevDay", day);
@@ -123,8 +121,7 @@ public class ServerData extends YMLFile {
 	/**
 	 * Sets the prev month.
 	 *
-	 * @param month
-	 *            the new prev month
+	 * @param month the new prev month
 	 */
 	public void setPrevMonth(String month) {
 		getData().set("Month", month);
@@ -134,8 +131,7 @@ public class ServerData extends YMLFile {
 	/**
 	 * Sets the prev week day.
 	 *
-	 * @param week
-	 *            the new prev week day
+	 * @param week the new prev week day
 	 */
 	public void setPrevWeekDay(int week) {
 		getData().set("PrevWeek", week);

@@ -14,14 +14,14 @@ public class Table {
 
 	private static String getStringType(DataType dataType) {
 		switch (dataType) {
-			case STRING:
-				return "VARCHAR";
-			case INTEGER:
-				return "INT";
-			case FLOAT:
-				return "FLOAT";
-			default:
-				return null;
+		case STRING:
+			return "VARCHAR";
+		case INTEGER:
+			return "INT";
+		case FLOAT:
+			return "FLOAT";
+		default:
+			return null;
 		}
 	}
 

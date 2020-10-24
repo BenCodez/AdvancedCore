@@ -25,12 +25,9 @@ public class BookManager implements Listener {
 	/**
 	 * Instantiates a new book manager.
 	 *
-	 * @param player
-	 *            the player
-	 * @param start
-	 *            the start
-	 * @param listener
-	 *            the listener
+	 * @param player   the player
+	 * @param start    the start
+	 * @param listener the listener
 	 */
 	public BookManager(Player player, String start, BookSign listener) {
 		User user = UserManager.getInstance().getUser(player);

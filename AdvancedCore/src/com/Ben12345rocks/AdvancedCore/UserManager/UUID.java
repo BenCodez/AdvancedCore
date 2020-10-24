@@ -11,8 +11,7 @@ public class UUID {
 	/**
 	 * Instantiates a new uuid.
 	 *
-	 * @param uuid
-	 *            the uuid
+	 * @param uuid the uuid
 	 */
 	public UUID(String uuid) {
 		this.uuid = uuid;
@@ -30,8 +29,7 @@ public class UUID {
 	/**
 	 * Sets the uuid.
 	 *
-	 * @param uuid
-	 *            the new uuid
+	 * @param uuid the new uuid
 	 */
 	public void setUUID(String uuid) {
 		this.uuid = uuid;

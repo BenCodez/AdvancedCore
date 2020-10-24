@@ -30,10 +30,8 @@ public class PluginUpdateVersionEvent extends Event {
 	/**
 	 * Instantiates a new plugin update version event.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @param oldVersion
-	 *            the old version
+	 * @param plugin     the plugin
+	 * @param oldVersion the old version
 	 */
 	public PluginUpdateVersionEvent(Plugin plugin, String oldVersion) {
 		super(true);
@@ -43,6 +41,7 @@ public class PluginUpdateVersionEvent extends Event {
 
 	/*
 	 * (non-Javadoc)
+	 *
 	 * @see org.bukkit.event.Event#getHandlers()
 	 */
 	@Override
@@ -71,8 +70,7 @@ public class PluginUpdateVersionEvent extends Event {
 	/**
 	 * Sets the old version.
 	 *
-	 * @param oldVersion
-	 *            the new old version
+	 * @param oldVersion the new old version
 	 */
 	public void setOldVersion(String oldVersion) {
 		this.oldVersion = oldVersion;
@@ -81,8 +79,7 @@ public class PluginUpdateVersionEvent extends Event {
 	/**
 	 * Sets the plugin.
 	 *
-	 * @param plugin
-	 *            the new plugin
+	 * @param plugin the new plugin
 	 */
 	public void setPlugin(Plugin plugin) {
 		this.plugin = plugin;

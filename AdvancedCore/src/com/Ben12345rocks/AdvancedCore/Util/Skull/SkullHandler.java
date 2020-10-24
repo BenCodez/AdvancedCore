@@ -56,38 +56,29 @@ public class SkullHandler {
 	}
 
 	/*
-	 * @SuppressWarnings("rawtypes")
-	 * private Class gameProfile;
-	 * @SuppressWarnings("rawtypes")
-	 * private Class property;
-	 * @SuppressWarnings("rawtypes")
-	 * private Constructor gameProfileConstructor;
-	 * @SuppressWarnings("rawtypes")
-	 * private Constructor propertyConstructor;
-	 * private Method gameProfileGetProperties;
-	 * public ItemStack getHead(String url) {
-	 * ItemStack head = new ItemStack(Material.PLAYER_HEAD, 1);
-	 * ItemMeta headMeta = head.getItemMeta();
-	 * try {
-	 * // GameProfile profile = new GameProfile(UUID.randomUUID(), null);
-	 * Object profile = gameProfileConstructor.newInstance(UUID.randomUUID(), null);
-	 * byte[] encodedData = Base64.getEncoder()
+	 * @SuppressWarnings("rawtypes") private Class gameProfile;
+	 *
+	 * @SuppressWarnings("rawtypes") private Class property;
+	 *
+	 * @SuppressWarnings("rawtypes") private Constructor gameProfileConstructor;
+	 *
+	 * @SuppressWarnings("rawtypes") private Constructor propertyConstructor;
+	 * private Method gameProfileGetProperties; public ItemStack getHead(String url)
+	 * { ItemStack head = new ItemStack(Material.PLAYER_HEAD, 1); ItemMeta headMeta
+	 * = head.getItemMeta(); try { // GameProfile profile = new
+	 * GameProfile(UUID.randomUUID(), null); Object profile =
+	 * gameProfileConstructor.newInstance(UUID.randomUUID(), null); byte[]
+	 * encodedData = Base64.getEncoder()
 	 * .encode((String.format("{\"textures\":{\"SKIN\":{\"url\":\"%s\"}}}",
-	 * url).getBytes()));
-	 * gameProfileGetProperties.invoke(gameProfile, "textures",
-	 * propertyConstructor.newInstance("textures", new String(encodedData)));
-	 * Field profileField = null;
-	 * profileField = headMeta.getClass().getDeclaredField("profile");
-	 * profileField.setAccessible(true);
-	 * profileField.set(headMeta, profile);
-	 * } catch (IllegalArgumentException | IllegalAccessException |
-	 * NoSuchFieldException | SecurityException
-	 * | InvocationTargetException | InstantiationException e) {
-	 * e.printStackTrace();
-	 * }
-	 * head.setItemMeta(headMeta);
-	 * return head;
-	 * }
+	 * url).getBytes())); gameProfileGetProperties.invoke(gameProfile, "textures",
+	 * propertyConstructor.newInstance("textures", new String(encodedData))); Field
+	 * profileField = null; profileField =
+	 * headMeta.getClass().getDeclaredField("profile");
+	 * profileField.setAccessible(true); profileField.set(headMeta, profile); }
+	 * catch (IllegalArgumentException | IllegalAccessException |
+	 * NoSuchFieldException | SecurityException | InvocationTargetException |
+	 * InstantiationException e) { e.printStackTrace(); }
+	 * head.setItemMeta(headMeta); return head; }
 	 */
 
 	@SuppressWarnings("deprecation")
@@ -127,13 +118,12 @@ public class SkullHandler {
 		try {
 			/*
 			 * gameProfile =
-			 * ReflectionUtils.getClassForName("com.mojang.authlib.GameProfile");
-			 * property =
+			 * ReflectionUtils.getClassForName("com.mojang.authlib.GameProfile"); property =
 			 * ReflectionUtils.getClassForName("com.mojang.authlib.properties.Property");
 			 * gameProfileConstructor = gameProfile.getConstructor(UUID.class,
-			 * String.class);
-			 * propertyConstructor = property.getConstructor(String.class, String.class);
-			 * gameProfileGetProperties = gameProfile.getDeclaredMethod("getProperties");
+			 * String.class); propertyConstructor = property.getConstructor(String.class,
+			 * String.class); gameProfileGetProperties =
+			 * gameProfile.getDeclaredMethod("getProperties");
 			 */
 
 			craftItemStack = ReflectionUtils.getClassForName(

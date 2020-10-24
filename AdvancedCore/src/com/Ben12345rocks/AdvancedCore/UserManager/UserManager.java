@@ -129,8 +129,7 @@ public class UserManager {
 	/**
 	 * Gets the user.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 * @return the user
 	 */
 	public User getUser(OfflinePlayer player) {
@@ -140,8 +139,7 @@ public class UserManager {
 	/**
 	 * Gets the user.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 * @return the user
 	 */
 	public User getUser(Player player) {
@@ -151,8 +149,7 @@ public class UserManager {
 	/**
 	 * Gets the user.
 	 *
-	 * @param playerName
-	 *            the player name
+	 * @param playerName the player name
 	 * @return the user
 	 */
 	@SuppressWarnings("deprecation")
@@ -163,8 +160,7 @@ public class UserManager {
 	/**
 	 * Gets the user.
 	 *
-	 * @param uuid
-	 *            the uuid
+	 * @param uuid the uuid
 	 * @return the user
 	 */
 	@SuppressWarnings("deprecation")

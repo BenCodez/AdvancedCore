@@ -27,8 +27,7 @@ public class PlayerJoinEvent implements Listener {
 	/**
 	 * Instantiates a new player join event.
 	 *
-	 * @param plugin
-	 *            the plugin
+	 * @param plugin the plugin
 	 */
 	public PlayerJoinEvent(Plugin plugin) {
 		PlayerJoinEvent.plugin = plugin;
@@ -47,10 +46,8 @@ public class PlayerJoinEvent implements Listener {
 				} /*
 					 * else if
 					 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)
-					 * ) {
-					 * AdvancedCorePlugin.getInstance().getSQLiteUserTable().playerJoin(player.
-					 * getUniqueId().toString());
-					 * }
+					 * ) { AdvancedCorePlugin.getInstance().getSQLiteUserTable().playerJoin(player.
+					 * getUniqueId().toString()); }
 					 */
 			}
 
@@ -69,8 +66,7 @@ public class PlayerJoinEvent implements Listener {
 	/**
 	 * On player login.
 	 *
-	 * @param event
-	 *            the event
+	 * @param event the event
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final PlayerLoginEvent event) {
@@ -116,8 +112,7 @@ public class PlayerJoinEvent implements Listener {
 				 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)
 				 * ) {
 				 * AdvancedCorePlugin.getInstance().getSQLiteUserTable().removePlayer(player.
-				 * getUniqueId().toString());
-				 * }
+				 * getUniqueId().toString()); }
 				 */
 		}
 	}

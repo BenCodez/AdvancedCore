@@ -22,12 +22,9 @@ public class AnimationAPI {
 	/**
 	 * Run an animation
 	 *
-	 * @param texts
-	 *            Text for animation
-	 * @param timeBetween
-	 *            Time between text updates
-	 * @param animation
-	 *            Method to run to display text
+	 * @param texts       Text for animation
+	 * @param timeBetween Time between text updates
+	 * @param animation   Method to run to display text
 	 */
 	public void runAnimation(ArrayList<String> texts, long timeBetween, final Animation animation) {
 		Iterator<String> it = texts.iterator();

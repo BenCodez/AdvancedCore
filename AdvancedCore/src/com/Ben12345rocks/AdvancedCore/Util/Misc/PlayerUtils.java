@@ -46,13 +46,29 @@ public class PlayerUtils {
 	private PlayerUtils() {
 	}
 
+	public boolean canBreakBlock(Player p, Block b) {
+		BlockBreakEvent block = new BlockBreakEvent(b, p);
+		Bukkit.getPluginManager().callEvent(block);
+		if (!block.isCancelled()) {
+			return true;
+		}
+		return false;
+	}
+
+	public boolean canInteract(Player p, Block clickedBlock, Action action, ItemStack item, BlockFace clickedFace) {
+		PlayerInteractEvent event = new PlayerInteractEvent(p, action, item, clickedBlock, clickedFace);
+		Bukkit.getPluginManager().callEvent(event);
+		if (event.useItemInHand().equals(Event.Result.DENY)) {
+			return false;
+		}
+		return true;
+	}
+
 	/**
 	 * Gets the player meta.
 	 *
-	 * @param player
-	 *            the player
-	 * @param str
-	 *            the str
+	 * @param player the player
+	 * @param str    the str
 	 * @return the player meta
 	 */
 	public Object getPlayerMeta(Player player, String str) {
@@ -123,6 +139,20 @@ public class PlayerUtils {
 		}
 	}
 
+	/*
+	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
+	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
+	 * String name = ""; java.util.UUID u = java.util.UUID.fromString(uuid); Player
+	 * player = Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
+	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
+	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
+	 * Thread.getInstance().getThread().getName(u); } } else { name =
+	 * player.getName(); } if (name.equals("")) { name =
+	 * UserManager.getInstance().getUser(new
+	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
+	 * name; } name = "Error getting name"; } return name; }
+	 */
+
 	public Player getRandomOnlinePlayer() {
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			return player;
@@ -135,27 +165,10 @@ public class PlayerUtils {
 		return Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
 	}
 
-	/*
-	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
-	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
-	 * String name = "";
-	 * java.util.UUID u = java.util.UUID.fromString(uuid); Player player =
-	 * Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
-	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
-	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
-	 * Thread.getInstance().getThread().getName(u); } } else { name =
-	 * player.getName(); }
-	 * if (name.equals("")) { name = UserManager.getInstance().getUser(new
-	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
-	 * name; } name = "Error getting name"; } return name;
-	 * }
-	 */
-
 	/**
 	 * Gets the uuid.
 	 *
-	 * @param playerName
-	 *            the player name
+	 * @param playerName the player name
 	 * @return the uuid
 	 */
 	@SuppressWarnings("deprecation")
@@ -241,32 +254,12 @@ public class PlayerUtils {
 			return true;
 		}
 	}
-	
-	public boolean canBreakBlock(Player p, Block b) {
-		BlockBreakEvent block = new BlockBreakEvent(b, p);
-		Bukkit.getPluginManager().callEvent(block);
-		if (!block.isCancelled()) {
-			return true;
-		}
-		return false;
-	}
-	
-	public boolean canInteract(Player p, Block clickedBlock, Action action, ItemStack item, BlockFace clickedFace) {
-		PlayerInteractEvent event = new PlayerInteractEvent(p, action, item, clickedBlock, clickedFace);
-		Bukkit.getPluginManager().callEvent(event);
-		if (event.useItemInHand().equals(Event.Result.DENY)) {
-			return false;
-		}
-		return true;
-	}
 
 	/**
 	 * Checks for permission.
 	 *
-	 * @param sender
-	 *            the sender
-	 * @param perm
-	 *            the perm
+	 * @param sender the sender
+	 * @param perm   the perm
 	 * @return true, if successful
 	 */
 	public boolean hasPermission(CommandSender sender, String perm) {
@@ -276,10 +269,8 @@ public class PlayerUtils {
 	/**
 	 * Checks for permission.
 	 *
-	 * @param player
-	 *            the player
-	 * @param perm
-	 *            the perm
+	 * @param player the player
+	 * @param perm   the perm
 	 * @return true, if successful
 	 */
 	public boolean hasPermission(Player player, String perm) {
@@ -289,10 +280,8 @@ public class PlayerUtils {
 	/**
 	 * Checks for permission.
 	 *
-	 * @param playerName
-	 *            the player name
-	 * @param perm
-	 *            the perm
+	 * @param playerName the player name
+	 * @param perm       the perm
 	 * @return true, if successful
 	 */
 	public boolean hasPermission(String playerName, String perm) {
@@ -309,10 +298,8 @@ public class PlayerUtils {
 	/**
 	 * Checks for server permission.
 	 *
-	 * @param playerName
-	 *            the player name
-	 * @param perm
-	 *            the perm
+	 * @param playerName the player name
+	 * @param perm       the perm
 	 * @return true, if successful
 	 */
 	public boolean hasServerPermission(String playerName, String perm) {
@@ -329,8 +316,7 @@ public class PlayerUtils {
 	/**
 	 * Checks if is player.
 	 *
-	 * @param sender
-	 *            the sender
+	 * @param sender the sender
 	 * @return true, if is player
 	 */
 	public boolean isPlayer(CommandSender sender) {
@@ -343,8 +329,7 @@ public class PlayerUtils {
 	/**
 	 * Checks if is player online.
 	 *
-	 * @param playerName
-	 *            the player name
+	 * @param playerName the player name
 	 * @return true, if is player online
 	 */
 	public boolean isPlayerOnline(String playerName) {
@@ -395,12 +380,9 @@ public class PlayerUtils {
 	/**
 	 * Sets the player meta.
 	 *
-	 * @param player
-	 *            the player
-	 * @param str
-	 *            the str
-	 * @param value
-	 *            the value
+	 * @param player the player
+	 * @param str    the str
+	 * @param value  the value
 	 */
 	public void setPlayerMeta(Player player, String str, Object value) {
 		player.removeMetadata(str, plugin);

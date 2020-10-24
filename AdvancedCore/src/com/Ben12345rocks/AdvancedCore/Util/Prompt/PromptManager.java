@@ -17,10 +17,8 @@ public class PromptManager {
 	/**
 	 * Instantiates a new prompt manager.
 	 *
-	 * @param promptText
-	 *            the prompt text
-	 * @param convoFactory
-	 *            the convo factory
+	 * @param promptText   the prompt text
+	 * @param convoFactory the convo factory
 	 */
 	public PromptManager(String promptText, ConversationFactory convoFactory) {
 		this.promptText = promptText;
@@ -30,10 +28,8 @@ public class PromptManager {
 	/**
 	 * String prompt.
 	 *
-	 * @param conversable
-	 *            the conversable
-	 * @param prompt
-	 *            the prompt
+	 * @param conversable the conversable
+	 * @param prompt      the prompt
 	 */
 	public void stringPrompt(Conversable conversable, PromptReturnString prompt) {
 		prompt.promptText = promptText;

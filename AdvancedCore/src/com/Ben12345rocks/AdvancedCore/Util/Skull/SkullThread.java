@@ -74,8 +74,7 @@ public class SkullThread {
 		/**
 		 * Run.
 		 *
-		 * @param run
-		 *            the run
+		 * @param run the run
 		 */
 		public void run(Runnable run) {
 			synchronized (obj) {
@@ -149,8 +148,7 @@ public class SkullThread {
 	/**
 	 * Run.
 	 *
-	 * @param run
-	 *            the run
+	 * @param run the run
 	 */
 	public void run(Runnable run) {
 		getThread().run(run);

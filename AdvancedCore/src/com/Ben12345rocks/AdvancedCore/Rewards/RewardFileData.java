@@ -44,10 +44,8 @@ public class RewardFileData {
 	/**
 	 * Instantiates a new reward file data.
 	 *
-	 * @param reward
-	 *            the reward
-	 * @param rewardFolder
-	 *            the reward folder
+	 * @param reward       the reward
+	 * @param rewardFolder the reward folder
 	 */
 	public RewardFileData(Reward reward, File rewardFolder) {
 		this.reward = reward;
@@ -184,8 +182,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item amount.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item amount
 	 */
 	@Deprecated
@@ -196,8 +193,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item data.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item data
 	 */
 	@Deprecated
@@ -208,8 +204,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item durability.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item durability
 	 */
 	@Deprecated
@@ -220,8 +215,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item enchants.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item enchants
 	 */
 	@Deprecated
@@ -236,10 +230,8 @@ public class RewardFileData {
 	/**
 	 * Gets the item enchants level.
 	 *
-	 * @param item
-	 *            the item
-	 * @param enchant
-	 *            the enchant
+	 * @param item    the item
+	 * @param enchant the enchant
 	 * @return the item enchants level
 	 */
 	@Deprecated
@@ -250,8 +242,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item lore.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item lore
 	 */
 	@SuppressWarnings("unchecked")
@@ -263,8 +254,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item material.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item material
 	 */
 	@Deprecated
@@ -275,8 +265,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item max amount.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item max amount
 	 */
 	@Deprecated
@@ -287,8 +276,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item min amount.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item min amount
 	 */
 	@Deprecated
@@ -299,8 +287,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item name.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item name
 	 */
 	@Deprecated
@@ -328,8 +315,7 @@ public class RewardFileData {
 	/**
 	 * Gets the item skull.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 * @return the item skull
 	 */
 	@Deprecated
@@ -449,10 +435,8 @@ public class RewardFileData {
 	/**
 	 * Sets the.
 	 *
-	 * @param path
-	 *            the path
-	 * @param value
-	 *            the value
+	 * @param path  the path
+	 * @param value the value
 	 */
 	public void set(String path, Object value) {
 		if (fileData != null) {
@@ -467,8 +451,7 @@ public class RewardFileData {
 	/**
 	 * Sets the chance.
 	 *
-	 * @param d
-	 *            the new chance
+	 * @param d the new chance
 	 */
 	public void setChance(double d) {
 		set("Chance", d);
@@ -477,8 +460,7 @@ public class RewardFileData {
 	/**
 	 * Sets the commands console.
 	 *
-	 * @param value
-	 *            the new commands console
+	 * @param value the new commands console
 	 */
 	public void setCommandsConsole(ArrayList<String> value) {
 		set("Commands.Console", value);
@@ -487,8 +469,7 @@ public class RewardFileData {
 	/**
 	 * Sets the commands player.
 	 *
-	 * @param value
-	 *            the new commands player
+	 * @param value the new commands player
 	 */
 	public void setCommandsPlayer(ArrayList<String> value) {
 		set("Commands.Player", value);
@@ -513,8 +494,7 @@ public class RewardFileData {
 	}
 
 	/**
-	 * @param dFile
-	 *            the dFile to set
+	 * @param dFile the dFile to set
 	 */
 	public void setDataFile(File dFile) {
 		this.dataFile = dFile;
@@ -527,8 +507,7 @@ public class RewardFileData {
 	/**
 	 * Sets the give in each world.
 	 *
-	 * @param value
-	 *            the new give in each world
+	 * @param value the new give in each world
 	 */
 	public void setGiveInEachWorld(boolean value) {
 		set("GiveInEachWorld", value);
@@ -537,10 +516,8 @@ public class RewardFileData {
 	/**
 	 * Sets the item amount.
 	 *
-	 * @param item
-	 *            the item
-	 * @param value
-	 *            the value
+	 * @param item  the item
+	 * @param value the value
 	 */
 	public void setItemAmount(String item, int value) {
 		set("Items." + item + ".Amount", value);
@@ -549,10 +526,8 @@ public class RewardFileData {
 	/**
 	 * Sets the item data.
 	 *
-	 * @param item
-	 *            the item
-	 * @param value
-	 *            the value
+	 * @param item  the item
+	 * @param value the value
 	 */
 	public void setItemData(String item, int value) {
 		set("Items." + item + ".Data", value);
@@ -561,10 +536,8 @@ public class RewardFileData {
 	/**
 	 * Sets the item durability.
 	 *
-	 * @param item
-	 *            the item
-	 * @param value
-	 *            the value
+	 * @param item  the item
+	 * @param value the value
 	 */
 	public void setItemDurability(String item, int value) {
 		set("Items." + item + ".Durability", value);
@@ -573,12 +546,9 @@ public class RewardFileData {
 	/**
 	 * Sets the item enchant.
 	 *
-	 * @param item
-	 *            the item
-	 * @param enchant
-	 *            the enchant
-	 * @param value
-	 *            the value
+	 * @param item    the item
+	 * @param enchant the enchant
+	 * @param value   the value
 	 */
 	public void setItemEnchant(String item, String enchant, int value) {
 		set("Items." + item + ".Enchants." + enchant, value);
@@ -587,10 +557,8 @@ public class RewardFileData {
 	/**
 	 * Sets the item lore.
 	 *
-	 * @param item
-	 *            the item
-	 * @param value
-	 *            the value
+	 * @param item  the item
+	 * @param value the value
 	 */
 	public void setItemLore(String item, ArrayList<String> value) {
 		set("Items." + item + ".Lore", value);
@@ -599,10 +567,8 @@ public class RewardFileData {
 	/**
 	 * Sets the item material.
 	 *
-	 * @param item
-	 *            the item
-	 * @param value
-	 *            the value
+	 * @param item  the item
+	 * @param value the value
 	 */
 	public void setItemMaterial(String item, String value) {
 		set("Items." + item + ".Material", value);
@@ -611,10 +577,8 @@ public class RewardFileData {
 	/**
 	 * Sets the item max amount.
 	 *
-	 * @param item
-	 *            the item
-	 * @param value
-	 *            the value
+	 * @param item  the item
+	 * @param value the value
 	 */
 	public void setItemMaxAmount(String item, int value) {
 		set("Items." + item + ".MaxAmount", value);
@@ -623,10 +587,8 @@ public class RewardFileData {
 	/**
 	 * Sets the item min amount.
 	 *
-	 * @param item
-	 *            the item
-	 * @param value
-	 *            the value
+	 * @param item  the item
+	 * @param value the value
 	 */
 	public void setItemMinAmount(String item, int value) {
 		set("Items." + item + ".MinAmount", value);
@@ -635,10 +597,8 @@ public class RewardFileData {
 	/**
 	 * Sets the item name.
 	 *
-	 * @param item
-	 *            the item
-	 * @param value
-	 *            the value
+	 * @param item  the item
+	 * @param value the value
 	 */
 	public void setItemName(String item, String value) {
 		set("Items." + item + ".Name", value);
@@ -647,8 +607,7 @@ public class RewardFileData {
 	/**
 	 * Sets the permission.
 	 *
-	 * @param perm
-	 *            the new permission
+	 * @param perm the new permission
 	 */
 	public void setPermission(String perm) {
 		set("Permission", perm);
@@ -657,8 +616,7 @@ public class RewardFileData {
 	/**
 	 * Sets the require permission.
 	 *
-	 * @param value
-	 *            the new require permission
+	 * @param value the new require permission
 	 */
 	public void setRequirePermission(boolean value) {
 		set("RequirePermission", value);
@@ -667,8 +625,7 @@ public class RewardFileData {
 	/**
 	 * Sets the reward type.
 	 *
-	 * @param value
-	 *            the new reward type
+	 * @param value the new reward type
 	 */
 	public void setRewardType(String value) {
 		set("RewardType", value);
@@ -694,8 +651,7 @@ public class RewardFileData {
 	/**
 	 * Sets the worlds.
 	 *
-	 * @param value
-	 *            the new worlds
+	 * @param value the new worlds
 	 */
 	public void setWorlds(ArrayList<String> value) {
 		set("Worlds", value);

@@ -41,10 +41,8 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 	/**
 	 * Instantiates a new a inventory reflection handler.
 	 *
-	 * @param player
-	 *            the player
-	 * @param anvilClickEventHandler
-	 *            the anvil click event handler
+	 * @param player                 the player
+	 * @param anvilClickEventHandler the anvil click event handler
 	 */
 	public AInventoryReflectionHandler(final Player player, final AnvilClickEventHandler anvilClickEventHandler) {
 		loadClasses();
@@ -53,6 +51,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#getInventory()
 	 */
@@ -63,6 +62,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#loadClasses()
 	 */
@@ -77,6 +77,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 
 	/*
 	 * (non-Javadoc)
+	 *
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#open(org.bukkit.entity.Player, java.util.HashMap)
 	 */

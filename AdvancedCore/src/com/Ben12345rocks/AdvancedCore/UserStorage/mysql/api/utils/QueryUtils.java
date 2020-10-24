@@ -7,10 +7,8 @@ public class QueryUtils {
 	/**
 	 * Turn a collection into a string separated by a separator.
 	 *
-	 * @param collection
-	 *            the collection to be separated
-	 * @param separator
-	 *            the separator
+	 * @param collection the collection to be separated
+	 * @param separator  the separator
 	 * @return String
 	 */
 	public static String separate(Collection<String> collection, String separator) {

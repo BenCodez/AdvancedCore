@@ -47,20 +47,13 @@ public class NumberRequester {
 	/**
 	 * Request.
 	 *
-	 * @param player
-	 *            the player
-	 * @param method
-	 *            the method
-	 * @param currentValue
-	 *            the current value
-	 * @param promptText
-	 *            the prompt text
-	 * @param options
-	 *            the options
-	 * @param allowCustomOption
-	 *            the allow custom option
-	 * @param listener
-	 *            the listener
+	 * @param player            the player
+	 * @param method            the method
+	 * @param currentValue      the current value
+	 * @param promptText        the prompt text
+	 * @param options           the options
+	 * @param allowCustomOption the allow custom option
+	 * @param listener          the listener
 	 */
 	public void request(Player player, InputMethod method, String currentValue,
 			LinkedHashMap<Number, ItemStack> options, String promptText, boolean allowCustomOption,

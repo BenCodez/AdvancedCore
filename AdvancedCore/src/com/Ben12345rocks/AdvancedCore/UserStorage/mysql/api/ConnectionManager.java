@@ -182,72 +182,63 @@ public class ConnectionManager {
 	}
 
 	/**
-	 * @param connectionTimeout
-	 *            the connectionTimeout to set
+	 * @param connectionTimeout the connectionTimeout to set
 	 */
 	public void setConnectionTimeout(int connectionTimeout) {
 		this.connectionTimeout = connectionTimeout;
 	}
 
 	/**
-	 * @param database
-	 *            the database to set
+	 * @param database the database to set
 	 */
 	public void setDatabase(String database) {
 		this.database = database;
 	}
 
 	/**
-	 * @param dataSource
-	 *            the dataSource to set
+	 * @param dataSource the dataSource to set
 	 */
 	public void setDataSource(HikariDataSource dataSource) {
 		this.dataSource = dataSource;
 	}
 
 	/**
-	 * @param host
-	 *            the host to set
+	 * @param host the host to set
 	 */
 	public void setHost(String host) {
 		this.host = host;
 	}
 
 	/**
-	 * @param maximumPoolsize
-	 *            the maximumPoolsize to set
+	 * @param maximumPoolsize the maximumPoolsize to set
 	 */
 	public void setMaximumPoolsize(int maximumPoolsize) {
 		this.maximumPoolsize = maximumPoolsize;
 	}
 
 	/**
-	 * @param password
-	 *            the password to set
+	 * @param password the password to set
 	 */
 	public void setPassword(String password) {
 		this.password = password;
 	}
 
 	/**
-	 * @param port
-	 *            the port to set
+	 * @param port the port to set
 	 */
 	public void setPort(String port) {
 		this.port = port;
 	}
 
 	/**
-	 * @param username
-	 *            the username to set
+	 * @param username the username to set
 	 */
 	public void setUsername(String username) {
 		this.username = username;
 	}
 
 	/**
-	 * @param useSSL
-	 *            the useSSL to set
+	 * @param useSSL the useSSL to set
 	 */
 	public void setUseSSL(boolean useSSL) {
 		this.useSSL = useSSL;

@@ -226,8 +226,7 @@ public class ItemMessage {
 	 * different packages, and will not be castable to one another. So we use
 	 * reflection to convert the foreign MessageRecord's data into our local object.
 	 *
-	 * @param other
-	 *            the foreign message record
+	 * @param other the foreign message record
 	 * @return a MessageRecord with the imported data, or null if there was a
 	 *         problem
 	 */
@@ -291,10 +290,8 @@ public class ItemMessage {
 	 * Set which item the player should held if he receives a message without having
 	 * something in his hand. Default is a snow layer
 	 *
-	 * @param material
-	 *            Material
-	 * @throws IllegalArgumentException
-	 *             if material is null
+	 * @param material Material
+	 * @throws IllegalArgumentException if material is null
 	 */
 	public void setEmptyHandReplacement(Material material) {
 		Validate.notNull(material, "There must be a replacement for an empty hand!");
@@ -305,10 +302,9 @@ public class ItemMessage {
 	 * Set the alternating format strings for message display. The strings must be
 	 * different and must each contain one (and only one) occurrence of '%s'.
 	 *
-	 * @param formats
-	 *            the format strings
-	 * @throws IllegalArgumentException
-	 *             if the strings are the same, or do not contain a %s
+	 * @param formats the format strings
+	 * @throws IllegalArgumentException if the strings are the same, or do not
+	 *                                  contain a %s
 	 */
 	public void setFormats(String... formats) {
 		Validate.isTrue(formats.length > 1, "Two formats are minimum!");
@@ -322,10 +318,8 @@ public class ItemMessage {
 	 * set the interval the player will receive packets with the formatted message
 	 * Default is 20 for every second
 	 *
-	 * @param interval
-	 *            in ticks
-	 * @throws IllegalArgumentException
-	 *             if interval is below 1
+	 * @param interval in ticks
+	 * @throws IllegalArgumentException if interval is below 1
 	 */
 	public void setInterval(int interval) {
 		Validate.isTrue(interval > 0, "Interval can't be below 1!");

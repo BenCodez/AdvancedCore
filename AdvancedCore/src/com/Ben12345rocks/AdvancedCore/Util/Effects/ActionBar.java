@@ -27,10 +27,8 @@ public class ActionBar {
 	/**
 	 * Instantiates a new action bar.
 	 *
-	 * @param msg
-	 *            the msg
-	 * @param duration
-	 *            the duration
+	 * @param msg      the msg
+	 * @param duration the duration
 	 */
 	public ActionBar(String msg, int duration) {
 		setMsg(StringParser.getInstance().colorize(msg));
@@ -58,8 +56,7 @@ public class ActionBar {
 	/**
 	 * Send.
 	 *
-	 * @param players
-	 *            the players
+	 * @param players the players
 	 */
 	public void send(Player... players) {
 		for (Player player : players) {
@@ -70,10 +67,8 @@ public class ActionBar {
 	/**
 	 * Send action bar.
 	 *
-	 * @param player
-	 *            the player
-	 * @param message
-	 *            the message
+	 * @param player  the player
+	 * @param message the message
 	 */
 	public void sendActionBar(Player player, String message) {
 		if (!NMSManager.getInstance().isVersion("1.7", "1.8", "1.9", "1.10", "1.11", "1.12")) {
@@ -84,12 +79,9 @@ public class ActionBar {
 	/**
 	 * Send action bar.
 	 *
-	 * @param player
-	 *            the player
-	 * @param message
-	 *            the message
-	 * @param duration
-	 *            the duration
+	 * @param player   the player
+	 * @param message  the message
+	 * @param duration the duration
 	 */
 	public void sendActionBar(final Player player, final String message, int duration) {
 		sendActionBar(player, message);
@@ -122,8 +114,7 @@ public class ActionBar {
 	/**
 	 * Send action bar to all players.
 	 *
-	 * @param message
-	 *            the message
+	 * @param message the message
 	 */
 	public void sendActionBarToAllPlayers(String message) {
 		sendActionBarToAllPlayers(message, -1);
@@ -132,10 +123,8 @@ public class ActionBar {
 	/**
 	 * Send action bar to all players.
 	 *
-	 * @param message
-	 *            the message
-	 * @param duration
-	 *            the duration
+	 * @param message  the message
+	 * @param duration the duration
 	 */
 	public void sendActionBarToAllPlayers(String message, int duration) {
 		for (Player p : Bukkit.getOnlinePlayers()) {
@@ -146,8 +135,7 @@ public class ActionBar {
 	/**
 	 * Sets the duration.
 	 *
-	 * @param duration
-	 *            the new duration
+	 * @param duration the new duration
 	 */
 	public void setDuration(int duration) {
 		this.duration = duration;
@@ -156,8 +144,7 @@ public class ActionBar {
 	/**
 	 * Sets the msg.
 	 *
-	 * @param msg
-	 *            the new msg
+	 * @param msg the new msg
 	 */
 	public void setMsg(String msg) {
 		this.msg = msg;

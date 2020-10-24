@@ -47,8 +47,7 @@ public class AdminGUI {
 	/**
 	 * Adds the button.
 	 *
-	 * @param b
-	 *            the b
+	 * @param b the b
 	 */
 	public void addButton(BInventoryButton b) {
 		if (pluginGUIs == null) {
@@ -60,8 +59,7 @@ public class AdminGUI {
 	/**
 	 * Open GUI.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 */
 	public void openGUI(Player player) {
 		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".Admin")) {

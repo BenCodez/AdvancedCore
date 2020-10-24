@@ -41,10 +41,8 @@ public class FilesManager {
 	/**
 	 * Edits the file.
 	 *
-	 * @param file
-	 *            the file
-	 * @param data
-	 *            the data
+	 * @param file the file
+	 * @param data the data
 	 */
 	public void editFile(File file, FileConfiguration data) {
 		FileThread.getInstance().run(new Runnable() {

@@ -20,8 +20,7 @@ public class MySQL {
 	/**
 	 * Create a new MySQL object.
 	 *
-	 * @param maxConnections
-	 *            Maxiumn number of connections
+	 * @param maxConnections Maxiumn number of connections
 	 */
 	public MySQL(int maxConnections) {
 		threadPool = Executors.newFixedThreadPool(10);

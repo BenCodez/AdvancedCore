@@ -80,6 +80,9 @@ public class MySQL {
 
 	private Timer timer = new Timer();
 
+	@Getter
+	private long lastBackgroundCheck = 0;
+
 	public MySQL(String tableName, ConfigurationSection section) {
 		intColumns = Collections.synchronizedList(ServerData.getInstance().getIntColumns());
 
@@ -145,36 +148,6 @@ public class MySQL {
 		schedule();
 
 		AdvancedCorePlugin.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
-	}
-
-	@Getter
-	private long lastBackgroundCheck = 0;
-
-	public void schedule() {
-		timer.schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				lastBackgroundCheck = System.currentTimeMillis();
-				try {
-					updateBatch();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-
-		}, 10 * 1000, 250);
-		timer.schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				if ((System.currentTimeMillis() - lastBackgroundCheck) > 10000) {
-					AdvancedCorePlugin.getInstance().getLogger().severe("MySQL background task not working, fixing");
-					cancel();
-					schedule();
-				}
-			}
-		}, 1000 * 60 * 5, 1000 * 60 * 5);
 	}
 
 	public void addColumn(String column, DataType dataType) {
@@ -611,8 +584,31 @@ public class MySQL {
 		table.remove(uuid);
 	}
 
-	public void update(String index, String column, Object value, DataType dataType) {
-		update(index, column, value, dataType, true);
+	public void schedule() {
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				lastBackgroundCheck = System.currentTimeMillis();
+				try {
+					updateBatch();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+		}, 10 * 1000, 250);
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				if ((System.currentTimeMillis() - lastBackgroundCheck) > 10000) {
+					AdvancedCorePlugin.getInstance().getLogger().severe("MySQL background task not working, fixing");
+					cancel();
+					schedule();
+				}
+			}
+		}, 1000 * 60 * 5, 1000 * 60 * 5);
 	}
 
 	public void update(String index, List<Column> cols, boolean queue) {
@@ -665,6 +661,10 @@ public class MySQL {
 				insertQuery(index, cols);
 			}
 		}
+	}
+
+	public void update(String index, String column, Object value, DataType dataType) {
+		update(index, column, value, dataType, true);
 	}
 
 	public void update(String index, String column, Object value, DataType dataType, boolean queue) {

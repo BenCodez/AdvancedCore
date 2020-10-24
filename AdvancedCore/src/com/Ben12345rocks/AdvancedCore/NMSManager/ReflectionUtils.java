@@ -81,12 +81,10 @@ public class ReflectionUtils {
 	/**
 	 * Sets the value of the specified {@code Field}
 	 *
-	 * @param field
-	 *            The field who's value should be changed
-	 * @param object
-	 *            object from which the represented field's value is to be extracted
-	 * @param newValue
-	 *            the new value for the field of {@code object} being modified
+	 * @param field    The field who's value should be changed
+	 * @param object   object from which the represented field's value is to be
+	 *                 extracted
+	 * @param newValue the new value for the field of {@code object} being modified
 	 * @return The old value of this Field
 	 */
 	public static Object setField(Field field, Object object, Object newValue) {
@@ -110,10 +108,8 @@ public class ReflectionUtils {
 	/**
 	 * Sets the modifiers of the specified Field or Method
 	 *
-	 * @param fieldOrMethod
-	 *            The object that represents the Field / Method
-	 * @param newMods
-	 *            the new modifiers
+	 * @param fieldOrMethod The object that represents the Field / Method
+	 * @param newMods       the new modifiers
 	 * @return the old modifiers
 	 */
 	public static int setModifiers(Object fieldOrMethod, int newMods) {

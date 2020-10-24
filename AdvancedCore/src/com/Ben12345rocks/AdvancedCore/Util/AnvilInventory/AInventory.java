@@ -48,12 +48,9 @@ public class AInventory {
 		/**
 		 * Instantiates a new anvil click event.
 		 *
-		 * @param slot
-		 *            the slot
-		 * @param name
-		 *            the name
-		 * @param player
-		 *            the player
+		 * @param slot   the slot
+		 * @param name   the name
+		 * @param player the player
 		 */
 		public AnvilClickEvent(AnvilSlot slot, String name, Player player) {
 			this.slot = slot;
@@ -109,8 +106,7 @@ public class AInventory {
 		/**
 		 * Sets the will close.
 		 *
-		 * @param close
-		 *            the new will close
+		 * @param close the new will close
 		 */
 		public void setWillClose(boolean close) {
 			this.close = close;
@@ -119,8 +115,7 @@ public class AInventory {
 		/**
 		 * Sets the will destroy.
 		 *
-		 * @param destroy
-		 *            the new will destroy
+		 * @param destroy the new will destroy
 		 */
 		public void setWillDestroy(boolean destroy) {
 			this.destroy = destroy;
@@ -135,8 +130,7 @@ public class AInventory {
 		/**
 		 * On anvil click.
 		 *
-		 * @param event
-		 *            the event
+		 * @param event the event
 		 */
 		void onAnvilClick(AnvilClickEvent event);
 	}
@@ -158,8 +152,7 @@ public class AInventory {
 		/**
 		 * By slot.
 		 *
-		 * @param slot
-		 *            the slot
+		 * @param slot the slot
 		 * @return the anvil slot
 		 */
 		public static AnvilSlot bySlot(int slot) {
@@ -178,8 +171,7 @@ public class AInventory {
 		/**
 		 * Instantiates a new anvil slot.
 		 *
-		 * @param slot
-		 *            the slot
+		 * @param slot the slot
 		 */
 		private AnvilSlot(int slot) {
 			this.slot = slot;
@@ -225,10 +217,8 @@ public class AInventory {
 	/**
 	 * Instantiates a new a inventory.
 	 *
-	 * @param player
-	 *            the player
-	 * @param anvilClickEventHandler
-	 *            the anvil click event handler
+	 * @param player                 the player
+	 * @param anvilClickEventHandler the anvil click event handler
 	 */
 	public AInventory(final Player player, final AnvilClickEventHandler anvilClickEventHandler) {
 
@@ -351,10 +341,8 @@ public class AInventory {
 	/**
 	 * Sets the slot.
 	 *
-	 * @param slot
-	 *            the slot
-	 * @param item
-	 *            the item
+	 * @param slot the slot
+	 * @param item the item
 	 */
 	public void setSlot(AnvilSlot slot, ItemStack item) {
 		items.put(slot, item);

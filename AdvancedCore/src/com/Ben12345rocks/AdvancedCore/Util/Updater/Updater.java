@@ -69,12 +69,9 @@ public class Updater {
 	/**
 	 * Instantiates a new updater.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @param resourceId
-	 *            the resource id
-	 * @param disabled
-	 *            the disabled
+	 * @param plugin     the plugin
+	 * @param resourceId the resource id
+	 * @param disabled   the disabled
 	 */
 	public Updater(JavaPlugin plugin, Integer resourceId, boolean disabled) {
 		RESOURCE_ID = resourceId + "";
@@ -129,10 +126,8 @@ public class Updater {
 	/**
 	 * Should update.
 	 *
-	 * @param localVersion
-	 *            the local version
-	 * @param remoteVersion
-	 *            the remote version
+	 * @param localVersion  the local version
+	 * @param remoteVersion the remote version
 	 * @return true, if successful
 	 */
 	public boolean shouldUpdate(String localVersion, String remoteVersion) {

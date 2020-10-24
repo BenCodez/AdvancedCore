@@ -49,8 +49,7 @@ public class MiscUtils {
 	/**
 	 * Broadcast.
 	 *
-	 * @param broadcastMsg
-	 *            the broadcast msg
+	 * @param broadcastMsg the broadcast msg
 	 */
 	public void broadcast(String broadcastMsg) {
 		broadcast(broadcastMsg, new ArrayList<Player>(Bukkit.getOnlinePlayers()));
@@ -177,21 +176,14 @@ public class MiscUtils {
 	/**
 	 * Gets the connection.
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 * @return the connection
-	 * @throws SecurityException
-	 *             the security exception
-	 * @throws NoSuchMethodException
-	 *             the no such method exception
-	 * @throws NoSuchFieldException
-	 *             the no such field exception
-	 * @throws IllegalArgumentException
-	 *             the illegal argument exception
-	 * @throws IllegalAccessException
-	 *             the illegal access exception
-	 * @throws InvocationTargetException
-	 *             the invocation target exception
+	 * @throws SecurityException         the security exception
+	 * @throws NoSuchMethodException     the no such method exception
+	 * @throws NoSuchFieldException      the no such field exception
+	 * @throws IllegalArgumentException  the illegal argument exception
+	 * @throws IllegalAccessException    the illegal access exception
+	 * @throws InvocationTargetException the invocation target exception
 	 */
 	public Object getConnection(Player player) throws SecurityException, NoSuchMethodException, NoSuchFieldException,
 			IllegalArgumentException, IllegalAccessException, InvocationTargetException {
@@ -205,8 +197,7 @@ public class MiscUtils {
 	/**
 	 * Gets the day from mili.
 	 *
-	 * @param time
-	 *            the time
+	 * @param time the time
 	 * @return the day from mili
 	 */
 	public int getDayFromMili(long time) {
@@ -217,8 +208,7 @@ public class MiscUtils {
 	/**
 	 * Gets the hour from mili.
 	 *
-	 * @param time
-	 *            the time
+	 * @param time the time
 	 * @return the hour from mili
 	 */
 	public int getHourFromMili(long time) {
@@ -229,8 +219,7 @@ public class MiscUtils {
 	/**
 	 * Gets the minutes from mili.
 	 *
-	 * @param time
-	 *            the time
+	 * @param time the time
 	 * @return the minutes from mili
 	 */
 	public int getMinutesFromMili(long time) {
@@ -241,8 +230,7 @@ public class MiscUtils {
 	/**
 	 * Gets the month from mili.
 	 *
-	 * @param time
-	 *            the time
+	 * @param time the time
 	 * @return the month from mili
 	 */
 	public int getMonthFromMili(long time) {
@@ -253,8 +241,7 @@ public class MiscUtils {
 	/**
 	 * Gets the month string.
 	 *
-	 * @param month
-	 *            the month
+	 * @param month the month
 	 * @return the month string
 	 */
 	public String getMonthString(int month) {
@@ -289,12 +276,9 @@ public class MiscUtils {
 	/**
 	 * Gets the region blocks.
 	 *
-	 * @param world
-	 *            the world
-	 * @param loc1
-	 *            the loc 1
-	 * @param loc2
-	 *            the loc 2
+	 * @param world the world
+	 * @param loc1  the loc 1
+	 * @param loc2  the loc 2
 	 * @return the region blocks
 	 */
 	public List<Block> getRegionBlocks(World world, Location loc1, Location loc2) {
@@ -327,8 +311,7 @@ public class MiscUtils {
 	/**
 	 * Gets the year from mili.
 	 *
-	 * @param time
-	 *            the time
+	 * @param time the time
 	 * @return the year from mili
 	 */
 	public int getYearFromMili(long time) {
@@ -346,8 +329,7 @@ public class MiscUtils {
 	/**
 	 * Sets the skull owner.
 	 *
-	 * @param playerName
-	 *            the player name
+	 * @param playerName the player name
 	 * @return the item stack
 	 */
 	@Deprecated

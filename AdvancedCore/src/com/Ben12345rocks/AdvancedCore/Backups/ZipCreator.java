@@ -43,10 +43,8 @@ public class ZipCreator {
 	/**
 	 * Adds the all files.
 	 *
-	 * @param dir
-	 *            the dir
-	 * @param fileList
-	 *            the file list
+	 * @param dir      the dir
+	 * @param fileList the file list
 	 */
 	private void addAllFiles(File dir, List<File> fileList) {
 		try {
@@ -78,14 +76,10 @@ public class ZipCreator {
 	/**
 	 * Adds the to zip.
 	 *
-	 * @param file
-	 *            the file
-	 * @param zos
-	 *            the zos
-	 * @throws FileNotFoundException
-	 *             the file not found exception
-	 * @throws IOException
-	 *             Signals that an I/O exception has occurred.
+	 * @param file the file
+	 * @param zos  the zos
+	 * @throws FileNotFoundException the file not found exception
+	 * @throws IOException           Signals that an I/O exception has occurred.
 	 */
 	private void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
 		if (file.exists()) {

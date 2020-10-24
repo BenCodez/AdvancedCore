@@ -62,13 +62,14 @@ public class User {
 
 	private UserData data;
 
+	@Getter
+	private boolean waitForCache = true;
+
 	/**
 	 * Instantiates a new user.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @param player
-	 *            the player
+	 * @param plugin the plugin
+	 * @param player the player
 	 */
 	@Deprecated
 	public User(Plugin plugin, Player player) {
@@ -81,10 +82,8 @@ public class User {
 	/**
 	 * Instantiates a new user.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @param playerName
-	 *            the player name
+	 * @param plugin     the plugin
+	 * @param playerName the player name
 	 */
 	@Deprecated
 	public User(Plugin plugin, String playerName) {
@@ -97,10 +96,8 @@ public class User {
 	/**
 	 * Instantiates a new user.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @param uuid
-	 *            the uuid
+	 * @param plugin the plugin
+	 * @param uuid   the uuid
 	 */
 	@Deprecated
 	public User(Plugin plugin, UUID uuid) {
@@ -114,12 +111,9 @@ public class User {
 	/**
 	 * Instantiates a new user.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @param uuid
-	 *            the uuid
-	 * @param loadName
-	 *            the load name
+	 * @param plugin   the plugin
+	 * @param uuid     the uuid
+	 * @param loadName the load name
 	 */
 	@Deprecated
 	public User(Plugin plugin, UUID uuid, boolean loadName) {
@@ -246,8 +240,7 @@ public class User {
 			 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)
 			 * ) {
 			 * AdvancedCorePlugin.getInstance().getSQLiteUserTable().removePlayer(getUUID())
-			 * ;
-			 * }
+			 * ; }
 			 */
 	}
 
@@ -413,8 +406,7 @@ public class User {
 	/**
 	 * Give exp.
 	 *
-	 * @param exp
-	 *            the exp
+	 * @param exp the exp
 	 */
 	public void giveExp(int exp) {
 		Player player = getPlayer();
@@ -437,8 +429,7 @@ public class User {
 	/**
 	 * Give item.
 	 *
-	 * @param item
-	 *            the item
+	 * @param item the item
 	 */
 	public void giveItem(ItemStack item) {
 		if (item.getAmount() == 0) {
@@ -480,8 +471,7 @@ public class User {
 	/**
 	 * Give user money, needs vault installed
 	 *
-	 * @param m
-	 *            Amount of money to give
+	 * @param m Amount of money to give
 	 */
 	public void giveMoney(double m) {
 		if (hook.getEcon() != null) {
@@ -517,8 +507,7 @@ public class User {
 	/**
 	 * Give money.
 	 *
-	 * @param money
-	 *            the money
+	 * @param money the money
 	 */
 	public void giveMoney(int money) {
 		giveMoney((double) money);
@@ -527,12 +516,9 @@ public class User {
 	/**
 	 * Give potion effect.
 	 *
-	 * @param potionName
-	 *            the potion name
-	 * @param duration
-	 *            the duration
-	 * @param amplifier
-	 *            the amplifier
+	 * @param potionName the potion name
+	 * @param duration   the duration
+	 * @param amplifier  the amplifier
 	 */
 	public void givePotionEffect(String potionName, int duration, int amplifier) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(getUUID()));
@@ -665,14 +651,10 @@ public class User {
 	/**
 	 * Play particle effect.
 	 *
-	 * @param effectName
-	 *            the effect name
-	 * @param data
-	 *            the data
-	 * @param particles
-	 *            the particles
-	 * @param radius
-	 *            the radius
+	 * @param effectName the effect name
+	 * @param data       the data
+	 * @param particles  the particles
+	 * @param radius     the radius
 	 */
 	public void playEffect(String effectName, int data, int particles, int radius) {
 		Player player = getPlayer();
@@ -708,12 +690,9 @@ public class User {
 	/**
 	 * Play sound.
 	 *
-	 * @param soundName
-	 *            the sound name
-	 * @param volume
-	 *            the volume
-	 * @param pitch
-	 *            the pitch
+	 * @param soundName the sound name
+	 * @param volume    the volume
+	 * @param pitch     the pitch
 	 */
 	public void playSound(String soundName, float volume, float pitch) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
@@ -781,10 +760,8 @@ public class User {
 	/**
 	 * Send action bar.
 	 *
-	 * @param msg
-	 *            the msg
-	 * @param delay
-	 *            the delay
+	 * @param msg   the msg
+	 * @param delay the delay
 	 */
 	public void sendActionBar(String msg, int delay) {
 		// plugin.debug("attempting to send action bar");
@@ -807,16 +784,11 @@ public class User {
 	/**
 	 * Send boss bar.
 	 *
-	 * @param msg
-	 *            the msg
-	 * @param color
-	 *            the color
-	 * @param style
-	 *            the style
-	 * @param progress
-	 *            the progress
-	 * @param delay
-	 *            the delay
+	 * @param msg      the msg
+	 * @param color    the color
+	 * @param style    the style
+	 * @param progress the progress
+	 * @param delay    the delay
 	 */
 	public void sendBossBar(String msg, String color, String style, double progress, int delay) {
 		if (msg != null && msg != "") {
@@ -837,8 +809,7 @@ public class User {
 	/**
 	 * Send json.
 	 *
-	 * @param messages
-	 *            the messages
+	 * @param messages the messages
 	 */
 	public void sendJson(ArrayList<TextComponent> messages) {
 		Player player = getPlayer();
@@ -853,8 +824,7 @@ public class User {
 	/**
 	 * Send json.
 	 *
-	 * @param message
-	 *            the message
+	 * @param message the message
 	 */
 	public void sendJson(TextComponent message) {
 		Player player = getPlayer();
@@ -867,8 +837,7 @@ public class User {
 	/**
 	 * Send message.
 	 *
-	 * @param msg
-	 *            the msg
+	 * @param msg the msg
 	 */
 	public void sendMessage(ArrayList<String> msg) {
 		sendMessage(ArrayUtils.getInstance().convert(msg));
@@ -877,8 +846,7 @@ public class User {
 	/**
 	 * Send message.
 	 *
-	 * @param msg
-	 *            the msg
+	 * @param msg the msg
 	 */
 	public void sendMessage(String msg) {
 		Player player = getPlayer();
@@ -903,8 +871,7 @@ public class User {
 	/**
 	 * Send message.
 	 *
-	 * @param msg
-	 *            the msg
+	 * @param msg the msg
 	 */
 	public void sendMessage(String[] msg) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
@@ -920,16 +887,11 @@ public class User {
 	/**
 	 * Send title.
 	 *
-	 * @param title
-	 *            the title
-	 * @param subTitle
-	 *            the sub title
-	 * @param fadeIn
-	 *            the fade in
-	 * @param showTime
-	 *            the show time
-	 * @param fadeOut
-	 *            the fade out
+	 * @param title    the title
+	 * @param subTitle the sub title
+	 * @param fadeIn   the fade in
+	 * @param showTime the show time
+	 * @param fadeOut  the fade out
 	 */
 	public void sendTitle(String title, String subTitle, int fadeIn, int showTime, int fadeOut) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
@@ -987,13 +949,6 @@ public class User {
 		this.playerName = playerName;
 	}
 
-	@Getter
-	private boolean waitForCache = true;
-
-	public void setWaitForCache(boolean b) {
-		waitForCache = b;
-	}
-
 	public void setRepeatAmount(Reward reward, int amount) {
 		getData().setInt("Repeat" + reward.getName(), amount);
 	}
@@ -1022,11 +977,14 @@ public class User {
 	/**
 	 * Sets the uuid.
 	 *
-	 * @param uuid
-	 *            the new uuid
+	 * @param uuid the new uuid
 	 */
 	public void setUUID(String uuid) {
 		this.uuid = uuid;
+	}
+
+	public void setWaitForCache(boolean b) {
+		waitForCache = b;
 	}
 
 	public void updateName() {

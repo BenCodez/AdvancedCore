@@ -119,8 +119,7 @@ public class MessageBuilder {
 	/**
 	 * Replace placeholderapi placeholders
 	 *
-	 * @param player
-	 *            the player
+	 * @param player the player
 	 * @return the string
 	 */
 	public MessageBuilder replacePlaceHolders(Player player) {

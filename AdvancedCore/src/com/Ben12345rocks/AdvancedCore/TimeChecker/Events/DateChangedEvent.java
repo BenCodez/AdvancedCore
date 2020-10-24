@@ -34,6 +34,7 @@ public class DateChangedEvent extends Event {
 
 	/*
 	 * (non-Javadoc)
+	 *
 	 * @see org.bukkit.event.Event#getHandlers()
 	 */
 	@Override
@@ -57,8 +58,7 @@ public class DateChangedEvent extends Event {
 	}
 
 	/**
-	 * @param timeType
-	 *            the timeType to set
+	 * @param timeType the timeType to set
 	 */
 	public void setTimeType(TimeType timeType) {
 		this.timeType = timeType;

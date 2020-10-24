@@ -37,8 +37,7 @@ public class StringUtils {
 	/**
 	 * Colorize.
 	 *
-	 * @param format
-	 *            the format
+	 * @param format the format
 	 * @return the string
 	 */
 	@Deprecated
@@ -61,8 +60,7 @@ public class StringUtils {
 	/**
 	 * Comp to string.
 	 *
-	 * @param comp
-	 *            the comp
+	 * @param comp the comp
 	 * @return the string
 	 */
 	@Deprecated
@@ -96,8 +94,7 @@ public class StringUtils {
 	/**
 	 * Checks if is int.
 	 *
-	 * @param st
-	 *            the st
+	 * @param st the st
 	 * @return true, if is int
 	 */
 	@Deprecated
@@ -190,12 +187,9 @@ public class StringUtils {
 	/**
 	 * Replace ignore case.
 	 *
-	 * @param str
-	 *            the str
-	 * @param toReplace
-	 *            the to replace
-	 * @param replaceWith
-	 *            the replace with
+	 * @param str         the str
+	 * @param toReplace   the to replace
+	 * @param replaceWith the replace with
 	 * @return the string
 	 */
 	@Deprecated
@@ -318,12 +312,9 @@ public class StringUtils {
 	/**
 	 * Replace place holder.
 	 *
-	 * @param str
-	 *            the str
-	 * @param toReplace
-	 *            the to replace
-	 * @param replaceWith
-	 *            the replace with
+	 * @param str         the str
+	 * @param toReplace   the to replace
+	 * @param replaceWith the replace with
 	 * @return the string
 	 */
 	@Deprecated
@@ -348,10 +339,8 @@ public class StringUtils {
 	/**
 	 * Replace place holders.
 	 *
-	 * @param player
-	 *            the player
-	 * @param text
-	 *            the text
+	 * @param player the player
+	 * @param text   the text
 	 * @return the string
 	 */
 	@Deprecated
@@ -369,10 +358,8 @@ public class StringUtils {
 	/**
 	 * Round decimals.
 	 *
-	 * @param num
-	 *            the num
-	 * @param decimals
-	 *            the decimals
+	 * @param num      the num
+	 * @param decimals the decimals
 	 * @return the string
 	 */
 	@Deprecated
@@ -387,10 +374,8 @@ public class StringUtils {
 	/**
 	 * Starts with ignore case.
 	 *
-	 * @param str1
-	 *            the str 1
-	 * @param str2
-	 *            the str 2
+	 * @param str1 the str 1
+	 * @param str2 the str 2
 	 * @return true, if successful
 	 */
 	@Deprecated
@@ -401,8 +386,7 @@ public class StringUtils {
 	/**
 	 * String to comp.
 	 *
-	 * @param string
-	 *            the string
+	 * @param string the string
 	 * @return the text component
 	 */
 	@Deprecated

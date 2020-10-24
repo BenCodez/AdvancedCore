@@ -48,20 +48,13 @@ public class FireworkHandler implements Listener {
 	/**
 	 * Launch firework.
 	 *
-	 * @param loc
-	 *            the loc
-	 * @param power
-	 *            the power
-	 * @param colors
-	 *            the colors
-	 * @param fadeOutColor
-	 *            the fade out color
-	 * @param trail
-	 *            the trail
-	 * @param flicker
-	 *            the flicker
-	 * @param types
-	 *            the types
+	 * @param loc          the loc
+	 * @param power        the power
+	 * @param colors       the colors
+	 * @param fadeOutColor the fade out color
+	 * @param trail        the trail
+	 * @param flicker      the flicker
+	 * @param types        the types
 	 */
 	public void launchFirework(Location loc, int power, ArrayList<String> colors, ArrayList<String> fadeOutColor,
 			boolean trail, boolean flicker, ArrayList<String> types) {

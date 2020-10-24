@@ -28,10 +28,8 @@ public interface AInventoryVersionHandler {
 	/**
 	 * Open.
 	 *
-	 * @param player
-	 *            the player
-	 * @param items
-	 *            the items
+	 * @param player the player
+	 * @param items  the items
 	 */
 	public void open(Player player, HashMap<AnvilSlot, ItemStack> items);
 }

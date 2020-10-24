@@ -13,8 +13,7 @@ public class DeleteQuery {
 	/**
 	 * Create a delete query.
 	 *
-	 * @param table
-	 *            - the table to be deleted from
+	 * @param table - the table to be deleted from
 	 */
 	public DeleteQuery(String table) {
 		this.table = table;
@@ -23,8 +22,7 @@ public class DeleteQuery {
 	/**
 	 * Add a where clause.
 	 *
-	 * @param expression
-	 *            the expression
+	 * @param expression the expression
 	 * @return the DeleteQuery object
 	 */
 	public DeleteQuery and(String expression) {
@@ -51,8 +49,7 @@ public class DeleteQuery {
 	/**
 	 * Add a where clause.
 	 *
-	 * @param expression
-	 *            the expression
+	 * @param expression the expression
 	 * @return the DeleteQuery object
 	 */
 	public DeleteQuery where(String expression) {

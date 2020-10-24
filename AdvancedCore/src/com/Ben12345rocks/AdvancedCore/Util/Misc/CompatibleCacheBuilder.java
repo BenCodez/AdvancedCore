@@ -13,10 +13,8 @@ import com.google.common.cache.RemovalListener;
  * Represents a Guava CacheBuilder that is compatible with both Guava 10
  * (Minecraft 1.7.X) and 13
  *
- * @param <K>
- *            K
- * @param <V>
- *            V
+ * @param <K> K
+ * @param <V> V
  */
 public class CompatibleCacheBuilder<K, V> {
 
@@ -26,10 +24,8 @@ public class CompatibleCacheBuilder<K, V> {
 	/**
 	 * Construct a new safe cache builder.
 	 *
-	 * @param <K>
-	 *            Key type
-	 * @param <V>
-	 *            Value type
+	 * @param <K> Key type
+	 * @param <V> Value type
 	 *
 	 * @return A new cache builder.
 	 */
@@ -49,12 +45,9 @@ public class CompatibleCacheBuilder<K, V> {
 	 * <p>
 	 * We can't return the direct Cache instance as it changed in Guava 13.
 	 *
-	 * @param <K1>
-	 *            Key type
-	 * @param <V1>
-	 *            Value type
-	 * @param loader
-	 *            - cache loader
+	 * @param <K1>   Key type
+	 * @param <V1>   Value type
+	 * @param loader - cache loader
 	 * @return The cache as a a map.
 	 */
 	@SuppressWarnings("unchecked")
@@ -112,14 +105,11 @@ public class CompatibleCacheBuilder<K, V> {
 	 * <b>Note:</b>The default may change in the future. If you care about this
 	 * value, you should always choose it explicitly.
 	 *
-	 * @param concurrencyLevel
-	 *            New concurrency level
+	 * @param concurrencyLevel New concurrency level
 	 * @return This for chaining
 	 *
-	 * @throws IllegalArgumentException
-	 *             if {@code concurrencyLevel} is nonpositive
-	 * @throws IllegalStateException
-	 *             if a concurrency level was already set
+	 * @throws IllegalArgumentException if {@code concurrencyLevel} is nonpositive
+	 * @throws IllegalStateException    if a concurrency level was already set
 	 */
 	public CompatibleCacheBuilder<K, V> concurrencyLevel(int concurrencyLevel) {
 		builder.concurrencyLevel(concurrencyLevel);
@@ -146,17 +136,14 @@ public class CompatibleCacheBuilder<K, V> {
 	 * occasional read operations in the absense of writes; though this behavior may
 	 * change in the future.
 	 *
-	 * @param duration
-	 *            the length of time after an entry is last accessed that it should
-	 *            be automatically removed
-	 * @param unit
-	 *            the unit that {@code duration} is expressed in
+	 * @param duration the length of time after an entry is last accessed that it
+	 *                 should be automatically removed
+	 * @param unit     the unit that {@code duration} is expressed in
 	 * @return This for chaining
 	 *
-	 * @throws IllegalArgumentException
-	 *             if {@code duration} is negative
-	 * @throws IllegalStateException
-	 *             if the time to idle or time to live was already set
+	 * @throws IllegalArgumentException if {@code duration} is negative
+	 * @throws IllegalStateException    if the time to idle or time to live was
+	 *                                  already set
 	 */
 	public CompatibleCacheBuilder<K, V> expireAfterAccess(long duration, TimeUnit unit) {
 		try {
@@ -184,17 +171,14 @@ public class CompatibleCacheBuilder<K, V> {
 	 * occasional read operations in the absense of writes; though this behavior may
 	 * change in the future.
 	 *
-	 * @param duration
-	 *            the length of time after an entry is created that it should be
-	 *            automatically removed
-	 * @param unit
-	 *            the unit that {@code duration} is expressed in
+	 * @param duration the length of time after an entry is created that it should
+	 *                 be automatically removed
+	 * @param unit     the unit that {@code duration} is expressed in
 	 * @return This for chaining
 	 *
-	 * @throws IllegalArgumentException
-	 *             if {@code duration} is negative
-	 * @throws IllegalStateException
-	 *             if the time to live or time to idle was already set
+	 * @throws IllegalArgumentException if {@code duration} is negative
+	 * @throws IllegalStateException    if the time to live or time to idle was
+	 *                                  already set
 	 */
 	public CompatibleCacheBuilder<K, V> expireAfterWrite(long duration, TimeUnit unit) {
 		try {
@@ -212,14 +196,11 @@ public class CompatibleCacheBuilder<K, V> {
 	 * resizing operations later, but setting this value unnecessarily high wastes
 	 * memory.
 	 *
-	 * @param initialCapacity
-	 *            - initial capacity
+	 * @param initialCapacity - initial capacity
 	 * @return This for chaining
 	 *
-	 * @throws IllegalArgumentException
-	 *             if {@code initialCapacity} is negative
-	 * @throws IllegalStateException
-	 *             if an initial capacity was already set
+	 * @throws IllegalArgumentException if {@code initialCapacity} is negative
+	 * @throws IllegalStateException    if an initial capacity was already set
 	 */
 	public CompatibleCacheBuilder<K, V> initialCapacity(int initialCapacity) {
 		builder.initialCapacity(initialCapacity);
@@ -241,14 +222,11 @@ public class CompatibleCacheBuilder<K, V> {
 	 * unit)}. It can be useful in testing, or to disable caching temporarily
 	 * without a code change.
 	 *
-	 * @param size
-	 *            the maximum size of the cache
+	 * @param size the maximum size of the cache
 	 * @return This for chaining
 	 *
-	 * @throws IllegalArgumentException
-	 *             if {@code size} is negative
-	 * @throws IllegalStateException
-	 *             if a maximum size was already set
+	 * @throws IllegalArgumentException if {@code size} is negative
+	 * @throws IllegalStateException    if a maximum size was already set
 	 */
 	public CompatibleCacheBuilder<K, V> maximumSize(int size) {
 		try {
@@ -289,16 +267,12 @@ public class CompatibleCacheBuilder<K, V> {
 	 * with the listener, you will likely experience a {@link ClassCastException} at
 	 * some <i>undefined</i> point in the future.
 	 *
-	 * @param <K1>
-	 *            Key type
-	 * @param <V1>
-	 *            Value type
-	 * @param listener
-	 *            - removal listener
+	 * @param <K1>     Key type
+	 * @param <V1>     Value type
+	 * @param listener - removal listener
 	 * @return This for chaining
 	 *
-	 * @throws IllegalStateException
-	 *             if a removal listener was already set
+	 * @throws IllegalStateException if a removal listener was already set
 	 */
 	@SuppressWarnings("unchecked")
 	public <K1 extends K, V1 extends V> CompatibleCacheBuilder<K1, V1> removalListener(
@@ -325,8 +299,7 @@ public class CompatibleCacheBuilder<K, V> {
 	 *
 	 * @return This for chaining
 	 *
-	 * @throws IllegalStateException
-	 *             if the value strength was already set
+	 * @throws IllegalStateException if the value strength was already set
 	 */
 	public CompatibleCacheBuilder<K, V> softValues() {
 		builder.softValues();
@@ -342,12 +315,10 @@ public class CompatibleCacheBuilder<K, V> {
 	 * have been configured with {@link #expireAfterWrite} or
 	 * {@link #expireAfterAccess}.
 	 *
-	 * @param ticker
-	 *            - ticker
+	 * @param ticker - ticker
 	 * @return This for chaining
 	 *
-	 * @throws IllegalStateException
-	 *             if a ticker was already set
+	 * @throws IllegalStateException if a ticker was already set
 	 */
 	public CompatibleCacheBuilder<K, V> ticker(Ticker ticker) {
 		builder.ticker(ticker);
@@ -365,8 +336,7 @@ public class CompatibleCacheBuilder<K, V> {
 	 *
 	 * @return This for chaining
 	 *
-	 * @throws IllegalStateException
-	 *             if the key strength was already set
+	 * @throws IllegalStateException if the key strength was already set
 	 */
 	public CompatibleCacheBuilder<K, V> weakKeys() {
 		builder.weakKeys();
@@ -389,8 +359,7 @@ public class CompatibleCacheBuilder<K, V> {
 	 *
 	 * @return This for chaining
 	 *
-	 * @throws IllegalStateException
-	 *             if the value strength was already set
+	 * @throws IllegalStateException if the value strength was already set
 	 */
 	public CompatibleCacheBuilder<K, V> weakValues() {
 		builder.weakValues();

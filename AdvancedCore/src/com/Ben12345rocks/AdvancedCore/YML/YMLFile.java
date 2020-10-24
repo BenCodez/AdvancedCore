@@ -34,8 +34,7 @@ public abstract class YMLFile {
 	/**
 	 * Instantiates a new YML file.
 	 *
-	 * @param file
-	 *            the file
+	 * @param file the file
 	 */
 	public YMLFile(File file) {
 		dFile = file;
@@ -44,10 +43,8 @@ public abstract class YMLFile {
 	/**
 	 * Instantiates a new YML file.
 	 *
-	 * @param file
-	 *            the file
-	 * @param setup
-	 *            the setup
+	 * @param file  the file
+	 * @param setup the setup
 	 */
 	public YMLFile(File file, boolean setup) {
 		dFile = file;
@@ -76,6 +73,10 @@ public abstract class YMLFile {
 
 	public boolean isJustCreated() {
 		return created;
+	}
+
+	public void loadValues() {
+
 	}
 
 	/**
@@ -122,10 +123,6 @@ public abstract class YMLFile {
 		for (Entry<String, Object> entry : map.entrySet()) {
 			this.data.set(entry.getKey(), entry.getValue());
 		}
-	}
-
-	public void loadValues() {
-
 	}
 
 	/**

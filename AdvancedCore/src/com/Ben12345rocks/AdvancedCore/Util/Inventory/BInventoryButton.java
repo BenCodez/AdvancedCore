@@ -49,12 +49,9 @@ public abstract class BInventoryButton {
 	/**
 	 * Instantiates a new b inventory button.
 	 *
-	 * @param name
-	 *            the name
-	 * @param lore
-	 *            the lore
-	 * @param item
-	 *            the item
+	 * @param name the name
+	 * @param lore the lore
+	 * @param item the item
 	 */
 	public BInventoryButton(String name, String[] lore, ItemStack item) {
 		setBuilder(new ItemBuilder(item).setName(name).setLore(lore));
@@ -94,9 +91,6 @@ public abstract class BInventoryButton {
 		}
 		return defaultValue;
 	}
-	
-	public void load(Player p) {
-	}
 
 	/**
 	 * Gets the item.
@@ -131,11 +125,13 @@ public abstract class BInventoryButton {
 		return slot;
 	}
 
+	public void load(Player p) {
+	}
+
 	/**
 	 * On click.
 	 *
-	 * @param clickEvent
-	 *            the click event
+	 * @param clickEvent the click event
 	 */
 	public abstract void onClick(ClickEvent clickEvent);
 
@@ -149,8 +145,7 @@ public abstract class BInventoryButton {
 	}
 
 	/**
-	 * @param builder
-	 *            the builder to set
+	 * @param builder the builder to set
 	 */
 	public void setBuilder(ItemBuilder builder) {
 		this.builder = builder;
@@ -168,8 +163,7 @@ public abstract class BInventoryButton {
 	/**
 	 * Sets the item.
 	 *
-	 * @param item
-	 *            the new item
+	 * @param item the new item
 	 */
 	public void setItem(ItemStack item) {
 		builder = new ItemBuilder(item);
@@ -182,8 +176,7 @@ public abstract class BInventoryButton {
 	/**
 	 * Sets the slot.
 	 *
-	 * @param slot
-	 *            the new slot
+	 * @param slot the new slot
 	 * @return Return button
 	 */
 	public BInventoryButton setSlot(int slot) {

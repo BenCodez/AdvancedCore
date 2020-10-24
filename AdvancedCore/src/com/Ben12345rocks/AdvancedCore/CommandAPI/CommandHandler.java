@@ -66,10 +66,8 @@ public abstract class CommandHandler {
 	/**
 	 * Instantiates a new command handler.
 	 *
-	 * @param args
-	 *            the args
-	 * @param perm
-	 *            the perm
+	 * @param args the args
+	 * @param perm the perm
 	 */
 	public CommandHandler(String[] args, String perm) {
 		this.args = args;
@@ -80,12 +78,9 @@ public abstract class CommandHandler {
 	/**
 	 * Instantiates a new command handler.
 	 *
-	 * @param args
-	 *            the args
-	 * @param perm
-	 *            the perm
-	 * @param helpMessage
-	 *            the help message
+	 * @param args        the args
+	 * @param perm        the perm
+	 * @param helpMessage the help message
 	 */
 	public CommandHandler(String[] args, String perm, String helpMessage) {
 		this.args = args;
@@ -96,14 +91,10 @@ public abstract class CommandHandler {
 	/**
 	 * Instantiates a new command handler.
 	 *
-	 * @param args
-	 *            the args
-	 * @param perm
-	 *            the perm
-	 * @param helpMessage
-	 *            the help message
-	 * @param allowConsole
-	 *            the allow console
+	 * @param args         the args
+	 * @param perm         the perm
+	 * @param helpMessage  the help message
+	 * @param allowConsole the allow console
 	 */
 	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole) {
 		this.args = args;
@@ -123,10 +114,8 @@ public abstract class CommandHandler {
 	/**
 	 * Adds the tab complete option.
 	 *
-	 * @param toReplace
-	 *            the to replace
-	 * @param options
-	 *            the options
+	 * @param toReplace the to replace
+	 * @param options   the options
 	 */
 	@Deprecated
 	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
@@ -136,10 +125,8 @@ public abstract class CommandHandler {
 	/**
 	 * Adds the tab complete option.
 	 *
-	 * @param toReplace
-	 *            the to replace
-	 * @param options
-	 *            the options
+	 * @param toReplace the to replace
+	 * @param options   the options
 	 */
 	@Deprecated
 	public void addTabCompleteOption(String toReplace, String... options) {
@@ -149,10 +136,8 @@ public abstract class CommandHandler {
 	/**
 	 * Args match.
 	 *
-	 * @param arg
-	 *            the arg
-	 * @param i
-	 *            the i
+	 * @param arg the arg
+	 * @param i   the i
 	 * @return true, if successful
 	 */
 	public boolean argsMatch(String arg, int i) {
@@ -190,18 +175,15 @@ public abstract class CommandHandler {
 	/**
 	 * Execute.
 	 *
-	 * @param sender
-	 *            the sender
-	 * @param args
-	 *            the args
+	 * @param sender the sender
+	 * @param args   the args
 	 */
 	public abstract void execute(CommandSender sender, String[] args);
 
 	/**
 	 * Gets the help line.
 	 *
-	 * @param command
-	 *            the command
+	 * @param command the command
 	 * @return the help line
 	 */
 	public TextComponent getHelpLine(String command) {
@@ -223,8 +205,7 @@ public abstract class CommandHandler {
 	/**
 	 * Gets the help line command.
 	 *
-	 * @param command
-	 *            the command
+	 * @param command the command
 	 * @return the help line command
 	 */
 	public String getHelpLineCommand(String command) {
@@ -337,10 +318,8 @@ public abstract class CommandHandler {
 	/**
 	 * Run command.
 	 *
-	 * @param sender
-	 *            the sender
-	 * @param args
-	 *            the args
+	 * @param sender the sender
+	 * @param args   the args
 	 * @return true, if successful
 	 */
 	public boolean runCommand(CommandSender sender, String[] args) {

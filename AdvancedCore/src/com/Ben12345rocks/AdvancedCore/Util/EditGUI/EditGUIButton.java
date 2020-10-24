@@ -40,62 +40,62 @@ public class EditGUIButton extends BInventoryButton {
 	public EditGUIButton(ItemBuilder itemBuilder, String key, Object value, EditGUIValueType type) {
 		super(itemBuilder);
 		switch (type) {
-			case BOOLEAN:
-				editer = new EditGUIValueBoolean(key, value) {
+		case BOOLEAN:
+			editer = new EditGUIValueBoolean(key, value) {
 
-					@Override
-					public void setValue(Player player, boolean value) {
-						setV(player, value);
-					}
-				};
-				break;
-			case DOUBLE:
-				editer = new EditGUIValueNumber(key, value) {
+				@Override
+				public void setValue(Player player, boolean value) {
+					setV(player, value);
+				}
+			};
+			break;
+		case DOUBLE:
+			editer = new EditGUIValueNumber(key, value) {
 
-					@Override
-					public void setValue(Player player, Number value) {
-						setV(player, value.doubleValue());
-					}
-				};
-				break;
-			case INT:
-				editer = new EditGUIValueNumber(key, value) {
+				@Override
+				public void setValue(Player player, Number value) {
+					setV(player, value.doubleValue());
+				}
+			};
+			break;
+		case INT:
+			editer = new EditGUIValueNumber(key, value) {
 
-					@Override
-					public void setValue(Player player, Number value) {
-						setV(player, value.intValue());
-					}
-				};
-				break;
-			case LIST:
-				editer = new EditGUIValueList(key, value) {
+				@Override
+				public void setValue(Player player, Number value) {
+					setV(player, value.intValue());
+				}
+			};
+			break;
+		case LIST:
+			editer = new EditGUIValueList(key, value) {
 
-					@Override
-					public void setValue(Player player, ArrayList<String> value) {
-						setV(player, value);
-					}
-				};
-				break;
-			case NUMBER:
-				editer = new EditGUIValueNumber(key, value) {
+				@Override
+				public void setValue(Player player, ArrayList<String> value) {
+					setV(player, value);
+				}
+			};
+			break;
+		case NUMBER:
+			editer = new EditGUIValueNumber(key, value) {
 
-					@Override
-					public void setValue(Player player, Number value) {
-						setV(player, value.doubleValue());
-					}
-				};
-				break;
-			case STRING:
-				editer = new EditGUIValueString(key, value) {
+				@Override
+				public void setValue(Player player, Number value) {
+					setV(player, value.doubleValue());
+				}
+			};
+			break;
+		case STRING:
+			editer = new EditGUIValueString(key, value) {
 
-					@Override
-					public void setValue(Player player, String value) {
-						setV(player, value);
-					}
-				};
-				break;
-			default:
-				break;
+				@Override
+				public void setValue(Player player, String value) {
+					setV(player, value);
+				}
+			};
+			break;
+		default:
+			break;
 
 		}
 	}

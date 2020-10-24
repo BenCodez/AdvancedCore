@@ -45,8 +45,7 @@ public class MCStatsMetrics {
 		/**
 		 * Instantiates a new graph.
 		 *
-		 * @param name
-		 *            the name
+		 * @param name the name
 		 */
 		private Graph(final String name) {
 			this.name = name;
@@ -55,8 +54,7 @@ public class MCStatsMetrics {
 		/**
 		 * Adds the plotter.
 		 *
-		 * @param plotter
-		 *            the plotter
+		 * @param plotter the plotter
 		 */
 		public void addPlotter(final Plotter plotter) {
 			plotters.add(plotter);
@@ -64,6 +62,7 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
+		 *
 		 * @see java.lang.Object#equals(java.lang.Object)
 		 */
 		@Override
@@ -96,6 +95,7 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
+		 *
 		 * @see java.lang.Object#hashCode()
 		 */
 		@Override
@@ -106,8 +106,7 @@ public class MCStatsMetrics {
 		/**
 		 * Removes the plotter.
 		 *
-		 * @param plotter
-		 *            the plotter
+		 * @param plotter the plotter
 		 */
 		public void removePlotter(final Plotter plotter) {
 			plotters.remove(plotter);
@@ -133,8 +132,7 @@ public class MCStatsMetrics {
 		/**
 		 * Instantiates a new plotter.
 		 *
-		 * @param name
-		 *            the name
+		 * @param name the name
 		 */
 		public Plotter(final String name) {
 			this.name = name;
@@ -142,6 +140,7 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
+		 *
 		 * @see java.lang.Object#equals(java.lang.Object)
 		 */
 		@Override
@@ -172,6 +171,7 @@ public class MCStatsMetrics {
 
 		/*
 		 * (non-Javadoc)
+		 *
 		 * @see java.lang.Object#hashCode()
 		 */
 		@Override
@@ -208,11 +208,9 @@ public class MCStatsMetrics {
 	/**
 	 * Encode.
 	 *
-	 * @param text
-	 *            the text
+	 * @param text the text
 	 * @return the string
-	 * @throws UnsupportedEncodingException
-	 *             the unsupported encoding exception
+	 * @throws UnsupportedEncodingException the unsupported encoding exception
 	 */
 	private static String encode(final String text) throws UnsupportedEncodingException {
 		return URLEncoder.encode(text, "UTF-8");
@@ -221,14 +219,10 @@ public class MCStatsMetrics {
 	/**
 	 * Encode data pair.
 	 *
-	 * @param buffer
-	 *            the buffer
-	 * @param key
-	 *            the key
-	 * @param value
-	 *            the value
-	 * @throws UnsupportedEncodingException
-	 *             the unsupported encoding exception
+	 * @param buffer the buffer
+	 * @param key    the key
+	 * @param value  the value
+	 * @throws UnsupportedEncodingException the unsupported encoding exception
 	 */
 	private static void encodeDataPair(final StringBuilder buffer, final String key, final String value)
 			throws UnsupportedEncodingException {
@@ -264,10 +258,8 @@ public class MCStatsMetrics {
 	/**
 	 * Instantiates a new metrics.
 	 *
-	 * @param plugin
-	 *            the plugin
-	 * @throws IOException
-	 *             Signals that an I/O exception has occurred.
+	 * @param plugin the plugin
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public MCStatsMetrics(final Plugin plugin) throws IOException {
 		if (plugin == null) {
@@ -297,8 +289,7 @@ public class MCStatsMetrics {
 	/**
 	 * Adds the custom data.
 	 *
-	 * @param plotter
-	 *            the plotter
+	 * @param plotter the plotter
 	 */
 	public void addCustomData(final Plotter plotter) {
 		if (plotter == null) {
@@ -315,8 +306,7 @@ public class MCStatsMetrics {
 	/**
 	 * Creates the graph.
 	 *
-	 * @param name
-	 *            the name
+	 * @param name the name
 	 * @return the graph
 	 */
 	public Graph createGraph(final String name) {
@@ -337,8 +327,7 @@ public class MCStatsMetrics {
 	/**
 	 * Disable.
 	 *
-	 * @throws IOException
-	 *             Signals that an I/O exception has occurred.
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public void disable() throws IOException {
 		// This has to be synchronized or it can collide with the check in the
@@ -362,8 +351,7 @@ public class MCStatsMetrics {
 	/**
 	 * Enable.
 	 *
-	 * @throws IOException
-	 *             Signals that an I/O exception has occurred.
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public void enable() throws IOException {
 		// This has to be synchronized or it can collide with the check in the
@@ -424,10 +412,8 @@ public class MCStatsMetrics {
 	/**
 	 * Post plugin.
 	 *
-	 * @param isPing
-	 *            the is ping
-	 * @throws IOException
-	 *             Signals that an I/O exception has occurred.
+	 * @param isPing the is ping
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	private void postPlugin(final boolean isPing) throws IOException {
 		// The plugin's description file containg all of the plugin data such as
