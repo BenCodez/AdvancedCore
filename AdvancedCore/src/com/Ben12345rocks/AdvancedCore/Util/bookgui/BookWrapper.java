@@ -59,7 +59,10 @@ public class BookWrapper {
 		if (currentPageLines > 14) {
 			nextPage(baseComponents.length);
 		}
-		currentPage.add(baseComponents);
+		for (BaseComponent comp : baseComponents) {
+			currentPage.add(comp);
+			currentPage.newLine();
+		}
 		return this;
 	}
 
