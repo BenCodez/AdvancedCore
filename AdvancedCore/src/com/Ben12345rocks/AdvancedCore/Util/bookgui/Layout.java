@@ -46,8 +46,8 @@ public class Layout {
 
 			if (StringParser.getInstance().containsIgnorecase(str, text)) {
 				String[] split = str.split(text);
-				String first = split[0].substring(0, split[0].length());
-				String last = str.substring(first.length() + text.length());
+				String first = split[0];
+				String last = split[1];
 				BaseComponent comp = new TextComponent(colorize(first));
 				comp.addExtra(compToAdd);
 				comp.addExtra(colorize(last));
