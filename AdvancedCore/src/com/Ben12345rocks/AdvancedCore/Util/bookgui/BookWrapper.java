@@ -22,9 +22,6 @@ public class BookWrapper {
 	@Setter
 	private String title;
 	@Getter
-	@Setter
-	private Player player;
-	@Getter
 	private ItemStack book;
 	@Getter
 	private BookUtil.PageBuilder currentPage;
@@ -40,9 +37,8 @@ public class BookWrapper {
 		return this;
 	}
 
-	public BookWrapper(String title, Player player) {
+	public BookWrapper(String title) {
 		this.title = title;
-		this.player = player;
 		currentPage = new BookUtil.PageBuilder();
 	}
 
@@ -71,7 +67,7 @@ public class BookWrapper {
 		return StringParser.getInstance().colorize(s);
 	}
 
-	public void open() {
+	public void open(Player player) {
 		builder.add(currentPage.build());
 		book = BookUtil.writtenBook().author(player.getName()).title(colorize(title)).pages(builder).build();
 		Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
