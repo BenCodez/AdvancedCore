@@ -88,7 +88,7 @@ public class BookWrapper {
 
 		private String text;
 		private BaseComponent compToAdd;
-		private HashMap<String,String> placeholders = new HashMap<String,String>();
+		private HashMap<String, String> placeholders = new HashMap<String, String>();
 
 		public Layout(ArrayList<String> layout) {
 			this.stringLayout = layout;
@@ -98,12 +98,12 @@ public class BookWrapper {
 			return StringParser.getInstance().colorize(s);
 		}
 
-		public Layout replaceTextComponent(BaseComponent compToAdd, String text) {
+		public Layout replaceTextComponent(String text, BaseComponent compToAdd) {
 			this.text = text;
 			this.compToAdd = compToAdd;
 			return this;
 		}
-		
+
 		public Layout addPlaceholder(String toReplace, String replaceWith) {
 			placeholders.put(toReplace, replaceWith);
 			return this;
