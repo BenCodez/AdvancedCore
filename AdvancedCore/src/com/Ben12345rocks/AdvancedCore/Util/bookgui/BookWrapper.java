@@ -85,6 +85,7 @@ public class BookWrapper {
 
 		private String text;
 		private BaseComponent compToAdd;
+		private HashMap<String,String> placeholders = new HashMap<String,String>();
 
 		public Layout(ArrayList<String> layout) {
 			this.stringLayout = layout;
@@ -99,9 +100,15 @@ public class BookWrapper {
 			this.compToAdd = compToAdd;
 			return this;
 		}
+		
+		public Layout addPlaceholder(String toReplace, String replaceWith) {
+			placeholders.put(toReplace, replaceWith);
+			return this;
+		}
 
 		public BaseComponent[] getLayout(HashMap<String, String> placeholders) {
 			stringLayout = ArrayUtils.getInstance().replacePlaceHolder(stringLayout, placeholders);
+			stringLayout = ArrayUtils.getInstance().replacePlaceHolder(stringLayout, this.placeholders);
 			ArrayList<BaseComponent> layout = new ArrayList<BaseComponent>();
 			for (int i = 0; i < stringLayout.size(); i++) {
 				String str = stringLayout.get(i);
