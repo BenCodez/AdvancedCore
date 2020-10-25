@@ -51,11 +51,11 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 					@Override
 					public void run() {
 						try {
-							if (p != null) {
+							if (p != null && getInv().isOpen(p)) {
 								p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
 							}
 						} catch (Exception e) {
-							e.printStackTrace();
+							AdvancedCorePlugin.getInstance().debug(e);
 							cancel();
 						}
 
