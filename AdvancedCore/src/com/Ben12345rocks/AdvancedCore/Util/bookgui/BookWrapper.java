@@ -26,6 +26,7 @@ public class BookWrapper {
 	@Getter
 	private BookUtil.PageBuilder currentPage;
 	@Getter
+	@Setter
 	private int currentPageLines = 0;
 	@Getter
 	private ArrayList<BaseComponent[]> builder = new ArrayList<BaseComponent[]>();
