@@ -93,6 +93,8 @@ public abstract class YMLFile {
 			failedToRead = false;
 			if (data.getConfigurationSection("").getKeys(false).size() == 0) {
 				failedToRead = true;
+			} else {
+				loadValues();
 			}
 		} catch (Exception e) {
 			failedToRead = true;
