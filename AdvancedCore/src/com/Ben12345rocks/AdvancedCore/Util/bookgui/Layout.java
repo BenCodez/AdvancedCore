@@ -2,11 +2,13 @@ package com.Ben12345rocks.AdvancedCore.Util.bookgui;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.regex.Pattern;
 
 import com.Ben12345rocks.AdvancedCore.Util.Messages.StringParser;
 import com.Ben12345rocks.AdvancedCore.Util.Misc.ArrayUtils;
 
 import lombok.Getter;
+import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 
@@ -23,7 +25,7 @@ public class Layout {
 	}
 
 	private String colorize(String s) {
-		return StringParser.getInstance().colorize(s);
+		return ChatColor.translateAlternateColorCodes('&', s);
 	}
 
 	public Layout replaceTextComponent(String text, BaseComponent compToAdd) {
@@ -45,13 +47,21 @@ public class Layout {
 			String str = stringLayout.get(i);
 
 			if (StringParser.getInstance().containsIgnorecase(str, text)) {
-				String[] split = str.split(text);
-				String first = split[0];
-				String last = split[1];
+				String[] split = str.split(Pattern.quote(text));
+
+				String first = "";
+				String last = "";
+				if (split.length > 0) {
+					first = split[0];
+					if (split.length > 1) {
+						last = split[1];
+					}
+				}
 				BaseComponent comp = new TextComponent(colorize(first));
 				comp.addExtra(compToAdd);
 				comp.addExtra(colorize(last));
 				layout.add(comp);
+
 			} else {
 				layout.add(new TextComponent(colorize(str)));
 			}
