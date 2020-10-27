@@ -72,7 +72,7 @@ public class RewardEditGUI {
 					@Override
 					public void setValue(Player player, boolean value) {
 						getCurrentReward(player).getConfig().setRequirePermission(value);
-						plugin.reloadAdvancedCore();
+						plugin.reloadAdvancedCore(false);
 					}
 				}));
 

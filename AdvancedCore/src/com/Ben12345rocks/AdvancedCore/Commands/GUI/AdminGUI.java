@@ -80,7 +80,7 @@ public class AdminGUI {
 						public void onInput(Player player, String value) {
 							RewardHandler.getInstance().getReward(value);
 							player.sendMessage("Reward file created");
-							plugin.reloadAdvancedCore();
+							plugin.reloadAdvancedCore(false);
 
 						}
 					});

@@ -334,9 +334,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}, delay, delay);
 	}
 
-	private void loadConfig() {
+	private void loadConfig(boolean userStorage) {
 		getOptions().load(this);
-		if (loadUserData) {
+		if (loadUserData && userStorage) {
 			loadUserAPI(getOptions().getStorageType());
 		}
 	}
@@ -387,7 +387,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadAutoUpdateCheck();
 		loadVersionFile();
 
-		loadConfig();
+		loadConfig(true);
 
 		UserManager.getInstance().purgeOldPlayers();
 
@@ -714,7 +714,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 								public void setValue(Player player, String value) {
 									Reward reward = (Reward) getInv().getData("Reward");
 									reward.getConfig().set(getKey(), value);
-									reloadAdvancedCore();
+									reloadAdvancedCore(false);
 								}
 							}.addOptions(getPerms().getGroups()))));
 				} else {
@@ -775,17 +775,22 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	/**
 	 * Reload
 	 */
-	public void reloadAdvancedCore() {
+	public void reloadAdvancedCore(boolean userStorage) {
 		ServerData.getInstance().reloadData();
 		RewardHandler.getInstance().loadRewards();
-		loadConfig();
-		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
+		loadConfig(userStorage);
+		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null && userStorage) {
 			getMysql().clearCache();
 		}
 		TimeChecker.getInstance().update();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
+	}
+	
+	@Deprecated
+	public void reloadAdvancedCore() {
+		reloadAdvancedCore(false);
 	}
 
 	/**
