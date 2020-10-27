@@ -287,9 +287,8 @@ public class RewardHandler {
 			return new ArrayList<String>();
 		}
 		for (int i = 0; i < rewardFiles1.size(); i++) {
-			if (rewardFiles1.get(i).endsWith(".yml")) {
-				rewardFiles.add(rewardFiles1.get(i).replace(".yml", ""));
-			}
+			rewardFiles.add(rewardFiles1.get(i).replace(".yml", ""));
+
 		}
 
 		Collections.sort(rewardFiles, String.CASE_INSENSITIVE_ORDER);
