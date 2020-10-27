@@ -263,6 +263,15 @@ public class RewardHandler {
 		return new Reward(reward);
 	}
 
+	private String getFileExtension(File file) {
+		String name = file.getName();
+		int lastIndexOf = name.lastIndexOf(".");
+		if (lastIndexOf == -1) {
+			return ""; // empty extension
+		}
+		return name.substring(lastIndexOf);
+	}
+
 	/**
 	 * Gets the reward files.
 	 *
@@ -270,8 +279,13 @@ public class RewardHandler {
 	 * @return the reward files
 	 */
 	public ArrayList<String> getRewardFiles(File folder) {
-		String[] fileNames = folder.list();
-		return ArrayUtils.getInstance().convert(fileNames);
+		ArrayList<String> fileNames = new ArrayList<String>();
+		for (File file : folder.listFiles()) {
+			if (getFileExtension(file).equals(".yml")) {
+				fileNames.add(file.getName());
+			}
+		}
+		return fileNames;
 	}
 
 	/**
