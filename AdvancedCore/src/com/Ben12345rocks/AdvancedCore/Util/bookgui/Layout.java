@@ -46,7 +46,7 @@ public class Layout {
 		for (int i = 0; i < stringLayout.size(); i++) {
 			String str = stringLayout.get(i);
 
-			if (StringParser.getInstance().containsIgnorecase(str, text)) {
+			if (text != null && !text.equals("") && StringParser.getInstance().containsIgnorecase(str, text)) {
 				String[] split = str.split(Pattern.quote(text));
 
 				String first = "";

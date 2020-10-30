@@ -53,6 +53,15 @@ public class BookWrapper {
 		return this;
 	}
 
+	public BookWrapper addLine() {
+		currentPageLines += 1;
+		if (currentPageLines > 14) {
+			nextPage(0);
+		}
+		currentPage.newLine();
+		return this;
+	}
+
 	public BookWrapper addToCurrentPage(BaseComponent... baseComponents) {
 		currentPageLines += baseComponents.length;
 		if (currentPageLines > 14) {
@@ -65,7 +74,7 @@ public class BookWrapper {
 		return this;
 	}
 
-	private String colorize(String s) {
+	public String colorize(String s) {
 		return StringParser.getInstance().colorize(s);
 	}
 

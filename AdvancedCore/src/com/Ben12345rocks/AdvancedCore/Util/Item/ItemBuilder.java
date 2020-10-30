@@ -152,6 +152,7 @@ public class ItemBuilder {
 				String texture = data.getString("SkullTexture", "");
 				if (!texture.equals("")) {
 					setHeadFromValue(texture);
+					is.setAmount(currentAmount);
 				}
 
 				String name = data.getString("Name");
