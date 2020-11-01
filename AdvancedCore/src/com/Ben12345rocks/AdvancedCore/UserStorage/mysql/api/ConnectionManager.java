@@ -74,7 +74,7 @@ public class ConnectionManager {
 
 	public Connection getConnection() {
 		try {
-			if (isClosed()) {
+			if (isClosed() || dataSource.getConnection() == null) {
 				open();
 			}
 			return dataSource.getConnection();
