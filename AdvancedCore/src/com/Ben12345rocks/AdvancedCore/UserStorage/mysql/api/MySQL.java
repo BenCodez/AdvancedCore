@@ -28,9 +28,9 @@ public class MySQL {
 	}
 
 	public boolean connect(String host, String port, String username, String password, String database, boolean useSSL,
-			long lifeTime, String str) {
+			long lifeTime, String str, boolean publicKeyRetrieval) {
 		connectionManager = new ConnectionManager(host, port, username, password, database, maxConnections, useSSL,
-				lifeTime, str);
+				lifeTime, str, publicKeyRetrieval);
 		return connectionManager.open();
 	}
 

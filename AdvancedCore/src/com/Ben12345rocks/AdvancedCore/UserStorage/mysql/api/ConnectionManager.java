@@ -20,6 +20,7 @@ public class ConnectionManager {
 	// private int maxConnections;
 	private long maxLifetimeMs;
 	private String str = "";
+	private boolean publicKeyRetrieval;
 
 	public ConnectionManager(String host, String port, String username, String password, String database) {
 		this.host = host;
@@ -34,7 +35,7 @@ public class ConnectionManager {
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
-			int maxConnections, boolean useSSL, long lifeTime, String str) {
+			int maxConnections, boolean useSSL, long lifeTime, String str, boolean publicKeyRetrieval) {
 		this.host = host;
 		this.port = port;
 		this.username = username;
@@ -50,6 +51,7 @@ public class ConnectionManager {
 		this.maxLifetimeMs = lifeTime;
 		// this.maxConnections = maxConnections;
 		this.str = str;
+		this.publicKeyRetrieval = publicKeyRetrieval;
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
@@ -74,7 +76,7 @@ public class ConnectionManager {
 
 	public Connection getConnection() {
 		try {
-			if (isClosed() || dataSource.getConnection() == null) {
+			if (isClosed()) {
 				open();
 			}
 			return dataSource.getConnection();
@@ -161,7 +163,8 @@ public class ConnectionManager {
 			config.setUsername(username);
 			config.setPassword(password);
 			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=" + useSSL
-					+ "&allowMultiQueries=true&rewriteBatchedStatements=true&useDynamicCharsetInfo=false" + str);
+					+ "&allowMultiQueries=true&rewriteBatchedStatements=true&useDynamicCharsetInfo=false&allowPublicKeyRetrieval="
+					+ publicKeyRetrieval + str);
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(maximumPoolsize);

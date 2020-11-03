@@ -98,6 +98,7 @@ public class MySQL {
 			maxThreads = 1;
 		}
 		boolean useSSL = section.getBoolean("UseSSL", false);
+		boolean publicKeyRetrieval = section.getBoolean("PublicKeyRetrieval", false);
 		this.maxSize = section.getInt("MaxSize", -1);
 		if (!section.getString("Name", "").isEmpty()) {
 			tableName = section.getString("Name", "");
@@ -121,7 +122,7 @@ public class MySQL {
 			name = tablePrefix + tableName;
 		}
 		mysql = new com.Ben12345rocks.AdvancedCore.UserStorage.mysql.api.MySQL(maxThreads);
-		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str)) {
+		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval)) {
 			AdvancedCorePlugin.getInstance().getLogger().warning("Failed to connect to MySQL");
 		}
 		try {
