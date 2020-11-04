@@ -476,7 +476,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						setReplace(list);
 					}
 				});
-
+		
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
 
 			@Override
@@ -787,7 +787,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}
-	
+
 	@Deprecated
 	public void reloadAdvancedCore() {
 		reloadAdvancedCore(false);
