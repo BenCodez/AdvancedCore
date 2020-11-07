@@ -210,11 +210,20 @@ public abstract class CommandHandler {
 	 */
 	public String getHelpLineCommand(String command) {
 		String commandText = command;
+		boolean addSpace = true;
+		if (command.isEmpty()) {
+			addSpace = false;
+		}
 		for (String arg1 : args) {
 			int count = 1;
 			for (String arg : arg1.split("&")) {
 				if (count == 1) {
-					commandText += " " + arg;
+					if (addSpace) {
+						commandText += " " + arg;
+					} else {
+						commandText += arg;
+						addSpace = true;
+					}
 				} else {
 					commandText += "/" + arg;
 				}

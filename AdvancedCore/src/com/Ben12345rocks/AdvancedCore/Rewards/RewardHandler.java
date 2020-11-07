@@ -1618,7 +1618,7 @@ public class RewardHandler {
 				return null;
 			}
 
-		}.priority(10).validator(new RewardInjectValidator() {
+		}.priority(10).synchronize().validator(new RewardInjectValidator() {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
