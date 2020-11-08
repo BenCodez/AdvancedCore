@@ -193,7 +193,7 @@ public class AdvancedCoreConfigOptions {
 			formatChoiceRewardsPreferenceSet = configData.getString("Format.ChoiceRewards.PreferenceSet",
 					"&aPreference set to %choice%");
 
-			helpLine = configData.getString("Format.HelpLine", "&3&l%Command% - &3%HelpMessage%");
+			helpLine = configData.getString("Format.HelpLine", "&6%Command% - &6%HelpMessage%");
 			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
 			sendScoreboards = configData.getBoolean("SendScoreboards", true);
 			autoKillInvs = configData.getBoolean("AutoKillInvs", true);
