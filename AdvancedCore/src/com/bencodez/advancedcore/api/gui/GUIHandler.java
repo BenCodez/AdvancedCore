@@ -62,11 +62,21 @@ public abstract class GUIHandler {
 	}
 
 	public void sendMessage(ArrayList<String> message) {
-		player.sendMessage(ArrayUtils.getInstance().convert(message));
+		if (player instanceof Player) {
+			AdvancedCoreUser user = UserManager.getInstance().getUser((Player) player);
+			user.sendMessage(message);
+		} else {
+			player.sendMessage(ArrayUtils.getInstance().convert(message));
+		}
 	}
 
 	public void sendMessage(String... message) {
-		player.sendMessage(message);
+		if (player instanceof Player) {
+			AdvancedCoreUser user = UserManager.getInstance().getUser((Player) player);
+			user.sendMessage(message);
+		} else {
+			player.sendMessage(message);
+		}
 	}
 
 	public void sendMessageJson(ArrayList<TextComponent> text) {
