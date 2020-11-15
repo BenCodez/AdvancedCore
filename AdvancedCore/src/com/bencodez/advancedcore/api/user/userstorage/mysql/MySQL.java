@@ -237,26 +237,19 @@ public class MySQL {
 
 	public boolean containsKeyQuery(String index) {
 		String sqlStr = "SELECT uuid FROM " + getName() + ";";
-		try {
-			ResultSet rs = null;
-
-			Connection conn = mysql.getConnectionManager().getConnection();
-			PreparedStatement sql = conn.prepareStatement(sqlStr);
-
-			rs = sql.executeQuery();
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
+			ResultSet rs = sql.executeQuery();
 			/*
 			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
 			 */
 			while (rs.next()) {
 				if (rs.getString("uuid").equals(index)) {
-					sql.close();
 					rs.close();
 					return true;
 				}
 			}
-			sql.close();
 			rs.close();
-			conn.close();
 
 		} catch (SQLException ex) {
 			ex.printStackTrace();
@@ -290,13 +283,9 @@ public class MySQL {
 
 	public ArrayList<String> getColumnsQueury() {
 		ArrayList<String> columns = new ArrayList<String>();
-		try {
-			ResultSet rs = null;
-
-			Connection conn = mysql.getConnectionManager().getConnection();
-			PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + ";");
-
-			rs = sql.executeQuery();
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + ";")) {
+			ResultSet rs = sql.executeQuery();
 			/*
 			 * Query query = new Query(mysql, "SELECT * FROM " + getName() + ";"); ResultSet
 			 * rs = query.executeQuery();
@@ -316,9 +305,7 @@ public class MySQL {
 				conn.close();
 				return columns;
 			}
-			sql.close();
 			rs.close();
-			conn.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -347,18 +334,10 @@ public class MySQL {
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`='"
 				+ column.getValue().toString() + "';";
 
-		try {
-			ResultSet rs = null;
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(query)) {
+			ResultSet rs = sql.executeQuery();
 
-			Connection conn = mysql.getConnectionManager().getConnection();
-			PreparedStatement sql = conn.prepareStatement(query);
-
-			rs = sql.executeQuery();
-
-			/*
-			 * Query sql = new Query(mysql, query); sql.setParameter(1,
-			 * column.getValue().toString()); ResultSet rs = sql.executeQuery();
-			 */
 			if (rs.next()) {
 				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
 					String columnName = rs.getMetaData().getColumnLabel(i);
@@ -375,9 +354,7 @@ public class MySQL {
 					result.add(rCol);
 				}
 			}
-			sql.close();
 			rs.close();
-			conn.close();
 			return result;
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -427,25 +404,17 @@ public class MySQL {
 		ArrayList<Column> result = new ArrayList<Column>();
 		String sqlStr = "SELECT PlayerName FROM " + getName() + ";";
 
-		try {
-			ResultSet rs = null;
-
-			Connection conn = mysql.getConnectionManager().getConnection();
-			PreparedStatement sql = conn.prepareStatement(sqlStr);
-
-			rs = sql.executeQuery();
-			/*
-			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
-			 */
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
+			ResultSet rs = sql.executeQuery();
 
 			while (rs.next()) {
 				Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
 				result.add(rCol);
 			}
-			sql.close();
 			rs.close();
-			conn.close();
 		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 
 		return result;
@@ -455,24 +424,16 @@ public class MySQL {
 		ArrayList<Column> result = new ArrayList<Column>();
 		String sqlStr = "SELECT uuid FROM " + getName() + ";";
 
-		try {
-			ResultSet rs = null;
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
 
-			Connection conn = mysql.getConnectionManager().getConnection();
-			PreparedStatement sql = conn.prepareStatement(sqlStr);
-
-			rs = sql.executeQuery();
-			/*
-			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
-			 */
+			ResultSet rs = sql.executeQuery();
 
 			while (rs.next()) {
 				Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
 				result.add(rCol);
 			}
-			sql.close();
 			rs.close();
-			conn.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return null;
@@ -535,7 +496,7 @@ public class MySQL {
 			names.add(
 					PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)), index));
 		} catch (Exception e) {
-			AdvancedCorePlugin.getInstance().debug(e);
+			e.printStackTrace();
 			AdvancedCorePlugin.getInstance().debug("Failed to insert player " + index);
 		}
 
@@ -552,11 +513,8 @@ public class MySQL {
 	public void loadData() {
 		columns = getColumnsQueury();
 
-		try {
-			Connection con = mysql.getConnectionManager().getConnection();
+		try (Connection con = mysql.getConnectionManager().getConnection()) {
 			useBatchUpdates = con.getMetaData().supportsBatchUpdates();
-			con.close();
-
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -725,14 +683,18 @@ public class MySQL {
 
 			try {
 				if (useBatchUpdates) {
-					Connection conn = mysql.getConnectionManager().getConnection();
-					Statement st = conn.createStatement();
-					for (String str : sql.split(";")) {
-						st.addBatch(str);
+
+					try (Connection conn = mysql.getConnectionManager().getConnection();
+							Statement st = conn.createStatement()) {
+						for (String str : sql.split(";")) {
+							st.addBatch(str);
+						}
+						st.executeBatch();
+					} catch (SQLException e) {
+						AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
+						e.printStackTrace();
 					}
-					st.executeBatch();
-					st.close();
-					conn.close();
+
 				} else {
 					for (String text : sql.split(";")) {
 						try {
@@ -745,7 +707,7 @@ public class MySQL {
 						}
 					}
 				}
-			} catch (SQLException e1) {
+			} catch (Exception e1) {
 				AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
 				e1.printStackTrace();
 			}
