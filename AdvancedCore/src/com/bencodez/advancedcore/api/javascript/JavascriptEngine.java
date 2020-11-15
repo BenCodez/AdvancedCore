@@ -15,7 +15,7 @@ import org.bukkit.entity.Player;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 
 public class JavascriptEngine {
@@ -77,7 +77,7 @@ public class JavascriptEngine {
 		return this;
 	}
 
-	public JavascriptEngine addPlayer(User user) {
+	public JavascriptEngine addPlayer(AdvancedCoreUser user) {
 		addToEngine("PlayerName", user.getPlayerName());
 		addToEngine("PlayerUUID", user.getUUID());
 		addToEngine("AdvancedCoreUser", user);

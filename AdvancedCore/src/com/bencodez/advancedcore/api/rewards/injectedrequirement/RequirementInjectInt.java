@@ -5,7 +5,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -26,7 +26,7 @@ public abstract class RequirementInjectInt extends RequirementInject {
 	}
 
 	@Override
-	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
+	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
 		if (data.isInt(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			int value = data.getInt(getPath(), getDefaultValue());
@@ -37,6 +37,6 @@ public abstract class RequirementInjectInt extends RequirementInject {
 		return true;
 	}
 
-	public abstract boolean onRequirementsRequest(Reward reward, User user, int num, RewardOptions rewardOptions);
+	public abstract boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, int num, RewardOptions rewardOptions);
 
 }

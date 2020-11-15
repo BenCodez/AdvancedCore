@@ -20,7 +20,7 @@ import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory;
 import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory.AnvilClickEvent;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
@@ -149,7 +149,7 @@ public class NumberRequester {
 
 		} else if (method.equals(InputMethod.CHAT)) {
 			if (options != null && options.size() != 0) {
-				User user = UserManager.getInstance().getUser(player);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
 				PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestNumber", listener);
 				for (Number num : options.keySet()) {

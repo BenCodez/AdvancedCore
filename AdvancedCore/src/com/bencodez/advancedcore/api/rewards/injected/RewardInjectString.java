@@ -6,7 +6,7 @@ import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -27,7 +27,7 @@ public abstract class RewardInjectString extends RewardInject {
 	}
 
 	@Override
-	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
+	public String onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
 		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty())
 				|| (isAlwaysForce() && data.contains(getPath(), true))) {
@@ -44,7 +44,7 @@ public abstract class RewardInjectString extends RewardInject {
 		return null;
 	}
 
-	public abstract String onRewardRequest(Reward reward, User user, String value,
+	public abstract String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
 			HashMap<String, String> placeholders);
 
 }

@@ -1,6 +1,6 @@
 package com.bencodez.advancedcore.api.rewards;
 
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -18,7 +18,7 @@ public abstract class RewardPlaceholderHandle {
 		this.key = key;
 	}
 
-	public abstract String getValue(Reward reward, User user);
+	public abstract String getValue(Reward reward, AdvancedCoreUser user);
 
 	public RewardPlaceholderHandle preProcess() {
 		preProcess = true;

@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatColor;
@@ -284,7 +284,7 @@ public class StringUtils {
 	}
 
 	@Deprecated
-	public String replaceJavascript(User user, String text) {
+	public String replaceJavascript(AdvancedCoreUser user, String text) {
 		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
 		return replaceJavascript(text, engine);
 	}

@@ -22,7 +22,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.user.UUID;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Iterables;
@@ -80,7 +80,7 @@ public class PlayerUtils {
 		return null;
 	}
 
-	public String getPlayerName(User user, String uuid) {
+	public String getPlayerName(AdvancedCoreUser user, String uuid) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null") || uuid.isEmpty()) {
 			plugin.debug("Null UUID");
 			return "";
@@ -208,7 +208,7 @@ public class PlayerUtils {
 		}
 
 		for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-			User user = UserManager.getInstance().getUser(new UUID(uuid));
+			AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
 			String name = user.getData().getString("PlayerName", true);
 			if (name.equals(playerName)) {
 				plugin.getUuidNameCache().put(uuid, playerName);

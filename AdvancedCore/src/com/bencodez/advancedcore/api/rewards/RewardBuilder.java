@@ -11,7 +11,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 
 public class RewardBuilder {
@@ -68,8 +68,8 @@ public class RewardBuilder {
 		return rewardOptions;
 	}
 
-	public void send(ArrayList<User> users) {
-		for (User user : users) {
+	public void send(ArrayList<AdvancedCoreUser> users) {
+		for (AdvancedCoreUser user : users) {
 			send(user);
 		}
 	}
@@ -82,7 +82,7 @@ public class RewardBuilder {
 		send(UserManager.getInstance().getUser(p));
 	}
 
-	public void send(User user) {
+	public void send(AdvancedCoreUser user) {
 		if (reward == null) {
 			if (data != null) {
 				RewardHandler.getInstance().giveReward(user, data, path, rewardOptions);
@@ -92,8 +92,8 @@ public class RewardBuilder {
 		}
 	}
 
-	public void send(User... users) {
-		for (User user : users) {
+	public void send(AdvancedCoreUser... users) {
+		for (AdvancedCoreUser user : users) {
 			send(user);
 		}
 	}

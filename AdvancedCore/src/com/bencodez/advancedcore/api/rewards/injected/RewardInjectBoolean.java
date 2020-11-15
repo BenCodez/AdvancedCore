@@ -6,7 +6,7 @@ import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -26,10 +26,10 @@ public abstract class RewardInjectBoolean extends RewardInject {
 		this.defaultValue = defaultValue;
 	}
 
-	public abstract String onRewardRequest(Reward reward, User user, boolean num, HashMap<String, String> placeholders);
+	public abstract String onRewardRequest(Reward reward, AdvancedCoreUser user, boolean num, HashMap<String, String> placeholders);
 
 	@Override
-	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
+	public String onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
 		if (data.isBoolean(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			boolean value = data.getBoolean(getPath(), isDefaultValue());

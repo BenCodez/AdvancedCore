@@ -21,7 +21,7 @@ import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.UUID;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
@@ -78,9 +78,9 @@ public class CommandLoader {
 					str += args[i] + " ";
 				}
 				final String cmd = str;
-				ArrayList<User> users = new ArrayList<User>();
+				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
 					users.add(user);
 
 					Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
@@ -102,12 +102,12 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
-				ArrayList<User> users = new ArrayList<User>();
+				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
 					users.add(user);
 				}
-				for (User user : users) {
+				for (AdvancedCoreUser user : users) {
 					new RewardBuilder(reward).send(user);
 				}
 			}
@@ -120,7 +120,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
 				for (Player p : Bukkit.getOnlinePlayers()) {
-					User user = UserManager.getInstance().getUser(p);
+					AdvancedCoreUser user = UserManager.getInstance().getUser(p);
 					new RewardBuilder(reward).send(user);
 				}
 			}
@@ -130,7 +130,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				User user = UserManager.getInstance().getUser(args[2]);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[2]);
 				RewardHandler.getInstance().giveReward(user, args[1], new RewardOptions().setOnline(user.isOnline()));
 
 				sender.sendMessage("Gave " + args[2] + " the reward file " + args[1]);
@@ -141,7 +141,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				User user = UserManager.getInstance().getUser(args[2]);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[2]);
 				RewardHandler.getInstance().giveReward(user, args[1],
 						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
 
@@ -225,7 +225,7 @@ public class CommandLoader {
 					@Override
 					public void execute(CommandSender sender, String[] args) {
 						sendMessage(sender, "&cRemoving " + args[1]);
-						User user = UserManager.getInstance().getUser(new UUID(args[1]));
+						AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(args[1]));
 						user.getData().remove();
 						sendMessage(sender, "&cRemoved " + args[1]);
 					}
@@ -339,7 +339,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 
-				User user = UserManager.getInstance().getUser((Player) sender);
+				AdvancedCoreUser user = UserManager.getInstance().getUser((Player) sender);
 				InputMethod method = InputMethod.getMethod(args[1]);
 				if (method == null) {
 					user.sendMessage("&cInvalid request method: " + args[1]);
@@ -365,7 +365,7 @@ public class CommandLoader {
 
 							@Override
 							public void onInput(Player player, String value) {
-								User user = UserManager.getInstance().getUser(player);
+								AdvancedCoreUser user = UserManager.getInstance().getUser(player);
 								user.setUserInputMethod(InputMethod.getMethod(value));
 
 							}
@@ -384,7 +384,7 @@ public class CommandLoader {
 					data = "";
 				}
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
 					user.getData().setString(args[3], data);
 
 				}
@@ -398,7 +398,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				User user = UserManager.getInstance().getUser(args[1]);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
 				String data = args[4];
 				if (data.equalsIgnoreCase("\"\"")) {
 					data = "";
@@ -414,7 +414,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				User user = UserManager.getInstance().getUser(args[1]);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
 				for (String key : user.getData().getKeys()) {
 					sendMessage(sender, "&c&l" + key + " &c" + user.getData().getString(key, true));
 				}
@@ -454,7 +454,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				User user = UserManager.getInstance().getUser((Player) sender);
+				AdvancedCoreUser user = UserManager.getInstance().getUser((Player) sender);
 				user.setChoicePreference(args[2], args[3]);
 
 				user.sendMessage(AdvancedCorePlugin.getInstance().getOptions().getFormatChoiceRewardsPreferenceSet(),
@@ -468,7 +468,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				User user = UserManager.getInstance().getUser(args[4]);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[4]);
 				user.setChoicePreference(args[2], args[3]);
 
 				user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);

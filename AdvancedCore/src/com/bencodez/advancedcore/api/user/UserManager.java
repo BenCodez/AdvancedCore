@@ -43,7 +43,7 @@ public class UserManager {
 		ArrayList<String> names = new ArrayList<String>();
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			for (String uuid : getAllUUIDs()) {
-				User user = UserManager.getInstance().getUser(new UUID(uuid));
+				AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
 				String name = user.getPlayerName();
 				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 					names.add(name);
@@ -115,14 +115,14 @@ public class UserManager {
 		return name;
 	}
 
-	public User getRandomUser() {
+	public AdvancedCoreUser getRandomUser() {
 		if (getAllUUIDs().size() > 0) {
 			getUser(getAllUUIDs().get(0));
 		}
 		return null;
 	}
 
-	public User getUser(java.util.UUID uuid) {
+	public AdvancedCoreUser getUser(java.util.UUID uuid) {
 		return getUser(new UUID(uuid.toString()));
 	}
 
@@ -132,7 +132,7 @@ public class UserManager {
 	 * @param player the player
 	 * @return the user
 	 */
-	public User getUser(OfflinePlayer player) {
+	public AdvancedCoreUser getUser(OfflinePlayer player) {
 		return getUser(player.getName());
 	}
 
@@ -142,7 +142,7 @@ public class UserManager {
 	 * @param player the player
 	 * @return the user
 	 */
-	public User getUser(Player player) {
+	public AdvancedCoreUser getUser(Player player) {
 		return getUser(player.getName());
 	}
 
@@ -153,8 +153,8 @@ public class UserManager {
 	 * @return the user
 	 */
 	@SuppressWarnings("deprecation")
-	public User getUser(String playerName) {
-		return new User(plugin, getProperName(playerName));
+	public AdvancedCoreUser getUser(String playerName) {
+		return new AdvancedCoreUser(plugin, getProperName(playerName));
 	}
 
 	/**
@@ -164,8 +164,8 @@ public class UserManager {
 	 * @return the user
 	 */
 	@SuppressWarnings("deprecation")
-	public User getUser(UUID uuid) {
-		return new User(plugin, uuid);
+	public AdvancedCoreUser getUser(UUID uuid) {
+		return new AdvancedCoreUser(plugin, uuid);
 	}
 
 	public void purgeOldPlayers() {
@@ -183,7 +183,7 @@ public class UserManager {
 				}
 
 				@Override
-				public void onStartUp(User user) {
+				public void onStartUp(AdvancedCoreUser user) {
 					int daysOld = plugin.getOptions().getPurgeMinimumDays();
 					int days = user.getNumberOfDaysSinceLogin();
 					if (days == -1) {

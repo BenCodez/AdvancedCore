@@ -51,7 +51,7 @@ import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInje
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectString;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectStringList;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectValidator;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStartup;
 
 import lombok.Getter;
@@ -160,7 +160,7 @@ public class RewardHandler {
 						}
 
 						@Override
-						public void onStartUp(User user) {
+						public void onStartUp(AdvancedCoreUser user) {
 							try {
 								HashMap<String, Long> timed = user.getTimedRewards();
 								for (Entry<String, Long> entry : timed.entrySet()) {
@@ -321,7 +321,7 @@ public class RewardHandler {
 		return rewards;
 	}
 
-	public void giveChoicesReward(Reward mainReward, User user, String choice) {
+	public void giveChoicesReward(Reward mainReward, AdvancedCoreUser user, String choice) {
 		RewardBuilder reward = new RewardBuilder(mainReward.getConfig().getConfigData(),
 				mainReward.getConfig().getChoicesRewardsPath(choice));
 		reward.withPrefix(mainReward.getName());
@@ -330,7 +330,7 @@ public class RewardHandler {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void giveReward(User user, ConfigurationSection data, String path, RewardOptions rewardOptions) {
+	public void giveReward(AdvancedCoreUser user, ConfigurationSection data, String path, RewardOptions rewardOptions) {
 		if (rewardOptions.isOnlineSet()) {
 			rewardOptions.setOnline(user.isOnline());
 		}
@@ -372,7 +372,7 @@ public class RewardHandler {
 		}
 	}
 
-	public void giveReward(User user, Reward reward, RewardOptions rewardOptions) {
+	public void giveReward(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
 		// make sure reward is async to avoid issues
 		if (Bukkit.isPrimaryThread()) {
 			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
@@ -388,7 +388,7 @@ public class RewardHandler {
 
 	}
 
-	public void giveReward(User user, String reward, RewardOptions rewardOptions) {
+	public void giveReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
 		if (!reward.equals("")) {
 			if (reward.startsWith("/")) {
 				MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward,
@@ -424,7 +424,7 @@ public class RewardHandler {
 		injectedRequirements.add(new RequirementInjectDouble("Chance", 100) {
 
 			@Override
-			public boolean onRequirementsRequest(Reward reward, User user, double num, RewardOptions rewardOptions) {
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, double num, RewardOptions rewardOptions) {
 				if (rewardOptions.isIgnoreChance()) {
 					return true;
 				}
@@ -458,7 +458,7 @@ public class RewardHandler {
 		injectedRequirements.add(new RequirementInjectInt("RewardExpiration", -1) {
 
 			@Override
-			public boolean onRequirementsRequest(Reward reward, User user, int num, RewardOptions rewardOptions) {
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, int num, RewardOptions rewardOptions) {
 				if (rewardOptions.getPlaceholders().containsKey("ExecDate") && num > 0) {
 					long execDate = Long.parseLong(rewardOptions.getPlaceholders().get("ExecDate"));
 					if (execDate + num * 60 * 1000 > System.currentTimeMillis()) {
@@ -482,7 +482,7 @@ public class RewardHandler {
 		injectedRequirements.add(new RequirementInjectString("Permission", "") {
 
 			@Override
-			public boolean onRequirementsRequest(Reward reward, User user, String str, RewardOptions rewardOptions) {
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String str, RewardOptions rewardOptions) {
 				if (!reward.getConfig().getRequirePermission()) {
 					return true;
 				}
@@ -530,7 +530,7 @@ public class RewardHandler {
 		injectedRequirements.add(new RequirementInjectString("Server", "") {
 
 			@Override
-			public boolean onRequirementsRequest(Reward reward, User user, String str, RewardOptions rewardOptions) {
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String str, RewardOptions rewardOptions) {
 				if (str != null && str.isEmpty()) {
 					return str.equalsIgnoreCase(AdvancedCorePlugin.getInstance().getOptions().getServer());
 				} else {
@@ -555,7 +555,7 @@ public class RewardHandler {
 		injectedRequirements.add(new RequirementInjectStringList("Worlds", new ArrayList<String>()) {
 
 			@Override
-			public boolean onRequirementsRequest(Reward reward, User user, ArrayList<String> worlds,
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> worlds,
 					RewardOptions rewardOptions) {
 				if (worlds.isEmpty()) {
 					return true;
@@ -600,7 +600,7 @@ public class RewardHandler {
 		injectedRequirements.add(new RequirementInjectString("RewardType", "BOTH") {
 
 			@Override
-			public boolean onRequirementsRequest(Reward reward, User user, String type, RewardOptions rewardOptions) {
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String type, RewardOptions rewardOptions) {
 				if (rewardOptions.isOnline()) {
 					if (type.equalsIgnoreCase("offline")) {
 						plugin.debug("Reward Type Don't match");
@@ -628,7 +628,7 @@ public class RewardHandler {
 		injectedRequirements.add(new RequirementInjectString("JavascriptExpression", "") {
 
 			@Override
-			public boolean onRequirementsRequest(Reward reward, User user, String expression,
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String expression,
 					RewardOptions rewardOptions) {
 				if (expression.equals("")) {
 					return true;
@@ -654,7 +654,7 @@ public class RewardHandler {
 
 		injectedRequirements.add(new RequirementInjectConfigurationSection("LocationDistance") {
 			@Override
-			public boolean onRequirementsRequested(Reward reward, User user, ConfigurationSection section,
+			public boolean onRequirementsRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					RewardOptions rewardOptions) {
 				if (!user.isOnline()) {
 					plugin.debug("user not online");
@@ -709,7 +709,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectDouble("Money", 0) {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, double num, HashMap<String, String> placeholders) {
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, double num, HashMap<String, String> placeholders) {
 				user.giveMoney(num);
 				return "" + (int) num;
 			}
@@ -735,7 +735,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Money") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				double minMoney = section.getDouble("Min", 0);
 				double maxMoney = section.getDouble("Max", 0);
@@ -776,7 +776,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectInt("EXP", 0) {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, int num, HashMap<String, String> placeholders) {
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, int num, HashMap<String, String> placeholders) {
 				user.giveExp(num);
 				return null;
 			}
@@ -802,7 +802,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectInt("EXPLevels", 0) {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, int num, HashMap<String, String> placeholders) {
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, int num, HashMap<String, String> placeholders) {
 				user.giveExpLevels(num);
 				return null;
 			}
@@ -828,7 +828,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("EXP") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				int minEXP = section.getInt("Min", 0);
 				int maxEXP = section.getInt("Max", 0);
@@ -868,7 +868,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("EXPLevels") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				int minEXP = section.getInt("Min", 0);
 				int maxEXP = section.getInt("Max", 0);
@@ -908,7 +908,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectString("Message") {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, String value,
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
 					HashMap<String, String> placeholders) {
 				user.sendMessage(value, placeholders);
 				return null;
@@ -935,7 +935,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectString("Messages.Player") {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, String value,
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
 					HashMap<String, String> placeholders) {
 				user.sendMessage(value, placeholders);
 				return null;
@@ -963,7 +963,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectString("Messages.Broadcast") {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, String value,
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
 					HashMap<String, String> placeholders) {
 				MiscUtils.getInstance().broadcast(StringParser.getInstance().replacePlaceHolders(user.getPlayer(),
 						StringParser.getInstance().replacePlaceHolder(value, placeholders)));
@@ -991,7 +991,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectString("Command") {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, String value,
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
 					HashMap<String, String> placeholders) {
 				MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), value, placeholders);
 				return null;
@@ -1017,7 +1017,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				user.sendActionBar(
 						StringParser.getInstance().replacePlaceHolder(section.getString("Message", ""), placeholders),
@@ -1063,7 +1063,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("Commands") {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (!list.isEmpty()) {
 					MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), list, placeholders);
@@ -1102,7 +1102,7 @@ public class RewardHandler {
 
 			@SuppressWarnings("unchecked")
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console",
@@ -1140,7 +1140,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("Javascripts") {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (!list.isEmpty()) {
 					JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
@@ -1163,7 +1163,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Javascript") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
@@ -1182,7 +1182,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Lucky") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				HashMap<Integer, String> luckyRewards = new HashMap<Integer, String>();
 
@@ -1226,7 +1226,7 @@ public class RewardHandler {
 
 			@SuppressWarnings("unchecked")
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				if (MiscUtils.getInstance().checkChance(section.getDouble("Chance", 100), 100)) {
 					if (section.getBoolean("PickRandom", true)) {
@@ -1257,7 +1257,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Rewards") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				new RewardBuilder(reward.getConfig().getConfigData(), "Rewards").withPrefix(reward.getName())
 						.withPlaceHolder(placeholders).send(user);
@@ -1269,7 +1269,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("RandomCommand") {
 
 			@Override
-			public String onRewardRequest(Reward r, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward r, AdvancedCoreUser user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (list.size() > 0) {
 					MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),
@@ -1301,7 +1301,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("RandomReward") {
 
 			@Override
-			public String onRewardRequest(Reward r, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward r, AdvancedCoreUser user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (list.size() > 0) {
 					String reward = list.get(ThreadLocalRandom.current().nextInt(list.size()));
@@ -1324,7 +1324,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectStringList("Priority") {
 
 			@Override
-			public String onRewardRequest(Reward r, User user, ArrayList<String> list,
+			public String onRewardRequest(Reward r, AdvancedCoreUser user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				for (String str : list) {
 					Reward reward = RewardHandler.getInstance().getReward(str);
@@ -1350,7 +1350,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Potions") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				for (String potion : section.getKeys(false)) {
@@ -1365,7 +1365,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Title") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
@@ -1385,7 +1385,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("BossBar") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
@@ -1403,7 +1403,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Sound") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
@@ -1422,7 +1422,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Effect") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				if (section.getBoolean("Enabled")) {
 					user.playParticle(section.getString("Effect"), section.getInt("Data", 1),
@@ -1437,7 +1437,7 @@ public class RewardHandler {
 
 			@SuppressWarnings("unchecked")
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				if (section.getBoolean("Enabled")) {
 					FireworkHandler.getInstance().launchFirework(user.getPlayer().getLocation(),
@@ -1455,7 +1455,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("Item") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				ItemBuilder builder = new ItemBuilder(section);
 				builder.setCheckLoreLength(false);
@@ -1492,7 +1492,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedPriority") {
 
 			@Override
-			public String onRewardRequested(Reward reward1, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward1, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				for (String keys : section.getKeys(false)) {
 
@@ -1514,7 +1514,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectConfigurationSection("SpecialChance") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, ConfigurationSection section,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				double totalChance = 0;
 				LinkedHashMap<Double, String> map = new LinkedHashMap<Double, String>();
@@ -1560,7 +1560,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectKeys("RandomItem") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, Set<String> section, ConfigurationSection data,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section, ConfigurationSection data,
 					HashMap<String, String> placeholders) {
 				if (section.size() > 0) {
 					String item = ArrayUtils.getInstance().pickRandom(ArrayUtils.getInstance().convert(section));
@@ -1602,7 +1602,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectBoolean("EnableChoices") {
 
 			@Override
-			public String onRewardRequest(Reward reward, User user, boolean value,
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, boolean value,
 					HashMap<String, String> placeholders) {
 				if (value) {
 					debug("Checking choice rewards");
@@ -1633,7 +1633,7 @@ public class RewardHandler {
 		injectedRewards.add(new RewardInjectKeys("Items") {
 
 			@Override
-			public String onRewardRequested(Reward reward, User user, Set<String> section, ConfigurationSection data,
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section, ConfigurationSection data,
 					HashMap<String, String> placeholders) {
 				boolean oneChance = reward.getConfig().getConfigData().getBoolean("OnlyOneItemChance", false);
 				if (section.size() > 0) {

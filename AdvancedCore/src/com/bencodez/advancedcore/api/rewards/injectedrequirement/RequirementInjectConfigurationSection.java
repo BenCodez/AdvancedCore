@@ -5,7 +5,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 public abstract class RequirementInjectConfigurationSection extends RequirementInject {
 
@@ -14,7 +14,7 @@ public abstract class RequirementInjectConfigurationSection extends RequirementI
 	}
 
 	@Override
-	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
+	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
 		if (data.isConfigurationSection(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath());
@@ -23,7 +23,7 @@ public abstract class RequirementInjectConfigurationSection extends RequirementI
 		return true;
 	}
 
-	public abstract boolean onRequirementsRequested(Reward reward, User user, ConfigurationSection section,
+	public abstract boolean onRequirementsRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 			RewardOptions rewardOptions);
 
 }

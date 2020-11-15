@@ -18,7 +18,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.listeners.PlayerRewardEvent;
 import com.bencodez.advancedcore.yml.annotation.AnnotationHandler;
 
@@ -103,7 +103,7 @@ public class Reward {
 		load(name, section);
 	}
 
-	public boolean canGiveReward(User user, RewardOptions options) {
+	public boolean canGiveReward(AdvancedCoreUser user, RewardOptions options) {
 		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
 			try {
 				plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
@@ -119,7 +119,7 @@ public class Reward {
 		return true;
 	}
 
-	public boolean checkDelayed(User user, HashMap<String, String> placeholders) {
+	public boolean checkDelayed(AdvancedCoreUser user, HashMap<String, String> placeholders) {
 		if (!isDelayEnabled()) {
 			return false;
 		}
@@ -152,7 +152,7 @@ public class Reward {
 		}
 	}
 
-	public boolean checkTimed(User user, HashMap<String, String> placeholders) {
+	public boolean checkTimed(AdvancedCoreUser user, HashMap<String, String> placeholders) {
 		if (!isTimedEnabled()) {
 			return false;
 		}
@@ -175,7 +175,7 @@ public class Reward {
 		return new ItemStack(Material.STONE);
 	}
 
-	public ItemStack getItemStack(User user, String item) {
+	public ItemStack getItemStack(AdvancedCoreUser user, String item) {
 		return new ItemBuilder(getConfig().getItemSection(item)).setSkullOwner(user.getOfflinePlayer())
 				.toItemStack(user.getPlayer());
 	}
@@ -189,7 +189,7 @@ public class Reward {
 		return name;
 	}
 
-	public void giveInjectedRewards(User user, HashMap<String, String> placeholders) {
+	public void giveInjectedRewards(AdvancedCoreUser user, HashMap<String, String> placeholders) {
 
 		for (final RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
 			boolean Addplaceholder = inject.isAddAsPlaceholder();
@@ -242,7 +242,7 @@ public class Reward {
 		}
 	}
 
-	public void giveReward(User user, RewardOptions rewardOptions) {
+	public void giveReward(AdvancedCoreUser user, RewardOptions rewardOptions) {
 		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
 			AdvancedCorePlugin.getInstance().getLogger().warning("Processing rewards is disabled");
 			return;
@@ -334,7 +334,7 @@ public class Reward {
 	 * @param phs           placeholders
 	 * @param rewardOptions rewardOptions
 	 */
-	public void giveRewardUser(User user, HashMap<String, String> phs, RewardOptions rewardOptions) {
+	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 
 		Player player = user.getPlayer();
 		if (player != null || isForceOffline()) {

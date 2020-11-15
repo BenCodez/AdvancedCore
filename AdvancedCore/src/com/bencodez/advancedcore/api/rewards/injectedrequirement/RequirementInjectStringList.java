@@ -8,7 +8,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -30,7 +30,7 @@ public abstract class RequirementInjectStringList extends RequirementInject {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
+	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
 		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());
@@ -42,7 +42,7 @@ public abstract class RequirementInjectStringList extends RequirementInject {
 		return true;
 	}
 
-	public abstract boolean onRequirementsRequest(Reward reward, User user, ArrayList<String> num,
+	public abstract boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> num,
 			RewardOptions rewardOptions);
 
 }

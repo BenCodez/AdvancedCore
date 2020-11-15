@@ -14,7 +14,7 @@ import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 
 /**
@@ -43,7 +43,7 @@ public class ChoiceGUI {
 	}
 
 	public void openClaimChoices(Player player) {
-		User user = UserManager.getInstance().getUser(player);
+		AdvancedCoreUser user = UserManager.getInstance().getUser(player);
 		BInventory inv = new BInventory("UnClaimed Choices");
 
 		ArrayList<String> choices = user.getUnClaimedChoices();
@@ -75,7 +75,7 @@ public class ChoiceGUI {
 			return;
 		}
 
-		User user = UserManager.getInstance().getUser(player);
+		AdvancedCoreUser user = UserManager.getInstance().getUser(player);
 
 		BInventory inv = new BInventory("Pick reward");
 		inv.dontClose();
@@ -89,7 +89,7 @@ public class ChoiceGUI {
 				@Override
 				public void onClick(ClickEvent clickEvent) {
 					Reward reward = (Reward) getInv().getData("Reward");
-					User user = (User) getInv().getData("User");
+					AdvancedCoreUser user = (AdvancedCoreUser) getInv().getData("User");
 					String choice = (String) getData("Choice");
 
 					user.removeUnClaimedChoiceReward(reward.getName());
@@ -122,7 +122,7 @@ public class ChoiceGUI {
 			return;
 		}
 
-		User user = UserManager.getInstance().getUser(player);
+		AdvancedCoreUser user = UserManager.getInstance().getUser(player);
 
 		BInventory inv = new BInventory("Select Preference");
 
@@ -141,7 +141,7 @@ public class ChoiceGUI {
 
 				@Override
 				public void onClick(ClickEvent clickEvent) {
-					User user = (User) getInv().getData("User");
+					AdvancedCoreUser user = (AdvancedCoreUser) getInv().getData("User");
 					String rewardName = (String) getInv().getData("Reward");
 					String choice = (String) getData("Choice");
 					if (user.getChoicePreference(rewardName).equals(choice)) {

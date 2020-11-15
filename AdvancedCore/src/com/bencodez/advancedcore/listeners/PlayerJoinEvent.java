@@ -11,7 +11,7 @@ import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.UUID;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 
@@ -52,7 +52,7 @@ public class PlayerJoinEvent implements Listener {
 			}
 
 			if (userExist) {
-				User user = UserManager.getInstance().getUser(player);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(player);
 
 				user.checkOfflineRewards();
 				user.setLastOnline(System.currentTimeMillis());

@@ -19,7 +19,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -233,11 +233,11 @@ public class ArrayUtils {
 	 * @param array the array
 	 * @return the user[]
 	 */
-	public User[] convertUsers(ArrayList<User> array) {
+	public AdvancedCoreUser[] convertUsers(ArrayList<AdvancedCoreUser> array) {
 		if (array == null) {
 			return null;
 		}
-		User[] list = new User[array.size()];
+		AdvancedCoreUser[] list = new AdvancedCoreUser[array.size()];
 		for (int i = 0; i < array.size(); i++) {
 			list[i] = array.get(i);
 		}
@@ -250,13 +250,13 @@ public class ArrayUtils {
 	 * @param set the set
 	 * @return the array list
 	 */
-	public ArrayList<User> convertUsers(Set<User> set) {
+	public ArrayList<AdvancedCoreUser> convertUsers(Set<AdvancedCoreUser> set) {
 		if (set == null) {
 			return null;
 		}
 
-		ArrayList<User> list = new ArrayList<User>();
-		for (User user : set) {
+		ArrayList<AdvancedCoreUser> list = new ArrayList<AdvancedCoreUser>();
+		for (AdvancedCoreUser user : set) {
 			list.add(user);
 		}
 		return list;
@@ -431,7 +431,7 @@ public class ArrayUtils {
 		return msg;
 	}
 
-	public ArrayList<String> replaceJavascript(User user, ArrayList<String> list) {
+	public ArrayList<String> replaceJavascript(AdvancedCoreUser user, ArrayList<String> list) {
 		ArrayList<String> msg = new ArrayList<String>();
 		for (String str : list) {
 			msg.add(StringParser.getInstance().replaceJavascript(user, str));
@@ -459,14 +459,14 @@ public class ArrayUtils {
 	 * @param order     the order
 	 * @return the hash map
 	 */
-	public HashMap<User, Integer> sortByValues(HashMap<User, Integer> unsortMap, final boolean order) {
+	public HashMap<AdvancedCoreUser, Integer> sortByValues(HashMap<AdvancedCoreUser, Integer> unsortMap, final boolean order) {
 
-		List<Entry<User, Integer>> list = new LinkedList<Entry<User, Integer>>(unsortMap.entrySet());
+		List<Entry<AdvancedCoreUser, Integer>> list = new LinkedList<Entry<AdvancedCoreUser, Integer>>(unsortMap.entrySet());
 
 		// Sorting the list based on values
-		Collections.sort(list, new Comparator<Entry<User, Integer>>() {
+		Collections.sort(list, new Comparator<Entry<AdvancedCoreUser, Integer>>() {
 			@Override
-			public int compare(Entry<User, Integer> o1, Entry<User, Integer> o2) {
+			public int compare(Entry<AdvancedCoreUser, Integer> o1, Entry<AdvancedCoreUser, Integer> o2) {
 				if (order) {
 					return o1.getValue().compareTo(o2.getValue());
 				} else {
@@ -477,22 +477,22 @@ public class ArrayUtils {
 		});
 
 		// Maintaining insertion order with the help of LinkedList
-		HashMap<User, Integer> sortedMap = new LinkedHashMap<User, Integer>();
-		for (Entry<User, Integer> entry : list) {
+		HashMap<AdvancedCoreUser, Integer> sortedMap = new LinkedHashMap<AdvancedCoreUser, Integer>();
+		for (Entry<AdvancedCoreUser, Integer> entry : list) {
 			sortedMap.put(entry.getKey(), entry.getValue());
 		}
 
 		return sortedMap;
 	}
 
-	public HashMap<User, Long> sortByValuesLong(HashMap<User, Long> unsortMap, final boolean order) {
+	public HashMap<AdvancedCoreUser, Long> sortByValuesLong(HashMap<AdvancedCoreUser, Long> unsortMap, final boolean order) {
 
-		List<Entry<User, Long>> list = new LinkedList<Entry<User, Long>>(unsortMap.entrySet());
+		List<Entry<AdvancedCoreUser, Long>> list = new LinkedList<Entry<AdvancedCoreUser, Long>>(unsortMap.entrySet());
 
 		// Sorting the list based on values
-		Collections.sort(list, new Comparator<Entry<User, Long>>() {
+		Collections.sort(list, new Comparator<Entry<AdvancedCoreUser, Long>>() {
 			@Override
-			public int compare(Entry<User, Long> o1, Entry<User, Long> o2) {
+			public int compare(Entry<AdvancedCoreUser, Long> o1, Entry<AdvancedCoreUser, Long> o2) {
 				if (order) {
 					return o1.getValue().compareTo(o2.getValue());
 				} else {
@@ -503,8 +503,8 @@ public class ArrayUtils {
 		});
 
 		// Maintaining insertion order with the help of LinkedList
-		HashMap<User, Long> sortedMap = new LinkedHashMap<User, Long>();
-		for (Entry<User, Long> entry : list) {
+		HashMap<AdvancedCoreUser, Long> sortedMap = new LinkedHashMap<AdvancedCoreUser, Long>();
+		for (Entry<AdvancedCoreUser, Long> entry : list) {
 			sortedMap.put(entry.getKey(), entry.getValue());
 		}
 

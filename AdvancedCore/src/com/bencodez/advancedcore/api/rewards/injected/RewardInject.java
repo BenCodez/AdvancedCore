@@ -8,7 +8,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.rewards.Inject;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -69,7 +69,7 @@ public abstract class RewardInject extends Inject {
 		return !getEditButtons().isEmpty();
 	}
 
-	public abstract Object onRewardRequest(Reward reward, User user, ConfigurationSection data,
+	public abstract Object onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
 
 	public RewardInject postReward() {

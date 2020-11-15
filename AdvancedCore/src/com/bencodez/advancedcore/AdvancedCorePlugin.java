@@ -48,7 +48,7 @@ import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.UUID;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
@@ -603,7 +603,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 
 			@Override
-			public void onStartUp(User user) {
+			public void onStartUp(AdvancedCoreUser user) {
 				String uuid = user.getUUID();
 				String name = user.getData().getString("PlayerName", true);
 				boolean add = true;
@@ -691,7 +691,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					RewardHandler.getInstance().addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
 
 						@Override
-						public boolean onRequirementsRequest(Reward reward, User user, String type,
+						public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String type,
 								RewardOptions rewardOptions) {
 							if (type.equals("")) {
 								return true;
@@ -855,9 +855,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				for (UserStartup start : userStartup) {
 					start.onStart();
 				}
-				ArrayList<User> users = new ArrayList<User>();
+				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					User user = UserManager.getInstance().getUser(new UUID(uuid));
+					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
 					if (user != null) {
 						users.add(user);
 						for (UserStartup start : userStartup) {

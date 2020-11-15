@@ -7,7 +7,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.rewards.Inject;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 
@@ -53,7 +53,7 @@ public abstract class RequirementInject extends Inject {
 		return !getEditButtons().isEmpty();
 	}
 
-	public abstract boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
+	public abstract boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions);
 
 	public RequirementInject priority(int priority) {

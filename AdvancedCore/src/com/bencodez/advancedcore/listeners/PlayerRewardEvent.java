@@ -5,7 +5,7 @@ import org.bukkit.event.HandlerList;
 
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -26,7 +26,7 @@ public class PlayerRewardEvent extends Event {
 	}
 
 	/** The player. */
-	private User player;
+	private AdvancedCoreUser player;
 
 	/** The reward. */
 	private Reward reward;
@@ -42,7 +42,7 @@ public class PlayerRewardEvent extends Event {
 	 * @param player        the player
 	 * @param rewardOptions rewardOptions
 	 */
-	public PlayerRewardEvent(Reward reward, User player, RewardOptions rewardOptions) {
+	public PlayerRewardEvent(Reward reward, AdvancedCoreUser player, RewardOptions rewardOptions) {
 		super(true);
 		setPlayer(player);
 		setReward(reward);
@@ -64,7 +64,7 @@ public class PlayerRewardEvent extends Event {
 	 *
 	 * @return the player
 	 */
-	public User getPlayer() {
+	public AdvancedCoreUser getPlayer() {
 		return player;
 	}
 
@@ -107,7 +107,7 @@ public class PlayerRewardEvent extends Event {
 	 *
 	 * @param player the new player
 	 */
-	public void setPlayer(User player) {
+	public void setPlayer(AdvancedCoreUser player) {
 		this.player = player;
 	}
 

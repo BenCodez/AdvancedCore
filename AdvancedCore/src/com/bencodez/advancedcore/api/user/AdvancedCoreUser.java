@@ -45,7 +45,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 /**
  * The Class User.
  */
-public class User {
+public class AdvancedCoreUser {
 
 	/** The plugin. */
 	public Plugin plugin = null;
@@ -72,7 +72,7 @@ public class User {
 	 * @param player the player
 	 */
 	@Deprecated
-	public User(Plugin plugin, Player player) {
+	public AdvancedCoreUser(Plugin plugin, Player player) {
 		this.plugin = plugin;
 		loadData();
 		uuid = player.getUniqueId().toString();
@@ -86,7 +86,7 @@ public class User {
 	 * @param playerName the player name
 	 */
 	@Deprecated
-	public User(Plugin plugin, String playerName) {
+	public AdvancedCoreUser(Plugin plugin, String playerName) {
 		this.plugin = plugin;
 		loadData();
 		uuid = PlayerUtils.getInstance().getUUID(playerName);
@@ -100,7 +100,7 @@ public class User {
 	 * @param uuid   the uuid
 	 */
 	@Deprecated
-	public User(Plugin plugin, UUID uuid) {
+	public AdvancedCoreUser(Plugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		loadData();
@@ -116,7 +116,7 @@ public class User {
 	 * @param loadName the load name
 	 */
 	@Deprecated
-	public User(Plugin plugin, UUID uuid, boolean loadName) {
+	public AdvancedCoreUser(Plugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		this.loadName = loadName;
@@ -128,7 +128,7 @@ public class User {
 	}
 
 	@Deprecated
-	public User(Plugin plugin, UUID uuid, boolean loadName, boolean loadData) {
+	public AdvancedCoreUser(Plugin plugin, UUID uuid, boolean loadName, boolean loadData) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		this.loadName = loadName;
@@ -211,7 +211,7 @@ public class User {
 		setCheckWorld(false);
 		final ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
-		final User user = this;
+		final AdvancedCoreUser user = this;
 		Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
 
 			@Override

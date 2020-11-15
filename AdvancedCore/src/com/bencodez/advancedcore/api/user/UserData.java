@@ -12,9 +12,9 @@ import com.bencodez.advancedcore.api.user.userstorage.sql.DataType;
 import com.bencodez.advancedcore.thread.FileThread;
 
 public class UserData {
-	private User user;
+	private AdvancedCoreUser user;
 
-	public UserData(User user) {
+	public UserData(AdvancedCoreUser user) {
 		this.user = user;
 	}
 

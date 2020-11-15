@@ -8,7 +8,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -28,12 +28,12 @@ public abstract class RewardInjectStringList extends RewardInject {
 		this.defaultValue = defaultValue;
 	}
 
-	public abstract String onRewardRequest(Reward reward, User user, ArrayList<String> num,
+	public abstract String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> num,
 			HashMap<String, String> placeholders);
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public String onRewardRequest(Reward reward, User user, ConfigurationSection data,
+	public String onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
 		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());

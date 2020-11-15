@@ -683,7 +683,6 @@ public class MySQL {
 
 			try {
 				if (useBatchUpdates) {
-
 					try (Connection conn = mysql.getConnectionManager().getConnection();
 							Statement st = conn.createStatement()) {
 						for (String str : sql.split(";")) {
@@ -694,7 +693,6 @@ public class MySQL {
 						AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
 						e.printStackTrace();
 					}
-
 				} else {
 					for (String text : sql.split(";")) {
 						try {

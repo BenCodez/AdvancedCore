@@ -8,7 +8,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 
 import lombok.Getter;
@@ -50,7 +50,7 @@ public class RepeatHandle {
 		}
 	}
 
-	public void giveRepeat(User user) {
+	public void giveRepeat(AdvancedCoreUser user) {
 		if (repeatOnStartup) {
 			return;
 		}
@@ -117,7 +117,7 @@ public class RepeatHandle {
 					globalAmount++;
 				}
 				for (Player p : Bukkit.getOnlinePlayers()) {
-					User user = UserManager.getInstance().getUser(p);
+					AdvancedCoreUser user = UserManager.getInstance().getUser(p);
 					giveReward(user, false);
 					cancel();
 					return;
@@ -127,7 +127,7 @@ public class RepeatHandle {
 
 	}
 
-	public void giveReward(User user, boolean bypassRequirement) {
+	public void giveReward(AdvancedCoreUser user, boolean bypassRequirement) {
 		AdvancedCorePlugin.getInstance()
 				.debug("Giving repeat reward " + reward.getName() + " for " + user.getPlayerName());
 		if (bypassRequirement) {

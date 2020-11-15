@@ -7,7 +7,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -91,7 +91,7 @@ public class MessageBuilder {
 		return this;
 	}
 
-	public MessageBuilder replaceJavascript(User user) {
+	public MessageBuilder replaceJavascript(AdvancedCoreUser user) {
 		setText(StringParser.getInstance().replaceJavascript(user, getText()));
 		return this;
 	}

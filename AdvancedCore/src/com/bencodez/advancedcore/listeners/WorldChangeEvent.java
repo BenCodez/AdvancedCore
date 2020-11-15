@@ -8,7 +8,7 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 
 /**
@@ -46,7 +46,7 @@ public class WorldChangeEvent implements Listener {
 				}
 				Player player = event.getPlayer();
 
-				User user = UserManager.getInstance().getUser(player);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(player);
 				if (user.isCheckWorld()) {
 					user.checkOfflineRewards();
 				}

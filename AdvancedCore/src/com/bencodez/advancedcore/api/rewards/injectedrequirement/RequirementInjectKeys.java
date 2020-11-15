@@ -7,7 +7,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 public abstract class RequirementInjectKeys extends RequirementInject {
 
@@ -16,7 +16,7 @@ public abstract class RequirementInjectKeys extends RequirementInject {
 	}
 
 	@Override
-	public boolean onRequirementRequest(Reward reward, User user, ConfigurationSection data,
+	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
 		if (data.isConfigurationSection(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
 			Set<String> value = data.getConfigurationSection(getPath()).getKeys(false);
@@ -26,7 +26,7 @@ public abstract class RequirementInjectKeys extends RequirementInject {
 		return true;
 	}
 
-	public abstract boolean onRequirementsRequested(Reward reward, User user, Set<String> section,
+	public abstract boolean onRequirementsRequested(Reward reward, AdvancedCoreUser user, Set<String> section,
 			ConfigurationSection data, RewardOptions rewardOptions);
 
 }

@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.user.User;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 
 import lombok.Getter;
@@ -71,7 +71,7 @@ public abstract class GUIHandler {
 
 	public void sendMessageJson(ArrayList<TextComponent> text) {
 		if (player instanceof Player) {
-			User user = UserManager.getInstance().getUser((Player) player);
+			AdvancedCoreUser user = UserManager.getInstance().getUser((Player) player);
 			user.sendJson(text);
 		} else {
 			player.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(text)));
