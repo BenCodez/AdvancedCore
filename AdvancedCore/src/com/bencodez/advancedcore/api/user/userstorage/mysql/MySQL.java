@@ -31,7 +31,6 @@ import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
 import com.bencodez.advancedcore.api.user.userstorage.sql.Column;
 import com.bencodez.advancedcore.api.user.userstorage.sql.DataType;
-import com.bencodez.advancedcore.data.ServerData;
 import com.google.common.cache.CacheLoader;
 
 import lombok.Getter;
@@ -83,8 +82,11 @@ public class MySQL {
 	@Getter
 	private long lastBackgroundCheck = 0;
 
-	public MySQL(String tableName, ConfigurationSection section) {
-		intColumns = Collections.synchronizedList(ServerData.getInstance().getIntColumns());
+	private AdvancedCorePlugin plugin;
+
+	public MySQL(AdvancedCorePlugin plugin, String tableName, ConfigurationSection section) {
+		this.plugin = plugin;
+		intColumns = Collections.synchronizedList(plugin.getServerDataFile().getIntColumns());
 
 		String tablePrefix = section.getString("Prefix");
 		String hostName = section.getString("Host");
@@ -188,7 +190,7 @@ public class MySQL {
 					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
 			if (!intColumns.contains(column)) {
 				intColumns.add(column);
-				ServerData.getInstance().setIntColumns(intColumns);
+				plugin.getServerDataFile().setIntColumns(intColumns);
 			}
 		}
 		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");

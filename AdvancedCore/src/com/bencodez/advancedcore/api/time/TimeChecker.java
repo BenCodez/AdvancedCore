@@ -15,36 +15,23 @@ import com.bencodez.advancedcore.api.time.events.DayChangeEvent;
 import com.bencodez.advancedcore.api.time.events.MonthChangeEvent;
 import com.bencodez.advancedcore.api.time.events.PreDateChangedEvent;
 import com.bencodez.advancedcore.api.time.events.WeekChangeEvent;
-import com.bencodez.advancedcore.data.ServerData;
 
 /**
  * The Class TimeChecker.
  */
 public class TimeChecker {
 
-	/** The instance. */
-	static TimeChecker instance = new TimeChecker();
-
-	/**
-	 * Gets the single instance of TimeChecker.
-	 *
-	 * @return single instance of TimeChecker
-	 */
-	public static TimeChecker getInstance() {
-		return instance;
-	}
-
 	private Timer timer = new Timer();
 
-	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+	private AdvancedCorePlugin plugin;
 
 	private boolean timerLoaded = false;
 
 	/**
 	 * Instantiates a new time checker.
 	 */
-	private TimeChecker() {
+	public TimeChecker(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 	}
 
 	public void forceChanged(TimeType time) {
@@ -95,13 +82,13 @@ public class TimeChecker {
 	 * @return true, if successful
 	 */
 	public boolean hasDayChanged() {
-		int prevDay = ServerData.getInstance().getPrevDay();
+		int prevDay = plugin.getServerDataFile().getPrevDay();
 		int day = getTime().getDayOfMonth();
 
 		if (prevDay == day) {
 			return false;
 		}
-		ServerData.getInstance().setPrevDay(day);
+		plugin.getServerDataFile().setPrevDay(day);
 		if (prevDay == -1) {
 			return false;
 		}
@@ -114,12 +101,12 @@ public class TimeChecker {
 	 * @return true, if successful
 	 */
 	public boolean hasMonthChanged() {
-		String prevMonth = ServerData.getInstance().getPrevMonth();
+		String prevMonth = plugin.getServerDataFile().getPrevMonth();
 		String month = getTime().getMonth().toString();
 		if (prevMonth.equals(month)) {
 			return false;
 		}
-		ServerData.getInstance().setPrevMonth(month);
+		plugin.getServerDataFile().setPrevMonth(month);
 		return true;
 
 	}
@@ -134,14 +121,14 @@ public class TimeChecker {
 	 * @return true, if successful
 	 */
 	public boolean hasWeekChanged() {
-		int prevDate = ServerData.getInstance().getPrevWeekDay();
+		int prevDate = plugin.getServerDataFile().getPrevWeekDay();
 		LocalDateTime date = getTime();
 		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear();
 		int weekNumber = date.get(woy);
 		if (weekNumber == prevDate) {
 			return false;
 		}
-		ServerData.getInstance().setPrevWeekDay(weekNumber);
+		plugin.getServerDataFile().setPrevWeekDay(weekNumber);
 		if (prevDate == -1) {
 			return false;
 		}

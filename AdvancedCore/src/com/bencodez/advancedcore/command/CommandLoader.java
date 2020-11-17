@@ -17,11 +17,10 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
-import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
-import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
@@ -122,27 +121,39 @@ public class CommandLoader {
 				}
 			}
 		});
-		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)" }, permPrefix + ".GiveReward",
+		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Player)", "(Reward)" }, permPrefix + ".GiveReward",
 				"Give a player a reward file", true) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[2]);
-				RewardHandler.getInstance().giveReward(user, args[1], new RewardOptions().setOnline(user.isOnline()));
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				RewardHandler.getInstance().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
 
-				sender.sendMessage("Gave " + args[2] + " the reward file " + args[1]);
+				sender.sendMessage("Gave " + args[1] + " the reward file " + args[2]);
 			}
 		});
-		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Reward)", "(Player)", "(Text)", "(Text)" },
+		
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ForceReward", "(Reward)" }, permPrefix + ".GiveReward",
+				"Give a player a reward file", true) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				RewardHandler.getInstance().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
+
+				sender.sendMessage("Gave " + args[1] + " the reward file " + args[3]);
+			}
+		});
+		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Player)","(Reward)", "(Text)", "(Text)" },
 				permPrefix + ".GiveReward", "Give a player a reward file and set a placeholder", true) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[2]);
-				RewardHandler.getInstance().giveReward(user, args[1],
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				RewardHandler.getInstance().giveReward(user, args[2],
 						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
 
-				sender.sendMessage("Gave " + args[2] + " the reward file " + args[1]);
+				sender.sendMessage("Gave " + args[1] + " the reward file " + args[2]);
 			}
 		});
 		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report", "Create Report File") {
@@ -303,7 +314,7 @@ public class CommandLoader {
 				try {
 					TimeType time = TimeType.getTimeType(args[1]);
 					sender.sendMessage("Forcing change for " + time.toString());
-					TimeChecker.getInstance().forceChanged(time);
+					plugin.getTimeChecker().forceChanged(time);
 					sender.sendMessage("Forced change for " + time.toString());
 				} catch (Exception e) {
 					e.printStackTrace();

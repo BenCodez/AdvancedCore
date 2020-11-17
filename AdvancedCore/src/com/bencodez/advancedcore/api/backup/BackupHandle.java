@@ -8,7 +8,6 @@ import org.bukkit.event.Listener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
-import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.time.events.DateChangedEvent;
 
@@ -42,7 +41,7 @@ public class BackupHandle implements Listener {
 			return;
 		}
 
-		LocalDateTime now = TimeChecker.getInstance().getTime();
+		LocalDateTime now = AdvancedCorePlugin.getInstance().getTimeChecker().getTime();
 		ZipCreator.getInstance().create(AdvancedCorePlugin.getInstance().getDataFolder(),
 				new File(AdvancedCorePlugin.getInstance().getDataFolder(), "Backups" + File.separator + "Backup-"
 						+ now.getYear() + "_" + now.getMonth() + "_" + now.getDayOfMonth() + ".zip"));

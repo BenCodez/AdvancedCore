@@ -14,13 +14,6 @@ import com.bencodez.advancedcore.api.yml.YMLFile;
  * The Class ServerData.
  */
 public class ServerData extends YMLFile {
-
-	static ServerData instance = new ServerData(AdvancedCorePlugin.getInstance());
-
-	public static ServerData getInstance() {
-		return instance;
-	}
-
 	/**
 	 * Instantiates a new server data.
 	 */

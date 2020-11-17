@@ -159,6 +159,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private PluginMessage pluginMessaging;
 
+	@Getter
+	private TimeChecker timeChecker;
+
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
@@ -368,6 +371,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Load AdvancedCore hook
 	 */
 	public void loadHook() {
+		serverDataFile = new ServerData(this);
 
 		loadSignAPI();
 		loadUUIDs();
@@ -376,10 +380,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadHandle();
 		loadVault();
 		loadAdvancedCoreEvents();
+		timeChecker = new TimeChecker(this);
 		if (loadServerData) {
-			TimeChecker.getInstance().loadTimer(1);
-			serverDataFile = new ServerData(this);
 			serverDataFile.setup();
+			timeChecker.loadTimer(1);
 		}
 
 		RewardHandler.getInstance().loadInjectedRewards();
@@ -585,7 +589,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 				@Override
 				public void run() {
-					setMysql(new MySQL(javaPlugin.getName() + "_Users",
+					setMysql(new MySQL(javaPlugin, javaPlugin.getName() + "_Users",
 							getOptions().getConfigData().getConfigurationSection("MySQL")));
 				}
 			});
@@ -790,7 +794,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null && userStorage) {
 			getMysql().clearCache();
 		}
-		TimeChecker.getInstance().update();
+		timeChecker.update();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
