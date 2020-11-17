@@ -47,8 +47,8 @@ import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
-import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
@@ -153,6 +153,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Setter
 	private boolean loadUserData = true;
 
+	@Getter
+	private ServerData serverDataFile;
+
+	@Getter
+	private PluginMessage pluginMessaging;
+
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
@@ -199,12 +205,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 			@Override
 			public void run() {
-				String version = ServerData.getInstance().getPluginVersion(javaPlugin);
+				String version = getServerDataFile().getPluginVersion(javaPlugin);
 				if (!version.equals(javaPlugin.getDescription().getVersion())) {
 					PluginUpdateVersionEvent event = new PluginUpdateVersionEvent(javaPlugin, version);
 					Bukkit.getServer().getPluginManager().callEvent(event);
 				}
-				ServerData.getInstance().setPluginVersion(javaPlugin);
+				getServerDataFile().setPluginVersion(javaPlugin);
 			}
 		});
 
@@ -372,7 +378,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadAdvancedCoreEvents();
 		if (loadServerData) {
 			TimeChecker.getInstance().loadTimer(1);
-			ServerData.getInstance().setup();
+			serverDataFile = new ServerData(this);
+			serverDataFile.setup();
 		}
 
 		RewardHandler.getInstance().loadInjectedRewards();
@@ -404,7 +411,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		if (Bukkit.getPluginManager().getPlugin("authme") != null) {
 			authMeLoaded = true;
-			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(), this);
+			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(this), this);
 		}
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
@@ -476,7 +483,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						setReplace(list);
 					}
 				});
-		
+
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
 
 			@Override
@@ -762,8 +769,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void registerBungeeChannels() {
 		getServer().getMessenger().registerOutgoingPluginChannel(this,
 				this.getName().toLowerCase() + ":" + this.getName().toLowerCase());
+		pluginMessaging = new PluginMessage(this);
 		getServer().getMessenger().registerIncomingPluginChannel(this,
-				this.getName().toLowerCase() + ":" + this.getName().toLowerCase(), PluginMessage.getInstance());
+				this.getName().toLowerCase() + ":" + this.getName().toLowerCase(), pluginMessaging);
 	}
 
 	public void registerEvents(Listener listener) {
@@ -776,7 +784,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Reload
 	 */
 	public void reloadAdvancedCore(boolean userStorage) {
-		ServerData.getInstance().reloadData();
+		getServerDataFile().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		loadConfig(userStorage);
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null && userStorage) {

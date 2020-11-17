@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.yml.annotation;
+package com.bencodez.advancedcore.api.yml.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -9,10 +9,11 @@ import java.lang.annotation.Target;
 @Inherited
 @Target({ ElementType.METHOD, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ConfigDataDouble {
-	double defaultValue() default 0;
+public @interface ConfigDataBoolean {
+	boolean defaultValue() default false;
 
 	String path();
 
 	String secondPath() default "";
+
 }

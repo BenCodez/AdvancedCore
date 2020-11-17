@@ -7,7 +7,7 @@ import java.util.List;
 import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.yml.YMLFile;
+import com.bencodez.advancedcore.api.yml.YMLFile;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -15,26 +15,17 @@ import com.bencodez.advancedcore.yml.YMLFile;
  */
 public class ServerData extends YMLFile {
 
-	/** The instance. */
-	static ServerData instance = new ServerData();
+	static ServerData instance = new ServerData(AdvancedCorePlugin.getInstance());
 
-	/**
-	 * Gets the single instance of ServerData.
-	 *
-	 * @return single instance of ServerData
-	 */
 	public static ServerData getInstance() {
 		return instance;
 	}
 
-	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
 	/**
 	 * Instantiates a new server data.
 	 */
-	public ServerData() {
-		super(new File(AdvancedCorePlugin.getInstance().getDataFolder(), "ServerData.yml"));
+	public ServerData(AdvancedCorePlugin plugin) {
+		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
 	}
 
 	@SuppressWarnings("unchecked")

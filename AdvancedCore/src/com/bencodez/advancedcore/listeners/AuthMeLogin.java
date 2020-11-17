@@ -10,17 +10,22 @@ import fr.xephi.authme.api.v3.AuthMeApi;
 import fr.xephi.authme.events.AuthMeAsyncPreLoginEvent;
 
 public class AuthMeLogin implements Listener {
+	private AdvancedCorePlugin plugin;
+	
+	public AuthMeLogin(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
+	}
 
 	@EventHandler
 	public void authmeLogin(AuthMeAsyncPreLoginEvent event) {
-		Bukkit.getScheduler().runTaskLaterAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
 				if (event.getPlayer() != null) {
 					if (AuthMeApi.getInstance().isAuthenticated(event.getPlayer())
-							&& AdvancedCorePlugin.getInstance().getOptions().isWaitUntilLoggedIn()) {
-						AdvancedCorePlugin.getInstance().debug("Authme Login: " + event.getPlayer().getName() + " ("
+							&& plugin.getOptions().isWaitUntilLoggedIn()) {
+						plugin.debug("Authme Login: " + event.getPlayer().getName() + " ("
 								+ event.getPlayer().getUniqueId() + ")");
 						AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(event.getPlayer());
 						Bukkit.getPluginManager().callEvent(login);

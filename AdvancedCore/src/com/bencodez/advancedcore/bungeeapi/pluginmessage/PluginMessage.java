@@ -15,15 +15,12 @@ import com.google.common.io.ByteStreams;
 
 public class PluginMessage implements PluginMessageListener {
 
-	private static PluginMessage instance = new PluginMessage();
-
-	public static PluginMessage getInstance() {
-		return instance;
-	}
+	private AdvancedCorePlugin plugin;
 
 	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<PluginMessageHandler>();
 
-	public PluginMessage() {
+	public PluginMessage(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 	}
 
 	public void add(PluginMessageHandler handle) {
@@ -37,8 +34,7 @@ public class PluginMessage implements PluginMessageListener {
 	@Override
 	public void onPluginMessageReceived(String channel, Player player, byte[] message) {
 		// plugin.getLogger().info("Got plugin message " + channel + " : " + message);
-		if (!channel.equals(AdvancedCorePlugin.getInstance().getName().toLowerCase() + ":"
-				+ AdvancedCorePlugin.getInstance().getName().toLowerCase())) {
+		if (!channel.equals(plugin.getName().toLowerCase() + ":" + plugin.getName().toLowerCase())) {
 			return;
 		}
 		ByteArrayDataInput in = ByteStreams.newDataInput(message);
@@ -58,7 +54,7 @@ public class PluginMessage implements PluginMessageListener {
 
 		final ArrayList<String> list1 = list;
 
-		Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -74,7 +70,7 @@ public class PluginMessage implements PluginMessageListener {
 
 	public void sendPluginMessage(Player p, String channel, String... messageData) {
 		if (p == null) {
-			AdvancedCorePlugin.getInstance().debug("Can't send plugin message, player == null, " + channel + " data: "
+			plugin.debug("Can't send plugin message, player == null, " + channel + " data: "
 					+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(messageData)));
 			return;
 		}
@@ -86,9 +82,7 @@ public class PluginMessage implements PluginMessageListener {
 			for (String message : messageData) {
 				out.writeUTF(message);
 			}
-			p.sendPluginMessage(AdvancedCorePlugin.getInstance(),
-					AdvancedCorePlugin.getInstance().getName().toLowerCase() + ":"
-							+ AdvancedCorePlugin.getInstance().getName().toLowerCase(),
+			p.sendPluginMessage(plugin, plugin.getName().toLowerCase() + ":" + plugin.getName().toLowerCase(),
 					byteOutStream.toByteArray());
 			out.close();
 		} catch (Exception e) {
@@ -102,7 +96,7 @@ public class PluginMessage implements PluginMessageListener {
 			return;
 		}
 
-		AdvancedCorePlugin.getInstance().debug("Can't send plugin message, player == null, " + channel + " data: "
+		plugin.debug("Can't send plugin message, player == null, " + channel + " data: "
 				+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(messageData)));
 	}
 

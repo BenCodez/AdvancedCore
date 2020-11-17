@@ -40,24 +40,21 @@ import com.bencodez.advancedcore.command.gui.UserGUI;
  */
 public class CommandLoader {
 
-	/** The instance. */
-	static CommandLoader instance = new CommandLoader();
+	static CommandLoader instance = new CommandLoader(AdvancedCorePlugin.getInstance());
 
-	/**
-	 * Gets the single instance of CommandLoader.
-	 *
-	 * @return single instance of CommandLoader
-	 */
 	public static CommandLoader getInstance() {
 		return instance;
 	}
+
+	private AdvancedCorePlugin plugin;
 
 	private ArrayList<String> perms = new ArrayList<String>();
 
 	/**
 	 * Instantiates a new command loader.
 	 */
-	private CommandLoader() {
+	public CommandLoader(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 	}
 
 	public void addPermission(String perm) {
@@ -83,7 +80,7 @@ public class CommandLoader {
 					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
 					users.add(user);
 
-					Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+					Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 						@Override
 						public void run() {
@@ -235,9 +232,9 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-					if (AdvancedCorePlugin.getInstance().getMysql() != null) {
-						AdvancedCorePlugin.getInstance().getMysql().clearCache();
+				if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+					if (plugin.getMysql() != null) {
+						plugin.getMysql().clearCache();
 						sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared"));
 					} else {
 						sender.sendMessage(StringParser.getInstance().colorize("&cMySQL not loaded"));
@@ -263,15 +260,14 @@ public class CommandLoader {
 			}
 		});
 
-		if (AdvancedCorePlugin.getInstance().getOptions().getResourceId() != 0) {
+		if (plugin.getOptions().getResourceId() != 0) {
 			cmds.add(new CommandHandler(new String[] { "Download" }, permPrefix + ".Download", "Download from spigot") {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
 					sender.sendMessage(StringParser.getInstance().colorize(
 							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
-					if (UpdateDownloader.getInstance().download(AdvancedCorePlugin.getInstance(),
-							AdvancedCorePlugin.getInstance().getOptions().getResourceId())) {
+					if (UpdateDownloader.getInstance().download(plugin, plugin.getOptions().getResourceId())) {
 						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar."));
 					} else {
 						sendMessage(sender, "&cFailed to download jar");
@@ -280,19 +276,16 @@ public class CommandLoader {
 			});
 		}
 
-		if (!AdvancedCorePlugin.getInstance().getJenkinsSite().isEmpty()) {
+		if (!plugin.getJenkinsSite().isEmpty()) {
 			cmds.add(new CommandHandler(new String[] { "DownloadJenkins" }, permPrefix + ".Download",
 					"Download from jenkins. Please use at your own risk") {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					if (AdvancedCorePlugin.getInstance().getOptions().isEnableJenkins()
-							&& !AdvancedCorePlugin.getInstance().getJenkinsSite().isEmpty()) {
+					if (plugin.getOptions().isEnableJenkins() && !plugin.getJenkinsSite().isEmpty()) {
 						sender.sendMessage(StringParser.getInstance().colorize(
 								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
-						UpdateDownloader.getInstance().downloadFromJenkins(
-								AdvancedCorePlugin.getInstance().getJenkinsSite(),
-								AdvancedCorePlugin.getInstance().getName());
+						UpdateDownloader.getInstance().downloadFromJenkins(plugin.getJenkinsSite(), plugin.getName());
 						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar"));
 					} else {
 						sendMessage(sender,
@@ -457,8 +450,7 @@ public class CommandLoader {
 				AdvancedCoreUser user = UserManager.getInstance().getUser((Player) sender);
 				user.setChoicePreference(args[2], args[3]);
 
-				user.sendMessage(AdvancedCorePlugin.getInstance().getOptions().getFormatChoiceRewardsPreferenceSet(),
-						"choice", args[3]);
+				user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice", args[3]);
 			}
 		});
 

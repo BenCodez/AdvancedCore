@@ -7,11 +7,10 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 
@@ -22,15 +21,15 @@ import com.bencodez.advancedcore.api.user.UserStorage;
 public class PlayerJoinEvent implements Listener {
 
 	/** The plugin. */
-	private static Plugin plugin;
+	private AdvancedCorePlugin plugin;
 
 	/**
 	 * Instantiates a new player join event.
 	 *
 	 * @param plugin the plugin
 	 */
-	public PlayerJoinEvent(Plugin plugin) {
-		PlayerJoinEvent.plugin = plugin;
+	public PlayerJoinEvent(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -40,9 +39,8 @@ public class PlayerJoinEvent implements Listener {
 			boolean userExist = UserManager.getInstance()
 					.userExist(new UUID(event.getPlayer().getUniqueId().toString()));
 			if (userExist) {
-				if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
-						&& AdvancedCorePlugin.getInstance().getMysql() != null) {
-					AdvancedCorePlugin.getInstance().getMysql().playerJoin(player.getUniqueId().toString());
+				if (plugin.getStorageType().equals(UserStorage.MYSQL) && plugin.getMysql() != null) {
+					plugin.getMysql().playerJoin(player.getUniqueId().toString());
 				} /*
 					 * else if
 					 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)
@@ -58,7 +56,7 @@ public class PlayerJoinEvent implements Listener {
 				user.setLastOnline(System.currentTimeMillis());
 				user.updateName();
 			}
-			AdvancedCorePlugin.getInstance().getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
+			plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
 
 		}
 	}
@@ -74,15 +72,14 @@ public class PlayerJoinEvent implements Listener {
 
 			@Override
 			public void run() {
-				if (AdvancedCorePlugin.getInstance().isAuthMeLoaded()
-						&& AdvancedCorePlugin.getInstance().getOptions().isWaitUntilLoggedIn()) {
+				if (plugin.isAuthMeLoaded() && plugin.getOptions().isWaitUntilLoggedIn()) {
 					return;
 				}
 
 				Player player = event.getPlayer();
 
 				if (player != null) {
-					AdvancedCorePlugin.getInstance().debug(
+					plugin.debug(
 							"Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(player);
 					Bukkit.getPluginManager().callEvent(login);
@@ -99,14 +96,12 @@ public class PlayerJoinEvent implements Listener {
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerQuit(PlayerQuitEvent event) {
-		AdvancedCorePlugin.getInstance()
-				.debug("Logout: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+		plugin.debug("Logout: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 
-		if (AdvancedCorePlugin.getInstance().getOptions().isClearCacheOnLeave()) {
+		if (plugin.getOptions().isClearCacheOnLeave()) {
 			Player player = event.getPlayer();
-			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
-					&& AdvancedCorePlugin.getInstance().getMysql() != null) {
-				AdvancedCorePlugin.getInstance().getMysql().removePlayer(player.getUniqueId().toString());
+			if (plugin.getStorageType().equals(UserStorage.MYSQL) && plugin.getMysql() != null) {
+				plugin.getMysql().removePlayer(player.getUniqueId().toString());
 			} /*
 				 * else if
 				 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)

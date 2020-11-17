@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.yml.annotation;
+package com.bencodez.advancedcore.api.yml.annotation;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;

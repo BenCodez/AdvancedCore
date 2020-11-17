@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.yml;
+package com.bencodez.advancedcore.api.yml;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,13 +31,17 @@ public abstract class YMLFile {
 
 	private boolean created = false;
 
+	@Getter
+	private AdvancedCorePlugin plugin;
+
 	/**
 	 * Instantiates a new YML file.
 	 *
 	 * @param file the file
 	 */
-	public YMLFile(File file) {
+	public YMLFile(AdvancedCorePlugin plugin, File file) {
 		dFile = file;
+		this.plugin = plugin;
 	}
 
 	/**
@@ -46,8 +50,9 @@ public abstract class YMLFile {
 	 * @param file  the file
 	 * @param setup the setup
 	 */
-	public YMLFile(File file, boolean setup) {
+	public YMLFile(AdvancedCorePlugin plugin, File file, boolean setup) {
 		dFile = file;
+		this.plugin = plugin;
 		if (setup) {
 			setup();
 		}
@@ -99,13 +104,12 @@ public abstract class YMLFile {
 		} catch (Exception e) {
 			failedToRead = true;
 			e.printStackTrace();
-			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to load " + dFile.getName());
-			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+			plugin.getLogger().severe("Failed to load " + dFile.getName());
+			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {
-					AdvancedCorePlugin.getInstance().getLogger()
-							.severe("Detected failure to load files on startup, see server log for details");
+					plugin.getLogger().severe("Detected failure to load files on startup, see server log for details");
 				}
 			});
 		}
@@ -154,13 +158,12 @@ public abstract class YMLFile {
 		} catch (Exception e) {
 			failedToRead = true;
 			e.printStackTrace();
-			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to load " + dFile.getName());
-			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+			plugin.getLogger().severe("Failed to load " + dFile.getName());
+			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {
-					AdvancedCorePlugin.getInstance().getLogger()
-							.severe("Detected failure to load files on startup, see server log for details");
+					plugin.getLogger().severe("Detected failure to load files on startup, see server log for details");
 				}
 			});
 		}

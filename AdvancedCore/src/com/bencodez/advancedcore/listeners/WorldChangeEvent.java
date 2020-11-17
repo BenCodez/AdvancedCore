@@ -5,7 +5,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
-import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -17,15 +16,15 @@ import com.bencodez.advancedcore.api.user.UserManager;
 public class WorldChangeEvent implements Listener {
 
 	/** The plugin. */
-	private static Plugin plugin;
+	private AdvancedCorePlugin plugin;
 
 	/**
 	 * Instantiates a new world change event.
 	 *
 	 * @param plugin Plugin
 	 */
-	public WorldChangeEvent(Plugin plugin) {
-		WorldChangeEvent.plugin = plugin;
+	public WorldChangeEvent(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 	}
 
 	/**
@@ -40,8 +39,7 @@ public class WorldChangeEvent implements Listener {
 
 			@Override
 			public void run() {
-				if (AdvancedCorePlugin.getInstance().getOptions().isDisableCheckOnWorldChange()
-						|| event.getPlayer() == null) {
+				if (plugin.getOptions().isDisableCheckOnWorldChange() || event.getPlayer() == null) {
 					return;
 				}
 				Player player = event.getPlayer();
