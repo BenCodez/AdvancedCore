@@ -106,6 +106,7 @@ public class CommandLoader {
 				for (AdvancedCoreUser user : users) {
 					new RewardBuilder(reward).send(user);
 				}
+				sendMessage(sender, "&cGave all players reward file " + args[1]);
 			}
 		});
 
@@ -129,22 +130,36 @@ public class CommandLoader {
 				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
 				RewardHandler.getInstance().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
 
-				sender.sendMessage("Gave " + args[1] + " the reward file " + args[2]);
+				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]);
 			}
 		});
-		
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ForceReward", "(Reward)" }, permPrefix + ".GiveReward",
-				"Give a player a reward file", true) {
+
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ForceReward", "(Reward)" },
+				permPrefix + ".GiveReward", "Give a player a reward file", true) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
-				RewardHandler.getInstance().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
+				if (args[1].equalsIgnoreCase("all")) {
+					Reward reward = RewardHandler.getInstance().getReward(args[3]);
+					ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
+					for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+						AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
+						users.add(user);
+					}
+					for (AdvancedCoreUser user : users) {
+						new RewardBuilder(reward).send(user);
+					}
+					sendMessage(sender, "&cGave all players reward file " + args[3]);
+				} else {
+					AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+					RewardHandler.getInstance().giveReward(user, args[3],
+							new RewardOptions().setOnline(user.isOnline()));
 
-				sender.sendMessage("Gave " + args[1] + " the reward file " + args[3]);
+					sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
+				}
 			}
 		});
-		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Player)","(Reward)", "(Text)", "(Text)" },
+		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Player)", "(Reward)", "(Text)", "(Text)" },
 				permPrefix + ".GiveReward", "Give a player a reward file and set a placeholder", true) {
 
 			@Override
@@ -153,7 +168,7 @@ public class CommandLoader {
 				RewardHandler.getInstance().giveReward(user, args[2],
 						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
 
-				sender.sendMessage("Gave " + args[1] + " the reward file " + args[2]);
+				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]);
 			}
 		});
 		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report", "Create Report File") {
