@@ -27,9 +27,6 @@ public class TimeChecker {
 
 	private boolean timerLoaded = false;
 
-	/**
-	 * Instantiates a new time checker.
-	 */
 	public TimeChecker(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}

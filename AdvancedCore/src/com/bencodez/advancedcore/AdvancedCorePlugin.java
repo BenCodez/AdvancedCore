@@ -784,9 +784,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public abstract void reload();
 
-	/**
-	 * Reload
-	 */
 	public void reloadAdvancedCore(boolean userStorage) {
 		getServerDataFile().reloadData();
 		RewardHandler.getInstance().loadRewards();

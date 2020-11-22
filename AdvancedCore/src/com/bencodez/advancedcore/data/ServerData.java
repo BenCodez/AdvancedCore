@@ -14,9 +14,6 @@ import com.bencodez.advancedcore.api.yml.YMLFile;
  * The Class ServerData.
  */
 public class ServerData extends YMLFile {
-	/**
-	 * Instantiates a new server data.
-	 */
 	public ServerData(AdvancedCorePlugin plugin) {
 		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
 	}

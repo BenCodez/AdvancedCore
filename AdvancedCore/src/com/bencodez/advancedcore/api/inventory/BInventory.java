@@ -144,21 +144,16 @@ public class BInventory {
 
 	private int maxInvSize = 54;
 
-	/** The pages. */
 	private boolean pages = false;
 
-	/** The page. */
 	@Getter
 	private int page = 1;
 
-	/** The max page. */
 	@Getter
 	private int maxPage = 1;
 
-	/** The inventory name. */
 	private String inventoryName;
 
-	/** The buttons. */
 	private Map<Integer, BInventoryButton> buttons = new HashMap<Integer, BInventoryButton>();
 
 	private Inventory inv;
@@ -183,8 +178,6 @@ public class BInventory {
 	 */
 	public BInventory(String name) {
 		setInventoryName(name);
-		// Bukkit.getPluginManager().registerEvents(this,
-		// AdvancedCorePlugin.getInstance());
 	}
 
 	/**

@@ -49,9 +49,6 @@ public class CommandLoader {
 
 	private ArrayList<String> perms = new ArrayList<String>();
 
-	/**
-	 * Instantiates a new command loader.
-	 */
 	public CommandLoader(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}

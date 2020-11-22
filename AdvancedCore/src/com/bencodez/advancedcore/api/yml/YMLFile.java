@@ -34,22 +34,11 @@ public abstract class YMLFile {
 	@Getter
 	private AdvancedCorePlugin plugin;
 
-	/**
-	 * Instantiates a new YML file.
-	 *
-	 * @param file the file
-	 */
 	public YMLFile(AdvancedCorePlugin plugin, File file) {
 		dFile = file;
 		this.plugin = plugin;
 	}
 
-	/**
-	 * Instantiates a new YML file.
-	 *
-	 * @param file  the file
-	 * @param setup the setup
-	 */
 	public YMLFile(AdvancedCorePlugin plugin, File file, boolean setup) {
 		dFile = file;
 		this.plugin = plugin;
