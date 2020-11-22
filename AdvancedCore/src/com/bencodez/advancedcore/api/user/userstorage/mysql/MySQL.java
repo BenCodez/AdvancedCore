@@ -125,7 +125,7 @@ public class MySQL {
 		}
 		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(maxThreads);
 		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval)) {
-			AdvancedCorePlugin.getInstance().getLogger().warning("Failed to connect to MySQL");
+			plugin.getLogger().warning("Failed to connect to MySQL");
 		}
 		try {
 			Query q = new Query(mysql, "USE " + database + ";");
@@ -150,14 +150,14 @@ public class MySQL {
 
 		schedule();
 
-		AdvancedCorePlugin.getInstance().debug("UseBatchUpdates: " + isUseBatchUpdates());
+		plugin.debug("UseBatchUpdates: " + isUseBatchUpdates());
 	}
 
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
 			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
 
-			AdvancedCorePlugin.getInstance().debug("Adding column: " + column + " Current columns: "
+			plugin.debug("Adding column: " + column + " Current columns: "
 					+ ArrayUtils.getInstance().makeStringList((ArrayList<String>) getColumns()));
 			try {
 				Query query = new Query(mysql, sql);
@@ -184,7 +184,7 @@ public class MySQL {
 
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
-		AdvancedCorePlugin.getInstance().debug("Altering column " + column + " to " + newType);
+		plugin.debug("Altering column " + column + " to " + newType);
 		if (newType.contains("INT")) {
 			addToQue(
 					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
@@ -207,7 +207,7 @@ public class MySQL {
 	}
 
 	public void clearCache() {
-		AdvancedCorePlugin.getInstance().debug("Clearing cache");
+		plugin.debug("Clearing cache");
 		table.clear();
 		clearCacheBasic();
 	}
@@ -217,7 +217,7 @@ public class MySQL {
 	}
 
 	public void clearCacheBasic() {
-		AdvancedCorePlugin.getInstance().debug("Clearing cache basic");
+		plugin.debug("Clearing cache basic");
 		columns.clear();
 		columns.addAll(getColumnsQueury());
 		uuids.clear();
@@ -320,7 +320,7 @@ public class MySQL {
 			loadPlayerIfNeeded(uuid);
 			return table.get(uuid);
 		} else {
-			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -464,7 +464,7 @@ public class MySQL {
 				}
 			}
 		} else {
-			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to fetch uuids");
+			plugin.getLogger().severe("Failed to fetch uuids");
 		}
 
 		return uuids;
@@ -499,7 +499,7 @@ public class MySQL {
 					PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)), index));
 		} catch (Exception e) {
 			e.printStackTrace();
-			AdvancedCorePlugin.getInstance().debug("Failed to insert player " + index);
+			plugin.debug("Failed to insert player " + index);
 		}
 
 	}
@@ -551,7 +551,6 @@ public class MySQL {
 			@Override
 			public void run() {
 				try {
-					plugin.devDebug("Running mysql batch update");
 					lastBackgroundCheck = System.currentTimeMillis();
 					updateBatch();
 				} catch (Exception e) {
@@ -631,7 +630,7 @@ public class MySQL {
 
 	public void update(String index, String column, Object value, DataType dataType, boolean queue) {
 		if (value == null) {
-			AdvancedCorePlugin.getInstance().extraDebug("Mysql value null: " + column);
+			plugin.extraDebug("Mysql value null: " + column);
 			return;
 		}
 		checkColumn(column, dataType);
@@ -673,8 +672,7 @@ public class MySQL {
 
 	public void updateBatch() {
 		if (query.size() > 0) {
-			AdvancedCorePlugin.getInstance()
-					.extraDebug("Query Size: " + query.size() + ", usebatchupdates: " + useBatchUpdates);
+			plugin.extraDebug("Query Size: " + query.size() + ", usebatchupdates: " + useBatchUpdates);
 			String sql = "";
 			while (query.size() > 0) {
 				String text = query.poll();
@@ -693,7 +691,7 @@ public class MySQL {
 						}
 						st.executeBatch();
 					} catch (SQLException e) {
-						AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
+						plugin.extraDebug("Failed to send query: " + sql);
 						e.printStackTrace();
 					}
 				} else {
@@ -702,14 +700,14 @@ public class MySQL {
 							Query query = new Query(mysql, text);
 							query.executeUpdateAsync();
 						} catch (SQLException e) {
-							AdvancedCorePlugin.getInstance().getLogger()
+							plugin.getLogger()
 									.severe("Error occoured while executing sql: " + e.toString());
 							e.printStackTrace();
 						}
 					}
 				}
 			} catch (Exception e1) {
-				AdvancedCorePlugin.getInstance().extraDebug("Failed to send query: " + sql);
+				plugin.extraDebug("Failed to send query: " + sql);
 				e1.printStackTrace();
 			}
 		}
@@ -718,7 +716,7 @@ public class MySQL {
 
 	public void updateBatchShutdown() {
 		if (query.size() > 0) {
-			AdvancedCorePlugin.getInstance().getLogger().info("Shutting down mysql, queries to do: " + query.size()
+			plugin.getLogger().info("Shutting down mysql, queries to do: " + query.size()
 					+ ", if number is higher than 1000, then something may be wrong");
 			updateBatch();
 
