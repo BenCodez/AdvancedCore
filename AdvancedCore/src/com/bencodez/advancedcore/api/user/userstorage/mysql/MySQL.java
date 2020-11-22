@@ -550,8 +550,9 @@ public class MySQL {
 
 			@Override
 			public void run() {
-				lastBackgroundCheck = System.currentTimeMillis();
 				try {
+					plugin.devDebug("Running mysql batch update");
+					lastBackgroundCheck = System.currentTimeMillis();
 					updateBatch();
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -564,7 +565,7 @@ public class MySQL {
 			@Override
 			public void run() {
 				if ((System.currentTimeMillis() - lastBackgroundCheck) > 10000) {
-					AdvancedCorePlugin.getInstance().getLogger().severe("MySQL background task not working, fixing");
+					plugin.getLogger().severe("MySQL background task not working, fixing");
 					cancel();
 					schedule();
 				}
