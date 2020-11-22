@@ -252,7 +252,7 @@ public class UserData {
 		}
 
 		AdvancedCorePlugin.getInstance().extraDebug("Player Data: Setting " + key + " to '" + value + "' for '"
-				+ user.getPlayerName() + "' Queue: " + queue);
+				+ user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
@@ -282,7 +282,7 @@ public class UserData {
 		}
 
 		AdvancedCorePlugin.getInstance().extraDebug("Player Data: Setting " + key + " to '" + value + "' for '"
-				+ user.getPlayerName() + "' Queue: " + queue);
+				+ user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();

@@ -435,7 +435,13 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
 				for (String key : user.getData().getKeys()) {
-					sendMessage(sender, "&c&l" + key + " &c" + user.getData().getString(key, true));
+					String str = user.getData().getString(key, true);
+					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
+						if (plugin.getMysql().isIntColumn(key)) {
+							str = "" + user.getData().getInt(key, true);
+						}
+					}
+					sendMessage(sender, "&c&l" + key + " &c" + str);
 				}
 			}
 		});
