@@ -987,8 +987,8 @@ public class AdvancedCoreUser {
 		waitForCache = b;
 	}
 
-	public void updateName() {
-		if (getData().hasData()) {
+	public void updateName(boolean force) {
+		if (getData().hasData() || force) {
 			if (!getData().getString("PlayerName", true).equals(getPlayerName())) {
 				getData().setString("PlayerName", getPlayerName());
 			}

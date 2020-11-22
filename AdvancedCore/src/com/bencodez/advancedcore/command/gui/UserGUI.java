@@ -11,8 +11,8 @@ import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
-import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
+import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
@@ -151,8 +151,7 @@ public class UserGUI {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				Player player = clickEvent.getPlayer();
-				AdvancedCoreUser user = UserManager.getInstance().getUser(player);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(playerName);
 				for (String key : user.getData().getKeys()) {
 					String str = user.getData().getString(key, true);
 					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {

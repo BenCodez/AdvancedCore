@@ -54,7 +54,7 @@ public class PlayerJoinEvent implements Listener {
 
 				user.checkOfflineRewards();
 				user.setLastOnline(System.currentTimeMillis());
-				user.updateName();
+				user.updateName(false);
 			}
 			plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
 
