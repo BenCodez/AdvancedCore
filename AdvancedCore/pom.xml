@@ -3,7 +3,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bencodez</groupId>
-	<artifactId>advancedcore</artifactId>
+	<artifactId>AdvancedCore</artifactId>
 	<version>3.0</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
@@ -113,11 +113,11 @@
 							<relocations>
 								<relocation>
 									<pattern>com.zaxxer.HikariCP</pattern>
-									<shadedPattern>${project.groupId}.${project.artifactId}.HikariCP</shadedPattern>
+									<shadedPattern>${project.groupId}.advancedcore.HikariCP</shadedPattern>
 								</relocation>
 								<relocation>
 									<pattern>com.zaxxer.hikari</pattern>
-									<shadedPattern>${project.groupId}.${project.artifactId}.hikari</shadedPattern>
+									<shadedPattern>${project.groupId}.advancedcore.hikari</shadedPattern>
 								</relocation>
 							</relocations>
 							<artifactSet>
