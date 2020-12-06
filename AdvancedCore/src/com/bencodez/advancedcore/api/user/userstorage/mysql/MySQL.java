@@ -476,7 +476,6 @@ public class MySQL {
 	}
 
 	public void insertQuery(String index, List<Column> cols) {
-		uuids.add(index);
 		String query = "INSERT " + getName() + " ";
 
 		query += "set uuid='" + index + "', ";
@@ -491,12 +490,12 @@ public class MySQL {
 
 		}
 
-		// AdvancedCorePlugin.getInstance().extraDebug(query);
-
 		try {
 			new Query(mysql, query).executeUpdate();
 			names.add(
 					PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)), index));
+			uuids.add(index);
+			plugin.debug("Inserting " + index + " into database");
 		} catch (Exception e) {
 			e.printStackTrace();
 			plugin.debug("Failed to insert player " + index);
