@@ -34,6 +34,7 @@ import com.bencodez.advancedcore.api.command.TabCompleteHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
+import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
 import com.bencodez.advancedcore.api.messages.StringParser;
@@ -161,6 +162,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private TimeChecker timeChecker;
+	
+	@Getter
+	private FullInventoryHandler fullInventoryHandler;
 
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
@@ -373,6 +377,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void loadHook() {
 		serverDataFile = new ServerData(this);
 
+		fullInventoryHandler = new FullInventoryHandler(this);
 		loadSignAPI();
 		loadUUIDs();
 		getOptions().setPermPrefix(this.getName());

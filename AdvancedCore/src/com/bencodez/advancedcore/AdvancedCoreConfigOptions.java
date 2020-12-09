@@ -110,6 +110,10 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private boolean dropOnFullInv = true;
+
+	@Getter
+	@Setter
 	private boolean clearCacheOnJoin;
 
 	@Getter
@@ -245,6 +249,7 @@ public class AdvancedCoreConfigOptions {
 			spamClickTime = configData.getInt("SpamClickTime", 350);
 
 			spamClickMessage = configData.getString("SpamClickMessage", "");
+			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);
 		}
 	}
 }

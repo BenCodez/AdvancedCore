@@ -8,7 +8,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TimerTask;
 
@@ -21,7 +20,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -48,7 +46,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 public class AdvancedCoreUser {
 
 	/** The plugin. */
-	public Plugin plugin = null;
+	public AdvancedCorePlugin plugin = null;
 
 	/** The player name. */
 	private String playerName;
@@ -72,7 +70,7 @@ public class AdvancedCoreUser {
 	 * @param player the player
 	 */
 	@Deprecated
-	public AdvancedCoreUser(Plugin plugin, Player player) {
+	public AdvancedCoreUser(AdvancedCorePlugin plugin, Player player) {
 		this.plugin = plugin;
 		loadData();
 		uuid = player.getUniqueId().toString();
@@ -86,7 +84,7 @@ public class AdvancedCoreUser {
 	 * @param playerName the player name
 	 */
 	@Deprecated
-	public AdvancedCoreUser(Plugin plugin, String playerName) {
+	public AdvancedCoreUser(AdvancedCorePlugin plugin, String playerName) {
 		this.plugin = plugin;
 		loadData();
 		uuid = PlayerUtils.getInstance().getUUID(playerName);
@@ -100,7 +98,7 @@ public class AdvancedCoreUser {
 	 * @param uuid   the uuid
 	 */
 	@Deprecated
-	public AdvancedCoreUser(Plugin plugin, UUID uuid) {
+	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		loadData();
@@ -116,7 +114,7 @@ public class AdvancedCoreUser {
 	 * @param loadName the load name
 	 */
 	@Deprecated
-	public AdvancedCoreUser(Plugin plugin, UUID uuid, boolean loadName) {
+	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		this.loadName = loadName;
@@ -128,7 +126,7 @@ public class AdvancedCoreUser {
 	}
 
 	@Deprecated
-	public AdvancedCoreUser(Plugin plugin, UUID uuid, boolean loadName, boolean loadData) {
+	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, boolean loadName, boolean loadData) {
 		this.plugin = plugin;
 		this.uuid = uuid.getUUID();
 		this.loadName = loadName;
@@ -443,21 +441,7 @@ public class AdvancedCoreUser {
 			@Override
 			public void run() {
 				if (player != null) {
-					HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
-					boolean full = false;
-					for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
-						full = true;
-						player.getWorld().dropItem(player.getLocation(), me.getValue());
-					}
-					if (full) {
-						String msg = StringParser.getInstance()
-								.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
-						if (!msg.isEmpty()) {
-							player.sendMessage(msg);
-						}
-					}
-
-					player.updateInventory();
+					plugin.getFullInventoryHandler().giveItem(player, item);
 				}
 			}
 		});
