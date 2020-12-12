@@ -155,23 +155,50 @@ public class StringParser {
 			preMessage = msg.substring(0, startIndex);
 			postMessage = msg.substring(endIndex + "\"]".length());
 
-			String text = msg.substring(startIndex + "[Text=\"".length(), middle);
-			int secondMiddle = msg.indexOf("=\"", middle);
-			String type = msg.substring(middle + "\",".length(), secondMiddle);
-			String typeData = msg.substring(secondMiddle + "=\"".length(), endIndex);
+			int postText = startIndex + "[Text=\"".length();
 
-			comp.addExtra(parseJson(preMessage));
+			String text = msg.substring(postText, middle);
 
 			TextComponent t = new TextComponent(text);
-			if (type.equalsIgnoreCase("hover")) {
-				t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(typeData).create()));
-			} else if (type.equalsIgnoreCase("command")) {
-				t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, typeData));
-			} else if (type.equalsIgnoreCase("url")) {
-				t.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, typeData));
-			} else if (type.equalsIgnoreCase("suggest_command")) {
-				t.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, typeData));
+
+			String typeMsg = msg;
+			// types
+			boolean parsing = true;
+			while (parsing) {
+				int nextTypeIndex = typeMsg.indexOf("\",");
+				int typeMiddle = typeMsg.indexOf("=\"",nextTypeIndex);
+				String type = typeMsg.substring(nextTypeIndex + "\",".length(), typeMiddle);
+				int typeEndIndex = typeMsg.indexOf("\",", typeMiddle);
+				int endIndex1 = typeMsg.indexOf("\"]");
+
+				if (typeEndIndex == -1 || typeEndIndex > endIndex1) {
+					typeEndIndex = endIndex1;
+					parsing = false;
+				}
+				String typeData = typeMsg.substring(typeMiddle + "=\"".length(), typeEndIndex);
+				if (parsing) {
+					typeMsg = typeMsg.substring(typeEndIndex);
+				}
+
+				if (type.equalsIgnoreCase("hover")) {
+					t.setHoverEvent(
+							new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(typeData).create()));
+				} else if (type.equalsIgnoreCase("command")) {
+					t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, typeData));
+				} else if (type.equalsIgnoreCase("url")) {
+					t.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, typeData));
+				} else if (type.equalsIgnoreCase("suggest_command")) {
+					t.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, typeData));
+				}
+
 			}
+			/*
+			 * int secondMiddle = msg.indexOf("=\"", middle); String type =
+			 * msg.substring(middle + "\",".length(), secondMiddle); String typeData =
+			 * msg.substring(secondMiddle + "=\"".length(), endIndex);
+			 */
+
+			comp.addExtra(parseJson(preMessage));
 
 			comp.addExtra(t);
 
