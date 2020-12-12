@@ -16,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -59,14 +60,11 @@ public class MiscUtils {
 		if (broadcastMsg != null && !broadcastMsg.equals("")) {
 			String consoleMsg = broadcastMsg;
 			for (Player player : players) {
-				String msg = StringParser.getInstance()
-						.colorize(StringParser.getInstance().replacePlaceHolders(player, broadcastMsg));
-				if (consoleMsg.equals(broadcastMsg)) {
-					consoleMsg = msg;
-				}
-				for (String str : msg.split("%NewLine%")) {
+				for (String str : broadcastMsg.split(Pattern.quote("%NewLine%"))) {
+					String msg = StringParser.getInstance()
+							.colorize(StringParser.getInstance().replacePlaceHolders(player, str));
 					AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
-							StringParser.getInstance().parseJson(str));
+							StringParser.getInstance().parseJson(msg));
 				}
 			}
 			Bukkit.getServer().getConsoleSender().sendMessage(consoleMsg);
