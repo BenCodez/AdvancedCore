@@ -60,11 +60,13 @@ public class MiscUtils {
 		if (broadcastMsg != null && !broadcastMsg.equals("")) {
 			String consoleMsg = broadcastMsg;
 			for (Player player : players) {
-				for (String str : broadcastMsg.split(Pattern.quote("%NewLine%"))) {
-					String msg = StringParser.getInstance()
-							.colorize(StringParser.getInstance().replacePlaceHolders(player, str));
-					AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
-							StringParser.getInstance().parseJson(msg));
+				for (String str1 : broadcastMsg.split(Pattern.quote("%newline%"))) {
+					for (String str : str1.split(Pattern.quote("%NewLine%"))) {
+						String msg = StringParser.getInstance()
+								.colorize(StringParser.getInstance().replacePlaceHolders(player, str));
+						AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
+								StringParser.getInstance().parseJson(msg));
+					}
 				}
 			}
 			Bukkit.getServer().getConsoleSender().sendMessage(consoleMsg);
