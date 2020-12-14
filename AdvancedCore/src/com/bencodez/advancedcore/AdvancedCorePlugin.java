@@ -162,7 +162,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private TimeChecker timeChecker;
-	
+
 	@Getter
 	private FullInventoryHandler fullInventoryHandler;
 
@@ -774,13 +774,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public abstract void onPreLoad();
 
 	public abstract void onUnLoad();
+	
+	@Getter
+	@Setter
+	private String bungeeChannel;
 
-	public void registerBungeeChannels() {
-		getServer().getMessenger().registerOutgoingPluginChannel(this,
-				this.getName().toLowerCase() + ":" + this.getName().toLowerCase());
+	public void registerBungeeChannels(String name) {
+		this.bungeeChannel = name;
+		getServer().getMessenger().registerOutgoingPluginChannel(this, name);
 		pluginMessaging = new PluginMessage(this);
-		getServer().getMessenger().registerIncomingPluginChannel(this,
-				this.getName().toLowerCase() + ":" + this.getName().toLowerCase(), pluginMessaging);
+		getServer().getMessenger().registerIncomingPluginChannel(this, name, pluginMessaging);
 	}
 
 	public void registerEvents(Listener listener) {

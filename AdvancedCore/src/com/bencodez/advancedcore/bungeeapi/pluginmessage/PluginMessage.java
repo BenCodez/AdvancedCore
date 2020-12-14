@@ -34,7 +34,7 @@ public class PluginMessage implements PluginMessageListener {
 	@Override
 	public void onPluginMessageReceived(String channel, Player player, byte[] message) {
 		// plugin.getLogger().info("Got plugin message " + channel + " : " + message);
-		if (!channel.equals(plugin.getName().toLowerCase() + ":" + plugin.getName().toLowerCase())) {
+		if (!channel.equals(plugin.getBungeeChannel())) {
 			return;
 		}
 		ByteArrayDataInput in = ByteStreams.newDataInput(message);
@@ -82,7 +82,7 @@ public class PluginMessage implements PluginMessageListener {
 			for (String message : messageData) {
 				out.writeUTF(message);
 			}
-			p.sendPluginMessage(plugin, plugin.getName().toLowerCase() + ":" + plugin.getName().toLowerCase(),
+			p.sendPluginMessage(plugin, plugin.getBungeeChannel(),
 					byteOutStream.toByteArray());
 			out.close();
 		} catch (Exception e) {
