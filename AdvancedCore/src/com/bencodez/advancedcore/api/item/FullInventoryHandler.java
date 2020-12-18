@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.item;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -29,6 +30,48 @@ public class FullInventoryHandler {
 		items = new ConcurrentHashMap<UUID, ArrayList<ItemStack>>();
 		this.plugin = plugin;
 		loadTimer();
+		startup();
+	}
+
+	public void startup() {
+		if (!plugin.getServerDataFile().getData().isConfigurationSection("FullInventory")) {
+			return;
+		}
+		try {
+			for (String uuid : plugin.getServerDataFile().getData().getConfigurationSection("FullInventory")
+					.getKeys(false)) {
+
+				// check time to keep a lot of items from long time offline players
+				long time = plugin.getServerDataFile().getData().getLong("FullInventory." + uuid + ".Time");
+				if (System.currentTimeMillis() - time < (1000 * 60 * 60 * 24)) {
+
+					for (String itemnum : plugin.getServerDataFile().getData()
+							.getConfigurationSection("FullInventory." + uuid + ".Items").getKeys(false)) {
+						add(UUID.fromString(uuid), plugin.getServerDataFile().getData()
+								.getItemStack("FullInventory." + uuid + ".Items." + itemnum));
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		plugin.getServerDataFile().setData("FullInventory", null);
+	}
+
+	public void save() {
+		try {
+			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
+				ArrayList<ItemStack> items = entry.getValue();
+				for (int i = 0; i < items.size(); i++) {
+					plugin.getServerDataFile().setData("FullInventory." + entry.getKey().toString() + ".Items." + i,
+							items.get(i));
+				}
+				plugin.getServerDataFile().setData("FullInventory." + entry.getKey().toString() + ".Time",
+						System.currentTimeMillis());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void loadTimer() {

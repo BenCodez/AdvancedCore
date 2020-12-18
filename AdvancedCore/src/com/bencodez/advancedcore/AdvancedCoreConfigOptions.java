@@ -193,7 +193,7 @@ public class AdvancedCoreConfigOptions {
 
 			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
 			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
-			formatInvFull = configData.getString("Format.InvFull", "&cInventory full, dropping items on ground");
+			formatInvFull = configData.getString("Format.InvFull", "&cInventory full");
 			formatChoiceRewardsPreferenceSet = configData.getString("Format.ChoiceRewards.PreferenceSet",
 					"&aPreference set to %choice%");
 
@@ -249,7 +249,7 @@ public class AdvancedCoreConfigOptions {
 			spamClickTime = configData.getInt("SpamClickTime", 350);
 
 			spamClickMessage = configData.getString("SpamClickMessage", "");
-			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);
+			dropOnFullInv = configData.getBoolean("DropOnFullInv", false);
 		}
 	}
 }

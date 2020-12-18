@@ -377,7 +377,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void loadHook() {
 		serverDataFile = new ServerData(this);
 
-		fullInventoryHandler = new FullInventoryHandler(this);
 		loadSignAPI();
 		loadUUIDs();
 		getOptions().setPermPrefix(this.getName());
@@ -411,6 +410,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		userStartup();
 		loadTabComplete();
+
+		fullInventoryHandler = new FullInventoryHandler(this);
 
 		for (OfflinePlayer p : Bukkit.getBannedPlayers()) {
 			bannedPlayers.add(p.getUniqueId().toString());
@@ -756,6 +757,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		timer.cancel();
 		onUnLoad();
 		SkullHandler.getInstance().close();
+		fullInventoryHandler.save();
 
 		// Thread.getInstance().getThread().interrupt();
 		// FileThread.getInstance().getThread().interrupt();
@@ -774,7 +776,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public abstract void onPreLoad();
 
 	public abstract void onUnLoad();
-	
+
 	@Getter
 	@Setter
 	private String bungeeChannel;
