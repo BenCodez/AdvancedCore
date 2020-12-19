@@ -34,10 +34,12 @@ public class FullInventoryHandler {
 	}
 
 	public void startup() {
-		if (plugin.getServerDataFile().getData() != null && !plugin.getServerDataFile().getData().isConfigurationSection("FullInventory")) {
-			return;
-		}
 		try {
+			if (plugin.getServerDataFile().getData() == null
+					|| !plugin.getServerDataFile().getData().isConfigurationSection("FullInventory")) {
+				return;
+			}
+
 			for (String uuid : plugin.getServerDataFile().getData().getConfigurationSection("FullInventory")
 					.getKeys(false)) {
 
@@ -52,10 +54,12 @@ public class FullInventoryHandler {
 					}
 				}
 			}
+			
+			plugin.getServerDataFile().setData("FullInventory", null);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		plugin.getServerDataFile().setData("FullInventory", null);
+		
 	}
 
 	public void save() {
