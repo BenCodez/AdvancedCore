@@ -249,7 +249,7 @@ public class AdvancedCoreConfigOptions {
 			spamClickTime = configData.getInt("SpamClickTime", 350);
 
 			spamClickMessage = configData.getString("SpamClickMessage", "");
-			dropOnFullInv = configData.getBoolean("DropOnFullInv", false);
+			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);
 		}
 	}
 }
