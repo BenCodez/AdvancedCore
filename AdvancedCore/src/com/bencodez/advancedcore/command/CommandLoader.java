@@ -127,7 +127,7 @@ public class CommandLoader {
 				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
 				RewardHandler.getInstance().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
 
-				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]);
+				sendMessage(sender, "&cGave " + args[1] + " the reward file " + args[2]);
 			}
 		});
 
