@@ -64,6 +64,9 @@ public class FullInventoryHandler {
 
 	public void save() {
 		try {
+			if (plugin.getServerDataFile().getData() == null) {
+				return;
+			}
 			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
 				ArrayList<ItemStack> items = entry.getValue();
 				for (int i = 0; i < items.size(); i++) {
