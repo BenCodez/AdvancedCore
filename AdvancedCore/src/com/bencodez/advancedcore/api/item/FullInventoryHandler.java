@@ -34,7 +34,7 @@ public class FullInventoryHandler {
 	}
 
 	public void startup() {
-		if (!plugin.getServerDataFile().getData().isConfigurationSection("FullInventory")) {
+		if (plugin.getServerDataFile().getData() != null && !plugin.getServerDataFile().getData().isConfigurationSection("FullInventory")) {
 			return;
 		}
 		try {
