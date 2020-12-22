@@ -116,17 +116,23 @@ public class RewardHandler {
 		placeholders.add(handle);
 	}
 
+	public void addRewardFolder(File file) {
+		addRewardFolder(file, true);
+	}
+
 	/**
 	 * Adds the reward folder.
 	 *
 	 * @param file the file
 	 */
-	public void addRewardFolder(File file) {
+	public void addRewardFolder(File file, boolean load) {
 		file.mkdirs();
 		if (file.isDirectory()) {
 			if (!rewardFolders.contains(file)) {
 				rewardFolders.add(file);
-				loadRewards();
+				if (load) {
+					loadRewards();
+				}
 			}
 		} else {
 			plugin.debug(file.getAbsolutePath());
@@ -263,6 +269,33 @@ public class RewardHandler {
 		return new Reward(reward);
 	}
 
+	public Reward getRewardDirectlyDefined(String reward) {
+		if (reward == null) {
+			reward = "";
+		}
+		reward = reward.replace(" ", "_");
+
+		for (Reward rewardFile : getRewards()) {
+			File folder = rewardFile.getConfig().getRewardFolder();
+			if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
+				if (rewardFile.getName().equalsIgnoreCase(reward)) {
+					return rewardFile;
+				}
+			}
+		}
+
+		if (reward.equals("")) {
+			plugin.getLogger().warning("Tried to get any empty reward file name, renaming to EmptyName");
+			reward = "EmptyName";
+		}
+
+		if (reward.equalsIgnoreCase("examplebasic") || reward.equalsIgnoreCase("exampleadvanced")) {
+			plugin.getLogger().warning("Using example rewards as a reward, becarefull");
+		}
+
+		return new Reward(new File(getDefaultFolder().getAbsolutePath() + File.separator + "DirectlyDefined"), reward);
+	}
+
 	private String getFileExtension(File file) {
 		String name = file.getName();
 		int lastIndexOf = name.lastIndexOf(".");
@@ -280,9 +313,11 @@ public class RewardHandler {
 	 */
 	public ArrayList<String> getRewardFiles(File folder) {
 		ArrayList<String> fileNames = new ArrayList<String>();
-		for (File file : folder.listFiles()) {
-			if (getFileExtension(file).equals(".yml")) {
-				fileNames.add(file.getName());
+		if (folder != null && folder.exists()) {
+			for (File file : folder.listFiles()) {
+				if (getFileExtension(file).equals(".yml")) {
+					fileNames.add(file.getName());
+				}
 			}
 		}
 		return fileNames;
@@ -1711,6 +1746,40 @@ public class RewardHandler {
 		sortInjectedRewards();
 	}
 
+	private void loadRewards(File file) {
+		for (String reward : getRewardNames(file)) {
+			if (!reward.equals("")) {
+				if (!rewardExist(reward)) {
+					try {
+						Reward reward1 = new Reward(file, reward);
+						reward1.validate();
+						if (reward1.getRepeatHandle().isEnabled() && reward1.getRepeatHandle().isRepeatOnStartup()
+								&& !reward1.getConfig().isDirectlyDefinedReward()) {
+							reward1.getRepeatHandle().giveRepeatAll();
+						}
+						if (!reward1.getConfig().isDirectlyDefinedReward()
+								|| file.getName().equalsIgnoreCase("DirectlyDefined")) {
+							rewards.add(reward1);
+							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
+						} else {
+							plugin.extraDebug(
+									"Ignoring directly defined reward file" + file.getAbsolutePath() + "/" + reward);
+						}
+					} catch (Exception e) {
+						plugin.getLogger().severe("Failed to load reward file " + reward + ".yml: " + e.getMessage());
+						e.printStackTrace();
+					}
+				} else {
+					plugin.getLogger().warning("Detected that a reward file named " + reward
+							+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
+				}
+			} else {
+				plugin.getLogger().warning(
+						"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
+			}
+		}
+	}
+
 	/**
 	 * Load rewards.
 	 */
@@ -1718,32 +1787,7 @@ public class RewardHandler {
 		rewards = Collections.synchronizedList(new ArrayList<Reward>());
 		setupExample();
 		for (File file : rewardFolders) {
-			for (String reward : getRewardNames(file)) {
-				if (!reward.equals("")) {
-					if (!rewardExist(reward)) {
-						try {
-							Reward reward1 = new Reward(file, reward);
-							reward1.validate();
-							if (reward1.getRepeatHandle().isEnabled() && reward1.getRepeatHandle().isRepeatOnStartup()
-									&& !reward1.getConfig().isDirectlyDefinedReward()) {
-								reward1.getRepeatHandle().giveRepeatAll();
-							}
-							rewards.add(reward1);
-							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
-						} catch (Exception e) {
-							plugin.getLogger()
-									.severe("Failed to load reward file " + reward + ".yml: " + e.getMessage());
-							e.printStackTrace();
-						}
-					} else {
-						plugin.getLogger().warning("Detected that a reward file named " + reward
-								+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
-					}
-				} else {
-					plugin.getLogger().warning(
-							"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
-				}
-			}
+			loadRewards(file);
 		}
 
 		sortInjectedRewards();

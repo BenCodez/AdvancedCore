@@ -231,7 +231,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		} else if (debugLevel.equals(DebugLevel.DEV)) {
 			debug = "Developer Debug: " + debug;
 		}
-		if (getOptions().getDebug().isDebug()) {
+		
+		if (getOptions().getDebug().isDebug(debugLevel)) {
 			getLogger().info(debug);
 		}
 		if (getOptions().isDebugIngame()) {
@@ -256,7 +257,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * @param e Exception
 	 */
 	public void debug(Exception e) {
-		if (getOptions().getDebug().equals(DebugLevel.INFO)) {
+		if (getOptions().getDebug().isDebug()) {
 			e.printStackTrace();
 		}
 		if (getOptions().isLogDebugToFile()) {
@@ -390,10 +391,18 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			timeChecker.loadTimer(1);
 		}
 
+		loadConfig(true);
+
 		RewardHandler.getInstance().loadInjectedRewards();
 		RewardHandler.getInstance().loadInjectedRequirements();
 		if (loadRewards) {
-			RewardHandler.getInstance().addRewardFolder(new File(this.getDataFolder(), "Rewards"));
+			File rewardsFolder = new File(this.getDataFolder(), "Rewards");
+			RewardHandler.getInstance().addRewardFolder(rewardsFolder, false);
+			File file = new File(rewardsFolder.getAbsolutePath() + File.separator + "DirectlyDefined");
+			if (!file.exists()) {
+				file.mkdirs();
+			}
+			RewardHandler.getInstance().addRewardFolder(file);
 		}
 
 		loadValueRequestInputCommands();
@@ -401,8 +410,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
 		loadVersionFile();
-
-		loadConfig(true);
 
 		UserManager.getInstance().purgeOldPlayers();
 

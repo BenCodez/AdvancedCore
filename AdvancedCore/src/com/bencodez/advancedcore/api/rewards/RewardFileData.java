@@ -15,6 +15,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.files.FilesManager;
 
+import lombok.Getter;
 import net.md_5.bungee.api.ChatColor;
 
 /**
@@ -36,6 +37,9 @@ public class RewardFileData {
 
 	private ConfigurationSection configData;
 
+	@Getter
+	private File rewardFolder;
+
 	public RewardFileData(Reward reward, ConfigurationSection section) {
 		this.reward = reward;
 		configData = section;
@@ -54,6 +58,8 @@ public class RewardFileData {
 		if (!rewardFolder.isDirectory()) {
 			rewardFolder = rewardFolder.getParentFile();
 		}
+
+		this.rewardFolder = rewardFolder;
 
 		setup();
 	}

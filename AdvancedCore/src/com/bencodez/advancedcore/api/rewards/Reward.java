@@ -428,7 +428,7 @@ public class Reward {
 	}
 
 	private void setRewardFile() {
-		Reward reward = RewardHandler.getInstance().getReward(name);
+		Reward reward = RewardHandler.getInstance().getRewardDirectlyDefined(name);
 		ConfigurationSection section = getConfig().getConfigData();
 		reward.getConfig().setData(section);
 		reward.getConfig().getFileData().options()
