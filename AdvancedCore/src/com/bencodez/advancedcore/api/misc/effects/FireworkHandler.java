@@ -10,7 +10,6 @@ import org.bukkit.FireworkEffect.Type;
 import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -107,7 +106,7 @@ public class FireworkHandler implements Listener {
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onFireworkDamage(EntityDamageByEntityEvent event) {
-		if (event.getDamager() instanceof Firework && event.getEntity() instanceof Player) {
+		if (event.getDamager() instanceof Firework) {
 			Firework fw = (Firework) event.getDamager();
 			if (fireWorks.contains(fw)) {
 				event.setCancelled(true);
