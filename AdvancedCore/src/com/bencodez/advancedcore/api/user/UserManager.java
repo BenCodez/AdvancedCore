@@ -133,7 +133,7 @@ public class UserManager {
 	 * @return the user
 	 */
 	public AdvancedCoreUser getUser(OfflinePlayer player) {
-		return getUser(player.getName());
+		return getUser(player.getUniqueId(), player.getName());
 	}
 
 	/**
@@ -166,6 +166,11 @@ public class UserManager {
 	@SuppressWarnings("deprecation")
 	public AdvancedCoreUser getUser(UUID uuid) {
 		return new AdvancedCoreUser(plugin, uuid);
+	}
+
+	@SuppressWarnings("deprecation")
+	public AdvancedCoreUser getUser(java.util.UUID uuid, String playerName) {
+		return new AdvancedCoreUser(plugin, new UUID(uuid.toString()), playerName);
 	}
 
 	public void purgeOldPlayers() {

@@ -103,7 +103,14 @@ public class AdvancedCoreUser {
 		this.uuid = uuid.getUUID();
 		loadData();
 		setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
+	}
 
+	@Deprecated
+	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, String playerName) {
+		this.plugin = plugin;
+		this.uuid = uuid.getUUID();
+		loadData();
+		setPlayerName(playerName);
 	}
 
 	/**
