@@ -442,6 +442,19 @@ public class CommandLoader {
 				}
 			}
 		});
+		
+		cmds.add(new CommandHandler(
+				new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)", "(Player)" },
+				permPrefix + ".ChoicesSetPreferenceOther", "Let user pick his choice preferences", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[4]);
+				user.setChoicePreference(args[2], args[3]);
+
+				user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
+			}
+		});
 
 		for (CommandHandler cmd : cmds) {
 			cmd.setAdvancedCoreCommand(true);
@@ -480,19 +493,6 @@ public class CommandLoader {
 				user.setChoicePreference(args[2], args[3]);
 
 				user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice", args[3]);
-			}
-		});
-
-		cmds.add(new CommandHandler(
-				new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)", "(Player)" },
-				permPrefix + ".ChoicesSetPreferenceOther", "Let user pick his choice preferences", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[4]);
-				user.setChoicePreference(args[2], args[3]);
-
-				user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
 			}
 		});
 
