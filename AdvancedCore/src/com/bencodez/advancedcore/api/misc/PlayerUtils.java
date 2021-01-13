@@ -1,5 +1,10 @@
 package com.bencodez.advancedcore.api.misc;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,6 +31,9 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Iterables;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class PlayerUtils {
 	/** The instance. */
@@ -173,7 +181,7 @@ public class PlayerUtils {
 	 */
 	@SuppressWarnings("deprecation")
 	public String getUUID(String playerName) {
-		if (playerName == null) {
+		if (playerName == null || playerName.isEmpty()) {
 			return null;
 		}
 
@@ -187,6 +195,7 @@ public class PlayerUtils {
 		if (!uuid.equals("")) {
 			return uuid;
 		}
+
 		try {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 			return p.getUniqueId().toString();
@@ -194,7 +203,47 @@ public class PlayerUtils {
 			e.printStackTrace();
 			return getUUIDLookup(playerName);
 		}
+	}
 
+	public java.util.UUID fetchUUID(String playerName) throws Exception {
+		// Get response from Mojang API
+		URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName);
+		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		connection.connect();
+
+		if (connection.getResponseCode() == 400) {
+			plugin.debug("There is no player with the name \"" + playerName + "\"!");
+			return null;
+		}
+
+		InputStream inputStream = connection.getInputStream();
+		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+		// Parse JSON response and get UUID
+		JsonElement element = new JsonParser().parse(bufferedReader);
+		JsonObject object = element.getAsJsonObject();
+		String uuidAsString = object.get("id").getAsString();
+
+		// Return UUID
+		return parseUUIDFromString(uuidAsString);
+	}
+
+	private java.util.UUID parseUUIDFromString(String uuidAsString) {
+		String[] parts = { "0x" + uuidAsString.substring(0, 8), "0x" + uuidAsString.substring(8, 12),
+				"0x" + uuidAsString.substring(12, 16), "0x" + uuidAsString.substring(16, 20),
+				"0x" + uuidAsString.substring(20, 32) };
+
+		long mostSigBits = Long.decode(parts[0]).longValue();
+		mostSigBits <<= 16;
+		mostSigBits |= Long.decode(parts[1]).longValue();
+		mostSigBits <<= 16;
+		mostSigBits |= Long.decode(parts[2]).longValue();
+
+		long leastSigBits = Long.decode(parts[3]).longValue();
+		leastSigBits <<= 48;
+		leastSigBits |= Long.decode(parts[4]).longValue();
+
+		return new java.util.UUID(mostSigBits, leastSigBits);
 	}
 
 	private String getUUIDLookup(String playerName) {
