@@ -28,8 +28,6 @@ public class StringParser {
 		return instance;
 	}
 
-	private final Pattern pattern = Pattern.compile("(?<!\\\\)(#[a-fA-F0-9]{6})");
-
 	private StringParser() {
 	}
 
@@ -52,7 +50,7 @@ public class StringParser {
 				.replace("{RESET}", "§r").replace("{STRIKE}", "§m").replace("{STRIKETHROUGH}", "§m")
 				.replace("{UNDERLINE}", "§n");
 
-		format = formatHex(format);
+		format = translateHexColorCodes("&#", "#", format);
 		return ChatColor.translateAlternateColorCodes('&', format);
 	}
 
@@ -76,17 +74,25 @@ public class StringParser {
 	public boolean containsJson(String msg) {
 		return containsIgnorecase(msg, "[Text=\"");
 	}
-
-	public String formatHex(String message) {
-		Matcher matcher = pattern.matcher(message); // Creates a matcher with the given pattern & message
-
-		while (matcher.find()) { // Searches the message for something that matches the pattern
-			String color = message.substring(matcher.start(), matcher.end()); // Extracts the color from the message
-			message = message.replace(color, "" + ChatColor.of(color)); // Places the color in the message
-		}
-
-		return message; // Returns the message
-	}
+	
+	public final char COLOR_CHAR = ChatColor.COLOR_CHAR;
+	
+	public String translateHexColorCodes(String startTag, String endTag, String message)
+    {
+        final Pattern hexPattern = Pattern.compile(startTag + "([A-Fa-f0-9]{6})" + endTag);
+        Matcher matcher = hexPattern.matcher(message);
+        StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
+        while (matcher.find())
+        {
+            String group = matcher.group(1);
+            matcher.appendReplacement(buffer, COLOR_CHAR + "x"
+                    + COLOR_CHAR + group.charAt(0) + COLOR_CHAR + group.charAt(1)
+                    + COLOR_CHAR + group.charAt(2) + COLOR_CHAR + group.charAt(3)
+                    + COLOR_CHAR + group.charAt(4) + COLOR_CHAR + group.charAt(5)
+                    );
+        }
+        return matcher.appendTail(buffer).toString();
+    }
 
 	public String getProgressBar(int current, int max, int totalBars, String symbol, String completedColor,
 			String notCompletedColor) {
