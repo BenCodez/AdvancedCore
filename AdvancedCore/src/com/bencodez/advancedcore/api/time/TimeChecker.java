@@ -27,45 +27,59 @@ public class TimeChecker {
 
 	private boolean timerLoaded = false;
 
+	private boolean processing = false;
+
+	private TimeType lastChange = TimeType.DAY;
+
 	public TimeChecker(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
 
 	public void forceChanged(TimeType time) {
-		forceChanged(time, true);
-	}
-
-	public void forceChanged(final TimeType time, final boolean fake) {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
-				plugin.debug("Executing time change events: " + time.toString());
-				plugin.getLogger().info("Time change event: " + time.toString() + ", Fake: " + fake);
+				forceChanged(time, true, true, true);
+			}
+		});
+	}
+
+	private void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
+		processing = true;
+		try {
+			plugin.debug("Executing time change events: " + time.toString());
+			plugin.getLogger().info("Time change event: " + time.toString() + ", Fake: " + fake);
+			if (preDate) {
 				PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
 				preDateChanged.setFake(fake);
 				plugin.getServer().getPluginManager().callEvent(preDateChanged);
-				if (time.equals(TimeType.DAY)) {
-					DayChangeEvent dayChange = new DayChangeEvent();
-					dayChange.setFake(fake);
-					plugin.getServer().getPluginManager().callEvent(dayChange);
-				} else if (time.equals(TimeType.WEEK)) {
-					WeekChangeEvent weekChange = new WeekChangeEvent();
-					weekChange.setFake(fake);
-					plugin.getServer().getPluginManager().callEvent(weekChange);
-				} else if (time.equals(TimeType.MONTH)) {
-					MonthChangeEvent monthChange = new MonthChangeEvent();
-					monthChange.setFake(fake);
-					plugin.getServer().getPluginManager().callEvent(monthChange);
-				}
+			}
+			if (time.equals(TimeType.DAY)) {
+				DayChangeEvent dayChange = new DayChangeEvent();
+				dayChange.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(dayChange);
+			} else if (time.equals(TimeType.WEEK)) {
+				WeekChangeEvent weekChange = new WeekChangeEvent();
+				weekChange.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(weekChange);
+			} else if (time.equals(TimeType.MONTH)) {
+				MonthChangeEvent monthChange = new MonthChangeEvent();
+				monthChange.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(monthChange);
+			}
 
+			if (postDate) {
 				DateChangedEvent dateChanged = new DateChangedEvent(time);
 				dateChanged.setFake(fake);
 				plugin.getServer().getPluginManager().callEvent(dateChanged);
-
-				plugin.debug("Finished executing time change events: " + time.toString());
 			}
-		});
+
+			plugin.debug("Finished executing time change events: " + time.toString());
+			processing = false;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 	}
 
@@ -78,14 +92,16 @@ public class TimeChecker {
 	 *
 	 * @return true, if successful
 	 */
-	public boolean hasDayChanged() {
+	public boolean hasDayChanged(boolean set) {
 		int prevDay = plugin.getServerDataFile().getPrevDay();
 		int day = getTime().getDayOfMonth();
 
 		if (prevDay == day) {
 			return false;
 		}
-		plugin.getServerDataFile().setPrevDay(day);
+		if (set) {
+			plugin.getServerDataFile().setPrevDay(day);
+		}
 		if (prevDay == -1) {
 			return false;
 		}
@@ -97,13 +113,15 @@ public class TimeChecker {
 	 *
 	 * @return true, if successful
 	 */
-	public boolean hasMonthChanged() {
+	public boolean hasMonthChanged(boolean set) {
 		String prevMonth = plugin.getServerDataFile().getPrevMonth();
 		String month = getTime().getMonth().toString();
 		if (prevMonth.equals(month)) {
 			return false;
 		}
-		plugin.getServerDataFile().setPrevMonth(month);
+		if (set) {
+			plugin.getServerDataFile().setPrevMonth(month);
+		}
 		return true;
 
 	}
@@ -117,7 +135,7 @@ public class TimeChecker {
 	 *
 	 * @return true, if successful
 	 */
-	public boolean hasWeekChanged() {
+	public boolean hasWeekChanged(boolean set) {
 		int prevDate = plugin.getServerDataFile().getPrevWeekDay();
 		LocalDateTime date = getTime();
 		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear();
@@ -125,7 +143,9 @@ public class TimeChecker {
 		if (weekNumber == prevDate) {
 			return false;
 		}
-		plugin.getServerDataFile().setPrevWeekDay(weekNumber);
+		if (set) {
+			plugin.getServerDataFile().setPrevWeekDay(weekNumber);
+		}
 		if (prevDate == -1) {
 			return false;
 		}
@@ -140,7 +160,9 @@ public class TimeChecker {
 				@Override
 				public void run() {
 					if (plugin != null) {
-						update();
+						if (!processing) {
+							update();
+						}
 					} else {
 						cancel();
 						timerLoaded = false;
@@ -167,28 +189,64 @@ public class TimeChecker {
 		boolean dayChanged = false;
 		boolean weekChanged = false;
 		boolean monthChanged = false;
-		if (hasDayChanged()) {
+		if (hasDayChanged(false)) {
 			plugin.debug("Day changed");
 			dayChanged = true;
 		}
-		if (hasWeekChanged()) {
+		if (hasWeekChanged(false)) {
 			plugin.debug("Week Changed");
 			weekChanged = true;
 		}
-		if (hasMonthChanged()) {
+		if (hasMonthChanged(false)) {
 			plugin.debug("Month Changed");
 			monthChanged = true;
 		}
 
-		if (dayChanged) {
-			forceChanged(TimeType.DAY, false);
-		}
-		if (weekChanged) {
-			forceChanged(TimeType.WEEK, false);
-		}
-		if (monthChanged) {
-			forceChanged(TimeType.MONTH, false);
-		}
+		if (!processing) {
+			// processing all 3 at once in a staggered pattern incase of shutdown
+			if (monthChanged && weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
+				forceChanged(TimeType.MONTH, false, true, false);
+				hasMonthChanged(true);
+				lastChange = TimeType.MONTH;
+			} else if (!monthChanged && weekChanged && dayChanged && lastChange.equals(TimeType.MONTH)) {
+				forceChanged(TimeType.WEEK, false, true, false);
+				lastChange = TimeType.WEEK;
+				hasWeekChanged(true);
+			} else if (!monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.WEEK)) {
+				forceChanged(TimeType.DAY, false, false, true);
+				lastChange = TimeType.DAY;
+				hasDayChanged(true);
+			}
 
+			// processing week/day at once
+			if (!monthChanged && weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
+				forceChanged(TimeType.WEEK, false, true, false);
+				lastChange = TimeType.WEEK;
+				hasWeekChanged(true);
+			} else if (!monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.WEEK)) {
+				forceChanged(TimeType.DAY, false, false, true);
+				lastChange = TimeType.DAY;
+				hasDayChanged(true);
+			}
+
+			// just normal day change
+			if (!monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
+				forceChanged(TimeType.DAY, false, false, true);
+				lastChange = TimeType.DAY;
+				hasDayChanged(true);
+			}
+
+			if (monthChanged && (!weekChanged || !dayChanged)) {
+				plugin.getLogger().warning("Detected issue with month change");
+				hasMonthChanged(true);
+			} else if (weekChanged && !dayChanged) {
+				plugin.getLogger().warning("Detected issue with week change");
+				hasWeekChanged(true);
+			}
+		} else {
+			if (!dayChanged && !weekChanged && !monthChanged && !lastChange.equals(TimeType.DAY)) {
+				lastChange = TimeType.DAY;
+			}
+		}
 	}
 }

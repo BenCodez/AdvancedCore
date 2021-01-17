@@ -312,7 +312,17 @@ public class MySQL {
 			e.printStackTrace();
 		}
 		return columns;
-
+	}
+	
+	public void wipeColumnData(String columnName) {
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 	public ArrayList<Column> getExact(String uuid, boolean waitForCache) {
