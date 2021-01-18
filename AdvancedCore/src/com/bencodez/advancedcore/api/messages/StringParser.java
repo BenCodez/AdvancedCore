@@ -50,6 +50,7 @@ public class StringParser {
 				.replace("{RESET}", "§r").replace("{STRIKE}", "§m").replace("{STRIKETHROUGH}", "§m")
 				.replace("{UNDERLINE}", "§n");
 
+		// hex format: &#FF0000#
 		format = translateHexColorCodes("&#", "#", format);
 		return ChatColor.translateAlternateColorCodes('&', format);
 	}
