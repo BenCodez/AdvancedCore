@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -201,7 +202,7 @@ public abstract class CommandHandler {
 		return txt;
 
 	}
-	
+
 	public TextComponent getHelpLine(String command, String line) {
 		String commandText = getHelpLineCommand(command);
 		line = line.replace("%Command%", commandText);
@@ -302,8 +303,16 @@ public abstract class CommandHandler {
 		return false;
 	}
 
+	@Getter
+	@Setter
+	private boolean allowMultiplePermissions = false;
+
 	public boolean hasPerm(CommandSender sender) {
-		return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
+		if (allowMultiplePermissions) {
+			return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
+		} else {
+			return sender.hasPermission(getPerm().split(Pattern.quote("|"))[0]);
+		}
 	}
 
 	public CommandHandler ignoreNumberCheck() {
