@@ -1125,7 +1125,7 @@ public class RewardHandler {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				if (data.isList(inject.getPath())) {
+				if (data.isList(inject.getPath()) && !data.isConfigurationSection(inject.getPath())) {
 					List<String> list = data.getStringList(inject.getPath());
 					if (list != null) {
 						if (list.isEmpty()) {
