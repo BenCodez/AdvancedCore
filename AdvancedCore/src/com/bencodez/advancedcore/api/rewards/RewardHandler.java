@@ -120,11 +120,6 @@ public class RewardHandler {
 		addRewardFolder(file, true);
 	}
 
-	/**
-	 * Adds the reward folder.
-	 *
-	 * @param file the file
-	 */
 	public void addRewardFolder(File file, boolean load) {
 		file.mkdirs();
 		if (file.isDirectory()) {

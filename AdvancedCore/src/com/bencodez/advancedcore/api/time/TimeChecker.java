@@ -87,11 +87,6 @@ public class TimeChecker {
 		return LocalDateTime.now().plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet());
 	}
 
-	/**
-	 * Checks for day changed.
-	 *
-	 * @return true, if successful
-	 */
 	public boolean hasDayChanged(boolean set) {
 		int prevDay = plugin.getServerDataFile().getPrevDay();
 		int day = getTime().getDayOfMonth();
@@ -108,11 +103,6 @@ public class TimeChecker {
 		return true;
 	}
 
-	/**
-	 * Checks for month changed.
-	 *
-	 * @return true, if successful
-	 */
 	public boolean hasMonthChanged(boolean set) {
 		String prevMonth = plugin.getServerDataFile().getPrevMonth();
 		String month = getTime().getMonth().toString();
@@ -130,11 +120,6 @@ public class TimeChecker {
 		return AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet() != 0;
 	}
 
-	/**
-	 * Checks for week changed.
-	 *
-	 * @return true, if successful
-	 */
 	public boolean hasWeekChanged(boolean set) {
 		int prevDate = plugin.getServerDataFile().getPrevWeekDay();
 		LocalDateTime date = getTime();
