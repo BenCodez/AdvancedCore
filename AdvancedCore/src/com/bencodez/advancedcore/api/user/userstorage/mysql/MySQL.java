@@ -313,7 +313,7 @@ public class MySQL {
 		}
 		return columns;
 	}
-	
+
 	public void wipeColumnData(String columnName) {
 		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
 		try {
@@ -322,7 +322,7 @@ public class MySQL {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		
+
 	}
 
 	public ArrayList<Column> getExact(String uuid, boolean waitForCache) {
@@ -555,6 +555,8 @@ public class MySQL {
 	}
 
 	public void schedule() {
+		timer.cancel();
+		timer = new Timer();
 		timer.schedule(new TimerTask() {
 
 			@Override
@@ -572,13 +574,18 @@ public class MySQL {
 
 			@Override
 			public void run() {
-				if ((System.currentTimeMillis() - lastBackgroundCheck) > 10000) {
-					plugin.getLogger().severe("MySQL background task not working, fixing");
-					cancel();
-					schedule();
-				}
+				checkBackgroundTask();
 			}
 		}, 1000 * 60 * 5, 1000 * 60 * 5);
+	}
+
+	public boolean checkBackgroundTask() {
+		if ((System.currentTimeMillis() - lastBackgroundCheck) > 50000) {
+			plugin.getLogger().severe("MySQL background task not working, fixing");
+			schedule();
+			return false;
+		}
+		return true;
 	}
 
 	public void update(String index, List<Column> cols, boolean queue) {
@@ -709,8 +716,7 @@ public class MySQL {
 							Query query = new Query(mysql, text);
 							query.executeUpdateAsync();
 						} catch (SQLException e) {
-							plugin.getLogger()
-									.severe("Error occoured while executing sql: " + e.toString());
+							plugin.getLogger().severe("Error occoured while executing sql: " + e.toString());
 							e.printStackTrace();
 						}
 					}

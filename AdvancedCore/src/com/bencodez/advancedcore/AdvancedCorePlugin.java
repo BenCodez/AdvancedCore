@@ -231,7 +231,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		} else if (debugLevel.equals(DebugLevel.DEV)) {
 			debug = "Developer Debug: " + debug;
 		}
-		
+
 		if (getOptions().getDebug().isDebug(debugLevel)) {
 			getLogger().info(debug);
 		}
@@ -430,6 +430,17 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			authMeLoaded = true;
 			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(this), this);
 		}
+
+		Bukkit.getScheduler().runTaskTimerAsynchronously(this, new Runnable() {
+
+			@Override
+			public void run() {
+				// additional fail safe
+				if (getStorageType().equals(UserStorage.MYSQL)) {
+					getMysql().checkBackgroundTask();
+				}
+			}
+		}, 20 * 1000, 20 * 1000);
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
 				+ Bukkit.getVersion() + " Total RAM: " + PluginUtils.getInstance().getMemory() + " Free RAM: "
