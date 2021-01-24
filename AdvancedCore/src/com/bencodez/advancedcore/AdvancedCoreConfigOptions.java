@@ -172,6 +172,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private String spamClickMessage = "";
 
+	@Getter
+	@Setter
+	private boolean multiplePermissionChecks = false;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -250,6 +254,7 @@ public class AdvancedCoreConfigOptions {
 
 			spamClickMessage = configData.getString("SpamClickMessage", "");
 			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);
+			multiplePermissionChecks = configData.getBoolean("MultiplePermissionsCheck", false);
 		}
 	}
 }

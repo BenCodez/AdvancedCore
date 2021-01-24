@@ -305,7 +305,7 @@ public abstract class CommandHandler {
 
 	@Getter
 	@Setter
-	private boolean allowMultiplePermissions = false;
+	private boolean allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
 
 	public boolean hasPerm(CommandSender sender) {
 		if (allowMultiplePermissions) {
