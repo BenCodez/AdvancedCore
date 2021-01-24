@@ -18,7 +18,7 @@
 # in other reward files, that is the way they are designed
 
 # If true:
-# Only allow one item with chance to go through
+# Only allow one item with chance to go through (from items below)
 # If no chance specificied it will only give the first item
 OnlyOneItemChance: false
 
@@ -48,7 +48,7 @@ Items:
     # Max amount of items
     #MaxAmount: 4
     
-    # Chance for this specific item
+    # Chance for this specific item to be given
     #Chance: 30
     
     # Item name
@@ -100,6 +100,7 @@ Items:
 # Use 0 to give none
 # Money is not per world
 # Use negative to take money
+# May need to use a command if it doesn't work
 Money: 1000
 
 # Pick random number between min and max money amount
@@ -139,10 +140,10 @@ Commands:
 #  - 'vote total'
 
 # The messages are sent when rewards above are given to user
-# set to '' to give no message
+# set to '' to give no message (or just remove the option)
 Messages:
   Player: '&aMessage on reward'
   Broadcast: '&aThis is a broadcast'
   
-# Can also do this
+# Can also do this to message player
 #Message: '&aMessage to player'

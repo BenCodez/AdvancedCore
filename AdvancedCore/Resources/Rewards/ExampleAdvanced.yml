@@ -333,7 +333,7 @@ Random:
 ################################################
 # REPEAT REWARDS
 # Meant for advanced uses
-# Rewards do not persist on shutdown
+# Rewards do not persist on shutdown (unless enabled)
 # Not tested in all situations yet, use at your own risk
 ################################################
 Repeat:
@@ -343,11 +343,9 @@ Repeat:
   # Number of times to repeat
   # set to -1 for no limit
   Amount: -1
-  # Start repeating on startup, otherwise it will only repeat
-  # of reward be given
+  # Start repeating on startup, otherwise it will only repeat when reward is given
   # If true, the reward will not repeat when executed
   # Will execute for every player online at time of execution
   RepeatOnStartup: false
-  # If a reward requirement fails to pass, the reward
-  # will stop repeating
+  # If any reward requirement fails to pass, the reward will stop repeating
   AutoStop: true
