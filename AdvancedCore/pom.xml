@@ -119,6 +119,10 @@
 									<pattern>com.zaxxer.hikari</pattern>
 									<shadedPattern>${project.groupId}.advancedcore.hikari</shadedPattern>
 								</relocation>
+								<relocation>
+									<pattern>org.slf4j</pattern>
+									<shadedPattern>${project.groupId}.advancedcore.org.slf4j</shadedPattern>
+								</relocation>
 							</relocations>
 							<artifactSet>
 								<!-- Lets exclude google code, because the server already has this 
@@ -242,12 +246,6 @@
 			<artifactId>HikariCP</artifactId>
 			<version>3.4.1</version>
 			<scope>compile</scope>
-			<exclusions>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<!--<dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-simple</artifactId> 
 			<version>1.6.4</version> <scope>compile</scope> </dependency> -->
