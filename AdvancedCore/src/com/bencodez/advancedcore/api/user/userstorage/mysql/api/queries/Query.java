@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL;
 
 public class Query {
@@ -153,6 +154,7 @@ public class Query {
 
 		} catch (SQLException e) {
 			e.printStackTrace();
+			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to send query: " + this.sql);
 		}
 
 		return 0;
