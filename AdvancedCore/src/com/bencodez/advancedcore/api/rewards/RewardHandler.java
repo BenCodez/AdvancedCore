@@ -970,6 +970,26 @@ public class RewardHandler {
 			}
 		}));
 
+		injectedRewards.add(new RewardInjectStringList("Messages.Player") {
+
+			@Override
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
+					HashMap<String, String> placeholders) {
+				user.sendMessage(value, placeholders);
+				return null;
+			}
+		});
+
+		injectedRewards.add(new RewardInjectStringList("Message") {
+
+			@Override
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
+					HashMap<String, String> placeholders) {
+				user.sendMessage(value, placeholders);
+				return null;
+			}
+		});
+
 		injectedRewards.add(new RewardInjectString("Messages.Player") {
 
 			@Override
@@ -991,7 +1011,7 @@ public class RewardHandler {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.getString(inject.getPath()).isEmpty()) {
+						if (data.isString(inject.getPath()) && data.getString(inject.getPath()).isEmpty()) {
 							warning(reward, inject, "No player message set");
 						}
 

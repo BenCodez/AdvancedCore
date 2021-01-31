@@ -834,6 +834,10 @@ public class AdvancedCoreUser {
 		sendMessage(ArrayUtils.getInstance().convert(msg));
 	}
 
+	public void sendMessage(ArrayList<String> msg, HashMap<String, String> placeholders) {
+		sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().replacePlaceHolder(msg, placeholders)));
+	}
+
 	/**
 	 * Send message.
 	 *
