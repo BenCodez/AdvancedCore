@@ -74,6 +74,15 @@ public class ServerData extends YMLFile {
 		saveData();
 	}
 
+	public boolean isIgnoreTime() {
+		return getData().getBoolean("IgnoreTime", false);
+	}
+
+	public void setIgnoreTime(boolean value) {
+		getData().set("IgnoreTime", value);
+		saveData();
+	}
+
 	public void setIntColumns(List<String> intColumns) {
 		getData().set("IntColumns", intColumns);
 		saveData();

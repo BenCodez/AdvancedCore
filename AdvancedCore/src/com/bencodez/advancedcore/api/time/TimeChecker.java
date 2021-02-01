@@ -171,6 +171,14 @@ public class TimeChecker {
 			plugin.extraDebug("TimeHourOffSet: " + getTime().getHour() + ":" + getTime().getMinute());
 		}
 
+		if (plugin.getServerDataFile().isIgnoreTime()) {
+			hasDayChanged(true);
+			hasMonthChanged(true);
+			hasWeekChanged(true);
+			plugin.getServerDataFile().setIgnoreTime(true);
+			plugin.getLogger().info("Ignoring time change events for one time only");
+		}
+
 		boolean dayChanged = false;
 		boolean weekChanged = false;
 		boolean monthChanged = false;
