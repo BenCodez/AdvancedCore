@@ -29,8 +29,6 @@ public class TimeChecker {
 
 	private boolean processing = false;
 
-	private TimeType lastChange = TimeType.DAY;
-
 	public TimeChecker(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
@@ -197,58 +195,19 @@ public class TimeChecker {
 
 		if (!processing) {
 			// processing all 3 at once in a staggered pattern incase of shutdown
-			if (monthChanged && weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
-				forceChanged(TimeType.MONTH, false, true, false);
+			if (monthChanged) {
+				forceChanged(TimeType.MONTH, false, true, true);
 				hasMonthChanged(true);
-				lastChange = TimeType.MONTH;
-			} else if (!monthChanged && weekChanged && dayChanged && lastChange.equals(TimeType.MONTH)) {
-				forceChanged(TimeType.WEEK, false, true, false);
-				lastChange = TimeType.WEEK;
-				hasWeekChanged(true);
-			} else if (!monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.WEEK)) {
-				forceChanged(TimeType.DAY, false, false, true);
-				lastChange = TimeType.DAY;
-				hasDayChanged(true);
 			}
 
-			if (monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
-				forceChanged(TimeType.MONTH, false, true, false);
-				hasMonthChanged(true);
-				lastChange = TimeType.MONTH;
-			} else if (!monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.MONTH)) {
-				forceChanged(TimeType.DAY, false, false, true);
-				lastChange = TimeType.DAY;
-				hasDayChanged(true);
-			}
-
-			// processing week/day at once
-			if (!monthChanged && weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
-				forceChanged(TimeType.WEEK, false, true, false);
-				lastChange = TimeType.WEEK;
-				hasWeekChanged(true);
-			} else if (!monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.WEEK)) {
-				forceChanged(TimeType.DAY, false, false, true);
-				lastChange = TimeType.DAY;
-				hasDayChanged(true);
-			}
-
-			// just normal day change
-			if (!monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
-				forceChanged(TimeType.DAY, false, false, true);
-				lastChange = TimeType.DAY;
-				hasDayChanged(true);
-			}
-
-			if (monthChanged && (!weekChanged || !dayChanged)) {
-				plugin.getLogger().warning("Detected issue with month change");
-				hasMonthChanged(true);
-			} else if (weekChanged && !dayChanged) {
-				plugin.getLogger().warning("Detected issue with week change");
+			if (weekChanged) {
+				forceChanged(TimeType.WEEK, false, true, true);
 				hasWeekChanged(true);
 			}
-		} else {
-			if (!dayChanged && !weekChanged && !monthChanged && !lastChange.equals(TimeType.DAY)) {
-				lastChange = TimeType.DAY;
+
+			if (dayChanged) {
+				forceChanged(TimeType.DAY, false, true, true);
+				hasDayChanged(true);
 			}
 		}
 	}
