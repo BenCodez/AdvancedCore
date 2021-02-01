@@ -173,7 +173,7 @@ public class TimeChecker {
 			hasDayChanged(true);
 			hasMonthChanged(true);
 			hasWeekChanged(true);
-			plugin.getServerDataFile().setIgnoreTime(true);
+			plugin.getServerDataFile().setIgnoreTime(false);
 			plugin.getLogger().info("Ignoring time change events for one time only");
 		}
 
