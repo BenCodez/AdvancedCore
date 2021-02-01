@@ -203,6 +203,16 @@ public class TimeChecker {
 				hasDayChanged(true);
 			}
 
+			if (monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
+				forceChanged(TimeType.MONTH, false, true, false);
+				hasMonthChanged(true);
+				lastChange = TimeType.MONTH;
+			} else if (!monthChanged && !weekChanged && dayChanged && lastChange.equals(TimeType.MONTH)) {
+				forceChanged(TimeType.DAY, false, false, true);
+				lastChange = TimeType.DAY;
+				hasDayChanged(true);
+			}
+
 			// processing week/day at once
 			if (!monthChanged && weekChanged && dayChanged && lastChange.equals(TimeType.DAY)) {
 				forceChanged(TimeType.WEEK, false, true, false);
