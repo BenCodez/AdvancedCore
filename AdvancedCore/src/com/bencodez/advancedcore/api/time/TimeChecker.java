@@ -194,7 +194,6 @@ public class TimeChecker {
 		}
 
 		if (!processing) {
-			// processing all 3 at once in a staggered pattern incase of shutdown
 			if (monthChanged) {
 				forceChanged(TimeType.MONTH, false, true, true);
 				hasMonthChanged(true);
