@@ -319,15 +319,15 @@ public class CommandLoader {
 		}
 
 		cmds.add(new CommandHandler(new String[] { "ForceTimeChanged", "(TimeType)" }, permPrefix + ".ForceTimeChange",
-				"Force time change, use at your own risk!") {
+				"Force time change, use at your own risk!", true, true) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				try {
 					TimeType time = TimeType.getTimeType(args[1]);
-					sender.sendMessage("Forcing change for " + time.toString());
+					sendMessage(sender,
+							"&cForcing time change for " + time.toString() + ". May take awhile to process");
 					plugin.getTimeChecker().forceChanged(time);
-					sender.sendMessage("Forced change for " + time.toString());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -442,7 +442,7 @@ public class CommandLoader {
 				}
 			}
 		});
-		
+
 		cmds.add(new CommandHandler(
 				new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)", "(Player)" },
 				permPrefix + ".ChoicesSetPreferenceOther", "Let user pick his choice preferences", false) {
