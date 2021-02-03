@@ -256,6 +256,12 @@ public class Reward {
 			rewardOptions.addPlaceholder("ExecDate", "" + System.currentTimeMillis());
 		}
 
+		if (!rewardOptions.getPlaceholders().containsKey("date")) {
+			LocalDateTime ldt = LocalDateTime.now();
+			Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+			rewardOptions.addPlaceholder("Date", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
+		}
+
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user, rewardOptions);
 		Bukkit.getPluginManager().callEvent(event);
 
