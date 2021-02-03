@@ -177,34 +177,18 @@ public class TimeChecker {
 			plugin.getLogger().info("Ignoring time change events for one time only");
 		}
 
-		boolean dayChanged = false;
-		boolean weekChanged = false;
-		boolean monthChanged = false;
-		if (hasDayChanged(false)) {
-			plugin.debug("Day changed");
-			dayChanged = true;
-		}
-		if (hasWeekChanged(false)) {
-			plugin.debug("Week Changed");
-			weekChanged = true;
-		}
-		if (hasMonthChanged(false)) {
-			plugin.debug("Month Changed");
-			monthChanged = true;
-		}
-
 		if (!processing) {
-			if (monthChanged) {
+			// stagger process time change events to prevent overloading mysql table
+			if (hasMonthChanged(false)) {
+				plugin.debug("Month Changed");
 				forceChanged(TimeType.MONTH, false, true, true);
 				hasMonthChanged(true);
-			}
-
-			if (weekChanged) {
+			} else if (hasWeekChanged(false)) {
+				plugin.debug("Week Changed");
 				forceChanged(TimeType.WEEK, false, true, true);
 				hasWeekChanged(true);
-			}
-
-			if (dayChanged) {
+			} else if (hasDayChanged(false)) {
+				plugin.debug("Day changed");
 				forceChanged(TimeType.DAY, false, true, true);
 				hasDayChanged(true);
 			}
