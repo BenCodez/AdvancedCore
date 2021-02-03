@@ -257,9 +257,14 @@ public class Reward {
 		}
 
 		if (!rewardOptions.getPlaceholders().containsKey("date")) {
-			LocalDateTime ldt = LocalDateTime.now();
-			Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
-			rewardOptions.addPlaceholder("Date", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
+			try {
+				LocalDateTime ldt = LocalDateTime.now();
+				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+				rewardOptions.addPlaceholder("Date",
+						"" + new SimpleDateFormat(plugin.getOptions().getFormatRewardTimeFormat()).format(date));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user, rewardOptions);

@@ -176,6 +176,9 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean multiplePermissionChecks = false;
 
+	@Getter
+	private String formatRewardTimeFormat;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -207,6 +210,7 @@ public class AdvancedCoreConfigOptions {
 			autoKillInvs = configData.getBoolean("AutoKillInvs", true);
 			prevItem = configData.getConfigurationSection("Format.PrevItem");
 			nextItem = configData.getConfigurationSection("Format.NextItem");
+			formatRewardTimeFormat = configData.getString("Format.RewardTimeFormat", "EEE, d MMM yyyy HH:mm");
 			purgeOldData = configData.getBoolean("PurgeOldData");
 			purgeMinimumDays = configData.getInt("PurgeMin", 90);
 			disableCheckOnWorldChange = configData.getBoolean("DisableCheckOnWorldChange");
