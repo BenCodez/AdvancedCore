@@ -1778,14 +1778,14 @@ public class RewardHandler {
 							plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
 						} else {
 							plugin.extraDebug(
-									"Ignoring directly defined reward file" + file.getAbsolutePath() + "/" + reward);
+									"Ignoring directly defined reward file " + file.getAbsolutePath() + "/" + reward);
 						}
 					} catch (Exception e) {
 						plugin.getLogger().severe("Failed to load reward file " + reward + ".yml: " + e.getMessage());
 						e.printStackTrace();
 					}
 				} else {
-					plugin.getLogger().warning("Detected that a reward file named " + reward
+					plugin.getLogger().info("Detected that a reward file named " + reward
 							+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
 				}
 			} else {
