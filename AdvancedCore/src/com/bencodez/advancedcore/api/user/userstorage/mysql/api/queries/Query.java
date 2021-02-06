@@ -153,8 +153,13 @@ public class Query {
 			return num;
 
 		} catch (SQLException e) {
-			e.printStackTrace();
 			AdvancedCorePlugin.getInstance().getLogger().severe("Failed to send query: " + this.sql);
+			if (!e.getMessage().contains("Duplicate entry")) {
+				e.printStackTrace();
+			} else {
+				AdvancedCorePlugin.getInstance().debug(e);
+			}
+
 		}
 
 		return 0;
