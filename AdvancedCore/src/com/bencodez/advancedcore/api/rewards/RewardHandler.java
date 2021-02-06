@@ -17,6 +17,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -393,12 +394,35 @@ public class RewardHandler {
 			}
 			ConfigurationSection section = data.getConfigurationSection(path);
 			Reward reward = new Reward(rewardName, section);
+			reward.checkRewardFileBasic();
 			plugin.debug("Giving reward " + path + ", Options: " + rewardOptions.toString());
 			giveReward(user, reward, rewardOptions);
 		} else {
 			String reward = data.getString(path, "");
 			plugin.debug("Giving reward " + reward + " from path " + path + ", Options: " + rewardOptions.toString());
 			giveReward(user, reward, rewardOptions);
+		}
+	}
+
+	public void updateReward(Configuration data, String path, RewardOptions rewardOptions) {
+		if (rewardOptions == null) {
+			rewardOptions = new RewardOptions();
+		}
+		if (data.isConfigurationSection(path)) {
+			String rewardName = "";
+			String prefix = rewardOptions.getPrefix();
+			if (prefix != null && !prefix.equals("")) {
+				rewardName += prefix + "_";
+			}
+			rewardName += path.replace(".", "_");
+
+			String suffix = rewardOptions.getSuffix();
+			if (suffix != null && !suffix.equals("")) {
+				rewardName += "_" + suffix;
+			}
+			ConfigurationSection section = data.getConfigurationSection(path);
+			Reward reward = new Reward(rewardName, section);
+			reward.checkRewardFile();
 		}
 	}
 

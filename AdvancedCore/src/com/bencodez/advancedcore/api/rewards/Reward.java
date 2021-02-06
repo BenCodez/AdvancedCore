@@ -140,14 +140,18 @@ public class Reward {
 		checkRewardFile(true);
 	}
 
-	public void checkRewardFile(boolean forceCheck) {
+	public void checkRewardFileBasic() {
+		checkRewardFile(false);
+	}
+
+	private void checkRewardFile(boolean forceSet) {
 		if (!getConfig().hasRewardFile()) {
 			if (!isRewardFileMatching()) {
 				plugin.getLogger().warning("Detected a reward file " + getName()
 						+ " edited when it should be edited where directly defined, overriding");
+				setRewardFile();
 			}
-			setRewardFile();
-		} else if (forceCheck && !isRewardFileMatching()) {
+		} else if (forceSet && !isRewardFileMatching()) {
 			setRewardFile();
 		}
 	}
