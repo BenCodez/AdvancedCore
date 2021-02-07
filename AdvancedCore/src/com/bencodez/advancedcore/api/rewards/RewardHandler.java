@@ -399,8 +399,14 @@ public class RewardHandler {
 			giveReward(user, reward, rewardOptions);
 		} else {
 			String reward = data.getString(path, "");
-			plugin.debug("Giving reward " + reward + " from path " + path + ", Options: " + rewardOptions.toString());
-			giveReward(user, reward, rewardOptions);
+			if (!reward.isEmpty()) {
+				plugin.debug(
+						"Giving reward " + reward + " from path " + path + ", Options: " + rewardOptions.toString());
+				giveReward(user, reward, rewardOptions);
+			} else {
+				plugin.debug("Not giving reward " + reward + " from path " + path + ", Options: "
+						+ rewardOptions.toString());
+			}
 		}
 	}
 
