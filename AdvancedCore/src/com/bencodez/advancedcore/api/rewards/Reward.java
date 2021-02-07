@@ -150,6 +150,8 @@ public class Reward {
 				plugin.getLogger().warning("Detected a reward file " + getName()
 						+ " edited when it should be edited where directly defined, overriding");
 				setRewardFile();
+			} else if (forceSet) {
+				setRewardFile();
 			}
 		} else if (forceSet && !isRewardFileMatching()) {
 			setRewardFile();
