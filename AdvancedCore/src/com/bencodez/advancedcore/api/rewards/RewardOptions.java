@@ -131,12 +131,14 @@ public class RewardOptions {
 	public RewardOptions setServer(boolean b) {
 		if (b) {
 			this.server = AdvancedCorePlugin.getInstance().getOptions().getServer();
+			addPlaceholder("Server", this.server);
 		}
 		return this;
 	}
 
 	public RewardOptions setServer(String server) {
 		this.server = server;
+		addPlaceholder("Server", this.server);
 		return this;
 	}
 

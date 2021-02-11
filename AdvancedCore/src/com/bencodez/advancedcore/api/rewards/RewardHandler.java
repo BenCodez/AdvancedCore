@@ -595,14 +595,27 @@ public class RewardHandler {
 			@Override
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String str,
 					RewardOptions rewardOptions) {
-				if (str != null && str.isEmpty()) {
-					return str.equalsIgnoreCase(AdvancedCorePlugin.getInstance().getOptions().getServer());
+				String server = "";
+				if (rewardOptions.getPlaceholders().containsKey("Server")) {
+					server = rewardOptions.getPlaceholders().get("Server");
 				} else {
-					if (!rewardOptions.getServer().isEmpty()) {
-						return rewardOptions.getServer()
-								.equalsIgnoreCase(AdvancedCorePlugin.getInstance().getOptions().getServer());
+					if (str != null && str.isEmpty()) {
+						boolean v = str.equalsIgnoreCase(plugin.getOptions().getServer());
+						if (!v) {
+							rewardOptions.addPlaceholder("Server", plugin.getOptions().getServer());
+						}
+					} else {
+						if (!rewardOptions.getServer().isEmpty()) {
+							return rewardOptions.getServer()
+									.equalsIgnoreCase(AdvancedCorePlugin.getInstance().getOptions().getServer());
+						}
 					}
 				}
+				if (server != null && !server.isEmpty()) {
+					return rewardOptions.getServer()
+							.equalsIgnoreCase(AdvancedCorePlugin.getInstance().getOptions().getServer());
+				}
+
 				return true;
 			}
 		}.priority(100).allowReattempt().alwaysForce().addEditButton(
