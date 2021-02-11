@@ -506,6 +506,7 @@ public class MySQL {
 					PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)), index));
 			uuids.add(index);
 			plugin.debug("Inserting " + index + " into database");
+			clearCache(index);
 		} catch (Exception e) {
 			e.printStackTrace();
 			plugin.debug("Failed to insert player " + index);
