@@ -59,6 +59,10 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private boolean perServerRewards = false;
+
+	@Getter
+	@Setter
 	private boolean autoKillInvs = true;
 
 	@Getter

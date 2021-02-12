@@ -327,7 +327,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ArrayList<String> getOfflineRewards() {
-		return getUserData().getStringList("OfflineRewards");
+		return getUserData().getStringList(getOfflineRewardsPath());
 	}
 
 	/**
@@ -936,8 +936,16 @@ public class AdvancedCoreUser {
 		getData().setString("LastOnline", "" + online);
 	}
 
+	public String getOfflineRewardsPath() {
+		if (plugin.getOptions().isPerServerRewards()) {
+			return "OfflineRewards" + plugin.getOptions().getServer();
+		} else {
+			return "OfflineRewards";
+		}
+	}
+
 	public void setOfflineRewards(ArrayList<String> offlineRewards) {
-		data.setStringList("OfflineRewards", offlineRewards);
+		data.setStringList(getOfflineRewardsPath(), offlineRewards);
 	}
 
 	private void setPlayerName(String playerName) {
