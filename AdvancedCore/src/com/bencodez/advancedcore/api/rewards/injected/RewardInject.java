@@ -32,6 +32,9 @@ public abstract class RewardInject extends Inject {
 	private boolean alwaysForce = false;
 
 	@Getter
+	private boolean alwaysForceNoData = false;
+
+	@Getter
 	private RewardInjectValidator validate;
 
 	@Getter
@@ -48,6 +51,12 @@ public abstract class RewardInject extends Inject {
 
 	public RewardInject alwaysForce() {
 		this.alwaysForce = true;
+		return this;
+	}
+
+	public RewardInject alwaysForceNoData() {
+		this.alwaysForce = true;
+		this.alwaysForceNoData = true;
 		return this;
 	}
 

@@ -29,7 +29,7 @@ public abstract class RewardInjectInt extends RewardInject {
 	@Override
 	public String onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
-		if (data.isInt(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
+		if (data.isInt(getPath()) || (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
 			int value = data.getInt(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);

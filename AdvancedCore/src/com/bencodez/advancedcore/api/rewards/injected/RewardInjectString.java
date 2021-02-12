@@ -30,7 +30,7 @@ public abstract class RewardInjectString extends RewardInject {
 	public String onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
 		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty())
-				|| (isAlwaysForce() && data.contains(getPath(), true))) {
+				|| (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
 			String value = data.getString(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: " + value);

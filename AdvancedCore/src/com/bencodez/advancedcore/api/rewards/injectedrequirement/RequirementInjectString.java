@@ -29,7 +29,7 @@ public abstract class RequirementInjectString extends RequirementInject {
 	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
 		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty())
-				|| (isAlwaysForce() && data.contains(getPath(), true))) {
+				|| (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
 			String value = data.getString(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: " + value);

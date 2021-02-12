@@ -596,29 +596,30 @@ public class RewardHandler {
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String str,
 					RewardOptions rewardOptions) {
 				String server = "";
+				String currentServer = AdvancedCorePlugin.getInstance().getOptions().getServer();
 				if (rewardOptions.getPlaceholders().containsKey("Server")) {
 					server = rewardOptions.getPlaceholders().get("Server");
-				} else {
-					if (str != null && str.isEmpty()) {
-						boolean v = str.equalsIgnoreCase(plugin.getOptions().getServer());
-						if (!v) {
-							rewardOptions.addPlaceholder("Server", plugin.getOptions().getServer());
-						}
-					} else {
-						if (!rewardOptions.getServer().isEmpty()) {
-							return rewardOptions.getServer()
-									.equalsIgnoreCase(AdvancedCorePlugin.getInstance().getOptions().getServer());
-						}
-					}
 				}
+
 				if (server != null && !server.isEmpty()) {
-					return rewardOptions.getServer()
-							.equalsIgnoreCase(AdvancedCorePlugin.getInstance().getOptions().getServer());
+					debug("This server: " + currentServer + ", matching server placeholder: " + server);
+					return server.equalsIgnoreCase(currentServer);
+				}
+				if (str != null && str.isEmpty()) {
+					boolean v = str.equalsIgnoreCase(currentServer);
+					if (!v) {
+						rewardOptions.addPlaceholder("Server", currentServer);
+					}
+				} else {
+					if (!rewardOptions.getServer().isEmpty()) {
+						debug("This server: " + currentServer + ", matching server: " + str);
+						return rewardOptions.getServer().equalsIgnoreCase(currentServer);
+					}
 				}
 
 				return true;
 			}
-		}.priority(100).allowReattempt().alwaysForce().addEditButton(
+		}.priority(100).allowReattempt().alwaysForceNoData().addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Server", null) {
 
 					@Override

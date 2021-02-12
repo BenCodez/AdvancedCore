@@ -41,6 +41,15 @@ public abstract class RequirementInject extends Inject {
 		return this;
 	}
 
+	public RequirementInject alwaysForceNoData() {
+		this.alwaysForce = true;
+		this.alwaysForceNoData = true;
+		return this;
+	}
+
+	@Getter
+	private boolean alwaysForceNoData = false;
+
 	public void debug(String str) {
 		AdvancedCorePlugin.getInstance().debug(str);
 	}

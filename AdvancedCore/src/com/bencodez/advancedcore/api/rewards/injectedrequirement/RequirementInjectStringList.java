@@ -32,7 +32,7 @@ public abstract class RequirementInjectStringList extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
+		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true) || isAlwaysForceNoData())) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: "
 					+ ArrayUtils.getInstance().makeStringList(value));

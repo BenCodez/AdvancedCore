@@ -28,7 +28,7 @@ public abstract class RequirementInjectInt extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if (data.isInt(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
+		if (data.isInt(getPath()) || (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
 			int value = data.getInt(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: " + value);

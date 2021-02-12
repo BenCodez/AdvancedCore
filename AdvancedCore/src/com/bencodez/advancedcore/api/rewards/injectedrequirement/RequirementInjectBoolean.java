@@ -28,7 +28,7 @@ public abstract class RequirementInjectBoolean extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if (data.isBoolean(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))) {
+		if (data.isBoolean(getPath()) || (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
 			boolean value = data.getBoolean(getPath(), isDefaultValue());
 			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: " + value);
