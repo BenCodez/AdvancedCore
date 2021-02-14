@@ -375,10 +375,15 @@ public class RewardHandler {
 		}
 		if (data.isList(path)) {
 			ArrayList<String> rewards = (ArrayList<String>) data.getList(path, new ArrayList<String>());
-			plugin.debug("Giving list of rewards (" + ArrayUtils.getInstance().makeStringList(rewards) + ") from "
-					+ path + ", Options: " + rewardOptions.toString());
-			for (String reward : rewards) {
-				giveReward(user, reward, rewardOptions);
+			if (rewards.isEmpty()) {
+				plugin.debug(
+						"Not giving empty list of rewards from " + path + ", Options: " + rewardOptions.toString());
+			} else {
+				plugin.debug("Giving list of rewards (" + ArrayUtils.getInstance().makeStringList(rewards) + ") from "
+						+ path + ", Options: " + rewardOptions.toString());
+				for (String reward : rewards) {
+					giveReward(user, reward, rewardOptions);
+				}
 			}
 		} else if (data.isConfigurationSection(path)) {
 			String rewardName = "";
@@ -611,14 +616,14 @@ public class RewardHandler {
 				if (!serverToMatch.isEmpty()) {
 					debug("Current Server: " + currentServer + ", ServerToMatch: " + serverToMatch);
 					boolean matched = serverToMatch.equalsIgnoreCase(currentServer);
-					
+
 					if (!matched && !hadPlaceholder) {
 						// add server for offline reward
 						rewardOptions.addPlaceholder("Server", serverToMatch);
 					}
-					
+
 					return matched;
-				
+
 				}
 
 				return true;
