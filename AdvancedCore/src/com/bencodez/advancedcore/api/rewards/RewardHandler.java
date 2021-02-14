@@ -595,26 +595,30 @@ public class RewardHandler {
 			@Override
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String str,
 					RewardOptions rewardOptions) {
-				String server = "";
+				// set server to match
+				String serverToMatch = str;
+				boolean hadPlaceholder = false;
+				if (str.isEmpty()) {
+					if (rewardOptions.getPlaceholders().containsKey("Server")) {
+						serverToMatch = rewardOptions.getPlaceholders().get("Server");
+						hadPlaceholder = true;
+					} else if (!rewardOptions.getServer().isEmpty()) {
+						serverToMatch = rewardOptions.getServer();
+					}
+				}
 				String currentServer = AdvancedCorePlugin.getInstance().getOptions().getServer();
-				if (rewardOptions.getPlaceholders().containsKey("Server")) {
-					server = rewardOptions.getPlaceholders().get("Server");
-				}
 
-				if (server != null && !server.isEmpty()) {
-					debug("This server: " + currentServer + ", matching server placeholder: " + server);
-					return server.equalsIgnoreCase(currentServer);
-				}
-				if (str != null && str.isEmpty()) {
-					boolean v = str.equalsIgnoreCase(currentServer);
-					if (!v) {
-						rewardOptions.addPlaceholder("Server", currentServer);
+				if (!serverToMatch.isEmpty()) {
+					debug("Current Server: " + currentServer + ", ServerToMatch: " + serverToMatch);
+					boolean matched = serverToMatch.equalsIgnoreCase(currentServer);
+					
+					if (!matched && !hadPlaceholder) {
+						// add server for offline reward
+						rewardOptions.addPlaceholder("Server", serverToMatch);
 					}
-				} else {
-					if (!rewardOptions.getServer().isEmpty()) {
-						debug("This server: " + currentServer + ", matching server: " + str);
-						return rewardOptions.getServer().equalsIgnoreCase(currentServer);
-					}
+					
+					return matched;
+				
 				}
 
 				return true;
