@@ -176,6 +176,19 @@ public class CommandLoader {
 				sender.sendMessage("Created zip file");
 			}
 		});
+		cmds.add(new CommandHandler(new String[] { "ClearOfflineRewards" }, permPrefix + ".ClearOfflineRewards",
+				"Clear offline rewards", true, true) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				sendMessage(sender, "&cStarting to clear offline rewards");
+				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+					AdvancedCoreUser user = UserManager.getInstance().getUser(java.util.UUID.fromString(uuid));
+					user.setOfflineRewards(new ArrayList<String>());
+				}
+				sendMessage(sender, "&cFinished clearing offline rewards");
+			}
+		});
 
 		cmds.add(new CommandHandler(new String[] { "GUI" }, permPrefix + ".AdminGUI", "Open AdminGUI", false) {
 
