@@ -4,6 +4,7 @@
 package com.bencodez.advancedcore.api.inventory;
 
 import java.util.HashMap;
+import java.util.List;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -27,6 +28,9 @@ public abstract class BInventoryButton {
 
 	/** The slot. */
 	private int slot = -1;
+	
+	@Getter
+	private List<Integer> fillSlots;
 
 	private HashMap<String, Object> data = new HashMap<String, Object>();
 
@@ -36,10 +40,17 @@ public abstract class BInventoryButton {
 
 	@Getter
 	private boolean closeInv = true;
+	
+	public BInventoryButton(BInventoryButton button) {
+		setBuilder(button.getBuilder());
+		slot = button.getSlot();
+		fillSlots = button.getFillSlots();
+	}
 
 	public BInventoryButton(ItemBuilder item) {
 		setBuilder(item);
 		slot = item.getSlot();
+		fillSlots = item.getFillSlots();
 	}
 
 	public BInventoryButton(ItemStack item) {

@@ -190,8 +190,24 @@ public class BInventory {
 		if (slot == -1) {
 			slot = getNextSlot();
 		}
-		button.setSlot(slot);
-		getButtons().put(slot, button);
+		if (button.getFillSlots() != null && button.getFillSlots().size() > 0) {
+			for (Integer fill : button.getFillSlots()) {
+				slot = fill.intValue();
+				BInventoryButton button1 = new BInventoryButton(button) {
+					
+					@Override
+					public void onClick(ClickEvent clickEvent) {
+						button.onClick(clickEvent);
+					}
+				};
+				button1.setSlot(slot);
+				getButtons().put(slot, button1);
+			}
+		} else {
+			// no fill slots set
+			button.setSlot(slot);
+			getButtons().put(slot, button);
+		}
 	}
 
 	/**

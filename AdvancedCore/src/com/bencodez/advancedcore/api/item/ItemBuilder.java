@@ -57,6 +57,8 @@ public class ItemBuilder {
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 	private int slot = -1;
 	@Getter
+	private List<Integer> fillSlots = new ArrayList<Integer>();
+	@Getter
 	private boolean validMaterial = true;
 	@Getter
 	private boolean legacy = false;
@@ -221,6 +223,14 @@ public class ItemBuilder {
 				setUnbreakable(data.getBoolean("Unbreakable", false));
 
 				slot = data.getInt("Slot", -1);
+
+				try {
+					fillSlots = data.getIntegerList("FillSlots");
+				} catch (Exception e) {
+					// tempoary to ensure plugin will always function
+					e.printStackTrace();
+				}
+
 			} else {
 				setBlank();
 				chancePass = false;
