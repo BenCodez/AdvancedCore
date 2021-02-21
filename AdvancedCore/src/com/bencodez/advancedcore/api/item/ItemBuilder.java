@@ -224,12 +224,7 @@ public class ItemBuilder {
 
 				slot = data.getInt("Slot", -1);
 
-				try {
-					fillSlots = data.getIntegerList("FillSlots");
-				} catch (Exception e) {
-					// tempoary to ensure plugin will always function
-					e.printStackTrace();
-				}
+				fillSlots = data.getIntegerList("FillSlots");
 
 			} else {
 				setBlank();

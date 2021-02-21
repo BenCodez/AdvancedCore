@@ -38,8 +38,10 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	}
 
 	public void cancel() {
-		timer.cancel();
-		timer = null;
+		if (timer != null) {
+			timer.cancel();
+			timer = null;
+		}
 	}
 
 	private void checkUpdate(Player p) {
@@ -52,7 +54,13 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 					public void run() {
 						try {
 							if (p != null && getInv().isOpen(p)) {
-								p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
+								if (getFillSlots() != null && getFillSlots().size() > 0) {
+									for (Integer slot : getFillSlots()) {
+										p.getOpenInventory().getTopInventory().setItem(slot.intValue(), item);
+									}
+								} else {
+									p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
+								}
 							}
 						} catch (Exception e) {
 							AdvancedCorePlugin.getInstance().debug(e);
@@ -71,13 +79,15 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 
 	@Override
 	public void load(Player p) {
-		timer.schedule(new TimerTask() {
+		if (timer != null) {
+			timer.schedule(new TimerTask() {
 
-			@Override
-			public void run() {
-				checkUpdate(p);
-			}
-		}, delay, updateInterval);
+				@Override
+				public void run() {
+					checkUpdate(p);
+				}
+			}, delay, updateInterval);
+		}
 	}
 
 	public abstract ItemBuilder onUpdate(Player player);

@@ -478,7 +478,7 @@ public class BInventory {
 	 * @param player the player
 	 * @param page   the page
 	 */
-	void openInventory(Player player, int page) {
+	public void openInventory(Player player, int page) {
 		BInventory inventory = this;
 		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize,
 				StringParser.getInstance().replaceJavascript(player, StringParser.getInstance()
@@ -489,7 +489,7 @@ public class BInventory {
 			int slot = pair.getKey();
 			if (slot >= startSlot) {
 				slot -= startSlot;
-				if (slot < (maxInvSize - 9) && pair.getKey() < inventory.getButtons().size()) {
+				if (slot < (maxInvSize - 9)) {
 					ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 					inv.setItem(slot, item);
 
