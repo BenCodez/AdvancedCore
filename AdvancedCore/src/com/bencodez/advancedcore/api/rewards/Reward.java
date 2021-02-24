@@ -149,8 +149,6 @@ public class Reward {
 			} else if (forceSet) {
 				setRewardFile();
 			}
-		} else if (forceSet && !isRewardFileMatching()) {
-			setRewardFile();
 		}
 	}
 
