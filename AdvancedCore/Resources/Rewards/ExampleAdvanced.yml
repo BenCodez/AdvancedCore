@@ -49,6 +49,19 @@ RandomCommand: []
 # Will give one reward from the list of rewards
 RandomReward: []
 
+# Works similar to RandomReward above, just avoids reward files
+# Similar style to AdvancedPriority
+AdvancedRandomReward:
+  reward1:
+    Commands:
+    - say reward1
+  reward2:
+    Commands:
+    - say reward2
+  reward3:
+    Commands:
+    - say reward3
+
 # Give one of the following items
 RandomItem:
   Diamond:

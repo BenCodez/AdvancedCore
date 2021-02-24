@@ -399,7 +399,7 @@ public class RewardHandler {
 			}
 			ConfigurationSection section = data.getConfigurationSection(path);
 			Reward reward = new Reward(rewardName, section);
-			reward.checkRewardFileBasic();
+			reward.checkRewardFile();
 			plugin.debug("Giving reward " + path + ", Options: " + rewardOptions.toString());
 			giveReward(user, reward, rewardOptions);
 		} else {
@@ -1431,6 +1431,25 @@ public class RewardHandler {
 						plugin.reloadAdvancedCore(false);
 					}
 				})).postReward());
+
+		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedRandomReward") {
+
+			@Override
+			public String onRewardRequested(Reward r, AdvancedCoreUser user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+
+				Set<String> keys = section.getKeys(false);
+				ArrayList<String> rewards = ArrayUtils.getInstance().convert(keys);
+				if (rewards.size() > 0) {
+					String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
+					giveReward(user, section, reward, new RewardOptions().setPlaceholders(placeholders)
+							.setPrefix(r.getRewardName() + "_AdvancedRandomReward_"));
+					return reward;
+				}
+				return null;
+
+			}
+		}.asPlaceholder("RandomReward").priority(90).postReward());
 
 		injectedRewards.add(new RewardInjectStringList("Priority") {
 

@@ -140,10 +140,6 @@ public class Reward {
 		checkRewardFile(true);
 	}
 
-	public void checkRewardFileBasic() {
-		checkRewardFile(false);
-	}
-
 	private void checkRewardFile(boolean forceSet) {
 		if (!getConfig().hasRewardFile()) {
 			if (!isRewardFileMatching()) {
