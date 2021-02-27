@@ -71,6 +71,10 @@ public class StringParser {
 		}
 		return str1.toLowerCase().contains(str2.toLowerCase());
 	}
+	
+	public boolean contains(String str1, String str2) {
+		return str1.contains(str2);
+	}
 
 	public boolean containsJson(String msg) {
 		return containsIgnorecase(msg, "[Text=\"");
@@ -152,7 +156,7 @@ public class StringParser {
 
 	public TextComponent parseJson(String msg) {
 		TextComponent comp = new TextComponent("");
-		if (containsIgnorecase(msg, "[Text=\"")) {
+		if (contains(msg, "[Text=\"")) {
 			String preMessage = "";
 			String postMessage = "";
 
