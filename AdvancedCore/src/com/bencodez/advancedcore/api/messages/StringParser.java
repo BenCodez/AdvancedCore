@@ -77,7 +77,7 @@ public class StringParser {
 	}
 
 	public boolean containsJson(String msg) {
-		return containsIgnorecase(msg, "[Text=\"");
+		return contains(msg, "[Text=\"");
 	}
 	
 	public final char COLOR_CHAR = ChatColor.COLOR_CHAR;
