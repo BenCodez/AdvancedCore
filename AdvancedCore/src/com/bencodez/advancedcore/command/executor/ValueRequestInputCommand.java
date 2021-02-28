@@ -17,7 +17,7 @@ public class ValueRequestInputCommand extends BukkitCommand {
 
 	@Override
 	public boolean execute(CommandSender sender, String alias, String[] args) {
-		for (CommandHandler cmd : CommandLoader.getInstance().getValueReqestCommands()) {
+		for (CommandHandler cmd : CommandLoader.getInstance().getValueRequestCommands()) {
 			if (cmd.runCommand(sender, args)) {
 				return true;
 			}
