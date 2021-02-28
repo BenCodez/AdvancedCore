@@ -137,18 +137,8 @@ public class Reward {
 	}
 
 	public void checkRewardFile() {
-		checkRewardFile(true);
-	}
-
-	private void checkRewardFile(boolean forceSet) {
 		if (!getConfig().hasRewardFile()) {
-			if (!isRewardFileMatching()) {
-				plugin.getLogger().warning("Detected a reward file " + getName()
-						+ " edited when it should be edited where directly defined, overriding");
-				setRewardFile();
-			} else if (forceSet) {
-				setRewardFile();
-			}
+			setRewardFile();
 		}
 	}
 
@@ -380,18 +370,6 @@ public class Reward {
 				}
 			}
 		}
-	}
-
-	public boolean isRewardFileMatching() {
-		Reward reward = RewardHandler.getInstance().getReward(name);
-		ConfigurationSection section = getConfig().getConfigData();
-		if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() != 0) {
-			if (reward.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
-					.size() != section.getKeys(true).size() + 1) {
-				return false;
-			}
-		}
-		return true;
 	}
 
 	/**

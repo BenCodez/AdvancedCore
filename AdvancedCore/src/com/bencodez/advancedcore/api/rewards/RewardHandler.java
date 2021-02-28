@@ -1957,7 +1957,7 @@ public class RewardHandler {
 	public void updateReward(Reward reward) {
 		reward.validate();
 		for (int i = getRewards().size() - 1; i >= 0; i--) {
-			if (getRewards().get(i).getFile().getName().equals(reward.getFile().getName())) {
+			if (getRewards().get(i).getFile().getPath().equals(reward.getFile().getPath())) {
 				getRewards().set(i, reward);
 				return;
 			}
