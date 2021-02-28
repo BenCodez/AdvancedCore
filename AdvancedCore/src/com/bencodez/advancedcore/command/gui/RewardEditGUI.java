@@ -113,7 +113,7 @@ public class RewardEditGUI {
 			if (!reward.getConfig().isDirectlyDefinedReward()) {
 				ArrayList<String> lore = new ArrayList<String>();
 				if (reward.getConfig().isDirectlyDefinedReward()) {
-					lore.add("&cReward is directly defined, can not edit");
+					lore.add("&cReward is directly defined, can not edit in GUI");
 				}
 
 				inv.addButton(new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),

@@ -61,6 +61,7 @@ import com.bencodez.advancedcore.api.user.userstorage.sql.Table;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu;
 import com.bencodez.advancedcore.bungeeapi.pluginmessage.PluginMessage;
+import com.bencodez.advancedcore.command.CommandLoader;
 import com.bencodez.advancedcore.command.executor.ValueRequestInputCommand;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.advancedcore.listeners.AuthMeLogin;
@@ -696,6 +697,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void loadValueRequestInputCommands() {
+		CommandLoader.getInstance().loadValueRequestCommands();
 		try {
 			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
 

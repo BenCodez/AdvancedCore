@@ -33,6 +33,8 @@ import com.bencodez.advancedcore.command.gui.ChoiceGUI;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.advancedcore.command.gui.UserGUI;
 
+import lombok.Getter;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class CommandLoader.
@@ -516,7 +518,10 @@ public class CommandLoader {
 		return cmds;
 	}
 
-	public ArrayList<CommandHandler> getValueReqestCommands() {
+	@Getter
+	ArrayList<CommandHandler> valueRequestCommands = new ArrayList<CommandHandler>();
+
+	public void loadValueRequestCommands() {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
 		cmds.add(new CommandHandler(new String[] { "String", "(String)" }, "", "Command to Input value", false) {
 
@@ -574,6 +579,6 @@ public class CommandLoader {
 		for (CommandHandler cmd : cmds) {
 			cmd.setAdvancedCoreCommand(true);
 		}
-		return cmds;
+		valueRequestCommands = cmds;
 	}
 }
