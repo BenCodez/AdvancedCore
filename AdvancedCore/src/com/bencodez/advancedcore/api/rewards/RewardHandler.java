@@ -1071,6 +1071,24 @@ public class RewardHandler {
 					}
 				}));
 
+		injectedRewards.add(new RewardInjectStringList("Messages.Broadcast") {
+
+			@Override
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
+					HashMap<String, String> placeholders) {
+				for (String str : value) {
+					MiscUtils.getInstance().broadcast(StringParser.getInstance().replacePlaceHolders(user.getPlayer(),
+							StringParser.getInstance().replacePlaceHolder(str, placeholders)));
+				}
+				return null;
+			}
+		}.validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+			}
+		}));
+
 		injectedRewards.add(new RewardInjectString("Messages.Broadcast") {
 
 			@Override
@@ -1093,9 +1111,12 @@ public class RewardHandler {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.getString(inject.getPath(), "Empty").isEmpty()) {
-							warning(reward, inject, "No broadcast was set");
+						if (!data.isList(inject.getPath())) {
+							if (data.getString(inject.getPath(), "Empty").isEmpty()) {
+								warning(reward, inject, "No broadcast was set");
+							}
 						}
+
 					}
 				}));
 
