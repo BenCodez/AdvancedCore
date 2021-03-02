@@ -180,15 +180,15 @@ public class TimeChecker {
 		if (!processing) {
 			// stagger process time change events to prevent overloading mysql table
 			if (hasMonthChanged(false)) {
-				plugin.debug("Month Changed");
+				plugin.getLogger().info("Detected month changed, processing...");
 				forceChanged(TimeType.MONTH, false, true, true);
 				hasMonthChanged(true);
 			} else if (hasWeekChanged(false)) {
-				plugin.debug("Week Changed");
+				plugin.getLogger().info("Detected week changed, processing...");
 				forceChanged(TimeType.WEEK, false, true, true);
 				hasWeekChanged(true);
 			} else if (hasDayChanged(false)) {
-				plugin.debug("Day changed");
+				plugin.getLogger().info("Detected day changed, processing...");
 				forceChanged(TimeType.DAY, false, true, true);
 				hasDayChanged(true);
 			}
