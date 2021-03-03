@@ -254,17 +254,29 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(
-				new CommandHandler(new String[] { "UserRemove", "(uuid)" }, permPrefix + ".UserRemove", "Remove User") {
+		cmds.add(new CommandHandler(new String[] { "UserRemove", "(player)" }, permPrefix + ".UserRemove",
+				"Remove User") {
 
-					@Override
-					public void execute(CommandSender sender, String[] args) {
-						sendMessage(sender, "&cRemoving " + args[1]);
-						AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(args[1]));
-						user.getData().remove();
-						sendMessage(sender, "&cRemoved " + args[1]);
-					}
-				});
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				sendMessage(sender, "&cRemoving " + args[1]);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				user.getData().remove();
+				sendMessage(sender, "&cRemoved " + args[1]);
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "UserUUIDRemove", "(uuid)" }, permPrefix + ".UserRemove",
+				"Remove User") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				sendMessage(sender, "&cRemoving " + args[1]);
+				AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(args[1]));
+				user.getData().remove();
+				sendMessage(sender, "&cRemoved " + args[1]);
+			}
+		});
 
 		cmds.add(new CommandHandler(new String[] { "ClearCache" }, permPrefix + ".ClearCache", "Clear MySQL Cache") {
 
