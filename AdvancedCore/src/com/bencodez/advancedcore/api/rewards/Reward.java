@@ -312,8 +312,9 @@ public class Reward {
 		}
 
 		// save reward for offline
-		if (((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline)
-				&& (!isForceOffline() && !rewardOptions.isForceOffline())) {
+		if ((((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline)
+				&& (!isForceOffline() && !rewardOptions.isForceOffline()))
+				|| (plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
 				user.addOfflineRewards(this, rewardOptions.getPlaceholders());

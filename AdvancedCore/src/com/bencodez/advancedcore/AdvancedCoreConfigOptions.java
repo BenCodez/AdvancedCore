@@ -59,6 +59,10 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private boolean treatVanishAsOffline = true;
+
+	@Getter
+	@Setter
 	private boolean perServerRewards = false;
 
 	@Getter
@@ -263,6 +267,7 @@ public class AdvancedCoreConfigOptions {
 			spamClickMessage = configData.getString("SpamClickMessage", "");
 			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);
 			multiplePermissionChecks = configData.getBoolean("MultiplePermissionsCheck", false);
+			treatVanishAsOffline = configData.getBoolean("TreatVanishAsOffline", true);
 		}
 	}
 }
