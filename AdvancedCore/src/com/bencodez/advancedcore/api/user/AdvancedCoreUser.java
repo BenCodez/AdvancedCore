@@ -618,7 +618,7 @@ public class AdvancedCoreUser {
 			}
 			
 			if (plugin.getCmiHandle() != null) {
-				return plugin.getCmiHandle().isVanished(this);
+				return plugin.getCmiHandle().isVanished(player);
 			}
 		}
 		return false;

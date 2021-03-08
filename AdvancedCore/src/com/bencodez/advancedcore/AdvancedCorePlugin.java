@@ -211,7 +211,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	
 	private void checkCMI() {
 		if (Bukkit.getPluginManager().getPlugin("CMI") != null) {
-			debug("CMI found, loading...");
+			getLogger().info("CMI found, loading hook");
 			cmiHandle = new CMIHandler();
 		}
 	}

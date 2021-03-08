@@ -1,10 +1,11 @@
 package com.bencodez.advancedcore.api.cmi;
 
+import org.bukkit.entity.Player;
+
 import com.Zrips.CMI.CMI;
-import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 public class CMIHandler {
-	public boolean isVanished(AdvancedCoreUser user) {
-		return CMI.getInstance().getPlayerManager().getUser(java.util.UUID.fromString(user.getUUID())).isVanished();
+	public boolean isVanished(Player p) {
+		return CMI.getInstance().getPlayerManager().getUser(p).isVanished();
 	}
 }
