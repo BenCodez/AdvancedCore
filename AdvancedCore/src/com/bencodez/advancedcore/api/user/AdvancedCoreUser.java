@@ -616,6 +616,10 @@ public class AdvancedCoreUser {
 					return true;
 				}
 			}
+			
+			if (plugin.getCmiHandle() != null) {
+				return plugin.getCmiHandle().isVanished(this);
+			}
 		}
 		return false;
 	}

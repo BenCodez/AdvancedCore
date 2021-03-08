@@ -29,6 +29,7 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.bencodez.advancedcore.api.backup.BackupHandle;
+import com.bencodez.advancedcore.api.cmi.CMIHandler;
 import com.bencodez.advancedcore.api.command.TabCompleteHandle;
 import com.bencodez.advancedcore.api.command.TabCompleteHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
@@ -90,6 +91,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private ConcurrentHashMap<String, String> uuidNameCache;
+	
+	@Getter
+	private CMIHandler cmiHandle;
 
 	@Getter
 	@Setter
@@ -203,6 +207,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		});
 
+	}
+	
+	private void checkCMI() {
+		if (Bukkit.getPluginManager().getPlugin("CMI") != null) {
+			debug("CMI found, loading...");
+			cmiHandle = new CMIHandler();
+		}
 	}
 
 	public void checkPluginUpdate() {
@@ -383,6 +394,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadUUIDs();
 		getOptions().setPermPrefix(this.getName());
 		checkPlaceHolderAPI();
+		checkCMI();
 		loadHandle();
 		loadVault();
 		loadAdvancedCoreEvents();
