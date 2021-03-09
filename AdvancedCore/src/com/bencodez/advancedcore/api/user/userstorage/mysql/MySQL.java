@@ -268,9 +268,14 @@ public class MySQL {
 
 	public void deletePlayer(String uuid) {
 		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
+		try {
+			Query query = new Query(mysql, q);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 		uuids.remove(uuid);
 		names.remove(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(uuid)), uuid));
-		this.query.add(q);
 		removePlayer(uuid);
 		clearCacheBasic();
 

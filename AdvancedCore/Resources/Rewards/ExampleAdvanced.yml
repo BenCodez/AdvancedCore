@@ -35,6 +35,20 @@ Timed:
 # Will not give any rewards unless chance is lucky or disabled
 Chance: 40
 
+# Item conditional example
+Items:
+  Item1:
+    # Javacript for conditional
+    # Uses return value to get item info (can be anything, like numbers)
+    ConditionalJavascript: 'User.canVoteAll()'
+    Conditional:
+      false:
+        Material: 'REDSTONE_BLOCK'
+        Amount: 1
+      true:
+        Material: 'EMERALD_BLOCK'
+        Amount: 1
+
 # Player must be with a certain distance of said location
 #LocationDistance:
 #  World: world
