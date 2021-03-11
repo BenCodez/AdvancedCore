@@ -314,7 +314,7 @@ public class Reward {
 		boolean vanished = false;
 		if ((plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
 			vanished = true;
-			plugin.debug(getRewardName() + ": " + user.getPlayerName() + " is vanished, saving vote offline");
+			plugin.getLogger().info(getRewardName() + ": " + user.getPlayerName() + " is vanished, saving vote offline");
 		}
 
 		// save reward for offline
