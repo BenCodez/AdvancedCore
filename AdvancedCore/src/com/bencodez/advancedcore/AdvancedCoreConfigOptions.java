@@ -267,7 +267,7 @@ public class AdvancedCoreConfigOptions {
 			spamClickMessage = configData.getString("SpamClickMessage", "");
 			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);
 			multiplePermissionChecks = configData.getBoolean("MultiplePermissionsCheck", false);
-			treatVanishAsOffline = configData.getBoolean("TreatVanishAsOffline", true);
+			treatVanishAsOffline = configData.getBoolean("TreatVanishAsOffline", false);
 		}
 	}
 }
