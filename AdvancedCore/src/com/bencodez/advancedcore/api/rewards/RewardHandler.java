@@ -362,7 +362,7 @@ public class RewardHandler {
 
 	@SuppressWarnings("unchecked")
 	public void giveReward(AdvancedCoreUser user, ConfigurationSection data, String path, RewardOptions rewardOptions) {
-		if (rewardOptions.isOnlineSet()) {
+		if (!rewardOptions.isOnlineSet()) {
 			rewardOptions.setOnline(user.isOnline());
 		}
 		if (path == null) {
