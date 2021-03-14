@@ -91,7 +91,7 @@ public class PlayerJoinEvent implements Listener {
 				}
 
 			}
-		}, 30L);
+		}, 60L);
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
