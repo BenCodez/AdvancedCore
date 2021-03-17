@@ -41,6 +41,7 @@ import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.PluginUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
+import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
@@ -91,7 +92,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private ConcurrentHashMap<String, String> uuidNameCache;
-	
+
 	@Getter
 	private CMIHandler cmiHandle;
 
@@ -208,7 +209,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		});
 
 	}
-	
+
 	private void checkCMI() {
 		if (Bukkit.getPluginManager().getPlugin("CMI") != null) {
 			getLogger().info("CMI found, loading hook");
@@ -837,6 +838,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
+		for (DirectlyDefinedReward r : RewardHandler.getInstance().getDirectlyDefinedRewards()) {
+			r.updateRewardData();
+		}
 	}
 
 	@Deprecated

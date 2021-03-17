@@ -82,6 +82,9 @@ public class RewardHandler {
 
 	@Getter
 	private ArrayList<RewardPlaceholderHandle> placeholders = new ArrayList<RewardPlaceholderHandle>();
+	
+	@Getter
+	private ArrayList<DirectlyDefinedReward> directlyDefinedRewards = new ArrayList<DirectlyDefinedReward>();
 
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();

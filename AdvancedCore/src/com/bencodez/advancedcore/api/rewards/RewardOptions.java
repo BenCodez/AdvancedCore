@@ -152,12 +152,12 @@ public class RewardOptions {
 		String str = "Online: " + online + ", ";
 		str += "OnlineSet: " + onlineSet + ", ";
 		str += "GiveOffline: " + giveOffline + ", ";
-		str += "CheckTimed" + checkTimed + ", ";
-		str += "IgnoreChance" + ignoreChance + ", ";
-		str += "IgnoreRequirements" + ignoreRequirements + ", ";
-		str += "Placeholders" + ArrayUtils.getInstance().makeString(placeholders) + ", ";
-		str += "Prefix" + prefix + ", ";
-		str += "Suffix" + suffix;
+		str += "CheckTimed: " + checkTimed + ", ";
+		str += "IgnoreChance: " + ignoreChance + ", ";
+		str += "IgnoreRequirements: " + ignoreRequirements + ", ";
+		str += "Placeholders: " + ArrayUtils.getInstance().makeString(placeholders) + ", ";
+		str += "Prefix: " + prefix + ", ";
+		str += "Suffix: " + suffix;
 		return str;
 
 	}

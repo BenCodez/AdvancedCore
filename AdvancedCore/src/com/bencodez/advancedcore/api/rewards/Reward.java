@@ -330,7 +330,7 @@ public class Reward {
 
 		// give reward
 		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
-			plugin.debug("Attempting to give " + user.getPlayerName() + " reward " + name);
+			plugin.debug(name + ": Passed requirements, attempting to give to " + user.getPlayerName());
 			giveRewardUser(user, rewardOptions.getPlaceholders(), rewardOptions);
 		}
 	}
