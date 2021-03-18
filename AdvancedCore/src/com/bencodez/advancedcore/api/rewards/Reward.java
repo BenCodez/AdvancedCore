@@ -345,6 +345,9 @@ public class Reward {
 	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 
 		Player player = user.getPlayer();
+		if (player == null) {
+			player = Bukkit.getPlayer(user.getPlayerName());
+		}
 		if (player != null || isForceOffline()) {
 
 			// placeholders
@@ -376,6 +379,8 @@ public class Reward {
 					repeatHandle.giveRepeat(user);
 				}
 			}
+		} else {
+			plugin.debug(getRewardName() + ": Player == null & forceoffline false");
 		}
 	}
 
