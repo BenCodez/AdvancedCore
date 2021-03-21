@@ -433,7 +433,7 @@ public class Reward {
 		ConfigurationSection section = getConfig().getConfigData();
 		reward.getConfig().setData(section);
 		reward.getConfig().getFileData().options()
-				.header("Directly defined reward file. ANY EDITS HERE CAN GET OVERRIDDEN!");
+				.header("Directly defined reward file. WRONG PLACE TO EDIT THIS! DO NOT EDIT");
 		reward.getConfig().setDirectlyDefinedReward(true);
 		reward.getConfig().save(reward.getConfig().getFileData());
 		RewardHandler.getInstance().updateReward(reward);
