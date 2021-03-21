@@ -119,6 +119,11 @@ public abstract class YMLFile {
 			this.data.set(entry.getKey(), entry.getValue());
 		}
 	}
+	
+	public void setValue(String path, Object value) {
+		getData().set(path, value);
+		saveData();
+	}
 
 	/**
 	 * Setup.
