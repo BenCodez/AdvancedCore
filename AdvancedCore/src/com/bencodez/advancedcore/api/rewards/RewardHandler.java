@@ -82,7 +82,7 @@ public class RewardHandler {
 
 	@Getter
 	private ArrayList<RewardPlaceholderHandle> placeholders = new ArrayList<RewardPlaceholderHandle>();
-	
+
 	@Getter
 	private ArrayList<DirectlyDefinedReward> directlyDefinedRewards = new ArrayList<DirectlyDefinedReward>();
 
@@ -1896,12 +1896,19 @@ public class RewardHandler {
 		}
 	}
 
+	public void updateDirectlyDefined() {
+		for (DirectlyDefinedReward directlyDefinedReward : getDirectlyDefinedRewards()) {
+			directlyDefinedReward.updateRewardData(plugin);
+		}
+	}
+
 	/**
 	 * Load rewards.
 	 */
 	public void loadRewards() {
 		rewards = Collections.synchronizedList(new ArrayList<Reward>());
 		setupExample();
+		updateDirectlyDefined();
 		for (File file : rewardFolders) {
 			loadRewards(file);
 		}
