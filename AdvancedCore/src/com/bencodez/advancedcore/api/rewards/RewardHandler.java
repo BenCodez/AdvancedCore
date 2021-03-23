@@ -98,6 +98,21 @@ public class RewardHandler {
 	/** The reward folders. */
 	private ArrayList<File> rewardFolders;
 
+	public void addDirectlyDefined(DirectlyDefinedReward directlyDefinedReward) {
+		plugin.debug("Adding directlydefined reward handle: " + directlyDefinedReward.getPath()
+				+ ", isdirectlydefined: " + directlyDefinedReward.isDirectlyDefined());
+		directlyDefinedRewards.add(directlyDefinedReward);
+	}
+
+	public DirectlyDefinedReward getDirectlyDefined(String path) {
+		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
+			if (direct.getPath().equalsIgnoreCase(path)) {
+				return direct;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Instantiates a new reward handler.
 	 */
@@ -503,8 +518,8 @@ public class RewardHandler {
 
 			@Override
 			public void setValue(Player player, Number value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value.intValue());
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value.intValue());
 				plugin.reloadAdvancedCore(false);
 			}
 		})).validator(new RequirementInjectValidator() {
@@ -543,8 +558,8 @@ public class RewardHandler {
 
 			@Override
 			public void setValue(Player player, Number value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value.intValue());
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value.intValue());
 				plugin.reloadAdvancedCore(false);
 			}
 		})));
@@ -574,16 +589,16 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, String value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				})).addEditButton(new EditGUIButton(new EditGUIValueBoolean("RequirePermission", null) {
 
 					@Override
 					public void setValue(Player player, boolean value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				})).validator(new RequirementInjectValidator() {
@@ -636,8 +651,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, String value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				}.addOptions(Bukkit.getServer().getName()))));
@@ -669,8 +684,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				})).validator(new RequirementInjectValidator() {
@@ -710,8 +725,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, String value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				}.addOptions("ONLINE", "OFFLINE", "BOTH"))));
@@ -810,8 +825,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, Number value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value.intValue());
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
 				})).validator(new RewardInjectValidator() {
@@ -841,8 +856,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, Number num) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), num.intValue());
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
 				})).addEditButton(
@@ -850,8 +865,8 @@ public class RewardHandler {
 
 							@Override
 							public void setValue(Player player, Number value) {
-								Reward reward = (Reward) getInv().getData("Reward");
-								reward.getConfig().set(getKey(), value.intValue());
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(getKey(), value.intValue());
 								plugin.reloadAdvancedCore(false);
 							}
 						}))
@@ -878,8 +893,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, Number value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value.intValue());
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
 				})).validator(new RewardInjectValidator() {
@@ -905,8 +920,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, Number value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value.intValue());
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
 				})).validator(new RewardInjectValidator() {
@@ -935,8 +950,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, Number num) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), num.intValue());
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
 				})).addEditButton(
@@ -944,8 +959,8 @@ public class RewardHandler {
 
 							@Override
 							public void setValue(Player player, Number value) {
-								Reward reward = (Reward) getInv().getData("Reward");
-								reward.getConfig().set(getKey(), value.intValue());
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(getKey(), value.intValue());
 								plugin.reloadAdvancedCore(false);
 							}
 						}))
@@ -975,8 +990,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, Number num) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), num.intValue());
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
 				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
@@ -984,8 +999,8 @@ public class RewardHandler {
 
 							@Override
 							public void setValue(Player player, Number value) {
-								Reward reward = (Reward) getInv().getData("Reward");
-								reward.getConfig().set(getKey(), value.intValue());
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(getKey(), value.intValue());
 								plugin.reloadAdvancedCore(false);
 							}
 						}))
@@ -1011,8 +1026,8 @@ public class RewardHandler {
 
 			@Override
 			public void setValue(Player player, String value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
 		})).validator(new RewardInjectValidator() {
@@ -1059,8 +1074,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, String value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				})).validator(new RewardInjectValidator() {
@@ -1106,8 +1121,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, String value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				})).validator(new RewardInjectValidator() {
@@ -1135,8 +1150,8 @@ public class RewardHandler {
 
 			@Override
 			public void setValue(Player player, String value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
 		})).validator(new RewardInjectValidator() {
@@ -1164,8 +1179,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, Number num) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), num.intValue());
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
 				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
@@ -1173,8 +1188,8 @@ public class RewardHandler {
 
 							@Override
 							public void setValue(Player player, String value) {
-								Reward reward = (Reward) getInv().getData("Reward");
-								reward.getConfig().set(getKey(), value);
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(getKey(), value);
 								plugin.reloadAdvancedCore(false);
 							}
 						}))
@@ -1209,8 +1224,8 @@ public class RewardHandler {
 
 			@Override
 			public void setValue(Player player, ArrayList<String> value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
 		})).validator(new RewardInjectValidator() {
@@ -1257,8 +1272,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
@@ -1266,8 +1281,8 @@ public class RewardHandler {
 
 							@Override
 							public void setValue(Player player, ArrayList<String> value) {
-								Reward reward = (Reward) getInv().getData("Reward");
-								reward.getConfig().set(getKey(), value);
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(getKey(), value);
 								plugin.reloadAdvancedCore(false);
 							}
 						})));
@@ -1289,8 +1304,8 @@ public class RewardHandler {
 
 			@Override
 			public void setValue(Player player, ArrayList<String> value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
 		})));
@@ -1416,8 +1431,8 @@ public class RewardHandler {
 
 			@Override
 			public void setValue(Player player, ArrayList<String> value) {
-				Reward reward = (Reward) getInv().getData("Reward");
-				reward.getConfig().set(getKey(), value);
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
 		})).validator(new RewardInjectValidator() {
@@ -1450,8 +1465,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				})).postReward());
@@ -1495,8 +1510,8 @@ public class RewardHandler {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
-						Reward reward = (Reward) getInv().getData("Reward");
-						reward.getConfig().set(getKey(), value);
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
 				})).postReward());

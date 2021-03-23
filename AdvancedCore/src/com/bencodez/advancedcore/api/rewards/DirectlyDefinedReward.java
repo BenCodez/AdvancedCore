@@ -15,7 +15,7 @@ public abstract class DirectlyDefinedReward {
 	public DirectlyDefinedReward(String path) {
 		this.path = path;
 	}
-	
+
 	public boolean isDirectlyDefined() {
 		return getFileData().isConfigurationSection(getPath());
 	}
@@ -23,6 +23,18 @@ public abstract class DirectlyDefinedReward {
 	public abstract ConfigurationSection getFileData();
 
 	public abstract void setData(String path, Object value);
+
+	public void setValue(String path, Object value) {
+		setData(getPath() + "." + path, value);
+	}
+
+	public Reward getReward() {
+		if (isDirectlyDefined()) {
+			return new Reward(getPath().replaceAll(".", "_"), getFileData().getConfigurationSection(getPath()));
+		} else {
+			return null;
+		}
+	}
 
 	public void updateRewardData(AdvancedCorePlugin plugin) {
 		if (isDirectlyDefined()) {
