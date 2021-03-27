@@ -95,9 +95,6 @@ public class TimeChecker {
 		if (set) {
 			plugin.getServerDataFile().setPrevDay(day);
 		}
-		if (prevDay == -1) {
-			return true;
-		}
 		return true;
 	}
 
@@ -128,9 +125,6 @@ public class TimeChecker {
 		}
 		if (set) {
 			plugin.getServerDataFile().setPrevWeekDay(weekNumber);
-		}
-		if (prevDate == -1) {
-			return true;
 		}
 		return true;
 	}
