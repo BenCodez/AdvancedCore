@@ -1901,7 +1901,7 @@ public class RewardHandler {
 						e.printStackTrace();
 					}
 				} else {
-					plugin.getLogger().info("Detected that a reward file named " + reward
+					plugin.debug("Detected that a reward file named " + reward
 							+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
 				}
 			} else {
@@ -1923,10 +1923,10 @@ public class RewardHandler {
 	public void loadRewards() {
 		rewards = Collections.synchronizedList(new ArrayList<Reward>());
 		setupExample();
-		updateDirectlyDefined();
 		for (File file : rewardFolders) {
 			loadRewards(file);
 		}
+		updateDirectlyDefined();
 
 		sortInjectedRewards();
 		sortInjectedRequirements();
