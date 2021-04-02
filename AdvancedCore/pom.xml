@@ -102,6 +102,7 @@
 				<version>2.4.3</version>
 				<configuration>
 					<shadedArtifactAttached>false</shadedArtifactAttached>
+					<minimizeJar>true</minimizeJar>
 				</configuration>
 				<executions>
 					<execution>

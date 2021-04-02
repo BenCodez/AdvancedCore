@@ -194,7 +194,7 @@ public class BInventory {
 			for (Integer fill : button.getFillSlots()) {
 				slot = fill.intValue();
 				BInventoryButton button1 = new BInventoryButton(button) {
-					
+
 					@Override
 					public void onClick(ClickEvent clickEvent) {
 						button.onClick(clickEvent);
@@ -440,6 +440,13 @@ public class BInventory {
 			AdvancedCorePlugin.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
 			return;
 		}
+		if (perm != null) {
+			if (!player.hasPermission(perm)) {
+				player.sendMessage(StringParser.getInstance()
+						.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
+				return;
+			}
+		}
 		BInventory inventory = this;
 
 		if (inventory.getHighestSlot() >= maxInvSize) {
@@ -470,6 +477,12 @@ public class BInventory {
 			openInventory(player, 1);
 		}
 
+	}
+
+	private String perm;
+
+	public void requirePermission(String permission) {
+		this.perm = permission;
 	}
 
 	/**
