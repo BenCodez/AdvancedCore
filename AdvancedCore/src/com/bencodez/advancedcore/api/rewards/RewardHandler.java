@@ -1146,7 +1146,7 @@ public class RewardHandler {
 				MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), value, placeholders);
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Command", null) {
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.COMMAND_BLOCK), new EditGUIValueString("Command", null) {
 
 			@Override
 			public void setValue(Player player, String value) {
@@ -1220,7 +1220,7 @@ public class RewardHandler {
 				}
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands", null) {
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.COMMAND_BLOCK), new EditGUIValueList("Commands", null) {
 
 			@Override
 			public void setValue(Player player, ArrayList<String> value) {

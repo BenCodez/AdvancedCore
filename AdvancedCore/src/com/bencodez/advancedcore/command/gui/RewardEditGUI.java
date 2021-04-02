@@ -58,6 +58,112 @@ public class RewardEditGUI {
 		return (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 	}
 
+	public void openRewardGUIRequirements(Player player, RewardEditData rewardEditData, String rewardName) {
+		EditGUI inv = new EditGUI("Requirements: " + rewardName);
+
+		inv.addData("Reward", rewardEditData);
+
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueBoolean("ForceOffline", rewardEditData.getValue("ForceOffline")) {
+
+					@Override
+					public void setValue(Player player, boolean value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}));
+
+		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
+			if (injectReward.isEditable()) {
+				for (EditGUIButton b : injectReward.getEditButtons()) {
+					b.getEditer().setCurrentValue(rewardEditData.getValue(b.getEditer().getKey()));
+					inv.addButton(b);
+				}
+			}
+		}
+		inv.sort();
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cGo back")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUI(clickEvent.getPlayer(), rewardEditData, rewardName);
+			}
+		});
+		inv.openInventory(player);
+	}
+
+	public void openRewardGUIRewards(Player player, RewardEditData rewardEditData, String rewardName,
+			boolean unsetValuesShown) {
+		EditGUI inv = new EditGUI("Rewards: " + rewardName);
+
+		inv.addData("Reward", rewardEditData);
+
+		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
+			if (injectReward.isEditable()) {
+				for (EditGUIButton b : injectReward.getEditButtons()) {
+					if (rewardEditData.hasPath(b.getEditer().getKey()) || unsetValuesShown) {
+						b.getEditer().setCurrentValue(rewardEditData.getValue(b.getEditer().getKey()));
+						inv.addButton(b);
+					}
+				}
+			}
+		}
+
+		inv.sort();
+		if (!unsetValuesShown) {
+			inv.addButton(new BInventoryButton(new ItemBuilder(Material.CHEST).setName("&cUnset Values")) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					openRewardGUIRewards(player, rewardEditData, rewardName, true);
+				}
+			});
+		}
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cGo back")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUI(clickEvent.getPlayer(), rewardEditData, rewardName);
+			}
+		});
+		inv.openInventory(player);
+	}
+
+	public void openRewardGUI(Player player, RewardEditData rewardEditData, String rewardName) {
+		EditGUI inv = new EditGUI("Reward: " + rewardName);
+
+		inv.addData("Reward", rewardEditData);
+
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.REDSTONE).setName("&cRequirements")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIRequirements(clickEvent.getPlayer(), rewardEditData, rewardName);
+			}
+		});
+
+		inv.addButton(new BInventoryButton(
+				new ItemBuilder(Material.DIAMOND).setName("&cRewards").addLoreLine("&cOnly shows set values")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIRewards(clickEvent.getPlayer(), rewardEditData, rewardName, false);
+			}
+		});
+
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cAll Rewards")
+				.addLoreLine("&cShows all possible settings")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIRewards(clickEvent.getPlayer(), rewardEditData, rewardName, true);
+			}
+		});
+
+		inv.openInventory(player);
+	}
+
 	public void openRewardGUI(Player player, DirectlyDefinedReward directlyDefinedReward) {
 		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
 			player.sendMessage("You do not have enough permission to do this");
@@ -74,43 +180,7 @@ public class RewardEditGUI {
 			return;
 		}
 
-		EditGUI inv = new EditGUI("Reward: " + directlyDefinedReward.getPath());
-
-		inv.addData("Reward", new RewardEditData(directlyDefinedReward));
-		
-		Reward reward = directlyDefinedReward.getReward();
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueBoolean("ForceOffline", reward.isForceOffline()) {
-
-					@Override
-					public void setValue(Player player, boolean value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value);
-						plugin.reloadAdvancedCore(false);
-					}
-				}));
-
-		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
-			if (injectReward.isEditable()) {
-				for (EditGUIButton b : injectReward.getEditButtons()) {
-					b.getEditer().setCurrentValue(reward.getConfig().getConfigData().get(b.getEditer().getKey()));
-					inv.addButton(b);
-				}
-			}
-		}
-
-		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
-			if (injectReward.isEditable()) {
-				for (EditGUIButton b : injectReward.getEditButtons()) {
-					b.getEditer().setCurrentValue(reward.getConfig().getConfigData().get(b.getEditer().getKey()));
-					inv.addButton(b);
-				}
-			}
-		}
-
-		inv.sort();
-		inv.openInventory(player);
+		openRewardGUI(player, new RewardEditData(directlyDefinedReward), directlyDefinedReward.getPath());
 	}
 
 	public void openRewardGUI(Player player, Reward reward) {
@@ -118,41 +188,8 @@ public class RewardEditGUI {
 			player.sendMessage("You do not have enough permission to do this");
 			return;
 		}
-		EditGUI inv = new EditGUI("Reward: " + reward.getRewardName());
 
-		inv.addData("Reward", new RewardEditData(reward));
-
-		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-				new EditGUIValueBoolean("ForceOffline", reward.isForceOffline()) {
-
-					@Override
-					public void setValue(Player player, boolean value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value);
-						plugin.reloadAdvancedCore(false);
-					}
-				}));
-
-		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
-			if (injectReward.isEditable()) {
-				for (EditGUIButton b : injectReward.getEditButtons()) {
-					b.getEditer().setCurrentValue(reward.getConfig().getConfigData().get(b.getEditer().getKey()));
-					inv.addButton(b);
-				}
-			}
-		}
-
-		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
-			if (injectReward.isEditable()) {
-				for (EditGUIButton b : injectReward.getEditButtons()) {
-					b.getEditer().setCurrentValue(reward.getConfig().getConfigData().get(b.getEditer().getKey()));
-					inv.addButton(b);
-				}
-			}
-		}
-
-		inv.sort();
-		inv.openInventory(player);
+		openRewardGUI(player, new RewardEditData(reward), reward.getName());
 	}
 
 	/**
@@ -182,7 +219,7 @@ public class RewardEditGUI {
 
 						Reward reward = (Reward) getData("Reward");
 						if (!reward.getConfig().isDirectlyDefinedReward()) {
-							openRewardGUI(player, reward);
+							openRewardGUI(player, new RewardEditData(reward), reward.getRewardName());
 						} else {
 							player.sendMessage("Can't edit this reward, directly defined reward");
 						}

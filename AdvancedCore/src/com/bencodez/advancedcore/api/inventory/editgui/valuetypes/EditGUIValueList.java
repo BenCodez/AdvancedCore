@@ -10,6 +10,7 @@ import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
 
@@ -50,16 +51,22 @@ public abstract class EditGUIValueList extends EditGUIValue {
 			@SuppressWarnings("unchecked")
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				new ValueRequestBuilder(new Listener<String>() {
-					@Override
-					public void onInput(Player player, String add) {
-						ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
-						list.remove(add);
-						setValue(player, list);
-						sendMessage(player, "&cRemoved " + add + " from " + getKey());
-					}
-				}, ArrayUtils.getInstance().convert((ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value")))
-						.request(clickEvent.getPlayer());
+				ArrayList<String> list = (ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value");
+				if (!list.isEmpty()) {
+					new ValueRequestBuilder(new Listener<String>() {
+						@Override
+						public void onInput(Player player, String add) {
+							ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
+							list.remove(add);
+							setValue(player, list);
+							sendMessage(player, "&cRemoved " + add + " from " + getKey());
+						}
+					}, ArrayUtils.getInstance().convert((ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value")))
+							.usingMethod(InputMethod.INVENTORY).allowCustomOption(false)
+							.request(clickEvent.getPlayer());
+				} else {
+					clickEvent.getPlayer().sendMessage("No values to remove");
+				}
 			}
 		});
 		inv.openInventory(clickEvent.getPlayer());
