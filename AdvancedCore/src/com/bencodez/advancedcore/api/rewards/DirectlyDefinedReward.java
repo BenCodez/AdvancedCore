@@ -35,7 +35,7 @@ public abstract class DirectlyDefinedReward {
 			return null;
 		}
 	}
-	
+
 	public Object getValue(String path) {
 		return getFileData().get(getPath() + "." + path);
 	}

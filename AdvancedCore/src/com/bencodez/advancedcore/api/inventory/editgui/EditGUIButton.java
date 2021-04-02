@@ -124,6 +124,12 @@ public class EditGUIButton extends BInventoryButton {
 						ArrayUtils.getInstance().makeStringList((ArrayList<String>) getEditer().getCurrentValue()));
 			}
 		}
+		ArrayList<String> lores = getEditer().getLores();
+		if (lores != null) {
+			for (String t : lores) {
+				builder.addLoreLine("&3" + t);
+			}
+		}
 		return builder.toItemStack(player);
 	}
 

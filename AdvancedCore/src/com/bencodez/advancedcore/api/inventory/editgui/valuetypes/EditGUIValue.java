@@ -23,6 +23,10 @@ public abstract class EditGUIValue {
 	@Getter
 	@Setter
 	private BInventory inv;
+	
+	@Getter
+	@Setter
+	private ArrayList<String> lores;
 
 	public EditGUIValue addOptions(String... str) {
 		for (String s : str) {
@@ -32,4 +36,12 @@ public abstract class EditGUIValue {
 	}
 
 	public abstract void onClick(ClickEvent event);
+	
+	public EditGUIValue addLore(String lore) {
+		if (lores == null) {
+			lores = new ArrayList<String>();
+		}
+		lores.add(lore);
+		return this;
+	}
 }

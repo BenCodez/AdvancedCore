@@ -522,7 +522,7 @@ public class RewardHandler {
 				reward.setValue(getKey(), value.intValue());
 				plugin.reloadAdvancedCore(false);
 			}
-		})).validator(new RequirementInjectValidator() {
+		}.addLore("Set chance for reward to execute"))).validator(new RequirementInjectValidator() {
 
 			@Override
 			public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
@@ -562,7 +562,7 @@ public class RewardHandler {
 				reward.setValue(getKey(), value.intValue());
 				plugin.reloadAdvancedCore(false);
 			}
-		})));
+		}.addLore("Time before reward expires, if not executed"))));
 
 		injectedRequirements.add(new RequirementInjectString("Permission", "") {
 
@@ -593,7 +593,8 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})).addEditButton(new EditGUIButton(new EditGUIValueBoolean("RequirePermission", null) {
+				}.addLore("Set permission required to be given, set RequirePermission to true if using this")))
+				.addEditButton(new EditGUIButton(new EditGUIValueBoolean("RequirePermission", null) {
 
 					@Override
 					public void setValue(Player player, boolean value) {
@@ -601,7 +602,8 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})).validator(new RequirementInjectValidator() {
+				}.addLore("If true, permission is required to run reward")))
+				.validator(new RequirementInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
@@ -655,7 +657,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addOptions(Bukkit.getServer().getName()))));
+				}.addOptions(Bukkit.getServer().getName()).addLore("Server to execute reward on"))));
 
 		injectedRequirements.add(new RequirementInjectStringList("Worlds", new ArrayList<String>()) {
 
@@ -688,7 +690,8 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})).validator(new RequirementInjectValidator() {
+				}.addLore("Worlds to execute reward in, only executes into one reward")))
+				.validator(new RequirementInjectValidator() {
 
 					@Override
 					@SuppressWarnings("unchecked")
@@ -729,7 +732,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addOptions("ONLINE", "OFFLINE", "BOTH"))));
+				}.addOptions("ONLINE", "OFFLINE", "BOTH").addLore("When reward should execute"))));
 
 		injectedRequirements.add(new RequirementInjectString("JavascriptExpression", "") {
 
@@ -829,7 +832,8 @@ public class RewardHandler {
 						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				})).validator(new RewardInjectValidator() {
+				}.addLore("Money to execute, may not work on some economy plugins")))
+				.validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -860,7 +864,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				})).addEditButton(
+				}.addLore("Minium amount of money for random money amount"))).addEditButton(
 						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money.Max", null) {
 
 							@Override
@@ -869,7 +873,7 @@ public class RewardHandler {
 								reward.setValue(getKey(), value.intValue());
 								plugin.reloadAdvancedCore(false);
 							}
-						}))
+						}.addLore("Maxium amount of money for random money amount")))
 				.validator(new RewardInjectValidator() {
 
 					@Override
@@ -897,7 +901,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				})).validator(new RewardInjectValidator() {
+				}.addLore("EXP to give"))).validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -924,7 +928,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				})).validator(new RewardInjectValidator() {
+				}.addLore("EXPLevels to give"))).validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -954,7 +958,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				})).addEditButton(
+				}.addLore("Minium amount of EXP to give for random amount"))).addEditButton(
 						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Max", null) {
 
 							@Override
@@ -963,7 +967,7 @@ public class RewardHandler {
 								reward.setValue(getKey(), value.intValue());
 								plugin.reloadAdvancedCore(false);
 							}
-						}))
+						}.addLore("Maxium amount of EXP to give for random amount")))
 				.validator(new RewardInjectValidator() {
 
 					@Override
@@ -994,7 +998,8 @@ public class RewardHandler {
 						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				}.addLore("Minium amount of EXPLevels to give for random amount")))
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 						new EditGUIValueNumber("EXPLevels.Max", null) {
 
 							@Override
@@ -1003,7 +1008,7 @@ public class RewardHandler {
 								reward.setValue(getKey(), value.intValue());
 								plugin.reloadAdvancedCore(false);
 							}
-						}))
+						}.addLore("Maxium amount of EXPLevels to give for random amount")))
 				.validator(new RewardInjectValidator() {
 
 					@Override
@@ -1030,7 +1035,7 @@ public class RewardHandler {
 				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
-		})).validator(new RewardInjectValidator() {
+		}.addLore("Player message"))).validator(new RewardInjectValidator() {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -1078,7 +1083,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})).validator(new RewardInjectValidator() {
+				}.addLore("Player message, doesn't support lists"))).validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -1125,7 +1130,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})).validator(new RewardInjectValidator() {
+				}.addLore("Broadcast message"))).validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -1146,23 +1151,24 @@ public class RewardHandler {
 				MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), value, placeholders);
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.COMMAND_BLOCK), new EditGUIValueString("Command", null) {
+		}.addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.COMMAND_BLOCK), new EditGUIValueString("Command", null) {
 
-			@Override
-			public void setValue(Player player, String value) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				reward.setValue(getKey(), value);
-				plugin.reloadAdvancedCore(false);
-			}
-		})).validator(new RewardInjectValidator() {
+					@Override
+					public void setValue(Player player, String value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.addLore("Execute single console command"))).validator(new RewardInjectValidator() {
 
-			@Override
-			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				if (data.getString(inject.getPath()).startsWith("/")) {
-					warning(reward, inject, "Can't start command with /");
-				}
-			}
-		}));
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.getString(inject.getPath()).startsWith("/")) {
+							warning(reward, inject, "Can't start command with /");
+						}
+					}
+				}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
 
@@ -1183,7 +1189,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				}.addLore("Actionbar delay"))).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 						new EditGUIValueString("ActionBar.Message", null) {
 
 							@Override
@@ -1192,7 +1198,7 @@ public class RewardHandler {
 								reward.setValue(getKey(), value);
 								plugin.reloadAdvancedCore(false);
 							}
-						}))
+						}.addLore("Actionbar message")))
 				.validator(new RewardInjectValidator() {
 
 					@Override
@@ -1220,33 +1226,34 @@ public class RewardHandler {
 				}
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.COMMAND_BLOCK), new EditGUIValueList("Commands", null) {
+		}.addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.COMMAND_BLOCK), new EditGUIValueList("Commands", null) {
 
-			@Override
-			public void setValue(Player player, ArrayList<String> value) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				reward.setValue(getKey(), value);
-				plugin.reloadAdvancedCore(false);
-			}
-		})).validator(new RewardInjectValidator() {
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.addLore("List of console commands"))).validator(new RewardInjectValidator() {
 
-			@Override
-			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				if (data.isList(inject.getPath()) && !data.isConfigurationSection(inject.getPath())) {
-					List<String> list = data.getStringList(inject.getPath());
-					if (list != null) {
-						if (list.isEmpty()) {
-							warning(reward, inject, "No commands listed");
-						}
-						for (String str : list) {
-							if (str.startsWith("/")) {
-								warning(reward, inject, "Commands can not start with /");
+					@Override
+					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+						if (data.isList(inject.getPath()) && !data.isConfigurationSection(inject.getPath())) {
+							List<String> list = data.getStringList(inject.getPath());
+							if (list != null) {
+								if (list.isEmpty()) {
+									warning(reward, inject, "No commands listed");
+								}
+								for (String str : list) {
+									if (str.startsWith("/")) {
+										warning(reward, inject, "Commands can not start with /");
+									}
+								}
 							}
 						}
 					}
-				}
-			}
-		}));
+				}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Commands") {
 
@@ -1276,8 +1283,8 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-						new EditGUIValueList("Commands.Player", null) {
+				}.addLore("Old style for console commands"))).addEditButton(new EditGUIButton(
+						new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands.Player", null) {
 
 							@Override
 							public void setValue(Player player, ArrayList<String> value) {
@@ -1285,7 +1292,7 @@ public class RewardHandler {
 								reward.setValue(getKey(), value);
 								plugin.reloadAdvancedCore(false);
 							}
-						})));
+						}.addLore("Execute commands as player"))));
 
 		injectedRewards.add(new RewardInjectStringList("Javascripts") {
 
@@ -1308,7 +1315,7 @@ public class RewardHandler {
 				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
-		})));
+		}.addLore("Javascript expressions to run"))));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Javascript") {
 
@@ -1435,7 +1442,7 @@ public class RewardHandler {
 				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
-		})).validator(new RewardInjectValidator() {
+		}.addLore("Execute random command"))).validator(new RewardInjectValidator() {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -1469,7 +1476,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})).postReward());
+				}.addLore("Execute random reward"))).postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedRandomReward") {
 
@@ -1514,7 +1521,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})).postReward());
+				}.addLore("Execute first reward file that can be executed"))).postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Potions") {
 
