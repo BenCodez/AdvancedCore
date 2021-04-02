@@ -80,6 +80,9 @@ public class Reward {
 	@Setter
 	private File file;
 
+	@Getter
+	private boolean needsRewardFile = true;
+
 	/**
 	 * Instantiates a new reward.
 	 *
@@ -101,6 +104,11 @@ public class Reward {
 
 	public Reward(String name, ConfigurationSection section) {
 		load(name, section);
+	}
+
+	public Reward needsRewardFile(boolean value) {
+		needsRewardFile = value;
+		return this;
 	}
 
 	public boolean canGiveReward(AdvancedCoreUser user, RewardOptions options) {
@@ -137,7 +145,7 @@ public class Reward {
 	}
 
 	public void checkRewardFile() {
-		if (!getConfig().hasRewardFile()) {
+		if (!getConfig().hasRewardFile() && needsRewardFile) {
 			setRewardFile();
 		}
 	}
@@ -310,17 +318,17 @@ public class Reward {
 				}
 			}
 		}
-		
+
 		boolean vanished = false;
 		if ((plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
 			vanished = true;
-			plugin.getLogger().info(getRewardName() + ": " + user.getPlayerName() + " is vanished, saving vote offline");
+			plugin.getLogger()
+					.info(getRewardName() + ": " + user.getPlayerName() + " is vanished, saving vote offline");
 		}
 
 		// save reward for offline
 		if ((((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline)
-				&& (!isForceOffline() && !rewardOptions.isForceOffline()))
-				|| vanished) {
+				&& (!isForceOffline() && !rewardOptions.isForceOffline())) || vanished) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
 				user.addOfflineRewards(this, rewardOptions.getPlaceholders());

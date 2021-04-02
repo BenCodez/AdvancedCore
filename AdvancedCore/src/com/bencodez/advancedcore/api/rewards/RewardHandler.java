@@ -415,11 +415,19 @@ public class RewardHandler {
 			if (suffix != null && !suffix.equals("")) {
 				rewardName += "_" + suffix;
 			}
-			ConfigurationSection section = data.getConfigurationSection(path);
-			Reward reward = new Reward(rewardName, section);
-			reward.checkRewardFile();
-			plugin.debug("Giving reward " + path + ", Options: " + rewardOptions.toString());
-			giveReward(user, reward, rewardOptions);
+			DirectlyDefinedReward direct = getDirectlyDefined(path);
+			if (suffix != null && prefix != null && direct != null) {
+
+				Reward reward = direct.getReward();
+				plugin.debug("Giving directlydefined reward " + path + ", Options: " + rewardOptions.toString());
+				giveReward(user, reward, rewardOptions);
+			} else {
+				ConfigurationSection section = data.getConfigurationSection(path);
+				Reward reward = new Reward(rewardName, section);
+				reward.checkRewardFile();
+				plugin.debug("Giving reward " + path + ", Options: " + rewardOptions.toString());
+				giveReward(user, reward, rewardOptions);
+			}
 		} else {
 			String reward = data.getString(path, "");
 			if (!reward.isEmpty()) {
@@ -1918,12 +1926,6 @@ public class RewardHandler {
 		}
 	}
 
-	public void updateDirectlyDefined() {
-		for (DirectlyDefinedReward directlyDefinedReward : getDirectlyDefinedRewards()) {
-			directlyDefinedReward.updateRewardData(plugin);
-		}
-	}
-
 	/**
 	 * Load rewards.
 	 */
@@ -1933,7 +1935,6 @@ public class RewardHandler {
 		for (File file : rewardFolders) {
 			loadRewards(file);
 		}
-		updateDirectlyDefined();
 
 		sortInjectedRewards();
 		sortInjectedRequirements();
