@@ -77,7 +77,7 @@ public class RewardEditGUI {
 		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
 			if (injectReward.isEditable()) {
 				for (EditGUIButton b : injectReward.getEditButtons()) {
-					b.getEditer().setCurrentValue(rewardEditData.getValue(b.getEditer().getKey()));
+					b.getEditor().setCurrentValue(rewardEditData.getValue(b.getEditor().getKey()));
 					inv.addButton(b);
 				}
 			}
@@ -102,8 +102,8 @@ public class RewardEditGUI {
 		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
 			if (injectReward.isEditable()) {
 				for (EditGUIButton b : injectReward.getEditButtons()) {
-					if (rewardEditData.hasPath(b.getEditer().getKey()) || unsetValuesShown) {
-						b.getEditer().setCurrentValue(rewardEditData.getValue(b.getEditer().getKey()));
+					if (rewardEditData.hasPath(b.getEditor().getKey()) || unsetValuesShown) {
+						b.getEditor().setCurrentValue(rewardEditData.getValue(b.getEditor().getKey()));
 						inv.addButton(b);
 					}
 				}
@@ -117,6 +117,17 @@ public class RewardEditGUI {
 				@Override
 				public void onClick(ClickEvent clickEvent) {
 					openRewardGUIRewards(player, rewardEditData, rewardName, true);
+				}
+			});
+		} else {
+			inv.addButton(new BInventoryButton(
+					new ItemBuilder(Material.BOOK).setName("&cValues not setable in GUI yet:").setLore(
+							"&aLocationDistance, AdvancedPriority, Javascript, Lucky, Random, Rewards, AdvancedRandomReward, Potions(Effects only), Title, BoosBar, Sound, Effect, FireWork, Item, Items, AdvancedPriority, SpecialChance, RandomItem, Choices",
+							"&bThis is a long list, overtime these will eventually be aded to edit gui",
+							"&3Also looking for feedback on GUI")) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
 				}
 			});
 		}

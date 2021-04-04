@@ -756,18 +756,27 @@ public class RewardHandler {
 				}
 				return false;
 			}
-		}.priority(90).validator(new RequirementInjectValidator() {
+		}.priority(90).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				new EditGUIValueString("JavascriptExpression", null) {
 
-			@Override
-			public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
-				String str = data.getString("JavascriptExpression", null);
-				if (str != null) {
-					if (str.isEmpty()) {
-						warning(reward, inject, "No javascript expression set");
+					@Override
+					public void setValue(Player player, String value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
 					}
-				}
-			}
-		}));
+				}.addLore("Javascript expression required to run reward"))).validator(new RequirementInjectValidator() {
+
+					@Override
+					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+						String str = data.getString("JavascriptExpression", null);
+						if (str != null) {
+							if (str.isEmpty()) {
+								warning(reward, inject, "No javascript expression set");
+							}
+						}
+					}
+				}));
 
 		injectedRequirements.add(new RequirementInjectConfigurationSection("LocationDistance") {
 			@Override
@@ -832,7 +841,7 @@ public class RewardHandler {
 				return "" + (int) num;
 			}
 		}.asPlaceholder("Money").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money", null) {
+				new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueNumber("Money", null) {
 
 					@Override
 					public void setValue(Player player, Number value) {
@@ -864,7 +873,7 @@ public class RewardHandler {
 				return "" + f.format(value);
 			}
 		}.asPlaceholder("Money").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money.Min", null) {
+				new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueNumber("Money.Min", null) {
 
 					@Override
 					public void setValue(Player player, Number num) {
@@ -873,7 +882,7 @@ public class RewardHandler {
 						plugin.reloadAdvancedCore(false);
 					}
 				}.addLore("Minium amount of money for random money amount"))).addEditButton(
-						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("Money.Max", null) {
+						new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueNumber("Money.Max", null) {
 
 							@Override
 							public void setValue(Player player, Number value) {
@@ -900,8 +909,8 @@ public class RewardHandler {
 				user.giveExp(num);
 				return null;
 			}
-		}.asPlaceholder("EXP").priority(100)
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP", null) {
+		}.asPlaceholder("EXP").priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE), new EditGUIValueNumber("EXP", null) {
 
 					@Override
 					public void setValue(Player player, Number value) {
@@ -927,16 +936,18 @@ public class RewardHandler {
 				user.giveExpLevels(num);
 				return null;
 			}
-		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXPLevels", null) {
+		}.asPlaceholder("EXP").priority(100)
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE),
+						new EditGUIValueNumber("EXPLevels", null) {
 
-					@Override
-					public void setValue(Player player, Number value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value.intValue());
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("EXPLevels to give"))).validator(new RewardInjectValidator() {
+							@Override
+							public void setValue(Player player, Number value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(getKey(), value.intValue());
+								plugin.reloadAdvancedCore(false);
+							}
+						}.addLore("EXPLevels to give")))
+				.validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -958,7 +969,7 @@ public class RewardHandler {
 				return "" + value;
 			}
 		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Min", null) {
+				new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE), new EditGUIValueNumber("EXP.Min", null) {
 
 					@Override
 					public void setValue(Player player, Number num) {
@@ -966,8 +977,9 @@ public class RewardHandler {
 						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addLore("Minium amount of EXP to give for random amount"))).addEditButton(
-						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Max", null) {
+				}.addLore("Minium amount of EXP to give for random amount")))
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE),
+						new EditGUIValueNumber("EXP.Max", null) {
 
 							@Override
 							public void setValue(Player player, Number value) {
@@ -997,17 +1009,18 @@ public class RewardHandler {
 				user.giveExpLevels(value);
 				return "" + value;
 			}
-		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXPLevels.Min", null) {
+		}.asPlaceholder("EXP").priority(100)
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE),
+						new EditGUIValueNumber("EXPLevels.Min", null) {
 
-					@Override
-					public void setValue(Player player, Number num) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), num.intValue());
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("Minium amount of EXPLevels to give for random amount")))
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+							@Override
+							public void setValue(Player player, Number num) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(getKey(), num.intValue());
+								plugin.reloadAdvancedCore(false);
+							}
+						}.addLore("Minium amount of EXPLevels to give for random amount")))
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE),
 						new EditGUIValueNumber("EXPLevels.Max", null) {
 
 							@Override
@@ -1062,7 +1075,16 @@ public class RewardHandler {
 				user.sendMessage(value, placeholders);
 				return null;
 			}
-		});
+		}.addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Messages.Player", null) {
+
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
+					}
+				})));
 
 		injectedRewards.add(new RewardInjectStringList("Message") {
 
@@ -1072,7 +1094,15 @@ public class RewardHandler {
 				user.sendMessage(value, placeholders);
 				return null;
 			}
-		});
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Message", null) {
+
+			@Override
+			public void setValue(Player player, ArrayList<String> value) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value);
+				plugin.reloadAdvancedCore(false);
+			}
+		})));
 
 		injectedRewards.add(new RewardInjectString("Messages.Player") {
 
@@ -1679,7 +1709,6 @@ public class RewardHandler {
 			public String onRewardRequested(Reward reward1, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				for (String keys : section.getKeys(false)) {
-
 					Reward reward = RewardHandler.getInstance().getReward(section, keys, new RewardOptions());
 					if (reward != null && reward.canGiveReward(user, new RewardOptions())) {
 						plugin.extraDebug("AdvancedPriority: Giving reward " + reward.getName());

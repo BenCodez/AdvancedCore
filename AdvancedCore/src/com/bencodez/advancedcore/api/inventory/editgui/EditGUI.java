@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 
@@ -24,7 +23,7 @@ public class EditGUI extends BInventory {
 		for (BInventoryButton button : map.values()) {
 			if (button instanceof EditGUIButton) {
 				EditGUIButton b = (EditGUIButton) button;
-				String key = b.getEditer().getKey();
+				String key = b.getEditor().getKey();
 				sortedList.add(key);
 				b.setSlot(-1);
 				buttons.put(key, b);
@@ -35,7 +34,6 @@ public class EditGUI extends BInventory {
 		sortedList.sort(Comparator.naturalOrder());
 
 		for (String key : sortedList) {
-			AdvancedCorePlugin.getInstance().debug(key);
 			addButton(buttons.get(key));
 		}
 	}

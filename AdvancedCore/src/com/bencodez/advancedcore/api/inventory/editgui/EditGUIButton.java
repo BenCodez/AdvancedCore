@@ -7,8 +7,8 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
+import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValue;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueBoolean;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueList;
@@ -24,16 +24,16 @@ public class EditGUIButton extends BInventoryButton {
 
 	@Getter
 	@Setter
-	private EditGUIValue editer;
+	private EditGUIValue editor;
 
 	public EditGUIButton(EditGUIValue editer) {
 		super(new ItemBuilder(Material.PAPER));
-		this.editer = editer;
+		this.editor = editer;
 	}
 
 	public EditGUIButton(ItemBuilder item, EditGUIValue editer) {
 		super(item);
-		this.editer = editer;
+		this.editor = editer;
 	}
 
 	@Deprecated
@@ -41,7 +41,7 @@ public class EditGUIButton extends BInventoryButton {
 		super(itemBuilder);
 		switch (type) {
 		case BOOLEAN:
-			editer = new EditGUIValueBoolean(key, value) {
+			editor = new EditGUIValueBoolean(key, value) {
 
 				@Override
 				public void setValue(Player player, boolean value) {
@@ -50,7 +50,7 @@ public class EditGUIButton extends BInventoryButton {
 			};
 			break;
 		case DOUBLE:
-			editer = new EditGUIValueNumber(key, value) {
+			editor = new EditGUIValueNumber(key, value) {
 
 				@Override
 				public void setValue(Player player, Number value) {
@@ -59,7 +59,7 @@ public class EditGUIButton extends BInventoryButton {
 			};
 			break;
 		case INT:
-			editer = new EditGUIValueNumber(key, value) {
+			editor = new EditGUIValueNumber(key, value) {
 
 				@Override
 				public void setValue(Player player, Number value) {
@@ -68,7 +68,7 @@ public class EditGUIButton extends BInventoryButton {
 			};
 			break;
 		case LIST:
-			editer = new EditGUIValueList(key, value) {
+			editor = new EditGUIValueList(key, value) {
 
 				@Override
 				public void setValue(Player player, ArrayList<String> value) {
@@ -77,7 +77,7 @@ public class EditGUIButton extends BInventoryButton {
 			};
 			break;
 		case NUMBER:
-			editer = new EditGUIValueNumber(key, value) {
+			editor = new EditGUIValueNumber(key, value) {
 
 				@Override
 				public void setValue(Player player, Number value) {
@@ -86,7 +86,7 @@ public class EditGUIButton extends BInventoryButton {
 			};
 			break;
 		case STRING:
-			editer = new EditGUIValueString(key, value) {
+			editor = new EditGUIValueString(key, value) {
 
 				@Override
 				public void setValue(Player player, String value) {
@@ -101,7 +101,7 @@ public class EditGUIButton extends BInventoryButton {
 	}
 
 	public EditGUIButton addOptions(String... str) {
-		getEditer().addOptions(str);
+		getEditor().addOptions(str);
 		return this;
 	}
 
@@ -110,21 +110,23 @@ public class EditGUIButton extends BInventoryButton {
 	public ItemStack getItem(Player player, HashMap<String, String> placeholders) {
 		ItemBuilder builder = getBuilder();
 		builder.addPlaceholder(placeholders);
-		if (!(getEditer() instanceof EditGUIValueList)) {
+		if (!(getEditor() instanceof EditGUIValueList)) {
 			if (!builder.hasCustomDisplayName()) {
-				builder.setName("&cSet " + getEditer().getKey());
+				builder.setName("&cSet " + getEditor().getKey());
 			}
-			builder.setLore("&cCurrent value: " + getEditer().getCurrentValue());
+			builder.setLore("&cCurrent value: " + getEditor().getCurrentValue());
 		} else {
 			if (!builder.hasCustomDisplayName()) {
-				builder.setName("&cEdit list for " + getEditer().getKey());
+				builder.setName("&cEdit list for " + getEditor().getKey());
 			}
-			if (getEditer().getCurrentValue() instanceof ArrayList<?>) {
+			if (getEditor().getCurrentValue() instanceof ArrayList<?>) {
 				builder.setLore(
-						ArrayUtils.getInstance().makeStringList((ArrayList<String>) getEditer().getCurrentValue()));
+						ArrayUtils.getInstance().makeStringList((ArrayList<String>) getEditor().getCurrentValue()));
+			} else {
+				builder.setLore("&cCurrent value: null");
 			}
 		}
-		ArrayList<String> lores = getEditer().getLores();
+		ArrayList<String> lores = getEditor().getLores();
 		if (lores != null) {
 			for (String t : lores) {
 				builder.addLoreLine("&3" + t);
@@ -135,8 +137,8 @@ public class EditGUIButton extends BInventoryButton {
 
 	@Override
 	public void onClick(ClickEvent clickEvent) {
-		getEditer().setInv(getInv());
-		getEditer().onClick(clickEvent);
+		getEditor().setInv(getInv());
+		getEditor().onClick(clickEvent);
 	}
 
 	private void setV(Player player, Object value) {
