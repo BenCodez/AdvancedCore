@@ -1084,7 +1084,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				})));
+				}.addLore("Messages for player as a list"))));
 
 		injectedRewards.add(new RewardInjectStringList("Message") {
 
@@ -1102,7 +1102,7 @@ public class RewardHandler {
 				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
 			}
-		})));
+		}.addLore("Messages for player as a list"))));
 
 		injectedRewards.add(new RewardInjectString("Messages.Player") {
 
@@ -1121,7 +1121,8 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addLore("Player message, doesn't support lists"))).validator(new RewardInjectValidator() {
+				}.addLore("Player message, single message, no list")))
+				.validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
