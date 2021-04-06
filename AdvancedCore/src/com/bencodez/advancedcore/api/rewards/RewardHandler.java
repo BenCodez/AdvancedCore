@@ -909,8 +909,8 @@ public class RewardHandler {
 				user.giveExp(num);
 				return null;
 			}
-		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE), new EditGUIValueNumber("EXP", null) {
+		}.asPlaceholder("EXP").priority(100)
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP", null) {
 
 					@Override
 					public void setValue(Player player, Number value) {
@@ -936,18 +936,16 @@ public class RewardHandler {
 				user.giveExpLevels(num);
 				return null;
 			}
-		}.asPlaceholder("EXP").priority(100)
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE),
-						new EditGUIValueNumber("EXPLevels", null) {
+		}.asPlaceholder("EXP").priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXPLevels", null) {
 
-							@Override
-							public void setValue(Player player, Number value) {
-								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-								reward.setValue(getKey(), value.intValue());
-								plugin.reloadAdvancedCore(false);
-							}
-						}.addLore("EXPLevels to give")))
-				.validator(new RewardInjectValidator() {
+					@Override
+					public void setValue(Player player, Number value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value.intValue());
+						plugin.reloadAdvancedCore(false);
+					}
+				}.addLore("EXPLevels to give"))).validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -969,7 +967,7 @@ public class RewardHandler {
 				return "" + value;
 			}
 		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE), new EditGUIValueNumber("EXP.Min", null) {
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Min", null) {
 
 					@Override
 					public void setValue(Player player, Number num) {
@@ -977,9 +975,8 @@ public class RewardHandler {
 						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addLore("Minium amount of EXP to give for random amount")))
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE),
-						new EditGUIValueNumber("EXP.Max", null) {
+				}.addLore("Minium amount of EXP to give for random amount"))).addEditButton(
+						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Max", null) {
 
 							@Override
 							public void setValue(Player player, Number value) {
@@ -1009,18 +1006,17 @@ public class RewardHandler {
 				user.giveExpLevels(value);
 				return "" + value;
 			}
-		}.asPlaceholder("EXP").priority(100)
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE),
-						new EditGUIValueNumber("EXPLevels.Min", null) {
+		}.asPlaceholder("EXP").priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXPLevels.Min", null) {
 
-							@Override
-							public void setValue(Player player, Number num) {
-								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-								reward.setValue(getKey(), num.intValue());
-								plugin.reloadAdvancedCore(false);
-							}
-						}.addLore("Minium amount of EXPLevels to give for random amount")))
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.EXPERIENCE_BOTTLE),
+					@Override
+					public void setValue(Player player, Number num) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), num.intValue());
+						plugin.reloadAdvancedCore(false);
+					}
+				}.addLore("Minium amount of EXPLevels to give for random amount")))
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
 						new EditGUIValueNumber("EXPLevels.Max", null) {
 
 							@Override
@@ -1121,8 +1117,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addLore("Player message, single message, no list")))
-				.validator(new RewardInjectValidator() {
+				}.addLore("Player message, single message, no list"))).validator(new RewardInjectValidator() {
 
 					@Override
 					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
