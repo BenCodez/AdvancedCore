@@ -1185,24 +1185,23 @@ public class RewardHandler {
 				MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), value, placeholders);
 				return null;
 			}
-		}.addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.COMMAND_BLOCK), new EditGUIValueString("Command", null) {
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Command", null) {
 
-					@Override
-					public void setValue(Player player, String value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value);
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("Execute single console command"))).validator(new RewardInjectValidator() {
+			@Override
+			public void setValue(Player player, String value) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value);
+				plugin.reloadAdvancedCore(false);
+			}
+		}.addLore("Execute single console command"))).validator(new RewardInjectValidator() {
 
-					@Override
-					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.getString(inject.getPath()).startsWith("/")) {
-							warning(reward, inject, "Can't start command with /");
-						}
-					}
-				}));
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.getString(inject.getPath()).startsWith("/")) {
+					warning(reward, inject, "Can't start command with /");
+				}
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("ActionBar") {
 
@@ -1260,34 +1259,33 @@ public class RewardHandler {
 				}
 				return null;
 			}
-		}.addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.COMMAND_BLOCK), new EditGUIValueList("Commands", null) {
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands", null) {
 
-					@Override
-					public void setValue(Player player, ArrayList<String> value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value);
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("List of console commands"))).validator(new RewardInjectValidator() {
+			@Override
+			public void setValue(Player player, ArrayList<String> value) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value);
+				plugin.reloadAdvancedCore(false);
+			}
+		}.addLore("List of console commands"))).validator(new RewardInjectValidator() {
 
-					@Override
-					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.isList(inject.getPath()) && !data.isConfigurationSection(inject.getPath())) {
-							List<String> list = data.getStringList(inject.getPath());
-							if (list != null) {
-								if (list.isEmpty()) {
-									warning(reward, inject, "No commands listed");
-								}
-								for (String str : list) {
-									if (str.startsWith("/")) {
-										warning(reward, inject, "Commands can not start with /");
-									}
-								}
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.isList(inject.getPath()) && !data.isConfigurationSection(inject.getPath())) {
+					List<String> list = data.getStringList(inject.getPath());
+					if (list != null) {
+						if (list.isEmpty()) {
+							warning(reward, inject, "No commands listed");
+						}
+						for (String str : list) {
+							if (str.startsWith("/")) {
+								warning(reward, inject, "Commands can not start with /");
 							}
 						}
 					}
-				}));
+				}
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Commands") {
 
