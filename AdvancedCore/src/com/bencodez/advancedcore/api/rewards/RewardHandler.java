@@ -909,8 +909,8 @@ public class RewardHandler {
 				user.giveExp(num);
 				return null;
 			}
-		}.asPlaceholder("EXP").priority(100)
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP", null) {
+		}.asPlaceholder("EXP").priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueNumber("EXP", null) {
 
 					@Override
 					public void setValue(Player player, Number value) {
@@ -937,7 +937,7 @@ public class RewardHandler {
 				return null;
 			}
 		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXPLevels", null) {
+				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueNumber("EXPLevels", null) {
 
 					@Override
 					public void setValue(Player player, Number value) {
@@ -967,7 +967,7 @@ public class RewardHandler {
 				return "" + value;
 			}
 		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Min", null) {
+				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueNumber("EXP.Min", null) {
 
 					@Override
 					public void setValue(Player player, Number num) {
@@ -975,8 +975,9 @@ public class RewardHandler {
 						reward.setValue(getKey(), num.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addLore("Minium amount of EXP to give for random amount"))).addEditButton(
-						new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXP.Max", null) {
+				}.addLore("Minium amount of EXP to give for random amount")))
+				.addEditButton(new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"),
+						new EditGUIValueNumber("EXP.Max", null) {
 
 							@Override
 							public void setValue(Player player, Number value) {
@@ -1007,7 +1008,7 @@ public class RewardHandler {
 				return "" + value;
 			}
 		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("EXPLevels.Min", null) {
+				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueNumber("EXPLevels.Min", null) {
 
 					@Override
 					public void setValue(Player player, Number num) {
@@ -1016,7 +1017,7 @@ public class RewardHandler {
 						plugin.reloadAdvancedCore(false);
 					}
 				}.addLore("Minium amount of EXPLevels to give for random amount")))
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+				.addEditButton(new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"),
 						new EditGUIValueNumber("EXPLevels.Max", null) {
 
 							@Override
@@ -1185,7 +1186,7 @@ public class RewardHandler {
 				MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), value, placeholders);
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Command", null) {
+		}.addEditButton(new EditGUIButton(new ItemBuilder("COMMAND_BLOCK"), new EditGUIValueString("Command", null) {
 
 			@Override
 			public void setValue(Player player, String value) {
@@ -1259,7 +1260,7 @@ public class RewardHandler {
 				}
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands", null) {
+		}.addEditButton(new EditGUIButton(new ItemBuilder("COMMAND_BLOCK"), new EditGUIValueList("Commands", null) {
 
 			@Override
 			public void setValue(Player player, ArrayList<String> value) {

@@ -273,6 +273,14 @@ public class ItemBuilder {
 		this(m, 1);
 	}
 
+	public ItemBuilder(String material) {
+		String materialStr = material;
+		if (NMSManager.getInstance().isVersion("1.12")) {
+			materialStr = "PAPER";
+		}
+		this.is = new ItemStack(Material.valueOf(materialStr));
+	}
+
 	/**
 	 * Create a new ItemBuilder from scratch.
 	 *
