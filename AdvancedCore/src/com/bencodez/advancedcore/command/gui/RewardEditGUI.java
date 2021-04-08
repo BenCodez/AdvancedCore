@@ -76,10 +76,16 @@ public class RewardEditGUI {
 
 		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
 			if (injectReward.isEditable()) {
-				for (EditGUIButton b : injectReward.getEditButtons()) {
-					b.getEditor().setCurrentValue(rewardEditData.getValue(b.getEditor().getKey()));
-					inv.addButton(b);
+				for (BInventoryButton b : injectReward.getEditButtons()) {
+					if (b instanceof EditGUIButton) {
+						EditGUIButton eb = (EditGUIButton) b;
+						eb.getEditor().setCurrentValue(rewardEditData.getValue(eb.getEditor().getKey()));
+						inv.addButton(eb);
+					} else {
+						inv.addButton(b);
+					}
 				}
+
 			}
 		}
 		inv.sort();
@@ -101,9 +107,14 @@ public class RewardEditGUI {
 
 		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
 			if (injectReward.isEditable()) {
-				for (EditGUIButton b : injectReward.getEditButtons()) {
-					if (rewardEditData.hasPath(b.getEditor().getKey()) || unsetValuesShown) {
-						b.getEditor().setCurrentValue(rewardEditData.getValue(b.getEditor().getKey()));
+				for (BInventoryButton b : injectReward.getEditButtons()) {
+					if (b instanceof EditGUIButton) {
+						EditGUIButton eb = (EditGUIButton) b;
+						if (rewardEditData.hasPath(eb.getEditor().getKey()) || unsetValuesShown) {
+							eb.getEditor().setCurrentValue(rewardEditData.getValue(eb.getEditor().getKey()));
+							inv.addButton(eb);
+						}
+					} else {
 						inv.addButton(b);
 					}
 				}

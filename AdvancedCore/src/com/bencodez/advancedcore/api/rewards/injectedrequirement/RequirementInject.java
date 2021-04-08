@@ -3,7 +3,7 @@ package com.bencodez.advancedcore.api.rewards.injectedrequirement;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
+import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.rewards.Inject;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
@@ -26,7 +26,7 @@ public abstract class RequirementInject extends Inject {
 		super(path);
 	}
 
-	public RequirementInject addEditButton(EditGUIButton button) {
+	public RequirementInject addEditButton(BInventoryButton button) {
 		getEditButtons().add(button);
 		return this;
 	}

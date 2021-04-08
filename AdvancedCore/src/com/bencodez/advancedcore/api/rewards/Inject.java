@@ -2,7 +2,7 @@ package com.bencodez.advancedcore.api.rewards;
 
 import java.util.ArrayList;
 
-import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
+import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -21,7 +21,7 @@ public class Inject {
 	private int priority = 50;
 	@Getter
 	@Setter
-	private ArrayList<EditGUIButton> editButtons = new ArrayList<EditGUIButton>();
+	private ArrayList<BInventoryButton> editButtons = new ArrayList<BInventoryButton>();
 
 	public Inject(String path) {
 		this.path = path;
