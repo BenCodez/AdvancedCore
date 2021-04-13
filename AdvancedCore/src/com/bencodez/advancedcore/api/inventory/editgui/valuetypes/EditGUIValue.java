@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
+import com.bencodez.advancedcore.api.rewards.RewardEditData;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -27,6 +28,14 @@ public abstract class EditGUIValue {
 	@Getter
 	@Setter
 	private ArrayList<String> lores;
+	
+	@Getter
+	@Setter
+	private boolean canGetValue = true;
+	
+	public boolean containsKey(RewardEditData rewardEditData) {
+		return rewardEditData.hasPath(getKey());
+	}
 
 	public EditGUIValue addOptions(String... str) {
 		for (String s : str) {

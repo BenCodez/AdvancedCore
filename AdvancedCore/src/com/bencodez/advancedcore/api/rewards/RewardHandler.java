@@ -24,8 +24,10 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.exceptions.FileDirectoryException;
+import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueBoolean;
+import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueList;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueNumber;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
@@ -36,6 +38,10 @@ import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditActionBar;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXP;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXPLevels;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMoney;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectBoolean;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectConfigurationSection;
@@ -840,16 +846,23 @@ public class RewardHandler {
 				user.giveMoney(num);
 				return "" + (int) num;
 			}
-		}.asPlaceholder("Money").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueNumber("Money", null) {
+		}.asPlaceholder("Money").priority(100)
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueInventory("Money") {
 
 					@Override
-					public void setValue(Player player, Number value) {
+					public void openInventory(ClickEvent clickEvent) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value.intValue());
-						plugin.reloadAdvancedCore(false);
+						new RewardEditMoney() {
+
+							@Override
+							public void setVal(String key, Object value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(key, value);
+								plugin.reloadAdvancedCore(false);
+							}
+						}.open(clickEvent.getPlayer(), reward);
 					}
-				}.addLore("Money to execute, may not work on some economy plugins")))
+				}.addLore("Money to execute, may not work on some economy plugins").addLore("Supports random amounts")))
 				.validator(new RewardInjectValidator() {
 
 					@Override
@@ -872,34 +885,15 @@ public class RewardHandler {
 				DecimalFormat f = new DecimalFormat("##.00");
 				return "" + f.format(value);
 			}
-		}.asPlaceholder("Money").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueNumber("Money.Min", null) {
+		}.asPlaceholder("Money").priority(100).validator(new RewardInjectValidator() {
 
-					@Override
-					public void setValue(Player player, Number num) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), num.intValue());
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("Minium amount of money for random money amount"))).addEditButton(
-						new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueNumber("Money.Max", null) {
-
-							@Override
-							public void setValue(Player player, Number value) {
-								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-								reward.setValue(getKey(), value.intValue());
-								plugin.reloadAdvancedCore(false);
-							}
-						}.addLore("Maxium amount of money for random money amount")))
-				.validator(new RewardInjectValidator() {
-
-					@Override
-					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.getDouble("Money.Max", -1) == 0) {
-							warning(reward, inject, "Maxium money can not be 0");
-						}
-					}
-				}));
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.getDouble("Money.Max", -1) == 0) {
+					warning(reward, inject, "Maxium money can not be 0");
+				}
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectInt("EXP", 0) {
 
@@ -910,13 +904,20 @@ public class RewardHandler {
 				return null;
 			}
 		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueNumber("EXP", null) {
+				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueInventory("EXP") {
 
 					@Override
-					public void setValue(Player player, Number value) {
+					public void openInventory(ClickEvent clickEvent) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value.intValue());
-						plugin.reloadAdvancedCore(false);
+						new RewardEditEXP() {
+
+							@Override
+							public void setVal(String key, Object value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(key, value);
+								plugin.reloadAdvancedCore(false);
+							}
+						}.open(clickEvent.getPlayer(), reward);
 					}
 				}.addLore("EXP to give"))).validator(new RewardInjectValidator() {
 
@@ -937,13 +938,20 @@ public class RewardHandler {
 				return null;
 			}
 		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueNumber("EXPLevels", null) {
+				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueInventory("EXPLevels") {
 
 					@Override
-					public void setValue(Player player, Number value) {
+					public void openInventory(ClickEvent clickEvent) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value.intValue());
-						plugin.reloadAdvancedCore(false);
+						new RewardEditEXPLevels() {
+
+							@Override
+							public void setVal(String key, Object value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(key, value);
+								plugin.reloadAdvancedCore(false);
+							}
+						}.open(clickEvent.getPlayer(), reward);
 					}
 				}.addLore("EXPLevels to give"))).validator(new RewardInjectValidator() {
 
@@ -966,35 +974,15 @@ public class RewardHandler {
 				user.giveExp(value);
 				return "" + value;
 			}
-		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueNumber("EXP.Min", null) {
+		}.asPlaceholder("EXP").priority(100).validator(new RewardInjectValidator() {
 
-					@Override
-					public void setValue(Player player, Number num) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), num.intValue());
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("Minium amount of EXP to give for random amount")))
-				.addEditButton(new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"),
-						new EditGUIValueNumber("EXP.Max", null) {
-
-							@Override
-							public void setValue(Player player, Number value) {
-								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-								reward.setValue(getKey(), value.intValue());
-								plugin.reloadAdvancedCore(false);
-							}
-						}.addLore("Maxium amount of EXP to give for random amount")))
-				.validator(new RewardInjectValidator() {
-
-					@Override
-					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.getDouble("EXP.Max", -1) == 0) {
-							warning(reward, inject, "Max EXP can not be 0");
-						}
-					}
-				}));
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.getDouble("EXP.Max", -1) == 0) {
+					warning(reward, inject, "Max EXP can not be 0");
+				}
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("EXPLevels") {
 
@@ -1007,35 +995,15 @@ public class RewardHandler {
 				user.giveExpLevels(value);
 				return "" + value;
 			}
-		}.asPlaceholder("EXP").priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueNumber("EXPLevels.Min", null) {
+		}.asPlaceholder("EXP").priority(100).validator(new RewardInjectValidator() {
 
-					@Override
-					public void setValue(Player player, Number num) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), num.intValue());
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("Minium amount of EXPLevels to give for random amount")))
-				.addEditButton(new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"),
-						new EditGUIValueNumber("EXPLevels.Max", null) {
-
-							@Override
-							public void setValue(Player player, Number value) {
-								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-								reward.setValue(getKey(), value.intValue());
-								plugin.reloadAdvancedCore(false);
-							}
-						}.addLore("Maxium amount of EXPLevels to give for random amount")))
-				.validator(new RewardInjectValidator() {
-
-					@Override
-					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.getDouble("EXP.Max", -1) == 0) {
-							warning(reward, inject, "Max EXP can not be 0");
-						}
-					}
-				}));
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.getDouble("EXP.Max", -1) == 0) {
+					warning(reward, inject, "Max EXP can not be 0");
+				}
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectString("Message") {
 
@@ -1214,41 +1182,38 @@ public class RewardHandler {
 						section.getInt("Delay", 30));
 				return null;
 			}
-		}.addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueNumber("ActionBar.Delay", null) {
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("ActionBar") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditActionBar() {
 
 					@Override
-					public void setValue(Player player, Number num) {
+					public void setVal(String key, Object value) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), num.intValue());
+						reward.setValue(key, value);
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addLore("Actionbar delay"))).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-						new EditGUIValueString("ActionBar.Message", null) {
+				}.open(clickEvent.getPlayer(), reward);
+			}
 
-							@Override
-							public void setValue(Player player, String value) {
-								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-								reward.setValue(getKey(), value);
-								plugin.reloadAdvancedCore(false);
-							}
-						}.addLore("Actionbar message")))
-				.validator(new RewardInjectValidator() {
+		}.addLore("Actionbar configuration"))).validator(new RewardInjectValidator() {
 
-					@Override
-					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						String str = data.getString("ActionBar.Message");
-						int delay = data.getInt("ActionBar.Delay", -1);
-						if (str != null && str.isEmpty()) {
-							warning(reward, inject, "No actionbar message set");
-						}
-						if (delay == -1) {
-							warning(reward, inject, "No actionbar delay set");
-						} else if (delay == 0) {
-							warning(reward, inject, "Actionbar delay can not be 0");
-						}
-					}
-				}));
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				String str = data.getString("ActionBar.Message");
+				int delay = data.getInt("ActionBar.Delay", -1);
+				if (str != null && str.isEmpty()) {
+					warning(reward, inject, "No actionbar message set");
+				}
+				if (delay == -1) {
+					warning(reward, inject, "No actionbar delay set");
+				} else if (delay == 0) {
+					warning(reward, inject, "Actionbar delay can not be 0");
+				}
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectStringList("Commands") {
 

@@ -79,7 +79,9 @@ public class RewardEditGUI {
 				for (BInventoryButton b : injectReward.getEditButtons()) {
 					if (b instanceof EditGUIButton) {
 						EditGUIButton eb = (EditGUIButton) b;
-						eb.getEditor().setCurrentValue(rewardEditData.getValue(eb.getEditor().getKey()));
+						if (eb.getEditor().isCanGetValue()) {
+							eb.getEditor().setCurrentValue(rewardEditData.getValue(eb.getEditor().getKey()));
+						}
 						inv.addButton(eb);
 					} else {
 						inv.addButton(b);
@@ -110,8 +112,10 @@ public class RewardEditGUI {
 				for (BInventoryButton b : injectReward.getEditButtons()) {
 					if (b instanceof EditGUIButton) {
 						EditGUIButton eb = (EditGUIButton) b;
-						if (rewardEditData.hasPath(eb.getEditor().getKey()) || unsetValuesShown) {
-							eb.getEditor().setCurrentValue(rewardEditData.getValue(eb.getEditor().getKey()));
+						if (eb.getEditor().containsKey(rewardEditData) || unsetValuesShown) {
+							if (eb.getEditor().isCanGetValue()) {
+								eb.getEditor().setCurrentValue(rewardEditData.getValue(eb.getEditor().getKey()));
+							}
 							inv.addButton(eb);
 						}
 					} else {
@@ -166,7 +170,7 @@ public class RewardEditGUI {
 		});
 
 		inv.addButton(new BInventoryButton(
-				new ItemBuilder(Material.DIAMOND).setName("&cRewards").addLoreLine("&cOnly shows set values")) {
+				new ItemBuilder(Material.DIAMOND).setName("&cRewards").addLoreLine("&cOnly shows current set values")) {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
