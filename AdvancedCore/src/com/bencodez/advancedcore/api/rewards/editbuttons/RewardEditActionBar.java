@@ -10,7 +10,7 @@ public abstract class RewardEditActionBar extends RewardEdit {
 	}
 
 	public void open(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit ActionBar");
+		EditGUI inv = new EditGUI("Edit ActionBar: " + reward.getName());
 		inv.addData("Reward", reward);
 
 		inv.addButton(getStringButton("ActionBar.Message", reward));

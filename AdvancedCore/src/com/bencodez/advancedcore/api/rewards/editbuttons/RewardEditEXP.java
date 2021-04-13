@@ -10,7 +10,7 @@ public abstract class RewardEditEXP extends RewardEdit{
 	}
 
 	public void open(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit EXP");
+		EditGUI inv = new EditGUI("Edit EXP: " + reward.getName());
 		inv.addData("Reward", reward);
 
 		inv.addButton(getIntButton("EXP",reward));

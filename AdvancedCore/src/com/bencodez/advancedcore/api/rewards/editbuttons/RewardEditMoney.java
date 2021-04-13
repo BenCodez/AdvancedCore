@@ -10,7 +10,7 @@ public abstract class RewardEditMoney extends RewardEdit {
 	}
 
 	public void open(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit Money");
+		EditGUI inv = new EditGUI("Edit Money: " + reward.getName());
 		inv.addData("Reward", reward);
 
 		inv.addButton(getIntButton("Money", reward));

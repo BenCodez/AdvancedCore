@@ -39,9 +39,14 @@ import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditActionBar;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditBossBar;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXP;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXPLevels;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEffect;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditFirework;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMoney;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditSound;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTitle;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectBoolean;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectConfigurationSection;
@@ -1554,7 +1559,22 @@ public class RewardHandler {
 				return null;
 
 			}
-		});
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAINTING), new EditGUIValueInventory("Title") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditTitle() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Configure Title & SubTitle"))));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("BossBar") {
 
@@ -1572,7 +1592,22 @@ public class RewardHandler {
 				return null;
 
 			}
-		});
+		}.addEditButton(new EditGUIButton(new ItemBuilder("DRAGON_HEAD"), new EditGUIValueInventory("BossBar") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditBossBar() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Configure bossbar"))));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Sound") {
 
@@ -1591,7 +1626,22 @@ public class RewardHandler {
 				return null;
 
 			}
-		});
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.NOTE_BLOCK), new EditGUIValueInventory("Sound") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditSound() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Configure sound"))));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Effect") {
 
@@ -1605,7 +1655,22 @@ public class RewardHandler {
 				return null;
 
 			}
-		});
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueInventory("Effect") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditEffect() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Configure particle effect"))));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Firework") {
 
@@ -1624,7 +1689,22 @@ public class RewardHandler {
 				return null;
 
 			}
-		});
+		}.addEditButton(new EditGUIButton(new ItemBuilder("FIREWORK_ROCKET"), new EditGUIValueInventory("Firework") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditFirework() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Configure firework effect"))));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Item") {
 

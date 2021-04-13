@@ -112,7 +112,7 @@ public class RewardEditGUI {
 				for (BInventoryButton b : injectReward.getEditButtons()) {
 					if (b instanceof EditGUIButton) {
 						EditGUIButton eb = (EditGUIButton) b;
-						if (eb.getEditor().containsKey(rewardEditData) || unsetValuesShown) {
+						if (unsetValuesShown || eb.getEditor().containsKey(rewardEditData)) {
 							if (eb.getEditor().isCanGetValue()) {
 								eb.getEditor().setCurrentValue(rewardEditData.getValue(eb.getEditor().getKey()));
 							}
@@ -137,7 +137,7 @@ public class RewardEditGUI {
 		} else {
 			inv.addButton(new BInventoryButton(
 					new ItemBuilder(Material.BOOK).setName("&cValues not setable in GUI yet:").setLore(
-							"&aLocationDistance, AdvancedPriority, Javascript, Lucky, Random, Rewards, AdvancedRandomReward, Potions(Effects only), Title, BoosBar, Sound, Effect, FireWork, Item, Items, AdvancedPriority, SpecialChance, RandomItem, Choices",
+							"&aLocationDistance, AdvancedPriority, Javascript, Lucky, Random, Rewards, AdvancedRandomReward, Potions(Effects only), Item, Items, AdvancedPriority, SpecialChance, RandomItem, Choices",
 							"&bThis is a long list, overtime these will eventually be aded to edit gui",
 							"&3Also looking for feedback on GUI")) {
 

@@ -12,6 +12,14 @@ public class RewardEditData {
 		this.directlyDefinedReward = directlyDefinedReward;
 	}
 
+	public String getName() {
+		if (reward != null) {
+			return reward.getName();
+		} else {
+			return directlyDefinedReward.getPath();
+		}
+	}
+
 	public boolean hasPath(String path) {
 		if (reward != null) {
 			return reward.getConfig().getConfigData().contains(path, false);
