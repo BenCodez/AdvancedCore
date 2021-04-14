@@ -182,6 +182,8 @@ public class BInventory {
 
 	/**
 	 * Adds the button.
+	 * 
+	 * Slot of -2 will add item to end of the GUI (last available slot)
 	 *
 	 * @param button the button
 	 */
@@ -189,6 +191,9 @@ public class BInventory {
 		int slot = button.getSlot();
 		if (slot == -1) {
 			slot = getNextSlot();
+		}
+		if (slot == -2) {
+			slot = getProperSize(getNextSlot());
 		}
 		if (button.getFillSlots() != null && button.getFillSlots().size() > 0) {
 			for (Integer fill : button.getFillSlots()) {
