@@ -17,6 +17,8 @@ public abstract class RewardEditMoney extends RewardEdit {
 
 		inv.addButton(getIntButton("Money.Min", reward));
 		inv.addButton(getIntButton("Money.Max", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

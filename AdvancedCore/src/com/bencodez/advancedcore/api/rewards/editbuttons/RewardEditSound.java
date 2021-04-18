@@ -17,6 +17,8 @@ public abstract class RewardEditSound extends RewardEdit {
 		inv.addButton(getStringButton("Sound.Sound", reward));
 		inv.addButton(getDoubleButton("Sound.Volume", reward));
 		inv.addButton(getDoubleButton("Sound.Pitch", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

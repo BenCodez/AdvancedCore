@@ -17,6 +17,8 @@ public abstract class RewardEditEXP extends RewardEdit{
 
 		inv.addButton(getIntButton("EXP.Min",reward));
 		inv.addButton(getIntButton("EXP.Max",reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

@@ -19,6 +19,8 @@ public abstract class RewardEditTitle extends RewardEdit {
 		inv.addButton(getIntButton("Title.FadeIn", reward));
 		inv.addButton(getIntButton("Title.ShowTime", reward));
 		inv.addButton(getIntButton("Title.FadeOut", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

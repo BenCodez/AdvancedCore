@@ -19,6 +19,8 @@ public abstract class RewardEditFirework extends RewardEdit {
 		inv.addButton(getBooleanButton("Firework.Trail", reward));
 		inv.addButton(getBooleanButton("Firework.Flicker", reward));
 		inv.addButton(getStringListButton("Firework.Types", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

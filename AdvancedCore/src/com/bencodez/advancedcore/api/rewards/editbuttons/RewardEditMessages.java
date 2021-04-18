@@ -24,6 +24,8 @@ public abstract class RewardEditMessages extends RewardEdit {
 		// messages.broadcast
 		inv.addButton(getStringButton("Messages.Broadcast", reward).addLore("Single line broadcast"));
 		inv.addButton(getStringListButton("Messages.Broadcast", reward).addLore("List of broadcast messages"));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

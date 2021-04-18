@@ -5,11 +5,14 @@ import java.util.ArrayList;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueBoolean;
+import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueList;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueNumber;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
+import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 
@@ -63,6 +66,25 @@ public abstract class RewardEdit {
 				setVal(key, value);
 			}
 		});
+	}
+
+	public EditGUIButton getBackButton(RewardEditData reward) {
+		EditGUIButton b = new EditGUIButton(new ItemBuilder("BARRIER").setName("&cGo back"),
+				new EditGUIValueInventory("") {
+
+					@Override
+					public void openInventory(ClickEvent clickEvent) {
+						reward.reOpenEditGUI(clickEvent.getPlayer());
+					}
+				});
+		b.setSlot(-2);
+		return b;
+	}
+
+	public EditGUIButton getBackButtonCustom(RewardEditData reward, EditGUIValueInventory edit) {
+		EditGUIButton b = new EditGUIButton(new ItemBuilder("BARRIER").setName("&cGo back"), edit);
+		b.setSlot(-2);
+		return b;
 	}
 
 	public abstract void setVal(String key, Object value);

@@ -19,6 +19,8 @@ public abstract class RewardEditBossBar extends RewardEdit {
 		inv.addButton(getStringButton("BossBar.Style", reward));
 		inv.addButton(getDoubleButton("BossBar.Progress", reward));
 		inv.addButton(getIntButton("BossBar.Delay", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

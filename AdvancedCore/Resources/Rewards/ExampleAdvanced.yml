@@ -113,9 +113,9 @@ Javascript:
   Enabled: false
   Expression: ''
   # Reward files to run if expression is true
-  TrueRewards: []
+  TrueRewards: {}
   # Reward files to run if expression is false
-  FalseRewards: []
+  FalseRewards: {}
   
 # Do things like set health or other things
 # not possible with commands

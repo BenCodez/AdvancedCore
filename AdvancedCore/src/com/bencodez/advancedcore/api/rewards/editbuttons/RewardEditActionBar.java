@@ -15,6 +15,8 @@ public abstract class RewardEditActionBar extends RewardEdit {
 
 		inv.addButton(getStringButton("ActionBar.Message", reward));
 		inv.addButton(getIntButton("ActionBar.Delay", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

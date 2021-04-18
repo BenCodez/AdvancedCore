@@ -172,16 +172,16 @@ public class RewardEditGUI {
 				}
 			});
 		} else {
-			inv.addButton(new BInventoryButton(
-					new ItemBuilder(Material.BOOK).setName("&cValues not setable in GUI yet:").setLore(
-							"&aLocationDistance, AdvancedPriority, Javascript, Lucky, Random, Rewards, AdvancedRandomReward, Potions(Effects only), Item, Items, AdvancedPriority, SpecialChance, RandomItem, Choices",
-							"&bThis is a long list, overtime these will eventually be aded to edit gui",
-							"&3Also looking for feedback on GUI")) {
+			inv.addButton(
+					new BInventoryButton(new ItemBuilder(Material.BOOK).setName("&cValues not setable in GUI yet:")
+							.setLore("&aRandom, Potions(Effects only), Item, Itemss, RandomItem",
+									"&bThis is a long list, overtime these will eventually be aded to edit gui",
+									"&3Also looking for feedback on GUI")) {
 
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-				}
-			});
+						@Override
+						public void onClick(ClickEvent clickEvent) {
+						}
+					});
 		}
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cGo back")) {
 
@@ -223,6 +223,17 @@ public class RewardEditGUI {
 				openRewardGUIRewards(clickEvent.getPlayer(), rewardEditData, rewardName, true);
 			}
 		});
+
+		if (rewardEditData.getParent() != null) {
+			inv.addButton(
+					new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cOpen parent reward edit GUI")) {
+
+						@Override
+						public void onClick(ClickEvent clickEvent) {
+							rewardEditData.getParent().reOpenEditGUI(clickEvent.getPlayer());
+						}
+					}.setSlot(-2));
+		}
 
 		inv.openInventory(player);
 	}

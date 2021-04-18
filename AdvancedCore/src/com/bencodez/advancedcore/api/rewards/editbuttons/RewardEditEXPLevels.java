@@ -17,6 +17,8 @@ public abstract class RewardEditEXPLevels extends RewardEdit{
 
 		inv.addButton(getIntButton("EXPLevels.Min",reward));
 		inv.addButton(getIntButton("EXPLevels.Max",reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

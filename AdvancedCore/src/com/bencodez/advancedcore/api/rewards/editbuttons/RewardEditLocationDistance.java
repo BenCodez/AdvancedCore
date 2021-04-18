@@ -18,6 +18,8 @@ public abstract class RewardEditLocationDistance extends RewardEdit {
 		inv.addButton(getIntButton("LocationDistance.Y", reward));
 		inv.addButton(getIntButton("LocationDistance.Z", reward));
 		inv.addButton(getIntButton("LocationDistance.Distance", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

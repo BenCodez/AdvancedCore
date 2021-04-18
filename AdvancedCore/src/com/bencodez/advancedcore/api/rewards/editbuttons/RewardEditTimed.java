@@ -16,6 +16,8 @@ public abstract class RewardEditTimed extends RewardEdit {
 		inv.addButton(getBooleanButton("Timed.Enabled", reward));
 		inv.addButton(getIntButton("Timed.Hour", reward));
 		inv.addButton(getIntButton("Timed.Minute", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

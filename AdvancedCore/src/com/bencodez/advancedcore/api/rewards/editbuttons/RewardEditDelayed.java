@@ -17,6 +17,8 @@ public abstract class RewardEditDelayed extends RewardEdit {
 		inv.addButton(getIntButton("Delayed.Hours", reward));
 		inv.addButton(getIntButton("Delayed.Minutes", reward));
 		inv.addButton(getIntButton("Delayed.Seconds", reward));
+		
+		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}

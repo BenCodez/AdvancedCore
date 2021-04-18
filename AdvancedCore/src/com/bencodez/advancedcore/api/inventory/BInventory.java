@@ -193,7 +193,7 @@ public class BInventory {
 			slot = getNextSlot();
 		}
 		if (slot == -2) {
-			slot = getProperSize(getNextSlot());
+			slot = getProperSize(getNextSlot())-1;
 		}
 		if (button.getFillSlots() != null && button.getFillSlots().size() > 0) {
 			for (Integer fill : button.getFillSlots()) {

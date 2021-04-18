@@ -1,10 +1,18 @@
 package com.bencodez.advancedcore.api.rewards;
 
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+
+import com.bencodez.advancedcore.command.gui.RewardEditGUI;
+
+import lombok.Getter;
 
 public class RewardEditData {
 	private Reward reward;
 	private DirectlyDefinedReward directlyDefinedReward;
+	
+	@Getter
+	private RewardEditData parent;
 
 	public RewardEditData(Reward reward) {
 		this.reward = reward;
@@ -12,6 +20,20 @@ public class RewardEditData {
 
 	public RewardEditData(DirectlyDefinedReward directlyDefinedReward) {
 		this.directlyDefinedReward = directlyDefinedReward;
+	}
+	
+	public RewardEditData(DirectlyDefinedReward directlyDefinedReward, RewardEditData parent) {
+		this.directlyDefinedReward = directlyDefinedReward;
+		this.parent = parent;
+	}
+	
+	public void reOpenEditGUI(Player player) {
+		if (reward != null) {
+			RewardEditGUI.getInstance().openRewardGUI(player, reward);
+		} else {
+			RewardEditGUI.getInstance().openRewardGUI(player, directlyDefinedReward);
+		}
+		
 	}
 
 	public String getName() {

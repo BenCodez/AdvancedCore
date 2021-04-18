@@ -14,15 +14,17 @@ import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 
-public abstract class RewardEditAdvancedPriority extends RewardEdit {
-	public RewardEditAdvancedPriority() {
+public abstract class RewardEditChoices extends RewardEdit {
+	public RewardEditChoices() {
 	}
 
 	public void open(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit AdvancedPriority: " + reward.getName());
+		EditGUI inv = new EditGUI("Edit Choices: " + reward.getName());
 		inv.addData("Reward", reward);
 
-		inv.addButton(new EditGUIButton(new EditGUIValueInventory("AdvancedPriority") {
+		inv.addButton(getBooleanButton("EnableChoices", reward).addLore("Enable choice rewards"));
+
+		inv.addButton(new EditGUIButton(new EditGUIValueInventory("Choices") {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
@@ -31,102 +33,65 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 					@Override
 					public void onInput(Player player, String value) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.createSection("AdvancedPriority." + value);
+						reward.createSection("Choices." + value);
 						reloadAdvancedCore();
 					}
 				}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				;
 			}
-		}).setName("&aAdd sub reward").addLore("Rewards execute in order of addition"));
+		}).setName("&aAdd sub reward"));
 
-		inv.addButton(new EditGUIButton(new EditGUIValueInventory("AdvancedPriority") {
+		inv.addButton(new EditGUIButton(new EditGUIValueInventory("Choices") {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				if (reward.hasPath("AdvancedPriority")) {
+				if (reward.hasPath("Choices")) {
 					openRemove(player, reward);
 				}
 			}
 		}).setName("&aRemove sub reward"));
 
-		inv.addButton(new EditGUIButton(new EditGUIValueInventory("AdvancedPriority") {
+		inv.addButton(new EditGUIButton(new EditGUIValueInventory("Choices") {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				if (reward.hasPath("AdvancedPriority")) {
+				if (reward.hasPath("Choices")) {
 					openRename(player, reward);
 				}
 			}
 		}).setName("&aRename sub reward"));
 
-		inv.addButton(new EditGUIButton(new EditGUIValueInventory("AdvancedPriority") {
+		inv.addButton(new EditGUIButton(new EditGUIValueInventory("Choices") {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				if (reward.hasPath("AdvancedPriority")) {
+				if (reward.hasPath("Choices")) {
 					openEditSub(player, reward);
 				}
 			}
 		}).setName("&aEdit sub reward"));
-
+		
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
 	}
 
 	public void openRemove(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit AdvancedPriority Remove: " + reward.getName());
+		EditGUI inv = new EditGUI("Edit Choices Remove: " + reward.getName());
 		inv.addData("Reward", reward);
 
-		for (String key : reward.getData().getConfigurationSection("AdvancedPriority").getKeys(false)) {
+		for (String key : reward.getData().getConfigurationSection("Choices").getKeys(false)) {
 			inv.addButton(new BInventoryButton(
 					new ItemBuilder(Material.PAPER).setName("&c" + key).addLoreLine("&cClick to remove")) {
 
 				@Override
 				public void onClick(ClickEvent clickEvent) {
 					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-					reward.setValue("AdvancedPriority." + key, null);
+					reward.setValue("Choices." + key, null);
 					reloadAdvancedCore();
-				}
-			});
-		}
-
-		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
-
-			@Override
-			public void openInventory(ClickEvent clickEvent) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				open(player, reward);
-			}
-		}));
-
-		inv.openInventory(player);
-	}
-
-	public void openRename(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit AdvancedPriority Rename: " + reward.getName());
-		inv.addData("Reward", reward);
-
-		for (String key : reward.getData().getConfigurationSection("AdvancedPriority").getKeys(false)) {
-			inv.addButton(new BInventoryButton(
-					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to rename")) {
-
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					new ValueRequestBuilder(new StringListener() {
-
-						@Override
-						public void onInput(Player player, String value) {
-							RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-							reward.setValue("AdvancedPriority." + value,
-									reward.getData().getConfigurationSection("AdvancedPriority." + key));
-							reward.setValue("AdvancedPriority." + key, null);
-							reloadAdvancedCore();
-						}
-					}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				}
 			});
 		}
@@ -143,18 +108,55 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 		inv.openInventory(player);
 	}
 
-	public void openEditSub(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit AdvancedPriority Edit Sub: " + reward.getName());
+	public void openRename(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit Choices Rename: " + reward.getName());
 		inv.addData("Reward", reward);
 
-		for (String key : reward.getData().getConfigurationSection("AdvancedPriority").getKeys(false)) {
+		for (String key : reward.getData().getConfigurationSection("Choices").getKeys(false)) {
+			inv.addButton(new BInventoryButton(
+					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to rename")) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					new ValueRequestBuilder(new StringListener() {
+
+						@Override
+						public void onInput(Player player, String value) {
+							RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+							reward.setValue("Choices." + value,
+									reward.getData().getConfigurationSection("Choices." + key));
+							reward.setValue("Choices." + key, null);
+							reloadAdvancedCore();
+						}
+					}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
+				}
+			});
+		}
+
+		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
+			}
+		}));
+		
+		inv.openInventory(player);
+	}
+
+	public void openEditSub(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit Choices Edit Sub: " + reward.getName());
+		inv.addData("Reward", reward);
+
+		for (String key : reward.getData().getConfigurationSection("Choices").getKeys(false)) {
 			inv.addButton(new BInventoryButton(
 					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to edit")) {
 
 				@Override
 				public void onClick(ClickEvent clickEvent) {
 					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-					openSubReward(clickEvent.getPlayer(), "AdvancedPriority." + key, reward);
+					openSubReward(clickEvent.getPlayer(), "Choices." + key, reward);
 				}
 			});
 		}
