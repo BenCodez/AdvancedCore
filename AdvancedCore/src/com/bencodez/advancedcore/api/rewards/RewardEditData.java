@@ -1,5 +1,7 @@
 package com.bencodez.advancedcore.api.rewards;
 
+import org.bukkit.configuration.ConfigurationSection;
+
 public class RewardEditData {
 	private Reward reward;
 	private DirectlyDefinedReward directlyDefinedReward;
@@ -36,6 +38,15 @@ public class RewardEditData {
 		}
 	}
 
+	public ConfigurationSection getData() {
+		if (reward != null) {
+			return reward.getConfig().getConfigData();
+		} else if (directlyDefinedReward != null) {
+			return directlyDefinedReward.getFileData().getConfigurationSection(directlyDefinedReward.getPath());
+		}
+		return null;
+	}
+
 	public Object getValue(String key) {
 		if (reward != null) {
 			return reward.getConfig().getConfigData().get(key);
@@ -43,5 +54,21 @@ public class RewardEditData {
 			return directlyDefinedReward.getValue(key);
 		}
 		return null;
+	}
+
+	public void save() {
+		if (reward != null) {
+			reward.getConfig().save(reward.getConfig().getFileData());
+		} else if (directlyDefinedReward != null) {
+			directlyDefinedReward.save();
+		}
+	}
+
+	public void createSection(String path) {
+		if (reward != null) {
+			reward.getConfig().createSection(path);
+		} else if (directlyDefinedReward != null) {
+			directlyDefinedReward.createSectionLocal(path);
+		}
 	}
 }

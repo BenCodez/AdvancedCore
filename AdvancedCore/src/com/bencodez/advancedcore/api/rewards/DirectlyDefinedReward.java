@@ -28,7 +28,8 @@ public abstract class DirectlyDefinedReward {
 
 	public Reward getReward() {
 		if (isDirectlyDefined()) {
-			return new Reward(getPath().replace(".", "_"), getFileData().getConfigurationSection(getPath())).needsRewardFile(false);
+			return new Reward(getPath().replace(".", "_"), getFileData().getConfigurationSection(getPath()))
+					.needsRewardFile(false);
 		} else {
 			return null;
 		}
@@ -37,4 +38,12 @@ public abstract class DirectlyDefinedReward {
 	public Object getValue(String path) {
 		return getFileData().get(getPath() + "." + path);
 	}
+
+	public abstract void save();
+
+	public void createSectionLocal(String key) {
+		createSection(getPath() + "." + key);
+	}
+
+	public abstract void createSection(String key);
 }

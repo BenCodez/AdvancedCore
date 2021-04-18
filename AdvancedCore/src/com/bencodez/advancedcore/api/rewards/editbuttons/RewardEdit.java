@@ -4,12 +4,14 @@ import java.util.ArrayList;
 
 import org.bukkit.entity.Player;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueBoolean;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueList;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueNumber;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
+import com.bencodez.advancedcore.api.rewards.RewardHandler;
 
 public abstract class RewardEdit {
 
@@ -64,5 +66,13 @@ public abstract class RewardEdit {
 	}
 
 	public abstract void setVal(String key, Object value);
+
+	public void reloadAdvancedCore() {
+		AdvancedCorePlugin.getInstance().reloadAdvancedCore(false);
+	}
+
+	public void openSubReward(Player player, String path, RewardEditData reward) {
+		RewardHandler.getInstance().openSubReward(player, path, reward);
+	}
 
 }

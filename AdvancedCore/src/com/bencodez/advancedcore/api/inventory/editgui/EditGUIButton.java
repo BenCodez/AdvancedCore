@@ -39,6 +39,16 @@ public class EditGUIButton extends BInventoryButton {
 		return this;
 	}
 
+	public EditGUIButton setName(String name) {
+		this.getBuilder().setName(name);
+		return this;
+	}
+
+	public EditGUIButton addLore(String lore) {
+		getEditor().addLore(lore);
+		return this;
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public ItemStack getItem(Player player, HashMap<String, String> placeholders) {

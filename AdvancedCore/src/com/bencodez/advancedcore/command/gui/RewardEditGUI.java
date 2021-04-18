@@ -13,6 +13,7 @@ import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueBoolean;
+import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
@@ -20,6 +21,8 @@ import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditDelayed;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTimed;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
 
@@ -72,7 +75,41 @@ public class RewardEditGUI {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				}));
+				}.addLore("Force reward to execute to run while player is offline")));
+
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Delayed") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditDelayed() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Delay reward from being executed")));
+
+		inv.addButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Timed") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditTimed() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Execute reward at certain time")));
 
 		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
 			if (injectReward.isEditable()) {

@@ -39,11 +39,14 @@ import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditActionBar;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditAdvancedPriority;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditBossBar;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXP;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXPLevels;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEffect;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditFirework;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditLocationDistance;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMessages;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMoney;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditSound;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTitle;
@@ -65,6 +68,7 @@ import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInje
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectValidator;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStartup;
+import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 
 import lombok.Getter;
 
@@ -833,7 +837,23 @@ public class RewardHandler {
 				}
 
 			}
-		}));
+		}).addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueInventory("LocationDistance") {
+
+					@Override
+					public void openInventory(ClickEvent clickEvent) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						new RewardEditLocationDistance() {
+
+							@Override
+							public void setVal(String key, Object value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(key, value);
+								plugin.reloadAdvancedCore(false);
+							}
+						}.open(clickEvent.getPlayer(), reward);
+					}
+				})));
 
 		for (RequirementInject reward : injectedRequirements) {
 			reward.setInternalReward(true);
@@ -1018,15 +1038,22 @@ public class RewardHandler {
 				user.sendMessage(value, placeholders);
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Message", null) {
+		}.addEditButton(new EditGUIButton(new ItemBuilder("OAK_SIGN"), new EditGUIValueInventory("Messages") {
 
 			@Override
-			public void setValue(Player player, String value) {
+			public void openInventory(ClickEvent clickEvent) {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				reward.setValue(getKey(), value);
-				plugin.reloadAdvancedCore(false);
+				new RewardEditMessages() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
 			}
-		}.addLore("Player message"))).validator(new RewardInjectValidator() {
+		}.addCheckKey("Message"))).validator(new RewardInjectValidator() {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
@@ -1045,16 +1072,7 @@ public class RewardHandler {
 				user.sendMessage(value, placeholders);
 				return null;
 			}
-		}.addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Messages.Player", null) {
-
-					@Override
-					public void setValue(Player player, ArrayList<String> value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value);
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("Messages for player as a list"))));
+		});
 
 		injectedRewards.add(new RewardInjectStringList("Message") {
 
@@ -1064,15 +1082,7 @@ public class RewardHandler {
 				user.sendMessage(value, placeholders);
 				return null;
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Message", null) {
-
-			@Override
-			public void setValue(Player player, ArrayList<String> value) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				reward.setValue(getKey(), value);
-				plugin.reloadAdvancedCore(false);
-			}
-		}.addLore("Messages for player as a list"))));
+		});
 
 		injectedRewards.add(new RewardInjectString("Messages.Player") {
 
@@ -1082,25 +1092,16 @@ public class RewardHandler {
 				user.sendMessage(value, placeholders);
 				return null;
 			}
-		}.addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Messages.Player", null) {
+		}.validator(new RewardInjectValidator() {
 
-					@Override
-					public void setValue(Player player, String value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value);
-						plugin.reloadAdvancedCore(false);
-					}
-				}.addLore("Player message, single message, no list"))).validator(new RewardInjectValidator() {
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (data.isString(inject.getPath()) && data.getString(inject.getPath()).isEmpty()) {
+					warning(reward, inject, "No player message set");
+				}
 
-					@Override
-					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (data.isString(inject.getPath()) && data.getString(inject.getPath()).isEmpty()) {
-							warning(reward, inject, "No player message set");
-						}
-
-					}
-				}));
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectStringList("Messages.Broadcast") {
 
@@ -1129,27 +1130,18 @@ public class RewardHandler {
 						StringParser.getInstance().replacePlaceHolder(value, placeholders)));
 				return null;
 			}
-		}.addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Messages.Broadcast", null) {
+		}.validator(new RewardInjectValidator() {
 
-					@Override
-					public void setValue(Player player, String value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(getKey(), value);
-						plugin.reloadAdvancedCore(false);
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (!data.isList(inject.getPath())) {
+					if (data.getString(inject.getPath(), "Empty").isEmpty()) {
+						warning(reward, inject, "No broadcast was set");
 					}
-				}.addLore("Broadcast message"))).validator(new RewardInjectValidator() {
+				}
 
-					@Override
-					public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-						if (!data.isList(inject.getPath())) {
-							if (data.getString(inject.getPath(), "Empty").isEmpty()) {
-								warning(reward, inject, "No broadcast was set");
-							}
-						}
-
-					}
-				}));
+			}
+		}));
 
 		injectedRewards.add(new RewardInjectString("Command") {
 
@@ -1424,7 +1416,15 @@ public class RewardHandler {
 				return null;
 
 			}
-		}.priority(5).alwaysForce().postReward());
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.DISPENSER), new EditGUIValueInventory("Rewards") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				openSubReward(clickEvent.getPlayer(), "Rewards", reward);
+			}
+
+		})).priority(5).alwaysForce().postReward());
 
 		injectedRewards.add(new RewardInjectStringList("RandomCommand") {
 
@@ -1762,7 +1762,24 @@ public class RewardHandler {
 				return null;
 
 			}
-		}.priority(10).postReward());
+		}.addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("AdvancedPriority") {
+
+					@Override
+					public void openInventory(ClickEvent clickEvent) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						new RewardEditAdvancedPriority() {
+
+							@Override
+							public void setVal(String key, Object value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(key, value);
+								plugin.reloadAdvancedCore(false);
+							}
+						}.open(clickEvent.getPlayer(), reward);
+					}
+
+				})).priority(10).postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("SpecialChance") {
 
@@ -1954,6 +1971,34 @@ public class RewardHandler {
 		}
 
 		sortInjectedRewards();
+	}
+
+	public void openSubReward(Player player, String path, RewardEditData reward) {
+		if (!reward.getData().contains(path)) {
+			reward.createSection(path);
+		}
+		RewardEditGUI.getInstance().openRewardGUI(player, new RewardEditData(new DirectlyDefinedReward(path) {
+
+			@Override
+			public void setData(String path, Object value) {
+				reward.setValue(path, value);
+			}
+
+			@Override
+			public void save() {
+				reward.save();
+			}
+
+			@Override
+			public ConfigurationSection getFileData() {
+				return reward.getData();
+			}
+
+			@Override
+			public void createSection(String path) {
+				reward.createSection(path);
+			}
+		}), reward.getName() + "." + path);
 	}
 
 	private void loadRewards(File file) {

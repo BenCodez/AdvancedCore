@@ -453,6 +453,14 @@ public class RewardFileData {
 			plugin.debug("Editing invalid reward: " + reward.getName());
 		}
 	}
+	
+	public void createSection(String path) {
+		if (fileData != null) {
+			fileData.createSection(path);
+			save(fileData);
+			reload();
+		}
+	}
 
 	/**
 	 * Sets the chance.

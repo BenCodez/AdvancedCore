@@ -124,6 +124,11 @@ public abstract class YMLFile {
 		getData().set(path, value);
 		saveData();
 	}
+	
+	public void createSection(String key) {
+		getData().createSection(key);
+		saveData();
+	}
 
 	/**
 	 * Setup.
