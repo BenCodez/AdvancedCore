@@ -10,7 +10,7 @@ import lombok.Getter;
 public class RewardEditData {
 	private Reward reward;
 	private DirectlyDefinedReward directlyDefinedReward;
-	
+
 	@Getter
 	private RewardEditData parent;
 
@@ -21,19 +21,14 @@ public class RewardEditData {
 	public RewardEditData(DirectlyDefinedReward directlyDefinedReward) {
 		this.directlyDefinedReward = directlyDefinedReward;
 	}
-	
+
 	public RewardEditData(DirectlyDefinedReward directlyDefinedReward, RewardEditData parent) {
 		this.directlyDefinedReward = directlyDefinedReward;
 		this.parent = parent;
 	}
-	
+
 	public void reOpenEditGUI(Player player) {
-		if (reward != null) {
-			RewardEditGUI.getInstance().openRewardGUI(player, reward);
-		} else {
-			RewardEditGUI.getInstance().openRewardGUI(player, directlyDefinedReward);
-		}
-		
+		RewardEditGUI.getInstance().openRewardGUI(player, this, getName());
 	}
 
 	public String getName() {

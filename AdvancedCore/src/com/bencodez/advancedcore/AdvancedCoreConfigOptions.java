@@ -262,7 +262,7 @@ public class AdvancedCoreConfigOptions {
 
 			newLoreLength = configData.getInt("NewLoreLength", 30);
 
-			spamClickTime = configData.getInt("SpamClickTime", 350);
+			spamClickTime = configData.getInt("SpamClickTime", 100);
 
 			spamClickMessage = configData.getString("SpamClickMessage", "");
 			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);

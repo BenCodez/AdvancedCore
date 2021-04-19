@@ -263,6 +263,10 @@ public class ItemBuilder {
 	public ItemBuilder(ItemStack is) {
 		this.is = is;
 	}
+	
+	public Material getType() {
+		return is.getType();
+	}
 
 	/**
 	 * Create a new ItemBuilder from scratch.
@@ -990,6 +994,19 @@ public class ItemBuilder {
 	@Override
 	public String toString() {
 		return is.toString();
+	}
 
+	public HashMap<String, Object> getConfiguration() {
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		map.put("Material", is.getType().toString());
+		map.put("Amount", is.getAmount());
+		if (hasCustomDisplayName()) {
+			map.put("Name", getName());
+		}
+		if (hasCustomLore()) {
+			map.put("Lore", getLore());
+		}
+
+		return map;
 	}
 }

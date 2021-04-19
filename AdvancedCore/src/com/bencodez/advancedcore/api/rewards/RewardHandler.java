@@ -542,30 +542,31 @@ public class RewardHandler {
 				}
 				return MiscUtils.getInstance().checkChance(num, 100);
 			}
-		}.priority(100).addEditButton(new EditGUIButton(new EditGUIValueNumber("Chance", null) {
+		}.priority(100)
+				.addEditButton(new EditGUIButton(new ItemBuilder("DROPPER"), new EditGUIValueNumber("Chance", null) {
 
-			@Override
-			public void setValue(Player player, Number value) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				reward.setValue(getKey(), value.intValue());
-				plugin.reloadAdvancedCore(false);
-			}
-		}.addLore("Set chance for reward to execute"))).validator(new RequirementInjectValidator() {
+					@Override
+					public void setValue(Player player, Number value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value.intValue());
+						plugin.reloadAdvancedCore(false);
+					}
+				}.addLore("Set chance for reward to execute"))).validator(new RequirementInjectValidator() {
 
-			@Override
-			public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
-				if (data.getDouble(inject.getPath(), 0) == 100) {
-					warning(reward, inject,
-							"Chance is 100, if intended then remove the chance option, as it's unneeded");
-				} else if (data.getDouble(inject.getPath(), 0) > 100) {
-					warning(reward, inject, "Chance is greater than 100, this will always give the reward");
-				} else if (data.getDouble(inject.getPath(), 1) == 0) {
-					warning(reward, inject, "Chance can not be 0");
-				} else if (data.getDouble(inject.getPath(), 1) < 0) {
-					warning(reward, inject, "Chance can not be negative");
-				}
-			}
-		}));
+					@Override
+					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+						if (data.getDouble(inject.getPath(), 0) == 100) {
+							warning(reward, inject,
+									"Chance is 100, if intended then remove the chance option, as it's unneeded");
+						} else if (data.getDouble(inject.getPath(), 0) > 100) {
+							warning(reward, inject, "Chance is greater than 100, this will always give the reward");
+						} else if (data.getDouble(inject.getPath(), 1) == 0) {
+							warning(reward, inject, "Chance can not be 0");
+						} else if (data.getDouble(inject.getPath(), 1) < 0) {
+							warning(reward, inject, "Chance can not be negative");
+						}
+					}
+				}));
 
 		injectedRequirements.add(new RequirementInjectInt("RewardExpiration", -1) {
 
@@ -582,15 +583,16 @@ public class RewardHandler {
 				}
 				return true;
 			}
-		}.priority(100).addEditButton(new EditGUIButton(new EditGUIValueNumber("RewardExpiration", null) {
+		}.priority(100).addEditButton(
+				new EditGUIButton(new ItemBuilder("CLOCK"), new EditGUIValueNumber("RewardExpiration", null) {
 
-			@Override
-			public void setValue(Player player, Number value) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				reward.setValue(getKey(), value.intValue());
-				plugin.reloadAdvancedCore(false);
-			}
-		}.addLore("Time before reward expires, if not executed"))));
+					@Override
+					public void setValue(Player player, Number value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value.intValue());
+						plugin.reloadAdvancedCore(false);
+					}
+				}.addLore("Time before reward expires, if not executed"))));
 
 		injectedRequirements.add(new RequirementInjectString("Permission", "") {
 
@@ -613,7 +615,7 @@ public class RewardHandler {
 				return true;
 			}
 		}.priority(100).alwaysForce().addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("Permission", null) {
+				new EditGUIButton(new ItemBuilder("IRON_DOOR"), new EditGUIValueString("Permission", null) {
 
 					@Override
 					public void setValue(Player player, String value) {
@@ -709,8 +711,8 @@ public class RewardHandler {
 				user.setCheckWorld(true);
 				return false;
 			}
-		}.priority(100).allowReattempt()
-				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Worlds", null) {
+		}.priority(100).allowReattempt().addEditButton(
+				new EditGUIButton(new ItemBuilder("END_PORTAL_FRAME"), new EditGUIValueList("Worlds", null) {
 
 					@Override
 					public void setValue(Player player, ArrayList<String> value) {
@@ -752,7 +754,7 @@ public class RewardHandler {
 				return true;
 			}
 		}.priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueString("RewardType", null) {
+				new EditGUIButton(new ItemBuilder(Material.REDSTONE_TORCH), new EditGUIValueString("RewardType", null) {
 
 					@Override
 					public void setValue(Player player, String value) {
@@ -776,7 +778,7 @@ public class RewardHandler {
 				}
 				return false;
 			}
-		}.priority(90).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+		}.priority(90).addEditButton(new EditGUIButton(new ItemBuilder("DETECTOR_RAIL"),
 				new EditGUIValueString("JavascriptExpression", null) {
 
 					@Override
@@ -843,7 +845,7 @@ public class RewardHandler {
 
 			}
 		}).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueInventory("LocationDistance") {
+				new EditGUIButton(new ItemBuilder("MAP"), new EditGUIValueInventory("LocationDistance") {
 
 					@Override
 					public void openInventory(ClickEvent clickEvent) {

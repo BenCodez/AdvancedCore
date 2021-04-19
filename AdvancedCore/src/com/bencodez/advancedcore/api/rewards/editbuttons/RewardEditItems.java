@@ -1,13 +1,18 @@
 package com.bencodez.advancedcore.api.rewards.editbuttons;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
+import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.UpdatingBInventoryButton;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
+import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
+import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
@@ -20,9 +25,18 @@ public abstract class RewardEditItems extends RewardEdit {
 		EditGUI inv = new EditGUI("Edit Items: " + reward.getName());
 		inv.addData("Reward", reward);
 
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&cView current items")
+				.addLoreLine("&aDisplaying all current items on next slot")
+				.addLoreLine("&aThis doesn't support adding conditional items")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+			}
+		});
+
 		UpdatingBInventoryButton b = new UpdatingBInventoryButton(new ItemBuilder(Material.PAPER)
 				.setName("&cView current items").addLoreLine("&aDisplaying all current items")
-				.addLoreLine("This doesn't support conditional items"), 750, 750) {
+				.addLoreLine("This doesn't support adding conditional items"), 750, 750) {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
@@ -35,30 +49,118 @@ public abstract class RewardEditItems extends RewardEdit {
 			}
 
 			public ItemBuilder nextItem() {
-				try {
-					int num = (int) getData("CurrentItem");
-					@SuppressWarnings("unchecked")
-					ArrayList<String> set = (ArrayList<String>) getData("ItemsKeys");
-					num++;
-					if (num >= set.size()) {
-						num = 0;
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				if (reward.hasPath("Items")) {
+					try {
+						int num = (int) getData("CurrentItem");
+						@SuppressWarnings("unchecked")
+						ArrayList<String> set = (ArrayList<String>) getData("ItemsKeys");
+						num++;
+						if (num >= set.size()) {
+							num = 0;
+						}
+						addData("CurrentItem", num);
+
+						return new ItemBuilder(reward.getData().getConfigurationSection("Items." + set.get(num)))
+								.addLoreLine("&cDisplaying: " + set.get(num));
+					} catch (Exception e) {
+						e.printStackTrace();
+						return new ItemBuilder(Material.STONE).setName("Error");
 					}
-					addData("CurrentItem", num);
-					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-					return new ItemBuilder(reward.getData().getConfigurationSection("Items." + set.get(num)))
-							.addLoreLine("&cDisplaying: " + set.get(num));
-				} catch (Exception e) {
-					e.printStackTrace();
-					return new ItemBuilder(Material.STONE).setName("Error");
 				}
+				return new ItemBuilder(Material.PAPER).setName("&cNo Items");
 			}
 		};
-		b.addData("ItemsKeys",
-				ArrayUtils.getInstance().convert(reward.getData().getConfigurationSection("Items").getKeys(false)));
+		if (reward.hasPath("Items")) {
+			b.addData("ItemsKeys",
+					ArrayUtils.getInstance().convert(reward.getData().getConfigurationSection("Items").getKeys(false)));
+		} else {
+			b.addData("ItemsKeys", new ArrayList<String>());
+		}
+
 		b.addData("CurrentItem", 0);
 		inv.addButton(b);
 
+		inv.addButton(new EditGUIButton(new EditGUIValueInventory("Items") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				if (reward.hasPath("Items")) {
+					openRemove(player, reward);
+				}
+			}
+		}).setName("&aRemove item"));
+
+		inv.addButton(
+				new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&aAdd current item in hand to reward")) {
+
+					@Override
+					public void onClick(ClickEvent clickEvent) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						openAdd(clickEvent.getPlayer(), reward);
+					}
+				});
+
 		inv.addButton(getBackButton(reward));
+
+		inv.openInventory(player);
+	}
+
+	public void openRemove(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit Item Remove: " + reward.getName());
+		inv.addData("Reward", reward);
+
+		for (String key : reward.getData().getConfigurationSection("Items").getKeys(false)) {
+			inv.addButton(new BInventoryButton(new ItemBuilder(reward.getData().getConfigurationSection("Items." + key))
+					.setName("&c" + key).addLoreLine("&cClick to remove")) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+					reward.setValue("Items." + key, null);
+					reloadAdvancedCore();
+				}
+			});
+		}
+
+		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
+			}
+		}));
+
+		inv.openInventory(player);
+	}
+
+	@SuppressWarnings("deprecation")
+	public void openAdd(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit Item Add: " + reward.getName());
+		inv.addData("Reward", reward);
+
+		inv.addButton(new BInventoryButton(new ItemBuilder(player.getItemInHand().clone()).addLoreLine("&cClick to add")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				ItemBuilder item = new ItemBuilder(clickEvent.getPlayer().getItemInHand().clone());
+				HashMap<String, Object> map = item.getConfiguration();
+				for (Entry<String, Object> entry : map.entrySet()) {
+					reward.setValue("Items." + item.getType().toString() + "." + entry.getKey(), entry.getValue());
+				}
+			}
+		});
+
+		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
+			}
+		}));
 
 		inv.openInventory(player);
 	}

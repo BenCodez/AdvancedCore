@@ -230,6 +230,7 @@ public class RewardEditGUI {
 
 						@Override
 						public void onClick(ClickEvent clickEvent) {
+							RewardEditData rewardEditData = (RewardEditData) getInv().getData("Reward");
 							rewardEditData.getParent().reOpenEditGUI(clickEvent.getPlayer());
 						}
 					}.setSlot(-2));
