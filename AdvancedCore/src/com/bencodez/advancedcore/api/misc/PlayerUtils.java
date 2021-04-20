@@ -424,7 +424,10 @@ public class PlayerUtils {
 				// plugin.extraDebug(name + " has joined before");
 				return true;
 			}
+		}
 
+		if (plugin.getOptions().isGeyserPrefixSupport() && !name.startsWith("*")) {
+			return isValidUser("*" + name);
 		}
 		plugin.extraDebug("Player " + name + " does not exist");
 		return false;
