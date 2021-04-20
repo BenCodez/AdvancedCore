@@ -187,6 +187,10 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	private String formatRewardTimeFormat;
 
+	@Getter
+	@Setter
+	private boolean geyserPrefixSupport = false;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -268,6 +272,8 @@ public class AdvancedCoreConfigOptions {
 			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);
 			multiplePermissionChecks = configData.getBoolean("MultiplePermissionsCheck", false);
 			treatVanishAsOffline = configData.getBoolean("TreatVanishAsOffline", false);
+
+			geyserPrefixSupport = configData.getBoolean("GeyserPrefixSupport", false);
 		}
 	}
 }

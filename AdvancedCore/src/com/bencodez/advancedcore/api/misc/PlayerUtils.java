@@ -26,8 +26,8 @@ import org.bukkit.plugin.Plugin;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
-import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Iterables;
@@ -194,6 +194,10 @@ public class PlayerUtils {
 
 		if (!uuid.equals("")) {
 			return uuid;
+		}
+
+		if (plugin.getOptions().isGeyserPrefixSupport() && !playerName.startsWith("*")) {
+			return getUUID("*" + playerName);
 		}
 
 		try {
