@@ -754,7 +754,7 @@ public class RewardHandler {
 				return true;
 			}
 		}.priority(100).addEditButton(
-				new EditGUIButton(new ItemBuilder(Material.REDSTONE_TORCH), new EditGUIValueString("RewardType", null) {
+				new EditGUIButton(new ItemBuilder("REDSTONE_TORCH"), new EditGUIValueString("RewardType", null) {
 
 					@Override
 					public void setValue(Player player, String value) {
