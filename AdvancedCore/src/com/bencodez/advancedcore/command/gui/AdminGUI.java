@@ -90,17 +90,16 @@ public class AdminGUI {
 			}
 		});
 
-		inv.addButton(inv.getNextSlot(),
-				new BInventoryButton(new ItemBuilder(Material.PLAYER_HEAD, 1).setName("&cUsers")) {
+		inv.addButton(inv.getNextSlot(), new BInventoryButton(new ItemBuilder("PLAYER_HEAD").setName("&cUsers")) {
 
-					@Override
-					public void onClick(ClickEvent event) {
-						Player player = event.getWhoClicked();
-						UserGUI.getInstance().openUsersGUI(player);
+			@Override
+			public void onClick(ClickEvent event) {
+				Player player = event.getWhoClicked();
+				UserGUI.getInstance().openUsersGUI(player);
 
-					}
+			}
 
-				});
+		});
 
 		if (pluginGUIs != null) {
 			for (BInventoryButton b : pluginGUIs) {
