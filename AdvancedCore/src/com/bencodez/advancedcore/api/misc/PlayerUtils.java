@@ -196,8 +196,9 @@ public class PlayerUtils {
 			return uuid;
 		}
 
-		if (plugin.getOptions().isGeyserPrefixSupport() && !playerName.startsWith("*")) {
-			return getUUID("*" + playerName);
+		if (plugin.getOptions().isGeyserPrefixSupport()
+				&& !playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
+			return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
 		}
 
 		try {
@@ -426,8 +427,8 @@ public class PlayerUtils {
 			}
 		}
 
-		if (plugin.getOptions().isGeyserPrefixSupport() && !name.startsWith("*")) {
-			return isValidUser("*" + name);
+		if (plugin.getOptions().isGeyserPrefixSupport() && !name.startsWith(plugin.getOptions().getGeyserPrefix())) {
+			return isValidUser(plugin.getOptions().getGeyserPrefix() + name);
 		}
 		plugin.extraDebug("Player " + name + " does not exist");
 		return false;

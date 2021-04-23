@@ -191,6 +191,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private boolean geyserPrefixSupport = false;
 
+	@Getter
+	@Setter
+	private String geyserPrefix = "*";
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -274,6 +278,7 @@ public class AdvancedCoreConfigOptions {
 			treatVanishAsOffline = configData.getBoolean("TreatVanishAsOffline", false);
 
 			geyserPrefixSupport = configData.getBoolean("GeyserPrefixSupport", false);
+			geyserPrefix = configData.getString("GeyserPrefix", "*");
 		}
 	}
 }
