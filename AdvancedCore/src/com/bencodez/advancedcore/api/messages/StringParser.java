@@ -71,7 +71,7 @@ public class StringParser {
 		}
 		return str1.toLowerCase().contains(str2.toLowerCase());
 	}
-	
+
 	public boolean contains(String str1, String str2) {
 		return str1.contains(str2);
 	}
@@ -79,25 +79,22 @@ public class StringParser {
 	public boolean containsJson(String msg) {
 		return contains(msg, "[Text=\"");
 	}
-	
+
 	public final char COLOR_CHAR = ChatColor.COLOR_CHAR;
-	
-	public String translateHexColorCodes(String startTag, String endTag, String message)
-    {
-        final Pattern hexPattern = Pattern.compile(startTag + "([A-Fa-f0-9]{6})" + endTag);
-        Matcher matcher = hexPattern.matcher(message);
-        StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
-        while (matcher.find())
-        {
-            String group = matcher.group(1);
-            matcher.appendReplacement(buffer, COLOR_CHAR + "x"
-                    + COLOR_CHAR + group.charAt(0) + COLOR_CHAR + group.charAt(1)
-                    + COLOR_CHAR + group.charAt(2) + COLOR_CHAR + group.charAt(3)
-                    + COLOR_CHAR + group.charAt(4) + COLOR_CHAR + group.charAt(5)
-                    );
-        }
-        return matcher.appendTail(buffer).toString();
-    }
+
+	public String translateHexColorCodes(String startTag, String endTag, String message) {
+		final Pattern hexPattern = Pattern.compile(startTag + "([A-Fa-f0-9]{6})" + endTag);
+		Matcher matcher = hexPattern.matcher(message);
+		StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
+		while (matcher.find()) {
+			String group = matcher.group(1);
+			matcher.appendReplacement(buffer,
+					COLOR_CHAR + "x" + COLOR_CHAR + group.charAt(0) + COLOR_CHAR + group.charAt(1) + COLOR_CHAR
+							+ group.charAt(2) + COLOR_CHAR + group.charAt(3) + COLOR_CHAR + group.charAt(4) + COLOR_CHAR
+							+ group.charAt(5));
+		}
+		return matcher.appendTail(buffer).toString();
+	}
 
 	public String getProgressBar(int current, int max, int totalBars, String symbol, String completedColor,
 			String notCompletedColor) {
@@ -177,7 +174,7 @@ public class StringParser {
 			boolean parsing = true;
 			while (parsing) {
 				int nextTypeIndex = typeMsg.indexOf("\",");
-				int typeMiddle = typeMsg.indexOf("=\"",nextTypeIndex);
+				int typeMiddle = typeMsg.indexOf("=\"", nextTypeIndex);
 				String type = typeMsg.substring(nextTypeIndex + "\",".length(), typeMiddle);
 				int typeEndIndex = typeMsg.indexOf("\",", typeMiddle);
 				int endIndex1 = typeMsg.indexOf("\"]");
@@ -264,7 +261,11 @@ public class StringParser {
 			return str;
 		}
 
-		return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
+		try {
+			return Pattern.compile(toReplace, Pattern.CASE_INSENSITIVE).matcher(str).replaceAll(replaceWith);
+		} catch (IndexOutOfBoundsException e) {
+			return str.replace(toReplace, replaceWith);
+		}
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
