@@ -22,6 +22,7 @@ com.bencodez.advancedcore.api.misc.files
 com.bencodez.advancedcore.api.misc.scoreboards
 com.bencodez.advancedcore.api.placeholder
 com.bencodez.advancedcore.api.rewards
+com.bencodez.advancedcore.api.rewards.editbuttons
 com.bencodez.advancedcore.api.rewards.injected
 com.bencodez.advancedcore.api.rewards.injectedrequirement
 com.bencodez.advancedcore.api.skull
