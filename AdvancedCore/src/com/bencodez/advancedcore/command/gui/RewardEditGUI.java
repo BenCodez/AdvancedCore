@@ -63,6 +63,7 @@ public class RewardEditGUI {
 
 	public void openRewardGUIRequirements(Player player, RewardEditData rewardEditData, String rewardName) {
 		EditGUI inv = new EditGUI("Requirements: " + rewardName);
+		inv.requirePermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit");
 
 		inv.addData("Reward", rewardEditData);
 
@@ -141,6 +142,7 @@ public class RewardEditGUI {
 	public void openRewardGUIRewards(Player player, RewardEditData rewardEditData, String rewardName,
 			boolean unsetValuesShown) {
 		EditGUI inv = new EditGUI("Rewards: " + rewardName);
+		inv.requirePermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit");
 
 		inv.addData("Reward", rewardEditData);
 
@@ -195,6 +197,7 @@ public class RewardEditGUI {
 
 	public void openRewardGUI(Player player, RewardEditData rewardEditData, String rewardName) {
 		EditGUI inv = new EditGUI("Reward: " + rewardName);
+		inv.requirePermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit");
 
 		inv.addData("Reward", rewardEditData);
 
