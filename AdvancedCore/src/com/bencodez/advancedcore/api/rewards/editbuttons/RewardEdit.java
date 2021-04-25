@@ -15,6 +15,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueSt
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
+import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 
 public abstract class RewardEdit {
 
@@ -24,6 +25,7 @@ public abstract class RewardEdit {
 			@Override
 			public void setValue(Player player, Number num) {
 				setVal(key, num.intValue());
+				open(player, reward);
 			}
 		});
 	}
@@ -34,6 +36,7 @@ public abstract class RewardEdit {
 			@Override
 			public void setValue(Player player, Number num) {
 				setVal(key, num.doubleValue());
+				open(player, reward);
 			}
 		});
 	}
@@ -44,8 +47,20 @@ public abstract class RewardEdit {
 			@Override
 			public void setValue(Player player, String str) {
 				setVal(key, str);
+				open(player, reward);
 			}
 		});
+	}
+
+	public EditGUIButton getStringButton(String key, RewardEditData reward, String... options) {
+		return new EditGUIButton(new EditGUIValueString(key, reward.getValue(key)) {
+
+			@Override
+			public void setValue(Player player, String str) {
+				setVal(key, str);
+				open(player, reward);
+			}
+		}.addOptions(options).inputMethod(InputMethod.INVENTORY));
 	}
 
 	public EditGUIButton getStringListButton(String key, RewardEditData reward) {
@@ -54,6 +69,7 @@ public abstract class RewardEdit {
 			@Override
 			public void setValue(Player player, ArrayList<String> value) {
 				setVal(key, value);
+				open(player, reward);
 			}
 		});
 	}
@@ -64,6 +80,7 @@ public abstract class RewardEdit {
 			@Override
 			public void setValue(Player player, boolean value) {
 				setVal(key, value);
+				open(player, reward);
 			}
 		});
 	}
@@ -86,6 +103,8 @@ public abstract class RewardEdit {
 		b.setSlot(-2);
 		return b;
 	}
+
+	public abstract void open(Player player, RewardEditData reward);
 
 	public abstract void setVal(String key, Object value);
 

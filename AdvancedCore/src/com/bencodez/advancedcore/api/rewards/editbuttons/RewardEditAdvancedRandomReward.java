@@ -33,6 +33,7 @@ public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.createSection("AdvancedRandomReward." + value);
 						reloadAdvancedCore();
+						open(player, reward);
 					}
 				}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				;
@@ -71,7 +72,7 @@ public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 				}
 			}
 		}).setName("&aEdit sub reward"));
-		
+
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);
@@ -90,10 +91,11 @@ public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 					reward.setValue("AdvancedRandomReward." + key, null);
 					reloadAdvancedCore();
+					open(player, reward);
 				}
 			});
 		}
-		
+
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
 			@Override
@@ -125,12 +127,13 @@ public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 									reward.getData().getConfigurationSection("AdvancedRandomReward." + key));
 							reward.setValue("AdvancedRandomReward." + key, null);
 							reloadAdvancedCore();
+							open(player, reward);
 						}
 					}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				}
 			});
 		}
-		
+
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
 			@Override
@@ -158,7 +161,7 @@ public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 				}
 			});
 		}
-		
+
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
 			@Override

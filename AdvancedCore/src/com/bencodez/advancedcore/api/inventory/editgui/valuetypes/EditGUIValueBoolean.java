@@ -25,7 +25,7 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 				setValue(player, value);
 				player.sendMessage(StringParser.getInstance().colorize("&cSetting " + getKey() + " to " + value));
 			}
-		}).currentValue(getCurrentValue().toString()).request(clickEvent.getPlayer());
+		}).currentValue(getCurrentValue().toString()).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
 
 	public abstract void setValue(Player player, boolean value);

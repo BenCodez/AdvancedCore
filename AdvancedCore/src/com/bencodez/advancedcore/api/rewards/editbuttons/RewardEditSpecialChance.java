@@ -33,6 +33,7 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.createSection("SpecialChance." + value.intValue());
 						reloadAdvancedCore();
+						open(player, reward);
 					}
 				}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				;
@@ -90,6 +91,7 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 					reward.setValue("SpecialChance." + key, null);
 					reloadAdvancedCore();
+					open(player, reward);
 				}
 			});
 		}
@@ -125,6 +127,7 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 									reward.getData().getConfigurationSection("SpecialChance." + key));
 							reward.setValue("SpecialChance." + key, null);
 							reloadAdvancedCore();
+							open(player, reward);
 						}
 					}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				}

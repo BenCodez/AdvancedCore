@@ -28,7 +28,7 @@ public abstract class EditGUIValueNumber extends EditGUIValue {
 						StringParser.getInstance().colorize("&cSetting " + getKey() + " to " + number.doubleValue()));
 			}
 		}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) getCurrentValue() })
-				.currentValue(getCurrentValue().toString()).allowCustomOption(true).request(clickEvent.getPlayer());
+				.currentValue(getCurrentValue().toString()).allowCustomOption(true).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
 
 	public abstract void setValue(Player player, Number num);

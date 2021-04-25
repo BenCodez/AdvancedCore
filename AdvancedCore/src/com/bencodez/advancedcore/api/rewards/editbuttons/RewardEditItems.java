@@ -43,7 +43,8 @@ public abstract class RewardEditItems extends RewardEdit {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
 			}
 
 			@Override
@@ -134,6 +135,7 @@ public abstract class RewardEditItems extends RewardEdit {
 					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 					reward.setValue("Items." + key, null);
 					reloadAdvancedCore();
+					open(player, reward);
 				}
 			});
 		}
@@ -194,6 +196,7 @@ public abstract class RewardEditItems extends RewardEdit {
 							reward.setValue("Items." + item.getType().toString() + "." + entry.getKey(),
 									entry.getValue());
 						}
+						open(player, reward);
 					}
 				});
 
@@ -218,7 +221,9 @@ public abstract class RewardEditItems extends RewardEdit {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				String item = (String) getInv().getData("Item");
+				openEditItem(player, item, reward);
 			}
 		});
 

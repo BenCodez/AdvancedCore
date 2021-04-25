@@ -33,6 +33,7 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.createSection("AdvancedPriority." + value);
 						reloadAdvancedCore();
+						open(player, reward);
 					}
 				}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				;
@@ -90,6 +91,7 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 					reward.setValue("AdvancedPriority." + key, null);
 					reloadAdvancedCore();
+					open(player, reward);
 				}
 			});
 		}
@@ -125,6 +127,7 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 									reward.getData().getConfigurationSection("AdvancedPriority." + key));
 							reward.setValue("AdvancedPriority." + key, null);
 							reloadAdvancedCore();
+							open(player, reward);
 						}
 					}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				}

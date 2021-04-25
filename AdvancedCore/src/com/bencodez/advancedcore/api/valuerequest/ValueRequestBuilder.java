@@ -167,7 +167,9 @@ public class ValueRequestBuilder {
 	}
 
 	public ValueRequestBuilder usingMethod(InputMethod method) {
-		this.method = method;
+		if (method != null) {
+			this.method = method;
+		}
 		return this;
 	}
 

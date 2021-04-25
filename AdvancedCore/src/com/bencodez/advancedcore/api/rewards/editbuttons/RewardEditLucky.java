@@ -35,6 +35,7 @@ public abstract class RewardEditLucky extends RewardEdit {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.createSection("Lucky." + value.intValue());
 						reloadAdvancedCore();
+						open(player, reward);
 					}
 				}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				;
@@ -92,6 +93,7 @@ public abstract class RewardEditLucky extends RewardEdit {
 					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 					reward.setValue("Lucky." + key, null);
 					reloadAdvancedCore();
+					open(player, reward);
 				}
 			});
 		}
@@ -127,6 +129,7 @@ public abstract class RewardEditLucky extends RewardEdit {
 									reward.getData().getConfigurationSection("Lucky." + key));
 							reward.setValue("Lucky." + key, null);
 							reloadAdvancedCore();
+							open(player, reward);
 						}
 					}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
 				}

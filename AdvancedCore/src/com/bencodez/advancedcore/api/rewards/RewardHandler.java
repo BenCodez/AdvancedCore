@@ -592,7 +592,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addLore("Time before reward expires, if not executed"))));
+				}.addLore("Time before reward expires, if not executed").addLore("In minutes"))));
 
 		injectedRequirements.add(new RequirementInjectString("Permission", "") {
 
@@ -762,7 +762,7 @@ public class RewardHandler {
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
 					}
-				}.addOptions("ONLINE", "OFFLINE", "BOTH").addLore("When reward should execute"))));
+				}.addOptions("ONLINE", "OFFLINE", "BOTH").addLore("Define whether should execute if player was offline/online"))));
 
 		injectedRequirements.add(new RequirementInjectString("JavascriptExpression", "") {
 
@@ -844,23 +844,22 @@ public class RewardHandler {
 				}
 
 			}
-		}).addEditButton(
-				new EditGUIButton(new ItemBuilder("MAP"), new EditGUIValueInventory("LocationDistance") {
+		}).addEditButton(new EditGUIButton(new ItemBuilder("MAP"), new EditGUIValueInventory("LocationDistance") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditLocationDistance() {
 
 					@Override
-					public void openInventory(ClickEvent clickEvent) {
+					public void setVal(String key, Object value) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						new RewardEditLocationDistance() {
-
-							@Override
-							public void setVal(String key, Object value) {
-								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-								reward.setValue(key, value);
-								plugin.reloadAdvancedCore(false);
-							}
-						}.open(clickEvent.getPlayer(), reward);
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
 					}
-				})));
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Require player to be within a certain distance of locaction to get reward"))));
 
 		for (RequirementInject reward : injectedRequirements) {
 			reward.setInternalReward(true);
@@ -1352,7 +1351,7 @@ public class RewardHandler {
 				}.open(clickEvent.getPlayer(), reward);
 			}
 
-		})));
+		}.addLore("Run javascript to run rewards based on expression return value of true/false"))));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Lucky") {
 
@@ -1447,7 +1446,7 @@ public class RewardHandler {
 				openSubReward(clickEvent.getPlayer(), "Rewards", reward);
 			}
 
-		})).priority(5).alwaysForce().postReward());
+		}.addLore("Sub rewards"))).priority(5).alwaysForce().postReward());
 
 		injectedRewards.add(new RewardInjectStringList("RandomCommand") {
 
@@ -1538,7 +1537,7 @@ public class RewardHandler {
 						}.open(clickEvent.getPlayer(), reward);
 					}
 
-				})).asPlaceholder("RandomReward").priority(90).postReward());
+				}.addLore("Execute random reward"))).asPlaceholder("RandomReward").priority(90).postReward());
 
 		injectedRewards.add(new RewardInjectStringList("Priority") {
 
@@ -1819,7 +1818,10 @@ public class RewardHandler {
 						}.open(clickEvent.getPlayer(), reward);
 					}
 
-				})).priority(10).postReward());
+				}.addLore(
+						"AdvancedPriority will run first sub reward that it can, then ignore the rest of the sub rewards")
+						.addLore("Can be used for permission based rewards or chance based rewards")))
+				.priority(10).postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("SpecialChance") {
 
@@ -1881,7 +1883,7 @@ public class RewardHandler {
 				}.open(clickEvent.getPlayer(), reward);
 			}
 
-		})).priority(10).postReward());
+		}.addLore("Rewards based on chance"))).priority(10).postReward());
 
 		injectedRewards.add(new RewardInjectKeys("RandomItem") {
 
@@ -1971,7 +1973,7 @@ public class RewardHandler {
 				}.open(clickEvent.getPlayer(), reward);
 			}
 
-		}.addCheckKey("EnableChoices"))));
+		}.addCheckKey("EnableChoices").addLore("Give users a choice on the reward"))));
 
 		injectedRewards.add(new RewardInjectKeys("Items") {
 
@@ -2052,7 +2054,7 @@ public class RewardHandler {
 				}.open(clickEvent.getPlayer(), reward);
 			}
 
-		})));
+		}.addLore("Edit items"))));
 
 		for (RewardInject reward : injectedRewards) {
 			reward.setInternalReward(true);
