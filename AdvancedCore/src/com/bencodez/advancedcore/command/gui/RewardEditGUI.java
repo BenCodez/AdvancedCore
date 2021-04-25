@@ -174,16 +174,15 @@ public class RewardEditGUI {
 				}
 			});
 		} else {
-			inv.addButton(
-					new BInventoryButton(new ItemBuilder(Material.BOOK).setName("&cValues not setable in GUI yet:")
-							.setLore("&aRandom, Potions(Effects only), Item, Itemss, RandomItem",
-									"&bThis is a long list, overtime these will eventually be aded to edit gui",
-									"&3Also looking for feedback on GUI")) {
+			inv.addButton(new BInventoryButton(
+					new ItemBuilder(Material.BOOK).setName("&cValues not setable in GUI yet:").setLore(
+							"&aRandom, Potions(Effects only), Item, Items(WIP), RandomItem",
+							"&bThese will eventually be aded to edit gui", "&3Also looking for feedback on GUI")) {
 
-						@Override
-						public void onClick(ClickEvent clickEvent) {
-						}
-					});
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+				}
+			});
 		}
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cGo back")) {
 

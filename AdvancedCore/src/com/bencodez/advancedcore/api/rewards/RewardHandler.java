@@ -50,6 +50,7 @@ import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditFirework;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditItems;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditJavascript;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditLocationDistance;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditLucky;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMessages;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMoney;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditSound;
@@ -550,6 +551,7 @@ public class RewardHandler {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
 					}
 				}.addLore("Set chance for reward to execute"))).validator(new RequirementInjectValidator() {
 
@@ -591,6 +593,7 @@ public class RewardHandler {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.setValue(getKey(), value.intValue());
 						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
 					}
 				}.addLore("Time before reward expires, if not executed").addLore("In minutes"))));
 
@@ -622,6 +625,7 @@ public class RewardHandler {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
 					}
 				}.addLore("Set permission required to be given, set RequirePermission to true if using this")))
 				.addEditButton(new EditGUIButton(new EditGUIValueBoolean("RequirePermission", null) {
@@ -631,6 +635,7 @@ public class RewardHandler {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
 					}
 				}.addLore("If true, permission is required to run reward")))
 				.validator(new RequirementInjectValidator() {
@@ -719,6 +724,7 @@ public class RewardHandler {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
 					}
 				}.addLore("Worlds to execute reward in, only executes into one reward")))
 				.validator(new RequirementInjectValidator() {
@@ -761,8 +767,10 @@ public class RewardHandler {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
 					}
-				}.addOptions("ONLINE", "OFFLINE", "BOTH").addLore("Define whether should execute if player was offline/online"))));
+				}.addOptions("ONLINE", "OFFLINE", "BOTH")
+						.addLore("Define whether should execute if player was offline/online"))));
 
 		injectedRequirements.add(new RequirementInjectString("JavascriptExpression", "") {
 
@@ -1164,6 +1172,7 @@ public class RewardHandler {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
+				reward.reOpenEditGUI(player);
 			}
 		}.addLore("Execute single console command"))).validator(new RewardInjectValidator() {
 
@@ -1235,6 +1244,7 @@ public class RewardHandler {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
+				reward.reOpenEditGUI(player);
 			}
 		}.addLore("List of console commands"))).validator(new RewardInjectValidator() {
 
@@ -1283,6 +1293,7 @@ public class RewardHandler {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
 					}
 				}.addLore("Old style for console commands"))).addEditButton(new EditGUIButton(
 						new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands.Player", null) {
@@ -1292,6 +1303,7 @@ public class RewardHandler {
 								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 								reward.setValue(getKey(), value);
 								plugin.reloadAdvancedCore(false);
+								reward.reOpenEditGUI(player);
 							}
 						}.addLore("Execute commands as player"))));
 
@@ -1315,6 +1327,7 @@ public class RewardHandler {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
+				reward.reOpenEditGUI(player);
 			}
 		}.addLore("Javascript expressions to run"))));
 
@@ -1394,7 +1407,23 @@ public class RewardHandler {
 				return null;
 
 			}
-		}.priority(10));
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Lucky") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditLucky() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+
+		})).priority(10));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Random") {
 
@@ -1466,6 +1495,7 @@ public class RewardHandler {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 				reward.setValue(getKey(), value);
 				plugin.reloadAdvancedCore(false);
+				reward.reOpenEditGUI(player);
 			}
 		}.addLore("Execute random command"))).validator(new RewardInjectValidator() {
 
@@ -1562,6 +1592,7 @@ public class RewardHandler {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
 						reward.setValue(getKey(), value);
 						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
 					}
 				}.addLore("Execute first reward file that can be executed"))).postReward());
 
