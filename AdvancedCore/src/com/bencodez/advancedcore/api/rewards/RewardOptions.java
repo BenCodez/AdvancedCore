@@ -152,6 +152,7 @@ public class RewardOptions {
 		String str = "Online: " + online + ", ";
 		str += "OnlineSet: " + onlineSet + ", ";
 		str += "GiveOffline: " + giveOffline + ", ";
+		str += "ForceOffline: " + forceOffline + ", ";
 		str += "CheckTimed: " + checkTimed + ", ";
 		str += "IgnoreChance: " + ignoreChance + ", ";
 		str += "IgnoreRequirements: " + ignoreRequirements + ", ";

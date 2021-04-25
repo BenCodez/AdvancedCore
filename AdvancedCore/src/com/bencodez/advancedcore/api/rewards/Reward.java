@@ -327,7 +327,7 @@ public class Reward {
 		}
 
 		// save reward for offline
-		if ((((!rewardOptions.isOnline() && !user.isOnline()) || allowOffline)
+		if (((((!rewardOptions.isOnline() || rewardOptions.getServer() != null) && !user.isOnline()) || allowOffline)
 				&& (!isForceOffline() && !rewardOptions.isForceOffline())) || vanished) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
@@ -388,7 +388,8 @@ public class Reward {
 				}
 			}
 		} else {
-			plugin.debug(getRewardName() + ": Player == null & forceoffline false");
+			plugin.debug(getRewardName() + ": Player == null & forceoffline false, player: " + user.getPlayerName()
+					+ "/" + user.getUUID());
 		}
 	}
 
