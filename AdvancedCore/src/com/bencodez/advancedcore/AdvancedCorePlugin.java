@@ -171,6 +171,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private FullInventoryHandler fullInventoryHandler;
 
+	@Getter
+	private CommandLoader advancedCoreCommandLoader;
+
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
@@ -717,7 +720,20 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
 
 			commandMap.register(this.getName() + "valuerequestinput",
-					new ValueRequestInputCommand(this.getName() + "valuerequestinput"));
+					new ValueRequestInputCommand(this, this.getName() + "valuerequestinput"));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void unRegisterValueRequest() {
+		try {
+			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+
+			bukkitCommandMap.setAccessible(true);
+			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
+
+			commandMap.getCommand(this.getName() + "valuerequestinput").unregister(commandMap);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -790,6 +806,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		onUnLoad();
 		SkullHandler.getInstance().close();
 		fullInventoryHandler.save();
+		unRegisterValueRequest();
 
 		// Thread.getInstance().getThread().interrupt();
 		// FileThread.getInstance().getThread().interrupt();
@@ -798,6 +815,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		javaPlugin = this;
+		advancedCoreCommandLoader = CommandLoader.getInstance();
 		onPreLoad();
 		loadHook();
 		onPostLoad();
