@@ -176,7 +176,7 @@ public class RewardEditGUI {
 		} else {
 			inv.addButton(new BInventoryButton(
 					new ItemBuilder(Material.BOOK).setName("&cValues not setable in GUI yet:").setLore(
-							"&aRandom, Potions(Effects only), Item, Items(WIP), RandomItem",
+							"&aRandom, Item, Items(WIP), RandomItem",
 							"&bThese will eventually be aded to edit gui", "&3Also looking for feedback on GUI")) {
 
 				@Override

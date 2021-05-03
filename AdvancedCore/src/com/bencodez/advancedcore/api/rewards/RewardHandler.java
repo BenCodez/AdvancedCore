@@ -53,6 +53,7 @@ import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditLocationDista
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditLucky;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMessages;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMoney;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditPotions;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditSound;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditSpecialChance;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTitle;
@@ -1609,7 +1610,22 @@ public class RewardHandler {
 				return null;
 
 			}
-		});
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAINTING), new EditGUIValueInventory("Potions") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditPotions() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Configure Potion Effects"))));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Title") {
 
