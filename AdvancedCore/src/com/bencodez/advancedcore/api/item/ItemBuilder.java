@@ -263,7 +263,7 @@ public class ItemBuilder {
 	public ItemBuilder(ItemStack is) {
 		this.is = is;
 	}
-	
+
 	public Material getType() {
 		return is.getType();
 	}
@@ -282,7 +282,12 @@ public class ItemBuilder {
 		if (NMSManager.getInstance().isVersion("1.12")) {
 			materialStr = "PAPER";
 		}
-		this.is = new ItemStack(Material.valueOf(materialStr));
+		try {
+			this.is = new ItemStack(Material.valueOf(materialStr));
+		} catch (Exception e) {
+			this.is = new ItemStack(Material.PAPER);
+			e.printStackTrace();
+		}
 	}
 
 	/**
