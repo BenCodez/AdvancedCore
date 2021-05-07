@@ -286,7 +286,7 @@ public class ItemBuilder {
 			this.is = new ItemStack(Material.valueOf(materialStr));
 		} catch (Exception e) {
 			this.is = new ItemStack(Material.PAPER);
-			e.printStackTrace();
+			AdvancedCorePlugin.getInstance().debug("Invalid material: " + material);
 		}
 	}
 
