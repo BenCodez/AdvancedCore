@@ -6,6 +6,7 @@ import java.util.Map.Entry;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
@@ -264,6 +265,36 @@ public abstract class RewardEditItems extends RewardEdit {
 						openEditItem(player, item, reward);
 					}
 				}));
+
+		inv.addButton(new EditGUIButton(new EditGUIValueNumber("Items." + item + ".CustomModelData",
+				reward.getValue("Items." + item + ".CustomModelData")) {
+
+			@Override
+			public void setValue(Player player, Number value) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				reward.setValue(getKey(), value.intValue());
+				reloadAdvancedCore();
+				String item = (String) getInv().getData("Item");
+				openEditItem(player, item, reward);
+			}
+		}));
+
+		ArrayList<String> flagList = new ArrayList<String>();
+		for (ItemFlag flag : ItemFlag.values()) {
+			flagList.add(flag.toString());
+		}
+		inv.addButton(new EditGUIButton(
+				new EditGUIValueList("Items." + item + ".ItemFlags", reward.getValue("Items." + item + ".ItemFlags")) {
+
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						reloadAdvancedCore();
+						String item = (String) getInv().getData("Item");
+						openEditItem(player, item, reward);
+					}
+				}).addOptions(ArrayUtils.getInstance().convert(flagList)));
 
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 

@@ -1011,6 +1011,20 @@ public class ItemBuilder {
 		if (hasCustomLore()) {
 			map.put("Lore", getLore());
 		}
+		ItemMeta im = is.getItemMeta();
+		for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
+			map.put("Enchants." + entry.getKey().getKey(), entry.getValue().intValue());
+		}
+
+		ArrayList<String> flagList = new ArrayList<String>();
+		for (ItemFlag flag : im.getItemFlags()) {
+			flagList.add(flag.toString());
+		}
+		map.put("ItemFlags", flagList);
+
+		if (im.hasCustomModelData()) {
+			map.put("CustomModelData", im.getCustomModelData());
+		}
 
 		return map;
 	}
