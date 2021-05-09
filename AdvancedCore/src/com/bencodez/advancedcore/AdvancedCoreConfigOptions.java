@@ -202,11 +202,13 @@ public class AdvancedCoreConfigOptions {
 	public void load(AdvancedCorePlugin plugin) {
 		if (getConfigData() != null) {
 			debug = DebugLevel.getDebug(configData.getString("DebugLevel", "NONE"));
-			if (configData.getBoolean("Debug", false)) {
-				if (configData.getBoolean("ExtraDebug", false)) {
-					debug = DebugLevel.EXTRA;
-				} else {
-					debug = DebugLevel.INFO;
+			if (debug.equals(DebugLevel.NONE)) {
+				if (configData.getBoolean("Debug", false)) {
+					if (configData.getBoolean("ExtraDebug", false)) {
+						debug = DebugLevel.EXTRA;
+					} else {
+						debug = DebugLevel.INFO;
+					}
 				}
 			}
 			debugIngame = configData.getBoolean("DebugInGame", false);
