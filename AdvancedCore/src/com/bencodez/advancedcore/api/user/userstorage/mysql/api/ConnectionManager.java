@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.user.userstorage.mysql.api;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -155,11 +156,19 @@ public class ConnectionManager {
 	}
 
 	public boolean open() {
+
+		String className = "com.mysql.cj.jdbc.Driver";
 		try {
-			Class.forName("com.mysql.jdbc.Driver");
+			Class.forName(className);
+		} catch (Exception e) {
+			AdvancedCorePlugin.getInstance().debug("Using com.mysql.jdbc.Driver");
+			className = "com.mysql.jdbc.Driver";
+		}
+		try {
+			Class.forName(className);
 
 			HikariConfig config = new HikariConfig();
-			config.setDriverClassName("com.mysql.jdbc.Driver");
+			config.setDriverClassName(className);
 			config.setUsername(username);
 			config.setPassword(password);
 			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=" + useSSL
