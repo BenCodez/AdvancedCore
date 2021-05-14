@@ -467,8 +467,7 @@ public class ItemBuilder {
 		int loreLength = getLoreLength();
 		ArrayList<String> currentLore = getLore();
 		ArrayList<String> newLore = new ArrayList<String>();
-		for (String lore1 : currentLore) {
-			String lore = ChatColor.stripColor(StringParser.getInstance().colorize(lore1));
+		for (String lore : currentLore) {
 			StringBuilder builder = new StringBuilder();
 			int count = 0;
 			for (char character : lore.toCharArray()) {
