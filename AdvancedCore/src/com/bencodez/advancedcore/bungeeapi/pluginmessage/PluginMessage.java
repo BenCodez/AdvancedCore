@@ -10,6 +10,7 @@ import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.thread.Thread;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
@@ -54,7 +55,7 @@ public class PluginMessage implements PluginMessageListener {
 
 		final ArrayList<String> list1 = list;
 
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		Thread.getInstance().run(new Runnable() {
 
 			@Override
 			public void run() {
@@ -82,8 +83,7 @@ public class PluginMessage implements PluginMessageListener {
 			for (String message : messageData) {
 				out.writeUTF(message);
 			}
-			p.sendPluginMessage(plugin, plugin.getBungeeChannel(),
-					byteOutStream.toByteArray());
+			p.sendPluginMessage(plugin, plugin.getBungeeChannel(), byteOutStream.toByteArray());
 			out.close();
 		} catch (Exception e) {
 			e.printStackTrace();
