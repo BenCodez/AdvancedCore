@@ -156,7 +156,12 @@ public class ConnectionManager {
 
 	public boolean open() {
 
-		String className = "com.mysql.jdbc.Driver";
+		String className = "com.mysql.cj.jdbc.Driver";
+		try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException ignored) {
+        	className = "com.mysql.jdbc.Driver";
+        }
 		try {
 			Class.forName(className);
 
