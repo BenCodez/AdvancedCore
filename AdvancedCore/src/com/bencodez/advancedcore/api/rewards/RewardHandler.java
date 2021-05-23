@@ -311,6 +311,13 @@ public class RewardHandler {
 			plugin.getLogger().warning("Using example rewards as a reward, becarefull");
 		}
 
+		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
+			if (direct.getPath().replace(".", "_").equals(reward)) {
+				plugin.debug("Using directlydefined reward for: " + reward);
+				return direct.getReward();
+			}
+		}
+
 		return new Reward(reward);
 	}
 
@@ -556,6 +563,8 @@ public class RewardHandler {
 					RewardOptions rewardOptions) {
 				if (rewardOptions.getPlaceholders().containsKey("ExecDate") && num > 0) {
 					long execDate = Long.parseLong(rewardOptions.getPlaceholders().get("ExecDate"));
+					debug("ExecDate: " + execDate + ", plus time: " + (execDate + num * 60 * 1000) + ", current time: "
+							+ System.currentTimeMillis());
 					if (execDate + num * 60 * 1000 > System.currentTimeMillis()) {
 						return true;
 					} else {
