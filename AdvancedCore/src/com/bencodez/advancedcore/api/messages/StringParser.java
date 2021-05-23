@@ -464,7 +464,23 @@ public class StringParser {
 		for (int i = 0; i < string.length(); i++) {
 			char c = string.charAt(i);
 			if (c == '&') {
-				if (string.charAt(i + 1) == 'l') {
+				if (string.charAt(i + 1) == '#') {
+					String hexColor = "";
+					for (int j = i + 2; j < i + 2 + 6; j++) {
+						hexColor += string.charAt(j);
+					}
+					AdvancedCorePlugin.getInstance().debug(hexColor);
+					if (string.charAt(i + 8) == '#') {
+						i += 8;
+						previousLetter = false;
+
+						TextComponent newTC = new TextComponent(currentstring);
+						newTC.setColor(ChatColor.of("#" + hexColor));
+						currentstring = "";
+						base.addExtra(newTC);
+
+					}
+				} else if (string.charAt(i + 1) == 'l') {
 					if (previousLetter) {
 						TextComponent newTC = new TextComponent(currentstring);
 						if (currentColor != null) {
