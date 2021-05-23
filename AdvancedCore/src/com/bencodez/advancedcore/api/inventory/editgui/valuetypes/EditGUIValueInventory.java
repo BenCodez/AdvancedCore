@@ -19,6 +19,7 @@ public abstract class EditGUIValueInventory extends EditGUIValue {
 		return this;
 	}
 
+	@Override
 	public boolean containsKey(RewardEditData rewardEditData) {
 		for (String key : keys) {
 			if (rewardEditData.hasPath(key)) {

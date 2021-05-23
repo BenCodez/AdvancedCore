@@ -9,6 +9,7 @@ public abstract class RewardEditFirework extends RewardEdit {
 	public RewardEditFirework() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Firework: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -19,7 +20,7 @@ public abstract class RewardEditFirework extends RewardEdit {
 		inv.addButton(getBooleanButton("Firework.Trail", reward));
 		inv.addButton(getBooleanButton("Firework.Flicker", reward));
 		inv.addButton(getStringListButton("Firework.Types", reward));
-		
+
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);

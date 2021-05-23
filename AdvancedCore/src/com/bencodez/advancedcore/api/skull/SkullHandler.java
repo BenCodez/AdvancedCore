@@ -29,14 +29,14 @@ public class SkullHandler {
 		return instance;
 	}
 
-	@SuppressWarnings("rawtypes")
-	private Class craftItemStack;
-	@SuppressWarnings("rawtypes")
-	private Class itemStack;
+	private Method asBukkitCopy;
 	@Getter
 	private Method asNMSCopy;
+	@SuppressWarnings("rawtypes")
+	private Class craftItemStack;
 
-	private Method asBukkitCopy;
+	@SuppressWarnings("rawtypes")
+	private Class itemStack;
 
 	@Getter
 	private ConcurrentHashMap<String, Object> skulls = new ConcurrentHashMap<String, Object>();

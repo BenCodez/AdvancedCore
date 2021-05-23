@@ -28,6 +28,8 @@ public class StringParser {
 		return instance;
 	}
 
+	public final char COLOR_CHAR = ChatColor.COLOR_CHAR;
+
 	private StringParser() {
 	}
 
@@ -65,6 +67,10 @@ public class StringParser {
 		return colorize(comp.toPlainText());
 	}
 
+	public boolean contains(String str1, String str2) {
+		return str1.contains(str2);
+	}
+
 	public boolean containsIgnorecase(String str1, String str2) {
 		if (str1 == null || str2 == null) {
 			return false;
@@ -72,28 +78,8 @@ public class StringParser {
 		return str1.toLowerCase().contains(str2.toLowerCase());
 	}
 
-	public boolean contains(String str1, String str2) {
-		return str1.contains(str2);
-	}
-
 	public boolean containsJson(String msg) {
 		return contains(msg, "[Text=\"");
-	}
-
-	public final char COLOR_CHAR = ChatColor.COLOR_CHAR;
-
-	public String translateHexColorCodes(String startTag, String endTag, String message) {
-		final Pattern hexPattern = Pattern.compile(startTag + "([A-Fa-f0-9]{6})" + endTag);
-		Matcher matcher = hexPattern.matcher(message);
-		StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
-		while (matcher.find()) {
-			String group = matcher.group(1);
-			matcher.appendReplacement(buffer,
-					COLOR_CHAR + "x" + COLOR_CHAR + group.charAt(0) + COLOR_CHAR + group.charAt(1) + COLOR_CHAR
-							+ group.charAt(2) + COLOR_CHAR + group.charAt(3) + COLOR_CHAR + group.charAt(4) + COLOR_CHAR
-							+ group.charAt(5));
-		}
-		return matcher.appendTail(buffer).toString();
 	}
 
 	public String getProgressBar(int current, int max, int totalBars, String symbol, String completedColor,
@@ -268,6 +254,11 @@ public class StringParser {
 		}
 	}
 
+	public String replaceJavascript(AdvancedCoreUser user, String text) {
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
+		return replaceJavascript(text, engine);
+	}
+
 	public String replaceJavascript(CommandSender player, String text) {
 		if (player instanceof Player) {
 			return replaceJavascript((Player) player, text);
@@ -340,11 +331,6 @@ public class StringParser {
 		}
 		// plugin.debug(msg);
 		return msg;
-	}
-
-	public String replaceJavascript(AdvancedCoreUser user, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
-		return replaceJavascript(text, engine);
 	}
 
 	public String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
@@ -670,5 +656,19 @@ public class StringParser {
 		newTC.setObfuscated(magic);
 		base.addExtra(newTC);
 		return base;
+	}
+
+	public String translateHexColorCodes(String startTag, String endTag, String message) {
+		final Pattern hexPattern = Pattern.compile(startTag + "([A-Fa-f0-9]{6})" + endTag);
+		Matcher matcher = hexPattern.matcher(message);
+		StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
+		while (matcher.find()) {
+			String group = matcher.group(1);
+			matcher.appendReplacement(buffer,
+					COLOR_CHAR + "x" + COLOR_CHAR + group.charAt(0) + COLOR_CHAR + group.charAt(1) + COLOR_CHAR
+							+ group.charAt(2) + COLOR_CHAR + group.charAt(3) + COLOR_CHAR + group.charAt(4) + COLOR_CHAR
+							+ group.charAt(5));
+		}
+		return matcher.appendTail(buffer).toString();
 	}
 }

@@ -35,10 +35,10 @@ import com.comphenix.protocol.events.PacketContainer;
  */
 public class ItemMessage {
 	public class MessageRecord implements Comparable<Object> {
-		private final String message;
 		private final int duration;
-		private final int priority;
 		private final long id;
+		private final String message;
+		private final int priority;
 
 		public MessageRecord(String message, int duration, int priority, long id) {
 			this.message = message;
@@ -79,10 +79,10 @@ public class ItemMessage {
 	}
 
 	private class NamerTask extends BukkitRunnable implements Listener {
-		private final WeakReference<Player> playerRef;
-		private final String message;
-		private int slot;
 		private int iterations;
+		private final String message;
+		private final WeakReference<Player> playerRef;
+		private int slot;
 
 		public NamerTask(Player player, MessageRecord rec) {
 			this.playerRef = new WeakReference<Player>(player);
@@ -176,19 +176,19 @@ public class ItemMessage {
 		}
 	}
 
-	private static final int DEFAULT_DURATION = 2; // seconds
-	private static final int DEFAULT_PRIORITY = 0;
 	private static final String DEF_FORMAT_1 = "%s";
 	private static final String DEF_FORMAT_2 = " %s ";
-	private static final String METADATA_Q_KEY = "item-message:msg-queue";
+	private static final int DEFAULT_DURATION = 2; // seconds
+	private static final int DEFAULT_PRIORITY = 0;
 	private static final String METADATA_ID_KEY = "item-message:id";
-
-	private int interval = 20; // ticks
-	private final Plugin plugin;
-
-	private String[] formats = new String[] { DEF_FORMAT_1, DEF_FORMAT_2 };
+	private static final String METADATA_Q_KEY = "item-message:msg-queue";
 
 	private Material emptyHandReplacement = Material.SNOW;
+	private String[] formats = new String[] { DEF_FORMAT_1, DEF_FORMAT_2 };
+
+	private int interval = 20; // ticks
+
+	private final Plugin plugin;
 
 	public ItemMessage(Plugin plugin) {
 		this.plugin = plugin;

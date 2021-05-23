@@ -30,20 +30,9 @@ import lombok.Setter;
  */
 public class Reward {
 
-	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
-	@Getter
-	@Setter
-	private String name;
-
 	@Getter
 	@Setter
 	private RewardFileData config;
-
-	@Getter
-	@Setter
-	private boolean forceOffline;
 
 	@Getter
 	@Setter
@@ -63,6 +52,27 @@ public class Reward {
 
 	@Getter
 	@Setter
+	private File file;
+
+	@Getter
+	@Setter
+	private boolean forceOffline;
+
+	@Getter
+	@Setter
+	private String name;
+
+	@Getter
+	private boolean needsRewardFile = true;
+
+	/** The plugin. */
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+
+	@Getter
+	private RepeatHandle repeatHandle;
+
+	@Getter
+	@Setter
 	private boolean timedEnabled;
 
 	@Getter
@@ -72,16 +82,6 @@ public class Reward {
 	@Getter
 	@Setter
 	private int timedMinute;
-
-	@Getter
-	private RepeatHandle repeatHandle;
-
-	@Getter
-	@Setter
-	private File file;
-
-	@Getter
-	private boolean needsRewardFile = true;
 
 	/**
 	 * Instantiates a new reward.
@@ -104,11 +104,6 @@ public class Reward {
 
 	public Reward(String name, ConfigurationSection section) {
 		load(name, section);
-	}
-
-	public Reward needsRewardFile(boolean value) {
-		needsRewardFile = value;
-		return this;
 	}
 
 	public boolean canGiveReward(AdvancedCoreUser user, RewardOptions options) {
@@ -435,6 +430,11 @@ public class Reward {
 		repeatHandle = new RepeatHandle(this);
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
+	}
+
+	public Reward needsRewardFile(boolean value) {
+		needsRewardFile = value;
+		return this;
 	}
 
 	private void setRewardFile() {

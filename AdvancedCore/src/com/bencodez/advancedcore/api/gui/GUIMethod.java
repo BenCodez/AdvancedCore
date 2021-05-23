@@ -1,5 +1,5 @@
 package com.bencodez.advancedcore.api.gui;
 
 public enum GUIMethod {
-	CHEST, BOOK, CHAT;
+	BOOK, CHAT, CHEST;
 }

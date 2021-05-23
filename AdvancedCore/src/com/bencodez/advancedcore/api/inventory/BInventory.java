@@ -37,25 +37,25 @@ public class BInventory {
 	public class ClickEvent {
 
 		@Getter
-		private Player player;
-
-		@Getter
-		private InventoryClickEvent event;
+		private BInventoryButton button;
 
 		@Getter
 		private ClickType click;
 
 		@Getter
-		private Inventory inventory;
-
-		@Getter
-		private int slot;
-
-		@Getter
 		private ItemStack clickedItem;
 
 		@Getter
-		private BInventoryButton button;
+		private InventoryClickEvent event;
+
+		@Getter
+		private Inventory inventory;
+
+		@Getter
+		private Player player;
+
+		@Getter
+		private int slot;
 
 		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
 			this.event = event;
@@ -133,32 +133,36 @@ public class BInventory {
 		inventory.openInventory(player);
 	}
 
+	private Map<Integer, BInventoryButton> buttons = new HashMap<Integer, BInventoryButton>();
+
 	@Getter
 	private boolean closeInv = true;
 
-	private ItemStack prevItem;
+	private HashMap<String, Object> data = new HashMap<String, Object>();
 
-	private ItemStack nextItem;
+	private Inventory inv;
 
-	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
-
-	private int maxInvSize = 54;
-
-	private boolean pages = false;
+	private String inventoryName;
 
 	@Getter
-	private int page = 1;
+	@Setter
+	private long lastPressTime = 0;
+
+	private int maxInvSize = 54;
 
 	@Getter
 	private int maxPage = 1;
 
-	private String inventoryName;
+	private ItemStack nextItem;
 
-	private Map<Integer, BInventoryButton> buttons = new HashMap<Integer, BInventoryButton>();
+	@Getter
+	private int page = 1;
 
-	private Inventory inv;
+	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
 
-	private HashMap<String, Object> data = new HashMap<String, Object>();
+	private boolean pages = false;
+
+	private String perm;
 
 	@Getter
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
@@ -167,9 +171,7 @@ public class BInventory {
 	@Setter
 	private boolean playerSound = true;
 
-	@Getter
-	@Setter
-	private long lastPressTime = 0;
+	private ItemStack prevItem;
 
 	/**
 	 * Instantiates a new b inventory.
@@ -182,7 +184,7 @@ public class BInventory {
 
 	/**
 	 * Adds the button.
-	 * 
+	 *
 	 * Slot of -2 will add item to end of the GUI (last available slot)
 	 *
 	 * @param button the button
@@ -193,7 +195,7 @@ public class BInventory {
 			slot = getNextSlot();
 		}
 		if (slot == -2) {
-			slot = getProperSize(getNextSlot())-1;
+			slot = getProperSize(getNextSlot()) - 1;
 		}
 		if (button.getFillSlots() != null && button.getFillSlots().size() > 0) {
 			for (Integer fill : button.getFillSlots()) {
@@ -484,12 +486,6 @@ public class BInventory {
 
 	}
 
-	private String perm;
-
-	public void requirePermission(String permission) {
-		this.perm = permission;
-	}
-
 	/**
 	 * Open inventory.
 	 *
@@ -558,6 +554,10 @@ public class BInventory {
 						(float) AdvancedCorePlugin.getInstance().getOptions().getClickSoundPitch());
 			}
 		}
+	}
+
+	public void requirePermission(String permission) {
+		this.perm = permission;
 	}
 
 	/**

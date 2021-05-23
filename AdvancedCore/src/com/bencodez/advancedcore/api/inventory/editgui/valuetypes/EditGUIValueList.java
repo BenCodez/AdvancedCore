@@ -6,8 +6,8 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.inventory.BInventory;
-import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
+import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;

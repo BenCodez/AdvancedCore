@@ -18,7 +18,8 @@ public abstract class RewardInjectKeys extends RewardInject {
 	@Override
 	public String onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
-		if (data.isConfigurationSection(getPath()) || (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
+		if (data.isConfigurationSection(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))
+				|| isAlwaysForceNoData()) {
 			Set<String> value = data.getConfigurationSection(getPath()).getKeys(false);
 			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath());
 			return onRewardRequested(reward, user, value, data.getConfigurationSection(getPath()), placeholders);
@@ -26,7 +27,7 @@ public abstract class RewardInjectKeys extends RewardInject {
 		return null;
 	}
 
-	public abstract String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section, ConfigurationSection data,
-			HashMap<String, String> placeholders);
+	public abstract String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section,
+			ConfigurationSection data, HashMap<String, String> placeholders);
 
 }

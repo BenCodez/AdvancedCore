@@ -17,24 +17,19 @@ import xyz.upperlevel.spigot.book.BookUtil;
 
 public class BookWrapper {
 	@Getter
-	@Setter
-	private String title;
-	@Getter
 	private ItemStack book;
+	@Getter
+	private ArrayList<BaseComponent[]> builder = new ArrayList<BaseComponent[]>();
 	@Getter
 	private BookUtil.PageBuilder currentPage;
 	@Getter
 	@Setter
 	private int currentPageLines = 0;
 	@Getter
-	private ArrayList<BaseComponent[]> builder = new ArrayList<BaseComponent[]>();
-	@Getter
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
-
-	public BookWrapper addPlaceholder(String toReplace, String replaceWith) {
-		placeholders.put(toReplace, replaceWith);
-		return this;
-	}
+	@Getter
+	@Setter
+	private String title;
 
 	public BookWrapper(String title) {
 		this.title = title;
@@ -46,19 +41,17 @@ public class BookWrapper {
 		return this;
 	}
 
-	public BookWrapper nextPage(int newSize) {
-		builder.add(currentPage.build());
-		currentPage = new BookUtil.PageBuilder();
-		currentPageLines = newSize;
-		return this;
-	}
-
 	public BookWrapper addLine() {
 		currentPageLines += 1;
 		if (currentPageLines > 14) {
 			nextPage(0);
 		}
 		currentPage.newLine();
+		return this;
+	}
+
+	public BookWrapper addPlaceholder(String toReplace, String replaceWith) {
+		placeholders.put(toReplace, replaceWith);
 		return this;
 	}
 
@@ -76,6 +69,13 @@ public class BookWrapper {
 
 	public String colorize(String s) {
 		return StringParser.getInstance().colorize(s);
+	}
+
+	public BookWrapper nextPage(int newSize) {
+		builder.add(currentPage.build());
+		currentPage = new BookUtil.PageBuilder();
+		currentPageLines = newSize;
+		return this;
 	}
 
 	public void open(Player player) {

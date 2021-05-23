@@ -8,8 +8,8 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
-import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
+import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory;
 import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory.AnvilClickEvent;
 import com.bencodez.advancedcore.api.item.ItemBuilder;

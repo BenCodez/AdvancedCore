@@ -1,7 +1,7 @@
 package com.bencodez.advancedcore;
 
 public enum DebugLevel {
-	NONE, INFO, EXTRA, DEV;
+	DEV, EXTRA, INFO, NONE;
 
 	public static DebugLevel getDebug(String str) {
 		for (DebugLevel d : values()) {

@@ -18,6 +18,7 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 	public RewardEditAdvancedPriority() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit AdvancedPriority: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -78,6 +79,34 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 		inv.openInventory(player);
 	}
 
+	public void openEditSub(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit AdvancedPriority Edit Sub: " + reward.getName());
+		inv.addData("Reward", reward);
+
+		for (String key : reward.getData().getConfigurationSection("AdvancedPriority").getKeys(false)) {
+			inv.addButton(new BInventoryButton(
+					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to edit")) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+					openSubReward(clickEvent.getPlayer(), "AdvancedPriority." + key, reward);
+				}
+			});
+		}
+
+		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
+			}
+		}));
+
+		inv.openInventory(player);
+	}
+
 	public void openRemove(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit AdvancedPriority Remove: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -133,35 +162,7 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 				}
 			});
 		}
-		
-		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
-			@Override
-			public void openInventory(ClickEvent clickEvent) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				open(player, reward);
-			}
-		}));
-
-		inv.openInventory(player);
-	}
-
-	public void openEditSub(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit AdvancedPriority Edit Sub: " + reward.getName());
-		inv.addData("Reward", reward);
-
-		for (String key : reward.getData().getConfigurationSection("AdvancedPriority").getKeys(false)) {
-			inv.addButton(new BInventoryButton(
-					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to edit")) {
-
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-					openSubReward(clickEvent.getPlayer(), "AdvancedPriority." + key, reward);
-				}
-			});
-		}
-		
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
 			@Override

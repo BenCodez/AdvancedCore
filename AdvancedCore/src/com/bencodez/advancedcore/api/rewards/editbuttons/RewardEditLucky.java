@@ -18,6 +18,7 @@ public abstract class RewardEditLucky extends RewardEdit {
 	public RewardEditLucky() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Lucky: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -74,8 +75,36 @@ public abstract class RewardEditLucky extends RewardEdit {
 				}
 			}
 		}).setName("&aEdit sub reward"));
-		
+
 		inv.addButton(getBackButton(reward));
+
+		inv.openInventory(player);
+	}
+
+	public void openEditSub(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit Lucky Edit Sub: " + reward.getName());
+		inv.addData("Reward", reward);
+
+		for (String key : reward.getData().getConfigurationSection("Lucky").getKeys(false)) {
+			inv.addButton(new BInventoryButton(
+					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to edit")) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+					openSubReward(clickEvent.getPlayer(), "Lucky." + key, reward);
+				}
+			});
+		}
+
+		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
+			}
+		}));
 
 		inv.openInventory(player);
 	}
@@ -97,7 +126,7 @@ public abstract class RewardEditLucky extends RewardEdit {
 				}
 			});
 		}
-		
+
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
 			@Override
@@ -135,35 +164,7 @@ public abstract class RewardEditLucky extends RewardEdit {
 				}
 			});
 		}
-		
-		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
-			@Override
-			public void openInventory(ClickEvent clickEvent) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				open(player, reward);
-			}
-		}));
-
-		inv.openInventory(player);
-	}
-
-	public void openEditSub(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit Lucky Edit Sub: " + reward.getName());
-		inv.addData("Reward", reward);
-
-		for (String key : reward.getData().getConfigurationSection("Lucky").getKeys(false)) {
-			inv.addButton(new BInventoryButton(
-					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to edit")) {
-
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-					openSubReward(clickEvent.getPlayer(), "Lucky." + key, reward);
-				}
-			});
-		}
-		
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
 			@Override

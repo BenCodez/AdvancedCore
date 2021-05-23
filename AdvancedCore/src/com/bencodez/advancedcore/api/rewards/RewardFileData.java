@@ -23,11 +23,7 @@ import net.md_5.bungee.api.ChatColor;
  */
 public class RewardFileData {
 
-	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
-	/** The reward. */
-	private Reward reward;
+	private ConfigurationSection configData;
 
 	/** The data file. */
 	private File dataFile;
@@ -35,7 +31,11 @@ public class RewardFileData {
 	/** The data. */
 	private FileConfiguration fileData;
 
-	private ConfigurationSection configData;
+	/** The plugin. */
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+
+	/** The reward. */
+	private Reward reward;
 
 	@Getter
 	private File rewardFolder;
@@ -62,6 +62,14 @@ public class RewardFileData {
 		this.rewardFolder = rewardFolder;
 
 		setup();
+	}
+
+	public void createSection(String path) {
+		if (fileData != null) {
+			fileData.createSection(path);
+			save(fileData);
+			reload();
+		}
 	}
 
 	/**
@@ -155,10 +163,6 @@ public class RewardFileData {
 		return getConfigData().getInt("Delayed.Seconds");
 	}
 
-	public ConfigurationSection getDisplayItem() {
-		return getConfigData().getConfigurationSection("DisplayItem");
-	}
-
 	/**
 	 * Gets the data.
 	 *
@@ -167,6 +171,10 @@ public class RewardFileData {
 	/*
 	 * private FileConfiguration getFileData() { return fileData; }
 	 */
+
+	public ConfigurationSection getDisplayItem() {
+		return getConfigData().getConfigurationSection("DisplayItem");
+	}
 
 	/**
 	 * Gets the choice rewards enabled.
@@ -451,14 +459,6 @@ public class RewardFileData {
 			reload();
 		} else {
 			plugin.debug("Editing invalid reward: " + reward.getName());
-		}
-	}
-	
-	public void createSection(String path) {
-		if (fileData != null) {
-			fileData.createSection(path);
-			save(fileData);
-			reload();
 		}
 	}
 

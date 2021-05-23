@@ -9,10 +9,10 @@ import com.bencodez.advancedcore.api.misc.encryption.EncryptionHandler;
 
 public class ClientHandler {
 	private Socket clientSocket;
+	private boolean debug = false;
+	private EncryptionHandler encryptionHandler;
 	private String host;
 	private int port;
-	private EncryptionHandler encryptionHandler;
-	private boolean debug = false;
 
 	public ClientHandler(String host, int port, EncryptionHandler handle) {
 		this.host = host;

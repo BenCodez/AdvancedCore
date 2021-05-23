@@ -9,8 +9,8 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
-import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
+import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;

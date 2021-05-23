@@ -16,26 +16,26 @@ import lombok.Setter;
 
 public class RepeatHandle {
 	@Getter
-	private Reward reward;
+	@Setter
+	private int amount = -1;
 
 	@Getter
 	@Setter
+	private boolean autoStop = false;
+	@Getter
+	@Setter
 	private boolean enabled = false;
-	@Getter
-	@Setter
-	private long timeBetween = 0;
-	@Getter
-	@Setter
-	private int amount = -1;
+	private int globalAmount = 0;
 	@Getter
 	@Setter
 	private boolean repeatOnStartup = false;
 	@Getter
+	private Reward reward;
+	@Getter
 	@Setter
-	private boolean autoStop = false;
-	private Timer timer;
+	private long timeBetween = 0;
 
-	private int globalAmount = 0;
+	private Timer timer;
 
 	public RepeatHandle(Reward reward) {
 		this.reward = reward;

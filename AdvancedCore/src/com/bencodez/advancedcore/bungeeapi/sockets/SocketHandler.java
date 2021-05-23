@@ -10,9 +10,9 @@ import lombok.Getter;
 
 public class SocketHandler {
 	@Getter
-	private SocketServer server;
-	@Getter
 	private ArrayList<SocketReceiver> receiving;
+	@Getter
+	private SocketServer server;
 
 	public SocketHandler(String threadName, String host, int port, EncryptionHandler handle) {
 		start(threadName, host, port, handle, false);

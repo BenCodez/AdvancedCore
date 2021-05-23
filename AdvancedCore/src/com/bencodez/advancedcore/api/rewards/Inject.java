@@ -10,7 +10,7 @@ import lombok.Setter;
 public class Inject {
 	@Getter
 	@Setter
-	private String path;
+	private ArrayList<BInventoryButton> editButtons = new ArrayList<BInventoryButton>();
 
 	@Getter
 	@Setter
@@ -18,10 +18,10 @@ public class Inject {
 
 	@Getter
 	@Setter
-	private int priority = 50;
+	private String path;
 	@Getter
 	@Setter
-	private ArrayList<BInventoryButton> editButtons = new ArrayList<BInventoryButton>();
+	private int priority = 50;
 
 	public Inject(String path) {
 		this.path = path;

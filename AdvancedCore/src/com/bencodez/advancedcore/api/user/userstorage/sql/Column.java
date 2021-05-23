@@ -2,9 +2,9 @@ package com.bencodez.advancedcore.api.user.userstorage.sql;
 
 public class Column {
 
-	public String name;
 	public DataType dataType;
 	public int limit = 0;
+	public String name;
 	private Object value;
 
 	public Column(String name, DataType dataType) {

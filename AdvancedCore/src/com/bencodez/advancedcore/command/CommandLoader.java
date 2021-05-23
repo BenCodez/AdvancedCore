@@ -47,9 +47,12 @@ public class CommandLoader {
 		return instance;
 	}
 
+	private ArrayList<String> perms = new ArrayList<String>();
+
 	private AdvancedCorePlugin plugin;
 
-	private ArrayList<String> perms = new ArrayList<String>();
+	@Getter
+	ArrayList<CommandHandler> valueRequestCommands = new ArrayList<CommandHandler>();
 
 	public CommandLoader(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -529,9 +532,6 @@ public class CommandLoader {
 
 		return cmds;
 	}
-
-	@Getter
-	ArrayList<CommandHandler> valueRequestCommands = new ArrayList<CommandHandler>();
 
 	public void loadValueRequestCommands() {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();

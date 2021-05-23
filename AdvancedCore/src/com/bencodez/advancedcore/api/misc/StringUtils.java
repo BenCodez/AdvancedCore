@@ -205,6 +205,12 @@ public class StringUtils {
 	}
 
 	@Deprecated
+	public String replaceJavascript(AdvancedCoreUser user, String text) {
+		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
+		return replaceJavascript(text, engine);
+	}
+
+	@Deprecated
 	public String replaceJavascript(CommandSender player, String text) {
 		if (player instanceof Player) {
 			return replaceJavascript((Player) player, text);
@@ -281,12 +287,6 @@ public class StringUtils {
 		}
 		// plugin.debug(msg);
 		return msg;
-	}
-
-	@Deprecated
-	public String replaceJavascript(AdvancedCoreUser user, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
-		return replaceJavascript(text, engine);
 	}
 
 	@Deprecated

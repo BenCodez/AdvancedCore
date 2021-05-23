@@ -18,7 +18,8 @@ public abstract class RequirementInjectKeys extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if (data.isConfigurationSection(getPath()) || (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
+		if (data.isConfigurationSection(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))
+				|| isAlwaysForceNoData()) {
 			Set<String> value = data.getConfigurationSection(getPath()).getKeys(false);
 			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath());
 			return onRequirementsRequested(reward, user, value, data.getConfigurationSection(getPath()), rewardOptions);

@@ -16,17 +16,7 @@ import lombok.Setter;
 public abstract class RewardInject extends Inject {
 
 	@Getter
-	@Setter
-	private boolean synchronize = false;
-
-	@Getter
-	private Object object;
-
-	@Getter
 	private boolean addAsPlaceholder = false;
-
-	@Getter
-	private String placeholderName;
 
 	@Getter
 	private boolean alwaysForce = false;
@@ -35,10 +25,20 @@ public abstract class RewardInject extends Inject {
 	private boolean alwaysForceNoData = false;
 
 	@Getter
-	private RewardInjectValidator validate;
+	private Object object;
+
+	@Getter
+	private String placeholderName;
 
 	@Getter
 	private boolean postReward = false;
+
+	@Getter
+	@Setter
+	private boolean synchronize = false;
+
+	@Getter
+	private RewardInjectValidator validate;
 
 	public RewardInject(String path) {
 		super(path);

@@ -25,13 +25,13 @@ public class Table {
 		}
 	}
 
-	private String name;
 	private List<Column> columns = new ArrayList<>();
+	private String name;
+	private Object object = new Object();
+
 	private Column primaryKey;
 
 	private SQLite sqLite;
-
-	private Object object = new Object();
 
 	public Table(String name, Collection<Column> columns) {
 		this.name = name;

@@ -7,10 +7,10 @@ import com.bencodez.advancedcore.api.user.userstorage.mysql.api.utils.QueryUtils
 
 public class CreateTableQuery {
 
-	private String table;
-	private boolean ifNotExists = false;
 	private List<String> columns = new ArrayList<String>();
+	private boolean ifNotExists = false;
 	private String primaryKey;
+	private String table;
 
 	/**
 	 * Create a create table query.

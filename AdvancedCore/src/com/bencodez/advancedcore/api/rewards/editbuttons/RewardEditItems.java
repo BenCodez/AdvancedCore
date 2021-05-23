@@ -25,6 +25,7 @@ public abstract class RewardEditItems extends RewardEdit {
 	public RewardEditItems() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Items: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -41,17 +42,6 @@ public abstract class RewardEditItems extends RewardEdit {
 		UpdatingBInventoryButton b = new UpdatingBInventoryButton(new ItemBuilder(Material.PAPER)
 				.setName("&cView current items").addLoreLine("&aDisplaying all current items")
 				.addLoreLine("This doesn't support adding conditional items"), 750, 750) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				open(player, reward);
-			}
-
-			@Override
-			public ItemBuilder onUpdate(Player player) {
-				return nextItem();
-			}
 
 			public ItemBuilder nextItem() {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
@@ -74,6 +64,17 @@ public abstract class RewardEditItems extends RewardEdit {
 					}
 				}
 				return new ItemBuilder(Material.PAPER).setName("&cNo Items");
+			}
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
+			}
+
+			@Override
+			public ItemBuilder onUpdate(Player player) {
+				return nextItem();
 			}
 		};
 		if (reward.hasPath("Items")) {
@@ -123,23 +124,25 @@ public abstract class RewardEditItems extends RewardEdit {
 		inv.openInventory(player);
 	}
 
-	public void openRemove(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit Item Remove: " + reward.getName());
+	@SuppressWarnings("deprecation")
+	public void openAdd(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit Item Add: " + reward.getName());
 		inv.addData("Reward", reward);
 
-		for (String key : reward.getData().getConfigurationSection("Items").getKeys(false)) {
-			inv.addButton(new BInventoryButton(new ItemBuilder(reward.getData().getConfigurationSection("Items." + key))
-					.setName("&c" + key).addLoreLine("&cClick to remove")) {
+		inv.addButton(
+				new BInventoryButton(new ItemBuilder(player.getItemInHand().clone()).addLoreLine("&cClick to add")) {
 
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-					reward.setValue("Items." + key, null);
-					reloadAdvancedCore();
-					open(player, reward);
-				}
-			});
-		}
+					@Override
+					public void onClick(ClickEvent clickEvent) {
+						ItemBuilder item = new ItemBuilder(clickEvent.getPlayer().getItemInHand().clone());
+						HashMap<String, Object> map = item.getConfiguration();
+						for (Entry<String, Object> entry : map.entrySet()) {
+							reward.setValue("Items." + item.getType().toString() + "." + entry.getKey(),
+									entry.getValue());
+						}
+						open(player, reward);
+					}
+				});
 
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
@@ -168,38 +171,6 @@ public abstract class RewardEditItems extends RewardEdit {
 				}
 			}.addData("key", key));
 		}
-
-		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
-
-			@Override
-			public void openInventory(ClickEvent clickEvent) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				open(player, reward);
-			}
-		}));
-
-		inv.openInventory(player);
-	}
-
-	@SuppressWarnings("deprecation")
-	public void openAdd(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit Item Add: " + reward.getName());
-		inv.addData("Reward", reward);
-
-		inv.addButton(
-				new BInventoryButton(new ItemBuilder(player.getItemInHand().clone()).addLoreLine("&cClick to add")) {
-
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						ItemBuilder item = new ItemBuilder(clickEvent.getPlayer().getItemInHand().clone());
-						HashMap<String, Object> map = item.getConfiguration();
-						for (Entry<String, Object> entry : map.entrySet()) {
-							reward.setValue("Items." + item.getType().toString() + "." + entry.getKey(),
-									entry.getValue());
-						}
-						open(player, reward);
-					}
-				});
 
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
@@ -295,6 +266,36 @@ public abstract class RewardEditItems extends RewardEdit {
 						openEditItem(player, item, reward);
 					}
 				}).addOptions(ArrayUtils.getInstance().convert(flagList)));
+
+		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
+			}
+		}));
+
+		inv.openInventory(player);
+	}
+
+	public void openRemove(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit Item Remove: " + reward.getName());
+		inv.addData("Reward", reward);
+
+		for (String key : reward.getData().getConfigurationSection("Items").getKeys(false)) {
+			inv.addButton(new BInventoryButton(new ItemBuilder(reward.getData().getConfigurationSection("Items." + key))
+					.setName("&c" + key).addLoreLine("&cClick to remove")) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+					reward.setValue("Items." + key, null);
+					reloadAdvancedCore();
+					open(player, reward);
+				}
+			});
+		}
 
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 

@@ -20,6 +20,9 @@ public abstract class RequirementInject extends Inject {
 	private boolean alwaysForce = false;
 
 	@Getter
+	private boolean alwaysForceNoData = false;
+
+	@Getter
 	private RequirementInjectValidator validate;
 
 	public RequirementInject(String path) {
@@ -46,9 +49,6 @@ public abstract class RequirementInject extends Inject {
 		this.alwaysForceNoData = true;
 		return this;
 	}
-
-	@Getter
-	private boolean alwaysForceNoData = false;
 
 	public void debug(String str) {
 		AdvancedCorePlugin.getInstance().debug(str);

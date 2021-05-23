@@ -14,17 +14,17 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 
 public class ValueRequestBuilder {
 
-	private StringListener stringListener;
-	private NumberListener numberListener;
-	private BooleanListener booleanListener;
-	private String[] stringOptions;
-	private Number[] numberOptions;
-	private InputMethod method = null;
-	private String currentValue = "";
 	private boolean allowCustomOption = false;
-
-	private LinkedHashMap<String, ItemStack> stringItemOptions;
+	private BooleanListener booleanListener;
+	private String currentValue = "";
+	private InputMethod method = null;
 	private LinkedHashMap<Number, ItemStack> numberItemOptions;
+	private NumberListener numberListener;
+	private Number[] numberOptions;
+	private LinkedHashMap<String, ItemStack> stringItemOptions;
+
+	private StringListener stringListener;
+	private String[] stringOptions;
 
 	public ValueRequestBuilder(BooleanListener listener) {
 		booleanListener = listener;

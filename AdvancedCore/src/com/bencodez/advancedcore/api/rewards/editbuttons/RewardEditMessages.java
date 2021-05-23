@@ -9,6 +9,7 @@ public abstract class RewardEditMessages extends RewardEdit {
 	public RewardEditMessages() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Messages: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -24,7 +25,7 @@ public abstract class RewardEditMessages extends RewardEdit {
 		// messages.broadcast
 		inv.addButton(getStringButton("Messages.Broadcast", reward).addLore("Single line broadcast"));
 		inv.addButton(getStringListButton("Messages.Broadcast", reward).addLore("List of broadcast messages"));
-		
+
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);

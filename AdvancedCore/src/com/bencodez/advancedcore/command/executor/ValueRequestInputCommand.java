@@ -10,6 +10,7 @@ import com.bencodez.advancedcore.api.command.CommandHandler;
 
 public class ValueRequestInputCommand extends BukkitCommand {
 	private AdvancedCorePlugin plugin;
+
 	public ValueRequestInputCommand(AdvancedCorePlugin plugin, String name) {
 		super(name);
 		this.plugin = plugin;

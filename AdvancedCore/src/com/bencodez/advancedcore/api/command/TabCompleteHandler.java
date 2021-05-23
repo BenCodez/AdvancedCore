@@ -18,11 +18,11 @@ public class TabCompleteHandler {
 
 	private AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
-	private ConcurrentLinkedQueue<TabCompleteHandle> tabCompletes = new ConcurrentLinkedQueue<TabCompleteHandle>();
+	private ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions = new ConcurrentHashMap<String, ArrayList<String>>();
 
 	private ArrayList<String> tabCompleteReplaces = new ArrayList<String>();
 
-	private ConcurrentHashMap<String, ArrayList<String>> tabCompleteOptions = new ConcurrentHashMap<String, ArrayList<String>>();
+	private ConcurrentLinkedQueue<TabCompleteHandle> tabCompletes = new ConcurrentLinkedQueue<TabCompleteHandle>();
 
 	public void addTabCompleteOption(String toReplace, ArrayList<String> options) {
 		addTabCompleteOption(new TabCompleteHandle(toReplace, options) {

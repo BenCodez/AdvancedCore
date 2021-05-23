@@ -13,6 +13,7 @@ public abstract class RewardEditSound extends RewardEdit {
 	public RewardEditSound() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Sound: " + reward.getName());
 		inv.addData("Reward", reward);

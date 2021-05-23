@@ -39,6 +39,7 @@ public abstract class RequirementInjectString extends RequirementInject {
 		return true;
 	}
 
-	public abstract boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String value, RewardOptions rewardOptions);
+	public abstract boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String value,
+			RewardOptions rewardOptions);
 
 }

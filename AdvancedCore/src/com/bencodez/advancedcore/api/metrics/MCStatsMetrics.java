@@ -229,8 +229,6 @@ public class MCStatsMetrics {
 		buffer.append('&').append(encode(key)).append('=').append(encode(value));
 	}
 
-	AdvancedCorePlugin hook = AdvancedCorePlugin.getInstance();
-
 	/** The configuration. */
 	private final YamlConfiguration configuration;
 
@@ -245,6 +243,8 @@ public class MCStatsMetrics {
 
 	/** The guid. */
 	private final String guid;
+
+	AdvancedCorePlugin hook = AdvancedCorePlugin.getInstance();
 
 	/** The opt out lock. */
 	private final Object optOutLock = new Object();

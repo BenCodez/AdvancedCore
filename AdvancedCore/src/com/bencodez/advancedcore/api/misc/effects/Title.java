@@ -11,23 +11,23 @@ import com.bencodez.advancedcore.api.messages.StringParser;
  */
 public class Title {
 
-	/** The title. */
-	/* Title text and color */
-	private String title = "";
+	/** The fade in time. */
+	/* Title timings */
+	private int fadeInTime = -1;
+
+	/** The fade out time. */
+	private int fadeOutTime = -1;
+
+	/** The stay time. */
+	private int stayTime = -1;
 
 	/** The subtitle. */
 	/* Subtitle text and color */
 	private String subtitle = "";
 
-	/** The fade in time. */
-	/* Title timings */
-	private int fadeInTime = -1;
-
-	/** The stay time. */
-	private int stayTime = -1;
-
-	/** The fade out time. */
-	private int fadeOutTime = -1;
+	/** The title. */
+	/* Title text and color */
+	private String title = "";
 
 	/**
 	 * Instantiates a new title.

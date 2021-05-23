@@ -11,34 +11,34 @@ import lombok.Setter;
 
 public class RewardOptions {
 
-	private boolean online = true;
-	@Getter
-	@Setter
-	private boolean onlineSet = false;
-
 	@Getter
 	private boolean checkRepeat = true;
-
-	private boolean giveOffline = true;
-
 	private boolean checkTimed = true;
-
-	private boolean ignoreChance = false;
 
 	@Getter
 	private boolean forceOffline = false;
 
+	private boolean giveOffline = true;
+
+	private boolean ignoreChance = false;
+
 	@Getter
 	private boolean ignoreRequirements = false;
+
+	private boolean online = true;
+
+	@Getter
+	@Setter
+	private boolean onlineSet = false;
 
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
 	private String prefix = "";
 
-	private String suffix = "";
-
 	@Getter
 	private String server = "";
+
+	private String suffix = "";
 
 	public RewardOptions() {
 	}

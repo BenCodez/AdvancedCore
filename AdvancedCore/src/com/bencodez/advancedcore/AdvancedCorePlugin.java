@@ -90,66 +90,46 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	@Getter
-	private ConcurrentHashMap<String, String> uuidNameCache;
+	private CommandLoader advancedCoreCommandLoader;
 
 	@Getter
-	private CMIHandler cmiHandle;
+	private boolean authMeLoaded = false;
 
 	@Getter
-	@Setter
-	private boolean loadRewards = true;
-
-	@Getter
-	private SignMenu signMenu;
-
-	@Getter
-	private boolean placeHolderAPIEnabled;
-
-	private Database database;
-
-	@Getter
-	private MySQL mysql;
-
-	@Getter
-	private IServerHandle serverHandle;
-
-	@Getter
-	private Logger pluginLogger;
-
-	@Getter
-	private Timer timer = new Timer();
-
-	@Getter
-	@Setter
-	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
-	@Getter
-	private String version = "";
+	private ArrayList<String> bannedPlayers = new ArrayList<String>();
 
 	@Getter
 	private String buildTime = "";
 
 	@Getter
 	@Setter
-	private String jenkinsSite = "";
+	private String bungeeChannel;
+
+	@Getter
+	private CMIHandler cmiHandle;
+
+	private Database database;
+
+	@Getter
+	private Economy econ = null;
+
+	@Getter
+	private FullInventoryHandler fullInventoryHandler;
 
 	@Getter
 	@Setter
 	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
 
 	@Getter
-	private Economy econ = null;
+	@Setter
+	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
 	@Getter
-	private Permission perms;
-	@Getter
-	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
-
-	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
+	@Setter
+	private String jenkinsSite = "";
 
 	@Getter
-	private ArrayList<String> bannedPlayers = new ArrayList<String>();
-
-	@Getter
-	private boolean authMeLoaded = false;
+	@Setter
+	private boolean loadRewards = true;
 
 	@Getter
 	@Setter
@@ -160,19 +140,43 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private boolean loadUserData = true;
 
 	@Getter
-	private ServerData serverDataFile;
+	private MySQL mysql;
+	@Getter
+	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
+	@Getter
+	private Permission perms;
+
+	@Getter
+	private boolean placeHolderAPIEnabled;
+
+	@Getter
+	private Logger pluginLogger;
 
 	@Getter
 	private PluginMessage pluginMessaging;
 
 	@Getter
+	private ServerData serverDataFile;
+
+	@Getter
+	private IServerHandle serverHandle;
+
+	@Getter
+	private SignMenu signMenu;
+
+	@Getter
 	private TimeChecker timeChecker;
 
 	@Getter
-	private FullInventoryHandler fullInventoryHandler;
+	private Timer timer = new Timer();
+
+	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
 
 	@Getter
-	private CommandLoader advancedCoreCommandLoader;
+	private ConcurrentHashMap<String, String> uuidNameCache;
+
+	@Getter
+	private String version = "";
 
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
@@ -195,6 +199,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	}
 
+	private void checkCMI() {
+		if (Bukkit.getPluginManager().getPlugin("CMI") != null) {
+			getLogger().info("CMI found, loading hook");
+			cmiHandle = new CMIHandler();
+		}
+	}
+
 	private void checkPlaceHolderAPI() {
 		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
 
@@ -210,13 +221,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		});
 
-	}
-
-	private void checkCMI() {
-		if (Bukkit.getPluginManager().getPlugin("CMI") != null) {
-			getLogger().info("CMI found, loading hook");
-			cmiHandle = new CMIHandler();
-		}
 	}
 
 	public void checkPluginUpdate() {
@@ -726,19 +730,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
-	public void unRegisterValueRequest() {
-		try {
-			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
-
-			bukkitCommandMap.setAccessible(true);
-			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
-
-			commandMap.getCommand(this.getName() + "valuerequestinput").unregister(commandMap);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 	public void loadVault() {
 		Bukkit.getScheduler().runTaskLater(this, new Runnable() {
 
@@ -827,10 +818,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public abstract void onUnLoad();
 
-	@Getter
-	@Setter
-	private String bungeeChannel;
-
 	public void registerBungeeChannels(String name) {
 		this.bungeeChannel = name;
 		getServer().getMessenger().registerOutgoingPluginChannel(this, name);
@@ -844,6 +831,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public abstract void reload();
 
+	@Deprecated
+	public void reloadAdvancedCore() {
+		reloadAdvancedCore(false);
+	}
+
 	public void reloadAdvancedCore(boolean userStorage) {
 		getServerDataFile().reloadData();
 		RewardHandler.getInstance().loadRewards();
@@ -855,11 +847,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		RewardHandler.getInstance().checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
-	}
-
-	@Deprecated
-	public void reloadAdvancedCore() {
-		reloadAdvancedCore(false);
 	}
 
 	/**
@@ -913,6 +900,19 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 		perms = rsp.getProvider();
 		return perms != null;
+	}
+
+	public void unRegisterValueRequest() {
+		try {
+			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+
+			bukkitCommandMap.setAccessible(true);
+			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
+
+			commandMap.getCommand(this.getName() + "valuerequestinput").unregister(commandMap);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void userStartup() {

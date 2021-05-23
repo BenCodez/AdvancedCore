@@ -28,10 +28,10 @@ public class UserManager {
 		return instance;
 	}
 
+	private Object obj = new Object();
+
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
-	private Object obj = new Object();
 
 	/**
 	 * Instantiates a new user manager.
@@ -126,6 +126,11 @@ public class UserManager {
 		return getUser(new UUID(uuid.toString()));
 	}
 
+	@SuppressWarnings("deprecation")
+	public AdvancedCoreUser getUser(java.util.UUID uuid, String playerName) {
+		return new AdvancedCoreUser(plugin, new UUID(uuid.toString()), playerName);
+	}
+
 	/**
 	 * Gets the user.
 	 *
@@ -166,11 +171,6 @@ public class UserManager {
 	@SuppressWarnings("deprecation")
 	public AdvancedCoreUser getUser(UUID uuid) {
 		return new AdvancedCoreUser(plugin, uuid);
-	}
-
-	@SuppressWarnings("deprecation")
-	public AdvancedCoreUser getUser(java.util.UUID uuid, String playerName) {
-		return new AdvancedCoreUser(plugin, new UUID(uuid.toString()), playerName);
 	}
 
 	public void purgeOldPlayers() {

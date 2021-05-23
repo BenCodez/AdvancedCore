@@ -28,7 +28,8 @@ public abstract class RequirementInjectDouble extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if (data.isDouble(getPath()) || data.isInt(getPath()) || (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
+		if (data.isDouble(getPath()) || data.isInt(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))
+				|| isAlwaysForceNoData()) {
 			double value = data.getDouble(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: " + value);
@@ -37,6 +38,7 @@ public abstract class RequirementInjectDouble extends RequirementInject {
 		return true;
 	}
 
-	public abstract boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, double num, RewardOptions rewardOptions);
+	public abstract boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, double num,
+			RewardOptions rewardOptions);
 
 }

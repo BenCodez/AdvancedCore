@@ -9,6 +9,7 @@ public abstract class RewardEditTimed extends RewardEdit {
 	public RewardEditTimed() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Timed: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -16,7 +17,7 @@ public abstract class RewardEditTimed extends RewardEdit {
 		inv.addButton(getBooleanButton("Timed.Enabled", reward));
 		inv.addButton(getIntButton("Timed.Hour", reward));
 		inv.addButton(getIntButton("Timed.Minute", reward));
-		
+
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);

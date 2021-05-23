@@ -8,11 +8,11 @@ import lombok.Setter;
 public abstract class TabCompleteHandle {
 	@Getter
 	@Setter
-	private String toReplace;
+	private ArrayList<String> replace = new ArrayList<String>();
 
 	@Getter
 	@Setter
-	private ArrayList<String> replace = new ArrayList<String>();
+	private String toReplace;
 
 	public TabCompleteHandle(String toReplace) {
 		this.toReplace = toReplace;

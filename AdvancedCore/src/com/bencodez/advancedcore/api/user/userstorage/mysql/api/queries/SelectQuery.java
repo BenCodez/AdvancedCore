@@ -7,13 +7,13 @@ import com.bencodez.advancedcore.api.user.userstorage.mysql.api.utils.QueryUtils
 
 public class SelectQuery {
 
-	private String table;
 	private List<String> columns = new ArrayList<String>();
-	private List<String> wheres = new ArrayList<String>();
-	private String orderBy;
-	private boolean orderByAscending = false;
 	private int limitOffset = 0;
 	private int limitRowCount = 0;
+	private String orderBy;
+	private boolean orderByAscending = false;
+	private String table;
+	private List<String> wheres = new ArrayList<String>();
 
 	/**
 	 * Create a select query.

@@ -395,6 +395,14 @@ public class ArrayUtils {
 		return newList;
 	}
 
+	public ArrayList<String> replaceJavascript(AdvancedCoreUser user, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<String>();
+		for (String str : list) {
+			msg.add(StringParser.getInstance().replaceJavascript(user, str));
+		}
+		return msg;
+	}
+
 	public ArrayList<String> replaceJavascript(ArrayList<String> list) {
 		return replaceJavascript(list, null);
 	}
@@ -431,14 +439,6 @@ public class ArrayUtils {
 		return msg;
 	}
 
-	public ArrayList<String> replaceJavascript(AdvancedCoreUser user, ArrayList<String> list) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(StringParser.getInstance().replaceJavascript(user, str));
-		}
-		return msg;
-	}
-
 	public ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
 		ArrayList<String> newList = new ArrayList<String>();
 		for (int i = 0; i < list.size(); i++) {
@@ -459,9 +459,11 @@ public class ArrayUtils {
 	 * @param order     the order
 	 * @return the hash map
 	 */
-	public HashMap<AdvancedCoreUser, Integer> sortByValues(HashMap<AdvancedCoreUser, Integer> unsortMap, final boolean order) {
+	public HashMap<AdvancedCoreUser, Integer> sortByValues(HashMap<AdvancedCoreUser, Integer> unsortMap,
+			final boolean order) {
 
-		List<Entry<AdvancedCoreUser, Integer>> list = new LinkedList<Entry<AdvancedCoreUser, Integer>>(unsortMap.entrySet());
+		List<Entry<AdvancedCoreUser, Integer>> list = new LinkedList<Entry<AdvancedCoreUser, Integer>>(
+				unsortMap.entrySet());
 
 		// Sorting the list based on values
 		Collections.sort(list, new Comparator<Entry<AdvancedCoreUser, Integer>>() {
@@ -485,7 +487,8 @@ public class ArrayUtils {
 		return sortedMap;
 	}
 
-	public HashMap<AdvancedCoreUser, Long> sortByValuesLong(HashMap<AdvancedCoreUser, Long> unsortMap, final boolean order) {
+	public HashMap<AdvancedCoreUser, Long> sortByValuesLong(HashMap<AdvancedCoreUser, Long> unsortMap,
+			final boolean order) {
 
 		List<Entry<AdvancedCoreUser, Long>> list = new LinkedList<Entry<AdvancedCoreUser, Long>>(unsortMap.entrySet());
 

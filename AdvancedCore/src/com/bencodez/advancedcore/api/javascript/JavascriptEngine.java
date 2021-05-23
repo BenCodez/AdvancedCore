@@ -25,6 +25,22 @@ public class JavascriptEngine {
 		engineAPI = new HashMap<String, Object>();
 	}
 
+	public JavascriptEngine addPlayer(AdvancedCoreUser user) {
+		addToEngine("PlayerName", user.getPlayerName());
+		addToEngine("PlayerUUID", user.getUUID());
+		addToEngine("AdvancedCoreUser", user);
+		// addToEngine("CommandSender", player);
+
+		for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
+			addToEngine(request.getStr(), request.getObject(user.getOfflinePlayer()));
+		}
+
+		if (user.isOnline()) {
+			return addPlayer(user.getPlayer());
+		}
+		return this;
+	}
+
 	public JavascriptEngine addPlayer(CommandSender player) {
 		addToEngine("CommandSender", player);
 		if (player instanceof Player) {
@@ -73,22 +89,6 @@ public class JavascriptEngine {
 					.getJavascriptEngineRequests()) {
 				addToEngine(request.getStr(), request.getObject(player));
 			}
-		}
-		return this;
-	}
-
-	public JavascriptEngine addPlayer(AdvancedCoreUser user) {
-		addToEngine("PlayerName", user.getPlayerName());
-		addToEngine("PlayerUUID", user.getUUID());
-		addToEngine("AdvancedCoreUser", user);
-		// addToEngine("CommandSender", player);
-
-		for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
-			addToEngine(request.getStr(), request.getObject(user.getOfflinePlayer()));
-		}
-
-		if (user.isOnline()) {
-			return addPlayer(user.getPlayer());
 		}
 		return this;
 	}

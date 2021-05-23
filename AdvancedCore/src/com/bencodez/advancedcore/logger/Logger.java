@@ -12,11 +12,11 @@ import org.bukkit.plugin.Plugin;
  */
 public class Logger {
 
-	/** The plugin. */
-	Plugin plugin;
-
 	/** The location. */
 	File location;
+
+	/** The plugin. */
+	Plugin plugin;
 
 	/**
 	 * Instantiates a new logger.

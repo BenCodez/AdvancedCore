@@ -19,12 +19,31 @@ import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 
 public abstract class RewardEdit {
 
-	public EditGUIButton getIntButton(String key, RewardEditData reward) {
-		return new EditGUIButton(new EditGUIValueNumber(key, reward.getValue(key)) {
+	public EditGUIButton getBackButton(RewardEditData reward) {
+		EditGUIButton b = new EditGUIButton(new ItemBuilder("BARRIER").setName("&cGo back"),
+				new EditGUIValueInventory("") {
+
+					@Override
+					public void openInventory(ClickEvent clickEvent) {
+						reward.reOpenEditGUI(clickEvent.getPlayer());
+					}
+				});
+		b.setSlot(-2);
+		return b;
+	}
+
+	public EditGUIButton getBackButtonCustom(RewardEditData reward, EditGUIValueInventory edit) {
+		EditGUIButton b = new EditGUIButton(new ItemBuilder("BARRIER").setName("&cGo back"), edit);
+		b.setSlot(-2);
+		return b;
+	}
+
+	public EditGUIButton getBooleanButton(String key, RewardEditData reward) {
+		return new EditGUIButton(new EditGUIValueBoolean(key, reward.getValue(key)) {
 
 			@Override
-			public void setValue(Player player, Number num) {
-				setVal(key, num.intValue());
+			public void setValue(Player player, boolean value) {
+				setVal(key, value);
 				open(player, reward);
 			}
 		});
@@ -36,6 +55,17 @@ public abstract class RewardEdit {
 			@Override
 			public void setValue(Player player, Number num) {
 				setVal(key, num.doubleValue());
+				open(player, reward);
+			}
+		});
+	}
+
+	public EditGUIButton getIntButton(String key, RewardEditData reward) {
+		return new EditGUIButton(new EditGUIValueNumber(key, reward.getValue(key)) {
+
+			@Override
+			public void setValue(Player player, Number num) {
+				setVal(key, num.intValue());
 				open(player, reward);
 			}
 		});
@@ -74,46 +104,16 @@ public abstract class RewardEdit {
 		});
 	}
 
-	public EditGUIButton getBooleanButton(String key, RewardEditData reward) {
-		return new EditGUIButton(new EditGUIValueBoolean(key, reward.getValue(key)) {
-
-			@Override
-			public void setValue(Player player, boolean value) {
-				setVal(key, value);
-				open(player, reward);
-			}
-		});
-	}
-
-	public EditGUIButton getBackButton(RewardEditData reward) {
-		EditGUIButton b = new EditGUIButton(new ItemBuilder("BARRIER").setName("&cGo back"),
-				new EditGUIValueInventory("") {
-
-					@Override
-					public void openInventory(ClickEvent clickEvent) {
-						reward.reOpenEditGUI(clickEvent.getPlayer());
-					}
-				});
-		b.setSlot(-2);
-		return b;
-	}
-
-	public EditGUIButton getBackButtonCustom(RewardEditData reward, EditGUIValueInventory edit) {
-		EditGUIButton b = new EditGUIButton(new ItemBuilder("BARRIER").setName("&cGo back"), edit);
-		b.setSlot(-2);
-		return b;
-	}
-
 	public abstract void open(Player player, RewardEditData reward);
 
-	public abstract void setVal(String key, Object value);
+	public void openSubReward(Player player, String path, RewardEditData reward) {
+		RewardHandler.getInstance().openSubReward(player, path, reward);
+	}
 
 	public void reloadAdvancedCore() {
 		AdvancedCorePlugin.getInstance().reloadAdvancedCore(false);
 	}
 
-	public void openSubReward(Player player, String path, RewardEditData reward) {
-		RewardHandler.getInstance().openSubReward(player, path, reward);
-	}
+	public abstract void setVal(String key, Object value);
 
 }

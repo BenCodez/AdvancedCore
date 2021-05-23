@@ -76,6 +76,11 @@ public class MessageBuilder {
 		return this;
 	}
 
+	public MessageBuilder replaceJavascript(AdvancedCoreUser user) {
+		setText(StringParser.getInstance().replaceJavascript(user, getText()));
+		return this;
+	}
+
 	public MessageBuilder replaceJavascript(CommandSender sender) {
 		setText(StringParser.getInstance().replaceJavascript(sender, getText()));
 		return this;
@@ -88,11 +93,6 @@ public class MessageBuilder {
 
 	public MessageBuilder replaceJavascript(OfflinePlayer player) {
 		setText(StringParser.getInstance().replaceJavascript(player, getText()));
-		return this;
-	}
-
-	public MessageBuilder replaceJavascript(AdvancedCoreUser user) {
-		setText(StringParser.getInstance().replaceJavascript(user, getText()));
 		return this;
 	}
 

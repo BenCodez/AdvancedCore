@@ -8,19 +8,19 @@ import com.zaxxer.hikari.HikariDataSource;
 
 public class ConnectionManager {
 
+	private int connectionTimeout;
+	private String database;
 	private HikariDataSource dataSource;
 	private String host;
-	private String port;
-	private String username;
-	private String password;
-	private String database;
-	private int connectionTimeout;
 	private int maximumPoolsize;
-	private boolean useSSL = false;
 	// private int maxConnections;
 	private long maxLifetimeMs;
-	private String str = "";
+	private String password;
+	private String port;
 	private boolean publicKeyRetrieval;
+	private String str = "";
+	private String username;
+	private boolean useSSL = false;
 
 	public ConnectionManager(String host, String port, String username, String password, String database) {
 		this.host = host;
@@ -158,10 +158,10 @@ public class ConnectionManager {
 
 		String className = "com.mysql.cj.jdbc.Driver";
 		try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException ignored) {
-        	className = "com.mysql.jdbc.Driver";
-        }
+			Class.forName("com.mysql.cj.jdbc.Driver");
+		} catch (ClassNotFoundException ignored) {
+			className = "com.mysql.jdbc.Driver";
+		}
 		try {
 			Class.forName(className);
 

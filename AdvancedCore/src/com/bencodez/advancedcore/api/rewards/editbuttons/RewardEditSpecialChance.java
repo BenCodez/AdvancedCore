@@ -18,6 +18,7 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 	public RewardEditSpecialChance() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit SpecialChance: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -78,6 +79,34 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 		inv.openInventory(player);
 	}
 
+	public void openEditSub(Player player, RewardEditData reward) {
+		EditGUI inv = new EditGUI("Edit SpecialChance Edit Sub: " + reward.getName());
+		inv.addData("Reward", reward);
+
+		for (String key : reward.getData().getConfigurationSection("SpecialChance").getKeys(false)) {
+			inv.addButton(new BInventoryButton(
+					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to edit")) {
+
+				@Override
+				public void onClick(ClickEvent clickEvent) {
+					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+					openSubReward(clickEvent.getPlayer(), "SpecialChance." + key, reward);
+				}
+			});
+		}
+
+		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				open(player, reward);
+			}
+		}));
+
+		inv.openInventory(player);
+	}
+
 	public void openRemove(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit SpecialChance Remove: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -130,34 +159,6 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 							open(player, reward);
 						}
 					}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
-				}
-			});
-		}
-
-		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
-
-			@Override
-			public void openInventory(ClickEvent clickEvent) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				open(player, reward);
-			}
-		}));
-
-		inv.openInventory(player);
-	}
-
-	public void openEditSub(Player player, RewardEditData reward) {
-		EditGUI inv = new EditGUI("Edit SpecialChance Edit Sub: " + reward.getName());
-		inv.addData("Reward", reward);
-
-		for (String key : reward.getData().getConfigurationSection("SpecialChance").getKeys(false)) {
-			inv.addButton(new BInventoryButton(
-					new ItemBuilder(Material.PAPER).setName("&a" + key).addLoreLine("&aClick to edit")) {
-
-				@Override
-				public void onClick(ClickEvent clickEvent) {
-					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-					openSubReward(clickEvent.getPlayer(), "SpecialChance." + key, reward);
 				}
 			});
 		}

@@ -43,6 +43,7 @@ public abstract class RewardInjectInt extends RewardInject {
 		return null;
 	}
 
-	public abstract String onRewardRequest(Reward reward, AdvancedCoreUser user, int num, HashMap<String, String> placeholders);
+	public abstract String onRewardRequest(Reward reward, AdvancedCoreUser user, int num,
+			HashMap<String, String> placeholders);
 
 }

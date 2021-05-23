@@ -18,8 +18,8 @@ import com.google.common.cache.RemovalListener;
  */
 public class CompatibleCacheBuilder<K, V> {
 
-	private static Method BUILD_METHOD;
 	private static Method AS_MAP_METHOD;
+	private static Method BUILD_METHOD;
 
 	/**
 	 * Construct a new safe cache builder.

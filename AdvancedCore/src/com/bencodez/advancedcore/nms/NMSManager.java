@@ -14,11 +14,11 @@ import org.bukkit.entity.Player;
  */
 public class NMSManager {
 
-	/** The instance. */
-	private static NMSManager instance;
-
 	/** The Constant CORRESPONDING_TYPES. */
 	public static final Map<Class<?>, Class<?>> CORRESPONDING_TYPES = new HashMap<Class<?>, Class<?>>();
+
+	/** The instance. */
+	private static NMSManager instance;
 
 	/**
 	 * Equals type array.

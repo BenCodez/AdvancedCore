@@ -12,6 +12,7 @@ public abstract class RewardEditJavascript extends RewardEdit {
 	public RewardEditJavascript() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Javascript: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -40,7 +41,7 @@ public abstract class RewardEditJavascript extends RewardEdit {
 				}
 			}
 		}).setName("&aEdit false rewards"));
-		
+
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);

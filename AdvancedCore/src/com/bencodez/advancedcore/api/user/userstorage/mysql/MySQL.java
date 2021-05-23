@@ -36,11 +36,38 @@ import com.google.common.cache.CacheLoader;
 import lombok.Getter;
 
 public class MySQL {
-	private com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL mysql;
-
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
 
+	private List<String> intColumns;
+
 	// private HashMap<String, ArrayList<Column>> table;
+
+	@Getter
+	private long lastBackgroundCheck = 0;
+
+	// ConcurrentMap<String, ArrayList<Column>> table = new
+	// ConcurrentHashMap<String, ArrayList<Column>>();
+
+	private int maxSize = 0;
+
+	private com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL mysql;
+
+	private String name;
+
+	private Set<String> names = ConcurrentHashMap.newKeySet();
+
+	private Object object1 = new Object();
+
+	private Object object2 = new Object();
+
+	private Object object3 = new Object();
+
+	private Object object4 = new Object();
+
+	private AdvancedCorePlugin plugin;
+
+	@Getter
+	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
 
 	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
 			.build(new CacheLoader<String, ArrayList<Column>>() {
@@ -51,38 +78,11 @@ public class MySQL {
 				}
 			});
 
-	// ConcurrentMap<String, ArrayList<Column>> table = new
-	// ConcurrentHashMap<String, ArrayList<Column>>();
-
-	@Getter
-	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
-
-	private String name;
-
-	private Set<String> uuids = ConcurrentHashMap.newKeySet();
-
-	private Set<String> names = ConcurrentHashMap.newKeySet();
+	private Timer timer = new Timer();
 
 	private boolean useBatchUpdates = true;
 
-	private int maxSize = 0;
-
-	private Object object1 = new Object();
-
-	private Object object2 = new Object();
-
-	private Object object3 = new Object();
-
-	private Object object4 = new Object();
-
-	private List<String> intColumns;
-
-	private Timer timer = new Timer();
-
-	@Getter
-	private long lastBackgroundCheck = 0;
-
-	private AdvancedCorePlugin plugin;
+	private Set<String> uuids = ConcurrentHashMap.newKeySet();
 
 	public MySQL(AdvancedCorePlugin plugin, String tableName, ConfigurationSection section) {
 		this.plugin = plugin;
@@ -194,6 +194,15 @@ public class MySQL {
 			}
 		}
 		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
+	}
+
+	public boolean checkBackgroundTask() {
+		if ((System.currentTimeMillis() - lastBackgroundCheck) > 50000) {
+			plugin.getLogger().severe("MySQL background task not working, fixing");
+			schedule();
+			return false;
+		}
+		return true;
 	}
 
 	public void checkColumn(String column, DataType dataType) {
@@ -317,17 +326,6 @@ public class MySQL {
 			e.printStackTrace();
 		}
 		return columns;
-	}
-
-	public void wipeColumnData(String columnName) {
-		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
-		try {
-			Query query = new Query(mysql, sql);
-			query.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
 	}
 
 	public ArrayList<Column> getExact(String uuid, boolean waitForCache) {
@@ -585,15 +583,6 @@ public class MySQL {
 		}, 1000 * 60 * 5, 1000 * 60 * 5);
 	}
 
-	public boolean checkBackgroundTask() {
-		if ((System.currentTimeMillis() - lastBackgroundCheck) > 50000) {
-			plugin.getLogger().severe("MySQL background task not working, fixing");
-			schedule();
-			return false;
-		}
-		return true;
-	}
-
 	public void update(String index, List<Column> cols, boolean queue) {
 		for (Column col : cols) {
 			checkColumn(col.getName(), col.getDataType());
@@ -747,6 +736,17 @@ public class MySQL {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+		}
+
+	}
+
+	public void wipeColumnData(String columnName) {
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 
 	}

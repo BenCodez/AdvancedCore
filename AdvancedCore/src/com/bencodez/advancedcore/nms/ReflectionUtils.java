@@ -124,9 +124,9 @@ public class ReflectionUtils {
 		return oldMods;
 	}
 
-	private Object object;
-
 	private Class<?> clazz;
+
+	private Object object;
 
 	public ReflectionUtils(Object object, Class<?> clazz) {
 		if (clazz == null) {

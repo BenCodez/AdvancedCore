@@ -11,7 +11,7 @@ import fr.xephi.authme.events.AuthMeAsyncPreLoginEvent;
 
 public class AuthMeLogin implements Listener {
 	private AdvancedCorePlugin plugin;
-	
+
 	public AuthMeLogin(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}

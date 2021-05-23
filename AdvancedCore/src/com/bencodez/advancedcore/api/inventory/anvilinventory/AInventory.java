@@ -30,20 +30,20 @@ public class AInventory {
 	 */
 	public class AnvilClickEvent {
 
-		/** The slot. */
-		private AnvilSlot slot;
-
-		/** The name. */
-		private String name;
-
 		/** The close. */
 		private boolean close = true;
 
 		/** The destroy. */
 		private boolean destroy = true;
 
+		/** The name. */
+		private String name;
+
 		/** The player. */
 		private Player player;
+
+		/** The slot. */
+		private AnvilSlot slot;
 
 		/**
 		 * Instantiates a new anvil click event.
@@ -199,12 +199,6 @@ public class AInventory {
 		return packageName.substring(packageName.lastIndexOf('.') + 1);
 	}
 
-	/** The version handle. */
-	private AInventoryVersionHandler versionHandle;
-
-	/** The player. */
-	private Player player;
-
 	/** The handler. */
 	private AnvilClickEventHandler handler;
 
@@ -213,6 +207,12 @@ public class AInventory {
 
 	/** The listener. */
 	private Listener listener;
+
+	/** The player. */
+	private Player player;
+
+	/** The version handle. */
+	private AInventoryVersionHandler versionHandle;
 
 	/**
 	 * Instantiates a new a inventory.

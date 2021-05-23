@@ -13,30 +13,24 @@ import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 
 public class Layout {
+	private BaseComponent compToAdd;
+
+	private HashMap<String, String> placeholders = new HashMap<String, String>();
 	@Getter
 	private ArrayList<String> stringLayout;
-
 	private String text;
-	private BaseComponent compToAdd;
-	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
 	public Layout(ArrayList<String> layout) {
 		this.stringLayout = layout;
 	}
 
-	private String colorize(String s) {
-		return ChatColor.translateAlternateColorCodes('&', s);
-	}
-
-	public Layout replaceTextComponent(String text, BaseComponent compToAdd) {
-		this.text = text;
-		this.compToAdd = compToAdd;
-		return this;
-	}
-
 	public Layout addPlaceholder(String toReplace, String replaceWith) {
 		placeholders.put(toReplace, replaceWith);
 		return this;
+	}
+
+	private String colorize(String s) {
+		return ChatColor.translateAlternateColorCodes('&', s);
 	}
 
 	public BaseComponent[] getLayout(HashMap<String, String> placeholders) {
@@ -71,5 +65,11 @@ public class Layout {
 			comps[i] = layout.get(i);
 		}
 		return comps;
+	}
+
+	public Layout replaceTextComponent(String text, BaseComponent compToAdd) {
+		this.text = text;
+		this.compToAdd = compToAdd;
+		return this;
 	}
 }

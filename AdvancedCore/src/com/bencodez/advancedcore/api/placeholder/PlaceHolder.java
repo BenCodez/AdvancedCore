@@ -8,11 +8,11 @@ import lombok.Getter;
 
 public abstract class PlaceHolder<T> {
 	@Getter
+	private String description;
+	@Getter
 	private String identifier;
 	@Getter
 	private boolean useStartsWith = false;
-	@Getter
-	private String description;
 
 	public PlaceHolder(String identifier) {
 		this.identifier = identifier;

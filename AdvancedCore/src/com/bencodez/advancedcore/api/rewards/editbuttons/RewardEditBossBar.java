@@ -9,6 +9,7 @@ public abstract class RewardEditBossBar extends RewardEdit {
 	public RewardEditBossBar() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit BossBar: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -19,7 +20,7 @@ public abstract class RewardEditBossBar extends RewardEdit {
 		inv.addButton(getStringButton("BossBar.Style", reward));
 		inv.addButton(getDoubleButton("BossBar.Progress", reward));
 		inv.addButton(getIntButton("BossBar.Delay", reward));
-		
+
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);

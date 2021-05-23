@@ -16,13 +16,13 @@ import net.md_5.bungee.api.chat.TextComponent;
  */
 public class ActionBar {
 
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
 	/** The duration. */
 	private int duration;
 
 	/** The msg. */
 	private String msg;
+
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new action bar.
@@ -99,7 +99,7 @@ public class ActionBar {
 
 		// Re-sends the messages every 3 seconds so it doesn't go away from the
 		// player's screen.
-		for (int i = 30; i < duration; i+=30) {
+		for (int i = 30; i < duration; i += 30) {
 			new BukkitRunnable() {
 				@Override
 				public void run() {

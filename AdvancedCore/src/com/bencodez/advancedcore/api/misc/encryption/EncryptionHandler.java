@@ -16,8 +16,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 public class EncryptionHandler {
-	private static Cipher ecipher;
 	private static Cipher dcipher;
+	private static Cipher ecipher;
 
 	private static SecretKey key;
 

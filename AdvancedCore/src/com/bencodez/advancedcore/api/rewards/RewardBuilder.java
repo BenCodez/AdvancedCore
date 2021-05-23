@@ -68,20 +68,6 @@ public class RewardBuilder {
 		return rewardOptions;
 	}
 
-	public void send(ArrayList<AdvancedCoreUser> users) {
-		for (AdvancedCoreUser user : users) {
-			send(user);
-		}
-	}
-
-	public void send(OfflinePlayer p) {
-		send(UserManager.getInstance().getUser(p));
-	}
-
-	public void send(Player p) {
-		send(UserManager.getInstance().getUser(p));
-	}
-
 	public void send(AdvancedCoreUser user) {
 		if (reward == null) {
 			if (data != null) {
@@ -96,6 +82,20 @@ public class RewardBuilder {
 		for (AdvancedCoreUser user : users) {
 			send(user);
 		}
+	}
+
+	public void send(ArrayList<AdvancedCoreUser> users) {
+		for (AdvancedCoreUser user : users) {
+			send(user);
+		}
+	}
+
+	public void send(OfflinePlayer p) {
+		send(UserManager.getInstance().getUser(p));
+	}
+
+	public void send(Player p) {
+		send(UserManager.getInstance().getUser(p));
 	}
 
 	public RewardBuilder setCheckTimed(boolean checkTimed) {

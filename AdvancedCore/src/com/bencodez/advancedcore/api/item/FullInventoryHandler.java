@@ -33,63 +33,33 @@ public class FullInventoryHandler {
 		startup();
 	}
 
-	public void startup() {
-		try {
-			if (plugin.getServerDataFile().getData() == null
-					|| !plugin.getServerDataFile().getData().isConfigurationSection("FullInventory")) {
-				return;
-			}
-
-			for (String uuid : plugin.getServerDataFile().getData().getConfigurationSection("FullInventory")
-					.getKeys(false)) {
-
-				// check time to keep a lot of items from long time offline players
-				long time = plugin.getServerDataFile().getData().getLong("FullInventory." + uuid + ".Time");
-				if (System.currentTimeMillis() - time < (1000 * 60 * 60 * 24)) {
-
-					for (String itemnum : plugin.getServerDataFile().getData()
-							.getConfigurationSection("FullInventory." + uuid + ".Items").getKeys(false)) {
-						add(UUID.fromString(uuid), plugin.getServerDataFile().getData()
-								.getItemStack("FullInventory." + uuid + ".Items." + itemnum));
-					}
-				}
-			}
-			
-			plugin.getServerDataFile().setData("FullInventory", null);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-	}
-
-	public void save() {
-		try {
-			if (plugin.getServerDataFile().getData() == null) {
-				return;
-			}
-			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
-				ArrayList<ItemStack> items = entry.getValue();
-				for (int i = 0; i < items.size(); i++) {
-					plugin.getServerDataFile().setData("FullInventory." + entry.getKey().toString() + ".Items." + i,
-							items.get(i));
-				}
-				plugin.getServerDataFile().setData("FullInventory." + entry.getKey().toString() + ".Time",
-						System.currentTimeMillis());
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
+	public void add(UUID uuid, ArrayList<ItemStack> item) {
+		if (items.containsKey(uuid)) {
+			ArrayList<ItemStack> current = items.get(uuid);
+			current.addAll(item);
+			items.put(null, current);
+		} else {
+			items.put(uuid, item);
 		}
 	}
 
-	public void loadTimer() {
-		timer = new Timer();
-		timer.schedule(new TimerTask() {
+	public void add(UUID uuid, ItemStack item) {
+		if (items.containsKey(uuid)) {
+			ArrayList<ItemStack> current = items.get(uuid);
+			current.add(item);
+			items.put(uuid, current);
+		} else {
+			ArrayList<ItemStack> itemList = new ArrayList<ItemStack>();
+			itemList.add(item);
+			items.put(uuid, itemList);
+		}
+	}
 
-			@Override
-			public void run() {
-				check();
-			}
-		}, 10 * 1000, 30 * 1000);
+	public void check() {
+		for (UUID entry : items.keySet()) {
+			Player p = Bukkit.getPlayer(entry);
+			check(p);
+		}
 	}
 
 	public void check(Player p) {
@@ -132,33 +102,63 @@ public class FullInventoryHandler {
 		p.updateInventory();
 	}
 
-	public void add(UUID uuid, ArrayList<ItemStack> item) {
-		if (items.containsKey(uuid)) {
-			ArrayList<ItemStack> current = items.get(uuid);
-			current.addAll(item);
-			items.put(null, current);
-		} else {
-			items.put(uuid, item);
+	public void loadTimer() {
+		timer = new Timer();
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				check();
+			}
+		}, 10 * 1000, 30 * 1000);
+	}
+
+	public void save() {
+		try {
+			if (plugin.getServerDataFile().getData() == null) {
+				return;
+			}
+			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
+				ArrayList<ItemStack> items = entry.getValue();
+				for (int i = 0; i < items.size(); i++) {
+					plugin.getServerDataFile().setData("FullInventory." + entry.getKey().toString() + ".Items." + i,
+							items.get(i));
+				}
+				plugin.getServerDataFile().setData("FullInventory." + entry.getKey().toString() + ".Time",
+						System.currentTimeMillis());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
-	public void add(UUID uuid, ItemStack item) {
-		if (items.containsKey(uuid)) {
-			ArrayList<ItemStack> current = items.get(uuid);
-			current.add(item);
-			items.put(uuid, current);
-		} else {
-			ArrayList<ItemStack> itemList = new ArrayList<ItemStack>();
-			itemList.add(item);
-			items.put(uuid, itemList);
-		}
-	}
+	public void startup() {
+		try {
+			if (plugin.getServerDataFile().getData() == null
+					|| !plugin.getServerDataFile().getData().isConfigurationSection("FullInventory")) {
+				return;
+			}
 
-	public void check() {
-		for (UUID entry : items.keySet()) {
-			Player p = Bukkit.getPlayer(entry);
-			check(p);
+			for (String uuid : plugin.getServerDataFile().getData().getConfigurationSection("FullInventory")
+					.getKeys(false)) {
+
+				// check time to keep a lot of items from long time offline players
+				long time = plugin.getServerDataFile().getData().getLong("FullInventory." + uuid + ".Time");
+				if (System.currentTimeMillis() - time < (1000 * 60 * 60 * 24)) {
+
+					for (String itemnum : plugin.getServerDataFile().getData()
+							.getConfigurationSection("FullInventory." + uuid + ".Items").getKeys(false)) {
+						add(UUID.fromString(uuid), plugin.getServerDataFile().getData()
+								.getItemStack("FullInventory." + uuid + ".Items." + itemnum));
+					}
+				}
+			}
+
+			plugin.getServerDataFile().setData("FullInventory", null);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+
 	}
 
 }

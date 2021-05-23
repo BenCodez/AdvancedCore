@@ -20,6 +20,8 @@ import net.md_5.bungee.api.ChatColor;
  */
 public abstract class YMLFile {
 
+	private boolean created = false;
+
 	/** The data. */
 	private FileConfiguration data;
 
@@ -28,8 +30,6 @@ public abstract class YMLFile {
 
 	@Getter
 	private boolean failedToRead = false;
-
-	private boolean created = false;
 
 	@Getter
 	private AdvancedCorePlugin plugin;
@@ -45,6 +45,11 @@ public abstract class YMLFile {
 		if (setup) {
 			setup();
 		}
+	}
+
+	public void createSection(String key) {
+		getData().createSection(key);
+		saveData();
 	}
 
 	/**
@@ -119,16 +124,6 @@ public abstract class YMLFile {
 			this.data.set(entry.getKey(), entry.getValue());
 		}
 	}
-	
-	public void setValue(String path, Object value) {
-		getData().set(path, value);
-		saveData();
-	}
-	
-	public void createSection(String key) {
-		getData().createSection(key);
-		saveData();
-	}
 
 	/**
 	 * Setup.
@@ -166,5 +161,10 @@ public abstract class YMLFile {
 				}
 			});
 		}
+	}
+
+	public void setValue(String path, Object value) {
+		getData().set(path, value);
+		saveData();
 	}
 }

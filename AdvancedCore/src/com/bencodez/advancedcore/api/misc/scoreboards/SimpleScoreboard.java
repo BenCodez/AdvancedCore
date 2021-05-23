@@ -31,14 +31,14 @@ public class SimpleScoreboard {
 	/** The scoreboard. */
 	private Scoreboard scoreboard;
 
-	/** The title. */
-	private String title;
-
 	/** The scores. */
 	private Map<String, Integer> scores;
 
 	/** The teams. */
 	private List<Team> teams;
+
+	/** The title. */
+	private String title;
 
 	/**
 	 * Instantiates a new simple scoreboard.

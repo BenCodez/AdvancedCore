@@ -14,36 +14,59 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private boolean autoDownload = false;
+
+	@Getter
+	@Setter
+	private boolean autoKillInvs = true;
+	@Getter
+	@Setter
+	private boolean clearCacheOnJoin;
+	@Getter
+	@Setter
+	private boolean clearCacheOnLeave;
+	@Getter
+	@Setter
+	private double clickSoundPitch = 1;
+	@Getter
+	@Setter
+	private Sound clickSoundSound = Sound.UI_BUTTON_CLICK;
+	@Getter
+	@Setter
+	private double clickSoundVolume = 1;
+	@Getter
+	@Setter
+	private ConfigurationSection configData;
+	@Getter
+	@Setter
+	private boolean createBackups = true;
+
+	@Getter
+	@Setter
 	private DebugLevel debug = DebugLevel.NONE;
 
 	@Getter
 	@Setter
 	private boolean debugIngame = false;
-	@Getter
-	@Setter
-	private boolean logDebugToFile = false;
+
 	@Getter
 	@Setter
 	private String defaultRequestMethod = "ANVIL";
 	@Getter
 	@Setter
-	private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
-	@Getter
-	@Setter
-	private String formatNoPerms = "&cYou do not have enough permission!";
-	@Getter
-	@Setter
-	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
-	@Getter
-	@Setter
-	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
-	@Getter
-	@Setter
-	private String permPrefix;
+	private boolean disableCheckOnWorldChange = false;
 
 	@Getter
 	@Setter
-	private String formatChoiceRewardsPreferenceSet = "&aPreference set to %choice%";
+	private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
+
+	@Getter
+	@Setter
+	private boolean dropOnFullInv = true;
+
+	@Getter
+	@Setter
+	private boolean enableJenkins;
 
 	@Getter
 	@Setter
@@ -52,30 +75,7 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	private boolean disableCheckOnWorldChange = false;
-	@Getter
-	@Setter
-	private boolean sendScoreboards = true;
-
-	@Getter
-	@Setter
-	private boolean treatVanishAsOffline = true;
-
-	@Getter
-	@Setter
-	private boolean perServerRewards = false;
-
-	@Getter
-	@Setter
-	private boolean autoKillInvs = true;
-
-	@Getter
-	@Setter
-	private boolean purgeOldData = false;
-
-	@Getter
-	@Setter
-	private int purgeMinimumDays = 90;
+	private String formatChoiceRewardsPreferenceSet = "&aPreference set to %choice%";
 
 	@Getter
 	@Setter
@@ -83,109 +83,18 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	private int timeHourOffSet = 0;
+	private String formatNoPerms = "&cYou do not have enough permission!";
 
 	@Getter
 	@Setter
-	private boolean createBackups = true;
-
-	@Getter
-	@Setter
-	private boolean enableJenkins;
-
-	@Getter
-	@Setter
-	private ConfigurationSection configData;
-
-	@Getter
-	@Setter
-	private boolean autoDownload = false;
-
-	@Getter
-	@Setter
-	private UserStorage storageType = UserStorage.SQLITE;
-	@Getter
-	@Setter
-	private int resourceId = 0;
-
-	@Getter
-	@Setter
-	private boolean useVaultPermissions = false;
-
-	@Getter
-	@Setter
-	private boolean processRewards = true;
-
-	@Getter
-	@Setter
-	private boolean dropOnFullInv = true;
-
-	@Getter
-	@Setter
-	private boolean clearCacheOnJoin;
-
-	@Getter
-	@Setter
-	private boolean clearCacheOnLeave;
-
-	@Getter
-	@Setter
-	private boolean loadDefaultRewards = true;
-
-	@Getter
-	@Setter
-	private Sound clickSoundSound = Sound.UI_BUTTON_CLICK;
-
-	@Getter
-	@Setter
-	private double clickSoundVolume = 1;
-
-	@Getter
-	@Setter
-	private double clickSoundPitch = 1;
-
-	@Getter
-	@Setter
-	private int newLoreLength = 30;
-
-	@Getter
-	@Setter
-	private boolean waitUntilLoggedIn;
-
-	@Getter
-	@Setter
-	private ConfigurationSection prevItem;
-
-	@Getter
-	@Setter
-	private ConfigurationSection nextItem;
-
-	@Getter
-	@Setter
-	private boolean preloadSkulls = true;
-
-	@Getter
-	@Setter
-	private boolean loadSkulls = true;
-
-	@Setter
-	@Getter
-	private String server = "";
-
-	@Setter
-	@Getter
-	private int spamClickTime = 250;
-
-	@Getter
-	@Setter
-	private String spamClickMessage = "";
-
-	@Getter
-	@Setter
-	private boolean multiplePermissionChecks = false;
+	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 
 	@Getter
 	private String formatRewardTimeFormat;
+
+	@Getter
+	@Setter
+	private String geyserPrefix = "*";
 
 	@Getter
 	@Setter
@@ -193,7 +102,98 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	private String geyserPrefix = "*";
+	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
+	@Getter
+	@Setter
+	private boolean loadDefaultRewards = true;
+
+	@Getter
+	@Setter
+	private boolean loadSkulls = true;
+
+	@Getter
+	@Setter
+	private boolean logDebugToFile = false;
+
+	@Getter
+	@Setter
+	private boolean multiplePermissionChecks = false;
+
+	@Getter
+	@Setter
+	private int newLoreLength = 30;
+
+	@Getter
+	@Setter
+	private ConfigurationSection nextItem;
+
+	@Getter
+	@Setter
+	private String permPrefix;
+
+	@Getter
+	@Setter
+	private boolean perServerRewards = false;
+
+	@Getter
+	@Setter
+	private boolean preloadSkulls = true;
+
+	@Getter
+	@Setter
+	private ConfigurationSection prevItem;
+
+	@Getter
+	@Setter
+	private boolean processRewards = true;
+
+	@Getter
+	@Setter
+	private int purgeMinimumDays = 90;
+
+	@Getter
+	@Setter
+	private boolean purgeOldData = false;
+
+	@Getter
+	@Setter
+	private int resourceId = 0;
+
+	@Getter
+	@Setter
+	private boolean sendScoreboards = true;
+
+	@Setter
+	@Getter
+	private String server = "";
+
+	@Getter
+	@Setter
+	private String spamClickMessage = "";
+
+	@Setter
+	@Getter
+	private int spamClickTime = 250;
+
+	@Getter
+	@Setter
+	private UserStorage storageType = UserStorage.SQLITE;
+
+	@Getter
+	@Setter
+	private int timeHourOffSet = 0;
+
+	@Getter
+	@Setter
+	private boolean treatVanishAsOffline = true;
+
+	@Getter
+	@Setter
+	private boolean useVaultPermissions = false;
+
+	@Getter
+	@Setter
+	private boolean waitUntilLoggedIn;
 
 	public AdvancedCoreConfigOptions() {
 	}

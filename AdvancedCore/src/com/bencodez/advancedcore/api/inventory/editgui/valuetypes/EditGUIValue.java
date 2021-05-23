@@ -13,14 +13,15 @@ import lombok.Setter;
 public abstract class EditGUIValue {
 	@Getter
 	@Setter
-	private String key;
+	private boolean canGetValue = true;
 
 	@Getter
 	@Setter
 	private Object currentValue;
 
 	@Getter
-	private ArrayList<String> options = new ArrayList<String>();
+	@Setter
+	private InputMethod inputMethod;
 
 	@Getter
 	@Setter
@@ -28,23 +29,21 @@ public abstract class EditGUIValue {
 
 	@Getter
 	@Setter
+	private String key;
+
+	@Getter
+	@Setter
 	private ArrayList<String> lores;
 
 	@Getter
-	@Setter
-	private boolean canGetValue = true;
+	private ArrayList<String> options = new ArrayList<String>();
 
-	@Getter
-	@Setter
-	private InputMethod inputMethod;
-
-	public EditGUIValue inputMethod(InputMethod inputMethod) {
-		this.inputMethod = inputMethod;
+	public EditGUIValue addLore(String lore) {
+		if (lores == null) {
+			lores = new ArrayList<String>();
+		}
+		lores.add(lore);
 		return this;
-	}
-
-	public boolean containsKey(RewardEditData rewardEditData) {
-		return rewardEditData.hasPath(getKey());
 	}
 
 	public EditGUIValue addOptions(String... str) {
@@ -54,13 +53,14 @@ public abstract class EditGUIValue {
 		return this;
 	}
 
-	public abstract void onClick(ClickEvent event);
+	public boolean containsKey(RewardEditData rewardEditData) {
+		return rewardEditData.hasPath(getKey());
+	}
 
-	public EditGUIValue addLore(String lore) {
-		if (lores == null) {
-			lores = new ArrayList<String>();
-		}
-		lores.add(lore);
+	public EditGUIValue inputMethod(InputMethod inputMethod) {
+		this.inputMethod = inputMethod;
 		return this;
 	}
+
+	public abstract void onClick(ClickEvent event);
 }

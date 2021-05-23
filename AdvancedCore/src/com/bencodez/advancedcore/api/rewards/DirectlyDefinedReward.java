@@ -14,17 +14,13 @@ public abstract class DirectlyDefinedReward {
 		this.path = path;
 	}
 
-	public boolean isDirectlyDefined() {
-		return getFileData().isConfigurationSection(getPath());
+	public abstract void createSection(String key);
+
+	public void createSectionLocal(String key) {
+		createSection(getPath() + "." + key);
 	}
 
 	public abstract ConfigurationSection getFileData();
-
-	public abstract void setData(String path, Object value);
-
-	public void setValue(String path, Object value) {
-		setData(getPath() + "." + path, value);
-	}
 
 	public Reward getReward() {
 		if (isDirectlyDefined()) {
@@ -39,11 +35,15 @@ public abstract class DirectlyDefinedReward {
 		return getFileData().get(getPath() + "." + path);
 	}
 
-	public abstract void save();
-
-	public void createSectionLocal(String key) {
-		createSection(getPath() + "." + key);
+	public boolean isDirectlyDefined() {
+		return getFileData().isConfigurationSection(getPath());
 	}
 
-	public abstract void createSection(String key);
+	public abstract void save();
+
+	public abstract void setData(String path, Object value);
+
+	public void setValue(String path, Object value) {
+		setData(getPath() + "." + path, value);
+	}
 }

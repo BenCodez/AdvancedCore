@@ -25,15 +25,15 @@ public class PlayerRewardEvent extends Event {
 		return handlers;
 	}
 
-	/** The player. */
-	private AdvancedCoreUser player;
-
-	/** The reward. */
-	private Reward reward;
-	private RewardOptions rewardOptions;
-
 	/** The cancelled. */
 	private boolean cancelled;
+
+	/** The player. */
+	private AdvancedCoreUser player;
+	/** The reward. */
+	private Reward reward;
+
+	private RewardOptions rewardOptions;
 
 	/**
 	 * Instantiates a new player reward event.

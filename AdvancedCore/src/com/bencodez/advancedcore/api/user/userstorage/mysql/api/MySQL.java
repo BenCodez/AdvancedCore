@@ -6,8 +6,8 @@ import java.util.concurrent.Executors;
 public class MySQL {
 
 	private ConnectionManager connectionManager;
-	private ExecutorService threadPool;
 	private int maxConnections;
+	private ExecutorService threadPool;
 
 	/**
 	 * Create a new MySQL object with a default of 10 maximum threads.

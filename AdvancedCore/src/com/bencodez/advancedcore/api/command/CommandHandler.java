@@ -33,19 +33,9 @@ import net.md_5.bungee.api.chat.TextComponent;
  */
 public abstract class CommandHandler {
 
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
 	@Getter
 	@Setter
-	private String[] args;
-
-	@Getter
-	@Setter
-	private String perm;
-
-	@Getter
-	@Setter
-	private String helpMessage;
+	private boolean advancedCoreCommand = false;
 
 	@Getter
 	@Setter
@@ -53,15 +43,30 @@ public abstract class CommandHandler {
 
 	@Getter
 	@Setter
+	private boolean allowMultiplePermissions;
+
+	@Getter
+	@Setter
+	private String[] args;
+
+	@Getter
+	@Setter
 	private boolean forceConsole = false;
 
 	@Getter
 	@Setter
-	private boolean advancedCoreCommand = false;
+	private String helpMessage;
 
 	private boolean ignoreNumberCheck = false;
 
+	@Getter
+	@Setter
+	private String perm;
+
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+
 	public CommandHandler() {
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
 	}
 
 	/**
@@ -302,10 +307,6 @@ public abstract class CommandHandler {
 		}
 		return false;
 	}
-
-	@Getter
-	@Setter
-	private boolean allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
 
 	public boolean hasPerm(CommandSender sender) {
 		if (allowMultiplePermissions) {

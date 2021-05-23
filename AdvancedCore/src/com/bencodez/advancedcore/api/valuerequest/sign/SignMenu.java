@@ -45,9 +45,9 @@ public class SignMenu {
 		void receive(Player player, String[] text);
 	}
 
-	private final Plugin plugin;
-
 	private final Map<UUID, InputReceiver> inputReceivers;
+
+	private final Plugin plugin;
 
 	public SignMenu(Plugin plugin) {
 		this.plugin = plugin;

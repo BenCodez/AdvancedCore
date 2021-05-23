@@ -61,6 +61,81 @@ public class RewardEditGUI {
 		return (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
 	}
 
+	public void openRewardGUI(Player player, DirectlyDefinedReward directlyDefinedReward) {
+		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
+
+		if (directlyDefinedReward == null) {
+			player.sendMessage("DirectlyDefinedReward not found");
+			return;
+		}
+
+		if (!directlyDefinedReward.isDirectlyDefined()) {
+			player.sendMessage("Reward " + directlyDefinedReward.getPath() + " is not directly defined");
+			return;
+		}
+
+		openRewardGUI(player, new RewardEditData(directlyDefinedReward), directlyDefinedReward.getPath());
+	}
+
+	public void openRewardGUI(Player player, Reward reward) {
+		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
+
+		openRewardGUI(player, new RewardEditData(reward), reward.getName());
+	}
+
+	public void openRewardGUI(Player player, RewardEditData rewardEditData, String rewardName) {
+		EditGUI inv = new EditGUI("Reward: " + rewardName);
+		inv.requirePermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit");
+
+		inv.addData("Reward", rewardEditData);
+
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.REDSTONE).setName("&cRequirements")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIRequirements(clickEvent.getPlayer(), rewardEditData, rewardName);
+			}
+		});
+
+		inv.addButton(new BInventoryButton(
+				new ItemBuilder(Material.DIAMOND).setName("&cRewards").addLoreLine("&cOnly shows current set values")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIRewards(clickEvent.getPlayer(), rewardEditData, rewardName, false);
+			}
+		});
+
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cAll Rewards")
+				.addLoreLine("&cShows all possible settings")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardGUIRewards(clickEvent.getPlayer(), rewardEditData, rewardName, true);
+			}
+		});
+
+		if (rewardEditData.getParent() != null) {
+			inv.addButton(
+					new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cOpen parent reward edit GUI")) {
+
+						@Override
+						public void onClick(ClickEvent clickEvent) {
+							RewardEditData rewardEditData = (RewardEditData) getInv().getData("Reward");
+							rewardEditData.getParent().reOpenEditGUI(clickEvent.getPlayer());
+						}
+					}.setSlot(-2));
+		}
+
+		inv.openInventory(player);
+	}
+
 	public void openRewardGUIRequirements(Player player, RewardEditData rewardEditData, String rewardName) {
 		EditGUI inv = new EditGUI("Requirements: " + rewardName);
 		inv.requirePermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit");
@@ -174,9 +249,8 @@ public class RewardEditGUI {
 				}
 			});
 		} else {
-			inv.addButton(new BInventoryButton(
-					new ItemBuilder(Material.BOOK).setName("&cValues not setable in GUI yet:").setLore(
-							"&aRandom, Item, Items(WIP), RandomItem",
+			inv.addButton(new BInventoryButton(new ItemBuilder(Material.BOOK)
+					.setName("&cValues not setable in GUI yet:").setLore("&aRandom, Item, Items(WIP), RandomItem",
 							"&bThese will eventually be aded to edit gui", "&3Also looking for feedback on GUI")) {
 
 				@Override
@@ -192,81 +266,6 @@ public class RewardEditGUI {
 			}
 		});
 		inv.openInventory(player);
-	}
-
-	public void openRewardGUI(Player player, RewardEditData rewardEditData, String rewardName) {
-		EditGUI inv = new EditGUI("Reward: " + rewardName);
-		inv.requirePermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit");
-
-		inv.addData("Reward", rewardEditData);
-
-		inv.addButton(new BInventoryButton(new ItemBuilder(Material.REDSTONE).setName("&cRequirements")) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				openRewardGUIRequirements(clickEvent.getPlayer(), rewardEditData, rewardName);
-			}
-		});
-
-		inv.addButton(new BInventoryButton(
-				new ItemBuilder(Material.DIAMOND).setName("&cRewards").addLoreLine("&cOnly shows current set values")) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				openRewardGUIRewards(clickEvent.getPlayer(), rewardEditData, rewardName, false);
-			}
-		});
-
-		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cAll Rewards")
-				.addLoreLine("&cShows all possible settings")) {
-
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				openRewardGUIRewards(clickEvent.getPlayer(), rewardEditData, rewardName, true);
-			}
-		});
-
-		if (rewardEditData.getParent() != null) {
-			inv.addButton(
-					new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cOpen parent reward edit GUI")) {
-
-						@Override
-						public void onClick(ClickEvent clickEvent) {
-							RewardEditData rewardEditData = (RewardEditData) getInv().getData("Reward");
-							rewardEditData.getParent().reOpenEditGUI(clickEvent.getPlayer());
-						}
-					}.setSlot(-2));
-		}
-
-		inv.openInventory(player);
-	}
-
-	public void openRewardGUI(Player player, DirectlyDefinedReward directlyDefinedReward) {
-		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
-			player.sendMessage("You do not have enough permission to do this");
-			return;
-		}
-
-		if (directlyDefinedReward == null) {
-			player.sendMessage("DirectlyDefinedReward not found");
-			return;
-		}
-
-		if (!directlyDefinedReward.isDirectlyDefined()) {
-			player.sendMessage("Reward " + directlyDefinedReward.getPath() + " is not directly defined");
-			return;
-		}
-
-		openRewardGUI(player, new RewardEditData(directlyDefinedReward), directlyDefinedReward.getPath());
-	}
-
-	public void openRewardGUI(Player player, Reward reward) {
-		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
-			player.sendMessage("You do not have enough permission to do this");
-			return;
-		}
-
-		openRewardGUI(player, new RewardEditData(reward), reward.getName());
 	}
 
 	/**

@@ -13,6 +13,11 @@ import lombok.Getter;
 public abstract class SocketServer extends Thread {
 
 	@Getter
+	private boolean debug = false;
+
+	private EncryptionHandler encryptionHandler;
+
+	@Getter
 	private String host;
 
 	@Getter
@@ -21,11 +26,6 @@ public abstract class SocketServer extends Thread {
 	private boolean running = true;
 
 	private ServerSocket server;
-
-	private EncryptionHandler encryptionHandler;
-
-	@Getter
-	private boolean debug = false;
 
 	public SocketServer(String version, String host, int port, EncryptionHandler handle, boolean debug) {
 		super(version);

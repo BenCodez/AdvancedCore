@@ -45,20 +45,20 @@ import net.md_5.bungee.api.chat.TextComponent;
  */
 public class AdvancedCoreUser {
 
-	/** The plugin. */
-	public AdvancedCorePlugin plugin = null;
-
-	/** The player name. */
-	private String playerName;
-
-	/** The uuid. */
-	private String uuid;
+	private UserData data;
 
 	private AdvancedCorePlugin hook = AdvancedCorePlugin.getInstance();
 
 	private boolean loadName = true;
 
-	private UserData data;
+	/** The player name. */
+	private String playerName;
+
+	/** The plugin. */
+	public AdvancedCorePlugin plugin = null;
+
+	/** The uuid. */
+	private String uuid;
 
 	@Getter
 	private boolean waitForCache = true;
@@ -105,14 +105,6 @@ public class AdvancedCoreUser {
 		setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
 	}
 
-	@Deprecated
-	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, String playerName) {
-		this.plugin = plugin;
-		this.uuid = uuid.getUUID();
-		loadData();
-		setPlayerName(playerName);
-	}
-
 	/**
 	 * Instantiates a new user.
 	 *
@@ -144,6 +136,14 @@ public class AdvancedCoreUser {
 			setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
 		}
 
+	}
+
+	@Deprecated
+	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, String playerName) {
+		this.plugin = plugin;
+		this.uuid = uuid.getUUID();
+		loadData();
+		setPlayerName(playerName);
 	}
 
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
@@ -328,6 +328,14 @@ public class AdvancedCoreUser {
 
 	public ArrayList<String> getOfflineRewards() {
 		return getUserData().getStringList(getOfflineRewardsPath());
+	}
+
+	public String getOfflineRewardsPath() {
+		if (plugin.getOptions().isPerServerRewards()) {
+			return "OfflineRewards" + plugin.getOptions().getServer();
+		} else {
+			return "OfflineRewards";
+		}
 	}
 
 	/**
@@ -616,7 +624,7 @@ public class AdvancedCoreUser {
 					return true;
 				}
 			}
-			
+
 			if (plugin.getCmiHandle() != null) {
 				return plugin.getCmiHandle().isVanished(player);
 			}
@@ -938,14 +946,6 @@ public class AdvancedCoreUser {
 
 	public void setLastOnline(long online) {
 		getData().setString("LastOnline", "" + online);
-	}
-
-	public String getOfflineRewardsPath() {
-		if (plugin.getOptions().isPerServerRewards()) {
-			return "OfflineRewards" + plugin.getOptions().getServer();
-		} else {
-			return "OfflineRewards";
-		}
 	}
 
 	public void setOfflineRewards(ArrayList<String> offlineRewards) {

@@ -11,12 +11,12 @@ import com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL;
 
 public class Query {
 
-	private MySQL mysql;
-	private Connection connection;
-	private String sql;
 	private boolean addBatch = false;
-
+	private Connection connection;
+	private MySQL mysql;
 	private HashMap<Integer, Object> paramters = new HashMap<Integer, Object>();
+
+	private String sql;
 
 	public Query(MySQL mysql, String sql) throws SQLException {
 		this.mysql = mysql;

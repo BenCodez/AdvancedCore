@@ -19,7 +19,6 @@ public class FileThread {
 	 */
 	public class ReadThread extends java.lang.Thread {
 
-		
 		public void deletePlayerFile(String uuid) {
 			synchronized (FileThread.getInstance()) {
 				try {

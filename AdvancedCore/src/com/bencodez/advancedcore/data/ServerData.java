@@ -60,6 +60,10 @@ public class ServerData extends YMLFile {
 		return getData().getInt("PrevWeek", -1);
 	}
 
+	public boolean isIgnoreTime() {
+		return getData().getBoolean("IgnoreTime", false);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 *
@@ -72,10 +76,6 @@ public class ServerData extends YMLFile {
 	public void setData(String path, Object value) {
 		getData().set(path, value);
 		saveData();
-	}
-
-	public boolean isIgnoreTime() {
-		return getData().getBoolean("IgnoreTime", false);
 	}
 
 	public void setIgnoreTime(boolean value) {

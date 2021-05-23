@@ -9,6 +9,7 @@ public abstract class RewardEditEffect extends RewardEdit {
 	public RewardEditEffect() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Effect: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -18,7 +19,7 @@ public abstract class RewardEditEffect extends RewardEdit {
 		inv.addButton(getIntButton("Effect.Data", reward));
 		inv.addButton(getIntButton("Effect.Particles", reward));
 		inv.addButton(getIntButton("Effect.Radius", reward));
-		
+
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);

@@ -19,11 +19,11 @@ import com.bencodez.advancedcore.api.valuerequest.requesters.StringRequester;
  */
 public class ValueRequest {
 
-	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
 	/** The method. */
 	private InputMethod method = null;
+
+	/** The plugin. */
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new value request.

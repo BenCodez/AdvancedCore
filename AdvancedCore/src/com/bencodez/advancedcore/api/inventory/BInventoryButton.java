@@ -26,21 +26,21 @@ public abstract class BInventoryButton {
 	/** The item. */
 	private ItemBuilder builder;
 
-	/** The slot. */
-	private int slot = -1;
-	
 	@Getter
-	private List<Integer> fillSlots;
+	private boolean closeInv = true;
 
 	private HashMap<String, Object> data = new HashMap<String, Object>();
+
+	@Getter
+	private List<Integer> fillSlots;
 
 	@Getter
 	@Setter
 	private BInventory inv;
 
-	@Getter
-	private boolean closeInv = true;
-	
+	/** The slot. */
+	private int slot = -1;
+
 	public BInventoryButton(BInventoryButton button) {
 		setBuilder(button.getBuilder());
 		slot = button.getSlot();

@@ -34,18 +34,13 @@ public class EditGUIButton extends BInventoryButton {
 		this.editor = editer;
 	}
 
-	public EditGUIButton addOptions(String... str) {
-		getEditor().addOptions(str);
-		return this;
-	}
-
-	public EditGUIButton setName(String name) {
-		this.getBuilder().setName(name);
-		return this;
-	}
-
 	public EditGUIButton addLore(String lore) {
 		getEditor().addLore(lore);
+		return this;
+	}
+
+	public EditGUIButton addOptions(String... str) {
+		getEditor().addOptions(str);
 		return this;
 	}
 
@@ -88,5 +83,10 @@ public class EditGUIButton extends BInventoryButton {
 	public void onClick(ClickEvent clickEvent) {
 		getEditor().setInv(getInv());
 		getEditor().onClick(clickEvent);
+	}
+
+	public EditGUIButton setName(String name) {
+		this.getBuilder().setName(name);
+		return this;
 	}
 }

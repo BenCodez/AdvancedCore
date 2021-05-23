@@ -21,11 +21,11 @@ public class PluginUpdateVersionEvent extends Event {
 		return handlers;
 	}
 
-	/** The plugin. */
-	private Plugin plugin;
-
 	/** The old version. */
 	private String oldVersion;
+
+	/** The plugin. */
+	private Plugin plugin;
 
 	/**
 	 * Instantiates a new plugin update version event.

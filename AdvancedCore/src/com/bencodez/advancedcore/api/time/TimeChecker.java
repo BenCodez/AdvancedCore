@@ -21,13 +21,13 @@ import com.bencodez.advancedcore.api.time.events.WeekChangeEvent;
  */
 public class TimeChecker {
 
-	private Timer timer = new Timer();
-
 	private AdvancedCorePlugin plugin;
 
-	private boolean timerLoaded = false;
-
 	private boolean processing = false;
+
+	private Timer timer = new Timer();
+
+	private boolean timerLoaded = false;
 
 	public TimeChecker(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;

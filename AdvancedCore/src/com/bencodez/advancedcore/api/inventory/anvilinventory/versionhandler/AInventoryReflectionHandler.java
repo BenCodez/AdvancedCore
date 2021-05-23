@@ -23,17 +23,17 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 	/** The Block position. */
 	private static Class<?> BlockPosition;
 
-	/** The Packet play out open window. */
-	private static Class<?> PacketPlayOutOpenWindow;
+	/** The Chat message. */
+	private static Class<?> ChatMessage;
 
 	/** The Container anvil. */
 	private static Class<?> ContainerAnvil;
 
-	/** The Chat message. */
-	private static Class<?> ChatMessage;
-
 	/** The Entity human. */
 	private static Class<?> EntityHuman;
+
+	/** The Packet play out open window. */
+	private static Class<?> PacketPlayOutOpenWindow;
 
 	/** The inv. */
 	private Inventory inv;

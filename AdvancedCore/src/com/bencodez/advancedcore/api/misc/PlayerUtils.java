@@ -36,10 +36,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 public class PlayerUtils {
+	private static final BlockFace[] axis = { BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST };
+
 	/** The instance. */
 	static PlayerUtils instance = new PlayerUtils();
-
-	private static final BlockFace[] axis = { BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST };
 
 	private static final BlockFace[] radial = { BlockFace.NORTH, BlockFace.NORTH_EAST, BlockFace.EAST,
 			BlockFace.SOUTH_EAST, BlockFace.SOUTH, BlockFace.SOUTH_WEST, BlockFace.WEST, BlockFace.NORTH_WEST };
@@ -70,6 +70,29 @@ public class PlayerUtils {
 			return false;
 		}
 		return true;
+	}
+
+	public java.util.UUID fetchUUID(String playerName) throws Exception {
+		// Get response from Mojang API
+		URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName);
+		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		connection.connect();
+
+		if (connection.getResponseCode() == 400) {
+			plugin.debug("There is no player with the name \"" + playerName + "\"!");
+			return null;
+		}
+
+		InputStream inputStream = connection.getInputStream();
+		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+		// Parse JSON response and get UUID
+		JsonElement element = new JsonParser().parse(bufferedReader);
+		JsonObject object = element.getAsJsonObject();
+		String uuidAsString = object.get("id").getAsString();
+
+		// Return UUID
+		return parseUUIDFromString(uuidAsString);
 	}
 
 	/**
@@ -125,6 +148,20 @@ public class PlayerUtils {
 		return getPlayerSkull(playerName, true);
 	}
 
+	/*
+	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
+	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
+	 * String name = ""; java.util.UUID u = java.util.UUID.fromString(uuid); Player
+	 * player = Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
+	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
+	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
+	 * Thread.getInstance().getThread().getName(u); } } else { name =
+	 * player.getName(); } if (name.equals("")) { name =
+	 * UserManager.getInstance().getUser(new
+	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
+	 * name; } name = "Error getting name"; } return name; }
+	 */
+
 	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName, boolean force) {
 		String skullMaterial = "PLAYER_HEAD";
@@ -146,20 +183,6 @@ public class PlayerUtils {
 			return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
 		}
 	}
-
-	/*
-	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
-	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
-	 * String name = ""; java.util.UUID u = java.util.UUID.fromString(uuid); Player
-	 * player = Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
-	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
-	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
-	 * Thread.getInstance().getThread().getName(u); } } else { name =
-	 * player.getName(); } if (name.equals("")) { name =
-	 * UserManager.getInstance().getUser(new
-	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
-	 * name; } name = "Error getting name"; } return name; }
-	 */
 
 	public Player getRandomOnlinePlayer() {
 		for (Player player : Bukkit.getOnlinePlayers()) {
@@ -208,47 +231,6 @@ public class PlayerUtils {
 			e.printStackTrace();
 			return getUUIDLookup(playerName);
 		}
-	}
-
-	public java.util.UUID fetchUUID(String playerName) throws Exception {
-		// Get response from Mojang API
-		URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName);
-		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.connect();
-
-		if (connection.getResponseCode() == 400) {
-			plugin.debug("There is no player with the name \"" + playerName + "\"!");
-			return null;
-		}
-
-		InputStream inputStream = connection.getInputStream();
-		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-
-		// Parse JSON response and get UUID
-		JsonElement element = new JsonParser().parse(bufferedReader);
-		JsonObject object = element.getAsJsonObject();
-		String uuidAsString = object.get("id").getAsString();
-
-		// Return UUID
-		return parseUUIDFromString(uuidAsString);
-	}
-
-	private java.util.UUID parseUUIDFromString(String uuidAsString) {
-		String[] parts = { "0x" + uuidAsString.substring(0, 8), "0x" + uuidAsString.substring(8, 12),
-				"0x" + uuidAsString.substring(12, 16), "0x" + uuidAsString.substring(16, 20),
-				"0x" + uuidAsString.substring(20, 32) };
-
-		long mostSigBits = Long.decode(parts[0]).longValue();
-		mostSigBits <<= 16;
-		mostSigBits |= Long.decode(parts[1]).longValue();
-		mostSigBits <<= 16;
-		mostSigBits |= Long.decode(parts[2]).longValue();
-
-		long leastSigBits = Long.decode(parts[3]).longValue();
-		leastSigBits <<= 48;
-		leastSigBits |= Long.decode(parts[4]).longValue();
-
-		return new java.util.UUID(mostSigBits, leastSigBits);
 	}
 
 	private String getUUIDLookup(String playerName) {
@@ -432,6 +414,24 @@ public class PlayerUtils {
 		}
 		plugin.extraDebug("Player " + name + " does not exist");
 		return false;
+	}
+
+	private java.util.UUID parseUUIDFromString(String uuidAsString) {
+		String[] parts = { "0x" + uuidAsString.substring(0, 8), "0x" + uuidAsString.substring(8, 12),
+				"0x" + uuidAsString.substring(12, 16), "0x" + uuidAsString.substring(16, 20),
+				"0x" + uuidAsString.substring(20, 32) };
+
+		long mostSigBits = Long.decode(parts[0]).longValue();
+		mostSigBits <<= 16;
+		mostSigBits |= Long.decode(parts[1]).longValue();
+		mostSigBits <<= 16;
+		mostSigBits |= Long.decode(parts[2]).longValue();
+
+		long leastSigBits = Long.decode(parts[3]).longValue();
+		leastSigBits <<= 48;
+		leastSigBits |= Long.decode(parts[4]).longValue();
+
+		return new java.util.UUID(mostSigBits, leastSigBits);
 	}
 
 	/**

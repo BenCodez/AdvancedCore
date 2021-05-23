@@ -10,11 +10,11 @@ public enum InputMethod {
 	/** The anvil. */
 	ANVIL,
 
-	/** The chat. */
-	CHAT,
-
 	/** The book. */
 	BOOK,
+
+	/** The chat. */
+	CHAT,
 
 	/** The inventory. */
 	INVENTORY,

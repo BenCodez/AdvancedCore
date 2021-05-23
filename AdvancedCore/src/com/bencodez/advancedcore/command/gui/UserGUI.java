@@ -45,10 +45,10 @@ public class UserGUI {
 		return instance;
 	}
 
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
 	/** The plugin buttons. */
 	private HashMap<Plugin, BInventoryButton> extraButtons = new HashMap<Plugin, BInventoryButton>();
+
+	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new user GUI.

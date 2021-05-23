@@ -8,15 +8,11 @@ import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import lombok.Getter;
 
 public class RewardEditData {
-	private Reward reward;
 	private DirectlyDefinedReward directlyDefinedReward;
-
 	@Getter
 	private RewardEditData parent;
 
-	public RewardEditData(Reward reward) {
-		this.reward = reward;
-	}
+	private Reward reward;
 
 	public RewardEditData(DirectlyDefinedReward directlyDefinedReward) {
 		this.directlyDefinedReward = directlyDefinedReward;
@@ -27,31 +23,15 @@ public class RewardEditData {
 		this.parent = parent;
 	}
 
-	public void reOpenEditGUI(Player player) {
-		RewardEditGUI.getInstance().openRewardGUI(player, this, getName());
+	public RewardEditData(Reward reward) {
+		this.reward = reward;
 	}
 
-	public String getName() {
+	public void createSection(String path) {
 		if (reward != null) {
-			return reward.getName();
-		} else {
-			return directlyDefinedReward.getPath();
-		}
-	}
-
-	public boolean hasPath(String path) {
-		if (reward != null) {
-			return reward.getConfig().getConfigData().contains(path, false);
-		} else {
-			return directlyDefinedReward.getFileData().contains(directlyDefinedReward.getPath() + "." + path, false);
-		}
-	}
-
-	public void setValue(String path, Object value) {
-		if (reward != null) {
-			reward.getConfig().set(path, value);
+			reward.getConfig().createSection(path);
 		} else if (directlyDefinedReward != null) {
-			directlyDefinedReward.setValue(path, value);
+			directlyDefinedReward.createSectionLocal(path);
 		}
 	}
 
@@ -64,6 +44,14 @@ public class RewardEditData {
 		return null;
 	}
 
+	public String getName() {
+		if (reward != null) {
+			return reward.getName();
+		} else {
+			return directlyDefinedReward.getPath();
+		}
+	}
+
 	public Object getValue(String key) {
 		if (reward != null) {
 			return reward.getConfig().getConfigData().get(key);
@@ -71,6 +59,18 @@ public class RewardEditData {
 			return directlyDefinedReward.getValue(key);
 		}
 		return null;
+	}
+
+	public boolean hasPath(String path) {
+		if (reward != null) {
+			return reward.getConfig().getConfigData().contains(path, false);
+		} else {
+			return directlyDefinedReward.getFileData().contains(directlyDefinedReward.getPath() + "." + path, false);
+		}
+	}
+
+	public void reOpenEditGUI(Player player) {
+		RewardEditGUI.getInstance().openRewardGUI(player, this, getName());
 	}
 
 	public void save() {
@@ -81,11 +81,11 @@ public class RewardEditData {
 		}
 	}
 
-	public void createSection(String path) {
+	public void setValue(String path, Object value) {
 		if (reward != null) {
-			reward.getConfig().createSection(path);
+			reward.getConfig().set(path, value);
 		} else if (directlyDefinedReward != null) {
-			directlyDefinedReward.createSectionLocal(path);
+			directlyDefinedReward.setValue(path, value);
 		}
 	}
 }

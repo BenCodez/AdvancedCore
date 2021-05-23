@@ -9,6 +9,7 @@ public abstract class RewardEditDelayed extends RewardEdit {
 	public RewardEditDelayed() {
 	}
 
+	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Delayed: " + reward.getName());
 		inv.addData("Reward", reward);
@@ -17,7 +18,7 @@ public abstract class RewardEditDelayed extends RewardEdit {
 		inv.addButton(getIntButton("Delayed.Hours", reward));
 		inv.addButton(getIntButton("Delayed.Minutes", reward));
 		inv.addButton(getIntButton("Delayed.Seconds", reward));
-		
+
 		inv.addButton(getBackButton(reward));
 
 		inv.openInventory(player);

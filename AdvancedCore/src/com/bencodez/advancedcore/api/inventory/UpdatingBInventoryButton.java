@@ -14,10 +14,10 @@ import lombok.Getter;
 
 public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	@Getter
-	private long updateInterval;
-	@Getter
 	private long delay;
 	private Timer timer = new Timer();
+	@Getter
+	private long updateInterval;
 
 	public UpdatingBInventoryButton(ItemBuilder item, long delay, long updateInterval) {
 		super(item);

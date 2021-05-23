@@ -12,8 +12,8 @@ import com.bencodez.advancedcore.api.user.userstorage.sql.db.SQLite;
 
 public class Database {
 
-	private List<Table> tables = new ArrayList<>();
 	private SQLite sqLite;
+	private List<Table> tables = new ArrayList<>();
 
 	public Database(Plugin plugin, String dbName, Table table) {
 		tables.add(table);

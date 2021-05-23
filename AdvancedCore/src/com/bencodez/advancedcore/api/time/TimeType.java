@@ -1,7 +1,7 @@
 package com.bencodez.advancedcore.api.time;
 
 public enum TimeType {
-	MONTH, WEEK, DAY;
+	DAY, MONTH, WEEK;
 
 	public static TimeType getTimeType(String str) {
 		for (TimeType time : TimeType.values()) {

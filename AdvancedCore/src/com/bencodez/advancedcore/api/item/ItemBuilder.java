@@ -54,35 +54,35 @@ import lombok.Setter;
  *
  */
 public class ItemBuilder {
-	private ItemStack is;
-	private HashMap<String, String> placeholders = new HashMap<String, String>();
-	private int slot = -1;
-	@Getter
-	private List<Integer> fillSlots = new ArrayList<Integer>();
-	@Getter
-	private boolean validMaterial = true;
-	@Getter
-	private boolean legacy = false;
-	private String skull = "";
-
-	private int loreLength = -1;
-
 	@Getter
 	@Setter
 	private boolean chancePass = true;
-
 	@Getter
 	@Setter
 	private boolean checkLoreLength = true;
-
 	@Getter
 	private boolean conditional = false;
-
+	@Getter
+	private ConfigurationSection conditionalValues;
+	@Getter
+	private List<Integer> fillSlots = new ArrayList<Integer>();
+	private ItemStack is;
 	@Getter
 	private String javascriptConditional = "";
 
 	@Getter
-	private ConfigurationSection conditionalValues;
+	private boolean legacy = false;
+
+	private int loreLength = -1;
+
+	private HashMap<String, String> placeholders = new HashMap<String, String>();
+
+	private String skull = "";
+
+	private int slot = -1;
+
+	@Getter
+	private boolean validMaterial = true;
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -264,10 +264,6 @@ public class ItemBuilder {
 		this.is = is;
 	}
 
-	public Material getType() {
-		return is.getType();
-	}
-
 	/**
 	 * Create a new ItemBuilder from scratch.
 	 *
@@ -275,6 +271,16 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder(Material m) {
 		this(m, 1);
+	}
+
+	/**
+	 * Create a new ItemBuilder from scratch.
+	 *
+	 * @param material The material of the item.
+	 * @param amount   The amount of the item.
+	 */
+	public ItemBuilder(Material material, int amount) {
+		is = new ItemStack(material, amount);
 	}
 
 	public ItemBuilder(String material) {
@@ -288,16 +294,6 @@ public class ItemBuilder {
 			this.is = new ItemStack(Material.PAPER);
 			AdvancedCorePlugin.getInstance().debug("Invalid material: " + material);
 		}
-	}
-
-	/**
-	 * Create a new ItemBuilder from scratch.
-	 *
-	 * @param material The material of the item.
-	 * @param amount   The amount of the item.
-	 */
-	public ItemBuilder(Material material, int amount) {
-		is = new ItemStack(material, amount);
 	}
 
 	public ItemBuilder addAttributeModifier(Attribute att, AttributeModifier modifier) {
@@ -562,6 +558,34 @@ public class ItemBuilder {
 		return is.getItemMeta().getAttributeModifiers(att);
 	}
 
+	public HashMap<String, Object> getConfiguration() {
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		map.put("Material", is.getType().toString());
+		map.put("Amount", is.getAmount());
+		if (hasCustomDisplayName()) {
+			map.put("Name", getName());
+		}
+		if (hasCustomLore()) {
+			map.put("Lore", getLore());
+		}
+		ItemMeta im = is.getItemMeta();
+		for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
+			map.put("Enchants." + entry.getKey().getKey(), entry.getValue().intValue());
+		}
+
+		ArrayList<String> flagList = new ArrayList<String>();
+		for (ItemFlag flag : im.getItemFlags()) {
+			flagList.add(flag.toString());
+		}
+		map.put("ItemFlags", flagList);
+
+		if (im.hasCustomModelData()) {
+			map.put("CustomModelData", im.getCustomModelData());
+		}
+
+		return map;
+	}
+
 	public String getCustomData(String key) {
 		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
 		ItemMeta itemMeta = is.getItemMeta();
@@ -630,6 +654,10 @@ public class ItemBuilder {
 	 */
 	public int getSlot() {
 		return slot;
+	}
+
+	public Material getType() {
+		return is.getType();
 	}
 
 	public boolean hasAttributes() {
@@ -737,6 +765,18 @@ public class ItemBuilder {
 	private void setBlank() {
 		is = new ItemStack(Material.STONE);
 		setAmount(0);
+	}
+
+	private ItemBuilder setConditional(JavascriptEngine engine) {
+		if (conditional) {
+			String value = engine.getStringValue(javascriptConditional);
+			ConfigurationSection data = conditionalValues.getConfigurationSection(value);
+			if (data != null) {
+				return new ItemBuilder(data);
+			}
+		}
+		return null;
+
 	}
 
 	public ItemBuilder setCustomData(String key, String value) {
@@ -942,18 +982,6 @@ public class ItemBuilder {
 		return this;
 	}
 
-	private ItemBuilder setConditional(JavascriptEngine engine) {
-		if (conditional) {
-			String value = engine.getStringValue(javascriptConditional);
-			ConfigurationSection data = conditionalValues.getConfigurationSection(value);
-			if (data != null) {
-				return new ItemBuilder(data);
-			}
-		}
-		return null;
-
-	}
-
 	/**
 	 * Retrieves the itemstack from the ItemBuilder.
 	 *
@@ -999,33 +1027,5 @@ public class ItemBuilder {
 	@Override
 	public String toString() {
 		return is.toString();
-	}
-
-	public HashMap<String, Object> getConfiguration() {
-		HashMap<String, Object> map = new HashMap<String, Object>();
-		map.put("Material", is.getType().toString());
-		map.put("Amount", is.getAmount());
-		if (hasCustomDisplayName()) {
-			map.put("Name", getName());
-		}
-		if (hasCustomLore()) {
-			map.put("Lore", getLore());
-		}
-		ItemMeta im = is.getItemMeta();
-		for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
-			map.put("Enchants." + entry.getKey().getKey(), entry.getValue().intValue());
-		}
-
-		ArrayList<String> flagList = new ArrayList<String>();
-		for (ItemFlag flag : im.getItemFlags()) {
-			flagList.add(flag.toString());
-		}
-		map.put("ItemFlags", flagList);
-
-		if (im.hasCustomModelData()) {
-			map.put("CustomModelData", im.getCustomModelData());
-		}
-
-		return map;
 	}
 }

@@ -28,9 +28,9 @@ public class BInventoryListener implements Listener {
 		}
 
 		final Player player = (Player) event.getWhoClicked();
-		
+
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-			
+
 			@Override
 			public void run() {
 				if (player.getInventory().firstEmpty() != -1) {
@@ -38,8 +38,7 @@ public class BInventoryListener implements Listener {
 				}
 			}
 		});
-		
-		
+
 		final GUISession session = GUISession.extractSession(player);
 		if (session == null) {
 			return;

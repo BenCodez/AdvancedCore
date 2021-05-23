@@ -15,17 +15,17 @@ import com.bencodez.advancedcore.api.user.userstorage.sql.Database;
 
 public class SQLite {
 
+	private Connection connection;
+
 	private String dbName;
-
-	private String query;
-
-	private boolean inDF = true;
 
 	private String dir;
 
+	private boolean inDF = true;
+
 	private Plugin plugin;
 
-	private Connection connection;
+	private String query;
 
 	public SQLite(Plugin plugin, String dbName, Database db) {
 		this.plugin = plugin;

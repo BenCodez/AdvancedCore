@@ -27,12 +27,12 @@ public class AdvancedCoreLoginEvent extends Event {
 		return handlers;
 	}
 
+	/** The cancelled. */
+	private boolean cancelled;
+
 	@Getter
 	@Setter
 	private Player player;
-
-	/** The cancelled. */
-	private boolean cancelled;
 
 	public AdvancedCoreLoginEvent(Player player) {
 		super(true);
