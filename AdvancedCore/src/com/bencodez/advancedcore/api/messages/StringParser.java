@@ -461,9 +461,17 @@ public class StringParser {
 						previousLetter = false;
 
 						TextComponent newTC = new TextComponent(currentstring);
-						newTC.setColor(ChatColor.of("#" + hexColor));
+						if (currentColor != null) {
+							newTC.setColor(currentColor);
+						}
 						currentstring = "";
+						newTC.setBold(bold);
+						newTC.setItalic(italic);
+						newTC.setUnderlined(underline);
+						newTC.setStrikethrough(strike);
+						newTC.setObfuscated(magic);
 						base.addExtra(newTC);
+						currentColor = ChatColor.of("#" + hexColor);
 
 					}
 				} else if (string.charAt(i + 1) == 'l') {
