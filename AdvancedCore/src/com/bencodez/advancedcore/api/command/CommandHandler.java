@@ -219,7 +219,19 @@ public abstract class CommandHandler {
 		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA).create()));
 		return txt;
-
+	}
+	
+	public TextComponent getHelpLine(String command, String line, ChatColor hoverColor) {
+		String commandText = getHelpLineCommand(command);
+		line = line.replace("%Command%", commandText);
+		if (getHelpMessage() != "") {
+			line = line.replace("%HelpMessage%", getHelpMessage());
+		}
+		TextComponent txt = StringParser.getInstance().stringToComp(line);
+		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
+		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+				new ComponentBuilder(getHelpMessage()).color(hoverColor).create()));
+		return txt;
 	}
 
 	/**
