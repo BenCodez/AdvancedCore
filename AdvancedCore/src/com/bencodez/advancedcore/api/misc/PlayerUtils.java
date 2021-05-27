@@ -126,22 +126,25 @@ public class PlayerUtils {
 
 		String name = "";
 
-		java.util.UUID u = java.util.UUID.fromString(uuid);
-		Player player = Bukkit.getPlayer(u);
+		if (uuid.length() > 5) {
+			java.util.UUID u = java.util.UUID.fromString(uuid);
+			Player player = Bukkit.getPlayer(u);
 
-		String storedName = user.getData().getString("PlayerName", true);
-		// String storedName = "";
-		if (player != null) {
-			name = player.getName();
+			String storedName = user.getData().getString("PlayerName", true);
+			// String storedName = "";
+			if (player != null) {
+				name = player.getName();
 
-			if (storedName == null || name != storedName || storedName.isEmpty()
-					|| storedName.equalsIgnoreCase("Error getting name")) {
-				user.getData().setString("PlayerName", name);
+				if (storedName == null || name != storedName || storedName.isEmpty()
+						|| storedName.equalsIgnoreCase("Error getting name")) {
+					user.getData().setString("PlayerName", name);
+				}
+				return name;
 			}
-			return name;
+			return storedName;
+		} else {
+			return "Error getting name";
 		}
-		return storedName;
-
 	}
 
 	public ItemStack getPlayerSkull(String playerName) {
