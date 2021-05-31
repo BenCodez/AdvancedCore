@@ -123,7 +123,18 @@ public class MySQL {
 		if (tablePrefix != null) {
 			name = tablePrefix + tableName;
 		}
-		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(maxThreads);
+		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(maxThreads) {
+
+			@Override
+			public void severe(String string) {
+				plugin.getLogger().severe(string);
+			}
+
+			@Override
+			public void debug(SQLException e) {
+				plugin.debug(e);
+			}
+		};
 		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval)) {
 			plugin.getLogger().warning("Failed to connect to MySQL");
 		}

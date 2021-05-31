@@ -1,9 +1,10 @@
 package com.bencodez.advancedcore.api.user.userstorage.mysql.api;
 
+import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MySQL {
+public abstract class MySQL {
 
 	private ConnectionManager connectionManager;
 	private int maxConnections;
@@ -64,4 +65,8 @@ public class MySQL {
 	public ExecutorService getThreadPool() {
 		return threadPool;
 	}
+
+	public abstract void severe(String string);
+
+	public abstract void debug(SQLException e);
 }
