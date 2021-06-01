@@ -55,18 +55,33 @@ public class PluginMessage implements PluginMessageListener {
 
 		final ArrayList<String> list1 = list;
 
+		if (Bukkit.isPrimaryThread()) {
+			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+				
+				@Override
+				public void run() {
+					onReceive(subChannel, list1);
+				}
+			});
+		} else {
+			onReceive(subChannel, list1);
+		}
+
+	}
+
+	public void onReceive(String subChannel, ArrayList<String> list) {
 		Thread.getInstance().run(new Runnable() {
 
 			@Override
 			public void run() {
 				for (PluginMessageHandler handle : pluginMessages) {
 					if (handle.getSubChannel().equalsIgnoreCase(subChannel)) {
-						handle.onRecieve(subChannel, list1);
+						handle.onRecieve(subChannel, list);
 					}
 				}
 			}
 		});
-
+		
 	}
 
 	public void sendPluginMessage(Player p, String channel, String... messageData) {
