@@ -471,17 +471,21 @@ public class RewardHandler {
 	}
 
 	public void giveReward(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
-		// make sure reward is async to avoid issues
-		if (Bukkit.isPrimaryThread()) {
-			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		if (reward != null) {
+			// make sure reward is async to avoid issues
+			if (Bukkit.isPrimaryThread()) {
+				Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
-				@Override
-				public void run() {
-					reward.giveReward(user, rewardOptions);
-				}
-			});
+					@Override
+					public void run() {
+						reward.giveReward(user, rewardOptions);
+					}
+				});
+			} else {
+				reward.giveReward(user, rewardOptions);
+			}
 		} else {
-			reward.giveReward(user, rewardOptions);
+			plugin.debug("Reward == null");
 		}
 
 	}
