@@ -6,6 +6,8 @@ import java.util.Set;
 
 import org.bukkit.configuration.ConfigurationSection;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
+
 public class AnnotationHandler {
 
 	public AnnotationHandler() {
@@ -41,6 +43,9 @@ public class AnnotationHandler {
 
 					field.set(classToLoad, value);
 
+					AdvancedCorePlugin.getInstance()
+							.extraDebug("Getting value for " + stringAnnotation.path() + ", value: " + value);
+
 				}
 
 				ConfigDataBoolean booleanAnnotation = field.getAnnotation(ConfigDataBoolean.class);
@@ -65,6 +70,9 @@ public class AnnotationHandler {
 
 					field.set(classToLoad, value);
 
+					AdvancedCorePlugin.getInstance()
+							.extraDebug("Getting value for " + booleanAnnotation.path() + ", value: " + value);
+
 				}
 
 				ConfigDataInt intAnnotation = field.getAnnotation(ConfigDataInt.class);
@@ -88,6 +96,8 @@ public class AnnotationHandler {
 
 					field.set(classToLoad, value);
 
+					AdvancedCorePlugin.getInstance()
+							.extraDebug("Getting value for " + intAnnotation.path() + ", value: " + value);
 				}
 
 				ConfigDataDouble doubleAnnotation = field.getAnnotation(ConfigDataDouble.class);
@@ -111,6 +121,8 @@ public class AnnotationHandler {
 
 					field.set(classToLoad, value);
 
+					AdvancedCorePlugin.getInstance()
+							.extraDebug("Getting value for " + doubleAnnotation.path() + ", value: " + value);
 				}
 
 				ConfigDataListString listAnnotation = field.getAnnotation(ConfigDataListString.class);
