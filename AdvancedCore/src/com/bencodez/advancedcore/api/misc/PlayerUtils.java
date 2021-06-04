@@ -224,6 +224,7 @@ public class PlayerUtils {
 
 		if (plugin.getOptions().isGeyserPrefixSupport()
 				&& !playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
+			playerName = playerName.replace(' ', '_');
 			return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
 		}
 
