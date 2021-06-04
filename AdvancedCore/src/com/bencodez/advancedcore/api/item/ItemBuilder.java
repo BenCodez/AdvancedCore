@@ -1005,6 +1005,9 @@ public class ItemBuilder {
 	}
 
 	public ItemStack toItemStack(OfflinePlayer player) {
+		if (!placeholders.containsKey("player")) {
+			placeholders.put("player", player.getName());
+		}
 		if (conditional) {
 			return setConditional(new JavascriptEngine().addPlayer(player)).toItemStack(player);
 		}
@@ -1015,6 +1018,9 @@ public class ItemBuilder {
 	}
 
 	public ItemStack toItemStack(Player player) {
+		if (!placeholders.containsKey("player")) {
+			placeholders.put("player", player.getName());
+		}
 		if (conditional) {
 			return setConditional(new JavascriptEngine().addPlayer(player)).toItemStack(player);
 		}
