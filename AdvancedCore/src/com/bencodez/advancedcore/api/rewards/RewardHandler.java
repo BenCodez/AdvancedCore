@@ -448,8 +448,13 @@ public class RewardHandler {
 			if (suffix != null && prefix != null && direct != null) {
 
 				Reward reward = direct.getReward();
-				plugin.debug("Giving directlydefined reward " + path + ", Options: " + rewardOptions.toString());
-				giveReward(user, reward, rewardOptions);
+				if (reward != null) {
+					plugin.debug("Giving directlydefined reward " + path + ", Options: " + rewardOptions.toString());
+					giveReward(user, reward, rewardOptions);
+				} else {
+					plugin.debug("Faield to give directlydefined reward " + path + ", Options: "
+							+ rewardOptions.toString() + ", Reward == null");
+				}
 			} else {
 				ConfigurationSection section = data.getConfigurationSection(path);
 				Reward reward = new Reward(rewardName, section);
