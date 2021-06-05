@@ -307,7 +307,7 @@ public class Reward {
 						}
 					}
 				} catch (Exception e) {
-					plugin.debug("Failed to check requirement");
+					plugin.debug("Failed to check requirement " + inject.getPath());
 					e.printStackTrace();
 					canGive = false;
 				}
@@ -327,6 +327,7 @@ public class Reward {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
 				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+				plugin.debug("Saving offline reward " + getRewardName() + " for " + user.getPlayerName());
 			}
 			return;
 		}
