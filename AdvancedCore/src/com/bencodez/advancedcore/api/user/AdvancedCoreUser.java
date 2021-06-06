@@ -252,6 +252,19 @@ public class AdvancedCoreUser {
 		return true;
 	}
 
+	public void loadCache() {
+		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					plugin.getMysql().loadPlayerIfNeeded(getUUID());
+				}
+			});
+
+		}
+	}
+
 	public void clearCache() {
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
 				&& AdvancedCorePlugin.getInstance().getMysql() != null) {
