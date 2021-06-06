@@ -233,7 +233,23 @@ public class AdvancedCoreUser {
 				}
 			}
 		}, 5l);
+	}
 
+	public boolean isCached() {
+		switch (plugin.getStorageType()) {
+		case FLAT:
+			return true;
+		case MYSQL:
+			if (plugin.getMysql().containsKey(getUUID())) {
+				return true;
+			}
+			return false;
+		case SQLITE:
+			return true;
+		default:
+			break;
+		}
+		return true;
 	}
 
 	public void clearCache() {
@@ -497,7 +513,9 @@ public class AdvancedCoreUser {
 					});
 
 				}
-			} catch (IllegalStateException e) {
+			} catch (
+
+			IllegalStateException e) {
 				e.printStackTrace();
 			}
 		}
