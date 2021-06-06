@@ -361,7 +361,7 @@ public class AdvancedCoreUser {
 
 	public String getOfflineRewardsPath() {
 		if (plugin.getOptions().isPerServerRewards()) {
-			return "OfflineRewards" + plugin.getOptions().getServer();
+			return "OfflineRewards" + plugin.getOptions().getServer().replace("-", "_");
 		} else {
 			return "OfflineRewards";
 		}
