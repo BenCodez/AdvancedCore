@@ -220,7 +220,7 @@ public abstract class CommandHandler {
 				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA).create()));
 		return txt;
 	}
-	
+
 	public TextComponent getHelpLine(String command, String line, ChatColor hoverColor) {
 		String commandText = getHelpLineCommand(command);
 		line = line.replace("%Command%", commandText);
@@ -401,7 +401,9 @@ public abstract class CommandHandler {
 			}
 
 			if (!hasPerm(sender)) {
-				sender.sendMessage(StringParser.getInstance().colorize(plugin.getOptions().getFormatNoPerms()));
+				if (!plugin.getOptions().getFormatNoPerms().isEmpty()) {
+					sender.sendMessage(StringParser.getInstance().colorize(plugin.getOptions().getFormatNoPerms()));
+				}
 				plugin.getLogger().log(Level.INFO,
 						sender.getName() + " was denied access to command, required permission: " + perm);
 				return true;
