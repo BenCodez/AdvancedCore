@@ -1,6 +1,5 @@
 package com.bencodez.advancedcore.api.valuerequest.requesters;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
@@ -17,8 +16,6 @@ import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory;
-import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory.AnvilClickEvent;
-import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
@@ -32,6 +29,7 @@ import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.wesjd.anvilgui.AnvilGUI;
 
 /**
  * The Class NumberRequester.
@@ -110,43 +108,15 @@ public class NumberRequester {
 
 		} else if (method.equals(InputMethod.ANVIL)) {
 
-			AInventory inv = new AInventory(player, new AInventory.AnvilClickEventHandler() {
+			new AInventory(player, new AInventory.AnvilClickEventHandler() {
 
 				@Override
-				public void onAnvilClick(AnvilClickEvent event) {
-					Player player = event.getPlayer();
-					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
-
-						event.setWillClose(true);
-						event.setWillDestroy(true);
-
-						String num = event.getName();
-						try {
-							Number number = Double.valueOf(num);
-							listener.onInput(player, number);
-						} catch (NumberFormatException ex) {
-							ex.printStackTrace();
-						}
-
-					} else {
-						event.setWillClose(false);
-						event.setWillDestroy(false);
-					}
+				public AnvilGUI.Response onAnvilClick(String value, Player player) {
+					listener.onInput(player, Double.valueOf(value));
+					return AnvilGUI.Response.close();
 				}
-			});
-
-			ItemBuilder builder = new ItemBuilder(Material.NAME_TAG);
-			builder.setName(currentValue);
-
-			ArrayList<String> lore = new ArrayList<String>();
-			lore.add("&cRename item and take out to set value");
-			lore.add("&cDoes not cost exp");
-			builder.setLore(lore);
-
-			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack(player));
-
-			inv.open();
-
+			}, currentValue, "Change current value",
+					new String[] { "&cRename item and take out to set value", "&cDoes not cost exp" });
 		} else if (method.equals(InputMethod.CHAT)) {
 			if (options != null && options.size() != 0) {
 				AdvancedCoreUser user = UserManager.getInstance().getUser(player);

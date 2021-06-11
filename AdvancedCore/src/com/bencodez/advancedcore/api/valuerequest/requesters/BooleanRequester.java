@@ -1,7 +1,5 @@
 package com.bencodez.advancedcore.api.valuerequest.requesters;
 
-import java.util.ArrayList;
-
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -11,8 +9,6 @@ import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory;
-import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory.AnvilClickEvent;
-import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
@@ -23,6 +19,7 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.wesjd.anvilgui.AnvilGUI;
 
 /**
  * The Class BooleanRequester.
@@ -82,36 +79,15 @@ public class BooleanRequester {
 
 		} else if (method.equals(InputMethod.ANVIL)) {
 
-			AInventory inv = new AInventory(player, new AInventory.AnvilClickEventHandler() {
+			new AInventory(player, new AInventory.AnvilClickEventHandler() {
 
 				@Override
-				public void onAnvilClick(AnvilClickEvent event) {
-					Player player = event.getPlayer();
-					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
-
-						event.setWillClose(true);
-						event.setWillDestroy(true);
-
-						listener.onInput(player, Boolean.valueOf(event.getName()));
-
-					} else {
-						event.setWillClose(false);
-						event.setWillDestroy(false);
-					}
+				public AnvilGUI.Response onAnvilClick(String value, Player player) {
+					listener.onInput(player, Boolean.valueOf(value));
+					return AnvilGUI.Response.close();
 				}
-			});
-
-			ItemBuilder builder = new ItemBuilder(Material.NAME_TAG);
-			builder.setName(currentValue);
-
-			ArrayList<String> lore = new ArrayList<String>();
-			lore.add("&cRename item and take out to set value");
-			lore.add("&cDoes not cost exp");
-			builder.setLore(lore);
-
-			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack(player));
-
-			inv.open();
+			}, currentValue, "Change current value",
+					new String[] { "&cRename item and take out to set value", "&cDoes not cost exp" });
 
 		} else if (method.equals(InputMethod.CHAT)) {
 
