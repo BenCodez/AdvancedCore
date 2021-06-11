@@ -128,7 +128,12 @@ public class SkullHandler {
 
 			craftItemStack = ReflectionUtils.getClassForName(
 					"org.bukkit.craftbukkit." + NMSManager.getInstance().getVersion() + "inventory.CraftItemStack");
-			itemStack = NMSManager.getInstance().getNMSClass("ItemStack");
+
+			if (NMSManager.getInstance().isVersion("1.12", "1.13", "1.14", "1.15", "1.16")) {
+				itemStack = NMSManager.getInstance().getNMSClass("ItemStack");
+			} else {
+				itemStack = ReflectionUtils.getClassForName("net.minecraft.world.item.ItemStack");
+			}
 
 			asNMSCopy = craftItemStack.getDeclaredMethod("asNMSCopy", ItemStack.class);
 			asNMSCopy.setAccessible(true);
