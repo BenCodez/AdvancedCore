@@ -113,7 +113,7 @@ public class SkullHandler {
 		return false;
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "deprecation" })
 	public void load() {
 		try {
 			/*

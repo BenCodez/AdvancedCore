@@ -67,6 +67,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#loadClasses()
 	 */
+	@SuppressWarnings("deprecation")
 	@Override
 	public void loadClasses() {
 		if (NMSManager.getInstance().isVersion("1.12", "1.13", "1.14", "1.15", "1.16")) {
@@ -91,6 +92,7 @@ public class AInventoryReflectionHandler implements AInventoryVersionHandler {
 	 * @see com.Ben12345rocks.AdvancedCore.Util.AnvilInventory.VersionHandler.
 	 * AInventoryVersionHandler#open(org.bukkit.entity.Player, java.util.HashMap)
 	 */
+	@SuppressWarnings("deprecation")
 	@Override
 	public void open(Player player, HashMap<AnvilSlot, ItemStack> items) {
 		player.setLevel(player.getLevel() + 1);

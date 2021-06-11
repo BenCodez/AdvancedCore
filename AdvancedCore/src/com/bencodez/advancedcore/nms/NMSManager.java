@@ -185,6 +185,7 @@ public class NMSManager {
 	 * @param className the class name
 	 * @return the NMS class
 	 */
+	@Deprecated
 	public Class<?> getNMSClass(String className) {
 		String fullName = "net.minecraft.server." + getVersion() + className;
 		Class<?> clazz = null;
