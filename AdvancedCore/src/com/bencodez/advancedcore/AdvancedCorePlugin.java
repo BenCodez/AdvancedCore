@@ -484,6 +484,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			try {
 				this.signMenu = new SignMenu(this);
 			} catch (Exception e) {
+				getLogger().warning("ProtocolLib may not be up to date? Failed to load SignMenu");
 				debug(e);
 			}
 		}
