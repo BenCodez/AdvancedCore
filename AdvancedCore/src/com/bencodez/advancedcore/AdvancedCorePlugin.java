@@ -481,11 +481,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private void loadSignAPI() {
 		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
 				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
-			try {
-				this.signMenu = new SignMenu(this);
-			} catch (Exception e) {
-				getLogger().warning("ProtocolLib may not be up to date? Failed to load SignMenu");
-				debug(e);
+			if (Bukkit.getPluginManager().getPlugin("ProtocolLib").isEnabled()) {
+				try {
+					this.signMenu = new SignMenu(this);
+				} catch (Exception e) {
+					getLogger().warning("ProtocolLib may not be up to date? Failed to load SignMenu");
+					debug(e);
+				}
 			}
 		}
 	}
