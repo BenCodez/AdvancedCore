@@ -7,7 +7,6 @@ com.bencodez.advancedcore.api.exceptions
 com.bencodez.advancedcore.api.gui
 com.bencodez.advancedcore.api.inventory
 com.bencodez.advancedcore.api.inventory.anvilinventory
-com.bencodez.advancedcore.api.inventory.anvilinventory.versionhandler
 com.bencodez.advancedcore.api.inventory.editgui
 com.bencodez.advancedcore.api.inventory.editgui.valuetypes
 com.bencodez.advancedcore.api.item
