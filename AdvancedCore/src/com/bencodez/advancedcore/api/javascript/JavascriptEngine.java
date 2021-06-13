@@ -1,12 +1,9 @@
 package com.bencodez.advancedcore.api.javascript;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import org.bukkit.Bukkit;
@@ -19,7 +16,6 @@ import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
-import com.bencodez.advancedcore.nms.ReflectionUtils;
 
 public class JavascriptEngine {
 	private HashMap<String, Object> engineAPI;
@@ -124,32 +120,11 @@ public class JavascriptEngine {
 		return false;
 	}
 
-	public ScriptEngine getJSScriptEngine() {
-		if (Double.parseDouble(System.getProperty("java.specification.version")) < 15) {
-			return new ScriptEngineManager().getEngineByName("js");
-		} else {
-			Class<?> factory = ReflectionUtils
-					.getClassForName("org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory");
-			Method methodToUse = null;
-			for (Method m : factory.getDeclaredMethods()) {
-				if (m.getParameterCount() == 0) {
-					if (m.getName().equals("getScriptEngine")) {
-						methodToUse = m;
-					}
-				}
-			}
-			try {
-				return (ScriptEngine) methodToUse.invoke(factory.newInstance(), new Object[] {});
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | InstantiationException e) {
-				e.printStackTrace();
-			}
-			return null;
-		}
-	}
+	
 
 	public Object getResult(String expression) {
 		if (!expression.equals("")) {
-			ScriptEngine engine = getJSScriptEngine();
+			ScriptEngine engine = JavascriptEngineHandler.getInstance().getJSScriptEngine();
 			if (engine != null) {
 				engine.put("Bukkit", Bukkit.getServer());
 				engine.put("AdvancedCore", AdvancedCorePlugin.getInstance());
