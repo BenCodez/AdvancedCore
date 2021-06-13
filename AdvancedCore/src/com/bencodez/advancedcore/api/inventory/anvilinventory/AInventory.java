@@ -1,42 +1,350 @@
 package com.bencodez.advancedcore.api.inventory.anvilinventory;
 
-import org.bukkit.Material;
+import java.util.HashMap;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.item.ItemBuilder;
+import com.bencodez.advancedcore.api.inventory.anvilinventory.versionhandler.AInventoryReflectionHandler;
+import com.bencodez.advancedcore.api.inventory.anvilinventory.versionhandler.AInventoryVersionHandler;
+import com.bencodez.advancedcore.api.misc.PlayerUtils;
 
-import net.wesjd.anvilgui.AnvilGUI;
-
+/**
+ * The Class AInventory.
+ */
 public class AInventory {
 
+	/**
+	 * The Class AnvilClickEvent.
+	 */
+	public class AnvilClickEvent {
+
+		/** The close. */
+		private boolean close = true;
+
+		/** The destroy. */
+		private boolean destroy = true;
+
+		/** The name. */
+		private String name;
+
+		/** The player. */
+		private Player player;
+
+		/** The slot. */
+		private AnvilSlot slot;
+
+		/**
+		 * Instantiates a new anvil click event.
+		 *
+		 * @param slot   the slot
+		 * @param name   the name
+		 * @param player the player
+		 */
+		public AnvilClickEvent(AnvilSlot slot, String name, Player player) {
+			this.slot = slot;
+			this.name = name;
+			this.player = player;
+		}
+
+		/**
+		 * Gets the name.
+		 *
+		 * @return the name
+		 */
+		public String getName() {
+			return name;
+		}
+
+		/**
+		 * Gets the player.
+		 *
+		 * @return the player
+		 */
+		public Player getPlayer() {
+			return player;
+		}
+
+		/**
+		 * Gets the slot.
+		 *
+		 * @return the slot
+		 */
+		public AnvilSlot getSlot() {
+			return slot;
+		}
+
+		/**
+		 * Gets the will close.
+		 *
+		 * @return the will close
+		 */
+		public boolean getWillClose() {
+			return close;
+		}
+
+		/**
+		 * Gets the will destroy.
+		 *
+		 * @return the will destroy
+		 */
+		public boolean getWillDestroy() {
+			return destroy;
+		}
+
+		/**
+		 * Sets the will close.
+		 *
+		 * @param close the new will close
+		 */
+		public void setWillClose(boolean close) {
+			this.close = close;
+		}
+
+		/**
+		 * Sets the will destroy.
+		 *
+		 * @param destroy the new will destroy
+		 */
+		public void setWillDestroy(boolean destroy) {
+			this.destroy = destroy;
+		}
+	}
+
+	/**
+	 * The Interface AnvilClickEventHandler.
+	 */
 	public interface AnvilClickEventHandler {
 
-		AnvilGUI.Response onAnvilClick(String value, Player player);
+		/**
+		 * On anvil click.
+		 *
+		 * @param event the event
+		 */
+		void onAnvilClick(AnvilClickEvent event);
 	}
 
-	private void open(Player playerToOpen, AnvilClickEventHandler anvilClickEventHandler, String textToStart,
-			String title, String[] strings) {
-		new AnvilGUI.Builder().onClose(player -> { // called when the inventory is closing
-			player.sendMessage("You closed the inventory.");
-		}).onComplete((player, text) -> { // called when the inventory output slot is clicked
-			return anvilClickEventHandler.onAnvilClick(text, player);
-		}) // prevents the inventory from being closed
-				.text(textToStart) // sets the text the GUI should start with
-				.title(title) // set the title of the GUI (only works in 1.14+)
-				.itemLeft(new ItemBuilder(Material.NAME_TAG).setLore(strings).toItemStack(playerToOpen))
-				.plugin(AdvancedCorePlugin.getInstance()) // set the plugin instance
-				.open(playerToOpen);
+	/**
+	 * The Enum AnvilSlot.
+	 */
+	public enum AnvilSlot {
+
+		/** The input left. */
+		INPUT_LEFT(0),
+
+		/** The input right. */
+		INPUT_RIGHT(1),
+
+		/** The output. */
+		OUTPUT(2);
+
+		/**
+		 * By slot.
+		 *
+		 * @param slot the slot
+		 * @return the anvil slot
+		 */
+		public static AnvilSlot bySlot(int slot) {
+			for (AnvilSlot anvilSlot : values()) {
+				if (anvilSlot.getSlot() == slot) {
+					return anvilSlot;
+				}
+			}
+
+			return null;
+		}
+
+		/** The slot. */
+		private int slot;
+
+		/**
+		 * Instantiates a new anvil slot.
+		 *
+		 * @param slot the slot
+		 */
+		private AnvilSlot(int slot) {
+			this.slot = slot;
+		}
+
+		/**
+		 * Gets the slot.
+		 *
+		 * @return the slot
+		 */
+		public int getSlot() {
+			return slot;
+		}
 	}
 
-	public AInventory(Player playerToOpen, AnvilClickEventHandler anvilClickEventHandler, String textToStart,
-			String title) {
+	/**
+	 * Gets the version.
+	 *
+	 * @return the version
+	 */
+	public static String getVersion() {
+		Server server = Bukkit.getServer();
+		final String packageName = server.getClass().getPackage().getName();
 
-		open(playerToOpen, anvilClickEventHandler, textToStart, title, new String[] {});
+		return packageName.substring(packageName.lastIndexOf('.') + 1);
 	}
 
-	public AInventory(Player playerToOpen, AnvilClickEventHandler anvilClickEventHandler, String textToStart,
-			String title, String[] strings) {
-		open(playerToOpen, anvilClickEventHandler, textToStart, title, strings);
+	/** The handler. */
+	private AnvilClickEventHandler handler;
+
+	/** The items. */
+	private HashMap<AnvilSlot, ItemStack> items = new HashMap<AnvilSlot, ItemStack>();
+
+	/** The listener. */
+	private Listener listener;
+
+	/** The player. */
+	private Player player;
+
+	/** The version handle. */
+	private AInventoryVersionHandler versionHandle;
+
+	/**
+	 * Instantiates a new a inventory.
+	 *
+	 * @param player                 the player
+	 * @param anvilClickEventHandler the anvil click event handler
+	 */
+	public AInventory(final Player player, final AnvilClickEventHandler anvilClickEventHandler) {
+
+		versionHandle = new AInventoryReflectionHandler(player, anvilClickEventHandler);
+
+		this.player = player;
+		handler = anvilClickEventHandler;
+		PlayerUtils.getInstance().setPlayerMeta(player, "AInventory", anvilClickEventHandler);
+
+		listener = new Listener() {
+			@EventHandler
+			public void onInventoryClick(InventoryClickEvent event) {
+				if (event.getWhoClicked() instanceof Player) {
+
+					if (event.getInventory().equals(versionHandle.getInventory())) {
+						event.setCancelled(true);
+
+						ItemStack item = event.getCurrentItem();
+						int slot = event.getRawSlot();
+						String name = "";
+
+						if (item != null) {
+							if (item.hasItemMeta()) {
+								ItemMeta meta = item.getItemMeta();
+
+								if (meta.hasDisplayName()) {
+									name = meta.getDisplayName();
+								}
+							}
+						}
+
+						AnvilClickEvent clickEvent = new AnvilClickEvent(AnvilSlot.bySlot(slot), name,
+								(Player) event.getWhoClicked());
+
+						if (clickEvent.getSlot() == AnvilSlot.OUTPUT) {
+							event.getWhoClicked().closeInventory();
+							if (handler == null) {
+								handler = (AnvilClickEventHandler) PlayerUtils.getInstance().getPlayerMeta(player,
+										"AInventory");
+								// AdvancedCorePlugin.getInstance().debug("Anvil
+								// handler was null, fixing...");
+							}
+
+							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
+									new Runnable() {
+
+										@Override
+										public void run() {
+											if (handler == null) {
+												handler = (AnvilClickEventHandler) PlayerUtils.getInstance()
+														.getPlayerMeta(player, "AInventory");
+												// AdvancedCorePlugin.getInstance()
+												// .debug("Anvil handler was
+												// null, fixing...");
+											}
+											handler.onAnvilClick(clickEvent);
+										}
+									});
+
+							destroy();
+						}
+
+					}
+				}
+			}
+
+			@EventHandler
+			public void onInventoryClose(InventoryCloseEvent event) {
+				if (event.getPlayer() instanceof Player) {
+					Inventory inv = event.getInventory();
+					player.setLevel(player.getLevel() - 1);
+					if (inv.equals(versionHandle.getInventory())) {
+						inv.clear();
+						destroy();
+					}
+				}
+			}
+
+			@EventHandler
+			public void onPlayerQuit(PlayerQuitEvent event) {
+				if (event.getPlayer().equals(getPlayer())) {
+					player.setLevel(player.getLevel() - 1);
+					destroy();
+				}
+			}
+		};
+
+		Bukkit.getPluginManager().registerEvents(listener, AdvancedCorePlugin.getInstance());
+	}
+
+	/**
+	 * Destroy.
+	 */
+	public void destroy() {
+		player = null;
+		handler = null;
+		items = null;
+
+		HandlerList.unregisterAll(listener);
+
+		listener = null;
+	}
+
+	/**
+	 * Gets the player.
+	 *
+	 * @return the player
+	 */
+	public Player getPlayer() {
+		return player;
+	}
+
+	/**
+	 * Open.
+	 */
+	public void open() {
+		versionHandle.open(getPlayer(), items);
+	}
+
+	/**
+	 * Sets the slot.
+	 *
+	 * @param slot the slot
+	 * @param item the item
+	 */
+	public void setSlot(AnvilSlot slot, ItemStack item) {
+		items.put(slot, item);
 	}
 }
