@@ -452,7 +452,7 @@ public class RewardHandler {
 					plugin.debug("Giving directlydefined reward " + path + ", Options: " + rewardOptions.toString());
 					giveReward(user, reward, rewardOptions);
 				} else {
-					plugin.debug("Faield to give directlydefined reward " + path + ", Options: "
+					plugin.debug("Failed to give directlydefined reward " + path + ", Options: "
 							+ rewardOptions.toString() + ", Reward == null");
 				}
 			} else {
