@@ -313,22 +313,6 @@ public class CommandLoader {
 			}
 		});
 
-		if (plugin.getOptions().getResourceId() != 0) {
-			cmds.add(new CommandHandler(new String[] { "Download" }, permPrefix + ".Download", "Download from spigot") {
-
-				@Override
-				public void execute(CommandSender sender, String[] args) {
-					sender.sendMessage(StringParser.getInstance().colorize(
-							"&cAttempting to download... restart server to fully update, Note: Jar may not be latest version (40 min or so update delay)"));
-					if (UpdateDownloader.getInstance().download(plugin, plugin.getOptions().getResourceId())) {
-						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar."));
-					} else {
-						sendMessage(sender, "&cFailed to download jar");
-					}
-				}
-			});
-		}
-
 		if (!plugin.getJenkinsSite().isEmpty()) {
 			cmds.add(new CommandHandler(new String[] { "DownloadJenkins" }, permPrefix + ".Download",
 					"Download from jenkins. Please use at your own risk") {
