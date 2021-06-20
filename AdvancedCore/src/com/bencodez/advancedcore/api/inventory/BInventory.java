@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -448,10 +449,24 @@ public class BInventory {
 			return;
 		}
 		if (perm != null) {
-			if (!player.hasPermission(perm)) {
-				player.sendMessage(StringParser.getInstance()
-						.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
-				return;
+			if (!perm.contains("|")) {
+				if (!player.hasPermission(perm)) {
+					player.sendMessage(StringParser.getInstance()
+							.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
+					return;
+				}
+			} else {
+				boolean hasPerm = false;
+				for (String permStr : perm.split(Pattern.quote("|"))) {
+					if (player.hasPermission(permStr)) {
+						hasPerm = true;
+					}
+				}
+				if (!hasPerm) {
+					player.sendMessage(StringParser.getInstance()
+							.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
+					return;
+				}
 			}
 		}
 		BInventory inventory = this;

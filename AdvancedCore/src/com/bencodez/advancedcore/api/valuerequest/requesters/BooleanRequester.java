@@ -54,7 +54,8 @@ public class BooleanRequester {
 		if (method.equals(InputMethod.SIGN)) {
 			method = InputMethod.INVENTORY;
 		}
-		if (NMSManager.getInstance().isVersion("1.17") && method.equals(InputMethod.ANVIL)) {
+		if (!NMSManager.getInstance().isVersion("1.12", "1.13", "1.14", "1.15", "1.16")
+				&& method.equals(InputMethod.ANVIL)) {
 			method = InputMethod.CHAT;
 		}
 		if (method.equals(InputMethod.INVENTORY)) {
