@@ -87,7 +87,7 @@ public class SkullHandler {
 			try {
 				return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
 			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				e.printStackTrace();
+				AdvancedCorePlugin.getInstance().debug(e);
 			}
 
 		} else {
@@ -138,14 +138,14 @@ public class SkullHandler {
 			asNMSCopy = craftItemStack.getDeclaredMethod("asNMSCopy", ItemStack.class);
 			asNMSCopy.setAccessible(true);
 		} catch (SecurityException | NoSuchMethodException e) {
-			e.printStackTrace();
+			AdvancedCorePlugin.getInstance().debug(e);
 		}
 
 		try {
 			asBukkitCopy = craftItemStack.getDeclaredMethod("asBukkitCopy", itemStack);
 			asBukkitCopy.setAccessible(true);
 		} catch (SecurityException | NoSuchMethodException e) {
-			e.printStackTrace();
+			AdvancedCorePlugin.getInstance().debug(e);
 		}
 
 		SkullThread.getInstance().loadThread();
