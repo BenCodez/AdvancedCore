@@ -1,6 +1,5 @@
 package com.bencodez.advancedcore.api.valuerequest.requesters;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
@@ -16,9 +15,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
-import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory;
-import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory.AnvilClickEvent;
-import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -31,7 +27,6 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptManager;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu.InputReceiver;
-import com.bencodez.advancedcore.nms.NMSManager;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -63,13 +58,6 @@ public class StringRequester {
 			LinkedHashMap<String, ItemStack> options, String promptText, boolean allowCustomOption,
 			StringListener listener) {
 		if ((options == null || options.size() == 0) && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
-			method = InputMethod.ANVIL;
-		}
-		if ((options != null && options.size() != 0) && method.equals(InputMethod.ANVIL)) {
-			method = InputMethod.INVENTORY;
-		}
-		if (!NMSManager.getInstance().isVersion("1.12", "1.13", "1.14", "1.15", "1.16")
-				&& method.equals(InputMethod.ANVIL)) {
 			method = InputMethod.CHAT;
 		}
 		if (AdvancedCorePlugin.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
@@ -107,39 +95,6 @@ public class StringRequester {
 			}
 
 			inv.openInventory(player);
-
-		} else if (method.equals(InputMethod.ANVIL)) {
-
-			AInventory inv = new AInventory(player, new AInventory.AnvilClickEventHandler() {
-
-				@Override
-				public void onAnvilClick(AnvilClickEvent event) {
-					Player player = event.getPlayer();
-					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
-
-						event.setWillClose(true);
-						event.setWillDestroy(true);
-
-						listener.onInput(player, event.getName());
-
-					} else {
-						event.setWillClose(false);
-						event.setWillDestroy(false);
-					}
-				}
-			});
-
-			ItemBuilder builder = new ItemBuilder(Material.NAME_TAG);
-			builder.setName(currentValue);
-
-			ArrayList<String> lore = new ArrayList<String>();
-			lore.add("&cRename item and take out to set value");
-			lore.add("&cDoes not cost exp");
-			builder.setLore(lore);
-
-			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack(player));
-
-			inv.open();
 
 		} else if (method.equals(InputMethod.CHAT)) {
 

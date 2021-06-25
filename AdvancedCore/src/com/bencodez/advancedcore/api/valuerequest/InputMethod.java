@@ -7,16 +7,10 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
  */
 public enum InputMethod {
 
-	/** The anvil. */
-	ANVIL,
-
-	/** The book. */
 	BOOK,
 
-	/** The chat. */
 	CHAT,
 
-	/** The inventory. */
 	INVENTORY,
 
 	SIGN;

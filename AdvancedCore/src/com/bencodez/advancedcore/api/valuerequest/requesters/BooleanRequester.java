@@ -1,7 +1,5 @@
 package com.bencodez.advancedcore.api.valuerequest.requesters;
 
-import java.util.ArrayList;
-
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -10,9 +8,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
-import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory;
-import com.bencodez.advancedcore.api.inventory.anvilinventory.AInventory.AnvilClickEvent;
-import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
@@ -20,7 +15,6 @@ import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.book.BookManager;
 import com.bencodez.advancedcore.api.valuerequest.book.BookSign;
 import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
-import com.bencodez.advancedcore.nms.NMSManager;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -54,10 +48,6 @@ public class BooleanRequester {
 		if (method.equals(InputMethod.SIGN)) {
 			method = InputMethod.INVENTORY;
 		}
-		if (!NMSManager.getInstance().isVersion("1.12", "1.13", "1.14", "1.15", "1.16")
-				&& method.equals(InputMethod.ANVIL)) {
-			method = InputMethod.CHAT;
-		}
 		if (method.equals(InputMethod.INVENTORY)) {
 
 			BInventory inv = new BInventory("Click one of the following:");
@@ -84,39 +74,6 @@ public class BooleanRequester {
 					});
 
 			inv.openInventory(player);
-
-		} else if (method.equals(InputMethod.ANVIL)) {
-
-			AInventory inv = new AInventory(player, new AInventory.AnvilClickEventHandler() {
-
-				@Override
-				public void onAnvilClick(AnvilClickEvent event) {
-					Player player = event.getPlayer();
-					if (event.getSlot() == AInventory.AnvilSlot.OUTPUT) {
-
-						event.setWillClose(true);
-						event.setWillDestroy(true);
-
-						listener.onInput(player, Boolean.valueOf(event.getName()));
-
-					} else {
-						event.setWillClose(false);
-						event.setWillDestroy(false);
-					}
-				}
-			});
-
-			ItemBuilder builder = new ItemBuilder(Material.NAME_TAG);
-			builder.setName(currentValue);
-
-			ArrayList<String> lore = new ArrayList<String>();
-			lore.add("&cRename item and take out to set value");
-			lore.add("&cDoes not cost exp");
-			builder.setLore(lore);
-
-			inv.setSlot(AInventory.AnvilSlot.INPUT_LEFT, builder.toItemStack(player));
-
-			inv.open();
 
 		} else if (method.equals(InputMethod.CHAT)) {
 
