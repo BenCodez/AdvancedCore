@@ -562,6 +562,7 @@ public class MySQL {
 	public void playerJoin(String uuid) {
 		if (AdvancedCorePlugin.getInstance().getOptions().isClearCacheOnJoin()) {
 			removePlayer(uuid);
+			loadPlayer(uuid);
 		}
 	}
 
