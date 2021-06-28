@@ -32,6 +32,7 @@ import com.bencodez.advancedcore.api.backup.BackupHandle;
 import com.bencodez.advancedcore.api.cmi.CMIHandler;
 import com.bencodez.advancedcore.api.command.TabCompleteHandle;
 import com.bencodez.advancedcore.api.command.TabCompleteHandler;
+import com.bencodez.advancedcore.api.hologram.HologramHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
@@ -145,6 +146,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 	@Getter
 	private Permission perms;
+
+	@Getter
+	private HologramHandler hologramHandler;
 
 	@Getter
 	private boolean placeHolderAPIEnabled;
@@ -396,6 +400,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 */
 	public void loadHook() {
 		serverDataFile = new ServerData(this);
+		
+		hologramHandler = new HologramHandler(this);
 
 		loadSignAPI();
 		loadUUIDs();
@@ -801,6 +807,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		SkullHandler.getInstance().close();
 		fullInventoryHandler.save();
 		unRegisterValueRequest();
+		
+		hologramHandler.onShutDown();
 
 		// Thread.getInstance().getThread().interrupt();
 		// FileThread.getInstance().getThread().interrupt();
