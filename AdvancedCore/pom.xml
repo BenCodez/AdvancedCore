@@ -149,51 +149,6 @@
 					</execution>
 				</executions>
 			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>2.10.4</version>
-				<executions>
-					<execution>
-						<id>attach-javadocs</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-						<phase>deploy</phase>
-						<configuration>
-							<sourcepath>${project.basedir}/target/delombok</sourcepath>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>com.github.github</groupId>
-				<artifactId>site-maven-plugin</artifactId>
-				<version>0.12</version>
-				<executions>
-					<execution>
-						<id>javadoc</id>
-						<goals>
-							<goal>site</goal>
-						</goals>
-						<phase>deploy</phase>
-						<configuration>
-							<message>Maven javadoc for ${project.version}</message>
-							<noJekyll>true</noJekyll>
-							<outputDirectory>${project.build.directory}/apidocs
-							</outputDirectory>
-							<branch>refs/heads/gh-pages</branch>
-							<includes>
-								<include>**/*</include>
-							</includes>
-							<repositoryName>AdvancedCore</repositoryName>
-							<repositoryOwner>BenCodez</repositoryOwner>
-							<server>github</server>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
 		</plugins>
 	</build>
 	<repositories>
@@ -202,9 +157,9 @@
 			<url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
 		</repository>
 		<repository>
-            <id>placeholderapi</id>
-            <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
-        </repository>
+			<id>placeholderapi</id>
+			<url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+		</repository>
 		<repository>
 			<id>jitpack.io</id>
 			<url>https://jitpack.io</url>
@@ -287,4 +242,104 @@
 			<systemPath>${project.basedir}/Jars/CMIAPI7.6.2.0.jar</systemPath>
 		</dependency>
 	</dependencies>
+	<profiles>
+		<profile>
+			<id>normal</id>
+			<properties>
+				<build.profile.id>deploy</build.profile.id>
+			</properties>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+		<profile>
+			<id>deploy</id>
+			<properties>
+				<build.profile.id>deploy</build.profile.id>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>com.bencodez</groupId>
+					<artifactId>AdvancedCore</artifactId>
+					<version>LATEST</version>
+					<scope>compile</scope>
+				</dependency>
+			</dependencies>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<version>2.10.4</version>
+						<executions>
+							<execution>
+								<id>attach-javadocs</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+								<phase>deploy</phase>
+								<configuration>
+									<sourcepath>${project.basedir}/target/delombok</sourcepath>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-deploy-plugin</artifactId>
+						<version>3.0.0-M1</version>
+						<configuration>
+							<skip>true</skip>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.sonatype.plugins</groupId>
+						<artifactId>nexus-staging-maven-plugin</artifactId>
+						<version>1.5.1</version>
+						<executions>
+							<execution>
+								<id>default-deploy</id>
+								<phase>deploy</phase>
+								<goals>
+									<goal>deploy</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<serverId>nexus</serverId>
+							<nexusUrl>http://51.161.110.19:8081/nexus/</nexusUrl>
+							<skipStaging>true</skipStaging>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>com.github.github</groupId>
+						<artifactId>site-maven-plugin</artifactId>
+						<version>0.12</version>
+						<executions>
+							<execution>
+								<id>javadoc</id>
+								<goals>
+									<goal>site</goal>
+								</goals>
+								<phase>deploy</phase>
+								<configuration>
+									<message>Maven javadoc for ${project.version}</message>
+									<noJekyll>true</noJekyll>
+									<outputDirectory>${project.build.directory}/apidocs
+									</outputDirectory>
+									<branch>refs/heads/gh-pages</branch>
+									<includes>
+										<include>**/*</include>
+									</includes>
+									<repositoryName>AdvancedCore</repositoryName>
+									<repositoryOwner>BenCodez</repositoryOwner>
+									<server>github</server>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 </project>
