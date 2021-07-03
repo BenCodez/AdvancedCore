@@ -103,8 +103,8 @@ public class RewardEditGUI {
 			}
 		});
 
-		inv.addButton(new BInventoryButton(
-				new ItemBuilder(Material.DIAMOND).setName("&cRewards").addLoreLine("&cOnly shows current set values")) {
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.DIAMOND).setName("&cRewards")
+				.addLoreLine("&cOnly shows current set values for Rewards")) {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
@@ -283,7 +283,7 @@ public class RewardEditGUI {
 			if (!reward.getConfig().isDirectlyDefinedReward()) {
 				ArrayList<String> lore = new ArrayList<String>();
 				if (reward.getConfig().isDirectlyDefinedReward()) {
-					lore.add("&cReward is directly defined, can not edit in GUI");
+					lore.add("&cReward is not directly defined, can not edit in GUI");
 				}
 
 				inv.addButton(new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),
