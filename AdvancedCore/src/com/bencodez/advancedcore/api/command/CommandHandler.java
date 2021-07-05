@@ -387,6 +387,17 @@ public abstract class CommandHandler {
 						args[i] = sender.getName();
 					} else if (args[i].equalsIgnoreCase("@r")) {
 						args[i] = PlayerUtils.getInstance().getRandomOnlinePlayer().getName();
+					} else {
+						if (Bukkit.getPlayer(args[i]) == null) {
+							for (Player player : Bukkit.getOnlinePlayers()) {
+								String name = player.getName();
+								if (StringParser.getInstance().startsWithIgnoreCase(name, args[i])) {
+									plugin.debug("Completing name: " + args[i] + " to " + name);
+									args[i] = name;
+									break;
+								}
+							}
+						}
 					}
 				}
 			}
