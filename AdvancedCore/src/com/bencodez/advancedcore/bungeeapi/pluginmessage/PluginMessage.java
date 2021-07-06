@@ -57,7 +57,7 @@ public class PluginMessage implements PluginMessageListener {
 
 		if (Bukkit.isPrimaryThread()) {
 			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-				
+
 				@Override
 				public void run() {
 					onReceive(subChannel, list1);
@@ -81,7 +81,7 @@ public class PluginMessage implements PluginMessageListener {
 				}
 			}
 		});
-		
+
 	}
 
 	public void sendPluginMessage(Player p, String channel, String... messageData) {

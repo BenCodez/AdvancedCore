@@ -18,6 +18,13 @@ public class HologramHandler {
 		list.add(hologram);
 	}
 
+	public void onShutDown() {
+		for (Hologram hologram : list) {
+			hologram.kill();
+		}
+		list = new ArrayList<Hologram>();
+	}
+
 	public void remove(Hologram hologram) {
 		remove(hologram, true);
 	}
@@ -27,12 +34,5 @@ public class HologramHandler {
 			hologram.kill();
 		}
 		list.remove(hologram);
-	}
-
-	public void onShutDown() {
-		for (Hologram hologram : list) {
-			hologram.kill();
-		}
-		list = new ArrayList<Hologram>();
 	}
 }

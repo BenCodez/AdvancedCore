@@ -120,8 +120,6 @@ public class JavascriptEngine {
 		return false;
 	}
 
-	
-
 	public Object getResult(String expression) {
 		if (!expression.equals("")) {
 			ScriptEngine engine = JavascriptEngineHandler.getInstance().getJSScriptEngine();

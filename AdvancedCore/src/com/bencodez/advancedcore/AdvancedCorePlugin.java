@@ -118,12 +118,15 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private FullInventoryHandler fullInventoryHandler;
 
 	@Getter
-	@Setter
-	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
+	private HologramHandler hologramHandler;
 
 	@Getter
 	@Setter
+	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
+	@Getter
+	@Setter
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
+
 	@Getter
 	@Setter
 	private String jenkinsSite = "";
@@ -139,16 +142,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	@Setter
 	private boolean loadUserData = true;
-
 	@Getter
 	private MySQL mysql;
 	@Getter
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
-	@Getter
-	private Permission perms;
 
 	@Getter
-	private HologramHandler hologramHandler;
+	private Permission perms;
 
 	@Getter
 	private boolean placeHolderAPIEnabled;
@@ -400,7 +400,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 */
 	public void loadHook() {
 		serverDataFile = new ServerData(this);
-		
+
 		hologramHandler = new HologramHandler(this);
 
 		loadSignAPI();
@@ -807,7 +807,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		SkullHandler.getInstance().close();
 		fullInventoryHandler.save();
 		unRegisterValueRequest();
-		
+
 		hologramHandler.onShutDown();
 
 		// Thread.getInstance().getThread().interrupt();

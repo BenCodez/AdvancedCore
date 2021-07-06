@@ -12,6 +12,10 @@ public class JavascriptEngineHandler {
 
 	private static JavascriptEngineHandler instance = new JavascriptEngineHandler();
 
+	public static JavascriptEngineHandler getInstance() {
+		return instance;
+	}
+
 	private boolean builtIn = false;
 
 	private Class<?> factory;
@@ -46,9 +50,5 @@ public class JavascriptEngineHandler {
 			}
 			return null;
 		}
-	}
-
-	public static JavascriptEngineHandler getInstance() {
-		return instance;
 	}
 }

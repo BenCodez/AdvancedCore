@@ -126,13 +126,13 @@ public class MySQL {
 		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(maxThreads) {
 
 			@Override
-			public void severe(String string) {
-				plugin.getLogger().severe(string);
+			public void debug(SQLException e) {
+				plugin.debug(e);
 			}
 
 			@Override
-			public void debug(SQLException e) {
-				plugin.debug(e);
+			public void severe(String string) {
+				plugin.getLogger().severe(string);
 			}
 		};
 		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval)) {

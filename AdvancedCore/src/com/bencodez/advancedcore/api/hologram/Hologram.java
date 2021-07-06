@@ -12,24 +12,9 @@ import lombok.Getter;
 
 public class Hologram {
 	@Getter
-	private Location loc;
-	@Getter
 	private ArmorStand armorStand;
-
-	private void createHologram(String name, boolean marker, boolean glowing) {
-		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
-		armorStand.setVisible(false);
-		if (!name.isEmpty()) {
-			armorStand.setCustomNameVisible(true);
-		} else {
-			armorStand.setCustomNameVisible(false);
-		}
-		armorStand.setCustomName(StringParser.getInstance().colorize(name));
-		armorStand.setGravity(false);
-		armorStand.setAI(false);
-		armorStand.setMarker(marker);
-		armorStand.setGlowing(glowing);
-	}
+	@Getter
+	private Location loc;
 
 	public Hologram(Location loc, String name) {
 		this.loc = loc;
@@ -65,7 +50,7 @@ public class Hologram {
 		}
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
 	}
-	
+
 	public Hologram(Location loc, String name, boolean marker, boolean glowing) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
@@ -83,6 +68,27 @@ public class Hologram {
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
 	}
 
+	private void createHologram(String name, boolean marker, boolean glowing) {
+		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
+		armorStand.setVisible(false);
+		if (!name.isEmpty()) {
+			armorStand.setCustomNameVisible(true);
+		} else {
+			armorStand.setCustomNameVisible(false);
+		}
+		armorStand.setCustomName(StringParser.getInstance().colorize(name));
+		armorStand.setGravity(false);
+		armorStand.setAI(false);
+		armorStand.setMarker(marker);
+		armorStand.setGlowing(glowing);
+	}
+
+	public void glow(boolean value) {
+		if (armorStand != null) {
+			armorStand.setGlowing(value);
+		}
+	}
+
 	public void kill() {
 		if (!Bukkit.isPrimaryThread()) {
 			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
@@ -98,11 +104,5 @@ public class Hologram {
 			armorStand.remove();
 		}
 		AdvancedCorePlugin.getInstance().getHologramHandler().remove(this, false);
-	}
-
-	public void glow(boolean value) {
-		if (armorStand != null) {
-			armorStand.setGlowing(value);
-		}
 	}
 }

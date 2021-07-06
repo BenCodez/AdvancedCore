@@ -35,6 +35,8 @@ public abstract class MySQL {
 		return connectionManager.open();
 	}
 
+	public abstract void debug(SQLException e);
+
 	/**
 	 * Close all connections and the data source.
 	 */
@@ -67,6 +69,4 @@ public abstract class MySQL {
 	}
 
 	public abstract void severe(String string);
-
-	public abstract void debug(SQLException e);
 }

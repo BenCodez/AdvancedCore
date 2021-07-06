@@ -43,11 +43,11 @@ public abstract class DirectlyDefinedReward {
 
 	public abstract void setData(String path, Object value);
 
-	public void setValue(String path, Object value) {
-		setData(getPath() + "." + path, value);
-	}
-
 	public void setParentValue(Object value) {
 		setData(getPath(), value);
+	}
+
+	public void setValue(String path, Object value) {
+		setData(getPath() + "." + path, value);
 	}
 }

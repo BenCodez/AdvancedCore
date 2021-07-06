@@ -235,36 +235,6 @@ public class AdvancedCoreUser {
 		}, 5l);
 	}
 
-	public boolean isCached() {
-		switch (plugin.getStorageType()) {
-		case FLAT:
-			return true;
-		case MYSQL:
-			if (plugin.getMysql().containsKey(getUUID())) {
-				return true;
-			}
-			return false;
-		case SQLITE:
-			return true;
-		default:
-			break;
-		}
-		return true;
-	}
-
-	public void loadCache() {
-		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					plugin.getMysql().loadPlayerIfNeeded(getUUID());
-				}
-			});
-
-		}
-	}
-
 	public void clearCache() {
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
 				&& AdvancedCorePlugin.getInstance().getMysql() != null) {
@@ -612,6 +582,23 @@ public class AdvancedCoreUser {
 		return false;
 	}
 
+	public boolean isCached() {
+		switch (plugin.getStorageType()) {
+		case FLAT:
+			return true;
+		case MYSQL:
+			if (plugin.getMysql().containsKey(getUUID())) {
+				return true;
+			}
+			return false;
+		case SQLITE:
+			return true;
+		default:
+			break;
+		}
+		return true;
+	}
+
 	public boolean isCheckWorld() {
 		return Boolean.valueOf(getData().getString("CheckWorld", true));
 	}
@@ -665,6 +652,19 @@ public class AdvancedCoreUser {
 			}
 		}
 		return false;
+	}
+
+	public void loadCache() {
+		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					plugin.getMysql().loadPlayerIfNeeded(getUUID());
+				}
+			});
+
+		}
 	}
 
 	public void loadData() {
