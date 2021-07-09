@@ -360,6 +360,9 @@ public class Reward {
 			}
 			final String playerName = user.getPlayerName();
 			phs.put("player", playerName);
+			if (player != null) {
+				phs.put("displayname", player.getDisplayName());
+			}
 			phs.put("@p", playerName);
 			LocalDateTime ldt = LocalDateTime.now();
 			Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
