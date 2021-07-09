@@ -834,6 +834,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getServer().getMessenger().registerOutgoingPluginChannel(this, name);
 		pluginMessaging = new PluginMessage(this);
 		getServer().getMessenger().registerIncomingPluginChannel(this, name, pluginMessaging);
+		getLogger().info("Loaded plugin message channels: " + name);
 	}
 
 	public void registerEvents(Listener listener) {
