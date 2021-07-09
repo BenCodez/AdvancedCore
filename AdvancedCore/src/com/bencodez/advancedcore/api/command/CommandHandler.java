@@ -23,9 +23,9 @@ import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.chat.hover.content.Text;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -202,8 +202,7 @@ public abstract class CommandHandler {
 		}
 		TextComponent txt = StringParser.getInstance().stringToComp(line);
 		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
-		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA).create()));
+		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(ChatColor.AQUA + getHelpMessage())));
 		return txt;
 
 	}
@@ -216,8 +215,7 @@ public abstract class CommandHandler {
 		}
 		TextComponent txt = StringParser.getInstance().stringToComp(line);
 		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
-		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-				new ComponentBuilder(getHelpMessage()).color(ChatColor.AQUA).create()));
+		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(ChatColor.AQUA + getHelpMessage())));
 		return txt;
 	}
 
@@ -229,8 +227,7 @@ public abstract class CommandHandler {
 		}
 		TextComponent txt = StringParser.getInstance().stringToComp(line);
 		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
-		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-				new ComponentBuilder(getHelpMessage()).color(hoverColor).create()));
+		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(hoverColor + getHelpMessage())));
 		return txt;
 	}
 

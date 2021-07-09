@@ -182,12 +182,6 @@
 			<version>2.10.9</version>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>net.md-5</groupId>
-			<artifactId>bungeecord-chat</artifactId>
-			<version>1.16-R0.1</version>
-			<scope>compile</scope>
-		</dependency>
 		<!-- <dependency> <groupId>com.github.Ben12345rocks</groupId> <artifactId>ChatComponentAPI</artifactId> 
 			<version>master-SNAPSHOT</version> <scope>compile</scope> </dependency> -->
 		<dependency>
