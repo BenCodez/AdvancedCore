@@ -117,27 +117,17 @@
 									<pattern>org.slf4j</pattern>
 									<shadedPattern>${project.groupId}.advancedcore.slf4j</shadedPattern>
 								</relocation>
+								<relocation>
+									<pattern>xyz.upperlevel.spigot</pattern>
+									<shadedPattern>${project.groupId}.advancedcore.xyz.upperlevel.spigot</shadedPattern>
+								</relocation>
 							</relocations>
 							<artifactSet>
-								<!-- Lets exclude google code, because the server already has this 
-									code in it (guava, etc) -->
 								<excludes>
 									<exclude>com.google.*:*</exclude>
 								</excludes>
 							</artifactSet>
 							<createDependencyReducedPom>false</createDependencyReducedPom>
-							<filters>
-								<filter>
-									<!-- this filter will remove en_US.properties from your jar. You 
-										want this filter if you dont use the TranslatableComponent so you can keep 
-										your jar file size down. -->
-									<artifact>net.md-5:bungeecord-chat</artifact>
-									<excludes>
-										<exclude>*/*en_US.properties</exclude>
-										<exclude>META-INF/maven/**</exclude>
-									</excludes>
-								</filter>
-							</filters>
 						</configuration>
 					</execution>
 				</executions>
