@@ -16,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.PluginUtils;
+import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.bencodez.advancedcore.nms.ReflectionUtils;
 
@@ -155,31 +156,21 @@ public class SkullHandler {
 
 				@Override
 				public void run() {
-					SkullThread.getInstance().getThread().startup();
+					startup();
 				}
 			});
 		}
-
-		timer.schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				if (AdvancedCorePlugin.getInstance().isEnabled()) {
-					String str = skullsToLoad.poll();
-					while (str != null) {
-						if (!getSkulls().containsKey(str)) {
-							SkullThread.getInstance().getThread().load(str);
-						}
-						str = skullsToLoad.poll();
-					}
-				}
-			}
-		}, 30 * 1000, 20 * 1000);
-
 	}
 
 	public void loadSkull(Player player) {
 		loadSkull(player.getName());
+	}
+
+	public void startup() {
+		AdvancedCorePlugin.getInstance().debug("Preloading skulls for all players");
+		for (String name : UserManager.getInstance().getAllPlayerNames()) {
+			add(name);
+		}
 	}
 
 	public void loadSkull(final String playerName) {

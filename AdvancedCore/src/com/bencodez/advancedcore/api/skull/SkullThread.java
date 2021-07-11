@@ -6,7 +6,6 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.NameFetcher;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 /**
  * The Class Thread.
@@ -59,11 +58,39 @@ public class SkullThread {
 
 		}
 
+		public void runBackgroundCheck() {
+			if (plugin.isEnabled()) {
+				String str = SkullHandler.getInstance().skullsToLoad.poll();
+				int count = 0;
+				while (str != null) {
+					if (!SkullHandler.getInstance().getSkulls().containsKey(str)) {
+						load(str);
+					}
+					count++;
+
+					if (count > 30) {
+						str = null;
+					} else {
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							count = -1;
+						}
+						if (count != -1) {
+							str = SkullHandler.getInstance().skullsToLoad.poll();
+						}
+					}
+
+				}
+			}
+		}
+
 		@Override
 		public void run() {
 			while (true) {
+				runBackgroundCheck();
 				try {
-					sleep(50);
+					sleep(10000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 					System.exit(0);
@@ -82,21 +109,6 @@ public class SkullThread {
 					return;
 				}
 				run.run();
-			}
-		}
-
-		public void startup() {
-			synchronized (SkullThread.getInstance().getThread()) {
-				AdvancedCorePlugin.getInstance().debug("Preloading skulls for all players");
-				for (String name : UserManager.getInstance().getAllPlayerNames()) {
-					SkullHandler.getInstance().loadSkull(name);
-
-					try {
-						sleep(1100);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
 			}
 		}
 	}
