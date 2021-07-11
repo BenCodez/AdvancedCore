@@ -385,7 +385,8 @@ public abstract class CommandHandler {
 					} else if (args[i].equalsIgnoreCase("@r")) {
 						args[i] = PlayerUtils.getInstance().getRandomOnlinePlayer().getName();
 					} else {
-						if (Bukkit.getPlayer(args[i]) == null) {
+						Player p = Bukkit.getPlayer(args[i]);
+						if (p == null) {
 							for (Player player : Bukkit.getOnlinePlayers()) {
 								String name = player.getName();
 								if (StringParser.getInstance().startsWithIgnoreCase(name, args[i])) {
@@ -393,6 +394,10 @@ public abstract class CommandHandler {
 									args[i] = name;
 									break;
 								}
+							}
+						} else {
+							if (args[i] != p.getName()) {
+								args[i] = p.getName();
 							}
 						}
 					}
