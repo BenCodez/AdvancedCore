@@ -10,7 +10,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -647,6 +649,44 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}
 			});
 		}
+	}
+
+	public void convertDataStorage(UserStorage from, UserStorage to) {
+		debug("Starting convert process");
+		if (to == null) {
+			throw new RuntimeException("Invalid Storage Method");
+		}
+		loadUserAPI(from);
+		loadUserAPI(to);
+
+		if (getMysql() != null) {
+			debug("Clearing mysql cache");
+			getMysql().clearCache();
+		}
+
+		Queue<String> uuids = new LinkedList<String>(UserManager.getInstance().getAllUUIDs(from));
+
+		while (uuids.size() > 0) {
+			String uuid = uuids.poll();
+			AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid), false);
+			debug("Starting convert for " + user.getUUID());
+			HashMap<String, String> values = new HashMap<String, String>();
+			for (String key : user.getData().getKeys(from, true)) {
+				String value = user.getData().getValue(from, key);
+				if (value != null && !value.isEmpty() && !value.equalsIgnoreCase("null")) {
+					values.put(key, value);
+				}
+			}
+
+			user.getData().setValues(to, values);
+			debug("Finished convert for " + user.getUUID() + ", " + uuids.size() + " more left to go!");
+
+			if (uuids.size() % 100 == 0) {
+				getLogger().info("Working on converting data, about " + uuids.size() + " left to go!");
+			}
+		}
+		debug("Convert finished!");
+
 	}
 
 	private void loadUUIDs() {

@@ -595,7 +595,7 @@ public class MySQL {
 		}, 1000 * 60 * 5, 1000 * 60 * 5);
 	}
 
-	public void update(String index, List<Column> cols, boolean queue) {
+	public void update(String index, List<Column> cols, boolean queue, boolean runAsync) {
 		for (Column col : cols) {
 			checkColumn(col.getName(), col.getDataType());
 		}
@@ -615,9 +615,9 @@ public class MySQL {
 					Column col = cols.get(i);
 					if (i == cols.size() - 1) {
 						if (col.getDataType().equals(DataType.STRING)) {
-							query += col.getName() + "='" + col.getValue().toString() + "';";
+							query += col.getName() + "='" + col.getValue().toString() + "'";
 						} else {
-							query += col.getName() + "=" + col.getValue().toString() + ";";
+							query += col.getName() + "=" + col.getValue().toString();
 						}
 					} else {
 						if (col.getDataType().equals(DataType.STRING)) {
@@ -628,15 +628,21 @@ public class MySQL {
 
 					}
 				}
-				query += " WHERE `uuid`=";
+				query += " WHERE 'uuid'=";
 				query += "'" + index + "';";
+
+				plugin.extraDebug("Batch query: " + query);
 
 				if (queue) {
 					addToQue(query);
 				} else {
 					try {
 						Query q = new Query(mysql, query);
-						q.executeUpdateAsync();
+						if (runAsync) {
+							q.executeUpdateAsync();
+						} else {
+							q.executeUpdate();
+						}
 					} catch (SQLException e) {
 						e.printStackTrace();
 					}

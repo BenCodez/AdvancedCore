@@ -69,7 +69,11 @@ public class UserManager {
 	}
 
 	public ArrayList<String> getAllUUIDs() {
-		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+		return getAllUUIDs(plugin.getStorageType());
+	}
+
+	public ArrayList<String> getAllUUIDs(UserStorage storage) {
+		if (storage.equals(UserStorage.FLAT)) {
 			File folder = new File(plugin.getDataFolder() + File.separator + "Data");
 			String[] fileNames = folder.list();
 			ArrayList<String> uuids = new ArrayList<String>();
@@ -82,14 +86,14 @@ public class UserManager {
 				}
 			}
 			return uuids;
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+		} else if (storage.equals(UserStorage.SQLITE)) {
 			List<Column> cols = AdvancedCorePlugin.getInstance().getSQLiteUserTable().getRows();
 			ArrayList<String> uuids = new ArrayList<String>();
 			for (Column col : cols) {
 				uuids.add((String) col.getValue());
 			}
 			return uuids;
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+		} else if (storage.equals(UserStorage.MYSQL)) {
 			synchronized (obj) {
 				ArrayList<String> uuids = new ArrayList<String>();
 				try {
@@ -171,6 +175,11 @@ public class UserManager {
 	@SuppressWarnings("deprecation")
 	public AdvancedCoreUser getUser(UUID uuid) {
 		return new AdvancedCoreUser(plugin, uuid);
+	}
+	
+	@SuppressWarnings("deprecation")
+	public AdvancedCoreUser getUser(UUID uuid, boolean loadName) {
+		return new AdvancedCoreUser(plugin, uuid, loadName);
 	}
 
 	public void purgeOldPlayers() {

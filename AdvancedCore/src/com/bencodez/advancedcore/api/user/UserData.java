@@ -1,7 +1,9 @@
 package com.bencodez.advancedcore.api.user;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -36,8 +38,12 @@ public class UserData {
 	}
 
 	public int getInt(String key, int def, boolean waitForCache) {
+		return getInt(AdvancedCorePlugin.getInstance().getStorageType(), key, def, waitForCache);
+	}
+
+	public int getInt(UserStorage storage, String key, int def, boolean waitForCache) {
 		if (!key.equals("")) {
-			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			if (storage.equals(UserStorage.SQLITE)) {
 				List<Column> row = getSQLiteRow();
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
@@ -59,7 +65,7 @@ public class UserData {
 
 				}
 
-			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			} else if (storage.equals(UserStorage.MYSQL)) {
 				List<Column> row = getMySqlRow(waitForCache);
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
@@ -79,7 +85,7 @@ public class UserData {
 						}
 					}
 				}
-			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			} else if (storage.equals(UserStorage.FLAT)) {
 				try {
 					return getData(user.getUUID()).getInt(key, def);
 				} catch (Exception e) {
@@ -125,6 +131,29 @@ public class UserData {
 		return keys;
 	}
 
+	public ArrayList<String> getKeys(UserStorage storage, boolean waitForCache) {
+		ArrayList<String> keys = new ArrayList<String>();
+		if (storage.equals(UserStorage.FLAT)) {
+			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
+		} else if (storage.equals(UserStorage.MYSQL)) {
+			List<Column> col = getMySqlRow(waitForCache);
+			if (col != null && !col.isEmpty()) {
+				for (Column c : col) {
+					keys.add(c.getName());
+				}
+			}
+		} else if (storage.equals(UserStorage.SQLITE)) {
+			List<Column> col = getSQLiteRow();
+			if (col != null && !col.isEmpty()) {
+				for (Column c : col) {
+					keys.add(c.getName());
+				}
+			}
+		}
+
+		return keys;
+	}
+
 	public List<Column> getMySqlRow(boolean waitForCache) {
 		return AdvancedCorePlugin.getInstance().getMysql().getExact(user.getUUID(), waitForCache);
 	}
@@ -140,8 +169,12 @@ public class UserData {
 	}
 
 	public String getString(String key, boolean waitForCache) {
+		return getString(AdvancedCorePlugin.getInstance().getStorageType(), key, waitForCache);
+	}
+
+	public String getString(UserStorage storage, String key, boolean waitForCache) {
 		if (!key.equals("")) {
-			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			if (storage.equals(UserStorage.SQLITE)) {
 				List<Column> row = getSQLiteRow();
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
@@ -155,7 +188,7 @@ public class UserData {
 					}
 				}
 
-			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			} else if (storage.equals(UserStorage.MYSQL)) {
 				List<Column> row = getMySqlRow(waitForCache);
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
@@ -171,7 +204,7 @@ public class UserData {
 						}
 					}
 				}
-			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+			} else if (storage.equals(UserStorage.FLAT)) {
 				try {
 					return getData(user.getUUID()).getString(key, "");
 				} catch (Exception e) {
@@ -194,6 +227,18 @@ public class UserData {
 		}
 		String[] list = str.split("%line%");
 		return ArrayUtils.getInstance().convert(list);
+	}
+
+	public String getValue(UserStorage storage, String key) {
+		if (storage.equals(UserStorage.MYSQL)) {
+			if (AdvancedCorePlugin.getInstance().getMysql().isIntColumn(key)) {
+				return "" + getInt(storage, key, 0, true);
+			} else {
+				return getString(storage, key, true);
+			}
+		} else {
+			return getString(storage, key, true);
+		}
 	}
 
 	public String getValue(String key) {
@@ -244,6 +289,10 @@ public class UserData {
 	}
 
 	public void setInt(final String key, final int value, boolean queue) {
+		setInt(AdvancedCorePlugin.getInstance().getStorageType(), key, value, queue);
+	}
+
+	public void setInt(UserStorage storage, final String key, final int value, boolean queue) {
 		if (key.equals("")) {
 			AdvancedCorePlugin.getInstance().debug("No key: " + key + " to " + value);
 			return;
@@ -251,19 +300,19 @@ public class UserData {
 			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
 
-		AdvancedCorePlugin.getInstance().extraDebug("Player Data: Setting " + key + " to '" + value + "' for '"
-				+ user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
+		AdvancedCorePlugin.getInstance().extraDebug("PlayerData " + storage.toString() + ":  Setting " + key + " to '"
+				+ value + "' for '" + user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
-		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+		if (storage.equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
 			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);
 			Column column = new Column(key, value, DataType.INTEGER);
 			columns.add(primary);
 			columns.add(column);
 			AdvancedCorePlugin.getInstance().getSQLiteUserTable().update(primary, columns);
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+		} else if (storage.equals(UserStorage.MYSQL)) {
 			AdvancedCorePlugin.getInstance().getMysql().update(user.getUUID(), key, value, DataType.INTEGER, queue);
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+		} else if (storage.equals(UserStorage.FLAT)) {
 			setData(user.getUUID(), key, value);
 		}
 
@@ -274,6 +323,10 @@ public class UserData {
 	}
 
 	public void setString(final String key, final String value, boolean queue) {
+		setString(AdvancedCorePlugin.getInstance().getStorageType(), key, value, queue);
+	}
+
+	public void setString(UserStorage storage, final String key, final String value, boolean queue) {
 		if (key.equals("") && value != null) {
 			AdvancedCorePlugin.getInstance().debug("No key/value: " + key + " to " + value);
 			return;
@@ -281,19 +334,19 @@ public class UserData {
 			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
 
-		AdvancedCorePlugin.getInstance().extraDebug("Player Data: Setting " + key + " to '" + value + "' for '"
-				+ user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
+		AdvancedCorePlugin.getInstance().extraDebug("PlayerData " + storage.toString() + ":  Setting " + key + " to '"
+				+ value + "' for '" + user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
-		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+		if (storage.equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
 			Column primary = new Column("uuid", user.getUUID(), DataType.STRING);
 			Column column = new Column(key, value, DataType.STRING);
 			columns.add(primary);
 			columns.add(column);
 			AdvancedCorePlugin.getInstance().getSQLiteUserTable().update(primary, columns);
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+		} else if (storage.equals(UserStorage.MYSQL)) {
 			AdvancedCorePlugin.getInstance().getMysql().update(user.getUUID(), key, value, DataType.STRING, queue);
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+		} else if (storage.equals(UserStorage.FLAT)) {
 			setData(user.getUUID(), key, value);
 		}
 	}
@@ -313,5 +366,40 @@ public class UserData {
 			str += value.get(i);
 		}
 		setString(key, str, queue);
+	}
+
+	public void setValues(UserStorage storage, HashMap<String, String> values) {
+		if (storage.equals(UserStorage.MYSQL)) {
+			if (AdvancedCorePlugin.getInstance().getMysql() != null) {
+				ArrayList<Column> cols = new ArrayList<Column>();
+				for (Entry<String, String> entry : values.entrySet()) {
+					if (!entry.getKey().equals("uuid")) {
+						if (AdvancedCorePlugin.getInstance().getMysql().isIntColumn(entry.getKey())) {
+							cols.add(new Column(entry.getKey(), entry.getValue(), DataType.INTEGER));
+						} else {
+							cols.add(new Column(entry.getKey(), entry.getValue(), DataType.STRING));
+						}
+					}
+				}
+				AdvancedCorePlugin.getInstance().getMysql().update(user.getUUID(), cols, false, false);
+			}
+		} else if (storage.equals(UserStorage.SQLITE)) {
+			ArrayList<Column> cols = new ArrayList<Column>();
+			for (Entry<String, String> entry : values.entrySet()) {
+				if (!entry.getKey().equals("uuid")) {
+					if (AdvancedCorePlugin.getInstance().getMysql().isIntColumn(entry.getKey())) {
+						cols.add(new Column(entry.getKey(), entry.getValue(), DataType.INTEGER));
+					} else {
+						cols.add(new Column(entry.getKey(), entry.getValue(), DataType.STRING));
+					}
+				}
+			}
+			AdvancedCorePlugin.getInstance().getSQLiteUserTable()
+					.update(new Column("uuid", user.getUUID(), DataType.STRING), cols);
+		} else if (storage.equals(UserStorage.FLAT)) {
+			for (Entry<String, String> entry : values.entrySet()) {
+				setData(user.getUUID(), entry.getKey(), entry.getValue());
+			}
+		}
 	}
 }
