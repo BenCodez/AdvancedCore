@@ -389,7 +389,7 @@ public abstract class CommandHandler {
 						if (p == null) {
 							for (Player player : Bukkit.getOnlinePlayers()) {
 								String name = player.getName();
-								if (StringParser.getInstance().startsWithIgnoreCase(name, args[i])) {
+								if (StringParser.getInstance().containsIgnorecase(name, args[i])) {
 									plugin.debug("Completing name: " + args[i] + " to " + name);
 									args[i] = name;
 									break;
