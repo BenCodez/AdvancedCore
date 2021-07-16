@@ -470,29 +470,33 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "ConvertToData", "(UserStorage)" },
-				permPrefix + ".Commands.AdminVote.ConvertToData",
-				"Convert user storage from current storage type the one specificed", true, true) {
+		if (plugin.isLoadUserData()) {
+			cmds.add(new CommandHandler(new String[] { "ConvertToData", "(UserStorage)" },
+					permPrefix + ".Commands.AdminVote.ConvertToData",
+					"Convert user storage from current storage type the one specificed", true, true) {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				sendMessage(sender, "&cStarting convert from " + plugin.getStorageType().toString() + " to " + args[1]);
-				plugin.convertDataStorage(plugin.getStorageType(), UserStorage.value(args[1]));
-				sendMessage(sender, "&cFinished converting");
-			}
-		});
+				@Override
+				public void execute(CommandSender sender, String[] args) {
+					sendMessage(sender,
+							"&cStarting convert from " + plugin.getStorageType().toString() + " to " + args[1]);
+					plugin.convertDataStorage(plugin.getStorageType(), UserStorage.value(args[1]));
+					sendMessage(sender, "&cFinished converting");
+				}
+			});
 
-		cmds.add(new CommandHandler(new String[] { "ConvertFromData", "(UserStorage)" },
-				permPrefix + ".Commands.AdminVote.ConvertFromData",
-				"Convert user storage from current storage type from the one specificed", true, true) {
+			cmds.add(new CommandHandler(new String[] { "ConvertFromData", "(UserStorage)" },
+					permPrefix + ".Commands.AdminVote.ConvertFromData",
+					"Convert user storage from current storage type from the one specificed", true, true) {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				sendMessage(sender, "&cStarting convert from " + args[1] + " to " + plugin.getStorageType().toString());
-				plugin.convertDataStorage(UserStorage.value(args[1]), plugin.getStorageType());
-				sendMessage(sender, "&cFinished converting");
-			}
-		});
+				@Override
+				public void execute(CommandSender sender, String[] args) {
+					sendMessage(sender,
+							"&cStarting convert from " + args[1] + " to " + plugin.getStorageType().toString());
+					plugin.convertDataStorage(UserStorage.value(args[1]), plugin.getStorageType());
+					sendMessage(sender, "&cFinished converting");
+				}
+			});
+		}
 
 		for (CommandHandler cmd : cmds) {
 			cmd.setAdvancedCoreCommand(true);

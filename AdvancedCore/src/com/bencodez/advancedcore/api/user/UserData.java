@@ -300,7 +300,7 @@ public class UserData {
 			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
 
-		AdvancedCorePlugin.getInstance().extraDebug("PlayerData " + storage.toString() + ":  Setting " + key + " to '"
+		AdvancedCorePlugin.getInstance().extraDebug("PlayerData " + storage.toString() + ": Setting " + key + " to '"
 				+ value + "' for '" + user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
 		if (storage.equals(UserStorage.SQLITE)) {
@@ -334,7 +334,7 @@ public class UserData {
 			AdvancedCorePlugin.getInstance().getLogger().severe("Keys cannot contain spaces " + key);
 		}
 
-		AdvancedCorePlugin.getInstance().extraDebug("PlayerData " + storage.toString() + ":  Setting " + key + " to '"
+		AdvancedCorePlugin.getInstance().extraDebug("PlayerData " + storage.toString() + ": Setting " + key + " to '"
 				+ value + "' for '" + user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
 		if (storage.equals(UserStorage.SQLITE)) {

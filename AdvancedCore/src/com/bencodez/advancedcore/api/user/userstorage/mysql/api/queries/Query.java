@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL;
 
 public class Query {
@@ -152,10 +153,11 @@ public class Query {
 			return num;
 
 		} catch (SQLException e) {
-			mysql.severe("Failed to send query: " + this.sql);
 			if (!e.getMessage().contains("Duplicate entry")) {
+				mysql.severe("Failed to send query: " + this.sql);
 				e.printStackTrace();
 			} else {
+				AdvancedCorePlugin.getInstance().debug("Failed to send query: " + this.sql);
 				mysql.debug(e);
 			}
 

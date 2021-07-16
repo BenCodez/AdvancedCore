@@ -500,7 +500,7 @@ public class MySQL {
 	}
 
 	public void insertQuery(String index, List<Column> cols) {
-		String query = "INSERT " + getName() + " ";
+		String query = "INSERT IGNORE " + getName() + " ";
 
 		query += "set uuid='" + index + "', ";
 
