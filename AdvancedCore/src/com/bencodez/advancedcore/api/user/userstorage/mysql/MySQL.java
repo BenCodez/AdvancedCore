@@ -142,7 +142,8 @@ public class MySQL {
 			Query q = new Query(mysql, "USE " + database + ";");
 			q.executeUpdate();
 		} catch (SQLException e) {
-			e.printStackTrace();
+			plugin.getLogger().severe("Failed to send use database query: " + database + " Error: " + e.getMessage());
+			plugin.debug(e);
 		}
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
 		sql += "uuid VARCHAR(37),";
