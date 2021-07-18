@@ -67,7 +67,7 @@ public class CommandLoader {
 	public ArrayList<CommandHandler> getBasicAdminCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
 		cmds.add(new CommandHandler(new String[] { "RunCMD", "All", "(List)" }, permPrefix + ".RunCMD.All",
-				"Run command for every user, use (player) for player") {
+				"Run command for every user, use %player% for player") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
