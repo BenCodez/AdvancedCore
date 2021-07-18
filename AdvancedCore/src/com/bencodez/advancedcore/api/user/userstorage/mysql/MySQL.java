@@ -139,7 +139,7 @@ public class MySQL {
 			plugin.getLogger().warning("Failed to connect to MySQL");
 		}
 		try {
-			Query q = new Query(mysql, "USE " + database + ";");
+			Query q = new Query(mysql, "USE `" + database + "`;");
 			q.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
