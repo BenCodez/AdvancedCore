@@ -244,11 +244,11 @@
 			<distributionManagement>
 				<snapshotRepository>
 					<id>nexus</id>
-					<url>http://51.161.110.19:8081/repository/maven-snapshots/</url>
+					<url>https://nexus.bencodez.com/repository/maven-snapshots/</url>
 				</snapshotRepository>
 				<repository>
 					<id>nexus</id>
-					<url>http://51.161.110.19:8081/repository/maven-releases</url>
+					<url>https://nexus.bencodez.com/repository/maven-releases</url>
 				</repository>
 			</distributionManagement>
 			<build>
@@ -293,7 +293,7 @@
 						</executions>
 						<configuration>
 							<serverId>nexus</serverId>
-							<nexusUrl>http://51.161.110.19:8081/nexus/</nexusUrl>
+							<nexusUrl>https://nexus.bencodez.com/nexus/</nexusUrl>
 							<skipStaging>true</skipStaging>
 						</configuration>
 					</plugin>
