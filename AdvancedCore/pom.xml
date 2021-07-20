@@ -293,7 +293,7 @@
 						</executions>
 						<configuration>
 							<serverId>nexus</serverId>
-							<nexusUrl>https://nexus.bencodez.com/nexus/</nexusUrl>
+							<nexusUrl>http://51.161.110.23:8081//nexus/</nexusUrl>
 							<skipStaging>true</skipStaging>
 						</configuration>
 					</plugin>
