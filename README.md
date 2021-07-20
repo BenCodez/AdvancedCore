@@ -3,23 +3,35 @@ https://www.spigotmc.org/resources/advancedcore.28295/
 
 ## License
 ### Creative Commons Arttribution 3.0 Unported
-https://github.com/Ben12345rocks/AdvancedCore/blob/master/VotingPlugin/LICENSE.txt
+https://github.com/BenCodez/AdvancedCore/blob/master/AdvancedCore/Resources/LICENSE.txt
 
 ### Maven:
 
+    <repository>
+	    <id>BenCodez Repo</id>
+	    <url>https://nexus.bencodez.com</url>
+    </repository>
+
+    <dependency>
+        <groupId>com.bencodez</groupId>
+	    <artifactId>advancedcore</artifactId>
+	    <version>LATEST</version>
+	    <scope>provided</scope>
+    </dependency>
+
+    BACKUP/OLD WAY
     <repository>
         <id>jitpack.io</id>
         <url>https://jitpack.io</url>
     </repository>
     
     <dependency>
-	    <groupId>com.github.Ben12345rocks</groupId>
+	    <groupId>com.github.BenCodez</groupId>
 	    <artifactId>AdvancedCore</artifactId>
 	    <version>LATEST</version>
-	    <scope>compile</scope>
+	    <scope>provided</scope>
 	</dependency>
   
   Versions:  
   LATEST - latest stable release  
-  BRANCH-SNAPHSOT - unstable builds  
  
