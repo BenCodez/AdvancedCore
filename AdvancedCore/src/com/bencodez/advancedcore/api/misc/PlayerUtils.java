@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -27,7 +28,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Iterables;
@@ -112,6 +112,10 @@ public class PlayerUtils {
 	}
 
 	public String getPlayerName(AdvancedCoreUser user, String uuid) {
+		return getPlayerName(user, uuid, true);
+	}
+
+	public String getPlayerName(AdvancedCoreUser user, String uuid, boolean useCache) {
 		if ((uuid == null) || uuid.equalsIgnoreCase("null") || uuid.isEmpty()) {
 			plugin.debug("Null UUID");
 			return "";
@@ -130,7 +134,7 @@ public class PlayerUtils {
 			java.util.UUID u = java.util.UUID.fromString(uuid);
 			Player player = Bukkit.getPlayer(u);
 
-			String storedName = user.getData().getString("PlayerName", true);
+			String storedName = user.getData().getString("PlayerName", useCache, true);
 			// String storedName = "";
 			if (player != null) {
 				name = player.getName();
@@ -248,7 +252,7 @@ public class PlayerUtils {
 		}
 
 		for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-			AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
+			AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
 			String name = user.getData().getString("PlayerName", true);
 			if (name.equals(playerName)) {
 				plugin.getUuidNameCache().put(uuid, playerName);

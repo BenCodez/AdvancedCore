@@ -106,7 +106,7 @@ public class SkullHandler {
 	}
 
 	public boolean hasSkull(String playerName) {
-		if (skulls.containsKey(playerName)) {
+		if (playerName != null && skulls.containsKey(playerName)) {
 			if (skulls.get(playerName) != null) {
 				return true;
 			}

@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.command;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -20,7 +21,6 @@ import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
@@ -78,7 +78,7 @@ public class CommandLoader {
 				final String cmd = str;
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
+					AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
 					users.add(user);
 
 					Bukkit.getScheduler().runTask(plugin, new Runnable() {
@@ -102,7 +102,7 @@ public class CommandLoader {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
+					AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
 					users.add(user);
 				}
 				for (AdvancedCoreUser user : users) {
@@ -145,7 +145,7 @@ public class CommandLoader {
 					Reward reward = RewardHandler.getInstance().getReward(args[3]);
 					ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 					for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-						AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
+						AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
 						users.add(user);
 					}
 					for (AdvancedCoreUser user : users) {
@@ -242,7 +242,7 @@ public class CommandLoader {
 		 *
 		 * @Override public void execute(CommandSender sender, String[] args) { for
 		 * (String uuid : UserManager.getInstance().getAllUUIDs()) { User user =
-		 * UserManager.getInstance().getUser(new UUID(uuid));
+		 * UserManager.getInstance().getUser(UUID.fromString(uuid));
 		 * user.getData().setString(args[2], args[3]); } sendMessage(sender, "&cSet " +
 		 * args[2] + " to " + args[3] + " for " + args[1]); } });
 		 */
@@ -275,7 +275,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
-				AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(args[1]));
+				AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(args[1]));
 				user.getData().remove();
 				sendMessage(sender, "&cRemoved " + args[1]);
 			}
@@ -287,20 +287,16 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
 					if (plugin.getMysql() != null) {
-						plugin.getMysql().clearCache();
-						sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared"));
+						plugin.getMysql().clearCacheBasic();
 					} else {
 						sender.sendMessage(StringParser.getInstance().colorize("&cMySQL not loaded"));
 					}
-				} /*
-					 * else if
-					 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)
-					 * ) { AdvancedCorePlugin.getInstance().getSQLiteUserTable().clearCache();
-					 * sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared")); }
-					 */else {
-					sender.sendMessage(
-							StringParser.getInstance().colorize("&cCurrent storage type does not have a cache"));
 				}
+				
+				plugin.getUserManager().getDataManager().clearCache();
+
+				sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared"));
+
 			}
 		});
 
@@ -414,7 +410,7 @@ public class CommandLoader {
 					data = "";
 				}
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
+					AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
 					user.getData().setString(args[3], data);
 
 				}

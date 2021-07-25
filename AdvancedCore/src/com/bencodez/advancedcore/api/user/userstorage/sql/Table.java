@@ -8,22 +8,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.userstorage.Column;
+import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.sql.db.SQLite;
 
 public class Table {
-
-	private static String getStringType(DataType dataType) {
-		switch (dataType) {
-		case STRING:
-			return "VARCHAR";
-		case INTEGER:
-			return "INT";
-		case FLOAT:
-			return "FLOAT";
-		default:
-			return null;
-		}
-	}
 
 	private List<Column> columns = new ArrayList<>();
 	private String name;
@@ -100,11 +90,27 @@ public class Table {
 		}
 	}
 
-	public boolean containsKey(Column column) {
-		for (Column col : getRows()) {
-			if (col.getValue().equals(column.getValue())) {
-				return true;
+	public boolean containsKey(String index) {
+		String query = "SELECT uuid FROM " + getName();
+
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			ResultSet rs = s.executeQuery();
+			/*
+			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
+			 */
+			while (rs.next()) {
+				String str = rs.getString("uuid");
+				if (str != null && str.equals(index)) {
+					rs.close();
+					s.close();
+					return true;
+				}
 			}
+			rs.close();
+
+		} catch (SQLException ex) {
+			ex.printStackTrace();
 		}
 		return false;
 	}
@@ -199,7 +205,9 @@ public class Table {
 					sqLite.close(s, rs);
 				} catch (SQLException e) {
 					s.close();
-					return null;
+					for (Column col : getColumns()) {
+						result.add(new Column(col.getName(), col.getDataType()));
+					}
 				}
 			}
 		} catch (SQLException e) {
@@ -227,15 +235,11 @@ public class Table {
 	}
 
 	public String getQuery() {
-		String query = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
-		for (Column column : getColumns()) {
-			query += "`" + column.name + "` ";
-			query += Table.getStringType(column.dataType);
-			query += (column.limit > 0 ? " (" + column.limit + "), " : ", ");
-		}
-		query += "PRIMARY KEY (`" + primaryKey.getName() + "`)";
-		query += ");";
-		return query;
+		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
+		sql += "uuid VARCHAR(37), ";
+		sql += "PRIMARY KEY ( uuid ));";
+		AdvancedCorePlugin.getInstance().devDebug("Create table query: " + sql);
+		return sql;
 	}
 
 	public List<Column> getRows() {
@@ -253,6 +257,7 @@ public class Table {
 				sqLite.close(s, rs);
 			} catch (SQLException e) {
 				s.close();
+				e.printStackTrace();
 				return null;
 			}
 		} catch (SQLException e) {
@@ -420,7 +425,7 @@ public class Table {
 		for (Column c : columns) {
 			checkColumn(c);
 		}
-		if (containsKey(primaryKey)) {
+		if (containsKey(primaryKey.getValue().toString())) {
 			synchronized (object) {
 				String query = "UPDATE " + getName() + " SET ";
 				for (Column column : columns) {
@@ -450,6 +455,7 @@ public class Table {
 				}
 			}
 		} else {
+			columns.add(primaryKey);
 			insert(columns);
 		}
 	}

@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.TimerTask;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -35,6 +36,7 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
+import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 
 import lombok.Getter;
@@ -55,13 +57,35 @@ public class AdvancedCoreUser {
 	private String playerName;
 
 	/** The plugin. */
-	public AdvancedCorePlugin plugin = null;
+	@Getter
+	private AdvancedCorePlugin plugin = null;
 
 	/** The uuid. */
 	private String uuid;
 
 	@Getter
 	private boolean waitForCache = true;
+
+	@Getter
+	private boolean cacheData = true;
+
+	@Getter
+	private boolean tempCache = false;
+
+	public AdvancedCoreUser tempCache() {
+		tempCache = true;
+		getUserData().tempCache();
+		return this;
+	}
+
+	public void clearTempCache() {
+		getUserData().clearTempCache();
+	}
+
+	public AdvancedCoreUser dontCache() {
+		cacheData = false;
+		return this;
+	}
 
 	/**
 	 * Instantiates a new user.
@@ -100,7 +124,7 @@ public class AdvancedCoreUser {
 	@Deprecated
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid) {
 		this.plugin = plugin;
-		this.uuid = uuid.getUUID();
+		this.uuid = uuid.toString();
 		loadData();
 		setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
 	}
@@ -115,7 +139,7 @@ public class AdvancedCoreUser {
 	@Deprecated
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, boolean loadName) {
 		this.plugin = plugin;
-		this.uuid = uuid.getUUID();
+		this.uuid = uuid.toString();
 		this.loadName = loadName;
 		loadData();
 		if (this.loadName) {
@@ -127,7 +151,7 @@ public class AdvancedCoreUser {
 	@Deprecated
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, boolean loadName, boolean loadData) {
 		this.plugin = plugin;
-		this.uuid = uuid.getUUID();
+		this.uuid = uuid.toString();
 		this.loadName = loadName;
 		if (loadData) {
 			loadData();
@@ -141,7 +165,7 @@ public class AdvancedCoreUser {
 	@Deprecated
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, String playerName) {
 		this.plugin = plugin;
-		this.uuid = uuid.getUUID();
+		this.uuid = uuid.toString();
 		loadData();
 		setPlayerName(playerName);
 	}
@@ -169,6 +193,10 @@ public class AdvancedCoreUser {
 		ArrayList<String> choices = getUnClaimedChoices();
 		choices.add(name);
 		setUnClaimedChoice(choices);
+	}
+
+	public UserDataCache getCache() {
+		return plugin.getUserManager().getDataManager().getCache(java.util.UUID.fromString(getUUID()));
 	}
 
 	public void checkDelayedTimedRewards() {
@@ -236,16 +264,9 @@ public class AdvancedCoreUser {
 	}
 
 	public void clearCache() {
-		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
-				&& AdvancedCorePlugin.getInstance().getMysql() != null) {
-			AdvancedCorePlugin.getInstance().getMysql().removePlayer(getUUID());
-		} /*
-			 * else if
-			 * (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)
-			 * ) {
-			 * AdvancedCorePlugin.getInstance().getSQLiteUserTable().removePlayer(getUUID())
-			 * ; }
-			 */
+		if (isCached()) {
+			getCache().clearCache();
+		}
 	}
 
 	public void closeInv() {
@@ -277,7 +298,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ArrayList<String> getChoicePreferenceData() {
-		return getData().getStringList("ChoicePreference");
+		return getData().getStringList("ChoicePreference", cacheData, waitForCache);
 	}
 
 	public UserData getData() {
@@ -288,11 +309,11 @@ public class AdvancedCoreUser {
 	}
 
 	public String getInputMethod() {
-		return getUserData().getString("InputMethod", true);
+		return getUserData().getString("InputMethod", cacheData, waitForCache);
 	}
 
 	public long getLastOnline() {
-		String d = getData().getString("LastOnline", true);
+		String d = getData().getString("LastOnline", cacheData, waitForCache);
 		long time = 0;
 		if (d != null && !d.equals("")) {
 			time = Long.valueOf(d);
@@ -326,7 +347,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ArrayList<String> getOfflineRewards() {
-		return getUserData().getStringList(getOfflineRewardsPath());
+		return getUserData().getStringList(getOfflineRewardsPath(), cacheData, waitForCache);
 	}
 
 	public String getOfflineRewardsPath() {
@@ -350,7 +371,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ItemStack getPlayerHead() {
-		return PlayerUtils.getInstance().getPlayerSkull(playerName, false);
+		return PlayerUtils.getInstance().getPlayerSkull(getPlayerName(), false);
 	}
 
 	/**
@@ -360,6 +381,9 @@ public class AdvancedCoreUser {
 	 */
 	public String getPlayerName() {
 		if (playerName == null) {
+			if (isTempCache()) {
+				return getUserData().getString("PlayerName", false, false);
+			}
 			return "";
 		} else {
 			return playerName;
@@ -367,11 +391,11 @@ public class AdvancedCoreUser {
 	}
 
 	public int getRepeatAmount(Reward reward) {
-		return getData().getInt("Repeat" + reward.getName(), true);
+		return getData().getInt("Repeat" + reward.getName(), cacheData, waitForCache);
 	}
 
 	public HashMap<String, Long> getTimedRewards() {
-		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards");
+		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards", cacheData, waitForCache);
 		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
 		for (String str : timedReward) {
 			String[] data = str.split("%ExecutionTime/%");
@@ -387,7 +411,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ArrayList<String> getUnClaimedChoices() {
-		return getData().getStringList("UnClaimedChoices");
+		return getData().getStringList("UnClaimedChoices", cacheData, waitForCache);
 	}
 
 	public UserData getUserData() {
@@ -583,20 +607,7 @@ public class AdvancedCoreUser {
 	}
 
 	public boolean isCached() {
-		switch (plugin.getStorageType()) {
-		case FLAT:
-			return true;
-		case MYSQL:
-			if (plugin.getMysql().containsKey(getUUID())) {
-				return true;
-			}
-			return false;
-		case SQLITE:
-			return true;
-		default:
-			break;
-		}
-		return true;
+		return plugin.getUserManager().getDataManager().getCache(UUID.fromString(uuid)) != null;
 	}
 
 	public boolean isCheckWorld() {
@@ -655,16 +666,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void loadCache() {
-		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					plugin.getMysql().loadPlayerIfNeeded(getUUID());
-				}
-			});
-
-		}
+		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid));
 	}
 
 	public void loadData() {
@@ -987,7 +989,7 @@ public class AdvancedCoreUser {
 		data.setStringList(getOfflineRewardsPath(), offlineRewards);
 	}
 
-	private void setPlayerName(String playerName) {
+	public void setPlayerName(String playerName) {
 		this.playerName = playerName;
 	}
 
@@ -1035,6 +1037,10 @@ public class AdvancedCoreUser {
 				getData().setString("PlayerName", getPlayerName());
 			}
 		}
+	}
+
+	public void cache() {
+		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid));
 	}
 
 }

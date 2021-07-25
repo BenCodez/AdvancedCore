@@ -11,10 +11,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -53,13 +53,12 @@ import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.userstorage.Column;
+import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
-import com.bencodez.advancedcore.api.user.userstorage.sql.Column;
-import com.bencodez.advancedcore.api.user.userstorage.sql.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.sql.Database;
 import com.bencodez.advancedcore.api.user.userstorage.sql.Table;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
@@ -419,6 +418,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			timeChecker.loadTimer(1);
 		}
 
+		// load usermanager
+		getUserManager();
+
 		loadConfig(true);
 
 		RewardHandler.getInstance().loadInjectedRewards();
@@ -660,25 +662,17 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadUserAPI(to);
 
 		if (getMysql() != null) {
-			debug("Clearing mysql cache");
-			getMysql().clearCache();
+			getMysql().clearCacheBasic();
 		}
 
 		Queue<String> uuids = new LinkedList<String>(UserManager.getInstance().getAllUUIDs(from));
 
 		while (uuids.size() > 0) {
 			String uuid = uuids.poll();
-			AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid), false);
+			AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid), false);
 			debug("Starting convert for " + user.getUUID());
-			HashMap<String, String> values = new HashMap<String, String>();
-			for (String key : user.getData().getKeys(from, true)) {
-				String value = user.getData().getValue(from, key);
-				if (value != null && !value.isEmpty() && !value.equalsIgnoreCase("null")) {
-					values.put(key, value);
-				}
-			}
 
-			user.getData().setValues(to, values);
+			user.getData().setValues(to, user.getData().getValues(from));
 			debug("Finished convert for " + user.getUUID() + ", " + uuids.size() + " more left to go!");
 
 			if (uuids.size() % 100 == 0) {
@@ -703,16 +697,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 			@Override
 			public void onStart() {
-				debug("Starting background uuid task");
+				debug("Starting background uuid/name task");
 			}
 
 			@Override
 			public void onStartUp(AdvancedCoreUser user) {
 				String uuid = user.getUUID();
-				String name = user.getData().getString("PlayerName", true);
+				String name = user.getData().getString("PlayerName", false, true);
 				boolean add = true;
 				if (uuidNameCache.containsKey(uuid)) {
-					debug("Duplicate uuid? " + uuid);
+					debug("Duplicate uuid? " + uuid + "/" + name);
 				}
 
 				if (name == null || name.equals("") || name.equals("Error getting name")) {
@@ -720,38 +714,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					add = false;
 				} else {
 					if (uuidNameCache.containsValue(name)) {
-						debug("Duplicate player name?" + name);
+						debug("Duplicate player name?" + uuid + "/" + name);
 					}
 				}
 				if (uuid == null || uuid.equals("")) {
 					debug("Invalid uuid: " + uuid);
 					add = false;
-				}
-
-				if (getStorageType().equals(UserStorage.MYSQL)) {
-					try {
-						boolean delete = true;
-						List<Column> list = user.getData().getMySqlRow(true);
-						if (list != null) {
-							for (Column col : list) {
-								if (!col.getName().equals("uuid") && !col.getName().equalsIgnoreCase("playername")) {
-									if (col.getValue() != null) {
-										if (!col.getValue().toString().isEmpty()) {
-											delete = false;
-										}
-									}
-								}
-							}
-							if (delete) {
-								add = false;
-								debug("Deleting " + uuid);
-								getMysql().deletePlayer(uuid);
-							}
-						}
-					} catch (Exception e) {
-						debug(e);
-					}
-
 				}
 
 				if (add) {
@@ -839,7 +807,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void onDisable() {
 
 		if (getOptions().getStorageType().equals(UserStorage.MYSQL)) {
-			getMysql().updateBatchShutdown();
 			getMysql().close();
 		}
 		timer.cancel();
@@ -869,6 +836,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public abstract void onUnLoad();
 
+	public boolean shouldNotAlwaysCacheData() {
+		return !(getStorageType().equals(UserStorage.MYSQL) && this.bungeeChannel != null);
+	}
+
 	public void registerBungeeChannels(String name) {
 		this.bungeeChannel = name;
 		getServer().getMessenger().registerOutgoingPluginChannel(this, name);
@@ -893,7 +864,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		RewardHandler.getInstance().loadRewards();
 		loadConfig(userStorage);
 		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null && userStorage) {
-			getMysql().clearCache();
+			getMysql().clearCacheBasic();
 		}
 		timeChecker.update();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
@@ -922,7 +893,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 */
 	public void setMysql(MySQL mysql) {
 		if (this.mysql != null) {
-			this.mysql.updateBatchShutdown();
 			this.mysql.close();
 			this.mysql = null;
 		}
@@ -978,11 +948,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
-					if (user != null) {
-						users.add(user);
-						for (UserStartup start : userStartup) {
-							start.onStartUp(user);
+					if (uuid != null) {
+						AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid), false);
+						if (user != null) {
+							user.dontCache();
+							user.tempCache();
+							users.add(user);
+							for (UserStartup start : userStartup) {
+								start.onStartUp(user);
+							}
+							user.clearTempCache();
 						}
 					}
 				}
@@ -990,6 +965,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					start.setUsers(users);
 					start.onFinish();
 				}
+
 			}
 		}, 30);
 	}

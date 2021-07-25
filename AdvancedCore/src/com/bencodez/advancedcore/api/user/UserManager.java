@@ -3,13 +3,17 @@ package com.bencodez.advancedcore.api.user;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.user.userstorage.sql.Column;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.userstorage.Column;
+
+import lombok.Getter;
 
 /**
  * The Class UserManager.
@@ -33,17 +37,25 @@ public class UserManager {
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
+	@Getter
+	private UserDataManager dataManager;
+
+	public void load() {
+		dataManager = new UserDataManager(AdvancedCorePlugin.getInstance());
+	}
+
 	/**
 	 * Instantiates a new user manager.
 	 */
 	public UserManager() {
+		load();
 	}
 
 	public ArrayList<String> getAllPlayerNames() {
 		ArrayList<String> names = new ArrayList<String>();
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			for (String uuid : getAllUUIDs()) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(new UUID(uuid));
+				AdvancedCoreUser user = UserManager.getInstance().getUser(java.util.UUID.fromString(uuid));
 				String name = user.getPlayerName();
 				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 					names.add(name);
@@ -126,13 +138,9 @@ public class UserManager {
 		return null;
 	}
 
-	public AdvancedCoreUser getUser(java.util.UUID uuid) {
-		return getUser(new UUID(uuid.toString()));
-	}
-
 	@SuppressWarnings("deprecation")
-	public AdvancedCoreUser getUser(java.util.UUID uuid, String playerName) {
-		return new AdvancedCoreUser(plugin, new UUID(uuid.toString()), playerName);
+	public AdvancedCoreUser getUser(UUID uuid, String playerName) {
+		return new AdvancedCoreUser(plugin, uuid, playerName);
 	}
 
 	/**
@@ -176,7 +184,7 @@ public class UserManager {
 	public AdvancedCoreUser getUser(UUID uuid) {
 		return new AdvancedCoreUser(plugin, uuid);
 	}
-	
+
 	@SuppressWarnings("deprecation")
 	public AdvancedCoreUser getUser(UUID uuid, boolean loadName) {
 		return new AdvancedCoreUser(plugin, uuid, loadName);
@@ -233,8 +241,8 @@ public class UserManager {
 	}
 
 	public boolean userExist(UUID uuid) {
-		if (uuid != null && uuid.getUUID() != null) {
-			if (getAllUUIDs().contains(uuid.getUUID())) {
+		if (uuid != null) {
+			if (getAllUUIDs().contains(uuid.toString())) {
 				// plugin.debug(uuid.getUUID() + " exists");
 				return true;
 			}

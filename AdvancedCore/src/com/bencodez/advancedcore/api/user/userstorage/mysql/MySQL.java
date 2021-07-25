@@ -5,33 +5,23 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.misc.CompatibleCacheBuilder;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
-import com.bencodez.advancedcore.api.user.UUID;
 import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
+import com.bencodez.advancedcore.api.user.userstorage.Column;
+import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
-import com.bencodez.advancedcore.api.user.userstorage.sql.Column;
-import com.bencodez.advancedcore.api.user.userstorage.sql.DataType;
-import com.google.common.cache.CacheLoader;
 
 import lombok.Getter;
 
@@ -56,8 +46,6 @@ public class MySQL {
 
 	private Set<String> names = ConcurrentHashMap.newKeySet();
 
-	private Object object1 = new Object();
-
 	private Object object2 = new Object();
 
 	private Object object3 = new Object();
@@ -65,20 +53,6 @@ public class MySQL {
 	private Object object4 = new Object();
 
 	private AdvancedCorePlugin plugin;
-
-	@Getter
-	private ConcurrentLinkedQueue<String> query = new ConcurrentLinkedQueue<String>();
-
-	ConcurrentMap<String, ArrayList<Column>> table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6)
-			.build(new CacheLoader<String, ArrayList<Column>>() {
-
-				@Override
-				public ArrayList<Column> load(String key) {
-					return getExactQuery(new Column("uuid", key, DataType.STRING));
-				}
-			});
-
-	private Timer timer = new Timer();
 
 	private boolean useBatchUpdates = true;
 
@@ -108,16 +82,15 @@ public class MySQL {
 
 		String str = section.getString("Line", "");
 
-		if (maxSize >= 0) {
-			table = CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20, TimeUnit.MINUTES)
-					.maximumSize(maxSize).build(new CacheLoader<String, ArrayList<Column>>() {
-
-						@Override
-						public ArrayList<Column> load(String key) {
-							return getExactQuery(new Column("uuid", key, DataType.STRING));
-						}
-					});
-		}
+		/*
+		 * if (maxSize >= 0) { table =
+		 * CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20,
+		 * TimeUnit.MINUTES) .maximumSize(maxSize).build(new CacheLoader<String,
+		 * ArrayList<Column>>() {
+		 * 
+		 * @Override public ArrayList<Column> load(String key) { return
+		 * getExactQuery(new Column("uuid", key, DataType.STRING)); } }); }
+		 */
 
 		name = tableName;
 		if (tablePrefix != null) {
@@ -142,16 +115,23 @@ public class MySQL {
 			Query q = new Query(mysql, "USE " + database + ";");
 			q.executeUpdate();
 		} catch (SQLException e) {
-			plugin.getLogger().severe("Failed to send use database query: " + database + " Error: " + e.getMessage());
+			plugin.getLogger().severe("Failed to send use database query: " + database + " Error: " + e.getMessage()
+					+ ", MySQL might still work");
 			plugin.debug(e);
 		}
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
-		sql += "uuid VARCHAR(37),";
-		sql += "PRIMARY KEY ( uuid )";
-		sql += ");";
-		Query query;
+		sql += "uuid VARCHAR(37), ";
+
+		// add custom column types
+		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
+			sql += key.getKey() + " " + key.getColumnType() + ", ";
+		}
+		sql += "PRIMARY KEY ( uuid ));";
+
+		plugin.devDebug("Create table query: " + sql);
+
 		try {
-			query = new Query(mysql, sql);
+			Query query = new Query(mysql, sql);
 
 			query.executeUpdate();
 		} catch (SQLException e) {
@@ -159,8 +139,6 @@ public class MySQL {
 		}
 
 		loadData();
-
-		schedule();
 
 		plugin.debug("UseBatchUpdates: " + isUseBatchUpdates());
 	}
@@ -176,11 +154,6 @@ public class MySQL {
 				query.executeUpdate();
 
 				getColumns().add(column);
-
-				Column col = new Column(column, dataType);
-				for (Entry<String, ArrayList<Column>> entry : table.entrySet()) {
-					entry.getValue().add(col);
-				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -188,30 +161,35 @@ public class MySQL {
 		}
 	}
 
-	public void addToQue(String query) {
-		// if (!this.query.contains(query)) {
-		this.query.add(query);
-		// }
-	}
-
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
 		plugin.debug("Altering column " + column + " to " + newType);
 		if (newType.contains("INT")) {
-			addToQue(
-					"UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column + ", '')) = '';");
+			try {
+				Query query = new Query(mysql, "UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce("
+						+ column + ", '')) = '';");
+				query.executeUpdateAsync();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 			if (!intColumns.contains(column)) {
 				intColumns.add(column);
 				plugin.getServerDataFile().setIntColumns(intColumns);
 			}
 		}
-		addToQue("ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
+		Query query;
+		try {
+			query = new Query(mysql, "ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
+			query.executeUpdateAsync();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 	public boolean checkBackgroundTask() {
 		if ((System.currentTimeMillis() - lastBackgroundCheck) > 50000) {
 			plugin.getLogger().severe("MySQL background task not working, fixing");
-			schedule();
 			return false;
 		}
 		return true;
@@ -227,16 +205,6 @@ public class MySQL {
 		}
 	}
 
-	public void clearCache() {
-		plugin.debug("Clearing cache");
-		table.clear();
-		clearCacheBasic();
-	}
-
-	public void clearCache(String uuid) {
-		table.remove(uuid);
-	}
-
 	public void clearCacheBasic() {
 		plugin.debug("Clearing cache basic");
 		columns.clear();
@@ -249,13 +217,6 @@ public class MySQL {
 
 	public void close() {
 		mysql.disconnect();
-	}
-
-	public boolean containsKey(String uuid) {
-		if (table.containsKey(uuid)) {
-			return true;
-		}
-		return false;
 	}
 
 	public boolean containsKeyQuery(String index) {
@@ -281,7 +242,7 @@ public class MySQL {
 	}
 
 	public boolean containsUUID(String uuid) {
-		if (table.containsKey(uuid) || uuids.contains(uuid)) {
+		if (uuids.contains(uuid)) {
 			return true;
 		}
 		return false;
@@ -296,8 +257,8 @@ public class MySQL {
 			e.printStackTrace();
 		}
 		uuids.remove(uuid);
-		names.remove(PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(uuid)), uuid));
-		removePlayer(uuid);
+		names.remove(PlayerUtils.getInstance()
+				.getPlayerName(UserManager.getInstance().getUser(java.util.UUID.fromString(uuid)), uuid));
 		clearCacheBasic();
 
 	}
@@ -340,20 +301,8 @@ public class MySQL {
 		return columns;
 	}
 
-	public ArrayList<Column> getExact(String uuid, boolean waitForCache) {
-		if (waitForCache || containsKey(uuid)) {
-			loadPlayerIfNeeded(uuid);
-			return table.get(uuid);
-		} else {
-			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					loadPlayerIfNeeded(uuid);
-				}
-			});
-			return null;
-		}
+	public ArrayList<Column> getExact(String uuid) {
+		return getExactQuery(new Column("uuid", uuid, DataType.STRING));
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
@@ -517,11 +466,20 @@ public class MySQL {
 
 		try {
 			new Query(mysql, query).executeUpdate();
-			names.add(
-					PlayerUtils.getInstance().getPlayerName(UserManager.getInstance().getUser(new UUID(index)), index));
+			String playerName = "";
+			for (Column col : cols) {
+				if (col.getName().equalsIgnoreCase("playername")) {
+					playerName = col.getValue().toString();
+				}
+			}
+			if (playerName.isEmpty()) {
+				names.add(PlayerUtils.getInstance().getPlayerName(
+						UserManager.getInstance().getUser(java.util.UUID.fromString(index), false), index));
+			} else {
+				names.add(playerName);
+			}
 			uuids.add(index);
 			plugin.debug("Inserting " + index + " into database");
-			clearCache(index);
 		} catch (Exception e) {
 			e.printStackTrace();
 			plugin.debug("Failed to insert player " + index);
@@ -547,69 +505,12 @@ public class MySQL {
 		}
 	}
 
-	private void loadPlayer(String uuid) {
-		table.put(uuid, getExactQuery(new Column("uuid", uuid, DataType.STRING)));
-	}
-
-	public void loadPlayerIfNeeded(String uuid) {
-		if (!containsKey(uuid)) {
-			// AdvancedCorePlugin.getInstance().debug("Caching " + uuid);
-			synchronized (object1) {
-				loadPlayer(uuid);
-			}
-		}
-	}
-
-	public void playerJoin(String uuid) {
-		if (AdvancedCorePlugin.getInstance().getOptions().isClearCacheOnJoin()) {
-			removePlayer(uuid);
-			loadPlayer(uuid);
-		}
-	}
-
-	public void removePlayer(String uuid) {
-		table.remove(uuid);
-	}
-
-	public void schedule() {
-		timer.cancel();
-		timer = new Timer();
-		timer.schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				try {
-					lastBackgroundCheck = System.currentTimeMillis();
-					updateBatch();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-
-		}, 10 * 1000, 250);
-		timer.schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				checkBackgroundTask();
-			}
-		}, 1000 * 60 * 5, 1000 * 60 * 5);
-	}
-
-	public void update(String index, List<Column> cols, boolean queue, boolean runAsync) {
+	public void update(String index, List<Column> cols, boolean runAsync) {
 		for (Column col : cols) {
 			checkColumn(col.getName(), col.getDataType());
 		}
 		synchronized (object2) {
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
-				for (Column col : getExact(index, true)) {
-					for (Column newCol : cols) {
-						if (col.getName().equals(newCol.getName())) {
-							col.setValue(newCol.getValue());
-						}
-					}
-				}
-
 				String query = "UPDATE " + getName() + " SET ";
 
 				for (int i = 0; i < cols.size(); i++) {
@@ -634,19 +535,15 @@ public class MySQL {
 
 				plugin.extraDebug("Batch query: " + query);
 
-				if (queue) {
-					addToQue(query);
-				} else {
-					try {
-						Query q = new Query(mysql, query);
-						if (runAsync) {
-							q.executeUpdateAsync();
-						} else {
-							q.executeUpdate();
-						}
-					} catch (SQLException e) {
-						e.printStackTrace();
+				try {
+					Query q = new Query(mysql, query);
+					if (runAsync) {
+						q.executeUpdateAsync();
+					} else {
+						q.executeUpdate();
 					}
+				} catch (SQLException e) {
+					e.printStackTrace();
 				}
 			} else {
 				insertQuery(index, cols);
@@ -655,10 +552,6 @@ public class MySQL {
 	}
 
 	public void update(String index, String column, Object value, DataType dataType) {
-		update(index, column, value, dataType, true);
-	}
-
-	public void update(String index, String column, Object value, DataType dataType, boolean queue) {
 		if (value == null) {
 			plugin.extraDebug("Mysql value null: " + column);
 			return;
@@ -666,12 +559,6 @@ public class MySQL {
 		checkColumn(column, dataType);
 		synchronized (object2) {
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
-				for (Column col : getExact(index, true)) {
-					if (col.getName().equals(column)) {
-						col.setValue(value);
-					}
-				}
-
 				String query = "UPDATE " + getName() + " SET ";
 
 				if (dataType == DataType.STRING) {
@@ -683,77 +570,15 @@ public class MySQL {
 				query += " WHERE `uuid`=";
 				query += "'" + index + "';";
 
-				if (queue) {
-					addToQue(query);
-				} else {
-					try {
-						Query q = new Query(mysql, query);
-						q.executeUpdateAsync();
-					} catch (SQLException e) {
-						e.printStackTrace();
-					}
+				try {
+					Query q = new Query(mysql, query);
+					q.executeUpdateAsync();
+				} catch (SQLException e) {
+					e.printStackTrace();
 				}
+
 			} else {
 				insert(index, column, value, dataType);
-			}
-		}
-
-	}
-
-	public void updateBatch() {
-		if (query.size() > 0) {
-			plugin.extraDebug("Query Size: " + query.size() + ", usebatchupdates: " + useBatchUpdates);
-			String sql = "";
-			while (query.size() > 0) {
-				String text = query.poll();
-				if (!text.endsWith(";")) {
-					text += ";";
-				}
-				sql += text;
-			}
-
-			try {
-				if (useBatchUpdates) {
-					try (Connection conn = mysql.getConnectionManager().getConnection();
-							Statement st = conn.createStatement()) {
-						for (String str : sql.split(";")) {
-							st.addBatch(str);
-						}
-						st.executeBatch();
-					} catch (SQLException e) {
-						plugin.extraDebug("Failed to send query: " + sql);
-						e.printStackTrace();
-					}
-				} else {
-					for (String text : sql.split(";")) {
-						try {
-							Query query = new Query(mysql, text);
-							query.executeUpdateAsync();
-						} catch (SQLException e) {
-							plugin.getLogger().severe("Error occoured while executing sql: " + e.toString());
-							e.printStackTrace();
-						}
-					}
-				}
-			} catch (Exception e1) {
-				plugin.extraDebug("Failed to send query: " + sql);
-				e1.printStackTrace();
-			}
-		}
-
-	}
-
-	public void updateBatchShutdown() {
-		if (query.size() > 0) {
-			plugin.getLogger().info("Shutting down mysql, queries to do: " + query.size()
-					+ ", if number is higher than 1000, then something may be wrong");
-			updateBatch();
-
-			try {
-				mysql.getThreadPool().awaitTermination(30, TimeUnit.SECONDS);
-				mysql.getThreadPool().shutdown();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
 			}
 		}
 
@@ -768,5 +593,12 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
+	}
+
+	public boolean containsKey(String uuid) {
+		if (uuids.contains(uuid) || containsKeyQuery(uuid)) {
+			return true;
+		}
+		return false;
 	}
 }

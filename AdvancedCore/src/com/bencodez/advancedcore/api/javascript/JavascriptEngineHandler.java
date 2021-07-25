@@ -26,27 +26,35 @@ public class JavascriptEngineHandler {
 		if (Double.parseDouble(System.getProperty("java.specification.version")) < 15) {
 			builtIn = true;
 		} else {
-			builtIn = false;
-			factory = ReflectionUtils.getClassForName("org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory");
-			for (Method m : factory.getDeclaredMethods()) {
-				if (m.getParameterCount() == 0) {
-					if (m.getName().equals("getScriptEngine")) {
-						methodToUse = m;
+			try {
+				builtIn = false;
+				factory = ReflectionUtils
+						.getClassForName("org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory");
+				for (Method m : factory.getDeclaredMethods()) {
+					if (m.getParameterCount() == 0) {
+						if (m.getName().equals("getScriptEngine")) {
+							methodToUse = m;
+						}
 					}
 				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
+
 	}
 
 	public ScriptEngine getJSScriptEngine() {
 		if (builtIn) {
 			return new ScriptEngineManager().getEngineByName("js");
 		} else {
-			try {
-				return (ScriptEngine) methodToUse.invoke(factory.newInstance(), new Object[] {});
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-					| InstantiationException e) {
-				e.printStackTrace();
+			if (factory != null) {
+				try {
+					return (ScriptEngine) methodToUse.invoke(factory.newInstance(), new Object[] {});
+				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
+						| InstantiationException e) {
+					e.printStackTrace();
+				}
 			}
 			return null;
 		}

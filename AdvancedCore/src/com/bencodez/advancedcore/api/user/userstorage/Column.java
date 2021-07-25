@@ -1,4 +1,8 @@
-package com.bencodez.advancedcore.api.user.userstorage.sql;
+package com.bencodez.advancedcore.api.user.userstorage;
+
+import com.bencodez.advancedcore.api.user.usercache.value.UserDataValue;
+import com.bencodez.advancedcore.api.user.usercache.value.UserDataValueInt;
+import com.bencodez.advancedcore.api.user.usercache.value.UserDataValueString;
 
 public class Column {
 
@@ -56,6 +60,30 @@ public class Column {
 
 	public void setValue(Object value) {
 		this.value = value;
+	}
+
+	public UserDataValue toUserData() {
+		if (dataType.equals(DataType.INTEGER)) {
+			int num = 0;
+			if (value instanceof Integer) {
+				try {
+					num = (int) value;
+				} catch (ClassCastException | NullPointerException ex) {
+				}
+			} else if (value instanceof String) {
+				try {
+					num = Integer.parseInt((String) value);
+				} catch (Exception e) {
+				}
+			}
+			return new UserDataValueInt(num);
+		} else {
+			String str = "";
+			if (getValue() != null) {
+				str = getValue().toString();
+			}
+			return new UserDataValueString(str);
+		}
 	}
 
 }
