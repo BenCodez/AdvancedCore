@@ -465,7 +465,6 @@ public class MySQL {
 			} else {
 				query += col.getName() + "='" + col.getValue().toString() + "', ";
 			}
-
 		}
 
 		try {

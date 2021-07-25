@@ -141,7 +141,9 @@ public class PlayerUtils {
 
 				if (storedName == null || name != storedName || storedName.isEmpty()
 						|| storedName.equalsIgnoreCase("Error getting name")) {
-					user.getData().setString("PlayerName", name);
+					if (user.getUserData().hasData()) {
+						user.getData().setString("PlayerName", name);
+					}
 				}
 				return name;
 			}
