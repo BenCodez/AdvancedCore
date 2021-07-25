@@ -66,4 +66,10 @@ public class UserDataManager {
 	public void clearCache() {
 		userDataCache.clear();
 	}
+
+	public void cacheUserIfNeeded(UUID uuid) {
+		if (userDataCache.size() == 0) {
+			cacheUser(uuid);
+		}
+	}
 }

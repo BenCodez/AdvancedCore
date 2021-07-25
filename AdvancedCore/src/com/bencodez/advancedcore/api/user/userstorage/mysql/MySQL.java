@@ -125,10 +125,14 @@ public class MySQL {
 		// add custom column types
 		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
 			sql += key.getKey() + " " + key.getColumnType() + ", ";
+			if (key.getColumnType().equalsIgnoreCase("int")) {
+				if (!intColumns.contains(key.getKey())) {
+					intColumns.add(key.getKey());
+					plugin.getServerDataFile().setIntColumns(intColumns);
+				}
+			}
 		}
 		sql += "PRIMARY KEY ( uuid ));";
-
-		plugin.devDebug("Create table query: " + sql);
 
 		try {
 			Query query = new Query(mysql, sql);

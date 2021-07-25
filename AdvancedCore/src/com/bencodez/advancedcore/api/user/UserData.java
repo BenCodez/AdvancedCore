@@ -75,8 +75,13 @@ public class UserData {
 			if (useCache) {
 				UserDataCache cache = user.getCache();
 				if (cache != null) {
+					user.cacheIfNeeded();
 					if (cache.isCached(key)) {
-						return cache.getCache().get(key).getInt();
+						if (cache.getCache().get(key).isInt()) {
+							return cache.getCache().get(key).getInt();
+						} else {
+							return Integer.parseInt(cache.getCache().get(key).getString());
+						}
 					}
 				} else {
 					user.cache();

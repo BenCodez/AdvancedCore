@@ -6,9 +6,12 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.sql.db.SQLite;
@@ -18,6 +21,7 @@ public class Table {
 	private List<Column> columns = new ArrayList<>();
 	private String name;
 	private Object object = new Object();
+	private List<String> intColumns;
 
 	private Column primaryKey;
 
@@ -61,6 +65,12 @@ public class Table {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			s.executeUpdate();
 			s.close();
+			if (column.getDataType().equals(DataType.INTEGER)) {
+				if (!intColumns.contains(column.getName())) {
+					intColumns.add(column.getName());
+					AdvancedCorePlugin.getInstance().getServerDataFile().setIntColumns(intColumns);
+				}
+			}
 			columns.add(column);
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -170,9 +180,9 @@ public class Table {
 		return columns;
 	}
 
-	public List<Column> getExact(Column column) {
-		checkColumns();
-		List<Column> result = new ArrayList<>();
+	public ArrayList<Column> getExact(Column column) {
+		ArrayList<Column> result = new ArrayList<>();
+
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
 		try {
 			synchronized (object) {
@@ -189,29 +199,32 @@ public class Table {
 					s.setFloat(1, Float.parseFloat(value));
 				}
 				ResultSet rs = s.executeQuery();
-				try {
-					for (int i = 0; i < getColumns().size(); i++) {
-						Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).dataType,
-								getColumns().get(i).limit);
-						if (rCol.dataType == DataType.STRING) {
-							rCol.setValue(rs.getString(i + 1));
-						} else if (rCol.dataType == DataType.INTEGER) {
-							rCol.setValue(rs.getInt(i + 1));
+
+				if (rs.next()) {
+					for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+						String columnName = rs.getMetaData().getColumnLabel(i);
+						Column rCol = null;
+						if (intColumns.contains(columnName)) {
+							rCol = new Column(columnName, DataType.INTEGER);
+							rCol.setValue(rs.getInt(i));
 						} else {
-							rCol.setValue(rs.getFloat(i + 1));
+							rCol = new Column(columnName, DataType.STRING);
+							rCol.setValue(rs.getString(i));
 						}
 						result.add(rCol);
 					}
-					sqLite.close(s, rs);
-				} catch (SQLException e) {
-					s.close();
-					for (Column col : getColumns()) {
-						result.add(new Column(col.getName(), col.getDataType()));
-					}
 				}
+				rs.close();
+				return result;
 			}
+
 		} catch (SQLException e) {
 			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
+		}
+
+		for (Column col : getColumns()) {
+			result.add(new Column(col.getName(), col.getDataType()));
 		}
 		return result;
 	}
@@ -235,10 +248,20 @@ public class Table {
 	}
 
 	public String getQuery() {
+		intColumns = Collections.synchronizedList(AdvancedCorePlugin.getInstance().getServerDataFile().getIntColumns());
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
 		sql += "uuid VARCHAR(37), ";
+		// add custom column types
+		for (UserDataKey key : AdvancedCorePlugin.getInstance().getUserManager().getDataManager().getKeys()) {
+			sql += key.getKey() + " " + key.getColumnType() + ", ";
+			if (StringParser.getInstance().containsIgnorecase(key.getColumnType(), "int")) {
+				if (!intColumns.contains(key.getKey())) {
+					intColumns.add(key.getKey());
+					AdvancedCorePlugin.getInstance().getServerDataFile().setIntColumns(intColumns);
+				}
+			}
+		}
 		sql += "PRIMARY KEY ( uuid ));";
-		AdvancedCorePlugin.getInstance().devDebug("Create table query: " + sql);
 		return sql;
 	}
 

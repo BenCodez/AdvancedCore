@@ -1043,4 +1043,8 @@ public class AdvancedCoreUser {
 		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid));
 	}
 
+	public void cacheIfNeeded() {
+		plugin.getUserManager().getDataManager().cacheUserIfNeeded(UUID.fromString(uuid));
+	}
+
 }
