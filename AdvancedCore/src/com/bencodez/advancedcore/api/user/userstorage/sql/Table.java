@@ -362,6 +362,7 @@ public class Table {
 			}
 		}
 		query += ";";
+		AdvancedCorePlugin.getInstance().debug(query);
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			for (int i = 0; i < columns.size(); i++) {
@@ -478,7 +479,15 @@ public class Table {
 				}
 			}
 		} else {
-			columns.add(primaryKey);
+			boolean addPrimary = true;
+			for (Column col : columns) {
+				if (col.getName().equals("uuid")) {
+					addPrimary = false;
+				}
+			}
+			if (addPrimary) {
+				columns.add(primaryKey);
+			}
 			insert(columns);
 		}
 	}

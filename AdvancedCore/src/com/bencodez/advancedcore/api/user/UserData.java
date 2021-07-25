@@ -535,7 +535,6 @@ public class UserData {
 	private HashMap<String, UserDataValue> tempCache;
 
 	public void tempCache() {
-		user.getPlugin().extraDebug("Temp caching for " + user.getUUID());
 		tempCache = getValues();
 	}
 
