@@ -156,12 +156,19 @@ public class ConnectionManager {
 
 	public boolean open() {
 
-		String className = "com.mysql.cj.jdbc.Driver";
+		String className = "org.mariadb.jdbc.Driver";
+
 		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
+			Class.forName(className);
 		} catch (ClassNotFoundException ignored) {
-			className = "com.mysql.jdbc.Driver";
+			className = "com.mysql.cj.jdbc.Driver";
+			try {
+				Class.forName(className);
+			} catch (ClassNotFoundException ignored1) {
+				className = "com.mysql.jdbc.Driver";
+			}
 		}
+
 		try {
 			Class.forName(className);
 
