@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.UserManager;
@@ -125,7 +126,7 @@ public class MySQL {
 		// add custom column types
 		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
 			sql += key.getKey() + " " + key.getColumnType() + ", ";
-			if (key.getColumnType().equalsIgnoreCase("int")) {
+			if (StringParser.getInstance().containsIgnorecase(key.getColumnType(), "int")) {
 				if (!intColumns.contains(key.getKey())) {
 					intColumns.add(key.getKey());
 					plugin.getServerDataFile().setIntColumns(intColumns);
@@ -324,13 +325,11 @@ public class MySQL {
 					Column rCol = null;
 					if (intColumns.contains(columnName)) {
 						rCol = new Column(columnName, DataType.INTEGER);
+						rCol.setValue(rs.getInt(i));
 					} else {
 						rCol = new Column(columnName, DataType.STRING);
+						rCol.setValue(rs.getString(i));
 					}
-					// System.out.println(i + " " +
-					// rs.getMetaData().getColumnLabel(i));
-					rCol.setValue(rs.getString(i));
-					// System.out.println(rCol.getValue());
 					result.add(rCol);
 				}
 			}
@@ -339,6 +338,7 @@ public class MySQL {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} catch (ArrayIndexOutOfBoundsException e) {
+			e.printStackTrace();
 		}
 
 		for (String col : getColumns()) {
@@ -469,6 +469,7 @@ public class MySQL {
 		}
 
 		try {
+			plugin.debug(query);
 			new Query(mysql, query).executeUpdate();
 			String playerName = "";
 			for (Column col : cols) {
@@ -483,7 +484,7 @@ public class MySQL {
 				names.add(playerName);
 			}
 			uuids.add(index);
-			plugin.debug("Inserting " + index + " into database");
+			plugin.devDebug("Inserting " + index + " into database");
 		} catch (Exception e) {
 			e.printStackTrace();
 			plugin.debug("Failed to insert player " + index);
@@ -515,6 +516,7 @@ public class MySQL {
 		}
 		synchronized (object2) {
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
+
 				String query = "UPDATE " + getName() + " SET ";
 
 				for (int i = 0; i < cols.size(); i++) {
@@ -534,10 +536,10 @@ public class MySQL {
 
 					}
 				}
-				query += " WHERE 'uuid'=";
+				query += " WHERE uuid=";
 				query += "'" + index + "';";
 
-				plugin.extraDebug("Batch query: " + query);
+				plugin.devDebug("Batch query: " + query);
 
 				try {
 					Query q = new Query(mysql, query);
@@ -568,10 +570,10 @@ public class MySQL {
 				if (dataType == DataType.STRING) {
 					query += column + "='" + value.toString() + "'";
 				} else {
-					query += column + "=" + value;
+					query += column + "='" + value + "'";
 
 				}
-				query += " WHERE `uuid`=";
+				query += " WHERE uuid=";
 				query += "'" + index + "';";
 
 				try {

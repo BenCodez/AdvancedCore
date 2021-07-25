@@ -498,9 +498,9 @@ public class UserData {
 				ArrayList<Column> cols = new ArrayList<Column>();
 				for (Entry<String, UserDataValue> entry : values.entrySet()) {
 					if (!entry.getKey().equals("uuid")) {
-						if (entry.getValue() instanceof UserDataValueInt) {
+						if (entry.getValue().isInt()) {
 							cols.add(new Column(entry.getKey(), entry.getValue().getInt(), DataType.INTEGER));
-						} else if (entry.getValue() instanceof UserDataValueString) {
+						} else if (entry.getValue().isString()) {
 							cols.add(new Column(entry.getKey(), entry.getValue().getString(), DataType.STRING));
 						}
 					}

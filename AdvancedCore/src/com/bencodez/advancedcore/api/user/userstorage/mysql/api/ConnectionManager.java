@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.user.userstorage.mysql.api;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -168,6 +169,8 @@ public class ConnectionManager {
 				className = "com.mysql.jdbc.Driver";
 			}
 		}
+
+		AdvancedCorePlugin.getInstance().extraDebug("Using mysql driver: " + className);
 
 		try {
 			Class.forName(className);

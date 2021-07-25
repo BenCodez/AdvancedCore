@@ -362,7 +362,6 @@ public class Table {
 			}
 		}
 		query += ";";
-		AdvancedCorePlugin.getInstance().debug(query);
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			for (int i = 0; i < columns.size(); i++) {
