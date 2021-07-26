@@ -192,14 +192,6 @@ public class MySQL {
 
 	}
 
-	public boolean checkBackgroundTask() {
-		if ((System.currentTimeMillis() - lastBackgroundCheck) > 50000) {
-			plugin.getLogger().severe("MySQL background task not working, fixing");
-			return false;
-		}
-		return true;
-	}
-
 	public void checkColumn(String column, DataType dataType) {
 		synchronized (object4) {
 			if (!ArrayUtils.getInstance().containsIgnoreCase((ArrayList<String>) getColumns(), column)) {
