@@ -533,6 +533,12 @@ public class UserData {
 
 	@Getter
 	private HashMap<String, UserDataValue> tempCache;
+	
+	public void updateCacheWithTemp() {
+		if (user.isCached()) {
+			user.getCache().updateCache(tempCache);
+		}
+	}
 
 	public void tempCache() {
 		tempCache = getValues();

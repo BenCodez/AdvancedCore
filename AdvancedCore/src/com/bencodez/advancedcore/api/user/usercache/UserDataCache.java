@@ -118,4 +118,8 @@ public class UserDataCache {
 	public boolean hasCache() {
 		return !cache.isEmpty();
 	}
+
+	public void updateCache(HashMap<String, UserDataValue> tempCache) {
+		cache = tempCache;
+	}
 }

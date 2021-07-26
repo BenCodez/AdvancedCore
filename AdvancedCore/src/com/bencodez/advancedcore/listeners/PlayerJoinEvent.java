@@ -86,11 +86,10 @@ public class PlayerJoinEvent implements Listener {
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerQuit(PlayerQuitEvent event) {
-		plugin.debug("Logout: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+		Player player = event.getPlayer();
+		plugin.debug("Logout: " + event.getPlayer().getName() + " (" + player.getUniqueId() + ")");
 
-		if (plugin.getOptions().isClearCacheOnLeave()) {
-			Player player = event.getPlayer();
-			plugin.getUserManager().getDataManager().removeCache(player.getUniqueId());
-		}
+		plugin.getUserManager().getDataManager().removeCache(player.getUniqueId());
 	}
+
 }

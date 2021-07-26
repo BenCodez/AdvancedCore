@@ -21,12 +21,6 @@ public class AdvancedCoreConfigOptions {
 	private boolean autoKillInvs = true;
 	@Getter
 	@Setter
-	private boolean clearCacheOnJoin;
-	@Getter
-	@Setter
-	private boolean clearCacheOnLeave;
-	@Getter
-	@Setter
 	private double clickSoundPitch = 1;
 	@Getter
 	@Setter
@@ -242,8 +236,6 @@ public class AdvancedCoreConfigOptions {
 
 			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled", true);
 			processRewards = configData.getBoolean("ProcessRewards", true);
-			clearCacheOnJoin = configData.getBoolean("ClearCacheOnJoin", false);
-			clearCacheOnLeave = configData.getBoolean("ClearCacheOnLeave", false);
 
 			waitUntilLoggedIn = configData.getBoolean("WaitUntilLoggedIn", true);
 

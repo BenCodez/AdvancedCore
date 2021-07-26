@@ -60,6 +60,10 @@ public class UserDataManager {
 	}
 
 	public void removeCache(UUID uuid) {
+		UserDataCache cache = getCache(uuid);
+		if (cache != null) {
+			cache.clearCache();
+		}
 		userDataCache.remove(uuid);
 	}
 
