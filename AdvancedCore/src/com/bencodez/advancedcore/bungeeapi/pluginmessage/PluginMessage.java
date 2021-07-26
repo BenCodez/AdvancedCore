@@ -14,9 +14,16 @@ import com.bencodez.advancedcore.thread.Thread;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class PluginMessage implements PluginMessageListener {
 
 	private AdvancedCorePlugin plugin;
+
+	@Getter
+	@Setter
+	private boolean debug = false;
 
 	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<PluginMessageHandler>();
 
@@ -70,6 +77,10 @@ public class PluginMessage implements PluginMessageListener {
 	}
 
 	public void onReceive(String subChannel, ArrayList<String> list) {
+		if (debug) {
+			plugin.getLogger().info("BungeeDebug: Received plugin message: " + subChannel + ", "
+					+ ArrayUtils.getInstance().makeStringList(list));
+		}
 		Thread.getInstance().run(new Runnable() {
 
 			@Override
@@ -84,12 +95,7 @@ public class PluginMessage implements PluginMessageListener {
 
 	}
 
-	public void sendPluginMessage(Player p, String channel, String... messageData) {
-		if (p == null) {
-			plugin.debug("Can't send plugin message, player == null, " + channel + " data: "
-					+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(messageData)));
-			return;
-		}
+	public void sendPluginMessage(String channel, String... messageData) {
 		ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(byteOutStream);
 		try {
@@ -98,21 +104,16 @@ public class PluginMessage implements PluginMessageListener {
 			for (String message : messageData) {
 				out.writeUTF(message);
 			}
-			p.sendPluginMessage(plugin, plugin.getBungeeChannel(), byteOutStream.toByteArray());
+			if (debug) {
+				plugin.getLogger().info("BungeeDebug: Sending plugin message: " + channel + ", "
+						+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(messageData)));
+			}
+			Bukkit.getServer().sendPluginMessage(plugin, plugin.getBungeeChannel(), byteOutStream.toByteArray());
+
 			out.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-
-	public void sendPluginMessage(String channel, String... messageData) {
-		for (Player p : Bukkit.getOnlinePlayers()) {
-			sendPluginMessage(p, channel, messageData);
-			return;
-		}
-
-		plugin.debug("Can't send plugin message, player == null, " + channel + " data: "
-				+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(messageData)));
 	}
 
 }
