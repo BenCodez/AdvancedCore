@@ -73,7 +73,9 @@ public class UserDataCache {
 			values.put(change.getKey(), change.toUserDataValue());
 			manager.getPlugin().extraDebug("Processing change for " + change.getKey());
 		}
-		user.getUserData().setValues(values);
+		if (!values.isEmpty()) {
+			user.getUserData().setValues(values);
+		}
 	}
 
 	public boolean isCached(String key) {

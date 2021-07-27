@@ -460,7 +460,6 @@ public class MySQL {
 		}
 
 		try {
-			plugin.debug(query);
 			new Query(mysql, query).executeUpdate();
 			String playerName = "";
 			for (Column col : cols) {

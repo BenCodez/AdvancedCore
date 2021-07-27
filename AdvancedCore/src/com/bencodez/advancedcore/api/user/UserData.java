@@ -303,18 +303,6 @@ public class UserData {
 		return ArrayUtils.getInstance().convert(list);
 	}
 
-	public String getValue(UserStorage storage, String key, boolean useCache) {
-		if (storage.equals(UserStorage.MYSQL)) {
-			if (AdvancedCorePlugin.getInstance().getMysql().isIntColumn(key)) {
-				return "" + getInt(storage, key, 0, useCache, true);
-			} else {
-				return getString(storage, key, useCache, true);
-			}
-		} else {
-			return getString(storage, key, useCache, true);
-		}
-	}
-
 	public HashMap<String, UserDataValue> getValues() {
 		return getValues(AdvancedCorePlugin.getInstance().getStorageType());
 	}
