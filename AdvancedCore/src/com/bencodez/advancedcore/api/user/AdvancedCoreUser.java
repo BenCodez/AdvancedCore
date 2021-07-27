@@ -607,7 +607,7 @@ public class AdvancedCoreUser {
 	}
 
 	public boolean isCached() {
-		return plugin.getUserManager().getDataManager().getCache(UUID.fromString(uuid)) != null;
+		return plugin.getUserManager().getDataManager().isCached(UUID.fromString(uuid));
 	}
 
 	public boolean isCheckWorld() {

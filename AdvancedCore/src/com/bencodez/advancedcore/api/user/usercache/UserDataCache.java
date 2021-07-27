@@ -104,7 +104,7 @@ public class UserDataCache {
 
 		}
 		if (keys.size() > 0) {
-			manager.getPlugin().debug("Keys not cached: " + ArrayUtils.getInstance().makeStringList(keys));
+			manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.getInstance().makeStringList(keys));
 		}
 
 		return this;

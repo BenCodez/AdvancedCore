@@ -35,6 +35,13 @@ public class UserDataManager {
 	public void addKey(UserDataKey userDataKey) {
 		keys.add(userDataKey);
 	}
+	
+	public boolean isCached(UUID uuid) {
+		if (userDataCache.containsKey(uuid)) {
+			return userDataCache.get(uuid).hasCache();
+		}
+		return false;
+	}
 
 	private void loadKeys() {
 		addKey(new UserDataKeyString("PlayerName").setColumnType("VARCHAR(30)"));
