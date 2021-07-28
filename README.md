@@ -9,7 +9,7 @@ https://github.com/BenCodez/AdvancedCore/blob/master/AdvancedCore/Resources/LICE
 
     <repository>
 	    <id>BenCodez Repo</id>
-	    <url>https://nexus.bencodez.com</url>
+	    <url>https://nexus.bencodez.com/repository/maven-public/</url>
     </repository>
 
     <dependency>
