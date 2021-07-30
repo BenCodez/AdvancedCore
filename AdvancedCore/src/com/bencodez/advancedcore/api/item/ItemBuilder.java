@@ -84,6 +84,9 @@ public class ItemBuilder {
 	@Getter
 	private boolean validMaterial = true;
 
+	@Getter
+	private String path;
+
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
 	 *
@@ -101,6 +104,7 @@ public class ItemBuilder {
 			}
 			setBlank();
 		} else {
+			path = data.getCurrentPath();
 			double chance = data.getDouble("Chance", 100);
 			if (checkChance(chance)) {
 				chancePass = true;
@@ -111,6 +115,7 @@ public class ItemBuilder {
 					conditional = true;
 					conditionalValues = data.getConfigurationSection("Conditional");
 					is = new ItemStack(Material.STONE);
+
 				} else {
 
 					Material material = null;
@@ -339,7 +344,20 @@ public class ItemBuilder {
 		for (String enchant : enchants.keySet()) {
 			try {
 				if (!NMSManager.getInstance().isVersion("1.12")) {
-					enchantments.put(Enchantment.getByKey(NamespacedKey.minecraft(enchant)), enchants.get(enchant));
+					Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchant));
+					if (ench == null) {
+						for (Enchantment en : Enchantment.values()) {
+							if (en.toString().equalsIgnoreCase(enchant)) {
+								ench = en;
+							}
+						}
+					}
+					if (ench != null) {
+						enchantments.put(ench, enchants.get(enchant));
+					} else {
+						AdvancedCorePlugin.getInstance().getLogger()
+								.warning("Invalid enchantment: " + enchant + ", Path: " + path);
+					}
 				} else {
 					for (Enchantment en : Enchantment.values()) {
 						if (en.toString().equalsIgnoreCase(enchant)) {
