@@ -33,7 +33,6 @@ public class SkullThread {
 				return;
 			}
 			if (playerName == null || playerName.isEmpty()) {
-				// AdvancedCoreHook.getInstance().debug("Invalid skull name");
 				return;
 			}
 			if (SkullHandler.getInstance().hasSkull(playerName)) {

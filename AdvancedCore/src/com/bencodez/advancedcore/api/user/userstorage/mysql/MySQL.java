@@ -367,7 +367,10 @@ public class MySQL {
 		if (rows != null) {
 			for (Column c : rows) {
 				if (c.getValue() != null && c.getValue().isString()) {
-					uuids.add(c.getValue().getString());
+					String value = c.getValue().getString();
+					if (value != null) {
+						uuids.add(value);
+					}
 				}
 			}
 		}
