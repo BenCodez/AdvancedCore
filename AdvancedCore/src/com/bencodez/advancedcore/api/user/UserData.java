@@ -367,6 +367,10 @@ public class UserData {
 		setString(key, "" + value);
 	}
 
+	public void setBoolean(String key, boolean value, boolean queue) {
+		setString(key, "" + value, queue);
+	}
+
 	private void setData(final String uuid, final String path, final Object value) {
 		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}

@@ -214,6 +214,7 @@ public class Table {
 					}
 				}
 				rs.close();
+				s.close();
 				return result;
 			}
 
@@ -279,6 +280,7 @@ public class Table {
 				sqLite.close(s, rs);
 			} catch (SQLException e) {
 				s.close();
+				rs.close();
 				e.printStackTrace();
 				return null;
 			}
