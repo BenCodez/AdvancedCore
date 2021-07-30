@@ -35,7 +35,7 @@ public class UserDataManager {
 	public void addKey(UserDataKey userDataKey) {
 		keys.add(userDataKey);
 	}
-	
+
 	public boolean isCached(UUID uuid) {
 		if (userDataCache.containsKey(uuid)) {
 			return userDataCache.get(uuid).hasCache();
@@ -75,14 +75,16 @@ public class UserDataManager {
 	}
 
 	public void clearCache() {
+		plugin.debug("Clearing cache: " + userDataCache.size());
 		for (UserDataCache c : userDataCache.values()) {
 			c.clearCache();
 		}
 		userDataCache.clear();
+
 	}
 
 	public void cacheUserIfNeeded(UUID uuid) {
-		if (userDataCache.size() == 0) {
+		if (!userDataCache.containsKey(uuid)) {
 			cacheUser(uuid);
 		}
 	}

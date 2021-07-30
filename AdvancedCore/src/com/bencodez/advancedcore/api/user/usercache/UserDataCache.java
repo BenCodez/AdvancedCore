@@ -71,7 +71,7 @@ public class UserDataCache {
 		while (!cachedChanges.isEmpty()) {
 			UserDataChange change = cachedChanges.poll();
 			values.put(change.getKey(), change.toUserDataValue());
-			manager.getPlugin().extraDebug("Processing change for " + change.getKey());
+			// manager.getPlugin().extraDebug("Processing change for " + change.getKey());
 		}
 		if (!values.isEmpty()) {
 			user.getUserData().setValues(values);
