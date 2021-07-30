@@ -18,4 +18,9 @@ public class UserDataChangeInt extends UserDataChange {
 	public DataValue toUserDataValue() {
 		return new DataValueInt(value);
 	}
+
+	@Override
+	public void dump() {
+		setKey(null);
+	}
 }

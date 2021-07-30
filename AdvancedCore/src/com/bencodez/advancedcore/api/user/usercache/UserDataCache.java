@@ -33,6 +33,12 @@ public class UserDataCache {
 		cachedChanges = new ConcurrentLinkedQueue<UserDataChange>();
 		cache = new HashMap<String, DataValue>();
 	}
+	
+	public void dump() {
+		cache = null;
+		cachedChanges = null;
+		uuid = null;
+	}
 
 	private void scheduleChanges() {
 		manager.getPlugin().debug("Schedule changes");
@@ -71,6 +77,7 @@ public class UserDataCache {
 		while (!cachedChanges.isEmpty()) {
 			UserDataChange change = cachedChanges.poll();
 			values.put(change.getKey(), change.toUserDataValue());
+			change.dump();
 			// manager.getPlugin().extraDebug("Processing change for " + change.getKey());
 		}
 		if (!values.isEmpty()) {

@@ -78,6 +78,7 @@ public class UserDataManager {
 		plugin.debug("Clearing cache: " + userDataCache.size());
 		for (UserDataCache c : userDataCache.values()) {
 			c.clearCache();
+			c.dump();
 		}
 		userDataCache.clear();
 

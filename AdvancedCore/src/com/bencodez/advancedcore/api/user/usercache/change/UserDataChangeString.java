@@ -18,4 +18,10 @@ public class UserDataChangeString extends UserDataChange {
 	public DataValue toUserDataValue() {
 		return new DataValueString(value);
 	}
+
+	@Override
+	public void dump() {
+		setKey(null);
+		value = null;
+	}
 }
