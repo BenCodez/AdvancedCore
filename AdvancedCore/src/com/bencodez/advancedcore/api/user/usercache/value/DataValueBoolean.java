@@ -49,4 +49,9 @@ public class DataValueBoolean implements DataValue {
 	public DataType getType() {
 		return DataType.BOOLEAN;
 	}
+
+	@Override
+	public String toString() {
+		return "" + value;
+	}
 }

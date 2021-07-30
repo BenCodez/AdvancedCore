@@ -49,4 +49,9 @@ public class DataValueString implements DataValue {
 	public DataType getType() {
 		return DataType.STRING;
 	}
+
+	@Override
+	public String toString() {
+		return value;
+	}
 }

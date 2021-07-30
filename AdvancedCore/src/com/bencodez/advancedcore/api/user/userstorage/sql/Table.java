@@ -364,13 +364,13 @@ public class Table {
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			for (int i = 0; i < columns.size(); i++) {
-				if (getColumns().get(i).getValue() != null) {
-					if (getColumns().get(i).getValue().isString()) {
-						s.setString(i + 1, getColumns().get(i).getValue().getString());
-					} else if (getColumns().get(i).getValue().isInt()) {
-						s.setInt(i + 1, getColumns().get(i).getValue().getInt());
+				if (columns.get(i).getValue() != null) {
+					if (columns.get(i).getValue().isString()) {
+						s.setString(i + 1, columns.get(i).getValue().getString());
+					} else if (columns.get(i).getValue().isInt()) {
+						s.setInt(i + 1, columns.get(i).getValue().getInt());
 					} else {
-						s.setBoolean(i + 1, getColumns().get(i).getValue().getBoolean());
+						s.setBoolean(i + 1, columns.get(i).getValue().getBoolean());
 					}
 				} else {
 					s.setString(i + 1, "");

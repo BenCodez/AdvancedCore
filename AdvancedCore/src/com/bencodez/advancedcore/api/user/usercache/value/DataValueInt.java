@@ -49,4 +49,9 @@ public class DataValueInt implements DataValue {
 	public DataType getType() {
 		return DataType.INTEGER;
 	}
+	
+	@Override
+	public String toString() {
+		return "" + value;
+	}
 }
