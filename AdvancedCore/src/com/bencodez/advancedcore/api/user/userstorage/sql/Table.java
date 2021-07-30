@@ -364,12 +364,16 @@ public class Table {
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			for (int i = 0; i < columns.size(); i++) {
-				if (getColumns().get(i).getValue().isString()) {
-					s.setString(i + 1, getColumns().get(i).getValue().getString());
-				} else if (getColumns().get(i).getValue().isInt()) {
-					s.setInt(i + 1, getColumns().get(i).getValue().getInt());
+				if (getColumns().get(i).getValue() != null) {
+					if (getColumns().get(i).getValue().isString()) {
+						s.setString(i + 1, getColumns().get(i).getValue().getString());
+					} else if (getColumns().get(i).getValue().isInt()) {
+						s.setInt(i + 1, getColumns().get(i).getValue().getInt());
+					} else {
+						s.setBoolean(i + 1, getColumns().get(i).getValue().getBoolean());
+					}
 				} else {
-					s.setBoolean(i + 1, getColumns().get(i).getValue().getBoolean());
+					s.setString(i + 1, "");
 				}
 			}
 			s.executeUpdate();
