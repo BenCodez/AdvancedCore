@@ -60,6 +60,8 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 							} else {
 								p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
 							}
+						} else {
+							cancel();
 						}
 					} catch (Exception e) {
 						AdvancedCorePlugin.getInstance().debug(e);
