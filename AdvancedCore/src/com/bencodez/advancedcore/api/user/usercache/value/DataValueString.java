@@ -1,12 +1,11 @@
 package com.bencodez.advancedcore.api.user.usercache.value;
 
-import lombok.Getter;
+import com.bencodez.advancedcore.api.user.userstorage.DataType;
 
-public class UserDataValueString implements UserDataValue {
-	@Getter
+public class DataValueString implements DataValue {
 	private String value;
 
-	public UserDataValueString(String value) {
+	public DataValueString(String value) {
 		super();
 		this.value = value;
 	}
@@ -34,5 +33,20 @@ public class UserDataValueString implements UserDataValue {
 	@Override
 	public String getTypeName() {
 		return "String";
+	}
+
+	@Override
+	public boolean isBoolean() {
+		return false;
+	}
+
+	@Override
+	public boolean getBoolean() {
+		return false;
+	}
+
+	@Override
+	public DataType getType() {
+		return DataType.STRING;
 	}
 }

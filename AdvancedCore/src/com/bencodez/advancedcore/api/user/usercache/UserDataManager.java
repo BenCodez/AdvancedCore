@@ -75,6 +75,9 @@ public class UserDataManager {
 	}
 
 	public void clearCache() {
+		for (UserDataCache c : userDataCache.values()) {
+			c.clearCache();
+		}
 		userDataCache.clear();
 	}
 

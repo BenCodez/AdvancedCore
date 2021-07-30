@@ -1,7 +1,7 @@
 package com.bencodez.advancedcore.api.user.usercache.change;
 
-import com.bencodez.advancedcore.api.user.usercache.value.UserDataValue;
-import com.bencodez.advancedcore.api.user.usercache.value.UserDataValueString;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 
 import lombok.Getter;
 
@@ -15,7 +15,7 @@ public class UserDataChangeString extends UserDataChange {
 	}
 
 	@Override
-	public UserDataValue toUserDataValue() {
-		return new UserDataValueString(value);
+	public DataValue toUserDataValue() {
+		return new DataValueString(value);
 	}
 }

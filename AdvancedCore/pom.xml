@@ -140,8 +140,12 @@
 			<url>https://jitpack.io</url>
 		</repository>
 		<repository>
-			<id>bungee-repo</id>
-			<url>https://oss.sonatype.org/content/groups/public/</url>
+			<id>bungeecord-repo</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</repository>
+		<repository>
+			<id>velocity</id>
+			<url>https://nexus.velocitypowered.com/repository/maven-public/</url>
 		</repository>
 	</repositories>
 	<dependencies>
@@ -209,6 +213,18 @@
 			<version>LATEST</version>
 			<scope>system</scope>
 			<systemPath>${project.basedir}/Jars/CMIAPI7.6.2.0.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>net.md-5</groupId>
+			<artifactId>bungeecord-api</artifactId>
+			<version>1.17-R0.1-SNAPSHOT</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.velocitypowered</groupId>
+			<artifactId>velocity-api</artifactId>
+			<version>1.1.5</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 	<profiles>

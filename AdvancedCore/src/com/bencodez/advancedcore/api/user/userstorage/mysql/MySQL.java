@@ -20,6 +20,9 @@ import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
@@ -299,13 +302,13 @@ public class MySQL {
 	}
 
 	public ArrayList<Column> getExact(String uuid) {
-		return getExactQuery(new Column("uuid", uuid, DataType.STRING));
+		return getExactQuery(new Column("uuid", new DataValueString(uuid)));
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
 		ArrayList<Column> result = new ArrayList<>();
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`='"
-				+ column.getValue().toString() + "';";
+				+ column.getValue().getString() + "';";
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(query)) {
@@ -317,10 +320,10 @@ public class MySQL {
 					Column rCol = null;
 					if (intColumns.contains(columnName)) {
 						rCol = new Column(columnName, DataType.INTEGER);
-						rCol.setValue(rs.getInt(i));
+						rCol.setValue(new DataValueInt(rs.getInt(i)));
 					} else {
 						rCol = new Column(columnName, DataType.STRING);
-						rCol.setValue(rs.getString(i));
+						rCol.setValue(new DataValueString(rs.getString(i)));
 					}
 					result.add(rCol);
 				}
@@ -363,8 +366,8 @@ public class MySQL {
 		ArrayList<Column> rows = getRowsNameQuery();
 		if (rows != null) {
 			for (Column c : rows) {
-				if (c.getValue() != null) {
-					uuids.add((String) c.getValue());
+				if (c.getValue() != null && c.getValue().isString()) {
+					uuids.add(c.getValue().getString());
 				}
 			}
 		}
@@ -381,7 +384,7 @@ public class MySQL {
 			ResultSet rs = sql.executeQuery();
 
 			while (rs.next()) {
-				Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
+				Column rCol = new Column("PlayerName", new DataValueString(rs.getString("PlayerName")));
 				result.add(rCol);
 			}
 			rs.close();
@@ -402,7 +405,7 @@ public class MySQL {
 			ResultSet rs = sql.executeQuery();
 
 			while (rs.next()) {
-				Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
+				Column rCol = new Column("uuid", new DataValueString(rs.getString("uuid")));
 				result.add(rCol);
 			}
 			rs.close();
@@ -429,8 +432,8 @@ public class MySQL {
 		ArrayList<Column> rows = getRowsQuery();
 		if (rows != null) {
 			for (Column c : rows) {
-				if (c.getValue() != null) {
-					uuids.add((String) c.getValue());
+				if (c.getValue() != null && c.getValue().isString()) {
+					uuids.add(c.getValue().getString());
 				}
 			}
 		} else {
@@ -440,8 +443,8 @@ public class MySQL {
 		return uuids;
 	}
 
-	public void insert(String index, String column, Object value, DataType dataType) {
-		insertQuery(index, Arrays.asList(new Column(column, value, dataType)));
+	public void insert(String index, String column, DataValue value) {
+		insertQuery(index, Arrays.asList(new Column(column, value)));
 
 	}
 
@@ -453,9 +456,21 @@ public class MySQL {
 		for (int i = 0; i < cols.size(); i++) {
 			Column col = cols.get(i);
 			if (i == cols.size() - 1) {
-				query += col.getName() + "='" + col.getValue().toString() + "';";
+				if (col.getValue().isString()) {
+					query += col.getName() + "='" + col.getValue().getString() + "';";
+				} else if (col.getValue().isBoolean()) {
+					query += col.getName() + "='" + col.getValue().getBoolean() + "';";
+				} else if (col.getValue().isInt()) {
+					query += col.getName() + "='" + col.getValue().getInt() + "';";
+				}
 			} else {
-				query += col.getName() + "='" + col.getValue().toString() + "', ";
+				if (col.getValue().isString()) {
+					query += col.getName() + "='" + col.getValue().getString() + "', ";
+				} else if (col.getValue().isBoolean()) {
+					query += col.getName() + "='" + col.getValue().getBoolean() + "', ";
+				} else if (col.getValue().isInt()) {
+					query += col.getName() + "='" + col.getValue().getInt() + "', ";
+				}
 			}
 		}
 
@@ -512,18 +527,21 @@ public class MySQL {
 				for (int i = 0; i < cols.size(); i++) {
 					Column col = cols.get(i);
 					if (i == cols.size() - 1) {
-						if (col.getDataType().equals(DataType.STRING)) {
-							query += col.getName() + "='" + col.getValue().toString() + "'";
-						} else {
-							query += col.getName() + "=" + col.getValue().toString();
+						if (col.getValue().isString()) {
+							query += col.getName() + "='" + col.getValue().getString() + "'";
+						} else if (col.getValue().isBoolean()) {
+							query += col.getName() + "='" + col.getValue().getBoolean() + "'";
+						} else if (col.getValue().isInt()) {
+							query += col.getName() + "='" + col.getValue().getInt() + "'";
 						}
 					} else {
-						if (col.getDataType().equals(DataType.STRING)) {
-							query += col.getName() + "='" + col.getValue().toString() + "', ";
-						} else {
-							query += col.getName() + "=" + col.getValue().toString() + ", ";
+						if (col.getValue().isString()) {
+							query += col.getName() + "='" + col.getValue().getString() + "', ";
+						} else if (col.getValue().isBoolean()) {
+							query += col.getName() + "='" + col.getValue().getBoolean() + "', ";
+						} else if (col.getValue().isInt()) {
+							query += col.getName() + "='" + col.getValue().getInt() + "', ";
 						}
-
 					}
 				}
 				query += " WHERE uuid=";
@@ -547,21 +565,22 @@ public class MySQL {
 		}
 	}
 
-	public void update(String index, String column, Object value, DataType dataType) {
+	public void update(String index, String column, DataValue value) {
 		if (value == null) {
 			plugin.extraDebug("Mysql value null: " + column);
 			return;
 		}
-		checkColumn(column, dataType);
+		checkColumn(column, value.getType());
 		synchronized (object2) {
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
 				String query = "UPDATE " + getName() + " SET ";
 
-				if (dataType == DataType.STRING) {
-					query += column + "='" + value.toString() + "'";
-				} else {
-					query += column + "='" + value + "'";
-
+				if (value.isString()) {
+					query += column + "='" + value.getString() + "'";
+				} else if (value.isBoolean()) {
+					query += column + "='" + value.getBoolean() + "'";
+				} else if (value.isInt()) {
+					query += column + "='" + value.getInt() + "'";
 				}
 				query += " WHERE uuid=";
 				query += "'" + index + "';";
@@ -574,7 +593,7 @@ public class MySQL {
 				}
 
 			} else {
-				insert(index, column, value, dataType);
+				insert(index, column, value);
 			}
 		}
 

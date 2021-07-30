@@ -12,6 +12,9 @@ import java.util.List;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValueBoolean;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.sql.db.SQLite;
@@ -130,12 +133,12 @@ public class Table {
 			String query = "DELETE FROM " + getName() + " WHERE `" + column.getName() + "`=?";
 			try {
 				PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-				if (column.dataType == DataType.STRING) {
-					s.setString(1, column.getValue().toString());
-				} else if (column.dataType == DataType.INTEGER) {
-					s.setInt(1, Integer.parseInt(column.getValue().toString()));
+				if (column.getValue().isString()) {
+					s.setString(1, column.getValue().getString());
+				} else if (column.getValue().isInt()) {
+					s.setInt(1, column.getValue().getInt());
 				} else {
-					s.setFloat(1, Float.parseFloat(column.getValue().toString()));
+					s.setBoolean(1, column.getValue().getBoolean());
 				}
 				s.executeUpdate();
 				s.close();
@@ -156,14 +159,14 @@ public class Table {
 			while (rs.next()) {
 				List<Column> result = new ArrayList<>();
 				for (int i = 0; i < getColumns().size(); i++) {
-					Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).dataType,
-							getColumns().get(i).limit);
-					if (getColumns().get(i).dataType == DataType.STRING) {
-						s.setString(1, getColumns().get(i).getValue().toString());
-					} else if (getColumns().get(i).dataType == DataType.INTEGER) {
-						s.setInt(1, Integer.parseInt(getColumns().get(i).getValue().toString()));
+					Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).getDataType(),
+							getColumns().get(i).getLimit());
+					if (getColumns().get(i).getValue().isString()) {
+						s.setString(1, getColumns().get(i).getValue().getString());
+					} else if (getColumns().get(i).getValue().isInt()) {
+						s.setInt(1, getColumns().get(i).getValue().getInt());
 					} else {
-						s.setFloat(1, Float.parseFloat(getColumns().get(i).getValue().toString()));
+						s.setBoolean(1, getColumns().get(i).getValue().getBoolean());
 					}
 					result.add(rCol);
 				}
@@ -187,16 +190,12 @@ public class Table {
 		try {
 			synchronized (object) {
 				PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-				String value = "";
-				if (column.getValue() != null) {
-					value = column.getValue().toString();
-				}
-				if (column.dataType == DataType.STRING) {
-					s.setString(1, value);
-				} else if (column.dataType == DataType.INTEGER) {
-					s.setInt(1, Integer.parseInt(value));
+				if (column.getValue().isString()) {
+					s.setString(1, column.getValue().getString());
+				} else if (column.getValue().isInt()) {
+					s.setInt(1, column.getValue().getInt());
 				} else {
-					s.setFloat(1, Float.parseFloat(value));
+					s.setBoolean(1, column.getValue().getBoolean());
 				}
 				ResultSet rs = s.executeQuery();
 
@@ -206,10 +205,10 @@ public class Table {
 						Column rCol = null;
 						if (intColumns.contains(columnName)) {
 							rCol = new Column(columnName, DataType.INTEGER);
-							rCol.setValue(rs.getInt(i));
+							rCol.setValue(new DataValueInt(rs.getInt(i)));
 						} else {
 							rCol = new Column(columnName, DataType.STRING);
-							rCol.setValue(rs.getString(i));
+							rCol.setValue(new DataValueString(rs.getString(i)));
 						}
 						result.add(rCol);
 					}
@@ -274,7 +273,7 @@ public class Table {
 			ResultSet rs = s.executeQuery();
 			try {
 				while (rs.next()) {
-					Column rCol = new Column("uuid", rs.getString("uuid"), DataType.STRING);
+					Column rCol = new Column("uuid", new DataValueString(rs.getString("uuid")));
 					result.add(rCol);
 				}
 				sqLite.close(s, rs);
@@ -300,7 +299,7 @@ public class Table {
 			ResultSet rs = s.executeQuery();
 			try {
 				while (rs.next()) {
-					Column rCol = new Column("PlayerName", rs.getString("PlayerName"), DataType.STRING);
+					Column rCol = new Column("PlayerName", new DataValueString(rs.getString("PlayerName")));
 					result.add(rCol);
 				}
 				sqLite.close(s, rs);
@@ -365,16 +364,27 @@ public class Table {
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			for (int i = 0; i < columns.size(); i++) {
-				if (columns.get(i).dataType == DataType.STRING) {
-					s.setString(i + 1, columns.get(i).getValue().toString());
-				} else if (columns.get(i).dataType == DataType.INTEGER) {
-					s.setInt(i + 1, Integer.parseInt(columns.get(i).getValue().toString()));
+				if (getColumns().get(i).getValue().isString()) {
+					s.setString(i + 1, getColumns().get(i).getValue().getString());
+				} else if (getColumns().get(i).getValue().isInt()) {
+					s.setInt(i + 1, getColumns().get(i).getValue().getInt());
 				} else {
-					s.setFloat(i + 1, Float.parseFloat(columns.get(i).getValue().toString()));
+					s.setBoolean(i + 1, getColumns().get(i).getValue().getBoolean());
 				}
 			}
 			s.executeUpdate();
 			s.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public void wipeColumnData(String columnName) {
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
+			s.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -387,32 +397,27 @@ public class Table {
 			String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
 			try {
 				PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-				if (column.dataType == DataType.STRING) {
-					s.setString(1, column.getValue().toString());
-				} else if (column.dataType == DataType.INTEGER) {
-					s.setInt(1, Integer.parseInt(column.getValue().toString()));
+				if (column.getValue().isString()) {
+					s.setString(1, column.getValue().getString());
+				} else if (column.getValue().isInt()) {
+					s.setInt(1, column.getValue().getInt());
 				} else {
-					s.setFloat(1, Float.parseFloat(column.getValue().toString()));
+					s.setBoolean(1, column.getValue().getBoolean());
 				}
+
 				ResultSet rs = s.executeQuery();
 				while (rs.next()) {
 					List<Column> result = new ArrayList<>();
 					for (int i = 0; i < getColumns().size(); i++) {
-						Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).dataType,
-								getColumns().get(i).limit);
+						Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).getDataType(),
+								getColumns().get(i).getLimit());
 
-						if (getColumns().get(i).dataType == DataType.STRING) {
-							if (column.getValue() == null || column.getValue().equals(rs.getString(i + 1))) {
-								rCol.setValue(rs.getString(i + 1));
-							}
-						} else if (getColumns().get(i).dataType == DataType.INTEGER) {
-							if (column.getValue() == null || column.getValue().equals(rs.getString(i + 1))) {
-								rCol.setValue(rs.getInt(i + 1));
-							}
-						} else {
-							if (column.getValue() == null || column.getValue().equals(rs.getString(i + 1))) {
-								rCol.setValue(rs.getFloat(i + 1));
-							}
+						if (getColumns().get(i).getValue().isString()) {
+							rCol.setValue(new DataValueString(rs.getString(i + 1)));
+						} else if (getColumns().get(i).getValue().isInt()) {
+							rCol.setValue(new DataValueInt(rs.getInt(i + 1)));
+						} else if (getColumns().get(i).getValue().isBoolean()) {
+							rCol.setValue(new DataValueBoolean(rs.getBoolean(i + 1)));
 						}
 						result.add(rCol);
 					}
@@ -452,10 +457,12 @@ public class Table {
 			synchronized (object) {
 				String query = "UPDATE " + getName() + " SET ";
 				for (Column column : columns) {
-					if (column.dataType == DataType.STRING) {
-						query += "`" + column.getName() + "`='" + column.getValue().toString() + "'";
-					} else {
-						query += "`" + column.getName() + "`=" + column.getValue().toString();
+					if (column.getValue().isString()) {
+						query += "`" + column.getName() + "`='" + column.getValue().getString() + "'";
+					} else if (column.getValue().isBoolean()) {
+						query += "`" + column.getName() + "`=" + column.getValue().getBoolean();
+					} else if (column.getValue().isInt()) {
+						query += "`" + column.getName() + "`=" + column.getValue().getInt();
 					}
 					if (columns.indexOf(column) == columns.size() - 1) {
 						query += " ";
@@ -464,11 +471,7 @@ public class Table {
 					}
 				}
 				query += "WHERE `" + primaryKey.getName() + "`=";
-				if (primaryKey.dataType == DataType.STRING) {
-					query += "'" + primaryKey.getValue().toString() + "'";
-				} else {
-					query += primaryKey.getValue().toString();
-				}
+				query += "'" + primaryKey.getValue().getString() + "'";
 				try {
 					PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 					s.executeUpdate();

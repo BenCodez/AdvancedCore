@@ -12,7 +12,7 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChange;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
-import com.bencodez.advancedcore.api.user.usercache.value.UserDataValue;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 
 import lombok.Getter;
 
@@ -21,7 +21,7 @@ public class UserDataCache {
 	private UUID uuid;
 
 	@Getter
-	private HashMap<String, UserDataValue> cache;
+	private HashMap<String, DataValue> cache;
 
 	private Queue<UserDataChange> cachedChanges;
 	private UserDataManager manager;
@@ -31,7 +31,7 @@ public class UserDataCache {
 		this.uuid = uuid;
 		this.manager = manager;
 		cachedChanges = new ConcurrentLinkedQueue<UserDataChange>();
-		cache = new HashMap<String, UserDataValue>();
+		cache = new HashMap<String, DataValue>();
 	}
 
 	private void scheduleChanges() {
@@ -67,7 +67,7 @@ public class UserDataCache {
 		manager.getPlugin()
 				.extraDebug("Processing changes for " + uuid.toString() + ", Changes: " + cachedChanges.size());
 		AdvancedCoreUser user = getUser();
-		HashMap<String, UserDataValue> values = new HashMap<String, UserDataValue>();
+		HashMap<String, DataValue> values = new HashMap<String, DataValue>();
 		while (!cachedChanges.isEmpty()) {
 			UserDataChange change = cachedChanges.poll();
 			values.put(change.getKey(), change.toUserDataValue());
@@ -85,7 +85,7 @@ public class UserDataCache {
 	public UserDataCache cache() {
 		AdvancedCoreUser user = getUser();
 		ArrayList<String> keys = user.getUserData().getKeys();
-		HashMap<String, UserDataValue> data = user.getUserData().getValues();
+		HashMap<String, DataValue> data = user.getUserData().getValues();
 		for (UserDataKey dataKey : manager.getKeys()) {
 			String key = dataKey.getKey();
 			keys.remove(key);
@@ -98,7 +98,7 @@ public class UserDataCache {
 					value = data.get(key).getString();
 				}
 				manager.getPlugin()
-						.extraDebug("Caching " + type + " " + key + " for " + uuid.toString() + ", value: " + value);
+						.devDebug("Caching " + type + " " + key + " for " + uuid.toString() + ", value: " + value);
 				cache.put(key, data.get(key));
 			}
 
@@ -121,7 +121,7 @@ public class UserDataCache {
 		return !cache.isEmpty();
 	}
 
-	public void updateCache(HashMap<String, UserDataValue> tempCache) {
+	public void updateCache(HashMap<String, DataValue> tempCache) {
 		cache = tempCache;
 	}
 }

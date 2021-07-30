@@ -102,7 +102,9 @@ public class UserManager {
 			List<Column> cols = AdvancedCorePlugin.getInstance().getSQLiteUserTable().getRows();
 			ArrayList<String> uuids = new ArrayList<String>();
 			for (Column col : cols) {
-				uuids.add((String) col.getValue());
+				if (col.getValue().isString()) {
+					uuids.add(col.getValue().getString());
+				}
 			}
 			return uuids;
 		} else if (storage.equals(UserStorage.MYSQL)) {
