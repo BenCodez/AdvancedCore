@@ -17,7 +17,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -455,7 +454,7 @@ public abstract class CommandHandler {
 	public void sendMessageJson(CommandSender sender, ArrayList<TextComponent> comp) {
 		if (isPlayer(sender)) {
 			Player player = (Player) sender;
-			UserManager.getInstance().getUser(player).sendJson(comp);
+			plugin.getUserManager().getUser(player).sendJson(comp);
 		} else {
 			sender.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(comp)));
 		}
@@ -464,7 +463,7 @@ public abstract class CommandHandler {
 	public void sendMessageJson(CommandSender sender, TextComponent comp) {
 		if (isPlayer(sender)) {
 			Player player = (Player) sender;
-			UserManager.getInstance().getUser(player).sendJson(comp);
+			plugin.getUserManager().getUser(player).sendJson(comp);
 		} else {
 			sender.sendMessage(StringParser.getInstance().compToString(comp));
 		}

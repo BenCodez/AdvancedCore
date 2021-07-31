@@ -7,10 +7,10 @@ import java.util.HashMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 import lombok.Getter;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -21,8 +21,12 @@ public abstract class GUIHandler {
 
 	@Getter
 	private CommandSender player;
+	
+	@Getter
+	private AdvancedCorePlugin plugin;
 
-	public GUIHandler(CommandSender player) {
+	public GUIHandler(AdvancedCorePlugin plugin, CommandSender player) {
+		this.plugin = plugin;
 		this.player = player;
 	}
 
@@ -63,7 +67,7 @@ public abstract class GUIHandler {
 
 	public void sendMessage(ArrayList<String> message) {
 		if (player instanceof Player) {
-			AdvancedCoreUser user = UserManager.getInstance().getUser((Player) player);
+			AdvancedCoreUser user = plugin.getUserManager().getUser((Player) player);
 			user.sendMessage(message);
 		} else {
 			player.sendMessage(ArrayUtils.getInstance().convert(message));
@@ -72,7 +76,7 @@ public abstract class GUIHandler {
 
 	public void sendMessage(String... message) {
 		if (player instanceof Player) {
-			AdvancedCoreUser user = UserManager.getInstance().getUser((Player) player);
+			AdvancedCoreUser user = plugin.getUserManager().getUser((Player) player);
 			user.sendMessage(message);
 		} else {
 			player.sendMessage(message);
@@ -81,7 +85,7 @@ public abstract class GUIHandler {
 
 	public void sendMessageJson(ArrayList<TextComponent> text) {
 		if (player instanceof Player) {
-			AdvancedCoreUser user = UserManager.getInstance().getUser((Player) player);
+			AdvancedCoreUser user = plugin.getUserManager().getUser((Player) player);
 			user.sendJson(text);
 		} else {
 			player.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(text)));

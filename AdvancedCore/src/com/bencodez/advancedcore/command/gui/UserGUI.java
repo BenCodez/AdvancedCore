@@ -23,7 +23,6 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
@@ -103,7 +102,7 @@ public class UserGUI {
 
 							@Override
 							public void onInput(Player player, String value) {
-								AdvancedCoreUser user = UserManager.getInstance()
+								AdvancedCoreUser user = plugin.getUserManager()
 										.getUser(UserGUI.getInstance().getCurrentPlayer(player));
 								RewardHandler.getInstance().giveReward(user, value, new RewardOptions());
 								player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
@@ -120,7 +119,7 @@ public class UserGUI {
 			public void onClick(ClickEvent clickEvent) {
 				Player player = clickEvent.getPlayer();
 				EditGUI inv = new EditGUI("Edit Data, click to change");
-				final AdvancedCoreUser user = UserManager.getInstance().getUser(playerName);
+				final AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
 				for (final String key : user.getData().getKeys()) {
 					String value = user.getData().getString(key, true);
 					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
@@ -151,7 +150,7 @@ public class UserGUI {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(playerName);
+				AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
 				for (String key : user.getData().getKeys()) {
 					String str = user.getData().getString(key, true);
 					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {

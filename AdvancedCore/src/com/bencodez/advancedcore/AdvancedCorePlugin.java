@@ -322,8 +322,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return getOptions().getStorageType();
 	}
 
+	@Setter
+	private UserManager userManager;
+
 	public UserManager getUserManager() {
-		return UserManager.getInstance();
+		if (userManager == null) {
+			userManager = new UserManager(this);
+		}
+		return userManager;
 	}
 
 	private YamlConfiguration getVersionFile() {
@@ -441,7 +447,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadAutoUpdateCheck();
 		loadVersionFile();
 
-		UserManager.getInstance().purgeOldPlayers();
+		getUserManager().purgeOldPlayers();
 
 		SkullHandler.getInstance().load();
 
@@ -654,11 +660,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			getMysql().clearCacheBasic();
 		}
 
-		Queue<String> uuids = new LinkedList<String>(UserManager.getInstance().getAllUUIDs(from));
+		Queue<String> uuids = new LinkedList<String>(getUserManager().getAllUUIDs(from));
 
 		while (uuids.size() > 0) {
 			String uuid = uuids.poll();
-			AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid), false);
+			AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
 			debug("Starting convert for " + user.getUUID());
 
 			user.getData().setValues(to, user.getData().getValues(from));
@@ -936,9 +942,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					start.onStart();
 				}
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
+				for (String uuid : getUserManager().getAllUUIDs()) {
 					if (uuid != null) {
-						AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid), false);
+						AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
 						if (user != null) {
 							user.dontCache();
 							user.tempCache();

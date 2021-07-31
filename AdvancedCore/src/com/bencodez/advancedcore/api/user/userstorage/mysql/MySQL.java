@@ -18,7 +18,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
-import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
@@ -258,7 +257,7 @@ public class MySQL {
 		}
 		uuids.remove(uuid);
 		names.remove(PlayerUtils.getInstance()
-				.getPlayerName(UserManager.getInstance().getUser(java.util.UUID.fromString(uuid)), uuid));
+				.getPlayerName(plugin.getUserManager().getUser(java.util.UUID.fromString(uuid)), uuid));
 		clearCacheBasic();
 
 	}
@@ -487,7 +486,7 @@ public class MySQL {
 			}
 			if (playerName.isEmpty()) {
 				names.add(PlayerUtils.getInstance().getPlayerName(
-						UserManager.getInstance().getUser(java.util.UUID.fromString(index), false), index));
+						plugin.getUserManager().getUser(java.util.UUID.fromString(index), false), index));
 			} else {
 				names.add(playerName);
 			}

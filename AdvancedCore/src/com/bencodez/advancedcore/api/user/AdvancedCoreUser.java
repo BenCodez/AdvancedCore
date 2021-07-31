@@ -584,7 +584,7 @@ public class AdvancedCoreUser {
 			}
 
 		}
-		ArrayList<String> uuids = UserManager.getInstance().getAllUUIDs();
+		ArrayList<String> uuids = plugin.getUserManager().getAllUUIDs();
 		if (uuids.contains(getUUID())) {
 			return true;
 		}

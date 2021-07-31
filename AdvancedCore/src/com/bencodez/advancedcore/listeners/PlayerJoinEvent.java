@@ -10,7 +10,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -34,13 +33,13 @@ public class PlayerJoinEvent implements Listener {
 	public void onJoin(AdvancedCoreLoginEvent event) {
 		if (event.isUserInStorage()) {
 			Player player = event.getPlayer();
-			boolean userExist = UserManager.getInstance().userExist(event.getPlayer().getUniqueId());
+			boolean userExist = plugin.getUserManager().userExist(event.getPlayer().getUniqueId());
 			if (userExist) {
 				plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId());
 			}
 
 			if (userExist) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(player);
+				AdvancedCoreUser user = plugin.getUserManager().getUser(player);
 
 				user.checkOfflineRewards();
 				user.setLastOnline(System.currentTimeMillis());

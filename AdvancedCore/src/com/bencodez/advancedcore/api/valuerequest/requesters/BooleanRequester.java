@@ -10,7 +10,6 @@ import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.book.BookManager;
 import com.bencodez.advancedcore.api.valuerequest.book.BookSign;
@@ -77,7 +76,7 @@ public class BooleanRequester {
 
 		} else if (method.equals(InputMethod.CHAT)) {
 
-			AdvancedCoreUser user = UserManager.getInstance().getUser(player);
+			AdvancedCoreUser user = AdvancedCorePlugin.getInstance().getUserManager().getUser(player);
 			user.sendMessage("&cClick one of the following options below:");
 			String option = "True";
 			TextComponent comp = new TextComponent(option);

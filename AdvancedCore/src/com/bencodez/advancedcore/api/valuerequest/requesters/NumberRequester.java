@@ -17,7 +17,6 @@ import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
 import com.bencodez.advancedcore.api.valuerequest.book.BookManager;
@@ -103,7 +102,7 @@ public class NumberRequester {
 
 		} else if (method.equals(InputMethod.CHAT)) {
 			if (options != null && options.size() != 0) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(player);
+				AdvancedCoreUser user = AdvancedCorePlugin.getInstance().getUserManager().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
 				PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestNumber", listener);
 				for (Number num : options.keySet()) {

@@ -28,7 +28,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Iterables;
 import com.google.gson.JsonElement;
@@ -166,7 +165,7 @@ public class PlayerUtils {
 	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
 	 * Thread.getInstance().getThread().getName(u); } } else { name =
 	 * player.getName(); } if (name.equals("")) { name =
-	 * UserManager.getInstance().getUser(new
+	 * plugin.getUserManager().getUser(new
 	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
 	 * name; } name = "Error getting name"; } return name; }
 	 */
@@ -253,8 +252,8 @@ public class PlayerUtils {
 			}
 		}
 
-		for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-			AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
+		for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+			AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 			String name = user.getData().getString("PlayerName", true);
 			if (name.equals(playerName)) {
 				plugin.getUuidNameCache().put(uuid, playerName);
@@ -401,7 +400,7 @@ public class PlayerUtils {
 		}
 
 		// plugin.extraDebug("Checking if user exists in database: " + name);
-		boolean userExist = UserManager.getInstance().userExist(name);
+		boolean userExist = plugin.getUserManager().userExist(name);
 		if (userExist) {
 			return userExist;
 		}

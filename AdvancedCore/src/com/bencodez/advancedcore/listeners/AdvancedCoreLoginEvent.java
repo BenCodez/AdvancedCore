@@ -4,7 +4,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -59,7 +59,7 @@ public class AdvancedCoreLoginEvent extends Event {
 	}
 
 	public boolean isUserInStorage() {
-		return UserManager.getInstance().getAllUUIDs().contains(player.getUniqueId().toString());
+		return AdvancedCorePlugin.getInstance().getUserManager().getAllUUIDs().contains(player.getUniqueId().toString());
 	}
 
 	/**

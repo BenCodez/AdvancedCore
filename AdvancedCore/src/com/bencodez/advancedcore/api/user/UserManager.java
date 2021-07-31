@@ -20,22 +20,10 @@ import lombok.Getter;
  */
 public class UserManager {
 
-	/** The instance. */
-	static UserManager instance = new UserManager();
-
-	/**
-	 * Gets the single instance of UserManager.
-	 *
-	 * @return single instance of UserManager
-	 */
-	public static UserManager getInstance() {
-		return instance;
-	}
-
 	private Object obj = new Object();
 
 	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+	private AdvancedCorePlugin plugin;
 
 	@Getter
 	private UserDataManager dataManager;
@@ -47,7 +35,8 @@ public class UserManager {
 	/**
 	 * Instantiates a new user manager.
 	 */
-	public UserManager() {
+	public UserManager(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 		load();
 	}
 
@@ -55,22 +44,21 @@ public class UserManager {
 		ArrayList<String> names = new ArrayList<String>();
 		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 			for (String uuid : getAllUUIDs()) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(java.util.UUID.fromString(uuid));
+				AdvancedCoreUser user = getUser(java.util.UUID.fromString(uuid));
 				String name = user.getPlayerName();
 				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 					names.add(name);
 				}
 			}
 		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-			ArrayList<String> data = AdvancedCorePlugin.getInstance().getSQLiteUserTable().getNames();
+			ArrayList<String> data = plugin.getSQLiteUserTable().getNames();
 			for (String name : data) {
 				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 					names.add(name);
 				}
 			}
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			ArrayList<String> data = ArrayUtils.getInstance()
-					.convert(AdvancedCorePlugin.getInstance().getMysql().getNames());
+		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			ArrayList<String> data = ArrayUtils.getInstance().convert(plugin.getMysql().getNames());
 			for (String name : data) {
 				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 					names.add(name);
@@ -99,7 +87,7 @@ public class UserManager {
 			}
 			return uuids;
 		} else if (storage.equals(UserStorage.SQLITE)) {
-			List<Column> cols = AdvancedCorePlugin.getInstance().getSQLiteUserTable().getRows();
+			List<Column> cols = plugin.getSQLiteUserTable().getRows();
 			ArrayList<String> uuids = new ArrayList<String>();
 			for (Column col : cols) {
 				if (col.getValue().isString()) {
@@ -111,7 +99,7 @@ public class UserManager {
 			synchronized (obj) {
 				ArrayList<String> uuids = new ArrayList<String>();
 				try {
-					for (String uuid : AdvancedCorePlugin.getInstance().getMysql().getUuids()) {
+					for (String uuid : plugin.getMysql().getUuids()) {
 						uuids.add(uuid);
 					}
 				} catch (NullPointerException e) {
@@ -221,21 +209,19 @@ public class UserManager {
 				}
 			});
 		}
-		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)
-				&& AdvancedCorePlugin.getInstance().getMysql() != null) {
-			AdvancedCorePlugin.getInstance().getMysql().clearCacheBasic();
+		if (plugin.getStorageType().equals(UserStorage.MYSQL) && plugin.getMysql() != null) {
+			plugin.getMysql().clearCacheBasic();
 		}
 	}
 
 	public boolean userExist(String name) {
-		boolean exist = UserManager.getInstance().getAllPlayerNames().contains(name);
+		boolean exist = getAllPlayerNames().contains(name);
 		if (exist) {
 			return exist;
 		}
 
 		for (String s : plugin.getUuidNameCache().values()) {
 			if (s.equalsIgnoreCase(name)) {
-				// plugin.extraDebug("Found " + name + " loaded in uuid map");
 				return true;
 			}
 		}
@@ -245,10 +231,8 @@ public class UserManager {
 	public boolean userExist(UUID uuid) {
 		if (uuid != null) {
 			if (getAllUUIDs().contains(uuid.toString())) {
-				// plugin.debug(uuid.getUUID() + " exists");
 				return true;
 			}
-			// plugin.debug(uuid.getUUID() + " not exist");
 		}
 
 		return false;

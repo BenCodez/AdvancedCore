@@ -21,7 +21,6 @@ import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
@@ -77,8 +76,8 @@ public class CommandLoader {
 				}
 				final String cmd = str;
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
+				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 					users.add(user);
 
 					Bukkit.getScheduler().runTask(plugin, new Runnable() {
@@ -101,8 +100,8 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
+				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 					users.add(user);
 				}
 				for (AdvancedCoreUser user : users) {
@@ -119,7 +118,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = RewardHandler.getInstance().getReward(args[1]);
 				for (Player p : Bukkit.getOnlinePlayers()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(p);
+					AdvancedCoreUser user = plugin.getUserManager().getUser(p);
 					new RewardBuilder(reward).send(user);
 				}
 			}
@@ -129,7 +128,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				RewardHandler.getInstance().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
 
 				sendMessage(sender, "&cGave " + args[1] + " the reward file " + args[2]);
@@ -144,8 +143,8 @@ public class CommandLoader {
 				if (args[1].equalsIgnoreCase("all")) {
 					Reward reward = RewardHandler.getInstance().getReward(args[3]);
 					ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
-					for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-						AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
+					for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+						AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 						users.add(user);
 					}
 					for (AdvancedCoreUser user : users) {
@@ -153,7 +152,7 @@ public class CommandLoader {
 					}
 					sendMessage(sender, "&cGave all players reward file " + args[3]);
 				} else {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+					AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 					RewardHandler.getInstance().giveReward(user, args[3],
 							new RewardOptions().setOnline(user.isOnline()));
 
@@ -166,7 +165,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				RewardHandler.getInstance().giveReward(user, args[2],
 						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
 
@@ -187,8 +186,8 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cStarting to clear offline rewards");
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(java.util.UUID.fromString(uuid));
+				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(java.util.UUID.fromString(uuid));
 					user.setOfflineRewards(new ArrayList<String>());
 				}
 				sendMessage(sender, "&cFinished clearing offline rewards");
@@ -234,15 +233,15 @@ public class CommandLoader {
 		 * false) {
 		 *
 		 * @Override public void execute(CommandSender sender, String[] args) { User
-		 * user = UserManager.getInstance().getUser(args[1]);
+		 * user = plugin.getUserManager().getUser(args[1]);
 		 * user.getData().setString(args[2], args[3]); sendMessage(sender, "&cSet " +
 		 * args[2] + " to " + args[3] + " for " + args[1]); } }); cmds.add(new
 		 * CommandHandler(new String[] { "UserEditValue", "All", "(string)", "(string)"
 		 * }, permPrefix + ".UserEditValue", "Edit all user data", false) {
 		 *
 		 * @Override public void execute(CommandSender sender, String[] args) { for
-		 * (String uuid : UserManager.getInstance().getAllUUIDs()) { User user =
-		 * UserManager.getInstance().getUser(UUID.fromString(uuid));
+		 * (String uuid : plugin.getUserManager().getAllUUIDs()) { User user =
+		 * plugin.getUserManager().getUser(UUID.fromString(uuid));
 		 * user.getData().setString(args[2], args[3]); } sendMessage(sender, "&cSet " +
 		 * args[2] + " to " + args[3] + " for " + args[1]); } });
 		 */
@@ -263,7 +262,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				user.getData().remove();
 				sendMessage(sender, "&cRemoved " + args[1]);
 			}
@@ -275,7 +274,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
-				AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(args[1]));
+				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(args[1]));
 				user.getData().remove();
 				sendMessage(sender, "&cRemoved " + args[1]);
 			}
@@ -304,7 +303,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				UserManager.getInstance().purgeOldPlayers();
+				plugin.getUserManager().purgeOldPlayers();
 				sendMessage(sender, "&cPurged data");
 			}
 		});
@@ -365,7 +364,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 
-				AdvancedCoreUser user = UserManager.getInstance().getUser((Player) sender);
+				AdvancedCoreUser user = plugin.getUserManager().getUser((Player) sender);
 				InputMethod method = InputMethod.getMethod(args[1]);
 				if (method == null) {
 					user.sendMessage("&cInvalid request method: " + args[1]);
@@ -391,7 +390,7 @@ public class CommandLoader {
 
 							@Override
 							public void onInput(Player player, String value) {
-								AdvancedCoreUser user = UserManager.getInstance().getUser(player);
+								AdvancedCoreUser user = plugin.getUserManager().getUser(player);
 								user.setUserInputMethod(InputMethod.getMethod(value));
 
 							}
@@ -409,8 +408,8 @@ public class CommandLoader {
 				if (data.equalsIgnoreCase("\"\"")) {
 					data = "";
 				}
-				for (String uuid : UserManager.getInstance().getAllUUIDs()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(UUID.fromString(uuid));
+				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 					user.getData().setString(args[3], data);
 
 				}
@@ -424,7 +423,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				String data = args[4];
 				if (data.equalsIgnoreCase("\"\"")) {
 					data = "";
@@ -440,7 +439,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[1]);
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				for (String key : user.getData().getKeys()) {
 					String str = user.getData().getString(key, true);
 					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
@@ -459,7 +458,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser(args[4]);
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[4]);
 				user.setChoicePreference(args[2], args[3]);
 
 				user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
@@ -527,7 +526,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = UserManager.getInstance().getUser((Player) sender);
+				AdvancedCoreUser user = plugin.getUserManager().getUser((Player) sender);
 				user.setChoicePreference(args[2], args[3]);
 
 				user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice", args[3]);

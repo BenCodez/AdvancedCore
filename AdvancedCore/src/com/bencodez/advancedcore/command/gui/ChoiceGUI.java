@@ -15,7 +15,6 @@ import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 /**
  * The Class UserGUI.
@@ -43,7 +42,7 @@ public class ChoiceGUI {
 	}
 
 	public void openClaimChoices(Player player) {
-		AdvancedCoreUser user = UserManager.getInstance().getUser(player);
+		AdvancedCoreUser user = plugin.getUserManager().getUser(player);
 		BInventory inv = new BInventory("UnClaimed Choices");
 
 		ArrayList<String> choices = user.getUnClaimedChoices();
@@ -75,7 +74,7 @@ public class ChoiceGUI {
 			return;
 		}
 
-		AdvancedCoreUser user = UserManager.getInstance().getUser(player);
+		AdvancedCoreUser user = plugin.getUserManager().getUser(player);
 
 		BInventory inv = new BInventory("Pick reward");
 		inv.dontClose();
@@ -122,7 +121,7 @@ public class ChoiceGUI {
 			return;
 		}
 
-		AdvancedCoreUser user = UserManager.getInstance().getUser(player);
+		AdvancedCoreUser user = plugin.getUserManager().getUser(player);
 
 		BInventory inv = new BInventory("Select Preference");
 

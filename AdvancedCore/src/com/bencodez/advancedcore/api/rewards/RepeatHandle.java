@@ -9,7 +9,6 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -117,7 +116,7 @@ public class RepeatHandle {
 					globalAmount++;
 				}
 				for (Player p : Bukkit.getOnlinePlayers()) {
-					AdvancedCoreUser user = UserManager.getInstance().getUser(p);
+					AdvancedCoreUser user = AdvancedCorePlugin.getInstance().getUserManager().getUser(p);
 					giveReward(user, false);
 					cancel();
 					return;

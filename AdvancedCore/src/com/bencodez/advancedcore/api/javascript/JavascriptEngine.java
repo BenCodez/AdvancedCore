@@ -15,7 +15,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 public class JavascriptEngine {
 	private HashMap<String, Object> engineAPI;
@@ -47,7 +46,7 @@ public class JavascriptEngine {
 			addToEngine("Player", p);
 			addToEngine("PlayerName", p.getName());
 			addToEngine("PlayerUUID", p.getUniqueId().toString());
-			addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(p));
+			addToEngine("AdvancedCoreUser", AdvancedCorePlugin.getInstance().getUserManager().getUser(p));
 
 			for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance()
 					.getJavascriptEngineRequests()) {
@@ -63,7 +62,7 @@ public class JavascriptEngine {
 		addToEngine("Player", player);
 		addToEngine("PlayerName", player.getName());
 		addToEngine("PlayerUUID", player.getUniqueId().toString());
-		addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
+		addToEngine("AdvancedCoreUser", AdvancedCorePlugin.getInstance().getUserManager().getUser(player));
 		addToEngine("CommandSender", player);
 
 		for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
@@ -81,7 +80,7 @@ public class JavascriptEngine {
 			addToEngine("Player", player);
 			addToEngine("PlayerName", player.getName());
 			addToEngine("PlayerUUID", player.getUniqueId().toString());
-			addToEngine("AdvancedCoreUser", UserManager.getInstance().getUser(player));
+			addToEngine("AdvancedCoreUser", AdvancedCorePlugin.getInstance().getUserManager().getUser(player));
 			addToEngine("CommandSender", player);
 
 			for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance()
@@ -127,7 +126,7 @@ public class JavascriptEngine {
 				engine.put("Bukkit", Bukkit.getServer());
 				engine.put("AdvancedCore", AdvancedCorePlugin.getInstance());
 				engine.put("Console", Bukkit.getConsoleSender());
-				engine.put("UserManager", UserManager.getInstance());
+				engine.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
 				engine.put("RewardHandler", RewardHandler.getInstance());
 				engine.put("StringParser", StringParser.getInstance());
 

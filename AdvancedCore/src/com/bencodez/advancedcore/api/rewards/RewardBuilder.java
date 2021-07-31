@@ -11,8 +11,8 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 public class RewardBuilder {
 	private ConfigurationSection data;
@@ -91,11 +91,11 @@ public class RewardBuilder {
 	}
 
 	public void send(OfflinePlayer p) {
-		send(UserManager.getInstance().getUser(p));
+		send(AdvancedCorePlugin.getInstance().getUserManager().getUser(p));
 	}
 
 	public void send(Player p) {
-		send(UserManager.getInstance().getUser(p));
+		send(AdvancedCorePlugin.getInstance().getUserManager().getUser(p));
 	}
 
 	public RewardBuilder setCheckTimed(boolean checkTimed) {

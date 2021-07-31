@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChange;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
@@ -33,7 +32,7 @@ public class UserDataCache {
 		cachedChanges = new ConcurrentLinkedQueue<UserDataChange>();
 		cache = new HashMap<String, DataValue>();
 	}
-	
+
 	public void dump() {
 		cache = null;
 		cachedChanges = null;
@@ -66,7 +65,7 @@ public class UserDataCache {
 	}
 
 	public AdvancedCoreUser getUser() {
-		return UserManager.getInstance().getUser(uuid, false);
+		return manager.getPlugin().getUserManager().getUser(uuid, false);
 	}
 
 	public void processChanges() {

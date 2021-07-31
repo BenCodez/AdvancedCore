@@ -6,7 +6,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
 import com.bencodez.advancedcore.api.valuerequest.listeners.NumberListener;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
@@ -49,7 +48,7 @@ public class ValueRequest {
 	public void requestBoolean(Player player, BooleanListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new BooleanRequester().request(player, input, "", "Type cancel to cancel", listener);
 	}
@@ -64,7 +63,7 @@ public class ValueRequest {
 	public void requestBoolean(Player player, String currentValue, BooleanListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new BooleanRequester().request(player, input, currentValue, "Type cancel to cancel", listener);
 	}
@@ -73,7 +72,7 @@ public class ValueRequest {
 			boolean allowCustomOption, NumberListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new NumberRequester().request(player, input, currentValue, options, "Type cancel to cancel", allowCustomOption,
 				listener);
@@ -88,7 +87,7 @@ public class ValueRequest {
 	public void requestNumber(Player player, NumberListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new NumberRequester().request(player, input, "", "Type cancel to cancel", null, true, listener);
 	}
@@ -106,7 +105,7 @@ public class ValueRequest {
 			NumberListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new NumberRequester().request(player, input, currentValue, "Type cancel to cancel", options, allowCustomOption,
 				listener);
@@ -123,7 +122,7 @@ public class ValueRequest {
 	public void requestNumber(Player player, String currentValue, Number[] options, NumberListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new NumberRequester().request(player, input, currentValue, "Type cancel to cancel", options, true, listener);
 	}
@@ -132,7 +131,7 @@ public class ValueRequest {
 			boolean allowCustomOption, StringListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new StringRequester().request(player, input, currentValue, options, "Type cancel to cancel", allowCustomOption,
 				listener);
@@ -151,7 +150,7 @@ public class ValueRequest {
 			StringListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new StringRequester().request(player, input, currentValue, "Type cancel to cancel", options, allowCustomOption,
 				listener);
@@ -168,7 +167,7 @@ public class ValueRequest {
 	public void requestString(Player player, String currentValue, String[] options, StringListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new StringRequester().request(player, input, currentValue, "Type cancel to cancel", options, true, listener);
 	}
@@ -182,7 +181,7 @@ public class ValueRequest {
 	public void requestString(Player player, StringListener listener) {
 		InputMethod input = method;
 		if (input == null) {
-			input = UserManager.getInstance().getUser(player).getUserInputMethod();
+			input = plugin.getUserManager().getUser(player).getUserInputMethod();
 		}
 		new StringRequester().request(player, input, "", "Type cancel to cancel", null, true, listener);
 	}
