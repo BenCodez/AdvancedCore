@@ -178,7 +178,11 @@ public class PlayerUtils {
 		}
 		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) {
 			if (SkullHandler.getInstance().hasSkull(playerName)) {
-				return SkullHandler.getInstance().getItemStack(playerName);
+				try {
+					return SkullHandler.getInstance().getItemStack(playerName);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			} else {
 				SkullHandler.getInstance().loadSkull(playerName);
 				if (force) {
@@ -187,9 +191,9 @@ public class PlayerUtils {
 					return new ItemBuilder(Material.valueOf(skullMaterial), 1).toItemStack();
 				}
 			}
-		} else {
-			return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
 		}
+		return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
+
 	}
 
 	public Player getRandomOnlinePlayer() {

@@ -387,6 +387,7 @@ public class Table {
 	}
 
 	public void wipeColumnData(String columnName) {
+		checkColumn(new Column(columnName, DataType.STRING));
 		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);

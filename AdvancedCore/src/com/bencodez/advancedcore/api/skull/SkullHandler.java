@@ -82,14 +82,10 @@ public class SkullHandler {
 	 */
 
 	@SuppressWarnings("deprecation")
-	public org.bukkit.inventory.ItemStack getItemStack(String playerName) {
+	public org.bukkit.inventory.ItemStack getItemStack(String playerName)
+			throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		if (hasSkull(playerName)) {
-			try {
-				return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				AdvancedCorePlugin.getInstance().debug(e);
-			}
-
+			return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
 		} else {
 			loadSkull(playerName);
 		}
