@@ -941,26 +941,24 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				for (UserStartup start : userStartup) {
 					start.onStart();
 				}
-				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : getUserManager().getAllUUIDs()) {
 					if (uuid != null) {
 						AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
 						if (user != null) {
 							user.dontCache();
 							user.tempCache();
-							users.add(user);
 							for (UserStartup start : userStartup) {
 								start.onStartUp(user);
 							}
 							user.clearTempCache();
+							user = null;
 						}
+
 					}
 				}
 				for (UserStartup start : userStartup) {
-					start.setUsers(users);
 					start.onFinish();
 				}
-
 			}
 		}, 30);
 	}

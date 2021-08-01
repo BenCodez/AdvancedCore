@@ -39,9 +39,9 @@ public class SkullThread {
 				return;
 			}
 
-			ItemStack s = SkullHandler.getInstance().getSkull(playerName);
-
 			try {
+				ItemStack s = SkullHandler.getInstance().getSkull(playerName);
+
 				SkullHandler.getInstance().getSkulls().put(playerName,
 						SkullHandler.getInstance().getAsNMSCopy().invoke(null, s));
 			} catch (Exception e) {
