@@ -15,10 +15,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
@@ -128,7 +128,7 @@ public class MySQL {
 		// add custom column types
 		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
 			sql += key.getKey() + " " + key.getColumnType() + ", ";
-			if (StringParser.getInstance().containsIgnorecase(key.getColumnType(), "int")) {
+			if (key instanceof UserDataKeyInt) {
 				if (!intColumns.contains(key.getKey())) {
 					intColumns.add(key.getKey());
 					plugin.getServerDataFile().setIntColumns(intColumns);

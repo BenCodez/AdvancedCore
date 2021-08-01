@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyString;
 
 import lombok.Getter;
@@ -39,6 +40,17 @@ public class UserDataManager {
 	public boolean isCached(UUID uuid) {
 		if (userDataCache.containsKey(uuid)) {
 			return userDataCache.get(uuid).hasCache();
+		}
+		return false;
+	}
+
+	public boolean isInt(String str) {
+		for (UserDataKey key : keys) {
+			if (key.getKey().equals(str)) {
+				if (key instanceof UserDataKeyInt) {
+					return true;
+				}
+			}
 		}
 		return false;
 	}

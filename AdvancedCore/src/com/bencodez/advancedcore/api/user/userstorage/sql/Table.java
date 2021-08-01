@@ -10,8 +10,8 @@ import java.util.Collections;
 import java.util.List;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueBoolean;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
@@ -254,7 +254,7 @@ public class Table {
 		// add custom column types
 		for (UserDataKey key : AdvancedCorePlugin.getInstance().getUserManager().getDataManager().getKeys()) {
 			sql += key.getKey() + " " + key.getColumnType() + ", ";
-			if (StringParser.getInstance().containsIgnorecase(key.getColumnType(), "int")) {
+			if (key instanceof UserDataKeyInt) {
 				if (!intColumns.contains(key.getKey())) {
 					intColumns.add(key.getKey());
 					AdvancedCorePlugin.getInstance().getServerDataFile().setIntColumns(intColumns);
