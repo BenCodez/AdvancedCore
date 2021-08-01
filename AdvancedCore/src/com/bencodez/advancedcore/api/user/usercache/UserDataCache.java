@@ -34,6 +34,9 @@ public class UserDataCache {
 	}
 
 	public void dump() {
+		if (hasChangesToProcess()) {
+			processChanges();
+		}
 		cache = null;
 		cachedChanges = null;
 		uuid = null;
@@ -69,18 +72,20 @@ public class UserDataCache {
 	}
 
 	public void processChanges() {
-		manager.getPlugin()
-				.extraDebug("Processing changes for " + uuid.toString() + ", Changes: " + cachedChanges.size());
-		AdvancedCoreUser user = getUser();
-		HashMap<String, DataValue> values = new HashMap<String, DataValue>();
-		while (!cachedChanges.isEmpty()) {
-			UserDataChange change = cachedChanges.poll();
-			values.put(change.getKey(), change.toUserDataValue());
-			change.dump();
-			// manager.getPlugin().extraDebug("Processing change for " + change.getKey());
-		}
-		if (!values.isEmpty()) {
-			user.getUserData().setValues(values);
+		if (uuid != null) {
+			manager.getPlugin()
+					.extraDebug("Processing changes for " + uuid.toString() + ", Changes: " + cachedChanges.size());
+			AdvancedCoreUser user = getUser();
+			HashMap<String, DataValue> values = new HashMap<String, DataValue>();
+			while (!cachedChanges.isEmpty()) {
+				UserDataChange change = cachedChanges.poll();
+				values.put(change.getKey(), change.toUserDataValue());
+				change.dump();
+				// manager.getPlugin().extraDebug("Processing change for " + change.getKey());
+			}
+			if (!values.isEmpty()) {
+				user.getUserData().setValues(values);
+			}
 		}
 	}
 

@@ -25,4 +25,8 @@ public class YMLFileHandler extends YMLFile {
 	public void onFileCreation() {
 
 	}
+
+	public void header(String string) {
+		getData().options().header(string);
+	}
 }
