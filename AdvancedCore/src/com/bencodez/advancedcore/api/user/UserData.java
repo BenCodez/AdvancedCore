@@ -91,16 +91,12 @@ public class UserData {
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key)) {
-							Object value = row.get(i).getValue();
-							if (value instanceof Integer) {
+							DataValue value = row.get(i).getValue();
+							if (value.isInt()) {
+								return value.getInt();
+							} else if (value.isString()) {
 								try {
-									return (int) value;
-								} catch (ClassCastException | NullPointerException ex) {
-									ex.printStackTrace();
-								}
-							} else if (value instanceof String) {
-								try {
-									return Integer.parseInt((String) value);
+									return Integer.parseInt(value.getString());
 								} catch (Exception e) {
 								}
 							}
