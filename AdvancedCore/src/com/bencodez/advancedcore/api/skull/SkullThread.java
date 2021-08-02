@@ -67,11 +67,11 @@ public class SkullThread {
 					}
 					count++;
 
-					if (count > 30) {
+					if (count > 50) {
 						str = null;
 					} else {
 						try {
-							Thread.sleep(1000);
+							Thread.sleep(2000);
 						} catch (InterruptedException e) {
 							count = -1;
 						}
@@ -89,7 +89,7 @@ public class SkullThread {
 			while (true) {
 				runBackgroundCheck();
 				try {
-					sleep(10000);
+					sleep(60000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 					System.exit(0);
