@@ -704,7 +704,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					debug("Duplicate uuid? " + uuid + "/" + name);
 				}
 
-				if (name == null || name.equals("") || name.equals("Error getting name")) {
+				if (name == null || name.equals("") || name.equals("Error getting name") || name.equals("null")) {
 					// extraDebug("Invalid player name: " + uuid);
 					add = false;
 				} else {

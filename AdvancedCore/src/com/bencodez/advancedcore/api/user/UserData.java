@@ -79,7 +79,14 @@ public class UserData {
 						if (cache.getCache().get(key).isInt()) {
 							return cache.getCache().get(key).getInt();
 						} else {
-							return Integer.parseInt(cache.getCache().get(key).getString());
+							String str = cache.getCache().get(key).getString();
+							if (str != null && !str.equals("null")) {
+								try {
+									return Integer.parseInt(str);
+								} catch (Exception e) {
+								}
+							}
+
 						}
 					}
 				} else {
@@ -95,10 +102,14 @@ public class UserData {
 							if (value.isInt()) {
 								return value.getInt();
 							} else if (value.isString()) {
-								try {
-									return Integer.parseInt(value.getString());
-								} catch (Exception e) {
+								String str = value.getString();
+								if (str != null) {
+									try {
+										return Integer.parseInt(str);
+									} catch (Exception e) {
+									}
 								}
+								return def;
 							}
 						}
 					}
@@ -114,7 +125,14 @@ public class UserData {
 							if (value.isInt()) {
 								return value.getInt();
 							} else if (value.isString()) {
-								return Integer.parseInt(value.getString());
+								String str = value.getString();
+								if (str != null) {
+									try {
+										return Integer.parseInt(str);
+									} catch (Exception e) {
+									}
+								}
+								return def;
 							}
 						}
 					}
@@ -238,7 +256,7 @@ public class UserData {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key) && row.get(i).getValue().isString()) {
 							String st = row.get(i).getValue().getString();
-							if (st != null) {
+							if (st != null && !st.equals("null")) {
 								return st;
 							}
 							return "";
@@ -252,7 +270,7 @@ public class UserData {
 					for (int i = 0; i < row.size(); i++) {
 						if (row.get(i).getName().equals(key) && row.get(i).getValue().isString()) {
 							String st = row.get(i).getValue().getString();
-							if (st != null) {
+							if (st != null && !st.equals("null")) {
 								return st;
 							}
 							return "";
