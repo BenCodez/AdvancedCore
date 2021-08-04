@@ -247,6 +247,9 @@ public class PlayerUtils {
 	}
 
 	private String getUUIDLookup(String playerName) {
+		if (playerName == null) {
+			return "";
+		}
 		ConcurrentHashMap<String, String> uuids = plugin.getUuidNameCache();
 		if (uuids != null) {
 			for (Entry<String, String> entry : uuids.entrySet()) {
@@ -259,7 +262,7 @@ public class PlayerUtils {
 		for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 			AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 			String name = user.getData().getString("PlayerName", true);
-			if (name.equals(playerName)) {
+			if (name != null && name.equals(playerName)) {
 				plugin.getUuidNameCache().put(uuid, playerName);
 				return uuid;
 			}
