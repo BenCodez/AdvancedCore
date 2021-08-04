@@ -858,8 +858,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getServerDataFile().reloadData();
 		RewardHandler.getInstance().loadRewards();
 		loadConfig(userStorage);
-		if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null && userStorage) {
-			getMysql().clearCacheBasic();
+		if (userStorage) {
+			getUserManager().getDataManager().clearCache();
+			if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
+				getMysql().clearCacheBasic();
+			}
 		}
 		timeChecker.update();
 		RewardHandler.getInstance().checkDelayedTimedRewards();
