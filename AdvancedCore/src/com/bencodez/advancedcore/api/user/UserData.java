@@ -233,7 +233,11 @@ public class UserData {
 			if (user.isTempCache() && tempCache != null) {
 				if (tempCache.get(key) != null) {
 					if (tempCache.get(key).isString()) {
-						return tempCache.get(key).getString();
+						String str = tempCache.get(key).getString();
+						if (str != null) {
+							return str;
+						}
+						return "";
 					}
 				} else {
 					return "";
@@ -243,7 +247,11 @@ public class UserData {
 				UserDataCache cache = user.getCache();
 				if (cache != null) {
 					if (cache.isCached(key)) {
-						return cache.getCache().get(key).getString();
+						String str = cache.getCache().get(key).getString();
+						if (str != null) {
+							return str;
+						}
+						return "";
 					}
 				} else {
 					user.cache();
