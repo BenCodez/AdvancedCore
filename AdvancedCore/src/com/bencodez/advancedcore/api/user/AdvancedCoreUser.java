@@ -1033,7 +1033,8 @@ public class AdvancedCoreUser {
 
 	public void updateName(boolean force) {
 		if (getData().hasData() || force) {
-			if (!getData().getString("PlayerName", true).equals(getPlayerName())) {
+			String playerName = getData().getString("PlayerName", true);
+			if (playerName == null || !playerName.equals(getPlayerName())) {
 				getData().setString("PlayerName", getPlayerName(), true);
 			}
 		}
