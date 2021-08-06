@@ -87,6 +87,17 @@ public class AdvancedCoreUser {
 		return this;
 	}
 
+	public AdvancedCoreUser(AdvancedCorePlugin plugin, AdvancedCoreUser user) {
+		this.waitForCache = user.waitForCache;
+		this.cacheData = user.cacheData;
+		this.tempCache = user.tempCache;
+		this.data = user.getUserData();
+		this.uuid = user.getUUID();
+		this.playerName = user.getPlayerName();
+		this.loadName = user.loadName;
+		this.plugin = plugin;
+	}
+
 	/**
 	 * Instantiates a new user.
 	 *
