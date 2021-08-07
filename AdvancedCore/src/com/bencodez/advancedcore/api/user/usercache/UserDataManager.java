@@ -101,4 +101,8 @@ public class UserDataManager {
 			cacheUser(uuid);
 		}
 	}
+
+	public boolean containsKey(UUID fromString) {
+		return userDataCache.containsKey(fromString);
+	}
 }

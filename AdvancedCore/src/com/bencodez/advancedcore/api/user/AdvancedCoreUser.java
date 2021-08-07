@@ -261,14 +261,16 @@ public class AdvancedCoreUser {
 			@Override
 			public void run() {
 				for (String str : copy) {
-					String[] args = str.split("%placeholders%");
-					String placeholders = "";
-					if (args.length > 1) {
-						placeholders = args[1];
+					if (str != null && !str.equals("null")) {
+						String[] args = str.split("%placeholders%");
+						String placeholders = "";
+						if (args.length > 1) {
+							placeholders = args[1];
+						}
+						RewardHandler.getInstance().giveReward(user, args[0],
+								new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
+										.setPlaceholders(ArrayUtils.getInstance().fromString(placeholders)));
 					}
-					RewardHandler.getInstance().giveReward(user, args[0],
-							new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
-									.setPlaceholders(ArrayUtils.getInstance().fromString(placeholders)));
 				}
 			}
 		}, 5l);
