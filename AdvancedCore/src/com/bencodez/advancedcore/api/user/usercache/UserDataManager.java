@@ -72,9 +72,13 @@ public class UserDataManager {
 
 	public void cacheUser(UUID uuid) {
 		plugin.debug("Caching " + uuid.toString());
-		UserDataCache data = new UserDataCache(this, uuid).cache();
-		if (data.hasCache()) {
-			userDataCache.put(uuid, data);
+		if (!userDataCache.containsKey(uuid)) {
+			UserDataCache data = new UserDataCache(this, uuid).cache();
+			if (data.hasCache()) {
+				userDataCache.put(uuid, data);
+			}
+		} else {
+			userDataCache.get(uuid).cache();
 		}
 	}
 
