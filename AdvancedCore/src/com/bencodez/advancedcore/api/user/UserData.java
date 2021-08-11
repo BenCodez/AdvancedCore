@@ -383,6 +383,7 @@ public class UserData {
 			AdvancedCorePlugin.getInstance().getSQLiteUserTable()
 					.delete(new Column("uuid", new DataValueString(user.getUUID())));
 		}
+		user.clearCache();
 	}
 
 	public void setBoolean(String key, boolean value) {
