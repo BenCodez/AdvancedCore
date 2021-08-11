@@ -89,8 +89,7 @@ public class SkullHandler {
 		} else {
 			loadSkull(playerName);
 		}
-		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
-
+		return new ItemBuilder("PLAYER_HEAD").setSkullOwner(playerName).toItemStack();
 	}
 
 	@SuppressWarnings("deprecation")

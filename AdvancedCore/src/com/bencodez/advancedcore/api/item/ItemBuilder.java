@@ -123,7 +123,7 @@ public class ItemBuilder {
 					String materialStr = data.getString("Material", data.getName());
 					if (NMSManager.getInstance().isVersion("1.12")) {
 						if (materialStr.equalsIgnoreCase("player_head")) {
-							materialStr = "PAPER";
+							materialStr = "SKULL";
 						}
 					}
 
@@ -290,7 +290,9 @@ public class ItemBuilder {
 
 	public ItemBuilder(String material) {
 		String materialStr = material;
-		if (NMSManager.getInstance().isVersion("1.12")) {
+		if (material.equalsIgnoreCase("player_head")) {
+			materialStr = "SKULL";
+		} else if (NMSManager.getInstance().isVersion("1.12")) {
 			materialStr = "PAPER";
 		}
 		try {
