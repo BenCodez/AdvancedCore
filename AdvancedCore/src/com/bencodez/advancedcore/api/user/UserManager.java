@@ -12,6 +12,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
+import com.bencodez.advancedcore.api.user.userstorage.DataType;
 
 import lombok.Getter;
 
@@ -211,6 +212,29 @@ public class UserManager {
 		}
 		if (plugin.getStorageType().equals(UserStorage.MYSQL) && plugin.getMysql() != null) {
 			plugin.getMysql().clearCacheBasic();
+		}
+	}
+
+	public void removeAllKeyValues(String key, DataType type) {
+		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			plugin.getSQLiteUserTable().wipeColumnData(key);
+		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			plugin.getMysql().wipeColumnData(key);
+		} else {
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				switch (type) {
+				case INTEGER:
+					user.getData().setInt(key, 0);
+					break;
+				case STRING:
+					user.getData().setString(key, "");
+					break;
+				default:
+					break;
+				}
+
+			}
 		}
 	}
 

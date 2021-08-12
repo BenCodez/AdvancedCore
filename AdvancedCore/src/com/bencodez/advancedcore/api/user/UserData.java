@@ -493,6 +493,12 @@ public class UserData {
 		setString(key, str, queue);
 	}
 
+	public void setValues(String key, DataValue value) {
+		HashMap<String, DataValue> values = new HashMap<String, DataValue>();
+		values.put(key, value);
+		setValues(AdvancedCorePlugin.getInstance().getStorageType(), values);
+	}
+
 	public void setValues(HashMap<String, DataValue> values) {
 		setValues(AdvancedCorePlugin.getInstance().getStorageType(), values);
 	}
