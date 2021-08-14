@@ -101,6 +101,7 @@ public class TimeChecker {
 	public boolean hasMonthChanged(boolean set) {
 		String prevMonth = plugin.getServerDataFile().getPrevMonth();
 		String month = getTime().getMonth().toString();
+
 		if (prevMonth.equals(month)) {
 			return false;
 		}
@@ -136,7 +137,7 @@ public class TimeChecker {
 
 				@Override
 				public void run() {
-					if (plugin != null) {
+					if (plugin != null && plugin.isEnabled()) {
 						if (!processing) {
 							update();
 						}
@@ -177,14 +178,17 @@ public class TimeChecker {
 				plugin.getLogger().info("Detected month changed, processing...");
 				forceChanged(TimeType.MONTH, false, true, true);
 				hasMonthChanged(true);
+				plugin.getLogger().info("Finished processing month changes");
 			} else if (hasWeekChanged(false)) {
 				plugin.getLogger().info("Detected week changed, processing...");
 				forceChanged(TimeType.WEEK, false, true, true);
 				hasWeekChanged(true);
+				plugin.getLogger().info("Finished processing week changes");
 			} else if (hasDayChanged(false)) {
 				plugin.getLogger().info("Detected day changed, processing...");
 				forceChanged(TimeType.DAY, false, true, true);
 				hasDayChanged(true);
+				plugin.getLogger().info("Finished processing day changes");
 			}
 		}
 	}
