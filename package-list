@@ -29,6 +29,11 @@ com.bencodez.advancedcore.api.time
 com.bencodez.advancedcore.api.time.events
 com.bencodez.advancedcore.api.updater
 com.bencodez.advancedcore.api.user
+com.bencodez.advancedcore.api.user.usercache
+com.bencodez.advancedcore.api.user.usercache.change
+com.bencodez.advancedcore.api.user.usercache.keys
+com.bencodez.advancedcore.api.user.usercache.value
+com.bencodez.advancedcore.api.user.userstorage
 com.bencodez.advancedcore.api.user.userstorage.mysql
 com.bencodez.advancedcore.api.user.userstorage.mysql.api
 com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries
@@ -43,8 +48,10 @@ com.bencodez.advancedcore.api.valuerequest.requesters
 com.bencodez.advancedcore.api.valuerequest.sign
 com.bencodez.advancedcore.api.yml
 com.bencodez.advancedcore.api.yml.annotation
+com.bencodez.advancedcore.bungeeapi.mysql
 com.bencodez.advancedcore.bungeeapi.pluginmessage
 com.bencodez.advancedcore.bungeeapi.sockets
+com.bencodez.advancedcore.bungeeapi.velocity
 com.bencodez.advancedcore.command
 com.bencodez.advancedcore.command.executor
 com.bencodez.advancedcore.command.gui
