@@ -249,14 +249,6 @@
 			<properties>
 				<build.profile.id>deploy</build.profile.id>
 			</properties>
-			<dependencies>
-				<dependency>
-					<groupId>com.bencodez</groupId>
-					<artifactId>AdvancedCore</artifactId>
-					<version>LATEST</version>
-					<scope>compile</scope>
-				</dependency>
-			</dependencies>
 			<distributionManagement>
 				<snapshotRepository>
 					<id>nexus</id>
