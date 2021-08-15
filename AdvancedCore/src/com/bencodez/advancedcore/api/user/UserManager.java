@@ -231,6 +231,7 @@ public class UserManager {
 		} else {
 			for (String uuid : getAllUUIDs()) {
 				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				user.dontCache();
 				switch (type) {
 				case INTEGER:
 					user.getData().setInt(key, 0);

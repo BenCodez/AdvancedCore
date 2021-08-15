@@ -1,10 +1,10 @@
 package com.bencodez.advancedcore.api.user.usercache;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -22,7 +22,7 @@ public class UserDataManager {
 	private ArrayList<UserDataKey> keys;
 
 	@Getter
-	private HashMap<UUID, UserDataCache> userDataCache;
+	private ConcurrentHashMap<UUID, UserDataCache> userDataCache;
 
 	@Getter
 	private AdvancedCorePlugin plugin;
@@ -32,7 +32,7 @@ public class UserDataManager {
 
 	public UserDataManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
-		userDataCache = new HashMap<UUID, UserDataCache>();
+		userDataCache = new ConcurrentHashMap<UUID, UserDataCache>();
 		keys = new ArrayList<UserDataKey>();
 		timer = new Timer();
 		loadKeys();
@@ -45,12 +45,22 @@ public class UserDataManager {
 				clearNonNeededCachedUsers();
 			}
 		}, 1000 * 60 * 3, 1000 * 60 * 60);
+
+		plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				if (plugin != null && plugin.isEnabled()) {
+					clearNonNeededCachedUsers();
+				}
+			}
+		}, 20 * 60 * 3, 20 * 60 * 60);
 	}
 
 	public void addKey(UserDataKey userDataKey) {
 		keys.add(userDataKey);
 	}
-	
+
 	public void clearCacheBasic() {
 		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
 			plugin.getMysql().clearCacheBasic();
@@ -58,7 +68,7 @@ public class UserDataManager {
 	}
 
 	public void clearNonNeededCachedUsers() {
-		plugin.devDebug("Checking cache for non online players");
+		plugin.devDebug("Clearing cache for non online players (if any)");
 		ArrayList<UUID> onlineUUIDS = new ArrayList<UUID>();
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			onlineUUIDS.add(p.getUniqueId());
