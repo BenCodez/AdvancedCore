@@ -1,2 +1,3 @@
 version: '${project.version}'
 time: '${timestamp}'
+buildnumber: '${build.number}'

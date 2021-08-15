@@ -15,6 +15,7 @@
 		<project.build.sourceEncoding>Cp1252</project.build.sourceEncoding>
 		<timestamp>${maven.build.timestamp}</timestamp>
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+		<build.number>NOTSET</build.number>
 	</properties>
 	<build>
 		<resources>

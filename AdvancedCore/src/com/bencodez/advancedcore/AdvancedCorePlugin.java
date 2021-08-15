@@ -186,6 +186,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private String version = "";
 
+	@Getter
+	private String advancedCoreBuildNumber = "NOTSET";
+
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
@@ -497,9 +500,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(this), this);
 		}
 
-		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' Spigot Version: "
-				+ Bukkit.getVersion() + " Total RAM: " + PluginUtils.getInstance().getMemory() + " Free RAM: "
-				+ PluginUtils.getInstance().getFreeMemory());
+		String buildNumberMsg = "";
+		if (!advancedCoreBuildNumber.equals("NOTSET")) {
+			buildNumberMsg = ", build number: " + advancedCoreBuildNumber + ", ";
+		}
+
+		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' " + buildNumberMsg
+				+ " Spigot Version: " + Bukkit.getVersion() + " Total RAM: " + PluginUtils.getInstance().getMemory()
+				+ " Free RAM: " + PluginUtils.getInstance().getFreeMemory());
 
 		debug(DebugLevel.INFO, "Debug Level: " + getOptions().getDebug().toString());
 	}
@@ -796,6 +804,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		YamlConfiguration conf = getVersionFile();
 		version = conf.getString("version", "Unknown");
 		buildTime = conf.getString("time", "Unknown");
+		advancedCoreBuildNumber = conf.getString("buildnumber", "NOTSET");
 	}
 
 	@Override
