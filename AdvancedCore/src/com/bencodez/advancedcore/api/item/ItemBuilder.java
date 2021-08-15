@@ -75,6 +75,9 @@ public class ItemBuilder {
 
 	private int loreLength = -1;
 
+	@Getter
+	private String path;
+
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
 	private String skull = "";
@@ -83,9 +86,6 @@ public class ItemBuilder {
 
 	@Getter
 	private boolean validMaterial = true;
-
-	@Getter
-	private String path;
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection

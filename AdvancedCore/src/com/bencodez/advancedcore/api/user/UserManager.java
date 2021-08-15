@@ -21,17 +21,13 @@ import lombok.Getter;
  */
 public class UserManager {
 
+	@Getter
+	private UserDataManager dataManager;
+
 	private Object obj = new Object();
 
 	/** The plugin. */
 	private AdvancedCorePlugin plugin;
-
-	@Getter
-	private UserDataManager dataManager;
-
-	public void load() {
-		dataManager = new UserDataManager(AdvancedCorePlugin.getInstance());
-	}
 
 	/**
 	 * Instantiates a new user manager.
@@ -112,6 +108,14 @@ public class UserManager {
 		return new ArrayList<String>();
 	}
 
+	public String getOfflineRewardsPath() {
+		if (plugin.getOptions().isPerServerRewards()) {
+			return "OfflineRewards" + plugin.getOptions().getServer().replace("-", "_");
+		} else {
+			return "OfflineRewards";
+		}
+	}
+
 	public String getProperName(String name) {
 
 		for (String s : plugin.getUuidNameCache().values()) {
@@ -127,11 +131,6 @@ public class UserManager {
 			getUser(getAllUUIDs().get(0));
 		}
 		return null;
-	}
-
-	@SuppressWarnings("deprecation")
-	public AdvancedCoreUser getUser(UUID uuid, String playerName) {
-		return new AdvancedCoreUser(plugin, uuid, playerName);
 	}
 
 	/**
@@ -181,6 +180,15 @@ public class UserManager {
 		return new AdvancedCoreUser(plugin, uuid, loadName);
 	}
 
+	@SuppressWarnings("deprecation")
+	public AdvancedCoreUser getUser(UUID uuid, String playerName) {
+		return new AdvancedCoreUser(plugin, uuid, playerName);
+	}
+
+	public void load() {
+		dataManager = new UserDataManager(AdvancedCorePlugin.getInstance());
+	}
+
 	public void purgeOldPlayers() {
 		if (plugin.getOptions().isPurgeOldData()) {
 			plugin.addUserStartup(new UserStartup() {
@@ -212,14 +220,6 @@ public class UserManager {
 		}
 		if (plugin.getStorageType().equals(UserStorage.MYSQL) && plugin.getMysql() != null) {
 			plugin.getMysql().clearCacheBasic();
-		}
-	}
-
-	public String getOfflineRewardsPath() {
-		if (plugin.getOptions().isPerServerRewards()) {
-			return "OfflineRewards" + plugin.getOptions().getServer().replace("-", "_");
-		} else {
-			return "OfflineRewards";
 		}
 	}
 

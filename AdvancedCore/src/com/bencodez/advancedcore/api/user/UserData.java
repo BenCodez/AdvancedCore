@@ -21,10 +21,29 @@ import com.bencodez.advancedcore.thread.FileThread;
 import lombok.Getter;
 
 public class UserData {
+	@Getter
+	private HashMap<String, DataValue> tempCache;
+
 	private AdvancedCoreUser user;
 
 	public UserData(AdvancedCoreUser user) {
 		this.user = user;
+	}
+
+	public void clearTempCache() {
+		tempCache.clear();
+		tempCache = null;
+	}
+
+	public HashMap<String, DataValue> convert(List<Column> cols) {
+		HashMap<String, DataValue> data = new HashMap<String, DataValue>();
+		if (cols != null) {
+			for (Column col : cols) {
+				data.put(col.getName(), col.getValue());
+			}
+		}
+
+		return data;
 	}
 
 	public boolean getBoolean(String key) {
@@ -315,19 +334,20 @@ public class UserData {
 		return ArrayUtils.getInstance().convert(list);
 	}
 
-	public HashMap<String, DataValue> getValues() {
-		return getValues(AdvancedCorePlugin.getInstance().getStorageType());
+	public String getValue(String key) {
+		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
+			if (AdvancedCorePlugin.getInstance().getMysql().isIntColumn(key)) {
+				return "" + getInt(key);
+			} else {
+				return getString(key);
+			}
+		} else {
+			return getString(key);
+		}
 	}
 
-	public HashMap<String, DataValue> convert(List<Column> cols) {
-		HashMap<String, DataValue> data = new HashMap<String, DataValue>();
-		if (cols != null) {
-			for (Column col : cols) {
-				data.put(col.getName(), col.getValue());
-			}
-		}
-
-		return data;
+	public HashMap<String, DataValue> getValues() {
+		return getValues(AdvancedCorePlugin.getInstance().getStorageType());
 	}
 
 	public HashMap<String, DataValue> getValues(UserStorage storage) {
@@ -349,18 +369,6 @@ public class UserData {
 
 		}
 		return null;
-	}
-
-	public String getValue(String key) {
-		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.MYSQL)) {
-			if (AdvancedCorePlugin.getInstance().getMysql().isIntColumn(key)) {
-				return "" + getInt(key);
-			} else {
-				return getString(key);
-			}
-		} else {
-			return getString(key);
-		}
 	}
 
 	public boolean hasData() {
@@ -493,13 +501,13 @@ public class UserData {
 		setString(key, str, queue);
 	}
 
-	public void setValues(String key, DataValue value) {
-		HashMap<String, DataValue> values = new HashMap<String, DataValue>();
-		values.put(key, value);
+	public void setValues(HashMap<String, DataValue> values) {
 		setValues(AdvancedCorePlugin.getInstance().getStorageType(), values);
 	}
 
-	public void setValues(HashMap<String, DataValue> values) {
+	public void setValues(String key, DataValue value) {
+		HashMap<String, DataValue> values = new HashMap<String, DataValue>();
+		values.put(key, value);
 		setValues(AdvancedCorePlugin.getInstance().getStorageType(), values);
 	}
 
@@ -534,21 +542,13 @@ public class UserData {
 		}
 	}
 
-	@Getter
-	private HashMap<String, DataValue> tempCache;
+	public void tempCache() {
+		tempCache = getValues();
+	}
 
 	public void updateCacheWithTemp() {
 		if (user.isCached()) {
 			user.getCache().updateCache(tempCache);
 		}
-	}
-
-	public void tempCache() {
-		tempCache = getValues();
-	}
-
-	public void clearTempCache() {
-		tempCache.clear();
-		tempCache = null;
 	}
 }

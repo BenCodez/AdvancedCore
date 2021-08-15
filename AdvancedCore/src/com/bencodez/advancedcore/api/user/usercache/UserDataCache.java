@@ -17,14 +17,14 @@ import lombok.Getter;
 
 public class UserDataCache {
 	@Getter
-	private UUID uuid;
-
-	@Getter
 	private HashMap<String, DataValue> cache;
 
 	private Queue<UserDataChange> cachedChanges;
+
 	private UserDataManager manager;
 	private boolean scheduled = false;
+	@Getter
+	private UUID uuid;
 
 	public UserDataCache(UserDataManager manager, UUID uuid) {
 		this.uuid = uuid;
@@ -33,66 +33,12 @@ public class UserDataCache {
 		cache = new HashMap<String, DataValue>();
 	}
 
-	public void dump() {
-		if (hasChangesToProcess()) {
-			processChanges();
-		}
-		cache = null;
-		cachedChanges = null;
-		uuid = null;
-	}
-
-	private void scheduleChanges() {
-		manager.getPlugin().debug("Schedule changes");
-		scheduled = true;
-		manager.getTimer().schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				processChanges();
-				scheduled = false;
-			}
-		}, 1000 * 3);
-	}
-
 	public synchronized void addChange(UserDataChange change) {
 		cache.put(change.getKey(), change.toUserDataValue());
 		cachedChanges.add(change);
 		if (!scheduled) {
 			scheduleChanges();
 		}
-	}
-
-	public boolean hasChangesToProcess() {
-		return !cachedChanges.isEmpty();
-	}
-
-	public AdvancedCoreUser getUser() {
-		return manager.getPlugin().getUserManager().getUser(uuid, false);
-	}
-
-	public void processChanges() {
-		if (uuid != null) {
-			if (cachedChanges.size() > 0) {
-				manager.getPlugin()
-						.extraDebug("Processing changes for " + uuid.toString() + ", Changes: " + cachedChanges.size());
-				AdvancedCoreUser user = getUser();
-				HashMap<String, DataValue> values = new HashMap<String, DataValue>();
-				while (!cachedChanges.isEmpty()) {
-					UserDataChange change = cachedChanges.poll();
-					values.put(change.getKey(), change.toUserDataValue());
-					change.dump();
-					// manager.getPlugin().extraDebug("Processing change for " + change.getKey());
-				}
-				if (!values.isEmpty()) {
-					user.getUserData().setValues(values);
-				}
-			}
-		}
-	}
-
-	public boolean isCached(String key) {
-		return cache.containsKey(key);
 	}
 
 	public UserDataCache cache() {
@@ -124,8 +70,62 @@ public class UserDataCache {
 		cache.clear();
 	}
 
+	public void dump() {
+		if (hasChangesToProcess()) {
+			processChanges();
+		}
+		cache = null;
+		cachedChanges = null;
+		uuid = null;
+	}
+
+	public AdvancedCoreUser getUser() {
+		return manager.getPlugin().getUserManager().getUser(uuid, false);
+	}
+
 	public boolean hasCache() {
 		return !cache.isEmpty();
+	}
+
+	public boolean hasChangesToProcess() {
+		return !cachedChanges.isEmpty();
+	}
+
+	public boolean isCached(String key) {
+		return cache.containsKey(key);
+	}
+
+	public void processChanges() {
+		if (uuid != null) {
+			if (cachedChanges.size() > 0) {
+				manager.getPlugin()
+						.extraDebug("Processing changes for " + uuid.toString() + ", Changes: " + cachedChanges.size());
+				AdvancedCoreUser user = getUser();
+				HashMap<String, DataValue> values = new HashMap<String, DataValue>();
+				while (!cachedChanges.isEmpty()) {
+					UserDataChange change = cachedChanges.poll();
+					values.put(change.getKey(), change.toUserDataValue());
+					change.dump();
+					// manager.getPlugin().extraDebug("Processing change for " + change.getKey());
+				}
+				if (!values.isEmpty()) {
+					user.getUserData().setValues(values);
+				}
+			}
+		}
+	}
+
+	private void scheduleChanges() {
+		manager.getPlugin().debug("Schedule changes");
+		scheduled = true;
+		manager.getTimer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				processChanges();
+				scheduled = false;
+			}
+		}, 1000 * 3);
 	}
 
 	public void updateCache(HashMap<String, DataValue> tempCache) {

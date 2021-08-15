@@ -774,10 +774,7 @@ public class RewardHandler {
 			@Override
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String expression,
 					RewardOptions rewardOptions) {
-				if (expression.equals("")) {
-					return true;
-				}
-				if (new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(
+				if (expression.equals("") || new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(
 						StringParser.getInstance().replacePlaceHolder(expression, rewardOptions.getPlaceholders()))) {
 					return true;
 				}

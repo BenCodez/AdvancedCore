@@ -13,8 +13,8 @@ public abstract class UserDataChange {
 	public UserDataChange(String key) {
 		this.key = key;
 	}
-	
-	public abstract DataValue toUserDataValue();
 
 	public abstract void dump();
+
+	public abstract DataValue toUserDataValue();
 }

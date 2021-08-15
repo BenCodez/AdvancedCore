@@ -175,6 +175,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private Timer timer = new Timer();
 
+	@Setter
+	private UserManager userManager;
+
 	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
 
 	@Getter
@@ -244,6 +247,36 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				getServerDataFile().setPluginVersion(javaPlugin);
 			}
 		});
+
+	}
+
+	public void convertDataStorage(UserStorage from, UserStorage to) {
+		debug("Starting convert process");
+		if (to == null) {
+			throw new RuntimeException("Invalid Storage Method");
+		}
+		loadUserAPI(from);
+		loadUserAPI(to);
+
+		if (getMysql() != null) {
+			getMysql().clearCacheBasic();
+		}
+
+		Queue<String> uuids = new LinkedList<String>(getUserManager().getAllUUIDs(from));
+
+		while (uuids.size() > 0) {
+			String uuid = uuids.poll();
+			AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
+			debug("Starting convert for " + user.getUUID());
+
+			user.getData().setValues(to, user.getData().getValues(from));
+			debug("Finished convert for " + user.getUUID() + ", " + uuids.size() + " more left to go!");
+
+			if (uuids.size() % 100 == 0) {
+				getLogger().info("Working on converting data, about " + uuids.size() + " left to go!");
+			}
+		}
+		debug("Convert finished!");
 
 	}
 
@@ -321,9 +354,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public UserStorage getStorageType() {
 		return getOptions().getStorageType();
 	}
-
-	@Setter
-	private UserManager userManager;
 
 	public UserManager getUserManager() {
 		if (userManager == null) {
@@ -646,36 +676,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}
 			});
 		}
-	}
-
-	public void convertDataStorage(UserStorage from, UserStorage to) {
-		debug("Starting convert process");
-		if (to == null) {
-			throw new RuntimeException("Invalid Storage Method");
-		}
-		loadUserAPI(from);
-		loadUserAPI(to);
-
-		if (getMysql() != null) {
-			getMysql().clearCacheBasic();
-		}
-
-		Queue<String> uuids = new LinkedList<String>(getUserManager().getAllUUIDs(from));
-
-		while (uuids.size() > 0) {
-			String uuid = uuids.poll();
-			AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
-			debug("Starting convert for " + user.getUUID());
-
-			user.getData().setValues(to, user.getData().getValues(from));
-			debug("Finished convert for " + user.getUUID() + ", " + uuids.size() + " more left to go!");
-
-			if (uuids.size() % 100 == 0) {
-				getLogger().info("Working on converting data, about " + uuids.size() + " left to go!");
-			}
-		}
-		debug("Convert finished!");
-
 	}
 
 	private void loadUUIDs() {

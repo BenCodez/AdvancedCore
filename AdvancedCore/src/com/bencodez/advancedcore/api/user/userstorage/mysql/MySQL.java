@@ -90,7 +90,7 @@ public class MySQL {
 		 * CompatibleCacheBuilder.newBuilder().concurrencyLevel(6).expireAfterAccess(20,
 		 * TimeUnit.MINUTES) .maximumSize(maxSize).build(new CacheLoader<String,
 		 * ArrayList<Column>>() {
-		 * 
+		 *
 		 * @Override public ArrayList<Column> load(String key) { return
 		 * getExactQuery(new Column("uuid", key, DataType.STRING)); } }); }
 		 */
@@ -216,6 +216,13 @@ public class MySQL {
 
 	public void close() {
 		mysql.disconnect();
+	}
+
+	public boolean containsKey(String uuid) {
+		if (uuids.contains(uuid) || containsKeyQuery(uuid)) {
+			return true;
+		}
+		return false;
 	}
 
 	public boolean containsKeyQuery(String index) {
@@ -611,12 +618,5 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
-	}
-
-	public boolean containsKey(String uuid) {
-		if (uuids.contains(uuid) || containsKeyQuery(uuid)) {
-			return true;
-		}
-		return false;
 	}
 }

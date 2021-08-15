@@ -15,13 +15,13 @@ public class UserDataChangeString extends UserDataChange {
 	}
 
 	@Override
-	public DataValue toUserDataValue() {
-		return new DataValueString(value);
-	}
-
-	@Override
 	public void dump() {
 		setKey(null);
 		value = null;
+	}
+
+	@Override
+	public DataValue toUserDataValue() {
+		return new DataValueString(value);
 	}
 }

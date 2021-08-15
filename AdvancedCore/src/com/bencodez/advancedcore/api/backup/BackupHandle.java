@@ -33,11 +33,7 @@ public class BackupHandle implements Listener {
 
 	@EventHandler
 	public void onPostDateChange(DateChangedEvent e) {
-		if (!e.getTimeType().equals(TimeType.DAY)) {
-			return;
-		}
-
-		if (!AdvancedCorePlugin.getInstance().getOptions().isCreateBackups()) {
+		if (!e.getTimeType().equals(TimeType.DAY) || !AdvancedCorePlugin.getInstance().getOptions().isCreateBackups()) {
 			return;
 		}
 

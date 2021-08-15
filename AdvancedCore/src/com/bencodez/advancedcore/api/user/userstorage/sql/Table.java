@@ -22,9 +22,9 @@ import com.bencodez.advancedcore.api.user.userstorage.sql.db.SQLite;
 public class Table {
 
 	private List<Column> columns = new ArrayList<>();
+	private List<String> intColumns;
 	private String name;
 	private Object object = new Object();
-	private List<String> intColumns;
 
 	private Column primaryKey;
 
@@ -386,18 +386,6 @@ public class Table {
 
 	}
 
-	public void wipeColumnData(String columnName) {
-		checkColumn(new Column(columnName, DataType.STRING));
-		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
-		try {
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
-			s.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-	}
-
 	public List<List<Column>> search(Column column) {
 		List<List<Column>> results = new ArrayList<>();
 		if (!column.getName().equalsIgnoreCase(primaryKey.getName())) {
@@ -499,6 +487,18 @@ public class Table {
 			}
 			insert(columns);
 		}
+	}
+
+	public void wipeColumnData(String columnName) {
+		checkColumn(new Column(columnName, DataType.STRING));
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
+			s.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 }

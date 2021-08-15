@@ -42,10 +42,6 @@ public abstract class VelocityMySQL {
 
 	private Set<String> uuids = Collections.synchronizedSet(new HashSet<String>());
 
-	public abstract void debug(SQLException e);
-
-	public abstract void severe(String str);
-
 	public VelocityMySQL(String tableName, VelocityYMLFile config) {
 		String tablePrefix = config.getString(config.getNode("Prefix"), "");
 		String hostName = config.getString(config.getNode("Host"), "");
@@ -195,6 +191,8 @@ public abstract class VelocityMySQL {
 		}
 		return false;
 	}
+
+	public abstract void debug(SQLException e);
 
 	public List<String> getColumns() {
 		if (columns == null || columns.size() == 0) {
@@ -419,6 +417,8 @@ public abstract class VelocityMySQL {
 	public void loadData() {
 		columns = getColumnsQueury();
 	}
+
+	public abstract void severe(String str);
 
 	public void update(String index, List<Column> cols) {
 		for (Column col : cols) {

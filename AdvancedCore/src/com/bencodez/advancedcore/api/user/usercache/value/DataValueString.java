@@ -11,8 +11,8 @@ public class DataValueString implements DataValue {
 	}
 
 	@Override
-	public String getString() {
-		return value;
+	public boolean getBoolean() {
+		return false;
 	}
 
 	@Override
@@ -21,13 +21,13 @@ public class DataValueString implements DataValue {
 	}
 
 	@Override
-	public boolean isInt() {
-		return false;
+	public String getString() {
+		return value;
 	}
 
 	@Override
-	public boolean isString() {
-		return true;
+	public DataType getType() {
+		return DataType.STRING;
 	}
 
 	@Override
@@ -41,13 +41,13 @@ public class DataValueString implements DataValue {
 	}
 
 	@Override
-	public boolean getBoolean() {
+	public boolean isInt() {
 		return false;
 	}
 
 	@Override
-	public DataType getType() {
-		return DataType.STRING;
+	public boolean isString() {
+		return true;
 	}
 
 	@Override

@@ -47,6 +47,9 @@ import net.md_5.bungee.api.chat.TextComponent;
  */
 public class AdvancedCoreUser {
 
+	@Getter
+	private boolean cacheData = true;
+
 	private UserData data;
 
 	private AdvancedCorePlugin hook = AdvancedCorePlugin.getInstance();
@@ -60,32 +63,14 @@ public class AdvancedCoreUser {
 	@Getter
 	private AdvancedCorePlugin plugin = null;
 
+	@Getter
+	private boolean tempCache = false;
+
 	/** The uuid. */
 	private String uuid;
 
 	@Getter
 	private boolean waitForCache = true;
-
-	@Getter
-	private boolean cacheData = true;
-
-	@Getter
-	private boolean tempCache = false;
-
-	public AdvancedCoreUser tempCache() {
-		tempCache = true;
-		getUserData().tempCache();
-		return this;
-	}
-
-	public void clearTempCache() {
-		getUserData().clearTempCache();
-	}
-
-	public AdvancedCoreUser dontCache() {
-		cacheData = false;
-		return this;
-	}
 
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, AdvancedCoreUser user) {
 		this.waitForCache = user.waitForCache;
@@ -206,8 +191,12 @@ public class AdvancedCoreUser {
 		setUnClaimedChoice(choices);
 	}
 
-	public UserDataCache getCache() {
-		return plugin.getUserManager().getDataManager().getCache(java.util.UUID.fromString(getUUID()));
+	public void cache() {
+		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid));
+	}
+
+	public void cacheIfNeeded() {
+		plugin.getUserManager().getDataManager().cacheUserIfNeeded(UUID.fromString(uuid));
 	}
 
 	public void checkDelayedTimedRewards() {
@@ -282,6 +271,10 @@ public class AdvancedCoreUser {
 		}
 	}
 
+	public void clearTempCache() {
+		getUserData().clearTempCache();
+	}
+
 	public void closeInv() {
 		Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
@@ -294,6 +287,15 @@ public class AdvancedCoreUser {
 			}
 		});
 
+	}
+
+	public AdvancedCoreUser dontCache() {
+		cacheData = false;
+		return this;
+	}
+
+	public UserDataCache getCache() {
+		return plugin.getUserManager().getDataManager().getCache(java.util.UUID.fromString(getUUID()));
 	}
 
 	public String getChoicePreference(String rewardName) {
@@ -1036,6 +1038,12 @@ public class AdvancedCoreUser {
 		waitForCache = b;
 	}
 
+	public AdvancedCoreUser tempCache() {
+		tempCache = true;
+		getUserData().tempCache();
+		return this;
+	}
+
 	public void updateName(boolean force) {
 		if (getData().hasData() || force) {
 			String playerName = getData().getString("PlayerName", true);
@@ -1043,14 +1051,6 @@ public class AdvancedCoreUser {
 				getData().setString("PlayerName", getPlayerName(), true);
 			}
 		}
-	}
-
-	public void cache() {
-		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid));
-	}
-
-	public void cacheIfNeeded() {
-		plugin.getUserManager().getDataManager().cacheUserIfNeeded(UUID.fromString(uuid));
 	}
 
 }

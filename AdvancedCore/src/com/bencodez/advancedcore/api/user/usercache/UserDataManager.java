@@ -22,13 +22,13 @@ public class UserDataManager {
 	private ArrayList<UserDataKey> keys;
 
 	@Getter
-	private ConcurrentHashMap<UUID, UserDataCache> userDataCache;
-
-	@Getter
 	private AdvancedCorePlugin plugin;
 
 	@Getter
 	private Timer timer;
+
+	@Getter
+	private ConcurrentHashMap<UUID, UserDataCache> userDataCache;
 
 	public UserDataManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -61,6 +61,36 @@ public class UserDataManager {
 		keys.add(userDataKey);
 	}
 
+	public void cacheUser(UUID uuid) {
+		plugin.debug("Caching " + uuid.toString());
+		if (userDataCache.containsKey(uuid)) {
+			UserDataCache data = userDataCache.get(uuid);
+			data.clearCache();
+			data.cache();
+		} else {
+			UserDataCache data = new UserDataCache(this, uuid).cache();
+			if (data.hasCache()) {
+				userDataCache.put(uuid, data);
+			}
+		}
+	}
+
+	public void cacheUserIfNeeded(UUID uuid) {
+		if (!userDataCache.containsKey(uuid)) {
+			cacheUser(uuid);
+		}
+	}
+
+	public void clearCache() {
+		plugin.debug("Clearing cache: " + userDataCache.keySet().size());
+		for (UserDataCache c : userDataCache.values()) {
+			c.clearCache();
+			c.dump();
+		}
+		userDataCache.clear();
+
+	}
+
 	public void clearCacheBasic() {
 		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
 			plugin.getMysql().clearCacheBasic();
@@ -83,6 +113,14 @@ public class UserDataManager {
 		if (removed > 0) {
 			plugin.devDebug("Removed " + removed + " cached users who are no longer online");
 		}
+	}
+
+	public boolean containsKey(UUID fromString) {
+		return userDataCache.containsKey(fromString);
+	}
+
+	public UserDataCache getCache(UUID uuid) {
+		return userDataCache.get(uuid);
 	}
 
 	public boolean isCached(UUID uuid) {
@@ -114,49 +152,11 @@ public class UserDataManager {
 		addKey(new UserDataKeyString("CheckWorld").setColumnType("VARCHAR(5)"));
 	}
 
-	public UserDataCache getCache(UUID uuid) {
-		return userDataCache.get(uuid);
-	}
-
-	public void cacheUser(UUID uuid) {
-		plugin.debug("Caching " + uuid.toString());
-		if (userDataCache.containsKey(uuid)) {
-			UserDataCache data = userDataCache.get(uuid);
-			data.clearCache();
-			data.cache();
-		} else {
-			UserDataCache data = new UserDataCache(this, uuid).cache();
-			if (data.hasCache()) {
-				userDataCache.put(uuid, data);
-			}
-		}
-	}
-
 	public void removeCache(UUID uuid) {
 		UserDataCache cache = getCache(uuid);
 		if (cache != null) {
 			cache.clearCache();
 		}
 		userDataCache.remove(uuid);
-	}
-
-	public void clearCache() {
-		plugin.debug("Clearing cache: " + userDataCache.keySet().size());
-		for (UserDataCache c : userDataCache.values()) {
-			c.clearCache();
-			c.dump();
-		}
-		userDataCache.clear();
-
-	}
-
-	public void cacheUserIfNeeded(UUID uuid) {
-		if (!userDataCache.containsKey(uuid)) {
-			cacheUser(uuid);
-		}
-	}
-
-	public boolean containsKey(UUID fromString) {
-		return userDataCache.containsKey(fromString);
 	}
 }

@@ -15,12 +15,12 @@ public class UserDataChangeBoolean extends UserDataChange {
 	}
 
 	@Override
-	public DataValue toUserDataValue() {
-		return new DataValueBoolean(value);
+	public void dump() {
+		setKey(null);
 	}
 
 	@Override
-	public void dump() {
-		setKey(null);
+	public DataValue toUserDataValue() {
+		return new DataValueBoolean(value);
 	}
 }

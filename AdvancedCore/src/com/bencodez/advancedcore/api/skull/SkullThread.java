@@ -29,13 +29,7 @@ public class SkullThread {
 		}
 
 		public void load(String playerName) {
-			if (!plugin.isEnabled()) {
-				return;
-			}
-			if (playerName == null || playerName.isEmpty()) {
-				return;
-			}
-			if (SkullHandler.getInstance().hasSkull(playerName)) {
+			if (!plugin.isEnabled() || playerName == null || playerName.isEmpty() || SkullHandler.getInstance().hasSkull(playerName)) {
 				return;
 			}
 
@@ -55,33 +49,6 @@ public class SkullThread {
 			}
 			plugin.extraDebug("Loaded skull: " + playerName);
 
-		}
-
-		public void runBackgroundCheck() {
-			if (plugin.isEnabled()) {
-				String str = SkullHandler.getInstance().skullsToLoad.poll();
-				int count = 0;
-				while (str != null) {
-					if (!SkullHandler.getInstance().getSkulls().containsKey(str)) {
-						load(str);
-					}
-					count++;
-
-					if (count > 50) {
-						str = null;
-					} else {
-						try {
-							Thread.sleep(2000);
-						} catch (InterruptedException e) {
-							count = -1;
-						}
-						if (count != -1) {
-							str = SkullHandler.getInstance().skullsToLoad.poll();
-						}
-					}
-
-				}
-			}
 		}
 
 		@Override
@@ -108,6 +75,33 @@ public class SkullThread {
 					return;
 				}
 				run.run();
+			}
+		}
+
+		public void runBackgroundCheck() {
+			if (plugin.isEnabled()) {
+				String str = SkullHandler.getInstance().skullsToLoad.poll();
+				int count = 0;
+				while (str != null) {
+					if (!SkullHandler.getInstance().getSkulls().containsKey(str)) {
+						load(str);
+					}
+					count++;
+
+					if (count > 50) {
+						str = null;
+					} else {
+						try {
+							Thread.sleep(2000);
+						} catch (InterruptedException e) {
+							count = -1;
+						}
+						if (count != -1) {
+							str = SkullHandler.getInstance().skullsToLoad.poll();
+						}
+					}
+
+				}
 			}
 		}
 	}

@@ -19,11 +19,11 @@ import lombok.Setter;
 
 public class PluginMessage implements PluginMessageListener {
 
-	private AdvancedCorePlugin plugin;
-
 	@Getter
 	@Setter
 	private boolean debug = false;
+
+	private AdvancedCorePlugin plugin;
 
 	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<PluginMessageHandler>();
 

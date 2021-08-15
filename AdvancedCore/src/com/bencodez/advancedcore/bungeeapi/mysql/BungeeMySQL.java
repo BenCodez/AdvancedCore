@@ -43,8 +43,7 @@ public abstract class BungeeMySQL {
 	private Object object4 = new Object();
 
 	private Set<String> uuids = Collections.synchronizedSet(new HashSet<String>());
-	
-	public abstract void debug(SQLException e);
+
 	public BungeeMySQL(Plugin bungee, String tableName, Configuration section) {
 		String tablePrefix = section.getString("Prefix");
 		String hostName = section.getString("Host");
@@ -194,6 +193,8 @@ public abstract class BungeeMySQL {
 		}
 		return false;
 	}
+
+	public abstract void debug(SQLException e);
 
 	public List<String> getColumns() {
 		if (columns == null || columns.size() == 0) {

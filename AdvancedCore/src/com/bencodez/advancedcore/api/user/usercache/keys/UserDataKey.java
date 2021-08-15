@@ -4,17 +4,17 @@ import lombok.Getter;
 
 public class UserDataKey {
 	@Getter
-	private String key;
+	private String columnType;
 
 	@Getter
-	private String columnType;
+	private String key;
+
+	public UserDataKey(String key) {
+		this.key = key;
+	}
 
 	public UserDataKey setColumnType(String columnType) {
 		this.columnType = columnType;
 		return this;
-	}
-
-	public UserDataKey(String key) {
-		this.key = key;
 	}
 }

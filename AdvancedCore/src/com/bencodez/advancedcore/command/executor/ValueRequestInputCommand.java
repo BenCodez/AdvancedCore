@@ -2,8 +2,8 @@ package com.bencodez.advancedcore.command.executor;
 
 import java.util.ArrayList;
 
-import org.bukkit.command.CommandSender;
 import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginIdentifiableCommand;
 import org.bukkit.plugin.Plugin;
 
@@ -21,11 +21,6 @@ public class ValueRequestInputCommand extends Command implements PluginIdentifia
 	}
 
 	@Override
-	public Plugin getPlugin() {
-		return plugin;
-	}
-
-	@Override
 	public boolean execute(CommandSender sender, String alias, String[] args) {
 		for (CommandHandler cmd : plugin.getAdvancedCoreCommandLoader().getValueRequestCommands()) {
 			if (cmd.runCommand(sender, args)) {
@@ -34,5 +29,10 @@ public class ValueRequestInputCommand extends Command implements PluginIdentifia
 		}
 
 		return true;
+	}
+
+	@Override
+	public Plugin getPlugin() {
+		return plugin;
 	}
 }

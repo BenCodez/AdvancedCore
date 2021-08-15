@@ -21,7 +21,7 @@ public abstract class GUIHandler {
 
 	@Getter
 	private CommandSender player;
-	
+
 	@Getter
 	private AdvancedCorePlugin plugin;
 

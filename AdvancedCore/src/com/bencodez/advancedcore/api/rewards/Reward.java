@@ -269,11 +269,7 @@ public class Reward {
 		}
 
 		if (rewardOptions.isCheckTimed()) {
-			if (checkDelayed(user, rewardOptions.getPlaceholders())) {
-				return;
-			}
-
-			if (checkTimed(user, rewardOptions.getPlaceholders())) {
+			if (checkDelayed(user, rewardOptions.getPlaceholders()) || checkTimed(user, rewardOptions.getPlaceholders())) {
 				return;
 			}
 		}

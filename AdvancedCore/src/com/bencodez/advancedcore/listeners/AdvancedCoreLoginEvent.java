@@ -59,7 +59,8 @@ public class AdvancedCoreLoginEvent extends Event {
 	}
 
 	public boolean isUserInStorage() {
-		return AdvancedCorePlugin.getInstance().getUserManager().getAllUUIDs().contains(player.getUniqueId().toString());
+		return AdvancedCorePlugin.getInstance().getUserManager().getAllUUIDs()
+				.contains(player.getUniqueId().toString());
 	}
 
 	/**
