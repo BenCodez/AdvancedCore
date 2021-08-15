@@ -29,9 +29,6 @@ public class UserManager {
 	/** The plugin. */
 	private AdvancedCorePlugin plugin;
 
-	/**
-	 * Instantiates a new user manager.
-	 */
 	public UserManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 		load();

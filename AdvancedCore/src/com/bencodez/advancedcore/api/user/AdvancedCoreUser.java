@@ -59,7 +59,6 @@ public class AdvancedCoreUser {
 	/** The player name. */
 	private String playerName;
 
-	/** The plugin. */
 	@Getter
 	private AdvancedCorePlugin plugin = null;
 
