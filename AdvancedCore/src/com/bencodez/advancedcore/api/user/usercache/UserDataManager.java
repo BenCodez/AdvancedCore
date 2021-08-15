@@ -3,9 +3,14 @@ package com.bencodez.advancedcore.api.user.usercache;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyString;
@@ -31,10 +36,43 @@ public class UserDataManager {
 		keys = new ArrayList<UserDataKey>();
 		timer = new Timer();
 		loadKeys();
+
+		// run every hour to clear some cache
+		timer.scheduleAtFixedRate(new TimerTask() {
+
+			@Override
+			public void run() {
+				clearNonNeededCachedUsers();
+			}
+		}, 1000 * 60 * 3, 1000 * 60 * 60);
 	}
 
 	public void addKey(UserDataKey userDataKey) {
 		keys.add(userDataKey);
+	}
+	
+	public void clearCacheBasic() {
+		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			plugin.getMysql().clearCacheBasic();
+		}
+	}
+
+	public void clearNonNeededCachedUsers() {
+		plugin.devDebug("Checking cache for non online players");
+		ArrayList<UUID> onlineUUIDS = new ArrayList<UUID>();
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			onlineUUIDS.add(p.getUniqueId());
+		}
+		int removed = 0;
+		for (UUID uuid : userDataCache.keySet()) {
+			if (!onlineUUIDS.contains(uuid)) {
+				removeCache(uuid);
+				removed++;
+			}
+		}
+		if (removed > 0) {
+			plugin.devDebug("Removed " + removed + " cached users who are no longer online");
+		}
 	}
 
 	public boolean isCached(UUID uuid) {

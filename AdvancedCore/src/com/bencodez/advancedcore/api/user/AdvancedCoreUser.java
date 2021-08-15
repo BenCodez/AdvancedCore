@@ -360,15 +360,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ArrayList<String> getOfflineRewards() {
-		return getUserData().getStringList(getOfflineRewardsPath(), cacheData, waitForCache);
-	}
-
-	public String getOfflineRewardsPath() {
-		if (plugin.getOptions().isPerServerRewards()) {
-			return "OfflineRewards" + plugin.getOptions().getServer().replace("-", "_");
-		} else {
-			return "OfflineRewards";
-		}
+		return getUserData().getStringList(plugin.getUserManager().getOfflineRewardsPath(), cacheData, waitForCache);
 	}
 
 	/**
@@ -999,7 +991,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void setOfflineRewards(ArrayList<String> offlineRewards) {
-		data.setStringList(getOfflineRewardsPath(), offlineRewards);
+		data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards);
 	}
 
 	public void setPlayerName(String playerName) {

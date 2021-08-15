@@ -261,6 +261,7 @@ public class PlayerUtils {
 
 		for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 			AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+			user.dontCache();
 			String name = user.getData().getString("PlayerName", true);
 			if (name != null && name.equals(playerName)) {
 				plugin.getUuidNameCache().put(uuid, playerName);

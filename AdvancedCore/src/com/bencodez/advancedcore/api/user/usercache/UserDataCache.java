@@ -103,16 +103,10 @@ public class UserDataCache {
 			String key = dataKey.getKey();
 			keys.remove(key);
 			if (data.containsKey(key)) {
-				String type = data.get(key).getTypeName();
-				String value = "";
-				if (data.get(key).isInt()) {
-					value = "" + data.get(key).getInt();
-				} else {
-					value = data.get(key).getString();
-				}
-				manager.getPlugin()
-						.devDebug("Caching " + type + " " + key + " for " + uuid.toString() + ", value: " + value);
-				cache.put(key, data.get(key));
+				DataValue dataValue = data.get(key);
+				manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for "
+						+ uuid.toString() + ", value: " + dataValue.toString());
+				cache.put(key, dataValue);
 			}
 
 		}

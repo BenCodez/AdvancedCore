@@ -22,6 +22,7 @@ import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
 import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
@@ -78,6 +79,7 @@ public class CommandLoader {
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+					user.dontCache();
 					users.add(user);
 
 					Bukkit.getScheduler().runTask(plugin, new Runnable() {
@@ -102,6 +104,7 @@ public class CommandLoader {
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+					user.dontCache();
 					users.add(user);
 				}
 				for (AdvancedCoreUser user : users) {
@@ -145,6 +148,7 @@ public class CommandLoader {
 					ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 					for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 						AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+						user.dontCache();
 						users.add(user);
 					}
 					for (AdvancedCoreUser user : users) {
@@ -186,10 +190,8 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cStarting to clear offline rewards");
-				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(java.util.UUID.fromString(uuid));
-					user.setOfflineRewards(new ArrayList<String>());
-				}
+				plugin.getUserManager().removeAllKeyValues(plugin.getUserManager().getOfflineRewardsPath(),
+						DataType.STRING);
 				sendMessage(sender, "&cFinished clearing offline rewards");
 			}
 		});
@@ -226,25 +228,6 @@ public class CommandLoader {
 				UserGUI.getInstance().openUserGUI((Player) sender, args[1]);
 			}
 		});
-
-		/*
-		 * cmds.add(new CommandHandler(new String[] { "UserEditValue", "(player)",
-		 * "(string)", "(string)" }, permPrefix + ".UserEditValue", "Edit user data",
-		 * false) {
-		 *
-		 * @Override public void execute(CommandSender sender, String[] args) { User
-		 * user = plugin.getUserManager().getUser(args[1]);
-		 * user.getData().setString(args[2], args[3]); sendMessage(sender, "&cSet " +
-		 * args[2] + " to " + args[3] + " for " + args[1]); } }); cmds.add(new
-		 * CommandHandler(new String[] { "UserEditValue", "All", "(string)", "(string)"
-		 * }, permPrefix + ".UserEditValue", "Edit all user data", false) {
-		 *
-		 * @Override public void execute(CommandSender sender, String[] args) { for
-		 * (String uuid : plugin.getUserManager().getAllUUIDs()) { User user =
-		 * plugin.getUserManager().getUser(UUID.fromString(uuid));
-		 * user.getData().setString(args[2], args[3]); } sendMessage(sender, "&cSet " +
-		 * args[2] + " to " + args[3] + " for " + args[1]); } });
-		 */
 
 		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report",
 				"Create a zip file to send for debuging") {
@@ -291,7 +274,7 @@ public class CommandLoader {
 						sender.sendMessage(StringParser.getInstance().colorize("&cMySQL not loaded"));
 					}
 				}
-				
+
 				plugin.getUserManager().getDataManager().clearCache();
 
 				sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared"));
@@ -410,6 +393,7 @@ public class CommandLoader {
 				}
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+					user.dontCache();
 					user.getData().setString(args[3], data);
 
 				}

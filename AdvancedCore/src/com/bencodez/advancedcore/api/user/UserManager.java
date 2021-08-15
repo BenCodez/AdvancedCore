@@ -215,6 +215,14 @@ public class UserManager {
 		}
 	}
 
+	public String getOfflineRewardsPath() {
+		if (plugin.getOptions().isPerServerRewards()) {
+			return "OfflineRewards" + plugin.getOptions().getServer().replace("-", "_");
+		} else {
+			return "OfflineRewards";
+		}
+	}
+
 	public void removeAllKeyValues(String key, DataType type) {
 		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
 			plugin.getSQLiteUserTable().wipeColumnData(key);

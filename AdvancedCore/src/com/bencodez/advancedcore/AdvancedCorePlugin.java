@@ -831,10 +831,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public abstract void onUnLoad();
 
-	public boolean shouldNotAlwaysCacheData() {
-		return !(getStorageType().equals(UserStorage.MYSQL) && this.bungeeChannel != null);
-	}
-
 	public void registerBungeeChannels(String name) {
 		this.bungeeChannel = name;
 		getServer().getMessenger().registerOutgoingPluginChannel(this, name);
