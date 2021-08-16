@@ -148,6 +148,18 @@
 			<id>velocity</id>
 			<url>https://nexus.velocitypowered.com/repository/maven-public/</url>
 		</repository>
+		<repository>
+			<id>dmulloy2-repo</id>
+			<url>https://repo.dmulloy2.net/repository/public/</url>
+		</repository>
+		<repository>
+			<id>codemc-repo</id>
+			<url>https://repo.codemc.org/repository/maven-public/</url>
+		</repository>
+		<repository>
+			<id>bencodez repo</id>
+			<url>https://nexus.bencodez.com/repository/maven-public/</url>
+		</repository>
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -157,11 +169,10 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>net.milkbowl.vault</groupId>
-			<artifactId>VaultAPI</artifactId>
+			<groupId>net.milkbowl</groupId>
+			<artifactId>vault</artifactId>
 			<version>1.6</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/Jars/Vault.jar</systemPath>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>me.clip</groupId>
@@ -185,10 +196,9 @@
 		</dependency>
 		<dependency>
 			<groupId>com.comphenix.protocol</groupId>
-			<artifactId>ProtocolLib-API</artifactId>
-			<version>LATEST</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/Jars/ProtocolLib.jar</systemPath>
+			<artifactId>ProtocolLib</artifactId>
+			<version>4.6.0</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -199,9 +209,8 @@
 		<dependency>
 			<groupId>fr.xephi</groupId>
 			<artifactId>authme</artifactId>
-			<version>LATEST</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/Jars/AuthMe-5.4.0.jar</systemPath>
+			<version>5.6.0-SNAPSHOT</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>xyz.upperlevel.spigot.book</groupId>
@@ -210,10 +219,9 @@
 		</dependency>
 		<dependency>
 			<groupId>com.cmi</groupId>
-			<artifactId>CMIAPI</artifactId>
-			<version>LATEST</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/Jars/CMIAPI7.6.2.0.jar</systemPath>
+			<artifactId>cmiapi</artifactId>
+			<version>8.7.8.2</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>net.md-5</groupId>
