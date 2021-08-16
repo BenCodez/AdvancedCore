@@ -497,4 +497,8 @@ public abstract class BungeeMySQL {
 		}
 
 	}
+
+	public void shutdown() {
+		mysql.disconnect();
+	}
 }

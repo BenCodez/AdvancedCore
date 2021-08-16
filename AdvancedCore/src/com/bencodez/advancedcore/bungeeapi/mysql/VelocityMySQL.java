@@ -493,4 +493,8 @@ public abstract class VelocityMySQL {
 		}
 
 	}
+
+	public void shutDown() {
+		mysql.disconnect();
+	}
 }
