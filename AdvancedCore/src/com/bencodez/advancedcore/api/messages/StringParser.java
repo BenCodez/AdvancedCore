@@ -17,20 +17,21 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Text;
+import net.md_5.bungee.api.chat.BaseComponent;
 
 public class StringParser {
-	private static StringParser instance = new StringParser();
+	private static final StringParser instance = new StringParser();
 
-	public static StringParser getInstance() {
-		return instance;
-	}
+	private static final HoverEventSupport hoverEventSupport = HoverEventSupport.findInstance();
 
 	public final char COLOR_CHAR = ChatColor.COLOR_CHAR;
 
 	private StringParser() {
+	}
+
+	public static StringParser getInstance() {
+		return instance;
 	}
 
 	/**
@@ -175,7 +176,8 @@ public class StringParser {
 				}
 
 				if (type.equalsIgnoreCase("hover")) {
-					t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(typeData)));
+					BaseComponent[] hoverContent = TextComponent.fromLegacyText(typeData);
+					t.setHoverEvent(hoverEventSupport.createHoverEvent(hoverContent));
 				} else if (type.equalsIgnoreCase("command")) {
 					t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, typeData));
 				} else if (type.equalsIgnoreCase("url")) {
