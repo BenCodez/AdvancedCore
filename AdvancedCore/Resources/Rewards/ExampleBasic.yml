@@ -64,6 +64,9 @@ Items:
     # use vanilla names
     Enchants:
       unbreaking: 1
+	  
+    # Set glowing effect on item (enchanted item effect)
+    Glow: false
       
     # Skull options
     #Skull: 'PLAYERNAME'

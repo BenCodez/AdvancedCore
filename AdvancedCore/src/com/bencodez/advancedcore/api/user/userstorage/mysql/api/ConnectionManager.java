@@ -154,8 +154,9 @@ public class ConnectionManager {
 		return useSSL;
 	}
 
-	public boolean open() {
+	private String mysqlDriver = "";
 
+	public String getMysqlDriverName() {
 		String className = "org.mariadb.jdbc.Driver";
 
 		try {
@@ -165,15 +166,24 @@ public class ConnectionManager {
 			try {
 				Class.forName(className);
 			} catch (ClassNotFoundException ignored1) {
-				className = "com.mysql.jdbc.Driver";
+				try {
+					className = "com.mysql.jdbc.Driver";
+					Class.forName(className);
+				} catch (ClassNotFoundException ignored2) {
+				}
 			}
+		}
+		return className;
+	}
+
+	public boolean open() {
+		if (mysqlDriver.isEmpty()) {
+			mysqlDriver = getMysqlDriverName();
 		}
 
 		try {
-			Class.forName(className);
-
 			HikariConfig config = new HikariConfig();
-			config.setDriverClassName(className);
+			config.setDriverClassName(mysqlDriver);
 			config.setUsername(username);
 			config.setPassword(password);
 			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=" + useSSL
