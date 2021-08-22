@@ -1548,7 +1548,7 @@ public class RewardHandler {
 				return null;
 
 			}
-		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Temp") {
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("TempPermission") {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
