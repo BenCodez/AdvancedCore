@@ -78,6 +78,8 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		helpMessage = "Unknown Help Message";
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
+
 	}
 
 	/**
@@ -91,6 +93,7 @@ public abstract class CommandHandler {
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
 	}
 
 	/**
@@ -106,6 +109,7 @@ public abstract class CommandHandler {
 		this.perm = perm;
 		this.helpMessage = helpMessage;
 		this.allowConsole = allowConsole;
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
 	}
 
 	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole, boolean forceConsole) {
@@ -114,6 +118,7 @@ public abstract class CommandHandler {
 		this.helpMessage = helpMessage;
 		this.allowConsole = allowConsole;
 		this.forceConsole = forceConsole;
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
 	}
 
 	/**

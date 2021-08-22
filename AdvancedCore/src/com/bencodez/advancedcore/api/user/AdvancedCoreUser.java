@@ -188,10 +188,12 @@ public class AdvancedCoreUser {
 		}
 	}
 
-	public void removePermission(String perm) {
+	public void removePermission(String permission) {
 		if (plugin.getUserManager().getPerms().containsKey(UUID.fromString(getUUID()))) {
-			plugin.getUserManager().getPerms().get(UUID.fromString(getUUID())).unsetPermission(perm);
-			plugin.debug("Removing temp permission " + perm + " to " + getPlayerName());
+			for (String perm : permission.split(Pattern.quote("|"))) {
+				plugin.getUserManager().getPerms().get(UUID.fromString(getUUID())).unsetPermission(perm);
+				plugin.debug("Removing temp permission " + perm + " to " + getPlayerName());
+			}
 		}
 	}
 
