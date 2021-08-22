@@ -329,7 +329,8 @@ DisplayItem:
   Name: '&aAdvancedReward'
   Amount: 1
     
-# Ability for server option, very rare cases
+# Ability for server option
+# Makes sure the correct server gets the reward
 #Server: 'Minecraft Server'
 
 #############################################

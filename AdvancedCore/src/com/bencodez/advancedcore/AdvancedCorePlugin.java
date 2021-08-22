@@ -44,6 +44,7 @@ import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.PluginUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
+import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
@@ -188,6 +189,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private String advancedCoreBuildNumber = "NOTSET";
+	
+	@Getter
+	private PermissionHandler permissionHandler;
 
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
@@ -459,6 +463,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		// load usermanager
 		getUserManager();
+		permissionHandler = new PermissionHandler(this);
 
 		loadConfig(true);
 

@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.TimerTask;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -22,7 +21,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
-import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -168,33 +166,15 @@ public class AdvancedCoreUser {
 	}
 
 	public void addPermission(String permission) {
-		if (permission.isEmpty()) {
-			plugin.debug("Permission is empty");
-			return;
-		}
-		for (String perm : permission.split(Pattern.quote("|"))) {
-			if (!plugin.getUserManager().getPerms().containsKey(UUID.fromString(getUUID()))) {
-				Player player = getPlayer();
-				if (player != null) {
-					PermissionAttachment attachment = player.addAttachment(plugin);
-					attachment.setPermission(perm, true);
-					plugin.getUserManager().getPerms().put(player.getUniqueId(), attachment);
-					plugin.debug("Giving temp permission " + perm + " to " + getPlayerName());
-				}
-			} else {
-				plugin.getUserManager().getPerms().get(UUID.fromString(getUUID())).setPermission(perm, true);
-				plugin.debug("Giving temp permission " + perm + " to " + getPlayerName());
-			}
-		}
+		plugin.getPermissionHandler().addPermission(getPlayer(), permission);
+	}
+
+	public void addPermission(String permission, long delay) {
+		plugin.getPermissionHandler().addPermission(getPlayer(), permission, delay);
 	}
 
 	public void removePermission(String permission) {
-		if (plugin.getUserManager().getPerms().containsKey(UUID.fromString(getUUID()))) {
-			for (String perm : permission.split(Pattern.quote("|"))) {
-				plugin.getUserManager().getPerms().get(UUID.fromString(getUUID())).unsetPermission(perm);
-				plugin.debug("Removing temp permission " + perm + " to " + getPlayerName());
-			}
-		}
+		plugin.getPermissionHandler().removePermission(UUID.fromString(getUUID()), getPlayerName(), permission);
 	}
 
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
