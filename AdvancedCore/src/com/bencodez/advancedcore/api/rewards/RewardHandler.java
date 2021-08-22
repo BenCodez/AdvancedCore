@@ -56,6 +56,7 @@ import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMoney;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditPotions;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditSound;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditSpecialChance;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTempPermission;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTitle;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectBoolean;
@@ -1526,6 +1527,44 @@ public class RewardHandler {
 						plugin.reloadAdvancedCore(false);
 					}
 				}.addLore("Execute random reward"))).postReward());
+
+		injectedRewards.add(new RewardInjectConfigurationSection("TempPermission") {
+
+			@Override
+			public String onRewardRequested(Reward r, AdvancedCoreUser user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				String perm = section.getString("Permission", "");
+				int time = section.getInt("Expiration");
+				if (!perm.isEmpty()) {
+					if (time > 0) {
+						user.addPermission(perm, time);
+					} else {
+						extraDebug("Time is 0");
+					}
+				} else {
+					extraDebug("Permission is empty");
+				}
+
+				return null;
+
+			}
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Temp") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditTempPermission() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+
+		}.addLore("Give temporary permission"))).priority(90).postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedRandomReward") {
 
