@@ -2,11 +2,13 @@ package com.bencodez.advancedcore.api.user;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.permissions.PermissionAttachment;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
@@ -28,6 +30,9 @@ public class UserManager {
 
 	/** The plugin. */
 	private AdvancedCorePlugin plugin;
+	
+	@Getter
+	private HashMap<UUID, PermissionAttachment> perms = new HashMap<UUID, PermissionAttachment>();
 
 	public UserManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
