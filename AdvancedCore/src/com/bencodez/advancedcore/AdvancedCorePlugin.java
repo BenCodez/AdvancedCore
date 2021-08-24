@@ -825,6 +825,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		unRegisterValueRequest();
 
 		hologramHandler.onShutDown();
+		
+		if (getPermissionHandler() != null) {
+			getPermissionHandler().shutDown();
+		}
 
 		// Thread.getInstance().getThread().interrupt();
 		// FileThread.getInstance().getThread().interrupt();

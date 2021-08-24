@@ -1,10 +1,15 @@
 package com.bencodez.advancedcore.api.permissions;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachment;
 
@@ -13,6 +18,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import lombok.Getter;
 
 public class PermissionHandler {
+	@Getter
 	private AdvancedCorePlugin plugin;
 
 	@Getter
@@ -21,56 +27,85 @@ public class PermissionHandler {
 	@Getter
 	private Timer timer = new Timer();
 
+	@Getter
+	private HashMap<UUID, PlayerPermissionHandler> permsToAdd;
+
 	public PermissionHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
+		permsToAdd = new HashMap<UUID, PlayerPermissionHandler>();
+		if (plugin.getServerDataFile().getData().isConfigurationSection("TimedPermissions")) {
+			for (String string : plugin.getServerDataFile().getData().getConfigurationSection("TimedPermissions")
+					.getKeys(false)) {
+				UUID uuid = UUID.fromString(string);
+				List<String> list = plugin.getServerDataFile().getData().getStringList("TimedPermissions." + string);
+				for (String str : list) {
+					String[] data = str.split(Pattern.quote("%line%"));
+					if (data.length > 1) {
+						String perm = data[0];
+						String longStr = data[1];
+						long delay = Long.valueOf(longStr).longValue() - System.currentTimeMillis();
+						if (delay > 0) {
+							plugin.debug("Adding permission " + perm + " to " + string);
+							addPermission(uuid, perm, delay);
+
+						}
+					}
+				}
+			}
+			plugin.getServerDataFile().getData().set("TimedPermissions", null);
+		}
+	}
+
+	public void addPermission(UUID uuid, String permission) {
+		if (permission.isEmpty()) {
+			plugin.debug("Permission is empty");
+			return;
+		}
+		for (String perm : permission.split(Pattern.quote("|"))) {
+			if (getPerms().contains(uuid)) {
+				getPerms().get(uuid).addPerm(perm);
+			} else {
+				Player p = Bukkit.getPlayer(uuid);
+				if (p != null) {
+					PermissionAttachment attachment = p.addAttachment(plugin);
+					PlayerPermissionHandler handle = new PlayerPermissionHandler(uuid, attachment, this);
+					plugin.getPermissionHandler().getPerms().put(uuid, handle.addPerm(perm));
+				} else {
+					getPermsToAdd().put(uuid, new PlayerPermissionHandler(uuid, null, this).addOfflinePerm(perm, -1));
+				}
+			}
+		}
+	}
+
+	public void addPermission(UUID uuid, String permission, long delay) {
+		if (permission.isEmpty()) {
+			plugin.debug("Permission is empty");
+			return;
+		}
+		for (String perm : permission.split(Pattern.quote("|"))) {
+			if (getPerms().contains(uuid)) {
+				getPerms().get(uuid).addPerm(perm);
+			} else {
+				Player p = Bukkit.getPlayer(uuid);
+				if (p != null) {
+					PermissionAttachment attachment = p.addAttachment(plugin);
+					PlayerPermissionHandler handle = new PlayerPermissionHandler(uuid, attachment, this);
+					plugin.getPermissionHandler().getPerms().put(uuid, handle.addExpiration(perm, delay));
+				} else {
+					getPermsToAdd().put(uuid,
+							new PlayerPermissionHandler(uuid, null, this).addOfflinePerm(perm, delay));
+				}
+			}
+
+		}
 	}
 
 	public void addPermission(Player player, String permission) {
-		if (permission.isEmpty()) {
-			plugin.debug("Permission is empty");
-			return;
-		}
-		if (player == null) {
-			plugin.debug("Player is null, not adding perm");
-			return;
-		}
-
-		for (String perm : permission.split(Pattern.quote("|"))) {
-			if (!plugin.getPermissionHandler().getPerms().containsKey(player.getUniqueId())) {
-				PermissionAttachment attachment = player.addAttachment(plugin);
-				PlayerPermissionHandler handle = new PlayerPermissionHandler(player.getUniqueId(), attachment, this);
-				handle.addPerm(perm);
-				plugin.getPermissionHandler().getPerms().put(player.getUniqueId(), handle);
-				plugin.debug("Giving temp permission " + perm + " to " + player.getName());
-			} else {
-				plugin.getPermissionHandler().getPerms().get(player.getUniqueId()).addPerm(perm);
-				plugin.debug("Giving temp permission " + perm + " to " + player.getName());
-			}
-		}
+		addPermission(player.getUniqueId(), permission);
 	}
 
 	public void addPermission(Player player, String permission, long expiration) {
-		if (permission.isEmpty()) {
-			plugin.debug("Permission is empty");
-			return;
-		}
-		if (player == null) {
-			plugin.debug("Player is null, not adding perm");
-			return;
-		}
-
-		for (String perm : permission.split(Pattern.quote("|"))) {
-			if (!plugin.getPermissionHandler().getPerms().containsKey(player.getUniqueId())) {
-				PermissionAttachment attachment = player.addAttachment(plugin);
-				PlayerPermissionHandler handle = new PlayerPermissionHandler(player.getUniqueId(), attachment, this);
-				handle.addExpiration(perm, expiration);
-				plugin.getPermissionHandler().getPerms().put(player.getUniqueId(), handle);
-				plugin.debug("Giving temp permission " + perm + " to " + player.getName());
-			} else {
-				plugin.getPermissionHandler().getPerms().get(player.getUniqueId()).addExpiration(perm, expiration);
-				plugin.debug("Giving temp permission " + perm + " to " + player.getName());
-			}
-		}
+		addPermission(player.getUniqueId(), permission, expiration);
 	}
 
 	public void removePermission(UUID uuid, String playerName, String permission) {
@@ -84,5 +119,28 @@ public class PermissionHandler {
 
 	public void removePermission(UUID uuid) {
 		getPerms().remove(uuid);
+	}
+
+	public void shutDown() {
+		for (PlayerPermissionHandler handle : getPerms().values()) {
+			ArrayList<String> list = new ArrayList<String>();
+			for (Entry<String, Long> entry : handle.getTimedPermissions().entrySet()) {
+				list.add(entry.getKey() + "%line%" + entry.getValue().longValue());
+			}
+			if (list.size() > 0) {
+				plugin.getServerDataFile().getData().set("TimedPermissions." + handle.getUuid().toString(), list);
+			}
+		}
+		plugin.getServerDataFile().saveData();
+	}
+
+	public void login(Player player) {
+		if (permsToAdd.containsKey(player.getUniqueId())) {
+			PlayerPermissionHandler handle = permsToAdd.get(player.getUniqueId());
+			handle.setAttachment(player.addAttachment(plugin));
+			handle.onLogin(player);
+			getPerms().put(player.getUniqueId(), handle);
+			permsToAdd.remove(player.getUniqueId());
+		}
 	}
 }

@@ -70,6 +70,10 @@ public class PlayerJoinEvent implements Listener {
 				if (player != null) {
 					plugin.debug(
 							"Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+					if (plugin.getPermissionHandler() != null) {
+						plugin.getPermissionHandler().login(player);
+					}
+					
 					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(player);
 					Bukkit.getPluginManager().callEvent(login);
 

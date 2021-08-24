@@ -93,7 +93,7 @@ RequirePermission: false
 # Permission that must be required if RequirePermission is true
 Permission: 'AdvancedCore.Reward.ExampleAdvanced'
 
-#TempPermssion:
+#TempPermission:
 #  Permission: 'PERMISSIONHERE'
 #  # Time in seconds
 #  Expiration: 60
