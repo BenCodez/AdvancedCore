@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -94,8 +93,7 @@ public class SkullHandler {
 
 	@SuppressWarnings("deprecation")
 	public ItemStack getSkull(String playerName) {
-
-		return new ItemBuilder(Material.PLAYER_HEAD).setSkullOwner(playerName).toItemStack();
+		return new ItemBuilder("PLAYER_HEAD").setSkullOwner(playerName).toItemStack();
 
 	}
 
