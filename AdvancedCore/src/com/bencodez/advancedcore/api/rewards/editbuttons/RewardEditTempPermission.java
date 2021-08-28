@@ -14,8 +14,8 @@ public abstract class RewardEditTempPermission extends RewardEdit {
 		EditGUI inv = new EditGUI("Edit TempPermission: " + reward.getName());
 		inv.addData("Reward", reward);
 
-		inv.addButton(getStringButton("Permission", reward));
-		inv.addButton(getIntButton("Expiration", reward));
+		inv.addButton(getStringButton("TempPermission.Permission", reward));
+		inv.addButton(getIntButton("TempPermission.Expiration", reward));
 
 		inv.addButton(getBackButton(reward));
 
