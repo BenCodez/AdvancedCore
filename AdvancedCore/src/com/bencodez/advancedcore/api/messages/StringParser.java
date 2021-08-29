@@ -14,15 +14,17 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
+import lombok.Getter;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.BaseComponent;
 
 public class StringParser {
 	private static final StringParser instance = new StringParser();
 
+	@Getter
 	private static final HoverEventSupport hoverEventSupport = HoverEventSupport.findInstance();
 
 	public final char COLOR_CHAR = ChatColor.COLOR_CHAR;

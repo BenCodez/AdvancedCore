@@ -206,7 +206,8 @@ public abstract class CommandHandler {
 		}
 		TextComponent txt = StringParser.getInstance().stringToComp(line);
 		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
-		txt.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(ChatColor.AQUA + getHelpMessage())));
+		txt.setHoverEvent(StringParser.getHoverEventSupport()
+				.createHoverEvent(TextComponent.fromLegacyText(ChatColor.AQUA + getHelpMessage())));
 		return txt;
 
 	}
