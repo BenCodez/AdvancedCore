@@ -290,10 +290,12 @@ public class ItemBuilder {
 
 	public ItemBuilder(String material) {
 		String materialStr = material;
-		if (material.equalsIgnoreCase("player_head")) {
-			materialStr = "SKULL";
-		} else if (NMSManager.getInstance().isVersion("1.12")) {
-			materialStr = "PAPER";
+		if (NMSManager.getInstance().isVersion("1.12")) {
+			if (material.equalsIgnoreCase("player_head")) {
+				materialStr = "SKULL";
+			} else {
+				materialStr = "PAPER";
+			}
 		}
 		try {
 			this.is = new ItemStack(Material.valueOf(materialStr));

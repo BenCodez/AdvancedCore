@@ -240,7 +240,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "AddTempPermissions", "(Text)", "(Numer)" },
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "AddTempPermissions", "(Text)", "(Number)" },
 				permPrefix + ".AddTempPermission", "Add temp permission for number of seconds") {
 
 			@Override
