@@ -229,6 +229,39 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "RemoveTempPermissions" },
+				permPrefix + ".RemoveTempPermission", "Remove temp permissions") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				plugin.getPermissionHandler()
+						.removePermission(UUID.fromString(PlayerUtils.getInstance().getUUID(args[1])));
+				sendMessage(sender, "&cRemoved temporary permissions from " + args[1]);
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "AddTempPermissions", "(Text)", "(Numer)" },
+				permPrefix + ".AddTempPermission", "Add temp permission for number of seconds") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				plugin.getPermissionHandler().addPermission(UUID.fromString(PlayerUtils.getInstance().getUUID(args[1])),
+						args[3], Integer.valueOf(args[4]));
+				sendMessage(sender, "&cAdded temporary permission to " + args[1] + " for " + args[4]);
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "AddTempPermissions", "(Text)" },
+				permPrefix + ".AddTempPermission", "Add temp permission") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				plugin.getPermissionHandler().addPermission(UUID.fromString(PlayerUtils.getInstance().getUUID(args[1])),
+						args[3]);
+				sendMessage(sender, "&cAdded temporary permission to " + args[1]);
+			}
+		});
+
 		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report",
 				"Create a zip file to send for debuging") {
 
