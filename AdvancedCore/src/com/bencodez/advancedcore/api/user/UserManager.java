@@ -147,7 +147,7 @@ public class UserManager {
 	 * @return the user
 	 */
 	public AdvancedCoreUser getUser(Player player) {
-		return getUser(player.getName());
+		return getUser(player.getUniqueId(), player.getName());
 	}
 
 	/**
