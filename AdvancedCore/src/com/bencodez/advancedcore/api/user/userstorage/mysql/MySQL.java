@@ -491,7 +491,7 @@ public class MySQL {
 					playerName = col.getValue().toString();
 				}
 			}
-			if (playerName.isEmpty()) {
+			if (playerName == null || playerName.isEmpty()) {
 				names.add(PlayerUtils.getInstance().getPlayerName(
 						plugin.getUserManager().getUser(java.util.UUID.fromString(index), false), index));
 			} else {
