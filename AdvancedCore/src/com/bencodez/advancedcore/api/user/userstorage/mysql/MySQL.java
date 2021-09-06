@@ -41,8 +41,6 @@ public class MySQL {
 	// ConcurrentMap<String, ArrayList<Column>> table = new
 	// ConcurrentHashMap<String, ArrayList<Column>>();
 
-	private int maxSize = 0;
-
 	private com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL mysql;
 
 	private String name;
@@ -78,7 +76,6 @@ public class MySQL {
 		}
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		boolean publicKeyRetrieval = section.getBoolean("PublicKeyRetrieval", false);
-		this.maxSize = section.getInt("MaxSize", -1);
 		if (!section.getString("Name", "").isEmpty()) {
 			tableName = section.getString("Name", "");
 		}
@@ -346,10 +343,6 @@ public class MySQL {
 			result.add(new Column(col, DataType.STRING));
 		}
 		return result;
-	}
-
-	public int getMaxSize() {
-		return maxSize;
 	}
 
 	public String getName() {
