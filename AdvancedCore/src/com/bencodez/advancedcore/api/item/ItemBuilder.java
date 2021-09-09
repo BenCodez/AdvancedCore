@@ -911,8 +911,10 @@ public class ItemBuilder {
 			}
 		}
 		ItemMeta im = is.getItemMeta();
-		im.setLore(ArrayUtils.getInstance().colorize(list));
-		is.setItemMeta(im);
+		if (im != null) {
+			im.setLore(ArrayUtils.getInstance().colorize(list));
+			is.setItemMeta(im);
+		}
 		return this;
 	}
 
