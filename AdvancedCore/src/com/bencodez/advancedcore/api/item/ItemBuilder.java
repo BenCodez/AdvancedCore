@@ -941,8 +941,10 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder setName(String name) {
 		ItemMeta im = is.getItemMeta();
-		im.setDisplayName(StringParser.getInstance().colorize(name));
-		is.setItemMeta(im);
+		if (im != null) {
+			im.setDisplayName(StringParser.getInstance().colorize(name));
+			is.setItemMeta(im);
+		}
 		return this;
 	}
 
