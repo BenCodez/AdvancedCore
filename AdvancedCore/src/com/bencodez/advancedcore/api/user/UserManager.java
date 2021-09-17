@@ -59,11 +59,11 @@ public class UserManager {
 				}
 			}
 		}
-		return names;
+		return ArrayUtils.getInstance().removeDuplicates(names);
 	}
 
 	public ArrayList<String> getAllUUIDs() {
-		return getAllUUIDs(plugin.getStorageType());
+		return ArrayUtils.getInstance().removeDuplicates(getAllUUIDs(plugin.getStorageType()));
 	}
 
 	public ArrayList<String> getAllUUIDs(UserStorage storage) {
