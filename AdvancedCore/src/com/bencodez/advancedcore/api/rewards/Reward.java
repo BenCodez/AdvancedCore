@@ -269,7 +269,8 @@ public class Reward {
 		}
 
 		if (rewardOptions.isCheckTimed()) {
-			if (checkDelayed(user, rewardOptions.getPlaceholders()) || checkTimed(user, rewardOptions.getPlaceholders())) {
+			if (checkDelayed(user, rewardOptions.getPlaceholders())
+					|| checkTimed(user, rewardOptions.getPlaceholders())) {
 				return;
 			}
 		}
@@ -330,7 +331,8 @@ public class Reward {
 
 		// give reward
 		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
-			plugin.debug(name + ": Passed requirements, attempting to give to " + user.getPlayerName());
+			plugin.debug(name + ": Passed requirements, attempting to give to " + user.getPlayerName() + "/"
+					+ user.getUUID());
 			giveRewardUser(user, rewardOptions.getPlaceholders(), rewardOptions);
 		}
 	}

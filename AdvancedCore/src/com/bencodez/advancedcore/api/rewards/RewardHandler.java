@@ -428,7 +428,8 @@ public class RewardHandler {
 						"Not giving empty list of rewards from " + path + ", Options: " + rewardOptions.toString());
 			} else {
 				plugin.debug("Giving list of rewards (" + ArrayUtils.getInstance().makeStringList(rewards) + ") from "
-						+ path + ", Options: " + rewardOptions.toString());
+						+ path + ", Options: " + rewardOptions.toString() + " to " + user.getPlayerName() + "/"
+						+ user.getUUID());
 				for (String reward : rewards) {
 					giveReward(user, reward, rewardOptions);
 				}
@@ -450,7 +451,8 @@ public class RewardHandler {
 
 				Reward reward = direct.getReward();
 				if (reward != null) {
-					plugin.debug("Giving directlydefined reward " + path + ", Options: " + rewardOptions.toString());
+					plugin.debug("Giving directlydefined reward " + path + ", Options: " + rewardOptions.toString()
+							+ " to " + user.getPlayerName() + "/" + user.getUUID());
 					giveReward(user, reward, rewardOptions);
 				} else {
 					plugin.debug("Failed to give directlydefined reward " + path + ", Options: "
@@ -460,14 +462,15 @@ public class RewardHandler {
 				ConfigurationSection section = data.getConfigurationSection(path);
 				Reward reward = new Reward(rewardName, section);
 				reward.checkRewardFile();
-				plugin.debug("Giving reward " + path + ", Options: " + rewardOptions.toString());
+				plugin.debug("Giving reward " + path + ", Options: " + rewardOptions.toString() + " to "
+						+ user.getPlayerName() + "/" + user.getUUID());
 				giveReward(user, reward, rewardOptions);
 			}
 		} else {
 			String reward = data.getString(path, "");
 			if (!reward.isEmpty()) {
-				plugin.debug(
-						"Giving reward " + reward + " from path " + path + ", Options: " + rewardOptions.toString());
+				plugin.debug("Giving reward " + reward + " from path " + path + ", Options: " + rewardOptions.toString()
+						+ " to " + user.getPlayerName() + "/" + user.getUUID());
 				giveReward(user, reward, rewardOptions);
 			} else {
 				plugin.debug("Not giving reward " + reward + " from path " + path + ", Options: "
