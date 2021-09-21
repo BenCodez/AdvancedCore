@@ -124,6 +124,8 @@ public class ItemBuilder {
 					if (NMSManager.getInstance().isVersion("1.12")) {
 						if (materialStr.equalsIgnoreCase("player_head")) {
 							materialStr = "SKULL";
+						} else if (materialStr.equalsIgnoreCase("CLOCK")) {
+							materialStr = "WATCH";
 						}
 					}
 
