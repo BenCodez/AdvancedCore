@@ -23,7 +23,6 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 
@@ -121,12 +120,7 @@ public class UserGUI {
 				EditGUI inv = new EditGUI("Edit Data, click to change");
 				final AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
 				for (final String key : user.getData().getKeys()) {
-					String value = user.getData().getString(key, true);
-					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
-						if (plugin.getMysql().isIntColumn(key)) {
-							value = "" + user.getData().getInt(key, true);
-						}
-					}
+					String value = user.getData().getValue(key);
 					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
 							new EditGUIValueString(key, value) {
 
@@ -152,12 +146,7 @@ public class UserGUI {
 			public void onClick(ClickEvent clickEvent) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
 				for (String key : user.getData().getKeys()) {
-					String str = user.getData().getString(key, true);
-					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
-						if (plugin.getMysql().isIntColumn(key)) {
-							str = "" + user.getData().getInt(key, true);
-						}
-					}
+					String str = user.getData().getValue(key);
 					user.sendMessage("&c&l" + key + " &c" + str);
 				}
 			}
