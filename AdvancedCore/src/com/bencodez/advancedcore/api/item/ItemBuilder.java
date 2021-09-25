@@ -421,14 +421,16 @@ public class ItemBuilder {
 	public ItemBuilder addLoreLine(String line) {
 		if (line != null) {
 			ItemMeta im = is.getItemMeta();
-			List<String> lore = new ArrayList<>();
-			if (im.hasLore()) {
-				lore = new ArrayList<>(im.getLore());
+			if (im != null) {
+				List<String> lore = new ArrayList<>();
+				if (im.hasLore()) {
+					lore = new ArrayList<>(im.getLore());
+				}
+				for (String str : line.split("%NewLine%")) {
+					lore.add(str);
+				}
+				setLore(lore);
 			}
-			for (String str : line.split("%NewLine%")) {
-				lore.add(str);
-			}
-			setLore(lore);
 		}
 		return this;
 	}
@@ -442,9 +444,12 @@ public class ItemBuilder {
 	 */
 	public ItemBuilder addLoreLine(String line, int pos) {
 		ItemMeta im = is.getItemMeta();
-		List<String> lore = new ArrayList<>(im.getLore());
-		lore.set(pos, line);
-		return setLore(lore);
+		if (im != null) {
+			List<String> lore = new ArrayList<>(im.getLore());
+			lore.set(pos, line);
+			return setLore(lore);
+		}
+		return this;
 	}
 
 	public ItemBuilder addPlaceholder(HashMap<String, String> placeholders) {
