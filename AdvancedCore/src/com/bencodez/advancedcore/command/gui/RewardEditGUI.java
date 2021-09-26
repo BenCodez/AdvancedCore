@@ -1,8 +1,11 @@
 package com.bencodez.advancedcore.command.gui;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -118,6 +121,15 @@ public class RewardEditGUI {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				openRewardGUIRewards(clickEvent.getPlayer(), rewardEditData, rewardName, true);
+			}
+		});
+
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.ANVIL).setName("&cCopy from existing reward")
+				.addLoreLine("&cDoes not remove existing rewards currently set")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openRewardsGUICopy(clickEvent.getPlayer(), rewardEditData, rewardName);
 			}
 		});
 
@@ -305,6 +317,67 @@ public class RewardEditGUI {
 		}
 
 		inv.openInventory(player);
+	}
+
+	public void openRewardsGUICopy(Player player, RewardEditData rewardEditData, String rewardName) {
+		if (!player.hasPermission(AdvancedCorePlugin.getInstance().getOptions().getPermPrefix() + ".RewardEdit")) {
+			player.sendMessage("You do not have enough permission to do this");
+			return;
+		}
+		BInventory inv = new BInventory("CopyRewards");
+		inv.addData("masterreward", rewardEditData);
+		for (Reward reward : RewardHandler.getInstance().getRewards()) {
+			if (!reward.getConfig().isDirectlyDefinedReward()) {
+				ArrayList<String> lore = new ArrayList<String>();
+				if (reward.getConfig().isDirectlyDefinedReward()) {
+					lore.add("&cReward is directly defined");
+				}
+
+				inv.addButton(new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),
+						new ItemStack(Material.STONE)) {
+
+					@Override
+					public void onClick(ClickEvent event) {
+						new RewardGUIConfirmation(plugin, player, "Confirm copy reward?") {
+
+							@Override
+							public void onDeny(Player p) {
+								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
+								rewardEditData.reOpenEditGUI(player);
+							}
+
+							@Override
+							public void onConfirm(Player p) {
+								Reward reward = (Reward) getButton().getData("Reward");
+								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
+								for (Entry<String, Object> entry : getAllValues(reward.getConfig().getConfigData())
+										.entrySet()) {
+									rewardEditData.setValue(entry.getKey(), entry.getValue());
+								}
+							}
+						}.open();
+					}
+				}.addData("Reward", reward));
+			}
+		}
+
+		inv.openInventory(player);
+	}
+
+	public HashMap<String, Object> getAllValues(ConfigurationSection data) {
+		HashMap<String, Object> values = new HashMap<String, Object>();
+		for (String key : data.getKeys(false)) {
+
+			if (data.isConfigurationSection(key)) {
+				HashMap<String, Object> valuesc = getAllValues(data.getConfigurationSection(key));
+				for (Entry<String, Object> entry : valuesc.entrySet()) {
+					values.put(key + "." + entry.getKey(), entry.getValue());
+				}
+			} else {
+				values.put(key, data.get(key));
+			}
+		}
+		return values;
 	}
 
 }

@@ -102,6 +102,10 @@ public abstract class BInventoryButton {
 		}
 		return defaultValue;
 	}
+	
+	public BInventoryButton getButton() {
+		return this;
+	}
 
 	/**
 	 * Gets the item.
