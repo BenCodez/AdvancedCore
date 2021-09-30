@@ -323,6 +323,9 @@ public abstract class CommandHandler {
 	}
 
 	public boolean hasPerm(CommandSender sender) {
+		if (getPerm().isEmpty()) {
+			return true;
+		}
 		if (allowMultiplePermissions) {
 			return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
 		} else {
