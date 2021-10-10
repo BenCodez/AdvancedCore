@@ -125,7 +125,7 @@ public class RewardEditGUI {
 		});
 
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.ANVIL).setName("&cCopy from existing reward")
-				.addLoreLine("&cDoes not remove existing rewards currently set")) {
+				.addLoreLine("&cDoes not remove existing rewards currently set, unless they overlap")) {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {

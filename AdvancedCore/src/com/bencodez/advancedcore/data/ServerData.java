@@ -74,6 +74,7 @@ public class ServerData extends YMLFile {
 
 	public void setLastUpdated() {
 		getData().set("LastUpdated", System.currentTimeMillis());
+		saveData();
 	}
 
 	public void setData(String path, Object value) {
@@ -108,7 +109,6 @@ public class ServerData extends YMLFile {
 	 */
 	public void setPrevDay(int day) {
 		getData().set("PrevDay", day);
-		setLastUpdated();
 		saveData();
 	}
 
@@ -119,7 +119,6 @@ public class ServerData extends YMLFile {
 	 */
 	public void setPrevMonth(String month) {
 		getData().set("Month", month);
-		setLastUpdated();
 		saveData();
 	}
 
@@ -130,7 +129,6 @@ public class ServerData extends YMLFile {
 	 */
 	public void setPrevWeekDay(int week) {
 		getData().set("PrevWeek", week);
-		setLastUpdated();
 		saveData();
 	}
 }

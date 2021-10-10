@@ -158,6 +158,13 @@ public class TimeChecker {
 
 				}
 			}, 60 * 1000, minutes * 60 * 1000);
+			timer.schedule(new TimerTask() {
+
+				@Override
+				public void run() {
+					plugin.getServerDataFile().setLastUpdated();
+				}
+			}, 60 * 60 * 1000, 60 * 60 * 1000);
 		} else {
 			AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
 		}
