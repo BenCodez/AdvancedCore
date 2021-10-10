@@ -189,7 +189,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private String advancedCoreBuildNumber = "NOTSET";
-	
+
 	@Getter
 	private PermissionHandler permissionHandler;
 
@@ -818,6 +818,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 			getMysql().close();
 		}
+		getServerDataFile().setLastUpdated();
 		timer.cancel();
 		onUnLoad();
 		SkullHandler.getInstance().close();
@@ -825,7 +826,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		unRegisterValueRequest();
 
 		hologramHandler.onShutDown();
-		
+
 		if (getPermissionHandler() != null) {
 			getPermissionHandler().shutDown();
 		}

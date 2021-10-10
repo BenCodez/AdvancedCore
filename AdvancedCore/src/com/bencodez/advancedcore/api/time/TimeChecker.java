@@ -133,6 +133,16 @@ public class TimeChecker {
 	public void loadTimer(int minutes) {
 		if (!timerLoaded) {
 			timerLoaded = true;
+			if (plugin.getServerDataFile().getLastUpdated() > 0) {
+				// serverdata.yml hasn't updated for 4 days, don't do time changes
+				if (System.currentTimeMillis() - plugin.getServerDataFile().getLastUpdated() > 1000 * 60 * 60 * 24
+						* 4) {
+					plugin.getServerDataFile().setIgnoreTime(true);
+					plugin.getLogger().warning(
+							"Skipping time change events, since server has been offline for awhile, use /av forcetimechanged to force them if needed");
+				}
+			}
+			plugin.getServerDataFile().setLastUpdated();
 			timer.schedule(new TimerTask() {
 
 				@Override

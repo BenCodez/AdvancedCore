@@ -64,13 +64,16 @@ public class ServerData extends YMLFile {
 		return getData().getBoolean("IgnoreTime", false);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see com.Ben12345rocks.AdvancedCore.YML.YMLFile#onFileCreation()
-	 */
 	@Override
 	public void onFileCreation() {
+	}
+
+	public long getLastUpdated() {
+		return getData().getLong("LastUpdated", -1);
+	}
+
+	public void setLastUpdated() {
+		getData().set("LastUpdated", System.currentTimeMillis());
 	}
 
 	public void setData(String path, Object value) {
@@ -105,6 +108,7 @@ public class ServerData extends YMLFile {
 	 */
 	public void setPrevDay(int day) {
 		getData().set("PrevDay", day);
+		setLastUpdated();
 		saveData();
 	}
 
@@ -115,6 +119,7 @@ public class ServerData extends YMLFile {
 	 */
 	public void setPrevMonth(String month) {
 		getData().set("Month", month);
+		setLastUpdated();
 		saveData();
 	}
 
@@ -125,6 +130,7 @@ public class ServerData extends YMLFile {
 	 */
 	public void setPrevWeekDay(int week) {
 		getData().set("PrevWeek", week);
+		setLastUpdated();
 		saveData();
 	}
 }
