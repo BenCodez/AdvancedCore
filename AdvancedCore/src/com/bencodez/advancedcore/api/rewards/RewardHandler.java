@@ -421,6 +421,10 @@ public class RewardHandler {
 			plugin.getLogger().warning("ConfigurationSection is null, failing to give reward: " + path);
 			return;
 		}
+		if (plugin == null || !plugin.isEnabled()) {
+			plugin.getLogger().severe("Not giving reward " + path + ", plugin is not enabled");
+			return;
+		}
 		if (data.isList(path)) {
 			ArrayList<String> rewards = (ArrayList<String>) data.getList(path, new ArrayList<String>());
 			if (rewards.isEmpty()) {
