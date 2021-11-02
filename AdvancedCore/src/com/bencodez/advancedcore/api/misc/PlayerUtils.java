@@ -362,10 +362,29 @@ public class PlayerUtils {
 
 		if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getPerms() != null
 				&& plugin.getPerms().isEnabled()) {
-			return plugin.getPerms().playerHas(Bukkit.getWorlds().get(0).getName(), Bukkit.getOfflinePlayer(playerUUID), perm);
+			return plugin.getPerms().playerHas(Bukkit.getWorlds().get(0).getName(), Bukkit.getOfflinePlayer(playerUUID),
+					perm);
 		}
 
 		Player player = Bukkit.getPlayer(playerUUID);
+		if (player != null) {
+			return player.hasPermission(perm);
+		}
+		return false;
+	}
+
+	/**
+	 * Checks for server permission.
+	 *
+	 * @param playerName the player name
+	 * @param perm       the perm
+	 * @return true, if successful
+	 */
+	public boolean hasServerPermission(String playerName, String perm) {
+		if (playerName == null) {
+			return false;
+		}
+		Player player = Bukkit.getPlayer(playerName);
 		if (player != null) {
 			return player.hasPermission(perm);
 		}
