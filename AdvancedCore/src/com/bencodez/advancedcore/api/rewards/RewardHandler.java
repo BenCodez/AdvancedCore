@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimerTask;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
@@ -614,7 +615,7 @@ public class RewardHandler {
 					str = "AdvancedCore.Reward." + reward.getName();
 				}
 
-				boolean perm = PlayerUtils.getInstance().hasServerPermission(user.getPlayerName(), str);
+				boolean perm = PlayerUtils.getInstance().hasServerPermission(UUID.fromString(user.getUUID()), str);
 				if (!perm) {
 					plugin.getLogger().info(user.getPlayerName() + " does not have permission " + str
 							+ " to get reward " + reward.getName());
