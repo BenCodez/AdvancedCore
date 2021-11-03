@@ -42,24 +42,25 @@ public class UserDataCache {
 	}
 
 	public UserDataCache cache() {
-		AdvancedCoreUser user = getUser();
-		ArrayList<String> keys = user.getUserData().getKeys();
-		HashMap<String, DataValue> data = user.getUserData().getValues();
-		for (UserDataKey dataKey : manager.getKeys()) {
-			String key = dataKey.getKey();
-			keys.remove(key);
-			if (data.containsKey(key)) {
-				DataValue dataValue = data.get(key);
-				manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for "
-						+ uuid.toString() + ", value: " + dataValue.toString());
-				cache.put(key, dataValue);
+		if (uuid != null) {
+			AdvancedCoreUser user = getUser();
+			ArrayList<String> keys = user.getUserData().getKeys();
+			HashMap<String, DataValue> data = user.getUserData().getValues();
+			for (UserDataKey dataKey : manager.getKeys()) {
+				String key = dataKey.getKey();
+				keys.remove(key);
+				if (data.containsKey(key)) {
+					DataValue dataValue = data.get(key);
+					manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for "
+							+ uuid.toString() + ", value: " + dataValue.toString());
+					cache.put(key, dataValue);
+				}
+
 			}
-
+			if (keys.size() > 0) {
+				manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.getInstance().makeStringList(keys));
+			}
 		}
-		if (keys.size() > 0) {
-			manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.getInstance().makeStringList(keys));
-		}
-
 		return this;
 	}
 
