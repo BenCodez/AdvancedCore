@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -184,6 +185,8 @@ public class Reward {
 
 	public void giveInjectedRewards(AdvancedCoreUser user, HashMap<String, String> placeholders) {
 
+		ArrayList<RewardInject> postReward = new ArrayList<RewardInject>();
+
 		for (final RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
 			boolean Addplaceholder = inject.isAddAsPlaceholder();
 			try {
@@ -218,20 +221,22 @@ public class Reward {
 						placeholders.put(placeholderName, value);
 					}
 				} else {
-					final Reward r = this;
-					Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+					postReward.add(inject);
 
-						@Override
-						public void run() {
-							inject.onRewardRequest(r, user, getConfig().getConfigData(), placeholders);
-						}
-					});
 				}
 
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 
+		}
+
+		for (RewardInject inject : postReward) {
+			try {
+				inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
