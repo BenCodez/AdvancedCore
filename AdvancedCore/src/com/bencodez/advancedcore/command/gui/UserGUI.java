@@ -112,7 +112,7 @@ public class UserGUI {
 			}
 		});
 
-		inv.addButton(new BInventoryButton(new ItemBuilder(Material.WRITABLE_BOOK).setName("Edit Data")) {
+		inv.addButton(new BInventoryButton(new ItemBuilder("WRITABLE_BOOK").setName("Edit Data")) {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {

@@ -20,7 +20,6 @@ import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -320,7 +319,7 @@ public class MiscUtils {
 
 	public ItemStack setSkullOwner(OfflinePlayer player) {
 		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
-			return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1)).setSkullOwner(player).toItemStack(player);
+			return new ItemBuilder("PLAYER_HEAD").setSkullOwner(player).toItemStack(player);
 		} else {
 			return setSkullOwner(player.getName());
 		}
@@ -334,8 +333,7 @@ public class MiscUtils {
 	 */
 	@Deprecated
 	public ItemStack setSkullOwner(String playerName) {
-		return new ItemBuilder(new ItemStack(Material.PLAYER_HEAD, 1, (short) 3)).setSkullOwner(playerName)
-				.toItemStack();
+		return new ItemBuilder("PLAYER_HEAD").setSkullOwner(playerName).toItemStack();
 	}
 
 	public LinkedHashMap<Double, String> sortByKeys(LinkedHashMap<Double, String> topVoterAllTime,

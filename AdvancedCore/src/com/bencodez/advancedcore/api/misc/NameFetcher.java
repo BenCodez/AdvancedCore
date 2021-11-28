@@ -9,13 +9,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import com.bencodez.advancedcore.api.misc.jsonparser.JsonParser;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 public class NameFetcher implements Callable<Map<UUID, String>> {
 	private static final String PROFILE_URL = "https://sessionserver.mojang.com/session/minecraft/profile/";
-	private final JsonParser jsonParser = new JsonParser();
 	private final List<UUID> uuids;
 
 	public NameFetcher(List<UUID> uuids) {
@@ -28,7 +27,7 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
 		for (UUID uuid : uuids) {
 			HttpURLConnection connection = (HttpURLConnection) new URL(PROFILE_URL + uuid.toString().replace("-", ""))
 					.openConnection();
-			JsonObject response = (JsonObject) jsonParser.parse(new InputStreamReader(connection.getInputStream()));
+			JsonObject response = (JsonObject) JsonParser.parseReader(new InputStreamReader(connection.getInputStream()));
 			String name = response.get("name").getAsString();
 			if (name == null) {
 				continue;

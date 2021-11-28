@@ -26,13 +26,13 @@ import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
+import com.bencodez.advancedcore.api.misc.jsonparser.JsonParser;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Iterables;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 public class PlayerUtils {
 	private static final BlockFace[] axis = { BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST };
@@ -86,7 +86,8 @@ public class PlayerUtils {
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
 		// Parse JSON response and get UUID
-		JsonElement element = new JsonParser().parse(bufferedReader);
+		
+		JsonElement element = JsonParser.parseReader(bufferedReader);
 		JsonObject object = element.getAsJsonObject();
 		String uuidAsString = object.get("id").getAsString();
 
