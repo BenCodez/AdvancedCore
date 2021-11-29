@@ -82,12 +82,6 @@ public final class JsonParser {
 		}
 	}
 
-	/**
-	 * Returns the next value from the JSON stream as a parse tree.
-	 *
-	 * @throws JsonParseException if there is an IOException or if the specified
-	 *                            text is not valid JSON
-	 */
 	public static JsonElement parseReader(JsonReader reader) throws JsonIOException, JsonSyntaxException {
 		boolean lenient = reader.isLenient();
 		reader.setLenient(true);
@@ -100,23 +94,5 @@ public final class JsonParser {
 		} finally {
 			reader.setLenient(lenient);
 		}
-	}
-
-	/** @deprecated Use {@link JsonParser#parseString} */
-	@Deprecated
-	public JsonElement parse(String json) throws JsonSyntaxException {
-		return parseString(json);
-	}
-
-	/** @deprecated Use {@link JsonParser#parseReader(Reader)} */
-	@Deprecated
-	public JsonElement parse(Reader json) throws JsonIOException, JsonSyntaxException {
-		return parseReader(json);
-	}
-
-	/** @deprecated Use {@link JsonParser#parseReader(JsonReader)} */
-	@Deprecated
-	public JsonElement parse(JsonReader json) throws JsonIOException, JsonSyntaxException {
-		return parseReader(json);
 	}
 }
