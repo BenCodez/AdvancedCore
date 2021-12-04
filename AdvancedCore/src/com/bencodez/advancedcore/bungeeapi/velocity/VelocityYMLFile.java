@@ -55,7 +55,7 @@ public class VelocityYMLFile {
 
 	public ArrayList<String> getKeys(ConfigurationNode node) {
 		ArrayList<String> keys = new ArrayList<String>();
-		for (ConfigurationNode key : node.getChildrenList()) {
+		for (ConfigurationNode key : node.getChildrenMap().values()) {
 			keys.add(key.getKey().toString());
 		}
 		return keys;
