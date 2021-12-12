@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
+import org.bukkit.persistence.PersistentDataContainer;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
@@ -66,6 +67,10 @@ public class Hologram {
 			createHologram(name, marker, glowing);
 		}
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
+	}
+
+	public PersistentDataContainer getPersistentDataHolder() {
+		return armorStand.getPersistentDataContainer();
 	}
 
 	private void createHologram(String name, boolean marker, boolean glowing) {
