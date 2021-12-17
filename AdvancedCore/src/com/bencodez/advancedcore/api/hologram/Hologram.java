@@ -72,6 +72,10 @@ public class Hologram {
 	public PersistentDataContainer getPersistentDataHolder() {
 		return armorStand.getPersistentDataContainer();
 	}
+	
+	public boolean isCreated() {
+		return armorStand != null;
+	}
 
 	private void createHologram(String name, boolean marker, boolean glowing) {
 		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
