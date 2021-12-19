@@ -420,6 +420,7 @@ public class UserData {
 
 		if (user.isCached() && queue) {
 			user.getCache().addChange(new UserDataChangeInt(key, value));
+			user.getPlugin().getUserManager().onChange(user, key);
 			return;
 		}
 
@@ -437,6 +438,7 @@ public class UserData {
 			setData(user.getUUID(), key, value);
 		}
 
+		user.getPlugin().getUserManager().onChange(user, key);
 	}
 
 	public void setString(final String key, final String value) {
@@ -460,8 +462,9 @@ public class UserData {
 
 		if (user.isCached() && queue) {
 			user.getCache().addChange(new UserDataChangeString(key, value));
+			user.getPlugin().getUserManager().onChange(user, key);
 			return;
-		}
+		} 
 
 		if (storage.equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
@@ -475,6 +478,8 @@ public class UserData {
 		} else if (storage.equals(UserStorage.FLAT)) {
 			setData(user.getUUID(), key, value);
 		}
+
+		user.getPlugin().getUserManager().onChange(user, key);
 	}
 
 	public void setStringList(final String key, final ArrayList<String> value) {

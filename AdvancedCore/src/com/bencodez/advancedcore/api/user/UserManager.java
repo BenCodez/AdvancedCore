@@ -28,6 +28,9 @@ public class UserManager {
 
 	/** The plugin. */
 	private AdvancedCorePlugin plugin;
+	
+	@Getter
+	private ArrayList<UserDataChanged> userDataChange = new ArrayList<UserDataChanged>();
 
 	public UserManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -266,5 +269,11 @@ public class UserManager {
 		}
 
 		return false;
+	}
+
+	public void onChange(AdvancedCoreUser user, String...keys) {
+		for (UserDataChanged change : userDataChange) {
+			change.onChange(user, keys);
+		}
 	}
 }

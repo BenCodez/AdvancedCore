@@ -457,6 +457,10 @@ public class AdvancedCoreUser {
 		return uuid;
 	}
 
+	public UUID getJavaUUID() {
+		return UUID.fromString(uuid);
+	}
+
 	/**
 	 * Give exp.
 	 *

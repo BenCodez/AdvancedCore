@@ -1,13 +1,12 @@
 package com.bencodez.advancedcore.api.placeholder;
 
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.bencodez.advancedcore.api.messages.StringParser;
 
 import lombok.Getter;
 
-public abstract class PlaceHolder<T> {
+public abstract class NonPlaceHolder<T> {
 	@Getter
 	private String description;
 	@Getter
@@ -16,24 +15,16 @@ public abstract class PlaceHolder<T> {
 	private boolean useStartsWith = false;
 
 	@Getter
-	private ConcurrentHashMap<String, ConcurrentHashMap<UUID, String>> cache;
-
-	@Getter
-	private String updateDataKey = "";
-
-	public PlaceHolder<T> updateDataKey(String key) {
-		this.updateDataKey = key;
-		return this;
-	}
+	private ConcurrentHashMap<String, String> cache;
 
 	@Getter
 	private boolean usesCache = false;
 
-	public PlaceHolder(String identifier) {
+	public NonPlaceHolder(String identifier) {
 		this.identifier = identifier;
 	}
 
-	public PlaceHolder(String identifier, boolean useStartsWith) {
+	public NonPlaceHolder(String identifier, boolean useStartsWith) {
 		this.identifier = identifier;
 		this.useStartsWith = useStartsWith;
 	}
@@ -55,24 +46,24 @@ public abstract class PlaceHolder<T> {
 		return false;
 	}
 
-	public abstract String placeholderRequest(T user, String identifier);
+	public abstract String placeholderRequest(String identifier);
 
-	public PlaceHolder<T> useStartsWith() {
+	public NonPlaceHolder<T> useStartsWith() {
 		useStartsWith = true;
 		return this;
 	}
 
-	public PlaceHolder<T> withDescription(String desc) {
+	public NonPlaceHolder<T> withDescription(String desc) {
 		description = desc;
 		return this;
 	}
 
-	public PlaceHolder<T> setUseCache(boolean usesCache, String identifier) {
+	public NonPlaceHolder<T> setUseCache(boolean usesCache, String identifier) {
 		this.usesCache = usesCache;
 		if (cache == null) {
-			cache = new ConcurrentHashMap<String, ConcurrentHashMap<UUID, String>>();
+			cache = new ConcurrentHashMap<String, String>();
 		}
-		cache.put(identifier, new ConcurrentHashMap<UUID, String>());
+		cache.put(identifier, "");
 		return this;
 	}
 
