@@ -60,11 +60,6 @@ public class UserDataCache {
 			if (keys.size() > 0) {
 				manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.getInstance().makeStringList(keys));
 			}
-			try {
-				throw new RuntimeException();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
 		}
 		return this;
 	}
