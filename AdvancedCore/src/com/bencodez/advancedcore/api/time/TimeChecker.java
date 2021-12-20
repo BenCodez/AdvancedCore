@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.time;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -107,6 +108,13 @@ public class TimeChecker {
 		}
 		if (set) {
 			plugin.getServerDataFile().setPrevMonth(month);
+		}
+		if (plugin.getServerDataFile().getPrevDay() < LocalDateTime.now().minusDays(1).getMonth()
+				.length(YearMonth.now().isLeapYear())) {
+			plugin.getLogger()
+					.info("Detected a month change, but current day is not near a month, ignoring month change");
+			plugin.getServerDataFile().setPrevMonth(month);
+			return false;
 		}
 		return true;
 
