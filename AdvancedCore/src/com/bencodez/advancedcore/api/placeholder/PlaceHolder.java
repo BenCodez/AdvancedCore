@@ -16,6 +16,9 @@ public abstract class PlaceHolder<T> {
 	private boolean useStartsWith = false;
 
 	@Getter
+	private String noValueReturn = "0";
+
+	@Getter
 	private ConcurrentHashMap<String, ConcurrentHashMap<UUID, String>> cache;
 
 	@Getter
@@ -31,6 +34,17 @@ public abstract class PlaceHolder<T> {
 
 	public PlaceHolder(String identifier) {
 		this.identifier = identifier;
+	}
+
+	public PlaceHolder(String identifier, String noValueReturn) {
+		this.identifier = identifier;
+		this.noValueReturn = noValueReturn;
+	}
+
+	public PlaceHolder(String identifier, String noValueReturn, boolean useStartsWith) {
+		this.identifier = identifier;
+		this.useStartsWith = useStartsWith;
+		this.noValueReturn = noValueReturn;
 	}
 
 	public PlaceHolder(String identifier, boolean useStartsWith) {

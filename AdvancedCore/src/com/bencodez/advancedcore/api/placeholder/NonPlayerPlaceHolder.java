@@ -6,7 +6,7 @@ import com.bencodez.advancedcore.api.messages.StringParser;
 
 import lombok.Getter;
 
-public abstract class NonPlaceHolder<T> {
+public abstract class NonPlayerPlaceHolder<T> {
 	@Getter
 	private String description;
 	@Getter
@@ -20,11 +20,25 @@ public abstract class NonPlaceHolder<T> {
 	@Getter
 	private boolean usesCache = false;
 
-	public NonPlaceHolder(String identifier) {
+	@Getter
+	private String noValueReturn = "0";
+
+	public NonPlayerPlaceHolder(String identifier) {
 		this.identifier = identifier;
 	}
 
-	public NonPlaceHolder(String identifier, boolean useStartsWith) {
+	public NonPlayerPlaceHolder(String identifier, String noValueReturn) {
+		this.identifier = identifier;
+		this.noValueReturn = noValueReturn;
+	}
+
+	public NonPlayerPlaceHolder(String identifier, String noValueReturn, boolean useStartsWith) {
+		this.identifier = identifier;
+		this.useStartsWith = useStartsWith;
+		this.noValueReturn = noValueReturn;
+	}
+
+	public NonPlayerPlaceHolder(String identifier, boolean useStartsWith) {
 		this.identifier = identifier;
 		this.useStartsWith = useStartsWith;
 	}
@@ -48,17 +62,17 @@ public abstract class NonPlaceHolder<T> {
 
 	public abstract String placeholderRequest(String identifier);
 
-	public NonPlaceHolder<T> useStartsWith() {
+	public NonPlayerPlaceHolder<T> useStartsWith() {
 		useStartsWith = true;
 		return this;
 	}
 
-	public NonPlaceHolder<T> withDescription(String desc) {
+	public NonPlayerPlaceHolder<T> withDescription(String desc) {
 		description = desc;
 		return this;
 	}
 
-	public NonPlaceHolder<T> setUseCache(boolean usesCache, String identifier) {
+	public NonPlayerPlaceHolder<T> setUseCache(boolean usesCache, String identifier) {
 		this.usesCache = usesCache;
 		if (cache == null) {
 			cache = new ConcurrentHashMap<String, String>();
