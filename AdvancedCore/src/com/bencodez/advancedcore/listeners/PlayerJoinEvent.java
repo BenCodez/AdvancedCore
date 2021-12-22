@@ -57,34 +57,38 @@ public class PlayerJoinEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final PlayerLoginEvent event) {
-		Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+		if (plugin != null && plugin.isEnabled()) {
+			Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
-			@Override
-			public void run() {
-				if (plugin.isAuthMeLoaded() && plugin.getOptions().isWaitUntilLoggedIn()) {
-					return;
-				}
+				@Override
+				public void run() {
+					if (plugin != null && plugin.isEnabled()) {
+						if (plugin.isAuthMeLoaded() && plugin.getOptions().isWaitUntilLoggedIn()) {
+							return;
+						}
 
-				Player player = event.getPlayer();
+						Player player = event.getPlayer();
 
-				if (player != null) {
-					plugin.debug(
-							"Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
-					if (plugin.getPermissionHandler() != null) {
-						plugin.getPermissionHandler().login(player);
+						if (player != null) {
+							plugin.debug("Login: " + event.getPlayer().getName() + " ("
+									+ event.getPlayer().getUniqueId() + ")");
+							if (plugin.getPermissionHandler() != null) {
+								plugin.getPermissionHandler().login(player);
+							}
+
+							AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(player);
+							Bukkit.getPluginManager().callEvent(login);
+
+							if (login.isCancelled()) {
+								return;
+							}
+						}
+
 					}
-					
-					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(player);
-					Bukkit.getPluginManager().callEvent(login);
-
-					if (login.isCancelled()) {
-						return;
-					}
 
 				}
-
-			}
-		}, 30L);
+			}, 30L);
+		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
