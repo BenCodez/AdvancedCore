@@ -68,7 +68,7 @@ public class MiscUtils {
 					}
 				}
 			}
-			Bukkit.getServer().getConsoleSender().sendMessage(consoleMsg);
+			Bukkit.getServer().getConsoleSender().sendMessage(StringParser.getInstance().colorize(consoleMsg));
 		}
 	}
 
