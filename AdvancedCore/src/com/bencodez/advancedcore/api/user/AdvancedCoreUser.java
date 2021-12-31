@@ -341,7 +341,7 @@ public class AdvancedCoreUser {
 	public long getLastOnline() {
 		String d = getData().getString("LastOnline", cacheData, waitForCache);
 		long time = 0;
-		if (d != null && !d.equals("")) {
+		if (d != null && !d.equals("") && !d.equals("null")) {
 			time = Long.valueOf(d);
 		}
 		if (time == 0) {
