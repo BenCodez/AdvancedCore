@@ -28,7 +28,7 @@ public class UserManager {
 
 	/** The plugin. */
 	private AdvancedCorePlugin plugin;
-	
+
 	@Getter
 	private ArrayList<UserDataChanged> userDataChange = new ArrayList<UserDataChanged>();
 

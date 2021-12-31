@@ -134,7 +134,6 @@ public abstract class BungeeMySQL {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			;
 			if (!intColumns.contains(column)) {
 				intColumns.add(column);
 			}

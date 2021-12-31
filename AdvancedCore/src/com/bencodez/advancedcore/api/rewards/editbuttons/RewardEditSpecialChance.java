@@ -37,7 +37,7 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 						open(player, reward);
 					}
 				}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
-				;
+
 			}
 		}).setName("&aAdd sub reward"));
 

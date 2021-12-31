@@ -39,7 +39,7 @@ public abstract class RewardEditChoices extends RewardEdit {
 						open(player, reward);
 					}
 				}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
-				;
+
 			}
 		}).setName("&aAdd sub reward"));
 

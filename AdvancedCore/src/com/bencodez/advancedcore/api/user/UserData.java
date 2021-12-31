@@ -464,7 +464,7 @@ public class UserData {
 			user.getCache().addChange(new UserDataChangeString(key, value));
 			user.getPlugin().getUserManager().onChange(user, key);
 			return;
-		} 
+		}
 
 		if (storage.equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();

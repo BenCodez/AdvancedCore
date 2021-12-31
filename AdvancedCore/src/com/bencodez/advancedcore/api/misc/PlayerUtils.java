@@ -86,7 +86,7 @@ public class PlayerUtils {
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
 		// Parse JSON response and get UUID
-		
+
 		JsonElement element = JsonParser.parseReader(bufferedReader);
 		JsonObject object = element.getAsJsonObject();
 		String uuidAsString = object.get("id").getAsString();

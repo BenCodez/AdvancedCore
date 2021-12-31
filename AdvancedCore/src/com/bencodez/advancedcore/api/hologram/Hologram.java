@@ -72,7 +72,7 @@ public class Hologram {
 	public PersistentDataContainer getPersistentDataHolder() {
 		return armorStand.getPersistentDataContainer();
 	}
-	
+
 	public boolean isCreated() {
 		return armorStand != null;
 	}

@@ -39,7 +39,7 @@ public abstract class RewardEditLucky extends RewardEdit {
 						open(player, reward);
 					}
 				}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
-				;
+
 			}
 		}).setName("&aAdd sub reward"));
 

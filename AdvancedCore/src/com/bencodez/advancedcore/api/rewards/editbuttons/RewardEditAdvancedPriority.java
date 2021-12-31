@@ -37,7 +37,7 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 						open(player, reward);
 					}
 				}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
-				;
+
 			}
 		}).setName("&aAdd sub reward").addLore("Rewards execute in order of addition"));
 

@@ -47,7 +47,7 @@ public abstract class RewardEditPotions extends RewardEdit {
 					}
 				}, ArrayUtils.getInstance().convert(potionEffects)).usingMethod(InputMethod.INVENTORY)
 						.request(clickEvent.getPlayer());
-				;
+
 			}
 		}).setName("&aAdd potion effect"));
 

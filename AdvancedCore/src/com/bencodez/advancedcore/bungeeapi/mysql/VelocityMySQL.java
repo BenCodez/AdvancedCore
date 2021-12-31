@@ -132,7 +132,6 @@ public abstract class VelocityMySQL {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			;
 			if (!intColumns.contains(column)) {
 				intColumns.add(column);
 			}
