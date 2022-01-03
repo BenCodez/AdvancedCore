@@ -111,8 +111,8 @@ public class TimeChecker {
 		}
 		if (plugin.getServerDataFile().getPrevDay() < LocalDateTime.now().minusDays(1).getMonth()
 				.length(YearMonth.now().isLeapYear())) {
-			plugin.getLogger()
-					.info("Detected a month change, but current day is not near end of a month, ignoring month change");
+			plugin.getLogger().warning(
+					"Detected a month change, but current day is not near end of a month, ignoring month change");
 			plugin.getServerDataFile().setPrevMonth(month);
 			return false;
 		}
