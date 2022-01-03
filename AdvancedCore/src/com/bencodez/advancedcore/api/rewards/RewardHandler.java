@@ -2075,13 +2075,13 @@ public class RewardHandler {
 						user.giveItem(builder.setPlaceholders(placeholders));
 						debug("Giving item " + str + ":" + builder.toString());
 						if (builder.isChancePass() && oneChance) {
-							return null;
+							return str;
 						}
 					}
 				}
-				return null;
+				return "";
 			}
-		}.priority(90).validator(new RewardInjectValidator() {
+		}.priority(90).asPlaceholder("Item").validator(new RewardInjectValidator() {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
