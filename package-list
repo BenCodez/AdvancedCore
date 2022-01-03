@@ -18,6 +18,7 @@ com.bencodez.advancedcore.api.misc.animation
 com.bencodez.advancedcore.api.misc.effects
 com.bencodez.advancedcore.api.misc.encryption
 com.bencodez.advancedcore.api.misc.files
+com.bencodez.advancedcore.api.misc.jsonparser
 com.bencodez.advancedcore.api.misc.scoreboards
 com.bencodez.advancedcore.api.permissions
 com.bencodez.advancedcore.api.placeholder
