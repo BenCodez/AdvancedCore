@@ -215,7 +215,7 @@
 		<dependency>
 			<groupId>xyz.upperlevel.spigot.book</groupId>
 			<artifactId>spigot-book-api</artifactId>
-			<version>1.5</version>
+			<version>1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>com.cmi</groupId>
