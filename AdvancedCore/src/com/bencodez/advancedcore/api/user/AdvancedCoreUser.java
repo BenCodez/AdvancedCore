@@ -256,24 +256,26 @@ public class AdvancedCoreUser {
 		final ArrayList<String> copy = getOfflineRewards();
 		setOfflineRewards(new ArrayList<String>());
 		final AdvancedCoreUser user = this;
-		Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+		if (plugin.isEnabled()) {
+			Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
 
-			@Override
-			public void run() {
-				for (String str : copy) {
-					if (str != null && !str.equals("null")) {
-						String[] args = str.split("%placeholders%");
-						String placeholders = "";
-						if (args.length > 1) {
-							placeholders = args[1];
+				@Override
+				public void run() {
+					for (String str : copy) {
+						if (str != null && !str.equals("null")) {
+							String[] args = str.split("%placeholders%");
+							String placeholders = "";
+							if (args.length > 1) {
+								placeholders = args[1];
+							}
+							RewardHandler.getInstance().giveReward(user, args[0],
+									new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
+											.setPlaceholders(ArrayUtils.getInstance().fromString(placeholders)));
 						}
-						RewardHandler.getInstance().giveReward(user, args[0],
-								new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
-										.setPlaceholders(ArrayUtils.getInstance().fromString(placeholders)));
 					}
 				}
-			}
-		}, 5l);
+			}, 5l);
+		}
 	}
 
 	public void clearCache() {
@@ -287,17 +289,18 @@ public class AdvancedCoreUser {
 	}
 
 	public void closeInv() {
-		Bukkit.getScheduler().runTask(plugin, new Runnable() {
+		if (plugin.isEnabled()) {
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
-			@Override
-			public void run() {
-				Player player = getPlayer();
-				if (player != null) {
-					player.closeInventory();
+				@Override
+				public void run() {
+					Player player = getPlayer();
+					if (player != null) {
+						player.closeInventory();
+					}
 				}
-			}
-		});
-
+			});
+		}
 	}
 
 	public AdvancedCoreUser dontCache() {
@@ -496,15 +499,17 @@ public class AdvancedCoreUser {
 
 		final Player player = getPlayer();
 
-		Bukkit.getScheduler().runTask(plugin, new Runnable() {
+		if (plugin.isEnabled()) {
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
-			@Override
-			public void run() {
-				if (player != null) {
-					plugin.getFullInventoryHandler().giveItem(player, item);
+				@Override
+				public void run() {
+					if (player != null) {
+						plugin.getFullInventoryHandler().giveItem(player, item);
+					}
 				}
-			}
-		});
+			});
+		}
 
 	}
 
@@ -518,6 +523,9 @@ public class AdvancedCoreUser {
 	 * @param m Amount of money to give
 	 */
 	public void giveMoney(double m) {
+		if (!plugin.isEnabled()) {
+			return;
+		}
 		if (hook.getEcon() != null) {
 			try {
 				if (m > 0) {
@@ -568,7 +576,7 @@ public class AdvancedCoreUser {
 	 */
 	public void givePotionEffect(String potionName, int duration, int amplifier) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(getUUID()));
-		if (player != null) {
+		if (player != null && plugin.isEnabled()) {
 			Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 				@Override
@@ -777,7 +785,7 @@ public class AdvancedCoreUser {
 					ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
 
 			final Player player = getPlayer();
-			if (player != null) {
+			if (player != null && plugin.isEnabled()) {
 				for (final String cmd : cmds) {
 					AdvancedCorePlugin.getInstance()
 							.debug("Executing player command for " + getPlayerName() + ": " + cmd);
@@ -798,16 +806,18 @@ public class AdvancedCoreUser {
 			final String cmd = StringParser.getInstance().replaceJavascript(getPlayer(),
 					StringParser.getInstance().replacePlaceHolder(command, placeholders));
 			AdvancedCorePlugin.getInstance().debug("Executing player command for " + getPlayerName() + ": " + command);
-			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+			if (plugin.isEnabled()) {
+				Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
-				@Override
-				public void run() {
-					Player player = getPlayer();
-					if (player != null) {
-						player.performCommand(cmd);
+					@Override
+					public void run() {
+						Player player = getPlayer();
+						if (player != null) {
+							player.performCommand(cmd);
+						}
 					}
-				}
-			});
+				});
+			}
 		}
 	}
 
