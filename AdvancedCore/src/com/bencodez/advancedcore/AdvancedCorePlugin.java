@@ -46,6 +46,7 @@ import com.bencodez.advancedcore.api.misc.PluginUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectString;
@@ -793,8 +794,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 								@Override
 								public void setValue(Player player, String value) {
-									Reward reward = (Reward) getInv().getData("Reward");
-									reward.getConfig().set(getKey(), value);
+									RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+									reward.setValue(getKey(), value);
 									reloadAdvancedCore(false);
 								}
 							}.addOptions(getPerms().getGroups()))));
