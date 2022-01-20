@@ -126,6 +126,8 @@ public class ItemBuilder {
 							materialStr = "SKULL";
 						} else if (materialStr.equalsIgnoreCase("CLOCK")) {
 							materialStr = "WATCH";
+						} else if (materialStr.equalsIgnoreCase("OAK_SIGN")) {
+							materialStr = "SIGN";
 						}
 					}
 
