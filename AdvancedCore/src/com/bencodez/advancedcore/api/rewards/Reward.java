@@ -316,16 +316,17 @@ public class Reward {
 			}
 		}
 
-		boolean vanished = false;
 		if ((plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
-			vanished = true;
+			checkRewardFile();
+			user.addOfflineRewards(this, rewardOptions.getPlaceholders());
 			plugin.getLogger()
-					.info(getRewardName() + ": " + user.getPlayerName() + " is vanished, saving vote offline");
+					.info(getRewardName() + ": " + user.getPlayerName() + " is vanished, saving reward offline");
+			return;
 		}
 
 		// save reward for offline
 		if (((((!rewardOptions.isOnline() || rewardOptions.getServer() != null) && !user.isOnline()) || allowOffline)
-				&& (!isForceOffline() && !rewardOptions.isForceOffline())) || vanished) {
+				&& (!isForceOffline() && !rewardOptions.isForceOffline()))) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
 				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
