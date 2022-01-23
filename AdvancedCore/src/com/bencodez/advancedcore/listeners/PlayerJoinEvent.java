@@ -7,6 +7,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.metadata.MetadataValue;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -70,6 +71,28 @@ public class PlayerJoinEvent implements Listener {
 						Player player = event.getPlayer();
 
 						if (player != null) {
+							for (MetadataValue meta : player.getMetadata("vanished")) {
+								if (meta.asBoolean()) {
+									plugin.debug("Player " + player.getName() + " joined vanished");
+									if (plugin.getOptions().isTreatVanishAsOffline()) {
+										return;
+									}
+								}
+							}
+
+							try {
+								if (plugin.getCmiHandle() != null) {
+									if (plugin.getCmiHandle().isVanished(player)) {
+										plugin.debug("Player " + player.getName() + " joined vanished");
+										if (plugin.getOptions().isTreatVanishAsOffline()) {
+											return;
+										}
+									}
+								}
+							} catch (Exception e) {
+								plugin.debug(e);
+							}
+
 							plugin.debug("Login: " + event.getPlayer().getName() + " ("
 									+ event.getPlayer().getUniqueId() + ")");
 							if (plugin.getPermissionHandler() != null) {
