@@ -71,6 +71,7 @@ import com.bencodez.advancedcore.command.executor.ValueRequestInputCommand;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.advancedcore.listeners.AuthMeLogin;
 import com.bencodez.advancedcore.listeners.PlayerJoinEvent;
+import com.bencodez.advancedcore.listeners.PlayerShowListener;
 import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
 import com.bencodez.advancedcore.listeners.WorldChangeEvent;
 import com.bencodez.advancedcore.logger.Logger;
@@ -504,6 +505,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (Bukkit.getPluginManager().getPlugin("authme") != null) {
 			authMeLoaded = true;
 			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(this), this);
+		}
+
+		try {
+			Class.forName("de.myzelyam.api.vanish.PostPlayerShowEvent");
+			registerEvents(new PlayerShowListener(this));
+			debug("Loaded PostPlayerShowEvent");
+		} catch (ClassNotFoundException e) {
+			debug("Not loading PostPlayerShowEvent");
 		}
 
 		String buildNumberMsg = "";
