@@ -672,7 +672,16 @@ public class AdvancedCoreUser {
 	 * @return true, if is online
 	 */
 	public boolean isOnline() {
-		return PlayerUtils.getInstance().isPlayerOnline(getPlayerName());
+		boolean online = PlayerUtils.getInstance().isPlayerOnline(getPlayerName());
+		if (!online) {
+			return false;
+		}
+		if (plugin.getOptions().isTreatVanishAsOffline()) {
+			if (isVanished()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public boolean isVanished() {
