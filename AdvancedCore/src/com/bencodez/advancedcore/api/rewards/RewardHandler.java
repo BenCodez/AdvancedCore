@@ -1882,7 +1882,7 @@ public class RewardHandler {
 								.setIgnoreRequirements(true).setPrefix(reward1.getName() + "_AdvancedPriority"));
 						return reward.getName();
 					} else {
-						plugin.extraDebug("AdvancedPriority: Can't give reward " + reward.getName());
+						plugin.extraDebug("AdvancedPriority: Can't give reward " + keys);
 					}
 				}
 				return null;
