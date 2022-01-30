@@ -1,6 +1,5 @@
 package com.bencodez.advancedcore.api.rewards;
 
-import java.util.Timer;
 import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
@@ -34,11 +33,8 @@ public class RepeatHandle {
 	@Setter
 	private long timeBetween = 0;
 
-	private Timer timer;
-
 	public RepeatHandle(Reward reward) {
 		this.reward = reward;
-		timer = new Timer();
 		ConfigurationSection data = reward.getConfig().getConfigData().getConfigurationSection("Repeat");
 		if (data != null) {
 			enabled = data.getBoolean("Enabled", false);
@@ -49,12 +45,12 @@ public class RepeatHandle {
 		}
 	}
 
-	public void giveRepeat(AdvancedCoreUser user) {
+	public void giveRepeat(AdvancedCorePlugin plugin, AdvancedCoreUser user) {
 		if (repeatOnStartup) {
 			return;
 		}
-		AdvancedCorePlugin.getInstance().debug("Giving repeat reward in " + timeBetween);
-		timer.schedule(new TimerTask() {
+		plugin.debug("Giving repeat reward in " + timeBetween);
+		RewardHandler.getInstance().getRepeatTimer().schedule(new TimerTask() {
 
 			@Override
 			public void run() {
@@ -73,12 +69,12 @@ public class RepeatHandle {
 							cancel();
 							return;
 						} else {
-							giveReward(user, true);
+							giveReward(plugin, user, true);
 							cancel();
 							return;
 						}
 					} else {
-						giveReward(user, false);
+						giveReward(plugin, user, false);
 						cancel();
 						return;
 					}
@@ -89,12 +85,12 @@ public class RepeatHandle {
 							cancel();
 							return;
 						} else {
-							giveReward(user, true);
+							giveReward(plugin, user, true);
 							cancel();
 							return;
 						}
 					} else {
-						giveReward(user, false);
+						giveReward(plugin, user, false);
 						cancel();
 						return;
 					}
@@ -103,8 +99,8 @@ public class RepeatHandle {
 		}, timeBetween);
 	}
 
-	public void giveRepeatAll() {
-		timer.schedule(new TimerTask() {
+	public void giveRepeatAll(AdvancedCorePlugin plugin) {
+		RewardHandler.getInstance().getRepeatTimer().schedule(new TimerTask() {
 
 			@Override
 			public void run() {
@@ -117,7 +113,7 @@ public class RepeatHandle {
 				}
 				for (Player p : Bukkit.getOnlinePlayers()) {
 					AdvancedCoreUser user = AdvancedCorePlugin.getInstance().getUserManager().getUser(p);
-					giveReward(user, false);
+					giveReward(plugin, user, false);
 					cancel();
 					return;
 				}
@@ -126,7 +122,7 @@ public class RepeatHandle {
 
 	}
 
-	public void giveReward(AdvancedCoreUser user, boolean bypassRequirement) {
+	public void giveReward(AdvancedCorePlugin plugin, AdvancedCoreUser user, boolean bypassRequirement) {
 		AdvancedCorePlugin.getInstance()
 				.debug("Giving repeat reward " + reward.getName() + " for " + user.getPlayerName());
 		if (bypassRequirement) {
@@ -135,7 +131,7 @@ public class RepeatHandle {
 		} else {
 			reward.giveReward(user, new RewardOptions().setCheckRepeat(false).forceOffline());
 		}
-		giveRepeat(user);
+		giveRepeat(plugin, user);
 	}
 
 }

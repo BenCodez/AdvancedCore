@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -121,6 +122,9 @@ public class RewardHandler {
 
 	/** The rewards. */
 	private List<Reward> rewards;
+
+	@Getter
+	private Timer repeatTimer = new Timer();
 
 	/**
 	 * Instantiates a new reward handler.
@@ -2175,7 +2179,7 @@ public class RewardHandler {
 						reward1.validate();
 						if (reward1.getRepeatHandle().isEnabled() && reward1.getRepeatHandle().isRepeatOnStartup()
 								&& !reward1.getConfig().isDirectlyDefinedReward()) {
-							reward1.getRepeatHandle().giveRepeatAll();
+							reward1.getRepeatHandle().giveRepeatAll(plugin);
 						}
 						if (!reward1.getConfig().isDirectlyDefinedReward()
 								|| file.getName().equalsIgnoreCase("DirectlyDefined")) {

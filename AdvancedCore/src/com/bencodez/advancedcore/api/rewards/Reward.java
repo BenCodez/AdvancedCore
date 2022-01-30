@@ -387,7 +387,7 @@ public class Reward {
 
 			if (rewardOptions.isCheckRepeat()) {
 				if (repeatHandle.isEnabled() && !repeatHandle.isRepeatOnStartup()) {
-					repeatHandle.giveRepeat(user);
+					repeatHandle.giveRepeat(plugin, user);
 				}
 			}
 		} else {
