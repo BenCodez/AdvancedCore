@@ -11,6 +11,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
@@ -294,6 +296,32 @@ public abstract class BungeeMySQL {
 		}
 
 		return uuids;
+	}
+
+	public ConcurrentHashMap<UUID, String> getRowsUUIDNameQuery() {
+		ConcurrentHashMap<UUID, String> uuidNames = new ConcurrentHashMap<UUID, String>();
+		String sqlStr = "SELECT UUID, PlayerName FROM " + getName() + ";";
+
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
+			ResultSet rs = sql.executeQuery();
+			/*
+			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
+			 */
+
+			while (rs.next()) {
+				String uuid = rs.getString("uuid");
+				String playerName = rs.getString("PlayerName");
+				if (uuid != null && !uuid.isEmpty() && !uuid.equals("null")) {
+					uuidNames.put(UUID.fromString(uuid), playerName);
+				}
+			}
+			sql.close();
+			conn.close();
+		} catch (SQLException e) {
+		}
+
+		return uuidNames;
 	}
 
 	public ArrayList<Column> getRowsNameQuery() {
