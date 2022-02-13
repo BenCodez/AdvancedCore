@@ -349,7 +349,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public Table getSQLiteUserTable() {
-		if (database == null) {
+		if (database == null && loadUserData) {
 			loadUserAPI(getStorageType());
 		}
 		for (Table table : database.getTables()) {

@@ -38,31 +38,35 @@ public class UserManager {
 	}
 
 	public ArrayList<String> getAllPlayerNames() {
-		ArrayList<String> names = new ArrayList<String>();
-		if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
-			for (String uuid : getAllUUIDs()) {
-				AdvancedCoreUser user = getUser(java.util.UUID.fromString(uuid));
-				String name = user.getPlayerName();
-				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
-					names.add(name);
+		if (plugin.isLoadUserData()) {
+			ArrayList<String> names = new ArrayList<String>();
+			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+				for (String uuid : getAllUUIDs()) {
+					AdvancedCoreUser user = getUser(java.util.UUID.fromString(uuid));
+					String name = user.getPlayerName();
+					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+						names.add(name);
+					}
+				}
+			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+				ArrayList<String> data = plugin.getSQLiteUserTable().getNames();
+				for (String name : data) {
+					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+						names.add(name);
+					}
+				}
+			} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+				ArrayList<String> data = ArrayUtils.getInstance().convert(plugin.getMysql().getNames());
+				for (String name : data) {
+					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+						names.add(name);
+					}
 				}
 			}
-		} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-			ArrayList<String> data = plugin.getSQLiteUserTable().getNames();
-			for (String name : data) {
-				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
-					names.add(name);
-				}
-			}
-		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			ArrayList<String> data = ArrayUtils.getInstance().convert(plugin.getMysql().getNames());
-			for (String name : data) {
-				if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
-					names.add(name);
-				}
-			}
+			return ArrayUtils.getInstance().removeDuplicates(names);
 		}
-		return ArrayUtils.getInstance().removeDuplicates(names);
+		return new ArrayList<String>();
+
 	}
 
 	public ArrayList<String> getAllUUIDs() {
@@ -70,39 +74,41 @@ public class UserManager {
 	}
 
 	public ArrayList<String> getAllUUIDs(UserStorage storage) {
-		if (storage.equals(UserStorage.FLAT)) {
-			File folder = new File(plugin.getDataFolder() + File.separator + "Data");
-			String[] fileNames = folder.list();
-			ArrayList<String> uuids = new ArrayList<String>();
-			if (fileNames != null) {
-				for (String playerFile : fileNames) {
-					if (!playerFile.equals("null") && !playerFile.equals("")) {
-						String uuid = playerFile.replace(".yml", "");
-						uuids.add(uuid);
-					}
-				}
-			}
-			return uuids;
-		} else if (storage.equals(UserStorage.SQLITE)) {
-			List<Column> cols = plugin.getSQLiteUserTable().getRows();
-			ArrayList<String> uuids = new ArrayList<String>();
-			for (Column col : cols) {
-				if (col.getValue().isString()) {
-					uuids.add(col.getValue().getString());
-				}
-			}
-			return uuids;
-		} else if (storage.equals(UserStorage.MYSQL)) {
-			synchronized (obj) {
+		if (plugin.isLoadUserData()) {
+			if (storage.equals(UserStorage.FLAT)) {
+				File folder = new File(plugin.getDataFolder() + File.separator + "Data");
+				String[] fileNames = folder.list();
 				ArrayList<String> uuids = new ArrayList<String>();
-				try {
-					for (String uuid : plugin.getMysql().getUuids()) {
-						uuids.add(uuid);
+				if (fileNames != null) {
+					for (String playerFile : fileNames) {
+						if (!playerFile.equals("null") && !playerFile.equals("")) {
+							String uuid = playerFile.replace(".yml", "");
+							uuids.add(uuid);
+						}
 					}
-				} catch (NullPointerException e) {
-					e.printStackTrace();
 				}
 				return uuids;
+			} else if (storage.equals(UserStorage.SQLITE)) {
+				List<Column> cols = plugin.getSQLiteUserTable().getRows();
+				ArrayList<String> uuids = new ArrayList<String>();
+				for (Column col : cols) {
+					if (col.getValue().isString()) {
+						uuids.add(col.getValue().getString());
+					}
+				}
+				return uuids;
+			} else if (storage.equals(UserStorage.MYSQL)) {
+				synchronized (obj) {
+					ArrayList<String> uuids = new ArrayList<String>();
+					try {
+						for (String uuid : plugin.getMysql().getUuids()) {
+							uuids.add(uuid);
+						}
+					} catch (NullPointerException e) {
+						e.printStackTrace();
+					}
+					return uuids;
+				}
 			}
 		}
 		return new ArrayList<String>();
@@ -271,7 +277,7 @@ public class UserManager {
 		return false;
 	}
 
-	public void onChange(AdvancedCoreUser user, String...keys) {
+	public void onChange(AdvancedCoreUser user, String... keys) {
 		for (UserDataChanged change : userDataChange) {
 			change.onChange(user, keys);
 		}
