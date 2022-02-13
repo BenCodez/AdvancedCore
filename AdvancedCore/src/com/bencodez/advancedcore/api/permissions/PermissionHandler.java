@@ -33,26 +33,29 @@ public class PermissionHandler {
 	public PermissionHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 		permsToAdd = new HashMap<UUID, PlayerPermissionHandler>();
-		if (plugin.getServerDataFile().getData().isConfigurationSection("TimedPermissions")) {
-			for (String string : plugin.getServerDataFile().getData().getConfigurationSection("TimedPermissions")
-					.getKeys(false)) {
-				UUID uuid = UUID.fromString(string);
-				List<String> list = plugin.getServerDataFile().getData().getStringList("TimedPermissions." + string);
-				for (String str : list) {
-					String[] data = str.split(Pattern.quote("%line%"));
-					if (data.length > 1) {
-						String perm = data[0];
-						String longStr = data[1];
-						long delay = Long.valueOf(longStr).longValue() - System.currentTimeMillis();
-						if (delay > 0) {
-							plugin.debug("Adding permission " + perm + " to " + string);
-							addPermission(uuid, perm, delay);
+		if (plugin.getServerDataFile().getData() != null) {
+			if (plugin.getServerDataFile().getData().isConfigurationSection("TimedPermissions")) {
+				for (String string : plugin.getServerDataFile().getData().getConfigurationSection("TimedPermissions")
+						.getKeys(false)) {
+					UUID uuid = UUID.fromString(string);
+					List<String> list = plugin.getServerDataFile().getData()
+							.getStringList("TimedPermissions." + string);
+					for (String str : list) {
+						String[] data = str.split(Pattern.quote("%line%"));
+						if (data.length > 1) {
+							String perm = data[0];
+							String longStr = data[1];
+							long delay = Long.valueOf(longStr).longValue() - System.currentTimeMillis();
+							if (delay > 0) {
+								plugin.debug("Adding permission " + perm + " to " + string);
+								addPermission(uuid, perm, delay);
 
+							}
 						}
 					}
 				}
+				plugin.getServerDataFile().getData().set("TimedPermissions", null);
 			}
-			plugin.getServerDataFile().getData().set("TimedPermissions", null);
 		}
 	}
 
