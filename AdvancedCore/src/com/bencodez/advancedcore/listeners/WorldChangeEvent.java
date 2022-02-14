@@ -33,23 +33,23 @@ public class WorldChangeEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorldChange(PlayerChangedWorldEvent event) {
+		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
+			plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
-		plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+				@Override
+				public void run() {
+					if (plugin.getOptions().isDisableCheckOnWorldChange() || event.getPlayer() == null) {
+						return;
+					}
+					Player player = event.getPlayer();
 
-			@Override
-			public void run() {
-				if (plugin.getOptions().isDisableCheckOnWorldChange() || event.getPlayer() == null) {
-					return;
+					AdvancedCoreUser user = plugin.getUserManager().getUser(player);
+					if (user.isCheckWorld()) {
+						user.checkOfflineRewards();
+					}
 				}
-				Player player = event.getPlayer();
-
-				AdvancedCoreUser user = plugin.getUserManager().getUser(player);
-				if (user.isCheckWorld()) {
-					user.checkOfflineRewards();
-				}
-			}
-		}, 1l);
-
+			}, 1l);
+		}
 	}
 
 }

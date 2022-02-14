@@ -32,7 +32,7 @@ public class PlayerJoinEvent implements Listener {
 
 	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
 	public void onJoin(AdvancedCoreLoginEvent event) {
-		if (event.isUserInStorage()) {
+		if (event.isUserInStorage() && plugin.isLoadUserData()) {
 			Player player = event.getPlayer();
 			boolean userExist = plugin.getUserManager().userExist(event.getPlayer().getUniqueId());
 			if (userExist) {
@@ -58,7 +58,7 @@ public class PlayerJoinEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final PlayerLoginEvent event) {
-		if (plugin != null && plugin.isEnabled()) {
+		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
 			Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 				@Override
