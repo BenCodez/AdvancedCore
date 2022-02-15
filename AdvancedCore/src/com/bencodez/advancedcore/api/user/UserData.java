@@ -229,7 +229,8 @@ public class UserData {
 	}
 
 	public List<Column> getSQLiteRow() {
-		return user.getPlugin().getSQLiteUserTable().getExact(new Column("uuid", new DataValueString(user.getUUID())));
+			return user.getPlugin().getSQLiteUserTable()
+					.getExact(new Column("uuid", new DataValueString(user.getUUID())));
 	}
 
 	@Deprecated

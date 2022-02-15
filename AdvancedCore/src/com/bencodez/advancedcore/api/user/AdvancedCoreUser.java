@@ -641,6 +641,9 @@ public class AdvancedCoreUser {
 	}
 
 	public boolean isCheckWorld() {
+		if (!plugin.isLoadUserData()) {
+			return false;
+		}
 		return Boolean.valueOf(getData().getString("CheckWorld", true));
 	}
 

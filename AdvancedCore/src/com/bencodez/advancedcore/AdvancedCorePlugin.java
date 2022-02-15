@@ -352,9 +352,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (database == null && loadUserData) {
 			loadUserAPI(getStorageType());
 		}
-		for (Table table : database.getTables()) {
-			if (table.getName().equalsIgnoreCase("Users")) {
-				return table;
+		if (!loadUserData) {
+			for (Table table : database.getTables()) {
+				if (table.getName().equalsIgnoreCase("Users")) {
+					return table;
+				}
 			}
 		}
 		return null;
