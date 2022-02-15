@@ -38,7 +38,8 @@ public class WorldChangeEvent implements Listener {
 
 				@Override
 				public void run() {
-					if (plugin.getOptions().isDisableCheckOnWorldChange() || event.getPlayer() == null) {
+					if (plugin.getOptions().isDisableCheckOnWorldChange() || event.getPlayer() == null
+							|| !plugin.isLoadUserData()) {
 						return;
 					}
 					Player player = event.getPlayer();
