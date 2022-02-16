@@ -312,7 +312,7 @@ public abstract class BungeeMySQL {
 			while (rs.next()) {
 				String uuid = rs.getString("uuid");
 				String playerName = rs.getString("PlayerName");
-				if (uuid != null && !uuid.isEmpty() && !uuid.equals("null")) {
+				if (uuid != null && !uuid.isEmpty() && !uuid.equals("null") && playerName != null) {
 					uuidNames.put(UUID.fromString(uuid), playerName);
 				}
 			}
