@@ -1,5 +1,7 @@
 package com.bencodez.advancedcore.listeners;
 
+import java.util.TimerTask;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -59,7 +61,7 @@ public class PlayerJoinEvent implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final PlayerLoginEvent event) {
 		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
-			Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+			plugin.getLoginTimer().schedule(new TimerTask() {
 
 				@Override
 				public void run() {
@@ -108,9 +110,8 @@ public class PlayerJoinEvent implements Listener {
 						}
 
 					}
-
 				}
-			}, 30L);
+			}, 1500);
 		}
 	}
 
