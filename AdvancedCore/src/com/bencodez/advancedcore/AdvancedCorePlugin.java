@@ -405,9 +405,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void loadAdvancedCoreEvents() {
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
+		if (loadUserData) {
+			Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
+			Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
+		}
+		
 		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), this);
-		Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
 		Bukkit.getPluginManager().registerEvents(new BInventoryListener(this), this);
 	}
 
