@@ -177,7 +177,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private Timer timer = new Timer();
-	
+
 	@Getter
 	private Timer loginTimer = new Timer();
 
@@ -355,7 +355,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (database == null && loadUserData) {
 			loadUserAPI(getStorageType());
 		}
-		if (!loadUserData) {
+		if (loadUserData) {
 			for (Table table : database.getTables()) {
 				if (table.getName().equalsIgnoreCase("Users")) {
 					return table;
