@@ -128,8 +128,8 @@ public class ItemBuilder {
 							materialStr = "WATCH";
 						} else if (materialStr.equalsIgnoreCase("OAK_SIGN")) {
 							materialStr = "SIGN";
-						} else if (materialStr.equalsIgnoreCase("STAINED_GLASS_PANE")) {
-							materialStr = "BLACK_STAINED_GLASS_PANE";
+						} else if (materialStr.equalsIgnoreCase("BLACK_STAINED_GLASS_PANE")) {
+							materialStr = "STAINED_GLASS_PANE";
 						}
 					}
 
