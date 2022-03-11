@@ -229,8 +229,7 @@ public class UserData {
 	}
 
 	public List<Column> getSQLiteRow() {
-			return user.getPlugin().getSQLiteUserTable()
-					.getExact(new Column("uuid", new DataValueString(user.getUUID())));
+		return user.getPlugin().getSQLiteUserTable().getExact(new Column("uuid", new DataValueString(user.getUUID())));
 	}
 
 	@Deprecated
@@ -419,10 +418,12 @@ public class UserData {
 		user.getPlugin().extraDebug("PlayerData " + storage.toString() + ": Setting " + key + " to '" + value
 				+ "' for '" + user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
-		if (user.isCached() && queue) {
-			user.getCache().addChange(new UserDataChangeInt(key, value));
+		if (user.isCached()) {
+			user.getCache().addChange(new UserDataChangeInt(key, value), queue);
 			user.getPlugin().getUserManager().onChange(user, key);
-			return;
+			if (queue) {
+				return;
+			}
 		}
 
 		// process change right away
@@ -461,10 +462,12 @@ public class UserData {
 		user.getPlugin().extraDebug("PlayerData " + storage.toString() + ": Setting " + key + " to '" + value
 				+ "' for '" + user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
-		if (user.isCached() && queue) {
-			user.getCache().addChange(new UserDataChangeString(key, value));
+		if (user.isCached()) {
+			user.getCache().addChange(new UserDataChangeString(key, value), queue);
 			user.getPlugin().getUserManager().onChange(user, key);
-			return;
+			if (queue) {
+				return;
+			}
 		}
 
 		if (storage.equals(UserStorage.SQLITE)) {

@@ -33,12 +33,15 @@ public class UserDataCache {
 		cache = new HashMap<String, DataValue>();
 	}
 
-	public synchronized void addChange(UserDataChange change) {
+	public synchronized void addChange(UserDataChange change, boolean queue) {
 		cache.put(change.getKey(), change.toUserDataValue());
-		cachedChanges.add(change);
-		if (!scheduled) {
-			scheduleChanges();
+		if (queue) {
+			cachedChanges.add(change);
+			if (!scheduled) {
+				scheduleChanges();
+			}
 		}
+
 	}
 
 	public UserDataCache cache() {
