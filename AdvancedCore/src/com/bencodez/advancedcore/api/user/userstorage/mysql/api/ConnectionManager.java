@@ -186,9 +186,15 @@ public class ConnectionManager {
 			config.setDriverClassName(mysqlDriver);
 			config.setUsername(username);
 			config.setPassword(password);
-			config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=" + useSSL
-					+ "&allowMultiQueries=true&rewriteBatchedStatements=true&useDynamicCharsetInfo=false&allowPublicKeyRetrieval="
-					+ publicKeyRetrieval + str);
+			if (mysqlDriver.equals("org.mariadb.jdbc.Driver")) {
+				config.setJdbcUrl(String.format("jdbc:mariadb://%s:%s/%s", host, port, database) + "?useSSL=" + useSSL
+						+ "&allowMultiQueries=true&rewriteBatchedStatements=true&useDynamicCharsetInfo=false&allowPublicKeyRetrieval="
+						+ publicKeyRetrieval + str);
+			} else {
+				config.setJdbcUrl(String.format("jdbc:mysql://%s:%s/%s", host, port, database) + "?useSSL=" + useSSL
+						+ "&allowMultiQueries=true&rewriteBatchedStatements=true&useDynamicCharsetInfo=false&allowPublicKeyRetrieval="
+						+ publicKeyRetrieval + str);
+			}
 			config.setConnectionTimeout(connectionTimeout);
 			config.setMaximumPoolSize(maximumPoolsize);
 			config.setMinimumIdle(maximumPoolsize);
