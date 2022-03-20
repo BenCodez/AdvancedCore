@@ -1129,6 +1129,11 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
 					HashMap<String, String> placeholders) {
+				String playerName = user.getPlayerName();
+				if (plugin.getOptions().getBroadcastBlacklist().contains(playerName)) {
+					debug("Not broadcasting for " + playerName + ", in blacklist");
+					return null;
+				}
 				for (String str : value) {
 					MiscUtils.getInstance().broadcast(StringParser.getInstance().replacePlaceHolders(user.getPlayer(),
 							StringParser.getInstance().replacePlaceHolder(str, placeholders)));
@@ -1147,6 +1152,11 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
 					HashMap<String, String> placeholders) {
+				String playerName = user.getPlayerName();
+				if (plugin.getOptions().getBroadcastBlacklist().contains(playerName)) {
+					debug("Not broadcasting for " + playerName + ", in blacklist");
+					return null;
+				}
 				MiscUtils.getInstance().broadcast(StringParser.getInstance().replacePlaceHolders(user.getPlayer(),
 						StringParser.getInstance().replacePlaceHolder(value, placeholders)));
 				return null;
