@@ -61,6 +61,7 @@ public abstract class BungeeMySQL {
 		}
 		boolean useSSL = section.getBoolean("UseSSL", false);
 		boolean publicKeyRetrieval = section.getBoolean("PublicKeyRetrieval", false);
+		boolean useMariaDB = section.getBoolean("UseMariaDB", false);
 		if (!section.getString("Name", "").isEmpty()) {
 			tableName = section.getString("Name", "");
 		}
@@ -81,7 +82,8 @@ public abstract class BungeeMySQL {
 				bungee.getLogger().severe(string);
 			}
 		};
-		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval)) {
+		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval,
+				useMariaDB)) {
 
 		}
 		try {

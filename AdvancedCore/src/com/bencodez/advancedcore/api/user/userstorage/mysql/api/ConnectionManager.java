@@ -21,6 +21,7 @@ public class ConnectionManager {
 	private String str = "";
 	private String username;
 	private boolean useSSL = false;
+	private boolean useMariaDB = false;
 
 	public ConnectionManager(String host, String port, String username, String password, String database) {
 		this.host = host;
@@ -35,7 +36,7 @@ public class ConnectionManager {
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
-			int maxConnections, boolean useSSL, long lifeTime, String str, boolean publicKeyRetrieval) {
+			int maxConnections, boolean useSSL, long lifeTime, String str, boolean publicKeyRetrieval, boolean useMariaDB) {
 		this.host = host;
 		this.port = port;
 		this.username = username;
@@ -52,6 +53,7 @@ public class ConnectionManager {
 		// this.maxConnections = maxConnections;
 		this.str = str;
 		this.publicKeyRetrieval = publicKeyRetrieval;
+		this.useMariaDB = useMariaDB;
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
@@ -158,6 +160,9 @@ public class ConnectionManager {
 
 	public String getMysqlDriverName() {
 		String className = "org.mariadb.jdbc.Driver";
+		if (!useMariaDB) {
+			className = "com.mysql.cj.jdbc.Driver";
+		}
 
 		try {
 			Class.forName(className);

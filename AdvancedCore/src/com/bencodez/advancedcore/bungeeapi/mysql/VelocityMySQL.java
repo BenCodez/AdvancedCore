@@ -59,6 +59,7 @@ public abstract class VelocityMySQL {
 		}
 		boolean useSSL = config.getBoolean(config.getNode("UseSSL"), false);
 		boolean publicKeyRetrieval = config.getBoolean(config.getNode("PublicKeyRetrieval"), false);
+		boolean useMariaDB = config.getBoolean(config.getNode("UseMariaDB"), false);
 		name = config.getString(config.getNode("Name"), "");
 		if (!name.isEmpty()) {
 			name = tableName;
@@ -79,7 +80,8 @@ public abstract class VelocityMySQL {
 				severe(string);
 			}
 		};
-		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval)) {
+		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval,
+				useMariaDB)) {
 
 		}
 		try {
