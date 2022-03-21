@@ -238,7 +238,7 @@ public class AdvancedCoreConfigOptions {
 			processRewards = configData.getBoolean("ProcessRewards", true);
 
 			waitUntilLoggedIn = configData.getBoolean("WaitUntilLoggedIn", true);
-			broadcastBlacklist = (ArrayList<String>) configData.getList("BroadcastBlackList", new ArrayList<String>());
+			broadcastBlacklist = (ArrayList<String>) configData.getList("BroadcastBlacklist", new ArrayList<String>());
 
 			loadSkulls = configData.getBoolean("LoadSkulls", true);
 
