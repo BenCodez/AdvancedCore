@@ -36,18 +36,15 @@ public class ConnectionManager {
 	}
 
 	public ConnectionManager(String host, String port, String username, String password, String database,
-			int maxConnections, boolean useSSL, long lifeTime, String str, boolean publicKeyRetrieval, boolean useMariaDB) {
+			int maxConnections, boolean useSSL, long lifeTime, String str, boolean publicKeyRetrieval,
+			boolean useMariaDB) {
 		this.host = host;
 		this.port = port;
 		this.username = username;
 		this.password = password;
 		this.database = database;
 		connectionTimeout = 50000;
-		if (maxConnections > 5) {
-			maximumPoolsize = maxConnections;
-		} else {
-			maximumPoolsize = 5;
-		}
+		maximumPoolsize = maxConnections;
 		this.useSSL = useSSL;
 		this.maxLifetimeMs = lifeTime;
 		// this.maxConnections = maxConnections;
