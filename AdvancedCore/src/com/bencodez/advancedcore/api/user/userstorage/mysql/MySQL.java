@@ -618,7 +618,7 @@ public class MySQL {
 
 				try {
 					Query q = new Query(mysql, query);
-					q.executeUpdateAsync();
+					q.executeUpdate();
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}

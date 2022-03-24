@@ -106,15 +106,18 @@ public class UserDataCache {
 						.extraDebug("Processing changes for " + uuid.toString() + ", Changes: " + cachedChanges.size());
 				AdvancedCoreUser user = getUser();
 				HashMap<String, DataValue> values = new HashMap<String, DataValue>();
+				ArrayList<String> keys = new ArrayList<String>();
 				while (!cachedChanges.isEmpty()) {
 					UserDataChange change = cachedChanges.poll();
 					values.put(change.getKey(), change.toUserDataValue());
+					keys.add(change.getKey());
 					change.dump();
 					// manager.getPlugin().extraDebug("Processing change for " + change.getKey());
 				}
 				if (!values.isEmpty()) {
 					user.getUserData().setValues(values);
 				}
+				manager.getPlugin().getUserManager().onChange(user, ArrayUtils.getInstance().convert(keys));
 			}
 		}
 	}

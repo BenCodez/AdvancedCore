@@ -445,6 +445,7 @@ public class Reward {
 		return this;
 	}
 
+	@SuppressWarnings("deprecation")
 	private void setRewardFile() {
 		Reward reward = RewardHandler.getInstance().getRewardDirectlyDefined(name);
 		ConfigurationSection section = getConfig().getConfigData();

@@ -760,6 +760,7 @@ public class BStatsMetrics {
 	 *                  <a href="https://bstats.org/what-is-my-plugin-id">What is my
 	 *                  plugin id?</a>
 	 */
+	@SuppressWarnings("deprecation")
 	public BStatsMetrics(JavaPlugin plugin, int serviceId) {
 		this.plugin = plugin;
 		// Get the config file
