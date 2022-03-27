@@ -133,6 +133,10 @@ public class Hologram {
 		}
 	}
 
+	public boolean isAlive() {
+		return !armorStand.isDead();
+	}
+
 	public void kill() {
 		if (!Bukkit.isPrimaryThread()) {
 			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
@@ -141,11 +145,13 @@ public class Hologram {
 				public void run() {
 					armorStand.setHealth(0);
 					armorStand.remove();
+					armorStand = null;
 				}
 			});
 		} else {
 			armorStand.setHealth(0);
 			armorStand.remove();
+			armorStand = null;
 		}
 		AdvancedCorePlugin.getInstance().getHologramHandler().remove(this, false);
 	}
