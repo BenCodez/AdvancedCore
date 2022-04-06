@@ -409,7 +409,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
 			Bukkit.getPluginManager().registerEvents(new WorldChangeEvent(this), this);
 		}
-		
+
 		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), this);
 		Bukkit.getPluginManager().registerEvents(new BInventoryListener(this), this);
 	}
@@ -838,6 +838,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 		getServerDataFile().setLastUpdated();
 		timer.cancel();
+		loginTimer.cancel();
 		onUnLoad();
 		SkullHandler.getInstance().close();
 		fullInventoryHandler.save();
@@ -857,6 +858,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void onEnable() {
 		javaPlugin = this;
 		advancedCoreCommandLoader = CommandLoader.getInstance();
+		loginTimer = new Timer();
 		onPreLoad();
 		loadHook();
 		onPostLoad();
