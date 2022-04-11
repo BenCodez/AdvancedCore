@@ -120,7 +120,17 @@ public class PlayerJoinEvent implements Listener {
 		Player player = event.getPlayer();
 		plugin.debug("Logout: " + event.getPlayer().getName() + " (" + player.getUniqueId() + ")");
 
-		plugin.getUserManager().getDataManager().removeCache(player.getUniqueId());
+		plugin.getLoginTimer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				if (plugin != null && plugin.isEnabled()) {
+					plugin.getUserManager().getDataManager().removeCache(player.getUniqueId());
+
+				}
+			}
+		}, 0);
+
 	}
 
 }
