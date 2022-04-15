@@ -43,6 +43,7 @@ import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditActionBar;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditAdvancedPriority;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditAdvancedRandomReward;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditAdvancedWorld;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditBossBar;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditChoices;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXP;
@@ -726,7 +727,7 @@ public class RewardHandler {
 				user.setCheckWorld(true);
 				return false;
 			}
-		}.priority(100).allowReattempt().addEditButton(
+		}.priority(100).allowReattempt().alwaysForce().addEditButton(
 				new EditGUIButton(new ItemBuilder("END_PORTAL_FRAME"), new EditGUIValueList("Worlds", null) {
 
 					@Override
@@ -1923,6 +1924,40 @@ public class RewardHandler {
 						"AdvancedPriority will run first sub reward that it can, then ignore the rest of the sub rewards")
 						.addLore("Can be used for permission based rewards or chance based rewards")))
 				.priority(10).postReward());
+
+		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedWorld") {
+
+			@Override
+			public String onRewardRequested(Reward reward1, AdvancedCoreUser user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				for (String keys : section.getKeys(false)) {
+					plugin.extraDebug("AdvancedWorld: Giving reward " + reward1.getName() + "_AdvancedWorld");
+					section.set(keys + ".Worlds", ArrayUtils.getInstance().convert(new String[] { keys }));
+					giveReward(user, section, keys, new RewardOptions().withPlaceHolder(placeholders)
+							.setPrefix(reward1.getName() + "_AdvancedWorld"));
+				}
+				return null;
+
+			}
+		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("AdvancedWorld") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+
+				new RewardEditAdvancedWorld() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+
+			}
+
+		}.addLore("AdvancedReward will run rewards based worlds specified"))).priority(10).postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("SpecialChance") {
 

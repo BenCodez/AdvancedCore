@@ -156,6 +156,15 @@ AdvancedPriority:
     Messages:
       Player: 'You got unlucky'
       
+# Give rewards based on what world the player is on
+AdvancedWorld:
+  world:
+    Commands:
+    - say %player% in world
+  world_nether:
+    Commands:
+    - say %player% in nether
+      
 # Special chance
 # percentage is caculated with all numbers added up
 # E.g. below:

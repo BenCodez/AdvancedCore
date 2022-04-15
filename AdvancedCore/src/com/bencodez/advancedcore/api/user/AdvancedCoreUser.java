@@ -121,7 +121,7 @@ public class AdvancedCoreUser {
 		this.plugin = plugin;
 		this.uuid = uuid.toString();
 		loadData();
-		setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
+		setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid, false));
 	}
 
 	/**
