@@ -16,7 +16,6 @@ import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
@@ -100,7 +99,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				Reward reward = RewardHandler.getInstance().getReward(args[1]);
+				Reward reward = plugin.getRewardHandler().getReward(args[1]);
 				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
@@ -119,7 +118,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				Reward reward = RewardHandler.getInstance().getReward(args[1]);
+				Reward reward = plugin.getRewardHandler().getReward(args[1]);
 				for (Player p : Bukkit.getOnlinePlayers()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(p);
 					new RewardBuilder(reward).send(user);
@@ -132,7 +131,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				RewardHandler.getInstance().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
+				plugin.getRewardHandler().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
 
 				sendMessage(sender, "&cGave " + args[1] + " the reward file " + args[2]);
 			}
@@ -144,7 +143,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				if (args[1].equalsIgnoreCase("all")) {
-					Reward reward = RewardHandler.getInstance().getReward(args[3]);
+					Reward reward = plugin.getRewardHandler().getReward(args[3]);
 					ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
 					for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 						AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
@@ -157,8 +156,7 @@ public class CommandLoader {
 					sendMessage(sender, "&cGave all players reward file " + args[3]);
 				} else {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-					RewardHandler.getInstance().giveReward(user, args[3],
-							new RewardOptions().setOnline(user.isOnline()));
+					plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
 
 					sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
 				}
@@ -170,7 +168,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				RewardHandler.getInstance().giveReward(user, args[2],
+				plugin.getRewardHandler().giveReward(user, args[2],
 						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
 
 				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]);
@@ -475,8 +473,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				sendMessage(sender,
-						"User " + args[1] + " permission " + args[3] + ":" + user.hasPermission(args[3]));
+				sendMessage(sender, "User " + args[1] + " permission " + args[3] + ":" + user.hasPermission(args[3]));
 			}
 		});
 

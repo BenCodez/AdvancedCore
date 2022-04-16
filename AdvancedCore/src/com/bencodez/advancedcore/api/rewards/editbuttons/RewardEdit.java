@@ -14,7 +14,6 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueNu
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 
 public abstract class RewardEdit {
@@ -107,7 +106,7 @@ public abstract class RewardEdit {
 	public abstract void open(Player player, RewardEditData reward);
 
 	public void openSubReward(Player player, String path, RewardEditData reward) {
-		RewardHandler.getInstance().openSubReward(player, path, reward);
+		AdvancedCorePlugin.getInstance().getRewardHandler().openSubReward(player, path, reward);
 	}
 
 	public void reloadAdvancedCore() {

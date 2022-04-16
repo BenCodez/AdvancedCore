@@ -12,7 +12,6 @@ import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 
@@ -78,7 +77,7 @@ public class AdminGUI {
 
 						@Override
 						public void onInput(Player player, String value) {
-							RewardHandler.getInstance().getReward(value);
+							plugin.getRewardHandler().getReward(value);
 							player.sendMessage("Reward file created");
 							plugin.reloadAdvancedCore(false);
 

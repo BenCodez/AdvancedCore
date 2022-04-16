@@ -13,7 +13,6 @@ import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 /**
@@ -53,7 +52,7 @@ public class ChoiceGUI {
 		}
 
 		for (String rewardName : unClaimedChoices) {
-			Reward reward = RewardHandler.getInstance().getReward(rewardName);
+			Reward reward = plugin.getRewardHandler().getReward(rewardName);
 			if (reward.getConfig().getEnableChoices()) {
 				inv.addButton(new BInventoryButton(new ItemBuilder(reward.getConfig().getDisplayItem())) {
 
@@ -92,7 +91,7 @@ public class ChoiceGUI {
 					String choice = (String) getData("Choice");
 
 					user.removeUnClaimedChoiceReward(reward.getName());
-					RewardHandler.getInstance().giveChoicesReward(reward, user, choice);
+					plugin.getRewardHandler().giveChoicesReward(reward, user, choice);
 					if (user.getUnClaimedChoices().size() > 0) {
 						openClaimChoices(clickEvent.getPlayer());
 					} else {
@@ -115,7 +114,7 @@ public class ChoiceGUI {
 	}
 
 	public void openPreferenceReward(Player player, String rewardName) {
-		Reward reward = RewardHandler.getInstance().getReward(rewardName);
+		Reward reward = plugin.getRewardHandler().getReward(rewardName);
 		if (!reward.getConfig().getEnableChoices()) {
 			player.sendMessage("Choice rewards not enabled");
 			return;

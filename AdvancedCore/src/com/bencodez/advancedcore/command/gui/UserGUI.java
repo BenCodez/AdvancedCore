@@ -20,7 +20,6 @@ import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
@@ -92,7 +91,7 @@ public class UserGUI {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				ArrayList<String> rewards = new ArrayList<String>();
-				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+				for (Reward reward : plugin.getRewardHandler().getRewards()) {
 					rewards.add(reward.getRewardName());
 				}
 
@@ -103,7 +102,7 @@ public class UserGUI {
 							public void onInput(Player player, String value) {
 								AdvancedCoreUser user = plugin.getUserManager()
 										.getUser(UserGUI.getInstance().getCurrentPlayer(player));
-								RewardHandler.getInstance().giveReward(user, value, new RewardOptions());
+								plugin.getRewardHandler().giveReward(user, value, new RewardOptions());
 								player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
 
 							}

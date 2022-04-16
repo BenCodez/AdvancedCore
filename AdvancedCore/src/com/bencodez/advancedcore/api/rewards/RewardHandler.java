@@ -91,11 +91,7 @@ public class RewardHandler {
 	/** The instance. */
 	static RewardHandler instance = new RewardHandler();
 
-	/**
-	 * Gets the single instance of RewardHandler.
-	 *
-	 * @return single instance of RewardHandler
-	 */
+	@Deprecated
 	public static RewardHandler getInstance() {
 		return instance;
 	}

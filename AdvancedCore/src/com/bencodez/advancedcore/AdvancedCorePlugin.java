@@ -198,6 +198,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private PermissionHandler permissionHandler;
 
+	@Getter
+	private RewardHandler rewardHandler;
+
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
@@ -452,6 +455,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	/**
 	 * Load AdvancedCore hook
 	 */
+	@SuppressWarnings("deprecation")
 	public void loadHook() {
 		serverDataFile = new ServerData(this);
 
@@ -477,21 +481,22 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		loadConfig(true);
 
-		RewardHandler.getInstance().loadInjectedRewards();
-		RewardHandler.getInstance().loadInjectedRequirements();
+		rewardHandler = RewardHandler.getInstance();
+		rewardHandler.loadInjectedRewards();
+		rewardHandler.loadInjectedRequirements();
 		if (loadRewards) {
 			File rewardsFolder = new File(this.getDataFolder(), "Rewards");
-			RewardHandler.getInstance().addRewardFolder(rewardsFolder, false);
+			rewardHandler.addRewardFolder(rewardsFolder, false);
 			File file = new File(rewardsFolder.getAbsolutePath() + File.separator + "DirectlyDefined");
 			if (!file.exists()) {
 				file.mkdirs();
 			}
-			RewardHandler.getInstance().addRewardFolder(file);
+			rewardHandler.addRewardFolder(file);
 		}
 
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
-		RewardHandler.getInstance().checkDelayedTimedRewards();
+		rewardHandler.checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
 		loadVersionFile();
 
@@ -638,7 +643,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			@Override
 			public void reload() {
 				ArrayList<String> rewards = new ArrayList<String>();
-				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+				for (Reward reward : rewardHandler.getRewards()) {
 					if (!reward.getConfig().isDirectlyDefinedReward()) {
 						rewards.add(reward.getRewardName());
 					}
@@ -657,7 +662,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			@Override
 			public void reload() {
 				ArrayList<String> rewards = new ArrayList<String>();
-				for (Reward reward : RewardHandler.getInstance().getRewards()) {
+				for (Reward reward : rewardHandler.getRewards()) {
 					if (reward.getConfig().getEnableChoices()) {
 						rewards.add(reward.getRewardName());
 					}
@@ -787,7 +792,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				if (setupPermissions()) {
 					getLogger().info("Hooked into vault permissions");
 
-					RewardHandler.getInstance().addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
+					rewardHandler.addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
 
 						@Override
 						public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String type,
@@ -891,7 +896,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public void reloadAdvancedCore(boolean userStorage) {
 		getServerDataFile().reloadData();
-		RewardHandler.getInstance().loadRewards();
+		rewardHandler.loadRewards();
 		loadConfig(userStorage);
 		if (userStorage) {
 			getUserManager().getDataManager().clearCache();
@@ -900,7 +905,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		}
 		timeChecker.update();
-		RewardHandler.getInstance().checkDelayedTimedRewards();
+		rewardHandler.checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 	}

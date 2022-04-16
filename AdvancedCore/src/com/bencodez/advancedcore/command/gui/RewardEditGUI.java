@@ -23,7 +23,6 @@ import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditDelayed;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTimed;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
@@ -199,7 +198,7 @@ public class RewardEditGUI {
 			}
 		}.addLore("Execute reward at certain time")));
 
-		for (RequirementInject injectReward : RewardHandler.getInstance().getInjectedRequirements()) {
+		for (RequirementInject injectReward : plugin.getRewardHandler().getInjectedRequirements()) {
 			if (injectReward.isEditable()) {
 				for (BInventoryButton b : injectReward.getEditButtons()) {
 					if (b instanceof EditGUIButton) {
@@ -233,7 +232,7 @@ public class RewardEditGUI {
 
 		inv.addData("Reward", rewardEditData);
 
-		for (RewardInject injectReward : RewardHandler.getInstance().getInjectedRewards()) {
+		for (RewardInject injectReward : plugin.getRewardHandler().getInjectedRewards()) {
 			if (injectReward.isEditable()) {
 				for (BInventoryButton b : injectReward.getEditButtons()) {
 					if (b instanceof EditGUIButton) {
@@ -291,7 +290,7 @@ public class RewardEditGUI {
 			return;
 		}
 		BInventory inv = new BInventory("Rewards");
-		for (Reward reward : RewardHandler.getInstance().getRewards()) {
+		for (Reward reward : plugin.getRewardHandler().getRewards()) {
 			if (!reward.getConfig().isDirectlyDefinedReward()) {
 				ArrayList<String> lore = new ArrayList<String>();
 				if (reward.getConfig().isDirectlyDefinedReward()) {
@@ -326,7 +325,7 @@ public class RewardEditGUI {
 		}
 		BInventory inv = new BInventory("CopyRewards");
 		inv.addData("masterreward", rewardEditData);
-		for (Reward reward : RewardHandler.getInstance().getRewards()) {
+		for (Reward reward : plugin.getRewardHandler().getRewards()) {
 			if (!reward.getConfig().isDirectlyDefinedReward()) {
 				ArrayList<String> lore = new ArrayList<String>();
 				if (reward.getConfig().isDirectlyDefinedReward()) {

@@ -100,7 +100,7 @@ public class Reward {
 	 * @param reward the reward
 	 */
 	public Reward(String reward) {
-		load(RewardHandler.getInstance().getDefaultFolder(), reward);
+		load(plugin.getRewardHandler().getDefaultFolder(), reward);
 	}
 
 	public Reward(String name, ConfigurationSection section) {
@@ -108,7 +108,7 @@ public class Reward {
 	}
 
 	public boolean canGiveReward(AdvancedCoreUser user, RewardOptions options) {
-		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+		for (RequirementInject inject : plugin.getRewardHandler().getInjectedRequirements()) {
 			try {
 				plugin.extraDebug(getRewardName() + ": Checking " + inject.getPath() + ":" + inject.getPriority());
 				if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), options)) {
@@ -187,7 +187,7 @@ public class Reward {
 
 		ArrayList<RewardInject> postReward = new ArrayList<RewardInject>();
 
-		for (final RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
+		for (final RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
 			boolean Addplaceholder = inject.isAddAsPlaceholder();
 			try {
 				Object obj = null;
@@ -284,7 +284,7 @@ public class Reward {
 			rewardOptions.setOnline(user.isOnline());
 		}
 
-		for (RewardPlaceholderHandle handle : RewardHandler.getInstance().getPlaceholders()) {
+		for (RewardPlaceholderHandle handle : plugin.getRewardHandler().getPlaceholders()) {
 			if (handle.isPreProcess()) {
 				rewardOptions.addPlaceholder(handle.getKey(), handle.getValue(this, user));
 			}
@@ -294,7 +294,7 @@ public class Reward {
 		boolean allowOffline = false;
 		boolean canGive = true;
 		if (!rewardOptions.isIgnoreRequirements()) {
-			for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+			for (RequirementInject inject : plugin.getRewardHandler().getInjectedRequirements()) {
 				try {
 					plugin.extraDebug(getRewardName() + ": Checking requirement " + inject.getPath() + ":"
 							+ inject.getPriority());
@@ -373,7 +373,7 @@ public class Reward {
 			phs.put("CurrentDate", "" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
 			phs.put("uuid", user.getUUID());
 
-			for (RewardPlaceholderHandle handle : RewardHandler.getInstance().getPlaceholders()) {
+			for (RewardPlaceholderHandle handle : plugin.getRewardHandler().getPlaceholders()) {
 				if (!handle.isPreProcess()) {
 					phs.put(handle.getKey(), handle.getValue(this, user));
 				}
@@ -447,24 +447,24 @@ public class Reward {
 
 	@SuppressWarnings("deprecation")
 	private void setRewardFile() {
-		Reward reward = RewardHandler.getInstance().getRewardDirectlyDefined(name);
+		Reward reward = plugin.getRewardHandler().getRewardDirectlyDefined(name);
 		ConfigurationSection section = getConfig().getConfigData();
 		reward.getConfig().setData(section);
 		reward.getConfig().getFileData().options()
 				.header("Directly defined reward file. WRONG PLACE TO EDIT THIS! DO NOT EDIT");
 		reward.getConfig().setDirectlyDefinedReward(true);
 		reward.getConfig().save(reward.getConfig().getFileData());
-		RewardHandler.getInstance().updateReward(reward);
+		plugin.getRewardHandler().updateReward(reward);
 	}
 
 	public void validate() {
 		if (getName().equalsIgnoreCase("examplebasic") || getName().equalsIgnoreCase("exampleadvanced")) {
 			return;
 		}
-		for (RequirementInject inject : RewardHandler.getInstance().getInjectedRequirements()) {
+		for (RequirementInject inject : plugin.getRewardHandler().getInjectedRequirements()) {
 			inject.validate(this, getConfig().getConfigData());
 		}
-		for (RewardInject inject : RewardHandler.getInstance().getInjectedRewards()) {
+		for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
 			inject.validate(this, getConfig().getConfigData());
 		}
 	}

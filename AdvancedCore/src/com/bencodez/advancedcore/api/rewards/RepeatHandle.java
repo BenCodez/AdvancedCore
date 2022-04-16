@@ -50,7 +50,7 @@ public class RepeatHandle {
 			return;
 		}
 		plugin.debug("Giving repeat reward in " + timeBetween);
-		RewardHandler.getInstance().getRepeatTimer().schedule(new TimerTask() {
+		plugin.getRewardHandler().getRepeatTimer().schedule(new TimerTask() {
 
 			@Override
 			public void run() {
@@ -100,7 +100,7 @@ public class RepeatHandle {
 	}
 
 	public void giveRepeatAll(AdvancedCorePlugin plugin) {
-		RewardHandler.getInstance().getRepeatTimer().schedule(new TimerTask() {
+		plugin.getRewardHandler().getRepeatTimer().schedule(new TimerTask() {
 
 			@Override
 			public void run() {

@@ -13,7 +13,6 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 public class JavascriptEngine {
@@ -127,7 +126,7 @@ public class JavascriptEngine {
 				engine.put("AdvancedCore", AdvancedCorePlugin.getInstance());
 				engine.put("Console", Bukkit.getConsoleSender());
 				engine.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
-				engine.put("RewardHandler", RewardHandler.getInstance());
+				engine.put("RewardHandler", AdvancedCorePlugin.getInstance().getRewardHandler());
 				engine.put("StringParser", StringParser.getInstance());
 
 				engineAPI.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());

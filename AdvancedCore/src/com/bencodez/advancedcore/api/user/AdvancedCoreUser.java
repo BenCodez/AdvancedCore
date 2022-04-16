@@ -34,7 +34,6 @@ import com.bencodez.advancedcore.api.misc.effects.BossBar;
 import com.bencodez.advancedcore.api.misc.effects.Title;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
@@ -227,7 +226,7 @@ public class AdvancedCoreUser {
 					if (data.length > 1) {
 						placeholders = data[1];
 					}
-					new RewardBuilder(RewardHandler.getInstance().getReward(rewardName)).setCheckTimed(false)
+					new RewardBuilder(plugin.getRewardHandler().getReward(rewardName)).setCheckTimed(false)
 							.withPlaceHolder(ArrayUtils.getInstance().fromString(placeholders))
 							.withPlaceHolder("date",
 									"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
@@ -268,7 +267,7 @@ public class AdvancedCoreUser {
 							if (args.length > 1) {
 								placeholders = args[1];
 							}
-							RewardHandler.getInstance().giveReward(user, args[0],
+							plugin.getRewardHandler().giveReward(user, args[0],
 									new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
 											.setPlaceholders(ArrayUtils.getInstance().fromString(placeholders)));
 						}
@@ -590,7 +589,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void giveReward(FileConfiguration data, String path, RewardOptions rewardOptions) {
-		RewardHandler.getInstance().giveReward(this, data, path, rewardOptions);
+		plugin.getRewardHandler().giveReward(this, data, path, rewardOptions);
 	}
 
 	public void giveReward(Reward reward, RewardOptions rewardOptions) {
