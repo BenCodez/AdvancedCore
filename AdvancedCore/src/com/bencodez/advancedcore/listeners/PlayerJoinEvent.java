@@ -117,19 +117,21 @@ public class PlayerJoinEvent implements Listener {
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerQuit(PlayerQuitEvent event) {
-		Player player = event.getPlayer();
-		plugin.debug("Logout: " + event.getPlayer().getName() + " (" + player.getUniqueId() + ")");
+		if (plugin != null && plugin.isEnabled()) {
+			Player player = event.getPlayer();
+			plugin.debug("Logout: " + event.getPlayer().getName() + " (" + player.getUniqueId() + ")");
 
-		plugin.getLoginTimer().schedule(new TimerTask() {
+			plugin.getLoginTimer().schedule(new TimerTask() {
 
-			@Override
-			public void run() {
-				if (plugin != null && plugin.isEnabled()) {
-					plugin.getUserManager().getDataManager().removeCache(player.getUniqueId());
+				@Override
+				public void run() {
+					if (plugin != null && plugin.isEnabled()) {
+						plugin.getUserManager().getDataManager().removeCache(player.getUniqueId());
 
+					}
 				}
-			}
-		}, 0);
+			}, 0);
+		}
 
 	}
 
