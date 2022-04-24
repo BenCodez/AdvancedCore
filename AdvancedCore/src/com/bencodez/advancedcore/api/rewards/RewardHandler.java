@@ -616,10 +616,19 @@ public class RewardHandler {
 					str = "AdvancedCore.Reward." + reward.getName();
 				}
 
+				boolean reverse = false;
+				if (str.startsWith("!")) {
+					reverse = true;
+					str = str.substring(1);
+				}
+
 				boolean perm = PlayerUtils.getInstance().hasServerPermission(UUID.fromString(user.getUUID()), str);
+				if (reverse) {
+					perm = !perm;
+				}
 				if (!perm) {
 					plugin.getLogger().info(user.getPlayerName() + " does not have permission " + str
-							+ " to get reward " + reward.getName());
+							+ " to get reward " + reward.getName() + ", reverse: " + reverse);
 					return false;
 				}
 				return true;
