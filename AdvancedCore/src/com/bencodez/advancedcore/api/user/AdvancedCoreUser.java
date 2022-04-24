@@ -625,6 +625,10 @@ public class AdvancedCoreUser {
 		if (player == null) {
 			return false;
 		}
+		if (perm.startsWith("!")) {
+			perm = perm.substring(1);
+			return !player.hasPermission(perm);
+		}
 		return player.hasPermission(perm);
 	}
 

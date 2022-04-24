@@ -926,6 +926,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getOptions().setConfigData(configData);
 	}
 
+	public boolean isMySQLOkay() {
+		if (getStorageType().equals(UserStorage.MYSQL)) {
+			return mysql != null;
+		}
+		return true;
+	}
+
 	/**
 	 * @param mysql the mysql to set
 	 */
