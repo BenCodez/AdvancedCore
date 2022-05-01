@@ -23,6 +23,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
@@ -762,11 +763,18 @@ public class AdvancedCoreUser {
 	public void playParticle(String effectName, int data, int particles, int radius) {
 		Player player = getPlayer();
 		if ((player != null) && (effectName != null)) {
-			Particle effect = Particle.valueOf(effectName);
-			for (int i = 0; i < particles; i++) {
-				player.getWorld().spawnParticle(effect, player.getLocation(), particles, radius, radius, radius, data);
-			}
+			try {
+				Particle effect = Particle.valueOf(effectName);
+				for (int i = 0; i < particles; i++) {
+					player.getWorld().spawnParticle(effect, player.getLocation(), particles, radius, radius, radius,
+							data);
+				}
 
+			} catch (Exception e) {
+				plugin.getLogger().warning(
+						"Failed to create particle: " + effectName + ", " + data + ", " + particles + ", " + radius);
+				e.printStackTrace();
+			}
 		}
 	}
 
