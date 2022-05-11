@@ -29,8 +29,13 @@ public class SkullThread {
 		}
 
 		public void load(String playerName) {
-			if (!plugin.isEnabled() || playerName == null || playerName.isEmpty() || SkullHandler.getInstance().hasSkull(playerName)) {
+			if (!plugin.isEnabled() || playerName == null || playerName.isEmpty()
+					|| SkullHandler.getInstance().hasSkull(playerName)) {
 				return;
+			}
+
+			if (playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
+				playerName = playerName.substring(plugin.getOptions().getGeyserPrefix().length());
 			}
 
 			try {
