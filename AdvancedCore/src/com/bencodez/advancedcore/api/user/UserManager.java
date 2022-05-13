@@ -224,9 +224,27 @@ public class UserManager {
 				}
 			});
 		}
-		if (plugin.getStorageType().equals(UserStorage.MYSQL) && plugin.getMysql() != null) {
-			plugin.getMysql().clearCacheBasic();
+		getDataManager().clearCache();
+	}
+
+	public void purgeOldPlayersNow() {
+		if (plugin.getOptions().isPurgeOldData()) {
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				int daysOld = plugin.getOptions().getPurgeMinimumDays();
+				int days = user.getNumberOfDaysSinceLogin();
+				if (days == -1) {
+					// fix ones with no last online
+					user.setLastOnline(System.currentTimeMillis());
+				}
+				if (days > daysOld) {
+					plugin.debug("Removing " + user.getUUID() + " because of purge");
+					user.remove();
+				}
+				user.clearCache();
+			}
 		}
+		getDataManager().clearCache();
 	}
 
 	public void removeAllKeyValues(String key, DataType type) {

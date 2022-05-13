@@ -317,7 +317,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				plugin.getUserManager().purgeOldPlayers();
+				plugin.getUserManager().purgeOldPlayersNow();
 				sendMessage(sender, "&cPurged data");
 			}
 		});
