@@ -467,6 +467,33 @@ public class Reward {
 		for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
 			inject.validate(this, getConfig().getConfigData());
 		}
+		for (String str : getConfig().getConfigData().getKeys(false)) {
+			boolean valid = false;
+			for (RequirementInject inject : plugin.getRewardHandler().getInjectedRequirements()) {
+				if (inject.hasValidator()) {
+					if (inject.getValidate().isValid(inject, str)) {
+						valid = true;
+					}
+				} else if (inject.getPath().startsWith(str)) {
+					valid = true;
+				}
+			}
+			for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
+				if (inject.hasValidator()) {
+					if (inject.getValidate().isValid(inject, str)) {
+						valid = true;
+					}
+				} else if (inject.getPath().startsWith(str)) {
+					valid = true;
+				}
+			}
+			if (plugin.getRewardHandler().getValidPaths().contains(str)) {
+				valid = true;
+			}
+			if (!valid) {
+				plugin.getLogger().warning(str + " possibly not valid in reward " + getRewardName());
+			}
+		}
 	}
 
 }

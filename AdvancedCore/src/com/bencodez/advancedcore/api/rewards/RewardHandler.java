@@ -82,6 +82,7 @@ import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * The Class RewardHandler.
@@ -172,6 +173,14 @@ public class RewardHandler {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	@Getter
+	@Setter
+	private Set<String> validPaths = new HashSet<String>();
+
+	public void addValidPath(String path) {
+		validPaths.add(path);
 	}
 
 	/**
@@ -664,7 +673,7 @@ public class RewardHandler {
 							}
 						}
 					}
-				}));
+				}.addPath("RequirePermission")));
 
 		injectedRequirements.add(new RequirementInjectString("Server", "") {
 
@@ -1446,7 +1455,13 @@ public class RewardHandler {
 				}.open(clickEvent.getPlayer(), reward);
 			}
 
-		})).priority(10));
+		})).priority(10).validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+
+			}
+		}.addPath("OnlyOneLucky")));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Random") {
 
@@ -2098,23 +2113,24 @@ public class RewardHandler {
 					}
 				}
 			}
-		}).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Choices") {
-
-			@Override
-			public void openInventory(ClickEvent clickEvent) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				new RewardEditChoices() {
+		}.addPath("Choices"))
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Choices") {
 
 					@Override
-					public void setVal(String key, Object value) {
+					public void openInventory(ClickEvent clickEvent) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(key, value);
-						plugin.reloadAdvancedCore(false);
-					}
-				}.open(clickEvent.getPlayer(), reward);
-			}
+						new RewardEditChoices() {
 
-		}.addCheckKey("EnableChoices").addLore("Give users a choice on the reward"))));
+							@Override
+							public void setVal(String key, Object value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(key, value);
+								plugin.reloadAdvancedCore(false);
+							}
+						}.open(clickEvent.getPlayer(), reward);
+					}
+
+				}.addCheckKey("EnableChoices").addLore("Give users a choice on the reward"))));
 
 		injectedRewards.add(new RewardInjectKeys("Items") {
 
@@ -2179,23 +2195,24 @@ public class RewardHandler {
 					warning(reward, inject, "Invalid item section");
 				}
 			}
-		}).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Items") {
-
-			@Override
-			public void openInventory(ClickEvent clickEvent) {
-				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-				new RewardEditItems() {
+		}.addPath("OnlyOneItemChance"))
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Items") {
 
 					@Override
-					public void setVal(String key, Object value) {
+					public void openInventory(ClickEvent clickEvent) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.setValue(key, value);
-						plugin.reloadAdvancedCore(false);
-					}
-				}.open(clickEvent.getPlayer(), reward);
-			}
+						new RewardEditItems() {
 
-		}.addLore("Edit items"))));
+							@Override
+							public void setVal(String key, Object value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(key, value);
+								plugin.reloadAdvancedCore(false);
+							}
+						}.open(clickEvent.getPlayer(), reward);
+					}
+
+				}.addLore("Edit items"))));
 
 		for (RewardInject reward : injectedRewards) {
 			reward.setInternalReward(true);
@@ -2210,12 +2227,19 @@ public class RewardHandler {
 	public void loadRewards() {
 		rewards = Collections.synchronizedList(new ArrayList<Reward>());
 		setupExample();
+		addValidPath("DirectlyDefinedReward");
+		addValidPath("Delayed");
+		addValidPath("Timed");
+		addValidPath("DisplayItem");
+		addValidPath("Repeat");
+		addValidPath("ForceOffline");
 		for (File file : rewardFolders) {
 			loadRewards(file);
 		}
 
 		sortInjectedRewards();
 		sortInjectedRequirements();
+
 		plugin.debug("Loaded rewards");
 
 	}

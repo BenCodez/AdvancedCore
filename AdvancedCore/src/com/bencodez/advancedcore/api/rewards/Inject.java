@@ -19,6 +19,7 @@ public class Inject {
 	@Getter
 	@Setter
 	private String path;
+
 	@Getter
 	@Setter
 	private int priority = 50;

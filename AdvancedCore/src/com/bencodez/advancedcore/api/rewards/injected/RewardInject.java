@@ -103,6 +103,10 @@ public abstract class RewardInject extends Inject {
 		}
 	}
 
+	public boolean hasValidator() {
+		return getValidate() != null;
+	}
+
 	public RewardInject validator(RewardInjectValidator validate) {
 		this.validate = validate;
 		return this;

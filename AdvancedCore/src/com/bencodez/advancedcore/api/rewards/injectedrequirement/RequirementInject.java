@@ -76,6 +76,10 @@ public abstract class RequirementInject extends Inject {
 		}
 	}
 
+	public boolean hasValidator() {
+		return getValidate() != null;
+	}
+
 	public RequirementInject validator(RequirementInjectValidator validate) {
 		this.validate = validate;
 		return this;
