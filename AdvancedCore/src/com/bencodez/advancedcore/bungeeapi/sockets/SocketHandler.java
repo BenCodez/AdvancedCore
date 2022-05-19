@@ -8,7 +8,7 @@ import com.bencodez.advancedcore.api.misc.encryption.EncryptionHandler;
 
 import lombok.Getter;
 
-public class SocketHandler {
+public abstract class SocketHandler {
 	@Getter
 	private ArrayList<SocketReceiver> receiving;
 	@Getter
@@ -29,6 +29,8 @@ public class SocketHandler {
 	public void closeConnection() {
 		server.close();
 	}
+
+	public abstract void log(String str);
 
 	public void start(String threadName, String host, int port, EncryptionHandler handle, boolean debug) {
 		receiving = new ArrayList<SocketReceiver>();
@@ -56,6 +58,11 @@ public class SocketHandler {
 				} else {
 					System.out.print("Socket data invalid");
 				}
+			}
+
+			@Override
+			public void logger(String str) {
+				log(str);
 			}
 		};
 	}

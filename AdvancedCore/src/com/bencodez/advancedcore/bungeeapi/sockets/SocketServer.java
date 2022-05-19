@@ -43,6 +43,8 @@ public abstract class SocketServer extends Thread {
 		}
 	}
 
+	public abstract void logger(String str);
+
 	public void close() {
 		try {
 			running = false;
@@ -64,13 +66,13 @@ public abstract class SocketServer extends Thread {
 
 				final String msg = encryptionHandler.decrypt(dis.readUTF());
 				if (debug) {
-					System.out.println("Socket Receiving: " + msg);
+					logger("Debug: Socket Receiving: " + msg);
 				}
 				onReceive(msg.split("%line%"));
 				dis.close();
 				socket.close();
 			} catch (Exception ex) {
-				System.out.println("Error occured while receiving socket message");
+				logger("Error occured while receiving socket message");
 				ex.printStackTrace();
 			}
 		}

@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.bungeeapi.pluginmessage;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -24,6 +26,8 @@ public class PluginMessage implements PluginMessageListener {
 	private boolean debug = false;
 
 	private AdvancedCorePlugin plugin;
+
+	private Timer timer = new Timer();
 
 	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<PluginMessageHandler>();
 
@@ -62,17 +66,14 @@ public class PluginMessage implements PluginMessageListener {
 
 		final ArrayList<String> list1 = list;
 
-		if (Bukkit.isPrimaryThread()) {
-			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		timer.schedule(new TimerTask() {
 
-				@Override
-				public void run() {
-					onReceive(subChannel, list1);
-				}
-			});
-		} else {
-			onReceive(subChannel, list1);
-		}
+			@Override
+			public void run() {
+				onReceive(subChannel, list1);
+
+			}
+		}, 0);
 
 	}
 
