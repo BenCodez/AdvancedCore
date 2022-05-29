@@ -606,6 +606,23 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					}
 				});
 
+		TabCompleteHandler.getInstance()
+				.addTabCompleteOption(new TabCompleteHandle("(PlayerExact)", new ArrayList<String>()) {
+
+					@Override
+					public void reload() {
+					}
+
+					@Override
+					public void updateReplacements() {
+						ArrayList<String> list = new ArrayList<String>();
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							list.add(player.getName());
+						}
+						setReplace(list);
+					}
+				});
+
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
 
 			@Override
