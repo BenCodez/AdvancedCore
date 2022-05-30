@@ -158,6 +158,10 @@
 			<id>bencodez repo</id>
 			<url>https://nexus.bencodez.com/repository/maven-public/</url>
 		</repository>
+		<repository>
+			<id>skullcreator-repo</id>
+			<url>https://github.com/deanveloper/SkullCreator/raw/mvn-repo/</url>
+		</repository>
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -238,6 +242,12 @@
 			<artifactId>PremiumVanishAPI</artifactId>
 			<version>2.7.3</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>dev.dbassett</groupId>
+			<artifactId>skullcreator</artifactId>
+			<version>3.0.1</version>
+			<scope>compile</scope>
 		</dependency>
 	</dependencies>
 	<profiles>

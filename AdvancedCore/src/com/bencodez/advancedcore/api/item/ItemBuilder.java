@@ -7,10 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
@@ -42,6 +40,7 @@ import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Multimap;
 
+import dev.dbassett.skullcreator.SkullCreator;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -865,15 +864,8 @@ public class ItemBuilder {
 		return this;
 	}
 
-	@SuppressWarnings("deprecation")
 	public ItemBuilder setHeadFromValue(String value) {
-		try {
-			is = Bukkit.getUnsafe().modifyItemStack(new ItemStack(Material.PLAYER_HEAD),
-					"{SkullOwner:{Id:\"" + UUID.nameUUIDFromBytes(value.getBytes())
-							+ "\",Properties:{textures:[{Value:\"" + value + "\"}]}}}");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		is = SkullCreator.itemFromBase64(value);
 		return this;
 	}
 
