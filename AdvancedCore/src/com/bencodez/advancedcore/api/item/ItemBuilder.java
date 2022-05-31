@@ -186,6 +186,12 @@ public class ItemBuilder {
 						is.setAmount(currentAmount);
 					}
 
+					String textureURL = data.getString("SkullURL", "");
+					if (!textureURL.equals("")) {
+						is = SkullCreator.itemFromUrl(textureURL);
+						is.setAmount(currentAmount);
+					}
+
 					String name = data.getString("Name");
 
 					if (name != null && !name.equals("")) {
