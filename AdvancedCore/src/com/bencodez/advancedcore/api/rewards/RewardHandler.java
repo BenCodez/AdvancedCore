@@ -2070,10 +2070,10 @@ public class RewardHandler {
 
 							// change legacy item
 							if (m == null) {
-								m = Material.matchMaterial(material, true);
+								m = Material.matchMaterial(material.toUpperCase(), true);
 								if (material != null) {
 									warning(reward, inject,
-											"Found legacy material: " + material + ", please update material");
+											"Found legacy material: " + material + ", please update material on RandomItem." + item);
 								}
 							}
 						} catch (NoSuchMethodError e) {
