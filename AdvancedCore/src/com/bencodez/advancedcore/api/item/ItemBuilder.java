@@ -865,7 +865,7 @@ public class ItemBuilder {
 	}
 
 	public ItemBuilder setHeadFromValue(String value) {
-		is = SkullCreator.itemFromBase64(value);
+		is = SkullCreator.itemWithBase64(is, value);
 		return this;
 	}
 
