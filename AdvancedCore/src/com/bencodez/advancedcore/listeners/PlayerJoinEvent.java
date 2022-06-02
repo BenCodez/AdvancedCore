@@ -111,7 +111,7 @@ public class PlayerJoinEvent implements Listener {
 
 					}
 				}
-			}, 1500);
+			}, 1500 + plugin.getOptions().getDelayLoginEvent());
 		}
 	}
 

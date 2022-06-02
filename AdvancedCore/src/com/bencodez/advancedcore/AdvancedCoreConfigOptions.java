@@ -187,6 +187,10 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private int delayLoginEvent = 0;
+
+	@Getter
+	@Setter
 	private ArrayList<String> broadcastBlacklist = new ArrayList<String>();
 
 	public AdvancedCoreConfigOptions() {
@@ -273,6 +277,7 @@ public class AdvancedCoreConfigOptions {
 
 			geyserPrefixSupport = configData.getBoolean("GeyserPrefixSupport", false);
 			geyserPrefix = configData.getString("GeyserPrefix", "*");
+			delayLoginEvent = configData.getInt("DelayLoginEvent", 0);
 		}
 	}
 }
