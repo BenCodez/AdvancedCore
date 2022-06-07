@@ -6,7 +6,6 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -294,7 +293,9 @@ public class ItemMessage {
 	 * @throws IllegalArgumentException if material is null
 	 */
 	public void setEmptyHandReplacement(Material material) {
-		Validate.notNull(material, "There must be a replacement for an empty hand!");
+		if (material == null) {
+			throw new NullPointerException("There must be a replacement for an empty hand!");
+		}
 		this.emptyHandReplacement = material;
 	}
 
@@ -307,9 +308,13 @@ public class ItemMessage {
 	 *                                  contain a %s
 	 */
 	public void setFormats(String... formats) {
-		Validate.isTrue(formats.length > 1, "Two formats are minimum!");
+		if (formats.length <= 1) {
+			throw new IllegalArgumentException("Two formats are minimum!");
+		}
 		for (String format : formats) {
-			Validate.isTrue(format.contains("%s"), "format string \"" + format + "\" must contain a %s");
+			if (!format.contains("%s")) {
+				throw new IllegalArgumentException("format string \"" + format + "\" must contain a %s");
+			}
 		}
 		this.formats = formats;
 	}
@@ -322,7 +327,9 @@ public class ItemMessage {
 	 * @throws IllegalArgumentException if interval is below 1
 	 */
 	public void setInterval(int interval) {
-		Validate.isTrue(interval > 0, "Interval can't be below 1!");
+		if (interval < 1) {
+			throw new IllegalArgumentException("Interval can't be below 1!");
+		}
 		this.interval = interval;
 	}
 }
