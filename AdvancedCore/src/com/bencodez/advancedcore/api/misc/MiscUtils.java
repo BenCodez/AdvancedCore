@@ -8,8 +8,10 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -53,6 +55,13 @@ public class MiscUtils {
 	 */
 	public void broadcast(String broadcastMsg) {
 		broadcast(broadcastMsg, new ArrayList<Player>(Bukkit.getOnlinePlayers()));
+	}
+
+	public Date addSeconds(Date date, int seconds) {
+		Calendar c = Calendar.getInstance();
+		c.setTime(new Date());
+		c.add(Calendar.SECOND, seconds);
+		return c.getTime();
 	}
 
 	public void broadcast(String broadcastMsg, ArrayList<Player> players) {
