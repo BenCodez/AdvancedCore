@@ -2072,8 +2072,8 @@ public class RewardHandler {
 							if (m == null) {
 								m = Material.matchMaterial(material.toUpperCase(), true);
 								if (material != null) {
-									warning(reward, inject,
-											"Found legacy material: " + material + ", please update material on RandomItem." + item);
+									warning(reward, inject, "Found legacy material: " + material
+											+ ", please update material on RandomItem." + item);
 								}
 							}
 						} catch (NoSuchMethodError e) {
@@ -2257,12 +2257,13 @@ public class RewardHandler {
 						}
 						if (!reward1.getConfig().isDirectlyDefinedReward()
 								|| file.getName().equalsIgnoreCase("DirectlyDefined")) {
+							rewards.add(reward1);
 							if (reward1.getConfig().getConfigData().getConfigurationSection("").getKeys(true)
 									.size() > 0) {
-								rewards.add(reward1);
+
 								plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
 							} else {
-								plugin.debug("Ignoring empty reward file" + file.getAbsolutePath() + "/" + reward);
+								plugin.debug("Loaded empty reward file" + file.getAbsolutePath() + "/" + reward);
 							}
 						} else {
 							plugin.extraDebug(
