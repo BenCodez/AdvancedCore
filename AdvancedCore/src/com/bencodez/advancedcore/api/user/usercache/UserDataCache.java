@@ -125,12 +125,17 @@ public class UserDataCache {
 	private void scheduleChanges() {
 		manager.getPlugin().debug("Schedule changes");
 		scheduled = true;
+
 		manager.getTimer().schedule(new TimerTask() {
 
 			@Override
 			public void run() {
-				processChanges();
-				scheduled = false;
+				try {
+					processChanges();
+					scheduled = false;
+				} catch (Exception e) {
+					manager.getPlugin().debug(e);
+				}
 			}
 		}, 1000 * 3);
 	}
