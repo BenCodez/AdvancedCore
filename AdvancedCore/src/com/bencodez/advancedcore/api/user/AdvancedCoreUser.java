@@ -492,6 +492,9 @@ public class AdvancedCoreUser {
 	 * @param item the item
 	 */
 	public void giveItem(ItemStack item) {
+		if (item == null) {
+			return;
+		}
 		if (item.getAmount() == 0) {
 			return;
 		}
