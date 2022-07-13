@@ -390,7 +390,11 @@ public class RewardHandler {
 			return new ArrayList<String>();
 		}
 		for (int i = 0; i < rewardFiles.size(); i++) {
-			rewardFiles.set(i, rewardFiles.get(i).replace(".yml", ""));
+			if (rewardFiles.get(i).contains(".yml")) {
+				rewardFiles.set(i, rewardFiles.get(i).replace(".yml", ""));
+			} else {
+				plugin.debug("Not a proper reward file: " + rewardFiles.get(i));
+			}
 
 		}
 
