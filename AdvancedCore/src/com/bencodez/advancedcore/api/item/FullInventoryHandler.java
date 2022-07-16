@@ -24,6 +24,7 @@ public class FullInventoryHandler {
 
 	private AdvancedCorePlugin plugin;
 
+	@Getter
 	private Timer timer;
 
 	public FullInventoryHandler(AdvancedCorePlugin plugin) {
