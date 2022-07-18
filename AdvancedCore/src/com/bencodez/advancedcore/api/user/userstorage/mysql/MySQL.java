@@ -127,7 +127,7 @@ public class MySQL {
 
 		// add custom column types
 		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
-			sql += key.getKey() + " " + key.getColumnType() + ", ";
+			sql += "`" + key.getKey() + "` " + key.getColumnType() + ", ";
 			if (key instanceof UserDataKeyInt) {
 				if (!intColumns.contains(key.getKey())) {
 					intColumns.add(key.getKey());
@@ -152,7 +152,7 @@ public class MySQL {
 
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
-			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
+			String sql = "ALTER TABLE " + getName() + " ADD COLUMN `" + column + "` text" + ";";
 
 			plugin.debug("Adding column: " + column + " Current columns: "
 					+ ArrayUtils.getInstance().makeStringList((ArrayList<String>) getColumns()));
@@ -170,11 +170,11 @@ public class MySQL {
 
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
-		plugin.debug("Altering column " + column + " to " + newType);
+		plugin.debug("Altering column `" + column + "` to " + newType);
 		if (newType.contains("INT")) {
 			try {
-				Query query = new Query(mysql, "UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce("
-						+ column + ", '')) = '';");
+				Query query = new Query(mysql, "UPDATE " + getName() + " SET `" + column
+						+ "` = '0' where trim(coalesce(" + column + ", '')) = '';");
 				query.executeUpdateAsync();
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -186,7 +186,7 @@ public class MySQL {
 		}
 		Query query;
 		try {
-			query = new Query(mysql, "ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";");
+			query = new Query(mysql, "ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";");
 			query.executeUpdateAsync();
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -559,19 +559,19 @@ public class MySQL {
 					Column col = cols.get(i);
 					if (i == cols.size() - 1) {
 						if (col.getValue().isString()) {
-							query += col.getName() + "='" + col.getValue().getString() + "'";
+							query += "`" + col.getName() + "`='" + col.getValue().getString() + "'";
 						} else if (col.getValue().isBoolean()) {
-							query += col.getName() + "='" + col.getValue().getBoolean() + "'";
+							query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "'";
 						} else if (col.getValue().isInt()) {
-							query += col.getName() + "='" + col.getValue().getInt() + "'";
+							query += "`" + col.getName() + "`='" + col.getValue().getInt() + "'";
 						}
 					} else {
 						if (col.getValue().isString()) {
-							query += col.getName() + "='" + col.getValue().getString() + "', ";
+							query += "`" + col.getName() + "`='" + col.getValue().getString() + "', ";
 						} else if (col.getValue().isBoolean()) {
-							query += col.getName() + "='" + col.getValue().getBoolean() + "', ";
+							query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "', ";
 						} else if (col.getValue().isInt()) {
-							query += col.getName() + "='" + col.getValue().getInt() + "', ";
+							query += "`" + col.getName() + "`='" + col.getValue().getInt() + "', ";
 						}
 					}
 				}
