@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.command;
 
 import java.util.ArrayList;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -21,6 +22,7 @@ import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
@@ -455,14 +457,8 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				for (String key : user.getData().getKeys()) {
-					String str = user.getData().getString(key, true);
-					if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
-						if (plugin.getMysql().isIntColumn(key)) {
-							str = "" + user.getData().getInt(key, true);
-						}
-					}
-					sendMessage(sender, "&c&l" + key + " &c" + str);
+				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
+					sendMessage(sender, "&c&l" + entry.getKey() + " &c" + entry.getValue().toString());
 				}
 			}
 		});
