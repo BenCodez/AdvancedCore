@@ -109,14 +109,14 @@ public class NumberRequester {
 					String option = num.toString();
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Number " + option));
+							"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput Number " + option));
 					user.sendJson(comp);
 				}
 				if (allowCustomOption) {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput Number " + option));
+							"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput Number " + option));
 					user.sendJson(comp);
 				}
 			} else {

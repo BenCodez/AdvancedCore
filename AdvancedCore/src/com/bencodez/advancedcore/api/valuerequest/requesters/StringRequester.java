@@ -104,14 +104,16 @@ public class StringRequester {
 				for (String option : options.keySet()) {
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput String " + option));
+							"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput String "
+									+ option));
 					user.sendJson(comp);
 				}
 				if (allowCustomOption) {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCorePlugin.getInstance().getName() + "valuerequestinput String " + option));
+							"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput String "
+									+ option));
 					user.sendJson(comp);
 				}
 			} else {
