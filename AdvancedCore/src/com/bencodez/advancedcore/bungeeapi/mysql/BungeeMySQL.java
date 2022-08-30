@@ -87,7 +87,7 @@ public abstract class BungeeMySQL {
 
 		}
 		try {
-			Query q = new Query(mysql, "USE " + database + ";");
+			Query q = new Query(mysql, "USE `" + database + "`;");
 			q.executeUpdateAsync();
 		} catch (SQLException e) {
 			bungee.getLogger().severe("Failed to send use database query: " + database + " Error: " + e.getMessage());

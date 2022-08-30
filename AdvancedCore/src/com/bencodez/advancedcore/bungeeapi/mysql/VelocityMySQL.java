@@ -85,7 +85,7 @@ public abstract class VelocityMySQL {
 
 		}
 		try {
-			Query q = new Query(mysql, "USE " + database + ";");
+			Query q = new Query(mysql, "USE `" + database + "`;");
 			q.executeUpdateAsync();
 		} catch (SQLException e) {
 			severe("Failed to send use database query: " + database + " Error: " + e.getMessage());
