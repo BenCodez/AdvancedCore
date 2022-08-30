@@ -115,7 +115,7 @@ public class MySQL {
 			plugin.getLogger().warning("Failed to connect to MySQL");
 		}
 		try {
-			Query q = new Query(mysql, "USE " + database + ";");
+			Query q = new Query(mysql, "USE `" + database + "`;");
 			q.executeUpdate();
 		} catch (SQLException e) {
 			plugin.getLogger().severe("Failed to send use database query: " + database + " Error: " + e.getMessage()
