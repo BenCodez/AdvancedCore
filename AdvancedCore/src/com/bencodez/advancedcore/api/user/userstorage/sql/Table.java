@@ -29,32 +29,44 @@ public class Table {
 	private Column primaryKey;
 
 	private SQLite sqLite;
+	private AdvancedCorePlugin plugin;
 
-	public Table(String name, Collection<Column> columns) {
+	public Table(AdvancedCorePlugin plugin, String name, Collection<Column> columns) {
 		this.name = name;
 		this.columns.addAll(columns);
 		primaryKey = this.columns.get(0);
+		this.plugin = plugin;
 	}
 
-	public Table(String name, Collection<Column> columns, Column primaryKey) {
+	public Table(AdvancedCorePlugin plugin, String name, Collection<Column> columns, Column primaryKey) {
 		this.name = name;
 		this.primaryKey = primaryKey;
 		this.columns.addAll(columns);
+		this.plugin = plugin;
 	}
 
-	public Table(String name, Column... columns) {
+	public Table(AdvancedCorePlugin plugin, String name, Column... columns) {
 		this.name = name;
 		for (Column column : columns) {
 			this.columns.add(column);
 		}
 		primaryKey = this.columns.get(0);
+		this.plugin = plugin;
 	}
 
-	public Table(String name, Column primaryKey, Column... columns) {
+	public Table(AdvancedCorePlugin plugin, String name, Column primaryKey, Column... columns) {
 		this.name = name;
 		this.primaryKey = primaryKey;
 		for (Column column : columns) {
 			this.columns.add(column);
+		}
+		this.plugin = plugin;
+	}
+
+	public void addCustomColumns() {
+		// add custom column types
+		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
+			addColoumn(key);
 		}
 	}
 
@@ -75,6 +87,29 @@ public class Table {
 				}
 			}
 			columns.add(column);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void addColoumn(UserDataKey column) {
+		if (getTableColumns().contains(column.getKey())) {
+			return;
+		}
+		try {
+			String query = "ALTER TABLE " + getName() + " ADD COLUMN " + column.getKey() + " " + column.getColumnType();
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			s.executeUpdate();
+			s.close();
+			if (column instanceof UserDataKeyInt) {
+				if (!intColumns.contains(column.getKey())) {
+					intColumns.add(column.getKey());
+					AdvancedCorePlugin.getInstance().getServerDataFile().setIntColumns(intColumns);
+				}
+				columns.add(new Column(column.getKey(), DataType.INTEGER));
+			} else {
+				columns.add(new Column(column.getKey(), DataType.STRING));
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

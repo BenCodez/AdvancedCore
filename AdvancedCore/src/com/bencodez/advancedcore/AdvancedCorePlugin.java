@@ -717,8 +717,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			ArrayList<Column> columns = new ArrayList<Column>();
 			Column key = new Column("uuid", DataType.STRING);
 			columns.add(key);
-			Table table = new Table("Users", columns, key);
+			Table table = new Table(this, "Users", columns, key);
 			database = new Database(this, "Users", table);
+			table.addCustomColumns();
 		} else if (storageType.equals(UserStorage.MYSQL)) {
 			Thread.getInstance().run(new Runnable() {
 
