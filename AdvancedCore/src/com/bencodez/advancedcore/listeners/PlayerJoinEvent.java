@@ -65,50 +65,54 @@ public class PlayerJoinEvent implements Listener {
 
 				@Override
 				public void run() {
-					if (plugin != null && plugin.isEnabled()) {
-						if (plugin.isAuthMeLoaded() && plugin.getOptions().isWaitUntilLoggedIn()) {
-							return;
-						}
-
-						Player player = event.getPlayer();
-
-						if (player != null) {
-							for (MetadataValue meta : player.getMetadata("vanished")) {
-								if (meta.asBoolean()) {
-									plugin.debug("Player " + player.getName() + " joined vanished");
-									if (plugin.getOptions().isTreatVanishAsOffline()) {
-										return;
-									}
-								}
+					try {
+						if (plugin != null && plugin.isEnabled()) {
+							if (plugin.isAuthMeLoaded() && plugin.getOptions().isWaitUntilLoggedIn()) {
+								return;
 							}
 
-							try {
-								if (plugin.getCmiHandle() != null) {
-									if (plugin.getCmiHandle().isVanished(player)) {
+							Player player = event.getPlayer();
+
+							if (player != null) {
+								for (MetadataValue meta : player.getMetadata("vanished")) {
+									if (meta.asBoolean()) {
 										plugin.debug("Player " + player.getName() + " joined vanished");
 										if (plugin.getOptions().isTreatVanishAsOffline()) {
 											return;
 										}
 									}
 								}
-							} catch (Exception e) {
-								plugin.debug(e);
+
+								try {
+									if (plugin.getCmiHandle() != null) {
+										if (plugin.getCmiHandle().isVanished(player)) {
+											plugin.debug("Player " + player.getName() + " joined vanished");
+											if (plugin.getOptions().isTreatVanishAsOffline()) {
+												return;
+											}
+										}
+									}
+								} catch (Exception e) {
+									plugin.debug(e);
+								}
+
+								plugin.debug("Login: " + event.getPlayer().getName() + " ("
+										+ event.getPlayer().getUniqueId() + ")");
+								if (plugin.getPermissionHandler() != null) {
+									plugin.getPermissionHandler().login(player);
+								}
+
+								AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(player);
+								Bukkit.getPluginManager().callEvent(login);
+
+								if (login.isCancelled()) {
+									return;
+								}
 							}
 
-							plugin.debug("Login: " + event.getPlayer().getName() + " ("
-									+ event.getPlayer().getUniqueId() + ")");
-							if (plugin.getPermissionHandler() != null) {
-								plugin.getPermissionHandler().login(player);
-							}
-
-							AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(player);
-							Bukkit.getPluginManager().callEvent(login);
-
-							if (login.isCancelled()) {
-								return;
-							}
 						}
-
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
 				}
 			}, 1500 + plugin.getOptions().getDelayLoginEvent());
