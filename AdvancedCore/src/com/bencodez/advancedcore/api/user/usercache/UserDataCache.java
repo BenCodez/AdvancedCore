@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.user.usercache;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -142,5 +143,20 @@ public class UserDataCache {
 
 	public void updateCache(HashMap<String, DataValue> tempCache) {
 		cache = tempCache;
+	}
+
+	@SuppressWarnings("unused")
+	private void displayCache() {
+		String str = "Current cache for " + uuid + ": ";
+		for (Entry<String, DataValue> entry : getCache().entrySet()) {
+			if (entry.getValue().isBoolean()) {
+				str += entry.getKey() + "=" + entry.getValue().getBoolean() + ", ";
+			} else if (entry.getValue().isString()) {
+				str += entry.getKey() + "=" + entry.getValue().getString() + ", ";
+			} else if (entry.getValue().isInt()) {
+				str += entry.getKey() + "=" + entry.getValue().getInt() + ", ";
+			}
+		}
+		manager.getPlugin().devDebug(str);
 	}
 }

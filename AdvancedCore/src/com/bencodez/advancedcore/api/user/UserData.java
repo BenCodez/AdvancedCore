@@ -49,8 +49,8 @@ public class UserData {
 		return Boolean.valueOf(getString(key));
 	}
 
-	public boolean getBoolean(String key, boolean cacheData, boolean waitForCache) {
-		return Boolean.valueOf(getString(key, cacheData, waitForCache));
+	public boolean getBoolean(String key, boolean useCache, boolean waitForCache) {
+		return Boolean.valueOf(getString(key, useCache, waitForCache));
 	}
 
 	public FileConfiguration getData(String uuid) {
@@ -89,12 +89,16 @@ public class UserData {
 					return def;
 				}
 			}
+			// user.getPlugin().debug("Pulling data: " + key + " " + useCache + " " +
+			// waitForCache);
 			if (useCache) {
 				UserDataCache cache = user.getCache();
 				if (cache != null) {
 					user.cacheIfNeeded();
 					if (cache.isCached(key)) {
 						if (cache.getCache().get(key).isInt()) {
+							// user.getPlugin().debug("Using cache: " + key + " " +
+							// cache.getCache().get(key).getInt());
 							return cache.getCache().get(key).getInt();
 						} else {
 							String str = cache.getCache().get(key).getString();

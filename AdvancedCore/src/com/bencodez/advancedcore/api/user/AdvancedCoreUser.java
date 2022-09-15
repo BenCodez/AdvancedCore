@@ -307,6 +307,11 @@ public class AdvancedCoreUser {
 		return this;
 	}
 
+	public AdvancedCoreUser cacheData() {
+		cacheData = true;
+		return this;
+	}
+
 	public UserDataCache getCache() {
 		return plugin.getUserManager().getDataManager().getCache(java.util.UUID.fromString(getUUID()));
 	}
