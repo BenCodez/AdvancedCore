@@ -145,8 +145,7 @@ public class UserDataCache {
 		cache = tempCache;
 	}
 
-	@SuppressWarnings("unused")
-	private void displayCache() {
+	public void displayCache() {
 		String str = "Current cache for " + uuid + ": ";
 		for (Entry<String, DataValue> entry : getCache().entrySet()) {
 			if (entry.getValue().isBoolean()) {
