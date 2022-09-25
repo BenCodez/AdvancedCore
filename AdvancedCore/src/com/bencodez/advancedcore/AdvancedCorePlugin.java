@@ -873,6 +873,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			getPermissionHandler().shutDown();
 		}
 
+		javaPlugin = null;
 		// Thread.getInstance().getThread().interrupt();
 		// FileThread.getInstance().getThread().interrupt();
 	}
@@ -1010,18 +1011,19 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					start.onStart();
 				}
 				for (String uuid : getUserManager().getAllUUIDs()) {
-					if (uuid != null) {
-						AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
-						if (user != null) {
-							user.dontCache();
-							user.tempCache();
-							for (UserStartup start : userStartup) {
-								start.onStartUp(user);
+					if (javaPlugin != null) {
+						if (uuid != null) {
+							AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
+							if (user != null) {
+								user.dontCache();
+								user.tempCache();
+								for (UserStartup start : userStartup) {
+									start.onStartUp(user);
+								}
+								user.clearTempCache();
+								user = null;
 							}
-							user.clearTempCache();
-							user = null;
 						}
-
 					}
 				}
 				for (UserStartup start : userStartup) {
