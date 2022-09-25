@@ -27,6 +27,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.MetadataValue;
+import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
@@ -370,5 +372,83 @@ public class MiscUtils {
 		}
 
 		return sortedMap;
+	}
+
+	public void setBlockMeta(Block block, String str, Object value) {
+		block.removeMetadata(str, plugin);
+		block.setMetadata(str, new MetadataValue() {
+
+			@Override
+			public boolean asBoolean() {
+
+				return false;
+			}
+
+			@Override
+			public byte asByte() {
+
+				return 0;
+			}
+
+			@Override
+			public double asDouble() {
+
+				return 0;
+			}
+
+			@Override
+			public float asFloat() {
+
+				return 0;
+			}
+
+			@Override
+			public int asInt() {
+
+				return 0;
+			}
+
+			@Override
+			public long asLong() {
+
+				return 0;
+			}
+
+			@Override
+			public short asShort() {
+
+				return 0;
+			}
+
+			@Override
+			public String asString() {
+
+				return null;
+			}
+
+			@Override
+			public Plugin getOwningPlugin() {
+				return plugin;
+			}
+
+			@Override
+			public void invalidate() {
+			}
+
+			@Override
+			public Object value() {
+				return value;
+			}
+
+		});
+	}
+
+	public Object getBlockMeta(Block block, String str) {
+		for (MetadataValue meta : block.getMetadata(str)) {
+			if (meta.getOwningPlugin().equals(plugin)) {
+				return meta.value();
+			}
+		}
+		return null;
 	}
 }
