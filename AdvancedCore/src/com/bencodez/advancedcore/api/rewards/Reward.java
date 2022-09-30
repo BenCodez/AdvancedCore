@@ -242,7 +242,7 @@ public class Reward {
 
 	public void giveReward(AdvancedCoreUser user, RewardOptions rewardOptions) {
 		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
-			AdvancedCorePlugin.getInstance().getLogger().warning("Processing rewards is disabled");
+			AdvancedCorePlugin.getInstance().debug("Processing rewards is disabled");
 			return;
 		}
 
