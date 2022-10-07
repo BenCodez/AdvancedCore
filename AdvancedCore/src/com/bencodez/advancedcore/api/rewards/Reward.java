@@ -50,6 +50,10 @@ public class Reward {
 	@Getter
 	@Setter
 	private int delaySeconds;
+	
+	@Getter
+	@Setter
+	private int delayMilliSeconds;
 
 	@Getter
 	@Setter
@@ -132,6 +136,7 @@ public class Reward {
 		time = time.plus(getDelayHours(), ChronoUnit.HOURS);
 		time = time.plus(getDelayMinutes(), ChronoUnit.MINUTES);
 		time = time.plus(getDelaySeconds(), ChronoUnit.SECONDS);
+		time = time.plus(getDelayMilliSeconds(), ChronoUnit.MILLIS);
 		checkRewardFile();
 		user.addTimedReward(this, placeholders, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
@@ -427,6 +432,7 @@ public class Reward {
 			setDelayHours(getConfig().getDelayedHours());
 			setDelayMinutes(getConfig().getDelayedMinutes());
 			setDelaySeconds(getConfig().getDelayedSeconds());
+			setDelayMilliSeconds(getConfig().getDelayedMilliSeconds());
 		}
 
 		setTimedEnabled(getConfig().getTimedEnabled());

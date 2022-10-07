@@ -163,6 +163,10 @@ public class RewardFileData {
 		return getConfigData().getInt("Delayed.Seconds");
 	}
 
+	public int getDelayedMilliSeconds() {
+		return getConfigData().getInt("Delayed.MilliSeconds");
+	}
+
 	/**
 	 * Gets the data.
 	 *
