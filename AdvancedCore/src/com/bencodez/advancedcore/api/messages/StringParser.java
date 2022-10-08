@@ -154,7 +154,7 @@ public class StringParser {
 
 			int postText = startIndex + "[Text=\"".length();
 
-			String text = msg.substring(postText, middle);
+			String text = colorize(msg.substring(postText, middle));
 
 			TextComponent t = new TextComponent(text);
 
