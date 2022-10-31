@@ -16,6 +16,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -179,8 +182,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private Timer timer = new Timer();
 
 	@Getter
-	@Setter
-	private Timer loginTimer;
+	private ScheduledExecutorService loginTimer;
 
 	@Setter
 	private UserManager userManager;
@@ -862,7 +864,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 		getServerDataFile().setLastUpdated();
 		timer.cancel();
-		loginTimer.cancel();
+		loginTimer.shutdown();
+		try {
+			loginTimer.awaitTermination(5, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		loginTimer.shutdownNow();
 		onUnLoad();
 		SkullHandler.getInstance().close();
 		fullInventoryHandler.save();
@@ -883,7 +891,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void onEnable() {
 		javaPlugin = this;
 		advancedCoreCommandLoader = CommandLoader.getInstance();
-		loginTimer = new Timer();
+		loginTimer = Executors.newScheduledThreadPool(1);
 		onPreLoad();
 		loadHook();
 		onPostLoad();

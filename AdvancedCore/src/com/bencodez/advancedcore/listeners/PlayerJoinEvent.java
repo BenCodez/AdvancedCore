@@ -1,6 +1,6 @@
 package com.bencodez.advancedcore.listeners;
 
-import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -61,7 +61,7 @@ public class PlayerJoinEvent implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final PlayerLoginEvent event) {
 		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
-			plugin.getLoginTimer().schedule(new TimerTask() {
+			plugin.getLoginTimer().schedule(new Runnable() {
 
 				@Override
 				public void run() {
@@ -115,7 +115,7 @@ public class PlayerJoinEvent implements Listener {
 						e.printStackTrace();
 					}
 				}
-			}, 1500 + plugin.getOptions().getDelayLoginEvent());
+			}, 1500 + plugin.getOptions().getDelayLoginEvent(), TimeUnit.MILLISECONDS);
 		}
 	}
 
@@ -125,7 +125,7 @@ public class PlayerJoinEvent implements Listener {
 			Player player = event.getPlayer();
 			plugin.debug("Logout: " + event.getPlayer().getName() + " (" + player.getUniqueId() + ")");
 
-			plugin.getLoginTimer().schedule(new TimerTask() {
+			plugin.getLoginTimer().execute(new Runnable() {
 
 				@Override
 				public void run() {
@@ -134,7 +134,7 @@ public class PlayerJoinEvent implements Listener {
 
 					}
 				}
-			}, 0);
+			});
 		}
 
 	}
