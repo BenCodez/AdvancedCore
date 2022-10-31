@@ -179,7 +179,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private Timer timer = new Timer();
 
 	@Getter
-	private Timer loginTimer = new Timer();
+	@Setter
+	private Timer loginTimer;
 
 	@Setter
 	private UserManager userManager;
