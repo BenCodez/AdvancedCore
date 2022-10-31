@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -187,7 +186,7 @@ public class RewardHandler {
 	 * Check delayed timed rewards.
 	 */
 	public synchronized void checkDelayedTimedRewards() {
-		plugin.getTimer().schedule(new TimerTask() {
+		plugin.getTimer().execute(new Runnable() {
 
 			@Override
 			public void run() {
@@ -219,7 +218,7 @@ public class RewardHandler {
 					});
 				}
 			}
-		}, 0);
+		});
 
 	}
 

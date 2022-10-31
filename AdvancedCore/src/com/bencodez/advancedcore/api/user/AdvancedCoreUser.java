@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
-import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -735,13 +735,13 @@ public class AdvancedCoreUser {
 			delay = 0;
 		}
 		delay += 500;
-		AdvancedCorePlugin.getInstance().getTimer().schedule(new TimerTask() {
+		AdvancedCorePlugin.getInstance().getTimer().schedule(new Runnable() {
 
 			@Override
 			public void run() {
 				checkDelayedTimedRewards();
 			}
-		}, delay);
+		}, delay, TimeUnit.MILLISECONDS);
 	}
 
 	/**

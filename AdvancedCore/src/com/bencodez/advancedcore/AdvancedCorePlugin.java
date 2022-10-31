@@ -12,8 +12,6 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -179,7 +177,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private TimeChecker timeChecker;
 
 	@Getter
-	private Timer timer = new Timer();
+	private ScheduledExecutorService timer;
 
 	@Getter
 	private ScheduledExecutorService loginTimer;
@@ -421,14 +419,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void loadAutoUpdateCheck() {
-		long delay = 1000 * 60 * 60;
-		timer.schedule(new TimerTask() {
+		long delay = 60 * 60;
+		timer.scheduleWithFixedDelay(new Runnable() {
 
 			@Override
 			public void run() {
 				checkAutoUpdate();
 			}
-		}, delay, delay);
+		}, delay, delay, TimeUnit.SECONDS);
 	}
 
 	private void loadConfig(boolean userStorage) {
@@ -863,14 +861,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			getMysql().close();
 		}
 		getServerDataFile().setLastUpdated();
-		timer.cancel();
+		timer.shutdown();
 		loginTimer.shutdown();
 		try {
 			loginTimer.awaitTermination(5, TimeUnit.SECONDS);
+			timer.awaitTermination(5, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		loginTimer.shutdownNow();
+		timer.shutdownNow();
 		onUnLoad();
 		SkullHandler.getInstance().close();
 		fullInventoryHandler.save();
@@ -883,15 +883,15 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 
 		javaPlugin = null;
-		// Thread.getInstance().getThread().interrupt();
-		// FileThread.getInstance().getThread().interrupt();
 	}
 
 	@Override
 	public void onEnable() {
 		javaPlugin = this;
-		advancedCoreCommandLoader = CommandLoader.getInstance();
+		timer = Executors.newScheduledThreadPool(1);
 		loginTimer = Executors.newScheduledThreadPool(1);
+		advancedCoreCommandLoader = CommandLoader.getInstance();
+
 		onPreLoad();
 		loadHook();
 		onPostLoad();
