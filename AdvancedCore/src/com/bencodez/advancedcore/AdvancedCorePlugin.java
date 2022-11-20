@@ -863,14 +863,17 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getServerDataFile().setLastUpdated();
 		timer.shutdown();
 		loginTimer.shutdown();
+		timeChecker.getTimer().shutdown();
 		try {
 			loginTimer.awaitTermination(5, TimeUnit.SECONDS);
 			timer.awaitTermination(5, TimeUnit.SECONDS);
+			timeChecker.getTimer().awaitTermination(5, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		loginTimer.shutdownNow();
 		timer.shutdownNow();
+		timeChecker.getTimer().shutdownNow();
 		onUnLoad();
 		SkullHandler.getInstance().close();
 		fullInventoryHandler.save();

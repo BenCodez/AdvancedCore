@@ -5,8 +5,9 @@ import java.time.YearMonth;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 
@@ -17,6 +18,8 @@ import com.bencodez.advancedcore.api.time.events.MonthChangeEvent;
 import com.bencodez.advancedcore.api.time.events.PreDateChangedEvent;
 import com.bencodez.advancedcore.api.time.events.WeekChangeEvent;
 
+import lombok.Getter;
+
 /**
  * The Class TimeChecker.
  */
@@ -26,7 +29,8 @@ public class TimeChecker {
 
 	private boolean processing = false;
 
-	private Timer timer = new Timer();
+	@Getter
+	private ScheduledExecutorService timer;
 
 	private boolean timerLoaded = false;
 
@@ -141,6 +145,7 @@ public class TimeChecker {
 	public void loadTimer(int minutes) {
 		if (!timerLoaded) {
 			timerLoaded = true;
+			timer = Executors.newScheduledThreadPool(1);
 			if (plugin.getServerDataFile().getLastUpdated() > 0) {
 				// serverdata.yml hasn't updated for 4 days, don't do time changes
 				if (System.currentTimeMillis() - plugin.getServerDataFile().getLastUpdated() > 1000 * 60 * 60 * 24
@@ -151,7 +156,7 @@ public class TimeChecker {
 				}
 			}
 			plugin.getServerDataFile().setLastUpdated();
-			timer.schedule(new TimerTask() {
+			timer.scheduleWithFixedDelay(new Runnable() {
 
 				@Override
 				public void run() {
@@ -160,19 +165,18 @@ public class TimeChecker {
 							update();
 						}
 					} else {
-						cancel();
+						timer.shutdown();
 						timerLoaded = false;
 					}
-
 				}
-			}, 60 * 1000, minutes * 60 * 1000);
-			timer.schedule(new TimerTask() {
+			}, 60, 5, TimeUnit.SECONDS);
+			timer.scheduleAtFixedRate(new Runnable() {
 
 				@Override
 				public void run() {
 					plugin.getServerDataFile().setLastUpdated();
 				}
-			}, 60 * 60 * 1000, 60 * 60 * 1000);
+			}, 60, 60, TimeUnit.MINUTES);
 		} else {
 			AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
 		}
