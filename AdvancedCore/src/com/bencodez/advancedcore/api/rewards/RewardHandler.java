@@ -103,6 +103,9 @@ public class RewardHandler {
 	private ArrayList<DirectlyDefinedReward> directlyDefinedRewards = new ArrayList<DirectlyDefinedReward>();
 
 	@Getter
+	private ArrayList<SubDirectlyDefinedReward> subDirectlyDefinedRewards = new ArrayList<SubDirectlyDefinedReward>();
+
+	@Getter
 	private ArrayList<RequirementInject> injectedRequirements = new ArrayList<RequirementInject>();
 
 	@Getter
@@ -135,6 +138,13 @@ public class RewardHandler {
 		plugin.debug("Adding directlydefined reward handle: " + directlyDefinedReward.getPath()
 				+ ", isdirectlydefined: " + directlyDefinedReward.isDirectlyDefined());
 		directlyDefinedRewards.add(directlyDefinedReward);
+	}
+
+	public void addSubDirectlyDefined(SubDirectlyDefinedReward subDirectlyDefinedReward) {
+		plugin.debug("Adding subdirectlydefined reward handle: " + subDirectlyDefinedReward.getMaster().getPath() + "."
+				+ subDirectlyDefinedReward.getPath() + ", isdirectlydefined: "
+				+ subDirectlyDefinedReward.isDirectlyDefined());
+		subDirectlyDefinedRewards.add(subDirectlyDefinedReward);
 	}
 
 	public void addInjectedRequirements(RequirementInject inject) {
@@ -180,6 +190,21 @@ public class RewardHandler {
 
 	public void addValidPath(String path) {
 		validPaths.add(path);
+	}
+
+	public void checkSubRewards(DirectlyDefinedReward direct) {
+		for (RewardInject inject : getInjectedRewards()) {
+			for (SubDirectlyDefinedReward sub : inject.subRewards(direct)) {
+				addSubDirectlyDefined(sub);
+			}
+		}
+	}
+
+	public void checkSubRewards() {
+		subDirectlyDefinedRewards = new ArrayList<SubDirectlyDefinedReward>();
+		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
+			checkSubRewards(direct);
+		}
 	}
 
 	/**
@@ -246,6 +271,15 @@ public class RewardHandler {
 	public DirectlyDefinedReward getDirectlyDefined(String path) {
 		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
 			if (direct.getPath().equalsIgnoreCase(path)) {
+				return direct;
+			}
+		}
+		return null;
+	}
+
+	public SubDirectlyDefinedReward getSubDirectlyDefined(String path) {
+		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
+			if (direct.getFullPath().equalsIgnoreCase(path)) {
 				return direct;
 			}
 		}
@@ -465,16 +499,28 @@ public class RewardHandler {
 				rewardName += "_" + suffix;
 			}
 			DirectlyDefinedReward direct = getDirectlyDefined(path);
-			if (suffix != null && prefix != null && direct != null) {
-
-				Reward reward = direct.getReward();
-				if (reward != null) {
-					plugin.debug("Giving directlydefined reward " + path + ", Options: " + rewardOptions.toString()
-							+ " to " + user.getPlayerName() + "/" + user.getUUID());
-					giveReward(user, reward, rewardOptions);
+			SubDirectlyDefinedReward sub = getSubDirectlyDefined(data.getCurrentPath() + "." + path);
+			if (suffix != null && prefix != null && direct != null || sub != null) {
+				if (direct != null) {
+					Reward reward = direct.getReward();
+					if (reward != null) {
+						plugin.debug("Giving directlydefined reward " + path + ", Options: " + rewardOptions.toString()
+								+ " to " + user.getPlayerName() + "/" + user.getUUID());
+						giveReward(user, reward, rewardOptions);
+					} else {
+						plugin.debug("Failed to give directlydefined reward " + path + ", Options: "
+								+ rewardOptions.toString() + ", Reward == null");
+					}
 				} else {
-					plugin.debug("Failed to give directlydefined reward " + path + ", Options: "
-							+ rewardOptions.toString() + ", Reward == null");
+					Reward reward = sub.getReward();
+					if (reward != null) {
+						plugin.debug("Giving subdirectlydefined reward " + path + ", Options: "
+								+ rewardOptions.toString() + " to " + user.getPlayerName() + "/" + user.getUUID());
+						giveReward(user, reward, rewardOptions);
+					} else {
+						plugin.debug("Failed to give subdirectlydefined reward " + path + ", Options: "
+								+ rewardOptions.toString() + ", Reward == null");
+					}
 				}
 			} else {
 				ConfigurationSection section = data.getConfigurationSection(path);
@@ -1375,13 +1421,27 @@ public class RewardHandler {
 				if (section.getBoolean("Enabled")) {
 					if (new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(StringParser
 							.getInstance().replacePlaceHolder(section.getString("Expression"), placeholders))) {
-						new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName()).send(user);
+						new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName() + ".Javascript")
+								.send(user);
 					} else {
-						new RewardBuilder(section, "FalseRewards").withPrefix(reward.getName()).send(user);
+						new RewardBuilder(section, "FalseRewards").withPrefix(reward.getName() + ".Javascript")
+								.send(user);
 					}
 				}
 				return null;
 
+			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DirectlyDefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Javascript.TrueRewards")) {
+					subs.add(new SubDirectlyDefinedReward(direct, "Javascript.TrueRewards"));
+				}
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Javascript.FalseRewards")) {
+					subs.add(new SubDirectlyDefinedReward(direct, "Javascript.FalseRewards"));
+				}
+				return subs;
 			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Javascript") {
 

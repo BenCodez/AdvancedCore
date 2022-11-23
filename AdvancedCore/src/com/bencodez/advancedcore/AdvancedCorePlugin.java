@@ -898,6 +898,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		onPreLoad();
 		loadHook();
 		onPostLoad();
+		getRewardHandler().checkSubRewards();
 	}
 
 	public abstract void onPostLoad();
@@ -939,6 +940,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		rewardHandler.checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
+		getRewardHandler().checkSubRewards();
 	}
 
 	/**

@@ -1,13 +1,16 @@
 package com.bencodez.advancedcore.api.rewards.injected;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
+import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.Inject;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.SubDirectlyDefinedReward;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
@@ -80,6 +83,10 @@ public abstract class RewardInject extends Inject {
 
 	public abstract Object onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
+
+	public ArrayList<SubDirectlyDefinedReward> subRewards(DirectlyDefinedReward direct) {
+		return new ArrayList<SubDirectlyDefinedReward>();
+	}
 
 	public RewardInject postReward() {
 		postReward = true;
