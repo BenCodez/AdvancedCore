@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -25,7 +26,7 @@ public class FullInventoryHandler {
 	private AdvancedCorePlugin plugin;
 
 	@Getter
-	private Timer timer;
+	private ScheduledExecutorService timer;
 
 	public FullInventoryHandler(AdvancedCorePlugin plugin) {
 		items = new ConcurrentHashMap<UUID, ArrayList<ItemStack>>();
@@ -104,14 +105,14 @@ public class FullInventoryHandler {
 	}
 
 	public void loadTimer() {
-		timer = new Timer();
-		timer.schedule(new TimerTask() {
+		timer = Executors.newScheduledThreadPool(1);
+		timer.scheduleAtFixedRate(new Runnable() {
 
 			@Override
 			public void run() {
 				check();
 			}
-		}, 10 * 1000, 30 * 1000);
+		}, 10, 30, TimeUnit.SECONDS);
 	}
 
 	public void save() {

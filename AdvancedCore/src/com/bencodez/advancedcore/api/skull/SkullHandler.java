@@ -3,10 +3,10 @@ package com.bencodez.advancedcore.api.skull;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Queue;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -42,7 +42,7 @@ public class SkullHandler {
 
 	Queue<String> skullsToLoad = new ConcurrentLinkedQueue<String>();
 
-	private Timer timer = new Timer();
+	private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
 
 	private void add(String playerName) {
 		if (!skullsToLoad.contains(playerName) && !getSkulls().containsKey(playerName)) {
@@ -51,7 +51,7 @@ public class SkullHandler {
 	}
 
 	public void close() {
-		timer.cancel();
+		timer.shutdownNow();
 	}
 
 	/*
@@ -153,13 +153,13 @@ public class SkullHandler {
 				&& AdvancedCorePlugin.getInstance().isEnabled()) {
 			if (PluginUtils.getInstance().getFreeMemory() > 300 && PluginUtils.getInstance().getMemory() > 800) {
 				if (Bukkit.isPrimaryThread()) {
-					timer.schedule(new TimerTask() {
+					timer.execute(new Runnable() {
 
 						@Override
 						public void run() {
 							add(playerName);
 						}
-					}, 0);
+					});
 				} else {
 					add(playerName);
 				}

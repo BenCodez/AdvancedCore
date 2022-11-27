@@ -1,10 +1,11 @@
 package com.bencodez.advancedcore.api.user.usercache;
 
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -25,7 +26,7 @@ public class UserDataManager {
 	private AdvancedCorePlugin plugin;
 
 	@Getter
-	private Timer timer;
+	private ScheduledExecutorService timer;
 
 	@Getter
 	private ConcurrentHashMap<UUID, UserDataCache> userDataCache;
@@ -34,17 +35,17 @@ public class UserDataManager {
 		this.plugin = plugin;
 		userDataCache = new ConcurrentHashMap<UUID, UserDataCache>();
 		keys = new ArrayList<UserDataKey>();
-		timer = new Timer();
+		timer = Executors.newScheduledThreadPool(1);
 		loadKeys();
 
 		// run every hour to clear some cache
-		timer.scheduleAtFixedRate(new TimerTask() {
+		timer.scheduleAtFixedRate(new Runnable() {
 
 			@Override
 			public void run() {
 				clearNonNeededCachedUsers();
 			}
-		}, 1000 * 60 * 3, 1000 * 60 * 60);
+		}, 60 * 3, 60 * 60, TimeUnit.SECONDS);
 
 		plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
 

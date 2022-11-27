@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -127,7 +127,7 @@ public class UserDataCache {
 		manager.getPlugin().debug("Schedule changes");
 		scheduled = true;
 
-		manager.getTimer().schedule(new TimerTask() {
+		manager.getTimer().schedule(new Runnable() {
 
 			@Override
 			public void run() {
@@ -138,7 +138,7 @@ public class UserDataCache {
 					manager.getPlugin().debug(e);
 				}
 			}
-		}, 1000 * 3);
+		}, 3, TimeUnit.SECONDS);
 	}
 
 	public void updateCache(HashMap<String, DataValue> tempCache) {

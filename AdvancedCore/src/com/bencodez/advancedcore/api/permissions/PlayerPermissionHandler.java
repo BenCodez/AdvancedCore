@@ -2,8 +2,8 @@ package com.bencodez.advancedcore.api.permissions;
 
 import java.util.HashMap;
 import java.util.Map.Entry;
-import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachment;
@@ -37,13 +37,13 @@ public class PlayerPermissionHandler {
 		}
 		timedPermissions.put(perm, System.currentTimeMillis() + (delay * 1000));
 		getAttachment().setPermission(perm, true);
-		handler.getTimer().schedule(new TimerTask() {
+		handler.getTimer().schedule(new Runnable() {
 
 			@Override
 			public void run() {
 				removePermission(perm);
 			}
-		}, delay * 1000);
+		}, delay, TimeUnit.SECONDS);
 		handler.getPlugin().debug("Giving temp permission " + perm + " to " + uuid.toString() + " for " + delay);
 		return this;
 	}

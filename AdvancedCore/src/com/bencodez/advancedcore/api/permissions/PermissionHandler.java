@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Timer;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
@@ -25,7 +26,7 @@ public class PermissionHandler {
 	private ConcurrentHashMap<UUID, PlayerPermissionHandler> perms = new ConcurrentHashMap<UUID, PlayerPermissionHandler>();
 
 	@Getter
-	private Timer timer = new Timer();
+	private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
 
 	@Getter
 	private HashMap<UUID, PlayerPermissionHandler> permsToAdd;

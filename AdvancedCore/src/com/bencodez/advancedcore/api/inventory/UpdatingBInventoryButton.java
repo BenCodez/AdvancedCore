@@ -1,7 +1,8 @@
 package com.bencodez.advancedcore.api.inventory;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -15,7 +16,7 @@ import lombok.Getter;
 public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	@Getter
 	private long delay;
-	private Timer timer = new Timer();
+	private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
 	@Getter
 	private long updateInterval;
 
@@ -39,7 +40,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 
 	public void cancel() {
 		if (timer != null) {
-			timer.cancel();
+			timer.shutdownNow();
 			timer = null;
 		}
 	}
@@ -82,13 +83,13 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	@Override
 	public void load(Player p) {
 		if (timer != null) {
-			timer.schedule(new TimerTask() {
+			timer.scheduleAtFixedRate(new Runnable() {
 
 				@Override
 				public void run() {
 					checkUpdate(p);
 				}
-			}, delay, updateInterval);
+			}, delay, updateInterval, TimeUnit.MILLISECONDS);
 		}
 	}
 
