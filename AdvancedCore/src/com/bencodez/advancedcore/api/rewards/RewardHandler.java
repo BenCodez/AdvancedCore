@@ -141,9 +141,8 @@ public class RewardHandler {
 	}
 
 	public void addSubDirectlyDefined(SubDirectlyDefinedReward subDirectlyDefinedReward) {
-		plugin.debug("Adding subdirectlydefined reward handle: " + subDirectlyDefinedReward.getMaster().getPath() + "."
-				+ subDirectlyDefinedReward.getPath() + ", isdirectlydefined: "
-				+ subDirectlyDefinedReward.isDirectlyDefined());
+		plugin.debug("Adding subdirectlydefined reward handle: " + subDirectlyDefinedReward.getFullPath()
+				+ ", isdirectlydefined: " + subDirectlyDefinedReward.isDirectlyDefined());
 		subDirectlyDefinedRewards.add(subDirectlyDefinedReward);
 	}
 
@@ -162,11 +161,16 @@ public class RewardHandler {
 	}
 
 	public void addRewardFolder(File file) {
-		addRewardFolder(file, true);
+		addRewardFolder(file, true, true);
 	}
 
-	public void addRewardFolder(File file, boolean load) {
-		file.mkdirs();
+	public void addRewardFolder(File file, boolean load, boolean create) {
+		if (create) {
+			file.mkdirs();
+		}
+		if (!file.exists()) {
+			return;
+		}
 		if (file.isDirectory()) {
 			if (!rewardFolders.contains(file)) {
 				rewardFolders.add(file);
@@ -192,10 +196,11 @@ public class RewardHandler {
 		validPaths.add(path);
 	}
 
-	public void checkSubRewards(DirectlyDefinedReward direct) {
+	public void checkSubRewards(DefinedReward direct) {
 		for (RewardInject inject : getInjectedRewards()) {
 			for (SubDirectlyDefinedReward sub : inject.subRewards(direct)) {
 				addSubDirectlyDefined(sub);
+				checkSubRewards(sub);
 			}
 		}
 	}
@@ -390,7 +395,9 @@ public class RewardHandler {
 			plugin.getLogger().warning("Using example rewards as a reward, becarefull");
 		}
 
-		return new Reward(new File(getDefaultFolder().getAbsolutePath() + File.separator + "DirectlyDefined"), reward);
+		File directFolder = new File(getDefaultFolder().getAbsolutePath() + File.separator + "DirectlyDefined");
+		directFolder.mkdirs();
+		return new Reward(directFolder, reward);
 	}
 
 	/**
@@ -500,7 +507,7 @@ public class RewardHandler {
 			}
 			DirectlyDefinedReward direct = getDirectlyDefined(path);
 			SubDirectlyDefinedReward sub = getSubDirectlyDefined(data.getCurrentPath() + "." + path);
-			if (suffix != null && prefix != null && direct != null || sub != null) {
+			if (suffix != null && prefix != null && (direct != null || sub != null)) {
 				if (direct != null) {
 					Reward reward = direct.getReward();
 					if (reward != null) {
@@ -1433,7 +1440,7 @@ public class RewardHandler {
 			}
 
 			@Override
-			public ArrayList<SubDirectlyDefinedReward> subRewards(DirectlyDefinedReward direct) {
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
 				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Javascript.TrueRewards")) {
 					subs.add(new SubDirectlyDefinedReward(direct, "Javascript.TrueRewards"));
@@ -1502,6 +1509,26 @@ public class RewardHandler {
 				return null;
 
 			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Lucky")) {
+					for (String str : direct.getFileData().getConfigurationSection(direct.getPath() + ".Lucky")
+							.getKeys(false)) {
+						if (StringParser.getInstance().isInt(str)) {
+							int num = Integer.parseInt(str);
+							if (num > 0) {
+								String path = "Lucky." + num;
+								if (direct.getFileData().isConfigurationSection(direct.getPath() + "." + path)) {
+									subs.add(new SubDirectlyDefinedReward(direct, path));
+								}
+							}
+						}
+					}
+				}
+				return subs;
+			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Lucky") {
 
 			@Override
@@ -1556,6 +1583,18 @@ public class RewardHandler {
 				return null;
 
 			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Random.Rewards")) {
+					subs.add(new SubDirectlyDefinedReward(direct, "Random.Rewards"));
+				}
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Random.FallBack")) {
+					subs.add(new SubDirectlyDefinedReward(direct, "Random.FallBack"));
+				}
+				return subs;
+			}
 		}.priority(10));
 
 		injectedRewards.add(new RewardInjectConfigurationSection("Rewards") {
@@ -1568,6 +1607,16 @@ public class RewardHandler {
 				return null;
 
 			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Rewards")) {
+					subs.add(new SubDirectlyDefinedReward(direct, "Rewards"));
+				}
+				return subs;
+			}
+
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.DISPENSER), new EditGUIValueInventory("Rewards") {
 
 			@Override
@@ -1688,6 +1737,21 @@ public class RewardHandler {
 				}
 				return null;
 
+			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".AdvancedRandomReward")) {
+					for (String str : direct.getFileData()
+							.getConfigurationSection(direct.getPath() + ".AdvancedRandomReward").getKeys(false)) {
+						if (direct.getFileData()
+								.isConfigurationSection(direct.getPath() + ".AdvancedRandomReward." + str)) {
+							subs.add(new SubDirectlyDefinedReward(direct, "AdvancedRandomReward." + str));
+						}
+					}
+				}
+				return subs;
 			}
 		}.addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("AdvancedRandomReward") {
@@ -1986,6 +2050,21 @@ public class RewardHandler {
 				return null;
 
 			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".AdvancedPriority")) {
+					for (String str : direct.getFileData()
+							.getConfigurationSection(direct.getPath() + ".AdvancedPriority").getKeys(false)) {
+						if (direct.getFileData()
+								.isConfigurationSection(direct.getPath() + ".AdvancedPriority." + str)) {
+							subs.add(new SubDirectlyDefinedReward(direct, "AdvancedPriority." + str));
+						}
+					}
+				}
+				return subs;
+			}
 		}.addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("AdvancedPriority") {
 
@@ -2021,6 +2100,20 @@ public class RewardHandler {
 				}
 				return null;
 
+			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".AdvancedWorld")) {
+					for (String str : direct.getFileData().getConfigurationSection(direct.getPath() + ".AdvancedWorld")
+							.getKeys(false)) {
+						if (direct.getFileData().isConfigurationSection(direct.getPath() + ".AdvancedWorld." + str)) {
+							subs.add(new SubDirectlyDefinedReward(direct, "AdvancedWorld." + str));
+						}
+					}
+				}
+				return subs;
 			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("AdvancedWorld") {
 
@@ -2085,6 +2178,24 @@ public class RewardHandler {
 
 				return null;
 
+			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".SpecialChance")) {
+					for (String str : direct.getFileData().getConfigurationSection(direct.getPath() + ".SpecialChance")
+							.getKeys(false)) {
+						String key = str.replaceAll("_", ".");
+						if (StringParser.getInstance().isDouble(key)) {
+							String path = "SpecialChance." + str;
+							if (direct.getFileData().isConfigurationSection(direct.getPath() + "." + path)) {
+								subs.add(new SubDirectlyDefinedReward(direct, path));
+							}
+						}
+					}
+				}
+				return subs;
 			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("SpecialChance") {
 
@@ -2166,6 +2277,22 @@ public class RewardHandler {
 				return null;
 			}
 
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
+				if (direct.getFileData().getBoolean(direct.getPath() + ".EnableChoices")) {
+					for (String str : direct.getFileData().getConfigurationSection(direct.getPath() + ".Choices")
+							.getKeys(false)) {
+
+						String path = "Choices." + str;
+						if (direct.getFileData().isConfigurationSection(direct.getPath() + "." + path)) {
+							subs.add(new SubDirectlyDefinedReward(direct, path));
+						}
+
+					}
+				}
+				return subs;
+			}
 		}.priority(10).synchronize().validator(new RewardInjectValidator() {
 
 			@Override

@@ -5,22 +5,22 @@ import org.bukkit.configuration.ConfigurationSection;
 import lombok.Getter;
 import lombok.Setter;
 
-public class SubDirectlyDefinedReward {
+public class SubDirectlyDefinedReward implements DefinedReward {
 	@Getter
 	@Setter
 	private String path;
 
 	@Getter
 	@Setter
-	private DirectlyDefinedReward master;
+	private DefinedReward master;
 
-	public SubDirectlyDefinedReward(DirectlyDefinedReward master, String path) {
+	public SubDirectlyDefinedReward(DefinedReward master, String path) {
 		this.master = master;
 		this.path = path;
 	}
 
 	public String getFullPath() {
-		return master.getPath() + "." + path;
+		return master.getFullPath() + "." + path;
 	}
 
 	public void createSection(String key) {

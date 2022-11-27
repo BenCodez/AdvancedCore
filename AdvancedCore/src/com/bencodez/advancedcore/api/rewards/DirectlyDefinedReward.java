@@ -5,7 +5,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import lombok.Getter;
 import lombok.Setter;
 
-public abstract class DirectlyDefinedReward {
+public abstract class DirectlyDefinedReward implements DefinedReward {
 	@Getter
 	@Setter
 	private String path;
@@ -18,6 +18,10 @@ public abstract class DirectlyDefinedReward {
 
 	public void createSectionLocal(String key) {
 		createSection(getPath() + "." + key);
+	}
+
+	public String getFullPath() {
+		return path;
 	}
 
 	public abstract ConfigurationSection getFileData();

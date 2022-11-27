@@ -487,12 +487,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		rewardHandler.loadInjectedRequirements();
 		if (loadRewards) {
 			File rewardsFolder = new File(this.getDataFolder(), "Rewards");
-			rewardHandler.addRewardFolder(rewardsFolder, false);
+			rewardHandler.addRewardFolder(rewardsFolder, false, true);
 			File file = new File(rewardsFolder.getAbsolutePath() + File.separator + "DirectlyDefined");
-			if (!file.exists()) {
-				file.mkdirs();
-			}
-			rewardHandler.addRewardFolder(file);
+			rewardHandler.addRewardFolder(file, false, false);
 		}
 
 		loadValueRequestInputCommands();
