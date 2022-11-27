@@ -206,9 +206,15 @@ public class RewardHandler {
 	}
 
 	public void checkSubRewards() {
+		plugin.extraDebug("Checking directlydefined rewards for sub rewards");
 		subDirectlyDefinedRewards = new ArrayList<SubDirectlyDefinedReward>();
 		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
 			checkSubRewards(direct);
+		}
+
+		plugin.extraDebug("Checking reward file for sub rewards");
+		for (Reward reward : getRewards()) {
+			checkSubRewards(new RewardFileDefinedReward(reward));
 		}
 	}
 
@@ -285,6 +291,8 @@ public class RewardHandler {
 	public SubDirectlyDefinedReward getSubDirectlyDefined(String path) {
 		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
 			if (direct.getFullPath().equalsIgnoreCase(path)) {
+				return direct;
+			} else if (direct.getFullPath().equalsIgnoreCase(path.replaceAll("_", "."))) {
 				return direct;
 			}
 		}
@@ -364,6 +372,16 @@ public class RewardHandler {
 		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
 			if (direct.getPath().replace(".", "_").equals(reward)) {
 				plugin.debug("Using directlydefined reward for: " + reward);
+				return direct.getReward();
+			}
+		}
+
+		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
+			if (direct.getFullPath().equalsIgnoreCase(reward)) {
+				plugin.debug("Using subdirectlydefined reward for: " + reward);
+				return direct.getReward();
+			} else if (direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
+				plugin.debug("Using subdirectlydefined reward for: " + reward);
 				return direct.getReward();
 			}
 		}
@@ -506,7 +524,7 @@ public class RewardHandler {
 				rewardName += "_" + suffix;
 			}
 			DirectlyDefinedReward direct = getDirectlyDefined(path);
-			SubDirectlyDefinedReward sub = getSubDirectlyDefined(data.getCurrentPath() + "." + path);
+			SubDirectlyDefinedReward sub = getSubDirectlyDefined(rewardName);
 			if (suffix != null && prefix != null && (direct != null || sub != null)) {
 				if (direct != null) {
 					Reward reward = direct.getReward();
@@ -521,7 +539,7 @@ public class RewardHandler {
 				} else {
 					Reward reward = sub.getReward();
 					if (reward != null) {
-						plugin.debug("Giving subdirectlydefined reward " + path + ", Options: "
+						plugin.debug("Giving subdirectlydefined reward " + rewardName + ", Options: "
 								+ rewardOptions.toString() + " to " + user.getPlayerName() + "/" + user.getUUID());
 						giveReward(user, reward, rewardOptions);
 					} else {
@@ -1442,10 +1460,12 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Javascript.TrueRewards")) {
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "Javascript.TrueRewards")) {
 					subs.add(new SubDirectlyDefinedReward(direct, "Javascript.TrueRewards"));
 				}
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Javascript.FalseRewards")) {
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "Javascript.FalseRewards")) {
 					subs.add(new SubDirectlyDefinedReward(direct, "Javascript.FalseRewards"));
 				}
 				return subs;
@@ -1496,13 +1516,13 @@ public class RewardHandler {
 					if (reward.getConfig().getConfigData().getBoolean("OnlyOneLucky", false)) {
 						for (Entry<String, Integer> entry : map.entrySet()) {
 							new RewardBuilder(reward.getConfig().getConfigData(), entry.getKey())
-									.withPlaceHolder(placeholders).send(user);
+									.withPrefix(reward.getName()).withPlaceHolder(placeholders).send(user);
 							return null;
 						}
 					} else {
 						for (Entry<String, Integer> entry : map.entrySet()) {
 							new RewardBuilder(reward.getConfig().getConfigData(), entry.getKey())
-									.withPlaceHolder(placeholders).send(user);
+									.withPrefix(reward.getName()).withPlaceHolder(placeholders).send(user);
 						}
 					}
 				}
@@ -1513,14 +1533,15 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Lucky")) {
-					for (String str : direct.getFileData().getConfigurationSection(direct.getPath() + ".Lucky")
-							.getKeys(false)) {
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + direct.needsDot() + "Lucky")) {
+					for (String str : direct.getFileData()
+							.getConfigurationSection(direct.getPath() + direct.needsDot() + "Lucky").getKeys(false)) {
 						if (StringParser.getInstance().isInt(str)) {
 							int num = Integer.parseInt(str);
 							if (num > 0) {
 								String path = "Lucky." + num;
-								if (direct.getFileData().isConfigurationSection(direct.getPath() + "." + path)) {
+								if (direct.getFileData()
+										.isConfigurationSection(direct.getPath() + direct.needsDot() + path)) {
 									subs.add(new SubDirectlyDefinedReward(direct, path));
 								}
 							}
@@ -1587,10 +1608,12 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Random.Rewards")) {
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "Random.Rewards")) {
 					subs.add(new SubDirectlyDefinedReward(direct, "Random.Rewards"));
 				}
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Random.FallBack")) {
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "Random.FallBack")) {
 					subs.add(new SubDirectlyDefinedReward(direct, "Random.FallBack"));
 				}
 				return subs;
@@ -1602,6 +1625,7 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
+				plugin.debug("12345c" + reward.getName());
 				new RewardBuilder(reward.getConfig().getConfigData(), "Rewards").withPrefix(reward.getName())
 						.withPlaceHolder(placeholders).send(user);
 				return null;
@@ -1611,7 +1635,7 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".Rewards")) {
+				if (direct.getFileData().isConfigurationSection(direct.getPath() + direct.needsDot() + "Rewards")) {
 					subs.add(new SubDirectlyDefinedReward(direct, "Rewards"));
 				}
 				return subs;
@@ -1732,7 +1756,7 @@ public class RewardHandler {
 				if (rewards.size() > 0) {
 					String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
 					giveReward(user, section, reward, new RewardOptions().setPlaceholders(placeholders)
-							.setPrefix(r.getRewardName() + "_AdvancedRandomReward_"));
+							.setPrefix(r.getRewardName() + "_AdvancedRandomReward"));
 					return reward;
 				}
 				return null;
@@ -1742,11 +1766,13 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".AdvancedRandomReward")) {
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "AdvancedRandomReward")) {
 					for (String str : direct.getFileData()
-							.getConfigurationSection(direct.getPath() + ".AdvancedRandomReward").getKeys(false)) {
-						if (direct.getFileData()
-								.isConfigurationSection(direct.getPath() + ".AdvancedRandomReward." + str)) {
+							.getConfigurationSection(direct.getPath() + direct.needsDot() + "AdvancedRandomReward")
+							.getKeys(false)) {
+						if (direct.getFileData().isConfigurationSection(
+								direct.getPath() + direct.needsDot() + "AdvancedRandomReward." + str)) {
 							subs.add(new SubDirectlyDefinedReward(direct, "AdvancedRandomReward." + str));
 						}
 					}
@@ -2054,11 +2080,13 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".AdvancedPriority")) {
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "AdvancedPriority")) {
 					for (String str : direct.getFileData()
-							.getConfigurationSection(direct.getPath() + ".AdvancedPriority").getKeys(false)) {
-						if (direct.getFileData()
-								.isConfigurationSection(direct.getPath() + ".AdvancedPriority." + str)) {
+							.getConfigurationSection(direct.getPath() + direct.needsDot() + "AdvancedPriority")
+							.getKeys(false)) {
+						if (direct.getFileData().isConfigurationSection(
+								direct.getPath() + direct.needsDot() + "AdvancedPriority." + str)) {
 							subs.add(new SubDirectlyDefinedReward(direct, "AdvancedPriority." + str));
 						}
 					}
@@ -2105,10 +2133,13 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".AdvancedWorld")) {
-					for (String str : direct.getFileData().getConfigurationSection(direct.getPath() + ".AdvancedWorld")
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "AdvancedWorld")) {
+					for (String str : direct.getFileData()
+							.getConfigurationSection(direct.getPath() + direct.needsDot() + "AdvancedWorld")
 							.getKeys(false)) {
-						if (direct.getFileData().isConfigurationSection(direct.getPath() + ".AdvancedWorld." + str)) {
+						if (direct.getFileData().isConfigurationSection(
+								direct.getPath() + direct.needsDot() + "AdvancedWorld." + str)) {
 							subs.add(new SubDirectlyDefinedReward(direct, "AdvancedWorld." + str));
 						}
 					}
@@ -2164,7 +2195,7 @@ public class RewardHandler {
 
 				for (Entry<Double, String> entry : map.entrySet()) {
 					if (randomNum <= entry.getKey()) {
-						new RewardBuilder(section, entry.getValue()).withPrefix(reward.getName())
+						new RewardBuilder(section, entry.getValue()).withPrefix(reward.getName() + "_SpecialChance")
 								.withPlaceHolder(placeholders).withPlaceHolder("chance", "" + entry.getKey())
 								.send(user);
 
@@ -2183,13 +2214,16 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().isConfigurationSection(direct.getPath() + ".SpecialChance")) {
-					for (String str : direct.getFileData().getConfigurationSection(direct.getPath() + ".SpecialChance")
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "SpecialChance")) {
+					for (String str : direct.getFileData()
+							.getConfigurationSection(direct.getPath() + direct.needsDot() + "SpecialChance")
 							.getKeys(false)) {
 						String key = str.replaceAll("_", ".");
 						if (StringParser.getInstance().isDouble(key)) {
 							String path = "SpecialChance." + str;
-							if (direct.getFileData().isConfigurationSection(direct.getPath() + "." + path)) {
+							if (direct.getFileData()
+									.isConfigurationSection(direct.getPath() + direct.needsDot() + path)) {
 								subs.add(new SubDirectlyDefinedReward(direct, path));
 							}
 						}
@@ -2280,12 +2314,12 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().getBoolean(direct.getPath() + ".EnableChoices")) {
-					for (String str : direct.getFileData().getConfigurationSection(direct.getPath() + ".Choices")
-							.getKeys(false)) {
+				if (direct.getFileData().getBoolean(direct.getPath() + direct.needsDot() + "EnableChoices")) {
+					for (String str : direct.getFileData()
+							.getConfigurationSection(direct.getPath() + direct.needsDot() + "Choices").getKeys(false)) {
 
 						String path = "Choices." + str;
-						if (direct.getFileData().isConfigurationSection(direct.getPath() + "." + path)) {
+						if (direct.getFileData().isConfigurationSection(direct.getPath() + direct.needsDot() + path)) {
 							subs.add(new SubDirectlyDefinedReward(direct, path));
 						}
 

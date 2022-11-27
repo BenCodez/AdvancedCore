@@ -54,4 +54,8 @@ public abstract class DirectlyDefinedReward implements DefinedReward {
 	public void setValue(String path, Object value) {
 		setData(getPath() + "." + path, value);
 	}
+
+	public String needsDot() {
+		return ".";
+	}
 }

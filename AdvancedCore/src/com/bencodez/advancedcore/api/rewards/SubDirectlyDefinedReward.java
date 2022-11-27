@@ -20,11 +20,11 @@ public class SubDirectlyDefinedReward implements DefinedReward {
 	}
 
 	public String getFullPath() {
-		return master.getFullPath() + "." + path;
+		return master.getFullPath() + master.needsDot() + path;
 	}
 
 	public void createSection(String key) {
-		master.createSection(master.getPath() + "." + key);
+		master.createSection(master.getPath() + master.needsDot() + key);
 	}
 
 	public void createSectionLocal(String key) {
@@ -37,7 +37,7 @@ public class SubDirectlyDefinedReward implements DefinedReward {
 
 	public Reward getReward() {
 		if (isDirectlyDefined()) {
-			return new Reward((master.getPath() + "." + getPath()).replace(".", "_"),
+			return new Reward((master.getFullPath() + master.needsDot() + getPath()).replace(".", "_"),
 					getFileData().getConfigurationSection(getPath())).needsRewardFile(false);
 		} else {
 			return null;
@@ -57,7 +57,7 @@ public class SubDirectlyDefinedReward implements DefinedReward {
 	}
 
 	public void setData(String path, Object value) {
-		master.setData(master.getPath() + "." + path, value);
+		master.setData(master.getPath() + master.needsDot() + path, value);
 	}
 
 	public void setParentValue(Object value) {
@@ -66,5 +66,10 @@ public class SubDirectlyDefinedReward implements DefinedReward {
 
 	public void setValue(String path, Object value) {
 		setData(getPath() + "." + path, value);
+	}
+
+	@Override
+	public String needsDot() {
+		return ".";
 	}
 }

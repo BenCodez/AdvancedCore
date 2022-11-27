@@ -446,6 +446,10 @@ public class RewardFileData {
 		configData = fileData.getConfigurationSection("");
 	}
 
+	public void save() {
+		FilesManager.getInstance().editFile(dataFile, fileData);
+	}
+
 	public void save(FileConfiguration fileData) {
 		FilesManager.getInstance().editFile(dataFile, fileData);
 	}

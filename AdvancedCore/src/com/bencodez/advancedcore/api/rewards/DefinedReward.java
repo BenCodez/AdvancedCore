@@ -14,4 +14,6 @@ public interface DefinedReward {
 	public void save();
 
 	public void setData(String str, Object value);
+	
+	public String needsDot();
 }
