@@ -135,13 +135,13 @@ public class RewardHandler {
 	}
 
 	public void addDirectlyDefined(DirectlyDefinedReward directlyDefinedReward) {
-		plugin.debug("Adding directlydefined reward handle: " + directlyDefinedReward.getPath()
+		plugin.extraDebug("Adding directlydefined reward handle: " + directlyDefinedReward.getPath()
 				+ ", isdirectlydefined: " + directlyDefinedReward.isDirectlyDefined());
 		directlyDefinedRewards.add(directlyDefinedReward);
 	}
 
 	public void addSubDirectlyDefined(SubDirectlyDefinedReward subDirectlyDefinedReward) {
-		plugin.debug("Adding subdirectlydefined reward handle: " + subDirectlyDefinedReward.getFullPath()
+		plugin.extraDebug("Adding subdirectlydefined reward handle: " + subDirectlyDefinedReward.getFullPath()
 				+ ", isdirectlydefined: " + subDirectlyDefinedReward.isDirectlyDefined());
 		subDirectlyDefinedRewards.add(subDirectlyDefinedReward);
 	}
