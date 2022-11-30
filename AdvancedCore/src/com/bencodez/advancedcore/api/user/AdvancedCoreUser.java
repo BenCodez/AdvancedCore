@@ -51,8 +51,6 @@ public class AdvancedCoreUser {
 
 	private UserData data;
 
-	private AdvancedCorePlugin hook = AdvancedCorePlugin.getInstance();
-
 	private boolean loadName = true;
 
 	/** The player name. */
@@ -177,7 +175,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
-		synchronized (AdvancedCorePlugin.getInstance()) {
+		synchronized (plugin) {
 			ArrayList<String> offlineRewards = getOfflineRewards();
 			offlineRewards
 					.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders));
@@ -210,7 +208,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void checkDelayedTimedRewards() {
-		AdvancedCorePlugin.getInstance().debug("Checking timed/delayed for " + getPlayerName());
+		plugin.debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
 		HashMap<String, Long> newTimed = new HashMap<String, Long>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
@@ -231,9 +229,8 @@ public class AdvancedCoreUser {
 							.withPlaceHolder("date",
 									"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
 							.send(this);
-					AdvancedCorePlugin.getInstance()
-							.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
-									+ " with placeholders " + ArrayUtils.getInstance().fromString(placeholders));
+					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
+							+ " with placeholders " + ArrayUtils.getInstance().fromString(placeholders));
 				} else {
 					newTimed.put(entry.getKey(), time);
 				}
@@ -247,8 +244,8 @@ public class AdvancedCoreUser {
 	 * Check offline rewards.
 	 */
 	public void checkOfflineRewards() {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
-			AdvancedCorePlugin.getInstance().debug("Processing rewards is disabled");
+		if (!plugin.getOptions().isProcessRewards()) {
+			plugin.debug("Processing rewards is disabled");
 			return;
 		}
 		setCheckWorld(false);
@@ -424,7 +421,7 @@ public class AdvancedCoreUser {
 		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
 		for (String str : timedReward) {
 			String[] data = str.split("%ExecutionTime/%");
-			AdvancedCorePlugin.getInstance().extraDebug("TimedReward: " + str);
+			plugin.extraDebug("TimedReward: " + str);
 			if (data.length > 1) {
 				String name = data[0];
 
@@ -449,7 +446,7 @@ public class AdvancedCoreUser {
 	public InputMethod getUserInputMethod() {
 		String inputMethod = getInputMethod();
 		if (inputMethod == null) {
-			return InputMethod.getMethod(AdvancedCorePlugin.getInstance().getOptions().getDefaultRequestMethod());
+			return InputMethod.getMethod(plugin.getOptions().getDefaultRequestMethod());
 		}
 		return InputMethod.getMethod(inputMethod);
 
@@ -533,7 +530,7 @@ public class AdvancedCoreUser {
 		if (!plugin.isEnabled()) {
 			return;
 		}
-		if (hook.getEcon() != null) {
+		if (plugin.getEcon() != null) {
 			try {
 				if (m > 0) {
 					final double money = m;
@@ -541,7 +538,7 @@ public class AdvancedCoreUser {
 
 						@Override
 						public void run() {
-							hook.getEcon().depositPlayer(getOfflinePlayer(), money);
+							plugin.getEcon().depositPlayer(getOfflinePlayer(), money);
 						}
 					});
 
@@ -552,7 +549,7 @@ public class AdvancedCoreUser {
 
 						@Override
 						public void run() {
-							hook.getEcon().withdrawPlayer(getOfflinePlayer(), money);
+							plugin.getEcon().withdrawPlayer(getOfflinePlayer(), money);
 						}
 					});
 
@@ -641,7 +638,7 @@ public class AdvancedCoreUser {
 	}
 
 	public boolean isBanned() {
-		if (AdvancedCorePlugin.getInstance().getBannedPlayers().contains(getUUID())) {
+		if (plugin.getBannedPlayers().contains(getUUID())) {
 			return true;
 		}
 		return false;
@@ -735,7 +732,7 @@ public class AdvancedCoreUser {
 			delay = 0;
 		}
 		delay += 500;
-		AdvancedCorePlugin.getInstance().getTimer().schedule(new Runnable() {
+		plugin.getTimer().schedule(new Runnable() {
 
 			@Override
 			public void run() {
@@ -804,7 +801,7 @@ public class AdvancedCoreUser {
 			if (sound != null) {
 				player.playSound(player.getLocation(), sound, volume, pitch);
 			} else {
-				hook.debug("Invalid sound: " + soundName);
+				plugin.debug("Invalid sound: " + soundName);
 			}
 		}
 	}
@@ -817,8 +814,7 @@ public class AdvancedCoreUser {
 			final Player player = getPlayer();
 			if (player != null && plugin.isEnabled()) {
 				for (final String cmd : cmds) {
-					AdvancedCorePlugin.getInstance()
-							.debug("Executing player command for " + getPlayerName() + ": " + cmd);
+					plugin.debug("Executing player command for " + getPlayerName() + ": " + cmd);
 					Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
 						@Override
@@ -835,7 +831,7 @@ public class AdvancedCoreUser {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringParser.getInstance().replaceJavascript(getPlayer(),
 					StringParser.getInstance().replacePlaceHolder(command, placeholders));
-			AdvancedCorePlugin.getInstance().debug("Executing player command for " + getPlayerName() + ": " + command);
+			plugin.debug("Executing player command for " + getPlayerName() + ": " + command);
 			if (plugin.isEnabled()) {
 				Bukkit.getScheduler().runTask(plugin, new Runnable() {
 
@@ -852,7 +848,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void remove() {
-		AdvancedCorePlugin.getInstance().debug("Removing " + getUUID() + " (" + getPlayerName() + ") from storage...");
+		plugin.debug("Removing " + getUUID() + " (" + getPlayerName() + ") from storage...");
 		getData().remove();
 	}
 
@@ -879,8 +875,8 @@ public class AdvancedCoreUser {
 							delay);
 					actionBar.send(player);
 				} catch (Exception ex) {
-					hook.debug("Failed to send ActionBar, turn debug on to see stack trace");
-					hook.debug(ex);
+					plugin.debug("Failed to send ActionBar, turn debug on to see stack trace");
+					plugin.debug(ex);
 				}
 			}
 		}
@@ -904,8 +900,8 @@ public class AdvancedCoreUser {
 							style, progress);
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
-					hook.debug("Failed to send BossBar");
-					hook.debug(ex);
+					plugin.debug("Failed to send BossBar");
+					plugin.debug(ex);
 				}
 			}
 		}
@@ -921,7 +917,7 @@ public class AdvancedCoreUser {
 		if ((player != null) && (messages != null)) {
 			for (TextComponent txt : messages) {
 				txt.setText(StringParser.getInstance().replaceJavascript(getPlayer(), txt.getText()));
-				AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player, txt);
+				plugin.getServerHandle().sendMessage(player, txt);
 			}
 		}
 	}
@@ -935,7 +931,7 @@ public class AdvancedCoreUser {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
 			message.setText(StringParser.getInstance().replaceJavascript(getPlayer(), message.getText()));
-			AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player, message);
+			plugin.getServerHandle().sendMessage(player, message);
 		}
 	}
 
@@ -962,7 +958,7 @@ public class AdvancedCoreUser {
 		if ((player != null) && (msg != null)) {
 			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
-					AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
+					plugin.getServerHandle().sendMessage(player,
 							StringParser.getInstance().parseJson(StringParser.getInstance().parseText(player, str)));
 				}
 			}
@@ -1011,7 +1007,7 @@ public class AdvancedCoreUser {
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");
-				hook.debug(ex);
+				plugin.debug(ex);
 			}
 		}
 	}
