@@ -43,6 +43,7 @@ public class ChoiceGUI {
 	public void openClaimChoices(Player player) {
 		AdvancedCoreUser user = plugin.getUserManager().getUser(player);
 		BInventory inv = new BInventory("UnClaimed Choices");
+		inv.dontClose();
 
 		ArrayList<String> choices = user.getUnClaimedChoices();
 		Set<String> unClaimedChoices = new HashSet<String>();
