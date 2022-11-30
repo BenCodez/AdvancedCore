@@ -2299,7 +2299,7 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				if (value) {
 					debug("Checking choice rewards");
-					reward.checkRewardFile();
+					// reward.checkRewardFile();
 					String choice = user.getChoicePreference(reward.getName());
 					if (choice.isEmpty() || choice.equalsIgnoreCase("none")) {
 						debug("No choice specified");
@@ -2318,7 +2318,7 @@ public class RewardHandler {
 					for (String str : direct.getFileData()
 							.getConfigurationSection(direct.getPath() + direct.needsDot() + "Choices").getKeys(false)) {
 
-						String path = "Choices." + str;
+						String path = "Choices." + str + ".Rewards";
 						if (direct.getFileData().isConfigurationSection(direct.getPath() + direct.needsDot() + path)) {
 							subs.add(new SubDirectlyDefinedReward(direct, path));
 						}
