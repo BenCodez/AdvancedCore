@@ -447,6 +447,14 @@ public class ArrayUtils {
 		return newList;
 	}
 
+	public ArrayList<String> replacePlaceHolders(ArrayList<String> list, Player p) {
+		ArrayList<String> newList = new ArrayList<String>();
+		for (int i = 0; i < list.size(); i++) {
+			newList.add(StringParser.getInstance().replacePlaceHolders(p, list.get(i)));
+		}
+		return newList;
+	}
+
 	public ArrayList<String> sort(ArrayList<String> list) {
 		Collections.sort(list, String.CASE_INSENSITIVE_ORDER);
 		return list;
