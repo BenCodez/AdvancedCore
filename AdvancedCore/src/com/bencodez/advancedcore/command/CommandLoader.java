@@ -96,6 +96,41 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "RunSQLQuery", "(List)" }, permPrefix + ".RunSQLQuery",
+				"Execute sql query", true, true) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				String str = "";
+				for (int i = 1; i < args.length; i++) {
+					if (i + 1 == args.length) {
+						str += args[i] + ";";
+					} else {
+						str += args[i] + " ";
+					}
+				}
+				
+				switch (plugin.getStorageType()) {
+				case FLAT:
+					sendMessage(sender, "FLAT storage doesn't support SQL queries");
+					break;
+				case MYSQL:
+					sendMessage(sender, "Running query: " + str);
+					plugin.getMysql().executeQuery(str);
+					sendMessage(sender, "Query finished: " + str);
+					break;
+				case SQLITE:
+					sendMessage(sender, "Running query: " + str);
+					plugin.getSQLiteUserTable().executeQuery(str);
+					sendMessage(sender, "Query finished: " + str);
+					break;
+				default:
+					break;
+				}
+
+			}
+		});
+
 		cmds.add(new CommandHandler(new String[] { "GiveAll", "(reward)" }, permPrefix + ".GiveAll",
 				"Give all users a reward") {
 

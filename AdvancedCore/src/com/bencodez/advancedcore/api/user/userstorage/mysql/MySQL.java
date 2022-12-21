@@ -641,4 +641,13 @@ public class MySQL {
 		}
 
 	}
+
+	public void executeQuery(String str) {
+		try {
+			Query q = new Query(mysql, str);
+			q.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
 }

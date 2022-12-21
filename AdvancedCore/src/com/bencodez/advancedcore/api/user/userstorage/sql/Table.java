@@ -536,4 +536,13 @@ public class Table {
 
 	}
 
+	public void executeQuery(String str) {
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(str);
+			s.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 }
