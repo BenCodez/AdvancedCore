@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
@@ -644,7 +645,7 @@ public class MySQL {
 
 	public void executeQuery(String str) {
 		try {
-			Query q = new Query(mysql, str);
+			Query q = new Query(mysql, StringParser.getInstance().replacePlaceHolder(str, "tablename", getName()));
 			q.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
