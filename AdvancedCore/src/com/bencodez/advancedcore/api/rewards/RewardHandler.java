@@ -2314,7 +2314,8 @@ public class RewardHandler {
 			@Override
 			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
 				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<SubDirectlyDefinedReward>();
-				if (direct.getFileData().getBoolean(direct.getPath() + direct.needsDot() + "EnableChoices")) {
+				if (direct.getFileData().getBoolean(direct.getPath() + direct.needsDot() + "EnableChoices") && direct
+						.getFileData().isConfigurationSection(direct.getPath() + direct.needsDot() + "Choices")) {
 					for (String str : direct.getFileData()
 							.getConfigurationSection(direct.getPath() + direct.needsDot() + "Choices").getKeys(false)) {
 
