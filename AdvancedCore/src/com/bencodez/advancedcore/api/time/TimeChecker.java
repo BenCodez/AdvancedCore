@@ -9,8 +9,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.bukkit.Bukkit;
-
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.time.events.DateChangedEvent;
 import com.bencodez.advancedcore.api.time.events.DayChangeEvent;
@@ -39,7 +37,7 @@ public class TimeChecker {
 	}
 
 	public void forceChanged(TimeType time) {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		timer.execute(new Runnable() {
 
 			@Override
 			public void run() {
