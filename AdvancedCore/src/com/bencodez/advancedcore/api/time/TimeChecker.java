@@ -185,6 +185,25 @@ public class TimeChecker {
 				AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
 			}
 		} else {
+			if (timer != null) {
+				timer.shutdownNow();
+			}
+			timer = Executors.newScheduledThreadPool(1);
+			timer.scheduleWithFixedDelay(new Runnable() {
+
+				@Override
+				public void run() {
+					if (hasDayChanged(false)) {
+						hasDayChanged(true);
+					}
+					if (hasWeekChanged(false)) {
+						hasWeekChanged(true);
+					}
+					if (hasMonthChanged(false)) {
+						hasMonthChanged(true);
+					}
+				}
+			}, 60, 60, TimeUnit.SECONDS);
 			plugin.debug("Processing time changes locally disabled");
 		}
 	}
