@@ -19,8 +19,11 @@ import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfigVelocity;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
 import com.bencodez.advancedcore.bungeeapi.velocity.VelocityYMLFile;
+
+import lombok.Getter;
 
 public abstract class VelocityMySQL {
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
@@ -32,6 +35,7 @@ public abstract class VelocityMySQL {
 	// ConcurrentMap<String, ArrayList<Column>> table = new
 	// ConcurrentHashMap<String, ArrayList<Column>>();
 
+	@Getter
 	private com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL mysql;
 
 	private String name;
@@ -44,31 +48,17 @@ public abstract class VelocityMySQL {
 
 	private Set<String> uuids = Collections.synchronizedSet(new HashSet<String>());
 
-	public VelocityMySQL(String tableName, VelocityYMLFile config) {
-		String tablePrefix = config.getString(config.getNode("Prefix"), "");
-		String hostName = config.getString(config.getNode("Host"), "");
-		int port = config.getInt(config.getNode("Port"), 0);
-		String user = config.getString(config.getNode("Username"), "");
-		String pass = config.getString(config.getNode("Password"), "");
-		String database = config.getString(config.getNode("Database"), "");
-		long lifeTime = config.getLong(config.getNode("MaxLifeTime"), -1);
-		int maxThreads = config.getInt(config.getNode("MaxConnections"), 1);
-		String str = config.getString(config.getNode("Line"), "");
-		if (maxThreads < 1) {
-			maxThreads = 1;
-		}
-		boolean useSSL = config.getBoolean(config.getNode("UseSSL"), false);
-		boolean publicKeyRetrieval = config.getBoolean(config.getNode("PublicKeyRetrieval"), false);
-		boolean useMariaDB = config.getBoolean(config.getNode("UseMariaDB"), false);
-		name = config.getString(config.getNode("Name"), "");
-		if (!name.isEmpty()) {
-			name = tableName;
-		}
+	public VelocityMySQL(String tableName, VelocityYMLFile section) {
+		MysqlConfigVelocity config = new MysqlConfigVelocity(section);
 
-		if (tablePrefix != null) {
-			name = tablePrefix + tableName;
+		if (config.hasTableNameSet()) {
+			tableName = config.getTableName();
 		}
-		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(maxThreads) {
+		name = tableName;
+		if (config.getTablePrefix() != null) {
+			name = config.getTablePrefix() + tableName;
+		}
+		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(config.getMaxThreads()) {
 
 			@Override
 			public void debug(SQLException e) {
@@ -80,15 +70,14 @@ public abstract class VelocityMySQL {
 				severe(string);
 			}
 		};
-		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval,
-				useMariaDB)) {
+		if (!mysql.connect(config)) {
 
 		}
 		try {
-			Query q = new Query(mysql, "USE `" + database + "`;");
+			Query q = new Query(mysql, "USE `" + config.getDatabase() + "`;");
 			q.executeUpdateAsync();
 		} catch (SQLException e) {
-			severe("Failed to send use database query: " + database + " Error: " + e.getMessage());
+			severe("Failed to send use database query: " + config.getDatabase() + " Error: " + e.getMessage());
 			debug(e);
 		}
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";

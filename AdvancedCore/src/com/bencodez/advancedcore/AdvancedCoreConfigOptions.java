@@ -96,6 +96,10 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private boolean onlineMode = true;
+
+	@Getter
+	@Setter
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	@Getter
 	@Setter
@@ -278,6 +282,8 @@ public class AdvancedCoreConfigOptions {
 			geyserPrefixSupport = configData.getBoolean("GeyserPrefixSupport", false);
 			geyserPrefix = configData.getString("GeyserPrefix", "*");
 			delayLoginEvent = configData.getInt("DelayLoginEvent", 0);
+
+			onlineMode = configData.getBoolean("OnlineMode", true);
 		}
 	}
 }

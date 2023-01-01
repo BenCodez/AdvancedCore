@@ -17,6 +17,7 @@ import com.bencodez.advancedcore.api.time.events.PreDateChangedEvent;
 import com.bencodez.advancedcore.api.time.events.WeekChangeEvent;
 
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * The Class TimeChecker.
@@ -32,6 +33,10 @@ public class TimeChecker {
 
 	private boolean timerLoaded = false;
 
+	@Getter
+	@Setter
+	private boolean processingEnabled = true;
+
 	public TimeChecker(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
@@ -46,7 +51,7 @@ public class TimeChecker {
 		});
 	}
 
-	private void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
+	public void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
 		processing = true;
 		try {
 			plugin.debug("Executing time change events: " + time.toString());
@@ -140,43 +145,47 @@ public class TimeChecker {
 		return true;
 	}
 
-	public void loadTimer(int minutes) {
-		if (!timerLoaded) {
-			timerLoaded = true;
-			timer = Executors.newScheduledThreadPool(1);
-			if (plugin.getServerDataFile().getLastUpdated() > 0) {
-				// serverdata.yml hasn't updated for 4 days, don't do time changes
-				if (System.currentTimeMillis() - plugin.getServerDataFile().getLastUpdated() > 1000 * 60 * 60 * 24
-						* 4) {
-					plugin.getServerDataFile().setIgnoreTime(true);
-					plugin.getLogger().warning(
-							"Skipping time change events, since server has been offline for awhile, use /av forcetimechanged to force them if needed");
-				}
-			}
-			plugin.getServerDataFile().setLastUpdated();
-			timer.scheduleWithFixedDelay(new Runnable() {
-
-				@Override
-				public void run() {
-					if (plugin != null && plugin.isEnabled()) {
-						if (!processing) {
-							update();
-						}
-					} else {
-						timer.shutdown();
-						timerLoaded = false;
+	public void loadTimer() {
+		if (!isProcessingEnabled()) {
+			if (!timerLoaded) {
+				timerLoaded = true;
+				timer = Executors.newScheduledThreadPool(1);
+				if (plugin.getServerDataFile().getLastUpdated() > 0) {
+					// serverdata.yml hasn't updated for 4 days, don't do time changes
+					if (System.currentTimeMillis() - plugin.getServerDataFile().getLastUpdated() > 1000 * 60 * 60 * 24
+							* 4) {
+						plugin.getServerDataFile().setIgnoreTime(true);
+						plugin.getLogger().warning(
+								"Skipping time change events, since server has been offline for awhile, use /av forcetimechanged to force them if needed");
 					}
 				}
-			}, 60, 5, TimeUnit.SECONDS);
-			timer.scheduleAtFixedRate(new Runnable() {
+				plugin.getServerDataFile().setLastUpdated();
+				timer.scheduleWithFixedDelay(new Runnable() {
 
-				@Override
-				public void run() {
-					plugin.getServerDataFile().setLastUpdated();
-				}
-			}, 60, 60, TimeUnit.MINUTES);
+					@Override
+					public void run() {
+						if (plugin != null && plugin.isEnabled()) {
+							if (!processing) {
+								update();
+							}
+						} else {
+							timer.shutdown();
+							timerLoaded = false;
+						}
+					}
+				}, 60, 5, TimeUnit.SECONDS);
+				timer.scheduleAtFixedRate(new Runnable() {
+
+					@Override
+					public void run() {
+						plugin.getServerDataFile().setLastUpdated();
+					}
+				}, 60, 60, TimeUnit.MINUTES);
+			} else {
+				AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
+			}
 		} else {
-			AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
+			plugin.debug("Processing time changes locally disabled");
 		}
 	}
 
@@ -187,6 +196,7 @@ public class TimeChecker {
 		if (plugin == null) {
 			return;
 		}
+
 		if (hasTimeOffSet()) {
 			plugin.extraDebug("TimeHourOffSet: " + getTime().getHour() + ":" + getTime().getMinute());
 		}
@@ -203,17 +213,26 @@ public class TimeChecker {
 			// stagger process time change events to prevent overloading mysql table
 			if (hasMonthChanged(false)) {
 				plugin.getLogger().info("Detected month changed, processing...");
-				forceChanged(TimeType.MONTH, false, true, true);
+				if (isProcessingEnabled()) {
+					plugin.debug("Processing time changes locally disabled");
+					forceChanged(TimeType.MONTH, false, true, true);
+				}
 				hasMonthChanged(true);
 				plugin.getLogger().info("Finished processing month changes");
 			} else if (hasWeekChanged(false)) {
 				plugin.getLogger().info("Detected week changed, processing...");
-				forceChanged(TimeType.WEEK, false, true, true);
+				if (isProcessingEnabled()) {
+					plugin.debug("Processing time changes locally disabled");
+					forceChanged(TimeType.WEEK, false, true, true);
+				}
 				hasWeekChanged(true);
 				plugin.getLogger().info("Finished processing week changes");
 			} else if (hasDayChanged(false)) {
 				plugin.getLogger().info("Detected day changed, processing...");
-				forceChanged(TimeType.DAY, false, true, true);
+				if (isProcessingEnabled()) {
+					plugin.debug("Processing time changes locally disabled");
+					forceChanged(TimeType.DAY, false, true, true);
+				}
 				hasDayChanged(true);
 				plugin.getLogger().info("Finished processing day changes");
 			}

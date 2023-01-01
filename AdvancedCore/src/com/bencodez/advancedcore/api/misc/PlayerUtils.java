@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -226,24 +227,29 @@ public class PlayerUtils {
 			return player.getUniqueId().toString();
 		}
 
-		String uuid = getUUIDLookup(playerName);
+		if (plugin.getOptions().isOnlineMode()) {
 
-		if (!uuid.equals("")) {
-			return uuid;
-		}
+			String uuid = getUUIDLookup(playerName);
 
-		if (plugin.getOptions().isGeyserPrefixSupport()
-				&& !playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
-			playerName = playerName.replace(' ', '_');
-			return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
-		}
+			if (!uuid.equals("")) {
+				return uuid;
+			}
 
-		try {
-			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-			return p.getUniqueId().toString();
-		} catch (Exception e) {
-			e.printStackTrace();
-			return getUUIDLookup(playerName);
+			if (plugin.getOptions().isGeyserPrefixSupport()
+					&& !playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
+				playerName = playerName.replace(' ', '_');
+				return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
+			}
+
+			try {
+				OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
+				return p.getUniqueId().toString();
+			} catch (Exception e) {
+				e.printStackTrace();
+				return getUUIDLookup(playerName);
+			}
+		} else {
+			return UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes(StandardCharsets.UTF_8)).toString();
 		}
 	}
 

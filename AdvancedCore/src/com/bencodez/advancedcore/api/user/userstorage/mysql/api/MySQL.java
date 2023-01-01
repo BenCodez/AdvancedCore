@@ -4,6 +4,8 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfig;
+
 public abstract class MySQL {
 
 	private ConnectionManager connectionManager;
@@ -28,10 +30,12 @@ public abstract class MySQL {
 		this.maxConnections = maxConnections;
 	}
 
-	public boolean connect(String host, String port, String username, String password, String database, boolean useSSL,
-			long lifeTime, String str, boolean publicKeyRetrieval, boolean useMariaDB) {
-		connectionManager = new ConnectionManager(host, port, username, password, database, maxConnections, useSSL,
-				lifeTime, str, publicKeyRetrieval, useMariaDB);
+	public boolean connect(MysqlConfig config) {
+		this.maxConnections = config.getMaxThreads();
+		connectionManager = new ConnectionManager(config.getHostName(), "" + config.getPort(), config.getUser(),
+				config.getPass(), config.getDatabase(), maxConnections, config.isUseSSL(), config.getLifeTime(),
+				config.getLine(), config.isPublicKeyRetrieval(), config.isUseMariaDB());
+
 		return connectionManager.open();
 	}
 

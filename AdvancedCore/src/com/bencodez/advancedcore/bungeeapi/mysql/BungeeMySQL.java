@@ -19,8 +19,10 @@ import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfigBungee;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
 
+import lombok.Getter;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.config.Configuration;
 
@@ -34,6 +36,7 @@ public abstract class BungeeMySQL {
 	// ConcurrentMap<String, ArrayList<Column>> table = new
 	// ConcurrentHashMap<String, ArrayList<Column>>();
 
+	@Getter
 	private com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL mysql;
 
 	private String name;
@@ -47,30 +50,16 @@ public abstract class BungeeMySQL {
 	private Set<String> uuids = Collections.synchronizedSet(new HashSet<String>());
 
 	public BungeeMySQL(Plugin bungee, String tableName, Configuration section) {
-		String tablePrefix = section.getString("Prefix");
-		String hostName = section.getString("Host");
-		int port = section.getInt("Port");
-		String user = section.getString("Username");
-		String pass = section.getString("Password");
-		String database = section.getString("Database");
-		long lifeTime = section.getLong("MaxLifeTime", -1);
-		int maxThreads = section.getInt("MaxConnections", 1);
-		String str = section.getString("Line", "");
-		if (maxThreads < 1) {
-			maxThreads = 1;
-		}
-		boolean useSSL = section.getBoolean("UseSSL", false);
-		boolean publicKeyRetrieval = section.getBoolean("PublicKeyRetrieval", false);
-		boolean useMariaDB = section.getBoolean("UseMariaDB", false);
-		if (!section.getString("Name", "").isEmpty()) {
-			tableName = section.getString("Name", "");
-		}
+		MysqlConfigBungee config = new MysqlConfigBungee(section);
 
-		name = tableName;
-		if (tablePrefix != null) {
-			name = tablePrefix + tableName;
+		if (config.hasTableNameSet()) {
+			tableName = config.getTableName();
 		}
-		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(maxThreads) {
+		name = tableName;
+		if (config.getTablePrefix() != null) {
+			name = config.getTablePrefix() + tableName;
+		}
+		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(config.getMaxThreads()) {
 
 			@Override
 			public void debug(SQLException e) {
@@ -82,15 +71,15 @@ public abstract class BungeeMySQL {
 				bungee.getLogger().severe(string);
 			}
 		};
-		if (!mysql.connect(hostName, "" + port, user, pass, database, useSSL, lifeTime, str, publicKeyRetrieval,
-				useMariaDB)) {
+		if (!mysql.connect(config)) {
 
 		}
 		try {
-			Query q = new Query(mysql, "USE `" + database + "`;");
+			Query q = new Query(mysql, "USE `" + config.getDatabase() + "`;");
 			q.executeUpdateAsync();
 		} catch (SQLException e) {
-			bungee.getLogger().severe("Failed to send use database query: " + database + " Error: " + e.getMessage());
+			bungee.getLogger()
+					.severe("Failed to send use database query: " + config.getDatabase() + " Error: " + e.getMessage());
 			debug(e);
 		}
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";

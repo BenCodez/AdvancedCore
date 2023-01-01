@@ -473,7 +473,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		timeChecker = new TimeChecker(this);
 		if (loadServerData) {
 			serverDataFile.setup();
-			timeChecker.loadTimer(1);
+			timeChecker.loadTimer();
 		}
 
 		// load usermanager
