@@ -45,6 +45,7 @@ public class GlobalDataHandler {
 			if (value.isBoolean()) {
 				return value.getBoolean();
 			}
+			return Boolean.valueOf(value.getString()).booleanValue();
 		}
 		return false;
 	}

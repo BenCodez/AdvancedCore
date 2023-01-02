@@ -222,6 +222,17 @@ public abstract class BungeeMySQL {
 			e.printStackTrace();
 		}
 		return columns;
+	}
+
+	public void wipeColumnData(String columnName) {
+		checkColumn(columnName, DataType.STRING);
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 
 	}
 

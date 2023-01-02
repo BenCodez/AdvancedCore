@@ -148,6 +148,18 @@ public abstract class VelocityMySQL {
 		}
 	}
 
+	public void wipeColumnData(String columnName) {
+		checkColumn(columnName, DataType.STRING);
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 	public void clearCache() {
 		clearCacheBasic();
 	}
