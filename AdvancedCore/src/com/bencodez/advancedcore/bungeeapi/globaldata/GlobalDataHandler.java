@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.bungeeapi.globaldata;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueBoolean;
@@ -36,6 +38,14 @@ public class GlobalDataHandler {
 			data.put(entry.getName(), entry.getValue());
 		}
 		return data;
+	}
+
+	public void setData(String server, HashMap<String, DataValue> data) {
+		ArrayList<Column> cols = new ArrayList<Column>();
+		for (Entry<String, DataValue> entry : data.entrySet()) {
+			cols.add(new Column(entry.getKey(), entry.getValue()));
+		}
+		globalMysql.update(server, cols, false);
 	}
 
 	public boolean getBoolean(String server, String key) {
