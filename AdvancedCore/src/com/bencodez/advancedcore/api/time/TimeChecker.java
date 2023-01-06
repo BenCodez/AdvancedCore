@@ -26,6 +26,7 @@ public class TimeChecker {
 
 	private AdvancedCorePlugin plugin;
 
+	@Getter
 	private boolean processing = false;
 
 	@Getter
