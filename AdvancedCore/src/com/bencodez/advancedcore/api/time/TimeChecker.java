@@ -147,65 +147,55 @@ public class TimeChecker {
 	}
 
 	public void loadTimer() {
-		if (!isProcessingEnabled()) {
-			if (!timerLoaded) {
-				timerLoaded = true;
-				timer = Executors.newScheduledThreadPool(1);
-				if (plugin.getServerDataFile().getLastUpdated() > 0) {
-					// serverdata.yml hasn't updated for 4 days, don't do time changes
-					if (System.currentTimeMillis() - plugin.getServerDataFile().getLastUpdated() > 1000 * 60 * 60 * 24
-							* 4) {
-						plugin.getServerDataFile().setIgnoreTime(true);
-						plugin.getLogger().warning(
-								"Skipping time change events, since server has been offline for awhile, use /av forcetimechanged to force them if needed");
-					}
-				}
-				plugin.getServerDataFile().setLastUpdated();
-				timer.scheduleWithFixedDelay(new Runnable() {
-
-					@Override
-					public void run() {
-						if (plugin != null && plugin.isEnabled()) {
-							if (!processing) {
-								update();
-							}
-						} else {
-							timer.shutdown();
-							timerLoaded = false;
-						}
-					}
-				}, 60, 5, TimeUnit.SECONDS);
-				timer.scheduleAtFixedRate(new Runnable() {
-
-					@Override
-					public void run() {
-						plugin.getServerDataFile().setLastUpdated();
-					}
-				}, 60, 60, TimeUnit.MINUTES);
-			} else {
-				AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
-			}
-		} else {
-			if (timer != null) {
-				timer.shutdownNow();
-			}
+		if (!timerLoaded) {
+			timerLoaded = true;
 			timer = Executors.newScheduledThreadPool(1);
+			if (plugin.getServerDataFile().getLastUpdated() > 0) {
+				// serverdata.yml hasn't updated for 4 days, don't do time changes
+				if (System.currentTimeMillis() - plugin.getServerDataFile().getLastUpdated() > 1000 * 60 * 60 * 24
+						* 4) {
+					plugin.getServerDataFile().setIgnoreTime(true);
+					plugin.getLogger().warning(
+							"Skipping time change events, since server has been offline for awhile, use /av forcetimechanged to force them if needed");
+				}
+			}
+			plugin.getServerDataFile().setLastUpdated();
 			timer.scheduleWithFixedDelay(new Runnable() {
 
 				@Override
 				public void run() {
-					if (hasDayChanged(false)) {
-						hasDayChanged(true);
-					}
-					if (hasWeekChanged(false)) {
-						hasWeekChanged(true);
-					}
-					if (hasMonthChanged(false)) {
-						hasMonthChanged(true);
+					if (plugin != null && plugin.isEnabled()) {
+						if (!processing && isProcessingEnabled()) {
+							update();
+						}
+					} else {
+						timer.shutdown();
+						timerLoaded = false;
 					}
 				}
-			}, 60, 60, TimeUnit.SECONDS);
-			plugin.debug("Processing time changes locally disabled");
+			}, 60, 5, TimeUnit.SECONDS);
+			timer.scheduleAtFixedRate(new Runnable() {
+
+				@Override
+				public void run() {
+					plugin.getServerDataFile().setLastUpdated();
+
+					if (!isProcessingEnabled()) {
+						plugin.debug("Processing time changes locally disabled");
+						if (hasDayChanged(false)) {
+							hasDayChanged(true);
+						}
+						if (hasWeekChanged(false)) {
+							hasWeekChanged(true);
+						}
+						if (hasMonthChanged(false)) {
+							hasMonthChanged(true);
+						}
+					}
+				}
+			}, 60, 60, TimeUnit.MINUTES);
+		} else {
+			AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
 		}
 	}
 
