@@ -109,7 +109,7 @@ public class CommandLoader {
 						str += args[i] + " ";
 					}
 				}
-				
+
 				switch (plugin.getStorageType()) {
 				case FLAT:
 					sendMessage(sender, "FLAT storage doesn't support SQL queries");
@@ -378,7 +378,7 @@ public class CommandLoader {
 			});
 		}
 
-		cmds.add(new CommandHandler(new String[] { "ForceTimeChanged", "(TimeType)" }, permPrefix + ".ForceTimeChange",
+		cmds.add(new CommandHandler(new String[] { "ForceTimeChange", "(TimeType)" }, permPrefix + ".ForceTimeChange",
 				"Force time change, use at your own risk!", true, true) {
 
 			@Override
