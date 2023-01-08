@@ -75,7 +75,7 @@ public class RewardEditGUI {
 		}
 
 		if (!directlyDefinedReward.isDirectlyDefined()) {
-			player.sendMessage("Reward " + directlyDefinedReward.getPath() + " is not directly defined");
+			player.sendMessage("Reward " + directlyDefinedReward.getPath() + " is not directly defined or isn't set");
 			return;
 		}
 
@@ -315,6 +315,26 @@ public class RewardEditGUI {
 			}
 		}
 
+		for (DirectlyDefinedReward reward : plugin.getRewardHandler().getDirectlyDefinedRewards()) {
+			if (!reward.isDirectlyDefined()) {
+				ArrayList<String> lore = new ArrayList<String>();
+				lore.add("DirectlyDefined reward handle");
+				inv.addButton(new BInventoryButton(reward.getFullPath(), ArrayUtils.getInstance().convert(lore),
+						new ItemStack(Material.COBBLESTONE)) {
+
+					@Override
+					public void onClick(ClickEvent event) {
+						Player player = event.getWhoClicked();
+
+						DirectlyDefinedReward reward = (DirectlyDefinedReward) getData("Reward");
+						openRewardGUI(player, reward);
+
+					}
+				}.addData("Reward", reward));
+
+			}
+		}
+
 		inv.openInventory(player);
 	}
 
@@ -357,6 +377,39 @@ public class RewardEditGUI {
 						}.open();
 					}
 				}.addData("Reward", reward));
+			}
+		}
+
+		for (DirectlyDefinedReward reward : plugin.getRewardHandler().getDirectlyDefinedRewards()) {
+			if (reward.isDirectlyDefined()) {
+				ArrayList<String> lore = new ArrayList<String>();
+
+				inv.addButton(new BInventoryButton(reward.getFullPath(), ArrayUtils.getInstance().convert(lore),
+						new ItemStack(Material.COBBLESTONE)) {
+
+					@Override
+					public void onClick(ClickEvent event) {
+						new RewardGUIConfirmation(plugin, player, "Confirm copy reward?") {
+
+							@Override
+							public void onDeny(Player p) {
+								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
+								rewardEditData.reOpenEditGUI(player);
+							}
+
+							@Override
+							public void onConfirm(Player p) {
+								DirectlyDefinedReward reward = (DirectlyDefinedReward) getButton().getData("Reward");
+								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
+								for (Entry<String, Object> entry : getAllValues(
+										reward.getFileData().getConfigurationSection(reward.getPath())).entrySet()) {
+									rewardEditData.setValue(entry.getKey(), entry.getValue());
+								}
+							}
+						}.open();
+					}
+				}.addData("Reward", reward));
+
 			}
 		}
 
