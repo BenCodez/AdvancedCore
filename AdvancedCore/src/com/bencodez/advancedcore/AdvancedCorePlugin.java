@@ -35,6 +35,7 @@ import com.bencodez.advancedcore.api.backup.BackupHandle;
 import com.bencodez.advancedcore.api.cmi.CMIHandler;
 import com.bencodez.advancedcore.api.command.TabCompleteHandle;
 import com.bencodez.advancedcore.api.command.TabCompleteHandler;
+import com.bencodez.advancedcore.api.geyser.GeyserHandler;
 import com.bencodez.advancedcore.api.hologram.HologramHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
@@ -201,6 +202,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private RewardHandler rewardHandler;
+	
+	@Getter
+	private GeyserHandler geyserHandler;
 
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
@@ -518,7 +522,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			authMeLoaded = true;
 			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(this), this);
 		}
+		
+		if (getOptions().isGeyserPrefixSupport()) {
+			geyserHandler = new GeyserHandler();
+		}
 
+		
 		try {
 			Class.forName("de.myzelyam.api.vanish.PostPlayerShowEvent");
 			registerEvents(new PlayerShowListener(this));

@@ -121,6 +121,12 @@ public class PlayerUtils {
 			plugin.debug("Null UUID");
 			return "";
 		}
+		
+		if (plugin.getOptions().isGeyserPrefixSupport()) {
+			if (plugin.getGeyserHandler().isFloodgatePlayer(UUID.fromString(uuid))) {
+				return plugin.getGeyserHandler().getFloodgateName(UUID.fromString(uuid));
+			}
+		}
 
 		if (plugin.getUuidNameCache().containsKey(uuid)) {
 			String n = plugin.getUuidNameCache().get(uuid);
@@ -222,6 +228,14 @@ public class PlayerUtils {
 			return null;
 		}
 
+		if (plugin.getOptions().isGeyserPrefixSupport()) {
+			if (plugin.getGeyserHandler().isFloodgatePlayer(playerName)) {
+				if (!playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
+					return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
+				}
+			}
+		}
+
 		Player player = Bukkit.getPlayerExact(playerName);
 		if (player != null) {
 			return player.getUniqueId().toString();
@@ -235,11 +249,6 @@ public class PlayerUtils {
 				return uuid;
 			}
 
-			if (plugin.getOptions().isGeyserPrefixSupport()
-					&& !playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
-				playerName = playerName.replace(' ', '_');
-				return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
-			}
 
 			try {
 				OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
