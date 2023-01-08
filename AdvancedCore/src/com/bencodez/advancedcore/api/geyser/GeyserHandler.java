@@ -32,4 +32,8 @@ public class GeyserHandler {
 		return FloodgateApi.getInstance().getPlayer(fromString).getCorrectUsername();
 	}
 
+	public FloodgatePlayer getFloodgatePlayer(UUID uuid) {
+		return FloodgateApi.getInstance().getPlayer(uuid);
+	}
+
 }
