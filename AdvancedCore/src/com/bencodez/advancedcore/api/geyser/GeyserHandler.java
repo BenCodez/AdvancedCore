@@ -1,7 +1,7 @@
 package com.bencodez.advancedcore.api.geyser;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.geysermc.floodgate.api.FloodgateApi;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
@@ -24,8 +24,13 @@ public class GeyserHandler {
 		return false;
 	}
 
-	public CompletableFuture<UUID> getFloodgateUUID(String name) {
-		return FloodgateApi.getInstance().getUuidFor(name);
+	public UUID getFloodgateUUID(String name) {
+		try {
+			return FloodgateApi.getInstance().getUuidFor(name).get();
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 	public String getFloodgateName(UUID fromString) {
