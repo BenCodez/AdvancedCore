@@ -1,10 +1,9 @@
 package com.bencodez.advancedcore.api.geyser;
 
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
-import org.geysermc.floodgate.api.FloodgateApi;
-import org.geysermc.floodgate.api.player.FloodgatePlayer;
+import org.geysermc.geyser.api.GeyserApi;
+import org.geysermc.geyser.api.connection.GeyserConnection;
 
 public class GeyserHandler {
 	public GeyserHandler() {
@@ -12,12 +11,12 @@ public class GeyserHandler {
 	}
 
 	public boolean isFloodgatePlayer(UUID uuid) {
-		return FloodgateApi.getInstance().isFloodgatePlayer(uuid);
+		return GeyserApi.api().isBedrockPlayer(uuid);
 	}
 
 	public boolean isFloodgatePlayer(String name) {
-		for (FloodgatePlayer p : FloodgateApi.getInstance().getPlayers()) {
-			if (p.getCorrectUsername().equals(name)) {
+		for (GeyserConnection p : GeyserApi.api().onlineConnections()) {
+			if (p.javaUsername().equals(name)) {
 				return true;
 			}
 		}
@@ -25,20 +24,20 @@ public class GeyserHandler {
 	}
 
 	public UUID getFloodgateUUID(String name) {
-		try {
-			return FloodgateApi.getInstance().getUuidFor(name).get();
-		} catch (InterruptedException | ExecutionException e) {
-			e.printStackTrace();
-			return null;
+		for (GeyserConnection p : GeyserApi.api().onlineConnections()) {
+			if (p.javaUsername().equals(name)) {
+				return p.javaUuid();
+			}
 		}
+		return null;
 	}
 
-	public String getFloodgateName(UUID fromString) {
-		return FloodgateApi.getInstance().getPlayer(fromString).getCorrectUsername();
+	public String getFloodgateName(UUID uuid) {
+		return GeyserApi.api().connectionByUuid(uuid).javaUsername();
 	}
 
-	public FloodgatePlayer getFloodgatePlayer(UUID uuid) {
-		return FloodgateApi.getInstance().getPlayer(uuid);
+	public GeyserConnection getFloodgatePlayer(UUID uuid) {
+		return GeyserApi.api().connectionByUuid(uuid);
 	}
 
 }

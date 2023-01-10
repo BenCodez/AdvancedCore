@@ -251,7 +251,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.geysermc</groupId>
-			<artifactId>floodgate</artifactId>
+			<artifactId>geyser</artifactId>
 			<version>1.0</version>
 			<scope>provided</scope>
 		</dependency>
