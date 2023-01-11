@@ -122,12 +122,6 @@ public class PlayerUtils {
 			return "";
 		}
 
-		if (plugin.getOptions().isGeyserPrefixSupport()) {
-			if (plugin.getGeyserHandler().isFloodgatePlayer(UUID.fromString(uuid))) {
-				return plugin.getGeyserHandler().getFloodgateName(UUID.fromString(uuid));
-			}
-		}
-
 		if (plugin.getUuidNameCache().containsKey(uuid)) {
 			String n = plugin.getUuidNameCache().get(uuid);
 			if (n != null && !n.isEmpty() && !n.equalsIgnoreCase("Error getting name")) {
@@ -228,14 +222,6 @@ public class PlayerUtils {
 			return null;
 		}
 
-		if (plugin.getOptions().isGeyserPrefixSupport()) {
-			if (plugin.getGeyserHandler().isFloodgatePlayer(playerName)) {
-				if (!playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
-					return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
-				}
-			}
-		}
-
 		Player player = Bukkit.getPlayerExact(playerName);
 		if (player != null) {
 			return player.getUniqueId().toString();
@@ -247,6 +233,12 @@ public class PlayerUtils {
 
 			if (!uuid.equals("")) {
 				return uuid;
+			}
+
+			if (plugin.getOptions().isGeyserPrefixSupport()
+					&& !playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
+				playerName = playerName.replace(' ', '_');
+				return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
 			}
 
 			try {

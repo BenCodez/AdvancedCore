@@ -35,7 +35,6 @@ import com.bencodez.advancedcore.api.backup.BackupHandle;
 import com.bencodez.advancedcore.api.cmi.CMIHandler;
 import com.bencodez.advancedcore.api.command.TabCompleteHandle;
 import com.bencodez.advancedcore.api.command.TabCompleteHandler;
-import com.bencodez.advancedcore.api.geyser.GeyserHandler;
 import com.bencodez.advancedcore.api.hologram.HologramHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
@@ -454,9 +453,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
-	@Getter
-	private GeyserHandler geyserHandler;
-
 	/**
 	 * Load AdvancedCore hook
 	 */
@@ -514,10 +510,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		for (OfflinePlayer p : Bukkit.getBannedPlayers()) {
 			bannedPlayers.add(p.getUniqueId().toString());
-		}
-
-		if (getOptions().isGeyserPrefixSupport()) {
-			geyserHandler = new GeyserHandler();
 		}
 
 		Bukkit.getPluginManager().registerEvents(BackupHandle.getInstance(), this);
