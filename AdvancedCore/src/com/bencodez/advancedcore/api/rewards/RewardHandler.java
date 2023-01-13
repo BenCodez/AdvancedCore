@@ -2113,7 +2113,7 @@ public class RewardHandler {
 				}.addLore(
 						"AdvancedPriority will run first sub reward that it can, then ignore the rest of the sub rewards")
 						.addLore("Can be used for permission based rewards or chance based rewards")))
-				.priority(10).postReward());
+				.priority(10).alwaysValid().postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedWorld") {
 

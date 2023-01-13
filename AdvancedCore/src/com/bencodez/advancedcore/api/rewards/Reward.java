@@ -50,7 +50,7 @@ public class Reward {
 	@Getter
 	@Setter
 	private int delaySeconds;
-	
+
 	@Getter
 	@Setter
 	private int delayMilliSeconds;
@@ -485,12 +485,16 @@ public class Reward {
 				}
 			}
 			for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
-				if (inject.hasValidator()) {
-					if (inject.getValidate().isValid(inject, str)) {
+				if (inject.isAlwaysValid()) {
+					valid = true;
+				} else {
+					if (inject.hasValidator()) {
+						if (inject.getValidate().isValid(inject, str)) {
+							valid = true;
+						}
+					} else if (inject.getPath().startsWith(str)) {
 						valid = true;
 					}
-				} else if (inject.getPath().startsWith(str)) {
-					valid = true;
 				}
 			}
 			if (plugin.getRewardHandler().getValidPaths().contains(str)) {

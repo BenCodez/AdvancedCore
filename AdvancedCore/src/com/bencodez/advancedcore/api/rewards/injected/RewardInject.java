@@ -41,6 +41,14 @@ public abstract class RewardInject extends Inject {
 	private boolean synchronize = false;
 
 	@Getter
+	private boolean alwaysValid = false;
+
+	public RewardInject alwaysValid() {
+		alwaysValid = true;
+		return this;
+	}
+
+	@Getter
 	private RewardInjectValidator validate;
 
 	public RewardInject(String path) {
