@@ -38,6 +38,7 @@ com.bencodez.advancedcore.api.user.usercache.value
 com.bencodez.advancedcore.api.user.userstorage
 com.bencodez.advancedcore.api.user.userstorage.mysql
 com.bencodez.advancedcore.api.user.userstorage.mysql.api
+com.bencodez.advancedcore.api.user.userstorage.mysql.api.config
 com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries
 com.bencodez.advancedcore.api.user.userstorage.mysql.api.utils
 com.bencodez.advancedcore.api.user.userstorage.sql
@@ -50,9 +51,11 @@ com.bencodez.advancedcore.api.valuerequest.requesters
 com.bencodez.advancedcore.api.valuerequest.sign
 com.bencodez.advancedcore.api.yml
 com.bencodez.advancedcore.api.yml.annotation
+com.bencodez.advancedcore.bungeeapi.globaldata
 com.bencodez.advancedcore.bungeeapi.mysql
 com.bencodez.advancedcore.bungeeapi.pluginmessage
 com.bencodez.advancedcore.bungeeapi.sockets
+com.bencodez.advancedcore.bungeeapi.time
 com.bencodez.advancedcore.bungeeapi.velocity
 com.bencodez.advancedcore.command
 com.bencodez.advancedcore.command.executor
