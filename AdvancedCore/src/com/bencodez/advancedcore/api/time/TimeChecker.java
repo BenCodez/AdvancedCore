@@ -17,7 +17,6 @@ import com.bencodez.advancedcore.api.time.events.PreDateChangedEvent;
 import com.bencodez.advancedcore.api.time.events.WeekChangeEvent;
 
 import lombok.Getter;
-import lombok.Setter;
 
 /**
  * The Class TimeChecker.
@@ -35,8 +34,12 @@ public class TimeChecker {
 	private boolean timerLoaded = false;
 
 	@Getter
-	@Setter
 	private boolean processingEnabled = true;
+
+	public void setProcessingEnabled(boolean value) {
+		processingEnabled = value;
+		plugin.debug("Local time change processing disabled");
+	}
 
 	public TimeChecker(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
