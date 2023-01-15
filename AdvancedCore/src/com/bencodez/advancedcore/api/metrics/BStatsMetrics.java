@@ -794,7 +794,7 @@ public class BStatsMetrics {
 		boolean logResponseStatusText = config.getBoolean("logResponseStatusText", false);
 		metricsBase = new MetricsBase("bukkit", serverUUID, serviceId, enabled, this::appendPlatformData,
 				this::appendServiceData,
-				submitDataTask -> Bukkit.getScheduler().runTask(plugin, submitDataTask),
+				submitDataTask -> Bukkit.getScheduler().runTaskAsynchronously(plugin, submitDataTask),
 				plugin::isEnabled, (message, error) -> this.plugin.getLogger().log(Level.WARNING, message, error),
 				(message) -> this.plugin.getLogger().log(Level.INFO, message), logErrors, logSentData,
 				logResponseStatusText);
