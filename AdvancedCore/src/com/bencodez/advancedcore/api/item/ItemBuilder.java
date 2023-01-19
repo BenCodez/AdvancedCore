@@ -95,7 +95,7 @@ public class ItemBuilder {
 		if (data == null) {
 			try {
 				throw new IllegalArgumentException(
-						"ConfigurationSection can not be null! You are probably missing a section in your config.");
+						"ConfigurationSection can not be null! You are probably missing a section in your yml file");
 			} catch (IllegalArgumentException e) {
 				AdvancedCorePlugin.getInstance().getLogger().warning(
 						"Error occurred while obtaining item, turn debug on to see full stacktrace: " + e.toString());
