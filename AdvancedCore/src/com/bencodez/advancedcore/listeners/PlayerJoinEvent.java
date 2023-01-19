@@ -37,6 +37,13 @@ public class PlayerJoinEvent implements Listener {
 		if (event.isUserInStorage() && plugin.isLoadUserData()) {
 			Player player = event.getPlayer();
 			boolean userExist = plugin.getUserManager().userExist(event.getPlayer().getUniqueId());
+			if (plugin.getOptions().isGeyserPrefixSupport()) {
+				if (player.getName().startsWith(plugin.getOptions().getGeyserPrefix())) {
+					userExist = true;
+					plugin.extraDebug("Detected Geyser Player, Forcing player data to load");
+				}
+			}
+
 			if (userExist) {
 				plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId());
 			}
