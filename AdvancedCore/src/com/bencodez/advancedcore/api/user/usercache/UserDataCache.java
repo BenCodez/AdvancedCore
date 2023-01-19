@@ -97,7 +97,10 @@ public class UserDataCache {
 	}
 
 	public boolean isCached(String key) {
-		return cache.containsKey(key);
+		if (cache != null) {
+			return cache.containsKey(key);
+		}
+		return false;
 	}
 
 	public void processChanges() {
