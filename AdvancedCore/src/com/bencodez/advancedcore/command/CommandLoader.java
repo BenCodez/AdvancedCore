@@ -22,6 +22,7 @@ import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
@@ -126,6 +127,23 @@ public class CommandLoader {
 					break;
 				default:
 					break;
+				}
+
+			}
+		});
+
+		cmds.add(new CommandHandler(new String[] { "UpdateMySQLColumnSizes" }, permPrefix + ".UpdateMySQLColumn",
+				"Update current mysql column sizes", true, true) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
+					for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
+						plugin.getMysql().alterColumnType(key.getKey(), key.getColumnType());
+					}
+					sendMessage(sender, "&cColumn sizes updated");
+				} else {
+					sendMessage(sender, "&cNot using MySQL");
 				}
 
 			}
