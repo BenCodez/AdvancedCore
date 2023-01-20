@@ -122,6 +122,12 @@ public class MySQL {
 			e.printStackTrace();
 		}
 
+		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
+			if (!(key instanceof UserDataKeyInt)) {
+				alterColumnType(key.getKey(), key.getColumnType());
+			}
+		}
+
 		loadData();
 
 		plugin.debug("UseBatchUpdates: " + isUseBatchUpdates());
