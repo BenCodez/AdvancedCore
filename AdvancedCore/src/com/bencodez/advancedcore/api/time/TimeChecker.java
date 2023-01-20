@@ -29,6 +29,9 @@ public class TimeChecker {
 	private boolean processing = false;
 
 	@Getter
+	private boolean activeProcessing = false;
+
+	@Getter
 	private ScheduledExecutorService timer;
 
 	private boolean timerLoaded = false;
@@ -57,6 +60,7 @@ public class TimeChecker {
 
 	public void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
 		processing = true;
+		activeProcessing = true;
 		try {
 			plugin.debug("Executing time change events: " + time.toString());
 			plugin.getLogger().info("Time change event: " + time.toString() + ", Fake: " + fake);
@@ -79,6 +83,7 @@ public class TimeChecker {
 				plugin.getServer().getPluginManager().callEvent(monthChange);
 			}
 
+			activeProcessing = false;
 			if (postDate) {
 				DateChangedEvent dateChanged = new DateChangedEvent(time);
 				dateChanged.setFake(fake);
@@ -90,6 +95,8 @@ public class TimeChecker {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		processing = false;
+		activeProcessing = false;
 
 	}
 
