@@ -26,9 +26,6 @@ public class TimeChecker {
 	private AdvancedCorePlugin plugin;
 
 	@Getter
-	private boolean processing = false;
-
-	@Getter
 	private boolean activeProcessing = false;
 
 	@Getter
@@ -58,8 +55,7 @@ public class TimeChecker {
 		});
 	}
 
-	public void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
-		processing = true;
+	public synchronized void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
 		activeProcessing = true;
 		try {
 			plugin.debug("Executing time change events: " + time.toString());
@@ -83,19 +79,17 @@ public class TimeChecker {
 				plugin.getServer().getPluginManager().callEvent(monthChange);
 			}
 
-			activeProcessing = false;
 			if (postDate) {
 				DateChangedEvent dateChanged = new DateChangedEvent(time);
 				dateChanged.setFake(fake);
 				plugin.getServer().getPluginManager().callEvent(dateChanged);
 			}
+			activeProcessing = false;
 
 			plugin.debug("Finished executing time change events: " + time.toString());
-			processing = false;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		processing = false;
 		activeProcessing = false;
 
 	}
@@ -175,7 +169,7 @@ public class TimeChecker {
 				@Override
 				public void run() {
 					if (plugin != null && plugin.isEnabled()) {
-						if (!processing && isProcessingEnabled()) {
+						if (!isActiveProcessing() && isProcessingEnabled()) {
 							update();
 						}
 					} else {
@@ -229,7 +223,7 @@ public class TimeChecker {
 			plugin.getLogger().info("Ignoring time change events for one time only");
 		}
 
-		if (!processing) {
+		if (!isActiveProcessing()) {
 			// stagger process time change events to prevent overloading mysql table
 			if (hasMonthChanged(false)) {
 				plugin.getLogger().info("Detected month changed, processing...");
