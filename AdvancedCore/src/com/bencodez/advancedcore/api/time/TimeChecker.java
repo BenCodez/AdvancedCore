@@ -234,24 +234,27 @@ public class TimeChecker {
 			if (hasMonthChanged(false)) {
 				plugin.getLogger().info("Detected month changed, processing...");
 				if (isProcessingEnabled()) {
-					plugin.debug("Processing time changes locally disabled");
 					forceChanged(TimeType.MONTH, false, true, true);
+				} else {
+					plugin.debug("Processing time changes locally disabled");
 				}
 				hasMonthChanged(true);
 				plugin.getLogger().info("Finished processing month changes");
 			} else if (hasWeekChanged(false)) {
 				plugin.getLogger().info("Detected week changed, processing...");
 				if (isProcessingEnabled()) {
-					plugin.debug("Processing time changes locally disabled");
 					forceChanged(TimeType.WEEK, false, true, true);
+				} else {
+					plugin.debug("Processing time changes locally disabled");
 				}
 				hasWeekChanged(true);
 				plugin.getLogger().info("Finished processing week changes");
 			} else if (hasDayChanged(false)) {
 				plugin.getLogger().info("Detected day changed, processing...");
 				if (isProcessingEnabled()) {
-					plugin.debug("Processing time changes locally disabled");
 					forceChanged(TimeType.DAY, false, true, true);
+				} else {
+					plugin.debug("Processing time changes locally disabled");
 				}
 				hasDayChanged(true);
 				plugin.getLogger().info("Finished processing day changes");
