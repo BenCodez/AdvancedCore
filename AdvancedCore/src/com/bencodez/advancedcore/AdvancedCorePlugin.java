@@ -889,8 +889,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		javaPlugin = this;
-		timer = Executors.newScheduledThreadPool(1);
-		loginTimer = Executors.newScheduledThreadPool(1);
+		timer = Executors.newSingleThreadScheduledExecutor();
+		loginTimer = Executors.newSingleThreadScheduledExecutor();
 		advancedCoreCommandLoader = CommandLoader.getInstance();
 
 		onPreLoad();
