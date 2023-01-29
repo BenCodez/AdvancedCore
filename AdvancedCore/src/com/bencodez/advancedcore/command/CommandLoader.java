@@ -493,14 +493,32 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				String data = args[4];
-				if (data.equalsIgnoreCase("\"\"")) {
-					data = "";
+				String name = args[1];
+				if (name.equalsIgnoreCase("all")) {
+					if (sender.hasPermission(permPrefix + ".SetAllData")) {
+						String data = args[3];
+						if (data.equalsIgnoreCase("\"\"")) {
+							data = "";
+						}
+						for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+							AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+							user.dontCache();
+							user.getData().setString(args[2], data);
+
+						}
+						sender.sendMessage(
+								StringParser.getInstance().colorize("&cSet all users " + args[3] + " to " + args[4]));
+					}
+				} else {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+					String data = args[4];
+					if (data.equalsIgnoreCase("\"\"")) {
+						data = "";
+					}
+					user.getData().setString(args[3], data);
+					sender.sendMessage(StringParser.getInstance()
+							.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
 				}
-				user.getData().setString(args[3], data);
-				sender.sendMessage(
-						StringParser.getInstance().colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
 			}
 		});
 
