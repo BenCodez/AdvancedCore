@@ -496,14 +496,14 @@ public class CommandLoader {
 				String name = args[1];
 				if (name.equalsIgnoreCase("all")) {
 					if (sender.hasPermission(permPrefix + ".SetAllData")) {
-						String data = args[3];
+						String data = args[4];
 						if (data.equalsIgnoreCase("\"\"")) {
 							data = "";
 						}
 						for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 							AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 							user.dontCache();
-							user.getData().setString(args[2], data);
+							user.getData().setString(args[3], data);
 
 						}
 						sender.sendMessage(
