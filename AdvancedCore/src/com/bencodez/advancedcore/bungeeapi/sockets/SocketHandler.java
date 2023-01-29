@@ -65,5 +65,7 @@ public abstract class SocketHandler {
 				log(str);
 			}
 		};
+
+		log("Loading socket server: " + server.getHost() + ":" + server.getPort());
 	}
 }
