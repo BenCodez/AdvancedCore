@@ -302,8 +302,22 @@ public class MySQL {
 					String columnName = rs.getMetaData().getColumnLabel(i);
 					Column rCol = null;
 					if (intColumns.contains(columnName)) {
-						rCol = new Column(columnName, DataType.INTEGER);
-						rCol.setValue(new DataValueInt(rs.getInt(i)));
+						try {
+							rCol = new Column(columnName, DataType.INTEGER);
+							rCol.setValue(new DataValueInt(rs.getInt(i)));
+						} catch (Exception e) {
+							rCol = new Column(columnName, DataType.INTEGER);
+							String data = rs.getString(i);
+							if (data != null) {
+								try {
+									rCol.setValue(new DataValueInt(Integer.parseInt(data)));
+								} catch (NumberFormatException ex) {
+									rCol.setValue(new DataValueInt(0));
+								}
+							} else {
+								rCol.setValue(new DataValueInt(0));
+							}
+						}
 					} else {
 						rCol = new Column(columnName, DataType.STRING);
 						rCol.setValue(new DataValueString(rs.getString(i)));
