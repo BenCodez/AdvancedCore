@@ -30,6 +30,7 @@ import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.jsonparser.JsonParser;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Iterables;
 import com.google.gson.JsonElement;
@@ -265,13 +266,22 @@ public class PlayerUtils {
 			}
 		}
 
-		for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-			AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-			user.dontCache();
-			String name = user.getData().getString("PlayerName", true);
-			if (name != null && name.equals(playerName)) {
-				plugin.getUuidNameCache().put(uuid, playerName);
-				return uuid;
+		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			ConcurrentHashMap<UUID, String> namesMap = plugin.getMysql().getRowsUUIDNameQuery();
+			for (Entry<UUID, String> entry : namesMap.entrySet()) {
+				if (entry.getValue().equalsIgnoreCase(playerName)) {
+					return entry.getKey().toString();
+				}
+			}
+		} else {
+			for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+				user.dontCache();
+				String name = user.getData().getString("PlayerName", true);
+				if (name != null && name.equals(playerName)) {
+					plugin.getUuidNameCache().put(uuid, playerName);
+					return uuid;
+				}
 			}
 		}
 		return "";
