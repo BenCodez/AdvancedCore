@@ -228,7 +228,6 @@ public class PlayerUtils {
 		}
 
 		if (plugin.getOptions().isOnlineMode()) {
-
 			String uuid = getUUIDLookup(playerName);
 
 			if (!uuid.equals("")) {
