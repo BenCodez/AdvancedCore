@@ -283,6 +283,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		while (uuids.size() > 0) {
 			String uuid = uuids.poll();
 			AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
+			user.dontCache();
 			debug("Starting convert for " + user.getUUID());
 
 			user.getData().setValues(to, user.getData().getValues(from));
