@@ -11,7 +11,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.DebugLevel;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
@@ -65,13 +64,6 @@ public class UserDataManager {
 
 	public void cacheUser(UUID uuid) {
 		plugin.devDebug("Caching " + uuid.toString());
-		try {
-			if (plugin.getOptions().getDebug().equals(DebugLevel.DEV)) {
-				throw new RuntimeException("Caching " + uuid.toString());
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		if (userDataCache.containsKey(uuid)) {
 			UserDataCache data = userDataCache.get(uuid);
 			data.clearCache();
