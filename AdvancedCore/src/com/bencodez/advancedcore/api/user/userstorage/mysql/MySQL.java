@@ -366,13 +366,9 @@ public class MySQL {
 			while (rs.next()) {
 				String uuid = rs.getString("uuid");
 				String playerName = rs.getString("PlayerName");
-				if (uuid != null && !uuid.isEmpty() && !uuid.equals("null")) {
-					try {
-						uuidNames.put(UUID.fromString(uuid), playerName);
-					} catch (NullPointerException e) {
-						plugin.debug(e);
-						// failsafe
-					}
+				if (uuid != null && !uuid.isEmpty() && !uuid.equals("null") && playerName != null
+						&& !playerName.isEmpty()) {
+					uuidNames.put(UUID.fromString(uuid), playerName);
 				}
 			}
 			sql.close();
