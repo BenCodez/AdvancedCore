@@ -351,6 +351,29 @@ public class MySQL {
 		}
 		return names;
 	}
+	
+	public String getUUID(String playerName) {
+		String query = "SELECT uuid FROM " + getName() + " WHERE " + "PlayerName" + "='" + playerName + "';";
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(query)) {
+			ResultSet rs = sql.executeQuery();
+			/*
+			 * Query sql = new Query(mysql, query); ResultSet rs = sql.executeQuery();
+			 */
+			if (rs.next()) {
+				String uuid = rs.getString("uuid");
+				if (uuid != null && !uuid.isEmpty()) {
+					rs.close();
+					return uuid;
+				}
+			}
+			rs.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
+		}
+		return null;
+	}
 
 	public ConcurrentHashMap<UUID, String> getRowsUUIDNameQuery() {
 		ConcurrentHashMap<UUID, String> uuidNames = new ConcurrentHashMap<UUID, String>();

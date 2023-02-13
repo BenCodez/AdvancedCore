@@ -352,6 +352,29 @@ public class Table {
 		return result;
 	}
 
+	public String getUUID(String playerName) {
+		String query = "SELECT uuid FROM " + getName() + " WHERE " + "PlayerName" + "='" + playerName + "';";
+
+		try (PreparedStatement sql = sqLite.getSQLConnection().prepareStatement(query)) {
+			ResultSet rs = sql.executeQuery();
+			/*
+			 * Query sql = new Query(mysql, query); ResultSet rs = sql.executeQuery();
+			 */
+			if (rs.next()) {
+				String uuid = rs.getString("uuid");
+				if (uuid != null && !uuid.isEmpty()) {
+					rs.close();
+					return uuid;
+				}
+			}
+			rs.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
+		}
+		return null;
+	}
+
 	public ArrayList<String> getTableColumns() {
 		ArrayList<String> columns = new ArrayList<String>();
 		String query = "SELECT * FROM " + getName();

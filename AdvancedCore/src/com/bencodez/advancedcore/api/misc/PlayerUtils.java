@@ -267,11 +267,14 @@ public class PlayerUtils {
 		}
 
 		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			ConcurrentHashMap<UUID, String> namesMap = plugin.getMysql().getRowsUUIDNameQuery();
-			for (Entry<UUID, String> entry : namesMap.entrySet()) {
-				if (entry.getValue().equalsIgnoreCase(playerName)) {
-					return entry.getKey().toString();
-				}
+			String name = plugin.getMysql().getUUID(playerName);
+			if (name != null) {
+				return name;
+			}
+		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			String name = plugin.getSQLiteUserTable().getUUID(playerName);
+			if (name != null) {
+				return name;
 			}
 		} else {
 			for (String uuid : plugin.getUserManager().getAllUUIDs()) {
