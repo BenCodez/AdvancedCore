@@ -109,6 +109,7 @@ public class Hologram {
 		armorStand.setAI(false);
 		armorStand.setMarker(marker);
 		armorStand.setGlowing(glowing);
+		armorStand.setInvulnerable(true);
 	}
 
 	private void createHologram(String name, boolean marker, boolean glowing, NamespacedKey key, int value) {
@@ -124,6 +125,7 @@ public class Hologram {
 		armorStand.setAI(false);
 		armorStand.setMarker(marker);
 		armorStand.setGlowing(glowing);
+		armorStand.setInvulnerable(true);
 		armorStand.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, value);
 	}
 
