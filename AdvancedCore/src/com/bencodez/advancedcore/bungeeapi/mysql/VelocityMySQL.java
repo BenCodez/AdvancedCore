@@ -3,7 +3,6 @@ package com.bencodez.advancedcore.bungeeapi.mysql;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -208,31 +207,20 @@ public abstract class VelocityMySQL {
 	public ArrayList<String> getColumnsQueury() {
 		ArrayList<String> columns = new ArrayList<String>();
 		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + ";")) {
+				PreparedStatement sql = conn.prepareStatement("SHOW COLUMNS FROM `" + getName() + "`;")) {
 			ResultSet rs = sql.executeQuery();
-			/*
-			 * Query query = new Query(mysql, "SELECT * FROM " + getName() + ";"); ResultSet
-			 * rs = query.executeQuery();
-			 */
 
-			ResultSetMetaData metadata = rs.getMetaData();
-			int columnCount = 0;
-			if (metadata != null) {
-				columnCount = metadata.getColumnCount();
+			while (rs.next()) {
+				String columnName = rs.getString(1);
+				columns.add(columnName);
 
-				for (int i = 1; i <= columnCount; i++) {
-					String columnName = metadata.getColumnName(i);
-					columns.add(columnName);
-				}
-				rs.close();
-				return columns;
 			}
+
 			rs.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return columns;
-
 	}
 
 	public ConcurrentHashMap<UUID, String> getRowsUUIDNameQuery() {

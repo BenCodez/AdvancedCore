@@ -3,7 +3,6 @@ package com.bencodez.advancedcore.api.user.userstorage.mysql;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -258,28 +257,17 @@ public class MySQL {
 	public ArrayList<String> getColumnsQueury() {
 		ArrayList<String> columns = new ArrayList<String>();
 		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + ";")) {
-			plugin.devDebug("MYSQL QUERY: " + " SELECT * FROM " + getName() + ";");
+				PreparedStatement sql = conn.prepareStatement("SHOW COLUMNS FROM `" + getName() + "`;")) {
+			plugin.devDebug("MYSQL QUERY: " + "SHOW COLUMNS FROM `" + getName() + "`;");
 			ResultSet rs = sql.executeQuery();
-			/*
-			 * Query query = new Query(mysql, "SELECT * FROM " + getName() + ";"); ResultSet
-			 * rs = query.executeQuery();
-			 */
 
-			ResultSetMetaData metadata = rs.getMetaData();
-			int columnCount = 0;
-			if (metadata != null) {
-				columnCount = metadata.getColumnCount();
+			while (rs.next()) {
+				String columnName = rs.getString(1);
+				columns.add(columnName);
 
-				for (int i = 1; i <= columnCount; i++) {
-					String columnName = metadata.getColumnName(i);
-					columns.add(columnName);
-				}
-				sql.close();
-				rs.close();
-				conn.close();
-				return columns;
 			}
+
+			plugin.devDebug("MYSQL QUERY: " + ArrayUtils.getInstance().makeStringList(columns));
 			rs.close();
 		} catch (Exception e) {
 			e.printStackTrace();
