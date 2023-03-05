@@ -149,6 +149,16 @@ public class CommandLoader {
 			}
 		});
 
+		cmds.add(new CommandHandler(new String[] { "TotalNumberOfUsers" }, permPrefix + ".TotalNumberOfUsers",
+				"Gets current number of users in VotingPlugin database", true, false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				sendMessage(sender, "Total number of users: " + plugin.getUserManager().getAllUUIDs().size());
+
+			}
+		});
+
 		cmds.add(new CommandHandler(new String[] { "GiveAll", "(reward)" }, permPrefix + ".GiveAll",
 				"Give all users a reward") {
 
