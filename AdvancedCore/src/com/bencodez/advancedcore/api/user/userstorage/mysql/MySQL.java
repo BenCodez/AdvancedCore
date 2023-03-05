@@ -665,4 +665,15 @@ public class MySQL {
 			e.printStackTrace();
 		}
 	}
+	
+	public void executeQueryReturn(String str) {
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(str)) {
+			ResultSet rs = sql.executeQuery();
+
+			rs.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
 }
