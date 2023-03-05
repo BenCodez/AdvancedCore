@@ -496,7 +496,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
-		rewardHandler.checkDelayedTimedRewards();
 		loadAutoUpdateCheck();
 		loadVersionFile();
 
@@ -870,6 +869,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		rewardHandler.shutdown();
 		loginTimer.shutdownNow();
 		timer.shutdownNow();
 		timeChecker.getTimer().shutdownNow();
@@ -936,7 +936,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		}
 		timeChecker.update();
-		rewardHandler.checkDelayedTimedRewards();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 		getRewardHandler().checkSubRewards();
@@ -1015,6 +1014,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void userStartup() {
+		rewardHandler.startup();
 		Bukkit.getScheduler().runTaskLaterAsynchronously(this, new Runnable() {
 
 			@Override

@@ -732,7 +732,7 @@ public class AdvancedCoreUser {
 			delay = 0;
 		}
 		delay += 500;
-		plugin.getTimer().schedule(new Runnable() {
+		plugin.getRewardHandler().getDelayedTimer().schedule(new Runnable() {
 
 			@Override
 			public void run() {

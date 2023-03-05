@@ -13,7 +13,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -126,12 +129,26 @@ public class RewardHandler {
 	@Getter
 	private Timer repeatTimer = new Timer();
 
+	@Getter
+	private ScheduledExecutorService delayedTimer = Executors.newSingleThreadScheduledExecutor();
+
 	/**
 	 * Instantiates a new reward handler.
 	 */
 	private RewardHandler() {
 		rewardFolders = new ArrayList<File>();
 		setDefaultFolder(new File(AdvancedCorePlugin.getInstance().getDataFolder(), "Rewards"));
+	}
+
+	public void shutdown() {
+		delayedTimer.shutdown();
+		try {
+			delayedTimer.awaitTermination(10, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		delayedTimer.shutdownNow();
+		repeatTimer.cancel();
 	}
 
 	public void addDirectlyDefined(DirectlyDefinedReward directlyDefinedReward) {
@@ -218,40 +235,29 @@ public class RewardHandler {
 		}
 	}
 
-	/**
-	 * Check delayed timed rewards.
-	 */
-	public synchronized void checkDelayedTimedRewards() {
-		plugin.getTimer().execute(new Runnable() {
+	public void startup() {
+		plugin.addUserStartup(new UserStartup() {
 
 			@Override
-			public void run() {
-				if (usesTimed()) {
-					plugin.addUserStartup(new UserStartup() {
+			public void onFinish() {
 
-						@Override
-						public void onFinish() {
+			}
 
-						}
+			@Override
+			public void onStart() {
+				plugin.debug("Checking timed/delayed rewards");
+			}
 
-						@Override
-						public void onStart() {
-							plugin.debug("Checking timed/delayed rewards");
-						}
-
-						@Override
-						public void onStartUp(AdvancedCoreUser user) {
-							try {
-								HashMap<String, Long> timed = user.getTimedRewards();
-								for (Entry<String, Long> entry : timed.entrySet()) {
-									user.loadTimedDelayedTimer(entry.getValue().longValue());
-								}
-							} catch (Exception ex) {
-								plugin.debug("Failed to update delayed/timed for: " + user.getUUID());
-								plugin.debug(ex);
-							}
-						}
-					});
+			@Override
+			public void onStartUp(AdvancedCoreUser user) {
+				try {
+					HashMap<String, Long> timed = user.getTimedRewards();
+					for (Entry<String, Long> entry : timed.entrySet()) {
+						user.loadTimedDelayedTimer(entry.getValue().longValue());
+					}
+				} catch (Exception ex) {
+					plugin.debug("Failed to update delayed/timed for: " + user.getUUID());
+					plugin.debug(ex);
 				}
 			}
 		});
@@ -2637,12 +2643,4 @@ public class RewardHandler {
 
 	}
 
-	public boolean usesTimed() {
-		for (Reward reward : getRewards()) {
-			if (reward.isTimedEnabled() || reward.isDelayEnabled()) {
-				return true;
-			}
-		}
-		return false;
-	}
 }
