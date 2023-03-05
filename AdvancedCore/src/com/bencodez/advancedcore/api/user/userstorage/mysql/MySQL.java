@@ -147,7 +147,7 @@ public class MySQL {
 
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
-		plugin.debug("Altering column `" + column + "` to " + newType);
+		plugin.debug("MYSQL QUERY: Altering column `" + column + "` to " + newType);
 		if (newType.contains("INT")) {
 			try {
 				Query query = new Query(mysql, "UPDATE " + getName() + " SET `" + column
@@ -204,6 +204,7 @@ public class MySQL {
 
 	public boolean containsKeyQuery(String index) {
 		String sqlStr = "SELECT uuid FROM " + getName() + ";";
+		plugin.devDebug("MYSQL QUERY: " + sqlStr);
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
 			ResultSet rs = sql.executeQuery();
@@ -233,6 +234,7 @@ public class MySQL {
 
 	public void deletePlayer(String uuid) {
 		String q = "DELETE FROM " + getName() + " WHERE uuid='" + uuid + "';";
+		plugin.devDebug("MYSQL QUERY: " + q);
 		try {
 			Query query = new Query(mysql, q);
 			query.executeUpdate();
@@ -257,6 +259,7 @@ public class MySQL {
 		ArrayList<String> columns = new ArrayList<String>();
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + ";")) {
+			plugin.devDebug("MYSQL QUERY: " + " SELECT * FROM " + getName() + ";");
 			ResultSet rs = sql.executeQuery();
 			/*
 			 * Query query = new Query(mysql, "SELECT * FROM " + getName() + ";"); ResultSet
@@ -292,6 +295,7 @@ public class MySQL {
 		ArrayList<Column> result = new ArrayList<>();
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`='"
 				+ column.getValue().getString() + "';";
+		plugin.devDebug("MYSQL QUERY: " + query);
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(query)) {
@@ -351,9 +355,10 @@ public class MySQL {
 		}
 		return names;
 	}
-	
+
 	public String getUUID(String playerName) {
 		String query = "SELECT uuid FROM " + getName() + " WHERE " + "PlayerName" + "='" + playerName + "';";
+		plugin.devDebug("MYSQL QUERY: " + query);
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(query)) {
 			ResultSet rs = sql.executeQuery();
@@ -378,7 +383,7 @@ public class MySQL {
 	public ConcurrentHashMap<UUID, String> getRowsUUIDNameQuery() {
 		ConcurrentHashMap<UUID, String> uuidNames = new ConcurrentHashMap<UUID, String>();
 		String sqlStr = "SELECT UUID, PlayerName FROM " + getName() + ";";
-
+		plugin.devDebug("MYSQL QUERY: " + sqlStr);
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
 			ResultSet rs = sql.executeQuery();
@@ -424,6 +429,7 @@ public class MySQL {
 	public ArrayList<Column> getRowsNameQuery() {
 		ArrayList<Column> result = new ArrayList<Column>();
 		String sqlStr = "SELECT PlayerName FROM " + getName() + ";";
+		plugin.devDebug("MYSQL QUERY: " + sqlStr);
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
@@ -444,6 +450,7 @@ public class MySQL {
 	public ArrayList<Column> getRowsQuery() {
 		ArrayList<Column> result = new ArrayList<Column>();
 		String sqlStr = "SELECT uuid FROM " + getName() + ";";
+		plugin.devDebug("MYSQL QUERY: " + sqlStr);
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
@@ -520,6 +527,8 @@ public class MySQL {
 			}
 		}
 
+		plugin.devDebug("MYSQL QUERY: " + query);
+
 		try {
 			new Query(mysql, query).executeUpdate();
 			String playerName = "";
@@ -593,7 +602,7 @@ public class MySQL {
 				query += " WHERE uuid=";
 				query += "'" + index + "';";
 
-				plugin.devDebug("Batch query: " + query);
+				plugin.devDebug("MYSQL QUERY: " + query);
 
 				try {
 					Query q = new Query(mysql, query);
@@ -631,6 +640,7 @@ public class MySQL {
 				query += " WHERE uuid=";
 				query += "'" + index + "';";
 
+				plugin.devDebug("MYSQL QUERY: " + query);
 				try {
 					Query q = new Query(mysql, query);
 					q.executeUpdate();
@@ -648,6 +658,7 @@ public class MySQL {
 	public void wipeColumnData(String columnName) {
 		checkColumn(columnName, DataType.STRING);
 		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+		plugin.devDebug("MYSQL QUERY: " + sql);
 		try {
 			Query query = new Query(mysql, sql);
 			query.executeUpdate();
@@ -660,15 +671,17 @@ public class MySQL {
 	public void executeQuery(String str) {
 		try {
 			Query q = new Query(mysql, StringParser.getInstance().replacePlaceHolder(str, "tablename", getName()));
+			plugin.devDebug("MYSQL QUERY: " + str);
 			q.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void executeQueryReturn(String str) {
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(str)) {
+			plugin.devDebug("MYSQL QUERY: " + str);
 			ResultSet rs = sql.executeQuery();
 
 			rs.close();
