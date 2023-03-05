@@ -942,15 +942,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	/**
-	 * Run.
-	 *
-	 * @param run the run
-	 */
-	public void run(Runnable run) {
-		com.bencodez.advancedcore.thread.Thread.getInstance().run(run);
-	}
-
-	/**
 	 * @param configData the configData to set
 	 */
 	public void setConfigData(ConfigurationSection configData) {

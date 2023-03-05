@@ -1,8 +1,9 @@
 package com.bencodez.advancedcore.bungeeapi.sockets;
 
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import com.bencodez.advancedcore.api.misc.encryption.EncryptionHandler;
 
@@ -13,6 +14,8 @@ public abstract class SocketHandler {
 	private ArrayList<SocketReceiver> receiving;
 	@Getter
 	private SocketServer server;
+
+	private ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
 
 	public SocketHandler(String threadName, String host, int port, EncryptionHandler handle) {
 		start(threadName, host, port, handle, false);
@@ -41,22 +44,27 @@ public abstract class SocketHandler {
 			public void onReceive(String[] data) {
 				if (data.length > 0) {
 					for (SocketReceiver r : receiving) {
-						TimerTask task = new TimerTask() {
-
-							@Override
-							public void run() {
-								r.onReceive(data[0], data);
-							}
-						};
 						if (r.getSocketDelay() > 0) {
-							new Timer().schedule(task, r.getSocketDelay());
+							timer.schedule(new Runnable() {
+
+								@Override
+								public void run() {
+									r.onReceive(data[0], data);
+								}
+							}, r.getSocketDelay(), TimeUnit.MILLISECONDS);
 						} else {
-							new Timer().schedule(task, 0);
+							timer.submit(new Runnable() {
+
+								@Override
+								public void run() {
+									r.onReceive(data[0], data);
+								}
+							});
 						}
 
 					}
 				} else {
-					System.out.print("Socket data invalid");
+					log("Socket data invalid");
 				}
 			}
 

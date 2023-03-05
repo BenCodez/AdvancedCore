@@ -12,7 +12,6 @@ import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.thread.Thread;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
@@ -27,7 +26,7 @@ public class PluginMessage implements PluginMessageListener {
 
 	private AdvancedCorePlugin plugin;
 
-	private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
+	private ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
 
 	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<PluginMessageHandler>();
 
@@ -66,7 +65,7 @@ public class PluginMessage implements PluginMessageListener {
 
 		final ArrayList<String> list1 = list;
 
-		timer.execute(new Runnable() {
+		timer.submit(new Runnable() {
 
 			@Override
 			public void run() {
@@ -82,17 +81,11 @@ public class PluginMessage implements PluginMessageListener {
 			plugin.getLogger().info("BungeeDebug: Received plugin message: " + subChannel + ", "
 					+ ArrayUtils.getInstance().makeStringList(list));
 		}
-		Thread.getInstance().run(new Runnable() {
-
-			@Override
-			public void run() {
-				for (PluginMessageHandler handle : pluginMessages) {
-					if (handle.getSubChannel().equalsIgnoreCase(subChannel)) {
-						handle.onRecieve(subChannel, list);
-					}
-				}
+		for (PluginMessageHandler handle : pluginMessages) {
+			if (handle.getSubChannel().equalsIgnoreCase(subChannel)) {
+				handle.onRecieve(subChannel, list);
 			}
-		});
+		}
 
 	}
 
