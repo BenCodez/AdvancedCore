@@ -62,7 +62,6 @@ public class TabCompleteHandler {
 	}
 
 	public ConcurrentHashMap<String, ArrayList<String>> getTabCompleteOptions() {
-		loadTabCompleteOptions();
 		return tabCompleteOptions;
 	}
 

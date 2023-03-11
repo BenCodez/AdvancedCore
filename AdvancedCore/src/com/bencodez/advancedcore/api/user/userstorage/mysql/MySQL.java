@@ -284,6 +284,11 @@ public class MySQL {
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`='"
 				+ column.getValue().getString() + "';";
 		plugin.devDebug("MYSQL QUERY: " + query);
+		try {
+			throw new RuntimeException();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(query)) {
