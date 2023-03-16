@@ -224,10 +224,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void checkCMI() {
-		if (Bukkit.getPluginManager().getPlugin("CMI") != null) {
-			getLogger().info("CMI found, loading hook");
-			cmiHandle = new CMIHandler();
-		}
+		Bukkit.getScheduler().runTaskAsynchronously(javaPlugin, new Runnable() {
+
+			@Override
+			public void run() {
+				if (Bukkit.getPluginManager().getPlugin("CMI") != null) {
+					getLogger().info("CMI found, loading hook");
+					cmiHandle = new CMIHandler();
+				}
+			}
+		});
 	}
 
 	private void checkPlaceHolderAPI() {
