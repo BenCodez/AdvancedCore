@@ -33,7 +33,7 @@ public class ClientHandler {
 				clientSocket.close();
 			}
 			clientSocket = new Socket(host, port);
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -66,7 +66,7 @@ public class ClientHandler {
 	public void stopConnection() {
 		try {
 			clientSocket.close();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
