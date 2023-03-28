@@ -599,6 +599,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 					@Override
 					public void reload() {
+						ArrayList<String> list = new ArrayList<String>();
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							list.add(player.getName());
+						}
+						setReplace(list);
 					}
 
 					@Override
@@ -616,6 +621,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 					@Override
 					public void reload() {
+						ArrayList<String> list = new ArrayList<String>();
+						for (Player player : Bukkit.getOnlinePlayers()) {
+							list.add(player.getName());
+						}
+						setReplace(list);
 					}
 
 					@Override
@@ -784,6 +794,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
+		TabCompleteHandler.getInstance().loadTimer();
 	}
 
 	public void loadValueRequestInputCommands() {
