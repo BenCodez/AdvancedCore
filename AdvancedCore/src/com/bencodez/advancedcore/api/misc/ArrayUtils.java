@@ -111,6 +111,17 @@ public class ArrayUtils {
 		return false;
 	}
 
+	public boolean containsIgnoreCase(List<String> set, String str) {
+		str = str.toLowerCase();
+		for (String text : set) {
+			text = text.toLowerCase();
+			if (text.equals(str)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Sets the contains ignore case.
 	 *
