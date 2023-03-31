@@ -884,7 +884,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			timer.awaitTermination(5, TimeUnit.SECONDS);
 			timeChecker.getTimer().awaitTermination(5, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			debug(e);
 		}
 		rewardHandler.shutdown();
 		loginTimer.shutdownNow();
