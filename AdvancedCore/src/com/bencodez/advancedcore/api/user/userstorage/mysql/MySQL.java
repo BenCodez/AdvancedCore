@@ -435,6 +435,26 @@ public class MySQL {
 		return result;
 	}
 
+	public ArrayList<Integer> getNumbersInColumn(String column) {
+		ArrayList<Integer> result = new ArrayList<Integer>();
+		String sqlStr = "SELECT " + column + " FROM " + getName() + ";";
+		plugin.devDebug("MYSQL QUERY: " + sqlStr);
+
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
+			ResultSet rs = sql.executeQuery();
+
+			while (rs.next()) {
+				result.add(rs.getInt(column));
+			}
+			rs.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return result;
+	}
+
 	public ArrayList<Column> getRowsQuery() {
 		ArrayList<Column> result = new ArrayList<Column>();
 		String sqlStr = "SELECT uuid FROM " + getName() + ";";
