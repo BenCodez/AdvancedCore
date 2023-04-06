@@ -1,6 +1,9 @@
 package com.bencodez.advancedcore.api.command;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -27,4 +30,15 @@ public abstract class TabCompleteHandle {
 	public abstract void reload();
 
 	public abstract void updateReplacements();
+
+	public TabCompleteHandle updateEveryXMinutes(AdvancedCorePlugin plugin, int x) {
+		plugin.getTimer().scheduleWithFixedDelay(new Runnable() {
+
+			@Override
+			public void run() {
+				updateReplacements();
+			}
+		}, x, x, TimeUnit.SECONDS);
+		return this;
+	}
 }

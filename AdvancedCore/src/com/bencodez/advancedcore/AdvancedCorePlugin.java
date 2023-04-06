@@ -592,7 +592,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						}
 
 					}
-				});
+				}.updateEveryXMinutes(javaPlugin, 10));
 
 		TabCompleteHandler.getInstance()
 				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {
@@ -614,7 +614,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						}
 						setReplace(list);
 					}
-				});
+				}.updateEveryXMinutes(javaPlugin, 3));
 
 		TabCompleteHandler.getInstance()
 				.addTabCompleteOption(new TabCompleteHandle("(PlayerExact)", new ArrayList<String>()) {
@@ -636,7 +636,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						}
 						setReplace(list);
 					}
-				});
+				}.updateEveryXMinutes(javaPlugin, 3));
 
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
 
@@ -659,7 +659,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					}
 				}
 			}
-		});
+		}.updateEveryXMinutes(javaPlugin, 30));
 
 		ArrayList<String> options = new ArrayList<String>();
 		options.add("True");
