@@ -21,18 +21,6 @@ API used in the plugins developed by BenCodez, can be used in any project.
 	    <scope>provided</scope>
     </dependency>
 
-    BACKUP/OLD WAY
-    <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
-    </repository>
-    
-    <dependency>
-	    <groupId>com.github.BenCodez</groupId>
-	    <artifactId>AdvancedCore</artifactId>
-	    <version>LATEST</version>
-	    <scope>provided</scope>
-	</dependency>
   ### In Gradle:
     repositories {
         maven { url "https://nexus.bencodez.com/repository/maven-public/" }
