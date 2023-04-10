@@ -515,6 +515,18 @@ public abstract class BungeeMySQL {
 		}
 
 	}
+	
+	public void copyColumnData(String columnFromName, String columnToName) {
+		checkColumn(columnFromName, DataType.STRING);
+		checkColumn(columnToName, DataType.STRING);
+		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `"+ columnFromName + "`;";
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public void shutdown() {
 		mysql.disconnect();

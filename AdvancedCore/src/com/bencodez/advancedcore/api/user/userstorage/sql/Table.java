@@ -557,7 +557,18 @@ public class Table {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
 
+	public void copyColumnData(String columnFromName, String columnToName) {
+		checkColumn(new Column(columnToName, DataType.STRING));
+		checkColumn(new Column(columnFromName, DataType.STRING));
+		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
+			s.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void executeQuery(String str) {

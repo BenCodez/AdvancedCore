@@ -344,6 +344,14 @@ public class UserData {
 		return getString(key);
 	}
 
+	public DataValue getDataValue(String key) {
+		boolean isInt = user.getPlugin().getUserManager().getDataManager().isInt(key);
+		if (isInt) {
+			return new DataValueInt(getInt(key));
+		}
+		return new DataValueString(getString(key));
+	}
+
 	public HashMap<String, DataValue> getValues() {
 		return getValues(user.getPlugin().getStorageType());
 	}

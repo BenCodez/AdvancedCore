@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 
@@ -283,6 +284,21 @@ public class UserManager {
 			}
 		}
 		return false;
+	}
+
+	public void copyColumnData(String columnFromName, String columnToName) {
+		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			plugin.getMysql().copyColumnData(columnFromName, columnToName);
+		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			plugin.getSQLiteUserTable().copyColumnData(columnFromName, columnToName);
+		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				user.dontCache();
+				DataValue data = user.getData().getDataValue(columnFromName);
+				user.getData().setValues(columnToName, data);
+			}
+		}
 	}
 
 	public boolean userExist(UUID uuid) {

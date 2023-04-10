@@ -224,6 +224,18 @@ public abstract class VelocityMySQL {
 		return columns;
 	}
 
+	public void copyColumnData(String columnFromName, String columnToName) {
+		checkColumn(columnFromName, DataType.STRING);
+		checkColumn(columnToName, DataType.STRING);
+		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public ConcurrentHashMap<UUID, String> getRowsUUIDNameQuery() {
 		ConcurrentHashMap<UUID, String> uuidNames = new ConcurrentHashMap<UUID, String>();
 		String sqlStr = "SELECT UUID, PlayerName FROM " + getName() + ";";

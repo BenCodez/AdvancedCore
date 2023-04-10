@@ -675,6 +675,19 @@ public class MySQL {
 		}
 
 	}
+	
+	public void copyColumnData(String columnFromName, String columnToName) {
+		checkColumn(columnFromName, DataType.STRING);
+		checkColumn(columnToName, DataType.STRING);
+		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `"+ columnFromName + "`;";
+		plugin.devDebug("MYSQL QUERY: " + sql);
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public void executeQuery(String str) {
 		try {
