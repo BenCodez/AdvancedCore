@@ -53,7 +53,11 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 							globalMysql.debug("Server " + server
 									+ " hasn't finished processing time change yet, processing: " + processing);
 							try {
-								long lastUpdated = Long.valueOf(getString(server, "LastUpdated")).longValue();
+								String str = getString(server, "LastUpdated");
+								long lastUpdated = 0;
+								if (!str.isEmpty()) {
+									lastUpdated = Long.valueOf(str).longValue();
+								}
 								if (processing) {
 									// 2 hours
 									if (LocalDateTime.now().atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
