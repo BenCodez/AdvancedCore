@@ -592,7 +592,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						}
 
 					}
-				}.updateEveryXMinutes(javaPlugin, 10));
+				});
 
 		TabCompleteHandler.getInstance()
 				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {

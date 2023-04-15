@@ -88,7 +88,7 @@ public class TabCompleteHandler {
 				loadTabCompleteOptions();
 
 			}
-		}, 5, 10, TimeUnit.MINUTES);
+		}, 5, 30, TimeUnit.MINUTES);
 	}
 
 	public void loadTabCompleteOptions() {
