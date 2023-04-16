@@ -17,6 +17,14 @@ public abstract class TabCompleteHandle {
 	@Setter
 	private String toReplace;
 
+	@Getter
+	private boolean updateOnLoginLogout = false;
+
+	public TabCompleteHandle updateOnLoginLogout() {
+		updateOnLoginLogout = true;
+		return this;
+	}
+
 	public TabCompleteHandle(String toReplace) {
 		this.toReplace = toReplace;
 		reload();

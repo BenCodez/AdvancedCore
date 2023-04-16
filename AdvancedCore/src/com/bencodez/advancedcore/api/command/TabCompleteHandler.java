@@ -91,6 +91,18 @@ public class TabCompleteHandler {
 		}, 5, 30, TimeUnit.MINUTES);
 	}
 
+	public void onLogin() {
+		for (TabCompleteHandle h : tabCompletes) {
+			if (h.isUpdateOnLoginLogout()) {
+				h.updateReplacements();
+			}
+		}
+		tabCompleteOptions.clear();
+		for (TabCompleteHandle h : tabCompletes) {
+			tabCompleteOptions.put(h.getToReplace(), h.getReplace());
+		}
+	}
+
 	public void loadTabCompleteOptions() {
 		for (TabCompleteHandle h : tabCompletes) {
 			h.updateReplacements();

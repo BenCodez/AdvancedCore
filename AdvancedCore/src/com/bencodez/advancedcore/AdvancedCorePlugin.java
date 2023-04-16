@@ -614,7 +614,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						}
 						setReplace(list);
 					}
-				}.updateEveryXMinutes(javaPlugin, 3));
+				}.updateOnLoginLogout());
 
 		TabCompleteHandler.getInstance()
 				.addTabCompleteOption(new TabCompleteHandle("(PlayerExact)", new ArrayList<String>()) {
@@ -636,7 +636,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						}
 						setReplace(list);
 					}
-				}.updateEveryXMinutes(javaPlugin, 3));
+				}.updateOnLoginLogout());
 
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
 

@@ -12,6 +12,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.MetadataValue;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.command.TabCompleteHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 // TODO: Auto-generated Javadoc
@@ -58,6 +59,7 @@ public class PlayerJoinEvent implements Listener {
 			plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
 
 		}
+
 	}
 
 	/**
@@ -67,6 +69,7 @@ public class PlayerJoinEvent implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final PlayerLoginEvent event) {
+
 		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
 			plugin.getLoginTimer().schedule(new Runnable() {
 
@@ -74,6 +77,7 @@ public class PlayerJoinEvent implements Listener {
 				public void run() {
 					try {
 						if (plugin != null && plugin.isEnabled()) {
+							TabCompleteHandler.getInstance().onLogin();
 							if (plugin.isAuthMeLoaded() && plugin.getOptions().isWaitUntilLoggedIn()) {
 								return;
 							}
@@ -137,6 +141,8 @@ public class PlayerJoinEvent implements Listener {
 				@Override
 				public void run() {
 					if (plugin != null && plugin.isEnabled()) {
+						TabCompleteHandler.getInstance().onLogin();
+
 						plugin.getUserManager().getDataManager().removeCache(player.getUniqueId());
 
 					}
