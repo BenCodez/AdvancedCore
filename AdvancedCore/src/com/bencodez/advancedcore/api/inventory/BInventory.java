@@ -198,23 +198,46 @@ public class BInventory {
 		if (slot == -2) {
 			slot = getProperSize(getNextSlot()) - 1;
 		}
-		if (button.getFillSlots() != null && button.getFillSlots().size() > 0) {
-			for (Integer fill : button.getFillSlots()) {
-				slot = fill.intValue();
-				BInventoryButton button1 = new BInventoryButton(button) {
+		if (!button.isFillEmptySlots()) {
+			if (button.getFillSlots() != null && button.getFillSlots().size() > 0) {
+				for (Integer fill : button.getFillSlots()) {
+					slot = fill.intValue();
+					BInventoryButton button1 = new BInventoryButton(button) {
 
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						button.onClick(clickEvent);
-					}
-				};
-				button1.setSlot(slot);
-				getButtons().put(slot, button1);
+						@Override
+						public void onClick(ClickEvent clickEvent) {
+							button.onClick(clickEvent);
+						}
+					};
+					button1.setSlot(slot);
+					getButtons().put(slot, button1);
+				}
+			} else {
+				// no fill slots set
+				button.setSlot(slot);
+				getButtons().put(slot, button);
 			}
 		} else {
-			// no fill slots set
-			button.setSlot(slot);
-			getButtons().put(slot, button);
+			// fill empty slots
+			for (int i = 0; i < getInventorySize(); i++) {
+				boolean slotExist = false;
+				for (Integer exist : getButtons().keySet()) {
+					if (exist.intValue() == i) {
+						slotExist = true;
+					}
+				}
+				if (!slotExist) {
+					BInventoryButton button1 = new BInventoryButton(button) {
+
+						@Override
+						public void onClick(ClickEvent clickEvent) {
+							button.onClick(clickEvent);
+						}
+					};
+					button1.setSlot(i);
+					getButtons().put(i, button1);
+				}
+			}
 		}
 	}
 

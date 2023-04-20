@@ -81,7 +81,11 @@ public class ItemBuilder {
 
 	private String skull = "";
 
+	@Getter
 	private int slot = -1;
+
+	@Getter
+	private boolean fillEmptySlots = false;
 
 	@Getter
 	private boolean validMaterial = true;
@@ -262,6 +266,8 @@ public class ItemBuilder {
 					slot = data.getInt("Slot", -1);
 
 					fillSlots = data.getIntegerList("FillSlots");
+
+					fillEmptySlots = data.getBoolean("FillEmptySlots");
 				}
 
 			} else {
@@ -685,13 +691,6 @@ public class ItemBuilder {
 		} catch (ClassCastException expected) {
 		}
 		return null;
-	}
-
-	/**
-	 * @return the slot
-	 */
-	public int getSlot() {
-		return slot;
 	}
 
 	public Material getType() {

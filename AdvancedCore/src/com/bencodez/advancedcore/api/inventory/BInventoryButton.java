@@ -40,6 +40,9 @@ public abstract class BInventoryButton {
 
 	/** The slot. */
 	private int slot = -1;
+	
+	@Getter
+	private boolean fillEmptySlots = false;
 
 	public BInventoryButton(BInventoryButton button) {
 		setBuilder(button.getBuilder());
@@ -51,6 +54,7 @@ public abstract class BInventoryButton {
 		setBuilder(item);
 		slot = item.getSlot();
 		fillSlots = item.getFillSlots();
+		fillEmptySlots = item.isFillEmptySlots();
 	}
 
 	public BInventoryButton(ItemStack item) {
