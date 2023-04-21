@@ -183,6 +183,8 @@ public class BInventory {
 		setInventoryName(name);
 	}
 
+	private ArrayList<BInventoryButton> fillItems = new ArrayList<BInventoryButton>();
+
 	/**
 	 * Adds the button.
 	 *
@@ -218,7 +220,14 @@ public class BInventory {
 				getButtons().put(slot, button);
 			}
 		} else {
+			fillItems.add(button);
 			// fill empty slots
+
+		}
+	}
+
+	private void addFillSlots() {
+		for (BInventoryButton button : fillItems) {
 			for (int i = 0; i < getInventorySize(); i++) {
 				boolean slotExist = false;
 				for (Integer exist : getButtons().keySet()) {
@@ -239,6 +248,7 @@ public class BInventory {
 				}
 			}
 		}
+		fillItems.clear();
 	}
 
 	/**
@@ -492,6 +502,7 @@ public class BInventory {
 				}
 			}
 		}
+		addFillSlots();
 		BInventory inventory = this;
 
 		if (inventory.getHighestSlot() >= maxInvSize) {
