@@ -118,6 +118,12 @@ public class ItemBuilder {
 					conditional = true;
 					conditionalValues = data.getConfigurationSection("Conditional");
 					is = new ItemStack(Material.STONE);
+					
+					slot = data.getInt("Slot", -1);
+
+					fillSlots = data.getIntegerList("FillSlots");
+
+					fillEmptySlots = data.getBoolean("FillEmptySlots");
 
 				} else {
 
