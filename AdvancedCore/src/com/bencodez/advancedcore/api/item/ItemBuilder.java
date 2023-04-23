@@ -76,6 +76,9 @@ public class ItemBuilder {
 
 	@Getter
 	private String path;
+	
+	@Getter
+	private String identifier;
 
 	private HashMap<String, String> placeholders = new HashMap<String, String>();
 
@@ -108,6 +111,7 @@ public class ItemBuilder {
 			setBlank();
 		} else {
 			path = data.getCurrentPath();
+			identifier = data.getName();
 			double chance = data.getDouble("Chance", 100);
 			if (checkChance(chance)) {
 				chancePass = true;
@@ -118,7 +122,7 @@ public class ItemBuilder {
 					conditional = true;
 					conditionalValues = data.getConfigurationSection("Conditional");
 					is = new ItemStack(Material.STONE);
-					
+
 					slot = data.getInt("Slot", -1);
 
 					fillSlots = data.getIntegerList("FillSlots");
@@ -819,7 +823,15 @@ public class ItemBuilder {
 			}
 		}
 		return null;
+	}
 
+	public String getRewardsPath(Player player) {
+		if (conditional) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			String value = engine.getStringValue(javascriptConditional);
+			return identifier + ".Conditional." + value + ".Rewards";
+		}
+		return "Rewards";
 	}
 
 	public ItemBuilder setCustomData(String key, String value) {
@@ -1044,12 +1056,16 @@ public class ItemBuilder {
 		return is;
 	}
 
+	public ItemBuilder getConditionItemBuilder(OfflinePlayer player) {
+		return setConditional(new JavascriptEngine().addPlayer(player));
+	}
+
 	public ItemStack toItemStack(OfflinePlayer player) {
 		if (!placeholders.containsKey("player")) {
 			placeholders.put("player", player.getName());
 		}
 		if (conditional) {
-			return setConditional(new JavascriptEngine().addPlayer(player)).toItemStack(player);
+			return getConditionItemBuilder(player).toItemStack(player);
 		}
 		if (checkLoreLength) {
 			checkLoreLength();
