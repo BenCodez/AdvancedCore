@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 
-import org.bukkit.configuration.file.FileConfiguration;
-
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt;
@@ -15,7 +13,6 @@ import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
-import com.bencodez.advancedcore.thread.FileThread;
 
 import lombok.Getter;
 
@@ -51,10 +48,6 @@ public class UserData {
 
 	public boolean getBoolean(String key, boolean useCache, boolean waitForCache) {
 		return Boolean.valueOf(getString(key, useCache, waitForCache));
-	}
-
-	public FileConfiguration getData(String uuid) {
-		return FileThread.getInstance().getThread().getData(this, uuid);
 	}
 
 	@Deprecated
@@ -159,13 +152,6 @@ public class UserData {
 						}
 					}
 				}
-			} else if (storage.equals(UserStorage.FLAT)) {
-				try {
-					return getData(user.getUUID()).getInt(key, def);
-				} catch (Exception e) {
-
-				}
-
 			}
 
 		}
@@ -184,9 +170,7 @@ public class UserData {
 
 	public ArrayList<String> getKeys(boolean waitForCache) {
 		ArrayList<String> keys = new ArrayList<String>();
-		if (user.getPlugin().getStorageType().equals(UserStorage.FLAT)) {
-			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
-		} else if (user.getPlugin().getStorageType().equals(UserStorage.MYSQL)) {
+		if (user.getPlugin().getStorageType().equals(UserStorage.MYSQL)) {
 			List<Column> col = getMySqlRow();
 			if (col != null && !col.isEmpty()) {
 				for (Column c : col) {
@@ -207,9 +191,7 @@ public class UserData {
 
 	public ArrayList<String> getKeys(UserStorage storage, boolean waitForCache) {
 		ArrayList<String> keys = new ArrayList<String>();
-		if (storage.equals(UserStorage.FLAT)) {
-			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
-		} else if (storage.equals(UserStorage.MYSQL)) {
+		if (storage.equals(UserStorage.MYSQL)) {
 			List<Column> col = getMySqlRow();
 			if (col != null && !col.isEmpty()) {
 				for (Column c : col) {
@@ -306,12 +288,6 @@ public class UserData {
 						}
 					}
 				}
-			} else if (storage.equals(UserStorage.FLAT)) {
-				try {
-					return getData(user.getUUID()).getString(key, "");
-				} catch (Exception e) {
-
-				}
 			}
 		}
 		/*
@@ -361,18 +337,6 @@ public class UserData {
 			return convert(getMySqlRow());
 		} else if (storage.equals(UserStorage.SQLITE)) {
 			return convert(getSQLiteRow());
-		} else if (storage.equals(UserStorage.FLAT)) {
-			HashMap<String, DataValue> list = new HashMap<String, DataValue>();
-			FileConfiguration data = getData(user.getUUID());
-			for (String str : data.getKeys(false)) {
-				if (data.isInt(str)) {
-					list.put(str, new DataValueInt(data.getInt(str)));
-				} else {
-					list.put(str, new DataValueString(data.getString(str, "")));
-				}
-			}
-			return list;
-
 		}
 		return null;
 	}
@@ -380,8 +344,6 @@ public class UserData {
 	public boolean hasData() {
 		if (user.getPlugin().getStorageType().equals(UserStorage.MYSQL)) {
 			return user.getPlugin().getMysql().containsKey(user.getUUID());
-		} else if (user.getPlugin().getStorageType().equals(UserStorage.FLAT)) {
-			return FileThread.getInstance().getThread().hasPlayerFile(user.getUUID());
 		} else if (user.getPlugin().getStorageType().equals(UserStorage.SQLITE)) {
 			return user.getPlugin().getSQLiteUserTable().containsKey(user.getUUID());
 		}
@@ -391,8 +353,6 @@ public class UserData {
 	public void remove() {
 		if (user.getPlugin().getStorageType().equals(UserStorage.MYSQL)) {
 			user.getPlugin().getMysql().deletePlayer(user.getUUID());
-		} else if (user.getPlugin().getStorageType().equals(UserStorage.FLAT)) {
-			FileThread.getInstance().getThread().deletePlayerFile(user.getUUID());
 		} else if (user.getPlugin().getStorageType().equals(UserStorage.SQLITE)) {
 			user.getPlugin().getSQLiteUserTable().delete(new Column("uuid", new DataValueString(user.getUUID())));
 		}
@@ -405,10 +365,6 @@ public class UserData {
 
 	public void setBoolean(String key, boolean value, boolean queue) {
 		setString(key, "" + value, queue);
-	}
-
-	private void setData(final String uuid, final String path, final Object value) {
-		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
 	public void setInt(final String key, final int value) {
@@ -448,8 +404,6 @@ public class UserData {
 			user.getPlugin().getSQLiteUserTable().update(primary, columns);
 		} else if (storage.equals(UserStorage.MYSQL)) {
 			user.getPlugin().getMysql().update(user.getUUID(), key, new DataValueInt(value));
-		} else if (storage.equals(UserStorage.FLAT)) {
-			setData(user.getUUID(), key, value);
 		}
 
 		user.getPlugin().getUserManager().onChange(user, key);
@@ -491,8 +445,6 @@ public class UserData {
 			user.getPlugin().getSQLiteUserTable().update(primary, columns);
 		} else if (storage.equals(UserStorage.MYSQL)) {
 			user.getPlugin().getMysql().update(user.getUUID(), key, new DataValueString(value));
-		} else if (storage.equals(UserStorage.FLAT)) {
-			setData(user.getUUID(), key, value);
 		}
 
 		user.getPlugin().getUserManager().onChange(user, key);
@@ -544,14 +496,6 @@ public class UserData {
 				}
 				user.getPlugin().getSQLiteUserTable().update(new Column("uuid", new DataValueString(user.getUUID())),
 						cols);
-			}
-		} else if (storage.equals(UserStorage.FLAT)) {
-			for (Entry<String, DataValue> entry : values.entrySet()) {
-				if (entry.getValue() instanceof DataValueString) {
-					setData(user.getUUID(), entry.getKey(), entry.getValue().getString());
-				} else if (entry.getValue() instanceof DataValueInt) {
-					setData(user.getUUID(), entry.getKey(), entry.getValue().getInt());
-				}
 			}
 		}
 	}

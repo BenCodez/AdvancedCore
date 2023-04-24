@@ -112,9 +112,6 @@ public class CommandLoader {
 				}
 
 				switch (plugin.getStorageType()) {
-				case FLAT:
-					sendMessage(sender, "FLAT storage doesn't support SQL queries");
-					break;
 				case MYSQL:
 					sendMessage(sender, "Running query: " + str);
 					plugin.getMysql().executeQuery(str);
