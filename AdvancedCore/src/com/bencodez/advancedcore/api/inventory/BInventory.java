@@ -281,7 +281,7 @@ public class BInventory {
 			return;
 		}
 
-		if (closeInv && !b.isCloseInvSet()) {
+		if (closeInv && (b == null || !b.isCloseInvSet())) {
 			forceClose(p);
 			return;
 		}
