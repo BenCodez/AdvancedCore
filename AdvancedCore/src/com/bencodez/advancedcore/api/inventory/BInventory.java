@@ -272,10 +272,23 @@ public class BInventory {
 	}
 
 	public void closeInv(Player p, BInventoryButton b) {
-		if ((closeInv && (b != null && b.isCloseInv())) || pages) {
-			if (p.getOpenInventory().getTopInventory().equals(inv) || pages) {
-				forceClose(p);
-			}
+		if (!p.getOpenInventory().getTopInventory().equals(inv)) {
+			return;
+		}
+
+		if (pages) {
+			forceClose(p);
+			return;
+		}
+
+		if (closeInv && !b.isCloseInvSet()) {
+			forceClose(p);
+			return;
+		}
+
+		if (b != null && b.isCloseInvSet() && b.isCloseInv()) {
+			forceClose(p);
+			return;
 		}
 	}
 

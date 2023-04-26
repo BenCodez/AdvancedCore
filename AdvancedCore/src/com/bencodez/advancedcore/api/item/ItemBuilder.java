@@ -76,7 +76,7 @@ public class ItemBuilder {
 
 	@Getter
 	private String path;
-	
+
 	@Getter
 	private String identifier;
 
@@ -92,6 +92,12 @@ public class ItemBuilder {
 
 	@Getter
 	private boolean validMaterial = true;
+
+	@Getter
+	private boolean closeGUISet = false;
+
+	@Getter
+	private boolean closeGUI = true;
 
 	/**
 	 * Create ItemBuilder from a ConfigurationSection
@@ -128,6 +134,13 @@ public class ItemBuilder {
 					fillSlots = data.getIntegerList("FillSlots");
 
 					fillEmptySlots = data.getBoolean("FillEmptySlots");
+
+					if (data.isBoolean("CloseGUI")) {
+						closeGUISet = true;
+						closeGUI = data.getBoolean("CloseGUI", true);
+					} else {
+						closeGUISet = false;
+					}
 
 				} else {
 
@@ -278,6 +291,13 @@ public class ItemBuilder {
 					fillSlots = data.getIntegerList("FillSlots");
 
 					fillEmptySlots = data.getBoolean("FillEmptySlots");
+
+					if (data.isBoolean("CloseGUI")) {
+						closeGUISet = true;
+						closeGUI = data.getBoolean("CloseGUI", true);
+					} else {
+						closeGUISet = false;
+					}
 				}
 
 			} else {

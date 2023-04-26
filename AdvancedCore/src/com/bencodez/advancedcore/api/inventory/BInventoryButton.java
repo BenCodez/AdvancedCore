@@ -29,6 +29,9 @@ public abstract class BInventoryButton {
 
 	@Getter
 	private boolean closeInv = true;
+	
+	@Getter
+	private boolean closeInvSet = false;
 
 	private HashMap<String, Object> data = new HashMap<String, Object>();
 
@@ -41,7 +44,7 @@ public abstract class BInventoryButton {
 
 	/** The slot. */
 	private int slot = -1;
-	
+
 	@Getter
 	private boolean fillEmptySlots = false;
 
@@ -56,6 +59,10 @@ public abstract class BInventoryButton {
 		slot = item.getSlot();
 		fillSlots = item.getFillSlots();
 		fillEmptySlots = item.isFillEmptySlots();
+		if (item.isCloseGUISet()) {
+			closeInv = item.isCloseGUI();
+			closeInvSet = true;
+		}
 	}
 
 	public BInventoryButton(ItemStack item) {
@@ -77,7 +84,7 @@ public abstract class BInventoryButton {
 		getData().put(key, object);
 		return this;
 	}
-	
+
 	public String getLastRewardsPath(Player player) {
 		String test = builder.getRewardsPath(player);
 		AdvancedCorePlugin.getInstance().debug("Path: " + test);
@@ -179,6 +186,7 @@ public abstract class BInventoryButton {
 
 	public BInventoryButton setCloseInv(boolean value) {
 		closeInv = value;
+		closeInvSet = true;
 		return this;
 	}
 
