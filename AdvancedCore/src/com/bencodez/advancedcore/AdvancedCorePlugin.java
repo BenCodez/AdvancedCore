@@ -727,6 +727,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
 	}
 
+	@SuppressWarnings("deprecation")
 	public void loadUserAPI(UserStorage storageType) {
 		if (storageType.equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<Column>();
@@ -744,6 +745,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 							getOptions().getConfigData().getConfigurationSection("MySQL")));
 				}
 			});
+		} else if (storageType.equals(UserStorage.FLAT)) {
+			getLogger().severe("Detected using FLAT storage, this will be removed in the future!");
 		}
 	}
 

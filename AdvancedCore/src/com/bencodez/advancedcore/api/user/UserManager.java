@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.api.user;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import org.bukkit.entity.Player;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 
@@ -36,10 +38,19 @@ public class UserManager {
 		load();
 	}
 
+	@SuppressWarnings("deprecation")
 	public ArrayList<String> getAllPlayerNames() {
 		if (plugin.isLoadUserData()) {
 			ArrayList<String> names = new ArrayList<String>();
-			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
+			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
+				for (String uuid : getAllUUIDs()) {
+					AdvancedCoreUser user = getUser(java.util.UUID.fromString(uuid));
+					String name = user.getPlayerName();
+					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
+						names.add(name);
+					}
+				}
+			} else if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
 				ArrayList<String> data = plugin.getSQLiteUserTable().getNames();
 				for (String name : data) {
 					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
@@ -64,9 +75,23 @@ public class UserManager {
 		return ArrayUtils.getInstance().removeDuplicates(getAllUUIDs(plugin.getStorageType()));
 	}
 
+	@SuppressWarnings("deprecation")
 	public ArrayList<String> getAllUUIDs(UserStorage storage) {
 		if (plugin.isLoadUserData()) {
-			if (storage.equals(UserStorage.SQLITE)) {
+			if (storage.equals(UserStorage.FLAT)) {
+				File folder = new File(plugin.getDataFolder() + File.separator + "Data");
+				String[] fileNames = folder.list();
+				ArrayList<String> uuids = new ArrayList<String>();
+				if (fileNames != null) {
+					for (String playerFile : fileNames) {
+						if (!playerFile.equals("null") && !playerFile.equals("")) {
+							String uuid = playerFile.replace(".yml", "");
+							uuids.add(uuid);
+						}
+					}
+				}
+				return uuids;
+			} else if (storage.equals(UserStorage.SQLITE)) {
 				List<Column> cols = plugin.getSQLiteUserTable().getRows();
 				ArrayList<String> uuids = new ArrayList<String>();
 				for (Column col : cols) {
@@ -263,11 +288,19 @@ public class UserManager {
 		return false;
 	}
 
+	@SuppressWarnings("deprecation")
 	public void copyColumnData(String columnFromName, String columnToName) {
 		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
 			plugin.getMysql().copyColumnData(columnFromName, columnToName);
 		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
 			plugin.getSQLiteUserTable().copyColumnData(columnFromName, columnToName);
+		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				user.dontCache();
+				DataValue data = user.getData().getDataValue(columnFromName);
+				user.getData().setValues(columnToName, data);
+			}
 		}
 	}
 
