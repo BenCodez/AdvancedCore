@@ -57,6 +57,8 @@ public class StringParser {
 
 		// hex format: &#FF0000#
 		format = translateHexColorCodes("&#", "#", format);
+		// hex format: &#FF0000
+		format = translateHexColorCodes("&#", "", format);
 		return ChatColor.translateAlternateColorCodes('&', format);
 	}
 
