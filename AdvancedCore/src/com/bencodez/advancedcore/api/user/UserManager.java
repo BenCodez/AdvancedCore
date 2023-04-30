@@ -286,4 +286,13 @@ public class UserManager {
 			change.onChange(user, keys);
 		}
 	}
+
+	public ArrayList<Integer> getNumbersInColumn(String columnName) {
+		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			return plugin.getMysql().getNumbersInColumn(columnName);
+		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			return plugin.getSQLiteUserTable().getNumbersInColumn(columnName);
+		}
+		return new ArrayList<Integer>();
+	}
 }

@@ -375,6 +375,26 @@ public class Table {
 		return null;
 	}
 
+	public ArrayList<Integer> getNumbersInColumn(String column) {
+		ArrayList<Integer> result = new ArrayList<Integer>();
+		String sqlStr = "SELECT " + column + " FROM " + getName() + ";";
+
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sqlStr);
+			ResultSet rs = s.executeQuery();
+
+			while (rs.next()) {
+				result.add(rs.getInt(column));
+			}
+
+			sqLite.close(s, rs);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return result;
+	}
+
 	public ArrayList<String> getTableColumns() {
 		ArrayList<String> columns = new ArrayList<String>();
 		String query = "SELECT * FROM " + getName();
