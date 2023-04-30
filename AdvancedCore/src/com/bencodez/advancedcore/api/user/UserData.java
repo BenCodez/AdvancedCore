@@ -207,9 +207,12 @@ public class UserData {
 		return keys;
 	}
 
+	@SuppressWarnings("deprecation")
 	public ArrayList<String> getKeys(UserStorage storage, boolean waitForCache) {
 		ArrayList<String> keys = new ArrayList<String>();
-		if (storage.equals(UserStorage.MYSQL)) {
+		if (storage.equals(UserStorage.FLAT)) {
+			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
+		} else if (storage.equals(UserStorage.MYSQL)) {
 			List<Column> col = getMySqlRow();
 			if (col != null && !col.isEmpty()) {
 				for (Column c : col) {
@@ -395,11 +398,14 @@ public class UserData {
 		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
+	@SuppressWarnings("deprecation")
 	public void remove() {
 		if (user.getPlugin().getStorageType().equals(UserStorage.MYSQL)) {
 			user.getPlugin().getMysql().deletePlayer(user.getUUID());
 		} else if (user.getPlugin().getStorageType().equals(UserStorage.SQLITE)) {
 			user.getPlugin().getSQLiteUserTable().delete(new Column("uuid", new DataValueString(user.getUUID())));
+		} else if (user.getPlugin().getStorageType().equals(UserStorage.FLAT)) {
+			FileThread.getInstance().getThread().deletePlayerFile(user.getUUID());
 		}
 		user.clearCache();
 	}
