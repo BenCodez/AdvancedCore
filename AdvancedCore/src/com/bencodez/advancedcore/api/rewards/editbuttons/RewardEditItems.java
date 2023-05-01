@@ -8,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.UpdatingBInventoryButton;
@@ -22,7 +23,10 @@ import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 
 public abstract class RewardEditItems extends RewardEdit {
-	public RewardEditItems() {
+	private AdvancedCorePlugin plugin;
+
+	public RewardEditItems(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 	}
 
 	@Override
@@ -39,9 +43,11 @@ public abstract class RewardEditItems extends RewardEdit {
 			}
 		});
 
-		UpdatingBInventoryButton b = new UpdatingBInventoryButton(new ItemBuilder(Material.PAPER)
-				.setName("&cView current items").addLoreLine("&aDisplaying all current items")
-				.addLoreLine("This doesn't support adding conditional items"), 750, 750) {
+		UpdatingBInventoryButton b = new UpdatingBInventoryButton(plugin,
+				new ItemBuilder(Material.PAPER).setName("&cView current items")
+						.addLoreLine("&aDisplaying all current items")
+						.addLoreLine("This doesn't support adding conditional items"),
+				750, 750) {
 
 			public ItemBuilder nextItem() {
 				RewardEditData reward = (RewardEditData) getInv().getData("Reward");

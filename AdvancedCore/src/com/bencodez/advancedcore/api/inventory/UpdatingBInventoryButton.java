@@ -19,21 +19,26 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
 	@Getter
 	private long updateInterval;
+	private AdvancedCorePlugin plugin;
 
-	public UpdatingBInventoryButton(ItemBuilder item, long delay, long updateInterval) {
+	public UpdatingBInventoryButton(AdvancedCorePlugin plugin, ItemBuilder item, long delay, long updateInterval) {
 		super(item);
+		this.plugin = plugin;
 		this.updateInterval = updateInterval;
 		this.delay = delay;
 	}
 
-	public UpdatingBInventoryButton(ItemStack item, long delay, long updateInterval) {
+	public UpdatingBInventoryButton(AdvancedCorePlugin plugin, ItemStack item, long delay, long updateInterval) {
 		super(item);
+		this.plugin = plugin;
 		this.updateInterval = updateInterval;
 		this.delay = delay;
 	}
 
-	public UpdatingBInventoryButton(String name, String[] lore, ItemStack item, long delay, long updateInterval) {
+	public UpdatingBInventoryButton(AdvancedCorePlugin plugin, String name, String[] lore, ItemStack item, long delay,
+			long updateInterval) {
 		super(name, lore, item);
+		this.plugin = plugin;
 		this.updateInterval = updateInterval;
 		this.delay = delay;
 	}
@@ -46,10 +51,10 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	}
 
 	private void checkUpdate(Player p) {
-		if (AdvancedCorePlugin.getInstance().getUserManager().getDataManager().isCached(p.getUniqueId())) {
+		if (!plugin.isLoadUserData() || plugin.getUserManager().getDataManager().isCached(p.getUniqueId())) {
 			final ItemStack item = onUpdate(p).toItemStack(p);
 			if (item != null) {
-				if (AdvancedCorePlugin.getInstance().isEnabled()) {
+				if (plugin.isEnabled()) {
 					Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 						@Override
@@ -67,7 +72,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 									cancel();
 								}
 							} catch (Exception e) {
-								AdvancedCorePlugin.getInstance().debug(e);
+								plugin.debug(e);
 								cancel();
 							}
 
@@ -79,6 +84,8 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 			} else {
 				cancel();
 			}
+		} else if (plugin.isLoadUserData()) {
+			plugin.getUserManager().getDataManager().cacheUser(p.getUniqueId());
 		}
 	}
 

@@ -2432,7 +2432,7 @@ public class RewardHandler {
 					@Override
 					public void openInventory(ClickEvent clickEvent) {
 						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						new RewardEditItems() {
+						new RewardEditItems(plugin) {
 
 							@Override
 							public void setVal(String key, Object value) {
