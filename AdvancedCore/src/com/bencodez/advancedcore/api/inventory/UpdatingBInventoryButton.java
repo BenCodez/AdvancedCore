@@ -84,9 +84,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 			} else {
 				cancel();
 			}
-		} else if (plugin.isLoadUserData()) {
-			plugin.getUserManager().getDataManager().cacheUser(p.getUniqueId());
-		}
+		} 
 	}
 
 	@Override
