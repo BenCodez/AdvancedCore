@@ -10,18 +10,18 @@ import com.google.common.reflect.TypeToken;
 import lombok.Getter;
 import lombok.Setter;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.gson.GsonConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
-import ninja.leaping.configurate.yaml.YAMLConfigurationLoader;
 
-public class VelocityYMLFile {
+public class VelocityJSONFile {
 	@Getter
 	@Setter
 	private ConfigurationNode conf;
 	@Getter
 	private File file;
-	private YAMLConfigurationLoader loader;
+	private GsonConfigurationLoader loader;
 
-	public VelocityYMLFile(File file) {
+	public VelocityJSONFile(File file) {
 
 		this.file = file;
 		if (!file.exists()) {
@@ -33,7 +33,7 @@ public class VelocityYMLFile {
 				e.printStackTrace();
 			}
 		}
-		loader = YAMLConfigurationLoader.builder().setPath(file.toPath()).build();
+		loader = GsonConfigurationLoader.builder().setPath(file.toPath()).build();
 
 		try {
 			conf = loader.load();
@@ -85,7 +85,7 @@ public class VelocityYMLFile {
 	}
 
 	public void reload() {
-		loader = YAMLConfigurationLoader.builder().setPath(file.toPath()).build();
+		loader = GsonConfigurationLoader.builder().setPath(file.toPath()).build();
 
 		try {
 			conf = loader.load();
