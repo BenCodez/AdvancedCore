@@ -54,6 +54,10 @@ public class BInventoryListener implements Listener {
 			}
 			player.setItemOnCursor(new ItemStack(Material.AIR));
 			player.updateInventory();
+			
+			if (plugin.getOptions().isCloseGUIOnShiftClick()) {
+				gui.forceClose(player);
+			}
 			if (gui.isCloseInv()) {
 				gui.closeInv(player, null);
 			}

@@ -194,6 +194,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	private ArrayList<String> broadcastBlacklist = new ArrayList<String>();
 
+	@Getter
+	@Setter
+	private boolean closeGUIOnShiftClick = false;;
+
 	public AdvancedCoreConfigOptions() {
 	}
 
@@ -280,6 +284,7 @@ public class AdvancedCoreConfigOptions {
 			delayLoginEvent = configData.getInt("DelayLoginEvent", 0);
 
 			onlineMode = configData.getBoolean("OnlineMode", true);
+			closeGUIOnShiftClick  = configData.getBoolean("CloseGUIOnShiftClick", false);
 		}
 	}
 }
