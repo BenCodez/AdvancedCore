@@ -1,8 +1,10 @@
 package com.bencodez.advancedcore.api.user.usercache.keys;
 
+import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
+
 import lombok.Getter;
 
-public class UserDataKey {
+public abstract class UserDataKey {
 	@Getter
 	private String columnType;
 
@@ -17,4 +19,6 @@ public class UserDataKey {
 		this.columnType = columnType;
 		return this;
 	}
+	
+	public abstract DataValue getDefault();
 }

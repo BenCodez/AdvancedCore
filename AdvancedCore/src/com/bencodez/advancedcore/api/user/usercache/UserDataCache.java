@@ -58,6 +58,9 @@ public class UserDataCache {
 					manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for "
 							+ uuid.toString() + ", value: " + dataValue.toString());
 					cache.put(key, dataValue);
+				} else {
+					manager.getPlugin().devDebug("Loading default cache value for " + key + " for " + uuid.toString());
+					cache.put(key, dataKey.getDefault());
 				}
 
 			}
@@ -149,6 +152,10 @@ public class UserDataCache {
 	}
 
 	public void displayCache() {
+		manager.getPlugin().devDebug(displayCacheString());
+	}
+
+	public String displayCacheString() {
 		String str = "Current cache for " + uuid + ": ";
 		for (Entry<String, DataValue> entry : getCache().entrySet()) {
 			if (entry.getValue().isBoolean()) {
@@ -159,6 +166,6 @@ public class UserDataCache {
 				str += entry.getKey() + "=" + entry.getValue().getInt() + ", ";
 			}
 		}
-		manager.getPlugin().devDebug(str);
+		return str;
 	}
 }

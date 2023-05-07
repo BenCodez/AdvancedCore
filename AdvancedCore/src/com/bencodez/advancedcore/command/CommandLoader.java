@@ -540,6 +540,16 @@ public class CommandLoader {
 				}
 			}
 		});
+		
+		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ViewCache" }, permPrefix + ".ViewCache",
+				"View playerdata") {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+				sender.sendMessage(user.getCache().displayCacheString());
+			}
+		});
 
 		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "HasPermission", "(Text)" },
 				permPrefix + ".HasPermission", "View playerdata") {

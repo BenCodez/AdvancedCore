@@ -121,6 +121,7 @@ public class UserDataManager {
 	}
 
 	public UserDataCache getCache(UUID uuid) {
+		cacheUserIfNeeded(uuid);
 		return userDataCache.get(uuid);
 	}
 
