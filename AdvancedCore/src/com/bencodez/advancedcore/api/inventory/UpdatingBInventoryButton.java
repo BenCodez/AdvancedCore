@@ -1,7 +1,5 @@
 package com.bencodez.advancedcore.api.inventory;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
@@ -16,7 +14,6 @@ import lombok.Getter;
 public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	@Getter
 	private long delay;
-	private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
 	@Getter
 	private long updateInterval;
 	private AdvancedCorePlugin plugin;
@@ -43,13 +40,6 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		this.delay = delay;
 	}
 
-	public void cancel() {
-		if (timer != null) {
-			timer.shutdownNow();
-			timer = null;
-		}
-	}
-
 	private void checkUpdate(Player p) {
 		if (!plugin.isLoadUserData() || plugin.getUserManager().getDataManager().isCached(p.getUniqueId())) {
 			final ItemStack item = onUpdate(p).toItemStack(p);
@@ -69,35 +59,33 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 										p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
 									}
 								} else {
-									cancel();
+									getInv().cancelTimer();
 								}
 							} catch (Exception e) {
 								plugin.debug(e);
-								cancel();
+								getInv().cancelTimer();
 							}
 
 						}
 					});
 				} else {
-					cancel();
+					getInv().cancelTimer();
 				}
 			} else {
-				cancel();
+				getInv().cancelTimer();
 			}
-		} 
+		}
 	}
 
 	@Override
 	public void load(Player p) {
-		if (timer != null) {
-			timer.scheduleAtFixedRate(new Runnable() {
+		getInv().getUpdatingTimer().scheduleAtFixedRate(new Runnable() {
 
-				@Override
-				public void run() {
-					checkUpdate(p);
-				}
-			}, delay, updateInterval, TimeUnit.MILLISECONDS);
-		}
+			@Override
+			public void run() {
+				checkUpdate(p);
+			}
+		}, delay, updateInterval, TimeUnit.MILLISECONDS);
 	}
 
 	public abstract ItemBuilder onUpdate(Player player);

@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
@@ -174,6 +176,22 @@ public class BInventory {
 
 	private ItemStack prevItem;
 
+	private ScheduledExecutorService timer;
+
+	public void cancelTimer() {
+		if (timer != null) {
+			timer.shutdownNow();
+			timer = null;
+		}
+	}
+
+	public ScheduledExecutorService getUpdatingTimer() {
+		if (timer == null) {
+			timer = Executors.newScheduledThreadPool(1);
+		}
+		return timer;
+	}
+
 	/**
 	 * Instantiates a new b inventory.
 	 *
@@ -293,12 +311,7 @@ public class BInventory {
 	}
 
 	private void closeUpdatingBInv() {
-		for (BInventoryButton b : getButtons().values()) {
-			if (b instanceof UpdatingBInventoryButton) {
-				UpdatingBInventoryButton ub = (UpdatingBInventoryButton) b;
-				ub.cancel();
-			}
-		}
+		cancelTimer();
 	}
 
 	public BInventory dontClose() {
