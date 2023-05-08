@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -328,6 +329,61 @@ public class MySQL {
 		for (String col : getColumns()) {
 			result.add(new Column(col, DataType.STRING));
 		}
+		return result;
+	}
+
+	public HashMap<UUID, ArrayList<Column>> getAllQuery() {
+		HashMap<UUID, ArrayList<Column>> result = new HashMap<UUID, ArrayList<Column>>();
+		String query = "SELECT * FROM " + getName() + ";";
+		plugin.devDebug("MYSQL QUERY: " + query);
+
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(query)) {
+			ResultSet rs = sql.executeQuery();
+
+			while (rs.next()) {
+				ArrayList<Column> cols = new ArrayList<Column>();
+				UUID uuid = null;
+				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+					String columnName = rs.getMetaData().getColumnLabel(i);
+					Column rCol = null;
+
+					if (intColumns.contains(columnName)) {
+						try {
+							rCol = new Column(columnName, DataType.INTEGER);
+							rCol.setValue(new DataValueInt(rs.getInt(i)));
+						} catch (Exception e) {
+							rCol = new Column(columnName, DataType.INTEGER);
+							String data = rs.getString(i);
+							if (data != null) {
+								try {
+									rCol.setValue(new DataValueInt(Integer.parseInt(data)));
+								} catch (NumberFormatException ex) {
+									rCol.setValue(new DataValueInt(0));
+								}
+							} else {
+								rCol.setValue(new DataValueInt(0));
+							}
+						}
+					} else {
+						rCol = new Column(columnName, DataType.STRING);
+						rCol.setValue(new DataValueString(rs.getString(i)));
+						if (columnName.equals("uuid")) {
+							uuid = UUID.fromString(rs.getString(i));
+						}
+					}
+					cols.add(rCol);
+				}
+				result.put(uuid, cols);
+			}
+			rs.close();
+			return result;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
+			e.printStackTrace();
+		}
+
 		return result;
 	}
 
@@ -675,11 +731,11 @@ public class MySQL {
 		}
 
 	}
-	
+
 	public void copyColumnData(String columnFromName, String columnToName) {
 		checkColumn(columnFromName, DataType.STRING);
 		checkColumn(columnToName, DataType.STRING);
-		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `"+ columnFromName + "`;";
+		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
 		plugin.devDebug("MYSQL QUERY: " + sql);
 		try {
 			Query query = new Query(mysql, sql);

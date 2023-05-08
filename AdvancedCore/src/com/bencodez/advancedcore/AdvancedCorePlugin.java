@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -1034,13 +1035,15 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				for (UserStartup start : userStartup) {
 					start.onStart();
 				}
-				for (String uuid : getUserManager().getAllUUIDs()) {
+				HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys();
+				for (Entry<UUID, ArrayList<Column>> playerData : cols.entrySet()) {
+					String uuid = playerData.getKey().toString();
 					if (javaPlugin != null) {
 						if (uuid != null) {
 							AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
 							if (user != null) {
 								user.dontCache();
-								user.tempCache();
+								user.updateCacheWithColumns(playerData.getValue());
 								for (UserStartup start : userStartup) {
 									start.onStartUp(user);
 								}
@@ -1053,6 +1056,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				for (UserStartup start : userStartup) {
 					start.onFinish();
 				}
+				debug("User Startup finished");
 			}
 		}, 30);
 	}

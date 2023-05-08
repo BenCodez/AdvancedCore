@@ -569,6 +569,11 @@ public class UserData {
 	public void tempCache() {
 		tempCache = getValues();
 	}
+	
+	public void updateCacheWithColumns(ArrayList<Column> cols) {
+		tempCache = convert(cols);
+		updateCacheWithTemp();
+	}
 
 	public void updateCacheWithTemp() {
 		if (user.isCached()) {

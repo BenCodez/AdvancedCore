@@ -36,6 +36,7 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
+import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 
 import lombok.Getter;
@@ -420,13 +421,15 @@ public class AdvancedCoreUser {
 		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards", cacheData, waitForCache);
 		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
 		for (String str : timedReward) {
-			String[] data = str.split("%ExecutionTime/%");
-			plugin.extraDebug("TimedReward: " + str);
-			if (data.length > 1) {
-				String name = data[0];
+			if (str != null && !str.equals("null")) {
+				String[] data = str.split("%ExecutionTime/%");
+				plugin.extraDebug("TimedReward: " + str);
+				if (data.length > 1) {
+					String name = data[0];
 
-				String timeStr = data[1];
-				timedRewards.put(name, Long.valueOf(timeStr));
+					String timeStr = data[1];
+					timedRewards.put(name, Long.valueOf(timeStr));
+				}
 			}
 		}
 		return timedRewards;
@@ -1096,6 +1099,11 @@ public class AdvancedCoreUser {
 		tempCache = true;
 		getUserData().tempCache();
 		return this;
+	}
+
+	public void updateCacheWithColumns(ArrayList<Column> cols) {
+		tempCache = true;
+		getUserData().updateCacheWithColumns(cols);
 	}
 
 	public void updateName(boolean force) {

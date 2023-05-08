@@ -7,7 +7,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
@@ -415,6 +417,60 @@ public class Table {
 			e.printStackTrace();
 		}
 		return columns;
+	}
+	
+	public HashMap<UUID, ArrayList<Column>> getAllQuery() {
+		HashMap<UUID, ArrayList<Column>> result = new HashMap<UUID, ArrayList<Column>>();
+		String query = "SELECT * FROM " + getName() + ";";
+
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			ResultSet rs = s.executeQuery();
+
+			while (rs.next()) {
+				ArrayList<Column> cols = new ArrayList<Column>();
+				UUID uuid = null;
+				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+					String columnName = rs.getMetaData().getColumnLabel(i);
+					Column rCol = null;
+
+					if (intColumns.contains(columnName)) {
+						try {
+							rCol = new Column(columnName, DataType.INTEGER);
+							rCol.setValue(new DataValueInt(rs.getInt(i)));
+						} catch (Exception e) {
+							rCol = new Column(columnName, DataType.INTEGER);
+							String data = rs.getString(i);
+							if (data != null) {
+								try {
+									rCol.setValue(new DataValueInt(Integer.parseInt(data)));
+								} catch (NumberFormatException ex) {
+									rCol.setValue(new DataValueInt(0));
+								}
+							} else {
+								rCol.setValue(new DataValueInt(0));
+							}
+						}
+					} else {
+						rCol = new Column(columnName, DataType.STRING);
+						rCol.setValue(new DataValueString(rs.getString(i)));
+						if (columnName.equals("uuid")) {
+							uuid = UUID.fromString(rs.getString(i));
+						}
+					}
+					cols.add(rCol);
+				}
+				result.put(uuid, cols);
+			}
+			rs.close();
+			return result;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
+			e.printStackTrace();
+		}
+
+		return result;
 	}
 
 	public boolean hasColumn(Column column) {

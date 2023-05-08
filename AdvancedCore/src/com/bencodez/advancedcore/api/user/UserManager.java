@@ -2,7 +2,9 @@ package com.bencodez.advancedcore.api.user;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import org.bukkit.OfflinePlayer;
@@ -271,6 +273,27 @@ public class UserManager {
 				}
 
 			}
+		}
+	}
+
+	public HashMap<UUID, ArrayList<Column>> getAllKeys() {
+		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			return plugin.getSQLiteUserTable().getAllQuery();
+		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			return plugin.getMysql().getAllQuery();
+		} else {
+			HashMap<UUID, ArrayList<Column>> cols = new HashMap<UUID, ArrayList<Column>>();
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				user.dontCache();
+				ArrayList<Column> col = new ArrayList<Column>();
+				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
+					col.add(new Column(entry.getKey(), entry.getValue()));
+				}
+				cols.put(UUID.fromString(uuid), col);
+			}
+			return cols;
+
 		}
 	}
 
