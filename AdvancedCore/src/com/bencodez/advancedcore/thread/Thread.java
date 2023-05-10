@@ -8,6 +8,7 @@ import com.bencodez.advancedcore.api.misc.NameFetcher;
 /**
  * The Class Thread.
  */
+@Deprecated
 public class Thread {
 
 	/**

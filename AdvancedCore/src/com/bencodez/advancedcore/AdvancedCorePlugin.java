@@ -11,9 +11,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.UUID;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -81,7 +81,6 @@ import com.bencodez.advancedcore.nms.NMSManager;
 import com.bencodez.advancedcore.serverhandle.CraftBukkitHandle;
 import com.bencodez.advancedcore.serverhandle.IServerHandle;
 import com.bencodez.advancedcore.serverhandle.SpigotHandle;
-import com.bencodez.advancedcore.thread.Thread;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -738,14 +737,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			database = new Database(this, "Users", table);
 			table.addCustomColumns();
 		} else if (storageType.equals(UserStorage.MYSQL)) {
-			Thread.getInstance().run(new Runnable() {
-
-				@Override
-				public void run() {
-					setMysql(new MySQL(javaPlugin, javaPlugin.getName() + "_Users",
-							getOptions().getConfigData().getConfigurationSection("MySQL")));
-				}
-			});
+			setMysql(new MySQL(javaPlugin, javaPlugin.getName() + "_Users",
+					getOptions().getConfigData().getConfigurationSection("MySQL")));
 		} else if (storageType.equals(UserStorage.FLAT)) {
 			getLogger().severe("Detected using FLAT storage, this will be removed in the future!");
 		}
