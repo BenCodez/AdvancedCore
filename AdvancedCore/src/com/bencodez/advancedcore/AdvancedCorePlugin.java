@@ -182,6 +182,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private ScheduledExecutorService loginTimer;
 
+	@Getter
+	private ScheduledExecutorService inventoryTimer;
+
 	@Setter
 	private UserManager userManager;
 
@@ -876,16 +879,20 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		timer.shutdown();
 		loginTimer.shutdown();
 		timeChecker.getTimer().shutdown();
+		inventoryTimer.shutdown();
 		try {
+			getLogger().info("Allowing background tasks to finish, this could take up to 20 seconds");
 			loginTimer.awaitTermination(5, TimeUnit.SECONDS);
 			timer.awaitTermination(5, TimeUnit.SECONDS);
 			timeChecker.getTimer().awaitTermination(5, TimeUnit.SECONDS);
+			inventoryTimer.awaitTermination(1, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			debug(e);
 		}
 		rewardHandler.shutdown();
 		loginTimer.shutdownNow();
 		timer.shutdownNow();
+		inventoryTimer.shutdownNow();
 		timeChecker.getTimer().shutdownNow();
 		onUnLoad();
 		SkullHandler.getInstance().close();
@@ -907,6 +914,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		timer = Executors.newSingleThreadScheduledExecutor();
 		loginTimer = Executors.newSingleThreadScheduledExecutor();
 		advancedCoreCommandLoader = CommandLoader.getInstance();
+		inventoryTimer = Executors.newSingleThreadScheduledExecutor();
 
 		onPreLoad();
 		loadHook();

@@ -1,7 +1,5 @@
 package com.bencodez.advancedcore.api.inventory;
 
-import java.util.concurrent.TimeUnit;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -79,13 +77,13 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 
 	@Override
 	public void load(Player p) {
-		getInv().getUpdatingTimer().scheduleAtFixedRate(new Runnable() {
+		getInv().addUpdatingButton(plugin, delay, updateInterval, new Runnable() {
 
 			@Override
 			public void run() {
 				checkUpdate(p);
 			}
-		}, delay, updateInterval, TimeUnit.MILLISECONDS);
+		});
 	}
 
 	public abstract ItemBuilder onUpdate(Player player);

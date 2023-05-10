@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
@@ -176,20 +176,25 @@ public class BInventory {
 
 	private ItemStack prevItem;
 
-	private ScheduledExecutorService timer;
+	@SuppressWarnings("rawtypes")
+	ArrayList<ScheduledFuture> futures;
 
+	@SuppressWarnings("rawtypes")
 	public void cancelTimer() {
-		if (timer != null) {
-			timer.shutdownNow();
-			timer = null;
+		if (futures != null) {
+			for (ScheduledFuture f : futures) {
+				f.cancel(true);
+			}
+			futures = null;
 		}
 	}
 
-	public ScheduledExecutorService getUpdatingTimer() {
-		if (timer == null) {
-			timer = Executors.newScheduledThreadPool(1);
+	@SuppressWarnings("rawtypes")
+	public void addUpdatingButton(AdvancedCorePlugin plugin, long delay, long interval, Runnable runnable) {
+		if (futures == null) {
+			futures = new ArrayList<ScheduledFuture>();
 		}
-		return timer;
+		futures.add(plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, delay, TimeUnit.MILLISECONDS));
 	}
 
 	/**
