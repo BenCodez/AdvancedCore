@@ -268,7 +268,7 @@ public class MySQL {
 
 			}
 
-			plugin.devDebug("MYSQL QUERY: " + ArrayUtils.getInstance().makeStringList(columns));
+			//plugin.devDebug("MYSQL QUERY COLUMNS: " + ArrayUtils.getInstance().makeStringList(columns));
 			rs.close();
 		} catch (Exception e) {
 			e.printStackTrace();
