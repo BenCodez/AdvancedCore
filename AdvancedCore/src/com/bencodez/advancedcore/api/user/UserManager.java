@@ -277,9 +277,13 @@ public class UserManager {
 	}
 
 	public HashMap<UUID, ArrayList<Column>> getAllKeys() {
-		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+		return getAllKeys(plugin.getStorageType());
+	}
+
+	public HashMap<UUID, ArrayList<Column>> getAllKeys(UserStorage storage) {
+		if (storage.equals(UserStorage.SQLITE)) {
 			return plugin.getSQLiteUserTable().getAllQuery();
-		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+		} else if (storage.equals(UserStorage.MYSQL)) {
 			return plugin.getMysql().getAllQuery();
 		} else {
 			HashMap<UUID, ArrayList<Column>> cols = new HashMap<UUID, ArrayList<Column>>();

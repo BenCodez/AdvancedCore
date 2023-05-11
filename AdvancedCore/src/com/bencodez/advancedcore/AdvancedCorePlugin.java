@@ -287,19 +287,19 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			getMysql().clearCacheBasic();
 		}
 
-		Queue<String> uuids = new LinkedList<String>(getUserManager().getAllUUIDs(from));
+		HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys(from);
+		Queue<Entry<UUID, ArrayList<Column>>> players = new LinkedList<Entry<UUID, ArrayList<Column>>>(cols.entrySet());
 
-		while (uuids.size() > 0) {
-			String uuid = uuids.poll();
-			AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
+		while (players.size() > 0) {
+			Entry<UUID, ArrayList<Column>> entry = players.poll();
+			AdvancedCoreUser user = getUserManager().getUser(entry.getKey(), false);
 			user.dontCache();
-			debug("Starting convert for " + user.getUUID());
 
-			user.getData().setValues(to, user.getData().getValues(from));
-			debug("Finished convert for " + user.getUUID() + ", " + uuids.size() + " more left to go!");
+			user.getData().setValues(to, user.getData().convert(entry.getValue()));
+			debug("Finished convert for " + user.getUUID() + ", " + players.size() + " more left to go!");
 
-			if (uuids.size() % 100 == 0) {
-				getLogger().info("Working on converting data, about " + uuids.size() + " left to go!");
+			if (players.size() % 50 == 0) {
+				getLogger().info("Working on converting data, about " + players.size() + " left to go!");
 			}
 		}
 		debug("Convert finished!");
