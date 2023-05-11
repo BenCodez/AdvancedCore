@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.time;
 
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -95,7 +96,15 @@ public class TimeChecker {
 	}
 
 	public LocalDateTime getTime() {
-		return LocalDateTime.now().plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet());
+		LocalDateTime localNow = LocalDateTime.now();
+		if (!plugin.getOptions().getTimeZone().isEmpty()) {
+			try {
+				localNow.atZone(ZoneId.of(plugin.getOptions().getTimeZone()));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return localNow.plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet());
 	}
 
 	public boolean hasDayChanged(boolean set) {

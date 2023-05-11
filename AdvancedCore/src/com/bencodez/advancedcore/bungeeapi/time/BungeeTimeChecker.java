@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.bungeeapi.time;
 
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -29,8 +30,12 @@ public abstract class BungeeTimeChecker {
 	@Getter
 	private int timeOffSet;
 
-	public BungeeTimeChecker(int timeOffSet) {
+	@Getter
+	private String timeZone;
+
+	public BungeeTimeChecker(String timeZone, int timeOffSet) {
 		this.timeOffSet = timeOffSet;
+		this.timeZone = timeZone;
 	}
 
 	public abstract void info(String text);
@@ -93,7 +98,15 @@ public abstract class BungeeTimeChecker {
 	}
 
 	public LocalDateTime getTime() {
-		return LocalDateTime.now().plusHours(timeOffSet);
+		LocalDateTime localNow = LocalDateTime.now();
+		if (!timeZone.isEmpty()) {
+			try {
+				localNow.atZone(ZoneId.of(timeZone));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return localNow.plusHours(timeOffSet);
 	}
 
 	public boolean hasDayChanged(boolean set) {

@@ -176,6 +176,10 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private String timeZone = "";
+
+	@Getter
+	@Setter
 	private boolean treatVanishAsOffline = true;
 
 	@Getter
@@ -239,6 +243,7 @@ public class AdvancedCoreConfigOptions {
 			storageType = UserStorage.value(configData.getString("DataStorage", "SQLITE"));
 
 			timeHourOffSet = configData.getInt("TimeHourOffSet", 0);
+			timeZone = configData.getString("TimeZone", "");
 
 			createBackups = configData.getBoolean("CreateBackups", false);
 
@@ -284,7 +289,7 @@ public class AdvancedCoreConfigOptions {
 			delayLoginEvent = configData.getInt("DelayLoginEvent", 0);
 
 			onlineMode = configData.getBoolean("OnlineMode", true);
-			closeGUIOnShiftClick  = configData.getBoolean("CloseGUIOnShiftClick", false);
+			closeGUIOnShiftClick = configData.getBoolean("CloseGUIOnShiftClick", false);
 		}
 	}
 }
