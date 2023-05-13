@@ -173,7 +173,7 @@
 		<dependency>
 			<groupId>net.milkbowl</groupId>
 			<artifactId>vault</artifactId>
-			<version>1.6</version>
+			<version>1.7.3</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
