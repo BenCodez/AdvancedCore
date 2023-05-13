@@ -347,11 +347,22 @@ public class UserManager {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	public ArrayList<Integer> getNumbersInColumn(String columnName) {
 		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
 			return plugin.getMysql().getNumbersInColumn(columnName);
 		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
 			return plugin.getSQLiteUserTable().getNumbersInColumn(columnName);
+		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
+			ArrayList<Integer> nums = new ArrayList<Integer>();
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				user.dontCache();
+				int num = user.getData().getInt(columnName, 0, true, true);
+				nums.add(num);
+
+			}
+			return nums;
 		}
 		return new ArrayList<Integer>();
 	}

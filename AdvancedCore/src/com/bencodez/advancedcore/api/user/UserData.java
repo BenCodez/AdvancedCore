@@ -570,9 +570,8 @@ public class UserData {
 		tempCache = getValues();
 	}
 	
-	public void updateCacheWithColumns(ArrayList<Column> cols) {
+	public void updateTempCacheWithColumns(ArrayList<Column> cols) {
 		tempCache = convert(cols);
-		updateCacheWithTemp();
 	}
 
 	public void updateCacheWithTemp() {

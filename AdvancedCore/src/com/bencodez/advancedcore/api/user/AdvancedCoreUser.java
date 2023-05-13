@@ -1101,9 +1101,9 @@ public class AdvancedCoreUser {
 		return this;
 	}
 
-	public void updateCacheWithColumns(ArrayList<Column> cols) {
+	public void updateTempCacheWithColumns(ArrayList<Column> cols) {
 		tempCache = true;
-		getUserData().updateCacheWithColumns(cols);
+		getUserData().updateTempCacheWithColumns(cols);
 	}
 
 	public void updateName(boolean force) {

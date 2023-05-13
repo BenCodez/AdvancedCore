@@ -1044,7 +1044,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 							AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
 							if (user != null) {
 								user.dontCache();
-								user.updateCacheWithColumns(playerData.getValue());
+								user.updateTempCacheWithColumns(playerData.getValue());
 								for (UserStartup start : userStartup) {
 									start.onStartUp(user);
 								}
