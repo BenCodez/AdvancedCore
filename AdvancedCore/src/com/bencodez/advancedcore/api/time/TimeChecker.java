@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.time;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -99,7 +100,8 @@ public class TimeChecker {
 		LocalDateTime localNow = LocalDateTime.now();
 		if (!plugin.getOptions().getTimeZone().isEmpty()) {
 			try {
-				localNow.atZone(ZoneId.of(plugin.getOptions().getTimeZone()));
+				ZonedDateTime zonedTime = localNow.atZone(ZoneId.of(plugin.getOptions().getTimeZone()));
+				localNow = zonedTime.toLocalDateTime();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

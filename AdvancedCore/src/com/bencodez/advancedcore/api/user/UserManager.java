@@ -234,20 +234,35 @@ public class UserManager {
 
 	public void purgeOldPlayersNow() {
 		if (plugin.getOptions().isPurgeOldData()) {
-			for (String uuid : getAllUUIDs()) {
-				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
-				int daysOld = plugin.getOptions().getPurgeMinimumDays();
-				int days = user.getNumberOfDaysSinceLogin();
-				if (days == -1) {
-					// fix ones with no last online
-					user.setLastOnline(System.currentTimeMillis());
+			HashMap<UUID, ArrayList<Column>> cols = getAllKeys();
+			for (Entry<UUID, ArrayList<Column>> playerData : cols.entrySet()) {
+				String uuid = playerData.getKey().toString();
+				if (plugin.isEnabled()) {
+					if (uuid != null) {
+						AdvancedCoreUser user = getUser(UUID.fromString(uuid), false);
+						if (user != null) {
+							user.dontCache();
+							user.updateTempCacheWithColumns(playerData.getValue());
+							int daysOld = plugin.getOptions().getPurgeMinimumDays();
+							int days = user.getNumberOfDaysSinceLogin();
+							if (days == -1) {
+								// fix ones with no last online
+								user.setLastOnline(System.currentTimeMillis());
+							}
+							if (days > daysOld) {
+								plugin.debug("Removing " + user.getUUID() + " because of purge");
+								user.remove();
+							}
+
+							user.clearTempCache();
+							cols.put(playerData.getKey(), null);
+							user = null;
+						}
+					}
 				}
-				if (days > daysOld) {
-					plugin.debug("Removing " + user.getUUID() + " because of purge");
-					user.remove();
-				}
-				user.clearCache();
 			}
+			cols.clear();
+			cols = null;
 		}
 		getDataManager().clearCache();
 	}
