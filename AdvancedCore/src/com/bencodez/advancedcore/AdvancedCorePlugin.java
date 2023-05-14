@@ -1049,11 +1049,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 									start.onStartUp(user);
 								}
 								user.clearTempCache();
+								cols.put(playerData.getKey(), null);
 								user = null;
 							}
 						}
 					}
 				}
+				cols.clear();
+				cols = null;
 				for (UserStartup start : userStartup) {
 					start.onFinish();
 				}
