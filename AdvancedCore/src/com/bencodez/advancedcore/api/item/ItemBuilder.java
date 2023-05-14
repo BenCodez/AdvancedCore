@@ -1066,13 +1066,14 @@ public class ItemBuilder {
 		if (conditional) {
 			return setConditional(new JavascriptEngine()).toItemStack();
 		}
-		if (checkLoreLength) {
-			checkLoreLength();
-		}
+
 		setName(StringParser.getInstance()
 				.replaceJavascript(StringParser.getInstance().replacePlaceHolder(getName(), placeholders)));
 		setLore(ArrayUtils.getInstance()
 				.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
+		if (checkLoreLength) {
+			checkLoreLength();
+		}
 		return is;
 	}
 
@@ -1087,10 +1088,11 @@ public class ItemBuilder {
 		if (conditional) {
 			return getConditionItemBuilder(player).toItemStack(player);
 		}
+		parsePlaceholders(player);
 		if (checkLoreLength) {
 			checkLoreLength();
 		}
-		return parsePlaceholders(player);
+		return is;
 	}
 
 	public ItemStack toItemStack(Player player) {
@@ -1100,10 +1102,11 @@ public class ItemBuilder {
 		if (conditional) {
 			return setConditional(new JavascriptEngine().addPlayer(player)).toItemStack(player);
 		}
+		parsePlaceholders(player);
 		if (checkLoreLength) {
 			checkLoreLength();
 		}
-		return parsePlaceholders(player);
+		return is;
 	}
 
 	@Override
