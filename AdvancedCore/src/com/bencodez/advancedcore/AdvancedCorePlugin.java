@@ -1027,6 +1027,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void userStartup() {
+		if (!loadUserData) {
+			debug("Not loading userdata");
+			return;
+		}
 		rewardHandler.startup();
 		Bukkit.getScheduler().runTaskLaterAsynchronously(this, new Runnable() {
 
