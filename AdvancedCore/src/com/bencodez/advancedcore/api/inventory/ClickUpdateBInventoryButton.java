@@ -1,5 +1,7 @@
 package com.bencodez.advancedcore.api.inventory;
 
+import java.util.concurrent.TimeUnit;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -39,6 +41,14 @@ public abstract class ClickUpdateBInventoryButton extends BInventoryButton {
 		this.delay = delay;
 	}
 
+	@Getter
+	private long mileseconds = 0;
+
+	public ClickUpdateBInventoryButton delay(long mileseconds) {
+		this.mileseconds = mileseconds;
+		return this;
+	}
+
 	public void update(Player p) {
 		if (!plugin.isLoadUserData() || plugin.getUserManager().getDataManager().isCached(p.getUniqueId())) {
 			final ItemStack item = onUpdate(p).toItemStack(p);
@@ -72,7 +82,17 @@ public abstract class ClickUpdateBInventoryButton extends BInventoryButton {
 	@Override
 	public void onClick(ClickEvent event, BInventory inv) {
 		super.onClick(event, inv);
-		update(event.getPlayer());
+		if (mileseconds > 0) {
+			plugin.getInventoryTimer().schedule(new Runnable() {
+
+				@Override
+				public void run() {
+					update(event.getPlayer());
+				}
+			}, mileseconds, TimeUnit.MILLISECONDS);
+		} else {
+			update(event.getPlayer());
+		}
 	}
 
 	public abstract ItemBuilder onUpdate(Player player);
