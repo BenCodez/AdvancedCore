@@ -13,32 +13,21 @@ import com.bencodez.advancedcore.api.item.ItemBuilder;
 import lombok.Getter;
 
 public abstract class ClickUpdateBInventoryButton extends BInventoryButton {
-	@Getter
-	private long delay;
-	@Getter
-	private long updateInterval;
 	private AdvancedCorePlugin plugin;
 
-	public ClickUpdateBInventoryButton(AdvancedCorePlugin plugin, ItemBuilder item, long delay, long updateInterval) {
+	public ClickUpdateBInventoryButton(AdvancedCorePlugin plugin, ItemBuilder item) {
 		super(item);
 		this.plugin = plugin;
-		this.updateInterval = updateInterval;
-		this.delay = delay;
 	}
 
-	public ClickUpdateBInventoryButton(AdvancedCorePlugin plugin, ItemStack item, long delay, long updateInterval) {
+	public ClickUpdateBInventoryButton(AdvancedCorePlugin plugin, ItemStack item) {
 		super(item);
 		this.plugin = plugin;
-		this.updateInterval = updateInterval;
-		this.delay = delay;
 	}
 
-	public ClickUpdateBInventoryButton(AdvancedCorePlugin plugin, String name, String[] lore, ItemStack item,
-			long delay, long updateInterval) {
+	public ClickUpdateBInventoryButton(AdvancedCorePlugin plugin, String name, String[] lore, ItemStack item) {
 		super(name, lore, item);
 		this.plugin = plugin;
-		this.updateInterval = updateInterval;
-		this.delay = delay;
 	}
 
 	@Getter

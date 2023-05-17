@@ -208,6 +208,16 @@ public class AdvancedCoreUser {
 		plugin.getUserManager().getDataManager().cacheUserIfNeeded(UUID.fromString(uuid));
 	}
 
+	public void cacheAsync() {
+		plugin.getServer().getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+			@Override
+			public void run() {
+				cache();
+			}
+		});
+	}
+
 	public void checkDelayedTimedRewards() {
 		plugin.debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
