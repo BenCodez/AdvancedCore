@@ -426,8 +426,16 @@ public class UserData {
 		setInt(user.getPlugin().getStorageType(), key, value, queue);
 	}
 
-	@SuppressWarnings("deprecation")
+	public void setInt(final String key, final int value, boolean queue, boolean async) {
+		setInt(user.getPlugin().getStorageType(), key, value, queue, async);
+	}
+
 	public void setInt(UserStorage storage, final String key, final int value, boolean queue) {
+		setInt(storage, key, value, queue, false);
+	}
+
+	@SuppressWarnings("deprecation")
+	public void setInt(final UserStorage storage, final String key, final int value, boolean queue, boolean async) {
 		if (key.equals("")) {
 			user.getPlugin().debug("No key: " + key + " to " + value);
 			return;
@@ -446,21 +454,48 @@ public class UserData {
 			}
 		}
 
-		// process change right away
-		if (storage.equals(UserStorage.SQLITE)) {
-			ArrayList<Column> columns = new ArrayList<Column>();
-			Column primary = new Column("uuid", new DataValueString(user.getUUID()));
-			Column column = new Column(key, new DataValueInt(value));
-			columns.add(primary);
-			columns.add(column);
-			user.getPlugin().getSQLiteUserTable().update(primary, columns);
-		} else if (storage.equals(UserStorage.MYSQL)) {
-			user.getPlugin().getMysql().update(user.getUUID(), key, new DataValueInt(value));
-		} else if (storage.equals(UserStorage.FLAT)) {
-			setData(user.getUUID(), key, value);
-		}
+		if (async) {
+			user.getPlugin().getTimer().execute(new Runnable() {
 
-		user.getPlugin().getUserManager().onChange(user, key);
+				@Override
+				public void run() {
+					if (storage.equals(UserStorage.SQLITE)) {
+						ArrayList<Column> columns = new ArrayList<Column>();
+						Column primary = new Column("uuid", new DataValueString(user.getUUID()));
+						Column column = new Column(key, new DataValueInt(value));
+						columns.add(primary);
+						columns.add(column);
+						user.getPlugin().getSQLiteUserTable().update(primary, columns);
+					} else if (storage.equals(UserStorage.MYSQL)) {
+						user.getPlugin().getMysql().update(user.getUUID(), key, new DataValueInt(value));
+					} else if (storage.equals(UserStorage.FLAT)) {
+						setData(user.getUUID(), key, value);
+					}
+
+					if (!user.isCached()) {
+						user.getPlugin().getUserManager().onChange(user, key);
+					}
+				}
+			});
+		} else {
+			// process change right away
+			if (storage.equals(UserStorage.SQLITE)) {
+				ArrayList<Column> columns = new ArrayList<Column>();
+				Column primary = new Column("uuid", new DataValueString(user.getUUID()));
+				Column column = new Column(key, new DataValueInt(value));
+				columns.add(primary);
+				columns.add(column);
+				user.getPlugin().getSQLiteUserTable().update(primary, columns);
+			} else if (storage.equals(UserStorage.MYSQL)) {
+				user.getPlugin().getMysql().update(user.getUUID(), key, new DataValueInt(value));
+			} else if (storage.equals(UserStorage.FLAT)) {
+				setData(user.getUUID(), key, value);
+			}
+
+			if (!user.isCached()) {
+				user.getPlugin().getUserManager().onChange(user, key);
+			}
+		}
 	}
 
 	public void setString(final String key, final String value) {
@@ -471,8 +506,17 @@ public class UserData {
 		setString(user.getPlugin().getStorageType(), key, value, queue);
 	}
 
-	@SuppressWarnings("deprecation")
+	public void setString(final String key, final String value, boolean queue, boolean async) {
+		setString(user.getPlugin().getStorageType(), key, value, queue, async);
+	}
+
 	public void setString(UserStorage storage, final String key, final String value, boolean queue) {
+		setString(storage, key, value, queue, false);
+	}
+
+	@SuppressWarnings("deprecation")
+	public void setString(final UserStorage storage, final String key, final String value, boolean queue,
+			boolean async) {
 		if (key.equals("") && value != null) {
 			user.getPlugin().debug("No key/value: " + key + " to " + value);
 			return;
@@ -491,20 +535,46 @@ public class UserData {
 			}
 		}
 
-		if (storage.equals(UserStorage.SQLITE)) {
-			ArrayList<Column> columns = new ArrayList<Column>();
-			Column primary = new Column("uuid", new DataValueString(user.getUUID()));
-			Column column = new Column(key, new DataValueString(value));
-			columns.add(primary);
-			columns.add(column);
-			user.getPlugin().getSQLiteUserTable().update(primary, columns);
-		} else if (storage.equals(UserStorage.MYSQL)) {
-			user.getPlugin().getMysql().update(user.getUUID(), key, new DataValueString(value));
-		} else if (storage.equals(UserStorage.FLAT)) {
-			setData(user.getUUID(), key, value);
+		if (async) {
+			user.getPlugin().getTimer().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					if (storage.equals(UserStorage.SQLITE)) {
+						ArrayList<Column> columns = new ArrayList<Column>();
+						Column primary = new Column("uuid", new DataValueString(user.getUUID()));
+						Column column = new Column(key, new DataValueString(value));
+						columns.add(primary);
+						columns.add(column);
+						user.getPlugin().getSQLiteUserTable().update(primary, columns);
+					} else if (storage.equals(UserStorage.MYSQL)) {
+						user.getPlugin().getMysql().update(user.getUUID(), key, new DataValueString(value));
+					} else if (storage.equals(UserStorage.FLAT)) {
+						setData(user.getUUID(), key, value);
+					}
+					if (!user.isCached()) {
+						user.getPlugin().getUserManager().onChange(user, key);
+					}
+				}
+			});
+		} else {
+			if (storage.equals(UserStorage.SQLITE)) {
+				ArrayList<Column> columns = new ArrayList<Column>();
+				Column primary = new Column("uuid", new DataValueString(user.getUUID()));
+				Column column = new Column(key, new DataValueString(value));
+				columns.add(primary);
+				columns.add(column);
+				user.getPlugin().getSQLiteUserTable().update(primary, columns);
+			} else if (storage.equals(UserStorage.MYSQL)) {
+				user.getPlugin().getMysql().update(user.getUUID(), key, new DataValueString(value));
+			} else if (storage.equals(UserStorage.FLAT)) {
+				setData(user.getUUID(), key, value);
+			}
+			if (!user.isCached()) {
+				user.getPlugin().getUserManager().onChange(user, key);
+			}
 		}
 
-		user.getPlugin().getUserManager().onChange(user, key);
 	}
 
 	public void setStringList(final String key, final ArrayList<String> value) {
@@ -569,7 +639,7 @@ public class UserData {
 	public void tempCache() {
 		tempCache = getValues();
 	}
-	
+
 	public void updateTempCacheWithColumns(ArrayList<Column> cols) {
 		tempCache = convert(cols);
 	}
