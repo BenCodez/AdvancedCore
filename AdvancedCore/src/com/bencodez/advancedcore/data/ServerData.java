@@ -1,8 +1,6 @@
 package com.bencodez.advancedcore.data;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.bukkit.plugin.Plugin;
 
@@ -16,11 +14,6 @@ import com.bencodez.advancedcore.api.yml.YMLFile;
 public class ServerData extends YMLFile {
 	public ServerData(AdvancedCorePlugin plugin) {
 		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
-	}
-
-	@SuppressWarnings("unchecked")
-	public List<String> getIntColumns() {
-		return (List<String>) getData().getList("IntColumns", new ArrayList<String>());
 	}
 
 	/**
@@ -84,11 +77,6 @@ public class ServerData extends YMLFile {
 
 	public void setIgnoreTime(boolean value) {
 		getData().set("IgnoreTime", value);
-		saveData();
-	}
-
-	public void setIntColumns(List<String> intColumns) {
-		getData().set("IntColumns", intColumns);
 		saveData();
 	}
 

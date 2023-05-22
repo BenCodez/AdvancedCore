@@ -20,8 +20,8 @@ import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
-import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValueBoolean;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
@@ -34,7 +34,7 @@ import lombok.Getter;
 public class MySQL {
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
 
-	private List<String> intColumns;
+	// private List<String> intColumns;
 
 	// private HashMap<String, ArrayList<Column>> table;
 
@@ -65,7 +65,6 @@ public class MySQL {
 
 	public MySQL(AdvancedCorePlugin plugin, String tableName, ConfigurationSection section) {
 		this.plugin = plugin;
-		intColumns = Collections.synchronizedList(plugin.getServerDataFile().getIntColumns());
 
 		MysqlConfigSpigot config = new MysqlConfigSpigot(section);
 
@@ -105,12 +104,6 @@ public class MySQL {
 		// add custom column types
 		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
 			sql += "`" + key.getKey() + "` " + key.getColumnType() + ", ";
-			if (key instanceof UserDataKeyInt) {
-				if (!intColumns.contains(key.getKey())) {
-					intColumns.add(key.getKey());
-					plugin.getServerDataFile().setIntColumns(intColumns);
-				}
-			}
 		}
 		sql += "PRIMARY KEY ( uuid ));";
 
@@ -155,10 +148,6 @@ public class MySQL {
 				query.executeUpdateAsync();
 			} catch (SQLException e) {
 				e.printStackTrace();
-			}
-			if (!intColumns.contains(column)) {
-				intColumns.add(column);
-				plugin.getServerDataFile().setIntColumns(intColumns);
 			}
 		}
 		Query query;
@@ -268,7 +257,8 @@ public class MySQL {
 
 			}
 
-			//plugin.devDebug("MYSQL QUERY COLUMNS: " + ArrayUtils.getInstance().makeStringList(columns));
+			// plugin.devDebug("MYSQL QUERY COLUMNS: " +
+			// ArrayUtils.getInstance().makeStringList(columns));
 			rs.close();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -294,7 +284,7 @@ public class MySQL {
 				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
 					String columnName = rs.getMetaData().getColumnLabel(i);
 					Column rCol = null;
-					if (intColumns.contains(columnName)) {
+					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
 						try {
 							rCol = new Column(columnName, DataType.INTEGER);
 							rCol.setValue(new DataValueInt(rs.getInt(i)));
@@ -311,6 +301,9 @@ public class MySQL {
 								rCol.setValue(new DataValueInt(0));
 							}
 						}
+					} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+						rCol = new Column(columnName, DataType.BOOLEAN);
+						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
 					} else {
 						rCol = new Column(columnName, DataType.STRING);
 						rCol.setValue(new DataValueString(rs.getString(i)));
@@ -348,7 +341,7 @@ public class MySQL {
 					String columnName = rs.getMetaData().getColumnLabel(i);
 					Column rCol = null;
 
-					if (intColumns.contains(columnName)) {
+					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
 						try {
 							rCol = new Column(columnName, DataType.INTEGER);
 							rCol.setValue(new DataValueInt(rs.getInt(i)));
@@ -365,6 +358,9 @@ public class MySQL {
 								rCol.setValue(new DataValueInt(0));
 							}
 						}
+					} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+						rCol = new Column(columnName, DataType.BOOLEAN);
+						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
 					} else {
 						rCol = new Column(columnName, DataType.STRING);
 						rCol.setValue(new DataValueString(rs.getString(i)));
@@ -614,10 +610,6 @@ public class MySQL {
 			plugin.debug("Failed to insert player " + index);
 		}
 
-	}
-
-	public boolean isIntColumn(String key) {
-		return intColumns.contains(key);
 	}
 
 	public boolean isUseBatchUpdates() {

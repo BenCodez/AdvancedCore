@@ -6,7 +6,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -25,7 +24,6 @@ import com.bencodez.advancedcore.api.user.userstorage.sql.db.SQLite;
 public class Table {
 
 	private List<Column> columns = new ArrayList<>();
-	private List<String> intColumns;
 	private String name;
 	private Object object = new Object();
 
@@ -83,12 +81,6 @@ public class Table {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			s.executeUpdate();
 			s.close();
-			if (column.getDataType().equals(DataType.INTEGER)) {
-				if (!intColumns.contains(column.getName())) {
-					intColumns.add(column.getName());
-					AdvancedCorePlugin.getInstance().getServerDataFile().setIntColumns(intColumns);
-				}
-			}
 			columns.add(column);
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -105,10 +97,6 @@ public class Table {
 			s.executeUpdate();
 			s.close();
 			if (column instanceof UserDataKeyInt) {
-				if (!intColumns.contains(column.getKey())) {
-					intColumns.add(column.getKey());
-					AdvancedCorePlugin.getInstance().getServerDataFile().setIntColumns(intColumns);
-				}
 				columns.add(new Column(column.getKey(), DataType.INTEGER));
 			} else {
 				columns.add(new Column(column.getKey(), DataType.STRING));
@@ -241,9 +229,12 @@ public class Table {
 					for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
 						String columnName = rs.getMetaData().getColumnLabel(i);
 						Column rCol = null;
-						if (intColumns.contains(columnName)) {
+						if (plugin.getUserManager().getDataManager().isInt(columnName)) {
 							rCol = new Column(columnName, DataType.INTEGER);
 							rCol.setValue(new DataValueInt(rs.getInt(i)));
+						} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+							rCol = new Column(columnName, DataType.BOOLEAN);
+							rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
 						} else {
 							rCol = new Column(columnName, DataType.STRING);
 							rCol.setValue(new DataValueString(rs.getString(i)));
@@ -286,18 +277,11 @@ public class Table {
 	}
 
 	public String getQuery() {
-		intColumns = Collections.synchronizedList(AdvancedCorePlugin.getInstance().getServerDataFile().getIntColumns());
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
 		sql += "uuid VARCHAR(37), ";
 		// add custom column types
 		for (UserDataKey key : AdvancedCorePlugin.getInstance().getUserManager().getDataManager().getKeys()) {
 			sql += key.getKey() + " " + key.getColumnType() + ", ";
-			if (key instanceof UserDataKeyInt) {
-				if (!intColumns.contains(key.getKey())) {
-					intColumns.add(key.getKey());
-					AdvancedCorePlugin.getInstance().getServerDataFile().setIntColumns(intColumns);
-				}
-			}
 		}
 		sql += "PRIMARY KEY ( uuid ));";
 		return sql;
@@ -418,7 +402,7 @@ public class Table {
 		}
 		return columns;
 	}
-	
+
 	public HashMap<UUID, ArrayList<Column>> getAllQuery() {
 		HashMap<UUID, ArrayList<Column>> result = new HashMap<UUID, ArrayList<Column>>();
 		String query = "SELECT * FROM " + getName() + ";";
@@ -434,7 +418,7 @@ public class Table {
 					String columnName = rs.getMetaData().getColumnLabel(i);
 					Column rCol = null;
 
-					if (intColumns.contains(columnName)) {
+					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
 						try {
 							rCol = new Column(columnName, DataType.INTEGER);
 							rCol.setValue(new DataValueInt(rs.getInt(i)));
@@ -451,6 +435,9 @@ public class Table {
 								rCol.setValue(new DataValueInt(0));
 							}
 						}
+					} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+						rCol = new Column(columnName, DataType.BOOLEAN);
+						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
 					} else {
 						rCol = new Column(columnName, DataType.STRING);
 						rCol.setValue(new DataValueString(rs.getString(i)));
