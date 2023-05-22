@@ -87,7 +87,6 @@ public abstract class BInventoryButton {
 
 	public String getLastRewardsPath(Player player) {
 		String test = builder.getRewardsPath(player);
-		AdvancedCorePlugin.getInstance().debug("Path: " + test);
 		return test;
 	}
 
