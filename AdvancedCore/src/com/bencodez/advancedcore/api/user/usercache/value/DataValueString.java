@@ -22,6 +22,9 @@ public class DataValueString implements DataValue {
 
 	@Override
 	public String getString() {
+		if (value == null) {
+			return "";
+		}
 		return value;
 	}
 
@@ -52,6 +55,9 @@ public class DataValueString implements DataValue {
 
 	@Override
 	public String toString() {
+		if (value == null) {
+			return "";
+		}
 		return value;
 	}
 }

@@ -50,6 +50,7 @@ public class UserDataCache {
 			AdvancedCoreUser user = getUser();
 			ArrayList<String> keys = user.getUserData().getKeys();
 			HashMap<String, DataValue> data = user.getUserData().getValues();
+			ArrayList<String> changedKeys = new ArrayList<String>();
 			for (UserDataKey dataKey : manager.getKeys()) {
 				String key = dataKey.getKey();
 				keys.remove(key);
@@ -57,12 +58,25 @@ public class UserDataCache {
 					DataValue dataValue = data.get(key);
 					manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for "
 							+ uuid.toString() + ", value: " + dataValue.toString());
+					// temp try/catch to prevent plugin failures
+					try {
+						if (cache.containsKey(key)) {
+							if (!cache.get(key).toString().equals(dataValue.toString())) {
+								changedKeys.add(key);
+							}
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 					cache.put(key, dataValue);
 				} else {
 					manager.getPlugin().devDebug("Loading default cache value for " + key + " for " + uuid.toString());
 					cache.put(key, dataKey.getDefault());
 				}
 
+			}
+			if (!changedKeys.isEmpty()) {
+				manager.getPlugin().getUserManager().onChange(user, ArrayUtils.getInstance().convert(changedKeys));
 			}
 			if (keys.size() > 0) {
 				manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.getInstance().makeStringList(keys));
