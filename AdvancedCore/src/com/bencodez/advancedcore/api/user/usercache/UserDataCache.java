@@ -91,6 +91,12 @@ public class UserDataCache {
 		}
 		cache.clear();
 	}
+	
+	public void clearChanges() {
+		if (hasChangesToProcess()) {
+			processChanges();
+		}
+	}
 
 	public void dump() {
 		if (hasChangesToProcess()) {
