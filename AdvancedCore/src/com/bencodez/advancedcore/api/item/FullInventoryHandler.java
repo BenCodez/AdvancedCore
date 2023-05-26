@@ -81,7 +81,7 @@ public class FullInventoryHandler {
 		}
 	}
 
-	public void giveItem(Player p, ItemStack item) {
+	public void giveItem(Player p, ItemStack... item) {
 		HashMap<Integer, ItemStack> excess = p.getInventory().addItem(item);
 		boolean full = false;
 		boolean dropItems = plugin.getOptions().isDropOnFullInv();

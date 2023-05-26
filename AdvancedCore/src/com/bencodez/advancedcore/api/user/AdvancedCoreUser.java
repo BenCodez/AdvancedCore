@@ -529,6 +529,27 @@ public class AdvancedCoreUser {
 		}
 
 	}
+	
+	public void giveItems(ItemStack... item) {
+		if (item == null) {
+			return;
+		}
+
+		final Player player = getPlayer();
+
+		if (plugin.isEnabled()) {
+			Bukkit.getScheduler().runTask(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					if (player != null) {
+						plugin.getFullInventoryHandler().giveItem(player, item);
+					}
+				}
+			});
+		}
+
+	}
 
 	public void giveItem(ItemStack itemStack, HashMap<String, String> placeholders) {
 		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack(getPlayer()));

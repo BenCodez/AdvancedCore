@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.misc;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -153,6 +154,20 @@ public class ArrayUtils {
 		String[] string = new String[list.size()];
 		for (int i = 0; i < list.size(); i++) {
 			string[i] = list.get(i);
+		}
+		return string;
+
+	}
+
+	public ItemStack[] convertItems(Collection<ItemStack> list) {
+		if (list == null) {
+			return null;
+		}
+		ItemStack[] string = new ItemStack[list.size()];
+		int i = 0;
+		for (ItemStack item : list) {
+			string[i] = item;
+			i++;
 		}
 		return string;
 

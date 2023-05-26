@@ -91,7 +91,7 @@ public class UserDataCache {
 		}
 		cache.clear();
 	}
-	
+
 	public void clearChanges() {
 		if (hasChangesToProcess()) {
 			processChanges();
@@ -124,6 +124,18 @@ public class UserDataCache {
 			return cache.containsKey(key);
 		}
 		return false;
+	}
+
+	public void processChangesAsync() {
+		if (uuid != null && cachedChanges.size() > 0) {
+			manager.getPlugin().getTimer().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					processChanges();
+				}
+			});
+		}
 	}
 
 	public void processChanges() {
