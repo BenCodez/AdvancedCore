@@ -1,7 +1,6 @@
 package com.bencodez.advancedcore.api.misc;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,6 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -159,15 +159,13 @@ public class ArrayUtils {
 
 	}
 
-	public ItemStack[] convertItems(Collection<ItemStack> list) {
+	public ItemStack[] convertItems(List<Item> list) {
 		if (list == null) {
 			return null;
 		}
 		ItemStack[] string = new ItemStack[list.size()];
-		int i = 0;
-		for (ItemStack item : list) {
-			string[i] = item;
-			i++;
+		for (int i = 0; i < list.size(); i++) {
+			string[i] = list.get(i).getItemStack();
 		}
 		return string;
 
