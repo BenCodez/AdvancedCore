@@ -25,6 +25,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -122,7 +123,7 @@ public class BInventory {
 		}
 
 		public void runSync(Runnable run) {
-			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), run);
+			BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), run);
 		}
 	}
 
@@ -328,7 +329,7 @@ public class BInventory {
 		if (Bukkit.isPrimaryThread()) {
 			p.closeInventory();
 
-			Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+			BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
@@ -337,13 +338,13 @@ public class BInventory {
 			});
 		} else {
 			closeUpdatingBInv();
-			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+			BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
 					p.closeInventory();
 				}
-			});
+			}, p);
 		}
 	}
 
@@ -493,13 +494,13 @@ public class BInventory {
 	}
 
 	private void openInv(Player player, Inventory inv) {
-		Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+		BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 			@Override
 			public void run() {
 				player.openInventory(inv);
 			}
-		});
+		}, player);
 	}
 
 	/**
@@ -507,6 +508,7 @@ public class BInventory {
 	 *
 	 * @param player the player
 	 */
+	@SuppressWarnings({ "deprecation" })
 	public void openInventory(Player player) {
 		if (player.isSleeping()) {
 			AdvancedCorePlugin.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
@@ -572,6 +574,7 @@ public class BInventory {
 	 * @param player the player
 	 * @param page   the page
 	 */
+	@SuppressWarnings("deprecation")
 	public void openInventory(Player player, int page) {
 		BInventory inventory = this;
 		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize,

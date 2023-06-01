@@ -1,6 +1,5 @@
 package com.bencodez.advancedcore.api.inventory;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event.Result;
@@ -13,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 public class BInventoryListener implements Listener {
 	private AdvancedCorePlugin plugin;
@@ -29,7 +29,7 @@ public class BInventoryListener implements Listener {
 
 		final Player player = (Player) event.getWhoClicked();
 
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+		BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -81,7 +81,7 @@ public class BInventoryListener implements Listener {
 
 			gui.setLastPressTime(cTime);
 
-			Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+			BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {

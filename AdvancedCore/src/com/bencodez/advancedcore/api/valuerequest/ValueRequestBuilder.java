@@ -2,7 +2,6 @@ package com.bencodez.advancedcore.api.valuerequest;
 
 import java.util.LinkedHashMap;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -11,6 +10,7 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
 import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
 import com.bencodez.advancedcore.api.valuerequest.listeners.NumberListener;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 public class ValueRequestBuilder {
 
@@ -35,7 +35,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, String value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+				BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -52,7 +52,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, boolean value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+				BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -68,7 +68,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, Number value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+				BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -85,7 +85,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, Number value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+				BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -102,7 +102,7 @@ public class ValueRequestBuilder {
 
 			@Override
 			public void onInput(Player player, String value) {
-				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+				BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {

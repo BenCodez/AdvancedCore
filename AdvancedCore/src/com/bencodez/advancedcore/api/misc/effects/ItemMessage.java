@@ -102,6 +102,7 @@ public class ItemMessage {
 			cleanup();
 		}
 
+		@SuppressWarnings("deprecation")
 		private ItemStack makeStack(Player player) {
 			ItemStack stack0 = player.getInventory().getItem(slot);
 			ItemStack stack;

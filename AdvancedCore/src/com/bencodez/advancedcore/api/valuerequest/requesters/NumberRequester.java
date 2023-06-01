@@ -3,7 +3,6 @@ package com.bencodez.advancedcore.api.valuerequest.requesters;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.conversations.Conversable;
 import org.bukkit.conversations.ConversationContext;
@@ -24,6 +23,7 @@ import com.bencodez.advancedcore.api.valuerequest.book.BookSign;
 import com.bencodez.advancedcore.api.valuerequest.listeners.NumberListener;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptManager;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -73,6 +73,7 @@ public class NumberRequester {
 				inv.addButton(inv.getNextSlot(),
 						new BInventoryButton(entry.getKey().toString(), new String[] {}, entry.getValue()) {
 
+							@SuppressWarnings("deprecation")
 							@Override
 							public void onClick(ClickEvent clickEvent) {
 								String num = clickEvent.getClickedItem().getItemMeta().getDisplayName();
@@ -130,7 +131,7 @@ public class NumberRequester {
 						String num = input;
 						try {
 							Number number = Double.valueOf(num);
-							Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
+							BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
 									new Runnable() {
 
 										@Override

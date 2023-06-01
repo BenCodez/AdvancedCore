@@ -34,6 +34,7 @@ import com.bencodez.advancedcore.command.gui.AdminGUI;
 import com.bencodez.advancedcore.command.gui.ChoiceGUI;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.advancedcore.command.gui.UserGUI;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 
@@ -84,7 +85,7 @@ public class CommandLoader {
 					user.dontCache();
 					users.add(user);
 
-					Bukkit.getScheduler().runTask(plugin, new Runnable() {
+					BukkitScheduler.runTask(plugin, new Runnable() {
 
 						@Override
 						public void run() {

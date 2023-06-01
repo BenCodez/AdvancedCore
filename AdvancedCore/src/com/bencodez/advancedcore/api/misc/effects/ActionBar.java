@@ -70,6 +70,7 @@ public class ActionBar {
 	 * @param player  the player
 	 * @param message the message
 	 */
+	@SuppressWarnings("deprecation")
 	public void sendActionBar(Player player, String message) {
 		if (!NMSManager.getInstance().isVersion("1.7", "1.8", "1.9", "1.10", "1.11", "1.12")) {
 			player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));

@@ -38,6 +38,7 @@ public class UpdateDownloader {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	public boolean download(Plugin plugin, int resourceId) {
 		try {
 			download(new URL("https://api.spiget.org/v2/resources/" + resourceId + "/download"),
@@ -60,6 +61,7 @@ public class UpdateDownloader {
 		rbc.close();
 	}
 
+	@SuppressWarnings("deprecation")
 	public void downloadFromJenkins(String site, String projectName) {
 		try {
 			download(

@@ -8,6 +8,7 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 /**
  * The Class WorldChangeEvent.
@@ -34,7 +35,7 @@ public class WorldChangeEvent implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorldChange(PlayerChangedWorldEvent event) {
 		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
-			plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+			BukkitScheduler.runTaskLaterAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {

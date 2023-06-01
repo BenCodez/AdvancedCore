@@ -2,13 +2,13 @@ package com.bencodez.advancedcore.api.inventory;
 
 import java.util.concurrent.TimeUnit;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 
@@ -60,7 +60,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 			final ItemStack item = onUpdate(p).toItemStack(p);
 			if (item != null) {
 				if (plugin.isEnabled()) {
-					Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+					BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 						@Override
 						public void run() {
@@ -82,7 +82,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 							}
 
 						}
-					});
+					}, p);
 				} else {
 					getInv().cancelTimer();
 				}
@@ -108,7 +108,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 			final ItemStack item = onUpdate(p).toItemStack(p);
 			if (item != null) {
 				if (plugin.isEnabled()) {
-					Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+					BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 						@Override
 						public void run() {
@@ -127,7 +127,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 							}
 
 						}
-					});
+					}, p);
 				}
 			}
 		}

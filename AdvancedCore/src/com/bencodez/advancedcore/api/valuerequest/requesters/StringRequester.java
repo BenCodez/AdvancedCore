@@ -3,7 +3,6 @@ package com.bencodez.advancedcore.api.valuerequest.requesters;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.conversations.Conversable;
 import org.bukkit.conversations.ConversationContext;
@@ -26,6 +25,7 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptManager;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu.InputReceiver;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -73,6 +73,7 @@ public class StringRequester {
 				inv.addButton(inv.getNextSlot(),
 						new BInventoryButton(entry.getKey(), new String[] {}, entry.getValue()) {
 
+							@SuppressWarnings("deprecation")
 							@Override
 							public void onClick(ClickEvent clickEvent) {
 								listener.onInput(clickEvent.getPlayer(),
@@ -124,7 +125,7 @@ public class StringRequester {
 
 					@Override
 					public void onInput(ConversationContext context, Conversable conversable, String input) {
-						Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+						BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 							@Override
 							public void run() {

@@ -10,6 +10,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 
@@ -22,7 +23,7 @@ public class Hologram {
 	public Hologram(Location loc, String name) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
@@ -40,7 +41,7 @@ public class Hologram {
 	public Hologram(Location loc, String name, boolean marker) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
@@ -57,7 +58,7 @@ public class Hologram {
 	public Hologram(Location loc, String name, boolean marker, boolean glowing) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
@@ -74,7 +75,7 @@ public class Hologram {
 	public Hologram(Location loc, String name, boolean marker, boolean glowing, NamespacedKey key, int value) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {
@@ -96,6 +97,7 @@ public class Hologram {
 		return armorStand != null;
 	}
 
+	@SuppressWarnings("deprecation")
 	private void createHologram(String name, boolean marker, boolean glowing) {
 		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
 		armorStand.setVisible(false);
@@ -112,6 +114,7 @@ public class Hologram {
 		armorStand.setInvulnerable(true);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void createHologram(String name, boolean marker, boolean glowing, NamespacedKey key, int value) {
 		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
 		armorStand.setVisible(false);
@@ -141,7 +144,7 @@ public class Hologram {
 
 	public void kill() {
 		if (!Bukkit.isPrimaryThread()) {
-			Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 				@Override
 				public void run() {

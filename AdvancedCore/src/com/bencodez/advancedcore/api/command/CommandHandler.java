@@ -17,6 +17,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -439,7 +440,7 @@ public abstract class CommandHandler {
 			}
 			String[] argsNew = args;
 
-			Bukkit.getServer().getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+			BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {

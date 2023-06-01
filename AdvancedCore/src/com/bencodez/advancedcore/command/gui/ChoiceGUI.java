@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -14,6 +13,7 @@ import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 /**
  * The Class UserGUI.
@@ -96,13 +96,13 @@ public class ChoiceGUI {
 					if (user.getUnClaimedChoices().size() > 0) {
 						openClaimChoices(clickEvent.getPlayer());
 					} else {
-						Bukkit.getScheduler().runTask(plugin, new Runnable() {
+						BukkitScheduler.runTask(plugin, new Runnable() {
 
 							@Override
 							public void run() {
 								clickEvent.getPlayer().closeInventory();
 							}
-						});
+						}, clickEvent.getWhoClicked());
 
 					}
 				}

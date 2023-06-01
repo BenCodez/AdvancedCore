@@ -100,6 +100,7 @@ public class Title {
 	 *
 	 * @param player the player
 	 */
+	@SuppressWarnings("deprecation")
 	public void clearTitle(Player player) {
 		player.sendTitle("", "", -1, -1, -1);
 	}
@@ -167,6 +168,7 @@ public class Title {
 		send(player, title, subtitle, fadeInTime, stayTime, fadeOutTime);
 	}
 
+	@SuppressWarnings("deprecation")
 	public void send(Player player, String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
 		player.sendTitle(StringParser.getInstance().colorize(title), StringParser.getInstance().colorize(subtitle),
 				fadeInTime, stayTime, fadeOutTime);
@@ -226,6 +228,7 @@ public class Title {
 		updateSubtitle(player, subtitle);
 	}
 
+	@SuppressWarnings("deprecation")
 	public void updateSubtitle(Player player, String subtitle) {
 		player.sendTitle("", StringParser.getInstance().colorize(subtitle), -1, -1, -1);
 	}
@@ -239,6 +242,7 @@ public class Title {
 		updateTimes(player, fadeInTime, stayTime, fadeOutTime);
 	}
 
+	@SuppressWarnings("deprecation")
 	public void updateTimes(Player player, int fadeInTime, int stayTime, int fadeOutTime) {
 		player.sendTitle("", "", fadeInTime, stayTime, fadeOutTime);
 	}
@@ -252,6 +256,7 @@ public class Title {
 		updateTitle(player, title);
 	}
 
+	@SuppressWarnings("deprecation")
 	public void updateTitle(Player player, String title) {
 		player.sendTitle(StringParser.getInstance().colorize(title), "", -1, -1, -1);
 	}

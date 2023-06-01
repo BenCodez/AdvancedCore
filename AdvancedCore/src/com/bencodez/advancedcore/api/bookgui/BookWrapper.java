@@ -3,12 +3,12 @@ package com.bencodez.advancedcore.api.bookgui;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -81,12 +81,12 @@ public class BookWrapper {
 	public void open(Player player) {
 		builder.add(currentPage.build());
 		book = BookUtil.writtenBook().author(player.getName()).title(colorize(title)).pages(builder).build();
-		Bukkit.getScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+		BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 			@Override
 			public void run() {
 				BookUtil.openPlayer(player, book);
 			}
-		});
+		}, player);
 	}
 }

@@ -82,6 +82,7 @@ import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInje
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -578,7 +579,7 @@ public class RewardHandler {
 		if (reward != null) {
 			// make sure reward is async to avoid issues
 			if (Bukkit.isPrimaryThread()) {
-				Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+				BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
 
 					@Override
 					public void run() {

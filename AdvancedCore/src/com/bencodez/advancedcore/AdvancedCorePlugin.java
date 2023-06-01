@@ -78,6 +78,7 @@ import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
 import com.bencodez.advancedcore.listeners.WorldChangeEvent;
 import com.bencodez.advancedcore.logger.Logger;
 import com.bencodez.advancedcore.nms.NMSManager;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 import com.bencodez.advancedcore.serverhandle.CraftBukkitHandle;
 import com.bencodez.advancedcore.serverhandle.IServerHandle;
 import com.bencodez.advancedcore.serverhandle.SpigotHandle;
@@ -214,7 +215,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void checkAutoUpdate() {
-		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
+		BukkitScheduler.runTaskAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -227,7 +228,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void checkCMI() {
-		Bukkit.getScheduler().runTaskAsynchronously(javaPlugin, new Runnable() {
+		BukkitScheduler.runTaskAsynchronously(javaPlugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -240,7 +241,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void checkPlaceHolderAPI() {
-		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
+		BukkitScheduler.runTaskAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -260,8 +261,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (!loadServerData) {
 			return;
 		}
-		Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
+		BukkitScheduler.runTaskAsynchronously(this, new Runnable() {
 
+			@SuppressWarnings("deprecation")
 			@Override
 			public void run() {
 				String version = getServerDataFile().getPluginVersion(javaPlugin);
@@ -813,7 +815,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void loadVault() {
-		Bukkit.getScheduler().runTaskLater(this, new Runnable() {
+		BukkitScheduler.runTaskLater(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -1032,7 +1034,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			return;
 		}
 		rewardHandler.startup();
-		Bukkit.getScheduler().runTaskLaterAsynchronously(this, new Runnable() {
+		BukkitScheduler.runTaskLaterAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {

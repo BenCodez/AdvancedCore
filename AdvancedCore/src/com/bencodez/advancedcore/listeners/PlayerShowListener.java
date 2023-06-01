@@ -7,6 +7,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import de.myzelyam.api.vanish.PlayerShowEvent;
 
@@ -31,7 +32,7 @@ public class PlayerShowListener implements Listener {
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void onJoin(PlayerShowEvent event) {
 		if (plugin != null && plugin.isEnabled()) {
-			Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+			BukkitScheduler.runTaskLaterAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {

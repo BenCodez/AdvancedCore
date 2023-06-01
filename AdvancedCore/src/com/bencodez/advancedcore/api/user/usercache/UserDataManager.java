@@ -16,6 +16,7 @@ import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyBoolean;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyString;
+import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 
@@ -56,7 +57,7 @@ public class UserDataManager {
 			}
 		}, 60 * 3, 60 * 60, TimeUnit.SECONDS);
 
-		plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
+		BukkitScheduler.runTaskTimerAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
