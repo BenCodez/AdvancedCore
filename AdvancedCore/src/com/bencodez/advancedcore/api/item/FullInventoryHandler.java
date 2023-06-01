@@ -28,8 +28,12 @@ public class FullInventoryHandler {
 	@Getter
 	private ScheduledExecutorService timer;
 
+	@Getter
+	private ConcurrentHashMap<UUID, Long> lastMessageTime;
+
 	public FullInventoryHandler(AdvancedCorePlugin plugin) {
 		items = new ConcurrentHashMap<UUID, ArrayList<ItemStack>>();
+		lastMessageTime = new ConcurrentHashMap<UUID, Long>();
 		this.plugin = plugin;
 		loadTimer();
 		startup();
@@ -61,6 +65,11 @@ public class FullInventoryHandler {
 		for (UUID entry : items.keySet()) {
 			Player p = Bukkit.getPlayer(entry);
 			check(p);
+			if (lastMessageTime.containsKey(entry)) {
+				if ((System.currentTimeMillis() - lastMessageTime.get(p.getUniqueId()).longValue()) > 5000) {
+					lastMessageTime.remove(entry);
+				}
+			}
 		}
 	}
 
@@ -85,6 +94,7 @@ public class FullInventoryHandler {
 		HashMap<Integer, ItemStack> excess = p.getInventory().addItem(item);
 		boolean full = false;
 		boolean dropItems = plugin.getOptions().isDropOnFullInv();
+
 		for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
 			full = true;
 			if (dropItems) {
@@ -94,14 +104,26 @@ public class FullInventoryHandler {
 			}
 		}
 		if (full) {
-			String msg = StringParser.getInstance()
-					.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
-			if (!msg.isEmpty()) {
-				p.sendMessage(msg);
+			if (lastMessageTime.containsKey(p.getUniqueId())) {
+				if ((System.currentTimeMillis() - lastMessageTime.get(p.getUniqueId()).longValue()) > 5000) {
+					sendMessage(p);
+				}
+			} else {
+				sendMessage(p);
 			}
+
 		}
 
 		p.updateInventory();
+	}
+
+	private void sendMessage(Player p) {
+		String msg = StringParser.getInstance()
+				.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
+		if (!msg.isEmpty()) {
+			p.sendMessage(msg);
+			lastMessageTime.put(p.getUniqueId(), System.currentTimeMillis());
+		}
 	}
 
 	public void loadTimer() {
