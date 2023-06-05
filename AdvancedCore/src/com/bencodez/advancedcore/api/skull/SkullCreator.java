@@ -59,7 +59,6 @@ public class SkullCreator {
 	 *
 	 * @param name The Player's name.
 	 * @return The head of the Player.
-	 * @deprecated names don't make for good identifiers.
 	 */
 	public static ItemStack itemFromName(String name) {
 		return itemWithName(createSkull(), name);
