@@ -73,7 +73,6 @@ public class Updater {
 	 * @param resourceId the resource id
 	 * @param disabled   the disabled
 	 */
-	@SuppressWarnings("deprecation")
 	public Updater(JavaPlugin plugin, Integer resourceId, boolean disabled) {
 		RESOURCE_ID = resourceId + "";
 		this.plugin = plugin;

@@ -463,7 +463,6 @@ public class ItemBuilder {
 	 * @param line The lore line to add.
 	 * @return ItemBuilder
 	 */
-	@SuppressWarnings("deprecation")
 	public ItemBuilder addLoreLine(String line) {
 		if (line != null) {
 			ItemMeta im = is.getItemMeta();
@@ -488,7 +487,6 @@ public class ItemBuilder {
 	 * @param pos  The index of where to put it.
 	 * @return ItemBuilder
 	 */
-	@SuppressWarnings("deprecation")
 	public ItemBuilder addLoreLine(String line, int pos) {
 		ItemMeta im = is.getItemMeta();
 		if (im != null) {
@@ -672,7 +670,6 @@ public class ItemBuilder {
 		return null;
 	}
 
-	@SuppressWarnings("deprecation")
 	public ArrayList<String> getLore() {
 		if (hasCustomLore()) {
 			List<String> lore = is.getItemMeta().getLore();
@@ -693,7 +690,6 @@ public class ItemBuilder {
 		return loreLength;
 	}
 
-	@SuppressWarnings("deprecation")
 	public String getName() {
 		if (hasCustomDisplayName()) {
 			return is.getItemMeta().getDisplayName();
@@ -791,7 +787,6 @@ public class ItemBuilder {
 	 * @param index The index of the lore line to remove.
 	 * @return ItemBuilder
 	 */
-	@SuppressWarnings("deprecation")
 	public ItemBuilder removeLoreLine(int index) {
 		ItemMeta im = is.getItemMeta();
 		List<String> lore = new ArrayList<>(im.getLore());
@@ -810,7 +805,6 @@ public class ItemBuilder {
 	 * @param line The lore to remove.
 	 * @return ItemBuilder
 	 */
-	@SuppressWarnings("deprecation")
 	public ItemBuilder removeLoreLine(String line) {
 		ItemMeta im = is.getItemMeta();
 		List<String> lore = new ArrayList<>(im.getLore());
@@ -955,7 +949,6 @@ public class ItemBuilder {
 	 *
 	 * @return ItemBuilder
 	 */
-	@SuppressWarnings("deprecation")
 	public ItemBuilder setLore(List<String> lore) {
 		List<String> list = new ArrayList<String>();
 		for (String str : lore) {
@@ -992,7 +985,6 @@ public class ItemBuilder {
 	 * @param name The name to change it to.
 	 * @return ItemBuilder
 	 */
-	@SuppressWarnings("deprecation")
 	public ItemBuilder setName(String name) {
 		ItemMeta im = is.getItemMeta();
 		if (im != null) {

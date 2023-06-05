@@ -354,7 +354,6 @@ public class AdvancedCoreUser {
 		return getUserData().getString("InputMethod", cacheData, waitForCache);
 	}
 
-	@SuppressWarnings("deprecation")
 	public long getLastOnline() {
 		String d = getData().getString("LastOnline", cacheData, waitForCache);
 		long time = 0;

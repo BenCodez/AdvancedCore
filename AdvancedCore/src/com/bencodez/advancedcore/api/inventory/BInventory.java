@@ -508,7 +508,7 @@ public class BInventory {
 	 *
 	 * @param player the player
 	 */
-	@SuppressWarnings({ "deprecation" })
+	@SuppressWarnings({ })
 	public void openInventory(Player player) {
 		if (player.isSleeping()) {
 			AdvancedCorePlugin.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
@@ -574,7 +574,6 @@ public class BInventory {
 	 * @param player the player
 	 * @param page   the page
 	 */
-	@SuppressWarnings("deprecation")
 	public void openInventory(Player player, int page) {
 		BInventory inventory = this;
 		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize,

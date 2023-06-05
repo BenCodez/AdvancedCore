@@ -73,7 +73,6 @@ public class NumberRequester {
 				inv.addButton(inv.getNextSlot(),
 						new BInventoryButton(entry.getKey().toString(), new String[] {}, entry.getValue()) {
 
-							@SuppressWarnings("deprecation")
 							@Override
 							public void onClick(ClickEvent clickEvent) {
 								String num = clickEvent.getClickedItem().getItemMeta().getDisplayName();

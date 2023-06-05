@@ -85,7 +85,6 @@ public class ServerData extends YMLFile {
 	 *
 	 * @param plugin the new plugin version
 	 */
-	@SuppressWarnings("deprecation")
 	public void setPluginVersion(Plugin plugin) {
 		getData().set("PluginVersions." + plugin.getName(), plugin.getDescription().getVersion());
 		saveData();

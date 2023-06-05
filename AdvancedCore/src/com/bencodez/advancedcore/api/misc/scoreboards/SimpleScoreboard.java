@@ -118,7 +118,6 @@ public class SimpleScoreboard {
 	 * @param text the text
 	 * @return the map. entry
 	 */
-	@SuppressWarnings("deprecation")
 	private Map.Entry<Team, String> createTeam(String text) {
 		String result = "";
 		if (text.length() <= 16) {

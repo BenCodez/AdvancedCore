@@ -97,7 +97,6 @@ public class Hologram {
 		return armorStand != null;
 	}
 
-	@SuppressWarnings("deprecation")
 	private void createHologram(String name, boolean marker, boolean glowing) {
 		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
 		armorStand.setVisible(false);
@@ -114,7 +113,6 @@ public class Hologram {
 		armorStand.setInvulnerable(true);
 	}
 
-	@SuppressWarnings("deprecation")
 	private void createHologram(String name, boolean marker, boolean glowing, NamespacedKey key, int value) {
 		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
 		armorStand.setVisible(false);

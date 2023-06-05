@@ -821,7 +821,6 @@ public class BStatsMetrics {
 		builder.appendField("coreCount", Runtime.getRuntime().availableProcessors());
 	}
 
-	@SuppressWarnings("deprecation")
 	private void appendServiceData(JsonObjectBuilder builder) {
 		builder.appendField("pluginVersion", plugin.getDescription().getVersion());
 	}

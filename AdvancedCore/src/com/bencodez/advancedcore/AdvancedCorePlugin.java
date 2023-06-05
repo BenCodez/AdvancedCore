@@ -263,7 +263,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 		BukkitScheduler.runTaskAsynchronously(this, new Runnable() {
 
-			@SuppressWarnings("deprecation")
 			@Override
 			public void run() {
 				String version = getServerDataFile().getPluginVersion(javaPlugin);

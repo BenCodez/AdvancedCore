@@ -54,7 +54,6 @@ public class BooleanRequester {
 			inv.addButton(inv.getNextSlot(),
 					new BInventoryButton("True", new String[] {}, new ItemStack(Material.REDSTONE_BLOCK)) {
 
-						@SuppressWarnings("deprecation")
 						@Override
 						public void onClick(ClickEvent clickEvent) {
 							listener.onInput(clickEvent.getPlayer(),
@@ -65,7 +64,6 @@ public class BooleanRequester {
 			inv.addButton(inv.getNextSlot(),
 					new BInventoryButton("False", new String[] {}, new ItemStack(Material.IRON_BLOCK)) {
 
-						@SuppressWarnings("deprecation")
 						@Override
 						public void onClick(ClickEvent clickEvent) {
 							listener.onInput(clickEvent.getPlayer(),

@@ -73,7 +73,6 @@ public class StringRequester {
 				inv.addButton(inv.getNextSlot(),
 						new BInventoryButton(entry.getKey(), new String[] {}, entry.getValue()) {
 
-							@SuppressWarnings("deprecation")
 							@Override
 							public void onClick(ClickEvent clickEvent) {
 								listener.onInput(clickEvent.getPlayer(),

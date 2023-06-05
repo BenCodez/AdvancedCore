@@ -217,6 +217,7 @@ public class PlayerUtils {
 	 * @param playerName the player name
 	 * @return the uuid
 	 */
+	@SuppressWarnings("deprecation")
 	public String getUUID(String playerName) {
 		if (playerName == null || playerName.isEmpty()) {
 			return null;

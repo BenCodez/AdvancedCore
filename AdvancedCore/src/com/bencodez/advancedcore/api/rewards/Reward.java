@@ -355,7 +355,6 @@ public class Reward {
 	 * @param phs           placeholders
 	 * @param rewardOptions rewardOptions
 	 */
-	@SuppressWarnings("deprecation")
 	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 
 		Player player = user.getPlayer();
