@@ -69,7 +69,7 @@ public class CommandLoader {
 
 	public ArrayList<CommandHandler> getBasicAdminCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
-		cmds.add(new CommandHandler(new String[] { "RunCMD", "All", "(List)" }, permPrefix + ".RunCMD.All",
+		cmds.add(new CommandHandler(plugin, new String[] { "RunCMD", "All", "(List)" }, permPrefix + ".RunCMD.All",
 				"Run command for every user, use %player% for player") {
 
 			@Override
@@ -98,7 +98,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "RunSQLQuery", "(List)" }, permPrefix + ".RunSQLQuery",
+		cmds.add(new CommandHandler(plugin, new String[] { "RunSQLQuery", "(List)" }, permPrefix + ".RunSQLQuery",
 				"Execute sql query", true, true) {
 
 			@Override
@@ -130,7 +130,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "UpdateMySQLColumnSizes" }, permPrefix + ".UpdateMySQLColumn",
+		cmds.add(new CommandHandler(plugin, new String[] { "UpdateMySQLColumnSizes" }, permPrefix + ".UpdateMySQLColumn",
 				"Update current mysql column sizes", true, true) {
 
 			@Override
@@ -147,7 +147,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "TotalNumberOfUsers" }, permPrefix + ".TotalNumberOfUsers",
+		cmds.add(new CommandHandler(plugin, new String[] { "TotalNumberOfUsers" }, permPrefix + ".TotalNumberOfUsers",
 				"Gets current number of users in VotingPlugin database", true, false) {
 
 			@Override
@@ -157,7 +157,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "GiveAll", "(reward)" }, permPrefix + ".GiveAll",
+		cmds.add(new CommandHandler(plugin, new String[] { "GiveAll", "(reward)" }, permPrefix + ".GiveAll",
 				"Give all users a reward") {
 
 			@Override
@@ -176,7 +176,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "GiveAllOnline", "(reward)" }, permPrefix + ".GiveAllOnline",
+		cmds.add(new CommandHandler(plugin, new String[] { "GiveAllOnline", "(reward)" }, permPrefix + ".GiveAllOnline",
 				"Give all users a reward") {
 
 			@Override
@@ -188,7 +188,7 @@ public class CommandLoader {
 				}
 			}
 		});
-		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Player)", "(Reward)" }, permPrefix + ".GiveReward",
+		cmds.add(new CommandHandler(plugin, new String[] { "GiveReward", "(Player)", "(Reward)" }, permPrefix + ".GiveReward",
 				"Give a player a reward file", true) {
 
 			@Override
@@ -200,7 +200,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ForceReward", "(Reward)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "ForceReward", "(Reward)" },
 				permPrefix + ".GiveReward", "Give a player a reward file", true) {
 
 			@Override
@@ -225,7 +225,7 @@ public class CommandLoader {
 				}
 			}
 		});
-		cmds.add(new CommandHandler(new String[] { "GiveReward", "(Player)", "(Reward)", "(Text)", "(Text)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "GiveReward", "(Player)", "(Reward)", "(Text)", "(Text)" },
 				permPrefix + ".GiveReward", "Give a player a reward file and set a placeholder", true) {
 
 			@Override
@@ -237,7 +237,7 @@ public class CommandLoader {
 				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]);
 			}
 		});
-		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report", "Create Report File") {
+		cmds.add(new CommandHandler(plugin, new String[] { "Report" }, permPrefix + ".Report", "Create Report File") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -245,7 +245,7 @@ public class CommandLoader {
 				sender.sendMessage("Created zip file");
 			}
 		});
-		cmds.add(new CommandHandler(new String[] { "ClearOfflineRewards" }, permPrefix + ".ClearOfflineRewards",
+		cmds.add(new CommandHandler(plugin, new String[] { "ClearOfflineRewards" }, permPrefix + ".ClearOfflineRewards",
 				"Clear offline rewards", true, true) {
 
 			@Override
@@ -257,7 +257,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "GUI" }, permPrefix + ".AdminGUI", "Open AdminGUI", false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "GUI" }, permPrefix + ".AdminGUI", "Open AdminGUI", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -265,7 +265,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Rewards" }, permPrefix + ".RewardEdit", "Open RewardGUI", false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "Rewards" }, permPrefix + ".RewardEdit", "Open RewardGUI", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -273,7 +273,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User" }, permPrefix + ".UserEdit", "Open UserGUI", false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "User" }, permPrefix + ".UserEdit", "Open UserGUI", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -281,7 +281,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)" }, permPrefix + ".UserEdit", "Open UserGUI",
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)" }, permPrefix + ".UserEdit", "Open UserGUI",
 				false) {
 
 			@Override
@@ -290,7 +290,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "RemoveTempPermissions" },
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "RemoveTempPermissions" },
 				permPrefix + ".RemoveTempPermission", "Remove temp permissions") {
 
 			@Override
@@ -301,7 +301,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "AddTempPermissions", "(Text)", "(Number)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "AddTempPermissions", "(Text)", "(Number)" },
 				permPrefix + ".AddTempPermission", "Add temp permission for number of seconds") {
 
 			@Override
@@ -312,7 +312,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "AddTempPermissions", "(Text)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "AddTempPermissions", "(Text)" },
 				permPrefix + ".AddTempPermission", "Add temp permission") {
 
 			@Override
@@ -323,7 +323,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Report" }, permPrefix + ".Report",
+		cmds.add(new CommandHandler(plugin, new String[] { "Report" }, permPrefix + ".Report",
 				"Create a zip file to send for debuging") {
 
 			@Override
@@ -333,7 +333,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "UserRemove", "(player)" }, permPrefix + ".UserRemove",
+		cmds.add(new CommandHandler(plugin, new String[] { "UserRemove", "(player)" }, permPrefix + ".UserRemove",
 				"Remove User") {
 
 			@Override
@@ -345,7 +345,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "UserUUIDRemove", "(uuid)" }, permPrefix + ".UserRemove",
+		cmds.add(new CommandHandler(plugin, new String[] { "UserUUIDRemove", "(uuid)" }, permPrefix + ".UserRemove",
 				"Remove User") {
 
 			@Override
@@ -357,7 +357,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "ClearCache" }, permPrefix + ".ClearCache", "Clear MySQL Cache") {
+		cmds.add(new CommandHandler(plugin, new String[] { "ClearCache" }, permPrefix + ".ClearCache", "Clear MySQL Cache") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -376,7 +376,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Purge" }, permPrefix + ".Purge", "Purge Data") {
+		cmds.add(new CommandHandler(plugin, new String[] { "Purge" }, permPrefix + ".Purge", "Purge Data") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -386,7 +386,7 @@ public class CommandLoader {
 		});
 
 		if (!plugin.getJenkinsSite().isEmpty()) {
-			cmds.add(new CommandHandler(new String[] { "DownloadJenkins" }, permPrefix + ".Download",
+			cmds.add(new CommandHandler(plugin, new String[] { "DownloadJenkins" }, permPrefix + ".Download",
 					"Download from jenkins. Please use at your own risk") {
 
 				@Override
@@ -404,7 +404,7 @@ public class CommandLoader {
 			});
 		}
 
-		cmds.add(new CommandHandler(new String[] { "ForceTimeChange", "(TimeType)" }, permPrefix + ".ForceTimeChange",
+		cmds.add(new CommandHandler(plugin, new String[] { "ForceTimeChange", "(TimeType)" }, permPrefix + ".ForceTimeChange",
 				"Force time change, use at your own risk!", true, true) {
 
 			@Override
@@ -420,7 +420,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
+		cmds.add(new CommandHandler(plugin, new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
 				"Execute javascript") {
 
 			@Override
@@ -435,7 +435,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "SetRequestMethod", "(RequestMethod)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "SetRequestMethod", "(RequestMethod)" },
 				permPrefix + ".SetRequestMethod", "SetRequestMethod", false) {
 
 			@Override
@@ -453,7 +453,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "SetRequestMethod" }, permPrefix + ".SetRequestMethod",
+		cmds.add(new CommandHandler(plugin, new String[] { "SetRequestMethod" }, permPrefix + ".SetRequestMethod",
 				"SetRequestMethod", false) {
 
 			@Override
@@ -476,7 +476,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "All", "SetData", "(text)", "(text)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "All", "SetData", "(text)", "(text)" },
 				permPrefix + ".SetAllData", "Set all users data") {
 
 			@Override
@@ -496,7 +496,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(player)", "SetData", "(text)", "(text)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(player)", "SetData", "(text)", "(text)" },
 				permPrefix + ".SetData", "Set user data") {
 
 			@Override
@@ -530,7 +530,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ViewData" }, permPrefix + ".ViewData",
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "ViewData" }, permPrefix + ".ViewData",
 				"View playerdata") {
 
 			@Override
@@ -542,7 +542,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ViewCache" }, permPrefix + ".ViewCache",
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "ViewCache" }, permPrefix + ".ViewCache",
 				"View playerdata") {
 
 			@Override
@@ -552,7 +552,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "ForceCache" }, permPrefix + ".ForceCache",
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "ForceCache" }, permPrefix + ".ForceCache",
 				"View playerdata") {
 
 			@Override
@@ -563,7 +563,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "User", "(Player)", "HasPermission", "(Text)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "HasPermission", "(Text)" },
 				permPrefix + ".HasPermission", "View playerdata") {
 
 			@Override
@@ -573,7 +573,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(
+		cmds.add(new CommandHandler(plugin, 
 				new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)", "(Player)" },
 				permPrefix + ".ChoicesSetPreferenceOther", "Let user pick his choice preferences", false) {
 
@@ -587,7 +587,7 @@ public class CommandLoader {
 		});
 
 		if (plugin.isLoadUserData()) {
-			cmds.add(new CommandHandler(new String[] { "ConvertToData", "(UserStorage)" },
+			cmds.add(new CommandHandler(plugin, new String[] { "ConvertToData", "(UserStorage)" },
 					permPrefix + ".Commands.AdminVote.ConvertToData",
 					"Convert user storage from current storage type the one specificed", true, true) {
 
@@ -600,7 +600,7 @@ public class CommandLoader {
 				}
 			});
 
-			cmds.add(new CommandHandler(new String[] { "ConvertFromData", "(UserStorage)" },
+			cmds.add(new CommandHandler(plugin, new String[] { "ConvertFromData", "(UserStorage)" },
 					permPrefix + ".Commands.AdminVote.ConvertFromData",
 					"Convert user storage from current storage type from the one specificed", true, true) {
 
@@ -624,7 +624,7 @@ public class CommandLoader {
 	public ArrayList<CommandHandler> getBasicCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
 
-		cmds.add(new CommandHandler(new String[] { "Choices" }, permPrefix + ".Choices",
+		cmds.add(new CommandHandler(plugin, new String[] { "Choices" }, permPrefix + ".Choices",
 				"Let user select his choice reward", false) {
 
 			@Override
@@ -633,7 +633,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Choices", "SetPreference", "(ChoiceReward)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "Choices", "SetPreference", "(ChoiceReward)" },
 				permPrefix + ".ChoicesPreference", "Let user pick his choice preferences", false) {
 
 			@Override
@@ -642,7 +642,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)" },
+		cmds.add(new CommandHandler(plugin, new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)" },
 				permPrefix + ".ChoicesPreference", "Let user pick his choice preferences", false) {
 
 			@Override
@@ -663,7 +663,7 @@ public class CommandLoader {
 
 	public void loadValueRequestCommands() {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
-		cmds.add(new CommandHandler(new String[] { "String", "(String)" }, "", "Command to Input value", false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "String", "(String)" }, "", "Command to Input value", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -682,7 +682,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(new String[] { "Number", "(Number)" }, "", "Command to Input value", false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "Number", "(Number)" }, "", "Command to Input value", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -702,7 +702,7 @@ public class CommandLoader {
 			}
 		}.ignoreNumberCheck());
 
-		cmds.add(new CommandHandler(new String[] { "Boolean", "(Boolean)" }, "", "Command to Input value", false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "Boolean", "(Boolean)" }, "", "Command to Input value", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {

@@ -55,25 +55,76 @@ public abstract class CommandHandler {
 	@Setter
 	private String helpMessage;
 
+	@Getter
 	private boolean ignoreNumberCheck = false;
 
 	@Getter
 	@Setter
 	private String perm;
 
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+	@Getter
+	private AdvancedCorePlugin plugin;
 
+	@Deprecated
 	public CommandHandler() {
+		this.plugin = AdvancedCorePlugin.getInstance();
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
+	}
+
+	@Deprecated
+	public CommandHandler(String[] args, String perm) {
+		this.plugin = AdvancedCorePlugin.getInstance();
+		this.args = args;
+		this.perm = perm;
+		helpMessage = "Unknown Help Message";
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
+
+	}
+
+	@Deprecated
+	public CommandHandler(String[] args, String perm, String helpMessage) {
+		this.plugin = AdvancedCorePlugin.getInstance();
+		this.args = args;
+		this.perm = perm;
+		this.helpMessage = helpMessage;
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
+	}
+
+	@Deprecated
+	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole) {
+		this.plugin = AdvancedCorePlugin.getInstance();
+		this.args = args;
+		this.perm = perm;
+		this.helpMessage = helpMessage;
+		this.allowConsole = allowConsole;
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
+	}
+
+	@Deprecated
+	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole, boolean forceConsole) {
+		this.plugin = AdvancedCorePlugin.getInstance();
+		this.args = args;
+		this.perm = perm;
+		this.helpMessage = helpMessage;
+		this.allowConsole = allowConsole;
+		this.forceConsole = forceConsole;
+		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
+	}
+
+	public CommandHandler(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
 	}
 
 	/**
 	 * Instantiates a new command handler.
 	 *
+	 * @param plugin main pluginclass
 	 * @param args the args
 	 * @param perm the perm
 	 */
-	public CommandHandler(String[] args, String perm) {
+	public CommandHandler(AdvancedCorePlugin plugin, String[] args, String perm) {
+		this.plugin = plugin;
 		this.args = args;
 		this.perm = perm;
 		helpMessage = "Unknown Help Message";
@@ -84,11 +135,13 @@ public abstract class CommandHandler {
 	/**
 	 * Instantiates a new command handler.
 	 *
+	 * @param plugin main pluginclass
 	 * @param args        the args
 	 * @param perm        the perm
 	 * @param helpMessage the help message
 	 */
-	public CommandHandler(String[] args, String perm, String helpMessage) {
+	public CommandHandler(AdvancedCorePlugin plugin, String[] args, String perm, String helpMessage) {
+		this.plugin = plugin;
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
@@ -98,12 +151,15 @@ public abstract class CommandHandler {
 	/**
 	 * Instantiates a new command handler.
 	 *
+	 * @param plugin main pluginclass
 	 * @param args         the args
 	 * @param perm         the perm
 	 * @param helpMessage  the help message
 	 * @param allowConsole the allow console
 	 */
-	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole) {
+	public CommandHandler(AdvancedCorePlugin plugin, String[] args, String perm, String helpMessage,
+			boolean allowConsole) {
+		this.plugin = plugin;
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
@@ -111,7 +167,19 @@ public abstract class CommandHandler {
 		allowMultiplePermissions = plugin.getOptions().isMultiplePermissionChecks();
 	}
 
-	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole, boolean forceConsole) {
+	/**
+	 * Instantiates a new command handler.
+	 *
+	 * @param plugin main pluginclass
+	 * @param args         the args
+	 * @param perm         the perm
+	 * @param helpMessage  the help message
+	 * @param allowConsole the allow console
+	 * @param forceConsole Option to force console only command
+	 */
+	public CommandHandler(AdvancedCorePlugin plugin, String[] args, String perm, String helpMessage,
+			boolean allowConsole, boolean forceConsole) {
+		this.plugin = plugin;
 		this.args = args;
 		this.perm = perm;
 		this.helpMessage = helpMessage;
