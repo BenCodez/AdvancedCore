@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.backup.ZipCreator;
 import com.bencodez.advancedcore.api.command.CommandHandler;
+import com.bencodez.advancedcore.api.command.PlayerCommandHandler;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
@@ -130,8 +131,8 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "UpdateMySQLColumnSizes" }, permPrefix + ".UpdateMySQLColumn",
-				"Update current mysql column sizes", true, true) {
+		cmds.add(new CommandHandler(plugin, new String[] { "UpdateMySQLColumnSizes" },
+				permPrefix + ".UpdateMySQLColumn", "Update current mysql column sizes", true, true) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -188,8 +189,8 @@ public class CommandLoader {
 				}
 			}
 		});
-		cmds.add(new CommandHandler(plugin, new String[] { "GiveReward", "(Player)", "(Reward)" }, permPrefix + ".GiveReward",
-				"Give a player a reward file", true) {
+		cmds.add(new CommandHandler(plugin, new String[] { "GiveReward", "(Player)", "(Reward)" },
+				permPrefix + ".GiveReward", "Give a player a reward file", true) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -200,29 +201,30 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "ForceReward", "(Reward)" },
+		cmds.add(new PlayerCommandHandler(plugin, new String[] { "User", "(Player)", "ForceReward", "(Reward)" },
 				permPrefix + ".GiveReward", "Give a player a reward file", true) {
 
 			@Override
-			public void execute(CommandSender sender, String[] args) {
-				if (args[1].equalsIgnoreCase("all")) {
-					Reward reward = plugin.getRewardHandler().getReward(args[3]);
-					ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
-					for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-						AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-						user.dontCache();
-						users.add(user);
-					}
-					for (AdvancedCoreUser user : users) {
-						new RewardBuilder(reward).send(user);
-					}
-					sendMessage(sender, "&cGave all players reward file " + args[3]);
-				} else {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-					plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
+			public void executeSinglePlayer(CommandSender sender, String[] args) {
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+				plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
 
-					sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
+				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
+			}
+
+			@Override
+			public void executeAll(CommandSender sender, String[] args) {
+				Reward reward = plugin.getRewardHandler().getReward(args[3]);
+				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
+				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+					user.dontCache();
+					users.add(user);
 				}
+				for (AdvancedCoreUser user : users) {
+					new RewardBuilder(reward).send(user);
+				}
+				sendMessage(sender, "&cGave all players reward file " + args[3]);
 			}
 		});
 		cmds.add(new CommandHandler(plugin, new String[] { "GiveReward", "(Player)", "(Reward)", "(Text)", "(Text)" },
@@ -265,7 +267,8 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "Rewards" }, permPrefix + ".RewardEdit", "Open RewardGUI", false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "Rewards" }, permPrefix + ".RewardEdit", "Open RewardGUI",
+				false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -281,8 +284,8 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)" }, permPrefix + ".UserEdit", "Open UserGUI",
-				false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)" }, permPrefix + ".UserEdit",
+				"Open UserGUI", false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -301,7 +304,8 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "AddTempPermissions", "(Text)", "(Number)" },
+		cmds.add(new CommandHandler(plugin,
+				new String[] { "User", "(Player)", "AddTempPermissions", "(Text)", "(Number)" },
 				permPrefix + ".AddTempPermission", "Add temp permission for number of seconds") {
 
 			@Override
@@ -357,7 +361,8 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "ClearCache" }, permPrefix + ".ClearCache", "Clear MySQL Cache") {
+		cmds.add(new CommandHandler(plugin, new String[] { "ClearCache" }, permPrefix + ".ClearCache",
+				"Clear MySQL Cache") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -404,8 +409,8 @@ public class CommandLoader {
 			});
 		}
 
-		cmds.add(new CommandHandler(plugin, new String[] { "ForceTimeChange", "(TimeType)" }, permPrefix + ".ForceTimeChange",
-				"Force time change, use at your own risk!", true, true) {
+		cmds.add(new CommandHandler(plugin, new String[] { "ForceTimeChange", "(TimeType)" },
+				permPrefix + ".ForceTimeChange", "Force time change, use at your own risk!", true, true) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -496,36 +501,36 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "User", "(player)", "SetData", "(text)", "(text)" },
+		cmds.add(new PlayerCommandHandler(plugin, new String[] { "User", "(player)", "SetData", "(text)", "(text)" },
 				permPrefix + ".SetData", "Set user data") {
 
 			@Override
-			public void execute(CommandSender sender, String[] args) {
-				String name = args[1];
-				if (name.equalsIgnoreCase("all")) {
-					if (sender.hasPermission(permPrefix + ".SetAllData")) {
-						String data = args[4];
-						if (data.equalsIgnoreCase("\"\"")) {
-							data = "";
-						}
-						for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-							AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-							user.dontCache();
-							user.getData().setString(args[3], data);
+			public void executeSinglePlayer(CommandSender sender, String[] args) {
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+				String data = args[4];
+				if (data.equalsIgnoreCase("\"\"")) {
+					data = "";
+				}
+				user.getData().setString(args[3], data);
+				sender.sendMessage(
+						StringParser.getInstance().colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
+			}
 
-						}
-						sender.sendMessage(
-								StringParser.getInstance().colorize("&cSet all users " + args[3] + " to " + args[4]));
-					}
-				} else {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+			@Override
+			public void executeAll(CommandSender sender, String[] args) {
+				if (sender.hasPermission(permPrefix + ".SetAllData")) {
 					String data = args[4];
 					if (data.equalsIgnoreCase("\"\"")) {
 						data = "";
 					}
-					user.getData().setString(args[3], data);
-					sender.sendMessage(StringParser.getInstance()
-							.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
+					for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+						AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+						user.dontCache();
+						user.getData().setString(args[3], data);
+
+					}
+					sender.sendMessage(
+							StringParser.getInstance().colorize("&cSet all users " + args[3] + " to " + args[4]));
 				}
 			}
 		});
@@ -552,8 +557,8 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "ForceCache" }, permPrefix + ".ForceCache",
-				"View playerdata") {
+		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "ForceCache" },
+				permPrefix + ".ForceCache", "View playerdata") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
@@ -573,7 +578,7 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, 
+		cmds.add(new CommandHandler(plugin,
 				new String[] { "Choices", "SetPreference", "(ChoiceReward)", "(String)", "(Player)" },
 				permPrefix + ".ChoicesSetPreferenceOther", "Let user pick his choice preferences", false) {
 
@@ -663,46 +668,49 @@ public class CommandLoader {
 
 	public void loadValueRequestCommands() {
 		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
-		cmds.add(new CommandHandler(plugin, new String[] { "String", "(String)" }, "", "Command to Input value", false) {
+		cmds.add(
+				new CommandHandler(plugin, new String[] { "String", "(String)" }, "", "Command to Input value", false) {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				Player player = (Player) sender;
-				try {
-					StringListener listener = (StringListener) PlayerUtils.getInstance().getPlayerMeta(player,
-							"ValueRequestString");
-					if (args[1].equals("CustomValue")) {
-						new ValueRequest().requestString(player, listener);
-					} else {
-						listener.onInput(player, args[1]);
+					@Override
+					public void execute(CommandSender sender, String[] args) {
+						Player player = (Player) sender;
+						try {
+							StringListener listener = (StringListener) PlayerUtils.getInstance().getPlayerMeta(player,
+									"ValueRequestString");
+							if (args[1].equals("CustomValue")) {
+								new ValueRequest().requestString(player, listener);
+							} else {
+								listener.onInput(player, args[1]);
+							}
+						} catch (Exception ex) {
+							player.sendMessage("No where to input value or error occured");
+						}
 					}
-				} catch (Exception ex) {
-					player.sendMessage("No where to input value or error occured");
-				}
-			}
-		});
+				});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "Number", "(Number)" }, "", "Command to Input value", false) {
+		cmds.add(
+				new CommandHandler(plugin, new String[] { "Number", "(Number)" }, "", "Command to Input value", false) {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				Player player = (Player) sender;
-				try {
-					NumberListener listener = (NumberListener) PlayerUtils.getInstance().getPlayerMeta(player,
-							"ValueRequestNumber");
-					if (args[1].equals("CustomValue")) {
-						new ValueRequest().requestNumber(player, listener);
-					} else {
-						Number number = Double.valueOf(args[1]);
-						listener.onInput(player, number);
+					@Override
+					public void execute(CommandSender sender, String[] args) {
+						Player player = (Player) sender;
+						try {
+							NumberListener listener = (NumberListener) PlayerUtils.getInstance().getPlayerMeta(player,
+									"ValueRequestNumber");
+							if (args[1].equals("CustomValue")) {
+								new ValueRequest().requestNumber(player, listener);
+							} else {
+								Number number = Double.valueOf(args[1]);
+								listener.onInput(player, number);
+							}
+						} catch (Exception ex) {
+							player.sendMessage("No where to input value or error occured");
+						}
 					}
-				} catch (Exception ex) {
-					player.sendMessage("No where to input value or error occured");
-				}
-			}
-		}.ignoreNumberCheck());
+				}.ignoreNumberCheck());
 
-		cmds.add(new CommandHandler(plugin, new String[] { "Boolean", "(Boolean)" }, "", "Command to Input value", false) {
+		cmds.add(new CommandHandler(plugin, new String[] { "Boolean", "(Boolean)" }, "", "Command to Input value",
+				false) {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
