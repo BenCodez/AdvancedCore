@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -16,12 +17,15 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 
@@ -577,6 +581,32 @@ public class PlayerUtils {
 		}
 
 		return axis[Math.round(yaw / 90f) & 0x3].getOppositeFace();
+	}
+
+	public boolean damageItemInHand(Player player, int damage) {
+		ItemStack itemInHand = player.getInventory().getItemInMainHand();
+		ItemMeta meta = itemInHand.getItemMeta();
+		if (meta instanceof Damageable) {
+			Damageable dMeta = (Damageable) meta;
+			int level = itemInHand.getEnchantmentLevel(Enchantment.DURABILITY);
+			int chance = (100 / (level + 1));
+			int addedDamage = 0;
+			for (int i = 0; i < damage; i++) {
+				if (chance == 100 || ThreadLocalRandom.current().nextInt(100) < chance) {
+					addedDamage++;
+				}
+			}
+			if (addedDamage > 0) {
+				dMeta.setDamage(dMeta.getDamage() + addedDamage);
+				itemInHand.setItemMeta(dMeta);
+				if (dMeta.getDamage() > (int) (itemInHand.getType().getMaxDurability())) {
+					player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+					return false;
+				}
+			}
+			return true;
+		}
+		return false;
 	}
 
 }
