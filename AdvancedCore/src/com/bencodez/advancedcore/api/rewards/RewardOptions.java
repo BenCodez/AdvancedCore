@@ -40,7 +40,23 @@ public class RewardOptions {
 
 	private String suffix = "";
 
+	@Getter
+	private boolean useDefaultWorlds = true;
+
+	public RewardOptions disableDefaultWorlds() {
+		useDefaultWorlds = false;
+		return this;
+	}
+
+	@Getter
+	private long orginalTrigger = -1;
+
 	public RewardOptions() {
+	}
+
+	public RewardOptions orginalTrigger(long trigger) {
+		orginalTrigger = trigger;
+		return this;
 	}
 
 	public RewardOptions addPlaceholder(String arg1, String arg2) {

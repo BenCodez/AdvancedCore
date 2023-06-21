@@ -670,7 +670,16 @@ public class RewardHandler {
 			@Override
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, int num,
 					RewardOptions rewardOptions) {
-				if (rewardOptions.getPlaceholders().containsKey("ExecDate") && num > 0) {
+				if (rewardOptions.getOrginalTrigger() > 0) {
+					long execDate = rewardOptions.getOrginalTrigger();
+					debug("OrgTrigger: " + execDate + ", plus time: " + (execDate + num * 60 * 1000)
+							+ ", current time: " + System.currentTimeMillis());
+					if (execDate + num * 60 * 1000 > System.currentTimeMillis()) {
+						return true;
+					} else {
+						return false;
+					}
+				} else if (rewardOptions.getPlaceholders().containsKey("ExecDate") && num > 0) {
 					long execDate = Long.parseLong(rewardOptions.getPlaceholders().get("ExecDate"));
 					debug("ExecDate: " + execDate + ", plus time: " + (execDate + num * 60 * 1000) + ", current time: "
 							+ System.currentTimeMillis());
@@ -717,8 +726,8 @@ public class RewardHandler {
 					perm = !perm;
 				}
 				if (!perm) {
-					plugin.debug(user.getPlayerName() + " does not have permission " + str
-							+ " to get reward " + reward.getName() + ", reverse: " + reverse);
+					plugin.debug(user.getPlayerName() + " does not have permission " + str + " to get reward "
+							+ reward.getName() + ", reverse: " + reverse);
 					return false;
 				}
 				return true;
@@ -806,7 +815,22 @@ public class RewardHandler {
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> worlds,
 					RewardOptions rewardOptions) {
 				if (worlds.isEmpty()) {
-					return true;
+					if (plugin.getOptions().getDefaultRewardWorlds().isEmpty() || !rewardOptions.isUseDefaultWorlds()) {
+						return true;
+					} else {
+						Player player = user.getPlayer();
+						if (player == null) {
+							return false;
+						}
+						reward.checkRewardFile();
+						String world = player.getWorld().getName();
+						if (plugin.getOptions().getDefaultRewardWorlds().contains(world)) {
+							return true;
+						}
+
+						user.setCheckWorld(true);
+						return false;
+					}
 				}
 
 				Player player = user.getPlayer();
@@ -839,6 +863,67 @@ public class RewardHandler {
 					@SuppressWarnings("unchecked")
 					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
 						ArrayList<String> list = (ArrayList<String>) data.getList("Worlds", null);
+						if (list != null) {
+							if (list.isEmpty()) {
+								warning(reward, inject, "No worlds were listed");
+							}
+						}
+					}
+				}));
+
+		injectedRequirements.add(new RequirementInjectStringList("BlackListedWorlds", new ArrayList<String>()) {
+
+			@Override
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> worlds,
+					RewardOptions rewardOptions) {
+				if (worlds.isEmpty()) {
+					if (plugin.getOptions().getDefaultRewardBlackListedWorlds().isEmpty()
+							|| !rewardOptions.isUseDefaultWorlds()) {
+						return true;
+					} else {
+						Player player = user.getPlayer();
+						if (player == null) {
+							return false;
+						}
+						reward.checkRewardFile();
+						String world = player.getWorld().getName();
+						if (plugin.getOptions().getDefaultRewardBlackListedWorlds().contains(world)) {
+							user.setCheckWorld(true);
+							return false;
+						}
+						return true;
+					}
+				}
+
+				Player player = user.getPlayer();
+				if (player == null) {
+					return false;
+				}
+				reward.checkRewardFile();
+				String world = player.getWorld().getName();
+				if (worlds.contains(world)) {
+					user.setCheckWorld(true);
+					return false;
+				}
+
+				return true;
+			}
+		}.priority(100).allowReattempt().alwaysForce().addEditButton(
+				new EditGUIButton(new ItemBuilder("END_PORTAL_FRAME"), new EditGUIValueList("BlackListedWorlds", null) {
+
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
+					}
+				}.addLore("Worlds to never execute the reward in"))).validator(new RequirementInjectValidator() {
+
+					@Override
+					@SuppressWarnings("unchecked")
+					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+						ArrayList<String> list = (ArrayList<String>) data.getList("BlackListedWorlds", null);
 						if (list != null) {
 							if (list.isEmpty()) {
 								warning(reward, inject, "No worlds were listed");

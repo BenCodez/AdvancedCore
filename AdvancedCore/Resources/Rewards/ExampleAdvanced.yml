@@ -222,6 +222,12 @@ Worlds:
 - 'world1'
 - 'world2'
 
+# Reward will never execute in the worlds below
+# Similar to Worlds, but in reverse
+BlackListedWorlds:
+- 'world3'
+- 'world4'
+
 # Reward type
 # Possible Values: ONLINE,OFFLINE,BOTH
 # Default: BOTH

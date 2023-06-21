@@ -200,7 +200,15 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	private boolean closeGUIOnShiftClick = false;;
+	private boolean closeGUIOnShiftClick = false;
+
+	@Getter
+	@Setter
+	private ArrayList<String> defaultRewardWorlds = new ArrayList<String>();
+
+	@Getter
+	@Setter
+	private ArrayList<String> defaultRewardBlackListedWorlds = new ArrayList<String>();
 
 	public AdvancedCoreConfigOptions() {
 	}
@@ -290,6 +298,12 @@ public class AdvancedCoreConfigOptions {
 
 			onlineMode = configData.getBoolean("OnlineMode", true);
 			closeGUIOnShiftClick = configData.getBoolean("CloseGUIOnShiftClick", false);
+
+			defaultRewardWorlds = (ArrayList<String>) configData.getList("DefaultRewardWorlds",
+					new ArrayList<String>());
+
+			defaultRewardBlackListedWorlds = (ArrayList<String>) configData.getList("DefaultRewardBlackListedWorlds",
+					new ArrayList<String>());
 		}
 	}
 }
