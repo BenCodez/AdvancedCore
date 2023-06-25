@@ -15,4 +15,6 @@ public @interface ConfigDataInt {
 	String path();
 
 	String secondPath() default "";
+	
+	String[] possibleValues() default "";
 }

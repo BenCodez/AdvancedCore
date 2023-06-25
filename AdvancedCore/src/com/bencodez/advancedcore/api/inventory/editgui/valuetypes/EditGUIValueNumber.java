@@ -31,6 +31,11 @@ public abstract class EditGUIValueNumber extends EditGUIValue {
 				.currentValue(getCurrentValue().toString()).allowCustomOption(true).usingMethod(getInputMethod())
 				.request(clickEvent.getPlayer());
 	}
+	
+	@Override
+	public String getType() {
+		return "number";
+	}
 
 	public abstract void setValue(Player player, Number num);
 }

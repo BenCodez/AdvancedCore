@@ -45,6 +45,14 @@ public abstract class EditGUIValue {
 		lores.add(lore);
 		return this;
 	}
+	
+	public EditGUIValue addLore(ArrayList<String> lore) {
+		if (lores == null) {
+			lores = new ArrayList<String>();
+		}
+		lores.addAll(lore);
+		return this;
+	}
 
 	public EditGUIValue addOptions(String... str) {
 		for (String s : str) {
@@ -63,4 +71,6 @@ public abstract class EditGUIValue {
 	}
 
 	public abstract void onClick(ClickEvent event);
+	
+	public abstract String getType();
 }

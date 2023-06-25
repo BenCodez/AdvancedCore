@@ -3,7 +3,6 @@ package com.bencodez.advancedcore.api.inventory.editgui.valuetypes;
 import java.util.ArrayList;
 
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
-import com.bencodez.advancedcore.api.rewards.RewardEditData;
 
 public abstract class EditGUIValueInventory extends EditGUIValue {
 	private ArrayList<String> keys = new ArrayList<String>();
@@ -20,18 +19,13 @@ public abstract class EditGUIValueInventory extends EditGUIValue {
 	}
 
 	@Override
-	public boolean containsKey(RewardEditData rewardEditData) {
-		for (String key : keys) {
-			if (rewardEditData.hasPath(key)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	@Override
 	public void onClick(ClickEvent clickEvent) {
 		openInventory(clickEvent);
+	}
+	
+	@Override
+	public String getType() {
+		return "unkown";
 	}
 
 	public abstract void openInventory(ClickEvent clickEvent);

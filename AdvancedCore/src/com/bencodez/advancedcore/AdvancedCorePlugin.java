@@ -805,7 +805,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 			bukkitCommandMap.setAccessible(true);
 			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
-
 			commandMap.register(this.getName() + "valuerequestinput",
 					new ValueRequestInputCommand(this, this.getName() + "valuerequestinput"));
 		} catch (Exception e) {

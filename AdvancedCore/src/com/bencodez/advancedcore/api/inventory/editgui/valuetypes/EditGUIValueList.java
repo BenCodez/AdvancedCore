@@ -71,6 +71,11 @@ public abstract class EditGUIValueList extends EditGUIValue {
 		});
 		inv.openInventory(clickEvent.getPlayer());
 	}
+	
+	@Override
+	public String getType() {
+		return "list";
+	}
 
 	public abstract void setValue(Player player, ArrayList<String> value);
 }

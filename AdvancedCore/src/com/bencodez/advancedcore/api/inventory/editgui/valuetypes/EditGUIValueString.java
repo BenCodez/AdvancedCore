@@ -29,6 +29,11 @@ public abstract class EditGUIValueString extends EditGUIValue {
 		}, ArrayUtils.getInstance().convert(getOptions())).currentValue(getCurrentValue().toString())
 				.allowCustomOption(true).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
+	
+	@Override
+	public String getType() {
+		return "string";
+	}
 
 	public abstract void setValue(Player player, String value);
 }

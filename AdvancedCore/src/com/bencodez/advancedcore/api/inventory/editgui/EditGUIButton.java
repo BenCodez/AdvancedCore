@@ -56,7 +56,7 @@ public class EditGUIButton extends BInventoryButton {
 			builder.setLore("&cClick to open");
 		} else if (!(getEditor() instanceof EditGUIValueList)) {
 			if (!builder.hasCustomDisplayName()) {
-				builder.setName("&cSet " + getEditor().getKey());
+				builder.setName("&cSet " + getEditor().getType() + " for " + getEditor().getKey());
 			}
 			builder.setLore("&cCurrent value: " + getEditor().getCurrentValue());
 		} else {

@@ -27,6 +27,11 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 			}
 		}).currentValue(getCurrentValue().toString()).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
+	
+	@Override
+	public String getType() {
+		return "boolean";
+	}
 
 	public abstract void setValue(Player player, boolean value);
 
