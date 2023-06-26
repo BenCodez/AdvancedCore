@@ -295,7 +295,7 @@
 				<dependency>
 					<groupId>com.bencodez</groupId>
 					<artifactId>Scheduler-Java17</artifactId>
-					<version>LATEST</version>
+					<version>1.0</version>
 					<scope>compile</scope>
 				</dependency>
 			</dependencies>
