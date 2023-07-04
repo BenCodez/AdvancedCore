@@ -67,6 +67,7 @@ import com.bencodez.advancedcore.api.user.userstorage.sql.Database;
 import com.bencodez.advancedcore.api.user.userstorage.sql.Table;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu;
+import com.bencodez.advancedcore.api.yml.YMLConfig;
 import com.bencodez.advancedcore.bungeeapi.pluginmessage.PluginMessage;
 import com.bencodez.advancedcore.command.CommandLoader;
 import com.bencodez.advancedcore.command.executor.ValueRequestInputCommand;
@@ -742,7 +743,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			table.addCustomColumns();
 		} else if (storageType.equals(UserStorage.MYSQL)) {
 			setMysql(new MySQL(javaPlugin, javaPlugin.getName() + "_Users",
-					getOptions().getConfigData().getConfigurationSection("MySQL")));
+					getOptions().getYmlConfig().getData().getConfigurationSection("MySQL")));
 		} else if (storageType.equals(UserStorage.FLAT)) {
 			getLogger().severe("Detected using FLAT storage, this will be removed in the future!");
 		}
@@ -966,8 +967,29 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	/**
 	 * @param configData the configData to set
 	 */
+	@Deprecated
 	public void setConfigData(ConfigurationSection configData) {
-		getOptions().setConfigData(configData);
+		getOptions().setYmlConfig(new YMLConfig(this, configData) {
+
+			@Override
+			public void setValue(String path, Object value) {
+
+			}
+
+			@Override
+			public void saveData() {
+
+			}
+
+			@Override
+			public void createSection(String key) {
+
+			}
+		});
+	}
+
+	public void setConfigData(YMLConfig ymlConfig) {
+		getOptions().setYmlConfig(ymlConfig);
 	}
 
 	public boolean isMySQLOkay() {

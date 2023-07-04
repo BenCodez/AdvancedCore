@@ -15,5 +15,4 @@ public @interface ConfigDataBoolean {
 	String path();
 
 	String secondPath() default "";
-
 }

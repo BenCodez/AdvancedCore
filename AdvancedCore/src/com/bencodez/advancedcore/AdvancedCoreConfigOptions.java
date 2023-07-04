@@ -6,6 +6,14 @@ import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.yml.YMLConfig;
+import com.bencodez.advancedcore.api.yml.annotation.AnnotationHandler;
+import com.bencodez.advancedcore.api.yml.annotation.ConfigDataBoolean;
+import com.bencodez.advancedcore.api.yml.annotation.ConfigDataConfigurationSection;
+import com.bencodez.advancedcore.api.yml.annotation.ConfigDataDouble;
+import com.bencodez.advancedcore.api.yml.annotation.ConfigDataInt;
+import com.bencodez.advancedcore.api.yml.annotation.ConfigDataListString;
+import com.bencodez.advancedcore.api.yml.annotation.ConfigDataString;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -14,23 +22,43 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	private YMLConfig ymlConfig;
+
+	@Getter
+	@Setter
+	@ConfigDataBoolean(path = "AutoDownload")
 	private boolean autoDownload = false;
 
 	@Getter
 	@Setter
+	@ConfigDataDouble(path = "ClickSound.Pitch")
 	private double clickSoundPitch = 1;
 	@Getter
 	@Setter
-	private Sound clickSoundSound = Sound.UI_BUTTON_CLICK;
+	@ConfigDataString(path = "ClickSound.Sound")
+	private String clickSoundSoundStr = Sound.UI_BUTTON_CLICK.toString();
+
+	public Sound getClickSoundSound() {
+		try {
+			return Sound.valueOf(getClickSoundSoundStr());
+		} catch (Exception e) {
+			e.printStackTrace();
+			return Sound.UI_BUTTON_CLICK;
+		}
+	}
+
 	@Getter
 	@Setter
+	@ConfigDataDouble(path = "ClickSound.Volume")
 	private double clickSoundVolume = 1;
+
 	@Getter
 	@Setter
-	private ConfigurationSection configData;
-	@Getter
-	@Setter
+	@ConfigDataBoolean(path = "CreateBackups")
 	private boolean createBackups = true;
+
+	@ConfigDataString(path = "DebugLevel")
+	private String debugLevelStr = "NONE";
 
 	@Getter
 	@Setter
@@ -38,88 +66,105 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "DebugInGame")
 	private boolean debugIngame = false;
 
 	@Getter
 	@Setter
+	@ConfigDataString(path = "RequestAPI.DefaultMethod")
 	private String defaultRequestMethod = "ANVIL";
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "DisableCheckOnWorldChange")
 	private boolean disableCheckOnWorldChange = false;
 
 	@Getter
 	@Setter
+	@ConfigDataListString(path = "RequestAPI.DisabledMethods")
 	private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "DropOnFullInv")
 	private boolean dropOnFullInv = true;
 
 	@Getter
 	@Setter
-	private boolean enableJenkins;
+	@ConfigDataBoolean(path = "JenkinsDownloadEnabled")
+	private boolean enableJenkins = false;
 
 	@Getter
 	@Setter
-	@Deprecated
-	private boolean extraDebug = false;
-
-	@Getter
-	@Setter
+	@ConfigDataString(path = "Format.ChoiceRewards.PreferenceSet")
 	private String formatChoiceRewardsPreferenceSet = "&aPreference set to %choice%";
 
 	@Getter
 	@Setter
-	private String formatInvFull;
+	@ConfigDataString(path = "Format.InvFull")
+	private String formatInvFull = "&cInventory full";
 
 	@Getter
 	@Setter
+	@ConfigDataString(path = "Format.NoPerms")
 	private String formatNoPerms = "&cYou do not have enough permission!";
 
 	@Getter
 	@Setter
+	@ConfigDataString(path = "Format.NotNumber")
 	private String formatNotNumber = "&cError on &6%arg%&c, number expected!";
 
 	@Getter
-	private String formatRewardTimeFormat;
+	@Setter
+	@ConfigDataString(path = "Format.RewardTimeFormat")
+	private String formatRewardTimeFormat = "EEE, d MMM yyyy HH:mm";
 
 	@Getter
 	@Setter
+	@ConfigDataString(path = "GeyserPrefix")
 	private String geyserPrefix = "*";
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "GeyserPrefixSupport")
 	private boolean geyserPrefixSupport = false;
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "OnlineMode")
 	private boolean onlineMode = true;
 
 	@Getter
 	@Setter
+	@ConfigDataString(path = "Format.HelpLine")
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "")
 	private boolean loadDefaultRewards = true;
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "LoadSkulls")
 	private boolean loadSkulls = true;
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "LogDebugToFile")
 	private boolean logDebugToFile = false;
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "")
 	private boolean multiplePermissionChecks = false;
 
 	@Getter
 	@Setter
+	@ConfigDataInt(path = "")
 	private int newLoreLength = 30;
 
 	@Getter
 	@Setter
+	@ConfigDataConfigurationSection(path = "Format.NextItem")
 	private ConfigurationSection nextItem;
 
 	@Getter
@@ -132,18 +177,22 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataConfigurationSection(path = "Format.PrevItem")
 	private ConfigurationSection prevItem;
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "ProcessRewards")
 	private boolean processRewards = true;
 
 	@Getter
 	@Setter
+	@ConfigDataInt(path = "PurgeMin")
 	private int purgeMinimumDays = 90;
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "PurgeOldData")
 	private boolean purgeOldData = false;
 
 	@Getter
@@ -152,19 +201,26 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "SendScoreboards")
 	private boolean sendScoreboards = true;
 
 	@Setter
 	@Getter
+	@ConfigDataString(path = "Server")
 	private String server = "";
 
 	@Getter
 	@Setter
+	@ConfigDataString(path = "SpamClickMessage")
 	private String spamClickMessage = "";
 
 	@Setter
 	@Getter
+	@ConfigDataInt(path = "SpamClickTime")
 	private int spamClickTime = 250;
+
+	@ConfigDataString(path = "DataStorage")
+	private String userStorageString = "SQLITE";
 
 	@Getter
 	@Setter
@@ -172,138 +228,62 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataInt(path = "TimeHourOffSet")
 	private int timeHourOffSet = 0;
 
 	@Getter
 	@Setter
+	@ConfigDataString(path = "TimeZone")
 	private String timeZone = "";
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "TreatVanishAsOffline")
 	private boolean treatVanishAsOffline = true;
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "UseVaultPermissions")
 	private boolean useVaultPermissions = false;
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "WaitUntilLoggedIn")
 	private boolean waitUntilLoggedIn;
 
 	@Getter
 	@Setter
+	@ConfigDataInt(path = "DelayLoginEvent")
 	private int delayLoginEvent = 0;
 
 	@Getter
 	@Setter
+	@ConfigDataListString(path = "BroadcastBlacklist")
 	private ArrayList<String> broadcastBlacklist = new ArrayList<String>();
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "CloseGUIOnShiftClick")
 	private boolean closeGUIOnShiftClick = false;
 
 	@Getter
 	@Setter
+	@ConfigDataListString(path = "DefaultRewardWorlds")
 	private ArrayList<String> defaultRewardWorlds = new ArrayList<String>();
 
 	@Getter
 	@Setter
+	@ConfigDataListString(path = "DefaultRewardBlackListedWorlds")
 	private ArrayList<String> defaultRewardBlackListedWorlds = new ArrayList<String>();
 
 	public AdvancedCoreConfigOptions() {
 	}
 
-	@SuppressWarnings("unchecked")
 	public void load(AdvancedCorePlugin plugin) {
-		if (getConfigData() != null) {
-			debug = DebugLevel.getDebug(configData.getString("DebugLevel", "NONE"));
-			if (debug.equals(DebugLevel.NONE)) {
-				if (configData.getBoolean("Debug", false)) {
-					if (configData.getBoolean("ExtraDebug", false)) {
-						debug = DebugLevel.EXTRA;
-					} else {
-						debug = DebugLevel.INFO;
-					}
-				}
-			}
-			debugIngame = configData.getBoolean("DebugInGame", false);
-			defaultRequestMethod = configData.getString("RequestAPI.DefaultMethod", "Anvil");
-			disabledRequestMethods = (ArrayList<String>) configData.getList("RequestAPI.DisabledMethods",
-					new ArrayList<String>());
-
-			formatNoPerms = configData.getString("Format.NoPerms", "&cYou do not have enough permission!");
-			formatNotNumber = configData.getString("Format.NotNumber", "&cError on &6%arg%&c, number expected!");
-			formatInvFull = configData.getString("Format.InvFull", "&cInventory full");
-			formatChoiceRewardsPreferenceSet = configData.getString("Format.ChoiceRewards.PreferenceSet",
-					"&aPreference set to %choice%");
-
-			helpLine = configData.getString("Format.HelpLine", "&6%Command% - &6%HelpMessage%");
-			logDebugToFile = configData.getBoolean("LogDebugToFile", false);
-			sendScoreboards = configData.getBoolean("SendScoreboards", true);
-			prevItem = configData.getConfigurationSection("Format.PrevItem");
-			nextItem = configData.getConfigurationSection("Format.NextItem");
-			formatRewardTimeFormat = configData.getString("Format.RewardTimeFormat", "EEE, d MMM yyyy HH:mm");
-			purgeOldData = configData.getBoolean("PurgeOldData");
-			purgeMinimumDays = configData.getInt("PurgeMin", 90);
-			disableCheckOnWorldChange = configData.getBoolean("DisableCheckOnWorldChange");
-			autoDownload = configData.getBoolean("AutoDownload", false);
-			extraDebug = configData.getBoolean("ExtraDebug", false);
-			storageType = UserStorage.value(configData.getString("DataStorage", "SQLITE"));
-
-			timeHourOffSet = configData.getInt("TimeHourOffSet", 0);
-			timeZone = configData.getString("TimeZone", "");
-
-			createBackups = configData.getBoolean("CreateBackups", false);
-
-			enableJenkins = configData.getBoolean("JenkinsDownloadEnabled", true);
-			processRewards = configData.getBoolean("ProcessRewards", true);
-
-			waitUntilLoggedIn = configData.getBoolean("WaitUntilLoggedIn", true);
-			broadcastBlacklist = (ArrayList<String>) configData.getList("BroadcastBlacklist", new ArrayList<String>());
-
-			loadSkulls = configData.getBoolean("LoadSkulls", true);
-
-			ConfigurationSection soundData = configData.getConfigurationSection("ClickSound");
-			if (soundData != null) {
-				try {
-					String str = configData.getString("Sound", "UI_BUTTON_CLICK");
-					if (str.equalsIgnoreCase("none")) {
-						clickSoundSound = null;
-					} else {
-						clickSoundVolume = configData.getDouble("Volume", 1);
-						clickSoundPitch = configData.getDouble("Pitch", 1);
-					}
-					clickSoundSound = Sound.valueOf(str);
-				} catch (Exception e) {
-					e.printStackTrace();
-					clickSoundSound = Sound.UI_BUTTON_CLICK;
-				}
-			}
-
-			useVaultPermissions = configData.getBoolean("UseVaultPermissions", false);
-			server = configData.getString("Server", "");
-
-			newLoreLength = configData.getInt("NewLoreLength", 30);
-
-			spamClickTime = configData.getInt("SpamClickTime", 100);
-
-			spamClickMessage = configData.getString("SpamClickMessage", "");
-			dropOnFullInv = configData.getBoolean("DropOnFullInv", true);
-			multiplePermissionChecks = configData.getBoolean("MultiplePermissionsCheck", false);
-			treatVanishAsOffline = configData.getBoolean("TreatVanishAsOffline", false);
-
-			geyserPrefixSupport = configData.getBoolean("GeyserPrefixSupport", false);
-			geyserPrefix = configData.getString("GeyserPrefix", "*");
-			delayLoginEvent = configData.getInt("DelayLoginEvent", 0);
-
-			onlineMode = configData.getBoolean("OnlineMode", true);
-			closeGUIOnShiftClick = configData.getBoolean("CloseGUIOnShiftClick", false);
-
-			defaultRewardWorlds = (ArrayList<String>) configData.getList("DefaultRewardWorlds",
-					new ArrayList<String>());
-
-			defaultRewardBlackListedWorlds = (ArrayList<String>) configData.getList("DefaultRewardBlackListedWorlds",
-					new ArrayList<String>());
+		if (getYmlConfig() != null) {
+			new AnnotationHandler().load(getYmlConfig().getData(), this);
+			debug = DebugLevel.getDebug(debugLevelStr);
+			storageType = UserStorage.value(userStorageString.toUpperCase());
 		}
 	}
 }
