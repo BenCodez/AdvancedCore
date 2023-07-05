@@ -217,7 +217,7 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@Getter
 	@ConfigDataInt(path = "SpamClickTime")
-	private int spamClickTime = 250;
+	private int spamClickTime = 100;
 
 	@ConfigDataString(path = "DataStorage")
 	private String userStorageString = "SQLITE";
