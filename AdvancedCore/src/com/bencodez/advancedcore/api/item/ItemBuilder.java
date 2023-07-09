@@ -373,9 +373,7 @@ public class ItemBuilder {
 				im.addStoredEnchant(ench, level, true);
 				is.setItemMeta(im);
 			} else {
-				ItemMeta im = is.getItemMeta();
-				im.addEnchant(ench, level, true);
-				is.setItemMeta(im);
+				is.addUnsafeEnchantment(ench, level);
 			}
 		}
 		return this;
