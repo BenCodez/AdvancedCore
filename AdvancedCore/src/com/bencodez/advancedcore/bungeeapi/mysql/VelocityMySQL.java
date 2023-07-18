@@ -88,7 +88,7 @@ public abstract class VelocityMySQL {
 		try {
 			query = new Query(mysql, sql);
 
-			query.executeUpdateAsync();
+			query.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

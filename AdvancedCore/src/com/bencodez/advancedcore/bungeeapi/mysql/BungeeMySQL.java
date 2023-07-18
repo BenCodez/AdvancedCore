@@ -88,8 +88,7 @@ public abstract class BungeeMySQL {
 		Query query;
 		try {
 			query = new Query(mysql, sql);
-
-			query.executeUpdateAsync();
+			query.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -515,11 +514,11 @@ public abstract class BungeeMySQL {
 		}
 
 	}
-	
+
 	public void copyColumnData(String columnFromName, String columnToName) {
 		checkColumn(columnFromName, DataType.STRING);
 		checkColumn(columnToName, DataType.STRING);
-		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `"+ columnFromName + "`;";
+		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
 		try {
 			Query query = new Query(mysql, sql);
 			query.executeUpdate();
