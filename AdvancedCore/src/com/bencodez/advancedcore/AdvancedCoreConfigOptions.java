@@ -57,7 +57,7 @@ public class AdvancedCoreConfigOptions {
 	@ConfigDataBoolean(path = "CreateBackups")
 	private boolean createBackups = true;
 
-	@ConfigDataString(path = "DebugLevel")
+	@ConfigDataString(path = "DebugLevel", options = { "NONE", "INFO", "EXTRA", "DEV" })
 	private String debugLevelStr = "NONE";
 
 	@Getter

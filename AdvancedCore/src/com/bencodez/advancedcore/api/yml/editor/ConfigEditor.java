@@ -2,15 +2,17 @@ package com.bencodez.advancedcore.api.yml.editor;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
@@ -34,19 +36,21 @@ public class ConfigEditor {
 	private YMLConfig ymlConfig;
 	private Class<?> ymlConfigClass;
 
-	private ArrayList<EditGUIButton> buttons = new ArrayList<EditGUIButton>();
+	@SuppressWarnings("unused")
+	private AdvancedCorePlugin plugin;
+	private HashMap<String, EditGUIButton> buttons = new HashMap<String, EditGUIButton>();
 
-	public ConfigEditor(YMLFile ymlFile) {
+	public ConfigEditor(AdvancedCorePlugin plugin, YMLFile ymlFile) {
 		this.ymlFile = ymlFile;
-
+		this.plugin = plugin;
 		load();
 	}
 
-	public ConfigEditor(YMLFile ymlFile, YMLConfig ymlConfig, Class<?> ymlConfigClass) {
+	public ConfigEditor(AdvancedCorePlugin plugin, YMLFile ymlFile, YMLConfig ymlConfig, Class<?> ymlConfigClass) {
 		this.ymlFile = ymlFile;
 		this.ymlConfig = ymlConfig;
 		this.ymlConfigClass = ymlConfigClass;
-
+		this.plugin = plugin;
 		load();
 	}
 
@@ -68,14 +72,20 @@ public class ConfigEditor {
 		EditGUI inv = new EditGUI("EDIT: " + ymlFile.getdFile().getName());
 		Set<String> configSections = new HashSet<String>();
 
-		for (EditGUIButton button : buttons) {
-			String[] split = button.getEditor().getKey().split("\\.");
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&aNon configuration sections")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				openNonConfig(player);
+			}
+		});
+		for (Entry<String, EditGUIButton> button : buttons.entrySet()) {
+			String[] split = button.getKey().split("\\.");
 			if (split.length > 1) {
 				configSections.add(split[0]);
-			} else {
-				inv.addButton(button);
 			}
 		}
+
 		inv.sort();
 
 		for (String configSec : configSections) {
@@ -91,20 +101,42 @@ public class ConfigEditor {
 		inv.openInventory(player);
 	}
 
+	public void openNonConfig(Player player) {
+		EditGUI inv = new EditGUI("EDIT: " + ymlFile.getdFile().getName());
+
+		for (Entry<String, EditGUIButton> button : buttons.entrySet()) {
+			String[] split = button.getKey().split("\\.");
+			if (split.length == 1) {
+				inv.addButton(button.getValue());
+			}
+		}
+
+		inv.sort();
+		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("Go Back")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				open(clickEvent.getPlayer());
+			}
+		});
+
+		inv.openInventory(player);
+	}
+
 	public void open(Player player, String sec) {
 		EditGUI inv = new EditGUI("EDIT: " + ymlFile.getdFile().getName());
 		Set<String> configSections = new HashSet<String>();
 
-		for (EditGUIButton button : buttons) {
-			if (button.getEditor().getKey().startsWith(sec)) {
-				String[] split = button.getEditor().getKey().split("\\.");
+		for (Entry<String, EditGUIButton> button : buttons.entrySet()) {
+			if (button.getKey().startsWith(sec)) {
+				String[] split = button.getKey().split("\\.");
 
 				int arg = sec.split("\\.").length;
-				AdvancedCorePlugin.getInstance().debug("" + button.getEditor().getKey() + "/" + arg);
+				//AdvancedCorePlugin.getInstance().debug("" + button.getKey() + "/" + arg);
 				if (split.length > arg + 1) {
 					configSections.add(sec + "." + split[arg]);
 				} else {
-					inv.addButton(button);
+					inv.addButton(button.getValue());
 				}
 			}
 		}
@@ -123,9 +155,23 @@ public class ConfigEditor {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				open(clickEvent.getPlayer());
+				String sec = (String) clickEvent.getButton().getData("sec");
+				String[] split = sec.split("\\.");
+				if (split.length > 1) {
+					String newSec = "";
+					for (int i = 0; i < split.length - 1; i++) {
+						if (i != 0) {
+							newSec += ".";
+						}
+						newSec += split[i];
+
+					}
+					open(player, newSec);
+				} else {
+					open(clickEvent.getPlayer());
+				}
 			}
-		});
+		}.addData("sec", sec));
 
 		inv.openInventory(player);
 	}
@@ -166,13 +212,14 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueString(stringAnnotation.path(), value) {
+					buttons.put(stringAnnotation.path(),
+							new EditGUIButton(new EditGUIValueString(stringAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, String value) {
-							ymlFile.setValue(stringAnnotation.path(), value);
-						}
-					}.addLore(comments).addOptions(stringAnnotation.possibleValues())));
+								@Override
+								public void setValue(Player player, String value) {
+									ymlFile.setValue(stringAnnotation.path(), value);
+								}
+							}.addLore(comments).addOptions(stringAnnotation.options())));
 
 				}
 
@@ -206,13 +253,14 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueBoolean(booleanAnnotation.path(), value) {
+					buttons.put(booleanAnnotation.path(),
+							new EditGUIButton(new EditGUIValueBoolean(booleanAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, boolean value) {
-							ymlFile.setValue(booleanAnnotation.path(), value);
-						}
-					}.addLore(comments)));
+								@Override
+								public void setValue(Player player, boolean value) {
+									ymlFile.setValue(booleanAnnotation.path(), value);
+								}
+							}.addLore(comments)));
 				}
 
 				final ConfigDataInt intAnnotation = field.getAnnotation(ConfigDataInt.class);
@@ -243,13 +291,14 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueNumber(intAnnotation.path(), value) {
+					buttons.put(intAnnotation.path(),
+							new EditGUIButton(new EditGUIValueNumber(intAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, Number value) {
-							ymlFile.setValue(intAnnotation.path(), value.intValue());
-						}
-					}.addLore(comments).addOptions(intAnnotation.possibleValues())));
+								@Override
+								public void setValue(Player player, Number value) {
+									ymlFile.setValue(intAnnotation.path(), value.intValue());
+								}
+							}.addLore(comments).addOptions(intAnnotation.options())));
 				}
 
 				final ConfigDataDouble doubleAnnotation = field.getAnnotation(ConfigDataDouble.class);
@@ -281,13 +330,14 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueNumber(doubleAnnotation.path(), value) {
+					buttons.put(doubleAnnotation.path(),
+							new EditGUIButton(new EditGUIValueNumber(doubleAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, Number value) {
-							ymlFile.setValue(doubleAnnotation.path(), value.doubleValue());
-						}
-					}.addLore(comments).addOptions(doubleAnnotation.possibleValues())));
+								@Override
+								public void setValue(Player player, Number value) {
+									ymlFile.setValue(doubleAnnotation.path(), value.doubleValue());
+								}
+							}.addLore(comments).addOptions(doubleAnnotation.possibleValues())));
 				}
 
 				final ConfigDataListString listAnnotation = field.getAnnotation(ConfigDataListString.class);
@@ -318,14 +368,15 @@ public class ConfigEditor {
 						// failsafe for older versions?
 					}
 
-					buttons.add(new EditGUIButton(new EditGUIValueList(listAnnotation.path(), value) {
+					buttons.put(listAnnotation.path(),
+							new EditGUIButton(new EditGUIValueList(listAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, ArrayList<String> value) {
-							ymlFile.setValue(listAnnotation.path(), value);
-						}
+								@Override
+								public void setValue(Player player, ArrayList<String> value) {
+									ymlFile.setValue(listAnnotation.path(), value);
+								}
 
-					}.addLore(comments).addOptions(listAnnotation.possibleValues())));
+							}.addLore(comments).addOptions(listAnnotation.options())));
 				}
 
 				final ConfigDataKeys setAnnotation = field.getAnnotation(ConfigDataKeys.class);
@@ -351,14 +402,15 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueList(setAnnotation.path(), keys) {
+					buttons.put(setAnnotation.path(),
+							new EditGUIButton(new EditGUIValueList(setAnnotation.path(), keys) {
 
-						@Override
-						public void setValue(Player player, ArrayList<String> value) {
-							ymlFile.setValue(setAnnotation.path(), value);
-						}
+								@Override
+								public void setValue(Player player, ArrayList<String> value) {
+									ymlFile.setValue(setAnnotation.path(), value);
+								}
 
-					}.addLore(comments).addOptions(setAnnotation.possibleValues())));
+							}.addLore(comments).addOptions(setAnnotation.options())));
 				}
 
 				ConfigDataConfigurationSection confAnnotation = field
@@ -417,13 +469,14 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueString(stringAnnotation.path(), value) {
+					buttons.put(stringAnnotation.path(),
+							new EditGUIButton(new EditGUIValueString(stringAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, String value) {
-							ymlConfig.setValue(stringAnnotation.path(), value);
-						}
-					}.addLore(comments).addOptions(stringAnnotation.possibleValues())));
+								@Override
+								public void setValue(Player player, String value) {
+									ymlConfig.setValue(stringAnnotation.path(), value);
+								}
+							}.addLore(comments).addOptions(stringAnnotation.options())));
 
 				}
 
@@ -457,13 +510,14 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueBoolean(booleanAnnotation.path(), value) {
+					buttons.put(booleanAnnotation.path(),
+							new EditGUIButton(new EditGUIValueBoolean(booleanAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, boolean value) {
-							ymlConfig.setValue(booleanAnnotation.path(), value);
-						}
-					}.addLore(comments)));
+								@Override
+								public void setValue(Player player, boolean value) {
+									ymlConfig.setValue(booleanAnnotation.path(), value);
+								}
+							}.addLore(comments)));
 				}
 
 				final ConfigDataInt intAnnotation = field.getAnnotation(ConfigDataInt.class);
@@ -494,13 +548,14 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueNumber(intAnnotation.path(), value) {
+					buttons.put(intAnnotation.path(),
+							new EditGUIButton(new EditGUIValueNumber(intAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, Number value) {
-							ymlConfig.setValue(intAnnotation.path(), value.intValue());
-						}
-					}.addLore(comments).addOptions(intAnnotation.possibleValues())));
+								@Override
+								public void setValue(Player player, Number value) {
+									ymlConfig.setValue(intAnnotation.path(), value.intValue());
+								}
+							}.addLore(comments).addOptions(intAnnotation.options())));
 				}
 
 				final ConfigDataDouble doubleAnnotation = field.getAnnotation(ConfigDataDouble.class);
@@ -532,13 +587,14 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueNumber(doubleAnnotation.path(), value) {
+					buttons.put(doubleAnnotation.path(),
+							new EditGUIButton(new EditGUIValueNumber(doubleAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, Number value) {
-							ymlConfig.setValue(doubleAnnotation.path(), value.doubleValue());
-						}
-					}.addLore(comments).addOptions(doubleAnnotation.possibleValues())));
+								@Override
+								public void setValue(Player player, Number value) {
+									ymlConfig.setValue(doubleAnnotation.path(), value.doubleValue());
+								}
+							}.addLore(comments).addOptions(doubleAnnotation.possibleValues())));
 				}
 
 				final ConfigDataListString listAnnotation = field.getAnnotation(ConfigDataListString.class);
@@ -569,14 +625,15 @@ public class ConfigEditor {
 						// failsafe for older versions?
 					}
 
-					buttons.add(new EditGUIButton(new EditGUIValueList(listAnnotation.path(), value) {
+					buttons.put(listAnnotation.path(),
+							new EditGUIButton(new EditGUIValueList(listAnnotation.path(), value) {
 
-						@Override
-						public void setValue(Player player, ArrayList<String> value) {
-							ymlConfig.setValue(listAnnotation.path(), value);
-						}
+								@Override
+								public void setValue(Player player, ArrayList<String> value) {
+									ymlConfig.setValue(listAnnotation.path(), value);
+								}
 
-					}.addLore(comments).addOptions(listAnnotation.possibleValues())));
+							}.addLore(comments).addOptions(listAnnotation.options())));
 				}
 
 				final ConfigDataKeys setAnnotation = field.getAnnotation(ConfigDataKeys.class);
@@ -602,14 +659,15 @@ public class ConfigEditor {
 					} catch (Exception e) {
 						// failsafe for older versions?
 					}
-					buttons.add(new EditGUIButton(new EditGUIValueList(setAnnotation.path(), keys) {
+					buttons.put(setAnnotation.path(),
+							new EditGUIButton(new EditGUIValueList(setAnnotation.path(), keys) {
 
-						@Override
-						public void setValue(Player player, ArrayList<String> value) {
-							ymlConfig.setValue(setAnnotation.path(), value);
-						}
+								@Override
+								public void setValue(Player player, ArrayList<String> value) {
+									ymlConfig.setValue(setAnnotation.path(), value);
+								}
 
-					}.addLore(comments).addOptions(setAnnotation.possibleValues())));
+							}.addLore(comments).addOptions(setAnnotation.options())));
 				}
 
 				ConfigDataConfigurationSection confAnnotation = field

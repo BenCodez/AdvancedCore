@@ -17,4 +17,6 @@ public @interface ConfigDataDouble {
 	String secondPath() default "";
 	
 	String[] possibleValues() default "";
+	
+	String[] options() default "";
 }

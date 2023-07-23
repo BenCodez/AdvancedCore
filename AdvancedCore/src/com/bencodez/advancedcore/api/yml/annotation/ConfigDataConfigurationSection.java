@@ -14,4 +14,6 @@ public @interface ConfigDataConfigurationSection {
 	String path();
 
 	String secondPath() default "";
+	
+	String[] options() default "";
 }

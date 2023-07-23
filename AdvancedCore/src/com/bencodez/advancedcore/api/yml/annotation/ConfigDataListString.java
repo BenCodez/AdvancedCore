@@ -14,5 +14,5 @@ public @interface ConfigDataListString {
 
 	String secondPath() default "";
 	
-	String[] possibleValues() default "";
+	String[] options() default "";
 }
