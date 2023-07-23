@@ -16,7 +16,6 @@ import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyBoolean;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyString;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 
@@ -53,19 +52,11 @@ public class UserDataManager {
 
 			@Override
 			public void run() {
-				clearNonNeededCachedUsers();
-			}
-		}, 60 * 3, 60 * 60, TimeUnit.SECONDS);
-
-		BukkitScheduler.runTaskTimerAsynchronously(plugin, new Runnable() {
-
-			@Override
-			public void run() {
 				if (plugin != null && plugin.isEnabled()) {
 					clearNonNeededCachedUsers();
 				}
 			}
-		}, 20 * 60 * 3, 20 * 60 * 60);
+		}, 60 * 3, 60 * 60, TimeUnit.SECONDS);
 	}
 
 	public void addKey(UserDataKey userDataKey) {
