@@ -2726,7 +2726,35 @@ public class RewardHandler {
 			}
 		}
 		getRewards().add(reward);
+	}
 
+	public boolean hasDirectRewardHandle(String reward) {
+		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
+			if (direct.getPath().replace(".", "_").equals(reward)) {
+				return true;
+			}
+		}
+
+		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
+			if (direct.getFullPath().equalsIgnoreCase(reward)) {
+				return true;
+			} else if (direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public void checkDirectlyDefined() {
+		for (Reward rewardFile : getRewards()) {
+			File folder = rewardFile.getConfig().getRewardFolder();
+			if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
+				if (hasDirectRewardHandle(rewardFile.getName())) {
+					rewardFile.getFile().delete();
+				}
+			}
+		}
+		loadRewards();
 	}
 
 }
