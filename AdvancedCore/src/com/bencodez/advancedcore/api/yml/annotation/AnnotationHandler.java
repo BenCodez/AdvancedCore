@@ -138,7 +138,9 @@ public class AnnotationHandler {
 					} else if (config.isConfigurationSection(setAnnotation.secondPath())) {
 						value = config.getConfigurationSection(setAnnotation.secondPath()).getKeys(false);
 					}
-					field.set(classToLoad, value);
+					if (value != null) {
+						field.set(classToLoad, value);
+					}
 				}
 
 				ConfigDataConfigurationSection confAnnotation = field
