@@ -135,7 +135,8 @@ public class AnnotationHandler {
 					Set<String> value = null;
 					if (config.isConfigurationSection(setAnnotation.path())) {
 						value = config.getConfigurationSection(setAnnotation.path()).getKeys(false);
-					} else if (config.isConfigurationSection(setAnnotation.secondPath())) {
+					} else if (config.isConfigurationSection(setAnnotation.secondPath())
+							&& !setAnnotation.secondPath().isEmpty()) {
 						value = config.getConfigurationSection(setAnnotation.secondPath()).getKeys(false);
 					}
 					if (value != null) {
@@ -149,7 +150,8 @@ public class AnnotationHandler {
 					ConfigurationSection value = null;
 					if (config.isConfigurationSection(confAnnotation.path())) {
 						value = config.getConfigurationSection(confAnnotation.path());
-					} else if (config.isConfigurationSection(confAnnotation.secondPath())) {
+					} else if (config.isConfigurationSection(confAnnotation.secondPath())
+							&& !confAnnotation.secondPath().isEmpty()) {
 						value = config.getConfigurationSection(confAnnotation.secondPath());
 					}
 
