@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.yml.annotation;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -132,11 +133,11 @@ public class AnnotationHandler {
 
 				ConfigDataKeys setAnnotation = field.getAnnotation(ConfigDataKeys.class);
 				if (setAnnotation != null) {
-					Set<String> value = null;
+					Set<String> value = new HashSet<String>();
 					if (config.isConfigurationSection(setAnnotation.path())) {
 						value = config.getConfigurationSection(setAnnotation.path()).getKeys(false);
 					} else if (config.isConfigurationSection(setAnnotation.secondPath())
-							&& !setAnnotation.secondPath().isEmpty()) {
+							&& setAnnotation.secondPath().length() > 0) {
 						value = config.getConfigurationSection(setAnnotation.secondPath()).getKeys(false);
 					}
 					if (value != null) {
