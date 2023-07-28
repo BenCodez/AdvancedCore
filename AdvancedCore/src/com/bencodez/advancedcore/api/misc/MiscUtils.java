@@ -149,7 +149,7 @@ public class MiscUtils {
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				Bukkit.getScheduler().runTask(plugin, new Runnable() {
+				BukkitScheduler.runTask(plugin, new Runnable() {
 
 					@Override
 					public void run() {
