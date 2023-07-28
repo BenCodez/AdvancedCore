@@ -197,6 +197,11 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "DisableJavascript")
+	private boolean disableJavascript = false;
+
+	@Getter
+	@Setter
 	private int resourceId = 0;
 
 	@Getter

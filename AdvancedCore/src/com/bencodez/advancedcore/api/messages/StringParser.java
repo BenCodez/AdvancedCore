@@ -260,32 +260,43 @@ public class StringParser {
 	}
 
 	public String replaceJavascript(AdvancedCoreUser user, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
-		return replaceJavascript(text, engine);
+		if (!user.getPlugin().getOptions().isDisableJavascript()) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
+			return replaceJavascript(text, engine);
+		}
+		return text;
 	}
 
 	public String replaceJavascript(CommandSender player, String text) {
-		if (player instanceof Player) {
-			return replaceJavascript((Player) player, text);
-		} else {
-			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(text, engine);
+		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+			if (player instanceof Player) {
+				return replaceJavascript((Player) player, text);
+			} else {
+				JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+				return replaceJavascript(text, engine);
+			}
 		}
+		return text;
 	}
 
 	public String replaceJavascript(OfflinePlayer player, String text) {
-
-		if (player.isOnline()) {
-			return replaceJavascript(player.getPlayer(), text);
-		} else {
-			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(text, engine);
+		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+			if (player.isOnline()) {
+				return replaceJavascript(player.getPlayer(), text);
+			} else {
+				JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+				return replaceJavascript(text, engine);
+			}
 		}
+		return text;
 	}
 
 	public String replaceJavascript(Player player, String text) {
-		JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-		return replaceJavascript(replacePlaceHolders(player, text), engine);
+		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			return replaceJavascript(replacePlaceHolders(player, text), engine);
+		}
+		return text;
 	}
 
 	public String replaceJavascript(String text) {
