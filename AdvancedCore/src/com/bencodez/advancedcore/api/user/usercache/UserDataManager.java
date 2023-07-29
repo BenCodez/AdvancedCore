@@ -165,4 +165,12 @@ public class UserDataManager {
 		}
 		userDataCache.remove(uuid);
 	}
+
+	public void updateCacheOnline() {
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			if (isCached(p.getUniqueId())) {
+				cacheUser(p.getUniqueId());
+			}
+		}
+	}
 }
