@@ -25,6 +25,7 @@ import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
@@ -446,6 +447,84 @@ public class MiscUtils {
 
 	public Object getBlockMeta(Block block, String str) {
 		for (MetadataValue meta : block.getMetadata(str)) {
+			if (meta.getOwningPlugin().equals(plugin)) {
+				return meta.value();
+			}
+		}
+		return null;
+	}
+
+	public void setEntityMeta(Entity entity, String str, Object value) {
+		entity.removeMetadata(str, plugin);
+		entity.setMetadata(str, new MetadataValue() {
+
+			@Override
+			public boolean asBoolean() {
+
+				return false;
+			}
+
+			@Override
+			public byte asByte() {
+
+				return 0;
+			}
+
+			@Override
+			public double asDouble() {
+
+				return 0;
+			}
+
+			@Override
+			public float asFloat() {
+
+				return 0;
+			}
+
+			@Override
+			public int asInt() {
+
+				return 0;
+			}
+
+			@Override
+			public long asLong() {
+
+				return 0;
+			}
+
+			@Override
+			public short asShort() {
+
+				return 0;
+			}
+
+			@Override
+			public String asString() {
+
+				return null;
+			}
+
+			@Override
+			public Plugin getOwningPlugin() {
+				return plugin;
+			}
+
+			@Override
+			public void invalidate() {
+			}
+
+			@Override
+			public Object value() {
+				return value;
+			}
+
+		});
+	}
+
+	public Object getEntityMeta(Entity entity, String str) {
+		for (MetadataValue meta : entity.getMetadata(str)) {
 			if (meta.getOwningPlugin().equals(plugin)) {
 				return meta.value();
 			}
