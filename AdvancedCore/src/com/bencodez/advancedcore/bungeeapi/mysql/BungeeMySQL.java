@@ -128,13 +128,14 @@ public abstract class BungeeMySQL {
 			if (!intColumns.contains(column)) {
 				intColumns.add(column);
 			}
-		}
-		try {
-			new Query(mysql, "ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";")
-					.executeUpdateAsync();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} else {
+			try {
+				new Query(mysql, "ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";")
+						.executeUpdateAsync();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 

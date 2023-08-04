@@ -146,13 +146,14 @@ public abstract class GlobalMySQL {
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
-		}
-		Query query;
-		try {
-			query = new Query(mysql, "ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";");
-			query.executeUpdateAsync();
-		} catch (SQLException e) {
-			e.printStackTrace();
+		} else {
+			Query query;
+			try {
+				query = new Query(mysql, "ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";");
+				query.executeUpdateAsync();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 		}
 
 	}
