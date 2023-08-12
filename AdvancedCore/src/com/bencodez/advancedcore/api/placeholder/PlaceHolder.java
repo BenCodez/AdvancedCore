@@ -93,5 +93,23 @@ public abstract class PlaceHolder<T> {
 	public boolean isCached(String identifier) {
 		return cache.containsKey(identifier);
 	}
+	
+	public boolean isCached(String identifier, UUID uuid) {
+		if (isCached(identifier)) {
+			if (cache.get(identifier).containsKey(uuid)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public void clearCachePlayer(UUID javaUUID) {
+		for (String ident : cache.keySet()) {
+			if (cache.get(ident).containsKey(javaUUID)) {
+				cache.get(ident).remove(javaUUID);
+			}
+			
+		}
+	}
 
 }
