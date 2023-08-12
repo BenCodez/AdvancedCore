@@ -28,4 +28,14 @@ public abstract class CalculatingPlaceholder<T> extends PlaceHolder<T>{
 	
 	public abstract String placeholderDataRequest(T user, String identifier);
 	
+	@Override
+	public void clearCachePlayer(UUID javaUUID) {
+		for (String ident : getCache().keySet()) {
+			if (getCache().get(ident).containsKey(javaUUID)) {
+				getCache().get(ident).remove(javaUUID);
+			}
+		}
+		cacheData.remove(javaUUID);
+	}
+	
 }
