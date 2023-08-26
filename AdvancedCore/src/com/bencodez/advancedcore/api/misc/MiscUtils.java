@@ -145,9 +145,12 @@ public class MiscUtils {
 			final HashMap<String, String> placeholders) {
 		if (cmds != null && !cmds.isEmpty()) {
 			placeholders.put("player", playerName);
-			final ArrayList<String> commands = ArrayUtils.getInstance().replaceJavascript(
-					Bukkit.getOfflinePlayer(playerName),
-					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
+			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
+			ArrayList<String> commands1 = cmds;
+			if (p != null) {
+				commands1 = ArrayUtils.getInstance().replaceJavascript(p, commands1);
+			}
+			final ArrayList<String> commands = ArrayUtils.getInstance().replacePlaceHolder(commands1, placeholders);
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
 				BukkitScheduler.runTask(plugin, new Runnable() {
