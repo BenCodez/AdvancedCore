@@ -73,6 +73,7 @@ import com.bencodez.advancedcore.command.CommandLoader;
 import com.bencodez.advancedcore.command.executor.ValueRequestInputCommand;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.advancedcore.listeners.AuthMeLogin;
+import com.bencodez.advancedcore.listeners.LoginSecurityLogin;
 import com.bencodez.advancedcore.listeners.PlayerJoinEvent;
 import com.bencodez.advancedcore.listeners.PlayerShowListener;
 import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
@@ -102,6 +103,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private boolean authMeLoaded = false;
+
+	@Getter
+	private boolean loginSecurityLoaded = false;
 
 	@Getter
 	private ArrayList<String> bannedPlayers = new ArrayList<String>();
@@ -528,6 +532,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (Bukkit.getPluginManager().getPlugin("authme") != null) {
 			authMeLoaded = true;
 			Bukkit.getPluginManager().registerEvents(new AuthMeLogin(this), this);
+		}
+		if (Bukkit.getPluginManager().getPlugin("LoginSecurity") != null) {
+			loginSecurityLoaded = true;
+			Bukkit.getPluginManager().registerEvents(new LoginSecurityLogin(this), this);
 		}
 
 		try {

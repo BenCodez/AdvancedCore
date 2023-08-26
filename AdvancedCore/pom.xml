@@ -247,6 +247,13 @@
 			<version>1.5.25</version>
 			<scope>provided</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.lenis0012</groupId>
+			<artifactId>loginsecurity</artifactId>
+			<version>3.2.0</version>
+			<scope>provided</scope>
+			<classifier>Spigot</classifier>
+		</dependency>
 	</dependencies>
 	<profiles>
 		<profile>
