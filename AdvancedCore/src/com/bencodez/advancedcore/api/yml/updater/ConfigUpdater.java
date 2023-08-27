@@ -7,7 +7,6 @@
  * 
  */
 
-
 package com.bencodez.advancedcore.api.yml.updater;
 
 import java.io.BufferedReader;
@@ -20,6 +19,8 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,7 +28,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -58,31 +59,38 @@ public class ConfigUpdater {
 		FileConfiguration defaultConfig = YamlConfiguration
 				.loadConfiguration(new InputStreamReader(plugin.getResource(resourceName), StandardCharsets.UTF_8));
 		FileConfiguration currentConfig = YamlConfiguration.loadConfiguration(toUpdate);
-		Set<String> allKeys = defaultConfig.getKeys(true);
 		ArrayList<String> dontExist = new ArrayList<String>();
 		for (String fullKey : currentConfig.getKeys(true)) {
-			if (!allKeys.contains(fullKey)) {
+			if (!defaultConfig.contains(fullKey)) {
 				if (currentConfig.isConfigurationSection(fullKey)) {
-					ignoredSections.add(fullKey);
-					dontExist.add(fullKey);
+					String startPath = fullKey.split(Pattern.quote("."))[0];
+					if (!ignoredSections.contains(startPath)) {
+						ignoredSections.add(startPath);
+						if (!defaultConfig.contains(startPath)) {
+							if (!dontExist.contains(startPath)) {
+								dontExist.add(startPath);
+							}
+						}
+					}
 				}
-
 			}
 		}
+
 		Map<String, String> comments = parseComments(plugin, resourceName, defaultConfig);
 		Map<String, String> ignoredSectionsValues = parseIgnoredSections(toUpdate, comments,
 				ignoredSections == null ? Collections.emptyList() : ignoredSections);
 		// will write updated config file "contents" to a string
 		StringWriter writer = new StringWriter();
+
 		write(defaultConfig, currentConfig, new BufferedWriter(writer), comments, ignoredSectionsValues, dontExist);
 		String value = writer.toString(); // config contents
 
 		Path toUpdatePath = toUpdate.toPath();
-		if (!value.equals(new String(Files.readAllBytes(toUpdatePath), StandardCharsets.UTF_8))) { // if updated
-																									// contents are not
-																									// the same as
-																									// current file
-																									// contents, update
+		if (!value.equals(new String(Files.readAllBytes(toUpdatePath), StandardCharsets.UTF_8))) {
+			// file needs updating, making backup
+			Path backupFilePath = new File(toUpdate.getParentFile(),
+					"backup-" + LocalDateTime.now().toString() + "-" + toUpdate.getName()).toPath();
+			Files.copy(toUpdatePath, backupFilePath, StandardCopyOption.REPLACE_EXISTING);
 			Files.write(toUpdatePath, value.getBytes(StandardCharsets.UTF_8));
 		}
 	}
