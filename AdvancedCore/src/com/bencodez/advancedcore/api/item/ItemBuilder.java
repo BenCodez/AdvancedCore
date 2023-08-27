@@ -121,7 +121,6 @@ public class ItemBuilder {
 			double chance = data.getDouble("Chance", 100);
 			if (checkChance(chance)) {
 				chancePass = true;
-
 				javascriptConditional = data.getString("ConditionalJavascript", "");
 				if (!javascriptConditional.isEmpty()) {
 					// process conditional item
@@ -144,148 +143,157 @@ public class ItemBuilder {
 
 				} else {
 
-					Material material = null;
-					List<String> lore = data.getStringList("Lore");
-					String materialStr = data.getString("Material", data.getName());
-					if (NMSManager.getInstance().isVersion("1.12")) {
-						if (materialStr.equalsIgnoreCase("player_head")) {
-							materialStr = "SKULL";
-						} else if (materialStr.equalsIgnoreCase("CLOCK")) {
-							materialStr = "WATCH";
-						} else if (materialStr.equalsIgnoreCase("OAK_SIGN")) {
-							materialStr = "SIGN";
-						} else if (materialStr.equalsIgnoreCase("BLACK_STAINED_GLASS_PANE")) {
-							materialStr = "STAINED_GLASS_PANE";
+					if (data.isConfigurationSection("ItemStack")) {
+						HashMap<String, Object> map = new HashMap<String, Object>();
+						for (String key : data.getConfigurationSection("ItemStack").getKeys(false)) {
+							map.put(key, data.get("ItemStack." + key));
 						}
-					}
+						is = ItemStack.deserialize(map);
+					} else {
 
-					try {
-						material = Material.matchMaterial(materialStr.toUpperCase());
+						Material material = null;
+						List<String> lore = data.getStringList("Lore");
+						String materialStr = data.getString("Material", data.getName());
+						if (NMSManager.getInstance().isVersion("1.12")) {
+							if (materialStr.equalsIgnoreCase("player_head")) {
+								materialStr = "SKULL";
+							} else if (materialStr.equalsIgnoreCase("CLOCK")) {
+								materialStr = "WATCH";
+							} else if (materialStr.equalsIgnoreCase("OAK_SIGN")) {
+								materialStr = "SIGN";
+							} else if (materialStr.equalsIgnoreCase("BLACK_STAINED_GLASS_PANE")) {
+								materialStr = "STAINED_GLASS_PANE";
+							}
+						}
 
-						// temp
+						try {
+							material = Material.matchMaterial(materialStr.toUpperCase());
+
+							// temp
+							if (material == null) {
+								material = Material.matchMaterial(materialStr, true);
+								if (material != null) {
+									AdvancedCorePlugin.getInstance().getLogger().warning("Found legacy material name: "
+											+ materialStr
+											+ ", please update this to prevent this message and prevent issues, path: "
+											+ data.getCurrentPath());
+									legacy = true;
+								}
+							}
+						} catch (NoSuchMethodError e) {
+							material = Material.valueOf(materialStr.toUpperCase());
+						}
+
 						if (material == null) {
-							material = Material.matchMaterial(materialStr, true);
-							if (material != null) {
-								AdvancedCorePlugin.getInstance().getLogger().warning("Found legacy material name: "
-										+ materialStr
-										+ ", please update this to prevent this message and prevent issues, path: "
-										+ data.getCurrentPath());
-								legacy = true;
+							material = Material.STONE;
+							AdvancedCorePlugin.getInstance().getLogger()
+									.warning("Invalid material: " + data.getString("Material"));
+							validMaterial = false;
+							lore.add("&cInvalid material: " + material);
+						}
+
+						int amount = data.getInt("Amount");
+						int minAmount = data.getInt("MinAmount");
+						int maxAmount = data.getInt("MaxAmount");
+
+						int currentAmount = 0;
+						if (amount > 0) {
+							currentAmount = amount;
+						} else {
+							currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
+						}
+
+						is = new ItemStack(material, currentAmount);
+						int power = data.getInt("Power", -1);
+						if (power > 0) {
+							setFireworkPower(power);
+						}
+
+						skull = data.getString("Skull", "");
+						if (!skull.equals("") && !skull.contains("%")) {
+							setSkullOwner(skull);
+
+						}
+						String texture = data.getString("SkullTexture", "");
+						if (!texture.equals("")) {
+							setHeadFromBase64(texture);
+							is.setAmount(currentAmount);
+						}
+
+						String textureURL = data.getString("SkullURL", "");
+						if (!textureURL.equals("")) {
+							is = SkullCreator.itemFromUrl(textureURL);
+							is.setAmount(currentAmount);
+						}
+
+						String name = data.getString("Name");
+
+						if (name != null && !name.equals("")) {
+							setName(name);
+						}
+						if (lore != null && lore.size() > 0) {
+							setLore(lore);
+						} else {
+							String line = data.getString("Lore", "");
+							if (!line.equals("")) {
+								addLoreLine(line);
 							}
 						}
-					} catch (NoSuchMethodError e) {
-						material = Material.valueOf(materialStr.toUpperCase());
-					}
-
-					if (material == null) {
-						material = Material.STONE;
-						AdvancedCorePlugin.getInstance().getLogger()
-								.warning("Invalid material: " + data.getString("Material"));
-						validMaterial = false;
-						lore.add("&cInvalid material: " + material);
-					}
-
-					int amount = data.getInt("Amount");
-					int minAmount = data.getInt("MinAmount");
-					int maxAmount = data.getInt("MaxAmount");
-
-					int currentAmount = 0;
-					if (amount > 0) {
-						currentAmount = amount;
-					} else {
-						currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
-					}
-
-					is = new ItemStack(material, currentAmount);
-					int power = data.getInt("Power", -1);
-					if (power > 0) {
-						setFireworkPower(power);
-					}
-
-					skull = data.getString("Skull", "");
-					if (!skull.equals("") && !skull.contains("%")) {
-						setSkullOwner(skull);
-
-					}
-					String texture = data.getString("SkullTexture", "");
-					if (!texture.equals("")) {
-						setHeadFromBase64(texture);
-						is.setAmount(currentAmount);
-					}
-
-					String textureURL = data.getString("SkullURL", "");
-					if (!textureURL.equals("")) {
-						is = SkullCreator.itemFromUrl(textureURL);
-						is.setAmount(currentAmount);
-					}
-
-					String name = data.getString("Name");
-
-					if (name != null && !name.equals("")) {
-						setName(name);
-					}
-					if (lore != null && lore.size() > 0) {
-						setLore(lore);
-					} else {
-						String line = data.getString("Lore", "");
-						if (!line.equals("")) {
-							addLoreLine(line);
+						int durability = data.getInt("Durability");
+						if (durability > 0) {
+							setDurability((short) durability);
 						}
-					}
-					int durability = data.getInt("Durability");
-					if (durability > 0) {
-						setDurability((short) durability);
-					}
 
-					if (data.isConfigurationSection("Enchants")) {
-						HashMap<String, Integer> enchants = new HashMap<String, Integer>();
-						for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
-							enchants.put(enchant, data.getInt("Enchants." + enchant));
+						if (data.isConfigurationSection("Enchants")) {
+							HashMap<String, Integer> enchants = new HashMap<String, Integer>();
+							for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
+								enchants.put(enchant, data.getInt("Enchants." + enchant));
+							}
+							addEnchantments(enchants);
 						}
-						addEnchantments(enchants);
-					}
 
-					@SuppressWarnings("unchecked")
-					ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags",
-							new ArrayList<String>());
-					for (String flag : itemFlags) {
-						addItemFlag(flag);
-					}
+						@SuppressWarnings("unchecked")
+						ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags",
+								new ArrayList<String>());
+						for (String flag : itemFlags) {
+							addItemFlag(flag);
+						}
 
-					if (data.getBoolean("Glow")) {
-						addGlow();
-					}
+						if (data.getBoolean("Glow")) {
+							addGlow();
+						}
 
-					checkLoreLength = data.getBoolean("CheckLoreLength", true);
-					loreLength = data.getInt("LoreLength", -1);
+						checkLoreLength = data.getBoolean("CheckLoreLength", true);
+						loreLength = data.getInt("LoreLength", -1);
 
-					Color color = null;
-					if (data.isConfigurationSection("PotionColor")) {
-						ConfigurationSection potionColor = data.getConfigurationSection("PotionColor");
-						color = Color.fromRGB(potionColor.getInt("Red", 0), potionColor.getInt("Green", 0),
-								potionColor.getInt("Blue", 0));
-					}
+						Color color = null;
+						if (data.isConfigurationSection("PotionColor")) {
+							ConfigurationSection potionColor = data.getConfigurationSection("PotionColor");
+							color = Color.fromRGB(potionColor.getInt("Red", 0), potionColor.getInt("Green", 0),
+									potionColor.getInt("Blue", 0));
+						}
 
-					if (data.isConfigurationSection("Potions")) {
-						for (String pot : data.getConfigurationSection("Potions").getKeys(false)) {
-							PotionEffectType type = PotionEffectType.getByName(pot);
-							if (type != null) {
-								addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
-										data.getInt("Potions." + pot + ".Amplifier", 1), color);
-							} else {
-								AdvancedCorePlugin.getInstance().getLogger()
-										.warning("Invalid potion effect type: " + pot);
+						if (data.isConfigurationSection("Potions")) {
+							for (String pot : data.getConfigurationSection("Potions").getKeys(false)) {
+								PotionEffectType type = PotionEffectType.getByName(pot);
+								if (type != null) {
+									addPotionEffect(type, data.getInt("Potions." + pot + ".Duration"),
+											data.getInt("Potions." + pot + ".Amplifier", 1), color);
+								} else {
+									AdvancedCorePlugin.getInstance().getLogger()
+											.warning("Invalid potion effect type: " + pot);
+								}
 							}
 						}
+
+						int customModelData = data.getInt("CustomModelData", -1);
+						if (customModelData != -1) {
+							setCustomModelData(customModelData);
+						}
+
+						setUnbreakable(data.getBoolean("Unbreakable", false));
+
 					}
-
-					int customModelData = data.getInt("CustomModelData", -1);
-					if (customModelData != -1) {
-						setCustomModelData(customModelData);
-					}
-
-					setUnbreakable(data.getBoolean("Unbreakable", false));
-
 					slot = data.getInt("Slot", -1);
 
 					fillSlots = data.getIntegerList("FillSlots");
@@ -630,32 +638,36 @@ public class ItemBuilder {
 		return is.getItemMeta().getAttributeModifiers(att);
 	}
 
-	public HashMap<String, Object> getConfiguration() {
-		HashMap<String, Object> map = new HashMap<String, Object>();
-		map.put("Material", is.getType().toString());
-		map.put("Amount", is.getAmount());
-		if (hasCustomDisplayName()) {
-			map.put("Name", getName());
-		}
-		if (hasCustomLore()) {
-			map.put("Lore", getLore());
-		}
-		ItemMeta im = is.getItemMeta();
-		for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
-			map.put("Enchants." + entry.getKey().getKey(), entry.getValue().intValue());
+	public Map<String, Object> getConfiguration(boolean deseralize) {
+		if (deseralize) {
+			return is.serialize();
+		} else {
+			HashMap<String, Object> map = new HashMap<String, Object>();
+			map.put("Material", is.getType().toString());
+			map.put("Amount", is.getAmount());
+			if (hasCustomDisplayName()) {
+				map.put("Name", getName());
+			}
+			if (hasCustomLore()) {
+				map.put("Lore", getLore());
+			}
+			ItemMeta im = is.getItemMeta();
+			for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
+				map.put("Enchants." + entry.getKey().getKey(), entry.getValue().intValue());
+			}
+
+			ArrayList<String> flagList = new ArrayList<String>();
+			for (ItemFlag flag : im.getItemFlags()) {
+				flagList.add(flag.toString());
+			}
+			map.put("ItemFlags", flagList);
+
+			if (im.hasCustomModelData()) {
+				map.put("CustomModelData", im.getCustomModelData());
+			}
+			return map;
 		}
 
-		ArrayList<String> flagList = new ArrayList<String>();
-		for (ItemFlag flag : im.getItemFlags()) {
-			flagList.add(flag.toString());
-		}
-		map.put("ItemFlags", flagList);
-
-		if (im.hasCustomModelData()) {
-			map.put("CustomModelData", im.getCustomModelData());
-		}
-
-		return map;
 	}
 
 	public String getCustomData(String key) {

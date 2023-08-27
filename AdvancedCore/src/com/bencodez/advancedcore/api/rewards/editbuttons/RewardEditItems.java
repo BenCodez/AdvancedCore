@@ -1,7 +1,7 @@
 package com.bencodez.advancedcore.api.rewards.editbuttons;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.bukkit.Material;
@@ -116,7 +116,7 @@ public abstract class RewardEditItems extends RewardEdit {
 		}).setName("&aEdit existing item"));
 
 		inv.addButton(
-				new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&aAdd current item in hand to reward")) {
+				new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&aAdd item in hand").addLoreLine("Click for more")) {
 
 					@Override
 					public void onClick(ClickEvent clickEvent) {
@@ -130,25 +130,37 @@ public abstract class RewardEditItems extends RewardEdit {
 		inv.openInventory(player);
 	}
 
-	@SuppressWarnings("deprecation")
 	public void openAdd(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Item Add: " + reward.getName());
 		inv.addData("Reward", reward);
 
-		inv.addButton(
-				new BInventoryButton(new ItemBuilder(player.getItemInHand().clone()).addLoreLine("&cClick to add")) {
+		inv.addButton(new BInventoryButton(
+				new ItemBuilder(player.getInventory().getItemInMainHand().clone()).addLoreLine("&cClick to add")) {
 
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						ItemBuilder item = new ItemBuilder(clickEvent.getPlayer().getItemInHand().clone());
-						HashMap<String, Object> map = item.getConfiguration();
-						for (Entry<String, Object> entry : map.entrySet()) {
-							reward.setValue("Items." + item.getType().toString() + "." + entry.getKey(),
-									entry.getValue());
-						}
-						open(player, reward);
-					}
-				});
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				ItemBuilder item = new ItemBuilder(clickEvent.getPlayer().getInventory().getItemInMainHand().clone());
+				Map<String, Object> map = item.getConfiguration(false);
+				for (Entry<String, Object> entry : map.entrySet()) {
+					reward.setValue("Items." + item.getType().toString() + "." + entry.getKey(), entry.getValue());
+				}
+				open(player, reward);
+			}
+		});
+		inv.addButton(new BInventoryButton(new ItemBuilder(player.getInventory().getItemInMainHand().clone())
+				.addLoreLine("&cClick to add with exact data")) {
+
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				ItemBuilder item = new ItemBuilder(clickEvent.getPlayer().getInventory().getItemInMainHand().clone());
+				Map<String, Object> map = item.getConfiguration(true);
+				for (Entry<String, Object> entry : map.entrySet()) {
+					reward.setValue("Items." + item.getType().toString() + ".ItemStack." + entry.getKey(),
+							entry.getValue());
+				}
+				open(player, reward);
+			}
+		});
 
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 
