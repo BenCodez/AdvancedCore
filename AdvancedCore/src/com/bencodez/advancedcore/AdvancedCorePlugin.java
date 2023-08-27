@@ -330,7 +330,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					player.sendMessage(StringParser.getInstance().colorize("&c" + getName() + " Debug: " + debug));
 				}
 			}
-		}
+		}	
 		if (getOptions().isLogDebugToFile()) {
 			if (pluginLogger == null) {
 				loadLogger();
