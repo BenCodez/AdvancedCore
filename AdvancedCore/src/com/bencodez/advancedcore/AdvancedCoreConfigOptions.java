@@ -40,7 +40,11 @@ public class AdvancedCoreConfigOptions {
 
 	public Sound getClickSoundSound() {
 		try {
-			return Sound.valueOf(getClickSoundSoundStr());
+			if (getClickSoundSoundStr().equalsIgnoreCase("none")) {
+				return null;
+			} else {
+				return Sound.valueOf(getClickSoundSoundStr());
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			return Sound.UI_BUTTON_CLICK;
