@@ -553,7 +553,10 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				sender.sendMessage(user.getCache().displayCacheString());
+				for (String str : user.getCache().displayCacheStringList()) {
+					sender.sendMessage(str);
+				}
+
 			}
 		});
 

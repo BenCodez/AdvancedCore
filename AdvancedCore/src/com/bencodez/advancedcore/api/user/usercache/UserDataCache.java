@@ -184,20 +184,21 @@ public class UserDataCache {
 	}
 
 	public void displayCache() {
-		manager.getPlugin().devDebug(displayCacheString());
+		manager.getPlugin().devDebug(displayCacheStringList().toString());
 	}
 
-	public String displayCacheString() {
-		String str = "Current cache for " + uuid + ": ";
+	public ArrayList<String> displayCacheStringList() {
+		ArrayList<String> list = new ArrayList<String>();
+		list.add("Current cache for " + uuid + ": ");
 		for (Entry<String, DataValue> entry : getCache().entrySet()) {
 			if (entry.getValue().isBoolean()) {
-				str += entry.getKey() + "=" + entry.getValue().getBoolean() + ", ";
+				list.add(entry.getKey() + "=" + entry.getValue().getBoolean());
 			} else if (entry.getValue().isString()) {
-				str += entry.getKey() + "=" + entry.getValue().getString() + ", ";
+				list.add(entry.getKey() + "=" + entry.getValue().getString());
 			} else if (entry.getValue().isInt()) {
-				str += entry.getKey() + "=" + entry.getValue().getInt() + ", ";
+				list.add(entry.getKey() + "=" + entry.getValue().getInt());
 			}
 		}
-		return str;
+		return list;
 	}
 }
