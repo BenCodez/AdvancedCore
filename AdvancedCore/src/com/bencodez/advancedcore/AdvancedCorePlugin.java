@@ -46,6 +46,7 @@ import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.PluginUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
+import com.bencodez.advancedcore.api.permissions.LuckPermsHandle;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
@@ -210,6 +211,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private RewardHandler rewardHandler;
+	
+	@Getter
+	private LuckPermsHandle luckPermsHandle;
 
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
@@ -477,6 +481,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		serverDataFile = new ServerData(this);
 
 		hologramHandler = new HologramHandler(this);
+		
+		luckPermsHandle = new LuckPermsHandle();
 
 		loadSignAPI();
 		loadUUIDs();

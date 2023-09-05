@@ -383,16 +383,24 @@ public class PlayerUtils {
 			return false;
 		}
 
+		Player player = Bukkit.getPlayer(playerUUID);
+		if (player != null) {
+			return player.hasPermission(perm);
+		}
+
+		if (plugin.getLuckPermsHandle().luckpermsApiLoaded()) {
+			plugin.devDebug("Attempting to use luckperms");
+			if (plugin.getLuckPermsHandle().hasPermission(playerUUID, perm)) {
+				return true;
+			}
+		}
+
 		if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getPerms() != null
 				&& plugin.getPerms().isEnabled()) {
 			return plugin.getPerms().playerHas(Bukkit.getWorlds().get(0).getName(), Bukkit.getOfflinePlayer(playerUUID),
 					perm);
 		}
 
-		Player player = Bukkit.getPlayer(playerUUID);
-		if (player != null) {
-			return player.hasPermission(perm);
-		}
 		return false;
 	}
 
