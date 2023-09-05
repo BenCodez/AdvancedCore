@@ -9,6 +9,8 @@ import java.util.concurrent.TimeoutException;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
+
 import lombok.Getter;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.model.user.User;
@@ -17,10 +19,11 @@ public class LuckPermsHandle {
 	@Getter
 	LuckPerms api = null;
 
-	public void load() {
+	public void load(AdvancedCorePlugin plugin) {
 		RegisteredServiceProvider<LuckPerms> provider = Bukkit.getServicesManager().getRegistration(LuckPerms.class);
 		if (provider != null) {
 			api = provider.getProvider();
+			plugin.getLogger().info("Loaded LuckPerms hook!");
 		}
 	}
 

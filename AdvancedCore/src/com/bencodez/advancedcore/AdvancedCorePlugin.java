@@ -211,7 +211,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private RewardHandler rewardHandler;
-	
+
 	@Getter
 	private LuckPermsHandle luckPermsHandle;
 
@@ -334,7 +334,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					player.sendMessage(StringParser.getInstance().colorize("&c" + getName() + " Debug: " + debug));
 				}
 			}
-		}	
+		}
 		if (getOptions().isLogDebugToFile()) {
 			if (pluginLogger == null) {
 				loadLogger();
@@ -481,8 +481,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		serverDataFile = new ServerData(this);
 
 		hologramHandler = new HologramHandler(this);
-		
+
 		luckPermsHandle = new LuckPermsHandle();
+		luckPermsHandle.load(this);
 
 		loadSignAPI();
 		loadUUIDs();
