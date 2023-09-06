@@ -388,7 +388,7 @@ public class PlayerUtils {
 			return player.hasPermission(perm);
 		}
 
-		if (plugin.getLuckPermsHandle().luckpermsApiLoaded()) {
+		if (plugin.getLuckPermsHandle() != null && plugin.getLuckPermsHandle().luckpermsApiLoaded()) {
 			plugin.devDebug("Attempting to use luckperms");
 			if (plugin.getLuckPermsHandle().hasPermission(playerUUID, perm)) {
 				return true;

@@ -482,8 +482,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		hologramHandler = new HologramHandler(this);
 
-		luckPermsHandle = new LuckPermsHandle();
-		luckPermsHandle.load(this);
+		if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
+			luckPermsHandle = new LuckPermsHandle();
+			luckPermsHandle.load(this);
+		}
 
 		loadSignAPI();
 		loadUUIDs();
