@@ -10,6 +10,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
@@ -89,6 +90,24 @@ public class Hologram {
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
 	}
 
+	public Hologram(Location loc, String name, boolean marker, boolean glowing, NamespacedKey key, int value,
+			String str, Object value1) {
+		this.loc = loc;
+		if (!Bukkit.isPrimaryThread()) {
+			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
+
+				@Override
+				public void run() {
+					createHologram(name, marker, glowing, key, value, str, value1);
+				}
+			});
+
+		} else {
+			createHologram(name, marker, glowing, key, value, str, value1);
+		}
+		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
+	}
+
 	public PersistentDataContainer getPersistentDataHolder() {
 		return armorStand.getPersistentDataContainer();
 	}
@@ -128,6 +147,25 @@ public class Hologram {
 		armorStand.setGlowing(glowing);
 		armorStand.setInvulnerable(true);
 		armorStand.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, value);
+	}
+
+	private void createHologram(String name, boolean marker, boolean glowing, NamespacedKey key, int value, String str,
+			Object object) {
+		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
+		armorStand.setVisible(false);
+		if (!name.isEmpty()) {
+			armorStand.setCustomNameVisible(true);
+		} else {
+			armorStand.setCustomNameVisible(false);
+		}
+		armorStand.setCustomName(StringParser.getInstance().colorize(name));
+		armorStand.setGravity(false);
+		armorStand.setAI(false);
+		armorStand.setMarker(marker);
+		armorStand.setGlowing(glowing);
+		armorStand.setInvulnerable(true);
+		armorStand.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, value);
+		MiscUtils.getInstance().setEntityMeta(armorStand, str, object);
 	}
 
 	public void glow(boolean value) {
