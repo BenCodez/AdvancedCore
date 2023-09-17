@@ -38,10 +38,11 @@ import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.chat.ComponentSerializer;
 
 /**
  * The Class User.
@@ -210,7 +211,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void cacheAsync() {
-		BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
+		getPlugin().getBukkitScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -265,7 +266,7 @@ public class AdvancedCoreUser {
 		setOfflineRewards(new ArrayList<String>());
 		final AdvancedCoreUser user = this;
 		if (plugin.isEnabled()) {
-			BukkitScheduler.runTaskLater(plugin, new Runnable() {
+			getPlugin().getBukkitScheduler().runTaskLater(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -282,7 +283,7 @@ public class AdvancedCoreUser {
 						}
 					}
 				}
-			}, 5l);
+			}, 2);
 		}
 	}
 
@@ -298,7 +299,7 @@ public class AdvancedCoreUser {
 
 	public void closeInv() {
 		if (plugin.isEnabled()) {
-			BukkitScheduler.runTask(plugin, new Runnable() {
+			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -518,7 +519,7 @@ public class AdvancedCoreUser {
 		final Player player = getPlayer();
 
 		if (plugin.isEnabled()) {
-			BukkitScheduler.runTask(plugin, new Runnable() {
+			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -539,7 +540,7 @@ public class AdvancedCoreUser {
 		final Player player = getPlayer();
 
 		if (plugin.isEnabled()) {
-			BukkitScheduler.runTask(plugin, new Runnable() {
+			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -569,7 +570,7 @@ public class AdvancedCoreUser {
 			try {
 				if (m > 0) {
 					final double money = m;
-					BukkitScheduler.runTask(plugin, new Runnable() {
+					getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
 						@Override
 						public void run() {
@@ -580,7 +581,7 @@ public class AdvancedCoreUser {
 				} else if (m < 0) {
 					m = m * -1;
 					final double money = m;
-					BukkitScheduler.runTask(plugin, new Runnable() {
+					getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
 						@Override
 						public void run() {
@@ -616,7 +617,7 @@ public class AdvancedCoreUser {
 	public void givePotionEffect(String potionName, int duration, int amplifier) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(getUUID()));
 		if (player != null && plugin.isEnabled()) {
-			BukkitScheduler.runTask(plugin, new Runnable() {
+			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -850,7 +851,7 @@ public class AdvancedCoreUser {
 			if (player != null && plugin.isEnabled()) {
 				for (final String cmd : cmds) {
 					plugin.debug("Executing player command for " + getPlayerName() + ": " + cmd);
-					BukkitScheduler.runTask(plugin, new Runnable() {
+					getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
 						@Override
 						public void run() {
@@ -868,7 +869,7 @@ public class AdvancedCoreUser {
 					StringParser.getInstance().replacePlaceHolder(command, placeholders));
 			plugin.debug("Executing player command for " + getPlayerName() + ": " + command);
 			if (plugin.isEnabled()) {
-				BukkitScheduler.runTask(plugin, new Runnable() {
+				getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
 					@Override
 					public void run() {
@@ -948,25 +949,29 @@ public class AdvancedCoreUser {
 	 * @param messages the messages
 	 */
 	public void sendJson(ArrayList<TextComponent> messages) {
-		Player player = getPlayer();
-		if ((player != null) && (messages != null)) {
-			for (TextComponent txt : messages) {
-				txt.setText(StringParser.getInstance().replaceJavascript(getPlayer(), txt.getText()));
-				plugin.getServerHandle().sendMessage(player, txt);
-			}
-		}
+		sendJson(messages, true);
 	}
 
 	public void sendJson(ArrayList<TextComponent> messages, boolean javascript) {
 		Player player = getPlayer();
 		if ((player != null) && (messages != null)) {
-			for (TextComponent txt : messages) {
+			ArrayList<BaseComponent> texts = new ArrayList<BaseComponent>();
+			TextComponent newLine = new TextComponent(ComponentSerializer.parse("{text: \"\n\"}"));
+			for (int i = 0; i < messages.size(); i++) {
+				TextComponent txt = messages.get(i);
 				if (javascript) {
 					txt.setText(StringParser.getInstance().replaceJavascript(getPlayer(), txt.getText()));
 				}
-				plugin.getServerHandle().sendMessage(player, txt);
+				texts.add(txt);
+				if (i + 1 < messages.size()) {
+					texts.add(newLine);
+				}
+
 			}
+
+			plugin.getServerHandle().sendMessage(player, ArrayUtils.getInstance().convertBaseComponent(texts));
 		}
+
 	}
 
 	/**

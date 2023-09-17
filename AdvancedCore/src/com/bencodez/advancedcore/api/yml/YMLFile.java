@@ -11,7 +11,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.files.FilesManager;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 import net.md_5.bungee.api.ChatColor;
@@ -100,7 +99,7 @@ public abstract class YMLFile {
 			failedToRead = true;
 			e.printStackTrace();
 			plugin.getLogger().severe("Failed to load " + dFile.getName());
-			BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
+			plugin.getBukkitScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -154,7 +153,7 @@ public abstract class YMLFile {
 			failedToRead = true;
 			e.printStackTrace();
 			plugin.getLogger().severe("Failed to load " + dFile.getName());
-			BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
+			plugin.getBukkitScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {

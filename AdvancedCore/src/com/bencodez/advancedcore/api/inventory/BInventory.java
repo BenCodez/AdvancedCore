@@ -25,7 +25,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -123,7 +122,7 @@ public class BInventory {
 		}
 
 		public void runSync(Runnable run) {
-			BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), run);
+			AdvancedCorePlugin.getInstance().getBukkitScheduler().runTask(AdvancedCorePlugin.getInstance(), run);
 		}
 	}
 
@@ -329,22 +328,24 @@ public class BInventory {
 		if (Bukkit.isPrimaryThread()) {
 			p.closeInventory();
 
-			BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+			AdvancedCorePlugin.getInstance().getBukkitScheduler()
+					.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-				@Override
-				public void run() {
-					closeUpdatingBInv();
-				}
-			});
+						@Override
+						public void run() {
+							closeUpdatingBInv();
+						}
+					});
 		} else {
 			closeUpdatingBInv();
-			BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+			AdvancedCorePlugin.getInstance().getBukkitScheduler().runTask(AdvancedCorePlugin.getInstance(),
+					new Runnable() {
 
-				@Override
-				public void run() {
-					p.closeInventory();
-				}
-			}, p);
+						@Override
+						public void run() {
+							p.closeInventory();
+						}
+					}, p);
 		}
 	}
 
@@ -494,7 +495,7 @@ public class BInventory {
 	}
 
 	private void openInv(Player player, Inventory inv) {
-		BukkitScheduler.runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
+		AdvancedCorePlugin.getInstance().getBukkitScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 			@Override
 			public void run() {
@@ -508,7 +509,7 @@ public class BInventory {
 	 *
 	 * @param player the player
 	 */
-	@SuppressWarnings({ })
+	@SuppressWarnings({})
 	public void openInventory(Player player) {
 		if (player.isSleeping()) {
 			AdvancedCorePlugin.getInstance().debug(player.getName() + " is sleeping, not opening gui!");

@@ -10,7 +10,6 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 
@@ -49,7 +48,7 @@ public class BossBar {
 			bossBar.addPlayer(player);
 
 			if (delay > 0) {
-				BukkitScheduler.runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+				AdvancedCorePlugin.getInstance().getBukkitScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override
 					public void run() {
@@ -76,7 +75,7 @@ public class BossBar {
 	}
 
 	private void hideInDelay(int delay) {
-		BukkitScheduler.runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+		AdvancedCorePlugin.getInstance().getBukkitScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 			@Override
 			public void run() {

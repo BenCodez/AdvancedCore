@@ -13,7 +13,6 @@ import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 /**
  * The Class UserGUI.
@@ -96,7 +95,7 @@ public class ChoiceGUI {
 					if (user.getUnClaimedChoices().size() > 0) {
 						openClaimChoices(clickEvent.getPlayer());
 					} else {
-						BukkitScheduler.runTask(plugin, new Runnable() {
+						plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
 							@Override
 							public void run() {

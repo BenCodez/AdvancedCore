@@ -17,7 +17,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.PlayerUtils;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -120,8 +119,8 @@ public abstract class CommandHandler {
 	 * Instantiates a new command handler.
 	 *
 	 * @param plugin main pluginclass
-	 * @param args the args
-	 * @param perm the perm
+	 * @param args   the args
+	 * @param perm   the perm
 	 */
 	public CommandHandler(AdvancedCorePlugin plugin, String[] args, String perm) {
 		this.plugin = plugin;
@@ -135,7 +134,7 @@ public abstract class CommandHandler {
 	/**
 	 * Instantiates a new command handler.
 	 *
-	 * @param plugin main pluginclass
+	 * @param plugin      main pluginclass
 	 * @param args        the args
 	 * @param perm        the perm
 	 * @param helpMessage the help message
@@ -151,7 +150,7 @@ public abstract class CommandHandler {
 	/**
 	 * Instantiates a new command handler.
 	 *
-	 * @param plugin main pluginclass
+	 * @param plugin       main pluginclass
 	 * @param args         the args
 	 * @param perm         the perm
 	 * @param helpMessage  the help message
@@ -170,7 +169,7 @@ public abstract class CommandHandler {
 	/**
 	 * Instantiates a new command handler.
 	 *
-	 * @param plugin main pluginclass
+	 * @param plugin       main pluginclass
 	 * @param args         the args
 	 * @param perm         the perm
 	 * @param helpMessage  the help message
@@ -508,7 +507,7 @@ public abstract class CommandHandler {
 			}
 			String[] argsNew = args;
 
-			BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
+			plugin.getBukkitScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {

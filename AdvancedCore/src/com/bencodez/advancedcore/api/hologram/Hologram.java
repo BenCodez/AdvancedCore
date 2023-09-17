@@ -11,7 +11,6 @@ import org.bukkit.persistence.PersistentDataType;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import lombok.Getter;
 
@@ -24,13 +23,14 @@ public class Hologram {
 	public Hologram(Location loc, String name) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
+			AdvancedCorePlugin.getInstance().getBukkitScheduler()
+					.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-				@Override
-				public void run() {
-					createHologram(name, true, false);
-				}
-			});
+						@Override
+						public void run() {
+							createHologram(name, true, false);
+						}
+					});
 
 		} else {
 			createHologram(name, true, false);
@@ -42,13 +42,14 @@ public class Hologram {
 	public Hologram(Location loc, String name, boolean marker) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
+			AdvancedCorePlugin.getInstance().getBukkitScheduler()
+					.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-				@Override
-				public void run() {
-					createHologram(name, marker, false);
-				}
-			});
+						@Override
+						public void run() {
+							createHologram(name, marker, false);
+						}
+					});
 
 		} else {
 			createHologram(name, marker, false);
@@ -59,13 +60,14 @@ public class Hologram {
 	public Hologram(Location loc, String name, boolean marker, boolean glowing) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
+			AdvancedCorePlugin.getInstance().getBukkitScheduler()
+					.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-				@Override
-				public void run() {
-					createHologram(name, marker, glowing);
-				}
-			});
+						@Override
+						public void run() {
+							createHologram(name, marker, glowing);
+						}
+					});
 
 		} else {
 			createHologram(name, marker, glowing);
@@ -76,13 +78,14 @@ public class Hologram {
 	public Hologram(Location loc, String name, boolean marker, boolean glowing, NamespacedKey key, int value) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
+			AdvancedCorePlugin.getInstance().getBukkitScheduler()
+					.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-				@Override
-				public void run() {
-					createHologram(name, marker, glowing, key, value);
-				}
-			});
+						@Override
+						public void run() {
+							createHologram(name, marker, glowing, key, value);
+						}
+					});
 
 		} else {
 			createHologram(name, marker, glowing, key, value);
@@ -94,13 +97,14 @@ public class Hologram {
 			String str, Object value1) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
-			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
+			AdvancedCorePlugin.getInstance().getBukkitScheduler()
+					.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-				@Override
-				public void run() {
-					createHologram(name, marker, glowing, key, value, str, value1);
-				}
-			});
+						@Override
+						public void run() {
+							createHologram(name, marker, glowing, key, value, str, value1);
+						}
+					});
 
 		} else {
 			createHologram(name, marker, glowing, key, value, str, value1);
@@ -180,15 +184,16 @@ public class Hologram {
 
 	public void kill() {
 		if (!Bukkit.isPrimaryThread()) {
-			BukkitScheduler.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
+			AdvancedCorePlugin.getInstance().getBukkitScheduler()
+					.executeOrScheduleSync(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-				@Override
-				public void run() {
-					armorStand.setHealth(0);
-					armorStand.remove();
-					armorStand = null;
-				}
-			});
+						@Override
+						public void run() {
+							armorStand.setHealth(0);
+							armorStand.remove();
+							armorStand = null;
+						}
+					});
 		} else {
 			armorStand.setHealth(0);
 			armorStand.remove();

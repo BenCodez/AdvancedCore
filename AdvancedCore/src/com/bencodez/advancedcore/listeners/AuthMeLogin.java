@@ -5,7 +5,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import fr.xephi.authme.api.v3.AuthMeApi;
 import fr.xephi.authme.events.AuthMeAsyncPreLoginEvent;
@@ -19,7 +18,7 @@ public class AuthMeLogin implements Listener {
 
 	@EventHandler
 	public void authmeLogin(AuthMeAsyncPreLoginEvent event) {
-		BukkitScheduler.runTaskLaterAsynchronously(plugin, new Runnable() {
+		plugin.getBukkitScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -33,7 +32,7 @@ public class AuthMeLogin implements Listener {
 					}
 				}
 			}
-		}, 40l);
+		}, 2);
 
 	}
 }

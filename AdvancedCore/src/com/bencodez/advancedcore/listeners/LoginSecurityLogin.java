@@ -5,7 +5,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 import com.lenis0012.bukkit.loginsecurity.events.AuthActionEvent;
 import com.lenis0012.bukkit.loginsecurity.session.AuthActionType;
 
@@ -19,7 +18,7 @@ public class LoginSecurityLogin implements Listener {
 	@EventHandler
 	public void loginSecurityLogin(AuthActionEvent event) {
 		if (event.getType().equals(AuthActionType.LOGIN)) {
-			BukkitScheduler.runTaskLaterAsynchronously(plugin, new Runnable() {
+			plugin.getBukkitScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -32,7 +31,7 @@ public class LoginSecurityLogin implements Listener {
 						}
 					}
 				}
-			}, 40l);
+			}, 2);
 		}
 	}
 }

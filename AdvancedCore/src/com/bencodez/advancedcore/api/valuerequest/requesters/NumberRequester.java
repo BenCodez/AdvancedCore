@@ -23,7 +23,6 @@ import com.bencodez.advancedcore.api.valuerequest.book.BookSign;
 import com.bencodez.advancedcore.api.valuerequest.listeners.NumberListener;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptManager;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -109,14 +108,16 @@ public class NumberRequester {
 					String option = num.toString();
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput Number " + option));
+							"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput Number "
+									+ option));
 					user.sendJson(comp);
 				}
 				if (allowCustomOption) {
 					String option = "CustomValue";
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
-							"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput Number " + option));
+							"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput Number "
+									+ option));
 					user.sendJson(comp);
 				}
 			} else {
@@ -130,8 +131,8 @@ public class NumberRequester {
 						String num = input;
 						try {
 							Number number = Double.valueOf(num);
-							BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(),
-									new Runnable() {
+							AdvancedCorePlugin.getInstance().getBukkitScheduler()
+									.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 										@Override
 										public void run() {

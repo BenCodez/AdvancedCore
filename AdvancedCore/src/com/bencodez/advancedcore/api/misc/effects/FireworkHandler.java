@@ -17,7 +17,6 @@ import org.bukkit.event.entity.FireworkExplodeEvent;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 public class FireworkHandler implements Listener {
 
@@ -57,7 +56,7 @@ public class FireworkHandler implements Listener {
 	 */
 	public void launchFirework(Location loc, int power, ArrayList<String> colors, ArrayList<String> fadeOutColor,
 			boolean trail, boolean flicker, ArrayList<String> types) {
-		BukkitScheduler.runTask(plugin, new Runnable() {
+		plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -119,13 +118,13 @@ public class FireworkHandler implements Listener {
 		if (event.getEntity() instanceof Firework) {
 			Firework fw = event.getEntity();
 			if (fireWorks.contains(fw)) {
-				BukkitScheduler.runTaskLaterAsynchronously(plugin, new Runnable() {
+				plugin.getBukkitScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 					@Override
 					public void run() {
 						fireWorks.remove(fw);
 					}
-				}, 10l);
+				}, 1);
 			}
 		}
 	}

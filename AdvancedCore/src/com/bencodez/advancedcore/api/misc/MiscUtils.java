@@ -34,7 +34,6 @@ import org.bukkit.plugin.Plugin;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import net.md_5.bungee.api.ChatColor;
 
@@ -109,7 +108,7 @@ public class MiscUtils {
 					ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders));
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				BukkitScheduler.runTask(plugin, new Runnable() {
+				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
 					@Override
 					public void run() {
@@ -128,7 +127,7 @@ public class MiscUtils {
 					StringParser.getInstance().replacePlaceHolder(command, placeholders));
 
 			plugin.debug("Executing console command: " + command);
-			BukkitScheduler.runTask(plugin, new Runnable() {
+			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -153,7 +152,7 @@ public class MiscUtils {
 			final ArrayList<String> commands = ArrayUtils.getInstance().replacePlaceHolder(commands1, placeholders);
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				BukkitScheduler.runTask(plugin, new Runnable() {
+				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
 					@Override
 					public void run() {
@@ -176,7 +175,7 @@ public class MiscUtils {
 			final String cmd = StringParser.getInstance().replacePlaceHolder(command, placeholders);
 
 			plugin.debug("Executing console command: " + command);
-			BukkitScheduler.runTask(plugin, new Runnable() {
+			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
 				@Override
 				public void run() {

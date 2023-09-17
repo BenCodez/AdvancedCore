@@ -25,7 +25,6 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptManager;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu.InputReceiver;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -124,13 +123,14 @@ public class StringRequester {
 
 					@Override
 					public void onInput(ConversationContext context, Conversable conversable, String input) {
-						BukkitScheduler.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
+						AdvancedCorePlugin.getInstance().getBukkitScheduler()
+								.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
-							@Override
-							public void run() {
-								listener.onInput((Player) conversable, input);
-							}
-						});
+									@Override
+									public void run() {
+										listener.onInput((Player) conversable, input);
+									}
+								});
 
 					}
 				});

@@ -53,6 +53,7 @@ import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectString;
+import com.bencodez.advancedcore.api.scheduler.BukkitScheduler;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
@@ -81,7 +82,6 @@ import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
 import com.bencodez.advancedcore.listeners.WorldChangeEvent;
 import com.bencodez.advancedcore.logger.Logger;
 import com.bencodez.advancedcore.nms.NMSManager;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 import com.bencodez.advancedcore.serverhandle.CraftBukkitHandle;
 import com.bencodez.advancedcore.serverhandle.IServerHandle;
 import com.bencodez.advancedcore.serverhandle.SpigotHandle;
@@ -215,6 +215,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private LuckPermsHandle luckPermsHandle;
 
+	@Getter
+	private BukkitScheduler bukkitScheduler;
+
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
@@ -224,7 +227,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void checkAutoUpdate() {
-		BukkitScheduler.runTaskAsynchronously(this, new Runnable() {
+		getBukkitScheduler().runTaskAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -237,7 +240,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void checkCMI() {
-		BukkitScheduler.runTaskAsynchronously(javaPlugin, new Runnable() {
+		getBukkitScheduler().runTaskAsynchronously(javaPlugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -250,7 +253,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void checkPlaceHolderAPI() {
-		BukkitScheduler.runTaskAsynchronously(this, new Runnable() {
+		getBukkitScheduler().runTaskAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -270,7 +273,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (!loadServerData) {
 			return;
 		}
-		BukkitScheduler.runTaskAsynchronously(this, new Runnable() {
+		getBukkitScheduler().runTaskAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -831,7 +834,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void loadVault() {
-		BukkitScheduler.runTaskLater(this, new Runnable() {
+		getBukkitScheduler().runTaskLater(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -929,6 +932,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		javaPlugin = this;
+		bukkitScheduler = new BukkitScheduler(this);
 		timer = Executors.newSingleThreadScheduledExecutor();
 		loginTimer = Executors.newSingleThreadScheduledExecutor();
 		advancedCoreCommandLoader = CommandLoader.getInstance();
@@ -1071,7 +1075,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			return;
 		}
 		rewardHandler.startup();
-		BukkitScheduler.runTaskLaterAsynchronously(this, new Runnable() {
+		getBukkitScheduler().runTaskLaterAsynchronously(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -1105,6 +1109,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}
 				debug("User Startup finished");
 			}
-		}, 30);
+		}, 5);
 	}
 }

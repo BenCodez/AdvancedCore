@@ -12,7 +12,6 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.scheduler.BukkitScheduler;
 
 public class BInventoryListener implements Listener {
 	private AdvancedCorePlugin plugin;
@@ -29,7 +28,7 @@ public class BInventoryListener implements Listener {
 
 		final Player player = (Player) event.getWhoClicked();
 
-		BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
+		plugin.getBukkitScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 			@Override
 			public void run() {
@@ -54,7 +53,7 @@ public class BInventoryListener implements Listener {
 			}
 			player.setItemOnCursor(new ItemStack(Material.AIR));
 			player.updateInventory();
-			
+
 			if (plugin.getOptions().isCloseGUIOnShiftClick()) {
 				gui.forceClose(player);
 			}
@@ -81,7 +80,7 @@ public class BInventoryListener implements Listener {
 
 			gui.setLastPressTime(cTime);
 
-			BukkitScheduler.runTaskAsynchronously(plugin, new Runnable() {
+			plugin.getBukkitScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {

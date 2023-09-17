@@ -110,6 +110,10 @@
 									<pattern>com.zaxxer.hikari</pattern>
 									<shadedPattern>${project.groupId}.advancedcore.hikari</shadedPattern>
 								</relocation>
+								<relocation>
+									<pattern>com.tcoded.folialib</pattern>
+									<shadedPattern>${project.groupId}.advancedcore.folialib</shadedPattern>
+								</relocation>
 							</relocations>
 							<artifactSet>
 								<excludes>
@@ -160,8 +164,18 @@
 			<id>minecraft-repo</id>
 			<url>https://libraries.minecraft.net/</url>
 		</repository>
+		<repository>
+			<id>devmart-other</id>
+			<url>https://nexuslite.gcnt.net/repos/other/</url>
+		</repository>
 	</repositories>
 	<dependencies>
+		<dependency>
+			<groupId>com.tcoded</groupId>
+			<artifactId>FoliaLib</artifactId>
+			<version>LATEST</version>
+			<scope>compile</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot-api</artifactId>
@@ -281,12 +295,12 @@
 				</repository>
 			</distributionManagement>
 			<dependencies>
-				<dependency>
+				<!--<dependency>
 					<groupId>com.bencodez</groupId>
 					<artifactId>Scheduler-Java8</artifactId>
 					<version>LATEST</version>
 					<scope>compile</scope>
-				</dependency>
+				</dependency>-->
 			</dependencies>
 		</profile>
 		<profile>
@@ -305,12 +319,12 @@
 				</repository>
 			</distributionManagement>
 			<dependencies>
-				<dependency>
+				<!--<dependency>
 					<groupId>com.bencodez</groupId>
 					<artifactId>Scheduler-Java17</artifactId>
 					<version>LATEST</version>
 					<scope>compile</scope>
-				</dependency>
+				</dependency>-->
 			</dependencies>
 		</profile>
 		<profile>
