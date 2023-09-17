@@ -957,6 +957,18 @@ public class AdvancedCoreUser {
 		}
 	}
 
+	public void sendJson(ArrayList<TextComponent> messages, boolean javascript) {
+		Player player = getPlayer();
+		if ((player != null) && (messages != null)) {
+			for (TextComponent txt : messages) {
+				if (javascript) {
+					txt.setText(StringParser.getInstance().replaceJavascript(getPlayer(), txt.getText()));
+				}
+				plugin.getServerHandle().sendMessage(player, txt);
+			}
+		}
+	}
+
 	/**
 	 * Send json.
 	 *
@@ -1017,11 +1029,25 @@ public class AdvancedCoreUser {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
 
+			ArrayList<TextComponent> texts = new ArrayList<TextComponent>();
 			for (String str : msg) {
-				sendMessage(str);
-			}
+				if ((player != null) && (msg != null)) {
+					if (!str.equals("")) {
+						for (String str1 : str.split("%NewLine%")) {
+							TextComponent text = StringParser.getInstance()
+									.parseJson(StringParser.getInstance().parseText(player, str1));
+							text.setText(StringParser.getInstance().replaceJavascript(getPlayer(), text.getText()));
+							texts.add(text);
+						}
+					}
 
+				}
+			}
+			if (texts.size() > 0) {
+				sendJson(texts, false);
+			}
 		}
+
 	}
 
 	/**
