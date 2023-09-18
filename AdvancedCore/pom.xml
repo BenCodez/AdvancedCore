@@ -173,7 +173,7 @@
 		<dependency>
 			<groupId>com.tcoded</groupId>
 			<artifactId>FoliaLib</artifactId>
-			<version>LATEST</version>
+			<version>0.2.3-legacy-support</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
