@@ -26,6 +26,7 @@ com.bencodez.advancedcore.api.rewards
 com.bencodez.advancedcore.api.rewards.editbuttons
 com.bencodez.advancedcore.api.rewards.injected
 com.bencodez.advancedcore.api.rewards.injectedrequirement
+com.bencodez.advancedcore.api.scheduler
 com.bencodez.advancedcore.api.skull
 com.bencodez.advancedcore.api.time
 com.bencodez.advancedcore.api.time.events
