@@ -902,10 +902,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		timeChecker.getTimer().shutdown();
 		inventoryTimer.shutdown();
 		try {
-			getLogger().info("Allowing background tasks to finish, this could take up to 20 seconds");
-			loginTimer.awaitTermination(5, TimeUnit.SECONDS);
-			timer.awaitTermination(5, TimeUnit.SECONDS);
-			timeChecker.getTimer().awaitTermination(5, TimeUnit.SECONDS);
+			getLogger().info("Allowing background tasks to finish, this could take up to 5 seconds");
+			loginTimer.awaitTermination(2, TimeUnit.SECONDS);
+			timer.awaitTermination(2, TimeUnit.SECONDS);
+			timeChecker.getTimer().awaitTermination(2, TimeUnit.SECONDS);
 			inventoryTimer.awaitTermination(1, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			debug(e);
