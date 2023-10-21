@@ -718,6 +718,7 @@ public class RewardHandler {
 				if (str.startsWith("!")) {
 					reverse = true;
 					str = str.substring(1);
+					debug("Doing permission check in reverse");
 				}
 
 				boolean perm = PlayerUtils.getInstance().hasServerPermission(UUID.fromString(user.getUUID()), str);
@@ -725,7 +726,7 @@ public class RewardHandler {
 					perm = !perm;
 				}
 				if (!perm) {
-					plugin.debug(user.getPlayerName() + " does not have permission " + str + " to get reward "
+					debug(user.getPlayerName() + " does not have permission " + str + " to get reward "
 							+ reward.getName() + ", reverse: " + reverse);
 					return false;
 				}
