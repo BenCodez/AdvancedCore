@@ -38,7 +38,8 @@ public class PlayerJoinEvent implements Listener {
 		if (event.isUserInStorage() && plugin.isLoadUserData()) {
 			Player player = event.getPlayer();
 			boolean userExist = plugin.getUserManager().userExist(event.getPlayer().getUniqueId());
-			if (player.getName().startsWith(plugin.getOptions().getBedrockPlayerPrefix())) {
+			if (player.getName().startsWith(plugin.getOptions().getBedrockPlayerPrefix())
+					|| plugin.getGeyserHandle().isGeyserPlayer(player.getUniqueId())) {
 				userExist = true;
 				plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
 				plugin.extraDebug("Detected Geyser Player, Forcing player data to load");

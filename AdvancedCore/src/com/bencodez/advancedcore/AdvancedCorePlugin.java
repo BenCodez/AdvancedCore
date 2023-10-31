@@ -36,6 +36,7 @@ import com.bencodez.advancedcore.api.backup.BackupHandle;
 import com.bencodez.advancedcore.api.cmi.CMIHandler;
 import com.bencodez.advancedcore.api.command.TabCompleteHandle;
 import com.bencodez.advancedcore.api.command.TabCompleteHandler;
+import com.bencodez.advancedcore.api.geyser.GeyserHandle;
 import com.bencodez.advancedcore.api.hologram.HologramHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
@@ -476,6 +477,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	@Getter
+	private GeyserHandle geyserHandle;
+
 	/**
 	 * Load AdvancedCore hook
 	 */
@@ -509,6 +513,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		permissionHandler = new PermissionHandler(this);
 
 		loadConfig(true);
+
+		geyserHandle = new GeyserHandle();
+		geyserHandle.load();
 
 		rewardHandler = RewardHandler.getInstance();
 		rewardHandler.loadInjectedRewards();
