@@ -239,12 +239,6 @@ public class PlayerUtils {
 				return uuid;
 			}
 
-			if (plugin.getOptions().isGeyserPrefixSupport()
-					&& !playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
-				playerName = playerName.replace(' ', '_');
-				return getUUID(plugin.getOptions().getGeyserPrefix() + playerName);
-			}
-
 			try {
 				OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 				return p.getUniqueId().toString();
@@ -389,9 +383,9 @@ public class PlayerUtils {
 		}
 
 		if (plugin.getLuckPermsHandle() != null && plugin.getLuckPermsHandle().luckpermsApiLoaded()) {
-			//plugin.devDebug("Attempting to use luckperms");
+			// plugin.devDebug("Attempting to use luckperms");
 			if (plugin.getLuckPermsHandle().hasPermission(playerUUID, perm)) {
-				//plugin.devDebug("does have permission: " + perm);
+				// plugin.devDebug("does have permission: " + perm);
 				return true;
 			}
 		}
@@ -483,9 +477,6 @@ public class PlayerUtils {
 			}
 		}
 
-		if (plugin.getOptions().isGeyserPrefixSupport() && !name.startsWith(plugin.getOptions().getGeyserPrefix())) {
-			return isValidUser(plugin.getOptions().getGeyserPrefix() + name);
-		}
 		plugin.extraDebug("Player " + name + " does not exist");
 		return false;
 	}

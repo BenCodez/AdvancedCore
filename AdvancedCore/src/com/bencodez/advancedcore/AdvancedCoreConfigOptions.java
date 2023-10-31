@@ -124,13 +124,8 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	@ConfigDataString(path = "GeyserPrefix")
-	private String geyserPrefix = "*";
-
-	@Getter
-	@Setter
-	@ConfigDataBoolean(path = "GeyserPrefixSupport")
-	private boolean geyserPrefixSupport = false;
+	@ConfigDataString(path = "BedrockPlayerPrefix")
+	private String bedrockPlayerPrefix = ".";
 
 	@Getter
 	@Setter

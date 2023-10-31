@@ -34,8 +34,8 @@ public class SkullThread {
 				return;
 			}
 
-			if (playerName.startsWith(plugin.getOptions().getGeyserPrefix())) {
-				playerName = playerName.substring(plugin.getOptions().getGeyserPrefix().length());
+			if (playerName.startsWith(plugin.getOptions().getBedrockPlayerPrefix())) {
+				playerName = playerName.substring(plugin.getOptions().getBedrockPlayerPrefix().length());
 			}
 
 			try {
