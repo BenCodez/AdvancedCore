@@ -20,7 +20,7 @@ public class GeyserHandle {
 			geyserExists = true;
 		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
 				| InvocationTargetException | ClassNotFoundException e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 
@@ -34,7 +34,7 @@ public class GeyserHandle {
 					return (boolean) value;
 				}
 			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			}
 		}
 		return false;
