@@ -1016,6 +1016,10 @@ public class AdvancedCoreUser {
 			}
 		}
 	}
+	
+	public boolean isBedrockPlayer() {
+		return plugin.getGeyserHandle().isGeyserPlayer(getJavaUUID());
+	}
 
 	public void sendMessage(String msg, HashMap<String, String> placeholders) {
 		sendMessage(StringParser.getInstance().replacePlaceHolder(msg, placeholders));
