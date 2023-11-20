@@ -482,6 +482,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private boolean loadGeyserAPI = true;
 
 	@Getter
+	@Setter
+	private boolean loadLuckPerms = true;
+
+	@Getter
 	private GeyserHandle geyserHandle;
 
 	/**
@@ -493,9 +497,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		hologramHandler = new HologramHandler(this);
 
-		if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
-			luckPermsHandle = new LuckPermsHandle();
-			luckPermsHandle.load(this);
+		if (loadLuckPerms) {
+			if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
+				luckPermsHandle = new LuckPermsHandle();
+				luckPermsHandle.load(this);
+			}
 		}
 
 		loadSignAPI();
