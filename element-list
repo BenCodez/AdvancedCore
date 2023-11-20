@@ -4,6 +4,7 @@ com.bencodez.advancedcore.api.bookgui
 com.bencodez.advancedcore.api.cmi
 com.bencodez.advancedcore.api.command
 com.bencodez.advancedcore.api.exceptions
+com.bencodez.advancedcore.api.geyser
 com.bencodez.advancedcore.api.gui
 com.bencodez.advancedcore.api.hologram
 com.bencodez.advancedcore.api.inventory
