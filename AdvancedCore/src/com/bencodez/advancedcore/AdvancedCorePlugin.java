@@ -478,6 +478,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	@Getter
+	@Setter
+	private boolean loadGeyserAPI = true;
+
+	@Getter
 	private GeyserHandle geyserHandle;
 
 	/**
@@ -514,8 +518,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		loadConfig(true);
 
-		geyserHandle = new GeyserHandle();
-		geyserHandle.load();
+		if (loadGeyserAPI) {
+			geyserHandle = new GeyserHandle();
+			geyserHandle.load();
+		}
 
 		rewardHandler = RewardHandler.getInstance();
 		rewardHandler.loadInjectedRewards();
