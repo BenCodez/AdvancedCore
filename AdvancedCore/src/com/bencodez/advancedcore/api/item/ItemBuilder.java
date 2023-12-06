@@ -104,6 +104,7 @@ public class ItemBuilder {
 	 *
 	 * @param data ConfigurationSection
 	 */
+	@SuppressWarnings("deprecation")
 	public ItemBuilder(ConfigurationSection data) {
 		if (data == null) {
 			try {
@@ -393,6 +394,7 @@ public class ItemBuilder {
 	 * @param enchants The enchants to add.
 	 * @return ItemBuilder
 	 */
+	@SuppressWarnings("deprecation")
 	public ItemBuilder addEnchantments(HashMap<String, Integer> enchants) {
 		if ((enchants == null) || (enchants.size() == 0)) {
 			return this;

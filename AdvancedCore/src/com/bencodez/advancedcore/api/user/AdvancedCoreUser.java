@@ -619,6 +619,7 @@ public class AdvancedCoreUser {
 		if (player != null && plugin.isEnabled()) {
 			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
+				@SuppressWarnings("deprecation")
 				@Override
 				public void run() {
 					player.addPotionEffect(

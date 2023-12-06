@@ -22,6 +22,7 @@ public abstract class RewardEditPotions extends RewardEdit {
 	public RewardEditPotions() {
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Potions: " + reward.getName());
