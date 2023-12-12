@@ -856,7 +856,7 @@ public class AdvancedCoreUser {
 
 						@Override
 						public void run() {
-							player.performCommand(cmd);
+							player.chat("/" + cmd);
 						}
 					});
 				}
@@ -876,7 +876,7 @@ public class AdvancedCoreUser {
 					public void run() {
 						Player player = getPlayer();
 						if (player != null) {
-							player.performCommand(cmd);
+							player.chat("/" + cmd);
 						}
 					}
 				});
