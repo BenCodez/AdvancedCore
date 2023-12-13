@@ -181,6 +181,12 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
+			<groupId>com.github.LoneDev6</groupId>
+			<artifactId>api-itemsadder</artifactId>
+			<version>3.6.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot-api</artifactId>
 			<version>1.20.3-R0.1-SNAPSHOT</version>
@@ -277,6 +283,11 @@
 			<artifactId>api</artifactId>
 			<version>5.4</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+			<version>5.0.2</version>
 		</dependency>
 	</dependencies>
 	<profiles>

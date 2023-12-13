@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
@@ -143,7 +144,6 @@ public class ItemBuilder {
 					}
 
 				} else {
-
 					if (data.isConfigurationSection("ItemStack")) {
 						HashMap<String, Object> map = new HashMap<String, Object>();
 						for (String key : data.getConfigurationSection("ItemStack").getKeys(false)) {
@@ -151,7 +151,6 @@ public class ItemBuilder {
 						}
 						is = ItemStack.deserialize(map);
 					} else {
-
 						Material material = null;
 						List<String> lore = data.getStringList("Lore");
 						String materialStr = data.getString("Material", data.getName());
@@ -293,6 +292,14 @@ public class ItemBuilder {
 						}
 
 						setUnbreakable(data.getBoolean("Unbreakable", false));
+						if (!data.getString("ItemsAdder", "").isEmpty()) {
+							if (Bukkit.getPluginManager().getPlugin("ItemsAdder") != null) {
+								ItemStack item = new ItemsAdderHandle().getItem(data.getString("ItemsAdder"));
+								if (item != null) {
+									is = item;
+								}
+							}
+						}
 
 					}
 					slot = data.getInt("Slot", -1);
