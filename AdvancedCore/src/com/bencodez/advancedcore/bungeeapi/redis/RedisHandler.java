@@ -7,7 +7,11 @@ public abstract class RedisHandler {
 	JedisPool jedisPool;
 
 	public RedisHandler(String host, int port, String username, String password) {
-		jedisPool = new JedisPool(host, port, username, password);
+		if (username.isEmpty() && password.isEmpty()) {
+			jedisPool = new JedisPool(host, port);
+		} else {
+			jedisPool = new JedisPool(host, port, username, password);
+		}
 	}
 
 	public void loadListener(RedisListener listener) {
@@ -16,15 +20,18 @@ public abstract class RedisHandler {
 		}
 	}
 
+	public abstract void debug(String message);
+
 	public void sendMessage(String channel, String... message) {
 		String str = "";
 		for (int i = 0; i < message.length; i++) {
 			str += message[i];
 			if (i < message.length - 1) {
-				str += "/";
+				str += ":";
 			}
 		}
 		try (Jedis jedis = jedisPool.getResource()) {
+			debug("Redis Send: " + channel + ", " + str);
 			jedis.publish(channel, str);
 		}
 	}

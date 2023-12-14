@@ -67,10 +67,10 @@ public class ConnectionManager {
 
 	public void close() {
 		if (isClosed()) {
-			throw new IllegalStateException("Connection is not open.");
+			//throw new IllegalStateException("Connection is not open.");
+		} else {
+			dataSource.close();
 		}
-
-		dataSource.close();
 	}
 
 	public Connection getConnection() {

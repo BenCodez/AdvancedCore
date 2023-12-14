@@ -16,8 +16,9 @@ public class RedisListener extends JedisPubSub {
 	}
 
 	public void onMessage(String channel, String message) {
+		redisHandler.debug("Redis Message: " + channel + "," + message);
 		if (channel.equals(this.channel)) {
-			redisHandler.onMessage(channel, message.split(Pattern.quote("//")));
+			redisHandler.onMessage(channel, message.split(Pattern.quote(":")));
 		}
 	}
 
