@@ -70,6 +70,7 @@ Items:
       
     # Skull options
     #Skull: 'PLAYERNAME'
+    # One place to find skull textures is here: https://minecraft-heads.com/
     #SkullTexture: 'SKULLTEXTURE'
     #SkullURL: 'URL to skull'
      
