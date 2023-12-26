@@ -150,7 +150,17 @@ public class ItemBuilder {
 							map.put(key, data.get("ItemStack." + key));
 						}
 						is = ItemStack.deserialize(map);
+					} else if (!data.getString("ItemsAdder", "").isEmpty()) {
+						if (Bukkit.getPluginManager().getPlugin("ItemsAdder") != null) {
+							ItemStack item = new ItemsAdderHandle().getItem(data.getString("ItemsAdder"));
+							if (item != null) {
+								is = item;
+							}
+						} else {
+							is = new ItemStack(Material.STONE);
+						}
 					} else {
+
 						Material material = null;
 						List<String> lore = data.getStringList("Lore");
 						String materialStr = data.getString("Material", data.getName());
@@ -292,15 +302,6 @@ public class ItemBuilder {
 						}
 
 						setUnbreakable(data.getBoolean("Unbreakable", false));
-						if (!data.getString("ItemsAdder", "").isEmpty()) {
-							if (Bukkit.getPluginManager().getPlugin("ItemsAdder") != null) {
-								ItemStack item = new ItemsAdderHandle().getItem(data.getString("ItemsAdder"));
-								if (item != null) {
-									is = item;
-								}
-							}
-						}
-
 					}
 					slot = data.getInt("Slot", -1);
 
