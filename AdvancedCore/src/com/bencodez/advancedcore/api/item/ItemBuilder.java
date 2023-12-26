@@ -159,6 +159,17 @@ public class ItemBuilder {
 						} else {
 							is = new ItemStack(Material.STONE);
 						}
+						int amount = data.getInt("Amount");
+						int minAmount = data.getInt("MinAmount");
+						int maxAmount = data.getInt("MaxAmount");
+
+						int currentAmount = 0;
+						if (amount > 0) {
+							currentAmount = amount;
+						} else {
+							currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
+						}
+						is.setAmount(currentAmount);
 					} else {
 
 						Material material = null;
