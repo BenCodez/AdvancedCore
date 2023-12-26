@@ -100,6 +100,8 @@ Items:
       #SPEED:
         #Duration: 20
         #Amplifier: 1
+        
+    #ItemsAdder: ITEMHERE
       
 # Amount of money to give, requires vault
 # Use 0 to give none
