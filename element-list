@@ -56,8 +56,10 @@ com.bencodez.advancedcore.api.yml.annotation
 com.bencodez.advancedcore.api.yml.editor
 com.bencodez.advancedcore.api.yml.updater
 com.bencodez.advancedcore.bungeeapi.globaldata
+com.bencodez.advancedcore.bungeeapi.GlobalMessage
 com.bencodez.advancedcore.bungeeapi.mysql
 com.bencodez.advancedcore.bungeeapi.pluginmessage
+com.bencodez.advancedcore.bungeeapi.redis
 com.bencodez.advancedcore.bungeeapi.sockets
 com.bencodez.advancedcore.bungeeapi.time
 com.bencodez.advancedcore.bungeeapi.velocity
