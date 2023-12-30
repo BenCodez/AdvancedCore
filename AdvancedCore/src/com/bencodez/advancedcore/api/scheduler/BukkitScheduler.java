@@ -63,6 +63,10 @@ public class BukkitScheduler {
 		getFoliaLib().getImpl().runLater(task, delay, TimeUnit.SECONDS);
 	}
 
+	public void runTaskLater(Plugin plugin, Runnable task, long delay, TimeUnit time) {
+		getFoliaLib().getImpl().runLater(task, delay, time);
+	}
+
 	public void runTaskTimer(Plugin plugin, Runnable task, long delay, long period) {
 		getFoliaLib().getImpl().runTimer(task, delay, period, TimeUnit.SECONDS);
 	}

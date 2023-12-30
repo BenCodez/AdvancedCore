@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.misc.effects;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
@@ -48,15 +49,16 @@ public class BossBar {
 			bossBar.addPlayer(player);
 
 			if (delay > 0) {
-				AdvancedCorePlugin.getInstance().getBukkitScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+				AdvancedCorePlugin.getInstance().getBukkitScheduler().runTaskLater(AdvancedCorePlugin.getInstance(),
+						new Runnable() {
 
-					@Override
-					public void run() {
-						if (bossBar != null && player != null) {
-							bossBar.removePlayer(player);
-						}
-					}
-				}, delay * 20);
+							@Override
+							public void run() {
+								if (bossBar != null && player != null) {
+									bossBar.removePlayer(player);
+								}
+							}
+						}, delay * 50 + 60, TimeUnit.MILLISECONDS);
 			}
 		} catch (Exception e) {
 			AdvancedCorePlugin.getInstance().debug(e);
@@ -75,13 +77,14 @@ public class BossBar {
 	}
 
 	private void hideInDelay(int delay) {
-		AdvancedCorePlugin.getInstance().getBukkitScheduler().runTaskLater(AdvancedCorePlugin.getInstance(), new Runnable() {
+		AdvancedCorePlugin.getInstance().getBukkitScheduler().runTaskLater(AdvancedCorePlugin.getInstance(),
+				new Runnable() {
 
-			@Override
-			public void run() {
-				hide();
-			}
-		}, delay);
+					@Override
+					public void run() {
+						hide();
+					}
+				}, delay * 50, TimeUnit.MILLISECONDS);
 	}
 
 	public void removePlayer(Player player) {
