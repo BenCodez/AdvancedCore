@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.Player;
 
@@ -33,7 +32,7 @@ public class BossBar {
 	 */
 	public BossBar(String msg, String barColor, String barStyle, double progress) {
 		bossBar = Bukkit.createBossBar(StringParser.getInstance().colorize(msg), BarColor.valueOf(barColor),
-				BarStyle.valueOf(barStyle), BarFlag.DARKEN_SKY);
+				BarStyle.valueOf(barStyle));
 		bossBar.setProgress(progress);
 	}
 
