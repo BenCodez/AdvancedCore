@@ -14,6 +14,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
+import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 
@@ -380,5 +381,13 @@ public class UserManager {
 			return nums;
 		}
 		return new ArrayList<Integer>();
+	}
+
+	public void removeUUID(UUID key) {
+		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			plugin.getSQLiteUserTable().delete(new Column("uuid", new DataValueString(key.toString())));
+		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			plugin.getMysql().deletePlayer(key.toString());
+		}
 	}
 }
