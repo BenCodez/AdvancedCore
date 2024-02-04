@@ -22,7 +22,7 @@ public class DataValueBoolean implements DataValue {
 
 	@Override
 	public String getString() {
-		return null;
+		return "" + getBoolean();
 	}
 
 	@Override
