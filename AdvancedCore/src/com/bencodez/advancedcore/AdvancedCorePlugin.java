@@ -1102,9 +1102,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				for (UserStartup start : userStartup) {
 					start.onStart();
 				}
+				boolean onlineMode = getOptions().isOnlineMode();
+				int offlineAmount = 0;
 				HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys();
 				for (Entry<UUID, ArrayList<Column>> playerData : cols.entrySet()) {
 					String uuid = playerData.getKey().toString();
+					if (onlineMode) {
+						if (uuid.charAt(14) == '3') {
+							offlineAmount++;
+						}
+					}
 					if (javaPlugin != null) {
 						if (uuid != null) {
 							AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
@@ -1125,6 +1132,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				cols = null;
 				for (UserStartup start : userStartup) {
 					start.onFinish();
+				}
+				if (offlineAmount > 0 && onlineMode) {
+					debug("Detected offline uuids in a online server, this could mean an error for your server setup: "
+							+ offlineAmount);
 				}
 				debug("User Startup finished");
 			}
