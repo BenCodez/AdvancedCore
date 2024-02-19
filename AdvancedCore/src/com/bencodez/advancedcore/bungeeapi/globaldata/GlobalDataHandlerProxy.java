@@ -40,6 +40,36 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 	public GlobalDataHandlerProxy(GlobalMySQL globalMysql, ArrayList<String> servers) {
 		super(globalMysql);
 		timeChangedTimer = Executors.newScheduledThreadPool(1);
+		timeChangedTimer.schedule(new Runnable() {
+
+			@Override
+			public void run() {
+				if (!timeChangedHappened) {
+					for (String server : servers) {
+						//boolean b = getBoolean(server, "FinishedProcessing");
+						boolean processing = getBoolean(server, "Processing");
+						boolean day = getBoolean(server, "DAY");
+						boolean week = getBoolean(server, "WEEK");
+						boolean month = getBoolean(server, "MONTH");
+						if (processing) {
+							if (day) {
+								timeChanges.add(TimeType.DAY);
+							}
+							if (week) {
+								timeChanges.add(TimeType.WEEK);
+							}
+							if (month) {
+								timeChanges.add(TimeType.MONTH);
+							}
+							globalMysql.debug("Detected time change that may have been before server start, finishing...");
+							timeChangedHappened = true;
+							return;
+						}
+						
+					}
+				}
+			}
+		}, 30, TimeUnit.SECONDS);
 		timeChangedTimer.scheduleWithFixedDelay(new Runnable() {
 
 			@Override
@@ -94,6 +124,7 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 						onTimeChangedFinished(time);
 					}
 					timeChanges.clear();
+					
 				}
 			}
 		}, 30, 10, TimeUnit.SECONDS);
