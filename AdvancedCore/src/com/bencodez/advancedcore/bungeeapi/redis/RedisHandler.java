@@ -22,6 +22,10 @@ public abstract class RedisHandler {
 
 	public abstract void debug(String message);
 
+	public void close() {
+		jedisPool.close();
+	}
+
 	public void sendMessage(String channel, String... message) {
 		String str = "";
 		for (int i = 0; i < message.length; i++) {
