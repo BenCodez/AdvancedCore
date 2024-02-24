@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.bungeeapi.sockets;
 
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -71,6 +72,11 @@ public abstract class SocketServer extends Thread {
 				onReceive(msg.split("%line%"));
 				dis.close();
 				socket.close();
+			} catch (EOFException e) {
+				logger("Error occured while receiving socket message, enable debug to see more: " + e.getMessage());
+				if (debug) {
+					e.printStackTrace();
+				}
 			} catch (Exception ex) {
 				logger("Error occured while receiving socket message");
 				ex.printStackTrace();
