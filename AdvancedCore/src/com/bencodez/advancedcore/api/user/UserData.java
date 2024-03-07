@@ -287,7 +287,8 @@ public class UserData {
 				List<Column> row = getSQLiteRow();
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
-						if (row.get(i).getName().equals(key) && row.get(i).getValue().isString()) {
+						if (row.get(i).getName().equals(key)
+								&& (row.get(i).getValue().isString() || row.get(i).getValue().isBoolean())) {
 							String st = row.get(i).getValue().getString();
 							if (st != null && !st.equals("null")) {
 								return st;
@@ -301,7 +302,8 @@ public class UserData {
 				List<Column> row = getMySqlRow();
 				if (row != null) {
 					for (int i = 0; i < row.size(); i++) {
-						if (row.get(i).getName().equals(key) && row.get(i).getValue().isString()) {
+						if (row.get(i).getName().equals(key)
+								&& (row.get(i).getValue().isString() || row.get(i).getValue().isBoolean())) {
 							String st = row.get(i).getValue().getString();
 							if (st != null && !st.equals("null")) {
 								return st;
