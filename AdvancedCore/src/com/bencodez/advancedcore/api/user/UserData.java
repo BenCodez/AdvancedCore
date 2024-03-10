@@ -18,9 +18,11 @@ import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.thread.FileThread;
 
 import lombok.Getter;
+import lombok.Setter;
 
 public class UserData {
 	@Getter
+	@Setter
 	private HashMap<String, DataValue> tempCache;
 
 	private AdvancedCoreUser user;
@@ -257,7 +259,7 @@ public class UserData {
 		if (!key.equals("")) {
 			if (user.isTempCache() && tempCache != null) {
 				if (tempCache.get(key) != null) {
-					if (tempCache.get(key).isString()) {
+					if (tempCache.get(key).isString() || tempCache.get(key).isBoolean()) {
 						String str = tempCache.get(key).getString();
 						if (str != null) {
 							return str;

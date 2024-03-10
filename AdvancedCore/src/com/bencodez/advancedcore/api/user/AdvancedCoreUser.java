@@ -80,6 +80,8 @@ public class AdvancedCoreUser {
 		this.playerName = user.getPlayerName();
 		this.loadName = user.loadName;
 		this.plugin = plugin;
+		loadData();
+		getUserData().setTempCache(user.getUserData().getTempCache());
 	}
 
 	/**
@@ -1017,7 +1019,7 @@ public class AdvancedCoreUser {
 			}
 		}
 	}
-	
+
 	public boolean isBedrockPlayer() {
 		return plugin.getGeyserHandle().isGeyserPlayer(getJavaUUID());
 	}
