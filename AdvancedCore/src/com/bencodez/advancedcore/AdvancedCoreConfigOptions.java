@@ -60,6 +60,11 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@ConfigDataBoolean(path = "CreateBackups")
 	private boolean createBackups = false;
+	
+	@Getter
+	@Setter
+	@ConfigDataBoolean(path = "AlternateOnlineLookup")
+	private boolean alternateOnlineLookup = false;
 
 	@ConfigDataString(path = "DebugLevel", options = { "NONE", "INFO", "EXTRA", "DEV" })
 	private String debugLevelStr = "NONE";
