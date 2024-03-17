@@ -722,7 +722,7 @@ public class AdvancedCoreUser {
 	 * @return true, if is online
 	 */
 	public boolean isOnline() {
-		boolean online = PlayerUtils.getInstance().isPlayerOnline(getPlayerName(), getJavaUUID());
+		boolean online = PlayerUtils.getInstance().isPlayerOnline(getPlayerName());
 		if (!online) {
 			return false;
 		}

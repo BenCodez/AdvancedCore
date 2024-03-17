@@ -436,11 +436,7 @@ public class PlayerUtils {
 	 * @param playerName the player name
 	 * @return true, if is player online
 	 */
-	public boolean isPlayerOnline(String playerName, UUID uuid) {
-		if (uuid == null && playerName == null) {
-			return false;
-		}
-
+	public boolean isPlayerOnline(String playerName) {
 		if (playerName == null) {
 			return false;
 		}
@@ -448,18 +444,6 @@ public class PlayerUtils {
 		if (player != null) {
 			return true;
 		}
-
-		if (plugin.getOptions().isAlternateOnlineLookup()) {
-			for (Player p : Bukkit.getOnlinePlayers()) {
-				if (playerName != null && p.getName().equals(playerName)) {
-					return true;
-				}
-				if (uuid != null && p.getUniqueId().equals(uuid)) {
-					return true;
-				}
-			}
-		}
-
 		return false;
 	}
 

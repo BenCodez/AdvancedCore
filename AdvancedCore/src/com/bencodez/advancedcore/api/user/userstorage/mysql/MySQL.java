@@ -186,6 +186,7 @@ public class MySQL {
 	}
 
 	public boolean containsKey(String uuid) {
+		checkUuids();
 		if (uuids.contains(uuid) || containsKeyQuery(uuid)) {
 			return true;
 		}
@@ -529,6 +530,13 @@ public class MySQL {
 		}
 
 		return result;
+	}
+
+	public void checkUuids() {
+		if (uuids == null || uuids.size() == 0) {
+			uuids.clear();
+			uuids.addAll(getUuidsQuery());
+		}
 	}
 
 	public Set<String> getUuids() {
