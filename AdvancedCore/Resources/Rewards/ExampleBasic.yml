@@ -5,6 +5,8 @@
 # That is what you put as a reward for other plugins, like VotingPlugin
 # DO NOT HAVE DUPLICATE NAMES!!
 
+# Do not use ExampleBasic or ExampleAdvanced as rewards, they are disabled from loading!
+
 # Wiki Page: 
 # https://github.com/BenCodez/AdvancedCore/wiki/Reward-files
 
