@@ -121,6 +121,24 @@ public class MiscUtils {
 		}
 	}
 
+	public void executeConsoleCommands(final ArrayList<String> cmds, final HashMap<String, String> placeholders) {
+		if (cmds != null && !cmds.isEmpty()) {
+			final ArrayList<String> commands = ArrayUtils.getInstance().replacePlaceHolder(cmds, placeholders);
+			for (final String cmd : commands) {
+				plugin.debug("Executing console command: " + cmd);
+				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+
+					@Override
+					public void run() {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+					}
+
+				});
+			}
+
+		}
+	}
+
 	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
 			final String cmd = StringParser.getInstance().replaceJavascript(player,
