@@ -880,7 +880,7 @@ public class ItemBuilder {
 		if (conditional) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
 			String value = engine.getStringValue(javascriptConditional);
-			return identifier + ".Conditional." + value + ".Rewards";
+			return "Conditional." + value + ".Rewards";
 		}
 		return "Rewards";
 	}
