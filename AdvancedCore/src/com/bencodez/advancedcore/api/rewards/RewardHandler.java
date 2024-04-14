@@ -969,7 +969,8 @@ public class RewardHandler {
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String expression,
 					RewardOptions rewardOptions) {
 				if (expression.equals("") || new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(
-						StringParser.getInstance().replacePlaceHolder(expression, rewardOptions.getPlaceholders()))) {
+						StringParser.getInstance().replacePlaceHolders(user.getOfflinePlayer(), StringParser
+								.getInstance().replacePlaceHolder(expression, rewardOptions.getPlaceholders())))) {
 					return true;
 				}
 				return false;
@@ -1512,8 +1513,11 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				if (!list.isEmpty()) {
 					JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
+
 					for (String str : list) {
-						engine.execute(StringParser.getInstance().replacePlaceHolder(str, placeholders));
+						String expression = StringParser.getInstance().replacePlaceHolders(user.getOfflinePlayer(),
+								str);
+						engine.execute(StringParser.getInstance().replacePlaceHolder(expression, placeholders));
 					}
 				}
 				return null;
@@ -1536,8 +1540,10 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
-					if (new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(StringParser
-							.getInstance().replacePlaceHolder(section.getString("Expression"), placeholders))) {
+					String expression = section.getString("Expression");
+					expression = StringParser.getInstance().replacePlaceHolders(user.getOfflinePlayer(), expression);
+					if (new JavascriptEngine().addPlayer(user.getOfflinePlayer())
+							.getBooleanValue(StringParser.getInstance().replacePlaceHolder(expression, placeholders))) {
 						new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName() + ".Javascript")
 								.send(user);
 					} else {
