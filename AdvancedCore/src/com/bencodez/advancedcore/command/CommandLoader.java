@@ -433,6 +433,9 @@ public class CommandLoader {
 				for (int i = 1; i < args.length; i++) {
 					str += args[i] + " ";
 				}
+				if (sender instanceof Player) {
+					str = StringParser.getInstance().replacePlaceHolders((Player) sender, str);
+				}
 				JavascriptEngine engine = new JavascriptEngine();
 				engine.addPlayer(sender);
 				sendMessage(sender, "&cJavascript result: " + engine.getStringValue(str.trim()));
