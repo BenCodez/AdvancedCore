@@ -7,7 +7,6 @@ import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -17,6 +16,7 @@ import org.bukkit.event.entity.FireworkExplodeEvent;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.misc.MiscUtils;
 
 public class FireworkHandler implements Listener {
 
@@ -60,7 +60,8 @@ public class FireworkHandler implements Listener {
 
 			@Override
 			public void run() {
-				Firework fw = (Firework) loc.getWorld().spawnEntity(loc, EntityType.FIREWORK);
+				Firework fw = (Firework) loc.getWorld().spawnEntity(loc,
+						MiscUtils.getInstance().getEntityType("FIREWORK_ROCKET", "FIREWORK"));
 				FireworkMeta fwmeta = fw.getFireworkMeta();
 				FireworkEffect.Builder builder = FireworkEffect.builder();
 				if (trail) {

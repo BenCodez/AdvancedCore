@@ -38,6 +38,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.skull.SkullCreator;
 import com.bencodez.advancedcore.nms.NMSManager;
 import com.google.common.collect.Multimap;
@@ -469,7 +470,8 @@ public class ItemBuilder {
 		ItemMeta meta = is.getItemMeta();
 		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 		is.setItemMeta(meta);
-		is.addUnsafeEnchantment(Enchantment.LUCK, 1);
+
+		is.addUnsafeEnchantment(MiscUtils.getInstance().getEnchant("LOOTING", "LUCK"), 1);
 		return this;
 	}
 

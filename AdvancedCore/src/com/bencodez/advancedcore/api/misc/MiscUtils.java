@@ -22,14 +22,18 @@ import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.potion.PotionEffectType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
@@ -98,6 +102,34 @@ public class MiscUtils {
 		} else {
 			return false;
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	public Enchantment getEnchant(String enchant, String enchant2) {
+		Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchant));
+		if (ench != null) {
+			return ench;
+		}
+		return Enchantment.getByKey(NamespacedKey.minecraft(enchant2));
+	}
+
+	public EntityType getEntityType(String entity, String entity2) {
+		try {
+			return EntityType.valueOf(entity);
+		} catch (Exception e) {
+			return EntityType.valueOf(entity2);
+		}
+
+	}
+
+	@SuppressWarnings("deprecation")
+	public PotionEffectType getPotionType(String potion, String potion2) {
+		try {
+			return PotionEffectType.getByKey(NamespacedKey.minecraft(potion));
+		} catch (Exception e) {
+			return PotionEffectType.getByKey(NamespacedKey.minecraft(potion2));
+		}
+
 	}
 
 	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds,

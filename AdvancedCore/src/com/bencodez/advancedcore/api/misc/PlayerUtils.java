@@ -17,7 +17,6 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
@@ -588,7 +587,7 @@ public class PlayerUtils {
 		ItemMeta meta = itemInHand.getItemMeta();
 		if (meta instanceof Damageable) {
 			Damageable dMeta = (Damageable) meta;
-			int level = itemInHand.getEnchantmentLevel(Enchantment.DURABILITY);
+			int level = itemInHand.getEnchantmentLevel(MiscUtils.getInstance().getEnchant("UNBREAKING", "DURABILITY"));
 			int chance = (100 / (level + 1));
 			int addedDamage = 0;
 			for (int i = 0; i < damage; i++) {
