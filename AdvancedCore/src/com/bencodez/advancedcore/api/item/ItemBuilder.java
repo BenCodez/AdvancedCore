@@ -160,6 +160,21 @@ public class ItemBuilder {
 						} else {
 							is = new ItemStack(Material.STONE);
 						}
+
+						List<String> lore = data.getStringList("Lore");
+						String name = data.getString("Name");
+
+						if (name != null && !name.equals("")) {
+							setName(name);
+						}
+						if (lore != null && lore.size() > 0) {
+							setLore(lore);
+						} else {
+							String line = data.getString("Lore", "");
+							if (!line.equals("")) {
+								addLoreLine(line);
+							}
+						}
 						int amount = data.getInt("Amount");
 						int minAmount = data.getInt("MinAmount");
 						int maxAmount = data.getInt("MaxAmount");
