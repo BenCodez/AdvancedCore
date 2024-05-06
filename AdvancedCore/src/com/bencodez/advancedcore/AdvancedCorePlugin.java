@@ -488,6 +488,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private GeyserHandle geyserHandle;
 
+	@Getter
+	@Setter
+	private boolean loadSkullHandler = true;
+
 	/**
 	 * Load AdvancedCore hook
 	 */
@@ -547,7 +551,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		getUserManager().purgeOldPlayers();
 
-		SkullHandler.getInstance().load();
+		try {
+			if (loadSkullHandler) {
+				SkullHandler.getInstance().load();
+			}
+		} catch (Exception e) {
+			getLogger().warning("Failed to load skull handler");
+			e.printStackTrace();
+		}
 
 		userStartup();
 		loadTabComplete();
