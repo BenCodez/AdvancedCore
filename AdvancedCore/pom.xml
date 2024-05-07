@@ -170,9 +170,6 @@
 		<repository>
 			<id>bencodez repo</id>
 			<url>https://nexus.bencodez.com/repository/maven-public/</url>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
 		</repository>
 		<repository>
 			<id>minecraft-repo</id>
@@ -191,7 +188,7 @@
 		<dependency>
 			<groupId>com.bencodez</groupId>
 			<artifactId>simpleapi</artifactId>
-			<version>LATEST</version>
+			<version>0.0.1-SNAPSHOT</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
