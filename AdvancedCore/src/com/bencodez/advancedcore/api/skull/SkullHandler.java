@@ -120,7 +120,7 @@ public class SkullHandler {
 			 */
 
 			craftItemStack = ReflectionUtils.getClassForName(
-					"org.bukkit.craftbukkit." + NMSManager.getInstance().getVersion() + "inventory.CraftItemStack");
+					Bukkit.getServer().getClass().getPackage().getName() + ".inventory.CraftItemStack");
 
 			if (NMSManager.getInstance().isVersion("1.12", "1.13", "1.14", "1.15", "1.16")) {
 				itemStack = NMSManager.getInstance().getNMSClass("ItemStack");
