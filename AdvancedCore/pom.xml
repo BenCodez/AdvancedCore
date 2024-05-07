@@ -172,8 +172,11 @@
 			<url>https://nexus.bencodez.com/repository/maven-public/</url>
 		</repository>
 		<repository>
-			<id>bencodez repo snapshots</id>
+			<id>bencodez repo snapshosts</id>
 			<url>https://nexus.bencodez.com/repository/maven-snapshots/</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
 		</repository>
 		<repository>
 			<id>minecraft-repo</id>
