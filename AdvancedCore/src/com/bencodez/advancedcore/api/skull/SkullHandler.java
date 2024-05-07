@@ -15,8 +15,8 @@ import org.bukkit.inventory.ItemStack;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.PluginUtils;
-import com.bencodez.advancedcore.nms.NMSManager;
-import com.bencodez.advancedcore.nms.ReflectionUtils;
+import com.bencodez.simpleapi.nms.NMSManager;
+import com.bencodez.simpleapi.nms.ReflectionUtils;
 
 import lombok.Getter;
 

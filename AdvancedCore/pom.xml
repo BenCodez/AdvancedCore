@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bencodez</groupId>
 	<artifactId>${version.art}</artifactId>
@@ -104,15 +106,23 @@
 							<relocations>
 								<relocation>
 									<pattern>com.zaxxer.HikariCP</pattern>
-									<shadedPattern>${project.groupId}.advancedcore.HikariCP</shadedPattern>
+									<shadedPattern>
+										${project.groupId}.advancedcore.HikariCP</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.bencodez.simpleapi</pattern>
+									<shadedPattern>
+										${project.groupId}.advancedcore.simpleapi</shadedPattern>
 								</relocation>
 								<relocation>
 									<pattern>com.zaxxer.hikari</pattern>
-									<shadedPattern>${project.groupId}.advancedcore.hikari</shadedPattern>
+									<shadedPattern>
+										${project.groupId}.advancedcore.hikari</shadedPattern>
 								</relocation>
 								<relocation>
 									<pattern>com.tcoded.folialib</pattern>
-									<shadedPattern>${project.groupId}.advancedcore.folialib</shadedPattern>
+									<shadedPattern>
+										${project.groupId}.advancedcore.folialib</shadedPattern>
 								</relocation>
 							</relocations>
 							<artifactSet>
@@ -134,7 +144,8 @@
 		</repository>
 		<repository>
 			<id>placeholderapi</id>
-			<url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+			<url>
+				https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
 		</repository>
 		<repository>
 			<id>jitpack.io</id>
@@ -175,6 +186,12 @@
 	</repositories>
 	<dependencies>
 		<dependency>
+			<groupId>com.bencodez</groupId>
+			<artifactId>SimpleAPI</artifactId>
+			<version>LATEST</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
 			<groupId>com.tcoded</groupId>
 			<artifactId>FoliaLib</artifactId>
 			<version>LATEST</version>
@@ -204,7 +221,8 @@
 			<version>2.11.5</version>
 			<scope>provided</scope>
 		</dependency>
-		<!-- <dependency> <groupId>com.github.Ben12345rocks</groupId> <artifactId>ChatComponentAPI</artifactId> 
+		<!-- <dependency> <groupId>com.github.Ben12345rocks</groupId>
+		<artifactId>ChatComponentAPI</artifactId> 
 			<version>master-SNAPSHOT</version> <scope>compile</scope> </dependency> -->
 		<dependency>
 			<groupId>com.zaxxer</groupId>
@@ -382,7 +400,8 @@
 								</goals>
 								<phase>deploy</phase>
 								<configuration>
-									<sourcepath>${project.basedir}/target/delombok</sourcepath>
+									<sourcepath>
+										${project.basedir}/target/delombok</sourcepath>
 								</configuration>
 							</execution>
 						</executions>
@@ -481,8 +500,10 @@
 								</goals>
 								<phase>deploy</phase>
 								<configuration>
-									<sourcepath>${project.basedir}/target/delombok</sourcepath>
-									<outputDirectory>${project.basedir}/target/apidocs</outputDirectory>
+									<sourcepath>
+										${project.basedir}/target/delombok</sourcepath>
+									<outputDirectory>
+										${project.basedir}/target/apidocs</outputDirectory>
 								</configuration>
 							</execution>
 						</executions>

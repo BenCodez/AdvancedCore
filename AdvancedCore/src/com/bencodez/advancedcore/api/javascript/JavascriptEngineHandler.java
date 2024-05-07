@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
-import com.bencodez.advancedcore.nms.ReflectionUtils;
+import com.bencodez.simpleapi.nms.ReflectionUtils;
 
 public class JavascriptEngineHandler {
 

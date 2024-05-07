@@ -82,10 +82,10 @@ import com.bencodez.advancedcore.listeners.PlayerShowListener;
 import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
 import com.bencodez.advancedcore.listeners.WorldChangeEvent;
 import com.bencodez.advancedcore.logger.Logger;
-import com.bencodez.advancedcore.nms.NMSManager;
 import com.bencodez.advancedcore.serverhandle.CraftBukkitHandle;
 import com.bencodez.advancedcore.serverhandle.IServerHandle;
 import com.bencodez.advancedcore.serverhandle.SpigotHandle;
+import com.bencodez.simpleapi.nms.NMSManager;
 
 import lombok.Getter;
 import lombok.Setter;

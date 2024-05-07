@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
  * @author Florian
  *
  */
+@Deprecated
 public class ReflectionUtils {
 
 	public static Object constructObject(Constructor<?> constructor, Object... args) {

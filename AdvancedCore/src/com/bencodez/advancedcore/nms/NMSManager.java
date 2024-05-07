@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 /**
  * The Class NMSManager.
  */
+@Deprecated
 public class NMSManager {
 
 	/** The Constant CORRESPONDING_TYPES. */
