@@ -44,7 +44,6 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueSt
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
-import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.PluginUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.permissions.LuckPermsHandle;
@@ -85,6 +84,7 @@ import com.bencodez.advancedcore.logger.Logger;
 import com.bencodez.advancedcore.serverhandle.CraftBukkitHandle;
 import com.bencodez.advancedcore.serverhandle.IServerHandle;
 import com.bencodez.advancedcore.serverhandle.SpigotHandle;
+import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
 
 import lombok.Getter;
@@ -335,7 +335,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (getOptions().isDebugIngame()) {
 			for (Player player : Bukkit.getOnlinePlayers()) {
 				if (player.hasPermission(this.getName() + ".Debug")) {
-					player.sendMessage(StringParser.getInstance().colorize("&c" + getName() + " Debug: " + debug));
+					player.sendMessage(MessageAPI.colorize("&c" + getName() + " Debug: " + debug));
 				}
 			}
 		}

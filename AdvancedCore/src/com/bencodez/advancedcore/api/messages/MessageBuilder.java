@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -23,7 +24,7 @@ public class MessageBuilder {
 	}
 
 	public MessageBuilder colorize() {
-		setText(StringParser.getInstance().colorize(getText()));
+		setText(MessageAPI.colorize(getText()));
 		return this;
 	}
 

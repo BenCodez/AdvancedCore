@@ -3,7 +3,7 @@ package com.bencodez.advancedcore.api.placeholder;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
@@ -58,7 +58,7 @@ public abstract class PlaceHolder<T> {
 
 	public boolean matches(String identifier) {
 		if (isUseStartsWith()) {
-			if (StringParser.getInstance().startsWithIgnoreCase(identifier, getIdentifier())) {
+			if (MessageAPI.startsWithIgnoreCase(identifier, getIdentifier())) {
 				return true;
 			}
 		} else {

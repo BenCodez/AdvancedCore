@@ -38,6 +38,7 @@ import org.bukkit.potion.PotionEffectType;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import net.md_5.bungee.api.ChatColor;
 
@@ -77,14 +78,13 @@ public class MiscUtils {
 			for (Player player : players) {
 				for (String str1 : broadcastMsg.split(Pattern.quote("%newline%"))) {
 					for (String str : str1.split(Pattern.quote("%NewLine%"))) {
-						String msg = StringParser.getInstance()
-								.colorize(StringParser.getInstance().replacePlaceHolders(player, str));
+						String msg = MessageAPI.colorize(StringParser.getInstance().replacePlaceHolders(player, str));
 						AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
 								StringParser.getInstance().parseJson(msg));
 					}
 				}
 			}
-			Bukkit.getServer().getConsoleSender().sendMessage(StringParser.getInstance().colorize(consoleMsg));
+			Bukkit.getServer().getConsoleSender().sendMessage(MessageAPI.colorize(consoleMsg));
 		}
 	}
 

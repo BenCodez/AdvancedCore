@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.checkerframework.checker.units.qual.degrees;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
@@ -42,6 +43,7 @@ public class StringParser {
 	 * @param format the format
 	 * @return the string
 	 */
+	@Deprecated
 	public String colorize(String format) {
 		if (format == null) {
 			return null;
@@ -72,10 +74,12 @@ public class StringParser {
 		return colorize(comp.toPlainText());
 	}
 
+	@Deprecated
 	public boolean contains(String str1, String str2) {
 		return str1.contains(str2);
 	}
 
+	@Deprecated
 	public boolean containsIgnorecase(String str1, String str2) {
 		if (str1 == null || str2 == null) {
 			return false;
@@ -87,6 +91,7 @@ public class StringParser {
 		return contains(msg, "[Text=\"");
 	}
 
+	@Deprecated
 	public String getProgressBar(int current, int max, int totalBars, String symbol, String completedColor,
 			String notCompletedColor) {
 
@@ -108,6 +113,7 @@ public class StringParser {
 		return sb.toString();
 	}
 
+	@Deprecated
 	public boolean isDouble(String st) {
 		if (st == null) {
 			return false;
@@ -128,6 +134,7 @@ public class StringParser {
 	 * @param st the st
 	 * @return true, if is int
 	 */
+	@Deprecated
 	public boolean isInt(String st) {
 		if (st == null) {
 			return false;
@@ -428,6 +435,7 @@ public class StringParser {
 	 * @param decimals the decimals
 	 * @return the string
 	 */
+	@Deprecated
 	public String roundDecimals(double num, int decimals) {
 		num = num * Math.pow(10, decimals);
 		num = Math.round(num);
@@ -443,6 +451,7 @@ public class StringParser {
 	 * @param str2 the str 2
 	 * @return true, if successful
 	 */
+	@Deprecated
 	public boolean startsWithIgnoreCase(String str1, String str2) {
 		return str1.toLowerCase().startsWith(str2.toLowerCase());
 	}
@@ -453,6 +462,7 @@ public class StringParser {
 	 * @param string the string
 	 * @return the text component
 	 */
+	@Deprecated
 	public TextComponent stringToComp(String string) {
 		TextComponent base = new TextComponent("");
 		boolean previousLetter = false;
@@ -682,6 +692,7 @@ public class StringParser {
 		return base;
 	}
 
+	@Deprecated
 	public String translateHexColorCodes(String startTag, String endTag, String message) {
 		final Pattern hexPattern = Pattern.compile(startTag + "([A-Fa-f0-9]{6})" + endTag);
 		Matcher matcher = hexPattern.matcher(message);

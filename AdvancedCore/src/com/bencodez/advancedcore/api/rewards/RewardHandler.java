@@ -82,6 +82,7 @@ import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInje
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -1594,7 +1595,7 @@ public class RewardHandler {
 				HashMap<Integer, String> luckyRewards = new HashMap<Integer, String>();
 
 				for (String str : section.getKeys(false)) {
-					if (StringParser.getInstance().isInt(str)) {
+					if (MessageAPI.isInt(str)) {
 						int num = Integer.parseInt(str);
 						if (num > 0) {
 							String path = "Lucky." + num;
@@ -1634,7 +1635,7 @@ public class RewardHandler {
 				if (direct.getFileData().isConfigurationSection(direct.getPath() + direct.needsDot() + "Lucky")) {
 					for (String str : direct.getFileData()
 							.getConfigurationSection(direct.getPath() + direct.needsDot() + "Lucky").getKeys(false)) {
-						if (StringParser.getInstance().isInt(str)) {
+						if (MessageAPI.isInt(str)) {
 							int num = Integer.parseInt(str);
 							if (num > 0) {
 								String path = "Lucky." + num;
@@ -2274,7 +2275,7 @@ public class RewardHandler {
 				for (String key : section.getKeys(false)) {
 					String path = key;
 					key = key.replaceAll("_", ".");
-					if (StringParser.getInstance().isDouble(key)) {
+					if (MessageAPI.isDouble(key)) {
 						double chance = Double.valueOf(key);
 						totalChance += chance;
 						map.put(chance, path);
@@ -2318,7 +2319,7 @@ public class RewardHandler {
 							.getConfigurationSection(direct.getPath() + direct.needsDot() + "SpecialChance")
 							.getKeys(false)) {
 						String key = str.replaceAll("_", ".");
-						if (StringParser.getInstance().isDouble(key)) {
+						if (MessageAPI.isDouble(key)) {
 							String path = "SpecialChance." + str;
 							if (direct.getFileData()
 									.isConfigurationSection(direct.getPath() + direct.needsDot() + path)) {

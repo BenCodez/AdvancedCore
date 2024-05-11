@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.yml.annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -120,15 +121,29 @@ public class AnnotationHandler {
 					} catch (Exception e) {
 
 					}
-					ArrayList<String> value = null;
-					if (!listAnnotation.secondPath().isEmpty()) {
-						value = (ArrayList<String>) config.getList(listAnnotation.path(),
-								config.getList(listAnnotation.secondPath(), defaultValue));
-					} else {
-						value = (ArrayList<String>) config.getList(listAnnotation.path(), defaultValue);
+
+					List<String> list = config.getStringList(listAnnotation.path());
+
+					if (list.isEmpty()) {
+						list = config.getStringList(listAnnotation.secondPath());
 					}
 
-					field.set(classToLoad, value);
+					ArrayList<String> list1 = new ArrayList<>(list);
+					// use default value
+					if (list.isEmpty()) {
+						list1 = defaultValue;
+					}
+
+					field.set(classToLoad, list1);
+
+					/*
+					 * ArrayList<String> value = null; if (!listAnnotation.secondPath().isEmpty()) {
+					 * value = (ArrayList<String>) config.getList(listAnnotation.path(),
+					 * config.getList(listAnnotation.secondPath(), defaultValue)); } else { value =
+					 * (ArrayList<String>) config.getList(listAnnotation.path(), defaultValue); }
+					 * 
+					 * field.set(classToLoad, value);
+					 */
 				}
 
 				ConfigDataKeys setAnnotation = field.getAnnotation(ConfigDataKeys.class);

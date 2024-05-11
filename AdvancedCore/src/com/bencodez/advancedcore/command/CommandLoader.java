@@ -35,6 +35,7 @@ import com.bencodez.advancedcore.command.gui.AdminGUI;
 import com.bencodez.advancedcore.command.gui.ChoiceGUI;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.advancedcore.command.gui.UserGUI;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
@@ -369,13 +370,13 @@ public class CommandLoader {
 					if (plugin.getMysql() != null) {
 						plugin.getMysql().clearCacheBasic();
 					} else {
-						sender.sendMessage(StringParser.getInstance().colorize("&cMySQL not loaded"));
+						sender.sendMessage(MessageAPI.colorize("&cMySQL not loaded"));
 					}
 				}
 
 				plugin.getUserManager().getDataManager().clearCache();
 
-				sender.sendMessage(StringParser.getInstance().colorize("&cCache cleared"));
+				sender.sendMessage(MessageAPI.colorize("&cCache cleared"));
 
 			}
 		});
@@ -396,10 +397,10 @@ public class CommandLoader {
 				@Override
 				public void execute(CommandSender sender, String[] args) {
 					if (plugin.getOptions().isEnableJenkins() && !plugin.getJenkinsSite().isEmpty()) {
-						sender.sendMessage(StringParser.getInstance().colorize(
+						sender.sendMessage(MessageAPI.colorize(
 								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
 						UpdateDownloader.getInstance().downloadFromJenkins(plugin.getJenkinsSite(), plugin.getName());
-						sender.sendMessage(StringParser.getInstance().colorize("&cDownloaded jar"));
+						sender.sendMessage(MessageAPI.colorize("&cDownloaded jar"));
 					} else {
 						sendMessage(sender,
 								"&cNot enabled, please enable to use this. Note: USE THESE DEV BUILDS AT YOUR OWN RISK");
@@ -499,7 +500,7 @@ public class CommandLoader {
 
 				}
 				sender.sendMessage(
-						StringParser.getInstance().colorize("&cSet all users " + args[3] + " to " + args[4]));
+						MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
 			}
 		});
 
@@ -515,7 +516,7 @@ public class CommandLoader {
 				}
 				user.getData().setString(args[3], data);
 				sender.sendMessage(
-						StringParser.getInstance().colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
+						MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
 			}
 
 			@Override
@@ -532,7 +533,7 @@ public class CommandLoader {
 
 					}
 					sender.sendMessage(
-							StringParser.getInstance().colorize("&cSet all users " + args[3] + " to " + args[4]));
+							MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
 				}
 			}
 		});

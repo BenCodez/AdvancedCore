@@ -22,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -49,7 +50,7 @@ public class ArrayUtils {
 		}
 
 		for (int i = 0; i < list.size(); i++) {
-			list.set(i, StringParser.getInstance().colorize(list.get(i)));
+			list.set(i, MessageAPI.colorize(list.get(i)));
 		}
 		return list;
 	}
@@ -66,7 +67,7 @@ public class ArrayUtils {
 		}
 
 		for (int i = 0; i < list.size(); i++) {
-			list.set(i, StringParser.getInstance().colorize(list.get(i)));
+			list.set(i, MessageAPI.colorize(list.get(i)));
 		}
 		return list;
 	}
@@ -83,7 +84,7 @@ public class ArrayUtils {
 		}
 
 		for (int i = 0; i < list.length; i++) {
-			list[i] = StringParser.getInstance().colorize(list[i]);
+			list[i] = MessageAPI.colorize(list[i]);
 		}
 		return list;
 	}

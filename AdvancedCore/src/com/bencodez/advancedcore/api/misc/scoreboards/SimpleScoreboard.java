@@ -16,7 +16,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
@@ -58,7 +58,7 @@ public class SimpleScoreboard {
 	 * @param text the text
 	 */
 	public void add(String text) {
-		text = StringParser.getInstance().colorize(text);
+		text = MessageAPI.colorize(text);
 		add(text, null);
 	}
 
@@ -70,7 +70,7 @@ public class SimpleScoreboard {
 	 */
 	public void add(String text, Integer score) {
 		Preconditions.checkArgument(text.length() < 48, "text cannot be over 48 characters in length");
-		text = StringParser.getInstance().colorize(text);
+		text = MessageAPI.colorize(text);
 		text = fixDuplicates(text);
 		scores.put(text, score);
 	}
