@@ -106,11 +106,11 @@ public class MiscUtils {
 
 	@SuppressWarnings("deprecation")
 	public Enchantment getEnchant(String enchant, String enchant2) {
-		Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchant));
+		Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchant.toLowerCase()));
 		if (ench != null) {
 			return ench;
 		}
-		return Enchantment.getByKey(NamespacedKey.minecraft(enchant2));
+		return Enchantment.getByKey(NamespacedKey.minecraft(enchant2.toLowerCase()));
 	}
 
 	public EntityType getEntityType(String entity, String entity2) {

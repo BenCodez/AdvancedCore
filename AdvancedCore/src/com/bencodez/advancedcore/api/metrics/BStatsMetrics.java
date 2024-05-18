@@ -35,6 +35,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
+@Deprecated
 public class BStatsMetrics {
 
 	public static class AdvancedBarChart extends CustomChart {
