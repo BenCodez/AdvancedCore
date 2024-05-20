@@ -34,8 +34,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import com.bencodez.advancedcore.api.backup.BackupHandle;
 import com.bencodez.advancedcore.api.cmi.CMIHandler;
-import com.bencodez.advancedcore.api.command.TabCompleteHandle;
-import com.bencodez.advancedcore.api.command.TabCompleteHandler;
 import com.bencodez.advancedcore.api.geyser.GeyserHandle;
 import com.bencodez.advancedcore.api.hologram.HologramHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
@@ -79,6 +77,8 @@ import com.bencodez.advancedcore.listeners.PlayerShowListener;
 import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
 import com.bencodez.advancedcore.listeners.WorldChangeEvent;
 import com.bencodez.advancedcore.logger.Logger;
+import com.bencodez.simpleapi.command.TabCompleteHandle;
+import com.bencodez.simpleapi.command.TabCompleteHandler;
 import com.bencodez.simpleapi.debug.DebugLevel;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
@@ -701,7 +701,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					}
 				}
 			}
-		}.updateEveryXMinutes(javaPlugin, 30));
+		}.updateEveryXMinutes(getTimer(), 30));
 
 		ArrayList<String> options = new ArrayList<String>();
 		options.add("True");
@@ -833,7 +833,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
-		TabCompleteHandler.getInstance().loadTimer();
+		TabCompleteHandler.getInstance().loadTimer(getTimer());
 	}
 
 	public void loadValueRequestInputCommands() {
