@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.command;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.simpleapi.command.ICommand;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 import lombok.Getter;
@@ -9,7 +10,7 @@ import lombok.Getter;
 /**
  * The Class CommandHandler.
  */
-public abstract class CommandHandler extends com.bencodez.simpleapi.command.CommandHandler {
+public abstract class CommandHandler extends com.bencodez.simpleapi.command.CommandHandler implements ICommand {
 
 	@Getter
 	private AdvancedCorePlugin plugin;
@@ -119,7 +120,7 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 		this.plugin = plugin;
 		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
 	}
-	
+
 	@Override
 	public CommandHandler ignoreNumberCheck() {
 		super.ignoreNumberCheck();
