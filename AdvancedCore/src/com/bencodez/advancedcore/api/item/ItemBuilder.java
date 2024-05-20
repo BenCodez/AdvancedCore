@@ -40,6 +40,7 @@ import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.skull.SkullCreator;
+import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.google.common.collect.Multimap;
 
@@ -1036,7 +1037,7 @@ public class ItemBuilder {
 	public ItemBuilder setName(String name) {
 		ItemMeta im = is.getItemMeta();
 		if (im != null) {
-			im.setDisplayName(StringParser.getInstance().colorize(name));
+			im.setDisplayName(MessageAPI.colorize(name));
 			is.setItemMeta(im);
 		}
 		return this;

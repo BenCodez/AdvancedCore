@@ -19,7 +19,6 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueBo
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
@@ -27,6 +26,7 @@ import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditDelayed;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTimed;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 /**
  * The Class RewardGUI.
@@ -60,7 +60,7 @@ public class RewardEditGUI {
 	 * @return the current reward
 	 */
 	public Reward getCurrentReward(Player player) {
-		return (Reward) PlayerUtils.getInstance().getPlayerMeta(player, "Reward");
+		return (Reward) PlayerUtils.getPlayerMeta(plugin, player, "Reward");
 	}
 
 	public void openRewardGUI(Player player, DirectlyDefinedReward directlyDefinedReward) {

@@ -14,7 +14,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
@@ -23,6 +22,7 @@ import com.bencodez.advancedcore.api.valuerequest.book.BookSign;
 import com.bencodez.advancedcore.api.valuerequest.listeners.NumberListener;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptManager;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -103,7 +103,7 @@ public class NumberRequester {
 			if (options != null && options.size() != 0) {
 				AdvancedCoreUser user = AdvancedCorePlugin.getInstance().getUserManager().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
-				PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestNumber", listener);
+				PlayerUtils.setPlayerMeta(AdvancedCorePlugin.getInstance(), player, "ValueRequestNumber", listener);
 				for (Number num : options.keySet()) {
 					String option = num.toString();
 					TextComponent comp = new TextComponent(option);

@@ -112,8 +112,10 @@ public class Updater {
 			int timed_out = 2000;
 			connection.setConnectTimeout(timed_out);
 			connection.setReadTimeout(timed_out);
-			this.version = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
+			BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			this.version = reader.readLine();
 			connection.disconnect();
+			reader.close();
 			versionCheck();
 			return;
 		} catch (Exception e) {

@@ -11,7 +11,7 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 public class BInventoryListener implements Listener {
 	private AdvancedCorePlugin plugin;
@@ -72,7 +72,7 @@ public class BInventoryListener implements Listener {
 				// spam click message
 				String msg = plugin.getOptions().getSpamClickMessage();
 				if (!msg.isEmpty()) {
-					player.sendMessage(StringParser.getInstance().colorize(msg));
+					player.sendMessage(MessageAPI.colorize(msg));
 				}
 
 				return;

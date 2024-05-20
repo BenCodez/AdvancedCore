@@ -1,119 +1,37 @@
 package com.bencodez.advancedcore.api.misc;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.metadata.MetadataValue;
-import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.jsonparser.JsonParser;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.simpleapi.nms.NMSManager;
-import com.google.common.collect.Iterables;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
-public class PlayerUtils {
-	private static final BlockFace[] axis = { BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST };
+public class PlayerManager {
 
 	/** The instance. */
-	static PlayerUtils instance = new PlayerUtils();
+	static PlayerManager instance = new PlayerManager();
 
-	private static final BlockFace[] radial = { BlockFace.NORTH, BlockFace.NORTH_EAST, BlockFace.EAST,
-			BlockFace.SOUTH_EAST, BlockFace.SOUTH, BlockFace.SOUTH_WEST, BlockFace.WEST, BlockFace.NORTH_WEST };
-
-	public static PlayerUtils getInstance() {
+	public static PlayerManager getInstance() {
 		return instance;
 	}
 
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
-	private PlayerUtils() {
-	}
-
-	public boolean canBreakBlock(Player p, Block b) {
-		BlockBreakEvent block = new BlockBreakEvent(b, p);
-		Bukkit.getPluginManager().callEvent(block);
-		if (!block.isCancelled()) {
-			return true;
-		}
-		return false;
-	}
-
-	public boolean canInteract(Player p, Block clickedBlock, Action action, ItemStack item, BlockFace clickedFace) {
-		PlayerInteractEvent event = new PlayerInteractEvent(p, action, item, clickedBlock, clickedFace);
-		Bukkit.getPluginManager().callEvent(event);
-		if (event.useItemInHand().equals(Event.Result.DENY)) {
-			return false;
-		}
-		return true;
-	}
-
-	public java.util.UUID fetchUUID(String playerName) throws Exception {
-		// Get response from Mojang API
-		URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName);
-		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.connect();
-
-		if (connection.getResponseCode() == 400) {
-			plugin.debug("There is no player with the name \"" + playerName + "\"!");
-			return null;
-		}
-
-		InputStream inputStream = connection.getInputStream();
-		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-
-		// Parse JSON response and get UUID
-
-		JsonElement element = JsonParser.parseReader(bufferedReader);
-		JsonObject object = element.getAsJsonObject();
-		String uuidAsString = object.get("id").getAsString();
-
-		// Return UUID
-		return parseUUIDFromString(uuidAsString);
-	}
-
-	/**
-	 * Gets the player meta.
-	 *
-	 * @param player the player
-	 * @param str    the str
-	 * @return the player meta
-	 */
-	public Object getPlayerMeta(Player player, String str) {
-		for (MetadataValue meta : player.getMetadata(str)) {
-			if (meta.getOwningPlugin().equals(plugin)) {
-				return meta.value();
-			}
-		}
-		return null;
+	private PlayerManager() {
 	}
 
 	public String getPlayerName(AdvancedCoreUser user, String uuid) {
@@ -162,20 +80,6 @@ public class PlayerUtils {
 		return getPlayerSkull(playerName, true);
 	}
 
-	/*
-	 * private String getPlayerName(String uuid) { if ((uuid == null) ||
-	 * uuid.equalsIgnoreCase("null")) { plugin.debug("Null UUID"); return null; }
-	 * String name = ""; java.util.UUID u = java.util.UUID.fromString(uuid); Player
-	 * player = Bukkit.getPlayer(uuid); if (player == null) { OfflinePlayer p =
-	 * Bukkit.getOfflinePlayer(u); if (p.hasPlayedBefore() || p.isOnline()) { name =
-	 * p.getName(); } else if (plugin.isCheckNameMojang()) { name =
-	 * Thread.getInstance().getThread().getName(u); } } else { name =
-	 * player.getName(); } if (name.equals("")) { name =
-	 * plugin.getUserManager().getUser(new
-	 * UUID(uuid)).getData().getString("PlayerName"); if (!name.equals("")) { return
-	 * name; } name = "Error getting name"; } return name; }
-	 */
-
 	@SuppressWarnings("deprecation")
 	public ItemStack getPlayerSkull(String playerName, boolean force) {
 		String skullMaterial = "PLAYER_HEAD";
@@ -202,25 +106,12 @@ public class PlayerUtils {
 
 	}
 
-	public Player getRandomOnlinePlayer() {
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			return player;
-		}
-
-		return null;
-	}
-
-	public Player getRandomPlayer() {
-		return Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
-	}
-
 	/**
 	 * Gets the uuid.
 	 *
 	 * @param playerName the player name
 	 * @return the uuid
 	 */
-	@SuppressWarnings("deprecation")
 	public String getUUID(String playerName) {
 		if (playerName == null || playerName.isEmpty()) {
 			return null;
@@ -239,6 +130,7 @@ public class PlayerUtils {
 			}
 
 			try {
+				@SuppressWarnings("deprecation")
 				OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 				return p.getUniqueId().toString();
 			} catch (Exception e) {
@@ -416,36 +308,6 @@ public class PlayerUtils {
 		return false;
 	}
 
-	/**
-	 * Checks if is player.
-	 *
-	 * @param sender the sender
-	 * @return true, if is player
-	 */
-	public boolean isPlayer(CommandSender sender) {
-		if (sender instanceof Player) {
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Checks if is player online.
-	 *
-	 * @param playerName the player name
-	 * @return true, if is player online
-	 */
-	public boolean isPlayerOnline(String playerName) {
-		if (playerName == null) {
-			return false;
-		}
-		Player player = Bukkit.getPlayerExact(playerName);
-		if (player != null) {
-			return true;
-		}
-		return false;
-	}
-
 	public boolean isValidUser(String name) {
 		return isValidUser(name, false);
 	}
@@ -477,134 +339,6 @@ public class PlayerUtils {
 		}
 
 		plugin.extraDebug("Player " + name + " does not exist");
-		return false;
-	}
-
-	private java.util.UUID parseUUIDFromString(String uuidAsString) {
-		String[] parts = { "0x" + uuidAsString.substring(0, 8), "0x" + uuidAsString.substring(8, 12),
-				"0x" + uuidAsString.substring(12, 16), "0x" + uuidAsString.substring(16, 20),
-				"0x" + uuidAsString.substring(20, 32) };
-
-		long mostSigBits = Long.decode(parts[0]).longValue();
-		mostSigBits <<= 16;
-		mostSigBits |= Long.decode(parts[1]).longValue();
-		mostSigBits <<= 16;
-		mostSigBits |= Long.decode(parts[2]).longValue();
-
-		long leastSigBits = Long.decode(parts[3]).longValue();
-		leastSigBits <<= 48;
-		leastSigBits |= Long.decode(parts[4]).longValue();
-
-		return new java.util.UUID(mostSigBits, leastSigBits);
-	}
-
-	/**
-	 * Sets the player meta.
-	 *
-	 * @param player the player
-	 * @param str    the str
-	 * @param value  the value
-	 */
-	public void setPlayerMeta(Player player, String str, Object value) {
-		player.removeMetadata(str, plugin);
-		player.setMetadata(str, new MetadataValue() {
-
-			@Override
-			public boolean asBoolean() {
-
-				return false;
-			}
-
-			@Override
-			public byte asByte() {
-
-				return 0;
-			}
-
-			@Override
-			public double asDouble() {
-
-				return 0;
-			}
-
-			@Override
-			public float asFloat() {
-
-				return 0;
-			}
-
-			@Override
-			public int asInt() {
-
-				return 0;
-			}
-
-			@Override
-			public long asLong() {
-
-				return 0;
-			}
-
-			@Override
-			public short asShort() {
-
-				return 0;
-			}
-
-			@Override
-			public String asString() {
-
-				return null;
-			}
-
-			@Override
-			public Plugin getOwningPlugin() {
-				return plugin;
-			}
-
-			@Override
-			public void invalidate() {
-			}
-
-			@Override
-			public Object value() {
-				return value;
-			}
-
-		});
-	}
-
-	public BlockFace yawToFace(float yaw, boolean useSubCardinalDirections) {
-		if (useSubCardinalDirections) {
-			return radial[Math.round(yaw / 45f) & 0x7].getOppositeFace();
-		}
-
-		return axis[Math.round(yaw / 90f) & 0x3].getOppositeFace();
-	}
-
-	public boolean damageItemInHand(Player player, int damage) {
-		ItemStack itemInHand = player.getInventory().getItemInMainHand();
-		ItemMeta meta = itemInHand.getItemMeta();
-		if (meta instanceof Damageable) {
-			Damageable dMeta = (Damageable) meta;
-			int level = itemInHand.getEnchantmentLevel(MiscUtils.getInstance().getEnchant("UNBREAKING", "DURABILITY"));
-			int chance = (100 / (level + 1));
-			int addedDamage = 0;
-			for (int i = 0; i < damage; i++) {
-				if (chance == 100 || ThreadLocalRandom.current().nextInt(100) < chance) {
-					addedDamage++;
-				}
-			}
-			if (addedDamage > 0) {
-				dMeta.setDamage(dMeta.getDamage() + addedDamage);
-				itemInHand.setItemMeta(dMeta);
-				if (dMeta.getDamage() > (int) (itemInHand.getType().getMaxDurability())) {
-					player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
-					return false;
-				}
-			}
-			return true;
-		}
 		return false;
 	}
 

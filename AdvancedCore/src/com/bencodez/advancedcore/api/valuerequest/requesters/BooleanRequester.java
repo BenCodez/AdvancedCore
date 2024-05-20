@@ -8,12 +8,12 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.book.BookManager;
 import com.bencodez.advancedcore.api.valuerequest.book.BookSign;
 import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -80,7 +80,7 @@ public class BooleanRequester {
 			user.sendMessage("&cClick one of the following options below:");
 			String option = "True";
 			TextComponent comp = new TextComponent(option);
-			PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestBoolean", listener);
+			PlayerUtils.setPlayerMeta(AdvancedCorePlugin.getInstance(), player, "ValueRequestBoolean", listener);
 			comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
 					"/" + AdvancedCorePlugin.getInstance().getName().toLowerCase() + "valuerequestinput Boolean "
 							+ option));

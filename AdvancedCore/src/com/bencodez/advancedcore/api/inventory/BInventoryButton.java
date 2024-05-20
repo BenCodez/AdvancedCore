@@ -9,10 +9,11 @@ import java.util.List;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.simpleapi.messages.MessageAPI;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -28,7 +29,7 @@ public abstract class BInventoryButton {
 
 	@Getter
 	private boolean closeInv = true;
-	
+
 	@Getter
 	private boolean closeInvSet = false;
 
@@ -144,7 +145,7 @@ public abstract class BInventoryButton {
 	}
 
 	public Object getMeta(Player player, String str) {
-		return PlayerUtils.getInstance().getPlayerMeta(player, str);
+		return PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player, str);
 	}
 
 	/**
@@ -172,7 +173,7 @@ public abstract class BInventoryButton {
 	}
 
 	public void sendMessage(Player player, String msg) {
-		player.sendMessage(StringParser.getInstance().colorize(msg));
+		player.sendMessage(MessageAPI.colorize(msg));
 	}
 
 	/**
@@ -202,7 +203,7 @@ public abstract class BInventoryButton {
 	}
 
 	public void setMeta(Player player, String str, Object ob) {
-		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
+		PlayerUtils.setPlayerMeta(AdvancedCorePlugin.getInstance(), player, str, ob);
 	}
 
 	/**

@@ -9,7 +9,7 @@ import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
@@ -31,7 +31,7 @@ public class BossBar {
 	 * @param progress the progress
 	 */
 	public BossBar(String msg, String barColor, String barStyle, double progress) {
-		bossBar = Bukkit.createBossBar(StringParser.getInstance().colorize(msg), BarColor.valueOf(barColor),
+		bossBar = Bukkit.createBossBar(MessageAPI.colorize(msg), BarColor.valueOf(barColor),
 				BarStyle.valueOf(barStyle));
 		bossBar.setProgress(progress);
 	}
@@ -136,7 +136,7 @@ public class BossBar {
 
 	public void setTitle(String title) {
 		if (title != null) {
-			bossBar.setTitle(StringParser.getInstance().colorize(title));
+			bossBar.setTitle(MessageAPI.colorize(title));
 		}
 
 	}

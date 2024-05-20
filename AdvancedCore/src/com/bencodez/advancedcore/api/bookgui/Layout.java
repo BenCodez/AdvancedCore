@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 
-import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 import net.md_5.bungee.api.ChatColor;
@@ -40,7 +40,7 @@ public class Layout {
 		for (int i = 0; i < stringLayout.size(); i++) {
 			String str = stringLayout.get(i);
 
-			if (text != null && !text.equals("") && StringParser.getInstance().containsIgnorecase(str, text)) {
+			if (text != null && !text.equals("") && MessageAPI.containsIgnorecase(str, text)) {
 				String[] split = str.split(Pattern.quote(text));
 
 				String first = "";

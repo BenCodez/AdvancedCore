@@ -5,7 +5,7 @@ import java.util.Arrays;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.NameFetcher;
+import com.bencodez.simpleapi.player.NameFetcher;
 
 /**
  * The Class Thread.

@@ -3,10 +3,10 @@ package com.bencodez.advancedcore.api.inventory.editgui.valuetypes;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
-import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 public abstract class EditGUIValueString extends EditGUIValue {
 
@@ -24,12 +24,12 @@ public abstract class EditGUIValueString extends EditGUIValue {
 			@Override
 			public void onInput(Player player, String value) {
 				setValue(player, value);
-				player.sendMessage(StringParser.getInstance().colorize("&cSetting " + getKey() + " to " + value));
+				player.sendMessage(MessageAPI.colorize("&cSetting " + getKey() + " to " + value));
 			}
 		}, ArrayUtils.getInstance().convert(getOptions())).currentValue(getCurrentValue().toString())
 				.allowCustomOption(true).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
-	
+
 	@Override
 	public String getType() {
 		return "string";

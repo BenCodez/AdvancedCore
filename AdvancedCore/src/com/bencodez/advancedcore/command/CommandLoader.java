@@ -15,7 +15,7 @@ import com.bencodez.advancedcore.api.command.PlayerCommandHandler;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
@@ -36,6 +36,7 @@ import com.bencodez.advancedcore.command.gui.ChoiceGUI;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.advancedcore.command.gui.UserGUI;
 import com.bencodez.simpleapi.messages.MessageAPI;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import lombok.Getter;
 
@@ -299,7 +300,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				plugin.getPermissionHandler()
-						.removePermission(UUID.fromString(PlayerUtils.getInstance().getUUID(args[1])));
+						.removePermission(UUID.fromString(PlayerManager.getInstance().getUUID(args[1])));
 				sendMessage(sender, "&cRemoved temporary permissions from " + args[1]);
 			}
 		});
@@ -310,8 +311,9 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				plugin.getPermissionHandler().addPermission(UUID.fromString(PlayerUtils.getInstance().getUUID(args[1])),
-						args[3], Integer.valueOf(args[4]));
+				plugin.getPermissionHandler().addPermission(
+						UUID.fromString(PlayerManager.getInstance().getUUID(args[1])), args[3],
+						Integer.valueOf(args[4]));
 				sendMessage(sender, "&cAdded temporary permission to " + args[1] + " for " + args[4]);
 			}
 		});
@@ -321,8 +323,8 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				plugin.getPermissionHandler().addPermission(UUID.fromString(PlayerUtils.getInstance().getUUID(args[1])),
-						args[3]);
+				plugin.getPermissionHandler()
+						.addPermission(UUID.fromString(PlayerManager.getInstance().getUUID(args[1])), args[3]);
 				sendMessage(sender, "&cAdded temporary permission to " + args[1]);
 			}
 		});
@@ -499,8 +501,7 @@ public class CommandLoader {
 					user.getData().setString(args[3], data);
 
 				}
-				sender.sendMessage(
-						MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
+				sender.sendMessage(MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
 			}
 		});
 
@@ -515,8 +516,7 @@ public class CommandLoader {
 					data = "";
 				}
 				user.getData().setString(args[3], data);
-				sender.sendMessage(
-						MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
+				sender.sendMessage(MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
 			}
 
 			@Override
@@ -532,8 +532,7 @@ public class CommandLoader {
 						user.getData().setString(args[3], data);
 
 					}
-					sender.sendMessage(
-							MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
+					sender.sendMessage(MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
 				}
 			}
 		});
@@ -681,7 +680,7 @@ public class CommandLoader {
 					public void execute(CommandSender sender, String[] args) {
 						Player player = (Player) sender;
 						try {
-							StringListener listener = (StringListener) PlayerUtils.getInstance().getPlayerMeta(player,
+							StringListener listener = (StringListener) PlayerUtils.getPlayerMeta(plugin, player,
 									"ValueRequestString");
 							if (args[1].equals("CustomValue")) {
 								new ValueRequest().requestString(player, listener);
@@ -701,7 +700,7 @@ public class CommandLoader {
 					public void execute(CommandSender sender, String[] args) {
 						Player player = (Player) sender;
 						try {
-							NumberListener listener = (NumberListener) PlayerUtils.getInstance().getPlayerMeta(player,
+							NumberListener listener = (NumberListener) PlayerUtils.getPlayerMeta(plugin, player,
 									"ValueRequestNumber");
 							if (args[1].equals("CustomValue")) {
 								new ValueRequest().requestNumber(player, listener);
@@ -722,7 +721,7 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Player player = (Player) sender;
 				try {
-					BooleanListener listener = (BooleanListener) PlayerUtils.getInstance().getPlayerMeta(player,
+					BooleanListener listener = (BooleanListener) PlayerUtils.getPlayerMeta(plugin, player,
 							"ValueRequestBoolean");
 					listener.onInput(player, Boolean.valueOf(args[1]));
 				} catch (Exception ex) {

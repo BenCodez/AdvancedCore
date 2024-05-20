@@ -28,7 +28,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.misc.effects.ActionBar;
 import com.bencodez.advancedcore.api.misc.effects.BossBar;
 import com.bencodez.advancedcore.api.misc.effects.Title;
@@ -38,6 +38,7 @@ import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import lombok.Getter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -108,7 +109,7 @@ public class AdvancedCoreUser {
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, String playerName) {
 		this.plugin = plugin;
 		loadData();
-		uuid = PlayerUtils.getInstance().getUUID(playerName);
+		uuid = PlayerManager.getInstance().getUUID(playerName);
 		setPlayerName(playerName);
 	}
 
@@ -123,7 +124,7 @@ public class AdvancedCoreUser {
 		this.plugin = plugin;
 		this.uuid = uuid.toString();
 		loadData();
-		setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid, false));
+		setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid, false));
 	}
 
 	/**
@@ -140,7 +141,7 @@ public class AdvancedCoreUser {
 		this.loadName = loadName;
 		loadData();
 		if (this.loadName) {
-			setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
+			setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid));
 		}
 
 	}
@@ -154,7 +155,7 @@ public class AdvancedCoreUser {
 			loadData();
 		}
 		if (this.loadName) {
-			setPlayerName(PlayerUtils.getInstance().getPlayerName(this, this.uuid));
+			setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid));
 		}
 
 	}
@@ -408,7 +409,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ItemStack getPlayerHead() {
-		return PlayerUtils.getInstance().getPlayerSkull(getPlayerName(), false);
+		return PlayerManager.getInstance().getPlayerSkull(getPlayerName(), false);
 	}
 
 	/**
@@ -722,7 +723,7 @@ public class AdvancedCoreUser {
 	 * @return true, if is online
 	 */
 	public boolean isOnline() {
-		boolean online = PlayerUtils.getInstance().isPlayerOnline(getPlayerName());
+		boolean online = PlayerUtils.isPlayerOnline(getPlayerName());
 		if (!online) {
 			return false;
 		}

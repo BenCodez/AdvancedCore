@@ -9,8 +9,8 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
@@ -128,7 +128,7 @@ public class Hologram {
 		} else {
 			armorStand.setCustomNameVisible(false);
 		}
-		armorStand.setCustomName(StringParser.getInstance().colorize(name));
+		armorStand.setCustomName(MessageAPI.colorize(name));
 		armorStand.setGravity(false);
 		armorStand.setAI(false);
 		armorStand.setMarker(marker);
@@ -144,7 +144,7 @@ public class Hologram {
 		} else {
 			armorStand.setCustomNameVisible(false);
 		}
-		armorStand.setCustomName(StringParser.getInstance().colorize(name));
+		armorStand.setCustomName(MessageAPI.colorize(name));
 		armorStand.setGravity(false);
 		armorStand.setAI(false);
 		armorStand.setMarker(marker);
@@ -162,7 +162,7 @@ public class Hologram {
 		} else {
 			armorStand.setCustomNameVisible(false);
 		}
-		armorStand.setCustomName(StringParser.getInstance().colorize(name));
+		armorStand.setCustomName(MessageAPI.colorize(name));
 		armorStand.setGravity(false);
 		armorStand.setAI(false);
 		armorStand.setMarker(marker);

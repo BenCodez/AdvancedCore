@@ -3,7 +3,7 @@ package com.bencodez.advancedcore.thread;
 import java.util.Arrays;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.NameFetcher;
+import com.bencodez.simpleapi.player.NameFetcher;
 
 /**
  * The Class Thread.

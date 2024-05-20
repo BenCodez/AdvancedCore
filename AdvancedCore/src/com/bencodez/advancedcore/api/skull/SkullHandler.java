@@ -14,9 +14,9 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.PluginUtils;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.bencodez.simpleapi.nms.ReflectionUtils;
+import com.bencodez.simpleapi.utils.PluginUtils;
 
 import lombok.Getter;
 
@@ -151,7 +151,7 @@ public class SkullHandler {
 	public void loadSkull(final String playerName) {
 		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()
 				&& AdvancedCorePlugin.getInstance().isEnabled()) {
-			if (PluginUtils.getInstance().getFreeMemory() > 300 && PluginUtils.getInstance().getMemory() > 800) {
+			if (PluginUtils.getFreeMemory() > 300 && PluginUtils.getMemory() > 800) {
 				if (Bukkit.isPrimaryThread()) {
 					timer.execute(new Runnable() {
 
@@ -166,8 +166,8 @@ public class SkullHandler {
 			} else {
 				AdvancedCorePlugin.getInstance()
 						.extraDebug("Not loading skull, not alot of free ram available, free "
-								+ PluginUtils.getInstance().getFreeMemory() + ", allocated "
-								+ PluginUtils.getInstance().getMemory());
+								+ PluginUtils.getFreeMemory() + ", allocated "
+								+ PluginUtils.getMemory());
 			}
 		}
 	}

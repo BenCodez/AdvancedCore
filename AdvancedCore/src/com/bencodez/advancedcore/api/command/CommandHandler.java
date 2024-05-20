@@ -16,7 +16,9 @@ import org.bukkit.entity.Player;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
+import com.bencodez.simpleapi.messages.MessageAPI;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -262,6 +264,7 @@ public abstract class CommandHandler {
 	 * @param command the command
 	 * @return the help line
 	 */
+	@SuppressWarnings("deprecation")
 	public TextComponent getHelpLine(String command) {
 		String line = plugin.getOptions().getHelpLine();
 
@@ -270,7 +273,7 @@ public abstract class CommandHandler {
 		if (getHelpMessage() != "") {
 			line = line.replace("%HelpMessage%", getHelpMessage());
 		}
-		TextComponent txt = StringParser.getInstance().stringToComp(line);
+		TextComponent txt = MessageAPI.stringToComp(line);
 		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
 		txt.setHoverEvent(StringParser.getHoverEventSupport()
 				.createHoverEvent(TextComponent.fromLegacyText(ChatColor.AQUA + getHelpMessage())));
@@ -278,26 +281,28 @@ public abstract class CommandHandler {
 
 	}
 
+	@SuppressWarnings("deprecation")
 	public TextComponent getHelpLine(String command, String line) {
 		String commandText = getHelpLineCommand(command);
 		line = line.replace("%Command%", commandText);
 		if (getHelpMessage() != "") {
 			line = line.replace("%HelpMessage%", getHelpMessage());
 		}
-		TextComponent txt = StringParser.getInstance().stringToComp(line);
+		TextComponent txt = MessageAPI.stringToComp(line);
 		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
 		txt.setHoverEvent(StringParser.getHoverEventSupport()
 				.createHoverEvent(TextComponent.fromLegacyText(ChatColor.AQUA + getHelpMessage())));
 		return txt;
 	}
 
+	@SuppressWarnings("deprecation")
 	public TextComponent getHelpLine(String command, String line, ChatColor hoverColor) {
 		String commandText = getHelpLineCommand(command);
 		line = line.replace("%Command%", commandText);
 		if (getHelpMessage() != "") {
 			line = line.replace("%HelpMessage%", getHelpMessage());
 		}
-		TextComponent txt = StringParser.getInstance().stringToComp(line);
+		TextComponent txt = MessageAPI.stringToComp(line);
 		txt.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandText));
 		txt.setHoverEvent(StringParser.getHoverEventSupport()
 				.createHoverEvent(TextComponent.fromLegacyText(hoverColor + getHelpMessage())));
@@ -395,7 +400,7 @@ public abstract class CommandHandler {
 			return true;
 		}
 		if (allowMultiplePermissions) {
-			return PlayerUtils.getInstance().hasEitherPermission(sender, getPerm());
+			return PlayerManager.getInstance().hasEitherPermission(sender, getPerm());
 		} else {
 			return sender.hasPermission(getPerm().split(Pattern.quote("|"))[0]);
 		}
@@ -450,8 +455,8 @@ public abstract class CommandHandler {
 					return false;
 				}
 				if (this.args[i].equalsIgnoreCase("(number)")) {
-					if (!ignoreNumberCheck && !StringParser.getInstance().isInt(args[i])) {
-						sender.sendMessage(StringParser.getInstance()
+					if (!ignoreNumberCheck && !MessageAPI.isInt(args[i])) {
+						sender.sendMessage(MessageAPI
 								.colorize(plugin.getOptions().getFormatNotNumber().replace("%arg%", args[i])));
 						return true;
 					}
@@ -459,13 +464,13 @@ public abstract class CommandHandler {
 					if (args[i].equalsIgnoreCase("@p")) {
 						args[i] = sender.getName();
 					} else if (args[i].equalsIgnoreCase("@r")) {
-						args[i] = PlayerUtils.getInstance().getRandomOnlinePlayer().getName();
+						args[i] = PlayerUtils.getRandomOnlinePlayer().getName();
 					} else {
 						Player p = Bukkit.getPlayer(args[i]);
 						if (p == null) {
 							for (Player player : Bukkit.getOnlinePlayers()) {
 								String name = player.getName();
-								if (StringParser.getInstance().containsIgnorecase(name, args[i])) {
+								if (MessageAPI.containsIgnorecase(name, args[i])) {
 									plugin.debug("Completing name: " + args[i] + " to " + name);
 									args[i] = name;
 									break;
@@ -480,18 +485,18 @@ public abstract class CommandHandler {
 				}
 			}
 			if (!(sender instanceof Player) && !allowConsole) {
-				sender.sendMessage(StringParser.getInstance().colorize("&cMust be a player to do this"));
+				sender.sendMessage(MessageAPI.colorize("&cMust be a player to do this"));
 				return true;
 			}
 
 			if (sender instanceof Player && forceConsole) {
-				sender.sendMessage(StringParser.getInstance().colorize("&cConsole command only"));
+				sender.sendMessage(MessageAPI.colorize("&cConsole command only"));
 				return true;
 			}
 
 			if (!hasPerm(sender)) {
 				if (!plugin.getOptions().getFormatNoPerms().isEmpty()) {
-					sender.sendMessage(StringParser.getInstance().colorize(plugin.getOptions().getFormatNoPerms()));
+					sender.sendMessage(MessageAPI.colorize(plugin.getOptions().getFormatNoPerms()));
 				}
 				plugin.getLogger().log(Level.INFO,
 						sender.getName() + " was denied access to command, required permission: " + perm);
@@ -525,7 +530,7 @@ public abstract class CommandHandler {
 	}
 
 	public void sendMessage(CommandSender sender, String msg) {
-		sender.sendMessage(StringParser.getInstance().colorize(msg));
+		sender.sendMessage(MessageAPI.colorize(msg));
 	}
 
 	public void sendMessageJson(CommandSender sender, ArrayList<TextComponent> comp) {

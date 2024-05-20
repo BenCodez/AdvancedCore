@@ -18,12 +18,12 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 /**
  * The Class UserGUI.
@@ -70,7 +70,7 @@ public class UserGUI {
 	 * @return the current player
 	 */
 	public String getCurrentPlayer(Player player) {
-		return (String) PlayerUtils.getInstance().getPlayerMeta(player, "UserGUI");
+		return (String) PlayerUtils.getPlayerMeta(plugin, player, "UserGUI");
 	}
 
 	/**
@@ -191,6 +191,6 @@ public class UserGUI {
 	 * @param playerName the player name
 	 */
 	private void setCurrentPlayer(Player player, String playerName) {
-		PlayerUtils.getInstance().setPlayerMeta(player, "UserGUI", playerName);
+		PlayerUtils.setPlayerMeta(plugin, player, "UserGUI", playerName);
 	}
 }

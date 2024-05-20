@@ -18,7 +18,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueBoolean;
@@ -232,7 +232,7 @@ public class MySQL {
 			e.printStackTrace();
 		}
 		uuids.remove(uuid);
-		names.remove(PlayerUtils.getInstance()
+		names.remove(PlayerManager.getInstance()
 				.getPlayerName(plugin.getUserManager().getUser(java.util.UUID.fromString(uuid)), uuid));
 		clearCacheBasic();
 
@@ -599,7 +599,7 @@ public class MySQL {
 				}
 			}
 			if (playerName == null || playerName.isEmpty()) {
-				names.add(PlayerUtils.getInstance().getPlayerName(
+				names.add(PlayerManager.getInstance().getPlayerName(
 						plugin.getUserManager().getUser(java.util.UUID.fromString(index), false), index));
 			} else {
 				names.add(playerName);

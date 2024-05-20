@@ -44,7 +44,6 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueSt
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
-import com.bencodez.advancedcore.api.misc.PluginUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.permissions.LuckPermsHandle;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
@@ -86,6 +85,7 @@ import com.bencodez.advancedcore.serverhandle.IServerHandle;
 import com.bencodez.advancedcore.serverhandle.SpigotHandle;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
+import com.bencodez.simpleapi.utils.PluginUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -594,8 +594,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 
 		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' " + buildNumberMsg
-				+ " Spigot Version: " + Bukkit.getVersion() + " Total RAM: " + PluginUtils.getInstance().getMemory()
-				+ " Free RAM: " + PluginUtils.getInstance().getFreeMemory());
+				+ " Spigot Version: " + Bukkit.getVersion() + " Total RAM: " + PluginUtils.getMemory() + " Free RAM: "
+				+ PluginUtils.getFreeMemory());
 
 		debug(DebugLevel.INFO, "Debug Level: " + getOptions().getDebug().toString());
 	}

@@ -10,8 +10,8 @@ import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 /**
  * The Class BookManager.
@@ -31,7 +31,7 @@ public class BookManager implements Listener {
 	public BookManager(Player player, String start, BookSign listener) {
 		AdvancedCoreUser user = AdvancedCorePlugin.getInstance().getUserManager().getUser(player);
 		ItemStack item = new ItemStack(Material.WRITABLE_BOOK);
-		PlayerUtils.getInstance().setPlayerMeta(player, "BookManager", listener);
+		PlayerUtils.setPlayerMeta(AdvancedCorePlugin.getInstance(), player, "BookManager", listener);
 
 		user.giveItem(item);
 
@@ -47,7 +47,8 @@ public class BookManager implements Listener {
 					st += str;
 				}
 				final String input = st;
-				BookSign listener = (BookSign) PlayerUtils.getInstance().getPlayerMeta(player, "BookManager");
+				BookSign listener = (BookSign) PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player,
+						"BookManager");
 				Bukkit.getScheduler().runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
 
 					@Override

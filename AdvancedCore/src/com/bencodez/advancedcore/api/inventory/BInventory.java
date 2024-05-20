@@ -24,7 +24,8 @@ import org.bukkit.inventory.ItemStack;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.simpleapi.messages.MessageAPI;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -99,7 +100,7 @@ public class BInventory {
 		 * @return the meta
 		 */
 		public Object getMeta(Player player, String str) {
-			return PlayerUtils.getInstance().getPlayerMeta(player, str);
+			return PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player, str);
 		}
 
 		/**
@@ -109,7 +110,7 @@ public class BInventory {
 		 * @return the meta
 		 */
 		public Object getMeta(String str) {
-			return PlayerUtils.getInstance().getPlayerMeta(player, str);
+			return PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player, str);
 		}
 
 		/**
@@ -417,7 +418,7 @@ public class BInventory {
 	}
 
 	public Object getMeta(Player player, String str) {
-		return PlayerUtils.getInstance().getPlayerMeta(player, str);
+		return PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player, str);
 	}
 
 	/**
@@ -518,8 +519,8 @@ public class BInventory {
 		if (perm != null) {
 			if (!perm.contains("|")) {
 				if (!player.hasPermission(perm)) {
-					player.sendMessage(StringParser.getInstance()
-							.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
+					player.sendMessage(
+							MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
 					return;
 				}
 			} else {
@@ -530,8 +531,8 @@ public class BInventory {
 					}
 				}
 				if (!hasPerm) {
-					player.sendMessage(StringParser.getInstance()
-							.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
+					player.sendMessage(
+							MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
 					return;
 				}
 			}
@@ -661,7 +662,7 @@ public class BInventory {
 	 * @param inventoryName the new inventory name
 	 */
 	public void setInventoryName(String inventoryName) {
-		this.inventoryName = StringParser.getInstance().colorize(inventoryName);
+		this.inventoryName = MessageAPI.colorize(inventoryName);
 	}
 
 	/**
@@ -679,7 +680,7 @@ public class BInventory {
 	 * @param ob     the ob
 	 */
 	public void setMeta(Player player, String str, Object ob) {
-		PlayerUtils.getInstance().setPlayerMeta(player, str, ob);
+		PlayerUtils.setPlayerMeta(AdvancedCorePlugin.getInstance(), player, str, ob);
 	}
 
 	/**

@@ -8,9 +8,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -31,7 +31,7 @@ public abstract class GUIHandler {
 	}
 
 	public String colorize(String str) {
-		return StringParser.getInstance().colorize(str);
+		return MessageAPI.colorize(str);
 	}
 
 	public abstract ArrayList<String> getChat(CommandSender sender);

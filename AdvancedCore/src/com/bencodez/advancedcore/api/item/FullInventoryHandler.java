@@ -15,7 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
@@ -118,7 +118,7 @@ public class FullInventoryHandler {
 	}
 
 	private void sendMessage(Player p) {
-		String msg = StringParser.getInstance()
+		String msg = MessageAPI
 				.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
 		if (!msg.isEmpty()) {
 			p.sendMessage(msg);

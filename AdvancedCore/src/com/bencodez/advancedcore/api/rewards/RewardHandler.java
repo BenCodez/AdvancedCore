@@ -40,7 +40,7 @@ import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditActionBar;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditAdvancedPriority;
@@ -722,7 +722,7 @@ public class RewardHandler {
 					debug("Doing permission check in reverse");
 				}
 
-				boolean perm = PlayerUtils.getInstance().hasServerPermission(UUID.fromString(user.getUUID()), str);
+				boolean perm = PlayerManager.getInstance().hasServerPermission(UUID.fromString(user.getUUID()), str);
 				if (reverse) {
 					perm = !perm;
 				}

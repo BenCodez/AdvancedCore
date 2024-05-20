@@ -7,7 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -67,7 +67,7 @@ public class BookWrapper {
 	}
 
 	public String colorize(String s) {
-		return StringParser.getInstance().colorize(s);
+		return MessageAPI.colorize(s);
 	}
 
 	public BookWrapper nextPage(int newSize) {

@@ -15,7 +15,6 @@ import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.misc.ArrayUtils;
-import com.bencodez.advancedcore.api.misc.PlayerUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
@@ -25,6 +24,7 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptManager;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu.InputReceiver;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -99,7 +99,7 @@ public class StringRequester {
 			if (options != null && options.size() != 0) {
 				AdvancedCoreUser user = AdvancedCorePlugin.getInstance().getUserManager().getUser(player);
 				user.sendMessage("&cClick one of the following options below:");
-				PlayerUtils.getInstance().setPlayerMeta(player, "ValueRequestString", listener);
+				PlayerUtils.setPlayerMeta(AdvancedCorePlugin.getInstance(), player, "ValueRequestString", listener);
 				for (String option : options.keySet()) {
 					TextComponent comp = new TextComponent(option);
 					comp.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(Action.RUN_COMMAND,
