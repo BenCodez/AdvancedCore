@@ -110,11 +110,6 @@
 										${project.groupId}.advancedcore.HikariCP</shadedPattern>
 								</relocation>
 								<relocation>
-									<pattern>com.bencodez.simpleapi</pattern>
-									<shadedPattern>
-										${project.groupId}.advancedcore.simpleapi</shadedPattern>
-								</relocation>
-								<relocation>
 									<pattern>com.zaxxer.hikari</pattern>
 									<shadedPattern>
 										${project.groupId}.advancedcore.hikari</shadedPattern>
