@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -172,7 +172,7 @@ public class RewardOptions {
 		str += "CheckTimed: " + checkTimed + ", ";
 		str += "IgnoreChance: " + ignoreChance + ", ";
 		str += "IgnoreRequirements: " + ignoreRequirements + ", ";
-		str += "Placeholders: " + ArrayUtils.getInstance().makeString(placeholders) + ", ";
+		str += "Placeholders: " + ArrayUtils.makeString(placeholders) + ", ";
 		str += "Prefix: " + prefix + ", ";
 		str += "Suffix: " + suffix;
 		return str;

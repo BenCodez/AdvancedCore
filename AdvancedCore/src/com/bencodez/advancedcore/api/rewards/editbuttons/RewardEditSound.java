@@ -6,8 +6,8 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 public abstract class RewardEditSound extends RewardEdit {
 	public RewardEditSound() {
@@ -25,7 +25,7 @@ public abstract class RewardEditSound extends RewardEdit {
 			sounds.add(s.toString());
 		}
 
-		inv.addButton(getStringButton("Sound.Sound", reward, ArrayUtils.getInstance().convert(sounds)));
+		inv.addButton(getStringButton("Sound.Sound", reward, ArrayUtils.convert(sounds)));
 		inv.addButton(getDoubleButton("Sound.Volume", reward));
 		inv.addButton(getDoubleButton("Sound.Pitch", reward));
 

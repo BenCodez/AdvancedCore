@@ -12,11 +12,11 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 public abstract class RewardEditPotions extends RewardEdit {
 	public RewardEditPotions() {
@@ -46,7 +46,7 @@ public abstract class RewardEditPotions extends RewardEdit {
 						reloadAdvancedCore();
 						open(player, reward);
 					}
-				}, ArrayUtils.getInstance().convert(potionEffects)).usingMethod(InputMethod.INVENTORY)
+				}, ArrayUtils.convert(potionEffects)).usingMethod(InputMethod.INVENTORY)
 						.request(clickEvent.getPlayer());
 
 			}

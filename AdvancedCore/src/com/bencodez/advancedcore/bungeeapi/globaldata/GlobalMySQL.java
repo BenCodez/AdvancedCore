@@ -12,8 +12,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
@@ -22,6 +21,7 @@ import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfig;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 public abstract class GlobalMySQL {
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
@@ -122,7 +122,7 @@ public abstract class GlobalMySQL {
 			String sql = "ALTER TABLE " + getName() + " ADD COLUMN `" + column + "` text" + ";";
 
 			debug("Adding column: " + column + " Current columns: "
-					+ ArrayUtils.getInstance().makeStringList((ArrayList<String>) getColumns()));
+					+ ArrayUtils.makeStringList((ArrayList<String>) getColumns()));
 			try {
 				Query query = new Query(mysql, sql);
 				query.executeUpdate();
@@ -160,8 +160,8 @@ public abstract class GlobalMySQL {
 
 	public void checkColumn(String column, DataType dataType) {
 		synchronized (object4) {
-			if (!ArrayUtils.getInstance().containsIgnoreCase((ArrayList<String>) getColumns(), column)) {
-				if (!ArrayUtils.getInstance().containsIgnoreCase(getColumnsQueury(), column)) {
+			if (!ArrayUtils.containsIgnoreCase((ArrayList<String>) getColumns(), column)) {
+				if (!ArrayUtils.containsIgnoreCase(getColumnsQueury(), column)) {
 					addColumn(column, dataType);
 				}
 			}
@@ -518,7 +518,7 @@ public abstract class GlobalMySQL {
 
 	public void executeQuery(String str) {
 		try {
-			Query q = new Query(mysql, StringParser.getInstance().replacePlaceHolder(str, "tablename", getName()));
+			Query q = new Query(mysql, PlaceholderUtils.replacePlaceHolder(str, "tablename", getName()));
 			q.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();

@@ -8,11 +8,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChange;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 
@@ -76,10 +76,10 @@ public class UserDataCache {
 
 			}
 			if (!changedKeys.isEmpty()) {
-				manager.getPlugin().getUserManager().onChange(user, ArrayUtils.getInstance().convert(changedKeys));
+				manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys));
 			}
 			if (keys.size() > 0) {
-				manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.getInstance().makeStringList(keys));
+				manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.makeStringList(keys));
 			}
 		}
 		return this;
@@ -156,7 +156,7 @@ public class UserDataCache {
 				if (!values.isEmpty()) {
 					user.getUserData().setValues(values);
 				}
-				manager.getPlugin().getUserManager().onChange(user, ArrayUtils.getInstance().convert(keys));
+				manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(keys));
 			}
 		}
 	}

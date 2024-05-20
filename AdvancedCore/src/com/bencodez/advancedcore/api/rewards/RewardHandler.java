@@ -37,8 +37,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueNu
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
-import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
@@ -82,6 +81,7 @@ import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInje
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
@@ -511,7 +511,7 @@ public class RewardHandler {
 				plugin.debug(
 						"Not giving empty list of rewards from " + path + ", Options: " + rewardOptions.toString());
 			} else {
-				plugin.debug("Giving list of rewards (" + ArrayUtils.getInstance().makeStringList(rewards) + ") from "
+				plugin.debug("Giving list of rewards (" + ArrayUtils.makeStringList(rewards) + ") from "
 						+ path + ", Options: " + rewardOptions.toString() + " to " + user.getPlayerName() + "/"
 						+ user.getUUID());
 				for (String reward : rewards) {
@@ -970,8 +970,7 @@ public class RewardHandler {
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String expression,
 					RewardOptions rewardOptions) {
 				if (expression.equals("") || new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(
-						StringParser.getInstance().replacePlaceHolders(user.getOfflinePlayer(), StringParser
-								.getInstance().replacePlaceHolder(expression, rewardOptions.getPlaceholders())))) {
+						PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(), PlaceholderUtils.replacePlaceHolder(expression, rewardOptions.getPlaceholders())))) {
 					return true;
 				}
 				return false;
@@ -1318,8 +1317,8 @@ public class RewardHandler {
 					return null;
 				}
 				for (String str : value) {
-					MiscUtils.getInstance().broadcast(StringParser.getInstance().replacePlaceHolders(user.getPlayer(),
-							StringParser.getInstance().replacePlaceHolder(str, placeholders)));
+					MiscUtils.getInstance().broadcast(PlaceholderUtils.replacePlaceHolders(user.getPlayer(),
+							PlaceholderUtils.replacePlaceHolder(str, placeholders)));
 				}
 				return null;
 			}
@@ -1340,8 +1339,8 @@ public class RewardHandler {
 					debug("Not broadcasting for " + playerName + ", in blacklist");
 					return null;
 				}
-				MiscUtils.getInstance().broadcast(StringParser.getInstance().replacePlaceHolders(user.getPlayer(),
-						StringParser.getInstance().replacePlaceHolder(value, placeholders)));
+				MiscUtils.getInstance().broadcast(PlaceholderUtils.replacePlaceHolders(user.getPlayer(),
+						PlaceholderUtils.replacePlaceHolder(value, placeholders)));
 				return null;
 			}
 		}.validator(new RewardInjectValidator() {
@@ -1390,7 +1389,7 @@ public class RewardHandler {
 			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				user.sendActionBar(
-						StringParser.getInstance().replacePlaceHolder(section.getString("Message", ""), placeholders),
+						PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""), placeholders),
 						section.getInt("Delay", 30));
 				return null;
 			}
@@ -1516,9 +1515,9 @@ public class RewardHandler {
 					JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
 
 					for (String str : list) {
-						String expression = StringParser.getInstance().replacePlaceHolders(user.getOfflinePlayer(),
+						String expression = PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(),
 								str);
-						engine.execute(StringParser.getInstance().replacePlaceHolder(expression, placeholders));
+						engine.execute(PlaceholderUtils.replacePlaceHolder(expression, placeholders));
 					}
 				}
 				return null;
@@ -1542,9 +1541,9 @@ public class RewardHandler {
 
 				if (section.getBoolean("Enabled")) {
 					String expression = section.getString("Expression");
-					expression = StringParser.getInstance().replacePlaceHolders(user.getOfflinePlayer(), expression);
+					expression = PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(), expression);
 					if (new JavascriptEngine().addPlayer(user.getOfflinePlayer())
-							.getBooleanValue(StringParser.getInstance().replacePlaceHolder(expression, placeholders))) {
+							.getBooleanValue(PlaceholderUtils.replacePlaceHolder(expression, placeholders))) {
 						new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName() + ".Javascript")
 								.send(user);
 					} else {
@@ -1610,7 +1609,7 @@ public class RewardHandler {
 					}
 				}
 
-				map = ArrayUtils.getInstance().sortByValuesStr(map, false);
+				map = ArrayUtils.sortByValuesStr(map, false);
 				if (map.size() > 0) {
 					if (reward.getConfig().getConfigData().getBoolean("OnlyOneLucky", false)) {
 						for (Entry<String, Integer> entry : map.entrySet()) {
@@ -1851,7 +1850,7 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 
 				Set<String> keys = section.getKeys(false);
-				ArrayList<String> rewards = ArrayUtils.getInstance().convert(keys);
+				ArrayList<String> rewards = ArrayUtils.convert(keys);
 				if (rewards.size() > 0) {
 					String reward = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
 					giveReward(user, section, reward, new RewardOptions().setPlaceholders(placeholders)
@@ -1962,9 +1961,9 @@ public class RewardHandler {
 
 				if (section.getBoolean("Enabled")) {
 					user.sendTitle(
-							StringParser.getInstance().replacePlaceHolder(section.getString("Title"), placeholders),
+							PlaceholderUtils.replacePlaceHolder(section.getString("Title"), placeholders),
 
-							StringParser.getInstance().replacePlaceHolder(section.getString("SubTitle"), placeholders),
+							PlaceholderUtils.replacePlaceHolder(section.getString("SubTitle"), placeholders),
 
 							section.getInt("FadeIn", 10), section.getInt("ShowTime", 50),
 							section.getInt("FadeOut", 10));
@@ -1997,7 +1996,7 @@ public class RewardHandler {
 
 				if (section.getBoolean("Enabled")) {
 					user.sendBossBar(
-							StringParser.getInstance().replacePlaceHolder(section.getString("Message", ""),
+							PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""),
 									placeholders),
 							section.getString("Color", "BLUE"), section.getString("Style", "SOLID"),
 							section.getDouble("Progress", .5), section.getInt("Delay", 30));
@@ -2221,7 +2220,7 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				for (String keys : section.getKeys(false)) {
 					plugin.extraDebug("AdvancedWorld: Giving reward " + reward1.getName() + "_AdvancedWorld");
-					section.set(keys + ".Worlds", ArrayUtils.getInstance().convert(new String[] { keys }));
+					section.set(keys + ".Worlds", ArrayUtils.convert(new String[] { keys }));
 					giveReward(user, section, keys, new RewardOptions().withPlaceHolder(placeholders)
 							.setPrefix(reward1.getName() + "_AdvancedWorld"));
 				}
@@ -2354,7 +2353,7 @@ public class RewardHandler {
 			public String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section,
 					ConfigurationSection data, HashMap<String, String> placeholders) {
 				if (section.size() > 0) {
-					String item = ArrayUtils.getInstance().pickRandom(ArrayUtils.getInstance().convert(section));
+					String item = ArrayUtils.pickRandom(ArrayUtils.convert(section));
 					ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
 
 					builder.setCheckLoreLength(false);

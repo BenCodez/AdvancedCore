@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
@@ -34,8 +34,8 @@ public class Layout {
 	}
 
 	public BaseComponent[] getLayout(HashMap<String, String> placeholders) {
-		stringLayout = ArrayUtils.getInstance().replacePlaceHolder(stringLayout, placeholders);
-		stringLayout = ArrayUtils.getInstance().replacePlaceHolder(stringLayout, this.placeholders);
+		stringLayout = PlaceholderUtils.replacePlaceHolder(stringLayout, placeholders);
+		stringLayout = PlaceholderUtils.replacePlaceHolder(stringLayout, this.placeholders);
 		ArrayList<BaseComponent> layout = new ArrayList<BaseComponent>();
 		for (int i = 0; i < stringLayout.size(); i++) {
 			String str = stringLayout.get(i);

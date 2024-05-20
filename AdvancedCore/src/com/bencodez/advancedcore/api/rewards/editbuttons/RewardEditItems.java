@@ -19,8 +19,8 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueLi
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueNumber;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 public abstract class RewardEditItems extends RewardEdit {
 	private AdvancedCorePlugin plugin;
@@ -85,7 +85,7 @@ public abstract class RewardEditItems extends RewardEdit {
 		};
 		if (reward.hasPath("Items")) {
 			b.addData("ItemsKeys",
-					ArrayUtils.getInstance().convert(reward.getData().getConfigurationSection("Items").getKeys(false)));
+					ArrayUtils.convert(reward.getData().getConfigurationSection("Items").getKeys(false)));
 		} else {
 			b.addData("ItemsKeys", new ArrayList<String>());
 		}
@@ -283,7 +283,7 @@ public abstract class RewardEditItems extends RewardEdit {
 						String item = (String) getInv().getData("Item");
 						openEditItem(player, item, reward);
 					}
-				}).addOptions(ArrayUtils.getInstance().convert(flagList)));
+				}).addOptions(ArrayUtils.convert(flagList)));
 
 		inv.addButton(getBackButtonCustom(reward, new EditGUIValueInventory("") {
 

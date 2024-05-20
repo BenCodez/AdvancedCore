@@ -12,8 +12,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.messages.MessageAPI;
 
 public class JavascriptEngine {
 	private HashMap<String, Object> engineAPI;
@@ -127,7 +127,7 @@ public class JavascriptEngine {
 				engine.put("Console", Bukkit.getConsoleSender());
 				engine.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
 				engine.put("RewardHandler", AdvancedCorePlugin.getInstance().getRewardHandler());
-				engine.put("StringParser", StringParser.getInstance());
+				engine.put("MessageAPI", MessageAPI.class);
 
 				engineAPI.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
 

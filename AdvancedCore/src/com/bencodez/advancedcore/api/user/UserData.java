@@ -7,7 +7,6 @@ import java.util.Map.Entry;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeString;
@@ -16,6 +15,7 @@ import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.thread.FileThread;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -341,7 +341,7 @@ public class UserData {
 			return new ArrayList<String>();
 		}
 		String[] list = str.split("%line%");
-		return ArrayUtils.getInstance().convert(list);
+		return ArrayUtils.convert(list);
 	}
 
 	public String getValue(String key) {

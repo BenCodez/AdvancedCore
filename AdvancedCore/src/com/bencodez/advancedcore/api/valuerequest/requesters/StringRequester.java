@@ -14,7 +14,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
@@ -24,6 +23,7 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptManager;
 import com.bencodez.advancedcore.api.valuerequest.prompt.PromptReturnString;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu.InputReceiver;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.player.PlayerUtils;
 
 import net.md_5.bungee.api.chat.ClickEvent.Action;
@@ -172,7 +172,7 @@ public class StringRequester {
 				items.put(option, new ItemStack(Material.STONE, 1));
 			}
 		}
-		items = ArrayUtils.getInstance().sortByValuesStrItem(items);
+		items = ArrayUtils.sortByValuesStrItem(items);
 		request(player, method, currentValue, items, promptText, allowCustomOption, listener);
 	}
 }

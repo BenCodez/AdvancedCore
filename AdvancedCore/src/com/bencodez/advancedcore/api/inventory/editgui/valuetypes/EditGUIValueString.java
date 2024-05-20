@@ -3,9 +3,9 @@ package com.bencodez.advancedcore.api.inventory.editgui.valuetypes;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
 public abstract class EditGUIValueString extends EditGUIValue {
@@ -26,7 +26,7 @@ public abstract class EditGUIValueString extends EditGUIValue {
 				setValue(player, value);
 				player.sendMessage(MessageAPI.colorize("&cSetting " + getKey() + " to " + value));
 			}
-		}, ArrayUtils.getInstance().convert(getOptions())).currentValue(getCurrentValue().toString())
+		}, ArrayUtils.convert(getOptions())).currentValue(getCurrentValue().toString())
 				.allowCustomOption(true).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
 

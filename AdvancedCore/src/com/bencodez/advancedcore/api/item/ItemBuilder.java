@@ -36,10 +36,10 @@ import org.bukkit.potion.PotionEffectType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
-import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.skull.SkullCreator;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.google.common.collect.Multimap;
@@ -800,13 +800,13 @@ public class ItemBuilder {
 
 	public ItemStack parsePlaceholders(OfflinePlayer player) {
 		if (player != null) {
-			setName(StringParser.getInstance().replaceJavascript(player,
-					StringParser.getInstance().replacePlaceHolder(getName(), placeholders)));
-			setLore(ArrayUtils.getInstance().replaceJavascript(player,
-					ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
+			setName(PlaceholderUtils.replaceJavascript(player,
+					PlaceholderUtils.replacePlaceHolder(getName(), placeholders)));
+			setLore(PlaceholderUtils.replaceJavascript(player,
+					PlaceholderUtils.replacePlaceHolder(getLore(), placeholders)));
 			if (skull.contains("%")) {
-				setSkullOwner(StringParser.getInstance().replaceJavascript(player,
-						StringParser.getInstance().replacePlaceHolder(skull, placeholders)));
+				setSkullOwner(PlaceholderUtils.replaceJavascript(player,
+						PlaceholderUtils.replacePlaceHolder(skull, placeholders)));
 			}
 		} else {
 			return toItemStack();
@@ -1007,7 +1007,7 @@ public class ItemBuilder {
 		}
 		ItemMeta im = is.getItemMeta();
 		if (im != null) {
-			im.setLore(ArrayUtils.getInstance().colorize(list));
+			im.setLore(ArrayUtils.colorize(list));
 			is.setItemMeta(im);
 		}
 		return this;
@@ -1020,7 +1020,7 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLore(String... lore) {
-		return setLore(ArrayUtils.getInstance().convert(lore));
+		return setLore(ArrayUtils.convert(lore));
 	}
 
 	public ItemBuilder setLoreLength(int length) {
@@ -1118,10 +1118,9 @@ public class ItemBuilder {
 			return setConditional(new JavascriptEngine()).toItemStack();
 		}
 
-		setName(StringParser.getInstance()
-				.replaceJavascript(StringParser.getInstance().replacePlaceHolder(getName(), placeholders)));
-		setLore(ArrayUtils.getInstance()
-				.replaceJavascript(ArrayUtils.getInstance().replacePlaceHolder(getLore(), placeholders)));
+		setName(PlaceholderUtils
+				.replaceJavascript(PlaceholderUtils.replacePlaceHolder(getName(), placeholders)));
+		setLore(PlaceholderUtils.replaceJavascript(PlaceholderUtils.replacePlaceHolder(getLore(), placeholders)));
 		if (checkLoreLength) {
 			checkLoreLength();
 		}

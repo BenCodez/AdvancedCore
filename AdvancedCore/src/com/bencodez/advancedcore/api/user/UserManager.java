@@ -11,12 +11,12 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 
@@ -61,21 +61,21 @@ public class UserManager {
 					}
 				}
 			} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-				ArrayList<String> data = ArrayUtils.getInstance().convert(plugin.getMysql().getNames());
+				ArrayList<String> data = ArrayUtils.convert(plugin.getMysql().getNames());
 				for (String name : data) {
 					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 						names.add(name);
 					}
 				}
 			}
-			return ArrayUtils.getInstance().removeDuplicates(names);
+			return ArrayUtils.removeDuplicates(names);
 		}
 		return new ArrayList<String>();
 
 	}
 
 	public ArrayList<String> getAllUUIDs() {
-		return ArrayUtils.getInstance().removeDuplicates(getAllUUIDs(plugin.getStorageType()));
+		return ArrayUtils.removeDuplicates(getAllUUIDs(plugin.getStorageType()));
 	}
 
 	@SuppressWarnings("deprecation")

@@ -26,8 +26,7 @@ import org.bukkit.potion.PotionEffectType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.misc.effects.ActionBar;
 import com.bencodez.advancedcore.api.misc.effects.BossBar;
@@ -38,6 +37,7 @@ import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.player.PlayerUtils;
 
 import lombok.Getter;
@@ -183,8 +183,7 @@ public class AdvancedCoreUser {
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
 		synchronized (plugin) {
 			ArrayList<String> offlineRewards = getOfflineRewards();
-			offlineRewards
-					.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders));
+			offlineRewards.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.makeString(placeholders));
 			setOfflineRewards(offlineRewards);
 		}
 	}
@@ -194,7 +193,7 @@ public class AdvancedCoreUser {
 		String rewardName = reward.getRewardName();
 		rewardName += "%extime%" + System.currentTimeMillis();
 
-		timed.put(rewardName + "%placeholders%" + ArrayUtils.getInstance().makeString(placeholders), epochMilli);
+		timed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(placeholders), epochMilli);
 		setTimedRewards(timed);
 		loadTimedDelayedTimer(epochMilli);
 	}
@@ -241,12 +240,12 @@ public class AdvancedCoreUser {
 						placeholders = data[1];
 					}
 					new RewardBuilder(plugin.getRewardHandler().getReward(rewardName)).setCheckTimed(false)
-							.withPlaceHolder(ArrayUtils.getInstance().fromString(placeholders))
+							.withPlaceHolder(ArrayUtils.fromString(placeholders))
 							.withPlaceHolder("date",
 									"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
 							.send(this);
 					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
-							+ " with placeholders " + ArrayUtils.getInstance().fromString(placeholders));
+							+ " with placeholders " + ArrayUtils.fromString(placeholders));
 				} else {
 					newTimed.put(entry.getKey(), time);
 				}
@@ -282,7 +281,7 @@ public class AdvancedCoreUser {
 							}
 							plugin.getRewardHandler().giveReward(user, args[0],
 									new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
-											.setPlaceholders(ArrayUtils.getInstance().fromString(placeholders)));
+											.withPlaceHolder(ArrayUtils.fromString(placeholders)));
 						}
 					}
 				}
@@ -848,8 +847,8 @@ public class AdvancedCoreUser {
 
 	public void preformCommand(ArrayList<String> commands, HashMap<String, String> placeholders) {
 		if (commands != null && !commands.isEmpty()) {
-			final ArrayList<String> cmds = ArrayUtils.getInstance().replaceJavascript(getPlayer(),
-					ArrayUtils.getInstance().replacePlaceHolder(commands, placeholders));
+			final ArrayList<String> cmds = PlaceholderUtils.replaceJavascript(getPlayer(),
+					PlaceholderUtils.replacePlaceHolder(commands, placeholders));
 
 			final Player player = getPlayer();
 			if (player != null && plugin.isEnabled()) {
@@ -869,8 +868,8 @@ public class AdvancedCoreUser {
 
 	public void preformCommand(String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
-			final String cmd = StringParser.getInstance().replaceJavascript(getPlayer(),
-					StringParser.getInstance().replacePlaceHolder(command, placeholders));
+			final String cmd = PlaceholderUtils.replaceJavascript(getPlayer(),
+					PlaceholderUtils.replacePlaceHolder(command, placeholders));
 			plugin.debug("Executing player command for " + getPlayerName() + ": " + command);
 			if (plugin.isEnabled()) {
 				getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
@@ -911,7 +910,7 @@ public class AdvancedCoreUser {
 			if (player != null) {
 
 				try {
-					ActionBar actionBar = new ActionBar(StringParser.getInstance().replaceJavascript(getPlayer(), msg),
+					ActionBar actionBar = new ActionBar(PlaceholderUtils.replaceJavascript(getPlayer(), msg),
 							delay);
 					actionBar.send(player);
 				} catch (Exception ex) {
@@ -936,7 +935,7 @@ public class AdvancedCoreUser {
 			Player player = getPlayer();
 			if (player != null) {
 				try {
-					BossBar bossBar = new BossBar(StringParser.getInstance().replaceJavascript(getPlayer(), msg), color,
+					BossBar bossBar = new BossBar(PlaceholderUtils.replaceJavascript(getPlayer(), msg), color,
 							style, progress);
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
@@ -964,7 +963,7 @@ public class AdvancedCoreUser {
 			for (int i = 0; i < messages.size(); i++) {
 				TextComponent txt = messages.get(i);
 				if (javascript) {
-					txt.setText(StringParser.getInstance().replaceJavascript(getPlayer(), txt.getText()));
+					txt.setText(PlaceholderUtils.replaceJavascript(getPlayer(), txt.getText()));
 				}
 				texts.add(txt);
 				if (i + 1 < messages.size()) {
@@ -973,7 +972,7 @@ public class AdvancedCoreUser {
 
 			}
 
-			PlayerUtils.getServerHandle().sendMessage(player, ArrayUtils.getInstance().convertBaseComponent(texts));
+			PlayerUtils.getServerHandle().sendMessage(player, ArrayUtils.convertBaseComponent(texts));
 		}
 
 	}
@@ -986,7 +985,7 @@ public class AdvancedCoreUser {
 	public void sendJson(TextComponent message) {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
-			message.setText(StringParser.getInstance().replaceJavascript(getPlayer(), message.getText()));
+			message.setText(PlaceholderUtils.replaceJavascript(getPlayer(), message.getText()));
 			PlayerUtils.getServerHandle().sendMessage(player, message);
 		}
 	}
@@ -997,11 +996,11 @@ public class AdvancedCoreUser {
 	 * @param msg the msg
 	 */
 	public void sendMessage(ArrayList<String> msg) {
-		sendMessage(ArrayUtils.getInstance().convert(msg));
+		sendMessage(ArrayUtils.convert(msg));
 	}
 
 	public void sendMessage(ArrayList<String> msg, HashMap<String, String> placeholders) {
-		sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().replacePlaceHolder(msg, placeholders)));
+		sendMessage(ArrayUtils.convert(PlaceholderUtils.replacePlaceHolder(msg, placeholders)));
 	}
 
 	/**
@@ -1015,7 +1014,7 @@ public class AdvancedCoreUser {
 			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
 					PlayerUtils.getServerHandle().sendMessage(player,
-							StringParser.getInstance().parseJson(StringParser.getInstance().parseText(player, str)));
+							PlaceholderUtils.parseJson(PlaceholderUtils.parseText(player, str)));
 				}
 			}
 		}
@@ -1026,11 +1025,11 @@ public class AdvancedCoreUser {
 	}
 
 	public void sendMessage(String msg, HashMap<String, String> placeholders) {
-		sendMessage(StringParser.getInstance().replacePlaceHolder(msg, placeholders));
+		sendMessage(PlaceholderUtils.replacePlaceHolder(msg, placeholders));
 	}
 
 	public void sendMessage(String msg, String toReplace, String replace) {
-		sendMessage(StringParser.getInstance().replacePlaceHolder(msg, toReplace, replace));
+		sendMessage(PlaceholderUtils.replacePlaceHolder(msg, toReplace, replace));
 	}
 
 	/**
@@ -1047,9 +1046,9 @@ public class AdvancedCoreUser {
 				if ((player != null) && (msg != null)) {
 					if (!str.equals("")) {
 						for (String str1 : str.split("%NewLine%")) {
-							TextComponent text = StringParser.getInstance()
-									.parseJson(StringParser.getInstance().parseText(player, str1));
-							text.setText(StringParser.getInstance().replaceJavascript(getPlayer(), text.getText()));
+							TextComponent text = PlaceholderUtils
+									.parseJson(PlaceholderUtils.parseText(player, str1));
+							text.setText(PlaceholderUtils.replaceJavascript(getPlayer(), text.getText()));
 							texts.add(text);
 						}
 					}
@@ -1076,8 +1075,8 @@ public class AdvancedCoreUser {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			try {
-				Title titleObject = new Title(StringParser.getInstance().replaceJavascript(getPlayer(), title),
-						StringParser.getInstance().replaceJavascript(getPlayer(), subTitle), fadeIn, showTime, fadeOut);
+				Title titleObject = new Title(PlaceholderUtils.replaceJavascript(getPlayer(), title),
+						PlaceholderUtils.replaceJavascript(getPlayer(), subTitle), fadeIn, showTime, fadeOut);
 				titleObject.send(player);
 			} catch (Exception ex) {
 				plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");

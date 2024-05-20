@@ -13,8 +13,7 @@ import com.bencodez.advancedcore.api.backup.ZipCreator;
 import com.bencodez.advancedcore.api.command.CommandHandler;
 import com.bencodez.advancedcore.api.command.PlayerCommandHandler;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
-import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
@@ -35,6 +34,7 @@ import com.bencodez.advancedcore.command.gui.AdminGUI;
 import com.bencodez.advancedcore.command.gui.ChoiceGUI;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.advancedcore.command.gui.UserGUI;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.player.PlayerUtils;
 
@@ -92,7 +92,7 @@ public class CommandLoader {
 						@Override
 						public void run() {
 							Bukkit.getServer().dispatchCommand(sender,
-									StringParser.getInstance().replacePlaceHolder(cmd, "player", user.getPlayerName()));
+									PlaceholderUtils.replacePlaceHolder(cmd, "player", user.getPlayerName()));
 						}
 					});
 
@@ -437,7 +437,7 @@ public class CommandLoader {
 					str += args[i] + " ";
 				}
 				if (sender instanceof Player) {
-					str = StringParser.getInstance().replacePlaceHolders((Player) sender, str);
+					str = PlaceholderUtils.replacePlaceHolders((Player) sender, str);
 				}
 				JavascriptEngine engine = new JavascriptEngine();
 				engine.addPlayer(sender);
@@ -473,7 +473,7 @@ public class CommandLoader {
 					methods.add(method.toString());
 				}
 				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-						ArrayUtils.getInstance().convert(methods), false, new StringListener() {
+						ArrayUtils.convert(methods), false, new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {

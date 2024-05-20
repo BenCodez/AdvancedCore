@@ -6,9 +6,9 @@ import java.util.HashMap;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -38,7 +38,7 @@ public abstract class RewardInjectStringList extends RewardInject {
 		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: "
-					+ ArrayUtils.getInstance().makeStringList(value));
+					+ ArrayUtils.makeStringList(value));
 			return onRewardRequest(reward, user, value, placeholders);
 
 		}

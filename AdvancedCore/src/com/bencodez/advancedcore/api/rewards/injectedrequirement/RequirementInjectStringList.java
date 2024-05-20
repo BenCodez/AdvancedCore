@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -35,7 +35,7 @@ public abstract class RequirementInjectStringList extends RequirementInject {
 		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true) || isAlwaysForceNoData())) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: "
-					+ ArrayUtils.getInstance().makeStringList(value));
+					+ ArrayUtils.makeStringList(value));
 			return onRequirementsRequest(reward, user, value, rewardOptions);
 
 		}

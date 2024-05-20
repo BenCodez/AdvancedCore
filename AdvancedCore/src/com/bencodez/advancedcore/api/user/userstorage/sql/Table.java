@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValueBoolean;
@@ -637,7 +637,7 @@ public class Table {
 	public void executeQuery(String str) {
 		try {
 			PreparedStatement s = sqLite.getSQLConnection()
-					.prepareStatement(StringParser.getInstance().replacePlaceHolder(str, "tablename", getName()));
+					.prepareStatement(PlaceholderUtils.replacePlaceHolder(str, "tablename", getName()));
 			s.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();

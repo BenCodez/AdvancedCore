@@ -8,8 +8,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
@@ -70,7 +70,7 @@ public abstract class GUIHandler {
 			AdvancedCoreUser user = plugin.getUserManager().getUser((Player) player);
 			user.sendMessage(message);
 		} else {
-			player.sendMessage(ArrayUtils.getInstance().convert(message));
+			player.sendMessage(ArrayUtils.convert(message));
 		}
 	}
 
@@ -88,7 +88,7 @@ public abstract class GUIHandler {
 			AdvancedCoreUser user = plugin.getUserManager().getUser((Player) player);
 			user.sendJson(text);
 		} else {
-			player.sendMessage(ArrayUtils.getInstance().convert(ArrayUtils.getInstance().comptoString(text)));
+			player.sendMessage(ArrayUtils.convert(ArrayUtils.comptoString(text)));
 		}
 	}
 

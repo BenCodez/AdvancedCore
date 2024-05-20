@@ -73,47 +73,47 @@ public class MessageBuilder {
 	}
 
 	public MessageBuilder replaceJavascript() {
-		setText(StringParser.getInstance().replaceJavascript(getText()));
+		setText(PlaceholderUtils.replaceJavascript(getText()));
 		return this;
 	}
 
 	public MessageBuilder replaceJavascript(AdvancedCoreUser user) {
-		setText(StringParser.getInstance().replaceJavascript(user, getText()));
+		setText(PlaceholderUtils.replaceJavascript(user, getText()));
 		return this;
 	}
 
 	public MessageBuilder replaceJavascript(CommandSender sender) {
-		setText(StringParser.getInstance().replaceJavascript(sender, getText()));
+		setText(PlaceholderUtils.replaceJavascript(sender, getText()));
 		return this;
 	}
 
 	public MessageBuilder replaceJavascript(JavascriptEngine engine) {
-		setText(StringParser.getInstance().replaceJavascript(getText(), engine));
+		setText(PlaceholderUtils.replaceJavascript(getText(), engine));
 		return this;
 	}
 
 	public MessageBuilder replaceJavascript(OfflinePlayer player) {
-		setText(StringParser.getInstance().replaceJavascript(player, getText()));
+		setText(PlaceholderUtils.replaceJavascript(player, getText()));
 		return this;
 	}
 
 	public MessageBuilder replacePlaceholder(HashMap<String, String> placeholders) {
-		setText(StringParser.getInstance().replacePlaceHolder(text, placeholders));
+		setText(PlaceholderUtils.replacePlaceHolder(text, placeholders));
 		return this;
 	}
 
 	public MessageBuilder replacePlaceholder(HashMap<String, String> placeholders, boolean ignoreCase) {
-		setText(StringParser.getInstance().replacePlaceHolder(text, placeholders, ignoreCase));
+		setText(PlaceholderUtils.replacePlaceHolder(text, placeholders, ignoreCase));
 		return this;
 	}
 
 	public MessageBuilder replacePlaceholder(String toReplace, String replaceWith) {
-		setText(StringParser.getInstance().replacePlaceHolder(text, toReplace, replaceWith));
+		setText(PlaceholderUtils.replacePlaceHolder(text, toReplace, replaceWith));
 		return this;
 	}
 
 	public MessageBuilder replacePlaceholder(String toReplace, String replaceWith, boolean ignoreCase) {
-		setText(StringParser.getInstance().replacePlaceHolder(text, toReplace, replaceWith, ignoreCase));
+		setText(PlaceholderUtils.replacePlaceHolder(text, toReplace, replaceWith, ignoreCase));
 		return this;
 	}
 
@@ -124,7 +124,7 @@ public class MessageBuilder {
 	 * @return the string
 	 */
 	public MessageBuilder replacePlaceHolders(Player player) {
-		setText(StringParser.getInstance().replacePlaceHolders(player, getText()));
+		setText(PlaceholderUtils.replacePlaceHolders(player, getText()));
 		return this;
 	}
 
@@ -134,6 +134,6 @@ public class MessageBuilder {
 	}
 
 	public TextComponent toTextComponent() {
-		return StringParser.getInstance().parseJson(getText());
+		return PlaceholderUtils.parseJson(getText());
 	}
 }

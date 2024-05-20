@@ -18,7 +18,6 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueBoolean;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
@@ -26,6 +25,7 @@ import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditDelayed;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTimed;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.player.PlayerUtils;
 
 /**
@@ -297,7 +297,7 @@ public class RewardEditGUI {
 					lore.add("&cReward is not directly defined, can not edit in GUI");
 				}
 
-				inv.addButton(new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),
+				inv.addButton(new BInventoryButton(reward.getRewardName(), ArrayUtils.convert(lore),
 						new ItemStack(Material.STONE)) {
 
 					@Override
@@ -319,7 +319,7 @@ public class RewardEditGUI {
 			if (!reward.isDirectlyDefined()) {
 				ArrayList<String> lore = new ArrayList<String>();
 				lore.add("DirectlyDefined reward handle");
-				inv.addButton(new BInventoryButton(reward.getFullPath(), ArrayUtils.getInstance().convert(lore),
+				inv.addButton(new BInventoryButton(reward.getFullPath(), ArrayUtils.convert(lore),
 						new ItemStack(Material.COBBLESTONE)) {
 
 					@Override
@@ -352,7 +352,7 @@ public class RewardEditGUI {
 					lore.add("&cReward is directly defined");
 				}
 
-				inv.addButton(new BInventoryButton(reward.getRewardName(), ArrayUtils.getInstance().convert(lore),
+				inv.addButton(new BInventoryButton(reward.getRewardName(), ArrayUtils.convert(lore),
 						new ItemStack(Material.STONE)) {
 
 					@Override
@@ -384,7 +384,7 @@ public class RewardEditGUI {
 			if (reward.isDirectlyDefined()) {
 				ArrayList<String> lore = new ArrayList<String>();
 
-				inv.addButton(new BInventoryButton(reward.getFullPath(), ArrayUtils.getInstance().convert(lore),
+				inv.addButton(new BInventoryButton(reward.getFullPath(), ArrayUtils.convert(lore),
 						new ItemStack(Material.COBBLESTONE)) {
 
 					@Override

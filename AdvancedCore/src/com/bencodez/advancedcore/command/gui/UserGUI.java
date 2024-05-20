@@ -17,12 +17,12 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.player.PlayerUtils;
 
 /**
@@ -95,7 +95,7 @@ public class UserGUI {
 					rewards.add(reward.getRewardName());
 				}
 
-				new ValueRequest().requestString(clickEvent.getPlayer(), "", ArrayUtils.getInstance().convert(rewards),
+				new ValueRequest().requestString(clickEvent.getPlayer(), "", ArrayUtils.convert(rewards),
 						true, new StringListener() {
 
 							@Override
@@ -173,7 +173,7 @@ public class UserGUI {
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			players.add(p.getName());
 		}
-		new ValueRequest().requestString(player, "", ArrayUtils.getInstance().convert(players), true,
+		new ValueRequest().requestString(player, "", ArrayUtils.convert(players), true,
 				new StringListener() {
 
 					@Override

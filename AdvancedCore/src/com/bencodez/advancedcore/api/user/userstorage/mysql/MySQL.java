@@ -16,8 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.messages.StringParser;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
@@ -28,6 +27,7 @@ import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfigSpigot;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 
@@ -125,7 +125,7 @@ public class MySQL {
 			String sql = "ALTER TABLE " + getName() + " ADD COLUMN `" + column + "` text" + ";";
 
 			plugin.debug("Adding column: " + column + " Current columns: "
-					+ ArrayUtils.getInstance().makeStringList((ArrayList<String>) getColumns()));
+					+ ArrayUtils.makeStringList((ArrayList<String>) getColumns()));
 			try {
 				Query query = new Query(mysql, sql);
 				query.executeUpdate();
@@ -163,8 +163,8 @@ public class MySQL {
 
 	public void checkColumn(String column, DataType dataType) {
 		synchronized (object4) {
-			if (!ArrayUtils.getInstance().containsIgnoreCase((ArrayList<String>) getColumns(), column)) {
-				if (!ArrayUtils.getInstance().containsIgnoreCase(getColumnsQueury(), column)) {
+			if (!ArrayUtils.containsIgnoreCase((ArrayList<String>) getColumns(), column)) {
+				if (!ArrayUtils.containsIgnoreCase(getColumnsQueury(), column)) {
 					addColumn(column, dataType);
 				}
 			}
@@ -740,7 +740,7 @@ public class MySQL {
 
 	public void executeQuery(String str) {
 		try {
-			Query q = new Query(mysql, StringParser.getInstance().replacePlaceHolder(str, "tablename", getName()));
+			Query q = new Query(mysql, PlaceholderUtils.replacePlaceHolder(str, "tablename", getName()));
 			plugin.devDebug("MYSQL QUERY: " + str);
 			q.executeUpdate();
 		} catch (SQLException e) {

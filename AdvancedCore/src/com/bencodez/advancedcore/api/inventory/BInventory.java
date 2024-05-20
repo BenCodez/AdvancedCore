@@ -23,7 +23,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.messages.StringParser;
+import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.player.PlayerUtils;
 
@@ -545,7 +545,7 @@ public class BInventory {
 		}
 		if (!pages) {
 			inv = Bukkit.createInventory(new GUISession(this, 1), inventory.getInventorySize(),
-					StringParser.getInstance().replaceJavascript(player, StringParser.getInstance()
+					PlaceholderUtils.replaceJavascript(player, PlaceholderUtils
 							.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem(player, getPlaceholders());
@@ -579,7 +579,7 @@ public class BInventory {
 	public void openInventory(Player player, int page) {
 		BInventory inventory = this;
 		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize,
-				StringParser.getInstance().replaceJavascript(player, StringParser.getInstance()
+				PlaceholderUtils.replaceJavascript(player, PlaceholderUtils
 						.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 		this.page = page;
 		int startSlot = (page - 1) * (maxInvSize - 9);

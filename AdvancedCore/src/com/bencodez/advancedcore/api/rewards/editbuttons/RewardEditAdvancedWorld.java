@@ -13,11 +13,11 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 public abstract class RewardEditAdvancedWorld extends RewardEdit {
 	public RewardEditAdvancedWorld() {
@@ -45,7 +45,7 @@ public abstract class RewardEditAdvancedWorld extends RewardEdit {
 						reloadAdvancedCore();
 						open(player, reward);
 					}
-				}, ArrayUtils.getInstance().convert(worlds)).usingMethod(InputMethod.CHAT).allowCustomOption(true)
+				}, ArrayUtils.convert(worlds)).usingMethod(InputMethod.CHAT).allowCustomOption(true)
 						.request(clickEvent.getPlayer());
 
 			}

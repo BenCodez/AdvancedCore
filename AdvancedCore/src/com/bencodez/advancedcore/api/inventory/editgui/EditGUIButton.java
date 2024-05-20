@@ -13,7 +13,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValue;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueList;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -65,7 +65,7 @@ public class EditGUIButton extends BInventoryButton {
 			}
 			if (getEditor().getCurrentValue() instanceof ArrayList<?>) {
 				builder.setLore(
-						ArrayUtils.getInstance().makeStringList((ArrayList<String>) getEditor().getCurrentValue()));
+						ArrayUtils.makeStringList((ArrayList<String>) getEditor().getCurrentValue()));
 			} else {
 				builder.setLore("&cCurrent value: null");
 			}

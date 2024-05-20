@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
+import com.bencodez.simpleapi.array.ArrayUtils;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
@@ -79,7 +79,7 @@ public class PluginMessage implements PluginMessageListener {
 	public void onReceive(String subChannel, ArrayList<String> list) {
 		if (debug) {
 			plugin.getLogger().info("BungeeDebug: Received plugin message: " + subChannel + ", "
-					+ ArrayUtils.getInstance().makeStringList(list));
+					+ ArrayUtils.makeStringList(list));
 		}
 		for (PluginMessageHandler handle : pluginMessages) {
 			if (handle.getSubChannel().equalsIgnoreCase(subChannel)) {
@@ -100,7 +100,7 @@ public class PluginMessage implements PluginMessageListener {
 			}
 			if (debug) {
 				plugin.getLogger().info("BungeeDebug: Sending plugin message: " + channel + ", "
-						+ ArrayUtils.getInstance().makeStringList(ArrayUtils.getInstance().convert(messageData)));
+						+ ArrayUtils.makeStringList(ArrayUtils.convert(messageData)));
 			}
 			Bukkit.getServer().sendPluginMessage(plugin, plugin.getBungeeChannel(), byteOutStream.toByteArray());
 

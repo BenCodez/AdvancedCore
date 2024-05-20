@@ -9,10 +9,10 @@ import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.misc.ArrayUtils;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 public abstract class EditGUIValueList extends EditGUIValue {
 	public EditGUIValueList(String key, Object value) {
@@ -61,7 +61,7 @@ public abstract class EditGUIValueList extends EditGUIValue {
 							setValue(player, list);
 							sendMessage(player, "&cRemoved " + add + " from " + getKey());
 						}
-					}, ArrayUtils.getInstance().convert((ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value")))
+					}, ArrayUtils.convert((ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value")))
 							.usingMethod(InputMethod.INVENTORY).allowCustomOption(false)
 							.request(clickEvent.getPlayer());
 				} else {
