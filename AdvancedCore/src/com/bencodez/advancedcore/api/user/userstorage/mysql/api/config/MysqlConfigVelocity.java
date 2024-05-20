@@ -1,6 +1,6 @@
 package com.bencodez.advancedcore.api.user.userstorage.mysql.api.config;
 
-import com.bencodez.advancedcore.bungeeapi.velocity.VelocityYMLFile;
+import com.bencodez.simpleapi.file.velocity.VelocityYMLFile;
 
 public class MysqlConfigVelocity extends MysqlConfig {
 	public MysqlConfigVelocity(VelocityYMLFile config) {

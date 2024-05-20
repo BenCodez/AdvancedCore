@@ -23,13 +23,13 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueSt
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.yml.YMLConfig;
 import com.bencodez.advancedcore.api.yml.YMLFile;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataBoolean;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataConfigurationSection;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataDouble;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataInt;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataKeys;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataListString;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataString;
+import com.bencodez.simpleapi.file.annotation.ConfigDataBoolean;
+import com.bencodez.simpleapi.file.annotation.ConfigDataConfigurationSection;
+import com.bencodez.simpleapi.file.annotation.ConfigDataDouble;
+import com.bencodez.simpleapi.file.annotation.ConfigDataInt;
+import com.bencodez.simpleapi.file.annotation.ConfigDataKeys;
+import com.bencodez.simpleapi.file.annotation.ConfigDataListString;
+import com.bencodez.simpleapi.file.annotation.ConfigDataString;
 
 public class ConfigEditor {
 	private YMLFile ymlFile;

@@ -39,6 +39,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.StringParser;
 import com.bencodez.simpleapi.messages.MessageAPI;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import net.md_5.bungee.api.ChatColor;
 
@@ -79,8 +80,7 @@ public class MiscUtils {
 				for (String str1 : broadcastMsg.split(Pattern.quote("%newline%"))) {
 					for (String str : str1.split(Pattern.quote("%NewLine%"))) {
 						String msg = MessageAPI.colorize(StringParser.getInstance().replacePlaceHolders(player, str));
-						AdvancedCorePlugin.getInstance().getServerHandle().sendMessage(player,
-								StringParser.getInstance().parseJson(msg));
+						PlayerUtils.getServerHandle().sendMessage(player, StringParser.getInstance().parseJson(msg));
 					}
 				}
 			}

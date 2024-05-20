@@ -973,7 +973,7 @@ public class AdvancedCoreUser {
 
 			}
 
-			plugin.getServerHandle().sendMessage(player, ArrayUtils.getInstance().convertBaseComponent(texts));
+			PlayerUtils.getServerHandle().sendMessage(player, ArrayUtils.getInstance().convertBaseComponent(texts));
 		}
 
 	}
@@ -987,7 +987,7 @@ public class AdvancedCoreUser {
 		Player player = getPlayer();
 		if ((player != null) && (message != null)) {
 			message.setText(StringParser.getInstance().replaceJavascript(getPlayer(), message.getText()));
-			plugin.getServerHandle().sendMessage(player, message);
+			PlayerUtils.getServerHandle().sendMessage(player, message);
 		}
 	}
 
@@ -1014,7 +1014,7 @@ public class AdvancedCoreUser {
 		if ((player != null) && (msg != null)) {
 			if (!msg.equals("")) {
 				for (String str : msg.split("%NewLine%")) {
-					plugin.getServerHandle().sendMessage(player,
+					PlayerUtils.getServerHandle().sendMessage(player,
 							StringParser.getInstance().parseJson(StringParser.getInstance().parseText(player, str)));
 				}
 			}

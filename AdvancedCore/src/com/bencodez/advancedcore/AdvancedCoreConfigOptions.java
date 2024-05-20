@@ -7,13 +7,14 @@ import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.yml.YMLConfig;
-import com.bencodez.advancedcore.api.yml.annotation.AnnotationHandler;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataBoolean;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataConfigurationSection;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataDouble;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataInt;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataListString;
-import com.bencodez.advancedcore.api.yml.annotation.ConfigDataString;
+import com.bencodez.simpleapi.debug.DebugLevel;
+import com.bencodez.simpleapi.file.annotation.AnnotationHandler;
+import com.bencodez.simpleapi.file.annotation.ConfigDataBoolean;
+import com.bencodez.simpleapi.file.annotation.ConfigDataConfigurationSection;
+import com.bencodez.simpleapi.file.annotation.ConfigDataDouble;
+import com.bencodez.simpleapi.file.annotation.ConfigDataInt;
+import com.bencodez.simpleapi.file.annotation.ConfigDataListString;
+import com.bencodez.simpleapi.file.annotation.ConfigDataString;
 
 import lombok.Getter;
 import lombok.Setter;

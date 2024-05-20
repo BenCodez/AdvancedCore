@@ -11,6 +11,7 @@ import com.tcoded.folialib.FoliaLib;
 
 import lombok.Getter;
 
+@Deprecated
 public class BukkitScheduler {
 	@Getter
 	private FoliaLib foliaLib;

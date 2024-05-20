@@ -12,6 +12,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.simpleapi.updater.Updater;
 
 public class UpdateDownloader {
 

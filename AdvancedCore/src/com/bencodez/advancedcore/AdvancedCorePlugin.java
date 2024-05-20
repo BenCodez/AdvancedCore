@@ -52,7 +52,6 @@ import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectString;
-import com.bencodez.advancedcore.api.scheduler.BukkitScheduler;
 import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
@@ -80,11 +79,10 @@ import com.bencodez.advancedcore.listeners.PlayerShowListener;
 import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
 import com.bencodez.advancedcore.listeners.WorldChangeEvent;
 import com.bencodez.advancedcore.logger.Logger;
-import com.bencodez.advancedcore.serverhandle.CraftBukkitHandle;
-import com.bencodez.advancedcore.serverhandle.IServerHandle;
-import com.bencodez.advancedcore.serverhandle.SpigotHandle;
+import com.bencodez.simpleapi.debug.DebugLevel;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
+import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 import com.bencodez.simpleapi.utils.PluginUtils;
 
 import lombok.Getter;
@@ -174,9 +172,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private ServerData serverDataFile;
-
-	@Getter
-	private IServerHandle serverHandle;
 
 	@Getter
 	private SignMenu signMenu;
@@ -461,15 +456,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void loadHandle() {
-		try {
-			Class.forName("org.spigotmc.SpigotConfig");
-			serverHandle = new SpigotHandle();
-			debug("Detected using spigot");
-		} catch (Exception ex) {
-			serverHandle = new CraftBukkitHandle();
-			debug("Detected using craftbukkit");
-			getLogger().warning("Detected server running craftbukkit. It is recommended to use spigot instead");
-		}
+
 		if (Bukkit.getOnlineMode()) {
 			debug("Server in online mode");
 		} else {

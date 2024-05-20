@@ -20,7 +20,7 @@ import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfigVelocity;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
-import com.bencodez.advancedcore.bungeeapi.velocity.VelocityYMLFile;
+import com.bencodez.simpleapi.file.velocity.VelocityYMLFile;
 
 import lombok.Getter;
 

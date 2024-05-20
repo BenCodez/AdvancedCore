@@ -9,11 +9,11 @@ import java.util.regex.Pattern;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.checkerframework.checker.units.qual.degrees;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.messages.hover.HoverEventSupport;
 
 import lombok.Getter;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -251,6 +251,7 @@ public class StringParser {
 	 * @param replaceWith the replace with
 	 * @return the string
 	 */
+	@Deprecated
 	public String replaceIgnoreCase(String str, String toReplace, String replaceWith) {
 		if (str == null) {
 			return "";

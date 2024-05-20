@@ -20,8 +20,8 @@ import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.yml.annotation.AnnotationHandler;
 import com.bencodez.advancedcore.listeners.PlayerRewardEvent;
+import com.bencodez.simpleapi.file.annotation.AnnotationHandler;
 
 import lombok.Getter;
 import lombok.Setter;
