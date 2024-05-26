@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bencodez</groupId>
 	<artifactId>${version.art}</artifactId>
-	<version>3.7.6</version>
+	<version>3.7.7</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
 	<properties>
@@ -183,7 +183,7 @@
 		<dependency>
 			<groupId>com.bencodez</groupId>
 			<artifactId>simpleapi</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>0.0.2-SNAPSHOT</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>

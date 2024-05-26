@@ -16,8 +16,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
@@ -205,11 +205,21 @@ public class MiscUtils {
 
 	@SuppressWarnings("deprecation")
 	public Enchantment getEnchant(String enchant, String enchant2) {
-		Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchant.toLowerCase()));
-		if (ench != null) {
-			return ench;
+		try {
+			Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchant.toLowerCase()));
+			if (ench != null) {
+				return ench;
+			}
+			return Enchantment.getByKey(NamespacedKey.minecraft(enchant2.toLowerCase()));
+		} catch (Exception e) {
+			plugin.debug(e);
+			for (Enchantment ench : Enchantment.values()) {
+				if (ench.toString().equalsIgnoreCase(enchant) || ench.toString().equalsIgnoreCase(enchant2)) {
+					return ench;
+				}
+			}
 		}
-		return Enchantment.getByKey(NamespacedKey.minecraft(enchant2.toLowerCase()));
+		return null;
 	}
 
 	public EntityType getEntityType(String entity, String entity2) {
