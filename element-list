@@ -13,13 +13,11 @@ com.bencodez.advancedcore.api.inventory.editgui.valuetypes
 com.bencodez.advancedcore.api.item
 com.bencodez.advancedcore.api.javascript
 com.bencodez.advancedcore.api.messages
-com.bencodez.advancedcore.api.metrics
 com.bencodez.advancedcore.api.misc
 com.bencodez.advancedcore.api.misc.animation
 com.bencodez.advancedcore.api.misc.effects
 com.bencodez.advancedcore.api.misc.encryption
 com.bencodez.advancedcore.api.misc.files
-com.bencodez.advancedcore.api.misc.jsonparser
 com.bencodez.advancedcore.api.misc.scoreboards
 com.bencodez.advancedcore.api.permissions
 com.bencodez.advancedcore.api.placeholder
@@ -52,7 +50,6 @@ com.bencodez.advancedcore.api.valuerequest.prompt
 com.bencodez.advancedcore.api.valuerequest.requesters
 com.bencodez.advancedcore.api.valuerequest.sign
 com.bencodez.advancedcore.api.yml
-com.bencodez.advancedcore.api.yml.annotation
 com.bencodez.advancedcore.api.yml.editor
 com.bencodez.advancedcore.api.yml.updater
 com.bencodez.advancedcore.bungeeapi.globaldata
@@ -62,7 +59,6 @@ com.bencodez.advancedcore.bungeeapi.pluginmessage
 com.bencodez.advancedcore.bungeeapi.redis
 com.bencodez.advancedcore.bungeeapi.sockets
 com.bencodez.advancedcore.bungeeapi.time
-com.bencodez.advancedcore.bungeeapi.velocity
 com.bencodez.advancedcore.command
 com.bencodez.advancedcore.command.executor
 com.bencodez.advancedcore.command.gui
