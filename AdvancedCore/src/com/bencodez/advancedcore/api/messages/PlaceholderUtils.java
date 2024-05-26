@@ -241,6 +241,7 @@ public class PlaceholderUtils {
 		return msg;
 	}
 
+	@SuppressWarnings("deprecation")
 	public static TextComponent parseJson(String msg) {
 		TextComponent comp = new TextComponent("");
 		if (MessageAPI.contains(msg, "[Text=\"")) {
