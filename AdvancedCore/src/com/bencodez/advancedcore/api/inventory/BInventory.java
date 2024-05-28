@@ -446,7 +446,7 @@ public class BInventory {
 		}
 
 		for (int i = 0; i < getInventorySize(); i++) {
-			if (buttons.containsKey(i)) {
+			if (!buttons.containsKey(i)) {
 				return i;
 			}
 		}
