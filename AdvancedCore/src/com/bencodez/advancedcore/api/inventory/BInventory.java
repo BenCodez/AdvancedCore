@@ -440,6 +440,20 @@ public class BInventory {
 		return getHighestSlot() + 1;
 	}
 
+	public int getFirstEmptySlot() {
+		if (buttons.keySet().size() == 0) {
+			return 0;
+		}
+
+		for (int i = 0; i < getInventorySize(); i++) {
+			if (buttons.containsKey(i)) {
+				return i;
+			}
+		}
+		return getHighestSlot() + 1;
+
+	}
+
 	/**
 	 * @return the pageButtons
 	 */
@@ -545,8 +559,8 @@ public class BInventory {
 		}
 		if (!pages) {
 			inv = Bukkit.createInventory(new GUISession(this, 1), inventory.getInventorySize(),
-					PlaceholderUtils.replaceJavascript(player, PlaceholderUtils
-							.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
+					PlaceholderUtils.replaceJavascript(player,
+							PlaceholderUtils.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
 				ItemStack item = pair.getValue().getItem(player, getPlaceholders());
 				inv.setItem(pair.getKey(), item);
@@ -578,9 +592,8 @@ public class BInventory {
 	 */
 	public void openInventory(Player player, int page) {
 		BInventory inventory = this;
-		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize,
-				PlaceholderUtils.replaceJavascript(player, PlaceholderUtils
-						.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
+		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize, PlaceholderUtils.replaceJavascript(player,
+				PlaceholderUtils.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 		this.page = page;
 		int startSlot = (page - 1) * (maxInvSize - 9);
 		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
