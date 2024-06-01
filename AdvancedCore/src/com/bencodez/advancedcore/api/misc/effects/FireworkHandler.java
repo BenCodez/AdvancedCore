@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.misc.effects;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
 import org.bukkit.FireworkEffect.Type;
@@ -55,7 +56,7 @@ public class FireworkHandler implements Listener {
 	 * @param types        the types
 	 */
 	public void launchFirework(Location loc, int power, ArrayList<String> colors, ArrayList<String> fadeOutColor,
-			boolean trail, boolean flicker, ArrayList<String> types) {
+			boolean trail, boolean flicker, ArrayList<String> types, boolean detonate) {
 		plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
 			@Override
@@ -71,19 +72,39 @@ public class FireworkHandler implements Listener {
 					builder.withFlicker();
 				}
 				for (String color : colors) {
-					try {
-						builder.withColor(DyeColor.valueOf(color).getColor());
-					} catch (Exception ex) {
-						plugin.getLogger().info(color
-								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+					if (color.startsWith("#")) {
+						String hexColor = color.substring(1); // Remove the "#" symbol
+						int rgb = Integer.parseInt(hexColor, 16);
+						int red = (rgb >> 16) & 0xFF;
+						int green = (rgb >> 8) & 0xFF;
+						int blue = rgb & 0xFF;
+
+						builder.withColor(Color.fromRGB(red, green, blue));
+					} else {
+						try {
+							builder.withColor(DyeColor.valueOf(color).getColor());
+						} catch (Exception ex) {
+							plugin.getLogger().info(color
+									+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Color.html");
+						}
 					}
 				}
 				for (String color : fadeOutColor) {
-					try {
-						builder.withFade(DyeColor.valueOf(color).getColor());
-					} catch (Exception ex) {
-						plugin.getLogger().info(color
-								+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/DyeColor.html");
+					if (color.startsWith("#")) {
+						String hexColor = color.substring(1); // Remove the "#" symbol
+						int rgb = Integer.parseInt(hexColor, 16);
+						int red = (rgb >> 16) & 0xFF;
+						int green = (rgb >> 8) & 0xFF;
+						int blue = rgb & 0xFF;
+
+						builder.withFade(Color.fromRGB(red, green, blue));
+					} else {
+						try {
+							builder.withFade(DyeColor.valueOf(color).getColor());
+						} catch (Exception ex) {
+							plugin.getLogger().info(color
+									+ " is not a valid color, see https://hub.spigotmc.org/javadocs/spigot/org/bukkit/DyeColor.html");
+						}
 					}
 				}
 				for (String type : types) {
@@ -98,6 +119,9 @@ public class FireworkHandler implements Listener {
 				fwmeta.setPower(power);
 				fw.setFireworkMeta(fwmeta);
 				fireWorks.add(fw);
+				if (detonate) {
+					fw.detonate();
+				}
 				// plugin.debug("Launched firework");
 			}
 		}, loc);

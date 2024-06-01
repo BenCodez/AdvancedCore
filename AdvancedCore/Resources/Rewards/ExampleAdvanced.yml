@@ -316,6 +316,7 @@ Firework:
   # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/DyeColor.html
   Colors:
   - BLUE
+  #- #123123 hex color code format
   FadeOutColor: 
   - RED
   Trail: true
@@ -324,6 +325,8 @@ Firework:
   # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/FireworkEffect.Type.html
   Types:
   - BALL_LARGE
+  # Detonate firework instantly
+  Detonate: false
   
 # Send action bar
 ActionBar:

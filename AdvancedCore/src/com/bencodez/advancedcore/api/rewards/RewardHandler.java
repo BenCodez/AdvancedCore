@@ -511,8 +511,8 @@ public class RewardHandler {
 				plugin.debug(
 						"Not giving empty list of rewards from " + path + ", Options: " + rewardOptions.toString());
 			} else {
-				plugin.debug("Giving list of rewards (" + ArrayUtils.makeStringList(rewards) + ") from "
-						+ path + ", Options: " + rewardOptions.toString() + " to " + user.getPlayerName() + "/"
+				plugin.debug("Giving list of rewards (" + ArrayUtils.makeStringList(rewards) + ") from " + path
+						+ ", Options: " + rewardOptions.toString() + " to " + user.getPlayerName() + "/"
 						+ user.getUUID());
 				for (String reward : rewards) {
 					giveReward(user, reward, rewardOptions);
@@ -969,8 +969,9 @@ public class RewardHandler {
 			@Override
 			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String expression,
 					RewardOptions rewardOptions) {
-				if (expression.equals("") || new JavascriptEngine().addPlayer(user.getOfflinePlayer()).getBooleanValue(
-						PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(), PlaceholderUtils.replacePlaceHolder(expression, rewardOptions.getPlaceholders())))) {
+				if (expression.equals("") || new JavascriptEngine().addPlayer(user.getOfflinePlayer())
+						.getBooleanValue(PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(),
+								PlaceholderUtils.replacePlaceHolder(expression, rewardOptions.getPlaceholders())))) {
 					return true;
 				}
 				return false;
@@ -1388,8 +1389,7 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
-				user.sendActionBar(
-						PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""), placeholders),
+				user.sendActionBar(PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""), placeholders),
 						section.getInt("Delay", 30));
 				return null;
 			}
@@ -1515,8 +1515,7 @@ public class RewardHandler {
 					JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
 
 					for (String str : list) {
-						String expression = PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(),
-								str);
+						String expression = PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(), str);
 						engine.execute(PlaceholderUtils.replacePlaceHolder(expression, placeholders));
 					}
 				}
@@ -1960,8 +1959,7 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 
 				if (section.getBoolean("Enabled")) {
-					user.sendTitle(
-							PlaceholderUtils.replacePlaceHolder(section.getString("Title"), placeholders),
+					user.sendTitle(PlaceholderUtils.replacePlaceHolder(section.getString("Title"), placeholders),
 
 							PlaceholderUtils.replacePlaceHolder(section.getString("SubTitle"), placeholders),
 
@@ -1996,8 +1994,7 @@ public class RewardHandler {
 
 				if (section.getBoolean("Enabled")) {
 					user.sendBossBar(
-							PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""),
-									placeholders),
+							PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""), placeholders),
 							section.getString("Color", "BLUE"), section.getString("Style", "SOLID"),
 							section.getDouble("Progress", .5), section.getInt("Delay", 30));
 				}
@@ -2096,7 +2093,8 @@ public class RewardHandler {
 							(ArrayList<String>) section.getList("Colors", new ArrayList<String>()),
 							(ArrayList<String>) section.getList("FadeOutColor", new ArrayList<String>()),
 							section.getBoolean("Trail"), section.getBoolean("Flicker"),
-							(ArrayList<String>) section.getList("Types", new ArrayList<String>()));
+							(ArrayList<String>) section.getList("Types", new ArrayList<String>()),
+							section.getBoolean("Detonate", false));
 				}
 				return null;
 
