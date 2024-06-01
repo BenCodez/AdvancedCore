@@ -29,6 +29,10 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@ConfigDataBoolean(path = "AutoDownload")
 	private boolean autoDownload = false;
+	
+	@Getter
+	@Setter
+	private boolean pauseRewards = false;
 
 	@Getter
 	@Setter

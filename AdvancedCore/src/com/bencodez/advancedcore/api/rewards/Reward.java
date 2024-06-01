@@ -321,6 +321,14 @@ public class Reward {
 			}
 		}
 
+		if (plugin.getOptions().isPauseRewards()) {
+			checkRewardFile();
+			user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+			plugin.getLogger()
+					.info("Rewards are paused, saving offline reward " + getRewardName() + ": " + user.getPlayerName());
+			return;
+		}
+
 		if ((plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
 			checkRewardFile();
 			user.addOfflineRewards(this, rewardOptions.getPlaceholders());
