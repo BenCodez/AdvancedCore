@@ -1902,7 +1902,7 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				for (String str : list) {
 					Reward reward = RewardHandler.getInstance().getReward(str);
-					if (reward.canGiveReward(user, new RewardOptions())) {
+					if (reward.canGiveReward(user, new RewardOptions().withPlaceHolder(placeholders))) {
 						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true)
 								.setIgnoreRequirements(true).send(user);
 						return reward.getName();
@@ -2160,10 +2160,10 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				for (String keys : section.getKeys(false)) {
 					Reward reward = RewardHandler.getInstance().getReward(section, keys, new RewardOptions());
-					if (reward != null && reward.canGiveReward(user, new RewardOptions())) {
+					if (reward != null && reward.canGiveReward(user, new RewardOptions().withPlaceHolder(placeholders))) {
 						plugin.extraDebug("AdvancedPriority: Giving reward " + reward.getName());
-						reward.giveReward(user, new RewardOptions().withPlaceHolder(placeholders).setIgnoreChance(true)
-								.setIgnoreRequirements(true).setPrefix(reward1.getName() + "_AdvancedPriority"));
+						reward.giveReward(user, new RewardOptions().setIgnoreChance(true).setIgnoreRequirements(true)
+								.setPrefix(reward1.getName() + "_AdvancedPriority").withPlaceHolder(placeholders));
 						return reward.getName();
 					} else {
 						plugin.extraDebug("AdvancedPriority: Can't give reward " + keys);
