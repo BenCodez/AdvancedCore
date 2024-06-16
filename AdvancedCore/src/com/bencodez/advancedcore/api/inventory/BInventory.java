@@ -296,7 +296,7 @@ public class BInventory {
 	}
 
 	public void closeInv(Player p, BInventoryButton b) {
-		if (!p.getOpenInventory().getTopInventory().equals(inv)) {
+		if (!PlayerUtils.getTopInventory(p).equals(inv)) {
 			return;
 		}
 

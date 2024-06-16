@@ -5,6 +5,8 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.InventoryView;
 
+import com.bencodez.simpleapi.player.PlayerUtils;
+
 public class GUISession implements InventoryHolder {
 	/**
 	 * Get the GUISession for a given inventory, or null if none exists for this
@@ -39,8 +41,12 @@ public class GUISession implements InventoryHolder {
 		if (oInv == null) {
 			return null;
 		}
-		return extractSession(oInv.getTopInventory()); // Get the inventory the player is looking at (Bottom is always
-														// their own inventory)
+		Inventory inv = PlayerUtils.getTopInventory(player);
+		if (inv != null) {
+			return extractSession(inv);
+		}
+		return extractSession(oInv.getTopInventory());
+
 	}
 
 	private BInventory inventoryGUI; // GUI Being viewed

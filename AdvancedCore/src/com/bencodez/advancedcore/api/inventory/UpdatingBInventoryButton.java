@@ -8,6 +8,7 @@ import org.bukkit.inventory.ItemStack;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 import lombok.Getter;
 
@@ -67,10 +68,10 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 								if (p != null && getInv().isOpen(p)) {
 									if (getFillSlots() != null && getFillSlots().size() > 0) {
 										for (Integer slot : getFillSlots()) {
-											p.getOpenInventory().getTopInventory().setItem(slot.intValue(), item);
+											PlayerUtils.getTopInventory(p).setItem(slot.intValue(), item);
 										}
 									} else {
-										p.getOpenInventory().getTopInventory().setItem(getSlot(), item);
+										PlayerUtils.getTopInventory(p).setItem(getSlot(), item);
 									}
 								} else {
 									getInv().cancelTimer();
