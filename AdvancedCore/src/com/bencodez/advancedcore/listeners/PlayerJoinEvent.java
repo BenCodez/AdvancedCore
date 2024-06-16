@@ -12,6 +12,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.MetadataValue;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.command.TabCompleteHandler;
 
@@ -43,6 +44,14 @@ public class PlayerJoinEvent implements Listener {
 				userExist = true;
 				plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
 				plugin.extraDebug("Detected Geyser Player, Forcing player data to load");
+			}
+
+			if (!plugin.getOptions().isOnlineMode()) {
+				if (!player.getUniqueId().toString().equals(PlayerManager.getInstance().getUUID(player.getName()))) {
+					plugin.debug("Detected UUID mismatch, please enabling OnlineMode in VotingPlugin "
+							+ player.getUniqueId().toString() + ":"
+							+ PlayerManager.getInstance().getUUID(player.getName()));
+				}
 			}
 
 			plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId());
