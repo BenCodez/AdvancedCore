@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.command;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.UUID;
 
@@ -24,6 +25,7 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
+import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
@@ -259,6 +261,49 @@ public class CommandLoader {
 				sendMessage(sender, "&cFinished clearing offline rewards");
 			}
 		});
+		cmds.add(new CommandHandler(plugin, new String[] { "ForceRunOfflineRewards" },
+				permPrefix + ".ForceRunOfflineRewards",
+				"Force run all offline rewards as if they were online for all players", true, true) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				sendMessage(sender, "&cStarting to run offline rewards");
+				HashMap<UUID, ArrayList<Column>> cols = plugin.getUserManager().getAllKeys();
+
+				for (Entry<UUID, ArrayList<Column>> playerData : cols.entrySet()) {
+
+					String uuid = playerData.getKey().toString();
+					if (plugin != null && plugin.isEnabled()) {
+						if (uuid != null && !uuid.isEmpty()) {
+							AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid), false);
+							user.dontCache();
+							user.updateTempCacheWithColumns(playerData.getValue());
+							cols.put(playerData.getKey(), null);
+
+							user.forceRunOfflineRewards();
+						}
+					}
+				}
+				sendMessage(sender, "&cFinished running offline rewards");
+			}
+		});
+
+		cmds.add(new CommandHandler(plugin, new String[] { "ForceRunOfflineRewards", "(player)" },
+				permPrefix + ".ForceRunOfflineRewards",
+				"Force run all offline rewards as if they were online for a specific player", true, true) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				sendMessage(sender, "&cStarting to run offline rewards for " + args[1]);
+
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+				user.dontCache();
+
+				user.forceRunOfflineRewards();
+
+				sendMessage(sender, "&cFinished running offline rewards for " + args[1]);
+			}
+		});
 
 		cmds.add(new CommandHandler(plugin, new String[] { "GUI" }, permPrefix + ".AdminGUI", "Open AdminGUI", false) {
 
@@ -472,8 +517,8 @@ public class CommandLoader {
 				for (InputMethod method : InputMethod.values()) {
 					methods.add(method.toString());
 				}
-				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "",
-						ArrayUtils.convert(methods), false, new StringListener() {
+				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "", ArrayUtils.convert(methods),
+						false, new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {

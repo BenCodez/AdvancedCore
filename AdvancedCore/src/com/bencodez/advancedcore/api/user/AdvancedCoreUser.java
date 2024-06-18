@@ -289,6 +289,33 @@ public class AdvancedCoreUser {
 		}
 	}
 
+	public void forceRunOfflineRewards() {
+		if (!plugin.getOptions().isProcessRewards()) {
+			plugin.debug("Processing rewards is disabled");
+			return;
+		}
+		setCheckWorld(false);
+		final ArrayList<String> copy = getOfflineRewards();
+		setOfflineRewards(new ArrayList<String>());
+		final AdvancedCoreUser user = this;
+		if (plugin.isEnabled()) {
+
+			for (String str : copy) {
+				if (str != null && !str.equals("null")) {
+					String[] args = str.split("%placeholders%");
+					String placeholders = "";
+					if (args.length > 1) {
+						placeholders = args[1];
+					}
+					plugin.getRewardHandler().giveReward(user, args[0],
+							new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
+									.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholders)));
+				}
+			}
+
+		}
+	}
+
 	public void clearCache() {
 		if (isCached()) {
 			getCache().clearCache();
@@ -910,8 +937,7 @@ public class AdvancedCoreUser {
 			if (player != null) {
 
 				try {
-					ActionBar actionBar = new ActionBar(PlaceholderUtils.replaceJavascript(getPlayer(), msg),
-							delay);
+					ActionBar actionBar = new ActionBar(PlaceholderUtils.replaceJavascript(getPlayer(), msg), delay);
 					actionBar.send(player);
 				} catch (Exception ex) {
 					plugin.debug("Failed to send ActionBar, turn debug on to see stack trace");
@@ -935,8 +961,8 @@ public class AdvancedCoreUser {
 			Player player = getPlayer();
 			if (player != null) {
 				try {
-					BossBar bossBar = new BossBar(PlaceholderUtils.replaceJavascript(getPlayer(), msg), color,
-							style, progress);
+					BossBar bossBar = new BossBar(PlaceholderUtils.replaceJavascript(getPlayer(), msg), color, style,
+							progress);
 					bossBar.send(player, delay);
 				} catch (Exception ex) {
 					plugin.debug("Failed to send BossBar");
@@ -1046,8 +1072,7 @@ public class AdvancedCoreUser {
 				if ((player != null) && (msg != null)) {
 					if (!str.equals("")) {
 						for (String str1 : str.split("%NewLine%")) {
-							TextComponent text = PlaceholderUtils
-									.parseJson(PlaceholderUtils.parseText(player, str1));
+							TextComponent text = PlaceholderUtils.parseJson(PlaceholderUtils.parseText(player, str1));
 							text.setText(PlaceholderUtils.replaceJavascript(getPlayer(), text.getText()));
 							texts.add(text);
 						}
