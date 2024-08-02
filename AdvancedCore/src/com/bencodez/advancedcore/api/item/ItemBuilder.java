@@ -230,7 +230,7 @@ public class ItemBuilder {
 							lore.add("&cInvalid material: " + material);
 						}
 
-						int amount = data.getInt("Amount", 1);
+						int amount = data.getInt("Amount");
 						int minAmount = data.getInt("MinAmount");
 						int maxAmount = data.getInt("MaxAmount");
 
@@ -239,7 +239,11 @@ public class ItemBuilder {
 						if (amount > 0) {
 							currentAmount = amount;
 						} else {
-							currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
+							if (minAmount >= 0 && maxAmount > 0) {
+								currentAmount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
+							} else {
+								currentAmount = 1;
+							}
 						}
 
 						is = new ItemStack(material, currentAmount);
