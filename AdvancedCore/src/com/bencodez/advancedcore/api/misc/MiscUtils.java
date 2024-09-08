@@ -316,7 +316,7 @@ public class MiscUtils {
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
 
 					@Override
 					public void run() {
