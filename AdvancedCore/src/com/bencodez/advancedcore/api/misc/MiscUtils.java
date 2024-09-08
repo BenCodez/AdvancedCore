@@ -247,16 +247,18 @@ public class MiscUtils {
 			placeholders.put("player", player.getName());
 			final ArrayList<String> commands = PlaceholderUtils.replaceJavascript(player,
 					PlaceholderUtils.replacePlaceHolder(cmds, placeholders));
+			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
 
 					@Override
 					public void run() {
 						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
 					}
 
-				});
+				}, tick);
+				tick++;
 			}
 
 		}
@@ -265,16 +267,18 @@ public class MiscUtils {
 	public void executeConsoleCommands(final ArrayList<String> cmds, final HashMap<String, String> placeholders) {
 		if (cmds != null && !cmds.isEmpty()) {
 			final ArrayList<String> commands = PlaceholderUtils.replacePlaceHolder(cmds, placeholders);
+			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
 
 					@Override
 					public void run() {
 						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
 					}
 
-				});
+				}, tick);
+				tick++;
 			}
 
 		}
@@ -309,6 +313,7 @@ public class MiscUtils {
 				commands1 = PlaceholderUtils.replaceJavascript(p, commands1);
 			}
 			final ArrayList<String> commands = PlaceholderUtils.replacePlaceHolder(commands1, placeholders);
+			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
 				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
@@ -317,7 +322,8 @@ public class MiscUtils {
 					public void run() {
 						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
 					}
-				});
+				}, tick);
+				tick++;
 			}
 		}
 	}
