@@ -77,7 +77,7 @@ public class PlayerJoinEvent implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final PlayerLoginEvent event) {
 		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
-			plugin.debug("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+			plugin.getLogger().info("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 			plugin.getLoginTimer().schedule(new Runnable() {
 
 				@Override
