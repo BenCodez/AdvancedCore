@@ -1893,7 +1893,8 @@ public class RewardHandler {
 						}.open(clickEvent.getPlayer(), reward);
 					}
 
-				}.addLore("Execute random reward"))).asPlaceholder("RandomReward").priority(90).postReward());
+				}.addLore("Execute random reward"))).asPlaceholder("RandomReward").synchronize().priority(90)
+				.postReward());
 
 		injectedRewards.add(new RewardInjectStringList("Priority") {
 
@@ -2160,7 +2161,8 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				for (String keys : section.getKeys(false)) {
 					Reward reward = RewardHandler.getInstance().getReward(section, keys, new RewardOptions());
-					if (reward != null && reward.canGiveReward(user, new RewardOptions().withPlaceHolder(placeholders))) {
+					if (reward != null
+							&& reward.canGiveReward(user, new RewardOptions().withPlaceHolder(placeholders))) {
 						plugin.extraDebug("AdvancedPriority: Giving reward " + reward.getName());
 						reward.giveReward(user, new RewardOptions().setIgnoreChance(true).setIgnoreRequirements(true)
 								.setPrefix(reward1.getName() + "_AdvancedPriority").withPlaceHolder(placeholders));
