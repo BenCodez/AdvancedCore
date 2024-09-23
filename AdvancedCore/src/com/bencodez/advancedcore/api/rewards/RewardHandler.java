@@ -1793,7 +1793,7 @@ public class RewardHandler {
 				}
 				return null;
 			}
-		}.asPlaceholder("RandomReward").priority(90).addEditButton(
+		}.asPlaceholder("RandomReward").priority(20).addEditButton(
 				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomReward", null) {
 
 					@Override
@@ -1893,7 +1893,7 @@ public class RewardHandler {
 						}.open(clickEvent.getPlayer(), reward);
 					}
 
-				}.addLore("Execute random reward"))).asPlaceholder("RandomReward").synchronize().priority(90)
+				}.addLore("Execute random reward"))).asPlaceholder("RandomReward").synchronize().priority(20)
 				.postReward());
 
 		injectedRewards.add(new RewardInjectStringList("Priority") {
