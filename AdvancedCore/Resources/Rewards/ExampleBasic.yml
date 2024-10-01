@@ -116,6 +116,8 @@ Money: 1000
 #Money:
 #  Min: 100
 #  Max: 3000
+#  # If true final value will not contain decimals
+#  Round: false
 
 #######
 # Experience rewards

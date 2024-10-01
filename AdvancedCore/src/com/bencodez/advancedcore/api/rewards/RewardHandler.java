@@ -1110,9 +1110,16 @@ public class RewardHandler {
 				double minMoney = section.getDouble("Min", 0);
 				double maxMoney = section.getDouble("Max", 0);
 				double value = ThreadLocalRandom.current().nextDouble(minMoney, maxMoney);
-				user.giveMoney(value);
-				DecimalFormat f = new DecimalFormat("##.00");
-				return "" + f.format(value);
+
+				if (section.getBoolean("Round")) {
+					value = Math.round(value);
+					user.giveMoney(value);
+					return "" + value;
+				} else {
+					DecimalFormat f = new DecimalFormat("##.00");
+					user.giveMoney(value);
+					return "" + f.format(value);
+				}
 			}
 		}.asPlaceholder("Money").priority(100).validator(new RewardInjectValidator() {
 
