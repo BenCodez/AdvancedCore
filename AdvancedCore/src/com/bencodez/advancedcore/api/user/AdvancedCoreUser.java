@@ -694,6 +694,7 @@ public class AdvancedCoreUser {
 	public boolean hasPermission(String perm) {
 		Player player = getPlayer();
 		if (player == null) {
+			plugin.debug("Unable to get player for " + getPlayerName() + "/" + getUUID());
 			return false;
 		}
 		if (perm.startsWith("!")) {
