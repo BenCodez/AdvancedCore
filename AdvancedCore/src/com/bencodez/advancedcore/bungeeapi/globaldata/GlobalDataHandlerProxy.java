@@ -37,16 +37,21 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 		timeChanges.clear();
 	}
 
+	private ArrayList<String> servers;
+	private GlobalMySQL globalMysql;
+
 	public GlobalDataHandlerProxy(GlobalMySQL globalMysql, ArrayList<String> servers) {
 		super(globalMysql);
 		timeChangedTimer = Executors.newScheduledThreadPool(1);
+		this.servers = servers;
+		this.globalMysql = globalMysql;
 		timeChangedTimer.schedule(new Runnable() {
 
 			@Override
 			public void run() {
 				if (!timeChangedHappened) {
 					for (String server : servers) {
-						//boolean b = getBoolean(server, "FinishedProcessing");
+						// boolean b = getBoolean(server, "FinishedProcessing");
 						boolean processing = getBoolean(server, "Processing");
 						boolean day = getBoolean(server, "DAY");
 						boolean week = getBoolean(server, "WEEK");
@@ -61,11 +66,12 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 							if (month) {
 								timeChanges.add(TimeType.MONTH);
 							}
-							globalMysql.debug("Detected time change that may have been before server start, finishing...");
+							globalMysql
+									.debug("Detected time change that may have been before server start, finishing...");
 							timeChangedHappened = true;
 							return;
 						}
-						
+
 					}
 				}
 			}
@@ -74,60 +80,69 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 
 			@Override
 			public void run() {
-				if (timeChangedHappened) {
-					for (String server : servers) {
-						boolean b = getBoolean(server, "FinishedProcessing");
-						if (!b) {
+				checkForFinishedTimeChanges();
+			}
+		}, 60, 10, TimeUnit.SECONDS);
+	}
 
-							boolean processing = getBoolean(server, "Processing");
-							globalMysql.debug("Server " + server
-									+ " hasn't finished processing time change yet, processing: " + processing);
-							try {
-								String str = getString(server, "LastUpdated");
-								long lastUpdated = 0;
-								if (!str.isEmpty()) {
-									lastUpdated = Long.valueOf(str).longValue();
-								}
-								if (processing) {
-									// 2 hours
-									if (LocalDateTime.now().atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
-											- lastUpdated > 1000 * 60 * 60 * 2) {
-										globalMysql.warning(
-												"Been too long, either something happened or server is offline finishing time change anyway, server: "
-														+ server);
-										failedProcess(server);
-									} else {
-										return;
-									}
-								} else {
-									// 30 minutes of plugin not processing time change
-									if (LocalDateTime.now().atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
-											- lastUpdated > 1000 * 60 * 30) {
-										globalMysql.warning(
-												"Server must be offline, skipping time change on this specific server: "
-														+ server);
-										failedProcess(server);
-									} else {
-										return;
-									}
-								}
+	public void checkForFinishedTimeChanges() {
+		try {
+			if (timeChangedHappened) {
+				globalMysql.debug("Checking if backend servers completed time change...");
+				for (String server : servers) {
+					boolean b = getBoolean(server, "FinishedProcessing");
+					if (!b) {
 
-							} catch (NumberFormatException e) {
-								e.printStackTrace();
-								return;
+						boolean processing = getBoolean(server, "Processing");
+						globalMysql.debug("Server " + server
+								+ " hasn't finished processing time change yet, processing: " + processing);
+						try {
+							String str = getString(server, "LastUpdated");
+							long lastUpdated = 0;
+							if (!str.isEmpty()) {
+								lastUpdated = Long.valueOf(str).longValue();
 							}
+							if (processing) {
+								// 2 hours
+								if (LocalDateTime.now().atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
+										- lastUpdated > 1000 * 60 * 60 * 2) {
+									globalMysql.warning(
+											"Been too long, either something happened or server is offline finishing time change anyway, server: "
+													+ server);
+									failedProcess(server);
+								} else {
+									return;
+								}
+							} else {
+								// 30 minutes of plugin not processing time change
+								if (LocalDateTime.now().atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
+										- lastUpdated > 1000 * 60 * 30) {
+									globalMysql.warning(
+											"Server must be offline, skipping time change on this specific server: "
+													+ server);
+									failedProcess(server);
+								} else {
+									return;
+								}
+							}
+
+						} catch (NumberFormatException e) {
+							e.printStackTrace();
+							return;
 						}
 					}
-					timeChangedHappened = false;
-					for (TimeType time : timeChanges) {
-						globalMysql.debug("Time changed finished on all servers: " + time.toString());
-						onTimeChangedFinished(time);
-					}
-					timeChanges.clear();
-					
 				}
+				timeChangedHappened = false;
+				for (TimeType time : timeChanges) {
+					globalMysql.debug("Time changed finished on all servers: " + time.toString());
+					onTimeChangedFinished(time);
+				}
+				timeChanges.clear();
+
 			}
-		}, 30, 10, TimeUnit.SECONDS);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public abstract void onTimeChangedFinished(TimeType type);
