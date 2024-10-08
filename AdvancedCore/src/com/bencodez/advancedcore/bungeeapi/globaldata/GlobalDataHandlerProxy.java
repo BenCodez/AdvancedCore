@@ -30,11 +30,9 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 	}
 
 	private void failedProcess(String server) {
-		timeChangedHappened = false;
 		for (TimeType time : timeChanges) {
 			onTimeChangedFailed(server, time);
 		}
-		timeChanges.clear();
 	}
 
 	private ArrayList<String> servers;
@@ -133,6 +131,7 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 						return;
 					}
 				}
+				globalMysql.debug("Finishing up time change processing...");
 				timeChangedHappened = false;
 				for (TimeType time : timeChanges) {
 					globalMysql.debug("Time changed finished on all servers: " + time.toString());
