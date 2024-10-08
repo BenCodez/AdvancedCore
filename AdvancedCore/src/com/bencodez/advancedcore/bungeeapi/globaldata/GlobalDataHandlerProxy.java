@@ -130,6 +130,7 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 							e.printStackTrace();
 							return;
 						}
+						return;
 					}
 				}
 				timeChangedHappened = false;
