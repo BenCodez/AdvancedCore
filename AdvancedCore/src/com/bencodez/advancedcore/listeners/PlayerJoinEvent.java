@@ -7,7 +7,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.MetadataValue;
 
@@ -75,9 +74,10 @@ public class PlayerJoinEvent implements Listener {
 	 * @param event the event
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-	public void onPlayerLogin(final PlayerLoginEvent event) {
+	public void onPlayerLogin(final org.bukkit.event.player.PlayerJoinEvent event) {
 		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
-			plugin.getLogger().info("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+			plugin.getLogger()
+					.info("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 			plugin.getLoginTimer().schedule(new Runnable() {
 
 				@Override
