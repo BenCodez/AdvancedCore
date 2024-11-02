@@ -14,8 +14,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
+import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
+import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -861,10 +863,17 @@ public class AdvancedCoreUser {
 	 * @param volume    the volume
 	 * @param pitch     the pitch
 	 */
+	@SuppressWarnings("deprecation")
 	public void playSound(String soundName, float volume, float pitch) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
-			Sound sound = Sound.valueOf(soundName);
+			Sound sound;
+			try {
+				sound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundName));
+			} catch (Exception e) {
+				sound = Sound.valueOf(soundName);
+				plugin.debug(e);
+			}
 			if (sound != null) {
 				player.playSound(player.getLocation(), sound, volume, pitch);
 			} else {

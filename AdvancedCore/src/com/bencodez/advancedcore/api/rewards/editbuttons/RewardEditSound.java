@@ -2,7 +2,7 @@ package com.bencodez.advancedcore.api.rewards.editbuttons;
 
 import java.util.ArrayList;
 
-import org.bukkit.Sound;
+import org.bukkit.Registry;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
@@ -21,9 +21,7 @@ public abstract class RewardEditSound extends RewardEdit {
 		inv.addButton(getBooleanButton("Sound.Enabled", reward));
 
 		ArrayList<String> sounds = new ArrayList<String>();
-		for (Sound s : Sound.values()) {
-			sounds.add(s.toString());
-		}
+		Registry.SOUNDS.forEach(sound -> sounds.add(sound.toString()));
 
 		inv.addButton(getStringButton("Sound.Sound", reward, ArrayUtils.convert(sounds)));
 		inv.addButton(getDoubleButton("Sound.Volume", reward));

@@ -2,6 +2,8 @@ package com.bencodez.advancedcore;
 
 import java.util.ArrayList;
 
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -29,7 +31,7 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@ConfigDataBoolean(path = "AutoDownload")
 	private boolean autoDownload = false;
-	
+
 	@Getter
 	@Setter
 	private boolean pauseRewards = false;
@@ -43,16 +45,27 @@ public class AdvancedCoreConfigOptions {
 	@ConfigDataString(path = "ClickSound.Sound")
 	private String clickSoundSoundStr = Sound.UI_BUTTON_CLICK.toString();
 
+	@SuppressWarnings("deprecation")
 	public Sound getClickSoundSound() {
-		try {
-			if (getClickSoundSoundStr().equalsIgnoreCase("none")) {
-				return null;
-			} else {
-				return Sound.valueOf(getClickSoundSoundStr());
+
+		if (getClickSoundSoundStr().equalsIgnoreCase("none")) {
+			return null;
+		} else {
+			try {
+				Registry.SOUNDS.get(NamespacedKey.minecraft(getClickSoundSoundStr()));
+			} catch (Exception e) {
+				if (getDebug().isDebug()) {
+					e.printStackTrace();
+				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			return Sound.UI_BUTTON_CLICK;
+
+			try {
+				return Sound.valueOf(getClickSoundSoundStr());
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				return Sound.UI_BUTTON_CLICK;
+			}
 		}
 	}
 
