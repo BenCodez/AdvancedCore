@@ -45,23 +45,14 @@ public class AdvancedCoreConfigOptions {
 	@ConfigDataString(path = "ClickSound.Sound")
 	private String clickSoundSoundStr = Sound.UI_BUTTON_CLICK.toString();
 
-	@SuppressWarnings("deprecation")
 	public Sound getClickSoundSound() {
 
 		if (getClickSoundSoundStr().equalsIgnoreCase("none")) {
 			return null;
 		} else {
 			try {
-				Registry.SOUNDS.get(NamespacedKey.minecraft(getClickSoundSoundStr()));
-			} catch (Exception e) {
-				if (getDebug().isDebug()) {
-					e.printStackTrace();
-				}
-			}
-
-			try {
-				return Sound.valueOf(getClickSoundSoundStr());
-
+				return Registry.SOUNDS
+						.get(NamespacedKey.minecraft(getClickSoundSoundStr().replaceAll("_", ".").toLowerCase()));
 			} catch (Exception e) {
 				e.printStackTrace();
 				return Sound.UI_BUTTON_CLICK;
