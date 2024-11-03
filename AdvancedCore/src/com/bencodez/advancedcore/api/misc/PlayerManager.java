@@ -16,11 +16,8 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStorage;
-import com.bencodez.simpleapi.nms.NMSManager;
 
 public class PlayerManager {
 
@@ -79,33 +76,26 @@ public class PlayerManager {
 		}
 	}
 
-	public ItemStack getPlayerSkull(String playerName) {
-		return getPlayerSkull(playerName, true);
+	public ItemStack getPlayerSkull(UUID uuid, String name) {
+		return getPlayerSkull(uuid, name, true);
 	}
 
-	@SuppressWarnings("deprecation")
-	public ItemStack getPlayerSkull(String playerName, boolean force) {
-		String skullMaterial = "PLAYER_HEAD";
-		if (NMSManager.getInstance().isVersion("1.12")) {
-			skullMaterial = "PAPER";
-		}
-		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) {
-			if (SkullHandler.getInstance().hasSkull(playerName)) {
-				try {
-					return SkullHandler.getInstance().getItemStack(playerName);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			} else {
-				SkullHandler.getInstance().loadSkull(playerName);
-				if (force) {
-					return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
-				} else {
-					return new ItemBuilder(Material.valueOf(skullMaterial), 1).toItemStack();
-				}
-			}
-		}
-		return new ItemBuilder(Material.valueOf(skullMaterial), 1).setSkullOwner(playerName).toItemStack();
+	public ItemStack getPlayerSkull(UUID uuid, String name, boolean force) {
+		return plugin.getSkullCacheHandler().getSkull(uuid, name);
+		/*
+		 * String skullMaterial = "PLAYER_HEAD"; if
+		 * (NMSManager.getInstance().isVersion("1.12")) { skullMaterial = "PAPER"; } if
+		 * (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) { if
+		 * (SkullHandler.getInstance().hasSkull(playerName)) { try { return
+		 * SkullHandler.getInstance().getItemStack(playerName); } catch (Exception e) {
+		 * e.printStackTrace(); } } else {
+		 * SkullHandler.getInstance().loadSkull(playerName); if (force) { return new
+		 * ItemBuilder(Material.valueOf(skullMaterial),
+		 * 1).setSkullOwner(playerName).toItemStack(); } else { return new
+		 * ItemBuilder(Material.valueOf(skullMaterial), 1).toItemStack(); } } } return
+		 * new ItemBuilder(Material.valueOf(skullMaterial),
+		 * 1).setSkullOwner(playerName).toItemStack();
+		 */
 
 	}
 

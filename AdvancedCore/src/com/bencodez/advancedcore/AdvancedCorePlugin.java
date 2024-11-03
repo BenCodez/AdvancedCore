@@ -50,7 +50,6 @@ import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectString;
-import com.bencodez.advancedcore.api.skull.SkullHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
@@ -83,6 +82,7 @@ import com.bencodez.simpleapi.debug.DebugLevel;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
+import com.bencodez.simpleapi.skull.SkullCacheHandler;
 import com.bencodez.simpleapi.utils.PluginUtils;
 
 import lombok.Getter;
@@ -100,6 +100,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private CommandLoader advancedCoreCommandLoader;
+
+	@Getter
+	private SkullCacheHandler skullCacheHandler;
 
 	@Getter
 	private boolean authMeLoaded = false;
@@ -488,6 +491,20 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		hologramHandler = new HologramHandler(this);
 
+		skullCacheHandler = new SkullCacheHandler() {
+
+			@Override
+			public void debugException(Exception e) {
+				debug(e);
+			}
+
+			@Override
+			public void debugLog(String debug) {
+				extraDebug(debug);
+			}
+		};
+		skullCacheHandler.startTimer();
+
 		if (loadLuckPerms) {
 			if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
 				luckPermsHandle = new LuckPermsHandle();
@@ -537,15 +554,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadVersionFile();
 
 		getUserManager().purgeOldPlayers();
-
-		try {
-			if (loadSkullHandler) {
-				SkullHandler.getInstance().load();
-			}
-		} catch (Exception e) {
-			getLogger().warning("Failed to load skull handler");
-			e.printStackTrace();
-		}
 
 		userStartup();
 		loadTabComplete();
@@ -933,7 +941,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		inventoryTimer.shutdownNow();
 		timeChecker.getTimer().shutdownNow();
 		onUnLoad();
-		SkullHandler.getInstance().close();
+		getSkullCacheHandler().close();
 		fullInventoryHandler.save();
 		unRegisterValueRequest();
 

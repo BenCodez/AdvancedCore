@@ -1,8 +1,8 @@
 package com.bencodez.advancedcore.api.skull;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -16,10 +16,12 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.bencodez.simpleapi.nms.ReflectionUtils;
+import com.bencodez.simpleapi.skull.SkullCache;
 import com.bencodez.simpleapi.utils.PluginUtils;
 
 import lombok.Getter;
 
+@Deprecated
 public class SkullHandler {
 
 	private static SkullHandler instance = new SkullHandler();
@@ -81,14 +83,13 @@ public class SkullHandler {
 	 */
 
 	@SuppressWarnings("deprecation")
-	public org.bukkit.inventory.ItemStack getItemStack(String playerName)
-			throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-		if (hasSkull(playerName)) {
-			return (ItemStack) asBukkitCopy.invoke(null, skulls.get(playerName));
-		} else {
-			loadSkull(playerName);
-		}
-		return new ItemBuilder("PLAYER_HEAD").setSkullOwner(playerName).toItemStack();
+	public org.bukkit.inventory.ItemStack getItemStack(UUID uuid, String name) {
+		/*
+		 * if (hasSkull(playerName)) { return (ItemStack) asBukkitCopy.invoke(null,
+		 * skulls.get(playerName)); } else { loadSkull(playerName); } return new
+		 * ItemBuilder("PLAYER_HEAD").setSkullOwner(playerName).toItemStack();
+		 */
+		return SkullCache.getSkull(uuid, name);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -145,10 +146,14 @@ public class SkullHandler {
 	}
 
 	public void loadSkull(Player player) {
-		loadSkull(player.getName());
+		loadSkull(player.getUniqueId(), player.getName());
 	}
 
-	public void loadSkull(final String playerName) {
+	public void loadSkull(UUID uuid, String name) {
+		SkullCache.cacheSkull(uuid, name);
+	}
+
+	private void loadSkull(final String playerName) {
 		if (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()
 				&& AdvancedCorePlugin.getInstance().isEnabled()) {
 			if (PluginUtils.getFreeMemory() > 300 && PluginUtils.getMemory() > 800) {
@@ -164,10 +169,8 @@ public class SkullHandler {
 					add(playerName);
 				}
 			} else {
-				AdvancedCorePlugin.getInstance()
-						.extraDebug("Not loading skull, not alot of free ram available, free "
-								+ PluginUtils.getFreeMemory() + ", allocated "
-								+ PluginUtils.getMemory());
+				AdvancedCorePlugin.getInstance().extraDebug("Not loading skull, not alot of free ram available, free "
+						+ PluginUtils.getFreeMemory() + ", allocated " + PluginUtils.getMemory());
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import com.bencodez.simpleapi.player.NameFetcher;
 /**
  * The Class Thread.
  */
+@Deprecated
 public class SkullThread {
 
 	/**

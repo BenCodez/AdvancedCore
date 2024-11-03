@@ -437,7 +437,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ItemStack getPlayerHead() {
-		return PlayerManager.getInstance().getPlayerSkull(getPlayerName(), false);
+		return PlayerManager.getInstance().getPlayerSkull(getJavaUUID(), getPlayerName(), false);
 	}
 
 	/**
