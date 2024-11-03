@@ -152,11 +152,6 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	@ConfigDataBoolean(path = "LoadSkulls")
-	private boolean loadSkulls = true;
-
-	@Getter
-	@Setter
 	@ConfigDataBoolean(path = "LogDebugToFile")
 	private boolean logDebugToFile = false;
 
