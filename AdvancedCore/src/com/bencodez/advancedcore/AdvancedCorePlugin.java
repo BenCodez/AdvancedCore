@@ -491,7 +491,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		hologramHandler = new HologramHandler(this);
 
-		skullCacheHandler = new SkullCacheHandler() {
+		skullCacheHandler = new SkullCacheHandler(getOptions().getSkullLoadDelay()) {
 
 			@Override
 			public void debugException(Exception e) {

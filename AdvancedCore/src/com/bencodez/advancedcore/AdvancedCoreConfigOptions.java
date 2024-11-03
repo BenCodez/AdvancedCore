@@ -266,6 +266,11 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataInt(path = "SkullLoadDelay")
+	private int SkullLoadDelay = 2000;
+
+	@Getter
+	@Setter
 	@ConfigDataListString(path = "BroadcastBlacklist")
 	private ArrayList<String> broadcastBlacklist = new ArrayList<String>();
 
