@@ -5,7 +5,7 @@ import java.io.File;
 import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.yml.YMLFile;
+import com.bencodez.simpleapi.file.YMLFile;
 
 // TODO: Auto-generated Javadoc
 /**

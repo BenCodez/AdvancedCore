@@ -21,8 +21,8 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueLi
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueNumber;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.yml.YMLConfig;
-import com.bencodez.advancedcore.api.yml.YMLFile;
+import com.bencodez.simpleapi.file.YMLConfig;
+import com.bencodez.simpleapi.file.YMLFile;
 import com.bencodez.simpleapi.file.annotation.ConfigDataBoolean;
 import com.bencodez.simpleapi.file.annotation.ConfigDataConfigurationSection;
 import com.bencodez.simpleapi.file.annotation.ConfigDataDouble;
@@ -132,7 +132,7 @@ public class ConfigEditor {
 				String[] split = button.getKey().split("\\.");
 
 				int arg = sec.split("\\.").length;
-				//AdvancedCorePlugin.getInstance().debug("" + button.getKey() + "/" + arg);
+				// AdvancedCorePlugin.getInstance().debug("" + button.getKey() + "/" + arg);
 				if (split.length > arg + 1) {
 					configSections.add(sec + "." + split[arg]);
 				} else {

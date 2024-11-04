@@ -8,8 +8,8 @@ import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
-import com.bencodez.advancedcore.api.yml.YMLConfig;
 import com.bencodez.simpleapi.debug.DebugLevel;
+import com.bencodez.simpleapi.file.YMLConfig;
 import com.bencodez.simpleapi.file.annotation.AnnotationHandler;
 import com.bencodez.simpleapi.file.annotation.ConfigDataBoolean;
 import com.bencodez.simpleapi.file.annotation.ConfigDataConfigurationSection;
