@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
@@ -41,6 +42,7 @@ import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
+import com.bencodez.simpleapi.skull.SkullCache;
 import com.bencodez.simpleapi.skull.SkullCreator;
 import com.google.common.collect.Multimap;
 
@@ -266,6 +268,12 @@ public class ItemBuilder {
 						String textureURL = data.getString("SkullURL", "");
 						if (!textureURL.equals("")) {
 							is = SkullCreator.itemFromUrl(textureURL);
+							is.setAmount(currentAmount);
+						}
+
+						String textureUUID = data.getString("SkullUUID", "");
+						if (!textureUUID.equals("")) {
+							is = SkullCache.getSkull(UUID.fromString(textureUUID), "");
 							is.setAmount(currentAmount);
 						}
 

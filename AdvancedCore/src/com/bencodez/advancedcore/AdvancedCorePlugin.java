@@ -858,54 +858,60 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	@Getter
+	@Setter
+	private boolean loadVault = true;
+
 	public void loadVault() {
-		getBukkitScheduler().runTaskLater(this, new Runnable() {
+		if (isLoadVault()) {
+			getBukkitScheduler().runTaskLater(this, new Runnable() {
 
-			@Override
-			public void run() {
-				if (setupEconomy()) {
-					getLogger().info("Successfully hooked into vault economy!");
-				} else {
-					getLogger().warning("Failed to hook into vault economy");
-				}
+				@Override
+				public void run() {
+					if (setupEconomy()) {
+						getLogger().info("Successfully hooked into vault economy!");
+					} else {
+						getLogger().warning("Failed to hook into vault economy");
+					}
 
-				if (setupPermissions()) {
-					getLogger().info("Hooked into vault permissions");
+					if (setupPermissions()) {
+						getLogger().info("Hooked into vault permissions");
 
-					rewardHandler.addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
+						rewardHandler.addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
 
-						@Override
-						public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String type,
-								RewardOptions rewardOptions) {
-							if (type.equals("")) {
-								return true;
-							}
-							String group = "";
-							if (!rewardOptions.isGiveOffline() && user.isOnline()) {
-								group = getPerms().getPrimaryGroup(user.getPlayer());
-							} else {
-								group = getPerms().getPrimaryGroup(null, user.getOfflinePlayer());
-							}
-							if (group.equalsIgnoreCase(type)) {
-								return true;
-							}
-							return false;
-						}
-					}.priority(100).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-							new EditGUIValueString("VaultGroup", null) {
-
-								@Override
-								public void setValue(Player player, String value) {
-									RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-									reward.setValue(getKey(), value);
-									reloadAdvancedCore(false);
+							@Override
+							public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String type,
+									RewardOptions rewardOptions) {
+								if (type.equals("")) {
+									return true;
 								}
-							}.addOptions(getPerms().getGroups()))));
-				} else {
-					getLogger().warning("Failed to hook into vault permissions");
+								String group = "";
+								if (!rewardOptions.isGiveOffline() && user.isOnline()) {
+									group = getPerms().getPrimaryGroup(user.getPlayer());
+								} else {
+									group = getPerms().getPrimaryGroup(null, user.getOfflinePlayer());
+								}
+								if (group.equalsIgnoreCase(type)) {
+									return true;
+								}
+								return false;
+							}
+						}.priority(100).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
+								new EditGUIValueString("VaultGroup", null) {
+
+									@Override
+									public void setValue(Player player, String value) {
+										RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+										reward.setValue(getKey(), value);
+										reloadAdvancedCore(false);
+									}
+								}.addOptions(getPerms().getGroups()))));
+					} else {
+						getLogger().warning("Failed to hook into vault permissions");
+					}
 				}
-			}
-		}, 5);
+			}, 5);
+		}
 	}
 
 	private void loadVersionFile() {
