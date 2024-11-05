@@ -43,7 +43,6 @@ import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.bencodez.simpleapi.skull.SkullCache;
-import com.bencodez.simpleapi.skull.SkullCreator;
 import com.google.common.collect.Multimap;
 
 import lombok.Getter;
@@ -267,7 +266,7 @@ public class ItemBuilder {
 
 						String textureURL = data.getString("SkullURL", "");
 						if (!textureURL.equals("")) {
-							is = SkullCreator.itemFromUrl(textureURL);
+							is = SkullCache.getSkullURL(textureURL);
 							is.setAmount(currentAmount);
 						}
 
@@ -970,7 +969,7 @@ public class ItemBuilder {
 	}
 
 	public ItemBuilder setHeadFromBase64(String value) {
-		is = SkullCreator.itemWithBase64(is, value);
+		is = SkullCache.getSkullBase64(value);
 		return this;
 	}
 
