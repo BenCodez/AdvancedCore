@@ -70,12 +70,6 @@ public abstract class VelocityMySQL {
 			}
 		};
 
-		try {
-			Class.forName(mysql.getConnectionManager().getMysqlDriverName());
-		} catch (ClassNotFoundException e) {
-			severe("No MySQL Driver found, please install this as a plugin: https://bencodez.com/job/MySQLDriver/");
-		}
-
 		if (!mysql.connect(config)) {
 
 		}
