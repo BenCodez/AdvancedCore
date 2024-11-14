@@ -303,7 +303,8 @@ public class PlaceholderUtils {
 
 			comp.addExtra(parseJson(postMessage));
 		} else {
-			comp.addExtra(new TextComponent(TextComponent.fromLegacyText(msg)));
+
+			comp.addExtra(new TextComponent(TextComponent.fromLegacyText(MessageAPI.colorize(msg))));
 		}
 		return comp;
 	}
