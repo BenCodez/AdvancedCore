@@ -3,8 +3,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bencodez</groupId>
-	<artifactId>${version.art}</artifactId>
-	<version>3.7.9</version>
+	<artifactId>advancedcore</artifactId>
+	<version>3.7.10-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
 	<properties>
@@ -14,6 +14,8 @@
 		<timestamp>${maven.build.timestamp}</timestamp>
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
 		<build.number>NOTSET</build.number>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
 	</properties>
 	<build>
 		<resources>
@@ -165,6 +167,9 @@
 		<repository>
 			<id>bencodez repo</id>
 			<url>https://nexus.bencodez.com/repository/maven-public/</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
 		</repository>
 		<repository>
 			<id>opencollab-snapshot</id>
@@ -179,7 +184,7 @@
 		<dependency>
 			<groupId>com.bencodez</groupId>
 			<artifactId>simpleapi</artifactId>
-			<version>0.0.2-SNAPSHOT</version>
+			<version>LATEST</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -288,63 +293,9 @@
 	</dependencies>
 	<profiles>
 		<profile>
-			<id>normal</id>
-			<properties>
-				<build.profile.id>normal</build.profile.id>
-				<maven.compiler.source>1.8</maven.compiler.source>
-				<maven.compiler.target>1.8</maven.compiler.target>
-				<version.art>advancedcore</version.art>
-			</properties>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<distributionManagement>
-				<repository>
-					<id>internal.repo</id>
-					<name>Temporary Staging Repository</name>
-					<url>file://${project.build.directory}/mvn-repo</url>
-				</repository>
-			</distributionManagement>
-			<dependencies>
-				<!--<dependency>
-					<groupId>com.bencodez</groupId>
-					<artifactId>Scheduler-Java8</artifactId>
-					<version>LATEST</version>
-					<scope>compile</scope>
-				</dependency>-->
-			</dependencies>
-		</profile>
-		<profile>
-			<id>normal-folia</id>
-			<properties>
-				<build.profile.id>normal-folia</build.profile.id>
-				<maven.compiler.source>17</maven.compiler.source>
-				<maven.compiler.target>17</maven.compiler.target>
-				<version.art>advancedcore-folia</version.art>
-			</properties>
-			<distributionManagement>
-				<repository>
-					<id>internal.repo</id>
-					<name>Temporary Staging Repository</name>
-					<url>file://${project.build.directory}/mvn-repo</url>
-				</repository>
-			</distributionManagement>
-			<dependencies>
-				<!--<dependency>
-					<groupId>com.bencodez</groupId>
-					<artifactId>Scheduler-Java17</artifactId>
-					<version>LATEST</version>
-					<scope>compile</scope>
-				</dependency>-->
-			</dependencies>
-		</profile>
-		<profile>
 			<id>deploy</id>
 			<properties>
 				<build.profile.id>deploy</build.profile.id>
-				<maven.compiler.source>1.8</maven.compiler.source>
-				<maven.compiler.target>1.8</maven.compiler.target>
-				<version.art>advancedcore</version.art>
 			</properties>
 			<distributionManagement>
 				<snapshotRepository>
@@ -356,14 +307,6 @@
 					<url>https://nexus.bencodez.com/repository/maven-releases</url>
 				</repository>
 			</distributionManagement>
-			<dependencies>
-				<dependency>
-					<groupId>com.bencodez</groupId>
-					<artifactId>Scheduler-Java8</artifactId>
-					<version>LATEST</version>
-					<scope>compile</scope>
-				</dependency>
-			</dependencies>
 			<build>
 				<plugins>
 					<plugin>
@@ -445,9 +388,6 @@
 			<id>javadoc</id>
 			<properties>
 				<build.profile.id>javadoc</build.profile.id>
-				<maven.compiler.source>1.8</maven.compiler.source>
-				<maven.compiler.target>1.8</maven.compiler.target>
-				<version.art>advancedcore</version.art>
 			</properties>
 			<distributionManagement>
 				<repository>
@@ -456,14 +396,6 @@
 					<url>file://${project.build.directory}/mvn-repo</url>
 				</repository>
 			</distributionManagement>
-			<dependencies>
-				<dependency>
-					<groupId>com.bencodez</groupId>
-					<artifactId>Scheduler-Java8</artifactId>
-					<version>LATEST</version>
-					<scope>compile</scope>
-				</dependency>
-			</dependencies>
 			<build>
 				<plugins>
 					<plugin>
