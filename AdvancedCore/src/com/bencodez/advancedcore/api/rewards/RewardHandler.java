@@ -880,33 +880,39 @@ public class RewardHandler {
 				if (worlds.isEmpty()) {
 					if (plugin.getOptions().getDefaultRewardBlackListedWorlds().isEmpty()
 							|| !rewardOptions.isUseDefaultWorlds()) {
+						debug("No blacklisted worlds specified");
 						return true;
 					} else {
 						Player player = user.getPlayer();
 						if (player == null) {
+							debug("No player");
 							return false;
 						}
 						reward.checkRewardFile();
 						String world = player.getWorld().getName();
 						if (plugin.getOptions().getDefaultRewardBlackListedWorlds().contains(world)) {
 							user.setCheckWorld(true);
+							debug("Player in default blacklisted world: " + world);
 							return false;
 						}
+						debug("Player not in default blacklisted worlds");
 						return true;
 					}
 				}
 
 				Player player = user.getPlayer();
 				if (player == null) {
+					debug("No player");
 					return false;
 				}
 				reward.checkRewardFile();
 				String world = player.getWorld().getName();
 				if (worlds.contains(world)) {
 					user.setCheckWorld(true);
+					debug("Player in default blacklisted world: " + world);
 					return false;
 				}
-
+				debug("Player not in blacklisted worlds");
 				return true;
 			}
 		}.priority(100).allowReattempt().alwaysForce().addEditButton(
@@ -940,12 +946,12 @@ public class RewardHandler {
 					RewardOptions rewardOptions) {
 				if (rewardOptions.isOnline()) {
 					if (type.equalsIgnoreCase("offline")) {
-						plugin.debug("Reward Type Don't match");
+						debug("Reward Type Don't match");
 						return false;
 					}
 				} else {
 					if (type.equalsIgnoreCase("online")) {
-						plugin.debug("Reward Type Don't match");
+						debug("Reward Type Don't match");
 						return false;
 					}
 				}
