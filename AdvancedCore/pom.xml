@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bencodez</groupId>
 	<artifactId>advancedcore</artifactId>
-	<version>3.7.10-SNAPSHOT</version>
+	<version>3.7.9</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
 	<properties>
@@ -61,6 +61,20 @@
 			</plugins>
 		</pluginManagement>
 		<plugins>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<includes>
+						<include>com.bencodez:simpleapi</include>
+					</includes>
+					<allowSnapshots>true</allowSnapshots>
+
+				</configuration>
+			</plugin>
+
 			<plugin>
 				<groupId>org.projectlombok</groupId>
 				<artifactId>lombok-maven-plugin</artifactId>
@@ -85,8 +99,6 @@
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>3.4.2</version>
 				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
 					<finalName>${project.name}</finalName>
 				</configuration>
 			</plugin>
@@ -169,7 +181,11 @@
 			<url>https://nexus.bencodez.com/repository/maven-public/</url>
 			<snapshots>
 				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
 			</snapshots>
+			<releases>
+				<updatePolicy>always</updatePolicy>
+			</releases>
 		</repository>
 		<repository>
 			<id>opencollab-snapshot</id>
@@ -293,6 +309,67 @@
 	</dependencies>
 	<profiles>
 		<profile>
+			<id>deploy-snapshot</id>
+			<properties>
+				<build.profile.id>deploy</build.profile.id>
+			</properties>
+			<distributionManagement>
+				<snapshotRepository>
+					<id>nexus</id>
+					<url>https://nexus.bencodez.com/repository/maven-snapshots/</url>
+				</snapshotRepository>
+			</distributionManagement>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<version>3.11.1</version>
+						<executions>
+							<execution>
+								<id>attach-javadocs</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+								<phase>deploy</phase>
+								<configuration>
+									<sourcepath>
+										${project.basedir}/target/delombok</sourcepath>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-deploy-plugin</artifactId>
+						<version>3.1.3</version>
+						<configuration>
+							<skip>true</skip>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.sonatype.plugins</groupId>
+						<artifactId>nexus-staging-maven-plugin</artifactId>
+						<version>1.7.0</version>
+						<executions>
+							<execution>
+								<id>default-deploy</id>
+								<phase>deploy</phase>
+								<goals>
+									<goal>deploy</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<serverId>nexus</serverId>
+							<nexusUrl>https://nexus.bencodez.com/nexus/</nexusUrl>
+							<skipStaging>true</skipStaging>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
 			<id>deploy</id>
 			<properties>
 				<build.profile.id>deploy</build.profile.id>
@@ -354,33 +431,6 @@
 							<skipStaging>true</skipStaging>
 						</configuration>
 					</plugin>
-					<!--<plugin>
-						<groupId>com.github.github</groupId>
-						<artifactId>site-maven-plugin</artifactId>
-						<version>0.12</version>
-						<executions>
-							<execution>
-								<id>javadoc</id>
-								<goals>
-									<goal>site</goal>
-								</goals>
-								<phase>deploy</phase>
-								<configuration>
-									<message>Maven javadoc for ${project.version}</message>
-									<noJekyll>true</noJekyll>
-									<outputDirectory>${project.build.directory}/apidocs
-									</outputDirectory>
-									<branch>refs/heads/gh-pages</branch>
-									<includes>
-										<include>**/*</include>
-									</includes>
-									<repositoryName>AdvancedCore</repositoryName>
-									<repositoryOwner>BenCodez</repositoryOwner>
-									<server>github</server>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>-->
 				</plugins>
 			</build>
 		</profile>
