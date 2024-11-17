@@ -331,7 +331,7 @@
 								<goals>
 									<goal>jar</goal>
 								</goals>
-								<phase>deploy</phase>
+								<phase>install</phase>
 								<configuration>
 									<sourcepath>
 										${project.basedir}/target/delombok</sourcepath>
@@ -354,7 +354,7 @@
 						<executions>
 							<execution>
 								<id>default-deploy</id>
-								<phase>deploy</phase>
+								<phase>install</phase>
 								<goals>
 									<goal>deploy</goal>
 								</goals>
