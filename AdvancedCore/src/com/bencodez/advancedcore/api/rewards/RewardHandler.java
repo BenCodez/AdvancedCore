@@ -817,34 +817,41 @@ public class RewardHandler {
 					RewardOptions rewardOptions) {
 				if (worlds.isEmpty()) {
 					if (plugin.getOptions().getDefaultRewardWorlds().isEmpty() || !rewardOptions.isUseDefaultWorlds()) {
+						debug("No whitelisted worlds specified");
 						return true;
 					} else {
 						Player player = user.getPlayer();
 						if (player == null) {
+							debug("No player");
 							return false;
 						}
 						reward.checkRewardFile();
 						String world = player.getWorld().getName();
 						if (plugin.getOptions().getDefaultRewardWorlds().contains(world)) {
+							debug("Player in default whitelisted world: " + world);
 							return true;
 						}
 
 						user.setCheckWorld(true);
+						debug("Player not in default whitelisted world: " + world);
 						return false;
 					}
 				}
 
 				Player player = user.getPlayer();
 				if (player == null) {
+					debug("No player");
 					return false;
 				}
 				reward.checkRewardFile();
 				String world = player.getWorld().getName();
 				if (worlds.contains(world)) {
+					debug("Player in whitelisted world: " + world);
 					return true;
 				}
 
 				user.setCheckWorld(true);
+				debug("Player not in whitelisted world: " + world);
 				return false;
 			}
 		}.priority(100).allowReattempt().alwaysForce().addEditButton(
