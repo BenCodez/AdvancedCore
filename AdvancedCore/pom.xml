@@ -311,7 +311,7 @@
 		<profile>
 			<id>deploy-snapshot</id>
 			<properties>
-				<build.profile.id>deploy</build.profile.id>
+				<build.profile.id>deploy-snapshot</build.profile.id>
 			</properties>
 			<distributionManagement>
 				<snapshotRepository>

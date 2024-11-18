@@ -43,7 +43,7 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	@ConfigDataString(path = "ClickSound.Sound")
-	private String clickSoundSoundStr = Sound.UI_BUTTON_CLICK.toString();
+	private String clickSoundSoundStr = "ui.button.click";
 
 	public Sound getClickSoundSound() {
 
@@ -55,7 +55,7 @@ public class AdvancedCoreConfigOptions {
 						.get(NamespacedKey.minecraft(getClickSoundSoundStr().replaceAll("_", ".").toLowerCase()));
 			} catch (Exception e) {
 				e.printStackTrace();
-				return Sound.UI_BUTTON_CLICK;
+				return Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
 			}
 		}
 	}
