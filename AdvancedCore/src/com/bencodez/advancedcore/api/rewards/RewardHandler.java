@@ -854,7 +854,7 @@ public class RewardHandler {
 				debug("Player not in whitelisted world: " + world);
 				return false;
 			}
-		}.priority(100).allowReattempt().alwaysForce().addEditButton(
+		}.priority(100).allowReattempt().alwaysForceNoData().addEditButton(
 				new EditGUIButton(new ItemBuilder("END_PORTAL_FRAME"), new EditGUIValueList("Worlds", null) {
 
 					@Override
@@ -922,7 +922,7 @@ public class RewardHandler {
 				debug("Player not in blacklisted worlds");
 				return true;
 			}
-		}.priority(100).allowReattempt().alwaysForce().addEditButton(
+		}.priority(100).allowReattempt().alwaysForceNoData().addEditButton(
 				new EditGUIButton(new ItemBuilder("END_PORTAL_FRAME"), new EditGUIValueList("BlackListedWorlds", null) {
 
 					@Override
