@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.api.item;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -272,7 +273,11 @@ public class ItemBuilder {
 
 						String textureUUID = data.getString("SkullUUID", "");
 						if (!textureUUID.equals("")) {
-							is = SkullCache.getSkull(UUID.fromString(textureUUID), "");
+							try {
+								is = SkullCache.getSkull(UUID.fromString(textureUUID), "");
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
 							is.setAmount(currentAmount);
 						}
 

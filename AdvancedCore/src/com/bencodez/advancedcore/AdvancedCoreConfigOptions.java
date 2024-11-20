@@ -267,7 +267,7 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	@ConfigDataInt(path = "SkullLoadDelay")
-	private int SkullLoadDelay = 2000;
+	private int SkullLoadDelay = 3000;
 
 	@Getter
 	@Setter

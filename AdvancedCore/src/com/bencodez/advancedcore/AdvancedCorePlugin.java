@@ -502,6 +502,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			public void debugLog(String debug) {
 				extraDebug(debug);
 			}
+
+			@Override
+			public void log(String log) {
+				getLogger().info(log);
+			}
 		};
 		skullCacheHandler.startTimer();
 
