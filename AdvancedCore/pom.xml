@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bencodez</groupId>
 	<artifactId>advancedcore</artifactId>
-	<version>3.7.10-SNAPSHOT</version>
+	<version>3.7.10</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
 	<properties>
@@ -169,9 +169,6 @@
 				<enabled>true</enabled>
 				<updatePolicy>always</updatePolicy>
 			</snapshots>
-			<releases>
-				<updatePolicy>always</updatePolicy>
-			</releases>
 		</repository>
 		<repository>
 			<id>opencollab-snapshot</id>
@@ -186,7 +183,7 @@
 		<dependency>
 			<groupId>com.bencodez</groupId>
 			<artifactId>simpleapi</artifactId>
-			<version>0.0.4-SNAPSHOT</version>
+			<version>0.0.5-SNAPSHOT</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
