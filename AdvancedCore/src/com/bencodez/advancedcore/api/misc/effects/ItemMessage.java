@@ -169,7 +169,7 @@ public class ItemMessage {
 			setSlot.getItemModifier().write(0, stack);
 			try {
 				ProtocolLibrary.getProtocolManager().sendServerPacket(player, setSlot);
-			} catch (InvocationTargetException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
