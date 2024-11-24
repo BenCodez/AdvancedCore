@@ -301,6 +301,10 @@
 					<id>nexus</id>
 					<url>https://nexus.bencodez.com/repository/maven-snapshots/</url>
 				</snapshotRepository>
+				<repository>
+					<id>nexus</id>
+					<url>https://nexus.bencodez.com/repository/maven-releases</url>
+				</repository>
 			</distributionManagement>
 			<build>
 				<plugins>
