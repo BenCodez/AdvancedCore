@@ -1,6 +1,5 @@
 package com.bencodez.advancedcore.api.valuerequest.sign;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +85,7 @@ public class SignMenu {
 			ProtocolLibrary.getProtocolManager().sendServerPacket(player, fakeSign);
 			ProtocolLibrary.getProtocolManager().sendServerPacket(player, openSign);
 			ProtocolLibrary.getProtocolManager().sendServerPacket(player, signData);
-		} catch (InvocationTargetException exception) {
+		} catch (Exception exception) {
 			exception.printStackTrace();
 		}
 		return inputReceiver;
