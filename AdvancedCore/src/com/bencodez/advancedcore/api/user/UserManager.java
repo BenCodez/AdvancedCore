@@ -201,13 +201,13 @@ public class UserManager {
 		dataManager = new UserDataManager(AdvancedCorePlugin.getInstance());
 	}
 
-	public void purgeOldPlayers() {
-		if (plugin.getOptions().isPurgeOldData()) {
+	public void purgeOldPlayersStartup() {
+		if (plugin.getOptions().isPurgeOldData() && plugin.getOptions().isPurgeDataOnStartup()) {
 			plugin.addUserStartup(new UserStartup() {
 
 				@Override
 				public void onFinish() {
-					plugin.debug("Finished purgining");
+					plugin.debug("Finished purging");
 				}
 
 				@Override
@@ -222,8 +222,7 @@ public class UserManager {
 					if (days == -1) {
 						// fix ones with no last online
 						user.setLastOnline(System.currentTimeMillis());
-					}
-					if (days > daysOld) {
+					} else if (days > daysOld) {
 						plugin.debug("Removing " + user.getUUID() + " because of purge");
 						user.remove();
 					}
@@ -249,8 +248,7 @@ public class UserManager {
 							if (days == -1) {
 								// fix ones with no last online
 								user.setLastOnline(System.currentTimeMillis());
-							}
-							if (days > daysOld) {
+							} else if (days > daysOld) {
 								plugin.debug("Removing " + user.getUUID() + " because of purge");
 								user.remove();
 							}

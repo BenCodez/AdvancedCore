@@ -558,7 +558,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loadAutoUpdateCheck();
 		loadVersionFile();
 
-		getUserManager().purgeOldPlayers();
+		getUserManager().purgeOldPlayersStartup();
 
 		userStartup();
 		loadTabComplete();

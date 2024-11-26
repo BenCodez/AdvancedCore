@@ -200,6 +200,11 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "PurgeDataOnStartup")
+	private boolean purgeDataOnStartup = false;
+
+	@Getter
+	@Setter
 	@ConfigDataBoolean(path = "DisableJavascript")
 	private boolean disableJavascript = false;
 
