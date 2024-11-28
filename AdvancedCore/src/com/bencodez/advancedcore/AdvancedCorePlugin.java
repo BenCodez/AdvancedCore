@@ -508,6 +508,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				getLogger().info(log);
 			}
 		};
+		if (!getOptions().getSkullProfileAPIURL().isEmpty()) {
+			skullCacheHandler.changeApiProfileURL(getOptions().getSkullProfileAPIURL());
+		}
 		skullCacheHandler.startTimer();
 
 		if (loadLuckPerms) {

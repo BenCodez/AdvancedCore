@@ -205,6 +205,11 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataString(path = "SkullProfileAPIURL")
+	private String SkullProfileAPIURL = "";
+
+	@Getter
+	@Setter
 	@ConfigDataBoolean(path = "DisableJavascript")
 	private boolean disableJavascript = false;
 
