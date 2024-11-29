@@ -491,28 +491,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		hologramHandler = new HologramHandler(this);
 
-		skullCacheHandler = new SkullCacheHandler(getOptions().getSkullLoadDelay()) {
-
-			@Override
-			public void debugException(Exception e) {
-				debug(e);
-			}
-
-			@Override
-			public void debugLog(String debug) {
-				extraDebug(debug);
-			}
-
-			@Override
-			public void log(String log) {
-				getLogger().info(log);
-			}
-		};
-		if (!getOptions().getSkullProfileAPIURL().isEmpty()) {
-			skullCacheHandler.changeApiProfileURL(getOptions().getSkullProfileAPIURL());
-		}
-		skullCacheHandler.startTimer();
-
 		if (loadLuckPerms) {
 			if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
 				luckPermsHandle = new LuckPermsHandle();
@@ -539,6 +517,29 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		permissionHandler = new PermissionHandler(this);
 
 		loadConfig(true);
+
+		skullCacheHandler = new SkullCacheHandler(getOptions().getSkullLoadDelay()) {
+
+			@Override
+			public void debugException(Exception e) {
+				debug(e);
+			}
+
+			@Override
+			public void debugLog(String debug) {
+				extraDebug(debug);
+			}
+
+			@Override
+			public void log(String log) {
+				getLogger().info(log);
+			}
+		};
+		if (!getOptions().getSkullProfileAPIURL().isEmpty()) {
+			debug("Setting API profile URL to " + getOptions().getSkullProfileAPIURL());
+			skullCacheHandler.changeApiProfileURL(getOptions().getSkullProfileAPIURL());
+		}
+		skullCacheHandler.startTimer();
 
 		if (loadGeyserAPI) {
 			geyserHandle = new GeyserHandle();
@@ -1022,6 +1023,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 		getRewardHandler().checkSubRewards();
+
+		if (skullCacheHandler != null) {
+			if (!getOptions().getSkullProfileAPIURL().isEmpty()) {
+				debug("Setting API profile URL to " + getOptions().getSkullProfileAPIURL());
+				skullCacheHandler.changeApiProfileURL(getOptions().getSkullProfileAPIURL());
+			}
+		}
 	}
 
 	/**
