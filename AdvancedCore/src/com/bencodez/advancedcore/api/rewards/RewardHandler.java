@@ -1452,7 +1452,7 @@ public class RewardHandler {
 			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (!list.isEmpty()) {
-					MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), list, placeholders);
+					MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), list, placeholders, true);
 				}
 				return null;
 			}
@@ -1496,7 +1496,8 @@ public class RewardHandler {
 						new ArrayList<String>());
 				ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<String>());
 				if (!consoleCommands.isEmpty()) {
-					MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), consoleCommands, placeholders);
+					MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), consoleCommands, placeholders,
+							section.getBoolean("Stagger", true));
 				}
 				if (!userCommands.isEmpty()) {
 					user.preformCommand(userCommands, placeholders);

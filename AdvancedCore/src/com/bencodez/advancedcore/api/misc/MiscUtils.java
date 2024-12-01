@@ -242,7 +242,7 @@ public class MiscUtils {
 	}
 
 	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds,
-			final HashMap<String, String> placeholders) {
+			final HashMap<String, String> placeholders, boolean stagger) {
 		if (cmds != null && !cmds.isEmpty()) {
 			placeholders.put("player", player.getName());
 			final ArrayList<String> commands = PlaceholderUtils.replaceJavascript(player,
@@ -250,35 +250,20 @@ public class MiscUtils {
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
-
-					@Override
-					public void run() {
-						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-					}
-
-				}, tick);
-				tick++;
+				runConsoleCommand(cmd, tick, stagger);
 			}
 
 		}
 	}
 
-	public void executeConsoleCommands(final ArrayList<String> cmds, final HashMap<String, String> placeholders) {
+	public void executeConsoleCommands(final ArrayList<String> cmds, final HashMap<String, String> placeholders,
+			boolean stagger) {
 		if (cmds != null && !cmds.isEmpty()) {
 			final ArrayList<String> commands = PlaceholderUtils.replacePlaceHolder(cmds, placeholders);
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
-
-					@Override
-					public void run() {
-						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-					}
-
-				}, tick);
-				tick++;
+				runConsoleCommand(cmd, tick, stagger);
 			}
 
 		}
@@ -304,7 +289,7 @@ public class MiscUtils {
 
 	@SuppressWarnings("deprecation")
 	public void executeConsoleCommands(final String playerName, final ArrayList<String> cmds,
-			final HashMap<String, String> placeholders) {
+			final HashMap<String, String> placeholders, boolean stagger) {
 		if (cmds != null && !cmds.isEmpty()) {
 			placeholders.put("player", playerName);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
@@ -316,15 +301,28 @@ public class MiscUtils {
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
-
-					@Override
-					public void run() {
-						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-					}
-				}, tick);
-				tick++;
+				runConsoleCommand(cmd, tick, stagger);
 			}
+		}
+	}
+
+	private void runConsoleCommand(String command, int delay, boolean hasDelay) {
+		if (hasDelay) {
+			plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+				}
+			}, delay);
+		} else {
+			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+				}
+			});
 		}
 	}
 

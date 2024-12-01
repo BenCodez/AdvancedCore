@@ -146,6 +146,9 @@ Commands:
   # Commands here will be run by console
 #  Console:
 #  - 'say %player% was lucky'
+# Stagger is enabled by default, delays each command one tick
+# Disable to run all commands the same tick
+#  Stagger: true
   # Commands here are run by player
 #  Player:
 #  - 'vote total'
