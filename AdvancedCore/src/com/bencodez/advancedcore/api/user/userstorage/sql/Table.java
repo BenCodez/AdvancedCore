@@ -611,9 +611,9 @@ public class Table {
 		}
 	}
 
-	public void wipeColumnData(String columnName) {
-		checkColumn(new Column(columnName, DataType.STRING));
-		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+	public void wipeColumnData(String columnName, DataType dataType) {
+		checkColumn(new Column(columnName, dataType));
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = " + dataType.getNoValue() + ";";
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
 			s.executeUpdate();
@@ -622,9 +622,9 @@ public class Table {
 		}
 	}
 
-	public void copyColumnData(String columnFromName, String columnToName) {
-		checkColumn(new Column(columnToName, DataType.STRING));
-		checkColumn(new Column(columnFromName, DataType.STRING));
+	public void copyColumnData(String columnFromName, String columnToName, DataType dataType) {
+		checkColumn(new Column(columnToName, dataType));
+		checkColumn(new Column(columnFromName, dataType));
 		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);

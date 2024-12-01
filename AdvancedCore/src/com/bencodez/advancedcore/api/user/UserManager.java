@@ -268,9 +268,9 @@ public class UserManager {
 
 	public void removeAllKeyValues(String key, DataType type) {
 		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			plugin.getSQLiteUserTable().wipeColumnData(key);
+			plugin.getSQLiteUserTable().wipeColumnData(key, type);
 		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			plugin.getMysql().wipeColumnData(key);
+			plugin.getMysql().wipeColumnData(key, type);
 		} else {
 			for (String uuid : getAllUUIDs()) {
 				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
@@ -332,9 +332,9 @@ public class UserManager {
 	@SuppressWarnings("deprecation")
 	public void copyColumnData(String columnFromName, String columnToName) {
 		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			plugin.getMysql().copyColumnData(columnFromName, columnToName);
+			plugin.getMysql().copyColumnData(columnFromName, columnToName, DataType.STRING);
 		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			plugin.getSQLiteUserTable().copyColumnData(columnFromName, columnToName);
+			plugin.getSQLiteUserTable().copyColumnData(columnFromName, columnToName, DataType.STRING);
 		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
 			for (String uuid : getAllUUIDs()) {
 				AdvancedCoreUser user = getUser(UUID.fromString(uuid));

@@ -712,9 +712,9 @@ public class MySQL {
 
 	}
 
-	public void wipeColumnData(String columnName) {
-		checkColumn(columnName, DataType.STRING);
-		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+	public void wipeColumnData(String columnName, DataType dataType) {
+		checkColumn(columnName, dataType);
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = " + dataType.getNoValue() + ";";
 		plugin.devDebug("MYSQL QUERY: " + sql);
 		try {
 			Query query = new Query(mysql, sql);
@@ -725,9 +725,9 @@ public class MySQL {
 
 	}
 
-	public void copyColumnData(String columnFromName, String columnToName) {
-		checkColumn(columnFromName, DataType.STRING);
-		checkColumn(columnToName, DataType.STRING);
+	public void copyColumnData(String columnFromName, String columnToName, DataType dataType) {
+		checkColumn(columnFromName, dataType);
+		checkColumn(columnToName, dataType);
 		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
 		plugin.devDebug("MYSQL QUERY: " + sql);
 		try {
