@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bencodez</groupId>
 	<artifactId>advancedcore</artifactId>
-	<version>3.7.11-SNAPSHOT</version>
+	<version>3.7.11</version>
 	<packaging>jar</packaging>
 	<name>AdvancedCore</name>
 	<properties>
