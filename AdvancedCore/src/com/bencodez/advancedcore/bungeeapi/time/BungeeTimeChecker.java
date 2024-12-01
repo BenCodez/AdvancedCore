@@ -132,10 +132,10 @@ public abstract class BungeeTimeChecker {
 		if (set) {
 			setPrevMonth(month);
 		}
-		if (getPrevDay() > (LocalDateTime.now().minusDays(1).getMonth().length(YearMonth.now().isLeapYear()) - 4)) {
+		int cDay = (LocalDateTime.now().minusDays(1).getMonth().length(YearMonth.now().isLeapYear()) - 3);
+		if (getPrevDay() < cDay) {
 			warning("Detected a month change, but current day is not near end of a month, ignoring month change, "
-					+ getPrevDay() + " "
-					+ LocalDateTime.now().minusDays(1).getMonth().length(YearMonth.now().isLeapYear()));
+					+ getPrevDay() + " " + cDay);
 			setPrevMonth(month);
 			return false;
 		}
