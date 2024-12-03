@@ -863,15 +863,13 @@ public class AdvancedCoreUser {
 	 * @param volume    the volume
 	 * @param pitch     the pitch
 	 */
-	@SuppressWarnings("deprecation")
 	public void playSound(String soundName, float volume, float pitch) {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
-			Sound sound;
+			Sound sound = null;
 			try {
 				sound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundName));
 			} catch (Exception e) {
-				sound = Sound.valueOf(soundName);
 				plugin.debug(e);
 			}
 			if (sound != null) {
