@@ -100,7 +100,8 @@ public class TimeChecker {
 		LocalDateTime localNow = LocalDateTime.now();
 		if (!plugin.getOptions().getTimeZone().isEmpty()) {
 			try {
-				ZonedDateTime zonedTime = localNow.atZone(ZoneId.of(plugin.getOptions().getTimeZone()));
+				ZonedDateTime zonedTime = localNow.atZone(ZoneId.systemDefault())
+						.withZoneSameInstant(ZoneId.of(plugin.getOptions().getTimeZone()));
 				localNow = zonedTime.toLocalDateTime();
 			} catch (Exception e) {
 				e.printStackTrace();

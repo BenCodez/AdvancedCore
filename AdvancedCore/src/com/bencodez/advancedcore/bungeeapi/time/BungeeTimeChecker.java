@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.bungeeapi.time;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.TemporalField;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -101,7 +102,9 @@ public abstract class BungeeTimeChecker {
 		LocalDateTime localNow = LocalDateTime.now();
 		if (!timeZone.isEmpty()) {
 			try {
-				localNow.atZone(ZoneId.of(timeZone));
+				ZonedDateTime zonedTime = localNow.atZone(ZoneId.systemDefault())
+						.withZoneSameInstant(ZoneId.of(getTimeZone()));
+				localNow = zonedTime.toLocalDateTime();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
