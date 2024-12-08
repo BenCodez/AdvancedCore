@@ -102,7 +102,7 @@ public abstract class VelocityMySQL {
 
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
-			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + column + " text" + ";";
+			String sql = "ALTER TABLE " + getName() + " ADD COLUMN `" + column + "` text" + ";";
 			try {
 				Query query = new Query(mysql, sql);
 				query.executeUpdate();
@@ -117,26 +117,20 @@ public abstract class VelocityMySQL {
 
 	public void alterColumnType(String column, String newType) {
 		checkColumn(column, DataType.STRING);
+
+		try {
+			new Query(mysql, "ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";")
+					.executeUpdateAsync();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		if (newType.contains("INT")) {
-			try {
-				new Query(mysql, "UPDATE " + getName() + " SET " + column + " = '0' where trim(coalesce(" + column
-						+ ", '')) = '';").executeUpdateAsync();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 			if (!intColumns.contains(column)) {
 				intColumns.add(column);
 			}
-		} else {
-			try {
-				new Query(mysql, "ALTER TABLE " + getName() + " MODIFY " + column + " " + newType + ";")
-						.executeUpdateAsync();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 		}
+
 	}
 
 	public void checkColumn(String column, DataType dataType) {
@@ -426,9 +420,21 @@ public abstract class VelocityMySQL {
 		for (int i = 0; i < cols.size(); i++) {
 			Column col = cols.get(i);
 			if (i == cols.size() - 1) {
-				query += col.getName() + "='" + col.getValue().toString() + "';";
+				if (col.getValue().isString()) {
+					query += "`" + col.getName() + "`='" + col.getValue().getString() + "';";
+				} else if (col.getValue().isBoolean()) {
+					query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "';";
+				} else if (col.getValue().isInt()) {
+					query += "`" + col.getName() + "`='" + col.getValue().getInt() + "';";
+				}
 			} else {
-				query += col.getName() + "='" + col.getValue().toString() + "', ";
+				if (col.getValue().isString()) {
+					query += "`" + col.getName() + "`='" + col.getValue().getString() + "', ";
+				} else if (col.getValue().isBoolean()) {
+					query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "', ";
+				} else if (col.getValue().isInt()) {
+					query += "`" + col.getName() + "`='" + col.getValue().getInt() + "', ";
+				}
 			}
 
 		}
@@ -465,19 +471,19 @@ public abstract class VelocityMySQL {
 					Column col = cols.get(i);
 					if (i == cols.size() - 1) {
 						if (col.getValue().isString()) {
-							query += col.getName() + "='" + col.getValue().getString() + "'";
+							query += "`" + col.getName() + "`='" + col.getValue().getString() + "'";
 						} else if (col.getValue().isBoolean()) {
-							query += col.getName() + "='" + col.getValue().getBoolean() + "'";
+							query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "'";
 						} else if (col.getValue().isInt()) {
-							query += col.getName() + "='" + col.getValue().getInt() + "'";
+							query += "`" + col.getName() + "`='" + col.getValue().getInt() + "'";
 						}
 					} else {
 						if (col.getValue().isString()) {
-							query += col.getName() + "='" + col.getValue().getString() + "', ";
+							query += "`" + col.getName() + "`='" + col.getValue().getString() + "', ";
 						} else if (col.getValue().isBoolean()) {
-							query += col.getName() + "='" + col.getValue().getBoolean() + "', ";
+							query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "', ";
 						} else if (col.getValue().isInt()) {
-							query += col.getName() + "='" + col.getValue().getInt() + "', ";
+							query += "`" + col.getName() + "`='" + col.getValue().getInt() + "', ";
 						}
 					}
 				}

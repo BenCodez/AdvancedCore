@@ -141,24 +141,12 @@ public class MySQL {
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
 		plugin.debug("MYSQL QUERY: Altering column `" + column + "` to " + newType);
-		if (newType.contains("INT")) {
-			try {
-				Query query = new Query(mysql, "UPDATE " + getName() + " SET `" + column
-						+ "` = '0' where trim(coalesce(" + column + ", '')) = '';");
-				query.executeUpdateAsync();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-		} else {
-			Query query;
-			try {
-				query = new Query(mysql, "ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";");
-				query.executeUpdateAsync();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+		try {
+			Query query = new Query(mysql, "ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";");
+			query.executeUpdateAsync();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
-
 	}
 
 	public void checkColumn(String column, DataType dataType) {
@@ -571,19 +559,19 @@ public class MySQL {
 			Column col = cols.get(i);
 			if (i == cols.size() - 1) {
 				if (col.getValue().isString()) {
-					query += col.getName() + "='" + col.getValue().getString() + "';";
+					query += "`" + col.getName() + "`='" + col.getValue().getString() + "';";
 				} else if (col.getValue().isBoolean()) {
-					query += col.getName() + "='" + col.getValue().getBoolean() + "';";
+					query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "';";
 				} else if (col.getValue().isInt()) {
-					query += col.getName() + "='" + col.getValue().getInt() + "';";
+					query += "`" + col.getName() + "`='" + col.getValue().getInt() + "';";
 				}
 			} else {
 				if (col.getValue().isString()) {
-					query += col.getName() + "='" + col.getValue().getString() + "', ";
+					query += "`" + col.getName() + "`='" + col.getValue().getString() + "', ";
 				} else if (col.getValue().isBoolean()) {
-					query += col.getName() + "='" + col.getValue().getBoolean() + "', ";
+					query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "', ";
 				} else if (col.getValue().isInt()) {
-					query += col.getName() + "='" + col.getValue().getInt() + "', ";
+					query += "`" + col.getName() + "`='" + col.getValue().getInt() + "', ";
 				}
 			}
 		}
