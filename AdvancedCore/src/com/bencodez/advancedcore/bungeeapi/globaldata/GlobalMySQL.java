@@ -49,6 +49,8 @@ public abstract class GlobalMySQL {
 	public abstract void severe(String text);
 
 	public abstract void warning(String text);
+	
+	public abstract void info(String text);
 
 	public GlobalMySQL(String tableName, MySQL mysql) {
 		this.mysql = mysql;

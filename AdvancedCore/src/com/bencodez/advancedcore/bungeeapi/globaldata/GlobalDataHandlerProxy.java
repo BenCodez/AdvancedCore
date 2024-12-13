@@ -86,7 +86,7 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 	public void checkForFinishedTimeChanges() {
 		try {
 			if (timeChangedHappened) {
-				globalMysql.debug("Checking if backend servers completed time change...");
+				globalMysql.info("Checking if backend servers completed time change...");
 				for (String server : servers) {
 					boolean b = getBoolean(server, "FinishedProcessing");
 					if (!b) {
