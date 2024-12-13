@@ -1,7 +1,6 @@
 package com.bencodez.advancedcore.api.time;
 
 import java.time.LocalDateTime;
-import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalField;
@@ -133,13 +132,15 @@ public class TimeChecker {
 		if (set) {
 			plugin.getServerDataFile().setPrevMonth(month);
 		}
-		int cDay = (LocalDateTime.now().minusDays(1).getMonth().length(YearMonth.now().isLeapYear()) - 3);
-		if (plugin.getServerDataFile().getPrevDay() < cDay) {
-			plugin.getLogger().warning(
-					"Detected a month change, but current day is not near end of a month, ignoring month change, "
-							+ plugin.getServerDataFile().getPrevDay() + " " + cDay);
-			plugin.getServerDataFile().setPrevMonth(month);
-			return false;
+
+		if (!plugin.getOptions().isTimeChangeFailSafeBypass()) {
+			if (getTime().getDayOfMonth() < 3) {
+				plugin.getLogger().warning(
+						"Detected a month change, but current day is not near end of a month, ignoring month change, "
+								+ getTime().getDayOfMonth());
+				plugin.getServerDataFile().setPrevMonth(month);
+				return false;
+			}
 		}
 		return true;
 

@@ -1,7 +1,6 @@
 package com.bencodez.advancedcore.bungeeapi.time;
 
 import java.time.LocalDateTime;
-import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalField;
@@ -15,6 +14,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.time.TimeType;
 
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * The Class TimeChecker.
@@ -27,6 +27,10 @@ public abstract class BungeeTimeChecker {
 	private ScheduledExecutorService timer;
 
 	private boolean timerLoaded = false;
+
+	@Getter
+	@Setter
+	private boolean timeChangeFailSafeBypass = false;
 
 	@Getter
 	private int timeOffSet;
@@ -135,12 +139,13 @@ public abstract class BungeeTimeChecker {
 		if (set) {
 			setPrevMonth(month);
 		}
-		int cDay = (LocalDateTime.now().minusDays(1).getMonth().length(YearMonth.now().isLeapYear()) - 3);
-		if (getPrevDay() < cDay) {
-			warning("Detected a month change, but current day is not near end of a month, ignoring month change, "
-					+ getPrevDay() + " " + cDay);
-			setPrevMonth(month);
-			return false;
+		if (!timeChangeFailSafeBypass) {
+			if (getTime().getDayOfMonth() < 3) {
+				warning("Detected a month change, but current day is not near end of a month, ignoring month change, "
+						+ getTime().getDayOfMonth());
+				setPrevMonth(month);
+				return false;
+			}
 		}
 		return true;
 

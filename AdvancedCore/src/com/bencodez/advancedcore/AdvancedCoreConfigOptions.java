@@ -251,6 +251,11 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "TimeChangeFailSafeBypass")
+	private boolean timeChangeFailSafeBypass = false;
+
+	@Getter
+	@Setter
 	@ConfigDataString(path = "TimeZone")
 	private String timeZone = "";
 
