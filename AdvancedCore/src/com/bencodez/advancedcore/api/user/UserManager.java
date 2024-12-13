@@ -294,6 +294,22 @@ public class UserManager {
 		return getAllKeys(plugin.getStorageType());
 	}
 
+	@SuppressWarnings("deprecation")
+	public List<String> getAllColumns() {
+		UserStorage storage = plugin.getStorageType();
+		if (storage.equals(UserStorage.SQLITE)) {
+			return plugin.getSQLiteUserTable().getColumnsString();
+		} else if (storage.equals(UserStorage.MYSQL)) {
+			return plugin.getMysql().getColumns();
+		} else {
+			AdvancedCoreUser user = getRandomUser();
+			user.dontCache();
+			return new ArrayList<String>(
+					user.getData().getData(user.getUUID()).getConfigurationSection("").getKeys(false));
+
+		}
+	}
+
 	public HashMap<UUID, ArrayList<Column>> getAllKeys(UserStorage storage) {
 		if (storage.equals(UserStorage.SQLITE)) {
 			return plugin.getSQLiteUserTable().getAllQuery();

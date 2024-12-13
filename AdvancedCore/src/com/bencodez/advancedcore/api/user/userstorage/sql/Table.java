@@ -209,6 +209,15 @@ public class Table {
 		return columns;
 	}
 
+	public List<String> getColumnsString() {
+		List<Column> column = getColumns();
+		ArrayList<String> list = new ArrayList<String>();
+		for (Column col : column) {
+			list.add(col.getName());
+		}
+		return list;
+	}
+
 	public ArrayList<Column> getExact(Column column) {
 		ArrayList<Column> result = new ArrayList<>();
 
