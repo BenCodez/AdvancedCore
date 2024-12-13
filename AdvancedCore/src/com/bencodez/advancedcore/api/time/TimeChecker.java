@@ -134,7 +134,7 @@ public class TimeChecker {
 		}
 
 		if (!plugin.getOptions().isTimeChangeFailSafeBypass()) {
-			if (getTime().getDayOfMonth() < 3) {
+			if (getTime().getDayOfMonth() > 3) {
 				plugin.getLogger().warning(
 						"Detected a month change, but current day is not near end of a month, ignoring month change, "
 								+ getTime().getDayOfMonth());

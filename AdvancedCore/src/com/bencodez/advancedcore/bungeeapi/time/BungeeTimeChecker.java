@@ -140,7 +140,7 @@ public abstract class BungeeTimeChecker {
 			setPrevMonth(month);
 		}
 		if (!timeChangeFailSafeBypass) {
-			if (getTime().getDayOfMonth() < 3) {
+			if (getTime().getDayOfMonth() > 3) {
 				warning("Detected a month change, but current day is not near end of a month, ignoring month change, "
 						+ getTime().getDayOfMonth());
 				setPrevMonth(month);
@@ -187,7 +187,7 @@ public abstract class BungeeTimeChecker {
 				// serverdata.yml hasn't updated for 4 days, don't do time changes
 				if (System.currentTimeMillis() - getLastUpdated() > 1000 * 60 * 60 * 24 * 4) {
 					setIgnoreTime(true);
-					warning("Skipping time change events, since server has been offline for awhile, use /av forcetimechanged to force them if needed");
+					warning("Skipping time change events, since server has been offline for awhile, use /votingpluginbungee forcetimechanged to force them if needed");
 				}
 			}
 			setLastUpdated();
