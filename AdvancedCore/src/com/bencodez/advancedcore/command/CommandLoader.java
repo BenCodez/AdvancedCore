@@ -472,23 +472,37 @@ public class CommandLoader {
 			}
 		});
 
-		cmds.add(new CommandHandler(plugin, new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
-				"Execute javascript") {
+		if (!plugin.getOptions().isDisableJavascript()) {
+			cmds.add(new CommandHandler(plugin, new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
+					"Execute javascript") {
 
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				String str = "";
-				for (int i = 1; i < args.length; i++) {
-					str += args[i] + " ";
+				@Override
+				public void execute(CommandSender sender, String[] args) {
+					if (sender.isOp()) {
+						String str = "";
+						for (int i = 1; i < args.length; i++) {
+							str += args[i] + " ";
+						}
+						if (sender instanceof Player) {
+							str = PlaceholderUtils.replacePlaceHolders((Player) sender, str);
+						}
+						JavascriptEngine engine = new JavascriptEngine();
+						engine.addPlayer(sender);
+						String javascript = str.trim();
+						if (MessageAPI.containsIgnorecase(javascript, "powershell")
+								|| MessageAPI.containsIgnorecase(javascript, "touch")) {
+							sendMessage(sender, "&aNot allowed");
+							plugin.getLogger()
+									.warning("Player " + sender.getName() + " attempted to run shell commands");
+							return;
+						}
+						sendMessage(sender, "&cJavascript result: " + engine.getStringValue(javascript));
+					} else {
+						sendMessage(sender, "&aNot allowed");
+					}
 				}
-				if (sender instanceof Player) {
-					str = PlaceholderUtils.replacePlaceHolders((Player) sender, str);
-				}
-				JavascriptEngine engine = new JavascriptEngine();
-				engine.addPlayer(sender);
-				sendMessage(sender, "&cJavascript result: " + engine.getStringValue(str.trim()));
-			}
-		});
+			});
+		}
 
 		cmds.add(new CommandHandler(plugin, new String[] { "SetRequestMethod", "(RequestMethod)" },
 				permPrefix + ".SetRequestMethod", "SetRequestMethod", false) {
