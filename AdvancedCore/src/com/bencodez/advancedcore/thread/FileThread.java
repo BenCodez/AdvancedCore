@@ -89,23 +89,6 @@ public class FileThread {
 			}
 		}
 
-		@Deprecated
-		public void setData(UserData userData, final String uuid, final String path, final Object value) {
-			synchronized (FileThread.getInstance()) {
-				try {
-					File dFile = getPlayerFile(uuid);
-					FileConfiguration data = getData(userData, uuid);
-					data.set(path, value);
-					data.save(dFile);
-				} catch (Exception e) {
-					AdvancedCorePlugin.getInstance().getLogger().warning(
-							"Failed to set a value for " + uuid + ".yml, turn debug on to see full stacktraces");
-					AdvancedCorePlugin.getInstance().debug(e);
-				}
-			}
-
-		}
-
 		@Override
 		public void run() {
 			while (!thread.isInterrupted()) {
@@ -126,6 +109,23 @@ public class FileThread {
 		public void run(Runnable run) {
 			synchronized (FileThread.getInstance()) {
 				run.run();
+			}
+
+		}
+
+		@Deprecated
+		public void setData(UserData userData, final String uuid, final String path, final Object value) {
+			synchronized (FileThread.getInstance()) {
+				try {
+					File dFile = getPlayerFile(uuid);
+					FileConfiguration data = getData(userData, uuid);
+					data.set(path, value);
+					data.save(dFile);
+				} catch (Exception e) {
+					AdvancedCorePlugin.getInstance().getLogger().warning(
+							"Failed to set a value for " + uuid + ".yml, turn debug on to see full stacktraces");
+					AdvancedCorePlugin.getInstance().debug(e);
+				}
 			}
 
 		}

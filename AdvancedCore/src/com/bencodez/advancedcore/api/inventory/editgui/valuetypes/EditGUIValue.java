@@ -36,21 +36,21 @@ public abstract class EditGUIValue {
 	private ArrayList<String> lores;
 
 	@Getter
-	private ArrayList<String> options = new ArrayList<String>();
+	private ArrayList<String> options = new ArrayList<>();
+
+	public EditGUIValue addLore(ArrayList<String> lore) {
+		if (lores == null) {
+			lores = new ArrayList<>();
+		}
+		lores.addAll(lore);
+		return this;
+	}
 
 	public EditGUIValue addLore(String lore) {
 		if (lores == null) {
-			lores = new ArrayList<String>();
+			lores = new ArrayList<>();
 		}
 		lores.add(lore);
-		return this;
-	}
-	
-	public EditGUIValue addLore(ArrayList<String> lore) {
-		if (lores == null) {
-			lores = new ArrayList<String>();
-		}
-		lores.addAll(lore);
 		return this;
 	}
 
@@ -65,12 +65,12 @@ public abstract class EditGUIValue {
 		return rewardEditData.hasPath(getKey());
 	}
 
+	public abstract String getType();
+
 	public EditGUIValue inputMethod(InputMethod inputMethod) {
 		this.inputMethod = inputMethod;
 		return this;
 	}
 
 	public abstract void onClick(ClickEvent event);
-	
-	public abstract String getType();
 }

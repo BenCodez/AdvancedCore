@@ -7,10 +7,10 @@ import com.bencodez.advancedcore.api.user.userstorage.mysql.api.utils.QueryUtils
 
 public class InsertQuery {
 
-	private LinkedHashMap<String, String> duplicateValues = new LinkedHashMap<String, String>();
+	private LinkedHashMap<String, String> duplicateValues = new LinkedHashMap<>();
 	private boolean onDuplicateKey = false;
 	private String table;
-	private LinkedHashMap<String, String> values = new LinkedHashMap<String, String>();
+	private LinkedHashMap<String, String> values = new LinkedHashMap<>();
 
 	/**
 	 * Create an insert query.

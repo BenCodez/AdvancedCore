@@ -9,7 +9,7 @@ public class UserDataKeyString extends UserDataKey {
 		super(key);
 		setColumnType("TEXT");
 	}
-	
+
 	public DataValue getDefault() {
 		if (getColumnType().equalsIgnoreCase("VARCHAR(5)")) {
 			return new DataValueBoolean(false);

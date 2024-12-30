@@ -23,6 +23,8 @@ public class ConnectionManager {
 	private boolean useSSL = false;
 	private boolean useMariaDB = false;
 
+	private String mysqlDriver = "";
+
 	public ConnectionManager(String host, String port, String username, String password, String database) {
 		this.host = host;
 		this.port = port;
@@ -67,7 +69,7 @@ public class ConnectionManager {
 
 	public void close() {
 		if (isClosed()) {
-			//throw new IllegalStateException("Connection is not open.");
+			// throw new IllegalStateException("Connection is not open.");
 		} else {
 			dataSource.close();
 		}
@@ -121,6 +123,29 @@ public class ConnectionManager {
 		return maximumPoolsize;
 	}
 
+	public String getMysqlDriverName() {
+		String className = "org.mariadb.jdbc.Driver";
+		if (!useMariaDB) {
+			className = "com.mysql.cj.jdbc.Driver";
+		}
+
+		try {
+			Class.forName(className);
+		} catch (ClassNotFoundException ignored) {
+			className = "com.mysql.cj.jdbc.Driver";
+			try {
+				Class.forName(className);
+			} catch (ClassNotFoundException ignored1) {
+				try {
+					className = "com.mysql.jdbc.Driver";
+					Class.forName(className);
+				} catch (ClassNotFoundException ignored2) {
+				}
+			}
+		}
+		return className;
+	}
+
 	/**
 	 * @return the password
 	 */
@@ -151,31 +176,6 @@ public class ConnectionManager {
 	 */
 	public boolean isUseSSL() {
 		return useSSL;
-	}
-
-	private String mysqlDriver = "";
-
-	public String getMysqlDriverName() {
-		String className = "org.mariadb.jdbc.Driver";
-		if (!useMariaDB) {
-			className = "com.mysql.cj.jdbc.Driver";
-		}
-
-		try {
-			Class.forName(className);
-		} catch (ClassNotFoundException ignored) {
-			className = "com.mysql.cj.jdbc.Driver";
-			try {
-				Class.forName(className);
-			} catch (ClassNotFoundException ignored1) {
-				try {
-					className = "com.mysql.jdbc.Driver";
-					Class.forName(className);
-				} catch (ClassNotFoundException ignored2) {
-				}
-			}
-		}
-		return className;
 	}
 
 	public boolean open() {

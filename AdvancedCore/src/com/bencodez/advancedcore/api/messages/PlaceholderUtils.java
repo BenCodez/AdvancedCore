@@ -19,228 +19,6 @@ import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 
 public class PlaceholderUtils {
-	public static ArrayList<String> replaceJavascript(AdvancedCoreUser user, ArrayList<String> list) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(replaceJavascript(user, str));
-		}
-		return msg;
-	}
-
-	public static ArrayList<String> replaceJavascript(ArrayList<String> list) {
-		return replaceJavascript(list, null);
-	}
-
-	public static ArrayList<String> replaceJavascript(ArrayList<String> list, JavascriptEngine engine) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(replaceJavascript(str, engine));
-		}
-		return msg;
-	}
-
-	public static ArrayList<String> replaceJavascript(CommandSender sender, ArrayList<String> list) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(replaceJavascript(sender, str));
-		}
-		return msg;
-	}
-
-	public static ArrayList<String> replaceJavascript(OfflinePlayer player, ArrayList<String> list) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(replaceJavascript(player, str));
-		}
-		return msg;
-	}
-
-	public static ArrayList<String> replaceJavascript(Player player, ArrayList<String> list) {
-		ArrayList<String> msg = new ArrayList<String>();
-		for (String str : list) {
-			msg.add(replaceJavascript(player, str));
-		}
-		return msg;
-	}
-
-	public static ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
-		ArrayList<String> newList = new ArrayList<String>();
-		for (int i = 0; i < list.size(); i++) {
-			newList.add(replacePlaceHolder(list.get(i), placeholders));
-		}
-		return newList;
-	}
-
-	public static ArrayList<String> replacePlaceHolders(ArrayList<String> list, Player p) {
-		ArrayList<String> newList = new ArrayList<String>();
-		for (int i = 0; i < list.size(); i++) {
-			newList.add(replacePlaceHolders(p, list.get(i)));
-		}
-		return newList;
-	}
-
-	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
-			}
-		}
-		return str;
-	}
-
-	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders, boolean ignoreCase) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue(), ignoreCase);
-			}
-		}
-		return str;
-	}
-
-	/**
-	 * Replace place holder.
-	 *
-	 * @param str         the str
-	 * @param toReplace   the to replace
-	 * @param replaceWith the replace with
-	 * @return the string
-	 */
-	public static String replacePlaceHolder(String str, String toReplace, String replaceWith) {
-		return replacePlaceHolder(str, toReplace, replaceWith, true);
-	}
-
-	public static String replacePlaceHolder(String str, String toReplace, String replaceWith, boolean ignoreCase) {
-		if (ignoreCase) {
-			return MessageAPI.replaceIgnoreCase(MessageAPI.replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith),
-					"\\{" + toReplace + "\\}", replaceWith);
-		} else {
-			str = str.replaceAll("\\{", "%");
-			str = str.replaceAll("\\}", "%");
-			str = str.replace("%" + toReplace + "%", replaceWith);
-			return str;
-
-		}
-	}
-
-	public static String replacePlaceHolders(OfflinePlayer player, String text) {
-		if (player == null) {
-			return text;
-		}
-		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setPlaceholders(player, text);
-		} else {
-			return text;
-		}
-	}
-
-	/**
-	 * Replace place holders.
-	 *
-	 * @param player the player
-	 * @param text   the text
-	 * @return the string
-	 */
-	public static String replacePlaceHolders(Player player, String text) {
-		if (player == null) {
-			return text;
-		}
-		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setPlaceholders(player, text);
-		} else {
-			return text;
-		}
-	}
-
-	public static String replaceJavascript(AdvancedCoreUser user, String text) {
-		if (!user.getPlugin().getOptions().isDisableJavascript()) {
-			JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
-			return replaceJavascript(text, engine);
-		}
-		return text;
-	}
-
-	public static String replaceJavascript(CommandSender player, String text) {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
-			if (player instanceof Player) {
-				return replaceJavascript((Player) player, text);
-			} else {
-				JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-				return replaceJavascript(text, engine);
-			}
-		}
-		return text;
-	}
-
-	public static String replaceJavascript(OfflinePlayer player, String text) {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
-			if (player.isOnline()) {
-				return replaceJavascript(player.getPlayer(), text);
-			} else {
-				JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-				return replaceJavascript(text, engine);
-			}
-		}
-		return text;
-	}
-
-	public static String replaceJavascript(Player player, String text) {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
-			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(replacePlaceHolders(player, text), engine);
-		}
-		return text;
-	}
-
-	public static String replaceJavascript(String text) {
-		return replaceJavascript(text, null);
-	}
-
-	public static String replaceJavascript(String text, JavascriptEngine engine) {
-		String msg = "";
-		if (MessageAPI.containsIgnorecase(text, "[Javascript=")) {
-			if (engine == null) {
-				engine = new JavascriptEngine();
-			}
-			int lastIndex = 0;
-			int startIndex = 0;
-			int num = 0;
-			while (startIndex != -1) {
-				startIndex = text.indexOf("[Javascript=", lastIndex);
-
-				int endIndex = -1;
-				if (startIndex != -1) {
-					if (num != 0) {
-						msg += text.substring(lastIndex + 1, startIndex);
-					} else {
-						msg += text.substring(lastIndex, startIndex);
-					}
-					num++;
-					endIndex = text.indexOf("]", startIndex);
-					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
-					// plugin.debug(startIndex + ":" + endIndex + " from " +
-					// text + " to " + str + " currently " + msg);
-					String script = engine.getStringValue(str);
-					if (script == null) {
-						script = "" + engine.getBooleanValue(str);
-
-					}
-
-					if (script != null) {
-						msg += script;
-					}
-					lastIndex = endIndex;
-				}
-
-			}
-			msg += text.substring(lastIndex + 1);
-
-		} else {
-			msg = text;
-		}
-		// plugin.debug(msg);
-		return msg;
-	}
-
 	@SuppressWarnings("deprecation")
 	public static TextComponent parseJson(String msg) {
 		TextComponent comp = new TextComponent("");
@@ -335,6 +113,222 @@ public class PlaceholderUtils {
 
 		str = replaceJavascript(str);
 		return MessageAPI.colorize(str);
+	}
+
+	public static ArrayList<String> replaceJavascript(AdvancedCoreUser user, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<>();
+		for (String str : list) {
+			msg.add(replaceJavascript(user, str));
+		}
+		return msg;
+	}
+
+	public static String replaceJavascript(AdvancedCoreUser user, String text) {
+		if (!user.getPlugin().getOptions().isDisableJavascript()) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
+			return replaceJavascript(text, engine);
+		}
+		return text;
+	}
+
+	public static ArrayList<String> replaceJavascript(ArrayList<String> list) {
+		return replaceJavascript(list, null);
+	}
+
+	public static ArrayList<String> replaceJavascript(ArrayList<String> list, JavascriptEngine engine) {
+		ArrayList<String> msg = new ArrayList<>();
+		for (String str : list) {
+			msg.add(replaceJavascript(str, engine));
+		}
+		return msg;
+	}
+
+	public static ArrayList<String> replaceJavascript(CommandSender sender, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<>();
+		for (String str : list) {
+			msg.add(replaceJavascript(sender, str));
+		}
+		return msg;
+	}
+
+	public static String replaceJavascript(CommandSender player, String text) {
+		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+			if (player instanceof Player) {
+				return replaceJavascript((Player) player, text);
+			}
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			return replaceJavascript(text, engine);
+		}
+		return text;
+	}
+
+	public static ArrayList<String> replaceJavascript(OfflinePlayer player, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<>();
+		for (String str : list) {
+			msg.add(replaceJavascript(player, str));
+		}
+		return msg;
+	}
+
+	public static String replaceJavascript(OfflinePlayer player, String text) {
+		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+			if (player.isOnline()) {
+				return replaceJavascript(player.getPlayer(), text);
+			}
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			return replaceJavascript(text, engine);
+		}
+		return text;
+	}
+
+	public static ArrayList<String> replaceJavascript(Player player, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<>();
+		for (String str : list) {
+			msg.add(replaceJavascript(player, str));
+		}
+		return msg;
+	}
+
+	public static String replaceJavascript(Player player, String text) {
+		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			return replaceJavascript(replacePlaceHolders(player, text), engine);
+		}
+		return text;
+	}
+
+	public static String replaceJavascript(String text) {
+		return replaceJavascript(text, null);
+	}
+
+	public static String replaceJavascript(String text, JavascriptEngine engine) {
+		String msg = "";
+		if (MessageAPI.containsIgnorecase(text, "[Javascript=")) {
+			if (engine == null) {
+				engine = new JavascriptEngine();
+			}
+			int lastIndex = 0;
+			int startIndex = 0;
+			int num = 0;
+			while (startIndex != -1) {
+				startIndex = text.indexOf("[Javascript=", lastIndex);
+
+				int endIndex = -1;
+				if (startIndex != -1) {
+					if (num != 0) {
+						msg += text.substring(lastIndex + 1, startIndex);
+					} else {
+						msg += text.substring(lastIndex, startIndex);
+					}
+					num++;
+					endIndex = text.indexOf("]", startIndex);
+					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
+					// plugin.debug(startIndex + ":" + endIndex + " from " +
+					// text + " to " + str + " currently " + msg);
+					String script = engine.getStringValue(str);
+					if (script == null) {
+						script = "" + engine.getBooleanValue(str);
+
+					}
+
+					if (script != null) {
+						msg += script;
+					}
+					lastIndex = endIndex;
+				}
+
+			}
+			msg += text.substring(lastIndex + 1);
+
+		} else {
+			msg = text;
+		}
+		// plugin.debug(msg);
+		return msg;
+	}
+
+	public static ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
+		ArrayList<String> newList = new ArrayList<>();
+		for (int i = 0; i < list.size(); i++) {
+			newList.add(replacePlaceHolder(list.get(i), placeholders));
+		}
+		return newList;
+	}
+
+	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
+		if (placeholders != null) {
+			for (Entry<String, String> entry : placeholders.entrySet()) {
+				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+			}
+		}
+		return str;
+	}
+
+	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders, boolean ignoreCase) {
+		if (placeholders != null) {
+			for (Entry<String, String> entry : placeholders.entrySet()) {
+				str = replacePlaceHolder(str, entry.getKey(), entry.getValue(), ignoreCase);
+			}
+		}
+		return str;
+	}
+
+	/**
+	 * Replace place holder.
+	 *
+	 * @param str         the str
+	 * @param toReplace   the to replace
+	 * @param replaceWith the replace with
+	 * @return the string
+	 */
+	public static String replacePlaceHolder(String str, String toReplace, String replaceWith) {
+		return replacePlaceHolder(str, toReplace, replaceWith, true);
+	}
+
+	public static String replacePlaceHolder(String str, String toReplace, String replaceWith, boolean ignoreCase) {
+		if (ignoreCase) {
+			return MessageAPI.replaceIgnoreCase(MessageAPI.replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith),
+					"\\{" + toReplace + "\\}", replaceWith);
+		}
+		str = str.replaceAll("\\{", "%");
+		str = str.replaceAll("\\}", "%");
+		str = str.replace("%" + toReplace + "%", replaceWith);
+		return str;
+	}
+
+	public static ArrayList<String> replacePlaceHolders(ArrayList<String> list, Player p) {
+		ArrayList<String> newList = new ArrayList<>();
+		for (int i = 0; i < list.size(); i++) {
+			newList.add(replacePlaceHolders(p, list.get(i)));
+		}
+		return newList;
+	}
+
+	public static String replacePlaceHolders(OfflinePlayer player, String text) {
+		if (player == null) {
+			return text;
+		}
+		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
+			return PlaceholderAPI.setPlaceholders(player, text);
+		}
+		return text;
+	}
+
+	/**
+	 * Replace place holders.
+	 *
+	 * @param player the player
+	 * @param text   the text
+	 * @return the string
+	 */
+	public static String replacePlaceHolders(Player player, String text) {
+		if (player == null) {
+			return text;
+		}
+		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
+			return PlaceholderAPI.setPlaceholders(player, text);
+		}
+		return text;
 	}
 
 }

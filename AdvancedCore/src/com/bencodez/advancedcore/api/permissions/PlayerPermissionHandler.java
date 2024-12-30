@@ -33,7 +33,7 @@ public class PlayerPermissionHandler {
 
 	public PlayerPermissionHandler addExpiration(String perm, long delay) {
 		if (timedPermissions == null) {
-			timedPermissions = new HashMap<String, Long>();
+			timedPermissions = new HashMap<>();
 		}
 		timedPermissions.put(perm, System.currentTimeMillis() + (delay * 1000));
 		getAttachment().setPermission(perm, true);
@@ -50,7 +50,7 @@ public class PlayerPermissionHandler {
 
 	public PlayerPermissionHandler addOfflinePerm(String perm, long delay) {
 		if (permsToAdd == null) {
-			permsToAdd = new HashMap<String, Long>();
+			permsToAdd = new HashMap<>();
 		}
 		permsToAdd.put(perm, delay);
 		return this;
@@ -65,10 +65,7 @@ public class PlayerPermissionHandler {
 	}
 
 	public void onLogin(Player player) {
-		if (player == null) {
-			return;
-		}
-		if (permsToAdd == null) {
+		if ((player == null) || (permsToAdd == null)) {
 			return;
 		}
 		for (Entry<String, Long> entry : permsToAdd.entrySet()) {
@@ -78,6 +75,11 @@ public class PlayerPermissionHandler {
 				addPerm(entry.getKey());
 			}
 		}
+	}
+
+	public void remove() {
+		getAttachment().remove();
+		handler.removePermission(uuid);
 	}
 
 	public void removePermission(String perm) {
@@ -90,10 +92,5 @@ public class PlayerPermissionHandler {
 		if (getAttachment().getPermissions().size() == 0) {
 			remove();
 		}
-	}
-
-	public void remove() {
-		getAttachment().remove();
-		handler.removePermission(uuid);
 	}
 }

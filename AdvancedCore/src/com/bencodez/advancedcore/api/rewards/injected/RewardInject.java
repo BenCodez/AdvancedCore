@@ -43,11 +43,6 @@ public abstract class RewardInject extends Inject {
 	@Getter
 	private boolean alwaysValid = false;
 
-	public RewardInject alwaysValid() {
-		alwaysValid = true;
-		return this;
-	}
-
 	@Getter
 	private RewardInjectValidator validate;
 
@@ -71,6 +66,11 @@ public abstract class RewardInject extends Inject {
 		return this;
 	}
 
+	public RewardInject alwaysValid() {
+		alwaysValid = true;
+		return this;
+	}
+
 	public RewardInject asPlaceholder(String placeholderName) {
 		addAsPlaceholder = true;
 		this.placeholderName = placeholderName;
@@ -85,16 +85,16 @@ public abstract class RewardInject extends Inject {
 		AdvancedCorePlugin.getInstance().extraDebug(str);
 	}
 
+	public boolean hasValidator() {
+		return getValidate() != null;
+	}
+
 	public boolean isEditable() {
 		return !getEditButtons().isEmpty();
 	}
 
 	public abstract Object onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
-
-	public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
-		return new ArrayList<SubDirectlyDefinedReward>();
-	}
 
 	public RewardInject postReward() {
 		postReward = true;
@@ -104,6 +104,10 @@ public abstract class RewardInject extends Inject {
 	public RewardInject priority(int priority) {
 		setPriority(priority);
 		return this;
+	}
+
+	public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+		return new ArrayList<>();
 	}
 
 	public RewardInject synchronize() {
@@ -116,10 +120,6 @@ public abstract class RewardInject extends Inject {
 		if (validate != null && data.contains(getPath())) {
 			validate.onValidate(reward, this, data);
 		}
-	}
-
-	public boolean hasValidator() {
-		return getValidate() != null;
 	}
 
 	public RewardInject validator(RewardInjectValidator validate) {

@@ -39,9 +39,8 @@ public abstract class RewardInjectBoolean extends RewardInject {
 			String re = onRewardRequest(reward, user, value, placeholders);
 			if (re == null) {
 				return "" + value;
-			} else {
-				return re;
 			}
+			return re;
 		}
 		return null;
 	}

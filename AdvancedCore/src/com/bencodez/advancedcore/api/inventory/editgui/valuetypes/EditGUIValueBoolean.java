@@ -14,6 +14,11 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 	}
 
 	@Override
+	public String getType() {
+		return "boolean";
+	}
+
+	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
 			setCurrentValue("false");
@@ -26,11 +31,6 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 				player.sendMessage(MessageAPI.colorize("&cSetting " + getKey() + " to " + value));
 			}
 		}).currentValue(getCurrentValue().toString()).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
-	}
-	
-	@Override
-	public String getType() {
-		return "boolean";
 	}
 
 	public abstract void setValue(Player player, boolean value);

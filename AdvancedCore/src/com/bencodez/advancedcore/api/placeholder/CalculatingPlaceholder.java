@@ -5,12 +5,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.Getter;
 
-public abstract class CalculatingPlaceholder<T> extends PlaceHolder<T>{
+public abstract class CalculatingPlaceholder<T> extends PlaceHolder<T> {
+
+	@Getter
+	private ConcurrentHashMap<UUID, String> cacheData = new ConcurrentHashMap<>();
 
 	public CalculatingPlaceholder(String identifier) {
 		super(identifier);
 	}
-	
+
+	public CalculatingPlaceholder(String identifier, boolean useStartsWith) {
+		super(identifier, useStartsWith);
+	}
+
 	public CalculatingPlaceholder(String identifier, String noValueReturn) {
 		super(identifier, noValueReturn);
 	}
@@ -19,15 +26,6 @@ public abstract class CalculatingPlaceholder<T> extends PlaceHolder<T>{
 		super(identifier, noValueReturn, useStartsWith);
 	}
 
-	public CalculatingPlaceholder(String identifier, boolean useStartsWith) {
-		super(identifier, useStartsWith);
-	}
-	
-	@Getter
-	private ConcurrentHashMap<UUID, String> cacheData = new ConcurrentHashMap<UUID, String>();
-	
-	public abstract String placeholderDataRequest(T user, String identifier);
-	
 	@Override
 	public void clearCachePlayer(UUID javaUUID) {
 		for (String ident : getCache().keySet()) {
@@ -37,5 +35,7 @@ public abstract class CalculatingPlaceholder<T> extends PlaceHolder<T>{
 		}
 		cacheData.remove(javaUUID);
 	}
-	
+
+	public abstract String placeholderDataRequest(T user, String identifier);
+
 }

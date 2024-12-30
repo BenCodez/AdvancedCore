@@ -43,25 +43,7 @@ public abstract class BungeeTimeChecker {
 		this.timeZone = timeZone;
 	}
 
-	public abstract void info(String text);
-
 	public abstract void debug(String text);
-
-	public abstract void warning(String text);
-
-	public abstract void timeChanged(TimeType type, boolean fake, boolean pre, boolean post);
-
-	public abstract void setPrevDay(int day);
-
-	public abstract int getPrevDay();
-
-	public abstract void setPrevWeek(int week);
-
-	public abstract int getPrevWeek();
-
-	public abstract String getPrevMonth();
-
-	public abstract void setPrevMonth(String text);
 
 	public void forceChanged(TimeType time) {
 		timer.execute(new Runnable() {
@@ -101,6 +83,14 @@ public abstract class BungeeTimeChecker {
 		}
 
 	}
+
+	public abstract long getLastUpdated();
+
+	public abstract int getPrevDay();
+
+	public abstract String getPrevMonth();
+
+	public abstract int getPrevWeek();
 
 	public LocalDateTime getTime() {
 		LocalDateTime localNow = LocalDateTime.now();
@@ -169,15 +159,11 @@ public abstract class BungeeTimeChecker {
 		return true;
 	}
 
-	public abstract void setLastUpdated();
-
-	public abstract long getLastUpdated();
-
-	public abstract void setIgnoreTime(boolean ignore);
-
-	public abstract boolean isIgnoreTime();
+	public abstract void info(String text);
 
 	public abstract boolean isEnabled();
+
+	public abstract boolean isIgnoreTime();
 
 	public void loadTimer() {
 		if (!timerLoaded) {
@@ -216,6 +202,18 @@ public abstract class BungeeTimeChecker {
 			AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
 		}
 	}
+
+	public abstract void setIgnoreTime(boolean ignore);
+
+	public abstract void setLastUpdated();
+
+	public abstract void setPrevDay(int day);
+
+	public abstract void setPrevMonth(String text);
+
+	public abstract void setPrevWeek(int week);
+
+	public abstract void timeChanged(TimeType type, boolean fake, boolean pre, boolean post);
 
 	/**
 	 * Update.
@@ -256,4 +254,6 @@ public abstract class BungeeTimeChecker {
 			}
 		}
 	}
+
+	public abstract void warning(String text);
 }

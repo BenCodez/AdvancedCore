@@ -36,9 +36,8 @@ public abstract class RewardInjectInt extends RewardInject {
 			String re = onRewardRequest(reward, user, value, placeholders);
 			if (re == null) {
 				return "" + value;
-			} else {
-				return re;
 			}
+			return re;
 		}
 		return null;
 	}

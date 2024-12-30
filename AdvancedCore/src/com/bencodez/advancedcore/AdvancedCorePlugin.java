@@ -111,7 +111,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private boolean loginSecurityLoaded = false;
 
 	@Getter
-	private ArrayList<String> bannedPlayers = new ArrayList<String>();
+	private ArrayList<String> bannedPlayers = new ArrayList<>();
 
 	@Getter
 	private String buildTime = "";
@@ -136,10 +136,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	@Setter
-	private HashMap<String, Object> javascriptEngine = new HashMap<String, Object>();
+	private HashMap<String, Object> javascriptEngine = new HashMap<>();
 	@Getter
 	@Setter
-	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<JavascriptPlaceholderRequest>();
+	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<>();
 
 	@Getter
 	@Setter
@@ -194,7 +194,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Setter
 	private UserManager userManager;
 
-	private ArrayList<UserStartup> userStartup = new ArrayList<UserStartup>();
+	private ArrayList<UserStartup> userStartup = new ArrayList<>();
 
 	@Getter
 	private ConcurrentHashMap<String, String> uuidNameCache;
@@ -216,6 +216,25 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private BukkitScheduler bukkitScheduler;
+
+	@Getter
+	@Setter
+	private boolean loadGeyserAPI = true;
+
+	@Getter
+	@Setter
+	private boolean loadLuckPerms = true;
+
+	@Getter
+	private GeyserHandle geyserHandle;
+
+	@Getter
+	@Setter
+	private boolean loadSkullHandler = true;
+
+	@Getter
+	@Setter
+	private boolean loadVault = true;
 
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
@@ -300,7 +319,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 
 		HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys(from);
-		Queue<Entry<UUID, ArrayList<Column>>> players = new LinkedList<Entry<UUID, ArrayList<Column>>>(cols.entrySet());
+		Queue<Entry<UUID, ArrayList<Column>>> players = new LinkedList<>(cols.entrySet());
 
 		while (players.size() > 0) {
 			Entry<UUID, ArrayList<Column>> entry = players.poll();
@@ -430,6 +449,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return null;
 	}
 
+	public boolean isMySQLOkay() {
+		if (getStorageType().equals(UserStorage.MYSQL)) {
+			return mysql != null;
+		}
+		return true;
+	}
+
 	public void loadAdvancedCoreEvents() {
 		if (loadUserData) {
 			Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
@@ -466,21 +492,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			debug("Server in offline mode");
 		}
 	}
-
-	@Getter
-	@Setter
-	private boolean loadGeyserAPI = true;
-
-	@Getter
-	@Setter
-	private boolean loadLuckPerms = true;
-
-	@Getter
-	private GeyserHandle geyserHandle;
-
-	@Getter
-	@Setter
-	private boolean loadSkullHandler = true;
 
 	/**
 	 * Load AdvancedCore hook
@@ -629,11 +640,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public void loadTabComplete() {
 		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(AllPlayer)", new ArrayList<String>()) {
+				.addTabCompleteOption(new TabCompleteHandle("(AllPlayer)", new ArrayList<>()) {
 
 					@Override
 					public void reload() {
-						ArrayList<String> players = new ArrayList<String>();
+						ArrayList<String> players = new ArrayList<>();
 						for (String name : getUuidNameCache().values()) {
 							if (!players.contains(name)) {
 								players.add(name);
@@ -654,11 +665,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				});
 
 		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<String>()) {
+				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<>()) {
 
 					@Override
 					public void reload() {
-						ArrayList<String> list = new ArrayList<String>();
+						ArrayList<String> list = new ArrayList<>();
 						for (Player player : Bukkit.getOnlinePlayers()) {
 							list.add(player.getName());
 						}
@@ -667,7 +678,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 					@Override
 					public void updateReplacements() {
-						ArrayList<String> list = new ArrayList<String>();
+						ArrayList<String> list = new ArrayList<>();
 						for (Player player : Bukkit.getOnlinePlayers()) {
 							list.add(player.getName());
 						}
@@ -676,11 +687,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}.updateOnLoginLogout());
 
 		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(PlayerExact)", new ArrayList<String>()) {
+				.addTabCompleteOption(new TabCompleteHandle("(PlayerExact)", new ArrayList<>()) {
 
 					@Override
 					public void reload() {
-						ArrayList<String> list = new ArrayList<String>();
+						ArrayList<String> list = new ArrayList<>();
 						for (Player player : Bukkit.getOnlinePlayers()) {
 							list.add(player.getName());
 						}
@@ -689,7 +700,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 					@Override
 					public void updateReplacements() {
-						ArrayList<String> list = new ArrayList<String>();
+						ArrayList<String> list = new ArrayList<>();
 						for (Player player : Bukkit.getOnlinePlayers()) {
 							list.add(player.getName());
 						}
@@ -697,11 +708,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					}
 				}.updateOnLoginLogout());
 
-		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<String>()) {
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(uuid)", new ArrayList<>()) {
 
 			@Override
 			public void reload() {
-				ArrayList<String> uuids = new ArrayList<String>();
+				ArrayList<String> uuids = new ArrayList<>();
 				for (String name : getUuidNameCache().keySet()) {
 					if (!uuids.contains(name)) {
 						uuids.add(name);
@@ -720,11 +731,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		}.updateEveryXMinutes(getTimer(), 30));
 
-		ArrayList<String> options = new ArrayList<String>();
+		ArrayList<String> options = new ArrayList<>();
 		options.add("True");
 		options.add("False");
 		TabCompleteHandler.getInstance().addTabCompleteOption("(Boolean)", options);
-		options = new ArrayList<String>();
+		options = new ArrayList<>();
 		TabCompleteHandler.getInstance().addTabCompleteOption("(List)", options);
 		TabCompleteHandler.getInstance().addTabCompleteOption("(String)", options);
 		TabCompleteHandler.getInstance().addTabCompleteOption("(Text)", options);
@@ -733,7 +744,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 			@Override
 			public void reload() {
-				ArrayList<String> rewards = new ArrayList<String>();
+				ArrayList<String> rewards = new ArrayList<>();
 				for (Reward reward : rewardHandler.getRewards()) {
 					if (!reward.getConfig().isDirectlyDefinedReward()) {
 						rewards.add(reward.getRewardName());
@@ -752,7 +763,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 			@Override
 			public void reload() {
-				ArrayList<String> rewards = new ArrayList<String>();
+				ArrayList<String> rewards = new ArrayList<>();
 				for (Reward reward : rewardHandler.getRewards()) {
 					if (reward.getConfig().getEnableChoices()) {
 						rewards.add(reward.getRewardName());
@@ -767,19 +778,19 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		});
 
-		ArrayList<String> method = new ArrayList<String>();
+		ArrayList<String> method = new ArrayList<>();
 		for (InputMethod me : InputMethod.values()) {
 			method.add(me.toString());
 		}
 		TabCompleteHandler.getInstance().addTabCompleteOption("(RequestMethod)", method);
 
-		ArrayList<String> userStorage = new ArrayList<String>();
+		ArrayList<String> userStorage = new ArrayList<>();
 		for (UserStorage storage : UserStorage.values()) {
 			userStorage.add(storage.toString());
 		}
 		TabCompleteHandler.getInstance().addTabCompleteOption("(UserStorage)", userStorage);
 
-		ArrayList<String> times = new ArrayList<String>();
+		ArrayList<String> times = new ArrayList<>();
 		for (TimeType ty : TimeType.values()) {
 			times.add(ty.toString());
 		}
@@ -789,7 +800,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@SuppressWarnings("deprecation")
 	public void loadUserAPI(UserStorage storageType) {
 		if (storageType.equals(UserStorage.SQLITE)) {
-			ArrayList<Column> columns = new ArrayList<Column>();
+			ArrayList<Column> columns = new ArrayList<>();
 			Column key = new Column("uuid", DataType.STRING);
 			columns.add(key);
 			Table table = new Table(this, "Users", columns, key);
@@ -805,7 +816,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private void loadUUIDs() {
 
-		uuidNameCache = new ConcurrentHashMap<String, String>();
+		uuidNameCache = new ConcurrentHashMap<>();
 
 		addUserStartup(new UserStartup() {
 
@@ -866,10 +877,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			e.printStackTrace();
 		}
 	}
-
-	@Getter
-	@Setter
-	private boolean loadVault = true;
 
 	public void loadVault() {
 		if (isLoadVault()) {
@@ -1040,7 +1047,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getOptions().setYmlConfig(new YMLConfig(this, configData) {
 
 			@Override
-			public void setValue(String path, Object value) {
+			public void createSection(String key) {
 
 			}
 
@@ -1050,7 +1057,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 
 			@Override
-			public void createSection(String key) {
+			public void setValue(String path, Object value) {
 
 			}
 		});
@@ -1058,13 +1065,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public void setConfigData(YMLConfig ymlConfig) {
 		getOptions().setYmlConfig(ymlConfig);
-	}
-
-	public boolean isMySQLOkay() {
-		if (getStorageType().equals(UserStorage.MYSQL)) {
-			return mysql != null;
-		}
-		return true;
 	}
 
 	/**

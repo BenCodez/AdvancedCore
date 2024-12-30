@@ -85,7 +85,7 @@ public class RewardFileData {
 		if (getConfigData().isConfigurationSection("Choices")) {
 			return getConfigData().getConfigurationSection("Choices").getKeys(false);
 		}
-		return new HashSet<String>();
+		return new HashSet<>();
 	}
 
 	public ConfigurationSection getChoicesItem(String choice) {
@@ -104,10 +104,9 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsConsole() {
 		if (getConfigData().isList("Commands")) {
-			return (ArrayList<String>) getConfigData().getList("Commands", new ArrayList<String>());
-		} else {
-			return (ArrayList<String>) getConfigData().getList("Commands.Console", new ArrayList<String>());
+			return (ArrayList<String>) getConfigData().getList("Commands", new ArrayList<>());
 		}
+		return (ArrayList<String>) getConfigData().getList("Commands.Console", new ArrayList<>());
 
 	}
 
@@ -118,7 +117,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsPlayer() {
-		return (ArrayList<String>) getConfigData().getList("Commands.Player", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Commands.Player", new ArrayList<>());
 	}
 
 	public ConfigurationSection getConfigData() {
@@ -150,6 +149,10 @@ public class RewardFileData {
 		return getConfigData().getInt("Delayed.Hours");
 	}
 
+	public int getDelayedMilliSeconds() {
+		return getConfigData().getInt("Delayed.MilliSeconds");
+	}
+
 	/**
 	 * Gets the delayed minutes.
 	 *
@@ -161,10 +164,6 @@ public class RewardFileData {
 
 	public int getDelayedSeconds() {
 		return getConfigData().getInt("Delayed.Seconds");
-	}
-
-	public int getDelayedMilliSeconds() {
-		return getConfigData().getInt("Delayed.MilliSeconds");
 	}
 
 	/**
@@ -241,7 +240,7 @@ public class RewardFileData {
 		try {
 			return getConfigData().getConfigurationSection("Items." + item + ".Enchants").getKeys(false);
 		} catch (Exception ex) {
-			return new HashSet<String>();
+			return new HashSet<>();
 		}
 	}
 
@@ -322,7 +321,7 @@ public class RewardFileData {
 		try {
 			return getConfigData().getConfigurationSection("Items").getKeys(false);
 		} catch (Exception ex) {
-			return new HashSet<String>();
+			return new HashSet<>();
 		}
 	}
 
@@ -352,7 +351,7 @@ public class RewardFileData {
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getPriority() {
-		return (ArrayList<String>) getConfigData().getList("Priority", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Priority", new ArrayList<>());
 	}
 
 	/**
@@ -374,7 +373,8 @@ public class RewardFileData {
 		if (str != null) {
 			if (str.equalsIgnoreCase("online")) {
 				return "ONLINE";
-			} else if (str.equalsIgnoreCase("offline")) {
+			}
+			if (str.equalsIgnoreCase("offline")) {
 				return "OFFLINE";
 			} else {
 				return "BOTH";
@@ -422,7 +422,7 @@ public class RewardFileData {
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getWorlds() {
 
-		return (ArrayList<String>) getConfigData().getList("Worlds", new ArrayList<String>());
+		return (ArrayList<String>) getConfigData().getList("Worlds", new ArrayList<>());
 
 	}
 

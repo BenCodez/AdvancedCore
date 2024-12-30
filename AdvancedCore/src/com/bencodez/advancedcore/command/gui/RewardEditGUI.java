@@ -53,6 +53,22 @@ public class RewardEditGUI {
 	private RewardEditGUI() {
 	}
 
+	public HashMap<String, Object> getAllValues(ConfigurationSection data) {
+		HashMap<String, Object> values = new HashMap<>();
+		for (String key : data.getKeys(false)) {
+
+			if (data.isConfigurationSection(key)) {
+				HashMap<String, Object> valuesc = getAllValues(data.getConfigurationSection(key));
+				for (Entry<String, Object> entry : valuesc.entrySet()) {
+					values.put(key + "." + entry.getKey(), entry.getValue());
+				}
+			} else {
+				values.put(key, data.get(key));
+			}
+		}
+		return values;
+	}
+
 	/**
 	 * Gets the current reward.
 	 *
@@ -292,7 +308,7 @@ public class RewardEditGUI {
 		BInventory inv = new BInventory("Rewards");
 		for (Reward reward : plugin.getRewardHandler().getRewards()) {
 			if (!reward.getConfig().isDirectlyDefinedReward()) {
-				ArrayList<String> lore = new ArrayList<String>();
+				ArrayList<String> lore = new ArrayList<>();
 				if (reward.getConfig().isDirectlyDefinedReward()) {
 					lore.add("&cReward is not directly defined, can not edit in GUI");
 				}
@@ -317,7 +333,7 @@ public class RewardEditGUI {
 
 		for (DirectlyDefinedReward reward : plugin.getRewardHandler().getDirectlyDefinedRewards()) {
 			if (!reward.isDirectlyDefined()) {
-				ArrayList<String> lore = new ArrayList<String>();
+				ArrayList<String> lore = new ArrayList<>();
 				lore.add("DirectlyDefined reward handle");
 				inv.addButton(new BInventoryButton(reward.getFullPath(), ArrayUtils.convert(lore),
 						new ItemStack(Material.COBBLESTONE)) {
@@ -347,7 +363,7 @@ public class RewardEditGUI {
 		inv.addData("masterreward", rewardEditData);
 		for (Reward reward : plugin.getRewardHandler().getRewards()) {
 			if (!reward.getConfig().isDirectlyDefinedReward()) {
-				ArrayList<String> lore = new ArrayList<String>();
+				ArrayList<String> lore = new ArrayList<>();
 				if (reward.getConfig().isDirectlyDefinedReward()) {
 					lore.add("&cReward is directly defined");
 				}
@@ -360,12 +376,6 @@ public class RewardEditGUI {
 						new RewardGUIConfirmation(plugin, player, "Confirm copy reward?") {
 
 							@Override
-							public void onDeny(Player p) {
-								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
-								rewardEditData.reOpenEditGUI(player);
-							}
-
-							@Override
 							public void onConfirm(Player p) {
 								Reward reward = (Reward) getButton().getData("Reward");
 								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
@@ -373,6 +383,12 @@ public class RewardEditGUI {
 										.entrySet()) {
 									rewardEditData.setValue(entry.getKey(), entry.getValue());
 								}
+							}
+
+							@Override
+							public void onDeny(Player p) {
+								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
+								rewardEditData.reOpenEditGUI(player);
 							}
 						}.open();
 					}
@@ -382,7 +398,7 @@ public class RewardEditGUI {
 
 		for (DirectlyDefinedReward reward : plugin.getRewardHandler().getDirectlyDefinedRewards()) {
 			if (reward.isDirectlyDefined()) {
-				ArrayList<String> lore = new ArrayList<String>();
+				ArrayList<String> lore = new ArrayList<>();
 
 				inv.addButton(new BInventoryButton(reward.getFullPath(), ArrayUtils.convert(lore),
 						new ItemStack(Material.COBBLESTONE)) {
@@ -390,12 +406,6 @@ public class RewardEditGUI {
 					@Override
 					public void onClick(ClickEvent event) {
 						new RewardGUIConfirmation(plugin, player, "Confirm copy reward?") {
-
-							@Override
-							public void onDeny(Player p) {
-								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
-								rewardEditData.reOpenEditGUI(player);
-							}
 
 							@Override
 							public void onConfirm(Player p) {
@@ -406,6 +416,12 @@ public class RewardEditGUI {
 									rewardEditData.setValue(entry.getKey(), entry.getValue());
 								}
 							}
+
+							@Override
+							public void onDeny(Player p) {
+								RewardEditData rewardEditData = (RewardEditData) getInv().getData("masterreward");
+								rewardEditData.reOpenEditGUI(player);
+							}
 						}.open();
 					}
 				}.addData("Reward", reward));
@@ -414,22 +430,6 @@ public class RewardEditGUI {
 		}
 
 		inv.openInventory(player);
-	}
-
-	public HashMap<String, Object> getAllValues(ConfigurationSection data) {
-		HashMap<String, Object> values = new HashMap<String, Object>();
-		for (String key : data.getKeys(false)) {
-
-			if (data.isConfigurationSection(key)) {
-				HashMap<String, Object> valuesc = getAllValues(data.getConfigurationSection(key));
-				for (Entry<String, Object> entry : valuesc.entrySet()) {
-					values.put(key + "." + entry.getKey(), entry.getValue());
-				}
-			} else {
-				values.put(key, data.get(key));
-			}
-		}
-		return values;
 	}
 
 }

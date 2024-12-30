@@ -8,7 +8,7 @@ public class UserDataKeyBoolean extends UserDataKey {
 		super(key);
 		setColumnType("VARCHAR(5)");
 	}
-	
+
 	public DataValue getDefault() {
 		return new DataValueBoolean(false);
 	}

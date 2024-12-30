@@ -45,21 +45,6 @@ public class AdvancedCoreConfigOptions {
 	@ConfigDataString(path = "ClickSound.Sound")
 	private String clickSoundSoundStr = "ui.button.click";
 
-	public Sound getClickSoundSound() {
-
-		if (getClickSoundSoundStr().equalsIgnoreCase("none")) {
-			return null;
-		} else {
-			try {
-				return Registry.SOUNDS
-						.get(NamespacedKey.minecraft(getClickSoundSoundStr().replaceAll("_", ".").toLowerCase()));
-			} catch (Exception e) {
-				e.printStackTrace();
-				return Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
-			}
-		}
-	}
-
 	@Getter
 	@Setter
 	@ConfigDataDouble(path = "ClickSound.Volume")
@@ -86,15 +71,15 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@ConfigDataString(path = "RequestAPI.DefaultMethod")
 	private String defaultRequestMethod = "ANVIL";
+
 	@Getter
 	@Setter
 	@ConfigDataBoolean(path = "DisableCheckOnWorldChange")
 	private boolean disableCheckOnWorldChange = false;
-
 	@Getter
 	@Setter
 	@ConfigDataListString(path = "RequestAPI.DisabledMethods")
-	private ArrayList<String> disabledRequestMethods = new ArrayList<String>();
+	private ArrayList<String> disabledRequestMethods = new ArrayList<>();
 
 	@Getter
 	@Setter
@@ -145,11 +130,11 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@ConfigDataString(path = "Format.HelpLine")
 	private String helpLine = "&3&l%Command% - &3%HelpMessage%";
+
 	@Getter
 	@Setter
 	@ConfigDataBoolean(path = "")
 	private boolean loadDefaultRewards = true;
-
 	@Getter
 	@Setter
 	@ConfigDataBoolean(path = "LogDebugToFile")
@@ -287,7 +272,7 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	@ConfigDataListString(path = "BroadcastBlacklist")
-	private ArrayList<String> broadcastBlacklist = new ArrayList<String>();
+	private ArrayList<String> broadcastBlacklist = new ArrayList<>();
 
 	@Getter
 	@Setter
@@ -297,14 +282,28 @@ public class AdvancedCoreConfigOptions {
 	@Getter
 	@Setter
 	@ConfigDataListString(path = "DefaultRewardWorlds")
-	private ArrayList<String> defaultRewardWorlds = new ArrayList<String>();
+	private ArrayList<String> defaultRewardWorlds = new ArrayList<>();
 
 	@Getter
 	@Setter
 	@ConfigDataListString(path = "DefaultRewardBlackListedWorlds")
-	private ArrayList<String> defaultRewardBlackListedWorlds = new ArrayList<String>();
+	private ArrayList<String> defaultRewardBlackListedWorlds = new ArrayList<>();
 
 	public AdvancedCoreConfigOptions() {
+	}
+
+	public Sound getClickSoundSound() {
+
+		if (getClickSoundSoundStr().equalsIgnoreCase("none")) {
+			return null;
+		}
+		try {
+			return Registry.SOUNDS
+					.get(NamespacedKey.minecraft(getClickSoundSoundStr().replaceAll("_", ".").toLowerCase()));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
+		}
 	}
 
 	public void load(AdvancedCorePlugin plugin) {

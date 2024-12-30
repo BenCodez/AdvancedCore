@@ -16,6 +16,11 @@ public abstract class EditGUIValueString extends EditGUIValue {
 	}
 
 	@Override
+	public String getType() {
+		return "string";
+	}
+
+	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
 			setCurrentValue("");
@@ -26,13 +31,8 @@ public abstract class EditGUIValueString extends EditGUIValue {
 				setValue(player, value);
 				player.sendMessage(MessageAPI.colorize("&cSetting " + getKey() + " to " + value));
 			}
-		}, ArrayUtils.convert(getOptions())).currentValue(getCurrentValue().toString())
-				.allowCustomOption(true).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
-	}
-
-	@Override
-	public String getType() {
-		return "string";
+		}, ArrayUtils.convert(getOptions())).currentValue(getCurrentValue().toString()).allowCustomOption(true)
+				.usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
 
 	public abstract void setValue(Player player, String value);

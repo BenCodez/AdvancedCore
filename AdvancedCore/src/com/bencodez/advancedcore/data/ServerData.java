@@ -16,6 +16,10 @@ public class ServerData extends YMLFile {
 		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
 	}
 
+	public long getLastUpdated() {
+		return getData().getLong("LastUpdated", -1);
+	}
+
 	/**
 	 * Gets the plugin version.
 	 *
@@ -61,15 +65,6 @@ public class ServerData extends YMLFile {
 	public void onFileCreation() {
 	}
 
-	public long getLastUpdated() {
-		return getData().getLong("LastUpdated", -1);
-	}
-
-	public void setLastUpdated() {
-		getData().set("LastUpdated", System.currentTimeMillis());
-		saveData();
-	}
-
 	public void setData(String path, Object value) {
 		getData().set(path, value);
 		saveData();
@@ -77,6 +72,11 @@ public class ServerData extends YMLFile {
 
 	public void setIgnoreTime(boolean value) {
 		getData().set("IgnoreTime", value);
+		saveData();
+	}
+
+	public void setLastUpdated() {
+		getData().set("LastUpdated", System.currentTimeMillis());
 		saveData();
 	}
 

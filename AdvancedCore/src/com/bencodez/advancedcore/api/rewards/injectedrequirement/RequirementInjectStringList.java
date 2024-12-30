@@ -17,7 +17,7 @@ public abstract class RequirementInjectStringList extends RequirementInject {
 
 	@Getter
 	@Setter
-	private ArrayList<String> defaultValue = new ArrayList<String>();
+	private ArrayList<String> defaultValue = new ArrayList<>();
 
 	public RequirementInjectStringList(String path) {
 		super(path);

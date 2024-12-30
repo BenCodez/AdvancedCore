@@ -27,7 +27,7 @@ public abstract class RewardEditPotions extends RewardEdit {
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Potions: " + reward.getName());
 		inv.addData("Reward", reward);
-		ArrayList<String> potionEffects = new ArrayList<String>();
+		ArrayList<String> potionEffects = new ArrayList<>();
 
 		for (PotionEffectType effect : PotionEffectType.values()) {
 			potionEffects.add(effect.toString());

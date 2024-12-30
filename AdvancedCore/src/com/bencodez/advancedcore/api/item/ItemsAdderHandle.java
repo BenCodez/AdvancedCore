@@ -13,9 +13,8 @@ public class ItemsAdderHandle {
 		CustomStack stack = CustomStack.getInstance(item);
 		if (stack != null) {
 			return stack.getItemStack();
-		} else {
-			// no custom item found with that id
-			return null;
 		}
+		// no custom item found with that id
+		return null;
 	}
 }

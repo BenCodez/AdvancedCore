@@ -44,8 +44,6 @@ public abstract class SocketServer extends Thread {
 		}
 	}
 
-	public abstract void logger(String str);
-
 	public void close() {
 		try {
 			running = false;
@@ -54,6 +52,8 @@ public abstract class SocketServer extends Thread {
 			e.printStackTrace();
 		}
 	}
+
+	public abstract void logger(String str);
 
 	public abstract void onReceive(String[] data);
 

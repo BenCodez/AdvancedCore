@@ -15,10 +15,10 @@ public abstract class UserDataKey {
 		this.key = key;
 	}
 
+	public abstract DataValue getDefault();
+
 	public UserDataKey setColumnType(String columnType) {
 		this.columnType = columnType;
 		return this;
 	}
-	
-	public abstract DataValue getDefault();
 }

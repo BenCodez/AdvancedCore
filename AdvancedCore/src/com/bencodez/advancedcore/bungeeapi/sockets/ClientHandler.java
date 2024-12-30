@@ -40,8 +40,7 @@ public class ClientHandler {
 
 	public void sendMessage(boolean debug, String... msgs) {
 		if (debug) {
-			System.out.println("Socket Sending: "
-					+ ArrayUtils.makeStringList(ArrayUtils.convert(msgs)));
+			System.out.println("Socket Sending: " + ArrayUtils.makeStringList(ArrayUtils.convert(msgs)));
 		}
 		connect();
 		String msg = msgs[0];

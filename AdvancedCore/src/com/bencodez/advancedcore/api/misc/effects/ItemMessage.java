@@ -48,14 +48,13 @@ public class ItemMessage {
 		@Override
 		public int compareTo(Object other) {
 			MessageRecord rec = importOtherMessageRecord(other);
-			if (rec != null) {
-				if (this.priority == rec.getPriority()) {
-					return (Long.valueOf(this.id)).compareTo(rec.getId());
-				} else {
-					return (Integer.valueOf(this.priority)).compareTo(rec.getPriority());
-				}
-			} else {
+			if (rec == null) {
 				return 0;
+			}
+			if (this.priority == rec.getPriority()) {
+				return (Long.valueOf(this.id)).compareTo(rec.getId());
+			} else {
+				return (Integer.valueOf(this.priority)).compareTo(rec.getPriority());
 			}
 		}
 
@@ -83,7 +82,7 @@ public class ItemMessage {
 		private int slot;
 
 		public NamerTask(Player player, MessageRecord rec) {
-			this.playerRef = new WeakReference<Player>(player);
+			this.playerRef = new WeakReference<>(player);
 			this.iterations = Math.max(1, (rec.getDuration() * 20) / interval);
 			this.slot = player.getInventory().getHeldItemSlot();
 			this.message = rec.getMessage();
@@ -195,7 +194,7 @@ public class ItemMessage {
 	@SuppressWarnings("unchecked")
 	private PriorityQueue<MessageRecord> getMessageQueue(Player player) {
 		if (!player.hasMetadata(METADATA_Q_KEY)) {
-			player.setMetadata(METADATA_Q_KEY, new FixedMetadataValue(plugin, new PriorityQueue<MessageRecord>()));
+			player.setMetadata(METADATA_Q_KEY, new FixedMetadataValue(plugin, new PriorityQueue<>()));
 		}
 		for (MetadataValue v : player.getMetadata(METADATA_Q_KEY)) {
 			if (v.value() instanceof PriorityQueue<?>) {
@@ -231,7 +230,8 @@ public class ItemMessage {
 	private MessageRecord importOtherMessageRecord(Object other) {
 		if (other instanceof MessageRecord) {
 			return (MessageRecord) other;
-		} else if (other.getClass().getName().endsWith(".ItemMessage$MessageRecord")) {
+		}
+		if (other.getClass().getName().endsWith(".ItemMessage$MessageRecord")) {
 			// looks like the same class as us - we make no assumptions about what package
 			// it's in, though
 			try {

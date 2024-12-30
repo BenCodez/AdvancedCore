@@ -27,7 +27,7 @@ import lombok.Getter;
 public abstract class VelocityMySQL {
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
 
-	private List<String> intColumns = new ArrayList<String>();
+	private List<String> intColumns = new ArrayList<>();
 
 	// private HashMap<String, ArrayList<Column>> table;
 
@@ -143,18 +143,6 @@ public abstract class VelocityMySQL {
 		}
 	}
 
-	public void wipeColumnData(String columnName, DataType dataType) {
-		checkColumn(columnName, dataType);
-		String sql = "UPDATE " + getName() + " SET " + columnName + " = " + dataType.getNoValue() + ";";
-		try {
-			Query query = new Query(mysql, sql);
-			query.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-	}
-
 	public void clearCache() {
 		clearCacheBasic();
 	}
@@ -191,6 +179,18 @@ public abstract class VelocityMySQL {
 		return false;
 	}
 
+	public void copyColumnData(String columnFromName, String columnToName) {
+		checkColumn(columnFromName, DataType.STRING);
+		checkColumn(columnToName, DataType.STRING);
+		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public abstract void debug(SQLException e);
 
 	public List<String> getColumns() {
@@ -201,7 +201,7 @@ public abstract class VelocityMySQL {
 	}
 
 	public ArrayList<String> getColumnsQueury() {
-		ArrayList<String> columns = new ArrayList<String>();
+		ArrayList<String> columns = new ArrayList<>();
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement("SHOW COLUMNS FROM `" + getName() + "`;")) {
 			ResultSet rs = sql.executeQuery();
@@ -217,44 +217,6 @@ public abstract class VelocityMySQL {
 			e.printStackTrace();
 		}
 		return columns;
-	}
-
-	public void copyColumnData(String columnFromName, String columnToName) {
-		checkColumn(columnFromName, DataType.STRING);
-		checkColumn(columnToName, DataType.STRING);
-		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
-		try {
-			Query query = new Query(mysql, sql);
-			query.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public ConcurrentHashMap<UUID, String> getRowsUUIDNameQuery() {
-		ConcurrentHashMap<UUID, String> uuidNames = new ConcurrentHashMap<UUID, String>();
-		String sqlStr = "SELECT UUID, PlayerName FROM " + getName() + ";";
-
-		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
-			ResultSet rs = sql.executeQuery();
-			/*
-			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
-			 */
-
-			while (rs.next()) {
-				String uuid = rs.getString("uuid");
-				String playerName = rs.getString("PlayerName");
-				if (uuid != null && !uuid.isEmpty() && !uuid.equals("null") && playerName != null) {
-					uuidNames.put(UUID.fromString(uuid), playerName);
-				}
-			}
-			sql.close();
-			conn.close();
-		} catch (SQLException e) {
-		}
-
-		return uuidNames;
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
@@ -302,7 +264,7 @@ public abstract class VelocityMySQL {
 	}
 
 	public ArrayList<String> getNamesQuery() {
-		ArrayList<String> uuids = new ArrayList<String>();
+		ArrayList<String> uuids = new ArrayList<>();
 
 		checkColumn("PlayerName", DataType.STRING);
 		ArrayList<Column> rows = getRowsNameQuery();
@@ -318,7 +280,7 @@ public abstract class VelocityMySQL {
 	}
 
 	public ArrayList<Column> getRowsNameQuery() {
-		ArrayList<Column> result = new ArrayList<Column>();
+		ArrayList<Column> result = new ArrayList<>();
 		String sqlStr = "SELECT PlayerName FROM " + getName() + ";";
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
@@ -341,7 +303,7 @@ public abstract class VelocityMySQL {
 	}
 
 	public ArrayList<Column> getRowsQuery() {
-		ArrayList<Column> result = new ArrayList<Column>();
+		ArrayList<Column> result = new ArrayList<>();
 		String sqlStr = "SELECT uuid FROM " + getName() + ";";
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
@@ -361,6 +323,32 @@ public abstract class VelocityMySQL {
 		}
 
 		return result;
+	}
+
+	public ConcurrentHashMap<UUID, String> getRowsUUIDNameQuery() {
+		ConcurrentHashMap<UUID, String> uuidNames = new ConcurrentHashMap<>();
+		String sqlStr = "SELECT UUID, PlayerName FROM " + getName() + ";";
+
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
+			ResultSet rs = sql.executeQuery();
+			/*
+			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
+			 */
+
+			while (rs.next()) {
+				String uuid = rs.getString("uuid");
+				String playerName = rs.getString("PlayerName");
+				if (uuid != null && !uuid.isEmpty() && !uuid.equals("null") && playerName != null) {
+					uuidNames.put(UUID.fromString(uuid), playerName);
+				}
+			}
+			sql.close();
+			conn.close();
+		} catch (SQLException e) {
+		}
+
+		return uuidNames;
 	}
 
 	public String getUUID(String playerName) {
@@ -396,7 +384,7 @@ public abstract class VelocityMySQL {
 	}
 
 	public ArrayList<String> getUuidsQuery() {
-		ArrayList<String> uuids = new ArrayList<String>();
+		ArrayList<String> uuids = new ArrayList<>();
 
 		ArrayList<Column> rows = getRowsQuery();
 		for (Column c : rows) {
@@ -457,6 +445,10 @@ public abstract class VelocityMySQL {
 	}
 
 	public abstract void severe(String str);
+
+	public void shutDown() {
+		mysql.disconnect();
+	}
 
 	public void update(String index, List<Column> cols) {
 		for (Column col : cols) {
@@ -532,7 +524,15 @@ public abstract class VelocityMySQL {
 
 	}
 
-	public void shutDown() {
-		mysql.disconnect();
+	public void wipeColumnData(String columnName, DataType dataType) {
+		checkColumn(columnName, dataType);
+		String sql = "UPDATE " + getName() + " SET " + columnName + " = " + dataType.getNoValue() + ";";
+		try {
+			Query query = new Query(mysql, sql);
+			query.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
 	}
 }

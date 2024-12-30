@@ -190,7 +190,7 @@ public class Reward {
 
 	public void giveInjectedRewards(AdvancedCoreUser user, HashMap<String, String> placeholders) {
 
-		ArrayList<RewardInject> postReward = new ArrayList<RewardInject>();
+		ArrayList<RewardInject> postReward = new ArrayList<>();
 
 		for (final RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
 			boolean Addplaceholder = inject.isAddAsPlaceholder();
@@ -307,11 +307,10 @@ public class Reward {
 						plugin.debug(getRewardName() + ": Requirement failed " + inject.getPath() + ":"
 								+ inject.isAllowReattempt());
 						canGive = false;
-						if (inject.isAllowReattempt()) {
-							allowOffline = true;
-						} else {
+						if (!inject.isAllowReattempt()) {
 							return;
 						}
+						allowOffline = true;
 					}
 				} catch (Exception e) {
 					plugin.debug("Failed to check requirement " + inject.getPath());
@@ -373,7 +372,7 @@ public class Reward {
 
 			// placeholders
 			if (phs == null) {
-				phs = new HashMap<String, String>();
+				phs = new HashMap<>();
 			}
 			final String playerName = user.getPlayerName();
 			phs.put("player", playerName);
@@ -392,7 +391,7 @@ public class Reward {
 				}
 			}
 
-			final HashMap<String, String> placeholders = new HashMap<String, String>(phs);
+			final HashMap<String, String> placeholders = new HashMap<>(phs);
 
 			giveInjectedRewards(user, placeholders);
 

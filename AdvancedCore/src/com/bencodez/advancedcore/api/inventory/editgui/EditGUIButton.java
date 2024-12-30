@@ -64,8 +64,7 @@ public class EditGUIButton extends BInventoryButton {
 				builder.setName("&cEdit list for " + getEditor().getKey());
 			}
 			if (getEditor().getCurrentValue() instanceof ArrayList<?>) {
-				builder.setLore(
-						ArrayUtils.makeStringList((ArrayList<String>) getEditor().getCurrentValue()));
+				builder.setLore(ArrayUtils.makeStringList((ArrayList<String>) getEditor().getCurrentValue()));
 			} else {
 				builder.setLore("&cCurrent value: null");
 			}

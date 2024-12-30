@@ -69,7 +69,7 @@ public class ItemBuilder {
 	@Getter
 	private ConfigurationSection conditionalValues;
 	@Getter
-	private List<Integer> fillSlots = new ArrayList<Integer>();
+	private List<Integer> fillSlots = new ArrayList<>();
 	private ItemStack is;
 	@Getter
 	private String javascriptConditional = "";
@@ -85,7 +85,7 @@ public class ItemBuilder {
 	@Getter
 	private String identifier;
 
-	private HashMap<String, String> placeholders = new HashMap<String, String>();
+	private HashMap<String, String> placeholders = new HashMap<>();
 
 	private String skull = "";
 
@@ -149,7 +149,7 @@ public class ItemBuilder {
 
 				} else {
 					if (data.isConfigurationSection("ItemStack")) {
-						HashMap<String, Object> map = new HashMap<String, Object>();
+						HashMap<String, Object> map = new HashMap<>();
 						for (String key : data.getConfigurationSection("ItemStack").getKeys(false)) {
 							map.put(key, data.get("ItemStack." + key));
 						}
@@ -300,7 +300,7 @@ public class ItemBuilder {
 						}
 
 						if (data.isConfigurationSection("Enchants")) {
-							HashMap<String, Integer> enchants = new HashMap<String, Integer>();
+							HashMap<String, Integer> enchants = new HashMap<>();
 							for (String enchant : data.getConfigurationSection("Enchants").getKeys(false)) {
 								enchants.put(enchant, data.getInt("Enchants." + enchant));
 							}
@@ -309,7 +309,7 @@ public class ItemBuilder {
 
 						@SuppressWarnings("unchecked")
 						ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags",
-								new ArrayList<String>());
+								new ArrayList<>());
 						for (String flag : itemFlags) {
 							addItemFlag(flag);
 						}
@@ -452,7 +452,7 @@ public class ItemBuilder {
 		if ((enchants == null) || (enchants.size() == 0)) {
 			return this;
 		}
-		HashMap<Enchantment, Integer> enchantments = new HashMap<Enchantment, Integer>();
+		HashMap<Enchantment, Integer> enchantments = new HashMap<>();
 		for (String enchant : enchants.keySet()) {
 			try {
 				if (!NMSManager.getInstance().isVersion("1.12")) {
@@ -590,15 +590,14 @@ public class ItemBuilder {
 
 		if (randomNum <= chance) {
 			return true;
-		} else {
-			return false;
 		}
+		return false;
 	}
 
 	private ItemBuilder checkLoreLength() {
 		int loreLength = getLoreLength();
 		ArrayList<String> currentLore = getLore();
-		ArrayList<String> newLore = new ArrayList<String>();
+		ArrayList<String> newLore = new ArrayList<>();
 		for (String lore : currentLore) {
 			StringBuilder builder = new StringBuilder();
 			int count = 0;
@@ -636,7 +635,7 @@ public class ItemBuilder {
 
 	@SuppressWarnings("deprecation")
 	public LinkedHashMap<String, Object> createConfigurationData() {
-		LinkedHashMap<String, Object> data = new LinkedHashMap<String, Object>();
+		LinkedHashMap<String, Object> data = new LinkedHashMap<>();
 		data.put("Material", is.getType().toString());
 		data.put("Amount", getAmount());
 		if (hasCustomDisplayName()) {
@@ -652,7 +651,7 @@ public class ItemBuilder {
 			data.put("Enchants." + en.getKey().getName(), en.getValue());
 		}
 
-		ArrayList<String> flags = new ArrayList<String>();
+		ArrayList<String> flags = new ArrayList<>();
 		for (ItemFlag fl : is.getItemMeta().getItemFlags()) {
 			flags.add(fl.toString());
 		}
@@ -694,35 +693,38 @@ public class ItemBuilder {
 		return is.getItemMeta().getAttributeModifiers(att);
 	}
 
+	public ItemBuilder getConditionItemBuilder(OfflinePlayer player) {
+		return setConditional(new JavascriptEngine().addPlayer(player));
+	}
+
 	public Map<String, Object> getConfiguration(boolean deseralize) {
 		if (deseralize) {
 			return is.serialize();
-		} else {
-			HashMap<String, Object> map = new HashMap<String, Object>();
-			map.put("Material", is.getType().toString());
-			map.put("Amount", is.getAmount());
-			if (hasCustomDisplayName()) {
-				map.put("Name", getName());
-			}
-			if (hasCustomLore()) {
-				map.put("Lore", getLore());
-			}
-			ItemMeta im = is.getItemMeta();
-			for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
-				map.put("Enchants." + entry.getKey().getKey(), entry.getValue().intValue());
-			}
-
-			ArrayList<String> flagList = new ArrayList<String>();
-			for (ItemFlag flag : im.getItemFlags()) {
-				flagList.add(flag.toString());
-			}
-			map.put("ItemFlags", flagList);
-
-			if (im.hasCustomModelData()) {
-				map.put("CustomModelData", im.getCustomModelData());
-			}
-			return map;
 		}
+		HashMap<String, Object> map = new HashMap<>();
+		map.put("Material", is.getType().toString());
+		map.put("Amount", is.getAmount());
+		if (hasCustomDisplayName()) {
+			map.put("Name", getName());
+		}
+		if (hasCustomLore()) {
+			map.put("Lore", getLore());
+		}
+		ItemMeta im = is.getItemMeta();
+		for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
+			map.put("Enchants." + entry.getKey().getKey(), entry.getValue().intValue());
+		}
+
+		ArrayList<String> flagList = new ArrayList<>();
+		for (ItemFlag flag : im.getItemFlags()) {
+			flagList.add(flag.toString());
+		}
+		map.put("ItemFlags", flagList);
+
+		if (im.hasCustomModelData()) {
+			map.put("CustomModelData", im.getCustomModelData());
+		}
+		return map;
 
 	}
 
@@ -739,13 +741,13 @@ public class ItemBuilder {
 	public ArrayList<String> getLore() {
 		if (hasCustomLore()) {
 			List<String> lore = is.getItemMeta().getLore();
-			ArrayList<String> list = new ArrayList<String>();
+			ArrayList<String> list = new ArrayList<>();
 			if (lore != null) {
 				list.addAll(lore);
 			}
 			return list;
 		}
-		return new ArrayList<String>();
+		return new ArrayList<>();
 
 	}
 
@@ -761,6 +763,15 @@ public class ItemBuilder {
 			return is.getItemMeta().getDisplayName();
 		}
 		return "";
+	}
+
+	public String getRewardsPath(Player player) {
+		if (conditional) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			String value = engine.getStringValue(javascriptConditional);
+			return "Conditional." + value + ".Rewards";
+		}
+		return "Rewards";
 	}
 
 	/**
@@ -816,17 +827,16 @@ public class ItemBuilder {
 	}
 
 	public ItemStack parsePlaceholders(OfflinePlayer player) {
-		if (player != null) {
-			setName(PlaceholderUtils.replaceJavascript(player,
-					PlaceholderUtils.replacePlaceHolder(getName(), placeholders)));
-			setLore(PlaceholderUtils.replaceJavascript(player,
-					PlaceholderUtils.replacePlaceHolder(getLore(), placeholders)));
-			if (skull.contains("%")) {
-				setSkullOwner(PlaceholderUtils.replaceJavascript(player,
-						PlaceholderUtils.replacePlaceHolder(skull, placeholders)));
-			}
-		} else {
+		if (player == null) {
 			return toItemStack();
+		}
+		setName(PlaceholderUtils.replaceJavascript(player,
+				PlaceholderUtils.replacePlaceHolder(getName(), placeholders)));
+		setLore(PlaceholderUtils.replaceJavascript(player,
+				PlaceholderUtils.replacePlaceHolder(getLore(), placeholders)));
+		if (skull.contains("%")) {
+			setSkullOwner(PlaceholderUtils.replaceJavascript(player,
+					PlaceholderUtils.replacePlaceHolder(skull, placeholders)));
 		}
 		return is;
 	}
@@ -909,15 +919,6 @@ public class ItemBuilder {
 			}
 		}
 		return null;
-	}
-
-	public String getRewardsPath(Player player) {
-		if (conditional) {
-			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			String value = engine.getStringValue(javascriptConditional);
-			return "Conditional." + value + ".Rewards";
-		}
-		return "Rewards";
 	}
 
 	public ItemBuilder setCustomData(String key, String value) {
@@ -1016,7 +1017,7 @@ public class ItemBuilder {
 	 * @return ItemBuilder
 	 */
 	public ItemBuilder setLore(List<String> lore) {
-		List<String> list = new ArrayList<String>();
+		List<String> list = new ArrayList<>();
 		for (String str : lore) {
 			for (String s : str.split("%NewLine%")) {
 				list.add(s);
@@ -1141,10 +1142,6 @@ public class ItemBuilder {
 			checkLoreLength();
 		}
 		return is;
-	}
-
-	public ItemBuilder getConditionItemBuilder(OfflinePlayer player) {
-		return setConditional(new JavascriptEngine().addPlayer(player));
 	}
 
 	public ItemStack toItemStack(OfflinePlayer player) {

@@ -32,7 +32,7 @@ public abstract class RewardEditAdvancedWorld extends RewardEdit {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
-				ArrayList<String> worlds = new ArrayList<String>();
+				ArrayList<String> worlds = new ArrayList<>();
 				for (World w : Bukkit.getWorlds()) {
 					worlds.add(w.getName());
 				}

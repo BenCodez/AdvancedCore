@@ -6,9 +6,9 @@ public enum UserStorage {
 	FLAT;
 
 	public static UserStorage value(String str) {
-		//if (str.equalsIgnoreCase("FLAT")) {
-			//return SQLITE;
-		//}
+		// if (str.equalsIgnoreCase("FLAT")) {
+		// return SQLITE;
+		// }
 		for (UserStorage s : values()) {
 			if (s.toString().equalsIgnoreCase(str)) {
 				return s;

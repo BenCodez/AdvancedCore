@@ -43,7 +43,7 @@ public class UserGUI {
 	}
 
 	/** The plugin buttons. */
-	private HashMap<Plugin, BInventoryButton> extraButtons = new HashMap<Plugin, BInventoryButton>();
+	private HashMap<Plugin, BInventoryButton> extraButtons = new HashMap<>();
 
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
@@ -90,13 +90,13 @@ public class UserGUI {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				ArrayList<String> rewards = new ArrayList<String>();
+				ArrayList<String> rewards = new ArrayList<>();
 				for (Reward reward : plugin.getRewardHandler().getRewards()) {
 					rewards.add(reward.getRewardName());
 				}
 
-				new ValueRequest().requestString(clickEvent.getPlayer(), "", ArrayUtils.convert(rewards),
-						true, new StringListener() {
+				new ValueRequest().requestString(clickEvent.getPlayer(), "", ArrayUtils.convert(rewards), true,
+						new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {
@@ -169,19 +169,18 @@ public class UserGUI {
 			return;
 		}
 
-		ArrayList<String> players = new ArrayList<String>();
+		ArrayList<String> players = new ArrayList<>();
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			players.add(p.getName());
 		}
-		new ValueRequest().requestString(player, "", ArrayUtils.convert(players), true,
-				new StringListener() {
+		new ValueRequest().requestString(player, "", ArrayUtils.convert(players), true, new StringListener() {
 
-					@Override
-					public void onInput(Player player, String value) {
-						setCurrentPlayer(player, value);
-						openUserGUI(player, value);
-					}
-				});
+			@Override
+			public void onInput(Player player, String value) {
+				setCurrentPlayer(player, value);
+				openUserGUI(player, value);
+			}
+		});
 	}
 
 	/**

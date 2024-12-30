@@ -47,16 +47,15 @@ public class JavascriptEngineHandler {
 	public ScriptEngine getJSScriptEngine() {
 		if (builtIn) {
 			return new ScriptEngineManager().getEngineByName("js");
-		} else {
-			if (factory != null) {
-				try {
-					return (ScriptEngine) methodToUse.invoke(factory.newInstance(), new Object[] {});
-				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-						| InstantiationException e) {
-					e.printStackTrace();
-				}
-			}
-			return null;
 		}
+		if (factory != null) {
+			try {
+				return (ScriptEngine) methodToUse.invoke(factory.newInstance(), new Object[] {});
+			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
+					| InstantiationException e) {
+				e.printStackTrace();
+			}
+		}
+		return null;
 	}
 }

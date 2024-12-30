@@ -27,6 +27,11 @@ public abstract class NonPlayerPlaceHolder<T> {
 		this.identifier = identifier;
 	}
 
+	public NonPlayerPlaceHolder(String identifier, boolean useStartsWith) {
+		this.identifier = identifier;
+		this.useStartsWith = useStartsWith;
+	}
+
 	public NonPlayerPlaceHolder(String identifier, String noValueReturn) {
 		this.identifier = identifier;
 		this.noValueReturn = noValueReturn;
@@ -38,13 +43,12 @@ public abstract class NonPlayerPlaceHolder<T> {
 		this.noValueReturn = noValueReturn;
 	}
 
-	public NonPlayerPlaceHolder(String identifier, boolean useStartsWith) {
-		this.identifier = identifier;
-		this.useStartsWith = useStartsWith;
-	}
-
 	public boolean hasDescription() {
 		return description != null;
+	}
+
+	public boolean isCached(String identifier) {
+		return cache.containsKey(identifier);
 	}
 
 	public boolean matches(String identifier) {
@@ -62,6 +66,15 @@ public abstract class NonPlayerPlaceHolder<T> {
 
 	public abstract String placeholderRequest(String identifier);
 
+	public NonPlayerPlaceHolder<T> setUseCache(boolean usesCache, String identifier) {
+		this.usesCache = usesCache;
+		if (cache == null) {
+			cache = new ConcurrentHashMap<>();
+		}
+		cache.put(identifier, "");
+		return this;
+	}
+
 	public NonPlayerPlaceHolder<T> useStartsWith() {
 		useStartsWith = true;
 		return this;
@@ -70,19 +83,6 @@ public abstract class NonPlayerPlaceHolder<T> {
 	public NonPlayerPlaceHolder<T> withDescription(String desc) {
 		description = desc;
 		return this;
-	}
-
-	public NonPlayerPlaceHolder<T> setUseCache(boolean usesCache, String identifier) {
-		this.usesCache = usesCache;
-		if (cache == null) {
-			cache = new ConcurrentHashMap<String, String>();
-		}
-		cache.put(identifier, "");
-		return this;
-	}
-
-	public boolean isCached(String identifier) {
-		return cache.containsKey(identifier);
 	}
 
 }

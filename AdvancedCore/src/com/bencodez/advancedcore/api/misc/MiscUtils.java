@@ -59,101 +59,11 @@ public class MiscUtils {
 	private MiscUtils() {
 	}
 
-	/**
-	 * Convert.
-	 *
-	 * @param array the array
-	 * @return the user[]
-	 */
-	public AdvancedCoreUser[] convertUsers(ArrayList<AdvancedCoreUser> array) {
-		if (array == null) {
-			return null;
-		}
-		AdvancedCoreUser[] list = new AdvancedCoreUser[array.size()];
-		for (int i = 0; i < array.size(); i++) {
-			list[i] = array.get(i);
-		}
-		return list;
-	}
-
-	/**
-	 * Convert set.
-	 *
-	 * @param set the set
-	 * @return the array list
-	 */
-	public ArrayList<AdvancedCoreUser> convertUsers(Set<AdvancedCoreUser> set) {
-		if (set == null) {
-			return null;
-		}
-
-		ArrayList<AdvancedCoreUser> list = new ArrayList<AdvancedCoreUser>();
-		for (AdvancedCoreUser user : set) {
-			list.add(user);
-		}
-		return list;
-	}
-
-	/**
-	 * Sort by values.
-	 *
-	 * @param unsortMap the unsort map
-	 * @param order     the order
-	 * @return the hash map
-	 */
-	public HashMap<AdvancedCoreUser, Integer> sortByValues(HashMap<AdvancedCoreUser, Integer> unsortMap,
-			final boolean order) {
-
-		List<Entry<AdvancedCoreUser, Integer>> list = new LinkedList<Entry<AdvancedCoreUser, Integer>>(
-				unsortMap.entrySet());
-
-		// Sorting the list based on values
-		Collections.sort(list, new Comparator<Entry<AdvancedCoreUser, Integer>>() {
-			@Override
-			public int compare(Entry<AdvancedCoreUser, Integer> o1, Entry<AdvancedCoreUser, Integer> o2) {
-				if (order) {
-					return o1.getValue().compareTo(o2.getValue());
-				} else {
-					return o2.getValue().compareTo(o1.getValue());
-
-				}
-			}
-		});
-
-		// Maintaining insertion order with the help of LinkedList
-		HashMap<AdvancedCoreUser, Integer> sortedMap = new LinkedHashMap<AdvancedCoreUser, Integer>();
-		for (Entry<AdvancedCoreUser, Integer> entry : list) {
-			sortedMap.put(entry.getKey(), entry.getValue());
-		}
-
-		return sortedMap;
-	}
-
-	public HashMap<AdvancedCoreUser, Long> sortByValuesLong(HashMap<AdvancedCoreUser, Long> unsortMap,
-			final boolean order) {
-
-		List<Entry<AdvancedCoreUser, Long>> list = new LinkedList<Entry<AdvancedCoreUser, Long>>(unsortMap.entrySet());
-
-		// Sorting the list based on values
-		Collections.sort(list, new Comparator<Entry<AdvancedCoreUser, Long>>() {
-			@Override
-			public int compare(Entry<AdvancedCoreUser, Long> o1, Entry<AdvancedCoreUser, Long> o2) {
-				if (order) {
-					return o1.getValue().compareTo(o2.getValue());
-				} else {
-					return o2.getValue().compareTo(o1.getValue());
-
-				}
-			}
-		});
-
-		// Maintaining insertion order with the help of LinkedList
-		HashMap<AdvancedCoreUser, Long> sortedMap = new LinkedHashMap<AdvancedCoreUser, Long>();
-		for (Entry<AdvancedCoreUser, Long> entry : list) {
-			sortedMap.put(entry.getKey(), entry.getValue());
-		}
-
-		return sortedMap;
+	public Date addSeconds(Date date, int seconds) {
+		Calendar c = Calendar.getInstance();
+		c.setTime(new Date());
+		c.add(Calendar.SECOND, seconds);
+		return c.getTime();
 	}
 
 	/**
@@ -162,14 +72,7 @@ public class MiscUtils {
 	 * @param broadcastMsg the broadcast msg
 	 */
 	public void broadcast(String broadcastMsg) {
-		broadcast(broadcastMsg, new ArrayList<Player>(Bukkit.getOnlinePlayers()));
-	}
-
-	public Date addSeconds(Date date, int seconds) {
-		Calendar c = Calendar.getInstance();
-		c.setTime(new Date());
-		c.add(Calendar.SECOND, seconds);
-		return c.getTime();
+		broadcast(broadcastMsg, new ArrayList<>(Bukkit.getOnlinePlayers()));
 	}
 
 	public void broadcast(String broadcastMsg, ArrayList<Player> players) {
@@ -198,55 +101,49 @@ public class MiscUtils {
 
 		if (randomNum <= chance) {
 			return true;
-		} else {
-			return false;
 		}
+		return false;
 	}
 
-	@SuppressWarnings("deprecation")
-	public Enchantment getEnchant(String enchant, String enchant2) {
-		try {
-			Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchant.toLowerCase()));
-			if (ench != null) {
-				return ench;
-			}
-			return Enchantment.getByKey(NamespacedKey.minecraft(enchant2.toLowerCase()));
-		} catch (Exception e) {
-			plugin.debug(e);
-			for (Enchantment ench : Enchantment.values()) {
-				if (ench.toString().equalsIgnoreCase(enchant) || ench.toString().equalsIgnoreCase(enchant2)) {
-					return ench;
-				}
-			}
+	/**
+	 * Convert.
+	 *
+	 * @param array the array
+	 * @return the user[]
+	 */
+	public AdvancedCoreUser[] convertUsers(ArrayList<AdvancedCoreUser> array) {
+		if (array == null) {
+			return null;
 		}
-		return null;
+		AdvancedCoreUser[] list = new AdvancedCoreUser[array.size()];
+		for (int i = 0; i < array.size(); i++) {
+			list[i] = array.get(i);
+		}
+		return list;
 	}
 
-	public EntityType getEntityType(String entity, String entity2) {
-		try {
-			return EntityType.valueOf(entity);
-		} catch (Exception e) {
-			return EntityType.valueOf(entity2);
+	/**
+	 * Convert set.
+	 *
+	 * @param set the set
+	 * @return the array list
+	 */
+	public ArrayList<AdvancedCoreUser> convertUsers(Set<AdvancedCoreUser> set) {
+		if (set == null) {
+			return null;
 		}
 
-	}
-
-	@SuppressWarnings("deprecation")
-	public PotionEffectType getPotionType(String potion, String potion2) {
-		try {
-			return PotionEffectType.getByKey(NamespacedKey.minecraft(potion));
-		} catch (Exception e) {
-			return PotionEffectType.getByKey(NamespacedKey.minecraft(potion2));
+		ArrayList<AdvancedCoreUser> list = new ArrayList<>();
+		for (AdvancedCoreUser user : set) {
+			list.add(user);
 		}
-
+		return list;
 	}
 
-	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds,
-			final HashMap<String, String> placeholders, boolean stagger) {
+	public void executeConsoleCommands(final ArrayList<String> cmds, final HashMap<String, String> placeholders,
+			boolean stagger) {
 		if (cmds != null && !cmds.isEmpty()) {
-			placeholders.put("player", player.getName());
-			final ArrayList<String> commands = PlaceholderUtils.replaceJavascript(player,
-					PlaceholderUtils.replacePlaceHolder(cmds, placeholders));
+			final ArrayList<String> commands = PlaceholderUtils.replacePlaceHolder(cmds, placeholders);
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
@@ -256,10 +153,12 @@ public class MiscUtils {
 		}
 	}
 
-	public void executeConsoleCommands(final ArrayList<String> cmds, final HashMap<String, String> placeholders,
-			boolean stagger) {
+	public void executeConsoleCommands(final Player player, final ArrayList<String> cmds,
+			final HashMap<String, String> placeholders, boolean stagger) {
 		if (cmds != null && !cmds.isEmpty()) {
-			final ArrayList<String> commands = PlaceholderUtils.replacePlaceHolder(cmds, placeholders);
+			placeholders.put("player", player.getName());
+			final ArrayList<String> commands = PlaceholderUtils.replaceJavascript(player,
+					PlaceholderUtils.replacePlaceHolder(cmds, placeholders));
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
@@ -306,26 +205,6 @@ public class MiscUtils {
 		}
 	}
 
-	private void runConsoleCommand(String command, int delay, boolean hasDelay) {
-		if (hasDelay) {
-			plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
-				}
-			}, delay);
-		} else {
-			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
-				}
-			});
-		}
-	}
-
 	public void executeConsoleCommands(String playerName, String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
 			Player p = Bukkit.getPlayer(playerName);
@@ -348,6 +227,15 @@ public class MiscUtils {
 			});
 		}
 
+	}
+
+	public Object getBlockMeta(Block block, String str) {
+		for (MetadataValue meta : block.getMetadata(str)) {
+			if (meta.getOwningPlugin().equals(plugin)) {
+				return meta.value();
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -380,6 +268,43 @@ public class MiscUtils {
 	public int getDayFromMili(long time) {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault())
 				.plusHours(AdvancedCorePlugin.getInstance().getOptions().getTimeHourOffSet()).getDayOfMonth();
+	}
+
+	@SuppressWarnings("deprecation")
+	public Enchantment getEnchant(String enchant, String enchant2) {
+		try {
+			Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchant.toLowerCase()));
+			if (ench != null) {
+				return ench;
+			}
+			return Enchantment.getByKey(NamespacedKey.minecraft(enchant2.toLowerCase()));
+		} catch (Exception e) {
+			plugin.debug(e);
+			for (Enchantment ench : Enchantment.values()) {
+				if (ench.toString().equalsIgnoreCase(enchant) || ench.toString().equalsIgnoreCase(enchant2)) {
+					return ench;
+				}
+			}
+		}
+		return null;
+	}
+
+	public Object getEntityMeta(Entity entity, String str) {
+		for (MetadataValue meta : entity.getMetadata(str)) {
+			if (meta.getOwningPlugin().equals(plugin)) {
+				return meta.value();
+			}
+		}
+		return null;
+	}
+
+	public EntityType getEntityType(String entity, String entity2) {
+		try {
+			return EntityType.valueOf(entity);
+		} catch (Exception e) {
+			return EntityType.valueOf(entity2);
+		}
+
 	}
 
 	/**
@@ -425,6 +350,16 @@ public class MiscUtils {
 		return new DateFormatSymbols().getMonths()[month];
 	}
 
+	@SuppressWarnings("deprecation")
+	public PotionEffectType getPotionType(String potion, String potion2) {
+		try {
+			return PotionEffectType.getByKey(NamespacedKey.minecraft(potion));
+		} catch (Exception e) {
+			return PotionEffectType.getByKey(NamespacedKey.minecraft(potion2));
+		}
+
+	}
+
 	/*
 	 * Gotten from:
 	 * https://www.spigotmc.org/threads/progress-bars-and-percentages.276020/
@@ -459,7 +394,7 @@ public class MiscUtils {
 	 * @return the region blocks
 	 */
 	public List<Block> getRegionBlocks(World world, Location loc1, Location loc2) {
-		List<Block> blocks = new ArrayList<Block>();
+		List<Block> blocks = new ArrayList<>();
 
 		for (double x = loc1.getX(); x <= loc2.getX(); x++) {
 			for (double y = loc1.getY(); y <= loc2.getY(); y++) {
@@ -478,7 +413,7 @@ public class MiscUtils {
 	}
 
 	public ArrayList<String> getWorldNames() {
-		ArrayList<String> worlds = new ArrayList<String>();
+		ArrayList<String> worlds = new ArrayList<>();
 		for (World w : Bukkit.getWorlds()) {
 			worlds.add(w.getName());
 		}
@@ -495,50 +430,24 @@ public class MiscUtils {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getYear();
 	}
 
-	public ItemStack setSkullOwner(OfflinePlayer player) {
-		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
-			return new ItemBuilder("PLAYER_HEAD").setSkullOwner(player).toItemStack(player);
-		} else {
-			return setSkullOwner(player.getName());
-		}
-	}
+	private void runConsoleCommand(String command, int delay, boolean hasDelay) {
+		if (hasDelay) {
+			plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
 
-	/**
-	 * Sets the skull owner.
-	 *
-	 * @param playerName the player name
-	 * @return the item stack
-	 */
-	@Deprecated
-	public ItemStack setSkullOwner(String playerName) {
-		return new ItemBuilder("PLAYER_HEAD").setSkullOwner(playerName).toItemStack();
-	}
-
-	public LinkedHashMap<Double, String> sortByKeys(LinkedHashMap<Double, String> topVoterAllTime,
-			final boolean order) {
-
-		List<Entry<Double, String>> list = new LinkedList<Entry<Double, String>>(topVoterAllTime.entrySet());
-
-		// Sorting the list based on values
-		Collections.sort(list, new Comparator<Entry<Double, String>>() {
-			@Override
-			public int compare(Entry<Double, String> o1, Entry<Double, String> o2) {
-				if (order) {
-					return o1.getKey().compareTo(o2.getKey());
-				} else {
-					return o2.getKey().compareTo(o1.getKey());
-
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
 				}
-			}
-		});
+			}, delay);
+		} else {
+			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
-		// Maintaining insertion order with the help of LinkedList
-		LinkedHashMap<Double, String> sortedMap = new LinkedHashMap<Double, String>();
-		for (Entry<Double, String> entry : list) {
-			sortedMap.put(entry.getKey(), entry.getValue());
+				@Override
+				public void run() {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+				}
+			});
 		}
-
-		return sortedMap;
 	}
 
 	public void setBlockMeta(Block block, String str, Object value) {
@@ -610,15 +519,6 @@ public class MiscUtils {
 		});
 	}
 
-	public Object getBlockMeta(Block block, String str) {
-		for (MetadataValue meta : block.getMetadata(str)) {
-			if (meta.getOwningPlugin().equals(plugin)) {
-				return meta.value();
-			}
-		}
-		return null;
-	}
-
 	public void setEntityMeta(Entity entity, String str, Object value) {
 		entity.removeMetadata(str, plugin);
 		entity.setMetadata(str, new MetadataValue() {
@@ -688,12 +588,104 @@ public class MiscUtils {
 		});
 	}
 
-	public Object getEntityMeta(Entity entity, String str) {
-		for (MetadataValue meta : entity.getMetadata(str)) {
-			if (meta.getOwningPlugin().equals(plugin)) {
-				return meta.value();
-			}
+	public ItemStack setSkullOwner(OfflinePlayer player) {
+		if ((player.hasPlayedBefore() || player.isOnline()) || Bukkit.getOnlineMode()) {
+			return new ItemBuilder("PLAYER_HEAD").setSkullOwner(player).toItemStack(player);
 		}
-		return null;
+		return setSkullOwner(player.getName());
+	}
+
+	/**
+	 * Sets the skull owner.
+	 *
+	 * @param playerName the player name
+	 * @return the item stack
+	 */
+	@Deprecated
+	public ItemStack setSkullOwner(String playerName) {
+		return new ItemBuilder("PLAYER_HEAD").setSkullOwner(playerName).toItemStack();
+	}
+
+	public LinkedHashMap<Double, String> sortByKeys(LinkedHashMap<Double, String> topVoterAllTime,
+			final boolean order) {
+
+		List<Entry<Double, String>> list = new LinkedList<>(topVoterAllTime.entrySet());
+
+		// Sorting the list based on values
+		Collections.sort(list, new Comparator<Entry<Double, String>>() {
+			@Override
+			public int compare(Entry<Double, String> o1, Entry<Double, String> o2) {
+				if (order) {
+					return o1.getKey().compareTo(o2.getKey());
+				}
+				return o2.getKey().compareTo(o1.getKey());
+			}
+		});
+
+		// Maintaining insertion order with the help of LinkedList
+		LinkedHashMap<Double, String> sortedMap = new LinkedHashMap<>();
+		for (Entry<Double, String> entry : list) {
+			sortedMap.put(entry.getKey(), entry.getValue());
+		}
+
+		return sortedMap;
+	}
+
+	/**
+	 * Sort by values.
+	 *
+	 * @param unsortMap the unsort map
+	 * @param order     the order
+	 * @return the hash map
+	 */
+	public HashMap<AdvancedCoreUser, Integer> sortByValues(HashMap<AdvancedCoreUser, Integer> unsortMap,
+			final boolean order) {
+
+		List<Entry<AdvancedCoreUser, Integer>> list = new LinkedList<>(
+				unsortMap.entrySet());
+
+		// Sorting the list based on values
+		Collections.sort(list, new Comparator<Entry<AdvancedCoreUser, Integer>>() {
+			@Override
+			public int compare(Entry<AdvancedCoreUser, Integer> o1, Entry<AdvancedCoreUser, Integer> o2) {
+				if (order) {
+					return o1.getValue().compareTo(o2.getValue());
+				}
+				return o2.getValue().compareTo(o1.getValue());
+			}
+		});
+
+		// Maintaining insertion order with the help of LinkedList
+		HashMap<AdvancedCoreUser, Integer> sortedMap = new LinkedHashMap<>();
+		for (Entry<AdvancedCoreUser, Integer> entry : list) {
+			sortedMap.put(entry.getKey(), entry.getValue());
+		}
+
+		return sortedMap;
+	}
+
+	public HashMap<AdvancedCoreUser, Long> sortByValuesLong(HashMap<AdvancedCoreUser, Long> unsortMap,
+			final boolean order) {
+
+		List<Entry<AdvancedCoreUser, Long>> list = new LinkedList<>(unsortMap.entrySet());
+
+		// Sorting the list based on values
+		Collections.sort(list, new Comparator<Entry<AdvancedCoreUser, Long>>() {
+			@Override
+			public int compare(Entry<AdvancedCoreUser, Long> o1, Entry<AdvancedCoreUser, Long> o2) {
+				if (order) {
+					return o1.getValue().compareTo(o2.getValue());
+				}
+				return o2.getValue().compareTo(o1.getValue());
+			}
+		});
+
+		// Maintaining insertion order with the help of LinkedList
+		HashMap<AdvancedCoreUser, Long> sortedMap = new LinkedHashMap<>();
+		for (Entry<AdvancedCoreUser, Long> entry : list) {
+			sortedMap.put(entry.getKey(), entry.getValue());
+		}
+
+		return sortedMap;
 	}
 }

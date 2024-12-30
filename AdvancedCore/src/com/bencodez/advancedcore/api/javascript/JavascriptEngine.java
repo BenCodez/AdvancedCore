@@ -19,7 +19,7 @@ public class JavascriptEngine {
 	private HashMap<String, Object> engineAPI;
 
 	public JavascriptEngine() {
-		engineAPI = new HashMap<String, Object>();
+		engineAPI = new HashMap<>();
 	}
 
 	public JavascriptEngine addPlayer(AdvancedCoreUser user) {
@@ -121,31 +121,29 @@ public class JavascriptEngine {
 	public Object getResult(String expression) {
 		if (!expression.equals("")) {
 			ScriptEngine engine = JavascriptEngineHandler.getInstance().getJSScriptEngine();
-			if (engine != null) {
-				engine.put("Bukkit", Bukkit.getServer());
-				engine.put("AdvancedCore", AdvancedCorePlugin.getInstance());
-				engine.put("Console", Bukkit.getConsoleSender());
-				engine.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
-				engine.put("RewardHandler", AdvancedCorePlugin.getInstance().getRewardHandler());
-				engine.put("MessageAPI", MessageAPI.class);
-
-				engineAPI.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
-
-				for (Entry<String, Object> entry : engineAPI.entrySet()) {
-					engine.put(entry.getKey(), entry.getValue());
-				}
-
-				try {
-					return engine.eval(expression);
-				} catch (ScriptException e) {
-					AdvancedCorePlugin.getInstance().getLogger()
-							.warning("Error occoured while evaluating javascript, turn debug on to see stacktrace: "
-									+ e.toString());
-					AdvancedCorePlugin.getInstance().debug(e);
-				}
-			} else {
+			if (engine == null) {
 				AdvancedCorePlugin.getInstance().debug("Failed to process javascript, engine == null");
 				return null;
+			}
+			engine.put("Bukkit", Bukkit.getServer());
+			engine.put("AdvancedCore", AdvancedCorePlugin.getInstance());
+			engine.put("Console", Bukkit.getConsoleSender());
+			engine.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
+			engine.put("RewardHandler", AdvancedCorePlugin.getInstance().getRewardHandler());
+			engine.put("MessageAPI", MessageAPI.class);
+
+			engineAPI.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
+
+			for (Entry<String, Object> entry : engineAPI.entrySet()) {
+				engine.put(entry.getKey(), entry.getValue());
+			}
+
+			try {
+				return engine.eval(expression);
+			} catch (ScriptException e) {
+				AdvancedCorePlugin.getInstance().getLogger().warning(
+						"Error occoured while evaluating javascript, turn debug on to see stacktrace: " + e.toString());
+				AdvancedCorePlugin.getInstance().debug(e);
 			}
 		}
 		return null;

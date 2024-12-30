@@ -23,16 +23,6 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	@Getter
 	private long clickUpdateDelay = 0;
 
-	public UpdatingBInventoryButton updateOnClick() {
-		updateOnClick = true;
-		return this;
-	}
-
-	public UpdatingBInventoryButton delay(long mileseconds) {
-		this.clickUpdateDelay = mileseconds;
-		return this;
-	}
-
 	public UpdatingBInventoryButton(AdvancedCorePlugin plugin, ItemBuilder item, long delay, long updateInterval) {
 		super(item);
 		this.plugin = plugin;
@@ -92,6 +82,11 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		}
 	}
 
+	public UpdatingBInventoryButton delay(long mileseconds) {
+		this.clickUpdateDelay = mileseconds;
+		return this;
+	}
+
 	@Override
 	public void load(Player p) {
 		getInv().addUpdatingButton(plugin, delay, updateInterval, new Runnable() {
@@ -102,6 +97,26 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 			}
 		});
 	}
+
+	@Override
+	public void onClick(ClickEvent event, BInventory inv) {
+		super.onClick(event, inv);
+		if (updateOnClick) {
+			if (clickUpdateDelay > 0) {
+				plugin.getInventoryTimer().schedule(new Runnable() {
+
+					@Override
+					public void run() {
+						update(event.getPlayer());
+					}
+				}, clickUpdateDelay, TimeUnit.MILLISECONDS);
+			} else {
+				update(event.getPlayer());
+			}
+		}
+	}
+
+	public abstract ItemBuilder onUpdate(Player player);
 
 	public void update(Player p) {
 		if (!plugin.isLoadUserData() || plugin.getUserManager().getDataManager().isCached(p.getUniqueId())) {
@@ -133,24 +148,9 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		}
 	}
 
-	@Override
-	public void onClick(ClickEvent event, BInventory inv) {
-		super.onClick(event, inv);
-		if (updateOnClick) {
-			if (clickUpdateDelay > 0) {
-				plugin.getInventoryTimer().schedule(new Runnable() {
-
-					@Override
-					public void run() {
-						update(event.getPlayer());
-					}
-				}, clickUpdateDelay, TimeUnit.MILLISECONDS);
-			} else {
-				update(event.getPlayer());
-			}
-		}
+	public UpdatingBInventoryButton updateOnClick() {
+		updateOnClick = true;
+		return this;
 	}
-
-	public abstract ItemBuilder onUpdate(Player player);
 
 }

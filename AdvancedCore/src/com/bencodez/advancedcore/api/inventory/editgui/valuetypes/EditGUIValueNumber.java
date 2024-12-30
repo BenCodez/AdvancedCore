@@ -15,6 +15,11 @@ public abstract class EditGUIValueNumber extends EditGUIValue {
 	}
 
 	@Override
+	public String getType() {
+		return "number";
+	}
+
+	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
 			setCurrentValue(0);
@@ -29,11 +34,6 @@ public abstract class EditGUIValueNumber extends EditGUIValue {
 		}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) getCurrentValue() })
 				.currentValue(getCurrentValue().toString()).allowCustomOption(true).usingMethod(getInputMethod())
 				.request(clickEvent.getPlayer());
-	}
-
-	@Override
-	public String getType() {
-		return "number";
 	}
 
 	public abstract void setValue(Player player, Number num);

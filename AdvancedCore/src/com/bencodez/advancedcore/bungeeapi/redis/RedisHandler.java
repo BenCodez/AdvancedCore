@@ -14,17 +14,19 @@ public abstract class RedisHandler {
 		}
 	}
 
+	public void close() {
+		jedisPool.close();
+	}
+
+	public abstract void debug(String message);
+
 	public void loadListener(RedisListener listener) {
 		try (Jedis jedis = jedisPool.getResource()) {
 			jedis.subscribe(listener, listener.getChannel());
 		}
 	}
 
-	public abstract void debug(String message);
-
-	public void close() {
-		jedisPool.close();
-	}
+	protected abstract void onMessage(String channel, String[] message);
 
 	public void sendMessage(String channel, String... message) {
 		String str = "";
@@ -39,7 +41,5 @@ public abstract class RedisHandler {
 			jedis.publish(channel, str);
 		}
 	}
-
-	protected abstract void onMessage(String channel, String[] message);
 
 }

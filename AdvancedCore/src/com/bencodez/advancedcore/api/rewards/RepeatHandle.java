@@ -79,21 +79,20 @@ public class RepeatHandle {
 						return;
 					}
 
-				} else {
-					if (autoStop) {
-						if (!reward.canGiveReward(user, new RewardOptions())) {
-							cancel();
-							return;
-						} else {
-							giveReward(plugin, user, true);
-							cancel();
-							return;
-						}
+				}
+				if (autoStop) {
+					if (!reward.canGiveReward(user, new RewardOptions())) {
+						cancel();
+						return;
 					} else {
-						giveReward(plugin, user, false);
+						giveReward(plugin, user, true);
 						cancel();
 						return;
 					}
+				} else {
+					giveReward(plugin, user, false);
+					cancel();
+					return;
 				}
 			}
 		}, timeBetween);

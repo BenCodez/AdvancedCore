@@ -8,7 +8,7 @@ import com.bencodez.advancedcore.api.user.userstorage.mysql.api.utils.QueryUtils
 public class DeleteQuery {
 
 	private String table;
-	private List<String> wheres = new ArrayList<String>();
+	private List<String> wheres = new ArrayList<>();
 
 	/**
 	 * Create a delete query.

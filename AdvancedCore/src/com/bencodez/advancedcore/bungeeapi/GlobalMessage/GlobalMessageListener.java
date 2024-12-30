@@ -12,9 +12,9 @@ public abstract class GlobalMessageListener {
 		this.subChannel = subChannel;
 	}
 
+	public abstract void onReceive(ArrayList<String> message);
+
 	public void sendMessage(GlobalMessageHandler globalMessageHandler, String subChannel, String... messageData) {
 		globalMessageHandler.sendMessage(subChannel, messageData);
 	}
-
-	public abstract void onReceive(ArrayList<String> message);
 }

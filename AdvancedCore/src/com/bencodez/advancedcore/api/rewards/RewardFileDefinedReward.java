@@ -14,18 +14,14 @@ public class RewardFileDefinedReward implements DefinedReward {
 	@Setter
 	private Reward master;
 
-	public RewardFileDefinedReward(Reward master, String path) {
-		this.master = master;
-		this.path = path;
-	}
-
 	public RewardFileDefinedReward(Reward master) {
 		this.master = master;
 		path = "";
 	}
 
-	public String getFullPath() {
-		return master.getName() + "." + path;
+	public RewardFileDefinedReward(Reward master, String path) {
+		this.master = master;
+		this.path = path;
 	}
 
 	public void createSection(String key) {
@@ -44,6 +40,10 @@ public class RewardFileDefinedReward implements DefinedReward {
 		return master.getConfig().getConfigData();
 	}
 
+	public String getFullPath() {
+		return master.getName() + "." + path;
+	}
+
 	public Reward getReward() {
 		if (getPath().isEmpty()) {
 			return master;
@@ -51,9 +51,8 @@ public class RewardFileDefinedReward implements DefinedReward {
 		if (isDirectlyDefined()) {
 			return new Reward((getPath()).replace(".", "_"), getFileData().getConfigurationSection(getPath()))
 					.needsRewardFile(false);
-		} else {
-			return null;
 		}
+		return null;
 	}
 
 	public Object getValue(String path) {
@@ -68,6 +67,14 @@ public class RewardFileDefinedReward implements DefinedReward {
 			return true;
 		}
 		return getFileData().isConfigurationSection(getPath());
+	}
+
+	@Override
+	public String needsDot() {
+		if (getPath().isEmpty()) {
+			return "";
+		}
+		return ".";
 	}
 
 	public void save() {
@@ -88,13 +95,5 @@ public class RewardFileDefinedReward implements DefinedReward {
 		} else {
 			setData(getPath() + "." + path, value);
 		}
-	}
-
-	@Override
-	public String needsDot() {
-		if (getPath().isEmpty()) {
-			return "";
-		}
-		return ".";
 	}
 }

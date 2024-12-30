@@ -112,14 +112,6 @@ public class Hologram {
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
 	}
 
-	public PersistentDataContainer getPersistentDataHolder() {
-		return armorStand.getPersistentDataContainer();
-	}
-
-	public boolean isCreated() {
-		return armorStand != null;
-	}
-
 	private void createHologram(String name, boolean marker, boolean glowing) {
 		armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
 		armorStand.setVisible(false);
@@ -172,6 +164,10 @@ public class Hologram {
 		MiscUtils.getInstance().setEntityMeta(armorStand, str, object);
 	}
 
+	public PersistentDataContainer getPersistentDataHolder() {
+		return armorStand.getPersistentDataContainer();
+	}
+
 	public void glow(boolean value) {
 		if (armorStand != null) {
 			armorStand.setGlowing(value);
@@ -180,6 +176,10 @@ public class Hologram {
 
 	public boolean isAlive() {
 		return !armorStand.isDead();
+	}
+
+	public boolean isCreated() {
+		return armorStand != null;
 	}
 
 	public void kill() {

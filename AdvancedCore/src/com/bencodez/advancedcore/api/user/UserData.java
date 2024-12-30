@@ -36,13 +36,8 @@ public class UserData {
 		tempCache = null;
 	}
 
-	@Deprecated
-	public FileConfiguration getData(String uuid) {
-		return FileThread.getInstance().getThread().getData(this, uuid);
-	}
-
 	public HashMap<String, DataValue> convert(List<Column> cols) {
-		HashMap<String, DataValue> data = new HashMap<String, DataValue>();
+		HashMap<String, DataValue> data = new HashMap<>();
 		if (cols != null) {
 			for (Column col : cols) {
 				data.put(col.getName(), col.getValue());
@@ -58,6 +53,19 @@ public class UserData {
 
 	public boolean getBoolean(String key, boolean useCache, boolean waitForCache) {
 		return Boolean.valueOf(getString(key, useCache, waitForCache));
+	}
+
+	@Deprecated
+	public FileConfiguration getData(String uuid) {
+		return FileThread.getInstance().getThread().getData(this, uuid);
+	}
+
+	public DataValue getDataValue(String key) {
+		boolean isInt = user.getPlugin().getUserManager().getDataManager().isInt(key);
+		if (isInt) {
+			return new DataValueInt(getInt(key));
+		}
+		return new DataValueString(getString(key));
 	}
 
 	@Deprecated
@@ -85,12 +93,11 @@ public class UserData {
 	public int getInt(UserStorage storage, String key, int def, boolean useCache, boolean waitForCache) {
 		if (!key.equals("")) {
 			if (user.isTempCache() && tempCache != null) {
-				if (tempCache.get(key) != null) {
-					if (tempCache.get(key).isInt()) {
-						return tempCache.get(key).getInt();
-					}
-				} else {
+				if (tempCache.get(key) == null) {
 					return def;
+				}
+				if (tempCache.get(key).isInt()) {
+					return tempCache.get(key).getInt();
 				}
 			}
 			// user.getPlugin().debug("Pulling data: " + key + " " + useCache + " " +
@@ -104,15 +111,13 @@ public class UserData {
 							// user.getPlugin().debug("Using cache: " + key + " " +
 							// cache.getCache().get(key).getInt());
 							return cache.getCache().get(key).getInt();
-						} else {
-							String str = cache.getCache().get(key).getString();
-							if (str != null && !str.equals("null")) {
-								try {
-									return Integer.parseInt(str);
-								} catch (Exception e) {
-								}
+						}
+						String str = cache.getCache().get(key).getString();
+						if (str != null && !str.equals("null")) {
+							try {
+								return Integer.parseInt(str);
+							} catch (Exception e) {
 							}
-
 						}
 					}
 				} else {
@@ -122,12 +127,13 @@ public class UserData {
 			if (storage.equals(UserStorage.SQLITE)) {
 				List<Column> row = getSQLiteRow();
 				if (row != null) {
-					for (int i = 0; i < row.size(); i++) {
-						if (row.get(i).getName().equals(key)) {
-							DataValue value = row.get(i).getValue();
+					for (Column element : row) {
+						if (element.getName().equals(key)) {
+							DataValue value = element.getValue();
 							if (value.isInt()) {
 								return value.getInt();
-							} else if (value.isString()) {
+							}
+							if (value.isString()) {
 								String str = value.getString();
 								if (str != null) {
 									try {
@@ -145,12 +151,13 @@ public class UserData {
 			} else if (storage.equals(UserStorage.MYSQL)) {
 				List<Column> row = getMySqlRow();
 				if (row != null) {
-					for (int i = 0; i < row.size(); i++) {
-						if (row.get(i).getName().equals(key)) {
-							DataValue value = row.get(i).getValue();
+					for (Column element : row) {
+						if (element.getName().equals(key)) {
+							DataValue value = element.getValue();
 							if (value.isInt()) {
 								return value.getInt();
-							} else if (value.isString()) {
+							}
+							if (value.isString()) {
 								String str = value.getString();
 								if (str != null) {
 									try {
@@ -187,9 +194,9 @@ public class UserData {
 
 	@SuppressWarnings("deprecation")
 	public ArrayList<String> getKeys(boolean waitForCache) {
-		ArrayList<String> keys = new ArrayList<String>();
+		ArrayList<String> keys = new ArrayList<>();
 		if (user.getPlugin().getStorageType().equals(UserStorage.FLAT)) {
-			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
+			keys = new ArrayList<>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
 		} else if (user.getPlugin().getStorageType().equals(UserStorage.MYSQL)) {
 			List<Column> col = getMySqlRow();
 			if (col != null && !col.isEmpty()) {
@@ -211,9 +218,9 @@ public class UserData {
 
 	@SuppressWarnings("deprecation")
 	public ArrayList<String> getKeys(UserStorage storage, boolean waitForCache) {
-		ArrayList<String> keys = new ArrayList<String>();
+		ArrayList<String> keys = new ArrayList<>();
 		if (storage.equals(UserStorage.FLAT)) {
-			keys = new ArrayList<String>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
+			keys = new ArrayList<>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
 		} else if (storage.equals(UserStorage.MYSQL)) {
 			List<Column> col = getMySqlRow();
 			if (col != null && !col.isEmpty()) {
@@ -258,15 +265,14 @@ public class UserData {
 	public String getString(UserStorage storage, String key, boolean useCache, boolean waitForCache) {
 		if (!key.equals("")) {
 			if (user.isTempCache() && tempCache != null) {
-				if (tempCache.get(key) != null) {
-					if (tempCache.get(key).isString() || tempCache.get(key).isBoolean()) {
-						String str = tempCache.get(key).getString();
-						if (str != null) {
-							return str;
-						}
-						return "";
+				if (tempCache.get(key) == null) {
+					return "";
+				}
+				if (tempCache.get(key).isString() || tempCache.get(key).isBoolean()) {
+					String str = tempCache.get(key).getString();
+					if (str != null) {
+						return str;
 					}
-				} else {
 					return "";
 				}
 			}
@@ -288,10 +294,10 @@ public class UserData {
 			if (storage.equals(UserStorage.SQLITE)) {
 				List<Column> row = getSQLiteRow();
 				if (row != null) {
-					for (int i = 0; i < row.size(); i++) {
-						if (row.get(i).getName().equals(key)
-								&& (row.get(i).getValue().isString() || row.get(i).getValue().isBoolean())) {
-							String st = row.get(i).getValue().getString();
+					for (Column element : row) {
+						if (element.getName().equals(key)
+								&& (element.getValue().isString() || element.getValue().isBoolean())) {
+							String st = element.getValue().getString();
 							if (st != null && !st.equals("null")) {
 								return st;
 							}
@@ -303,10 +309,10 @@ public class UserData {
 			} else if (storage.equals(UserStorage.MYSQL)) {
 				List<Column> row = getMySqlRow();
 				if (row != null) {
-					for (int i = 0; i < row.size(); i++) {
-						if (row.get(i).getName().equals(key)
-								&& (row.get(i).getValue().isString() || row.get(i).getValue().isBoolean())) {
-							String st = row.get(i).getValue().getString();
+					for (Column element : row) {
+						if (element.getName().equals(key)
+								&& (element.getValue().isString() || element.getValue().isBoolean())) {
+							String st = element.getValue().getString();
 							if (st != null && !st.equals("null")) {
 								return st;
 							}
@@ -338,7 +344,7 @@ public class UserData {
 	public ArrayList<String> getStringList(String key, boolean cache, boolean waitForCache) {
 		String str = getString(key, cache, waitForCache);
 		if (str == null || str.equals("")) {
-			return new ArrayList<String>();
+			return new ArrayList<>();
 		}
 		String[] list = str.split("%line%");
 		return ArrayUtils.convert(list);
@@ -352,14 +358,6 @@ public class UserData {
 		return getString(key);
 	}
 
-	public DataValue getDataValue(String key) {
-		boolean isInt = user.getPlugin().getUserManager().getDataManager().isInt(key);
-		if (isInt) {
-			return new DataValueInt(getInt(key));
-		}
-		return new DataValueString(getString(key));
-	}
-
 	public HashMap<String, DataValue> getValues() {
 		return getValues(user.getPlugin().getStorageType());
 	}
@@ -368,10 +366,11 @@ public class UserData {
 	public HashMap<String, DataValue> getValues(UserStorage storage) {
 		if (storage.equals(UserStorage.MYSQL)) {
 			return convert(getMySqlRow());
-		} else if (storage.equals(UserStorage.SQLITE)) {
+		}
+		if (storage.equals(UserStorage.SQLITE)) {
 			return convert(getSQLiteRow());
 		} else if (storage.equals(UserStorage.FLAT)) {
-			HashMap<String, DataValue> list = new HashMap<String, DataValue>();
+			HashMap<String, DataValue> list = new HashMap<>();
 			FileConfiguration data = getData(user.getUUID());
 			for (String str : data.getKeys(false)) {
 				if (data.isInt(str)) {
@@ -389,17 +388,13 @@ public class UserData {
 	public boolean hasData() {
 		if (user.getPlugin().getStorageType().equals(UserStorage.MYSQL)) {
 			return user.getPlugin().getMysql().containsKey(user.getUUID());
-		} else if (user.getPlugin().getStorageType().equals(UserStorage.SQLITE)) {
+		}
+		if (user.getPlugin().getStorageType().equals(UserStorage.SQLITE)) {
 			return user.getPlugin().getSQLiteUserTable().containsKey(user.getUUID());
 		} else if (user.getPlugin().getStorageType().equals(UserStorage.FLAT)) {
 			return FileThread.getInstance().getThread().hasPlayerFile(user.getUUID());
 		}
 		return false;
-	}
-
-	@Deprecated
-	private void setData(final String uuid, final String path, final Object value) {
-		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -420,6 +415,11 @@ public class UserData {
 
 	public void setBoolean(String key, boolean value, boolean queue) {
 		setString(key, "" + value, queue);
+	}
+
+	@Deprecated
+	private void setData(final String uuid, final String path, final Object value) {
+		FileThread.getInstance().getThread().setData(this, uuid, path, value);
 	}
 
 	public void setInt(final String key, final int value) {
@@ -443,7 +443,8 @@ public class UserData {
 		if (key.equals("")) {
 			user.getPlugin().debug("No key: " + key + " to " + value);
 			return;
-		} else if (key.contains(" ")) {
+		}
+		if (key.contains(" ")) {
 			user.getPlugin().getLogger().severe("Keys cannot contain spaces " + key);
 		}
 
@@ -464,7 +465,7 @@ public class UserData {
 				@Override
 				public void run() {
 					if (storage.equals(UserStorage.SQLITE)) {
-						ArrayList<Column> columns = new ArrayList<Column>();
+						ArrayList<Column> columns = new ArrayList<>();
 						Column primary = new Column("uuid", new DataValueString(user.getUUID()));
 						Column column = new Column(key, new DataValueInt(value));
 						columns.add(primary);
@@ -484,7 +485,7 @@ public class UserData {
 		} else {
 			// process change right away
 			if (storage.equals(UserStorage.SQLITE)) {
-				ArrayList<Column> columns = new ArrayList<Column>();
+				ArrayList<Column> columns = new ArrayList<>();
 				Column primary = new Column("uuid", new DataValueString(user.getUUID()));
 				Column column = new Column(key, new DataValueInt(value));
 				columns.add(primary);
@@ -524,7 +525,8 @@ public class UserData {
 		if (key.equals("") && value != null) {
 			user.getPlugin().debug("No key/value: " + key + " to " + value);
 			return;
-		} else if (key.contains(" ")) {
+		}
+		if (key.contains(" ")) {
 			user.getPlugin().getLogger().severe("Keys cannot contain spaces " + key);
 		}
 
@@ -545,7 +547,7 @@ public class UserData {
 				@Override
 				public void run() {
 					if (storage.equals(UserStorage.SQLITE)) {
-						ArrayList<Column> columns = new ArrayList<Column>();
+						ArrayList<Column> columns = new ArrayList<>();
 						Column primary = new Column("uuid", new DataValueString(user.getUUID()));
 						Column column = new Column(key, new DataValueString(value));
 						columns.add(primary);
@@ -563,7 +565,7 @@ public class UserData {
 			});
 		} else {
 			if (storage.equals(UserStorage.SQLITE)) {
-				ArrayList<Column> columns = new ArrayList<Column>();
+				ArrayList<Column> columns = new ArrayList<>();
 				Column primary = new Column("uuid", new DataValueString(user.getUUID()));
 				Column column = new Column(key, new DataValueString(value));
 				columns.add(primary);
@@ -603,7 +605,7 @@ public class UserData {
 	}
 
 	public void setValues(String key, DataValue value) {
-		HashMap<String, DataValue> values = new HashMap<String, DataValue>();
+		HashMap<String, DataValue> values = new HashMap<>();
 		values.put(key, value);
 		setValues(user.getPlugin().getStorageType(), values);
 	}
@@ -612,7 +614,7 @@ public class UserData {
 	public void setValues(UserStorage storage, HashMap<String, DataValue> values) {
 		if (storage.equals(UserStorage.MYSQL)) {
 			if (user.getPlugin().getMysql() != null) {
-				ArrayList<Column> cols = new ArrayList<Column>();
+				ArrayList<Column> cols = new ArrayList<>();
 				for (Entry<String, DataValue> entry : values.entrySet()) {
 					if (!entry.getKey().equals("uuid")) {
 						cols.add(new Column(entry.getKey(), entry.getValue()));
@@ -621,7 +623,7 @@ public class UserData {
 				user.getPlugin().getMysql().update(user.getUUID(), cols, false);
 			}
 		} else if (storage.equals(UserStorage.SQLITE)) {
-			ArrayList<Column> cols = new ArrayList<Column>();
+			ArrayList<Column> cols = new ArrayList<>();
 			for (Entry<String, DataValue> entry : values.entrySet()) {
 				if (!entry.getKey().equals("uuid")) {
 					cols.add(new Column(entry.getKey(), entry.getValue()));
@@ -644,13 +646,13 @@ public class UserData {
 		tempCache = getValues();
 	}
 
-	public void updateTempCacheWithColumns(ArrayList<Column> cols) {
-		tempCache = convert(cols);
-	}
-
 	public void updateCacheWithTemp() {
 		if (user.isCached()) {
 			user.getCache().updateCache(tempCache);
 		}
+	}
+
+	public void updateTempCacheWithColumns(ArrayList<Column> cols) {
+		tempCache = convert(cols);
 	}
 }

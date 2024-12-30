@@ -51,7 +51,7 @@ public class AdminGUI {
 	 */
 	public void addButton(BInventoryButton b) {
 		if (pluginGUIs == null) {
-			pluginGUIs = new ArrayList<BInventoryButton>();
+			pluginGUIs = new ArrayList<>();
 		}
 		pluginGUIs.add(b);
 	}

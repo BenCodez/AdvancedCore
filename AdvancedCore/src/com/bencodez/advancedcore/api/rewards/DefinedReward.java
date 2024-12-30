@@ -6,14 +6,14 @@ public interface DefinedReward {
 	public void createSection(String key);
 
 	public ConfigurationSection getFileData();
-	
-	public String getPath();
-	
+
 	public String getFullPath();
+
+	public String getPath();
+
+	public String needsDot();
 
 	public void save();
 
 	public void setData(String str, Object value);
-	
-	public String needsDot();
 }

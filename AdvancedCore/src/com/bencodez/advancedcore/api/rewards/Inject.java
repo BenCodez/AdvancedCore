@@ -10,7 +10,7 @@ import lombok.Setter;
 public class Inject {
 	@Getter
 	@Setter
-	private ArrayList<BInventoryButton> editButtons = new ArrayList<BInventoryButton>();
+	private ArrayList<BInventoryButton> editButtons = new ArrayList<>();
 
 	@Getter
 	@Setter

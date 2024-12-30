@@ -19,23 +19,13 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 	private boolean timeChangedHappened = false;
 
 	@Getter
-	private ArrayList<TimeType> timeChanges = new ArrayList<TimeType>();
+	private ArrayList<TimeType> timeChanges = new ArrayList<>();
 
 	@Getter
 	private ScheduledExecutorService timeChangedTimer;
 
-	public void onTimeChange(TimeType type) {
-		timeChangedHappened = true;
-		timeChanges.add(type);
-	}
-
-	private void failedProcess(String server) {
-		for (TimeType time : timeChanges) {
-			onTimeChangedFailed(server, time);
-		}
-	}
-
 	private ArrayList<String> servers;
+
 	private GlobalMySQL globalMysql;
 
 	public GlobalDataHandlerProxy(GlobalMySQL globalMysql, ArrayList<String> servers) {
@@ -103,25 +93,23 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 							if (processing) {
 								// 2 hours
 								if (LocalDateTime.now().atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
-										- lastUpdated > 1000 * 60 * 60 * 2) {
-									globalMysql.warning(
-											"Been too long, either something happened or server is offline finishing time change anyway, server: "
-													+ server);
-									failedProcess(server);
-								} else {
+										- lastUpdated <= 1000 * 60 * 60 * 2) {
 									return;
 								}
+								globalMysql.warning(
+										"Been too long, either something happened or server is offline finishing time change anyway, server: "
+												+ server);
+								failedProcess(server);
 							} else {
 								// 30 minutes of plugin not processing time change
 								if (LocalDateTime.now().atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
-										- lastUpdated > 1000 * 60 * 30) {
-									globalMysql.warning(
-											"Server must be offline, skipping time change on this specific server: "
-													+ server);
-									failedProcess(server);
-								} else {
+										- lastUpdated <= 1000 * 60 * 30) {
 									return;
 								}
+								globalMysql.warning(
+										"Server must be offline, skipping time change on this specific server: "
+												+ server);
+								failedProcess(server);
 							}
 
 						} catch (NumberFormatException e) {
@@ -145,8 +133,19 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 		}
 	}
 
-	public abstract void onTimeChangedFinished(TimeType type);
+	private void failedProcess(String server) {
+		for (TimeType time : timeChanges) {
+			onTimeChangedFailed(server, time);
+		}
+	}
+
+	public void onTimeChange(TimeType type) {
+		timeChangedHappened = true;
+		timeChanges.add(type);
+	}
 
 	public abstract void onTimeChangedFailed(String server, TimeType type);
+
+	public abstract void onTimeChangedFinished(TimeType type);
 
 }

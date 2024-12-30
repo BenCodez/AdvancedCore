@@ -17,7 +17,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 
 public abstract class GUIHandler {
 	@Getter
-	private HashMap<String, Object> data = new HashMap<String, Object>();
+	private HashMap<String, Object> data = new HashMap<>();
 
 	@Getter
 	private CommandSender player;

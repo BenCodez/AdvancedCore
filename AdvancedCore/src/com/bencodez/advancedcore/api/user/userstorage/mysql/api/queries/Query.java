@@ -14,7 +14,7 @@ public class Query {
 	private boolean addBatch = false;
 	private Connection connection;
 	private MySQL mysql;
-	private HashMap<Integer, Object> paramters = new HashMap<Integer, Object>();
+	private HashMap<Integer, Object> paramters = new HashMap<>();
 
 	private String sql;
 

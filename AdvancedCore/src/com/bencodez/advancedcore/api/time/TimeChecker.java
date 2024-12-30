@@ -37,11 +37,6 @@ public class TimeChecker {
 	@Getter
 	private boolean processingEnabled = true;
 
-	public void setProcessingEnabled(boolean value) {
-		processingEnabled = value;
-		plugin.debug("Local time change processing disabled");
-	}
-
 	public TimeChecker(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
@@ -215,6 +210,11 @@ public class TimeChecker {
 		} else {
 			AdvancedCorePlugin.getInstance().debug("Timer is already loaded");
 		}
+	}
+
+	public void setProcessingEnabled(boolean value) {
+		processingEnabled = value;
+		plugin.debug("Local time change processing disabled");
 	}
 
 	/**

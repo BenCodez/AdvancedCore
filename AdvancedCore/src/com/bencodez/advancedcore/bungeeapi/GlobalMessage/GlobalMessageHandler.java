@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public abstract class GlobalMessageHandler {
 
-	private ArrayList<GlobalMessageListener> globalMessageListeners = new ArrayList<GlobalMessageListener>();
+	private ArrayList<GlobalMessageListener> globalMessageListeners = new ArrayList<>();
 
 	public GlobalMessageHandler() {
 	}

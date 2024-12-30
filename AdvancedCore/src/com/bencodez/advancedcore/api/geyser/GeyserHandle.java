@@ -10,20 +10,6 @@ public class GeyserHandle {
 	private Method method;
 	private boolean geyserExists = false;
 
-	public void load() {
-		try {
-			geyserClass = Class.forName("org.geysermc.geyser.api.GeyserApi");
-
-			geyserAPI = geyserClass.getMethod("api", new Class<?>[] {}).invoke(geyserClass, new Object[] {});
-
-			method = geyserAPI.getClass().getMethod("isBedrockPlayer", UUID.class);
-			geyserExists = true;
-		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
-				| InvocationTargetException | ClassNotFoundException e) {
-			//e.printStackTrace();
-		}
-	}
-
 	public boolean isGeyserPlayer(UUID player) {
 		if (geyserExists) {
 			Object value;
@@ -34,9 +20,23 @@ public class GeyserHandle {
 					return (boolean) value;
 				}
 			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				//e.printStackTrace();
+				// e.printStackTrace();
 			}
 		}
 		return false;
+	}
+
+	public void load() {
+		try {
+			geyserClass = Class.forName("org.geysermc.geyser.api.GeyserApi");
+
+			geyserAPI = geyserClass.getMethod("api", new Class<?>[] {}).invoke(geyserClass, new Object[] {});
+
+			method = geyserAPI.getClass().getMethod("isBedrockPlayer", UUID.class);
+			geyserExists = true;
+		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException | ClassNotFoundException e) {
+			// e.printStackTrace();
+		}
 	}
 }

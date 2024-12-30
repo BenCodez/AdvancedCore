@@ -21,37 +21,6 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
 	}
 
-	@Deprecated
-	public CommandHandler(String[] args, String perm) {
-		super(AdvancedCorePlugin.getInstance(), args, perm);
-		this.plugin = AdvancedCorePlugin.getInstance();
-		setHelpMessage("Unknown Help Message");
-		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
-
-	}
-
-	@Deprecated
-	public CommandHandler(String[] args, String perm, String helpMessage) {
-		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage);
-		this.plugin = AdvancedCorePlugin.getInstance();
-		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
-	}
-
-	@Deprecated
-	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole) {
-		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage, allowConsole);
-		this.plugin = AdvancedCorePlugin.getInstance();
-		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
-	}
-
-	@Deprecated
-	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole, boolean forceConsole) {
-		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage, allowConsole, forceConsole);
-		this.plugin = AdvancedCorePlugin.getInstance();
-
-		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
-	}
-
 	public CommandHandler(AdvancedCorePlugin plugin) {
 		super(plugin);
 		this.plugin = plugin;
@@ -120,15 +89,35 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
 	}
 
-	@Override
-	public CommandHandler ignoreNumberCheck() {
-		super.ignoreNumberCheck();
-		return this;
+	@Deprecated
+	public CommandHandler(String[] args, String perm) {
+		super(AdvancedCorePlugin.getInstance(), args, perm);
+		this.plugin = AdvancedCorePlugin.getInstance();
+		setHelpMessage("Unknown Help Message");
+		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
+
 	}
 
-	@Override
-	public String getHelpLine() {
-		return plugin.getOptions().getHelpLine();
+	@Deprecated
+	public CommandHandler(String[] args, String perm, String helpMessage) {
+		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage);
+		this.plugin = AdvancedCorePlugin.getInstance();
+		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
+	}
+
+	@Deprecated
+	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole) {
+		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage, allowConsole);
+		this.plugin = AdvancedCorePlugin.getInstance();
+		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
+	}
+
+	@Deprecated
+	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole, boolean forceConsole) {
+		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage, allowConsole, forceConsole);
+		this.plugin = AdvancedCorePlugin.getInstance();
+
+		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
 	}
 
 	@Override
@@ -137,18 +126,29 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 	}
 
 	@Override
-	public String formatNotNumber() {
-		return plugin.getOptions().getFormatNotNumber();
-	}
-
-	@Override
 	public String formatNoPerms() {
 		return plugin.getOptions().getFormatNoPerms();
 	}
 
 	@Override
+	public String formatNotNumber() {
+		return plugin.getOptions().getFormatNotNumber();
+	}
+
+	@Override
 	public BukkitScheduler getBukkitScheduler() {
 		return plugin.getBukkitScheduler();
+	}
+
+	@Override
+	public String getHelpLine() {
+		return plugin.getOptions().getHelpLine();
+	}
+
+	@Override
+	public CommandHandler ignoreNumberCheck() {
+		super.ignoreNumberCheck();
+		return this;
 	}
 
 }

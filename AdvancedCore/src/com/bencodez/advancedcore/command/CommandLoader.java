@@ -54,12 +54,12 @@ public class CommandLoader {
 		return instance;
 	}
 
-	private ArrayList<String> perms = new ArrayList<String>();
+	private ArrayList<String> perms = new ArrayList<>();
 
 	private AdvancedCorePlugin plugin;
 
 	@Getter
-	ArrayList<CommandHandler> valueRequestCommands = new ArrayList<CommandHandler>();
+	ArrayList<CommandHandler> valueRequestCommands = new ArrayList<>();
 
 	public CommandLoader(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -72,7 +72,7 @@ public class CommandLoader {
 	}
 
 	public ArrayList<CommandHandler> getBasicAdminCommands(String permPrefix) {
-		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
+		ArrayList<CommandHandler> cmds = new ArrayList<>();
 		cmds.add(new CommandHandler(plugin, new String[] { "RunCMD", "All", "(List)" }, permPrefix + ".RunCMD.All",
 				"Run command for every user, use %player% for player") {
 
@@ -83,7 +83,7 @@ public class CommandLoader {
 					str += args[i] + " ";
 				}
 				final String cmd = str;
-				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
+				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 					user.dontCache();
@@ -167,7 +167,7 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = plugin.getRewardHandler().getReward(args[1]);
-				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
+				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 					user.dontCache();
@@ -208,17 +208,9 @@ public class CommandLoader {
 				permPrefix + ".GiveReward", "Give a player a reward file", true) {
 
 			@Override
-			public void executeSinglePlayer(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
-
-				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
-			}
-
-			@Override
 			public void executeAll(CommandSender sender, String[] args) {
 				Reward reward = plugin.getRewardHandler().getReward(args[3]);
-				ArrayList<AdvancedCoreUser> users = new ArrayList<AdvancedCoreUser>();
+				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
 					user.dontCache();
@@ -228,6 +220,14 @@ public class CommandLoader {
 					new RewardBuilder(reward).send(user);
 				}
 				sendMessage(sender, "&cGave all players reward file " + args[3]);
+			}
+
+			@Override
+			public void executeSinglePlayer(CommandSender sender, String[] args) {
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+				plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
+
+				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
 			}
 		});
 		cmds.add(new CommandHandler(plugin, new String[] { "GiveReward", "(Player)", "(Reward)", "(Text)", "(Text)" },
@@ -527,7 +527,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				ArrayList<String> methods = new ArrayList<String>();
+				ArrayList<String> methods = new ArrayList<>();
 				for (InputMethod method : InputMethod.values()) {
 					methods.add(method.toString());
 				}
@@ -568,17 +568,6 @@ public class CommandLoader {
 				permPrefix + ".SetData", "Set user data") {
 
 			@Override
-			public void executeSinglePlayer(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				String data = args[4];
-				if (data.equalsIgnoreCase("\"\"")) {
-					data = "";
-				}
-				user.getData().setString(args[3], data);
-				sender.sendMessage(MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
-			}
-
-			@Override
 			public void executeAll(CommandSender sender, String[] args) {
 				if (sender.hasPermission(permPrefix + ".SetAllData")) {
 					String data = args[4];
@@ -593,6 +582,17 @@ public class CommandLoader {
 					}
 					sender.sendMessage(MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
 				}
+			}
+
+			@Override
+			public void executeSinglePlayer(CommandSender sender, String[] args) {
+				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+				String data = args[4];
+				if (data.equalsIgnoreCase("\"\"")) {
+					data = "";
+				}
+				user.getData().setString(args[3], data);
+				sender.sendMessage(MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
 			}
 		});
 
@@ -691,7 +691,7 @@ public class CommandLoader {
 	}
 
 	public ArrayList<CommandHandler> getBasicCommands(String permPrefix) {
-		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
+		ArrayList<CommandHandler> cmds = new ArrayList<>();
 
 		cmds.add(new CommandHandler(plugin, new String[] { "Choices" }, permPrefix + ".Choices",
 				"Let user select his choice reward", false) {
@@ -731,7 +731,7 @@ public class CommandLoader {
 	}
 
 	public void loadValueRequestCommands() {
-		ArrayList<CommandHandler> cmds = new ArrayList<CommandHandler>();
+		ArrayList<CommandHandler> cmds = new ArrayList<>();
 		cmds.add(
 				new CommandHandler(plugin, new String[] { "String", "(String)" }, "", "Command to Input value", false) {
 

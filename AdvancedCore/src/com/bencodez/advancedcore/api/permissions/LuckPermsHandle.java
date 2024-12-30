@@ -19,18 +19,6 @@ public class LuckPermsHandle {
 	@Getter
 	LuckPerms api = null;
 
-	public void load(AdvancedCorePlugin plugin) {
-		RegisteredServiceProvider<LuckPerms> provider = Bukkit.getServicesManager().getRegistration(LuckPerms.class);
-		if (provider != null) {
-			api = provider.getProvider();
-			plugin.getLogger().info("Loaded LuckPerms hook!");
-		}
-	}
-
-	public boolean luckpermsApiLoaded() {
-		return api != null;
-	}
-
 	public boolean hasPermission(UUID uuid, String permission) {
 		User user = api.getUserManager().getUser(uuid);
 		if (user == null) {
@@ -43,5 +31,17 @@ public class LuckPermsHandle {
 			}
 		}
 		return user.getCachedData().getPermissionData().checkPermission(permission).asBoolean();
+	}
+
+	public void load(AdvancedCorePlugin plugin) {
+		RegisteredServiceProvider<LuckPerms> provider = Bukkit.getServicesManager().getRegistration(LuckPerms.class);
+		if (provider != null) {
+			api = provider.getProvider();
+			plugin.getLogger().info("Loaded LuckPerms hook!");
+		}
+	}
+
+	public boolean luckpermsApiLoaded() {
+		return api != null;
 	}
 }

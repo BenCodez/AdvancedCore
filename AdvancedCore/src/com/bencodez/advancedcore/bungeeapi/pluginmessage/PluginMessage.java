@@ -28,7 +28,7 @@ public class PluginMessage implements PluginMessageListener {
 
 	private ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
 
-	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<PluginMessageHandler>();
+	public ArrayList<PluginMessageHandler> pluginMessages = new ArrayList<>();
 
 	public PluginMessage(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -49,7 +49,7 @@ public class PluginMessage implements PluginMessageListener {
 			return;
 		}
 		ByteArrayDataInput in = ByteStreams.newDataInput(message);
-		ArrayList<String> list = new ArrayList<String>();
+		ArrayList<String> list = new ArrayList<>();
 		final String subChannel = in.readUTF();
 		int size = in.readInt();
 		for (int i = 0; i < size; i++) {
@@ -78,8 +78,8 @@ public class PluginMessage implements PluginMessageListener {
 
 	public void onReceive(String subChannel, ArrayList<String> list) {
 		if (debug) {
-			plugin.getLogger().info("BungeeDebug: Received plugin message: " + subChannel + ", "
-					+ ArrayUtils.makeStringList(list));
+			plugin.getLogger().info(
+					"BungeeDebug: Received plugin message: " + subChannel + ", " + ArrayUtils.makeStringList(list));
 		}
 		for (PluginMessageHandler handle : pluginMessages) {
 			if (handle.getSubChannel().equalsIgnoreCase(subChannel)) {

@@ -169,7 +169,7 @@ public class NumberRequester {
 
 	public void request(Player player, InputMethod method, String currentValue, String promptText, Number[] options,
 			boolean allowCustomOption, NumberListener listener) {
-		LinkedHashMap<Number, ItemStack> items = new LinkedHashMap<Number, ItemStack>();
+		LinkedHashMap<Number, ItemStack> items = new LinkedHashMap<>();
 		if (options != null) {
 			for (Number option : options) {
 				items.put(option, new ItemStack(Material.STONE, 1));

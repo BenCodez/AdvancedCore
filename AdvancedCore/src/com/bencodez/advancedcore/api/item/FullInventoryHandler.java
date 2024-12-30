@@ -32,8 +32,8 @@ public class FullInventoryHandler {
 	private ConcurrentHashMap<UUID, Long> lastMessageTime;
 
 	public FullInventoryHandler(AdvancedCorePlugin plugin) {
-		items = new ConcurrentHashMap<UUID, ArrayList<ItemStack>>();
-		lastMessageTime = new ConcurrentHashMap<UUID, Long>();
+		items = new ConcurrentHashMap<>();
+		lastMessageTime = new ConcurrentHashMap<>();
 		this.plugin = plugin;
 		loadTimer();
 		startup();
@@ -55,7 +55,7 @@ public class FullInventoryHandler {
 			current.add(item);
 			items.put(uuid, current);
 		} else {
-			ArrayList<ItemStack> itemList = new ArrayList<ItemStack>();
+			ArrayList<ItemStack> itemList = new ArrayList<>();
 			itemList.add(item);
 			items.put(uuid, itemList);
 		}
@@ -75,7 +75,7 @@ public class FullInventoryHandler {
 
 	public void check(Player p) {
 		if (p != null && items.containsKey(p.getUniqueId())) {
-			ArrayList<ItemStack> extra = new ArrayList<ItemStack>();
+			ArrayList<ItemStack> extra = new ArrayList<>();
 			for (ItemStack item : items.get(p.getUniqueId())) {
 				HashMap<Integer, ItemStack> excess = p.getInventory().addItem(item);
 				for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
@@ -117,15 +117,6 @@ public class FullInventoryHandler {
 		p.updateInventory();
 	}
 
-	private void sendMessage(Player p) {
-		String msg = MessageAPI
-				.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
-		if (!msg.isEmpty()) {
-			p.sendMessage(msg);
-			lastMessageTime.put(p.getUniqueId(), System.currentTimeMillis());
-		}
-	}
-
 	public void loadTimer() {
 		timer = Executors.newScheduledThreadPool(1);
 		timer.scheduleAtFixedRate(new Runnable() {
@@ -153,6 +144,14 @@ public class FullInventoryHandler {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+
+	private void sendMessage(Player p) {
+		String msg = MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
+		if (!msg.isEmpty()) {
+			p.sendMessage(msg);
+			lastMessageTime.put(p.getUniqueId(), System.currentTimeMillis());
 		}
 	}
 

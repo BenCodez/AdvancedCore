@@ -137,12 +137,12 @@ public class BInventory {
 		inventory.openInventory(player);
 	}
 
-	private Map<Integer, BInventoryButton> buttons = new HashMap<Integer, BInventoryButton>();
+	private Map<Integer, BInventoryButton> buttons = new HashMap<>();
 
 	@Getter
 	private boolean closeInv = true;
 
-	private HashMap<String, Object> data = new HashMap<String, Object>();
+	private HashMap<String, Object> data = new HashMap<>();
 
 	private Inventory inv;
 
@@ -162,14 +162,14 @@ public class BInventory {
 	@Getter
 	private int page = 1;
 
-	private ArrayList<BInventoryButton> pageButtons = new ArrayList<BInventoryButton>();
+	private ArrayList<BInventoryButton> pageButtons = new ArrayList<>();
 
 	private boolean pages = false;
 
 	private String perm;
 
 	@Getter
-	private HashMap<String, String> placeholders = new HashMap<String, String>();
+	private HashMap<String, String> placeholders = new HashMap<>();
 
 	@Getter
 	@Setter
@@ -180,23 +180,7 @@ public class BInventory {
 	@SuppressWarnings("rawtypes")
 	ArrayList<ScheduledFuture> futures;
 
-	@SuppressWarnings("rawtypes")
-	public void cancelTimer() {
-		if (futures != null) {
-			for (ScheduledFuture f : futures) {
-				f.cancel(true);
-			}
-			futures = null;
-		}
-	}
-
-	@SuppressWarnings("rawtypes")
-	public void addUpdatingButton(AdvancedCorePlugin plugin, long delay, long interval, Runnable runnable) {
-		if (futures == null) {
-			futures = new ArrayList<ScheduledFuture>();
-		}
-		futures.add(plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, delay, TimeUnit.MILLISECONDS));
-	}
+	private ArrayList<BInventoryButton> fillItems = new ArrayList<>();
 
 	/**
 	 * Instantiates a new b inventory.
@@ -206,8 +190,6 @@ public class BInventory {
 	public BInventory(String name) {
 		setInventoryName(name);
 	}
-
-	private ArrayList<BInventoryButton> fillItems = new ArrayList<BInventoryButton>();
 
 	/**
 	 * Adds the button.
@@ -250,6 +232,21 @@ public class BInventory {
 		}
 	}
 
+	/**
+	 * Adds the button.
+	 *
+	 * @param position the position
+	 * @param button   the button
+	 */
+	public void addButton(int position, BInventoryButton button) {
+		getButtons().put(position, button);
+	}
+
+	public BInventory addData(String key, Object object) {
+		getData().put(key, object);
+		return this;
+	}
+
 	private void addFillSlots() {
 		for (BInventoryButton button : fillItems) {
 			for (int i = 0; i < getInventorySize(); i++) {
@@ -275,24 +272,27 @@ public class BInventory {
 		fillItems.clear();
 	}
 
-	/**
-	 * Adds the button.
-	 *
-	 * @param position the position
-	 * @param button   the button
-	 */
-	public void addButton(int position, BInventoryButton button) {
-		getButtons().put(position, button);
-	}
-
-	public BInventory addData(String key, Object object) {
-		getData().put(key, object);
-		return this;
-	}
-
 	public BInventory addPlaceholder(String toReplace, String replaceWith) {
 		placeholders.put(toReplace, replaceWith);
 		return this;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public void addUpdatingButton(AdvancedCorePlugin plugin, long delay, long interval, Runnable runnable) {
+		if (futures == null) {
+			futures = new ArrayList<>();
+		}
+		futures.add(plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, delay, TimeUnit.MILLISECONDS));
+	}
+
+	@SuppressWarnings("rawtypes")
+	public void cancelTimer() {
+		if (futures != null) {
+			for (ScheduledFuture f : futures) {
+				f.cancel(true);
+			}
+			futures = null;
+		}
 	}
 
 	public void closeInv(Player p, BInventoryButton b) {
@@ -300,12 +300,7 @@ public class BInventory {
 			return;
 		}
 
-		if (pages) {
-			forceClose(p);
-			return;
-		}
-
-		if (closeInv && (b == null || !b.isCloseInvSet())) {
+		if (pages || (closeInv && (b == null || !b.isCloseInvSet()))) {
 			forceClose(p);
 			return;
 		}
@@ -377,6 +372,20 @@ public class BInventory {
 		return defaultValue;
 	}
 
+	public int getFirstEmptySlot() {
+		if (buttons.keySet().size() == 0) {
+			return 0;
+		}
+
+		for (int i = 0; i < getInventorySize(); i++) {
+			if (!buttons.containsKey(i)) {
+				return i;
+			}
+		}
+		return getHighestSlot() + 1;
+
+	}
+
 	/**
 	 * Gets the highest slot.
 	 *
@@ -440,20 +449,6 @@ public class BInventory {
 		return getHighestSlot() + 1;
 	}
 
-	public int getFirstEmptySlot() {
-		if (buttons.keySet().size() == 0) {
-			return 0;
-		}
-
-		for (int i = 0; i < getInventorySize(); i++) {
-			if (!buttons.containsKey(i)) {
-				return i;
-			}
-		}
-		return getHighestSlot() + 1;
-
-	}
-
 	/**
 	 * @return the pageButtons
 	 */
@@ -471,7 +466,8 @@ public class BInventory {
 	private int getProperSize(int size) {
 		if (size < 9) {
 			return 9;
-		} else if (size < 18) {
+		}
+		if (size < 18) {
 			return 18;
 		} else if (size < 27) {
 			return 27;

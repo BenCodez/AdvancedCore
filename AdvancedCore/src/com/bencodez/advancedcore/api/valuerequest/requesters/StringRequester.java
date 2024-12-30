@@ -166,7 +166,7 @@ public class StringRequester {
 
 	public void request(Player player, InputMethod method, String currentValue, String promptText, String[] options,
 			boolean allowCustomOption, StringListener listener) {
-		LinkedHashMap<String, ItemStack> items = new LinkedHashMap<String, ItemStack>();
+		LinkedHashMap<String, ItemStack> items = new LinkedHashMap<>();
 		if (options != null) {
 			for (String option : options) {
 				items.put(option, new ItemStack(Material.STONE, 1));

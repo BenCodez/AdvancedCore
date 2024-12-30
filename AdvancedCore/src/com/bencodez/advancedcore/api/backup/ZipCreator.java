@@ -114,7 +114,7 @@ public class ZipCreator {
 			e1.printStackTrace();
 		}
 
-		List<File> fileList = new ArrayList<File>();
+		List<File> fileList = new ArrayList<>();
 
 		try {
 			plugin.debug("---Getting references to all files in: " + directory.getCanonicalPath());

@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 
 public abstract class EditGUIValueInventory extends EditGUIValue {
-	private ArrayList<String> keys = new ArrayList<String>();
+	private ArrayList<String> keys = new ArrayList<>();
 
 	public EditGUIValueInventory(String key) {
 		setKey(key);
@@ -19,13 +19,13 @@ public abstract class EditGUIValueInventory extends EditGUIValue {
 	}
 
 	@Override
-	public void onClick(ClickEvent clickEvent) {
-		openInventory(clickEvent);
-	}
-	
-	@Override
 	public String getType() {
 		return "unkown";
+	}
+
+	@Override
+	public void onClick(ClickEvent clickEvent) {
+		openInventory(clickEvent);
 	}
 
 	public abstract void openInventory(ClickEvent clickEvent);

@@ -21,9 +21,14 @@ public abstract class EditGUIValueList extends EditGUIValue {
 	}
 
 	@Override
+	public String getType() {
+		return "list";
+	}
+
+	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
-			setCurrentValue(new ArrayList<String>());
+			setCurrentValue(new ArrayList<>());
 		}
 		BInventory inv = new BInventory("Edit list: " + getKey());
 		inv.setMeta(clickEvent.getPlayer(), "Value", getCurrentValue());
@@ -37,7 +42,7 @@ public abstract class EditGUIValueList extends EditGUIValue {
 						@SuppressWarnings("unchecked")
 						ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
 						if (list == null) {
-							list = new ArrayList<String>();
+							list = new ArrayList<>();
 						}
 						list.add(add);
 						setValue(player, list);
@@ -70,11 +75,6 @@ public abstract class EditGUIValueList extends EditGUIValue {
 			}
 		});
 		inv.openInventory(clickEvent.getPlayer());
-	}
-	
-	@Override
-	public String getType() {
-		return "list";
 	}
 
 	public abstract void setValue(Player player, ArrayList<String> value);

@@ -31,7 +31,7 @@ public class RewardOptions {
 	@Setter
 	private boolean onlineSet = false;
 
-	private HashMap<String, String> placeholders = new HashMap<String, String>();
+	private HashMap<String, String> placeholders = new HashMap<>();
 
 	private String prefix = "";
 
@@ -43,24 +43,19 @@ public class RewardOptions {
 	@Getter
 	private boolean useDefaultWorlds = true;
 
-	public RewardOptions disableDefaultWorlds() {
-		useDefaultWorlds = false;
-		return this;
-	}
-
 	@Getter
 	private long orginalTrigger = -1;
 
 	public RewardOptions() {
 	}
 
-	public RewardOptions orginalTrigger(long trigger) {
-		orginalTrigger = trigger;
+	public RewardOptions addPlaceholder(String arg1, String arg2) {
+		getPlaceholders().put(arg1, arg2);
 		return this;
 	}
 
-	public RewardOptions addPlaceholder(String arg1, String arg2) {
-		getPlaceholders().put(arg1, arg2);
+	public RewardOptions disableDefaultWorlds() {
+		useDefaultWorlds = false;
 		return this;
 	}
 
@@ -101,6 +96,11 @@ public class RewardOptions {
 
 	public boolean isOnline() {
 		return online;
+	}
+
+	public RewardOptions orginalTrigger(long trigger) {
+		orginalTrigger = trigger;
+		return this;
 	}
 
 	public RewardOptions setCheckRepeat(boolean checkRepeat) {

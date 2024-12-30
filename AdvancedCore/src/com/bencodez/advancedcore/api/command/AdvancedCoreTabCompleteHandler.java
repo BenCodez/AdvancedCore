@@ -16,7 +16,7 @@ public class AdvancedCoreTabCompleteHandler {
 
 	public ArrayList<String> getTabCompleteOptions(ArrayList<CommandHandler> handles, CommandSender sender,
 			String[] args, int argNum) {
-		ArrayList<String> tabComplete = new ArrayList<String>();
+		ArrayList<String> tabComplete = new ArrayList<>();
 		ConcurrentHashMap<String, ArrayList<String>> options = TabCompleteHandler.getInstance().getTabCompleteOptions();
 		for (CommandHandler h : handles) {
 			tabComplete.addAll(h.getTabCompleteOptions(sender, args, argNum, options));

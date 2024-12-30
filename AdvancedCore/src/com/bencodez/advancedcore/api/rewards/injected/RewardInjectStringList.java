@@ -17,7 +17,7 @@ public abstract class RewardInjectStringList extends RewardInject {
 
 	@Getter
 	@Setter
-	private ArrayList<String> defaultValue = new ArrayList<String>();
+	private ArrayList<String> defaultValue = new ArrayList<>();
 
 	public RewardInjectStringList(String path) {
 		super(path);
@@ -37,8 +37,8 @@ public abstract class RewardInjectStringList extends RewardInject {
 			HashMap<String, String> placeholders) {
 		if (data.isList(getPath()) || (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
 			ArrayList<String> value = (ArrayList<String>) data.getList(getPath(), getDefaultValue());
-			AdvancedCorePlugin.getInstance().extraDebug(reward.getRewardName() + ": Giving " + getPath() + ", value: "
-					+ ArrayUtils.makeStringList(value));
+			AdvancedCorePlugin.getInstance().extraDebug(
+					reward.getRewardName() + ": Giving " + getPath() + ", value: " + ArrayUtils.makeStringList(value));
 			return onRewardRequest(reward, user, value, placeholders);
 
 		}

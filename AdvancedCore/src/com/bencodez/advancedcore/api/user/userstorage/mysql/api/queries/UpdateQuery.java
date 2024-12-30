@@ -10,8 +10,8 @@ import com.bencodez.advancedcore.api.user.userstorage.mysql.api.utils.QueryUtils
 public class UpdateQuery {
 
 	private String table;
-	private LinkedHashMap<String, String> values = new LinkedHashMap<String, String>();
-	private List<String> wheres = new ArrayList<String>();
+	private LinkedHashMap<String, String> values = new LinkedHashMap<>();
+	private List<String> wheres = new ArrayList<>();
 
 	/**
 	 * Create an update query.

@@ -170,24 +170,20 @@ public class AdvancedCoreUser {
 		setPlayerName(playerName);
 	}
 
-	public void addPermission(String permission) {
-		plugin.getPermissionHandler().addPermission(getPlayer(), permission);
-	}
-
-	public void addPermission(String permission, long delay) {
-		plugin.getPermissionHandler().addPermission(getPlayer(), permission, delay);
-	}
-
-	public void removePermission(String permission) {
-		plugin.getPermissionHandler().removePermission(UUID.fromString(getUUID()), getPlayerName(), permission);
-	}
-
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
 		synchronized (plugin) {
 			ArrayList<String> offlineRewards = getOfflineRewards();
 			offlineRewards.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.makeString(placeholders));
 			setOfflineRewards(offlineRewards);
 		}
+	}
+
+	public void addPermission(String permission) {
+		plugin.getPermissionHandler().addPermission(getPlayer(), permission);
+	}
+
+	public void addPermission(String permission, long delay) {
+		plugin.getPermissionHandler().addPermission(getPlayer(), permission, delay);
 	}
 
 	public synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
@@ -210,10 +206,6 @@ public class AdvancedCoreUser {
 		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid));
 	}
 
-	public void cacheIfNeeded() {
-		plugin.getUserManager().getDataManager().cacheUserIfNeeded(UUID.fromString(uuid));
-	}
-
 	public void cacheAsync() {
 		getPlugin().getBukkitScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
@@ -224,10 +216,19 @@ public class AdvancedCoreUser {
 		});
 	}
 
+	public AdvancedCoreUser cacheData() {
+		cacheData = true;
+		return this;
+	}
+
+	public void cacheIfNeeded() {
+		plugin.getUserManager().getDataManager().cacheUserIfNeeded(UUID.fromString(uuid));
+	}
+
 	public void checkDelayedTimedRewards() {
 		plugin.debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
-		HashMap<String, Long> newTimed = new HashMap<String, Long>();
+		HashMap<String, Long> newTimed = new HashMap<>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 			long time = entry.getValue();
 
@@ -267,7 +268,7 @@ public class AdvancedCoreUser {
 		}
 		setCheckWorld(false);
 		final ArrayList<String> copy = getOfflineRewards();
-		setOfflineRewards(new ArrayList<String>());
+		setOfflineRewards(new ArrayList<>());
 		final AdvancedCoreUser user = this;
 		if (plugin.isEnabled()) {
 			getPlugin().getBukkitScheduler().runTaskLater(plugin, new Runnable() {
@@ -288,33 +289,6 @@ public class AdvancedCoreUser {
 					}
 				}
 			}, 2);
-		}
-	}
-
-	public void forceRunOfflineRewards() {
-		if (!plugin.getOptions().isProcessRewards()) {
-			plugin.debug("Processing rewards is disabled");
-			return;
-		}
-		setCheckWorld(false);
-		final ArrayList<String> copy = getOfflineRewards();
-		setOfflineRewards(new ArrayList<String>());
-		final AdvancedCoreUser user = this;
-		if (plugin.isEnabled()) {
-
-			for (String str : copy) {
-				if (str != null && !str.equals("null")) {
-					String[] args = str.split("%placeholders%");
-					String placeholders = "";
-					if (args.length > 1) {
-						placeholders = args[1];
-					}
-					plugin.getRewardHandler().giveReward(user, args[0],
-							new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
-									.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholders)));
-				}
-			}
-
 		}
 	}
 
@@ -348,9 +322,31 @@ public class AdvancedCoreUser {
 		return this;
 	}
 
-	public AdvancedCoreUser cacheData() {
-		cacheData = true;
-		return this;
+	public void forceRunOfflineRewards() {
+		if (!plugin.getOptions().isProcessRewards()) {
+			plugin.debug("Processing rewards is disabled");
+			return;
+		}
+		setCheckWorld(false);
+		final ArrayList<String> copy = getOfflineRewards();
+		setOfflineRewards(new ArrayList<>());
+		final AdvancedCoreUser user = this;
+		if (plugin.isEnabled()) {
+
+			for (String str : copy) {
+				if (str != null && !str.equals("null")) {
+					String[] args = str.split("%placeholders%");
+					String placeholders = "";
+					if (args.length > 1) {
+						placeholders = args[1];
+					}
+					plugin.getRewardHandler().giveReward(user, args[0],
+							new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
+									.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholders)));
+				}
+			}
+
+		}
 	}
 
 	public UserDataCache getCache() {
@@ -384,6 +380,10 @@ public class AdvancedCoreUser {
 
 	public String getInputMethod() {
 		return getUserData().getString("InputMethod", cacheData, waitForCache);
+	}
+
+	public UUID getJavaUUID() {
+		return UUID.fromString(uuid);
 	}
 
 	public long getLastOnline() {
@@ -446,14 +446,13 @@ public class AdvancedCoreUser {
 	 * @return the player name
 	 */
 	public String getPlayerName() {
-		if (playerName == null) {
-			if (isTempCache()) {
-				return getUserData().getString("PlayerName", false, false);
-			}
-			return "";
-		} else {
+		if (playerName != null) {
 			return playerName;
 		}
+		if (isTempCache()) {
+			return getUserData().getString("PlayerName", false, false);
+		}
+		return "";
 	}
 
 	public int getRepeatAmount(Reward reward) {
@@ -462,7 +461,7 @@ public class AdvancedCoreUser {
 
 	public HashMap<String, Long> getTimedRewards() {
 		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards", cacheData, waitForCache);
-		HashMap<String, Long> timedRewards = new HashMap<String, Long>();
+		HashMap<String, Long> timedRewards = new HashMap<>();
 		for (String str : timedReward) {
 			if (str != null && !str.equals("null")) {
 				String[] data = str.split("%ExecutionTime/%");
@@ -507,10 +506,6 @@ public class AdvancedCoreUser {
 		return uuid;
 	}
 
-	public UUID getJavaUUID() {
-		return UUID.fromString(uuid);
-	}
-
 	/**
 	 * Give exp.
 	 *
@@ -540,31 +535,7 @@ public class AdvancedCoreUser {
 	 * @param item the item
 	 */
 	public void giveItem(ItemStack item) {
-		if (item == null) {
-			return;
-		}
-		if (item.getAmount() == 0) {
-			return;
-		}
-
-		final Player player = getPlayer();
-
-		if (plugin.isEnabled()) {
-			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					if (player != null) {
-						plugin.getFullInventoryHandler().giveItem(player, item);
-					}
-				}
-			}, player);
-		}
-
-	}
-
-	public void giveItems(ItemStack... item) {
-		if (item == null) {
+		if ((item == null) || (item.getAmount() == 0)) {
 			return;
 		}
 
@@ -586,6 +557,27 @@ public class AdvancedCoreUser {
 
 	public void giveItem(ItemStack itemStack, HashMap<String, String> placeholders) {
 		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack(getPlayer()));
+	}
+
+	public void giveItems(ItemStack... item) {
+		if (item == null) {
+			return;
+		}
+
+		final Player player = getPlayer();
+
+		if (plugin.isEnabled()) {
+			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
+
+				@Override
+				public void run() {
+					if (player != null) {
+						plugin.getFullInventoryHandler().giveItem(player, item);
+					}
+				}
+			}, player);
+		}
+
 	}
 
 	/**
@@ -711,6 +703,10 @@ public class AdvancedCoreUser {
 			return true;
 		}
 		return false;
+	}
+
+	public boolean isBedrockPlayer() {
+		return plugin.getGeyserHandle().isGeyserPlayer(getJavaUUID());
 	}
 
 	public boolean isCached() {
@@ -926,6 +922,10 @@ public class AdvancedCoreUser {
 		getData().remove();
 	}
 
+	public void removePermission(String permission) {
+		plugin.getPermissionHandler().removePermission(UUID.fromString(getUUID()), getPlayerName(), permission);
+	}
+
 	public void removeUnClaimedChoiceReward(String name) {
 		ArrayList<String> choices = getUnClaimedChoices();
 		choices.remove(name);
@@ -992,7 +992,7 @@ public class AdvancedCoreUser {
 	public void sendJson(ArrayList<TextComponent> messages, boolean javascript) {
 		Player player = getPlayer();
 		if ((player != null) && (messages != null)) {
-			ArrayList<BaseComponent> texts = new ArrayList<BaseComponent>();
+			ArrayList<BaseComponent> texts = new ArrayList<>();
 			TextComponent newLine = new TextComponent(ComponentSerializer.parse("{text: \"\n\"}"));
 			for (int i = 0; i < messages.size(); i++) {
 				TextComponent txt = messages.get(i);
@@ -1054,10 +1054,6 @@ public class AdvancedCoreUser {
 		}
 	}
 
-	public boolean isBedrockPlayer() {
-		return plugin.getGeyserHandle().isGeyserPlayer(getJavaUUID());
-	}
-
 	public void sendMessage(String msg, HashMap<String, String> placeholders) {
 		sendMessage(PlaceholderUtils.replacePlaceHolder(msg, placeholders));
 	}
@@ -1075,7 +1071,7 @@ public class AdvancedCoreUser {
 		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		if ((player != null) && (msg != null)) {
 
-			ArrayList<TextComponent> texts = new ArrayList<TextComponent>();
+			ArrayList<TextComponent> texts = new ArrayList<>();
 			for (String str : msg) {
 				if ((player != null) && (msg != null)) {
 					if (!str.equals("")) {
@@ -1124,7 +1120,7 @@ public class AdvancedCoreUser {
 
 	public void setChoicePreference(String reward, String preference) {
 		ArrayList<String> data = getChoicePreferenceData();
-		ArrayList<String> choices = new ArrayList<String>();
+		ArrayList<String> choices = new ArrayList<>();
 
 		boolean added = false;
 		for (String str : data) {
@@ -1165,7 +1161,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void setTimedRewards(HashMap<String, Long> timed) {
-		ArrayList<String> timedRewards = new ArrayList<String>();
+		ArrayList<String> timedRewards = new ArrayList<>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 
 			String str = "";
@@ -1204,11 +1200,6 @@ public class AdvancedCoreUser {
 		return this;
 	}
 
-	public void updateTempCacheWithColumns(ArrayList<Column> cols) {
-		tempCache = true;
-		getUserData().updateTempCacheWithColumns(cols);
-	}
-
 	public void updateName(boolean force) {
 		if (getData().hasData() || force) {
 			String playerName = getData().getString("PlayerName", true);
@@ -1216,6 +1207,11 @@ public class AdvancedCoreUser {
 				getData().setString("PlayerName", getPlayerName(), true);
 			}
 		}
+	}
+
+	public void updateTempCacheWithColumns(ArrayList<Column> cols) {
+		tempCache = true;
+		getUserData().updateTempCacheWithColumns(cols);
 	}
 
 }

@@ -36,21 +36,11 @@ public abstract class GlobalMySQL {
 
 	private Object object4 = new Object();
 
-	private List<String> intColumns = new ArrayList<String>();
+	private List<String> intColumns = new ArrayList<>();
 
 	private boolean useBatchUpdates = true;
 
 	private Set<String> servers = ConcurrentHashMap.newKeySet();
-
-	public abstract void debug(String text);
-
-	public abstract void debug(Exception e);
-
-	public abstract void severe(String text);
-
-	public abstract void warning(String text);
-	
-	public abstract void info(String text);
 
 	public GlobalMySQL(String tableName, MySQL mysql) {
 		this.mysql = mysql;
@@ -218,6 +208,10 @@ public abstract class GlobalMySQL {
 		return false;
 	}
 
+	public abstract void debug(Exception e);
+
+	public abstract void debug(String text);
+
 	public void deleteServer(String server) {
 		String q = "DELETE FROM " + getName() + " WHERE server='" + server + "';";
 		try {
@@ -231,6 +225,15 @@ public abstract class GlobalMySQL {
 
 	}
 
+	public void executeQuery(String str) {
+		try {
+			Query q = new Query(mysql, PlaceholderUtils.replacePlaceHolder(str, "tablename", getName()));
+			q.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public List<String> getColumns() {
 		if (columns == null || columns.size() == 0) {
 			loadData();
@@ -239,7 +242,7 @@ public abstract class GlobalMySQL {
 	}
 
 	public ArrayList<String> getColumnsQueury() {
-		ArrayList<String> columns = new ArrayList<String>();
+		ArrayList<String> columns = new ArrayList<>();
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + ";")) {
 			ResultSet rs = sql.executeQuery();
@@ -315,7 +318,7 @@ public abstract class GlobalMySQL {
 	}
 
 	public ArrayList<Column> getRowsQuery() {
-		ArrayList<Column> result = new ArrayList<Column>();
+		ArrayList<Column> result = new ArrayList<>();
 		String sqlStr = "SELECT server FROM " + getName() + ";";
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
@@ -346,7 +349,7 @@ public abstract class GlobalMySQL {
 	}
 
 	public ArrayList<String> getServersQuery() {
-		ArrayList<String> uuids = new ArrayList<String>();
+		ArrayList<String> uuids = new ArrayList<>();
 
 		ArrayList<Column> rows = getRowsQuery();
 		if (rows != null) {
@@ -361,6 +364,8 @@ public abstract class GlobalMySQL {
 
 		return uuids;
 	}
+
+	public abstract void info(String text);
 
 	public void insert(String index, String column, DataValue value) {
 		insertQuery(index, Arrays.asList(new Column(column, value)));
@@ -421,6 +426,8 @@ public abstract class GlobalMySQL {
 			e.printStackTrace();
 		}
 	}
+
+	public abstract void severe(String text);
 
 	public void update(String index, List<Column> cols, boolean runAsync) {
 		for (Column col : cols) {
@@ -506,6 +513,8 @@ public abstract class GlobalMySQL {
 
 	}
 
+	public abstract void warning(String text);
+
 	public void wipeColumnData(String columnName) {
 		checkColumn(columnName, DataType.STRING);
 		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
@@ -516,14 +525,5 @@ public abstract class GlobalMySQL {
 			e.printStackTrace();
 		}
 
-	}
-
-	public void executeQuery(String str) {
-		try {
-			Query q = new Query(mysql, PlaceholderUtils.replacePlaceHolder(str, "tablename", getName()));
-			q.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
 	}
 }

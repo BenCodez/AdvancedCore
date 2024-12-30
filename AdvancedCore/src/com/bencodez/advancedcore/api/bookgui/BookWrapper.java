@@ -18,14 +18,14 @@ public class BookWrapper {
 	@Getter
 	private ItemStack book;
 	@Getter
-	private ArrayList<BaseComponent[]> builder = new ArrayList<BaseComponent[]>();
+	private ArrayList<BaseComponent[]> builder = new ArrayList<>();
 	@Getter
 	private BookUtil.PageBuilder currentPage;
 	@Getter
 	@Setter
 	private int currentPageLines = 0;
 	@Getter
-	private HashMap<String, String> placeholders = new HashMap<String, String>();
+	private HashMap<String, String> placeholders = new HashMap<>();
 	@Getter
 	@Setter
 	private String title;

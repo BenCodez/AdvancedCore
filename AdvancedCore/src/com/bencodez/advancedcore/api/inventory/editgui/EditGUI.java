@@ -17,9 +17,9 @@ public class EditGUI extends BInventory {
 
 	public void sort() {
 		Map<Integer, BInventoryButton> map = getButtons();
-		setButtons(new HashMap<Integer, BInventoryButton>());
-		LinkedHashMap<String, EditGUIButton> buttons = new LinkedHashMap<String, EditGUIButton>();
-		ArrayList<String> sortedList = new ArrayList<String>();
+		setButtons(new HashMap<>());
+		LinkedHashMap<String, EditGUIButton> buttons = new LinkedHashMap<>();
+		ArrayList<String> sortedList = new ArrayList<>();
 		for (BInventoryButton button : map.values()) {
 			if (button instanceof EditGUIButton) {
 				EditGUIButton b = (EditGUIButton) button;

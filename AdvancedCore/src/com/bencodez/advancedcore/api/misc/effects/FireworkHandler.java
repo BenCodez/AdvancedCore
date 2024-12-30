@@ -33,7 +33,7 @@ public class FireworkHandler implements Listener {
 		return instance;
 	}
 
-	private ConcurrentLinkedQueue<Firework> fireWorks = new ConcurrentLinkedQueue<Firework>();
+	private ConcurrentLinkedQueue<Firework> fireWorks = new ConcurrentLinkedQueue<>();
 
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();

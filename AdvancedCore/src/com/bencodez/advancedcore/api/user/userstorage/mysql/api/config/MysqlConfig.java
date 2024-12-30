@@ -44,7 +44,7 @@ public class MysqlConfig {
 	@Getter
 	@Setter
 	private String line = "";
-	
+
 	public boolean hasTableNameSet() {
 		if (tableName == null) {
 			return false;

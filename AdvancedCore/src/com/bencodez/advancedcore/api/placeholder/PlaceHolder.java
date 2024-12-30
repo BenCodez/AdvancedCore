@@ -24,16 +24,16 @@ public abstract class PlaceHolder<T> {
 	@Getter
 	private String updateDataKey = "";
 
-	public PlaceHolder<T> updateDataKey(String key) {
-		this.updateDataKey = key;
-		return this;
-	}
-
 	@Getter
 	private boolean usesCache = false;
 
 	public PlaceHolder(String identifier) {
 		this.identifier = identifier;
+	}
+
+	public PlaceHolder(String identifier, boolean useStartsWith) {
+		this.identifier = identifier;
+		this.useStartsWith = useStartsWith;
 	}
 
 	public PlaceHolder(String identifier, String noValueReturn) {
@@ -47,13 +47,30 @@ public abstract class PlaceHolder<T> {
 		this.noValueReturn = noValueReturn;
 	}
 
-	public PlaceHolder(String identifier, boolean useStartsWith) {
-		this.identifier = identifier;
-		this.useStartsWith = useStartsWith;
+	public void clearCachePlayer(UUID javaUUID) {
+		for (String ident : cache.keySet()) {
+			if (cache.get(ident).containsKey(javaUUID)) {
+				cache.get(ident).remove(javaUUID);
+			}
+
+		}
 	}
 
 	public boolean hasDescription() {
 		return description != null;
+	}
+
+	public boolean isCached(String identifier) {
+		return cache.containsKey(identifier);
+	}
+
+	public boolean isCached(String identifier, UUID uuid) {
+		if (isCached(identifier)) {
+			if (cache.get(identifier).containsKey(uuid)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public boolean matches(String identifier) {
@@ -71,6 +88,20 @@ public abstract class PlaceHolder<T> {
 
 	public abstract String placeholderRequest(T user, String identifier);
 
+	public PlaceHolder<T> setUseCache(boolean usesCache, String identifier) {
+		this.usesCache = usesCache;
+		if (cache == null) {
+			cache = new ConcurrentHashMap<>();
+		}
+		cache.put(identifier, new ConcurrentHashMap<>());
+		return this;
+	}
+
+	public PlaceHolder<T> updateDataKey(String key) {
+		this.updateDataKey = key;
+		return this;
+	}
+
 	public PlaceHolder<T> useStartsWith() {
 		useStartsWith = true;
 		return this;
@@ -79,37 +110,6 @@ public abstract class PlaceHolder<T> {
 	public PlaceHolder<T> withDescription(String desc) {
 		description = desc;
 		return this;
-	}
-
-	public PlaceHolder<T> setUseCache(boolean usesCache, String identifier) {
-		this.usesCache = usesCache;
-		if (cache == null) {
-			cache = new ConcurrentHashMap<String, ConcurrentHashMap<UUID, String>>();
-		}
-		cache.put(identifier, new ConcurrentHashMap<UUID, String>());
-		return this;
-	}
-
-	public boolean isCached(String identifier) {
-		return cache.containsKey(identifier);
-	}
-	
-	public boolean isCached(String identifier, UUID uuid) {
-		if (isCached(identifier)) {
-			if (cache.get(identifier).containsKey(uuid)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	public void clearCachePlayer(UUID javaUUID) {
-		for (String ident : cache.keySet()) {
-			if (cache.get(ident).containsKey(javaUUID)) {
-				cache.get(ident).remove(javaUUID);
-			}
-			
-		}
 	}
 
 }

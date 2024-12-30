@@ -64,8 +64,18 @@ public class RewardBuilder {
 				"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(date));
 	}
 
+	public RewardBuilder disableDefaultWorlds() {
+		this.rewardOptions.disableDefaultWorlds();
+		return this;
+	}
+
 	public RewardOptions getRewardOptions() {
 		return rewardOptions;
+	}
+
+	public RewardBuilder orginalTrigger(long trigger) {
+		this.rewardOptions.orginalTrigger(trigger);
+		return this;
 	}
 
 	public void send(AdvancedCoreUser user) {
@@ -142,11 +152,6 @@ public class RewardBuilder {
 		return this;
 	}
 
-	public RewardBuilder disableDefaultWorlds() {
-		this.rewardOptions.disableDefaultWorlds();
-		return this;
-	}
-
 	public RewardBuilder withPlaceHolder(HashMap<String, String> placeholders) {
 		this.rewardOptions.getPlaceholders().putAll(placeholders);
 		return this;
@@ -164,11 +169,6 @@ public class RewardBuilder {
 
 	public RewardBuilder withSuffix(String suffix) {
 		this.rewardOptions.setSuffix(suffix);
-		return this;
-	}
-
-	public RewardBuilder orginalTrigger(long trigger) {
-		this.rewardOptions.orginalTrigger(trigger);
 		return this;
 	}
 

@@ -64,13 +64,6 @@ public class Table {
 		this.plugin = plugin;
 	}
 
-	public void addCustomColumns() {
-		// add custom column types
-		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
-			addColoumn(key);
-		}
-	}
-
 	public void addColoumn(Column column) {
 		if (hasColumn(column)) {
 			return;
@@ -106,6 +99,13 @@ public class Table {
 		}
 	}
 
+	public void addCustomColumns() {
+		// add custom column types
+		for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
+			addColoumn(key);
+		}
+	}
+
 	public void checkColumn(Column c) {
 		if (!hasColumn(c)) {
 			Column col = new Column(c.getName(), c.getDataType());
@@ -116,9 +116,9 @@ public class Table {
 	public void checkColumns() {
 		for (String col : getTableColumns()) {
 			boolean has = false;
-			for (int i = 0; i < columns.size(); i++) {
+			for (Column column : columns) {
 				if (col != null) {
-					if (col.equals(columns.get(i).getName())) {
+					if (col.equals(column.getName())) {
 						has = true;
 					}
 				}
@@ -154,6 +154,18 @@ public class Table {
 		return false;
 	}
 
+	public void copyColumnData(String columnFromName, String columnToName, DataType dataType) {
+		checkColumn(new Column(columnToName, dataType));
+		checkColumn(new Column(columnFromName, dataType));
+		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
+			s.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public void delete(Column column) {
 		if (column.getName().equalsIgnoreCase(primaryKey.getName())) {
 			String query = "DELETE FROM " + getName() + " WHERE `" + column.getName() + "`=?";
@@ -173,6 +185,16 @@ public class Table {
 			}
 		} else {
 			System.out.println("Primary key must be used!");
+		}
+	}
+
+	public void executeQuery(String str) {
+		try {
+			PreparedStatement s = sqLite.getSQLConnection()
+					.prepareStatement(PlaceholderUtils.replacePlaceHolder(str, "tablename", getName()));
+			s.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -205,13 +227,70 @@ public class Table {
 		return results;
 	}
 
+	public HashMap<UUID, ArrayList<Column>> getAllQuery() {
+		HashMap<UUID, ArrayList<Column>> result = new HashMap<>();
+		String query = "SELECT * FROM " + getName() + ";";
+
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			ResultSet rs = s.executeQuery();
+
+			while (rs.next()) {
+				ArrayList<Column> cols = new ArrayList<>();
+				UUID uuid = null;
+				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+					String columnName = rs.getMetaData().getColumnLabel(i);
+					Column rCol = null;
+
+					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
+						try {
+							rCol = new Column(columnName, DataType.INTEGER);
+							rCol.setValue(new DataValueInt(rs.getInt(i)));
+						} catch (Exception e) {
+							rCol = new Column(columnName, DataType.INTEGER);
+							String data = rs.getString(i);
+							if (data != null) {
+								try {
+									rCol.setValue(new DataValueInt(Integer.parseInt(data)));
+								} catch (NumberFormatException ex) {
+									rCol.setValue(new DataValueInt(0));
+								}
+							} else {
+								rCol.setValue(new DataValueInt(0));
+							}
+						}
+					} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+						rCol = new Column(columnName, DataType.BOOLEAN);
+						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
+					} else {
+						rCol = new Column(columnName, DataType.STRING);
+						rCol.setValue(new DataValueString(rs.getString(i)));
+						if (columnName.equals("uuid")) {
+							uuid = UUID.fromString(rs.getString(i));
+						}
+					}
+					cols.add(rCol);
+				}
+				result.put(uuid, cols);
+			}
+			rs.close();
+			return result;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
+			e.printStackTrace();
+		}
+
+		return result;
+	}
+
 	public List<Column> getColumns() {
 		return columns;
 	}
 
 	public List<String> getColumnsString() {
 		List<Column> column = getColumns();
-		ArrayList<String> list = new ArrayList<String>();
+		ArrayList<String> list = new ArrayList<>();
 		for (Column col : column) {
 			list.add(col.getName());
 		}
@@ -272,13 +351,33 @@ public class Table {
 	}
 
 	public ArrayList<String> getNames() {
-		ArrayList<String> names = new ArrayList<String>();
+		ArrayList<String> names = new ArrayList<>();
 		for (Column col : getRowsNames()) {
 			if (col.getValue() != null && col.getValue().isString()) {
 				names.add(col.getValue().getString());
 			}
 		}
 		return names;
+	}
+
+	public ArrayList<Integer> getNumbersInColumn(String column) {
+		ArrayList<Integer> result = new ArrayList<>();
+		String sqlStr = "SELECT " + column + " FROM " + getName() + ";";
+
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sqlStr);
+			ResultSet rs = s.executeQuery();
+
+			while (rs.next()) {
+				result.add(rs.getInt(column));
+			}
+
+			sqLite.close(s, rs);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return result;
 	}
 
 	public Column getPrimaryKey() {
@@ -297,7 +396,7 @@ public class Table {
 	}
 
 	public List<Column> getRows() {
-		List<Column> result = new ArrayList<Column>();
+		List<Column> result = new ArrayList<>();
 		String query = "SELECT uuid FROM " + getName();
 
 		try {
@@ -324,7 +423,7 @@ public class Table {
 
 	public List<Column> getRowsNames() {
 		checkColumn(new Column("PlayerName", DataType.STRING));
-		List<Column> result = new ArrayList<Column>();
+		List<Column> result = new ArrayList<>();
 		String query = "SELECT PlayerName FROM " + getName();
 
 		try {
@@ -345,6 +444,28 @@ public class Table {
 		}
 
 		return result;
+	}
+
+	public ArrayList<String> getTableColumns() {
+		ArrayList<String> columns = new ArrayList<>();
+		String query = "SELECT * FROM " + getName();
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			ResultSet rs = s.executeQuery();
+			ResultSetMetaData metadata = rs.getMetaData();
+			int columnCount = metadata.getColumnCount();
+
+			for (int i = 1; i <= columnCount; i++) {
+				String columnName = metadata.getColumnName(i);
+
+				columns.add(columnName);
+			}
+
+			sqLite.close(s, rs);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return columns;
 	}
 
 	public String getUUID(String playerName) {
@@ -368,105 +489,6 @@ public class Table {
 		} catch (ArrayIndexOutOfBoundsException e) {
 		}
 		return null;
-	}
-
-	public ArrayList<Integer> getNumbersInColumn(String column) {
-		ArrayList<Integer> result = new ArrayList<Integer>();
-		String sqlStr = "SELECT " + column + " FROM " + getName() + ";";
-
-		try {
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sqlStr);
-			ResultSet rs = s.executeQuery();
-
-			while (rs.next()) {
-				result.add(rs.getInt(column));
-			}
-
-			sqLite.close(s, rs);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		return result;
-	}
-
-	public ArrayList<String> getTableColumns() {
-		ArrayList<String> columns = new ArrayList<String>();
-		String query = "SELECT * FROM " + getName();
-		try {
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-			ResultSet rs = s.executeQuery();
-			ResultSetMetaData metadata = rs.getMetaData();
-			int columnCount = metadata.getColumnCount();
-
-			for (int i = 1; i <= columnCount; i++) {
-				String columnName = metadata.getColumnName(i);
-
-				columns.add(columnName);
-			}
-
-			sqLite.close(s, rs);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return columns;
-	}
-
-	public HashMap<UUID, ArrayList<Column>> getAllQuery() {
-		HashMap<UUID, ArrayList<Column>> result = new HashMap<UUID, ArrayList<Column>>();
-		String query = "SELECT * FROM " + getName() + ";";
-
-		try {
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-			ResultSet rs = s.executeQuery();
-
-			while (rs.next()) {
-				ArrayList<Column> cols = new ArrayList<Column>();
-				UUID uuid = null;
-				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-					String columnName = rs.getMetaData().getColumnLabel(i);
-					Column rCol = null;
-
-					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
-						try {
-							rCol = new Column(columnName, DataType.INTEGER);
-							rCol.setValue(new DataValueInt(rs.getInt(i)));
-						} catch (Exception e) {
-							rCol = new Column(columnName, DataType.INTEGER);
-							String data = rs.getString(i);
-							if (data != null) {
-								try {
-									rCol.setValue(new DataValueInt(Integer.parseInt(data)));
-								} catch (NumberFormatException ex) {
-									rCol.setValue(new DataValueInt(0));
-								}
-							} else {
-								rCol.setValue(new DataValueInt(0));
-							}
-						}
-					} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
-						rCol = new Column(columnName, DataType.BOOLEAN);
-						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
-					} else {
-						rCol = new Column(columnName, DataType.STRING);
-						rCol.setValue(new DataValueString(rs.getString(i)));
-						if (columnName.equals("uuid")) {
-							uuid = UUID.fromString(rs.getString(i));
-						}
-					}
-					cols.add(rCol);
-				}
-				result.put(uuid, cols);
-			}
-			rs.close();
-			return result;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} catch (ArrayIndexOutOfBoundsException e) {
-			e.printStackTrace();
-		}
-
-		return result;
 	}
 
 	public boolean hasColumn(Column column) {
@@ -519,44 +541,43 @@ public class Table {
 
 	public List<List<Column>> search(Column column) {
 		List<List<Column>> results = new ArrayList<>();
-		if (!column.getName().equalsIgnoreCase(primaryKey.getName())) {
-			String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
-			try {
-				PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-				if (column.getValue().isString()) {
-					s.setString(1, column.getValue().getString());
-				} else if (column.getValue().isInt()) {
-					s.setInt(1, column.getValue().getInt());
-				} else {
-					s.setBoolean(1, column.getValue().getBoolean());
-				}
-
-				ResultSet rs = s.executeQuery();
-				while (rs.next()) {
-					List<Column> result = new ArrayList<>();
-					for (int i = 0; i < getColumns().size(); i++) {
-						Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).getDataType(),
-								getColumns().get(i).getLimit());
-
-						if (getColumns().get(i).getValue().isString()) {
-							rCol.setValue(new DataValueString(rs.getString(i + 1)));
-						} else if (getColumns().get(i).getValue().isInt()) {
-							rCol.setValue(new DataValueInt(rs.getInt(i + 1)));
-						} else if (getColumns().get(i).getValue().isBoolean()) {
-							rCol.setValue(new DataValueBoolean(rs.getBoolean(i + 1)));
-						}
-						result.add(rCol);
-					}
-					results.add(result);
-				}
-				sqLite.close(s, rs);
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-			return results;
-		} else {
+		if (column.getName().equalsIgnoreCase(primaryKey.getName())) {
 			return null;
 		}
+		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
+		try {
+			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
+			if (column.getValue().isString()) {
+				s.setString(1, column.getValue().getString());
+			} else if (column.getValue().isInt()) {
+				s.setInt(1, column.getValue().getInt());
+			} else {
+				s.setBoolean(1, column.getValue().getBoolean());
+			}
+
+			ResultSet rs = s.executeQuery();
+			while (rs.next()) {
+				List<Column> result = new ArrayList<>();
+				for (int i = 0; i < getColumns().size(); i++) {
+					Column rCol = new Column(getColumns().get(i).getName(), getColumns().get(i).getDataType(),
+							getColumns().get(i).getLimit());
+
+					if (getColumns().get(i).getValue().isString()) {
+						rCol.setValue(new DataValueString(rs.getString(i + 1)));
+					} else if (getColumns().get(i).getValue().isInt()) {
+						rCol.setValue(new DataValueInt(rs.getInt(i + 1)));
+					} else if (getColumns().get(i).getValue().isBoolean()) {
+						rCol.setValue(new DataValueBoolean(rs.getBoolean(i + 1)));
+					}
+					result.add(rCol);
+				}
+				results.add(result);
+			}
+			sqLite.close(s, rs);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return results;
 	}
 
 	public void setColumns(List<Column> columns) {
@@ -625,28 +646,6 @@ public class Table {
 		String sql = "UPDATE " + getName() + " SET " + columnName + " = " + dataType.getNoValue() + ";";
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
-			s.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void copyColumnData(String columnFromName, String columnToName, DataType dataType) {
-		checkColumn(new Column(columnToName, dataType));
-		checkColumn(new Column(columnFromName, dataType));
-		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
-		try {
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
-			s.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void executeQuery(String str) {
-		try {
-			PreparedStatement s = sqLite.getSQLConnection()
-					.prepareStatement(PlaceholderUtils.replacePlaceHolder(str, "tablename", getName()));
 			s.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();

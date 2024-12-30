@@ -87,7 +87,7 @@ public abstract class RewardEditItems extends RewardEdit {
 			b.addData("ItemsKeys",
 					ArrayUtils.convert(reward.getData().getConfigurationSection("Items").getKeys(false)));
 		} else {
-			b.addData("ItemsKeys", new ArrayList<String>());
+			b.addData("ItemsKeys", new ArrayList<>());
 		}
 
 		b.addData("CurrentItem", 0);
@@ -115,15 +115,15 @@ public abstract class RewardEditItems extends RewardEdit {
 			}
 		}).setName("&aEdit existing item"));
 
-		inv.addButton(
-				new BInventoryButton(new ItemBuilder(Material.PAPER).setName("&aAdd item in hand").addLoreLine("Click for more")) {
+		inv.addButton(new BInventoryButton(
+				new ItemBuilder(Material.PAPER).setName("&aAdd item in hand").addLoreLine("Click for more")) {
 
-					@Override
-					public void onClick(ClickEvent clickEvent) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						openAdd(clickEvent.getPlayer(), reward);
-					}
-				});
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				openAdd(clickEvent.getPlayer(), reward);
+			}
+		});
 
 		inv.addButton(getBackButton(reward));
 
@@ -268,7 +268,7 @@ public abstract class RewardEditItems extends RewardEdit {
 			}
 		}));
 
-		ArrayList<String> flagList = new ArrayList<String>();
+		ArrayList<String> flagList = new ArrayList<>();
 		for (ItemFlag flag : ItemFlag.values()) {
 			flagList.add(flag.toString());
 		}

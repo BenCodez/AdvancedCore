@@ -17,7 +17,7 @@ public class ValueRequestInputCommand extends Command implements PluginIdentifia
 		super(name);
 		this.plugin = plugin;
 		description = "ValueRequestInput";
-		setAliases(new ArrayList<String>());
+		setAliases(new ArrayList<>());
 	}
 
 	@Override

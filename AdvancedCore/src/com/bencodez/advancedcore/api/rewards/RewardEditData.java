@@ -38,7 +38,8 @@ public class RewardEditData {
 	public ConfigurationSection getData() {
 		if (reward != null) {
 			return reward.getConfig().getConfigData();
-		} else if (directlyDefinedReward != null) {
+		}
+		if (directlyDefinedReward != null) {
 			return directlyDefinedReward.getFileData().getConfigurationSection(directlyDefinedReward.getPath());
 		}
 		return null;
@@ -47,15 +48,15 @@ public class RewardEditData {
 	public String getName() {
 		if (reward != null) {
 			return reward.getName();
-		} else {
-			return directlyDefinedReward.getPath();
 		}
+		return directlyDefinedReward.getPath();
 	}
 
 	public Object getValue(String key) {
 		if (reward != null) {
 			return reward.getConfig().getConfigData().get(key);
-		} else if (directlyDefinedReward != null) {
+		}
+		if (directlyDefinedReward != null) {
 			return directlyDefinedReward.getValue(key);
 		}
 		return null;
@@ -64,9 +65,8 @@ public class RewardEditData {
 	public boolean hasPath(String path) {
 		if (reward != null) {
 			return reward.getConfig().getConfigData().contains(path, false);
-		} else {
-			return directlyDefinedReward.getFileData().contains(directlyDefinedReward.getPath() + "." + path, false);
 		}
+		return directlyDefinedReward.getFileData().contains(directlyDefinedReward.getPath() + "." + path, false);
 	}
 
 	public void reOpenEditGUI(Player player) {

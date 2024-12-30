@@ -23,7 +23,7 @@ public class PermissionHandler {
 	private AdvancedCorePlugin plugin;
 
 	@Getter
-	private ConcurrentHashMap<UUID, PlayerPermissionHandler> perms = new ConcurrentHashMap<UUID, PlayerPermissionHandler>();
+	private ConcurrentHashMap<UUID, PlayerPermissionHandler> perms = new ConcurrentHashMap<>();
 
 	@Getter
 	private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
@@ -33,7 +33,7 @@ public class PermissionHandler {
 
 	public PermissionHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
-		permsToAdd = new HashMap<UUID, PlayerPermissionHandler>();
+		permsToAdd = new HashMap<>();
 		if (plugin.getServerDataFile().getData() != null) {
 			if (plugin.getServerDataFile().getData().isConfigurationSection("TimedPermissions")) {
 				for (String string : plugin.getServerDataFile().getData().getConfigurationSection("TimedPermissions")
@@ -58,6 +58,14 @@ public class PermissionHandler {
 				plugin.getServerDataFile().getData().set("TimedPermissions", null);
 			}
 		}
+	}
+
+	public void addPermission(Player player, String permission) {
+		addPermission(player.getUniqueId(), permission);
+	}
+
+	public void addPermission(Player player, String permission, long expiration) {
+		addPermission(player.getUniqueId(), permission, expiration);
 	}
 
 	public void addPermission(UUID uuid, String permission) {
@@ -104,12 +112,18 @@ public class PermissionHandler {
 		}
 	}
 
-	public void addPermission(Player player, String permission) {
-		addPermission(player.getUniqueId(), permission);
+	public void login(Player player) {
+		if (permsToAdd.containsKey(player.getUniqueId())) {
+			PlayerPermissionHandler handle = permsToAdd.get(player.getUniqueId());
+			handle.setAttachment(player.addAttachment(plugin));
+			handle.onLogin(player);
+			getPerms().put(player.getUniqueId(), handle);
+			permsToAdd.remove(player.getUniqueId());
+		}
 	}
 
-	public void addPermission(Player player, String permission, long expiration) {
-		addPermission(player.getUniqueId(), permission, expiration);
+	public void removePermission(UUID uuid) {
+		getPerms().remove(uuid);
 	}
 
 	public void removePermission(UUID uuid, String playerName, String permission) {
@@ -121,13 +135,9 @@ public class PermissionHandler {
 		}
 	}
 
-	public void removePermission(UUID uuid) {
-		getPerms().remove(uuid);
-	}
-
 	public void shutDown() {
 		for (PlayerPermissionHandler handle : getPerms().values()) {
-			ArrayList<String> list = new ArrayList<String>();
+			ArrayList<String> list = new ArrayList<>();
 			for (Entry<String, Long> entry : handle.getTimedPermissions().entrySet()) {
 				list.add(entry.getKey() + "%line%" + entry.getValue().longValue());
 			}
@@ -136,15 +146,5 @@ public class PermissionHandler {
 			}
 		}
 		plugin.getServerDataFile().saveData();
-	}
-
-	public void login(Player player) {
-		if (permsToAdd.containsKey(player.getUniqueId())) {
-			PlayerPermissionHandler handle = permsToAdd.get(player.getUniqueId());
-			handle.setAttachment(player.addAttachment(plugin));
-			handle.onLogin(player);
-			getPerms().put(player.getUniqueId(), handle);
-			permsToAdd.remove(player.getUniqueId());
-		}
 	}
 }

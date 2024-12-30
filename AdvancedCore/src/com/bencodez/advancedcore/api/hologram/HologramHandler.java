@@ -11,7 +11,7 @@ public class HologramHandler {
 
 	public HologramHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
-		list = new ArrayList<Hologram>();
+		list = new ArrayList<>();
 	}
 
 	public void add(Hologram hologram) {
@@ -22,7 +22,7 @@ public class HologramHandler {
 		for (Hologram hologram : list) {
 			hologram.kill();
 		}
-		list = new ArrayList<Hologram>();
+		list = new ArrayList<>();
 	}
 
 	public void remove(Hologram hologram) {

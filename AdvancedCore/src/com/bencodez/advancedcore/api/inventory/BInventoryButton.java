@@ -33,7 +33,7 @@ public abstract class BInventoryButton {
 	@Getter
 	private boolean closeInvSet = false;
 
-	private HashMap<String, Object> data = new HashMap<String, Object>();
+	private HashMap<String, Object> data = new HashMap<>();
 
 	@Getter
 	private List<Integer> fillSlots;
@@ -85,11 +85,6 @@ public abstract class BInventoryButton {
 		return this;
 	}
 
-	public String getLastRewardsPath(Player player) {
-		String test = builder.getRewardsPath(player);
-		return test;
-	}
-
 	public BInventoryButton dontClose() {
 		closeInv = false;
 		return this;
@@ -100,6 +95,10 @@ public abstract class BInventoryButton {
 	 */
 	public ItemBuilder getBuilder() {
 		return builder;
+	}
+
+	public BInventoryButton getButton() {
+		return this;
 	}
 
 	/**
@@ -120,10 +119,6 @@ public abstract class BInventoryButton {
 		return defaultValue;
 	}
 
-	public BInventoryButton getButton() {
-		return this;
-	}
-
 	/**
 	 * Gets the item.
 	 *
@@ -142,6 +137,11 @@ public abstract class BInventoryButton {
 
 	public ItemStack getItem(Player player, HashMap<String, String> placeholders) {
 		return builder.addPlaceholder(placeholders).toItemStack(player);
+	}
+
+	public String getLastRewardsPath(Player player) {
+		String test = builder.getRewardsPath(player);
+		return test;
 	}
 
 	public Object getMeta(Player player, String str) {

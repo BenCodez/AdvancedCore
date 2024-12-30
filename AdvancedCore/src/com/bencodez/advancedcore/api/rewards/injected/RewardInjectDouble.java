@@ -37,9 +37,8 @@ public abstract class RewardInjectDouble extends RewardInject {
 			String d = onRewardRequest(reward, user, value, placeholders);
 			if (d == null) {
 				return "" + value;
-			} else {
-				return d;
 			}
+			return d;
 		}
 		return null;
 	}

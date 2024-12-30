@@ -30,8 +30,8 @@ public class UserDataCache {
 	public UserDataCache(UserDataManager manager, UUID uuid) {
 		this.uuid = uuid;
 		this.manager = manager;
-		cachedChanges = new ConcurrentLinkedQueue<UserDataChange>();
-		cache = new HashMap<String, DataValue>();
+		cachedChanges = new ConcurrentLinkedQueue<>();
+		cache = new HashMap<>();
 	}
 
 	public synchronized void addChange(UserDataChange change, boolean queue) {
@@ -50,7 +50,7 @@ public class UserDataCache {
 			AdvancedCoreUser user = getUser();
 			ArrayList<String> keys = user.getUserData().getKeys();
 			HashMap<String, DataValue> data = user.getUserData().getValues();
-			ArrayList<String> changedKeys = new ArrayList<String>();
+			ArrayList<String> changedKeys = new ArrayList<>();
 			for (UserDataKey dataKey : manager.getKeys()) {
 				String key = dataKey.getKey();
 				keys.remove(key);
@@ -98,6 +98,25 @@ public class UserDataCache {
 		}
 	}
 
+	public void displayCache() {
+		manager.getPlugin().devDebug(displayCacheStringList().toString());
+	}
+
+	public ArrayList<String> displayCacheStringList() {
+		ArrayList<String> list = new ArrayList<>();
+		list.add("Current cache for " + uuid + ": ");
+		for (Entry<String, DataValue> entry : getCache().entrySet()) {
+			if (entry.getValue().isBoolean()) {
+				list.add(entry.getKey() + "=" + entry.getValue().getBoolean());
+			} else if (entry.getValue().isString()) {
+				list.add(entry.getKey() + "=" + entry.getValue().getString());
+			} else if (entry.getValue().isInt()) {
+				list.add(entry.getKey() + "=" + entry.getValue().getInt());
+			}
+		}
+		return list;
+	}
+
 	public void dump() {
 		if (hasChangesToProcess()) {
 			processChanges();
@@ -126,26 +145,14 @@ public class UserDataCache {
 		return false;
 	}
 
-	public void processChangesAsync() {
-		if (uuid != null && cachedChanges.size() > 0) {
-			manager.getPlugin().getTimer().execute(new Runnable() {
-
-				@Override
-				public void run() {
-					processChanges();
-				}
-			});
-		}
-	}
-
 	public void processChanges() {
 		if (uuid != null) {
 			if (cachedChanges.size() > 0) {
 				manager.getPlugin()
 						.extraDebug("Processing changes for " + uuid.toString() + ", Changes: " + cachedChanges.size());
 				AdvancedCoreUser user = getUser();
-				HashMap<String, DataValue> values = new HashMap<String, DataValue>();
-				ArrayList<String> keys = new ArrayList<String>();
+				HashMap<String, DataValue> values = new HashMap<>();
+				ArrayList<String> keys = new ArrayList<>();
 				while (!cachedChanges.isEmpty()) {
 					UserDataChange change = cachedChanges.poll();
 					values.put(change.getKey(), change.toUserDataValue());
@@ -158,6 +165,18 @@ public class UserDataCache {
 				}
 				manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(keys));
 			}
+		}
+	}
+
+	public void processChangesAsync() {
+		if (uuid != null && cachedChanges.size() > 0) {
+			manager.getPlugin().getTimer().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					processChanges();
+				}
+			});
 		}
 	}
 
@@ -181,24 +200,5 @@ public class UserDataCache {
 
 	public void updateCache(HashMap<String, DataValue> tempCache) {
 		cache = tempCache;
-	}
-
-	public void displayCache() {
-		manager.getPlugin().devDebug(displayCacheStringList().toString());
-	}
-
-	public ArrayList<String> displayCacheStringList() {
-		ArrayList<String> list = new ArrayList<String>();
-		list.add("Current cache for " + uuid + ": ");
-		for (Entry<String, DataValue> entry : getCache().entrySet()) {
-			if (entry.getValue().isBoolean()) {
-				list.add(entry.getKey() + "=" + entry.getValue().getBoolean());
-			} else if (entry.getValue().isString()) {
-				list.add(entry.getKey() + "=" + entry.getValue().getString());
-			} else if (entry.getValue().isInt()) {
-				list.add(entry.getKey() + "=" + entry.getValue().getInt());
-			}
-		}
-		return list;
 	}
 }

@@ -34,6 +34,32 @@ public class PlayerManager {
 	private PlayerManager() {
 	}
 
+	public boolean damageItemInHand(Player player, int damage) {
+		ItemStack itemInHand = player.getInventory().getItemInMainHand();
+		ItemMeta meta = itemInHand.getItemMeta();
+		if (meta instanceof Damageable) {
+			Damageable dMeta = (Damageable) meta;
+			int level = itemInHand.getEnchantmentLevel(MiscUtils.getInstance().getEnchant("UNBREAKING", "DURABILITY"));
+			int chance = (100 / (level + 1));
+			int addedDamage = 0;
+			for (int i = 0; i < damage; i++) {
+				if (chance == 100 || ThreadLocalRandom.current().nextInt(100) < chance) {
+					addedDamage++;
+				}
+			}
+			if (addedDamage > 0) {
+				dMeta.setDamage(dMeta.getDamage() + addedDamage);
+				itemInHand.setItemMeta(dMeta);
+				if (dMeta.getDamage() > (itemInHand.getType().getMaxDurability())) {
+					player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+					return false;
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+
 	public String getPlayerName(AdvancedCoreUser user, String uuid) {
 		return getPlayerName(user, uuid, true);
 	}
@@ -53,27 +79,26 @@ public class PlayerManager {
 
 		String name = "";
 
-		if (uuid.length() > 5) {
-			java.util.UUID u = java.util.UUID.fromString(uuid);
-			Player player = Bukkit.getPlayer(u);
-
-			String storedName = user.getData().getString("PlayerName", useCache, true);
-			// String storedName = "";
-			if (player != null) {
-				name = player.getName();
-
-				if (storedName == null || name != storedName || storedName.isEmpty()
-						|| storedName.equalsIgnoreCase("Error getting name")) {
-					if (user.getUserData().hasData()) {
-						user.getData().setString("PlayerName", name);
-					}
-				}
-				return name;
-			}
-			return storedName;
-		} else {
+		if (uuid.length() <= 5) {
 			return "Error getting name";
 		}
+		java.util.UUID u = java.util.UUID.fromString(uuid);
+		Player player = Bukkit.getPlayer(u);
+
+		String storedName = user.getData().getString("PlayerName", useCache, true);
+		// String storedName = "";
+		if (player != null) {
+			name = player.getName();
+
+			if (storedName == null || name != storedName || storedName.isEmpty()
+					|| storedName.equalsIgnoreCase("Error getting name")) {
+				if (user.getUserData().hasData()) {
+					user.getData().setString("PlayerName", name);
+				}
+			}
+			return name;
+		}
+		return storedName;
 	}
 
 	public ItemStack getPlayerSkull(UUID uuid, String name) {
@@ -115,23 +140,22 @@ public class PlayerManager {
 			return player.getUniqueId().toString();
 		}
 
-		if (plugin.getOptions().isOnlineMode()) {
-			String uuid = getUUIDLookup(playerName);
-
-			if (!uuid.equals("")) {
-				return uuid;
-			}
-
-			try {
-				@SuppressWarnings("deprecation")
-				OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-				return p.getUniqueId().toString();
-			} catch (Exception e) {
-				e.printStackTrace();
-				return getUUIDLookup(playerName);
-			}
-		} else {
+		if (!plugin.getOptions().isOnlineMode()) {
 			return UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes(StandardCharsets.UTF_8)).toString();
+		}
+		String uuid = getUUIDLookup(playerName);
+
+		if (!uuid.equals("")) {
+			return uuid;
+		}
+
+		try {
+			@SuppressWarnings("deprecation")
+			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
+			return p.getUniqueId().toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return getUUIDLookup(playerName);
 		}
 	}
 
@@ -172,66 +196,38 @@ public class PlayerManager {
 		return "";
 	}
 
-	public boolean damageItemInHand(Player player, int damage) {
-		ItemStack itemInHand = player.getInventory().getItemInMainHand();
-		ItemMeta meta = itemInHand.getItemMeta();
-		if (meta instanceof Damageable) {
-			Damageable dMeta = (Damageable) meta;
-			int level = itemInHand.getEnchantmentLevel(MiscUtils.getInstance().getEnchant("UNBREAKING", "DURABILITY"));
-			int chance = (100 / (level + 1));
-			int addedDamage = 0;
-			for (int i = 0; i < damage; i++) {
-				if (chance == 100 || ThreadLocalRandom.current().nextInt(100) < chance) {
-					addedDamage++;
-				}
-			}
-			if (addedDamage > 0) {
-				dMeta.setDamage(dMeta.getDamage() + addedDamage);
-				itemInHand.setItemMeta(dMeta);
-				if (dMeta.getDamage() > (int) (itemInHand.getType().getMaxDurability())) {
-					player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
-					return false;
-				}
-			}
+	public boolean hasEitherPermission(CommandSender sender, String perm) {
+		if (!(sender instanceof Player)) {
 			return true;
 		}
-		return false;
-	}
+		Player player = (Player) sender;
 
-	public boolean hasEitherPermission(CommandSender sender, String perm) {
-		if (sender instanceof Player) {
-			Player player = (Player) sender;
-
-			if (perm.equals("")) {
-				return true;
-			}
-
-			if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getPerms() != null
-					&& plugin.getPerms().isEnabled()) {
-				boolean hasPerm = false;
-				for (String permission : perm.split("\\|")) {
-
-					boolean has = plugin.getPerms().playerHas(player, permission);
-					if (!hasPerm) {
-						hasPerm = has;
-					}
-				}
-
-				return hasPerm;
-			} else {
-				boolean hasPerm = false;
-
-				for (String permission : perm.split("\\|")) {
-					if (sender.hasPermission(permission)) {
-						hasPerm = true;
-					}
-				}
-
-				return hasPerm;
-			}
-
-		} else {
+		if (perm.equals("")) {
 			return true;
+		}
+
+		if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getPerms() != null
+				&& plugin.getPerms().isEnabled()) {
+			boolean hasPerm = false;
+			for (String permission : perm.split("\\|")) {
+
+				boolean has = plugin.getPerms().playerHas(player, permission);
+				if (!hasPerm) {
+					hasPerm = has;
+				}
+			}
+
+			return hasPerm;
+		} else {
+			boolean hasPerm = false;
+
+			for (String permission : perm.split("\\|")) {
+				if (sender.hasPermission(permission)) {
+					hasPerm = true;
+				}
+			}
+
+			return hasPerm;
 		}
 	}
 
@@ -278,6 +274,24 @@ public class PlayerManager {
 	/**
 	 * Checks for server permission.
 	 *
+	 * @param playerName the player name
+	 * @param perm       the perm
+	 * @return true, if successful
+	 */
+	public boolean hasServerPermission(String playerName, String perm) {
+		if (playerName == null) {
+			return false;
+		}
+		Player player = Bukkit.getPlayer(playerName);
+		if (player != null) {
+			return player.hasPermission(perm);
+		}
+		return false;
+	}
+
+	/**
+	 * Checks for server permission.
+	 *
 	 * @param playerUUID the player UUID
 	 * @param perm       the perm
 	 * @return true, if successful
@@ -306,24 +320,6 @@ public class PlayerManager {
 					perm);
 		}
 
-		return false;
-	}
-
-	/**
-	 * Checks for server permission.
-	 *
-	 * @param playerName the player name
-	 * @param perm       the perm
-	 * @return true, if successful
-	 */
-	public boolean hasServerPermission(String playerName, String perm) {
-		if (playerName == null) {
-			return false;
-		}
-		Player player = Bukkit.getPlayer(playerName);
-		if (player != null) {
-			return player.hasPermission(perm);
-		}
 		return false;
 	}
 

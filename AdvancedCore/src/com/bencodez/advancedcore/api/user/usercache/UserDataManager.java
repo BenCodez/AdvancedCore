@@ -40,10 +40,10 @@ public class UserDataManager {
 
 	public UserDataManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
-		userDataCache = new ConcurrentHashMap<UUID, UserDataCache>();
-		keys = new ArrayList<UserDataKey>();
-		intColumns = new ArrayList<String>();
-		booleanColumns = new ArrayList<String>();
+		userDataCache = new ConcurrentHashMap<>();
+		keys = new ArrayList<>();
+		intColumns = new ArrayList<>();
+		booleanColumns = new ArrayList<>();
 		timer = Executors.newScheduledThreadPool(1);
 		loadKeys();
 
@@ -107,7 +107,7 @@ public class UserDataManager {
 
 	public void clearNonNeededCachedUsers() {
 		plugin.devDebug("Clearing cache for non online players (if any)");
-		ArrayList<UUID> onlineUUIDS = new ArrayList<UUID>();
+		ArrayList<UUID> onlineUUIDS = new ArrayList<>();
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			onlineUUIDS.add(p.getUniqueId());
 		}
@@ -132,6 +132,10 @@ public class UserDataManager {
 		return userDataCache.get(uuid);
 	}
 
+	public boolean isBoolean(String str) {
+		return booleanColumns.contains(str);
+	}
+
 	public boolean isCached(UUID uuid) {
 		if (userDataCache.containsKey(uuid)) {
 			return userDataCache.get(uuid).hasCache();
@@ -141,10 +145,6 @@ public class UserDataManager {
 
 	public boolean isInt(String str) {
 		return intColumns.contains(str);
-	}
-
-	public boolean isBoolean(String str) {
-		return booleanColumns.contains(str);
 	}
 
 	private void loadKeys() {

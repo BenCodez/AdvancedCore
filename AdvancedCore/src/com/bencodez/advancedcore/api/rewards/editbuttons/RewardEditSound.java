@@ -20,7 +20,7 @@ public abstract class RewardEditSound extends RewardEdit {
 
 		inv.addButton(getBooleanButton("Sound.Enabled", reward));
 
-		ArrayList<String> sounds = new ArrayList<String>();
+		ArrayList<String> sounds = new ArrayList<>();
 		Registry.SOUNDS.forEach(sound -> sounds.add(sound.toString()));
 
 		inv.addButton(getStringButton("Sound.Sound", reward, ArrayUtils.convert(sounds)));

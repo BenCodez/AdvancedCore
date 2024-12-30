@@ -8,7 +8,7 @@ public class UserDataKeyInt extends UserDataKey {
 		super(key);
 		setColumnType("INT DEFAULT '0'");
 	}
-	
+
 	public DataValue getDefault() {
 		return new DataValueInt(0);
 	}

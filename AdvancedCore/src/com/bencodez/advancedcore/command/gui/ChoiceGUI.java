@@ -45,7 +45,7 @@ public class ChoiceGUI {
 		inv.dontClose();
 
 		ArrayList<String> choices = user.getUnClaimedChoices();
-		Set<String> unClaimedChoices = new HashSet<String>();
+		Set<String> unClaimedChoices = new HashSet<>();
 
 		for (String str : choices) {
 			unClaimedChoices.add(str);

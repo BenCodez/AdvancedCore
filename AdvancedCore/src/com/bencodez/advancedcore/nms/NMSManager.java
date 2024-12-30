@@ -16,7 +16,7 @@ import org.bukkit.entity.Player;
 public class NMSManager {
 
 	/** The Constant CORRESPONDING_TYPES. */
-	public static final Map<Class<?>, Class<?>> CORRESPONDING_TYPES = new HashMap<Class<?>, Class<?>>();
+	public static final Map<Class<?>, Class<?>> CORRESPONDING_TYPES = new HashMap<>();
 
 	/** The instance. */
 	private static NMSManager instance;

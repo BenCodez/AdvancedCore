@@ -15,7 +15,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 public class Layout {
 	private BaseComponent compToAdd;
 
-	private HashMap<String, String> placeholders = new HashMap<String, String>();
+	private HashMap<String, String> placeholders = new HashMap<>();
 	@Getter
 	private ArrayList<String> stringLayout;
 	private String text;
@@ -36,7 +36,7 @@ public class Layout {
 	public BaseComponent[] getLayout(HashMap<String, String> placeholders) {
 		stringLayout = PlaceholderUtils.replacePlaceHolder(stringLayout, placeholders);
 		stringLayout = PlaceholderUtils.replacePlaceHolder(stringLayout, this.placeholders);
-		ArrayList<BaseComponent> layout = new ArrayList<BaseComponent>();
+		ArrayList<BaseComponent> layout = new ArrayList<>();
 		for (int i = 0; i < stringLayout.size(); i++) {
 			String str = stringLayout.get(i);
 

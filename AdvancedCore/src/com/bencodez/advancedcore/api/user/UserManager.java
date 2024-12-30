@@ -34,7 +34,7 @@ public class UserManager {
 	private AdvancedCorePlugin plugin;
 
 	@Getter
-	private ArrayList<UserDataChanged> userDataChange = new ArrayList<UserDataChanged>();
+	private ArrayList<UserDataChanged> userDataChange = new ArrayList<>();
 
 	public UserManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -42,9 +42,68 @@ public class UserManager {
 	}
 
 	@SuppressWarnings("deprecation")
+	public void copyColumnData(String columnFromName, String columnToName) {
+		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			plugin.getMysql().copyColumnData(columnFromName, columnToName, DataType.STRING);
+		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			plugin.getSQLiteUserTable().copyColumnData(columnFromName, columnToName, DataType.STRING);
+		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				user.dontCache();
+				DataValue data = user.getData().getDataValue(columnFromName);
+				user.getData().setValues(columnToName, data);
+			}
+		}
+	}
+
+	@SuppressWarnings("deprecation")
+	public List<String> getAllColumns() {
+		UserStorage storage = plugin.getStorageType();
+		if (storage.equals(UserStorage.SQLITE)) {
+			return plugin.getSQLiteUserTable().getColumnsString();
+		}
+		if (storage.equals(UserStorage.MYSQL)) {
+			return plugin.getMysql().getColumns();
+		} else {
+			AdvancedCoreUser user = getRandomUser();
+			user.dontCache();
+			return new ArrayList<>(
+					user.getData().getData(user.getUUID()).getConfigurationSection("").getKeys(false));
+
+		}
+	}
+
+	public HashMap<UUID, ArrayList<Column>> getAllKeys() {
+		return getAllKeys(plugin.getStorageType());
+	}
+
+	public HashMap<UUID, ArrayList<Column>> getAllKeys(UserStorage storage) {
+		if (storage.equals(UserStorage.SQLITE)) {
+			return plugin.getSQLiteUserTable().getAllQuery();
+		}
+		if (storage.equals(UserStorage.MYSQL)) {
+			return plugin.getMysql().getAllQuery();
+		} else {
+			HashMap<UUID, ArrayList<Column>> cols = new HashMap<>();
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				user.dontCache();
+				ArrayList<Column> col = new ArrayList<>();
+				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
+					col.add(new Column(entry.getKey(), entry.getValue()));
+				}
+				cols.put(UUID.fromString(uuid), col);
+			}
+			return cols;
+
+		}
+	}
+
+	@SuppressWarnings("deprecation")
 	public ArrayList<String> getAllPlayerNames() {
 		if (plugin.isLoadUserData()) {
-			ArrayList<String> names = new ArrayList<String>();
+			ArrayList<String> names = new ArrayList<>();
 			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 				for (String uuid : getAllUUIDs()) {
 					AdvancedCoreUser user = getUser(java.util.UUID.fromString(uuid));
@@ -70,7 +129,7 @@ public class UserManager {
 			}
 			return ArrayUtils.removeDuplicates(names);
 		}
-		return new ArrayList<String>();
+		return new ArrayList<>();
 
 	}
 
@@ -84,7 +143,7 @@ public class UserManager {
 			if (storage.equals(UserStorage.FLAT)) {
 				File folder = new File(plugin.getDataFolder() + File.separator + "Data");
 				String[] fileNames = folder.list();
-				ArrayList<String> uuids = new ArrayList<String>();
+				ArrayList<String> uuids = new ArrayList<>();
 				if (fileNames != null) {
 					for (String playerFile : fileNames) {
 						if (!playerFile.equals("null") && !playerFile.equals("")) {
@@ -94,9 +153,10 @@ public class UserManager {
 					}
 				}
 				return uuids;
-			} else if (storage.equals(UserStorage.SQLITE)) {
+			}
+			if (storage.equals(UserStorage.SQLITE)) {
 				List<Column> cols = plugin.getSQLiteUserTable().getRows();
-				ArrayList<String> uuids = new ArrayList<String>();
+				ArrayList<String> uuids = new ArrayList<>();
 				for (Column col : cols) {
 					if (col.getValue().isString()) {
 						uuids.add(col.getValue().getString());
@@ -105,7 +165,7 @@ public class UserManager {
 				return uuids;
 			} else if (storage.equals(UserStorage.MYSQL)) {
 				synchronized (obj) {
-					ArrayList<String> uuids = new ArrayList<String>();
+					ArrayList<String> uuids = new ArrayList<>();
 					try {
 						for (String uuid : plugin.getMysql().getUuids()) {
 							uuids.add(uuid);
@@ -117,15 +177,35 @@ public class UserManager {
 				}
 			}
 		}
-		return new ArrayList<String>();
+		return new ArrayList<>();
+	}
+
+	@SuppressWarnings("deprecation")
+	public ArrayList<Integer> getNumbersInColumn(String columnName) {
+		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			return plugin.getMysql().getNumbersInColumn(columnName);
+		}
+		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			return plugin.getSQLiteUserTable().getNumbersInColumn(columnName);
+		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
+			ArrayList<Integer> nums = new ArrayList<>();
+			for (String uuid : getAllUUIDs()) {
+				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
+				user.dontCache();
+				int num = user.getData().getInt(columnName, 0, true, true);
+				nums.add(num);
+
+			}
+			return nums;
+		}
+		return new ArrayList<>();
 	}
 
 	public String getOfflineRewardsPath() {
 		if (plugin.getOptions().isPerServerRewards()) {
 			return "OfflineRewards" + plugin.getOptions().getServer().replace("-", "_");
-		} else {
-			return "OfflineRewards";
 		}
+		return "OfflineRewards";
 	}
 
 	public String getProperName(String name) {
@@ -201,35 +281,10 @@ public class UserManager {
 		dataManager = new UserDataManager(AdvancedCorePlugin.getInstance());
 	}
 
-	public void purgeOldPlayersStartup() {
-		if (plugin.getOptions().isPurgeOldData() && plugin.getOptions().isPurgeDataOnStartup()) {
-			plugin.addUserStartup(new UserStartup() {
-
-				@Override
-				public void onFinish() {
-					plugin.debug("Finished purging");
-				}
-
-				@Override
-				public void onStart() {
-
-				}
-
-				@Override
-				public void onStartUp(AdvancedCoreUser user) {
-					int daysOld = plugin.getOptions().getPurgeMinimumDays();
-					int days = user.getNumberOfDaysSinceLogin();
-					if (days == -1) {
-						// fix ones with no last online
-						user.setLastOnline(System.currentTimeMillis());
-					} else if (days > daysOld) {
-						plugin.debug("Removing " + user.getUUID() + " because of purge");
-						user.remove();
-					}
-				}
-			});
+	public void onChange(AdvancedCoreUser user, String... keys) {
+		for (UserDataChanged change : userDataChange) {
+			change.onChange(user, keys);
 		}
-		getDataManager().clearCache();
 	}
 
 	public void purgeOldPlayersNow() {
@@ -266,6 +321,37 @@ public class UserManager {
 		getDataManager().clearCache();
 	}
 
+	public void purgeOldPlayersStartup() {
+		if (plugin.getOptions().isPurgeOldData() && plugin.getOptions().isPurgeDataOnStartup()) {
+			plugin.addUserStartup(new UserStartup() {
+
+				@Override
+				public void onFinish() {
+					plugin.debug("Finished purging");
+				}
+
+				@Override
+				public void onStart() {
+
+				}
+
+				@Override
+				public void onStartUp(AdvancedCoreUser user) {
+					int daysOld = plugin.getOptions().getPurgeMinimumDays();
+					int days = user.getNumberOfDaysSinceLogin();
+					if (days == -1) {
+						// fix ones with no last online
+						user.setLastOnline(System.currentTimeMillis());
+					} else if (days > daysOld) {
+						plugin.debug("Removing " + user.getUUID() + " because of purge");
+						user.remove();
+					}
+				}
+			});
+		}
+		getDataManager().clearCache();
+	}
+
 	public void removeAllKeyValues(String key, DataType type) {
 		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
 			plugin.getSQLiteUserTable().wipeColumnData(key, type);
@@ -290,44 +376,11 @@ public class UserManager {
 		}
 	}
 
-	public HashMap<UUID, ArrayList<Column>> getAllKeys() {
-		return getAllKeys(plugin.getStorageType());
-	}
-
-	@SuppressWarnings("deprecation")
-	public List<String> getAllColumns() {
-		UserStorage storage = plugin.getStorageType();
-		if (storage.equals(UserStorage.SQLITE)) {
-			return plugin.getSQLiteUserTable().getColumnsString();
-		} else if (storage.equals(UserStorage.MYSQL)) {
-			return plugin.getMysql().getColumns();
-		} else {
-			AdvancedCoreUser user = getRandomUser();
-			user.dontCache();
-			return new ArrayList<String>(
-					user.getData().getData(user.getUUID()).getConfigurationSection("").getKeys(false));
-
-		}
-	}
-
-	public HashMap<UUID, ArrayList<Column>> getAllKeys(UserStorage storage) {
-		if (storage.equals(UserStorage.SQLITE)) {
-			return plugin.getSQLiteUserTable().getAllQuery();
-		} else if (storage.equals(UserStorage.MYSQL)) {
-			return plugin.getMysql().getAllQuery();
-		} else {
-			HashMap<UUID, ArrayList<Column>> cols = new HashMap<UUID, ArrayList<Column>>();
-			for (String uuid : getAllUUIDs()) {
-				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
-				user.dontCache();
-				ArrayList<Column> col = new ArrayList<Column>();
-				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
-					col.add(new Column(entry.getKey(), entry.getValue()));
-				}
-				cols.put(UUID.fromString(uuid), col);
-			}
-			return cols;
-
+	public void removeUUID(UUID key) {
+		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
+			plugin.getSQLiteUserTable().delete(new Column("uuid", new DataValueString(key.toString())));
+		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
+			plugin.getMysql().deletePlayer(key.toString());
 		}
 	}
 
@@ -345,22 +398,6 @@ public class UserManager {
 		return false;
 	}
 
-	@SuppressWarnings("deprecation")
-	public void copyColumnData(String columnFromName, String columnToName) {
-		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			plugin.getMysql().copyColumnData(columnFromName, columnToName, DataType.STRING);
-		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			plugin.getSQLiteUserTable().copyColumnData(columnFromName, columnToName, DataType.STRING);
-		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
-			for (String uuid : getAllUUIDs()) {
-				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
-				user.dontCache();
-				DataValue data = user.getData().getDataValue(columnFromName);
-				user.getData().setValues(columnToName, data);
-			}
-		}
-	}
-
 	public boolean userExist(UUID uuid) {
 		if (uuid != null) {
 			if (getAllUUIDs().contains(uuid.toString())) {
@@ -369,39 +406,5 @@ public class UserManager {
 		}
 
 		return false;
-	}
-
-	public void onChange(AdvancedCoreUser user, String... keys) {
-		for (UserDataChanged change : userDataChange) {
-			change.onChange(user, keys);
-		}
-	}
-
-	@SuppressWarnings("deprecation")
-	public ArrayList<Integer> getNumbersInColumn(String columnName) {
-		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			return plugin.getMysql().getNumbersInColumn(columnName);
-		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			return plugin.getSQLiteUserTable().getNumbersInColumn(columnName);
-		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
-			ArrayList<Integer> nums = new ArrayList<Integer>();
-			for (String uuid : getAllUUIDs()) {
-				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
-				user.dontCache();
-				int num = user.getData().getInt(columnName, 0, true, true);
-				nums.add(num);
-
-			}
-			return nums;
-		}
-		return new ArrayList<Integer>();
-	}
-
-	public void removeUUID(UUID key) {
-		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			plugin.getSQLiteUserTable().delete(new Column("uuid", new DataValueString(key.toString())));
-		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			plugin.getMysql().deletePlayer(key.toString());
-		}
 	}
 }

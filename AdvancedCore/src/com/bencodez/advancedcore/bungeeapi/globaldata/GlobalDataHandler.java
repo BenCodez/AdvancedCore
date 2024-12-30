@@ -20,34 +20,6 @@ public class GlobalDataHandler {
 		this.globalMysql = globalMysql;
 	}
 
-	public void setBoolean(String server, String key, boolean data) {
-		globalMysql.update(server, key, new DataValueBoolean(data));
-	}
-
-	public void setInt(String server, String key, int data) {
-		globalMysql.update(server, key, new DataValueInt(data));
-	}
-
-	public void setString(String server, String key, String data) {
-		globalMysql.update(server, key, new DataValueString(data));
-	}
-
-	public HashMap<String, DataValue> getExact(String server) {
-		HashMap<String, DataValue> data = new HashMap<String, DataValue>();
-		for (Column entry : globalMysql.getExact(server)) {
-			data.put(entry.getName(), entry.getValue());
-		}
-		return data;
-	}
-
-	public void setData(String server, HashMap<String, DataValue> data) {
-		ArrayList<Column> cols = new ArrayList<Column>();
-		for (Entry<String, DataValue> entry : data.entrySet()) {
-			cols.add(new Column(entry.getKey(), entry.getValue()));
-		}
-		globalMysql.update(server, cols, false);
-	}
-
 	public boolean getBoolean(String server, String key) {
 		HashMap<String, DataValue> data = getExact(server);
 		if (data.containsKey(key)) {
@@ -58,6 +30,14 @@ public class GlobalDataHandler {
 			return Boolean.valueOf(value.getString()).booleanValue();
 		}
 		return false;
+	}
+
+	public HashMap<String, DataValue> getExact(String server) {
+		HashMap<String, DataValue> data = new HashMap<>();
+		for (Column entry : globalMysql.getExact(server)) {
+			data.put(entry.getName(), entry.getValue());
+		}
+		return data;
 	}
 
 	public int getInt(String server, String key) {
@@ -80,6 +60,26 @@ public class GlobalDataHandler {
 			}
 		}
 		return "";
+	}
+
+	public void setBoolean(String server, String key, boolean data) {
+		globalMysql.update(server, key, new DataValueBoolean(data));
+	}
+
+	public void setData(String server, HashMap<String, DataValue> data) {
+		ArrayList<Column> cols = new ArrayList<>();
+		for (Entry<String, DataValue> entry : data.entrySet()) {
+			cols.add(new Column(entry.getKey(), entry.getValue()));
+		}
+		globalMysql.update(server, cols, false);
+	}
+
+	public void setInt(String server, String key, int data) {
+		globalMysql.update(server, key, new DataValueInt(data));
+	}
+
+	public void setString(String server, String key, String data) {
+		globalMysql.update(server, key, new DataValueString(data));
 	}
 
 }

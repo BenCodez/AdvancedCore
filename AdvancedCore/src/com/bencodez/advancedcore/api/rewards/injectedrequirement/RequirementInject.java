@@ -58,6 +58,10 @@ public abstract class RequirementInject extends Inject {
 		AdvancedCorePlugin.getInstance().extraDebug(str);
 	}
 
+	public boolean hasValidator() {
+		return getValidate() != null;
+	}
+
 	public boolean isEditable() {
 		return !getEditButtons().isEmpty();
 	}
@@ -74,10 +78,6 @@ public abstract class RequirementInject extends Inject {
 		if (validate != null && data.contains(getPath())) {
 			validate.onValidate(reward, this, data);
 		}
-	}
-
-	public boolean hasValidator() {
-		return getValidate() != null;
 	}
 
 	public RequirementInject validator(RequirementInjectValidator validate) {

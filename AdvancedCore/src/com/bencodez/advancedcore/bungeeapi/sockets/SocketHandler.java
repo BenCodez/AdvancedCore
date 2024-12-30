@@ -37,9 +37,14 @@ public abstract class SocketHandler {
 	public abstract void log(String str);
 
 	public void start(String threadName, String host, int port, EncryptionHandler handle, boolean debug) {
-		receiving = new ArrayList<SocketReceiver>();
+		receiving = new ArrayList<>();
 
 		server = new SocketServer(threadName, host, port, handle, debug) {
+
+			@Override
+			public void logger(String str) {
+				log(str);
+			}
 
 			@Override
 			public void onReceive(String[] data) {
@@ -67,11 +72,6 @@ public abstract class SocketHandler {
 				} else {
 					log("Socket data invalid");
 				}
-			}
-
-			@Override
-			public void logger(String str) {
-				log(str);
 			}
 		};
 
