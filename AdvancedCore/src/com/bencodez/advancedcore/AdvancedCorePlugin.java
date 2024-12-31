@@ -550,6 +550,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			debug("Setting API profile URL to " + getOptions().getSkullProfileAPIURL());
 			skullCacheHandler.changeApiProfileURL(getOptions().getSkullProfileAPIURL());
 		}
+		skullCacheHandler.setBedrockPrefix(getOptions().getBedrockPlayerPrefix());
 		skullCacheHandler.startTimer();
 
 		if (loadGeyserAPI) {
@@ -639,52 +640,50 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void loadTabComplete() {
-		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(AllPlayer)", new ArrayList<>()) {
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(AllPlayer)", new ArrayList<>()) {
 
-					@Override
-					public void reload() {
-						ArrayList<String> players = new ArrayList<>();
-						for (String name : getUuidNameCache().values()) {
-							if (!players.contains(name)) {
-								players.add(name);
-							}
-						}
-						setReplace(players);
+			@Override
+			public void reload() {
+				ArrayList<String> players = new ArrayList<>();
+				for (String name : getUuidNameCache().values()) {
+					if (!players.contains(name)) {
+						players.add(name);
 					}
+				}
+				setReplace(players);
+			}
 
-					@Override
-					public void updateReplacements() {
-						for (Player player : Bukkit.getOnlinePlayers()) {
-							if (!getReplace().contains(player.getName())) {
-								getReplace().add(player.getName());
-							}
-						}
-
+			@Override
+			public void updateReplacements() {
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					if (!getReplace().contains(player.getName())) {
+						getReplace().add(player.getName());
 					}
-				});
+				}
 
-		TabCompleteHandler.getInstance()
-				.addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<>()) {
+			}
+		});
 
-					@Override
-					public void reload() {
-						ArrayList<String> list = new ArrayList<>();
-						for (Player player : Bukkit.getOnlinePlayers()) {
-							list.add(player.getName());
-						}
-						setReplace(list);
-					}
+		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(Player)", new ArrayList<>()) {
 
-					@Override
-					public void updateReplacements() {
-						ArrayList<String> list = new ArrayList<>();
-						for (Player player : Bukkit.getOnlinePlayers()) {
-							list.add(player.getName());
-						}
-						setReplace(list);
-					}
-				}.updateOnLoginLogout());
+			@Override
+			public void reload() {
+				ArrayList<String> list = new ArrayList<>();
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					list.add(player.getName());
+				}
+				setReplace(list);
+			}
+
+			@Override
+			public void updateReplacements() {
+				ArrayList<String> list = new ArrayList<>();
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					list.add(player.getName());
+				}
+				setReplace(list);
+			}
+		}.updateOnLoginLogout());
 
 		TabCompleteHandler.getInstance()
 				.addTabCompleteOption(new TabCompleteHandle("(PlayerExact)", new ArrayList<>()) {
@@ -1020,6 +1019,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getServerDataFile().reloadData();
 		rewardHandler.loadRewards();
 		loadConfig(userStorage);
+
 		if (userStorage) {
 			getUserManager().getDataManager().clearCache();
 			if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
@@ -1036,6 +1036,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				debug("Setting API profile URL to " + getOptions().getSkullProfileAPIURL());
 				skullCacheHandler.changeApiProfileURL(getOptions().getSkullProfileAPIURL());
 			}
+			getSkullCacheHandler().setBedrockPrefix(getOptions().getBedrockPlayerPrefix());
 		}
 	}
 
