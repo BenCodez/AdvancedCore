@@ -25,7 +25,7 @@ import lombok.Getter;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.config.Configuration;
 
-public abstract class BungeeMySQL {
+public abstract class BungeeMySQL implements ProxyMySQL {
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
 
 	private List<String> intColumns = new ArrayList<>();

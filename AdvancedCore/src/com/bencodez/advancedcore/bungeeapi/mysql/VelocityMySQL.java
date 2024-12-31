@@ -24,7 +24,7 @@ import com.bencodez.simpleapi.file.velocity.VelocityYMLFile;
 
 import lombok.Getter;
 
-public abstract class VelocityMySQL {
+public abstract class VelocityMySQL implements ProxyMySQL {
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
 
 	private List<String> intColumns = new ArrayList<>();
@@ -446,7 +446,7 @@ public abstract class VelocityMySQL {
 
 	public abstract void severe(String str);
 
-	public void shutDown() {
+	public void shutdown() {
 		mysql.disconnect();
 	}
 
