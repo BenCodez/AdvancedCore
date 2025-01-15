@@ -360,6 +360,10 @@ DisplayItem:
 # Makes sure the correct server gets the reward
 #Server: 'Minecraft Server'
 
+# List of servers that will prevent the reward from running on, such as a hub/lobby server
+#BlockedServers: 
+#- lobby
+
 #############################################
 # RECOMMEND using AdvancedPriority
 # as it easier to use

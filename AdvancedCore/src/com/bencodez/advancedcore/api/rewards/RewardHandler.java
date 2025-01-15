@@ -345,7 +345,8 @@ public class RewardHandler {
 		}
 
 		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
-			if (direct.getFullPath().equalsIgnoreCase(reward) || direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
+			if (direct.getFullPath().equalsIgnoreCase(reward)
+					|| direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
 				plugin.debug("Using subdirectlydefined reward for: " + reward);
 				return direct.getReward();
 			}
@@ -440,7 +441,8 @@ public class RewardHandler {
 
 	public SubDirectlyDefinedReward getSubDirectlyDefined(String path) {
 		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
-			if (direct.getFullPath().equalsIgnoreCase(path) || direct.getFullPath().equalsIgnoreCase(path.replaceAll("_", "."))) {
+			if (direct.getFullPath().equalsIgnoreCase(path)
+					|| direct.getFullPath().equalsIgnoreCase(path.replaceAll("_", "."))) {
 				return direct;
 			}
 		}
@@ -581,7 +583,8 @@ public class RewardHandler {
 		}
 
 		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
-			if (direct.getFullPath().equalsIgnoreCase(reward) || direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
+			if (direct.getFullPath().equalsIgnoreCase(reward)
+					|| direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
 				return true;
 			}
 		}
@@ -792,6 +795,48 @@ public class RewardHandler {
 						plugin.reloadAdvancedCore(false);
 					}
 				}.addOptions(Bukkit.getServer().getName()).addLore("Server to execute reward on"))));
+
+		injectedRequirements.add(new RequirementInjectStringList("BlockedServers", new ArrayList<>()) {
+
+			@Override
+			public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> servers,
+					RewardOptions rewardOptions) {
+				if (servers.isEmpty()) {
+					return true;
+				}
+				
+				String currentServer = AdvancedCorePlugin.getInstance().getOptions().getServer();
+
+				if (ArrayUtils.containsIgnoreCase(servers, currentServer)) {
+					debug("Current server is in blocekd servers list: " + currentServer + " " + servers.toString());
+					return false;
+				}
+
+				return true;
+			}
+		}.priority(100).allowReattempt().addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("BlockedServers", null) {
+
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
+					}
+				}.addLore("List of servers for reward not to run on"))).validator(new RequirementInjectValidator() {
+
+					@Override
+					@SuppressWarnings("unchecked")
+					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+						ArrayList<String> list = (ArrayList<String>) data.getList("BlockedServers", null);
+						if (list != null) {
+							if (list.isEmpty()) {
+								warning(reward, inject, "No blocked servers were listed");
+							}
+						}
+					}
+				}));
 
 		injectedRequirements.add(new RequirementInjectStringList("Worlds", new ArrayList<>()) {
 
@@ -1472,8 +1517,7 @@ public class RewardHandler {
 			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 
-				ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console",
-						new ArrayList<>());
+				ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console", new ArrayList<>());
 				ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<>());
 				if (!consoleCommands.isEmpty()) {
 					MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), consoleCommands, placeholders,
@@ -1680,8 +1724,7 @@ public class RewardHandler {
 					HashMap<String, String> placeholders) {
 				if (MiscUtils.getInstance().checkChance(section.getDouble("Chance", 100), 100)) {
 					if (section.getBoolean("PickRandom", true)) {
-						ArrayList<String> rewards = (ArrayList<String>) section.getList("Rewards",
-								new ArrayList<>());
+						ArrayList<String> rewards = (ArrayList<String>) section.getList("Rewards", new ArrayList<>());
 						if (rewards != null) {
 							if (rewards.size() > 0) {
 								String reward1 = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
