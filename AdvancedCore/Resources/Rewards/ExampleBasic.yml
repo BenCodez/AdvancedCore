@@ -33,8 +33,6 @@ Items:
     # Item Material
     # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
     Material: 'DIAMOND'
-    # Item data value (Eg 1:4, data is 4)
-    Data: 0
     # Will only give Amount if min and max amounts are 0
     Amount: 1
     # Set item durability

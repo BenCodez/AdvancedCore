@@ -168,6 +168,12 @@ AdvancedWorld:
   world_nether:
     Commands:
     - say %player% in nether
+
+# List of rewards to run, works similar to AdvancedPriority, but runs all rewards
+#AdvancedRewards:
+#  Reward1:
+#    Commands:
+#    - say test
       
 # Special chance
 # percentage is caculated with all numbers added up

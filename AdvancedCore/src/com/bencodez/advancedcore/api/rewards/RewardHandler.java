@@ -804,7 +804,7 @@ public class RewardHandler {
 				if (servers.isEmpty()) {
 					return true;
 				}
-				
+
 				String currentServer = AdvancedCorePlugin.getInstance().getOptions().getServer();
 
 				if (ArrayUtils.containsIgnoreCase(servers, currentServer)) {
@@ -1885,6 +1885,59 @@ public class RewardHandler {
 			}
 
 		}.addLore("Give temporary permission"))).priority(90).postReward());
+
+		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedRewards") {
+
+			@Override
+			public String onRewardRequested(Reward r, AdvancedCoreUser user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+
+				Set<String> keys = section.getKeys(false);
+				ArrayList<String> rewards = ArrayUtils.convert(keys);
+				if (rewards.size() > 0) {
+					for (String reward : rewards) {
+						giveReward(user, section, reward, new RewardOptions().setPlaceholders(placeholders)
+								.setPrefix(r.getRewardName() + "_AdvancedRewards_" + reward));
+					}
+				}
+				return null;
+
+			}
+
+			@Override
+			public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
+				ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<>();
+				if (direct.getFileData()
+						.isConfigurationSection(direct.getPath() + direct.needsDot() + "AdvancedRewards")) {
+					for (String str : direct.getFileData()
+							.getConfigurationSection(direct.getPath() + direct.needsDot() + "AdvancedRewards")
+							.getKeys(false)) {
+						if (direct.getFileData().isConfigurationSection(
+								direct.getPath() + direct.needsDot() + "AdvancedRewards." + str)) {
+							subs.add(new SubDirectlyDefinedReward(direct, "AdvancedRewards." + str));
+						}
+					}
+				}
+				return subs;
+			}
+		}.addEditButton(
+				new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("AdvancedRewards") {
+
+					@Override
+					public void openInventory(ClickEvent clickEvent) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						new RewardEditAdvancedRandomReward() {
+
+							@Override
+							public void setVal(String key, Object value) {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue(key, value);
+								plugin.reloadAdvancedCore(false);
+							}
+						}.open(clickEvent.getPlayer(), reward);
+					}
+
+				}.addLore("Execute rewards"))).synchronize().priority(20).postReward());
 
 		injectedRewards.add(new RewardInjectConfigurationSection("AdvancedRandomReward") {
 
