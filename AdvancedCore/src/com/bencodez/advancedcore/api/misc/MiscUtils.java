@@ -174,14 +174,14 @@ public class MiscUtils {
 					PlaceholderUtils.replacePlaceHolder(command, placeholders));
 
 			plugin.debug("Executing console command: " + command);
-			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+			plugin.getBukkitScheduler().executeOrScheduleSync(plugin, new Runnable() {
 
 				@Override
 				public void run() {
 					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
 				}
 
-			});
+			}, player);
 		}
 
 	}
@@ -217,7 +217,7 @@ public class MiscUtils {
 			final String cmd = PlaceholderUtils.replacePlaceHolder(command, placeholders);
 
 			plugin.debug("Executing console command: " + command);
-			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+			plugin.getBukkitScheduler().executeOrScheduleSync(plugin, new Runnable() {
 
 				@Override
 				public void run() {
@@ -641,8 +641,7 @@ public class MiscUtils {
 	public HashMap<AdvancedCoreUser, Integer> sortByValues(HashMap<AdvancedCoreUser, Integer> unsortMap,
 			final boolean order) {
 
-		List<Entry<AdvancedCoreUser, Integer>> list = new LinkedList<>(
-				unsortMap.entrySet());
+		List<Entry<AdvancedCoreUser, Integer>> list = new LinkedList<>(unsortMap.entrySet());
 
 		// Sorting the list based on values
 		Collections.sort(list, new Comparator<Entry<AdvancedCoreUser, Integer>>() {
