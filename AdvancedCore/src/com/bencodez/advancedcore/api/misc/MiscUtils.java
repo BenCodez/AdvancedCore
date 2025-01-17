@@ -439,7 +439,7 @@ public class MiscUtils {
 					public void run() {
 						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
 					}
-				}, delay, player);
+				}, delay, player.getLocation());
 			} else {
 				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
 
@@ -457,7 +457,7 @@ public class MiscUtils {
 					public void run() {
 						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
 					}
-				}, player);
+				}, player.getLocation());
 			} else {
 				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
