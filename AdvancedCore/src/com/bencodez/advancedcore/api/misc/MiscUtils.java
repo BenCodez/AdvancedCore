@@ -147,7 +147,7 @@ public class MiscUtils {
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				runConsoleCommand(cmd, tick, stagger);
+				runConsoleCommand(null, cmd, tick, stagger);
 			}
 
 		}
@@ -162,7 +162,7 @@ public class MiscUtils {
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				runConsoleCommand(cmd, tick, stagger);
+				runConsoleCommand(player, cmd, tick, stagger);
 			}
 
 		}
@@ -200,7 +200,7 @@ public class MiscUtils {
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				runConsoleCommand(cmd, tick, stagger);
+				runConsoleCommand(null, cmd, tick, stagger);
 			}
 		}
 	}
@@ -430,23 +430,43 @@ public class MiscUtils {
 		return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault()).getYear();
 	}
 
-	private void runConsoleCommand(String command, int delay, boolean hasDelay) {
-		if (hasDelay) {
-			plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
+	private void runConsoleCommand(Player player, String command, int delay, boolean hasDelay) {
+		if (hasDelay && delay > 0) {
+			if (player != null) {
+				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
 
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
-				}
-			}, delay);
+					@Override
+					public void run() {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+					}
+				}, delay, player);
+			} else {
+				plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
+
+					@Override
+					public void run() {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+					}
+				}, delay);
+			}
 		} else {
-			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+			if (player != null) {
+				plugin.getBukkitScheduler().executeOrScheduleSync(plugin, new Runnable() {
 
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
-				}
-			});
+					@Override
+					public void run() {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+					}
+				}, player);
+			} else {
+				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+
+					@Override
+					public void run() {
+						Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+					}
+				});
+			}
 		}
 	}
 
