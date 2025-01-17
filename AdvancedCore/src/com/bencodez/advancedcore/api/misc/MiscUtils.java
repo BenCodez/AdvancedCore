@@ -200,7 +200,7 @@ public class MiscUtils {
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
-				runConsoleCommand(null, cmd, tick, stagger);
+				runConsoleCommand(Bukkit.getPlayer(playerName), cmd, tick, stagger);
 			}
 		}
 	}
