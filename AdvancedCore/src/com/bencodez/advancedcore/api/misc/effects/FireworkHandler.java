@@ -143,13 +143,13 @@ public class FireworkHandler implements Listener {
 		if (event.getEntity() instanceof Firework) {
 			Firework fw = event.getEntity();
 			if (fireWorks.contains(fw)) {
-				plugin.getBukkitScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
+				plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
 
 					@Override
 					public void run() {
 						fireWorks.remove(fw);
 					}
-				}, 1);
+				}, fw);
 			}
 		}
 	}
