@@ -118,7 +118,9 @@ public class FireworkHandler implements Listener {
 				fwmeta.addEffects(builder.build());
 				fwmeta.setPower(power);
 				fw.setFireworkMeta(fwmeta);
-				fireWorks.add(fw);
+				fw.setCustomName("reward");
+				fw.setCustomNameVisible(false);
+				// fireWorks.add(fw);
 				if (detonate) {
 					fw.detonate();
 				}
@@ -132,18 +134,10 @@ public class FireworkHandler implements Listener {
 	public void onFireworkDamage(EntityDamageByEntityEvent event) {
 		if (event.getDamager() instanceof Firework) {
 			Firework fw = (Firework) event.getDamager();
-			if (fireWorks.contains(fw)) {
-				event.setCancelled(true);
-			}
-		}
-	}
-
-	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onFireworkExplode(FireworkExplodeEvent event) {
-		if (event.getEntity() instanceof Firework) {
-			Firework fw = event.getEntity();
-			if (fireWorks.contains(fw)) {
-				fireWorks.remove(fw);
+			if (fw.getCustomName() != null) {
+				if (fw.getCustomName().equals("reward")) {
+					event.setCancelled(true);
+				}
 			}
 		}
 	}
