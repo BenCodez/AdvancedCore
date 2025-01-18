@@ -271,24 +271,17 @@ public class AdvancedCoreUser {
 		setOfflineRewards(new ArrayList<>());
 		final AdvancedCoreUser user = this;
 		if (plugin.isEnabled()) {
-			getPlugin().getBukkitScheduler().runTaskLater(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					for (String str : copy) {
-						if (str != null && !str.equals("null")) {
-							String[] args = str.split("%placeholders%");
-							String placeholders = "";
-							if (args.length > 1) {
-								placeholders = args[1];
-							}
-							plugin.getRewardHandler().giveReward(user, args[0],
-									new RewardOptions().setOnline(false).setGiveOffline(false).setCheckTimed(false)
-											.withPlaceHolder(ArrayUtils.fromString(placeholders)));
-						}
+			for (String str : copy) {
+				if (str != null && !str.equals("null")) {
+					String[] args = str.split("%placeholders%");
+					String placeholders = "";
+					if (args.length > 1) {
+						placeholders = args[1];
 					}
+					plugin.getRewardHandler().giveReward(user, args[0], new RewardOptions().setOnline(false)
+							.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholders)));
 				}
-			}, 2);
+			}
 		}
 	}
 

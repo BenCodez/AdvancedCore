@@ -34,22 +34,22 @@ public class WorldChangeEvent implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onWorldChange(PlayerChangedWorldEvent event) {
 		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
+			final Player player = event.getPlayer();
 			plugin.getBukkitScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {
 
 				@Override
 				public void run() {
-					if (plugin.getOptions().isDisableCheckOnWorldChange() || event.getPlayer() == null
+					if (plugin.getOptions().isDisableCheckOnWorldChange() || player == null
 							|| !plugin.isLoadUserData()) {
 						return;
 					}
-					Player player = event.getPlayer();
 
 					AdvancedCoreUser user = plugin.getUserManager().getUser(player);
 					if (user.isCheckWorld()) {
 						user.checkOfflineRewards();
 					}
 				}
-			}, 1);
+			}, 10);
 		}
 	}
 
