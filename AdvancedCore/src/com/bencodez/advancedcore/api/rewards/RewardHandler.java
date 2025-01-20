@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.rewards;
 
 import java.io.File;
 import java.text.DecimalFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -751,6 +752,40 @@ public class RewardHandler {
 						}
 					}
 				}.addPath("RequirePermission")));
+
+		injectedRequirements.add(new RequirementInjectConfigurationSection("DayOfMonth") {
+			@Override
+			public boolean onRequirementsRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
+					RewardOptions rewardOptions) {
+				if (!data.getBoolean("Enabled", false)) {
+					return true;
+				}
+
+				List<Integer> days = data.getIntegerList("Days");
+				int currentDay = LocalDateTime.now().getDayOfMonth();
+
+				return days.contains(currentDay);
+			}
+		}.priority(100)
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Days", null) {
+					@Override
+					public void setValue(Player player, ArrayList<String> value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(getKey(), value);
+						plugin.reloadAdvancedCore(false);
+						reward.reOpenEditGUI(player);
+					}
+				}.addLore("Set the days of the month for the requirement")))
+				.validator(new RequirementInjectValidator() {
+					@Override
+					@SuppressWarnings("unchecked")
+					public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+						List<Integer> days = (List<Integer>) data.getList("Days", null);
+						if (days != null && days.isEmpty()) {
+							warning(reward, inject, "No days specified for DayOfMonth requirement");
+						}
+					}
+				}));
 
 		injectedRequirements.add(new RequirementInjectString("Server", "") {
 

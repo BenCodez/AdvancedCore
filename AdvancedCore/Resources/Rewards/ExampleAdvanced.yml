@@ -107,6 +107,16 @@ Permission: 'AdvancedCore.Reward.ExampleAdvanced'
 # Time in minutes
 #RewardExpiration: 1440
 
+
+# DayOfMonth requirement configuration
+DayOfMonth:
+  # Enable or disable the DayOfMonth requirement
+  Enabled: false
+  # List of days of the month when the requirement should be met
+  Days:
+  - 1
+  - 15
+
 # Javascript
 # Only use this if you know what you are doing
 # 
