@@ -44,14 +44,21 @@ public class PluginMessage implements PluginMessageListener {
 
 	@Override
 	public void onPluginMessageReceived(String channel, Player player, byte[] message) {
-		// plugin.getLogger().info("Got plugin message " + channel + " : " + message);
 		if (!channel.equals(plugin.getBungeeChannel())) {
 			return;
 		}
+
 		ByteArrayDataInput in = ByteStreams.newDataInput(message);
 		ArrayList<String> list = new ArrayList<>();
 		final String subChannel = in.readUTF();
 		int size = in.readInt();
+
+		// Ensure the size is within a reasonable range to prevent reading too much data
+		if (size < 0 || size > message.length) {
+			plugin.getLogger().warning("Invalid message size: " + size);
+			return;
+		}
+
 		for (int i = 0; i < size; i++) {
 			try {
 				String str = in.readUTF();
@@ -59,21 +66,20 @@ public class PluginMessage implements PluginMessageListener {
 					list.add(str);
 				}
 			} catch (Exception e) {
-				e.printStackTrace();
+				plugin.debug(e);
+				plugin.getLogger().warning("Error reading plugin message: " + e.getMessage());
+				return;
 			}
 		}
 
 		final ArrayList<String> list1 = list;
 
 		timer.submit(new Runnable() {
-
 			@Override
 			public void run() {
 				onReceive(subChannel, list1);
-
 			}
 		});
-
 	}
 
 	public void onReceive(String subChannel, ArrayList<String> list) {
