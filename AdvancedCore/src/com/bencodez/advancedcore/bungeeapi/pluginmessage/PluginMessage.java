@@ -64,34 +64,39 @@ public class PluginMessage implements PluginMessageListener {
 			return;
 		}
 
-		for (int i = 0; i < size; i++) {
-			try {
-				if (encryptionHandler != null) {
-					String str = encryptionHandler.decrypt(in.readUTF());
-					if (str != null) {
-						list.add(str);
+		try {
+			for (int i = 0; i < size; i++) {
+				try {
+					if (encryptionHandler != null) {
+						String str = encryptionHandler.decrypt(in.readUTF());
+						if (str != null) {
+							list.add(str);
+						}
+					} else {
+						String str = in.readUTF();
+						if (str != null) {
+							list.add(str);
+						}
 					}
-				} else {
-					String str = in.readUTF();
-					if (str != null) {
-						list.add(str);
-					}
+				} catch (Exception e) {
+					plugin.debug(e);
+					plugin.getLogger().warning("Error reading plugin message: " + e.getMessage());
+					return;
 				}
-			} catch (Exception e) {
-				plugin.debug(e);
-				plugin.getLogger().warning("Error reading plugin message: " + e.getMessage());
-				return;
 			}
+
+			final ArrayList<String> list1 = list;
+
+			timer.submit(new Runnable() {
+				@Override
+				public void run() {
+					onReceive(subChannel, list1);
+				}
+			});
+		} catch (Exception e) {
+			plugin.debug(e);
+			plugin.getLogger().warning("Error reading plugin message: " + e.getMessage());
 		}
-
-		final ArrayList<String> list1 = list;
-
-		timer.submit(new Runnable() {
-			@Override
-			public void run() {
-				onReceive(subChannel, list1);
-			}
-		});
 	}
 
 	public void onReceive(String subChannel, ArrayList<String> list) {
