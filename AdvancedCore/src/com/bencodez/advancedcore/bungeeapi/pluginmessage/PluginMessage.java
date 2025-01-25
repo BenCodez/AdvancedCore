@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.misc.encryption.EncryptionHandler;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
@@ -23,6 +24,10 @@ public class PluginMessage implements PluginMessageListener {
 	@Getter
 	@Setter
 	private boolean debug = false;
+
+	@Getter
+	@Setter
+	private EncryptionHandler encryptionHandler;
 
 	private AdvancedCorePlugin plugin;
 
@@ -61,9 +66,16 @@ public class PluginMessage implements PluginMessageListener {
 
 		for (int i = 0; i < size; i++) {
 			try {
-				String str = in.readUTF();
-				if (str != null) {
-					list.add(str);
+				if (encryptionHandler != null) {
+					String str = encryptionHandler.decrypt(in.readUTF());
+					if (str != null) {
+						list.add(str);
+					}
+				} else {
+					String str = in.readUTF();
+					if (str != null) {
+						list.add(str);
+					}
 				}
 			} catch (Exception e) {
 				plugin.debug(e);
@@ -102,6 +114,9 @@ public class PluginMessage implements PluginMessageListener {
 			out.writeUTF(channel);
 			out.writeInt(messageData.length);
 			for (String message : messageData) {
+				if (encryptionHandler != null) {
+					message = encryptionHandler.encrypt(message);
+				}
 				out.writeUTF(message);
 			}
 			if (debug) {
