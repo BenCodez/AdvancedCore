@@ -54,8 +54,20 @@ public class PluginMessage implements PluginMessageListener {
 		}
 
 		ByteArrayDataInput in = ByteStreams.newDataInput(message);
-		ArrayList<String> list = new ArrayList<>();
-		final String subChannel = in.readUTF();
+		String data = "";
+		String subChannel1 = "";
+		if (encryptionHandler != null) {
+			try {
+				subChannel1 = encryptionHandler.decrypt(in.readUTF());
+			} catch (Exception e) {
+				plugin.debug(e);
+				plugin.getLogger().warning("Error reading plugin message: " + e.getMessage());
+				return;
+			}
+		} else {
+			subChannel1 = in.readUTF();
+		}
+		final String subChannel = subChannel1;
 		int size = in.readInt();
 
 		// Ensure the size is within a reasonable range to prevent reading too much data
@@ -65,27 +77,18 @@ public class PluginMessage implements PluginMessageListener {
 		}
 
 		try {
-			for (int i = 0; i < size; i++) {
-				try {
-					if (encryptionHandler != null) {
-						String str = encryptionHandler.decrypt(in.readUTF());
-						if (str != null) {
-							list.add(str);
-						}
-					} else {
-						String str = in.readUTF();
-						if (str != null) {
-							list.add(str);
-						}
-					}
-				} catch (Exception e) {
-					plugin.debug(e);
-					plugin.getLogger().warning("Error reading plugin message: " + e.getMessage());
-					return;
-				}
+
+			if (encryptionHandler != null) {
+				data = encryptionHandler.decrypt(in.readUTF());
+			} else {
+				data = in.readUTF();
 			}
 
-			final ArrayList<String> list1 = list;
+			String[] list = data.split("//");
+			ArrayList<String> list1 = new ArrayList<String>();
+			for (String s : list) {
+				list1.add(s);
+			}
 
 			timer.submit(new Runnable() {
 				@Override
@@ -116,13 +119,22 @@ public class PluginMessage implements PluginMessageListener {
 		ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
 		DataOutputStream out = new DataOutputStream(byteOutStream);
 		try {
-			out.writeUTF(channel);
+			if (encryptionHandler != null) {
+				out.writeUTF(encryptionHandler.encrypt(channel));
+			} else {
+				out.writeUTF(channel);
+			}
 			out.writeInt(messageData.length);
+			String data = "";
+
 			for (String message : messageData) {
-				if (encryptionHandler != null) {
-					message = encryptionHandler.encrypt(message);
-				}
-				out.writeUTF(message);
+				data += message + "//";
+
+			}
+			if (encryptionHandler != null) {
+				out.writeUTF(encryptionHandler.encrypt(data));
+			} else {
+				out.writeUTF(data);
 			}
 			if (debug) {
 				plugin.getLogger().info("BungeeDebug: Sending plugin message: " + channel + ", "
