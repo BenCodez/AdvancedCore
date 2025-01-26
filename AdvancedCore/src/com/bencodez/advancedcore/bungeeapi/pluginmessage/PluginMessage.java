@@ -84,7 +84,7 @@ public class PluginMessage implements PluginMessageListener {
 				data = in.readUTF();
 			}
 
-			String[] list = data.split("//");
+			String[] list = data.split("/a/");
 			ArrayList<String> list1 = new ArrayList<String>();
 			for (String s : list) {
 				list1.add(s);
@@ -128,7 +128,7 @@ public class PluginMessage implements PluginMessageListener {
 			String data = "";
 
 			for (String message : messageData) {
-				data += message + "//";
+				data += message + "/a/";
 
 			}
 			if (encryptionHandler != null) {
