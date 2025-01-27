@@ -22,14 +22,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.bencodez.advancedcore.api.backup.BackupHandle;
@@ -37,19 +35,13 @@ import com.bencodez.advancedcore.api.cmi.CMIHandler;
 import com.bencodez.advancedcore.api.geyser.GeyserHandle;
 import com.bencodez.advancedcore.api.hologram.HologramHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
-import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
-import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
-import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.permissions.LuckPermsHandle;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
-import com.bencodez.advancedcore.api.rewards.RewardOptions;
-import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectString;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.updater.UpdateDownloader;
@@ -87,8 +79,6 @@ import com.bencodez.simpleapi.utils.PluginUtils;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.milkbowl.vault.economy.Economy;
-import net.milkbowl.vault.permission.Permission;
 
 public abstract class AdvancedCorePlugin extends JavaPlugin {
 
@@ -97,6 +87,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public static AdvancedCorePlugin getInstance() {
 		return javaPlugin;
 	}
+
+	@Getter
+	public VaultHandler vaultHandler;
 
 	@Getter
 	private CommandLoader advancedCoreCommandLoader;
@@ -124,9 +117,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private CMIHandler cmiHandle;
 
 	private Database database;
-
-	@Getter
-	private Economy econ = null;
 
 	@Getter
 	private FullInventoryHandler fullInventoryHandler;
@@ -160,9 +150,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private MySQL mysql;
 	@Getter
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
-
-	@Getter
-	private Permission perms;
 
 	@Getter
 	private boolean placeHolderAPIEnabled;
@@ -878,54 +865,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	public void loadVault() {
-		if (isLoadVault()) {
-			getBukkitScheduler().runTaskLater(this, new Runnable() {
-
-				@Override
-				public void run() {
-					if (setupEconomy()) {
-						getLogger().info("Successfully hooked into vault economy!");
-					} else {
-						getLogger().warning("Failed to hook into vault economy");
-					}
-
-					if (setupPermissions()) {
-						getLogger().info("Hooked into vault permissions");
-
-						rewardHandler.addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
-
-							@Override
-							public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String type,
-									RewardOptions rewardOptions) {
-								if (type.equals("")) {
-									return true;
-								}
-								String group = "";
-								if (!rewardOptions.isGiveOffline() && user.isOnline()) {
-									group = getPerms().getPrimaryGroup(user.getPlayer());
-								} else {
-									group = getPerms().getPrimaryGroup(null, user.getOfflinePlayer());
-								}
-								if (group.equalsIgnoreCase(type)) {
-									return true;
-								}
-								return false;
-							}
-						}.priority(100).addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER),
-								new EditGUIValueString("VaultGroup", null) {
-
-									@Override
-									public void setValue(Player player, String value) {
-										RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-										reward.setValue(getKey(), value);
-										reloadAdvancedCore(false);
-									}
-								}.addOptions(getPerms().getGroups()))));
-					} else {
-						getLogger().warning("Failed to hook into vault permissions");
-					}
-				}
-			}, 5);
+		vaultHandler = new VaultHandler();
+		if (getServer().getPluginManager().getPlugin("Vault") == null) {
+			vaultHandler.loadVault(this);
 		}
 	}
 
@@ -1077,31 +1019,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			this.mysql = null;
 		}
 		this.mysql = mysql;
-	}
-
-	private boolean setupEconomy() {
-		if (this.getServer().getPluginManager().getPlugin("Vault") == null) {
-			return false;
-		}
-		RegisteredServiceProvider<Economy> rsp = this.getServer().getServicesManager().getRegistration(Economy.class);
-		if (rsp == null) {
-			return false;
-		}
-		econ = rsp.getProvider();
-		return econ != null;
-	}
-
-	private boolean setupPermissions() {
-		if (getServer().getPluginManager().getPlugin("Vault") == null) {
-			return false;
-		}
-		RegisteredServiceProvider<Permission> rsp = this.getServer().getServicesManager()
-				.getRegistration(Permission.class);
-		if (rsp == null) {
-			return false;
-		}
-		perms = rsp.getProvider();
-		return perms != null;
 	}
 
 	public void unRegisterValueRequest() {

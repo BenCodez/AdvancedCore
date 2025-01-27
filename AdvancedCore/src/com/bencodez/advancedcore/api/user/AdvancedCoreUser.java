@@ -582,7 +582,7 @@ public class AdvancedCoreUser {
 		if (!plugin.isEnabled()) {
 			return;
 		}
-		if (plugin.getEcon() != null) {
+		if (plugin.getVaultHandler() != null && plugin.getVaultHandler().getEcon() != null) {
 			try {
 				if (m > 0) {
 					final double money = m;
@@ -590,7 +590,7 @@ public class AdvancedCoreUser {
 
 						@Override
 						public void run() {
-							plugin.getEcon().depositPlayer(getOfflinePlayer(), money);
+							plugin.getVaultHandler().getEcon().depositPlayer(getOfflinePlayer(), money);
 						}
 					});
 
@@ -601,7 +601,7 @@ public class AdvancedCoreUser {
 
 						@Override
 						public void run() {
-							plugin.getEcon().withdrawPlayer(getOfflinePlayer(), money);
+							plugin.getVaultHandler().getEcon().withdrawPlayer(getOfflinePlayer(), money);
 						}
 					});
 

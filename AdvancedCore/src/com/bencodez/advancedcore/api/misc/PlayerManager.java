@@ -206,12 +206,12 @@ public class PlayerManager {
 			return true;
 		}
 
-		if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getPerms() != null
-				&& plugin.getPerms().isEnabled()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getVaultHandler() != null
+				&& plugin.getVaultHandler().getPerms() != null && plugin.getVaultHandler().getPerms().isEnabled()) {
 			boolean hasPerm = false;
 			for (String permission : perm.split("\\|")) {
 
-				boolean has = plugin.getPerms().playerHas(player, permission);
+				boolean has = plugin.getVaultHandler().getPerms().playerHas(player, permission);
 				if (!hasPerm) {
 					hasPerm = has;
 				}
@@ -314,10 +314,10 @@ public class PlayerManager {
 			}
 		}
 
-		if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getPerms() != null
-				&& plugin.getPerms().isEnabled()) {
-			return plugin.getPerms().playerHas(Bukkit.getWorlds().get(0).getName(), Bukkit.getOfflinePlayer(playerUUID),
-					perm);
+		if (AdvancedCorePlugin.getInstance().getOptions().isUseVaultPermissions() && plugin.getVaultHandler() != null
+				&& plugin.getVaultHandler().getPerms() != null && plugin.getVaultHandler().getPerms().isEnabled()) {
+			return plugin.getVaultHandler().getPerms().playerHas(Bukkit.getWorlds().get(0).getName(),
+					Bukkit.getOfflinePlayer(playerUUID), perm);
 		}
 
 		return false;

@@ -150,14 +150,15 @@ public class JavascriptEngine {
 	}
 
 	public String getStringValue(String expression) {
-		Object result = getResult(expression);
-		if (result != null) {
-			try {
+		try {
+			Object result = getResult(expression);
+			if (result != null) {
 				return result.toString();
-			} catch (Exception e) {
-				AdvancedCorePlugin.getInstance().debug(e);
 			}
+		} catch (Exception e) {
+			AdvancedCorePlugin.getInstance().debug(e);
 		}
+
 		return "";
 	}
 }
