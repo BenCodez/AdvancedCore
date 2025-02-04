@@ -45,6 +45,24 @@ public abstract class SocketServer extends Thread {
 		}
 	}
 
+	private void restartServer() {
+		if (restartCount > 5) {
+			logger("Failed to restart server socket on " + host + ":" + port + " after 10 attempts, closing server");
+			close();
+			return;
+		}
+		try {
+			server.close();
+			server = new ServerSocket();
+			server.bind(new InetSocketAddress(host, port));
+		} catch (IOException e) {
+			logger("Failed to restart server socket on " + host + ":" + port);
+			e.printStackTrace();
+		}
+
+		restartCount++;
+	}
+
 	public void close() {
 		try {
 			running = false;
@@ -57,6 +75,8 @@ public abstract class SocketServer extends Thread {
 	public abstract void logger(String str);
 
 	public abstract void onReceive(String[] data);
+
+	private int restartCount = 0;
 
 	@Override
 	public void run() {
@@ -81,6 +101,7 @@ public abstract class SocketServer extends Thread {
 			} catch (Exception ex) {
 				logger("Error occured while receiving socket message");
 				ex.printStackTrace();
+				restartServer();
 			}
 		}
 
