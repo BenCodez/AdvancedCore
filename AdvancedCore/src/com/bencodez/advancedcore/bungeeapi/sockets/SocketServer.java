@@ -53,9 +53,10 @@ public abstract class SocketServer extends Thread {
 		}
 		try {
 			server.close();
+			sleep(1000);
 			server = new ServerSocket();
 			server.bind(new InetSocketAddress(host, port));
-		} catch (IOException e) {
+		} catch (Exception e) {
 			logger("Failed to restart server socket on " + host + ":" + port);
 			e.printStackTrace();
 		}
