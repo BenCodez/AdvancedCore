@@ -41,6 +41,7 @@ public abstract class SocketServer extends Thread {
 		} catch (IOException e) {
 			System.out.println("Failed to bind to " + host + ":" + port);
 			e.printStackTrace();
+			close();
 		}
 	}
 
@@ -71,6 +72,7 @@ public abstract class SocketServer extends Thread {
 				}
 				onReceive(msg.split("%line%"));
 				dis.close();
+				socket.close();
 			} catch (EOFException e) {
 				logger("Error occured while receiving socket message, enable debug to see more: " + e.getMessage());
 				if (debug) {
