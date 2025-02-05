@@ -1,3 +1,4 @@
+
 package com.bencodez.advancedcore.bungeeapi.sockets;
 
 import java.io.DataOutputStream;
@@ -49,13 +50,12 @@ public class ClientHandler {
 			msg += msgs[i];
 		}
 		String encrypted = encryptionHandler.encrypt(msg);
-		try {
-			DataOutputStream ds = new DataOutputStream(clientSocket.getOutputStream());
+		try (DataOutputStream ds = new DataOutputStream(clientSocket.getOutputStream())) {
 			ds.writeUTF(encrypted);
-			ds.close();
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
+		stopConnection();
 	}
 
 	public void sendMessage(String... msgs) {
@@ -64,7 +64,9 @@ public class ClientHandler {
 
 	public void stopConnection() {
 		try {
-			clientSocket.close();
+			if (clientSocket != null) {
+				clientSocket.close();
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
