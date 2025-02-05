@@ -49,6 +49,10 @@ public class ClientHandler {
 			msg += "%line%";
 			msg += msgs[i];
 		}
+		if (clientSocket == null) {
+			System.out.println("Failed to connect to " + host + ":" + port + " to send message: " + msg);
+			return;
+		}
 		String encrypted = encryptionHandler.encrypt(msg);
 		try (DataOutputStream ds = new DataOutputStream(clientSocket.getOutputStream())) {
 			ds.writeUTF(encrypted);
