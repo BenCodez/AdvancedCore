@@ -2,7 +2,6 @@
 package com.bencodez.advancedcore.bungeeapi.sockets;
 
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.Socket;
 
 import com.bencodez.advancedcore.api.misc.encryption.EncryptionHandler;
@@ -43,23 +42,26 @@ public class ClientHandler {
 		if (debug) {
 			System.out.println("Socket Sending: " + ArrayUtils.makeStringList(ArrayUtils.convert(msgs)));
 		}
-		connect();
+
 		String msg = msgs[0];
 		for (int i = 1; i < msgs.length; i++) {
 			msg += "%line%";
 			msg += msgs[i];
 		}
-		if (clientSocket == null) {
+
+		connect();
+		if (clientSocket == null || clientSocket.isClosed()) {
 			System.out.println("Failed to connect to " + host + ":" + port + " to send message: " + msg);
 			return;
 		}
 		String encrypted = encryptionHandler.encrypt(msg);
 		try (DataOutputStream ds = new DataOutputStream(clientSocket.getOutputStream())) {
 			ds.writeUTF(encrypted);
-		} catch (IOException e1) {
+		} catch (Exception e1) {
 			e1.printStackTrace();
+		} finally {
+			stopConnection();
 		}
-		stopConnection();
 	}
 
 	public void sendMessage(String... msgs) {
@@ -70,6 +72,7 @@ public class ClientHandler {
 		try {
 			if (clientSocket != null) {
 				clientSocket.close();
+				clientSocket = null;
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
