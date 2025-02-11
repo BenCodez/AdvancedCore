@@ -20,18 +20,18 @@
 	<build>
 		<resources>
 			<resource>
-				<directory>Resources</directory>
+				<directory>src/main/resources</directory>
 				<filtering>true</filtering>
 				<includes>
 					<include>advancedcoreversion.yml</include>
 				</includes>
 			</resource>
 			<resource>
-				<directory>Resources</directory>
+				<directory>src/main/resources</directory>
 				<filtering>false</filtering>
 			</resource>
 		</resources>
-		<sourceDirectory>src</sourceDirectory>
+		<sourceDirectory>src/main/java</sourceDirectory>
 		<pluginManagement>
 			<plugins>
 				<plugin>
@@ -75,7 +75,7 @@
 						<configuration>
 							<addOutputDirectory>false</addOutputDirectory>
 							<outputDirectory>${project.basedir}/target/delombok</outputDirectory>
-							<sourceDirectory>${project.basedir}/src</sourceDirectory>
+							<sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
 						</configuration>
 					</execution>
 				</executions>
