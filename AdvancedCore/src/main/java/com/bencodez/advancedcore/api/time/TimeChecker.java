@@ -18,6 +18,7 @@ import com.bencodez.advancedcore.api.time.events.PreDateChangedEvent;
 import com.bencodez.advancedcore.api.time.events.WeekChangeEvent;
 
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * The Class TimeChecker.
@@ -30,6 +31,7 @@ public class TimeChecker {
 	private boolean activeProcessing = false;
 
 	@Getter
+	@Setter
 	private ScheduledExecutorService timer;
 
 	private boolean timerLoaded = false;

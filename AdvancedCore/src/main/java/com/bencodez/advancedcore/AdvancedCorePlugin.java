@@ -88,6 +88,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return javaPlugin;
 	}
 
+	public static void setInstance(AdvancedCorePlugin plugin) {
+		javaPlugin = plugin;
+	}
+
 	@Getter
 	public VaultHandler vaultHandler;
 
