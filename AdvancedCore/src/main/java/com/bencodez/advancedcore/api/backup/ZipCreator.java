@@ -32,7 +32,7 @@ public class ZipCreator {
 	}
 
 	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+	public AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	/**
 	 * Instantiates a new report.
@@ -46,7 +46,7 @@ public class ZipCreator {
 	 * @param dir      the dir
 	 * @param fileList the file list
 	 */
-	private void addAllFiles(File dir, List<File> fileList) {
+	public void addAllFiles(File dir, List<File> fileList) {
 		try {
 			File[] files = dir.listFiles();
 			for (File file : files) {
@@ -81,7 +81,7 @@ public class ZipCreator {
 	 * @throws FileNotFoundException the file not found exception
 	 * @throws IOException           Signals that an I/O exception has occurred.
 	 */
-	private void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
+	public void addToZip(File file, ZipOutputStream zos) throws FileNotFoundException, IOException {
 		if (file.exists()) {
 			FileInputStream fis = new FileInputStream(file);
 

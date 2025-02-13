@@ -18,7 +18,7 @@ public class BackupHandle implements Listener {
 		return instance;
 	}
 
-	public BackupHandle() {
+	private BackupHandle() {
 	}
 
 	public void checkOldBackups() {
