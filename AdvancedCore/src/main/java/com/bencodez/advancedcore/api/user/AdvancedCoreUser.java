@@ -35,6 +35,7 @@ import com.bencodez.advancedcore.api.misc.effects.BossBar;
 import com.bencodez.advancedcore.api.misc.effects.Title;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
+import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.userstorage.Column;
@@ -266,23 +267,33 @@ public class AdvancedCoreUser {
 			plugin.debug("Processing rewards is disabled");
 			return;
 		}
-		setCheckWorld(false);
-		final ArrayList<String> copy = getOfflineRewards();
-		setOfflineRewards(new ArrayList<>());
-		final AdvancedCoreUser user = this;
-		if (plugin.isEnabled()) {
-			for (String str : copy) {
-				if (str != null && !str.equals("null")) {
-					String[] args = str.split("%placeholders%");
-					String placeholders = "";
-					if (args.length > 1) {
-						placeholders = args[1];
-					}
-					plugin.getRewardHandler().giveReward(user, args[0], new RewardOptions().setOnline(false)
-							.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholders)));
-				}
-			}
+		if (isCheckWorld()) {
+			setCheckWorld(false);
 		}
+		ArrayList<String> rewards = getOfflineRewards();
+		if (rewards.isEmpty()) {
+			return;
+		}
+
+		setOfflineRewards(new ArrayList<>());
+		RewardHandler rewardHandler = plugin.getRewardHandler();
+		AdvancedCoreUser user = this;
+
+		for (String rewardEntry : rewards) {
+			if (rewardEntry == null || rewardEntry.equals("null")) {
+				continue;
+			}
+
+			String[] parts = rewardEntry.split("%placeholders%", 2);
+			String rewardName = parts[0];
+			String placeholderStr = parts.length > 1 ? parts[1] : "";
+
+			RewardOptions options = new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
+					.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholderStr));
+
+			rewardHandler.giveReward(user, rewardName, options);
+		}
+
 	}
 
 	public void clearCache() {
@@ -320,25 +331,30 @@ public class AdvancedCoreUser {
 			plugin.debug("Processing rewards is disabled");
 			return;
 		}
-		setCheckWorld(false);
-		final ArrayList<String> copy = getOfflineRewards();
-		setOfflineRewards(new ArrayList<>());
-		final AdvancedCoreUser user = this;
-		if (plugin.isEnabled()) {
 
-			for (String str : copy) {
-				if (str != null && !str.equals("null")) {
-					String[] args = str.split("%placeholders%");
-					String placeholders = "";
-					if (args.length > 1) {
-						placeholders = args[1];
-					}
-					plugin.getRewardHandler().giveReward(user, args[0],
-							new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
-									.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholders)));
-				}
+		setCheckWorld(false);
+		ArrayList<String> rewards = getOfflineRewards();
+		if (rewards.isEmpty()) {
+			return;
+		}
+
+		setOfflineRewards(new ArrayList<>());
+		RewardHandler rewardHandler = plugin.getRewardHandler();
+		AdvancedCoreUser user = this;
+
+		for (String rewardEntry : rewards) {
+			if (rewardEntry == null || rewardEntry.equals("null")) {
+				continue;
 			}
 
+			String[] parts = rewardEntry.split("%placeholders%", 2);
+			String rewardName = parts[0];
+			String placeholderStr = parts.length > 1 ? parts[1] : "";
+
+			RewardOptions options = new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
+					.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholderStr));
+
+			rewardHandler.giveReward(user, rewardName, options);
 		}
 	}
 
