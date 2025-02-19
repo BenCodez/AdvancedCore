@@ -277,7 +277,6 @@ public class BInventory {
 		return this;
 	}
 
-	@SuppressWarnings("rawtypes")
 	public void addUpdatingButton(AdvancedCorePlugin plugin, long delay, long interval, Runnable runnable) {
 		if (futures == null) {
 			futures = new ArrayList<>();
@@ -575,6 +574,7 @@ public class BInventory {
 			if (getHighestSlot() % (maxInvSize - 9) != 0) {
 				maxPage++;
 			}
+			addPlaceholder("totalpages", "" + maxPage);
 			openInventory(player, 1);
 		}
 
@@ -588,6 +588,7 @@ public class BInventory {
 	 */
 	public void openInventory(Player player, int page) {
 		BInventory inventory = this;
+		addPlaceholder("currentpage", "" + page);
 		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize, PlaceholderUtils.replaceJavascript(player,
 				PlaceholderUtils.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
 		this.page = page;
