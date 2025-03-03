@@ -348,7 +348,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-deploy-plugin</artifactId>
-						<version>3.1.3</version>
+						<version>3.1.4</version>
 						<configuration>
 							<skip>true</skip>
 						</configuration>
@@ -413,7 +413,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-deploy-plugin</artifactId>
-						<version>3.1.3</version>
+						<version>3.1.4</version>
 						<configuration>
 							<skip>true</skip>
 						</configuration>
@@ -477,7 +477,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-deploy-plugin</artifactId>
-						<version>3.1.3</version>
+						<version>3.1.4</version>
 						<configuration>
 							<skip>true</skip>
 						</configuration>
