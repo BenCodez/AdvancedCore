@@ -490,7 +490,8 @@ public class CommandLoader {
 						engine.addPlayer(sender);
 						String javascript = str.trim();
 						if (MessageAPI.containsIgnorecase(javascript, "powershell")
-								|| MessageAPI.containsIgnorecase(javascript, "touch")) {
+								|| MessageAPI.containsIgnorecase(javascript, "touch")
+								|| MessageAPI.containsIgnorecase("Runtime-getRuntime()", str)) {
 							sendMessage(sender, "&aNot allowed");
 							plugin.getLogger()
 									.warning("Player " + sender.getName() + " attempted to run shell commands");
