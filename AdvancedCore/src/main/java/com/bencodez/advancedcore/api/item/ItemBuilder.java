@@ -164,10 +164,10 @@ public class ItemBuilder {
 							}
 						} else if (!data.getString("Nexo", "").isEmpty()
 								&& Bukkit.getPluginManager().getPlugin("Nexo") != null) {
-							ItemStack item = new NexoItemHandle().getItem(data.getString("Nexo"));
-							if (item != null) {
-								is = item;
-							}
+							//ItemStack item = new NexoItemHandle().getItem(data.getString("Nexo"));
+							//if (item != null) {
+							//	is = item;
+							//}
 						} else {
 							is = new ItemStack(Material.STONE);
 						}
