@@ -1,7 +1,6 @@
 package com.bencodez.advancedcore.api.misc.effects;
 
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
@@ -13,7 +12,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.FireworkExplodeEvent;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -32,8 +30,6 @@ public class FireworkHandler implements Listener {
 	public static FireworkHandler getInstance() {
 		return instance;
 	}
-
-	private ConcurrentLinkedQueue<Firework> fireWorks = new ConcurrentLinkedQueue<>();
 
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();

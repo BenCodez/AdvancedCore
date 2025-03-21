@@ -164,10 +164,10 @@ public class ItemBuilder {
 							}
 						} else if (!data.getString("Nexo", "").isEmpty()
 								&& Bukkit.getPluginManager().getPlugin("Nexo") != null) {
-							//ItemStack item = new NexoItemHandle().getItem(data.getString("Nexo"));
-							//if (item != null) {
-							//	is = item;
-							//}
+							ItemStack item = new NexoItemHandle().getItem(data.getString("Nexo"));
+							if (item != null) {
+								is = item;
+							}
 						} else {
 							is = new ItemStack(Material.STONE);
 						}
@@ -719,7 +719,7 @@ public class ItemBuilder {
 		}
 		ItemMeta im = is.getItemMeta();
 		for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
-			map.put("Enchants." + entry.getKey().getKey(), entry.getValue().intValue());
+			map.put("Enchants." + entry.getKey().getKeyOrThrow().getKey(), entry.getValue().intValue());
 		}
 
 		ArrayList<String> flagList = new ArrayList<>();
