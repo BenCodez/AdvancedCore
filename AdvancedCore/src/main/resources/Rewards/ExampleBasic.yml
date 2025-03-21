@@ -101,7 +101,9 @@ Items:
         #Duration: 20
         #Amplifier: 1
         
+    #From other plugins
     #ItemsAdder: ITEMHERE
+    #Nexo: ITEM
       
 # Amount of money to give, requires vault
 # Use 0 to give none

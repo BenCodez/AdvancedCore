@@ -154,9 +154,17 @@ public class ItemBuilder {
 							map.put(key, data.get("ItemStack." + key));
 						}
 						is = ItemStack.deserialize(map);
-					} else if (!data.getString("ItemsAdder", "").isEmpty()) {
-						if (Bukkit.getPluginManager().getPlugin("ItemsAdder") != null) {
+					} else if (!data.getString("ItemsAdder", "").isEmpty() || !data.getString("Nexo", "").isEmpty()) {
+
+						if (!data.getString("ItemsAdder", "").isEmpty()
+								&& Bukkit.getPluginManager().getPlugin("ItemsAdder") != null) {
 							ItemStack item = new ItemsAdderHandle().getItem(data.getString("ItemsAdder"));
+							if (item != null) {
+								is = item;
+							}
+						} else if (!data.getString("Nexo", "").isEmpty()
+								&& Bukkit.getPluginManager().getPlugin("Nexo") != null) {
+							ItemStack item = new NexoItemHandle().getItem(data.getString("Nexo"));
 							if (item != null) {
 								is = item;
 							}
@@ -308,8 +316,7 @@ public class ItemBuilder {
 						}
 
 						@SuppressWarnings("unchecked")
-						ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags",
-								new ArrayList<>());
+						ArrayList<String> itemFlags = (ArrayList<String>) data.getList("ItemFlags", new ArrayList<>());
 						for (String flag : itemFlags) {
 							addItemFlag(flag);
 						}
