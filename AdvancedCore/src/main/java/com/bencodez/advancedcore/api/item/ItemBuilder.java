@@ -837,10 +837,10 @@ public class ItemBuilder {
 		if (player == null) {
 			return toItemStack();
 		}
-		setName(PlaceholderUtils.replaceJavascript(player,
-				PlaceholderUtils.replacePlaceHolder(getName(), placeholders)));
-		setLore(PlaceholderUtils.replaceJavascript(player,
-				PlaceholderUtils.replacePlaceHolder(getLore(), placeholders)));
+		setName(MessageAPI.colorize(PlaceholderUtils.replaceJavascript(player,
+				PlaceholderUtils.replacePlaceHolder(getName(), placeholders))));
+		setLore(ArrayUtils.colorize(PlaceholderUtils.replaceJavascript(player,
+				PlaceholderUtils.replacePlaceHolder(getLore(), placeholders))));
 		if (skull.contains("%")) {
 			setSkullOwner(PlaceholderUtils.replaceJavascript(player,
 					PlaceholderUtils.replacePlaceHolder(skull, placeholders)));
@@ -1032,7 +1032,7 @@ public class ItemBuilder {
 		}
 		ItemMeta im = is.getItemMeta();
 		if (im != null) {
-			im.setLore(ArrayUtils.colorize(list));
+			im.setLore(list);
 			is.setItemMeta(im);
 		}
 		return this;
@@ -1062,7 +1062,7 @@ public class ItemBuilder {
 	public ItemBuilder setName(String name) {
 		ItemMeta im = is.getItemMeta();
 		if (im != null) {
-			im.setDisplayName(MessageAPI.colorize(name));
+			im.setDisplayName(name);
 			is.setItemMeta(im);
 		}
 		return this;
@@ -1143,8 +1143,10 @@ public class ItemBuilder {
 			return setConditional(new JavascriptEngine()).toItemStack();
 		}
 
-		setName(PlaceholderUtils.replaceJavascript(PlaceholderUtils.replacePlaceHolder(getName(), placeholders)));
-		setLore(PlaceholderUtils.replaceJavascript(PlaceholderUtils.replacePlaceHolder(getLore(), placeholders)));
+		setName(MessageAPI.colorize(
+				PlaceholderUtils.replaceJavascript(PlaceholderUtils.replacePlaceHolder(getName(), placeholders))));
+		setLore(ArrayUtils.colorize(
+				PlaceholderUtils.replaceJavascript(PlaceholderUtils.replacePlaceHolder(getLore(), placeholders))));
 		if (checkLoreLength) {
 			checkLoreLength();
 		}
