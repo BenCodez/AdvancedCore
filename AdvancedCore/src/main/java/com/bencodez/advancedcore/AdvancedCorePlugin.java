@@ -870,7 +870,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public void loadVault() {
 		vaultHandler = new VaultHandler();
-		if (getServer().getPluginManager().getPlugin("Vault") == null) {
+		if (getServer().getPluginManager().getPlugin("Vault") != null) {
 			vaultHandler.loadVault(this);
 		}
 	}
