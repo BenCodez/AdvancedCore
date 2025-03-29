@@ -68,6 +68,8 @@ public class VaultHandler {
 					}
 				}
 			}, 5);
+		} else {
+			plugin.debug("Vault hook disabled");
 		}
 	}
 

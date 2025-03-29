@@ -870,7 +870,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public void loadVault() {
 		vaultHandler = new VaultHandler();
-		if (getServer().getPluginManager().getPlugin("Vault") != null) {
+		if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
+			debug("Attempting to hook into vault");
 			vaultHandler.loadVault(this);
 		}
 	}
