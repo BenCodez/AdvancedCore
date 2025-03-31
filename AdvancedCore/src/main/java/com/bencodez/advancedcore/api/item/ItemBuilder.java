@@ -1158,7 +1158,7 @@ public class ItemBuilder {
 			placeholders.put("player", player.getName());
 		}
 		if (conditional) {
-			return getConditionItemBuilder(player).toItemStack(player);
+			return getConditionItemBuilder(player).setPlaceholders(placeholders).toItemStack(player);
 		}
 		parsePlaceholders(player);
 		if (checkLoreLength) {
@@ -1172,7 +1172,8 @@ public class ItemBuilder {
 			placeholders.put("player", player.getName());
 		}
 		if (conditional) {
-			return setConditional(new JavascriptEngine().addPlayer(player)).toItemStack(player);
+			return setConditional(new JavascriptEngine().addPlayer(player)).setPlaceholders(placeholders)
+					.toItemStack(player);
 		}
 		parsePlaceholders(player);
 		if (checkLoreLength) {
