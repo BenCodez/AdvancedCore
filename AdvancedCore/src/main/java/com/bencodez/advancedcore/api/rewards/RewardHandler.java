@@ -1204,6 +1204,28 @@ public class RewardHandler {
 			}
 		}));
 
+		injectedRewards.add(new RewardInjectConfigurationSection("NumberCommand") {
+
+			@Override
+			public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
+					HashMap<String, String> placeholders) {
+				int min = section.getInt("Min", 0);
+				int max = section.getInt("Max", 100);
+				int number = ThreadLocalRandom.current().nextInt(min, max + 1);
+				String command = section.getString("Command", "").replace("%number%", String.valueOf(number));
+				MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), command, placeholders);
+				return String.valueOf(number);
+			}
+		}.asPlaceholder("Number").priority(100).validator(new RewardInjectValidator() {
+
+			@Override
+			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
+				if (!data.isInt("Min") || !data.isInt("Max") || !data.isString("Command")) {
+					warning(reward, inject, "NumberCommand requires Min, Max, and Command to be set");
+				}
+			}
+		}));
+
 		injectedRewards.add(new RewardInjectInt("EXP", 0) {
 
 			@Override
@@ -1442,7 +1464,7 @@ public class RewardHandler {
 			@Override
 			public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
 					HashMap<String, String> placeholders) {
-				MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(), value, placeholders);
+				MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), value, placeholders);
 				return null;
 			}
 		}.addEditButton(new EditGUIButton(new ItemBuilder("COMMAND_BLOCK"), new EditGUIValueString("Command", null) {
@@ -1833,7 +1855,7 @@ public class RewardHandler {
 			public String onRewardRequest(Reward r, AdvancedCoreUser user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				if (list.size() > 0) {
-					MiscUtils.getInstance().executeConsoleCommands(user.getPlayer(),
+					MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(),
 							list.get(ThreadLocalRandom.current().nextInt(list.size())), placeholders);
 				}
 				return null;

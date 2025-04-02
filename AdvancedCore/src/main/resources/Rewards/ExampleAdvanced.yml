@@ -66,6 +66,12 @@ RandomCommand: []
 # Will give one reward from the list of rewards
 RandomReward: []
 
+# Picks a random number and uses that within the command
+NumberCommand:
+  Min: 1
+  Max: 10
+  Command: "say The random number is %number%"
+
 # Works similar to RandomReward above, just avoids reward files
 # Similar style to AdvancedPriority
 AdvancedRandomReward:
