@@ -44,6 +44,7 @@ import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.player.PlayerUtils;
 
 import lombok.Getter;
+import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
@@ -56,6 +57,7 @@ public class AdvancedCoreUser {
 	@Getter
 	private boolean cacheData = true;
 
+	@Setter
 	private UserData data;
 
 	private boolean loadName = true;
@@ -1158,6 +1160,16 @@ public class AdvancedCoreUser {
 	}
 
 	public void setOfflineRewards(ArrayList<String> offlineRewards) {
+		// MySQL TEXT max length is 65535 bytes
+		int maxLength = 65535;
+		String str = String.join("%line%", offlineRewards);
+
+		// Remove oldest rewards until within limit
+		while (str.getBytes().length > maxLength && !offlineRewards.isEmpty()) {
+			offlineRewards.remove(0);
+			str = String.join("%line%", offlineRewards);
+		}
+
 		data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards);
 	}
 
