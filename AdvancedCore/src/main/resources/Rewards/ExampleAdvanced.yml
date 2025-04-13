@@ -198,6 +198,7 @@ AdvancedWorld:
 # The number represents a weight value essentially
 # Decimals are allowed as well, just use _ as the decimal
 # no duplicates numbers allowed
+# If using decimals avoid the last number decimal value being 0, no 5.500
 SpecialChance:
   5:
     # rewards here
