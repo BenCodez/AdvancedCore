@@ -169,6 +169,9 @@ public class AdvancedCoreUser {
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, UUID uuid, String playerName) {
 		this.plugin = plugin;
 		this.uuid = uuid.toString();
+		if (!plugin.getOptions().isOnlineMode()) {
+			this.uuid = PlayerManager.getInstance().getUUID(playerName);
+		}
 		loadData();
 		setPlayerName(playerName);
 	}

@@ -135,14 +135,15 @@ public class PlayerManager {
 			return null;
 		}
 
+		if (!plugin.getOptions().isOnlineMode()) {
+			return UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes(StandardCharsets.UTF_8)).toString();
+		}
+
 		Player player = Bukkit.getPlayerExact(playerName);
 		if (player != null) {
 			return player.getUniqueId().toString();
 		}
 
-		if (!plugin.getOptions().isOnlineMode()) {
-			return UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes(StandardCharsets.UTF_8)).toString();
-		}
 		String uuid = getUUIDLookup(playerName);
 
 		if (!uuid.equals("")) {
