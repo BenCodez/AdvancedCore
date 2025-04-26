@@ -392,6 +392,12 @@ public class CommandLoader {
 				sendMessage(sender, "&cRemoving " + args[1]);
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				user.getData().remove();
+				for (Entry<String, String> entry : plugin.getUuidNameCache().entrySet()) {
+					if (entry.getValue().equals(args[1])) {
+						plugin.getUuidNameCache().remove(entry.getKey());
+						break;
+					}
+				}
 				sendMessage(sender, "&cRemoved " + args[1]);
 			}
 		});
@@ -404,6 +410,7 @@ public class CommandLoader {
 				sendMessage(sender, "&cRemoving " + args[1]);
 				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(args[1]));
 				user.getData().remove();
+				plugin.getUuidNameCache().remove(args[1]);
 				sendMessage(sender, "&cRemoved " + args[1]);
 			}
 		});
