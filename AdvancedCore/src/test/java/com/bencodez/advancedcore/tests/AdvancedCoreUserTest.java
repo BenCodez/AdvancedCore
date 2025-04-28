@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserData;
@@ -34,6 +35,9 @@ public class AdvancedCoreUserTest {
 		data = mock(UserData.class);
 		MySQL mysql = mock(MySQL.class);
 
+		AdvancedCoreConfigOptions configOptions = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(configOptions);
+		when(configOptions.isOnlineMode()).thenReturn(true); // Stub the required method
 		when(plugin.getMysql()).thenReturn(mysql);
 		when(userManager.getDataManager()).thenReturn(dataManager);
 		when(plugin.getUserManager()).thenReturn(userManager);
