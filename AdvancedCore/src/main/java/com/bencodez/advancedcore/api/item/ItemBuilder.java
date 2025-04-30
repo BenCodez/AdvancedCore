@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.item;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -508,6 +509,20 @@ public class ItemBuilder {
 
 	public ItemBuilder addGlow() {
 		ItemMeta meta = is.getItemMeta();
+
+		try {
+			// for newer minecraft versions
+			meta.setEnchantmentGlintOverride(true);
+			if (meta.getClass().getMethod("setEnchantmentGlintOverride", boolean.class) != null) {
+				meta.getClass().getMethod("setEnchantmentGlintOverride", boolean.class).invoke(meta, true);
+				is.setItemMeta(meta);
+				return this;
+			}
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
+				| SecurityException e) {
+			e.printStackTrace();
+		}
+
 		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 		is.setItemMeta(meta);
 
