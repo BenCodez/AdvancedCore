@@ -135,7 +135,7 @@ public class UserDataManager {
 		int removed = 0;
 		for (UUID uuid : userDataCache.keySet()) {
 			if (!onlineUUIDS.contains(uuid)) {
-				removeCache(uuid);
+				removeCache(uuid, null);
 				removed++;
 			}
 		}
@@ -179,7 +179,12 @@ public class UserDataManager {
 		addKey(new UserDataKeyBoolean("CheckWorld"));
 	}
 
-	public void removeCache(UUID uuid) {
+	public void removeCache(UUID uuid, String playerName) {
+		if (playerName != null && !playerName.isEmpty()) {
+			if (!plugin.getOptions().isOnlineMode()) {
+				uuid = UUID.fromString(PlayerManager.getInstance().getUUID(playerName));
+			}
+		}
 		UserDataCache cache = getCache(uuid);
 		if (cache != null) {
 			cache.clearCache();

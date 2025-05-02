@@ -151,7 +151,7 @@ public class PlayerJoinEvent implements Listener {
 					if (plugin != null && plugin.isEnabled()) {
 						TabCompleteHandler.getInstance().onLogin();
 
-						plugin.getUserManager().getDataManager().removeCache(player.getUniqueId());
+						plugin.getUserManager().getDataManager().removeCache(player.getUniqueId(), player.getName());
 
 					}
 				}
