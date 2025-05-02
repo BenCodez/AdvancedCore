@@ -53,7 +53,7 @@ public class PlayerJoinEvent implements Listener {
 				}
 			}
 
-			plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId());
+			plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId(), player.getName());
 
 			if (userExist) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(player);

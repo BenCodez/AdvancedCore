@@ -209,7 +209,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void cache() {
-		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid));
+		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid), getPlayerName());
 	}
 
 	public void cacheAsync() {
@@ -798,7 +798,7 @@ public class AdvancedCoreUser {
 	}
 
 	public void loadCache() {
-		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid));
+		plugin.getUserManager().getDataManager().cacheUser(UUID.fromString(uuid), getPlayerName());
 	}
 
 	public void loadData() {

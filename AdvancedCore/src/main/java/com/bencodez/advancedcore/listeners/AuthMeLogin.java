@@ -5,6 +5,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 
 import fr.xephi.authme.api.v3.AuthMeApi;
 import fr.xephi.authme.events.AuthMeAsyncPreLoginEvent;
@@ -26,7 +27,7 @@ public class AuthMeLogin implements Listener {
 					if (AuthMeApi.getInstance().isAuthenticated(event.getPlayer())
 							&& plugin.getOptions().isWaitUntilLoggedIn()) {
 						plugin.debug("Authme Login: " + event.getPlayer().getName() + " ("
-								+ event.getPlayer().getUniqueId() + ")");
+								+ PlayerManager.getInstance().getUUID(event.getPlayer().getName()) + ")");
 						AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(event.getPlayer());
 						Bukkit.getPluginManager().callEvent(login);
 					}
