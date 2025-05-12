@@ -41,16 +41,14 @@ public class PlayerJoinEvent implements Listener {
 			if (player.getName().startsWith(plugin.getOptions().getBedrockPlayerPrefix())
 					|| plugin.getGeyserHandle().isGeyserPlayer(player.getUniqueId())) {
 				userExist = true;
-				plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
-				plugin.extraDebug("Detected Geyser Player, Forcing player data to load");
-			}
 
-			if (!plugin.getOptions().isOnlineMode()) {
-				if (!player.getUniqueId().toString().equals(PlayerManager.getInstance().getUUID(player.getName()))) {
-					plugin.debug("Detected UUID mismatch, please enabling OnlineMode in VotingPlugin "
-							+ player.getUniqueId().toString() + ":"
-							+ PlayerManager.getInstance().getUUID(player.getName()));
+				if (plugin.getOptions().isOnlineMode()) {
+					plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
+				} else {
+					plugin.getUuidNameCache().put(PlayerManager.getInstance().getUUID(player.getName()),
+							player.getName());
 				}
+				plugin.extraDebug("Detected Geyser Player, Forcing player data to load");
 			}
 
 			plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId(), player.getName());
@@ -62,7 +60,12 @@ public class PlayerJoinEvent implements Listener {
 				user.setLastOnline(System.currentTimeMillis());
 				user.updateName(false);
 			}
-			plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
+			if (plugin.getOptions().isOnlineMode()) {
+				plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
+			} else {
+				plugin.getUuidNameCache().put(PlayerManager.getInstance().getUUID(player.getName()),
+						player.getName());
+			}
 
 		}
 
@@ -150,7 +153,7 @@ public class PlayerJoinEvent implements Listener {
 				public void run() {
 					if (plugin != null && plugin.isEnabled()) {
 						TabCompleteHandler.getInstance().onLogin();
-
+						
 						plugin.getUserManager().getDataManager().removeCache(player.getUniqueId(), player.getName());
 
 					}

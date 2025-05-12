@@ -701,6 +701,9 @@ public class AdvancedCoreUser {
 
 	public boolean hasPermission(String perm) {
 		Player player = getPlayer();
+		if (!plugin.getOptions().isOnlineMode() && player == null) {
+			player = Bukkit.getPlayer(getPlayerName());
+		}
 		if (player == null) {
 			plugin.debug("Unable to get player for " + getPlayerName() + "/" + getUUID());
 			return false;
