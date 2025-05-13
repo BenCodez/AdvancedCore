@@ -54,8 +54,8 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 							if (month) {
 								timeChanges.add(TimeType.MONTH);
 							}
-							globalMysql
-									.debug("Detected time change that may have been before server start, finishing...");
+							globalMysql.debugLog(
+									"Detected time change that may have been before server start, finishing...");
 							timeChangedHappened = true;
 							return;
 						}
@@ -82,7 +82,7 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 					if (!b) {
 
 						boolean processing = getBoolean(server, "Processing");
-						globalMysql.debug("Server " + server
+						globalMysql.debugLog("Server " + server
 								+ " hasn't finished processing time change yet, processing: " + processing);
 						try {
 							String str = getString(server, "LastUpdated");
@@ -119,10 +119,10 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 						return;
 					}
 				}
-				globalMysql.debug("Finishing up time change processing...");
+				globalMysql.debugLog("Finishing up time change processing...");
 				timeChangedHappened = false;
 				for (TimeType time : timeChanges) {
-					globalMysql.debug("Time changed finished on all servers: " + time.toString());
+					globalMysql.debugLog("Time changed finished on all servers: " + time.toString());
 					onTimeChangedFinished(time);
 				}
 				timeChanges.clear();

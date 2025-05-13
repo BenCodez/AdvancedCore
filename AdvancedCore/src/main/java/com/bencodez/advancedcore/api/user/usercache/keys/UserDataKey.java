@@ -1,6 +1,6 @@
 package com.bencodez.advancedcore.api.user.usercache.keys;
 
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
+import com.bencodez.simpleapi.sql.data.DataValue;
 
 import lombok.Getter;
 

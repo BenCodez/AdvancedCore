@@ -10,12 +10,12 @@ import org.bukkit.configuration.file.FileConfiguration;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeString;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.thread.FileThread;
 import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
+import com.bencodez.simpleapi.sql.data.DataValueString;
 
 import lombok.Getter;
 import lombok.Setter;

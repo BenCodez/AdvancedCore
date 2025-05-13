@@ -13,20 +13,20 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
-import com.bencodez.advancedcore.api.user.userstorage.DataType;
-import com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL;
-import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfig;
-import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
 import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
+import com.bencodez.simpleapi.sql.data.DataValueString;
+import com.bencodez.simpleapi.sql.mysql.MySQL;
+import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
+import com.bencodez.simpleapi.sql.mysql.queries.Query;
 
 public abstract class GlobalMySQL {
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
 
-	private com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL mysql;
+	private com.bencodez.simpleapi.sql.mysql.MySQL mysql;
 
 	private String name;
 
@@ -70,16 +70,21 @@ public abstract class GlobalMySQL {
 		if (config.getTablePrefix() != null) {
 			name = config.getTablePrefix() + tableName;
 		}
-		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(config.getMaxThreads()) {
+		mysql = new com.bencodez.simpleapi.sql.mysql.MySQL(config.getMaxThreads()) {
 
 			@Override
 			public void debug(SQLException e) {
-				debug(e);
+				debugEx(e);
 			}
 
 			@Override
 			public void severe(String string) {
-				severe(string);
+				logSevere(string);
+			}
+
+			@Override
+			public void debug(String msg) {
+				debugLog(msg);
 			}
 		};
 		if (!mysql.connect(config)) {
@@ -89,9 +94,9 @@ public abstract class GlobalMySQL {
 			Query q = new Query(mysql, "USE `" + config.getDatabase() + "`;");
 			q.executeUpdate();
 		} catch (SQLException e) {
-			severe("Failed to send use database query: " + config.getDatabase() + " Error: " + e.getMessage()
+			logSevere("Failed to send use database query: " + config.getDatabase() + " Error: " + e.getMessage()
 					+ ", MySQL might still work");
-			debug(e);
+			debugEx(e);
 		}
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
 		sql += "server VARCHAR(50), ";
@@ -113,7 +118,7 @@ public abstract class GlobalMySQL {
 		synchronized (object3) {
 			String sql = "ALTER TABLE " + getName() + " ADD COLUMN `" + column + "` text" + ";";
 
-			debug("Adding column: " + column + " Current columns: "
+			debugLog("Adding column: " + column + " Current columns: "
 					+ ArrayUtils.makeStringList((ArrayList<String>) getColumns()));
 			try {
 				Query query = new Query(mysql, sql);
@@ -129,7 +134,7 @@ public abstract class GlobalMySQL {
 
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
-		debug("Altering column `" + column + "` to " + newType);
+		debugLog("Altering column `" + column + "` to " + newType);
 		if (newType.contains("INT")) {
 			try {
 				Query query = new Query(mysql, "UPDATE " + getName() + " SET `" + column
@@ -161,7 +166,7 @@ public abstract class GlobalMySQL {
 	}
 
 	public void clearCacheBasic() {
-		debug("Clearing cache basic");
+		debugLog("Clearing cache basic");
 		columns.clear();
 		columns.addAll(getColumnsQueury());
 		servers.clear();
@@ -208,9 +213,9 @@ public abstract class GlobalMySQL {
 		return false;
 	}
 
-	public abstract void debug(Exception e);
+	public abstract void debugEx(Exception e);
 
-	public abstract void debug(String text);
+	public abstract void debugLog(String text);
 
 	public void deleteServer(String server) {
 		String q = "DELETE FROM " + getName() + " WHERE server='" + server + "';";
@@ -359,7 +364,7 @@ public abstract class GlobalMySQL {
 				}
 			}
 		} else {
-			severe("Failed to fetch servers");
+			logSevere("Failed to fetch servers");
 		}
 
 		return uuids;
@@ -401,10 +406,10 @@ public abstract class GlobalMySQL {
 		try {
 			new Query(mysql, query).executeUpdate();
 			servers.add(index);
-			debug("Inserting " + index + " into database");
+			debugLog("Inserting " + index + " into database");
 		} catch (Exception e) {
 			e.printStackTrace();
-			debug("Failed to insert server " + index);
+			debugLog("Failed to insert server " + index);
 		}
 
 	}
@@ -427,7 +432,7 @@ public abstract class GlobalMySQL {
 		}
 	}
 
-	public abstract void severe(String text);
+	public abstract void logSevere(String text);
 
 	public void update(String index, List<Column> cols, boolean runAsync) {
 		for (Column col : cols) {
@@ -461,7 +466,7 @@ public abstract class GlobalMySQL {
 				query += " WHERE server=";
 				query += "'" + index + "';";
 
-				debug("Batch query: " + query);
+				debugLog("Batch query: " + query);
 
 				try {
 					Query q = new Query(mysql, query);
@@ -481,7 +486,7 @@ public abstract class GlobalMySQL {
 
 	public void update(String index, String column, DataValue value) {
 		if (value == null) {
-			debug("Mysql value null: " + column);
+			debugLog("Mysql value null: " + column);
 			return;
 		}
 		checkColumn(column, value.getType());

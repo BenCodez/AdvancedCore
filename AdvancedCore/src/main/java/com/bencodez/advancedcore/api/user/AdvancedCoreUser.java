@@ -38,10 +38,10 @@ import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.player.PlayerUtils;
+import com.bencodez.simpleapi.sql.Column;
 
 import lombok.Getter;
 import lombok.Setter;

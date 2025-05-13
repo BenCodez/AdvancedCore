@@ -49,11 +49,8 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
-import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
-import com.bencodez.advancedcore.api.user.userstorage.sql.Database;
-import com.bencodez.advancedcore.api.user.userstorage.sql.Table;
+import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu;
 import com.bencodez.advancedcore.bungeeapi.pluginmessage.PluginMessage;
@@ -75,6 +72,10 @@ import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 import com.bencodez.simpleapi.skull.SkullCacheHandler;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.sqlite.Database;
+import com.bencodez.simpleapi.sql.sqlite.Table;
 import com.bencodez.simpleapi.utils.PluginUtils;
 
 import lombok.Getter;
@@ -387,14 +388,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		debug(DebugLevel.EXTRA, debug);
 	}
 
-	public Table getSQLiteUserTable() {
+	public UserTable getSQLiteUserTable() {
 		if (database == null && loadUserData) {
 			loadUserAPI(getStorageType());
 		}
 		if (loadUserData) {
 			for (Table table : database.getTables()) {
-				if (table.getName().equalsIgnoreCase("Users")) {
-					return table;
+				if (table instanceof UserTable) {
+					return (UserTable) table;
 				}
 			}
 		}
@@ -793,7 +794,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			ArrayList<Column> columns = new ArrayList<>();
 			Column key = new Column("uuid", DataType.STRING);
 			columns.add(key);
-			Table table = new Table(this, "Users", columns, key);
+			UserTable table = new UserTable(this, "Users", columns, key);
 			database = new Database(this, "Users", table);
 			table.addCustomColumns();
 		} else if (storageType.equals(UserStorage.MYSQL)) {

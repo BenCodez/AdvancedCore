@@ -24,9 +24,6 @@ import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
-import com.bencodez.advancedcore.api.user.userstorage.DataType;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
 import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
@@ -39,6 +36,9 @@ import com.bencodez.advancedcore.command.gui.UserGUI;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.player.PlayerUtils;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.data.DataValue;
 
 import lombok.Getter;
 

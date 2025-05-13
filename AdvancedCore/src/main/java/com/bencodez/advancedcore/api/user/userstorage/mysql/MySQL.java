@@ -19,15 +19,15 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueBoolean;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
-import com.bencodez.advancedcore.api.user.userstorage.DataType;
-import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfigSpigot;
-import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
 import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.sql.data.DataValueBoolean;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
+import com.bencodez.simpleapi.sql.data.DataValueString;
+import com.bencodez.simpleapi.sql.mysql.config.MysqlConfigSpigot;
+import com.bencodez.simpleapi.sql.mysql.queries.Query;
 
 import lombok.Getter;
 
@@ -45,7 +45,7 @@ public class MySQL {
 	// ConcurrentHashMap<String, ArrayList<Column>>();
 
 	@Getter
-	private com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL mysql;
+	private com.bencodez.simpleapi.sql.mysql.MySQL mysql;
 
 	private String name;
 
@@ -75,7 +75,7 @@ public class MySQL {
 		if (config.getTablePrefix() != null) {
 			name = config.getTablePrefix() + tableName;
 		}
-		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(config.getMaxThreads()) {
+		mysql = new com.bencodez.simpleapi.sql.mysql.MySQL(config.getMaxThreads()) {
 
 			@Override
 			public void debug(SQLException e) {
@@ -85,6 +85,12 @@ public class MySQL {
 			@Override
 			public void severe(String string) {
 				plugin.getLogger().severe(string);
+			}
+
+			@Override
+			public void debug(String msg) {
+				plugin.debug(msg);
+				
 			}
 		};
 		if (!mysql.connect(config)) {

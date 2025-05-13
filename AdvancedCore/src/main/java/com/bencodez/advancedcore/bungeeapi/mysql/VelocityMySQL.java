@@ -13,14 +13,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
-import com.bencodez.advancedcore.api.user.userstorage.DataType;
-import com.bencodez.advancedcore.api.user.userstorage.mysql.api.config.MysqlConfigVelocity;
-import com.bencodez.advancedcore.api.user.userstorage.mysql.api.queries.Query;
+import org.slf4j.Logger;
+
 import com.bencodez.simpleapi.file.velocity.VelocityYMLFile;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
+import com.bencodez.simpleapi.sql.data.DataValueString;
+import com.bencodez.simpleapi.sql.mysql.config.MysqlConfigVelocity;
+import com.bencodez.simpleapi.sql.mysql.queries.Query;
 
 import lombok.Getter;
 
@@ -35,7 +37,7 @@ public abstract class VelocityMySQL implements ProxyMySQL {
 	// ConcurrentHashMap<String, ArrayList<Column>>();
 
 	@Getter
-	private com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL mysql;
+	private com.bencodez.simpleapi.sql.mysql.MySQL mysql;
 
 	private String name;
 
@@ -47,7 +49,7 @@ public abstract class VelocityMySQL implements ProxyMySQL {
 
 	private Set<String> uuids = Collections.synchronizedSet(new HashSet<String>());
 
-	public VelocityMySQL(String tableName, VelocityYMLFile section) {
+	public VelocityMySQL(String tableName, VelocityYMLFile section, boolean debug, Logger logger) {
 		MysqlConfigVelocity config = new MysqlConfigVelocity(section);
 
 		if (config.hasTableNameSet()) {
@@ -57,16 +59,25 @@ public abstract class VelocityMySQL implements ProxyMySQL {
 		if (config.getTablePrefix() != null) {
 			name = config.getTablePrefix() + tableName;
 		}
-		mysql = new com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL(config.getMaxThreads()) {
+		mysql = new com.bencodez.simpleapi.sql.mysql.MySQL(config.getMaxThreads()) {
 
 			@Override
 			public void debug(SQLException e) {
-				debug(e);
+				if (debug) {
+					e.printStackTrace();
+				}
 			}
 
 			@Override
 			public void severe(String string) {
-				severe(string);
+				logger.error(string);
+			}
+
+			@Override
+			public void debug(String msg) {
+				if (debug) {
+					logger.info("MYSQL DEBUG: " + msg);
+				}
 			}
 		};
 

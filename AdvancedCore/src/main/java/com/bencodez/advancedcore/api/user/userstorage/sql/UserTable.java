@@ -14,14 +14,14 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueBoolean;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueString;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
-import com.bencodez.advancedcore.api.user.userstorage.DataType;
-import com.bencodez.advancedcore.api.user.userstorage.sql.db.SQLite;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.data.DataValueBoolean;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
+import com.bencodez.simpleapi.sql.data.DataValueString;
+import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
 
-public class Table {
+public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 
 	private List<Column> columns = new ArrayList<>();
 	private String name;
@@ -32,21 +32,21 @@ public class Table {
 	private SQLite sqLite;
 	private AdvancedCorePlugin plugin;
 
-	public Table(AdvancedCorePlugin plugin, String name, Collection<Column> columns) {
+	public UserTable(AdvancedCorePlugin plugin, String name, Collection<Column> columns) {
 		this.name = name;
 		this.columns.addAll(columns);
 		primaryKey = this.columns.get(0);
 		this.plugin = plugin;
 	}
 
-	public Table(AdvancedCorePlugin plugin, String name, Collection<Column> columns, Column primaryKey) {
+	public UserTable(AdvancedCorePlugin plugin, String name, Collection<Column> columns, Column primaryKey) {
 		this.name = name;
 		this.primaryKey = primaryKey;
 		this.columns.addAll(columns);
 		this.plugin = plugin;
 	}
 
-	public Table(AdvancedCorePlugin plugin, String name, Column... columns) {
+	public UserTable(AdvancedCorePlugin plugin, String name, Column... columns) {
 		this.name = name;
 		for (Column column : columns) {
 			this.columns.add(column);
@@ -55,7 +55,7 @@ public class Table {
 		this.plugin = plugin;
 	}
 
-	public Table(AdvancedCorePlugin plugin, String name, Column primaryKey, Column... columns) {
+	public UserTable(AdvancedCorePlugin plugin, String name, Column primaryKey, Column... columns) {
 		this.name = name;
 		this.primaryKey = primaryKey;
 		for (Column column : columns) {
@@ -346,6 +346,7 @@ public class Table {
 		return result;
 	}
 
+	@Override
 	public String getName() {
 		return name;
 	}
@@ -384,6 +385,7 @@ public class Table {
 		return primaryKey;
 	}
 
+	@Override
 	public String getQuery() {
 		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
 		sql += "uuid VARCHAR(37), ";
@@ -592,6 +594,7 @@ public class Table {
 		this.primaryKey = primaryKey;
 	}
 
+	@Override
 	public void setSqLite(SQLite sqLite) {
 		this.sqLite = sqLite;
 	}
@@ -650,6 +653,11 @@ public class Table {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public SQLite getSqLite() {
+		return sqLite;
 	}
 
 }

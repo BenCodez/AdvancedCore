@@ -7,9 +7,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
-import com.bencodez.advancedcore.api.user.userstorage.Column;
-import com.bencodez.advancedcore.api.user.userstorage.DataType;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.data.DataValue;
 
 public interface ProxyMySQL {
 	void addColumn(String column, DataType dataType);
@@ -21,8 +21,8 @@ public interface ProxyMySQL {
 	void clearCache();
 
 	void close();
-	
-	com.bencodez.advancedcore.api.user.userstorage.mysql.api.MySQL getMysql();
+
+	com.bencodez.simpleapi.sql.mysql.MySQL getMysql();
 
 	boolean containsKeyQuery(String index);
 

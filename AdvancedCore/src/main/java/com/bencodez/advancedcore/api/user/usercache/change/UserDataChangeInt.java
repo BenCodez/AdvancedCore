@@ -1,7 +1,7 @@
 package com.bencodez.advancedcore.api.user.usercache.change;
 
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValueInt;
+import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 import lombok.Getter;
 

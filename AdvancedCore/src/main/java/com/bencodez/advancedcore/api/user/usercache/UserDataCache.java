@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChange;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
-import com.bencodez.advancedcore.api.user.usercache.value.DataValue;
 import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.sql.data.DataValue;
 
 import lombok.Getter;
 
