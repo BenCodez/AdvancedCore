@@ -2,22 +2,24 @@ package com.bencodez.advancedcore.bungeeapi.redis;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 public abstract class RedisHandler {
 	private final JedisPool publishPool;
 	private final JedisPool subscribePool;
 
 	public RedisHandler(String host, int port, String username, String password) {
-		if (username.isEmpty() && password.isEmpty()) {
-			publishPool = new JedisPool(host, port);
-			subscribePool = new JedisPool(host, port);
-		} else if (username.isEmpty()) {
-			publishPool = new JedisPool(host, port, null, password);
-			subscribePool = new JedisPool(host, port, null, password);
-		} else {
-			publishPool = new JedisPool(host, port, username, password);
-			subscribePool = new JedisPool(host, port, username, password);
-		}
+	    int timeout = 2000; // Set a reasonable timeout
+	    if (username.isEmpty() && password.isEmpty()) {
+	        publishPool = new JedisPool(new JedisPoolConfig(), host, port, timeout);
+	        subscribePool = new JedisPool(new JedisPoolConfig(), host, port, timeout);
+	    } else if (username.isEmpty()) {
+	        publishPool = new JedisPool(new JedisPoolConfig(), host, port, timeout, password);
+	        subscribePool = new JedisPool(new JedisPoolConfig(), host, port, timeout, password);
+	    } else {
+	        publishPool = new JedisPool(new JedisPoolConfig(), host, port, timeout, username, password);
+	        subscribePool = new JedisPool(new JedisPoolConfig(), host, port, timeout, username, password);
+	    }
 	}
 
 	public void close() {
