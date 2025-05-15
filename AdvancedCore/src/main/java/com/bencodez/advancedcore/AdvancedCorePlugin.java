@@ -820,6 +820,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			@Override
 			public void onStart() {
 				debug("Starting background uuid/name task");
+				if (!getOptions().isOnlineMode()) {
+					setProcess(false);
+				}
 			}
 
 			@Override
@@ -1071,7 +1074,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 								user.dontCache();
 								user.updateTempCacheWithColumns(playerData.getValue());
 								for (UserStartup start : userStartup) {
-									start.onStartUp(user);
+									if (start.isProcess()) {
+										start.onStartUp(user);
+									}
 								}
 								user.clearTempCache();
 								cols.put(playerData.getKey(), null);
