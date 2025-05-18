@@ -286,11 +286,6 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>redis.clients</groupId>
-			<artifactId>jedis</artifactId>
-			<version>5.0.2</version>
-		</dependency>
-		<dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>5.3.1</version>
@@ -308,6 +303,7 @@
             <version>5.17.0</version>
             <scope>test</scope>
         </dependency>
+
 	</dependencies>
 	<profiles>
 		<profile>
