@@ -950,7 +950,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void registerBungeeChannels(String name) {
 		this.bungeeChannel = name;
 		getServer().getMessenger().registerOutgoingPluginChannel(this, name);
-		pluginMessaging = new PluginMessage(this);
+		pluginMessaging = new PluginMessage(this, name);
 		getServer().getMessenger().registerIncomingPluginChannel(this, name, pluginMessaging);
 		getLogger().info("Loaded plugin message channels: " + name);
 	}
