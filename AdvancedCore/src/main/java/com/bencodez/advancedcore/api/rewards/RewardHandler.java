@@ -2,7 +2,9 @@ package com.bencodez.advancedcore.api.rewards;
 
 import java.io.File;
 import java.text.DecimalFormat;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -48,6 +50,7 @@ import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditAdvancedRando
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditAdvancedWorld;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditBossBar;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditChoices;
+import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditDate;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXP;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEXPLevels;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditEffect;
@@ -1071,6 +1074,104 @@ public class RewardHandler {
 						}
 					}
 				}));
+
+		injectedRequirements.add(new RequirementInjectConfigurationSection("Date") {
+			@Override
+			public boolean onRequirementsRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
+					RewardOptions rewardOptions) {
+				LocalDateTime now = LocalDateTime.now();
+
+				// Validate WeekDay
+				if (section.isString("WeekDay")) {
+					String requiredWeekDay = section.getString("WeekDay").toUpperCase();
+					if (!now.getDayOfWeek().name().equals(requiredWeekDay)) {
+						debug("WeekDay does not match: " + requiredWeekDay);
+						return false;
+					}
+				} else if (section.isInt("WeekDay")) {
+					int requiredWeekDay = section.getInt("WeekDay");
+					if (now.getDayOfWeek().getValue() != requiredWeekDay) {
+						debug("WeekDay does not match: " + requiredWeekDay);
+						return false;
+					}
+				}
+
+				// Validate DayOfMonth
+				if (section.isInt("DayOfMonth")) {
+					int requiredDayOfMonth = section.getInt("DayOfMonth");
+					if (now.getDayOfMonth() != requiredDayOfMonth) {
+						debug("DayOfMonth does not match: " + requiredDayOfMonth);
+						return false;
+					}
+				}
+
+				// Validate Month
+				if (section.isString("Month")) {
+					String requiredMonth = section.getString("Month").toUpperCase();
+					if (!now.getMonth().name().equals(requiredMonth)) {
+						debug("Month does not match: " + requiredMonth);
+						return false;
+					}
+				}
+
+				return true;
+			}
+		}.priority(90).validator(new RequirementInjectValidator() {
+			@Override
+			public void onValidate(Reward reward, RequirementInject inject, ConfigurationSection data) {
+				if (!data.isConfigurationSection("Date")) {
+					return;
+				}
+
+				ConfigurationSection section = data.getConfigurationSection("Date");
+
+				// Validate WeekDay
+				if (section.isString("WeekDay")) {
+					try {
+						DayOfWeek.valueOf(section.getString("WeekDay").toUpperCase());
+					} catch (IllegalArgumentException e) {
+						warning(reward, inject, "Invalid WeekDay: " + section.getString("WeekDay"));
+					}
+				} else if (section.isInt("WeekDay")) {
+					int weekDay = section.getInt("WeekDay");
+					if (weekDay < 1 || weekDay > 7) {
+						warning(reward, inject, "Invalid WeekDay: " + weekDay);
+					}
+				}
+
+				// Validate DayOfMonth
+				if (section.isInt("DayOfMonth")) {
+					int day = section.getInt("DayOfMonth");
+					if (day < 1 || day > 31) {
+						warning(reward, inject, "Invalid DayOfMonth: " + day);
+					}
+				}
+
+				// Validate Month
+				if (section.isString("Month")) {
+					try {
+						Month.valueOf(section.getString("Month").toUpperCase());
+					} catch (IllegalArgumentException e) {
+						warning(reward, inject, "Invalid Month: " + section.getString("Month"));
+					}
+				}
+			}
+		}).addEditButton(new EditGUIButton(new ItemBuilder("PAPER"), new EditGUIValueInventory("Date") {
+
+			@Override
+			public void openInventory(ClickEvent clickEvent) {
+				RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+				new RewardEditDate() {
+
+					@Override
+					public void setVal(String key, Object value) {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue(key, value);
+						plugin.reloadAdvancedCore(false);
+					}
+				}.open(clickEvent.getPlayer(), reward);
+			}
+		}.addLore("Edit date-based requirements for the reward"))));
 
 		injectedRequirements.add(new RequirementInjectConfigurationSection("LocationDistance") {
 			@Override
