@@ -1,4 +1,3 @@
-
 package com.bencodez.advancedcore.tests;
 
 import static org.mockito.Mockito.mock;
