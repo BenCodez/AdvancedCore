@@ -67,15 +67,17 @@ public class ReflectionModelUtil {
     /**
      * Apply custom-model data to the given ItemStack.
      *
-     * If modelData is a String or List<String> and the string-model API exists, it writes those string keys.
-     * Otherwise, if modelData is an Integer and the integer CustomModelData API exists, it writes that int.
+     * If modelData is a String or List&lt;String&gt; and the string-model API exists,
+     * it writes those string keys.
+     * Otherwise, if modelData is an Integer and the integer CustomModelData API exists,
+     * it writes that int.
      * If neither path is available, it returns the original ItemStack unchanged.
      *
      * @param item      The ItemStack to modify (cloned internally).
-     * @param modelData Either an Integer, a String, or a List<String>:
+     * @param modelData Either an Integer, a String, or a List&lt;String&gt;:
      *                  - Integer -> sets integer CustomModelData (1.14+)
-     *                  - String  -> treated as a single-element List<String> (1.20.3+)
-     *                  - List<String> -> writes multiple string keys (1.20.3+)
+     *                  - String  -> treated as a single-element List&lt;String&gt; (1.20.3+)
+     *                  - List&lt;String&gt; -> writes multiple string keys (1.20.3+)
      * @return A new ItemStack with custom model data applied if supported, or the original clone if not.
      */
     @SuppressWarnings("unchecked")
@@ -117,7 +119,7 @@ public class ReflectionModelUtil {
                         return clone;
                     }
                 }
-                // If modelData wasn't a String/List<String>, fall through to integer branch
+                // If modelData wasn't a String or List<String>, fall through to integer branch
             }
 
             // 2) Integer-only branch (Spigot 1.14+)
@@ -140,13 +142,13 @@ public class ReflectionModelUtil {
     /**
      * Read back the custom-model data from an ItemStack.
      *
-     * If running on 1.20.3+, returns the List<String> of string-model keys.
+     * If running on 1.20.3+, returns the List&lt;String&gt; of string-model keys.
      * Else if running on 1.14+, returns the integer CustomModelData.
      * Otherwise returns null.
      *
      * @param item The ItemStack to inspect.
      * @return Either:
-     *         - List<String> of string-model keys,
+     *         - List&lt;String&gt; of string-model keys,
      *         - Integer of the integer CustomModelData,
      *         - or null if none is found / unsupported.
      */
