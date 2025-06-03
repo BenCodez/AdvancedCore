@@ -349,9 +349,8 @@ public class ItemBuilder {
 							}
 						}
 
-						int customModelData = data.getInt("CustomModelData", -1);
-						if (customModelData != -1) {
-							setCustomModelData(customModelData);
+						if (data.contains("CustomModelData")) {
+							setCustomModelData(data.get("CustomModelData", -1));
 						}
 
 						setUnbreakable(data.getBoolean("Unbreakable", false));
@@ -743,8 +742,8 @@ public class ItemBuilder {
 		}
 		map.put("ItemFlags", flagList);
 
-		if (im.hasCustomModelData()) {
-			map.put("CustomModelData", im.getCustomModelData());
+		if (ReflectionModelUtil.hasCustomModel(is)) {
+			map.put("CustomModelData", ReflectionModelUtil.readCustomModel(is));
 		}
 		return map;
 
@@ -951,10 +950,8 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public ItemBuilder setCustomModelData(int data) {
-		ItemMeta im = is.getItemMeta();
-		im.setCustomModelData(data);
-		is.setItemMeta(im);
+	public ItemBuilder setCustomModelData(Object data) {
+		ReflectionModelUtil.applyCustomModel(is, data);
 		return this;
 	}
 
