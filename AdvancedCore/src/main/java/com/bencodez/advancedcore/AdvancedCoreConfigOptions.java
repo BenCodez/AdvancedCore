@@ -200,6 +200,11 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
+	@ConfigDataBoolean(path = "EnableJavascriptCommand")
+	private boolean enableJavascriptCommand = false;
+
+	@Getter
+	@Setter
 	private int resourceId = 0;
 
 	@Getter

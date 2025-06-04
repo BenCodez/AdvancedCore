@@ -479,7 +479,7 @@ public class CommandLoader {
 			}
 		});
 
-		if (!plugin.getOptions().isDisableJavascript()) {
+		if (!plugin.getOptions().isDisableJavascript() && plugin.getOptions().isEnableJavascriptCommand()) {
 			cmds.add(new CommandHandler(plugin, new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
 					"Execute javascript") {
 
