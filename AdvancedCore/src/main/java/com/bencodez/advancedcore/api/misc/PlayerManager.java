@@ -297,7 +297,7 @@ public class PlayerManager {
 	 * @param perm       the perm
 	 * @return true, if successful
 	 */
-	public boolean hasServerPermission(UUID playerUUID, String perm) {
+	public boolean hasServerPermission(UUID playerUUID, String playername, String perm) {
 		if (playerUUID == null) {
 			return false;
 		}
@@ -305,6 +305,11 @@ public class PlayerManager {
 		Player player = Bukkit.getPlayer(playerUUID);
 		if (player != null) {
 			return player.hasPermission(perm);
+		} else {
+			player = Bukkit.getPlayer(playername);
+			if (player != null) {
+				return player.hasPermission(perm);
+			}
 		}
 
 		if (plugin.getLuckPermsHandle() != null && plugin.getLuckPermsHandle().luckpermsApiLoaded()) {

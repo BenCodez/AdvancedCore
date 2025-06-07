@@ -712,7 +712,8 @@ public class RewardHandler {
 					debug("Doing permission check in reverse");
 				}
 
-				boolean perm = PlayerManager.getInstance().hasServerPermission(UUID.fromString(user.getUUID()), str);
+				boolean perm = PlayerManager.getInstance().hasServerPermission(UUID.fromString(user.getUUID()),
+						user.getPlayerName(), str);
 				if (reverse) {
 					perm = !perm;
 				}
