@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.item;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -350,7 +351,11 @@ public class ItemBuilder {
 						}
 
 						if (data.contains("CustomModelData")) {
-							setCustomModelData(data.get("CustomModelData", -1));
+							setCustomModelData(data.getInt("CustomModelData", -1));
+						}
+
+						if (data.contains("ItemModel")) {
+							is = ItemModelHandler.getItemWithModel(is, data.getString("ItemModel"));
 						}
 
 						setUnbreakable(data.getBoolean("Unbreakable", false));
@@ -718,6 +723,7 @@ public class ItemBuilder {
 		return setConditional(new JavascriptEngine().addPlayer(player));
 	}
 
+	@SuppressWarnings("deprecation")
 	public Map<String, Object> getConfiguration(boolean deseralize) {
 		if (deseralize) {
 			return is.serialize();
@@ -742,11 +748,25 @@ public class ItemBuilder {
 		}
 		map.put("ItemFlags", flagList);
 
-		if (ReflectionModelUtil.hasCustomModel(is)) {
-			map.put("CustomModelData", ReflectionModelUtil.readCustomModel(is));
+		if (im.hasCustomModelData()) {
+			map.put("CustomModelData", im.getCustomModelData());
 		}
+
+		if (hasGetItemModel(im)) {
+			map.put("ItemModel", ItemModelHandler.getModel(is));
+		}
+
 		return map;
 
+	}
+
+	public boolean hasGetItemModel(ItemMeta meta) {
+		try {
+			Method method = meta.getClass().getMethod("getItemModel");
+			return method != null;
+		} catch (NoSuchMethodException e) {
+			return false;
+		}
 	}
 
 	public String getCustomData(String key) {
@@ -950,8 +970,11 @@ public class ItemBuilder {
 		return this;
 	}
 
-	public ItemBuilder setCustomModelData(Object data) {
-		ReflectionModelUtil.applyCustomModel(is, data);
+	@SuppressWarnings("deprecation")
+	public ItemBuilder setCustomModelData(int data) {
+		ItemMeta im = is.getItemMeta();
+		im.setCustomModelData(data);
+		is.setItemMeta(im);
 		return this;
 	}
 
