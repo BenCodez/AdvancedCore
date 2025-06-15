@@ -80,6 +80,9 @@ Items:
     
     # CustomModelData nbt tag
     #CustomModelData: 100
+    
+    # Item models, 1.21.5+ only
+    #ItemModel: "custom:modelname"
       
     # Set power of firework
     #Power: 1
