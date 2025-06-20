@@ -88,7 +88,7 @@ public class PlayerJoinEvent implements Listener {
 					try {
 						if (plugin != null && plugin.isEnabled()) {
 							TabCompleteHandler.getInstance().onLogin();
-							if ((plugin.isAuthMeLoaded() || plugin.isLoginSecurityLoaded())
+							if ((plugin.isAuthMeLoaded() || plugin.isLoginSecurityLoaded() || plugin.isNLoginLoaded())
 									&& plugin.getOptions().isWaitUntilLoggedIn()) {
 								return;
 							}

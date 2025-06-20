@@ -36,7 +36,7 @@ public class PlayerShowListener implements Listener {
 				@Override
 				public void run() {
 					if (plugin != null && plugin.isEnabled()) {
-						if (plugin.isAuthMeLoaded() && plugin.getOptions().isWaitUntilLoggedIn()) {
+						if ((plugin.isAuthMeLoaded() || plugin.isNLoginLoaded()) && plugin.getOptions().isWaitUntilLoggedIn()) {
 							return;
 						}
 
