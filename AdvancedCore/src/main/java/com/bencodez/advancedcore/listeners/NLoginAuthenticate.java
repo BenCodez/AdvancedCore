@@ -8,24 +8,24 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
 public class NLoginAuthenticate implements Listener {
-    private AdvancedCorePlugin plugin;
+	private AdvancedCorePlugin plugin;
 
-    public NLoginAuthenticate(AdvancedCorePlugin plugin) {
-        this.plugin = plugin;
-    }
+	public NLoginAuthenticate(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
+	}
 
-    @EventHandler
-    public void nLoginLogin(AuthenticateEvent event) {
+	@EventHandler
+	public void nLoginLogin(AuthenticateEvent event) {
 
-        plugin.getBukkitScheduler().runTaskLaterAsynchronously(plugin, () -> {
-            if (event.getPlayer() != null) {
-                if (plugin.getOptions().isWaitUntilLoggedIn()) {
-                    plugin.debug("nLogin Login: " + event.getPlayer().getName() + " ("
-                            + PlayerManager.getInstance().getUUID(event.getPlayer().getName()) + ")");
-                    AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(event.getPlayer());
-                    Bukkit.getPluginManager().callEvent(login);
-                }
-            }
-        }, 2);
-    }
+		plugin.getBukkitScheduler().runTaskLaterAsynchronously(plugin, () -> {
+			if (event.getPlayer() != null) {
+				if (plugin.getOptions().isWaitUntilLoggedIn()) {
+					plugin.debug("nLogin Login: " + event.getPlayer().getName() + " ("
+							+ PlayerManager.getInstance().getUUID(event.getPlayer().getName()) + ")");
+					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(event.getPlayer());
+					Bukkit.getPluginManager().callEvent(login);
+				}
+			}
+		}, 2 + (plugin.getOptions().getDelayLoginEvent() / 50));
+	}
 }
