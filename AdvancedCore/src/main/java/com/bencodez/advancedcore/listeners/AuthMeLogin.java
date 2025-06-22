@@ -33,7 +33,7 @@ public class AuthMeLogin implements Listener {
 					}
 				}
 			}
-		}, 2 + (plugin.getOptions().getDelayLoginEvent() / 50));
+		}, 2 + (plugin.getOptions().getDelayLoginEvent() / 1000));
 
 	}
 }

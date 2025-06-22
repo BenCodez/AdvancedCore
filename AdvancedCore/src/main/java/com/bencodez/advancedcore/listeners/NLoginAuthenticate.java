@@ -26,6 +26,6 @@ public class NLoginAuthenticate implements Listener {
 					Bukkit.getPluginManager().callEvent(login);
 				}
 			}
-		}, 2 + (plugin.getOptions().getDelayLoginEvent() / 50));
+		}, 2 + (plugin.getOptions().getDelayLoginEvent() / 1000));
 	}
 }
