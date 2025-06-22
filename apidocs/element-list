@@ -41,7 +41,6 @@ com.bencodez.advancedcore.api.valuerequest.requesters
 com.bencodez.advancedcore.api.valuerequest.sign
 com.bencodez.advancedcore.api.yml.editor
 com.bencodez.advancedcore.bungeeapi.globaldata
-com.bencodez.advancedcore.bungeeapi.mysql
 com.bencodez.advancedcore.bungeeapi.time
 com.bencodez.advancedcore.command
 com.bencodez.advancedcore.command.executor
