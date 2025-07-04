@@ -214,6 +214,10 @@ public abstract class BungeeTimeChecker {
 	public abstract void setPrevWeek(int week);
 
 	public abstract void timeChanged(TimeType type, boolean fake, boolean pre, boolean post);
+	
+	public void shutdown() {
+		timer.shutdownNow();
+	}
 
 	/**
 	 * Update.
