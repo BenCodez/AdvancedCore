@@ -72,6 +72,10 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 			}
 		}, 60, 10, TimeUnit.SECONDS);
 	}
+	
+	public void shutdown() {
+		timeChangedTimer.shutdownNow();
+	}
 
 	public void checkForFinishedTimeChanges() {
 		try {
