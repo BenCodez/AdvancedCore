@@ -372,13 +372,54 @@ public class ItemBuilder {
 					} else {
 						closeGUISet = false;
 					}
+
+					if (data.getBoolean("HideToolTip", false)) {
+						setHideTooltipCompat(is, true);
+					}
 				}
+				is.getItemMeta().setHideTooltip(chancePass);
 
 			} else {
 				setBlank();
 				chancePass = false;
 			}
 		}
+	}
+
+	/**
+	 * Hides (or shows) the item tooltip. On 1.20.5+ this uses the native
+	 * ItemMeta#setHideTooltip method; on older versions it simply adds all
+	 * available ItemFlags (so at least most tooltip lines are hidden).
+	 *
+	 * @param item the ItemStack to modify
+	 * @param hide true to hide, false to show
+	 */
+	public void setHideTooltipCompat(ItemStack item, boolean hide) {
+		if (item == null)
+			return;
+
+		ItemMeta meta = item.getItemMeta();
+		if (meta == null)
+			return;
+
+		try {
+			// Try to call ItemMeta#setHideTooltip(boolean) reflectively
+			Method m = meta.getClass().getMethod("setHideTooltip", boolean.class);
+			m.invoke(meta, hide);
+		} catch (NoSuchMethodException e) {
+			// Older versions: no native hideTooltip
+			if (hide) {
+				// add all flags to hide as much as possible
+				meta.addItemFlags(ItemFlag.values());
+			} else {
+				// remove all flags so tooltip shows again
+				meta.removeItemFlags(ItemFlag.values());
+			}
+		} catch (ReflectiveOperationException ex) {
+			// something went wrong with reflection; just ignore
+		}
+
+		item.setItemMeta(meta);
 	}
 
 	/**
