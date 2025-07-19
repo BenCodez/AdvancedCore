@@ -231,6 +231,10 @@ public class BInventory {
 
 		}
 	}
+	
+	public boolean isSlotTaken(int slot) {
+	    return buttons.containsKey(slot);
+	}
 
 	/**
 	 * Adds the button.
