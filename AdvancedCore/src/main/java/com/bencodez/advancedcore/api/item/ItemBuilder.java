@@ -374,6 +374,7 @@ public class ItemBuilder {
 					}
 
 					if (data.getBoolean("HideToolTip", false)) {
+						
 						setHideTooltipCompat(is, true);
 					}
 				}
@@ -404,9 +405,10 @@ public class ItemBuilder {
 
 		try {
 			// Try to call ItemMeta#setHideTooltip(boolean) reflectively
-			Method m = meta.getClass().getMethod("setHideTooltip", boolean.class);
+			Method m = ItemMeta.class.getMethod("setHideTooltip", boolean.class);
 			m.invoke(meta, hide);
 		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
 			// Older versions: no native hideTooltip
 			if (hide) {
 				// add all flags to hide as much as possible
