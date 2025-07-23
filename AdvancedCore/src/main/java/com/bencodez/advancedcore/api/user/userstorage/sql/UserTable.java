@@ -69,7 +69,7 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 			return;
 		}
 		try {
-			String query = "ALTER TABLE " + getName() + " ADD COLUMN " + column.getName() + " "
+			String query = "ALTER TABLE " + getName() + " ADD COLUMN `" + column.getName() + "` "
 					+ column.getDataType().toString();
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			s.executeUpdate();
@@ -85,7 +85,7 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 			return;
 		}
 		try {
-			String query = "ALTER TABLE " + getName() + " ADD COLUMN " + column.getKey() + " " + column.getColumnType();
+			String query = "ALTER TABLE " + getName() + " ADD COLUMN `" + column.getKey() + ` " + column.getColumnType();
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			s.executeUpdate();
 			s.close();
