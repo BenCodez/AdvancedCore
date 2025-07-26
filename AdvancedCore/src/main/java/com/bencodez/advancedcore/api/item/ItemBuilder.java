@@ -378,7 +378,6 @@ public class ItemBuilder {
 						setHideTooltipCompat(is, true);
 					}
 				}
-				is.getItemMeta().setHideTooltip(chancePass);
 
 			} else {
 				setBlank();
