@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -108,16 +109,16 @@ public class RewardHandler {
 	private File defaultFolder;
 
 	@Getter
-	private ArrayList<DirectlyDefinedReward> directlyDefinedRewards = new ArrayList<>();
+	private CopyOnWriteArrayList<DirectlyDefinedReward> directlyDefinedRewards = new CopyOnWriteArrayList<DirectlyDefinedReward>();
 
 	@Getter
-	private ArrayList<SubDirectlyDefinedReward> subDirectlyDefinedRewards = new ArrayList<>();
+	private CopyOnWriteArrayList<SubDirectlyDefinedReward> subDirectlyDefinedRewards = new CopyOnWriteArrayList<SubDirectlyDefinedReward>();
 
 	@Getter
-	private ArrayList<RequirementInject> injectedRequirements = new ArrayList<>();
+	private CopyOnWriteArrayList<RequirementInject> injectedRequirements = new CopyOnWriteArrayList<RequirementInject>();
 
 	@Getter
-	private ArrayList<RewardInject> injectedRewards = new ArrayList<>();
+	private CopyOnWriteArrayList<RewardInject> injectedRewards = new CopyOnWriteArrayList<RewardInject>();
 
 	@Getter
 	private ArrayList<RewardPlaceholderHandle> placeholders = new ArrayList<>();
@@ -221,7 +222,7 @@ public class RewardHandler {
 
 	public void checkSubRewards() {
 		plugin.extraDebug("Checking directlydefined rewards for sub rewards");
-		subDirectlyDefinedRewards = new ArrayList<>();
+		subDirectlyDefinedRewards = new CopyOnWriteArrayList<SubDirectlyDefinedReward>();
 		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
 			checkSubRewards(direct);
 		}
