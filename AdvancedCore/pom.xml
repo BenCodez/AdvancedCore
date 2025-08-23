@@ -116,16 +116,6 @@
                             </filters>
 							<relocations>
 								<relocation>
-									<pattern>com.zaxxer.HikariCP</pattern>
-									<shadedPattern>
-										${project.groupId}.advancedcore.HikariCP</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>com.zaxxer.hikari</pattern>
-									<shadedPattern>
-										${project.groupId}.advancedcore.hikari</shadedPattern>
-								</relocation>
-								<relocation>
 									<pattern>com.tcoded.folialib</pattern>
 									<shadedPattern>
 										${project.groupId}.advancedcore.folialib</shadedPattern>
