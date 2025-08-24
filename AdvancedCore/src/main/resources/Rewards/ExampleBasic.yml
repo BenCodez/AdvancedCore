@@ -67,6 +67,9 @@ Items:
     
     # Set glowing effect on item (enchanted item effect)
     Glow: false
+    
+    # Hide item tool tip
+    #HideToolTip: false
       
     # Skull options
     #Skull: 'PLAYERNAME'
