@@ -188,7 +188,7 @@
 		<dependency>
 			<groupId>com.bencodez</groupId>
 			<artifactId>simpleapi</artifactId>
-			<version>0.0.7-SNAPSHOT</version>
+			<version>0.0.8-SNAPSHOT</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
