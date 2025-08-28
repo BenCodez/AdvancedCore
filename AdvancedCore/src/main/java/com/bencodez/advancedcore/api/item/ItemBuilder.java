@@ -565,7 +565,7 @@ public class ItemBuilder {
 			}
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
 				| SecurityException e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 
 		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
