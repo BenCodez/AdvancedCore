@@ -214,6 +214,12 @@ public class UserManager {
 				return s;
 			}
 		}
+		
+		for (String s : getAllPlayerNames()) {
+			if (s.equalsIgnoreCase(name)) {
+				return s;
+			}
+		}
 		return name;
 	}
 
