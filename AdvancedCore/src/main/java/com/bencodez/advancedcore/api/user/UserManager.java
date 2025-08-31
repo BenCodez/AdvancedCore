@@ -68,8 +68,7 @@ public class UserManager {
 		} else {
 			AdvancedCoreUser user = getRandomUser();
 			user.dontCache();
-			return new ArrayList<>(
-					user.getData().getData(user.getUUID()).getConfigurationSection("").getKeys(false));
+			return new ArrayList<>(user.getData().getData(user.getUUID()).getConfigurationSection("").getKeys(false));
 
 		}
 	}
@@ -385,7 +384,7 @@ public class UserManager {
 	}
 
 	public boolean userExist(String name) {
-		boolean exist = getAllPlayerNames().contains(name);
+		boolean exist = ArrayUtils.containsIgnoreCase(getAllPlayerNames(), name);
 		if (exist) {
 			return exist;
 		}
