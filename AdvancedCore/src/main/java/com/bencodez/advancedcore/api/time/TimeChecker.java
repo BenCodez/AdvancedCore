@@ -149,7 +149,7 @@ public class TimeChecker {
 
 	public boolean hasWeekChanged(boolean set) {
 		int prevDate = plugin.getServerDataFile().getPrevWeekDay();
-		LocalDateTime date = getTime();
+		LocalDateTime date = getTime().plusDays(plugin.getOptions().getTimeWeekOffSet());
 		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear();
 		int weekNumber = date.get(woy);
 		if (weekNumber == prevDate) {

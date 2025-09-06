@@ -238,6 +238,11 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@ConfigDataInt(path = "TimeHourOffSet")
 	private int timeHourOffSet = 0;
+	
+	@Getter
+	@Setter
+	@ConfigDataInt(path = "TimeWeekOffSet")
+	private int timeWeekOffSet = 0;
 
 	@Getter
 	@Setter

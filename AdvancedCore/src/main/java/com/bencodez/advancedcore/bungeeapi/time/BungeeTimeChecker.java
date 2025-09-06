@@ -36,11 +36,15 @@ public abstract class BungeeTimeChecker {
 	private int timeOffSet;
 
 	@Getter
+	private int timeWeekOffSet = 0;
+
+	@Getter
 	private String timeZone;
 
-	public BungeeTimeChecker(String timeZone, int timeOffSet) {
+	public BungeeTimeChecker(String timeZone, int timeOffSet, int weekOffSet) {
 		this.timeOffSet = timeOffSet;
 		this.timeZone = timeZone;
+		this.timeWeekOffSet = weekOffSet;
 	}
 
 	public abstract void debug(String text);
@@ -147,7 +151,7 @@ public abstract class BungeeTimeChecker {
 
 	public boolean hasWeekChanged(boolean set) {
 		int prevDate = getPrevWeek();
-		LocalDateTime date = getTime();
+		LocalDateTime date = getTime().plusDays(timeWeekOffSet);
 		TemporalField woy = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear();
 		int weekNumber = date.get(woy);
 		if (weekNumber == prevDate) {
@@ -214,7 +218,7 @@ public abstract class BungeeTimeChecker {
 	public abstract void setPrevWeek(int week);
 
 	public abstract void timeChanged(TimeType type, boolean fake, boolean pre, boolean post);
-	
+
 	public void shutdown() {
 		timer.shutdownNow();
 	}
