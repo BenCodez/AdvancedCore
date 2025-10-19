@@ -350,6 +350,11 @@ public class PlayerManager {
 			return false;
 		}
 
+		if (plugin.getBedrockHandle().isBedrock(name)) {
+			plugin.extraDebug("Player " + name + " is a bedrock player, skipping offline check");
+			return true;
+		}
+
 		if (checkServer && !name.startsWith(plugin.getOptions().getBedrockPlayerPrefix())) {
 			// plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
