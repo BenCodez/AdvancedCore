@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer; // <-- NEW
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -14,18 +15,6 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 
-/**
- * Resolves whether a given *name* belongs to a Bedrock player and returns a
- * prefixed name if needed. Works with online or offline names.
- *
- * Resolution order: 1) Online player UUID -> BedrockDetect (authoritative) 2)
- * In-memory cache learned on join 3) Persistent user flag "isBedrock"
- * (optional) 4) Name already has the bedrock prefix (fallback)
- *
- * No reliance on OfflinePlayer(name) UUIDs. This version preserves original
- * name casing (no lowercasing of stored names), but still supports
- * case-insensitive matching via a side index.
- */
 public final class BedrockNameResolver {
 
 	private final BedrockDetect bedrockDetect;
@@ -33,25 +22,26 @@ public final class BedrockNameResolver {
 	private final String bedrockPrefix;
 	private final AdvancedCorePlugin plugin;
 
-	/** Canonical cache: ORIGINAL-CASE name -> isBedrock */
 	private final Map<String, Boolean> cache = new ConcurrentHashMap<>();
-	/**
-	 * Case-insensitive index: lower(name) -> ORIGINAL-CASE name (canonical key for
-	 * cache). We only use lowercase for this index key; we never alter the stored
-	 * name.
-	 */
 	private final Map<String, String> ciIndex = new ConcurrentHashMap<>();
 
 	public BedrockNameResolver(AdvancedCorePlugin plugin) {
-		this.bedrockDetect = new BedrockDetect();
 		this.plugin = plugin;
+		this.bedrockDetect = new BedrockDetect(plugin::debug);
 		this.bedrockDetect.load();
+
+		// summary log
+		plugin.debug("[BedrockNameResolver] Floodgate loaded=" + bedrockDetect.isFloodgateAvailable()
+				+ ", Geyser loaded=" + bedrockDetect.isGeyserAvailable());
+
 		this.userManager = plugin.getUserManager();
 		this.bedrockPrefix = plugin.getOptions().getBedrockPlayerPrefix();
+
 		plugin.addUserStartup(new UserStartup() {
 			@Override
 			public void onStart() {
 				clearCache();
+				plugin.debug("[BedrockNameResolver] startup: cleared in-memory cache/index");
 			}
 
 			@Override
@@ -66,97 +56,130 @@ public final class BedrockNameResolver {
 		});
 	}
 
+	public boolean isBedrock(String name) {
+		return isBedrockName(name);
+	}
+
+	public boolean isBedrock(UUID uuid, String name) {
+		// 1) UUID is authoritative if present
+		if (uuid != null) {
+			try {
+				boolean viaUuid = bedrockDetect.isBedrock(uuid);
+				if (viaUuid) {
+					plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): TRUE via UUID");
+					return true;
+				}
+			} catch (Throwable ignored) {
+			}
+		}
+
+		// 2) If name supplied, try the usual name resolution chain
+		if (name != null && !name.isEmpty()) {
+			// Online (authoritative)
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				if (p.getName().equalsIgnoreCase(name)) {
+					boolean online = bedrockDetect.isBedrock(p.getUniqueId());
+					if (online) {
+						plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): TRUE via online UUID match");
+						return true;
+					} else {
+						plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): FALSE via online UUID match");
+						return false;
+					}
+				}
+			}
+
+			// Cache (case-insensitive)
+			Boolean cached = getCachedCaseInsensitive(name);
+			if (cached != null) {
+				plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): " + cached + " via cache");
+				return cached;
+			}
+
+			// DB flag
+			try {
+				AdvancedCoreUser user = userManager.getUser(name);
+				if (user == null) {
+					String canonical = ciIndex.get(name.toLowerCase(Locale.ROOT));
+					if (canonical != null)
+						user = userManager.getUser(canonical);
+				}
+				if (user != null && user.isBedrockUser()) {
+					plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): TRUE via DB flag");
+					return true;
+				}
+			} catch (Throwable ignored) {
+			}
+
+			// Prefix fallback (only if prefix is non-empty)
+			if (bedrockPrefix != null && !bedrockPrefix.isEmpty() && name.startsWith(bedrockPrefix)) {
+				plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): TRUE via prefix fallback");
+				return true;
+			}
+		}
+
+		plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): FALSE (no signals)");
+		return false;
+	}
+
+	// ------------ EXISTING METHODS (unchanged behavior) ------------
+
 	public void learn(AdvancedCoreUser user) {
 		if (user == null)
 			return;
-		String name = user.getPlayerName(); // keep original case
+		String name = user.getPlayerName();
 		if (name == null || name.isEmpty())
 			return;
-		putLearned(name, user.isBedrockUser()); // uses your existing helper that maintains ciIndex
+		putLearned(name, user.isBedrockUser());
 	}
 
-	/**
-	 * Learn authoritative Bedrock status when the player logs in / joins. Call this
-	 * from your login/join event (where you have the real UUID). Preserves original
-	 * name casing in cache.
-	 */
 	public void learn(Player player) {
 		if (player == null)
 			return;
-
 		final UUID uuid = player.getUniqueId();
 		final boolean isBedrock = bedrockDetect.isBedrock(uuid);
 		final String originalName = player.getName();
-
 		if (isBedrock) {
-			plugin.debug("Learned Bedrock player: " + originalName + " (" + uuid.toString() + ")");
-
-			// Store with original casing
-			cache.put(originalName, isBedrock);
+			plugin.debug("Learned Bedrock player: " + originalName + " (" + uuid + ")");
+			cache.put(originalName, true);
 			ciIndex.put(originalName.toLowerCase(Locale.ROOT), originalName);
-
-			// Optional: persist a flag for offline lookups later
 			AdvancedCoreUser user = userManager.getUser(player);
-			if (user != null) {
-				user.setBedrockUser(isBedrock);
-			}
+			if (user != null)
+				user.setBedrockUser(true);
 		}
 	}
 
-	/**
-	 * Returns true if this name (no prefix) should be treated as Bedrock. Safe for
-	 * online and offline cases. Never alters 'name' casing.
-	 */
 	public boolean isBedrockName(String name) {
 		if (name == null || name.isEmpty())
 			return false;
-
-		// 1) Online (authoritative, case-insensitive match without changing 'name')
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			if (p.getName().equalsIgnoreCase(name)) {
 				return bedrockDetect.isBedrock(p.getUniqueId());
 			}
 		}
-
-		// 2) Learned cache (case-insensitive via index; stored names keep original
-		// case)
 		Boolean cached = getCachedCaseInsensitive(name);
 		if (cached != null)
 			return cached;
 
-		// 3) Persistent user flag (optional)
 		try {
-			// Try exact case first
 			AdvancedCoreUser user = userManager.getUser(name);
 			if (user == null) {
-				// Try canonical original name via CI index
 				String canonical = ciIndex.get(name.toLowerCase(Locale.ROOT));
 				if (canonical != null)
 					user = userManager.getUser(canonical);
 			}
-			if (user != null && user.isBedrockUser()) {
+			if (user != null && user.isBedrockUser())
 				return true;
-			}
 		} catch (Throwable ignored) {
 		}
 
-		// 4) Already-prefixed names should be treated as Bedrock
-		return !bedrockPrefix.isEmpty() && name.startsWith(bedrockPrefix);
+		return bedrockPrefix != null && !bedrockPrefix.isEmpty() && name.startsWith(bedrockPrefix);
 	}
 
-	/**
-	 * Returns a decision for vote/name resolution: - finalName: the name you should
-	 * credit (maybe prefixed, preserves original case) - isBedrock: true if we
-	 * believe this is a Bedrock user - rationale: how we decided (for
-	 * logging/debug)
-	 */
 	public Result resolve(String incomingName) {
-		if (incomingName == null || incomingName.isEmpty()) {
+		if (incomingName == null || incomingName.isEmpty())
 			return new Result(incomingName, false, "empty-name");
-		}
 
-		// 1) Prefer online UUID (authoritative), equalsIgnoreCase without mutating
-		// 'incomingName'
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			if (p.getName().equalsIgnoreCase(incomingName)) {
 				boolean bedrock = bedrockDetect.isBedrock(p.getUniqueId());
@@ -165,7 +188,6 @@ public final class BedrockNameResolver {
 			}
 		}
 
-		// 2) Cache (case-insensitive via index)
 		Boolean cached = getCachedCaseInsensitive(incomingName);
 		if (cached != null) {
 			boolean bedrock = cached;
@@ -173,7 +195,6 @@ public final class BedrockNameResolver {
 			return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java"));
 		}
 
-		// 3) DB flag (try exact, then canonical from index)
 		try {
 			AdvancedCoreUser user = userManager.getUser(incomingName);
 			if (user == null) {
@@ -189,24 +210,17 @@ public final class BedrockNameResolver {
 		} catch (Throwable ignored) {
 		}
 
-		// 4) Fallback: if already prefixed, treat as bedrock
-		if (!bedrockPrefix.isEmpty() && incomingName.startsWith(bedrockPrefix)) {
+		if (bedrockPrefix != null && !bedrockPrefix.isEmpty() && incomingName.startsWith(bedrockPrefix)) {
 			return new Result(incomingName, true, "prefixed");
 		}
 
-		// Unknown -> default to Java (no prefix)
 		return new Result(incomingName, false, "unknown-default-java");
 	}
 
-	/**
-	 * Quickly return a prefixed name if we consider this a Bedrock name; otherwise
-	 * return the original. Preserves original case.
-	 */
 	public String getPrefixedIfBedrock(String name) {
 		return addPrefixIfNeeded(name, isBedrockName(name));
 	}
 
-	/** Clear learned cache (e.g., on plugin reload). */
 	public void clearCache() {
 		cache.clear();
 		ciIndex.clear();
@@ -219,15 +233,10 @@ public final class BedrockNameResolver {
 		ciIndex.put(originalCaseName.toLowerCase(Locale.ROOT), originalCaseName);
 	}
 
-	// -------------------- helpers --------------------
-
 	private Boolean getCachedCaseInsensitive(String name) {
-		// Try exact first (preserves canonical casing)
 		Boolean exact = cache.get(name);
 		if (exact != null)
 			return exact;
-
-		// Fall back to CI index → canonical name → cache lookup
 		String canonical = ciIndex.get(name.toLowerCase(Locale.ROOT));
 		return (canonical != null) ? cache.get(canonical) : null;
 	}
@@ -235,14 +244,13 @@ public final class BedrockNameResolver {
 	private String addPrefixIfNeeded(String name, boolean bedrock) {
 		if (!bedrock)
 			return name;
-		if (bedrockPrefix.isEmpty())
+		if (bedrockPrefix == null || bedrockPrefix.isEmpty())
 			return name;
 		if (name.startsWith(bedrockPrefix))
 			return name;
 		return bedrockPrefix + name;
 	}
 
-	// Result DTO
 	public static final class Result {
 		public final String finalName;
 		public final boolean isBedrock;
@@ -255,126 +263,106 @@ public final class BedrockNameResolver {
 		}
 	}
 
-	// ========================================================================
-	// ================ Embedded BedrockDetect (Floodgate/Geyser) ===========
-	// ========================================================================
+	// ====================== Embedded BedrockDetect with DEBUG
+	// ======================
 
-	/**
-	 * Soft-dependency Bedrock detector for Floodgate and Geyser. - No compile-time
-	 * dependency required. - Prefer Floodgate (linked/true Bedrock) -> then Geyser
-	 * (connected via proxy). - Falls back to false if neither present or an error
-	 * occurs.
-	 */
 	public static final class BedrockDetect {
-		// ----- Floodgate cached refs -----
 		private volatile boolean floodgateAvailable = false;
-		private Class<?> floodgateApiClass;
-		private Object floodgateApi; // FloodgateApi instance
-		private Method fgIsFloodgatePlayer; // boolean isFloodgatePlayer(UUID)
-		private Method fgGetPlayer; // FloodgatePlayer getPlayer(UUID) (optional/info)
-
-		// ----- Geyser cached refs -----
 		private volatile boolean geyserAvailable = false;
-		private Class<?> geyserApiClass;
-		private Object geyserApi; // GeyserApi.api()
-		private Method gzIsBedrockPlayer; // boolean isBedrockPlayer(UUID)
-		// Optional alternative:
-		// private Method gzConnectionByUuid; // Optional<Connection>
-		// connectionByUuid(UUID)
 
-		/** Call once during plugin enable. */
+		private Object floodgateApi;
+		private Method fgIsFloodgatePlayer;
+		private Method fgGetPlayer;
+
+		private Object geyserApi;
+		private Method gzIsBedrockPlayer;
+
+		private final Consumer<String> debug;
+
+		public BedrockDetect() {
+			this(s -> {
+			});
+		}
+
+		public BedrockDetect(Consumer<String> debug) {
+			this.debug = (debug != null) ? debug : (s -> {
+			});
+		}
+
 		public void load() {
 			loadFloodgate();
 			loadGeyser();
+			debug.accept("[BedrockDetect] Loaded. Floodgate=" + floodgateAvailable + ", Geyser=" + geyserAvailable);
 		}
 
 		private void loadFloodgate() {
 			try {
-				floodgateApiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
-				Method getInstance = floodgateApiClass.getMethod("getInstance");
+				Class<?> api = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+				Method getInstance = api.getMethod("getInstance");
 				floodgateApi = getInstance.invoke(null);
 				fgIsFloodgatePlayer = floodgateApi.getClass().getMethod("isFloodgatePlayer", UUID.class);
-
-				// Optional player accessor (may not exist on very old versions)
 				try {
 					fgGetPlayer = floodgateApi.getClass().getMethod("getPlayer", UUID.class);
 				} catch (NoSuchMethodException ignored) {
 				}
-
 				floodgateAvailable = true;
+				debug.accept("[BedrockDetect] Floodgate API: LOADED");
 			} catch (Throwable t) {
-				// Any reflection/linkage issue -> mark unavailable
 				floodgateAvailable = false;
+				debug.accept("[BedrockDetect] Floodgate API: NOT FOUND (" + t.getClass().getSimpleName() + ": "
+						+ t.getMessage() + ")");
 			}
 		}
 
 		private void loadGeyser() {
 			try {
 				Class<?> apiClass = Class.forName("org.geysermc.geyser.api.GeyserApi");
-				Method apiMethod = apiClass.getMethod("api"); // static
+				Method apiMethod = apiClass.getMethod("api");
 				geyserApi = apiMethod.invoke(null);
-
-				// Geyser 2.x: boolean isBedrockPlayer(UUID)
 				gzIsBedrockPlayer = geyserApi.getClass().getMethod("isBedrockPlayer", UUID.class);
-
-				// Optional alternative approach:
-				// gzConnectionByUuid = geyserApi.getClass().getMethod("connectionByUuid",
-				// UUID.class);
-
 				geyserAvailable = true;
+				debug.accept("[BedrockDetect] Geyser API: LOADED");
 			} catch (Throwable t) {
 				geyserAvailable = false;
+				debug.accept("[BedrockDetect] Geyser API: NOT FOUND (" + t.getClass().getSimpleName() + ": "
+						+ t.getMessage() + ")");
 			}
 		}
 
-		/**
-		 * Returns true if the UUID is a Bedrock player (Floodgate or Geyser). Safe to
-		 * call even if neither plugin is installed.
-		 */
 		public boolean isBedrock(UUID uuid) {
 			if (uuid == null)
 				return false;
 
-			// 1) Floodgate (most authoritative)
 			if (floodgateAvailable) {
 				try {
 					Object v = fgIsFloodgatePlayer.invoke(floodgateApi, uuid);
-					if (v instanceof Boolean && (Boolean) v) {
+					if (v instanceof Boolean && (Boolean) v)
 						return true;
-					}
 				} catch (Throwable t) {
-					floodgateAvailable = false; // stop trying on subsequent calls
+					floodgateAvailable = false;
+					debug.accept("[BedrockDetect] Floodgate call failed, disabling: " + t.getClass().getSimpleName());
 				}
 			}
 
-			// 2) Geyser fallback
 			if (geyserAvailable) {
 				try {
 					Object v = gzIsBedrockPlayer.invoke(geyserApi, uuid);
 					if (v instanceof Boolean)
 						return (Boolean) v;
-
-					// If you prefer the Optional<Connection> approach:
-					// Object opt = gzConnectionByUuid.invoke(geyserApi, uuid);
-					// return (opt instanceof java.util.Optional) && ((java.util.Optional<?>)
-					// opt).isPresent();
 				} catch (Throwable t) {
 					geyserAvailable = false;
+					debug.accept("[BedrockDetect] Geyser call failed, disabling: " + t.getClass().getSimpleName());
 				}
 			}
 
 			return false;
 		}
 
-		/**
-		 * Optional: get a Floodgate player object for more info (XUID, linked Java,
-		 * etc.). Returns null if Floodgate is unavailable or player not Bedrock.
-		 */
 		public Object getFloodgatePlayer(UUID uuid) {
 			if (!floodgateAvailable || fgGetPlayer == null || uuid == null)
 				return null;
 			try {
-				return fgGetPlayer.invoke(floodgateApi, uuid); // FloodgatePlayer or null
+				return fgGetPlayer.invoke(floodgateApi, uuid);
 			} catch (Throwable t) {
 				floodgateAvailable = false;
 				return null;
