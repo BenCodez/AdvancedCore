@@ -37,9 +37,11 @@ public class PlayerJoinEvent implements Listener {
 	public void onJoin(AdvancedCoreLoginEvent event) {
 		if (event.isUserInStorage() && plugin.isLoadUserData()) {
 			Player player = event.getPlayer();
+
+			plugin.getBedrockHandle().learn(player);
+
 			boolean userExist = plugin.getUserManager().userExist(event.getPlayer().getUniqueId());
-			if (player.getName().startsWith(plugin.getOptions().getBedrockPlayerPrefix())
-					|| plugin.getGeyserHandle().isGeyserPlayer(player.getUniqueId())) {
+			if (player.getName().startsWith(plugin.getOptions().getBedrockPlayerPrefix())) {
 				userExist = true;
 
 				if (plugin.getOptions().isOnlineMode()) {
@@ -63,8 +65,7 @@ public class PlayerJoinEvent implements Listener {
 			if (plugin.getOptions().isOnlineMode()) {
 				plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
 			} else {
-				plugin.getUuidNameCache().put(PlayerManager.getInstance().getUUID(player.getName()),
-						player.getName());
+				plugin.getUuidNameCache().put(PlayerManager.getInstance().getUUID(player.getName()), player.getName());
 			}
 
 		}
@@ -153,7 +154,7 @@ public class PlayerJoinEvent implements Listener {
 				public void run() {
 					if (plugin != null && plugin.isEnabled()) {
 						TabCompleteHandler.getInstance().onLogin();
-						
+
 						plugin.getUserManager().getDataManager().removeCache(player.getUniqueId(), player.getName());
 
 					}

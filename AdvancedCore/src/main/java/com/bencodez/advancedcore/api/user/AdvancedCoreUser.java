@@ -722,8 +722,12 @@ public class AdvancedCoreUser {
 		return false;
 	}
 
-	public boolean isBedrockPlayer() {
-		return plugin.getGeyserHandle().isGeyserPlayer(getJavaUUID());
+	public boolean isBedrockUser() {
+		return getData().getBoolean("isBedrock", cacheData, waitForCache);
+	}
+
+	public void setBedrockUser(boolean isBedrock) {
+		getData().setBoolean("isBedrock", isBedrock);
 	}
 
 	public boolean isCached() {

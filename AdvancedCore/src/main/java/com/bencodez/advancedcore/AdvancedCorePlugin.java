@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import com.bencodez.advancedcore.listeners.*;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandMap;
@@ -32,8 +31,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.bencodez.advancedcore.api.backup.BackupHandle;
+import com.bencodez.advancedcore.api.bedrock.BedrockNameResolver;
 import com.bencodez.advancedcore.api.cmi.CMIHandler;
-import com.bencodez.advancedcore.api.geyser.GeyserHandle;
 import com.bencodez.advancedcore.api.hologram.HologramHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
@@ -57,6 +56,13 @@ import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu;
 import com.bencodez.advancedcore.command.CommandLoader;
 import com.bencodez.advancedcore.command.executor.ValueRequestInputCommand;
 import com.bencodez.advancedcore.data.ServerData;
+import com.bencodez.advancedcore.listeners.AuthMeLogin;
+import com.bencodez.advancedcore.listeners.LoginSecurityLogin;
+import com.bencodez.advancedcore.listeners.NLoginAuthenticate;
+import com.bencodez.advancedcore.listeners.PlayerJoinEvent;
+import com.bencodez.advancedcore.listeners.PlayerShowListener;
+import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
+import com.bencodez.advancedcore.listeners.WorldChangeEvent;
 import com.bencodez.advancedcore.logger.Logger;
 import com.bencodez.simpleapi.command.TabCompleteHandle;
 import com.bencodez.simpleapi.command.TabCompleteHandler;
@@ -209,14 +215,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	@Setter
-	private boolean loadGeyserAPI = true;
+	private boolean loadBedrockAPI = true;
 
 	@Getter
 	@Setter
 	private boolean loadLuckPerms = true;
 
 	@Getter
-	private GeyserHandle geyserHandle;
+	private BedrockNameResolver bedrockHandle;;
 
 	@Getter
 	@Setter
@@ -543,9 +549,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		skullCacheHandler.setBedrockPrefix(getOptions().getBedrockPlayerPrefix());
 		skullCacheHandler.startTimer();
 
-		if (loadGeyserAPI) {
-			geyserHandle = new GeyserHandle();
-			geyserHandle.load();
+		if (loadBedrockAPI) {
+			bedrockHandle = new BedrockNameResolver(this);
 		}
 
 		rewardHandler = RewardHandler.getInstance();
