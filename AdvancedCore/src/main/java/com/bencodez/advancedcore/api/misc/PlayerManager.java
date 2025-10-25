@@ -37,7 +37,13 @@ public class PlayerManager {
 	public boolean damageItemInHand(Player player, int damage) {
 		ItemStack itemInHand = player.getInventory().getItemInMainHand();
 		ItemMeta meta = itemInHand.getItemMeta();
-		if (meta instanceof Damageable) {
+		boolean isUnbreakable = false;
+		try {
+			isUnbreakable = meta.isUnbreakable();
+		} catch (NoSuchMethodError e) {
+			// Older versions don't have isUnbreakable(), ignore safely
+		}
+		if (meta instanceof Damageable && !isUnbreakable) {
 			Damageable dMeta = (Damageable) meta;
 			int level = itemInHand.getEnchantmentLevel(MiscUtils.getInstance().getEnchant("UNBREAKING", "DURABILITY"));
 			int chance = (100 / (level + 1));
