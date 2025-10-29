@@ -161,8 +161,9 @@ public class PlayerManager {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 			return p.getUniqueId().toString();
 		} catch (Exception e) {
-			e.printStackTrace();
-			return getUUIDLookup(playerName);
+			plugin.getLogger().info("Unable to get UUID for: " + playerName);
+			plugin.debug(e);
+			return "";
 		}
 	}
 
