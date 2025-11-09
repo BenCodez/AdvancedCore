@@ -75,6 +75,9 @@ public class MySQL {
 		if (config.getTablePrefix() != null) {
 			name = config.getTablePrefix() + tableName;
 		}
+		if (config.getPoolName().isEmpty()) {
+			config.setPoolName(plugin.getName() + "-" + tableName);
+		}
 		mysql = new com.bencodez.simpleapi.sql.mysql.MySQL(config.getMaxThreads()) {
 
 			@Override
@@ -90,7 +93,7 @@ public class MySQL {
 			@Override
 			public void debug(String msg) {
 				plugin.debug(msg);
-				
+
 			}
 		};
 		if (!mysql.connect(config)) {
