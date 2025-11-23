@@ -135,27 +135,140 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	/**
+	 * Decide if a column actually needs to be altered, based on information_schema.
+	 * This avoids doing expensive ALTER TABLEs on every startup.
+	 */
+	private boolean columnNeedsAlter(Connection conn, String column, String newType) throws SQLException {
+		String sql = "SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, COLUMN_DEFAULT " + "FROM information_schema.COLUMNS "
+				+ "WHERE TABLE_SCHEMA = DATABASE() " + "AND TABLE_NAME = ? " + "AND COLUMN_NAME = ?";
+
+		try (PreparedStatement ps = conn.prepareStatement(sql)) {
+			ps.setString(1, getName());
+			ps.setString(2, column);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (!rs.next()) {
+					// Column doesn't exist yet (should be created by checkColumn, but be safe)
+					return true;
+				}
+
+				String dataType = rs.getString("DATA_TYPE"); // e.g. "varchar", "int", "mediumtext"
+				Object lenObj = rs.getObject("CHARACTER_MAXIMUM_LENGTH");
+				Long length = null;
+				if (lenObj instanceof Number) {
+					length = ((Number) lenObj).longValue(); // handles BigInteger, Long, Integer, etc.
+				}
+				String defaultVal = rs.getString("COLUMN_DEFAULT");
+
+				String typeUpper = newType.toUpperCase().trim();
+
+				// MEDIUMTEXT
+				if (typeUpper.equals("MEDIUMTEXT")) {
+					return !dataType.equalsIgnoreCase("mediumtext");
+				}
+
+				// TEXT
+				if (typeUpper.equals("TEXT")) {
+					return !dataType.equalsIgnoreCase("text");
+				}
+
+				// LONGTEXT
+				if (typeUpper.equals("LONGTEXT")) {
+					return !dataType.equalsIgnoreCase("longtext");
+				}
+
+				// VARCHAR(N)
+				if (typeUpper.startsWith("VARCHAR(")) {
+					int open = typeUpper.indexOf('(');
+					int close = typeUpper.indexOf(')', open + 1);
+					if (open != -1 && close != -1) {
+						String lenStr = typeUpper.substring(open + 1, close);
+						int expectedLen;
+						try {
+							expectedLen = Integer.parseInt(lenStr);
+						} catch (NumberFormatException ex) {
+							// if we can't parse, be safe and ALTER
+							return true;
+						}
+
+						boolean typeMatches = dataType.equalsIgnoreCase("varchar");
+						boolean lengthMatches = (length != null && length == expectedLen);
+						return !(typeMatches && lengthMatches);
+					}
+					// malformed definition, fallback to altering
+					return true;
+				}
+
+				// INT [DEFAULT '0'] style
+				if (typeUpper.startsWith("INT")) {
+					boolean isIntFamily = dataType.equalsIgnoreCase("int") || dataType.equalsIgnoreCase("integer")
+							|| dataType.equalsIgnoreCase("mediumint") || dataType.equalsIgnoreCase("smallint")
+							|| dataType.equalsIgnoreCase("tinyint") || dataType.equalsIgnoreCase("bigint");
+
+					boolean expectDefaultZero = typeUpper.contains("DEFAULT '0'") || typeUpper.contains("DEFAULT 0");
+
+					if (!expectDefaultZero) {
+						// Only care that it's some INT-like type
+						return !isIntFamily;
+					} else {
+						boolean defaultIsZero = defaultVal != null && defaultVal.trim().equals("0");
+						return !(isIntFamily && defaultIsZero);
+					}
+				}
+
+				// For any types we don't explicitly handle, be conservative and ALTER.
+				return true;
+			}
+		}
+	}
+
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
-		debugLog("Altering column `" + column + "` to " + newType);
-		if (newType.contains("INT")) {
-			try {
-				Query query = new Query(mysql, "UPDATE " + getName() + " SET `" + column
-						+ "` = '0' where trim(coalesce(" + column + ", '')) = '';");
-				query.executeUpdateAsync();
-			} catch (SQLException e) {
-				e.printStackTrace();
+
+		// First inspect existing type; skip ALTER if it's already correct
+		try (Connection conn = mysql.getConnectionManager().getConnection()) {
+			if (!columnNeedsAlter(conn, column, newType)) {
+				debugLog("GlobalMySQL: Column `" + column + "` already matches " + newType + ", skipping ALTER");
+				// Make sure intColumns stays in sync if we've decided it's an int
+				if (newType.toUpperCase().contains("INT") && !intColumns.contains(column)) {
+					intColumns.add(column);
+				}
+				return;
 			}
-		} else {
-			Query query;
+		} catch (SQLException e) {
+			// If inspection fails, log and fall back to doing the ALTER anyway
+			debugLog("GlobalMySQL: Failed to inspect column " + getName() + "." + column + " – running ALTER anyway");
+			debugEx(e);
+		}
+
+		debugLog("Altering column `" + column + "` to " + newType);
+
+		// If going to INT, normalise empty strings to 0 first to avoid conversion
+		// issues.
+		if (newType.toUpperCase().contains("INT")) {
 			try {
-				query = new Query(mysql, "ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";");
-				query.executeUpdateAsync();
+				Query fixQuery = new Query(mysql, "UPDATE " + getName() + " SET `" + column
+						+ "` = '0' WHERE TRIM(COALESCE(" + column + ", '')) = '';");
+				fixQuery.executeUpdateAsync();
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
 		}
 
+		try {
+			Query alterQuery = new Query(mysql,
+					"ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";");
+			alterQuery.executeUpdateAsync();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		// Track int columns for getExact/isIntColumn
+		if (newType.toUpperCase().contains("INT")) {
+			if (!intColumns.contains(column)) {
+				intColumns.add(column);
+			}
+		}
 	}
 
 	public void checkColumn(String column, DataType dataType) {
