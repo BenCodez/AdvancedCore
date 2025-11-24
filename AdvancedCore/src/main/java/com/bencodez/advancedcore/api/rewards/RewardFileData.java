@@ -14,6 +14,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.files.FilesManager;
+import com.bencodez.simpleapi.file.CaseInsensitiveSection;
 
 import lombok.Getter;
 import net.md_5.bungee.api.ChatColor;
@@ -42,7 +43,7 @@ public class RewardFileData {
 
 	public RewardFileData(Reward reward, ConfigurationSection section) {
 		this.reward = reward;
-		configData = section;
+		configData = new CaseInsensitiveSection(section);
 	}
 
 	/**
@@ -667,7 +668,7 @@ public class RewardFileData {
 
 			}
 		}
-		configData = fileData.getConfigurationSection("");
+		configData = new CaseInsensitiveSection(fileData.getConfigurationSection(""));
 	}
 
 	/**
