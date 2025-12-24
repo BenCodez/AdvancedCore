@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -142,7 +143,7 @@ public class SimpleScoreboard {
 	 */
 	private String fixDuplicates(String text) {
 		while (scores.containsKey(text)) {
-			text += "§r";
+			text += ChatColor.COLOR_CHAR + "r";
 		}
 		if (text.length() > 48) {
 			text = text.substring(0, 47);

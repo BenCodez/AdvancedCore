@@ -58,7 +58,7 @@ public class TimeCheckerTest {
 
 	@Test
 	public void testDayWeekMonthChanges() {
-		// initial “previous” values
+		// initial previous values
 		when(serverDataFile.getPrevDay()).thenReturn(31);
 		when(serverDataFile.getPrevWeekDay()).thenReturn(52);
 		when(serverDataFile.getPrevMonth()).thenReturn("DECEMBER");
@@ -109,7 +109,7 @@ public class TimeCheckerTest {
 					verify(serverDataFile).setPrevMonth(mockedTime.getMonth().toString());
 				}
 
-				// prepare for next iteration: update “previous” getters
+				// prepare for next iteration: update previous getters
 				when(serverDataFile.getPrevDay()).thenReturn(day);
 				when(serverDataFile.getPrevWeekDay()).thenReturn(weekOfYear);
 				when(serverDataFile.getPrevMonth()).thenReturn(mockedTime.getMonth().toString());

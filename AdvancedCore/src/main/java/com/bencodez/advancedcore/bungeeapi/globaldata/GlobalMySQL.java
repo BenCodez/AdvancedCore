@@ -237,7 +237,7 @@ public abstract class GlobalMySQL {
 			}
 		} catch (SQLException e) {
 			// If inspection fails, log and fall back to doing the ALTER anyway
-			debugLog("GlobalMySQL: Failed to inspect column " + getName() + "." + column + " – running ALTER anyway");
+			debugLog("GlobalMySQL: Failed to inspect column " + getName() + "." + column + " running ALTER anyway");
 			debugEx(e);
 		}
 

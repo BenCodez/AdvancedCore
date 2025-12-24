@@ -158,7 +158,7 @@ public class MySQL {
 			}
 		} catch (SQLException e) {
 			// If inspection fails, log and fall back to doing the ALTER anyway
-			plugin.debug("MYSQL: Failed to inspect column " + getName() + "." + column + " – running ALTER anyway");
+			plugin.debug("MYSQL: Failed to inspect column " + getName() + "." + column + " running ALTER anyway");
 			plugin.debug(e);
 		}
 
