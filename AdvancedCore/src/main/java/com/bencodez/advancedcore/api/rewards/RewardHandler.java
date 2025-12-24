@@ -151,6 +151,11 @@ public class RewardHandler {
 	}
 
 	public void addDirectlyDefined(DirectlyDefinedReward directlyDefinedReward) {
+		if (getDirectlyDefined(directlyDefinedReward.getPath()) != null) {
+			plugin.extraDebug(
+					"DirectlyDefinedReward with path already exists, skipping: " + directlyDefinedReward.getPath());
+			return;
+		}
 		plugin.extraDebug("Adding directlydefined reward handle: " + directlyDefinedReward.getPath()
 				+ ", isdirectlydefined: " + directlyDefinedReward.isDirectlyDefined());
 		directlyDefinedRewards.add(directlyDefinedReward);
