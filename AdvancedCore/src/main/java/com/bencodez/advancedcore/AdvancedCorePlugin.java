@@ -366,7 +366,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 *
 	 * @param e Exception
 	 */
-	public void debug(Exception e) {
+	public void debug(Throwable e) {
 		if (getOptions().getDebug().isDebug()) {
 			e.printStackTrace();
 		}

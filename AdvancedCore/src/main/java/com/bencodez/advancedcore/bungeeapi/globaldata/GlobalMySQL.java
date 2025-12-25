@@ -19,6 +19,7 @@ import com.bencodez.simpleapi.sql.DataType;
 import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 import com.bencodez.simpleapi.sql.data.DataValueString;
+import com.bencodez.simpleapi.sql.mysql.DbType;
 import com.bencodez.simpleapi.sql.mysql.MySQL;
 import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 import com.bencodez.simpleapi.sql.mysql.queries.Query;
@@ -30,11 +31,9 @@ public abstract class GlobalMySQL {
 
 	private String name;
 
-	private Object object2 = new Object();
-
-	private Object object3 = new Object();
-
-	private Object object4 = new Object();
+	private final Object object2 = new Object();
+	private final Object object3 = new Object();
+	private final Object object4 = new Object();
 
 	private List<String> intColumns = new ArrayList<>();
 
@@ -45,18 +44,13 @@ public abstract class GlobalMySQL {
 	public GlobalMySQL(String tableName, MySQL mysql) {
 		this.mysql = mysql;
 		this.name = tableName;
-		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
-		sql += "server VARCHAR(50), ";
 
-		sql += "PRIMARY KEY ( server ));";
-
-		try {
-			Query query = new Query(mysql, sql);
-
-			query.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
+		// Best practice for Postgres: keep table name lower-case unless you always quote it.
+		if (dbType() == DbType.POSTGRESQL) {
+			this.name = this.name.toLowerCase();
 		}
+
+		createTableIfNeeded();
 
 		loadData();
 	}
@@ -70,9 +64,15 @@ public abstract class GlobalMySQL {
 		if (config.getTablePrefix() != null) {
 			name = config.getTablePrefix() + tableName;
 		}
+
+		if (config.getDbType() == DbType.POSTGRESQL) {
+			name = name.toLowerCase();
+		}
+
 		if (config.getPoolName().isEmpty()) {
 			config.setPoolName("VotingPlugin" + "-" + tableName);
 		}
+
 		mysql = new com.bencodez.simpleapi.sql.mysql.MySQL(config.getMaxThreads()) {
 
 			@Override
@@ -90,133 +90,202 @@ public abstract class GlobalMySQL {
 				debugLog(msg);
 			}
 		};
+
 		if (!mysql.connect(config)) {
-			warning("Failed to connect to MySQL");
-		}
-		try {
-			Query q = new Query(mysql, "USE `" + config.getDatabase() + "`;");
-			q.executeUpdate();
-		} catch (SQLException e) {
-			logSevere("Failed to send use database query: " + config.getDatabase() + " Error: " + e.getMessage()
-					+ ", MySQL might still work");
-			debugEx(e);
-		}
-		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (";
-		sql += "server VARCHAR(50), ";
-
-		sql += "PRIMARY KEY ( server ));";
-
-		try {
-			Query query = new Query(mysql, sql);
-
-			query.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
+			warning("Failed to connect to database (type=" + config.getDbType() + ")");
 		}
 
+		// MySQL has a "USE db" command; Postgres does NOT.
+		if (config.getDbType() != DbType.POSTGRESQL) {
+			try {
+				new Query(mysql, "USE " + quoteIdent(config.getDbType(), config.getDatabase()) + ";").executeUpdate();
+			} catch (SQLException e) {
+				logSevere("Failed to send use database query: " + config.getDatabase() + " Error: " + e.getMessage()
+						+ ", DB might still work");
+				debugEx(e);
+			}
+		}
+
+		createTableIfNeeded();
 		loadData();
 	}
 
+	// -------------------------
+	// Dialect helpers
+	// -------------------------
+
+	private DbType dbType() {
+		return mysql.getConnectionManager().getDbType();
+	}
+
+	private String quoteIdent(DbType dbType, String ident) {
+		if (ident == null) {
+			return "";
+		}
+		if (dbType == DbType.POSTGRESQL) {
+			return "\"" + ident.replace("\"", "\"\"") + "\"";
+		}
+		return "`" + ident.replace("`", "``") + "`";
+	}
+
+	private String qi(String ident) {
+		return quoteIdent(dbType(), ident);
+	}
+
+	private String normalizeColumnType(DbType dbType, String type) {
+		if (type == null) {
+			return "TEXT";
+		}
+		if (dbType != DbType.POSTGRESQL) {
+			return type;
+		}
+
+		String t = type.trim().toUpperCase();
+
+		// MySQL text variants -> Postgres TEXT
+		if (t.equals("MEDIUMTEXT") || t.equals("LONGTEXT") || t.equals("TEXT")) {
+			return "TEXT";
+		}
+
+		// INT family
+		if (t.startsWith("INT")) {
+			return "INTEGER";
+		}
+
+		// Leave VARCHAR(N), BOOLEAN, BIGINT, etc. alone if already compatible
+		return type;
+	}
+
+	private void createTableIfNeeded() {
+		String sql = "CREATE TABLE IF NOT EXISTS " + getName() + " (" + "server VARCHAR(50), " + "PRIMARY KEY ( server ));";
+		try {
+			new Query(mysql, sql).executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	// -------------------------
+	// Column management
+	// -------------------------
+
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
-			String sql = "ALTER TABLE " + getName() + " ADD COLUMN `" + column + "` text" + ";";
-
+			// TEXT works fine for both
+			String sql = "ALTER TABLE " + getName() + " ADD COLUMN " + qi(dbType() == DbType.POSTGRESQL ? column.toLowerCase() : column)
+					+ " TEXT;";
 			debugLog("Adding column: " + column + " Current columns: "
 					+ ArrayUtils.makeStringList((ArrayList<String>) getColumns()));
 			try {
-				Query query = new Query(mysql, sql);
-				query.executeUpdate();
-
+				new Query(mysql, sql).executeUpdate();
 				getColumns().add(column);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-
 		}
 	}
 
 	/**
 	 * Decide if a column actually needs to be altered, based on information_schema.
-	 * This avoids doing expensive ALTER TABLEs on every startup.
+	 * - MySQL/MariaDB: TABLE_SCHEMA = DATABASE()
+	 * - PostgreSQL: table_schema = current_schema()
 	 */
-	private boolean columnNeedsAlter(Connection conn, String column, String newType) throws SQLException {
-		String sql = "SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, COLUMN_DEFAULT " + "FROM information_schema.COLUMNS "
-				+ "WHERE TABLE_SCHEMA = DATABASE() " + "AND TABLE_NAME = ? " + "AND COLUMN_NAME = ?";
+	private boolean columnNeedsAlter(Connection conn, DbType dbType, String column, String newType) throws SQLException {
+		String normalized = normalizeColumnType(dbType, newType).trim();
+
+		if (dbType == DbType.POSTGRESQL) {
+			String sql = "SELECT data_type, character_maximum_length, column_default "
+					+ "FROM information_schema.columns "
+					+ "WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?";
+
+			try (PreparedStatement ps = conn.prepareStatement(sql)) {
+				ps.setString(1, getName());
+				ps.setString(2, column.toLowerCase());
+				try (ResultSet rs = ps.executeQuery()) {
+					if (!rs.next()) {
+						return true;
+					}
+
+					String dataType = rs.getString("data_type"); // "text", "integer", "character varying", ...
+					Object lenObj = rs.getObject("character_maximum_length");
+					Long length = (lenObj instanceof Number) ? ((Number) lenObj).longValue() : null;
+
+					String typeUpper = normalized.toUpperCase().trim();
+
+					if (typeUpper.equals("TEXT")) {
+						return !dataType.equalsIgnoreCase("text");
+					}
+
+					if (typeUpper.startsWith("VARCHAR(")) {
+						boolean typeMatches = dataType.equalsIgnoreCase("character varying")
+								|| dataType.equalsIgnoreCase("varchar");
+						int open = typeUpper.indexOf('(');
+						int close = typeUpper.indexOf(')', open + 1);
+						if (open != -1 && close != -1) {
+							int expectedLen = Integer.parseInt(typeUpper.substring(open + 1, close));
+							boolean lengthMatches = (length != null && length == expectedLen);
+							return !(typeMatches && lengthMatches);
+						}
+						return true;
+					}
+
+					if (typeUpper.startsWith("INTEGER") || typeUpper.startsWith("INT")) {
+						return !(dataType.equalsIgnoreCase("integer") || dataType.equalsIgnoreCase("int4"));
+					}
+
+					return true;
+				}
+			}
+		}
+
+		// MySQL / MariaDB
+		String sql = "SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, COLUMN_DEFAULT "
+				+ "FROM information_schema.COLUMNS "
+				+ "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?";
 
 		try (PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setString(1, getName());
 			ps.setString(2, column);
 			try (ResultSet rs = ps.executeQuery()) {
 				if (!rs.next()) {
-					// Column doesn't exist yet (should be created by checkColumn, but be safe)
 					return true;
 				}
 
-				String dataType = rs.getString("DATA_TYPE"); // e.g. "varchar", "int", "mediumtext"
+				String dataType = rs.getString("DATA_TYPE");
 				Object lenObj = rs.getObject("CHARACTER_MAXIMUM_LENGTH");
-				Long length = null;
-				if (lenObj instanceof Number) {
-					length = ((Number) lenObj).longValue(); // handles BigInteger, Long, Integer, etc.
-				}
-				String defaultVal = rs.getString("COLUMN_DEFAULT");
+				Long length = (lenObj instanceof Number) ? ((Number) lenObj).longValue() : null;
 
-				String typeUpper = newType.toUpperCase().trim();
+				String typeUpper = normalized.toUpperCase().trim();
 
-				// MEDIUMTEXT
 				if (typeUpper.equals("MEDIUMTEXT")) {
 					return !dataType.equalsIgnoreCase("mediumtext");
 				}
-
-				// TEXT
 				if (typeUpper.equals("TEXT")) {
 					return !dataType.equalsIgnoreCase("text");
 				}
-
-				// LONGTEXT
 				if (typeUpper.equals("LONGTEXT")) {
 					return !dataType.equalsIgnoreCase("longtext");
 				}
 
-				// VARCHAR(N)
 				if (typeUpper.startsWith("VARCHAR(")) {
 					int open = typeUpper.indexOf('(');
 					int close = typeUpper.indexOf(')', open + 1);
 					if (open != -1 && close != -1) {
-						String lenStr = typeUpper.substring(open + 1, close);
-						int expectedLen;
-						try {
-							expectedLen = Integer.parseInt(lenStr);
-						} catch (NumberFormatException ex) {
-							// if we can't parse, be safe and ALTER
-							return true;
-						}
-
+						int expectedLen = Integer.parseInt(typeUpper.substring(open + 1, close));
 						boolean typeMatches = dataType.equalsIgnoreCase("varchar");
 						boolean lengthMatches = (length != null && length == expectedLen);
 						return !(typeMatches && lengthMatches);
 					}
-					// malformed definition, fallback to altering
 					return true;
 				}
 
-				// INT [DEFAULT '0'] style
 				if (typeUpper.startsWith("INT")) {
 					boolean isIntFamily = dataType.equalsIgnoreCase("int") || dataType.equalsIgnoreCase("integer")
 							|| dataType.equalsIgnoreCase("mediumint") || dataType.equalsIgnoreCase("smallint")
 							|| dataType.equalsIgnoreCase("tinyint") || dataType.equalsIgnoreCase("bigint");
-
-					boolean expectDefaultZero = typeUpper.contains("DEFAULT '0'") || typeUpper.contains("DEFAULT 0");
-
-					if (!expectDefaultZero) {
-						// Only care that it's some INT-like type
-						return !isIntFamily;
-					} else {
-						boolean defaultIsZero = defaultVal != null && defaultVal.trim().equals("0");
-						return !(isIntFamily && defaultIsZero);
-					}
+					return !isIntFamily;
 				}
 
-				// For any types we don't explicitly handle, be conservative and ALTER.
 				return true;
 			}
 		}
@@ -225,49 +294,59 @@ public abstract class GlobalMySQL {
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
 
+		DbType dbType = dbType();
+		String normalized = normalizeColumnType(dbType, newType);
+
 		// First inspect existing type; skip ALTER if it's already correct
 		try (Connection conn = mysql.getConnectionManager().getConnection()) {
-			if (!columnNeedsAlter(conn, column, newType)) {
-				debugLog("GlobalMySQL: Column `" + column + "` already matches " + newType + ", skipping ALTER");
-				// Make sure intColumns stays in sync if we've decided it's an int
-				if (newType.toUpperCase().contains("INT") && !intColumns.contains(column)) {
+			if (!columnNeedsAlter(conn, dbType, column, normalized)) {
+				debugLog("GlobalDB: Column " + qi(dbType == DbType.POSTGRESQL ? column.toLowerCase() : column)
+						+ " already matches " + normalized + ", skipping ALTER");
+				if (normalized.toUpperCase().contains("INT") && !intColumns.contains(column)) {
 					intColumns.add(column);
 				}
 				return;
 			}
 		} catch (SQLException e) {
-			// If inspection fails, log and fall back to doing the ALTER anyway
-			debugLog("GlobalMySQL: Failed to inspect column " + getName() + "." + column + " running ALTER anyway");
+			debugLog("GlobalDB: Failed to inspect column " + getName() + "." + column + " - running ALTER anyway");
 			debugEx(e);
 		}
 
-		debugLog("Altering column `" + column + "` to " + newType);
+		debugLog("Altering column `" + column + "` to " + normalized);
 
-		// If going to INT, normalise empty strings to 0 first to avoid conversion
-		// issues.
-		if (newType.toUpperCase().contains("INT")) {
+		// If going to INT, normalise empty strings to 0 first to avoid conversion issues.
+		if (normalized.toUpperCase().contains("INT")) {
 			try {
-				Query fixQuery = new Query(mysql, "UPDATE " + getName() + " SET `" + column
-						+ "` = '0' WHERE TRIM(COALESCE(" + column + ", '')) = '';");
-				fixQuery.executeUpdateAsync();
+				if (dbType == DbType.POSTGRESQL) {
+					// Postgres: trim(coalesce(col::text,'')) = ''
+					String fix = "UPDATE " + getName() + " SET " + qi(column.toLowerCase()) + " = '0' "
+							+ "WHERE btrim(coalesce(" + qi(column.toLowerCase()) + "::text, '')) = '';";
+					new Query(mysql, fix).executeUpdateAsync();
+				} else {
+					String fix = "UPDATE " + getName() + " SET " + qi(column) + " = '0' "
+							+ "WHERE TRIM(COALESCE(" + column + ", '')) = '';";
+					new Query(mysql, fix).executeUpdateAsync();
+				}
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
 		}
 
 		try {
-			Query alterQuery = new Query(mysql,
-					"ALTER TABLE " + getName() + " MODIFY `" + column + "` " + newType + ";");
-			alterQuery.executeUpdateAsync();
+			String alter;
+			if (dbType == DbType.POSTGRESQL) {
+				alter = "ALTER TABLE " + getName() + " ALTER COLUMN " + qi(column.toLowerCase()) + " TYPE " + normalized
+						+ ";";
+			} else {
+				alter = "ALTER TABLE " + getName() + " MODIFY " + qi(column) + " " + normalized + ";";
+			}
+			new Query(mysql, alter).executeUpdateAsync();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 
-		// Track int columns for getExact/isIntColumn
-		if (newType.toUpperCase().contains("INT")) {
-			if (!intColumns.contains(column)) {
-				intColumns.add(column);
-			}
+		if (normalized.toUpperCase().contains("INT") && !intColumns.contains(column)) {
+			intColumns.add(column);
 		}
 	}
 
@@ -281,6 +360,10 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	// -------------------------
+	// Cache / lifecycle
+	// -------------------------
+
 	public void clearCacheBasic() {
 		debugLog("Clearing cache basic");
 		columns.clear();
@@ -293,29 +376,23 @@ public abstract class GlobalMySQL {
 		mysql.disconnect();
 	}
 
+	// -------------------------
+	// Existence checks
+	// -------------------------
+
 	public boolean containsKey(String server) {
-		if (servers.contains(server) || containsKeyQuery(server)) {
-			return true;
-		}
-		return false;
+		return servers.contains(server) || containsKeyQuery(server);
 	}
 
 	public boolean containsKeyQuery(String index) {
-		String sqlStr = "SELECT server FROM " + getName() + ";";
+		// Efficient: WHERE server = ?
+		String sqlStr = "SELECT server FROM " + getName() + " WHERE server = ?;";
 		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
-			ResultSet rs = sql.executeQuery();
-			/*
-			 * Query query = new Query(mysql, sql); ResultSet rs = query.executeQuery();
-			 */
-			while (rs.next()) {
-				if (rs.getString("server").equals(index)) {
-					rs.close();
-					return true;
-				}
+				PreparedStatement ps = conn.prepareStatement(sqlStr)) {
+			ps.setString(1, index);
+			try (ResultSet rs = ps.executeQuery()) {
+				return rs.next();
 			}
-			rs.close();
-
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		}
@@ -323,10 +400,7 @@ public abstract class GlobalMySQL {
 	}
 
 	public boolean containsServer(String server) {
-		if (servers.contains(server)) {
-			return true;
-		}
-		return false;
+		return servers.contains(server);
 	}
 
 	public abstract void debugEx(Exception e);
@@ -336,14 +410,12 @@ public abstract class GlobalMySQL {
 	public void deleteServer(String server) {
 		String q = "DELETE FROM " + getName() + " WHERE server='" + server + "';";
 		try {
-			Query query = new Query(mysql, q);
-			query.executeUpdate();
+			new Query(mysql, q).executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 		servers.remove(server);
 		clearCacheBasic();
-
 	}
 
 	public void executeQuery(String str) {
@@ -356,41 +428,45 @@ public abstract class GlobalMySQL {
 	}
 
 	public List<String> getColumns() {
-		if (columns == null || columns.size() == 0) {
+		if (columns == null || columns.isEmpty()) {
 			loadData();
 		}
 		return columns;
 	}
 
 	public ArrayList<String> getColumnsQueury() {
-		ArrayList<String> columns = new ArrayList<>();
-		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + ";")) {
-			ResultSet rs = sql.executeQuery();
-			/*
-			 * Query query = new Query(mysql, "SELECT * FROM " + getName() + ";"); ResultSet
-			 * rs = query.executeQuery();
-			 */
+		ArrayList<String> cols = new ArrayList<>();
 
-			ResultSetMetaData metadata = rs.getMetaData();
-			int columnCount = 0;
-			if (metadata != null) {
-				columnCount = metadata.getColumnCount();
-
-				for (int i = 1; i <= columnCount; i++) {
-					String columnName = metadata.getColumnName(i);
-					columns.add(columnName);
+		try (Connection conn = mysql.getConnectionManager().getConnection()) {
+			if (dbType() == DbType.POSTGRESQL) {
+				String sql = "SELECT column_name FROM information_schema.columns "
+						+ "WHERE table_schema = current_schema() AND table_name = ?;";
+				try (PreparedStatement ps = conn.prepareStatement(sql)) {
+					ps.setString(1, getName());
+					try (ResultSet rs = ps.executeQuery()) {
+						while (rs.next()) {
+							cols.add(rs.getString(1));
+						}
+					}
 				}
-				sql.close();
-				rs.close();
-				conn.close();
-				return columns;
+				return cols;
 			}
-			rs.close();
+
+			// MySQL/MariaDB fallback (fast + doesn't require information_schema privileges)
+			try (PreparedStatement sql = conn.prepareStatement("SELECT * FROM " + getName() + " LIMIT 1;");
+					ResultSet rs = sql.executeQuery()) {
+				ResultSetMetaData metadata = rs.getMetaData();
+				if (metadata != null) {
+					for (int i = 1; i <= metadata.getColumnCount(); i++) {
+						cols.add(metadata.getColumnName(i));
+					}
+				}
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return columns;
+
+		return cols;
 	}
 
 	public ArrayList<Column> getExact(String server) {
@@ -399,17 +475,18 @@ public abstract class GlobalMySQL {
 
 	public ArrayList<Column> getExactQuery(Column column) {
 		ArrayList<Column> result = new ArrayList<>();
-		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`='"
-				+ column.getValue().getString() + "';";
+
+		String colName = (dbType() == DbType.POSTGRESQL) ? qi(column.getName().toLowerCase()) : qi(column.getName());
+		String query = "SELECT * FROM " + getName() + " WHERE " + colName + "='" + column.getValue().getString() + "';";
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement(query)) {
-			ResultSet rs = sql.executeQuery();
+				PreparedStatement sql = conn.prepareStatement(query);
+				ResultSet rs = sql.executeQuery()) {
 
 			if (rs.next()) {
 				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
 					String columnName = rs.getMetaData().getColumnLabel(i);
-					Column rCol = null;
+					Column rCol;
 					if (intColumns.contains(columnName)) {
 						rCol = new Column(columnName, DataType.INTEGER);
 						rCol.setValue(new DataValueInt(rs.getInt(i)));
@@ -420,11 +497,8 @@ public abstract class GlobalMySQL {
 					result.add(rCol);
 				}
 			}
-			rs.close();
 			return result;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} catch (ArrayIndexOutOfBoundsException e) {
+		} catch (SQLException | ArrayIndexOutOfBoundsException e) {
 			e.printStackTrace();
 		}
 
@@ -443,15 +517,12 @@ public abstract class GlobalMySQL {
 		String sqlStr = "SELECT server FROM " + getName() + ";";
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement(sqlStr)) {
-
-			ResultSet rs = sql.executeQuery();
+				PreparedStatement sql = conn.prepareStatement(sqlStr);
+				ResultSet rs = sql.executeQuery()) {
 
 			while (rs.next()) {
-				Column rCol = new Column("server", new DataValueString(rs.getString("server")));
-				result.add(rCol);
+				result.add(new Column("server", new DataValueString(rs.getString(1))));
 			}
-			rs.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return null;
@@ -461,61 +532,92 @@ public abstract class GlobalMySQL {
 	}
 
 	public Set<String> getServers() {
-		if (servers == null || servers.size() == 0) {
+		if (servers == null || servers.isEmpty()) {
 			servers.clear();
 			servers.addAll(getServersQuery());
-			return servers;
 		}
 		return servers;
 	}
 
 	public ArrayList<String> getServersQuery() {
-		ArrayList<String> uuids = new ArrayList<>();
+		ArrayList<String> out = new ArrayList<>();
 
 		ArrayList<Column> rows = getRowsQuery();
 		if (rows != null) {
 			for (Column c : rows) {
 				if (c.getValue() != null && c.getValue().isString()) {
-					uuids.add(c.getValue().getString());
+					out.add(c.getValue().getString());
 				}
 			}
 		} else {
 			logSevere("Failed to fetch servers");
 		}
 
-		return uuids;
+		return out;
 	}
 
 	public abstract void info(String text);
 
 	public void insert(String index, String column, DataValue value) {
 		insertQuery(index, Arrays.asList(new Column(column, value)));
-
 	}
 
 	public void insertQuery(String index, List<Column> cols) {
-		String query = "INSERT IGNORE " + getName() + " ";
+		DbType dbType = dbType();
 
+		// Ensure columns exist
+		for (Column c : cols) {
+			checkColumn(c.getName(), c.getDataType());
+		}
+
+		if (dbType == DbType.POSTGRESQL) {
+			// Best-case: UPSERT
+			StringBuilder sb = new StringBuilder();
+			sb.append("INSERT INTO ").append(getName()).append(" (server");
+			for (Column col : cols) {
+				sb.append(", ").append(quoteIdent(dbType, col.getName().toLowerCase()));
+			}
+			sb.append(") VALUES ('").append(index).append("'");
+			for (Column col : cols) {
+				sb.append(", '").append(col.getValue().toString()).append("'");
+			}
+			sb.append(") ON CONFLICT (server) DO UPDATE SET ");
+			for (int i = 0; i < cols.size(); i++) {
+				Column col = cols.get(i);
+				String c = quoteIdent(dbType, col.getName().toLowerCase());
+				sb.append(c).append(" = EXCLUDED.").append(c);
+				if (i != cols.size() - 1) {
+					sb.append(", ");
+				}
+			}
+			sb.append(";");
+
+			String query = sb.toString();
+			try {
+				new Query(mysql, query).executeUpdate();
+				servers.add(index);
+				debugLog("Upserting " + index + " into database");
+			} catch (Exception e) {
+				e.printStackTrace();
+				debugLog("Failed to upsert server " + index);
+			}
+			return;
+		}
+
+		// MySQL/MariaDB: keep original INSERT IGNORE ... SET ...
+		String query = "INSERT IGNORE " + getName() + " ";
 		query += "set server='" + index + "', ";
 
 		for (int i = 0; i < cols.size(); i++) {
 			Column col = cols.get(i);
-			if (i == cols.size() - 1) {
-				if (col.getValue().isString()) {
-					query += col.getName() + "='" + col.getValue().getString() + "';";
-				} else if (col.getValue().isBoolean()) {
-					query += col.getName() + "='" + col.getValue().getBoolean() + "';";
-				} else if (col.getValue().isInt()) {
-					query += col.getName() + "='" + col.getValue().getInt() + "';";
-				}
-			} else {
-				if (col.getValue().isString()) {
-					query += col.getName() + "='" + col.getValue().getString() + "', ";
-				} else if (col.getValue().isBoolean()) {
-					query += col.getName() + "='" + col.getValue().getBoolean() + "', ";
-				} else if (col.getValue().isInt()) {
-					query += col.getName() + "='" + col.getValue().getInt() + "', ";
-				}
+			boolean last = (i == cols.size() - 1);
+
+			if (col.getValue().isString()) {
+				query += col.getName() + "='" + col.getValue().getString() + "'" + (last ? ";" : ", ");
+			} else if (col.getValue().isBoolean()) {
+				query += col.getName() + "='" + col.getValue().getBoolean() + "'" + (last ? ";" : ", ");
+			} else if (col.getValue().isInt()) {
+				query += col.getName() + "='" + col.getValue().getInt() + "'" + (last ? ";" : ", ");
 			}
 		}
 
@@ -527,7 +629,6 @@ public abstract class GlobalMySQL {
 			e.printStackTrace();
 			debugLog("Failed to insert server " + index);
 		}
-
 	}
 
 	public boolean isIntColumn(String key) {
@@ -542,7 +643,7 @@ public abstract class GlobalMySQL {
 		columns = getColumnsQueury();
 
 		try (Connection con = mysql.getConnectionManager().getConnection()) {
-			useBatchUpdates = con.getMetaData().supportsBatchUpdates();
+			useBatchUpdates = con != null && con.getMetaData().supportsBatchUpdates();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -554,34 +655,38 @@ public abstract class GlobalMySQL {
 		for (Column col : cols) {
 			checkColumn(col.getName(), col.getDataType());
 		}
+
 		synchronized (object2) {
 			if (getServers().contains(index) || containsKeyQuery(index)) {
 
-				String query = "UPDATE " + getName() + " SET ";
+				DbType dbType = dbType();
+
+				StringBuilder sb = new StringBuilder();
+				sb.append("UPDATE ").append(getName()).append(" SET ");
 
 				for (int i = 0; i < cols.size(); i++) {
 					Column col = cols.get(i);
-					if (i == cols.size() - 1) {
-						if (col.getValue().isString()) {
-							query += "`" + col.getName() + "`='" + col.getValue().getString() + "'";
-						} else if (col.getValue().isBoolean()) {
-							query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "'";
-						} else if (col.getValue().isInt()) {
-							query += "`" + col.getName() + "`='" + col.getValue().getInt() + "'";
-						}
-					} else {
-						if (col.getValue().isString()) {
-							query += "`" + col.getName() + "`='" + col.getValue().getString() + "', ";
-						} else if (col.getValue().isBoolean()) {
-							query += "`" + col.getName() + "`='" + col.getValue().getBoolean() + "', ";
-						} else if (col.getValue().isInt()) {
-							query += "`" + col.getName() + "`='" + col.getValue().getInt() + "', ";
-						}
+					boolean last = (i == cols.size() - 1);
+
+					String colName = (dbType == DbType.POSTGRESQL) ? quoteIdent(dbType, col.getName().toLowerCase())
+							: "`" + col.getName() + "`";
+
+					if (col.getValue().isString()) {
+						sb.append(colName).append("='").append(col.getValue().getString()).append("'");
+					} else if (col.getValue().isBoolean()) {
+						sb.append(colName).append("='").append(col.getValue().getBoolean()).append("'");
+					} else if (col.getValue().isInt()) {
+						sb.append(colName).append("='").append(col.getValue().getInt()).append("'");
+					}
+
+					if (!last) {
+						sb.append(", ");
 					}
 				}
-				query += " WHERE server=";
-				query += "'" + index + "';";
 
+				sb.append(" WHERE server='").append(index).append("';");
+
+				String query = sb.toString();
 				debugLog("Batch query: " + query);
 
 				try {
@@ -606,45 +711,48 @@ public abstract class GlobalMySQL {
 			return;
 		}
 		checkColumn(column, value.getType());
+
 		synchronized (object2) {
 			if (getServers().contains(index) || containsKeyQuery(index)) {
+				DbType dbType = dbType();
+
+				String colName = (dbType == DbType.POSTGRESQL) ? quoteIdent(dbType, column.toLowerCase()) : column;
+
 				String query = "UPDATE " + getName() + " SET ";
 
 				if (value.isString()) {
-					query += column + "='" + value.getString() + "'";
+					query += colName + "='" + value.getString() + "'";
 				} else if (value.isBoolean()) {
-					query += column + "='" + value.getBoolean() + "'";
+					query += colName + "='" + value.getBoolean() + "'";
 				} else if (value.isInt()) {
-					query += column + "='" + value.getInt() + "'";
+					query += colName + "='" + value.getInt() + "'";
 				}
-				query += " WHERE server=";
-				query += "'" + index + "';";
+
+				query += " WHERE server='" + index + "';";
 
 				try {
-					Query q = new Query(mysql, query);
-					q.executeUpdate();
+					new Query(mysql, query).executeUpdate();
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
-
 			} else {
 				insert(index, column, value);
 			}
 		}
-
 	}
 
 	public abstract void warning(String text);
 
 	public void wipeColumnData(String columnName) {
 		checkColumn(columnName, DataType.STRING);
-		String sql = "UPDATE " + getName() + " SET " + columnName + " = NULL;";
+
+		String colName = (dbType() == DbType.POSTGRESQL) ? quoteIdent(dbType(), columnName.toLowerCase()) : columnName;
+
+		String sql = "UPDATE " + getName() + " SET " + colName + " = NULL;";
 		try {
-			Query query = new Query(mysql, sql);
-			query.executeUpdate();
+			new Query(mysql, sql).executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-
 	}
 }
