@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -132,6 +134,72 @@ public class UserManager {
 
 	}
 
+	/**
+	 * Storage-agnostic streaming iteration over all users + their column data.
+	 *
+	 * MYSQL: uses plugin.getMysql().forEachUser(...) SQLITE: uses
+	 * plugin.getSQLiteUserTable().forEachUser(...) FLAT: iterates UUID files and
+	 * builds columns per user (no giant map).
+	 *
+	 * @param perUser    called for each user with (uuid, columns)
+	 * @param onFinished called once at the end with the number of users processed
+	 */
+	public void forEachUserKeys(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished) {
+		UserStorage storage = plugin.getStorageType();
+
+		if (storage == UserStorage.MYSQL) {
+			plugin.getMysql().forEachUser((uuid, cols) -> {
+				perUser.accept(uuid, cols);
+			}, (count) -> {
+				if (onFinished != null)
+					onFinished.accept(count);
+			});
+			return;
+		}
+
+		if (storage == UserStorage.SQLITE) {
+			plugin.getSQLiteUserTable().forEachUser((uuid, cols) -> {
+				perUser.accept(uuid, cols);
+			}, (count) -> {
+				if (onFinished != null)
+					onFinished.accept(count);
+			});
+			return;
+		}
+
+		// FLAT fallback (stream-like; no giant HashMap)
+		int processed = 0;
+		try {
+			for (String uuidStr : getAllUUIDs(UserStorage.FLAT)) {
+				if (uuidStr == null || uuidStr.isEmpty() || "null".equalsIgnoreCase(uuidStr)) {
+					continue;
+				}
+
+				UUID uuid;
+				try {
+					uuid = UUID.fromString(uuidStr);
+				} catch (IllegalArgumentException ignored) {
+					continue;
+				}
+
+				AdvancedCoreUser user = getUser(uuid);
+				user.dontCache();
+
+				// Build per-user columns from current values
+				ArrayList<Column> colList = new ArrayList<>();
+				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
+					colList.add(new Column(entry.getKey(), entry.getValue()));
+				}
+
+				processed++;
+				perUser.accept(uuid, colList);
+			}
+		} finally {
+			if (onFinished != null)
+				onFinished.accept(processed);
+		}
+	}
+
 	public ArrayList<String> getAllUUIDs() {
 		return ArrayUtils.removeDuplicates(getAllUUIDs(plugin.getStorageType()));
 	}
@@ -214,7 +282,7 @@ public class UserManager {
 				return s;
 			}
 		}
-		
+
 		for (String s : getAllPlayerNames()) {
 			if (s.equalsIgnoreCase(name)) {
 				return s;

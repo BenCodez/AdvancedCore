@@ -9,6 +9,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
@@ -44,6 +46,95 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 		this.primaryKey = primaryKey;
 		this.columns.addAll(columns);
 		this.plugin = plugin;
+	}
+
+	/**
+	 * Streams every user row from SQLite without building a giant in-memory map.
+	 *
+	 * @param perUser    called once per row with (uuid, columns)
+	 * @param onFinished called once at the end with the number of rows processed
+	 */
+	public void forEachUser(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished) {
+		int processed = 0;
+		String query = "SELECT * FROM " + getName() + ";";
+
+		PreparedStatement s = null;
+		ResultSet rs = null;
+
+		try {
+			s = sqLite.getSQLConnection().prepareStatement(query);
+			rs = s.executeQuery();
+
+			while (rs.next()) {
+				ArrayList<Column> cols = new ArrayList<>();
+				UUID uuid = null;
+
+				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+					String columnName = rs.getMetaData().getColumnLabel(i);
+					Column rCol;
+
+					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
+						rCol = new Column(columnName, DataType.INTEGER);
+						try {
+							rCol.setValue(new DataValueInt(rs.getInt(i)));
+						} catch (Exception e) {
+							String data = rs.getString(i);
+							if (data != null) {
+								try {
+									rCol.setValue(new DataValueInt(Integer.parseInt(data)));
+								} catch (NumberFormatException ex) {
+									rCol.setValue(new DataValueInt(0));
+								}
+							} else {
+								rCol.setValue(new DataValueInt(0));
+							}
+						}
+					} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+						rCol = new Column(columnName, DataType.BOOLEAN);
+						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
+					} else {
+						rCol = new Column(columnName, DataType.STRING);
+						String val = rs.getString(i);
+						rCol.setValue(new DataValueString(val));
+
+						if ("uuid".equalsIgnoreCase(columnName)) {
+							if (val != null && !val.isEmpty() && !"null".equalsIgnoreCase(val)) {
+								try {
+									uuid = UUID.fromString(val);
+								} catch (IllegalArgumentException ignored) {
+									// bad uuid in db; skip row below
+								}
+							}
+						}
+					}
+
+					cols.add(rCol);
+				}
+
+				if (uuid != null) {
+					processed++;
+					perUser.accept(uuid, cols); // <-- per row
+				}
+				// cols becomes eligible for GC after this loop iteration
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (rs != null)
+					rs.close();
+			} catch (SQLException ignored) {
+			}
+			try {
+				if (s != null)
+					s.close();
+			} catch (SQLException ignored) {
+			}
+
+			if (onFinished != null) {
+				onFinished.accept(processed); // <-- once
+			}
+		}
 	}
 
 	public UserTable(AdvancedCorePlugin plugin, String name, Column... columns) {
