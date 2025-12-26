@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -185,109 +183,114 @@ public class MySQL extends AbstractSqlTable {
 	 * @param onFinished called once at the end with the number of rows processed
 	 *                   (even if 0)
 	 */
-	public void forEachUser(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished) {
+	public void forEachUser(java.util.function.BiConsumer<UUID, ArrayList<Column>> perUser,
+			java.util.function.Consumer<Integer> onFinished) {
+
 		int processed = 0;
+		final int pageSize = 500; // tune 250/500/1000
 
-		// NOTE: Selecting * means we still read every column, but we DON'T store all
-		// rows at once.
-		final String sqlStr = "SELECT * FROM " + qi(tableName) + ";";
-		plugin.devDebug("DB QUERY: " + sqlStr);
+		String lastUuid = ""; // start lower than any real uuid string
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement ps = conn.prepareStatement(sqlStr, ResultSet.TYPE_FORWARD_ONLY,
-						ResultSet.CONCUR_READ_ONLY)) {
+		while (true) {
+			int rowsThisPage = 0;
 
-			// Streaming hints:
-			// - MySQL: Integer.MIN_VALUE triggers row-by-row streaming for some drivers
-			// - Postgres: a positive fetch size enables cursor-based fetching
-			try {
-				if (dbType == DbType.POSTGRESQL) {
-					conn.setAutoCommit(false); // required for cursor fetch in pg
-					ps.setFetchSize(500);
-				} else {
-					ps.setFetchSize(Integer.MIN_VALUE);
-				}
-			} catch (Exception ignore) {
-				// Driver may not support the hint; safe to ignore.
-			}
+			String sqlStr = "SELECT * FROM " + qi(tableName) + " WHERE " + qi("uuid") + " > ?" + " ORDER BY "
+					+ qi("uuid") + " ASC" + " LIMIT " + pageSize + ";";
 
-			try (ResultSet rs = ps.executeQuery()) {
-				final int colCount = rs.getMetaData().getColumnCount();
+			try (Connection conn = mysql.getConnectionManager().getConnection();
+					PreparedStatement ps = conn.prepareStatement(sqlStr, ResultSet.TYPE_FORWARD_ONLY,
+							ResultSet.CONCUR_READ_ONLY)) {
 
-				while (rs.next()) {
-					UUID uuid = null;
-					ArrayList<Column> cols = new ArrayList<>(colCount);
+				ps.setString(1, lastUuid);
 
-					for (int i = 1; i <= colCount; i++) {
-						String columnName = rs.getMetaData().getColumnLabel(i);
-						Column rCol;
+				try (ResultSet rs = ps.executeQuery()) {
+					final int colCount = rs.getMetaData().getColumnCount();
 
-						if (plugin.getUserManager().getDataManager().isInt(columnName)) {
-							rCol = new Column(columnName, DataType.INTEGER);
-							try {
-								rCol.setValue(new DataValueInt(rs.getInt(i)));
-							} catch (Exception e) {
-								String data = rs.getString(i);
-								if (data != null) {
-									try {
-										rCol.setValue(new DataValueInt(Integer.parseInt(data)));
-									} catch (NumberFormatException ex) {
+					while (rs.next()) {
+						ArrayList<Column> cols = new ArrayList<>(colCount);
+						UUID uuid = null;
+						String uuidStrForSeek = null;
+
+						for (int i = 1; i <= colCount; i++) {
+							String columnName = rs.getMetaData().getColumnLabel(i);
+							Column rCol;
+
+							if (plugin.getUserManager().getDataManager().isInt(columnName)) {
+								rCol = new Column(columnName, DataType.INTEGER);
+								try {
+									rCol.setValue(new DataValueInt(rs.getInt(i)));
+								} catch (Exception e) {
+									String data = rs.getString(i);
+									if (data != null) {
+										try {
+											rCol.setValue(new DataValueInt(Integer.parseInt(data)));
+										} catch (NumberFormatException ex) {
+											rCol.setValue(new DataValueInt(0));
+										}
+									} else {
 										rCol.setValue(new DataValueInt(0));
 									}
-								} else {
-									rCol.setValue(new DataValueInt(0));
 								}
-							}
-						} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
-							rCol = new Column(columnName, DataType.BOOLEAN);
-							rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
-						} else {
-							rCol = new Column(columnName, DataType.STRING);
+							} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+								rCol = new Column(columnName, DataType.BOOLEAN);
+								rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
+							} else {
+								rCol = new Column(columnName, DataType.STRING);
 
-							if ("uuid".equalsIgnoreCase(columnName)) {
-								// Extract UUID efficiently and correctly for pg uuid type
-								if (dbType == DbType.POSTGRESQL) {
-									Object obj = rs.getObject(i);
-									if (obj instanceof java.util.UUID) {
-										uuid = (java.util.UUID) obj;
-										rCol.setValue(new DataValueString(uuid.toString()));
-									} else {
-										String s = rs.getString(i);
-										if (s != null && !s.isEmpty() && !"null".equalsIgnoreCase(s)) {
-											uuid = UUID.fromString(s);
-											rCol.setValue(new DataValueString(s));
+								if ("uuid".equalsIgnoreCase(columnName)) {
+									// MySQL stores as string; Postgres might store native UUID, handle both
+									if (dbType == DbType.POSTGRESQL) {
+										Object obj = rs.getObject(i);
+										if (obj instanceof java.util.UUID) {
+											uuid = (java.util.UUID) obj;
+											uuidStrForSeek = uuid.toString();
+											rCol.setValue(new DataValueString(uuidStrForSeek));
 										} else {
+											String s = rs.getString(i);
+											uuidStrForSeek = s;
+											if (s != null && !s.isEmpty() && !"null".equalsIgnoreCase(s)) {
+												uuid = UUID.fromString(s);
+											}
 											rCol.setValue(new DataValueString(s));
 										}
+									} else {
+										String s = rs.getString(i);
+										uuidStrForSeek = s;
+										if (s != null && !s.isEmpty() && !"null".equalsIgnoreCase(s)) {
+											uuid = UUID.fromString(s);
+										}
+										rCol.setValue(new DataValueString(s));
 									}
 								} else {
-									String s = rs.getString(i);
-									if (s != null && !s.isEmpty() && !"null".equalsIgnoreCase(s)) {
-										uuid = UUID.fromString(s);
-									}
-									rCol.setValue(new DataValueString(s));
+									rCol.setValue(new DataValueString(rs.getString(i)));
 								}
-							} else {
-								rCol.setValue(new DataValueString(rs.getString(i)));
 							}
+
+							cols.add(rCol);
 						}
 
-						cols.add(rCol);
+						if (uuid != null && uuidStrForSeek != null) {
+							rowsThisPage++;
+							processed++;
+							lastUuid = uuidStrForSeek; // advance seek cursor
+							perUser.accept(uuid, cols);
+						}
 					}
-
-					if (uuid != null) {
-						processed++;
-						perUser.accept(uuid, cols);
-					}
-					// allow GC of cols for each row after callback returns
 				}
+
+			} catch (SQLException e) {
+				debug(e);
+				break;
 			}
-		} catch (SQLException e) {
-			debug(e);
-		} finally {
-			if (onFinished != null) {
-				onFinished.accept(processed);
+
+			// no more rows
+			if (rowsThisPage == 0) {
+				break;
 			}
+		}
+
+		if (onFinished != null) {
+			onFinished.accept(processed);
 		}
 	}
 
