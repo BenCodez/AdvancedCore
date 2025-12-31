@@ -196,7 +196,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private ConcurrentHashMap<String, String> uuidNameCache;
 
 	@Getter
-	private String version = "";
+	private String advancedCoreVersion = "";
 
 	@Getter
 	private String advancedCoreBuildNumber = "NOTSET";
@@ -610,9 +610,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			buildNumberMsg = ", build number: " + advancedCoreBuildNumber + ", ";
 		}
 
-		debug("Using AdvancedCore '" + getVersion() + "' built on '" + getBuildTime() + "' " + buildNumberMsg
-				+ " Spigot Version: " + Bukkit.getVersion() + " Total RAM: " + PluginUtils.getMemory() + " Free RAM: "
-				+ PluginUtils.getFreeMemory());
+		debug("Using AdvancedCore '" + getAdvancedCoreVersion() + "' built on '" + getBuildTime() + "' "
+				+ buildNumberMsg + " Spigot Version: " + Bukkit.getVersion() + " Total RAM: " + PluginUtils.getMemory()
+				+ " Free RAM: " + PluginUtils.getFreeMemory());
 
 		debug(DebugLevel.INFO, "Debug Level: " + getOptions().getDebug().toString());
 	}
@@ -891,7 +891,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private void loadVersionFile() {
 		YamlConfiguration conf = getVersionFile();
-		version = conf.getString("version", "Unknown");
+		advancedCoreVersion = conf.getString("version", "Unknown");
 		buildTime = conf.getString("time", "Unknown");
 		advancedCoreBuildNumber = conf.getString("buildnumber", "NOTSET");
 	}
