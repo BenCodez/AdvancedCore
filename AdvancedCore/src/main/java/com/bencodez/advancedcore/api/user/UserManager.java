@@ -144,6 +144,7 @@ public class UserManager {
 	 * @param perUser    called for each user with (uuid, columns)
 	 * @param onFinished called once at the end with the number of users processed
 	 */
+	@SuppressWarnings("deprecation")
 	public void forEachUserKeys(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished) {
 		UserStorage storage = plugin.getStorageType();
 

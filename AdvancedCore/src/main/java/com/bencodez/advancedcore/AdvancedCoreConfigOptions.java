@@ -29,11 +29,6 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	@ConfigDataBoolean(path = "AutoDownload")
-	private boolean autoDownload = false;
-
-	@Getter
-	@Setter
 	private boolean pauseRewards = false;
 
 	@Getter
@@ -238,7 +233,7 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@ConfigDataInt(path = "TimeHourOffSet")
 	private int timeHourOffSet = 0;
-	
+
 	@Getter
 	@Setter
 	@ConfigDataInt(path = "TimeWeekOffSet")

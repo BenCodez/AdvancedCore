@@ -44,7 +44,6 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
-import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
@@ -142,10 +141,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	@Setter
-	private String jenkinsSite = "";
-
-	@Getter
-	@Setter
 	private boolean loadRewards = true;
 
 	@Getter
@@ -238,19 +233,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	public void allowDownloadingFromSpigot(int resourceId) {
 		getOptions().setResourceId(resourceId);
-	}
-
-	private void checkAutoUpdate() {
-		getBukkitScheduler().runTaskAsynchronously(this, new Runnable() {
-
-			@Override
-			public void run() {
-				if (getOptions().isAutoDownload() && getOptions().getResourceId() != 0) {
-					UpdateDownloader.getInstance().checkAutoDownload(javaPlugin, getOptions().getResourceId());
-				}
-			}
-		});
-
 	}
 
 	private void checkCMI() {
@@ -462,17 +444,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		Bukkit.getPluginManager().registerEvents(new BInventoryListener(this), this);
 	}
 
-	public void loadAutoUpdateCheck() {
-		long delay = 60 * 60;
-		timer.scheduleWithFixedDelay(new Runnable() {
-
-			@Override
-			public void run() {
-				checkAutoUpdate();
-			}
-		}, delay, delay, TimeUnit.SECONDS);
-	}
-
 	private void loadConfig(boolean userStorage) {
 		getOptions().load(this);
 		if (loadUserData && userStorage) {
@@ -566,7 +537,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		loadValueRequestInputCommands();
 		checkPluginUpdate();
-		loadAutoUpdateCheck();
 		loadVersionFile();
 
 		getUserManager().purgeOldPlayersStartup();

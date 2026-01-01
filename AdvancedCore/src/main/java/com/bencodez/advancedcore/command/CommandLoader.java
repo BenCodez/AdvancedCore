@@ -20,7 +20,6 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.time.TimeType;
-import com.bencodez.advancedcore.api.updater.UpdateDownloader;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
@@ -443,25 +442,6 @@ public class CommandLoader {
 				sendMessage(sender, "&cPurged data");
 			}
 		});
-
-		if (!plugin.getJenkinsSite().isEmpty()) {
-			cmds.add(new CommandHandler(plugin, new String[] { "DownloadJenkins" }, permPrefix + ".Download",
-					"Download from jenkins. Please use at your own risk") {
-
-				@Override
-				public void execute(CommandSender sender, String[] args) {
-					if (plugin.getOptions().isEnableJenkins() && !plugin.getJenkinsSite().isEmpty()) {
-						sender.sendMessage(MessageAPI.colorize(
-								"&cAttempting to download from jenkins... restart server to fully update, Note: USE THESE DEV BUILDS AT YOUR OWN RISK"));
-						UpdateDownloader.getInstance().downloadFromJenkins(plugin.getJenkinsSite(), plugin.getName());
-						sender.sendMessage(MessageAPI.colorize("&cDownloaded jar"));
-					} else {
-						sendMessage(sender,
-								"&cNot enabled, please enable to use this. Note: USE THESE DEV BUILDS AT YOUR OWN RISK");
-					}
-				}
-			});
-		}
 
 		cmds.add(new CommandHandler(plugin, new String[] { "ForceTimeChange", "(TimeType)" },
 				permPrefix + ".ForceTimeChange", "Force time change, use at your own risk!", true, true) {
