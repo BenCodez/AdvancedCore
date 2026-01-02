@@ -6,9 +6,7 @@ import java.io.Reader;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.security.CodeSource;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
@@ -62,12 +60,10 @@ import com.bencodez.advancedcore.listeners.PlayerJoinEvent;
 import com.bencodez.advancedcore.listeners.PlayerShowListener;
 import com.bencodez.advancedcore.listeners.PluginUpdateVersionEvent;
 import com.bencodez.advancedcore.listeners.WorldChangeEvent;
-import com.bencodez.advancedcore.logger.Logger;
 import com.bencodez.simpleapi.command.TabCompleteHandle;
 import com.bencodez.simpleapi.command.TabCompleteHandler;
 import com.bencodez.simpleapi.debug.DebugLevel;
 import com.bencodez.simpleapi.file.YMLConfig;
-import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 import com.bencodez.simpleapi.servercomm.pluginmessage.PluginMessage;
@@ -157,9 +153,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Getter
 	private boolean placeHolderAPIEnabled;
-
-	@Getter
-	private Logger pluginLogger;
 
 	@Getter
 	private PluginMessage pluginMessaging;
@@ -327,20 +320,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (getOptions().getDebug().isDebug(debugLevel)) {
 			getLogger().info(debug);
 		}
-		if (getOptions().isDebugIngame()) {
-			for (Player player : Bukkit.getOnlinePlayers()) {
-				if (player.hasPermission(this.getName() + ".Debug")) {
-					player.sendMessage(MessageAPI.colorize("&c" + getName() + " Debug: " + debug));
-				}
-			}
-		}
-		if (getOptions().isLogDebugToFile()) {
-			if (pluginLogger == null) {
-				loadLogger();
-			}
-			String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-			pluginLogger.logToFile(str + ":" + debug);
-		}
 	}
 
 	/**
@@ -351,14 +330,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	public void debug(Throwable e) {
 		if (getOptions().getDebug().isDebug()) {
 			e.printStackTrace();
-		}
-		if (getOptions().isLogDebugToFile()) {
-			if (pluginLogger != null) {
-				String str = new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(Calendar.getInstance().getTime());
-				pluginLogger.logToFile(str + " [" + this.getName() + "] ExceptionDebug: " + e.getMessage());
-			} else {
-				loadLogger();
-			}
 		}
 	}
 
@@ -585,15 +556,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				+ " Free RAM: " + PluginUtils.getFreeMemory());
 
 		debug(DebugLevel.INFO, "Debug Level: " + getOptions().getDebug().toString());
-	}
-
-	/**
-	 * Load logger
-	 */
-	public void loadLogger() {
-		if (getOptions().isLogDebugToFile() && pluginLogger == null) {
-			pluginLogger = new Logger(this, new File(this.getDataFolder(), "Log" + File.separator + "Log.txt"));
-		}
 	}
 
 	private void loadSignAPI() {

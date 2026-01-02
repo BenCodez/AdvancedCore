@@ -59,11 +59,6 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	@ConfigDataBoolean(path = "DebugInGame")
-	private boolean debugIngame = false;
-
-	@Getter
-	@Setter
 	@ConfigDataString(path = "RequestAPI.DefaultMethod")
 	private String defaultRequestMethod = "ANVIL";
 
@@ -130,10 +125,7 @@ public class AdvancedCoreConfigOptions {
 	@Setter
 	@ConfigDataBoolean(path = "")
 	private boolean loadDefaultRewards = true;
-	@Getter
-	@Setter
-	@ConfigDataBoolean(path = "LogDebugToFile")
-	private boolean logDebugToFile = false;
+
 
 	@Getter
 	@Setter
