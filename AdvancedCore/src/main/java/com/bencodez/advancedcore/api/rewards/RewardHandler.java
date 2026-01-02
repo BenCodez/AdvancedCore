@@ -325,19 +325,6 @@ public class RewardHandler {
 		}
 		reward = reward.replace(" ", "_");
 
-		/*
-		 * if (rewardOptions != null) { String prefix = rewardOptions.getPrefix(); if
-		 * (prefix != null && !prefix.equals("")) { String str = reward; reward = prefix
-		 * + "_" + str; } String suffix = rewardOptions.getSuffix(); if (suffix != null
-		 * && !suffix.equals("")) { reward += "_" + suffix; } }
-		 */
-
-		for (Reward rewardFile : getRewards()) {
-			if (rewardFile.getName().equalsIgnoreCase(reward)) {
-				return rewardFile;
-			}
-		}
-
 		if (reward.equals("")) {
 			plugin.getLogger().warning("Tried to get any empty reward file name, renaming to EmptyName");
 			reward = "EmptyName";
@@ -359,6 +346,12 @@ public class RewardHandler {
 					|| direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
 				plugin.debug("Using subdirectlydefined reward for: " + reward);
 				return direct.getReward();
+			}
+		}
+
+		for (Reward rewardFile : getRewards()) {
+			if (rewardFile.getName().equalsIgnoreCase(reward)) {
+				return rewardFile;
 			}
 		}
 
