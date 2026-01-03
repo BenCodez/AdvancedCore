@@ -1,7 +1,6 @@
 package com.bencodez.advancedcore.command;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.UUID;
 
@@ -35,7 +34,6 @@ import com.bencodez.advancedcore.command.gui.UserGUI;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.player.PlayerUtils;
-import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.DataType;
 import com.bencodez.simpleapi.sql.data.DataValue;
 
@@ -267,23 +265,16 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cStarting to run offline rewards");
-				HashMap<UUID, ArrayList<Column>> cols = plugin.getUserManager().getAllKeys();
 
-				for (Entry<UUID, ArrayList<Column>> playerData : cols.entrySet()) {
+				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
+					user.dontCache();
+					user.updateTempCacheWithColumns(columns);
 
-					String uuid = playerData.getKey().toString();
-					if (plugin != null && plugin.isEnabled()) {
-						if (uuid != null && !uuid.isEmpty()) {
-							AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid), false);
-							user.dontCache();
-							user.updateTempCacheWithColumns(playerData.getValue());
-							cols.put(playerData.getKey(), null);
-
-							user.forceRunOfflineRewards();
-						}
-					}
-				}
-				sendMessage(sender, "&cFinished running offline rewards");
+					user.forceRunOfflineRewards();
+				}, (count) -> {
+					sendMessage(sender, "&cFinished running offline rewards");
+				});
 			}
 		});
 

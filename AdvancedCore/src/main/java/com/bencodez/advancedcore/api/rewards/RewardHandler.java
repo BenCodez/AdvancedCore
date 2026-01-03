@@ -213,6 +213,23 @@ public class RewardHandler {
 		validPaths.add(path);
 	}
 
+	public void checkDirectlyDefinedRewardFiles() {
+		ArrayList<String> directlyDefinedPaths = new ArrayList<String>();
+		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
+			directlyDefinedPaths.add(direct.getPath().replace(".", "_"));
+		}
+
+		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
+			directlyDefinedPaths.add(direct.getFullPath().replace(".", "_"));
+		}
+
+		for (Reward rewardFile : getRewards()) {
+			if (ArrayUtils.containsIgnoreCase(directlyDefinedPaths, rewardFile.getName())) {
+				plugin.getLogger().warning("Found reward file conflict: " + rewardFile.getName() + ", recommend deleting or renaming file to prevent issues");
+			}
+		}
+	}
+
 	public void checkDirectlyDefined() {
 		for (Reward rewardFile : getRewards()) {
 			File folder = rewardFile.getConfig().getRewardFolder();

@@ -75,6 +75,7 @@ public class UserManager {
 		}
 	}
 
+	@Deprecated
 	public HashMap<UUID, ArrayList<Column>> getAllKeys() {
 		return getAllKeys(plugin.getStorageType());
 	}
