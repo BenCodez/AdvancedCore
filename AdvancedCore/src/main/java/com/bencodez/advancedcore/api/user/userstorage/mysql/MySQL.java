@@ -190,13 +190,18 @@ public class MySQL extends AbstractSqlTable {
 		int processed = 0;
 		final int pageSize = 500; // tune 250/500/1000
 
-		String lastUuid = ""; // start lower than any real uuid string
+		String lastUuid = ""; // seek cursor (string form)
 
 		while (true) {
 			int rowsThisPage = 0;
 
-			String sqlStr = "SELECT * FROM " + qi(tableName) + " WHERE " + qi("uuid") + " > ?" + " ORDER BY "
-					+ qi("uuid") + " ASC" + " LIMIT " + pageSize + ";";
+			// Read a page into memory, CLOSE connection, then run callbacks.
+			// This prevents holding a DB connection while user code runs.
+			final ArrayList<java.util.AbstractMap.SimpleEntry<UUID, ArrayList<Column>>> page = new ArrayList<>(
+					pageSize);
+
+			String sqlStr = "SELECT * FROM " + qi(tableName) + " WHERE " + qi("uuid") + " > ? ORDER BY " + qi("uuid")
+					+ " ASC LIMIT " + pageSize + ";";
 
 			try (Connection conn = mysql.getConnectionManager().getConnection();
 					PreparedStatement ps = conn.prepareStatement(sqlStr, ResultSet.TYPE_FORWARD_ONLY,
@@ -274,8 +279,12 @@ public class MySQL extends AbstractSqlTable {
 						if (uuid != null && uuidStrForSeek != null) {
 							rowsThisPage++;
 							processed++;
-							lastUuid = uuidStrForSeek; // advance seek cursor
-							perUser.accept(uuid, cols);
+
+							// advance seek cursor based on the last row we read
+							lastUuid = uuidStrForSeek;
+
+							// store for later callback (after connection closes)
+							page.add(new java.util.AbstractMap.SimpleEntry<>(uuid, cols));
 						}
 					}
 				}
@@ -283,6 +292,16 @@ public class MySQL extends AbstractSqlTable {
 			} catch (SQLException e) {
 				debug(e);
 				break;
+			}
+
+			// Run callbacks OUTSIDE of DB resources
+			for (java.util.AbstractMap.SimpleEntry<UUID, ArrayList<Column>> entry : page) {
+				try {
+					perUser.accept(entry.getKey(), entry.getValue());
+				} catch (Throwable t) {
+					// Don't kill the whole scan if user-code throws
+					debug(t);
+				}
 			}
 
 			// no more rows

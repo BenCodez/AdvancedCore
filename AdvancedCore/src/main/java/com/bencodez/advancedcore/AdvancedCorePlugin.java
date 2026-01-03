@@ -739,8 +739,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			database = new Database(this, "Users", table);
 			table.addCustomColumns();
 		} else if (storageType.equals(UserStorage.MYSQL)) {
-			setMysql(new MySQL(javaPlugin, javaPlugin.getName() + "_Users",
-					getOptions().getYmlConfig().getData().getConfigurationSection("MySQL")));
+			if (getOptions().getYmlConfig().getData().contains("Database")) {
+				setMysql(new MySQL(javaPlugin, javaPlugin.getName() + "_Users",
+						getOptions().getYmlConfig().getData().getConfigurationSection("Database")));
+			} else {
+				getLogger().warning(
+						"Deprecated MySQL config detected, please update your mysql config to use 'Database' section");
+				setMysql(new MySQL(javaPlugin, javaPlugin.getName() + "_Users",
+						getOptions().getYmlConfig().getData().getConfigurationSection("MySQL")));
+			}
+
 		} else if (storageType.equals(UserStorage.FLAT)) {
 			getLogger().severe("Detected using FLAT storage, this will be removed in the future!");
 		}

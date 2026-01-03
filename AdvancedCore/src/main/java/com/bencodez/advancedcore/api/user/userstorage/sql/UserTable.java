@@ -56,84 +56,117 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 	 */
 	public void forEachUser(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished) {
 		int processed = 0;
-		String query = "SELECT * FROM " + getName() + ";";
+		final String query = "SELECT * FROM " + getName() + ";";
 
-		PreparedStatement s = null;
-		ResultSet rs = null;
+		try (PreparedStatement ps = sqLite.getSQLConnection().prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY,
+				ResultSet.CONCUR_READ_ONLY); ResultSet rs = ps.executeQuery()) {
 
-		try {
-			s = sqLite.getSQLConnection().prepareStatement(query);
-			rs = s.executeQuery();
+			// Helps on some JDBC drivers (SQLite varies, but harmless)
+			try {
+				ps.setFetchSize(500);
+			} catch (Exception ignored) {
+			}
+
+			// Compute metadata ONCE
+			final ResultSetMetaData meta = rs.getMetaData();
+			final int colCount = meta.getColumnCount();
+
+			// Precompute how each column should be read
+			final String[] colNames = new String[colCount + 1];
+			final byte[] kind = new byte[colCount + 1]; // 0=string, 1=int, 2=bool
+			int uuidIndex = -1;
+
+			for (int i = 1; i <= colCount; i++) {
+				String name = meta.getColumnLabel(i);
+				colNames[i] = name;
+
+				if ("uuid".equalsIgnoreCase(name)) {
+					uuidIndex = i;
+				}
+
+				if (plugin.getUserManager().getDataManager().isInt(name)) {
+					kind[i] = 1;
+				} else if (plugin.getUserManager().getDataManager().isBoolean(name)) {
+					kind[i] = 2;
+				} else {
+					kind[i] = 0;
+				}
+			}
 
 			while (rs.next()) {
-				final ResultSetMetaData meta = rs.getMetaData();
-				ArrayList<Column> cols = new ArrayList<>();
 				UUID uuid = null;
 
-				for (int i = 1; i <= meta.getColumnCount(); i++) {
-					String columnName = meta.getColumnLabel(i);
+				// Fast path: read uuid column directly (avoid scanning for it)
+				if (uuidIndex > 0) {
+					String uuidStr = rs.getString(uuidIndex);
+					if (uuidStr != null && !uuidStr.isEmpty() && !"null".equalsIgnoreCase(uuidStr)) {
+						try {
+							uuid = UUID.fromString(uuidStr);
+						} catch (IllegalArgumentException ignored) {
+							// bad uuid; skip row below
+						}
+					}
+				}
+
+				// Build cols only if we have a valid uuid (saves a ton if db has junk)
+				if (uuid == null) {
+					continue;
+				}
+
+				ArrayList<Column> cols = new ArrayList<>(colCount);
+
+				for (int i = 1; i <= colCount; i++) {
+					String columnName = colNames[i];
 					Column rCol;
 
-					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
+					switch (kind[i]) {
+					case 1: { // int
 						rCol = new Column(columnName, DataType.INTEGER);
+						int v;
 						try {
-							rCol.setValue(new DataValueInt(rs.getInt(i)));
+							v = rs.getInt(i);
+							if (rs.wasNull())
+								v = 0;
 						} catch (Exception e) {
 							String data = rs.getString(i);
 							if (data != null) {
 								try {
-									rCol.setValue(new DataValueInt(Integer.parseInt(data)));
+									v = Integer.parseInt(data);
 								} catch (NumberFormatException ex) {
-									rCol.setValue(new DataValueInt(0));
+									v = 0;
 								}
 							} else {
-								rCol.setValue(new DataValueInt(0));
+								v = 0;
 							}
 						}
-					} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+						rCol.setValue(new DataValueInt(v));
+						break;
+					}
+					case 2: { // bool
 						rCol = new Column(columnName, DataType.BOOLEAN);
+						// Keep same semantics as your original: Boolean.valueOf(String)
 						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
-					} else {
+						break;
+					}
+					default: { // string
 						rCol = new Column(columnName, DataType.STRING);
-						String val = rs.getString(i);
-						rCol.setValue(new DataValueString(val));
-
-						if ("uuid".equalsIgnoreCase(columnName)) {
-							if (val != null && !val.isEmpty() && !"null".equalsIgnoreCase(val)) {
-								try {
-									uuid = UUID.fromString(val);
-								} catch (IllegalArgumentException ignored) {
-									// bad uuid in db; skip row below
-								}
-							}
-						}
+						rCol.setValue(new DataValueString(rs.getString(i)));
+						break;
+					}
 					}
 
 					cols.add(rCol);
 				}
 
-				if (uuid != null) {
-					processed++;
-					perUser.accept(uuid, cols); // <-- per row
-				}
-				// cols becomes eligible for GC after this loop iteration
+				processed++;
+				perUser.accept(uuid, cols);
 			}
+
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} finally {
-			try {
-				if (rs != null)
-					rs.close();
-			} catch (SQLException ignored) {
-			}
-			try {
-				if (s != null)
-					s.close();
-			} catch (SQLException ignored) {
-			}
-
 			if (onFinished != null) {
-				onFinished.accept(processed); // <-- once
+				onFinished.accept(processed);
 			}
 		}
 	}
