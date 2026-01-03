@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.user.userstorage.mysql;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -204,7 +205,8 @@ public class MySQL extends AbstractSqlTable {
 				ps.setString(1, lastUuid);
 
 				try (ResultSet rs = ps.executeQuery()) {
-					final int colCount = rs.getMetaData().getColumnCount();
+					final ResultSetMetaData meta = rs.getMetaData();
+					final int colCount = meta.getColumnCount();
 
 					while (rs.next()) {
 						ArrayList<Column> cols = new ArrayList<>(colCount);
@@ -212,7 +214,7 @@ public class MySQL extends AbstractSqlTable {
 						String uuidStrForSeek = null;
 
 						for (int i = 1; i <= colCount; i++) {
-							String columnName = rs.getMetaData().getColumnLabel(i);
+							String columnName = meta.getColumnLabel(i);
 							Column rCol;
 
 							if (plugin.getUserManager().getDataManager().isInt(columnName)) {

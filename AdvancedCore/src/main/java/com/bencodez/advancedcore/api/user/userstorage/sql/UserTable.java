@@ -66,11 +66,12 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 			rs = s.executeQuery();
 
 			while (rs.next()) {
+				final ResultSetMetaData meta = rs.getMetaData();
 				ArrayList<Column> cols = new ArrayList<>();
 				UUID uuid = null;
 
-				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-					String columnName = rs.getMetaData().getColumnLabel(i);
+				for (int i = 1; i <= meta.getColumnCount(); i++) {
+					String columnName = meta.getColumnLabel(i);
 					Column rCol;
 
 					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
