@@ -188,26 +188,46 @@ public class MySQL extends AbstractSqlTable {
 			java.util.function.Consumer<Integer> onFinished) {
 
 		int processed = 0;
-		final int pageSize = 500; // tune 250/500/1000
+		final int pageSize = 500;
 
-		String lastUuid = ""; // seek cursor (string form)
+		// Use a typed cursor. NULL means "start from beginning".
+		UUID lastUuidPg = null;
+		String lastUuidMy = null;
 
 		while (true) {
 			int rowsThisPage = 0;
 
-			// Read a page into memory, CLOSE connection, then run callbacks.
-			// This prevents holding a DB connection while user code runs.
 			final ArrayList<java.util.AbstractMap.SimpleEntry<UUID, ArrayList<Column>>> page = new ArrayList<>(
 					pageSize);
 
-			String sqlStr = "SELECT * FROM " + qi(tableName) + " WHERE " + qi("uuid") + " > ? ORDER BY " + qi("uuid")
-					+ " ASC LIMIT " + pageSize + ";";
+			final String sqlStr;
+			if (dbType == DbType.POSTGRESQL) {
+				// Typed cursor + safe first page
+				sqlStr = "SELECT * FROM " + qi(tableName) + " WHERE (?::uuid IS NULL OR " + qi("uuid") + " > ?::uuid) "
+						+ " ORDER BY " + qi("uuid") + " ASC " + " LIMIT " + pageSize + ";";
+			} else {
+				// MySQL/MariaDB uuid stored as VARCHAR(37) so string comparison works
+				sqlStr = "SELECT * FROM " + qi(tableName) + " WHERE " + qi("uuid") + " > ? " + " ORDER BY " + qi("uuid")
+						+ " ASC " + " LIMIT " + pageSize + ";";
+			}
 
 			try (Connection conn = mysql.getConnectionManager().getConnection();
 					PreparedStatement ps = conn.prepareStatement(sqlStr, ResultSet.TYPE_FORWARD_ONLY,
 							ResultSet.CONCUR_READ_ONLY)) {
 
-				ps.setString(1, lastUuid);
+				if (dbType == DbType.POSTGRESQL) {
+					// Bind BOTH placeholders as UUID (or NULL)
+					if (lastUuidPg == null) {
+						ps.setNull(1, java.sql.Types.OTHER);
+						ps.setNull(2, java.sql.Types.OTHER);
+					} else {
+						ps.setObject(1, lastUuidPg);
+						ps.setObject(2, lastUuidPg);
+					}
+				} else {
+					// First page: "" is OK for varchar seek
+					ps.setString(1, (lastUuidMy == null) ? "" : lastUuidMy);
+				}
 
 				try (ResultSet rs = ps.executeQuery()) {
 					final ResultSetMetaData meta = rs.getMetaData();
@@ -215,6 +235,7 @@ public class MySQL extends AbstractSqlTable {
 
 					while (rs.next()) {
 						ArrayList<Column> cols = new ArrayList<>(colCount);
+
 						UUID uuid = null;
 						String uuidStrForSeek = null;
 
@@ -238,14 +259,15 @@ public class MySQL extends AbstractSqlTable {
 										rCol.setValue(new DataValueInt(0));
 									}
 								}
+
 							} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
 								rCol = new Column(columnName, DataType.BOOLEAN);
 								rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
+
 							} else {
 								rCol = new Column(columnName, DataType.STRING);
 
 								if ("uuid".equalsIgnoreCase(columnName)) {
-									// MySQL stores as string; Postgres might store native UUID, handle both
 									if (dbType == DbType.POSTGRESQL) {
 										Object obj = rs.getObject(i);
 										if (obj instanceof java.util.UUID) {
@@ -280,10 +302,13 @@ public class MySQL extends AbstractSqlTable {
 							rowsThisPage++;
 							processed++;
 
-							// advance seek cursor based on the last row we read
-							lastUuid = uuidStrForSeek;
+							// advance cursor based on the last row
+							if (dbType == DbType.POSTGRESQL) {
+								lastUuidPg = uuid;
+							} else {
+								lastUuidMy = uuidStrForSeek;
+							}
 
-							// store for later callback (after connection closes)
 							page.add(new java.util.AbstractMap.SimpleEntry<>(uuid, cols));
 						}
 					}
@@ -294,17 +319,15 @@ public class MySQL extends AbstractSqlTable {
 				break;
 			}
 
-			// Run callbacks OUTSIDE of DB resources
+			// Run callbacks outside DB resources
 			for (java.util.AbstractMap.SimpleEntry<UUID, ArrayList<Column>> entry : page) {
 				try {
 					perUser.accept(entry.getKey(), entry.getValue());
 				} catch (Throwable t) {
-					// Don't kill the whole scan if user-code throws
 					debug(t);
 				}
 			}
 
-			// no more rows
 			if (rowsThisPage == 0) {
 				break;
 			}
