@@ -89,6 +89,51 @@ public class UserData {
 		return getInt(user.getPlugin().getStorageType(), key, def, useCache, waitForCache);
 	}
 
+	public int getIntTempOnly(String key, int def) {
+		if (user.isTempCache() && tempCache != null) {
+			DataValue v = tempCache.get(key);
+			if (v == null)
+				return def;
+			if (v.isInt())
+				return v.getInt();
+			if (v.isString()) {
+				try {
+					return Integer.parseInt(v.getString());
+				} catch (Exception ignored) {
+				}
+			}
+		}
+		return def;
+	}
+
+	public String getStringTempOnly(String key, String def) {
+		if (user.isTempCache() && tempCache != null) {
+			DataValue v = tempCache.get(key);
+			if (v == null)
+				return def;
+			String s = v.getString();
+			return (s != null && !"null".equalsIgnoreCase(s)) ? s : def;
+		}
+		return def;
+	}
+
+	public long getLongTempOnly(String key, long def) {
+		if (user.isTempCache() && tempCache != null) {
+			DataValue v = tempCache.get(key);
+			if (v == null)
+				return def;
+			if (v.isInt())
+				return v.getInt();
+			if (v.isString()) {
+				try {
+					return Long.parseLong(v.getString());
+				} catch (Exception ignored) {
+				}
+			}
+		}
+		return def;
+	}
+
 	@SuppressWarnings("deprecation")
 	public int getInt(UserStorage storage, String key, int def, boolean useCache, boolean waitForCache) {
 		if (!key.equals("")) {
