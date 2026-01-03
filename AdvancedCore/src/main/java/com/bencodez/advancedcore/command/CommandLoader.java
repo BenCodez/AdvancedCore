@@ -20,6 +20,7 @@ import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.valuerequest.InputMethod;
@@ -83,7 +84,7 @@ public class CommandLoader {
 				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-					user.dontCache();
+					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					users.add(user);
 
 					plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
@@ -167,7 +168,7 @@ public class CommandLoader {
 				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-					user.dontCache();
+					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					users.add(user);
 				}
 				for (AdvancedCoreUser user : users) {
@@ -210,7 +211,7 @@ public class CommandLoader {
 				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-					user.dontCache();
+					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					users.add(user);
 				}
 				for (AdvancedCoreUser user : users) {
@@ -268,7 +269,7 @@ public class CommandLoader {
 
 				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
-					user.dontCache();
+					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					user.updateTempCacheWithColumns(columns);
 
 					user.forceRunOfflineRewards();
@@ -287,7 +288,7 @@ public class CommandLoader {
 				sendMessage(sender, "&cStarting to run offline rewards for " + args[1]);
 
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				user.dontCache();
+				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 
 				user.forceRunOfflineRewards();
 
@@ -535,7 +536,7 @@ public class CommandLoader {
 				}
 				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-					user.dontCache();
+					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					user.getData().setString(args[3], data);
 
 				}
@@ -555,7 +556,7 @@ public class CommandLoader {
 					}
 					for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 						AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-						user.dontCache();
+						user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 						user.getData().setString(args[3], data);
 
 					}

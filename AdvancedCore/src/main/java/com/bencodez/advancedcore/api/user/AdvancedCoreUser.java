@@ -55,7 +55,7 @@ import net.md_5.bungee.chat.ComponentSerializer;
 public class AdvancedCoreUser {
 
 	@Getter
-	private boolean cacheData = true;
+	private UserDataFetchMode userDataFetchMode = UserDataFetchMode.DEFAULT;
 
 	@Setter
 	private UserData data;
@@ -68,19 +68,11 @@ public class AdvancedCoreUser {
 	@Getter
 	private AdvancedCorePlugin plugin = null;
 
-	@Getter
-	private boolean tempCache = false;
-
 	/** The uuid. */
 	private String uuid;
 
-	@Getter
-	private boolean waitForCache = true;
-
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, AdvancedCoreUser user) {
-		this.waitForCache = user.waitForCache;
-		this.cacheData = user.cacheData;
-		this.tempCache = user.tempCache;
+		this.userDataFetchMode = user.userDataFetchMode;
 		this.data = user.getUserData();
 		this.uuid = user.getUUID();
 		this.playerName = user.getPlayerName();
@@ -222,11 +214,6 @@ public class AdvancedCoreUser {
 		});
 	}
 
-	public AdvancedCoreUser cacheData() {
-		cacheData = true;
-		return this;
-	}
-
 	public void cacheIfNeeded() {
 		plugin.getUserManager().getDataManager().cacheUserIfNeeded(UUID.fromString(uuid));
 	}
@@ -326,8 +313,8 @@ public class AdvancedCoreUser {
 		}
 	}
 
-	public AdvancedCoreUser dontCache() {
-		cacheData = false;
+	public AdvancedCoreUser userDataFetechMode(UserDataFetchMode mode) {
+		this.userDataFetchMode = mode;
 		return this;
 	}
 
@@ -382,7 +369,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ArrayList<String> getChoicePreferenceData() {
-		return getData().getStringList("ChoicePreference", cacheData, waitForCache);
+		return getData().getStringList("ChoicePreference", userDataFetchMode);
 	}
 
 	public UserData getData() {
@@ -393,7 +380,7 @@ public class AdvancedCoreUser {
 	}
 
 	public String getInputMethod() {
-		return getUserData().getString("InputMethod", cacheData, waitForCache);
+		return getUserData().getString("InputMethod", userDataFetchMode);
 	}
 
 	public UUID getJavaUUID() {
@@ -401,7 +388,7 @@ public class AdvancedCoreUser {
 	}
 
 	public long getLastOnline() {
-		String d = getData().getString("LastOnline", cacheData, waitForCache);
+		String d = getData().getString("LastOnline", userDataFetchMode);
 		long time = 0;
 		if (d != null && !d.equals("") && !d.equals("null")) {
 			time = Long.valueOf(d);
@@ -435,7 +422,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ArrayList<String> getOfflineRewards() {
-		return getUserData().getStringList(plugin.getUserManager().getOfflineRewardsPath(), cacheData, waitForCache);
+		return getUserData().getStringList(plugin.getUserManager().getOfflineRewardsPath(), userDataFetchMode);
 	}
 
 	/**
@@ -463,18 +450,18 @@ public class AdvancedCoreUser {
 		if (playerName != null) {
 			return playerName;
 		}
-		if (isTempCache()) {
-			return getUserData().getString("PlayerName", false, false);
+		if (userDataFetchMode.allowTempCache()) {
+			return getUserData().getString("PlayerName", UserDataFetchMode.TEMP_ONLY);
 		}
 		return "";
 	}
 
 	public int getRepeatAmount(Reward reward) {
-		return getData().getInt("Repeat" + reward.getName(), cacheData, waitForCache);
+		return getData().getInt("Repeat" + reward.getName(), userDataFetchMode);
 	}
 
 	public HashMap<String, Long> getTimedRewards() {
-		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards", cacheData, waitForCache);
+		ArrayList<String> timedReward = getUserData().getStringList("TimedRewards", userDataFetchMode);
 		HashMap<String, Long> timedRewards = new HashMap<>();
 		for (String str : timedReward) {
 			if (str != null && !str.equals("null")) {
@@ -492,7 +479,7 @@ public class AdvancedCoreUser {
 	}
 
 	public ArrayList<String> getUnClaimedChoices() {
-		return getData().getStringList("UnClaimedChoices", cacheData, waitForCache);
+		return getData().getStringList("UnClaimedChoices", userDataFetchMode);
 	}
 
 	public UserData getUserData() {
@@ -723,7 +710,7 @@ public class AdvancedCoreUser {
 	}
 
 	public boolean isBedrockUser() {
-		return getData().getBoolean("isBedrock", cacheData, waitForCache);
+		return getData().getBoolean("isBedrock", userDataFetchMode);
 	}
 
 	public void setBedrockUser(boolean isBedrock) {
@@ -738,7 +725,7 @@ public class AdvancedCoreUser {
 		if (!plugin.isLoadUserData()) {
 			return false;
 		}
-		return Boolean.valueOf(getData().getString("CheckWorld", true));
+		return Boolean.valueOf(getData().getString("CheckWorld", userDataFetchMode));
 	}
 
 	public boolean isInWorld(ArrayList<String> worlds) {
@@ -1211,6 +1198,11 @@ public class AdvancedCoreUser {
 	public void setUserInputMethod(InputMethod method) {
 		setInputMethod(method.toString());
 	}
+	
+	@Deprecated
+	public void dontCache() {
+		userDataFetchMode = UserDataFetchMode.NO_CACHE;
+	}
 
 	/**
 	 * Sets the uuid.
@@ -1221,19 +1213,14 @@ public class AdvancedCoreUser {
 		this.uuid = uuid;
 	}
 
-	public void setWaitForCache(boolean b) {
-		waitForCache = b;
-	}
-
 	public AdvancedCoreUser tempCache() {
-		tempCache = true;
 		getUserData().tempCache();
 		return this;
 	}
 
 	public void updateName(boolean force) {
 		if (getData().hasData() || force) {
-			String playerName = getData().getString("PlayerName", true);
+			String playerName = getData().getString("PlayerName", userDataFetchMode);
 			if (playerName == null || !playerName.equals(getPlayerName())) {
 				getData().setString("PlayerName", getPlayerName(), true);
 			}
@@ -1241,7 +1228,6 @@ public class AdvancedCoreUser {
 	}
 
 	public void updateTempCacheWithColumns(ArrayList<Column> cols) {
-		tempCache = true;
 		getUserData().updateTempCacheWithColumns(cols);
 	}
 

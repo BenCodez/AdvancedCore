@@ -43,6 +43,7 @@ import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
@@ -295,7 +296,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		while (players.size() > 0) {
 			Entry<UUID, ArrayList<Column>> entry = players.poll();
 			AdvancedCoreUser user = getUserManager().getUser(entry.getKey(), false);
-			user.dontCache();
+			user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 
 			user.getData().setValues(to, user.getData().convert(entry.getValue()));
 			debug("Finished convert for " + user.getUUID() + ", " + players.size() + " more left to go!");
@@ -777,7 +778,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			@Override
 			public void onStartUp(AdvancedCoreUser user) {
 				String uuid = user.getUUID();
-				String name = user.getData().getString("PlayerName", false, true);
+				String name = user.getData().getString("PlayerName", UserDataFetchMode.NO_DB_LOOKUP);
 				boolean add = true;
 				if (uuidNameCache.containsKey(uuid)) {
 					debug("Duplicate uuid? " + uuid + "/" + name);
@@ -1011,7 +1012,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = getUserManager().getUser(uuid, false);
 					if (user != null) {
-						user.dontCache();
+						user.userDataFetechMode(UserDataFetchMode.TEMP_ONLY);
 						user.updateTempCacheWithColumns(columns);
 						for (UserStartup start : userStartup) {
 							if (start.isProcess()) {

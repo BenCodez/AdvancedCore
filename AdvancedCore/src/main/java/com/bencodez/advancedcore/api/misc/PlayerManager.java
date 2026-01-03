@@ -17,6 +17,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserStorage;
 
 public class PlayerManager {
@@ -91,7 +92,7 @@ public class PlayerManager {
 		java.util.UUID u = java.util.UUID.fromString(uuid);
 		Player player = Bukkit.getPlayer(u);
 
-		String storedName = user.getData().getString("PlayerName", useCache, true);
+		String storedName = user.getData().getString("PlayerName", UserDataFetchMode.fromBooleans(useCache, true));
 		// String storedName = "";
 		if (player != null) {
 			name = player.getName();
@@ -193,8 +194,8 @@ public class PlayerManager {
 		} else {
 			for (String uuid : plugin.getUserManager().getAllUUIDs()) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-				user.dontCache();
-				String name = user.getData().getString("PlayerName", true);
+				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
+				String name = user.getData().getString("PlayerName", UserDataFetchMode.NO_CACHE);
 				if (name != null && name.equals(playerName)) {
 					plugin.getUuidNameCache().put(uuid, playerName);
 					return uuid;

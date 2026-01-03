@@ -32,7 +32,9 @@ public class UserData {
 	}
 
 	public void clearTempCache() {
-		tempCache.clear();
+		if (tempCache != null) {
+			tempCache.clear();
+		}
 		tempCache = null;
 	}
 
@@ -51,8 +53,16 @@ public class UserData {
 		return Boolean.valueOf(getString(key));
 	}
 
+	public boolean getBoolean(String key, UserDataFetchMode mode) {
+		return Boolean.valueOf(getString(key, mode));
+	}
+
+	/**
+	 * @deprecated Use {@link #getBoolean(String, UserDataFetchMode)}
+	 */
+	@Deprecated
 	public boolean getBoolean(String key, boolean useCache, boolean waitForCache) {
-		return Boolean.valueOf(getString(key, useCache, waitForCache));
+		return getBoolean(key, UserDataFetchMode.fromBooleans(useCache, waitForCache));
 	}
 
 	@Deprecated
@@ -68,150 +78,165 @@ public class UserData {
 		return new DataValueString(getString(key));
 	}
 
-	@Deprecated
 	public int getInt(String key) {
-		return getInt(key, 0, true, true);
+		return getInt(key, 0, user.getUserDataFetchMode());
 	}
 
+	public int getInt(String key, UserDataFetchMode mode) {
+		return getInt(key, 0, mode);
+	}
+
+	public int getInt(String key, int def) {
+		return getInt(user.getPlugin().getStorageType(), key, def, user.getUserDataFetchMode());
+	}
+
+	public int getInt(String key, int def, UserDataFetchMode mode) {
+		return getInt(user.getPlugin().getStorageType(), key, def, mode);
+	}
+
+	/**
+	 * @deprecated Use {@link #getInt(String, int, UserDataFetchMode)}
+	 */
+	@Deprecated
 	public int getInt(String key, boolean waitForCache) {
-		return getInt(key, 0, true, waitForCache);
+		return getInt(key, 0, UserDataFetchMode.fromBooleans(true, waitForCache));
 	}
 
+	/**
+	 * @deprecated Use {@link #getInt(String, int, UserDataFetchMode)}
+	 */
+	@Deprecated
 	public int getInt(String key, boolean useCache, boolean waitForCache) {
-		return getInt(key, 0, useCache, waitForCache);
+		return getInt(key, 0, UserDataFetchMode.fromBooleans(useCache, waitForCache));
 	}
 
+	/**
+	 * @deprecated Use {@link #getInt(String, int, UserDataFetchMode)}
+	 */
+	@Deprecated
 	public int getInt(String key, int def, boolean waitForCache) {
-		return getInt(user.getPlugin().getStorageType(), key, def, true, waitForCache);
+		return getInt(user.getPlugin().getStorageType(), key, def, UserDataFetchMode.fromBooleans(true, waitForCache));
 	}
 
+	/**
+	 * @deprecated Use {@link #getInt(String, int, UserDataFetchMode)}
+	 */
+	@Deprecated
 	public int getInt(String key, int def, boolean useCache, boolean waitForCache) {
-		return getInt(user.getPlugin().getStorageType(), key, def, useCache, waitForCache);
-	}
-
-	public int getIntTempOnly(String key, int def) {
-		if (user.isTempCache() && tempCache != null) {
-			DataValue v = tempCache.get(key);
-			if (v == null)
-				return def;
-			if (v.isInt())
-				return v.getInt();
-			if (v.isString()) {
-				try {
-					return Integer.parseInt(v.getString());
-				} catch (Exception ignored) {
-				}
-			}
-		}
-		return def;
-	}
-
-	public String getStringTempOnly(String key, String def) {
-		if (user.isTempCache() && tempCache != null) {
-			DataValue v = tempCache.get(key);
-			if (v == null)
-				return def;
-			String s = v.getString();
-			return (s != null && !"null".equalsIgnoreCase(s)) ? s : def;
-		}
-		return def;
-	}
-
-	public long getLongTempOnly(String key, long def) {
-		if (user.isTempCache() && tempCache != null) {
-			DataValue v = tempCache.get(key);
-			if (v == null)
-				return def;
-			if (v.isInt())
-				return v.getInt();
-			if (v.isString()) {
-				try {
-					return Long.parseLong(v.getString());
-				} catch (Exception ignored) {
-				}
-			}
-		}
-		return def;
+		return getInt(user.getPlugin().getStorageType(), key, def,
+				UserDataFetchMode.fromBooleans(useCache, waitForCache));
 	}
 
 	@SuppressWarnings("deprecation")
-	public int getInt(UserStorage storage, String key, int def, boolean useCache, boolean waitForCache) {
-		if (!key.equals("")) {
-			if (user.isTempCache() && tempCache != null) {
-				if (tempCache.get(key) == null) {
+	public int getInt(UserStorage storage, String key, int def, UserDataFetchMode mode) {
+		if (key == null || key.isEmpty()) {
+			if (storage.equals(UserStorage.FLAT)) {
+				try {
+					return getData(user.getUUID()).getInt(key, def);
+				} catch (Exception ignored) {
+				}
+			}
+			return def;
+		}
+
+		// 1) Temp cache
+		if (mode.allowTempCache() && tempCache != null) {
+			DataValue v = tempCache.get(key);
+			if (v != null) {
+				if (v.isInt()) {
+					return v.getInt();
+				}
+				if (v.isString()) {
+					try {
+						return Integer.parseInt(v.getString());
+					} catch (Exception ignored) {
+					}
+				}
+			} else {
+				// If temp cache is enabled but key is absent, keep old behavior (return def)
+				// ONLY when temp cache is the only allowed source.
+				if (!mode.allowUserCache() && !mode.allowStorageLookup()) {
 					return def;
 				}
-				if (tempCache.get(key).isInt()) {
-					return tempCache.get(key).getInt();
-				}
 			}
-			// user.getPlugin().debug("Pulling data: " + key + " " + useCache + " " +
-			// waitForCache);
-			if (useCache) {
-				UserDataCache cache = user.getCache();
-				if (cache != null) {
-					user.cacheIfNeeded();
-					if (cache.isCached(key)) {
-						if (cache.getCache().get(key).isInt()) {
-							// user.getPlugin().debug("Using cache: " + key + " " +
-							// cache.getCache().get(key).getInt());
-							return cache.getCache().get(key).getInt();
+		}
+
+		// 2) UserDataCache
+		if (mode.allowUserCache()) {
+			UserDataCache cache = user.getCache();
+			if (cache != null) {
+				// preserve previous behavior
+				user.cacheIfNeeded();
+
+				if (cache.isCached(key)) {
+					DataValue cv = cache.getCache().get(key);
+					if (cv != null) {
+						if (cv.isInt()) {
+							return cv.getInt();
 						}
-						String str = cache.getCache().get(key).getString();
-						if (str != null && !str.equals("null")) {
+						String str = cv.getString();
+						if (str != null && !str.equalsIgnoreCase("null")) {
 							try {
 								return Integer.parseInt(str);
-							} catch (Exception e) {
+							} catch (Exception ignored) {
 							}
 						}
 					}
-				} else {
-					user.cache();
+				}
+			} else {
+				user.cache();
+			}
+
+			if (!mode.allowStorageLookup()) {
+				return def;
+			}
+		} else {
+			if (!mode.allowStorageLookup()) {
+				return def;
+			}
+		}
+
+		// 3) Storage lookup
+		if (storage.equals(UserStorage.SQLITE)) {
+			List<Column> row = getSQLiteRow();
+			if (row != null) {
+				for (Column element : row) {
+					if (element.getName().equals(key)) {
+						DataValue value = element.getValue();
+						if (value.isInt()) {
+							return value.getInt();
+						}
+						if (value.isString()) {
+							String str = value.getString();
+							if (str != null) {
+								try {
+									return Integer.parseInt(str);
+								} catch (Exception ignored) {
+								}
+							}
+							return def;
+						}
+					}
 				}
 			}
-			if (storage.equals(UserStorage.SQLITE)) {
-				List<Column> row = getSQLiteRow();
-				if (row != null) {
-					for (Column element : row) {
-						if (element.getName().equals(key)) {
-							DataValue value = element.getValue();
-							if (value.isInt()) {
-								return value.getInt();
-							}
-							if (value.isString()) {
-								String str = value.getString();
-								if (str != null) {
-									try {
-										return Integer.parseInt(str);
-									} catch (Exception e) {
-									}
-								}
-								return def;
-							}
+		} else if (storage.equals(UserStorage.MYSQL)) {
+			List<Column> row = getMySqlRow();
+			if (row != null) {
+				for (Column element : row) {
+					if (element.getName().equals(key)) {
+						DataValue value = element.getValue();
+						if (value.isInt()) {
+							return value.getInt();
 						}
-					}
-
-				}
-
-			} else if (storage.equals(UserStorage.MYSQL)) {
-				List<Column> row = getMySqlRow();
-				if (row != null) {
-					for (Column element : row) {
-						if (element.getName().equals(key)) {
-							DataValue value = element.getValue();
-							if (value.isInt()) {
-								return value.getInt();
-							}
-							if (value.isString()) {
-								String str = value.getString();
-								if (str != null) {
-									try {
-										return Integer.parseInt(str);
-									} catch (Exception e) {
-									}
+						if (value.isString()) {
+							String str = value.getString();
+							if (str != null) {
+								try {
+									return Integer.parseInt(str);
+								} catch (Exception ignored) {
 								}
-								return def;
 							}
+							return def;
 						}
 					}
 				}
@@ -219,50 +244,27 @@ public class UserData {
 		} else if (storage.equals(UserStorage.FLAT)) {
 			try {
 				return getData(user.getUUID()).getInt(key, def);
-			} catch (Exception e) {
-
+			} catch (Exception ignored) {
 			}
-
 		}
 
-		// user.getPlugin()
-		// .extraDebug("Failed to get int from '" + key + "' for '" +
-		// user.getPlayerName() + "'");
-
 		return def;
+	}
 
+	/**
+	 * @deprecated Use {@link #getInt(UserStorage, String, int, UserDataFetchMode)}
+	 */
+	@Deprecated
+	public int getInt(UserStorage storage, String key, int def, boolean useCache, boolean waitForCache) {
+		return getInt(storage, key, def, UserDataFetchMode.fromBooleans(useCache, waitForCache));
 	}
 
 	public ArrayList<String> getKeys() {
-		return getKeys(true);
+		return getKeys(user.getPlugin().getStorageType());
 	}
 
 	@SuppressWarnings("deprecation")
-	public ArrayList<String> getKeys(boolean waitForCache) {
-		ArrayList<String> keys = new ArrayList<>();
-		if (user.getPlugin().getStorageType().equals(UserStorage.FLAT)) {
-			keys = new ArrayList<>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
-		} else if (user.getPlugin().getStorageType().equals(UserStorage.MYSQL)) {
-			List<Column> col = getMySqlRow();
-			if (col != null && !col.isEmpty()) {
-				for (Column c : col) {
-					keys.add(c.getName());
-				}
-			}
-		} else if (user.getPlugin().getStorageType().equals(UserStorage.SQLITE)) {
-			List<Column> col = getSQLiteRow();
-			if (col != null && !col.isEmpty()) {
-				for (Column c : col) {
-					keys.add(c.getName());
-				}
-			}
-		}
-
-		return keys;
-	}
-
-	@SuppressWarnings("deprecation")
-	public ArrayList<String> getKeys(UserStorage storage, boolean waitForCache) {
+	public ArrayList<String> getKeys(UserStorage storage) {
 		ArrayList<String> keys = new ArrayList<>();
 		if (storage.equals(UserStorage.FLAT)) {
 			keys = new ArrayList<>(getData(user.getUUID()).getConfigurationSection("").getKeys(false));
@@ -285,6 +287,22 @@ public class UserData {
 		return keys;
 	}
 
+	/**
+	 * @deprecated Use {@link #getKeys()} or {@link #getKeys(UserStorage)}
+	 */
+	@Deprecated
+	public ArrayList<String> getKeys(boolean waitForCache) {
+		return getKeys(user.getPlugin().getStorageType());
+	}
+
+	/**
+	 * @deprecated Use {@link #getKeys(UserStorage)}
+	 */
+	@Deprecated
+	public ArrayList<String> getKeys(UserStorage storage, boolean waitForCache) {
+		return getKeys(storage);
+	}
+
 	public List<Column> getMySqlRow() {
 		return user.getPlugin().getMysql().getExact(user.getUUID());
 	}
@@ -293,106 +311,135 @@ public class UserData {
 		return user.getPlugin().getSQLiteUserTable().getExact(new Column("uuid", new DataValueString(user.getUUID())));
 	}
 
-	@Deprecated
 	public String getString(String key) {
-		return getString(key, true, true);
+		return getString(key, user.getUserDataFetchMode());
 	}
 
-	public String getString(String key, boolean waitForCache) {
-		return getString(user.getPlugin().getStorageType(), key, true, waitForCache);
-	}
-
-	public String getString(String key, boolean useCache, boolean waitForCache) {
-		return getString(user.getPlugin().getStorageType(), key, useCache, waitForCache);
+	public String getString(String key, UserDataFetchMode mode) {
+		return getString(user.getPlugin().getStorageType(), key, mode);
 	}
 
 	@SuppressWarnings("deprecation")
-	public String getString(UserStorage storage, String key, boolean useCache, boolean waitForCache) {
-		if (!key.equals("")) {
-			if (user.isTempCache() && tempCache != null) {
-				if (tempCache.get(key) == null) {
+	public String getString(UserStorage storage, String key, UserDataFetchMode mode) {
+		if (key == null || key.isEmpty()) {
+			return "";
+		}
+
+		// 1) Temp cache
+		if (mode.allowTempCache() && tempCache != null) {
+			DataValue v = tempCache.get(key);
+			if (v != null) {
+				if (v.isString() || v.isBoolean()) {
+					String str = v.getString();
+					return (str != null) ? str : "";
+				}
+			} else {
+				if (!mode.allowUserCache() && !mode.allowStorageLookup()) {
 					return "";
-				}
-				if (tempCache.get(key).isString() || tempCache.get(key).isBoolean()) {
-					String str = tempCache.get(key).getString();
-					if (str != null) {
-						return str;
-					}
-					return "";
-				}
-			}
-			if (useCache) {
-				UserDataCache cache = user.getCache();
-				if (cache != null) {
-					if (cache.isCached(key)) {
-						String str = cache.getCache().get(key).getString();
-						if (str != null) {
-							return str;
-						}
-						return "";
-					}
-				} else {
-					user.cache();
-				}
-			}
-
-			if (storage.equals(UserStorage.SQLITE)) {
-				List<Column> row = getSQLiteRow();
-				if (row != null) {
-					for (Column element : row) {
-						if (element.getName().equals(key)
-								&& (element.getValue().isString() || element.getValue().isBoolean())) {
-							String st = element.getValue().getString();
-							if (st != null && !st.equals("null")) {
-								return st;
-							}
-							return "";
-						}
-					}
-				}
-
-			} else if (storage.equals(UserStorage.MYSQL)) {
-				List<Column> row = getMySqlRow();
-				if (row != null) {
-					for (Column element : row) {
-						if (element.getName().equals(key)
-								&& (element.getValue().isString() || element.getValue().isBoolean())) {
-							String st = element.getValue().getString();
-							if (st != null && !st.equals("null")) {
-								return st;
-							}
-							return "";
-						}
-					}
-				}
-			} else if (storage.equals(UserStorage.FLAT)) {
-				try {
-					return getData(user.getUUID()).getString(key, "");
-				} catch (Exception e) {
-
 				}
 			}
 		}
-		/*
-		 * if (user.getPlugin().isExtraDebug()) { user.getPlugin()
-		 * .debug("Extra: Failed to get string from: '" + key + "' for '" +
-		 * user.getPlayerName() + "'"); }
-		 */
-		return "";
 
+		// 2) UserDataCache
+		if (mode.allowUserCache()) {
+			UserDataCache cache = user.getCache();
+			if (cache != null) {
+				if (cache.isCached(key)) {
+					DataValue cv = cache.getCache().get(key);
+					if (cv != null) {
+						String str = cv.getString();
+						return (str != null) ? str : "";
+					}
+					return "";
+				}
+			} else {
+				user.cache();
+			}
+
+			if (!mode.allowStorageLookup()) {
+				return "";
+			}
+		} else {
+			if (!mode.allowStorageLookup()) {
+				return "";
+			}
+		}
+
+		// 3) Storage lookup
+		if (storage.equals(UserStorage.SQLITE)) {
+			List<Column> row = getSQLiteRow();
+			if (row != null) {
+				for (Column element : row) {
+					if (element.getName().equals(key)
+							&& (element.getValue().isString() || element.getValue().isBoolean())) {
+						String st = element.getValue().getString();
+						return (st != null && !st.equalsIgnoreCase("null")) ? st : "";
+					}
+				}
+			}
+		} else if (storage.equals(UserStorage.MYSQL)) {
+			List<Column> row = getMySqlRow();
+			if (row != null) {
+				for (Column element : row) {
+					if (element.getName().equals(key)
+							&& (element.getValue().isString() || element.getValue().isBoolean())) {
+						String st = element.getValue().getString();
+						return (st != null && !st.equalsIgnoreCase("null")) ? st : "";
+					}
+				}
+			}
+		} else if (storage.equals(UserStorage.FLAT)) {
+			try {
+				return getData(user.getUUID()).getString(key, "");
+			} catch (Exception ignored) {
+			}
+		}
+
+		return "";
+	}
+
+	/**
+	 * @deprecated Use {@link #getString(String, UserDataFetchMode)}
+	 */
+	@Deprecated
+	public String getString(String key, boolean waitForCache) {
+		return getString(key, UserDataFetchMode.fromBooleans(true, waitForCache));
+	}
+
+	/**
+	 * @deprecated Use {@link #getString(String, UserDataFetchMode)}
+	 */
+	@Deprecated
+	public String getString(String key, boolean useCache, boolean waitForCache) {
+		return getString(key, UserDataFetchMode.fromBooleans(useCache, waitForCache));
+	}
+
+	/**
+	 * @deprecated Use {@link #getString(UserStorage, String, UserDataFetchMode)}
+	 */
+	@Deprecated
+	public String getString(UserStorage storage, String key, boolean useCache, boolean waitForCache) {
+		return getString(storage, key, UserDataFetchMode.fromBooleans(useCache, waitForCache));
 	}
 
 	public ArrayList<String> getStringList(String key) {
-		return getStringList(key, true, true);
+		return getStringList(key, user.getUserDataFetchMode());
 	}
 
-	public ArrayList<String> getStringList(String key, boolean cache, boolean waitForCache) {
-		String str = getString(key, cache, waitForCache);
-		if (str == null || str.equals("")) {
+	public ArrayList<String> getStringList(String key, UserDataFetchMode mode) {
+		String str = getString(key, mode);
+		if (str == null || str.isEmpty()) {
 			return new ArrayList<>();
 		}
-		String[] list = str.split("%line%");
-		return ArrayUtils.convert(list);
+		return ArrayUtils.convert(str.split("%line%"));
+	}
+
+	/**
+	 * @deprecated Use {@link #getStringList(String, UserDataFetchMode)}
+	 */
+	@Deprecated
+	public ArrayList<String> getStringList(String key, boolean cache, boolean waitForCache) {
+		return getStringList(key, UserDataFetchMode.fromBooleans(cache, waitForCache));
 	}
 
 	public String getValue(String key) {
@@ -633,8 +680,6 @@ public class UserData {
 	}
 
 	public void setStringList(final String key, final ArrayList<String> value, boolean queue) {
-		// user.getPlugin().debug("Setting " + key + " to " +
-		// value);
 		String str = "";
 		for (int i = 0; i < value.size(); i++) {
 			if (i != 0) {

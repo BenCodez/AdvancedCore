@@ -52,7 +52,7 @@ public class UserManager {
 		} else if (plugin.getStorageType().equals(UserStorage.FLAT)) {
 			for (String uuid : getAllUUIDs()) {
 				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
-				user.dontCache();
+				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 				DataValue data = user.getData().getDataValue(columnFromName);
 				user.getData().setValues(columnToName, data);
 			}
@@ -69,7 +69,7 @@ public class UserManager {
 			return plugin.getMysql().getColumns();
 		} else {
 			AdvancedCoreUser user = getRandomUser();
-			user.dontCache();
+			user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 			return new ArrayList<>(user.getData().getData(user.getUUID()).getConfigurationSection("").getKeys(false));
 
 		}
@@ -90,7 +90,7 @@ public class UserManager {
 			HashMap<UUID, ArrayList<Column>> cols = new HashMap<>();
 			for (String uuid : getAllUUIDs()) {
 				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
-				user.dontCache();
+				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 				ArrayList<Column> col = new ArrayList<>();
 				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
 					col.add(new Column(entry.getKey(), entry.getValue()));
@@ -185,7 +185,7 @@ public class UserManager {
 				}
 
 				AdvancedCoreUser user = getUser(uuid);
-				user.dontCache();
+				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 
 				// Build per-user columns from current values
 				ArrayList<Column> colList = new ArrayList<>();
@@ -260,7 +260,7 @@ public class UserManager {
 			ArrayList<Integer> nums = new ArrayList<>();
 			for (String uuid : getAllUUIDs()) {
 				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
-				user.dontCache();
+				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 				int num = user.getData().getInt(columnName, 0, true, true);
 				nums.add(num);
 
@@ -371,7 +371,7 @@ public class UserManager {
 					if (uuid != null) {
 						AdvancedCoreUser user = getUser(UUID.fromString(uuid), false);
 						if (user != null) {
-							user.dontCache();
+							user.userDataFetechMode(UserDataFetchMode.TEMP_ONLY);
 							user.updateTempCacheWithColumns(playerData.getValue());
 							int daysOld = plugin.getOptions().getPurgeMinimumDays();
 							int days = user.getNumberOfDaysSinceLogin();
@@ -435,7 +435,7 @@ public class UserManager {
 		} else {
 			for (String uuid : getAllUUIDs()) {
 				AdvancedCoreUser user = getUser(UUID.fromString(uuid));
-				user.dontCache();
+				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 				switch (type) {
 				case INTEGER:
 					user.getData().setInt(key, 0);
