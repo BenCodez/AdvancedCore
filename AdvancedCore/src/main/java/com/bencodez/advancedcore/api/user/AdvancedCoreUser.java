@@ -687,6 +687,10 @@ public class AdvancedCoreUser {
 	}
 
 	public boolean hasPermission(String perm) {
+		return hasPermission(perm, true);
+	}
+
+	public boolean hasPermission(String perm, boolean offlineCheck) {
 		boolean negate = perm != null && perm.startsWith("!");
 		if (negate) {
 			perm = perm.substring(1);
@@ -703,6 +707,11 @@ public class AdvancedCoreUser {
 			return negate ? !has : has;
 		}
 
+		if (!offlineCheck) {
+			plugin.debug("Unable to get player for permission check for " + getPlayerName() + "/" + getUUID()
+					+ " (offlineCheck is false)");
+			return false;
+		}
 		// Offline path: LuckPerms (if available)
 		if (plugin.getLuckPermsHandle() != null && plugin.getLuckPermsHandle().luckpermsApiLoaded()) {
 			boolean has = plugin.getLuckPermsHandle().hasPermission(getJavaUUID(), perm);
