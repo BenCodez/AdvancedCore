@@ -692,7 +692,7 @@ public class AdvancedCoreUser {
 			player = Bukkit.getPlayer(getPlayerName());
 		}
 		if (player == null) {
-			plugin.debug("Unable to get player for " + getPlayerName() + "/" + getUUID());
+			plugin.debug("Unable to get player for permission check for " + getPlayerName() + "/" + getUUID());
 			return false;
 		}
 		if (perm.startsWith("!")) {
