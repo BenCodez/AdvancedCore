@@ -13,5 +13,9 @@ public abstract class UserStartup {
 	public abstract void onStart();
 
 	public abstract void onStartUp(AdvancedCoreUser user);
+	
+	public void onPostFinish() {
+		
+	}
 
 }

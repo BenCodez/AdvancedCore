@@ -1026,6 +1026,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					for (UserStartup start : userStartup) {
 						start.onFinish();
 					}
+					
+					for (UserStartup start : userStartup) {
+						start.onPostFinish();
+					}
 
 					debug("User Startup finished");
 				});
