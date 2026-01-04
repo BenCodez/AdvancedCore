@@ -687,19 +687,31 @@ public class AdvancedCoreUser {
 	}
 
 	public boolean hasPermission(String perm) {
+		boolean negate = perm != null && perm.startsWith("!");
+		if (negate) {
+			perm = perm.substring(1);
+		}
+
 		Player player = getPlayer();
 		if (!plugin.getOptions().isOnlineMode() && player == null) {
 			player = Bukkit.getPlayer(getPlayerName());
 		}
-		if (player == null) {
-			plugin.debug("Unable to get player for permission check for " + getPlayerName() + "/" + getUUID());
-			return false;
+
+		// Online fast path
+		if (player != null) {
+			boolean has = player.hasPermission(perm);
+			return negate ? !has : has;
 		}
-		if (perm.startsWith("!")) {
-			perm = perm.substring(1);
-			return !player.hasPermission(perm);
+
+		// Offline path: LuckPerms (if available)
+		if (plugin.getLuckPermsHandle() != null && plugin.getLuckPermsHandle().luckpermsApiLoaded()) {
+			boolean has = plugin.getLuckPermsHandle().hasPermission(getJavaUUID(), perm);
+			return negate ? !has : has;
 		}
-		return player.hasPermission(perm);
+
+		plugin.debug("Unable to get player for permission check for " + getPlayerName() + "/" + getUUID()
+				+ " (offline and no LuckPerms hook)");
+		return false;
 	}
 
 	public boolean isBanned() {
@@ -1198,7 +1210,7 @@ public class AdvancedCoreUser {
 	public void setUserInputMethod(InputMethod method) {
 		setInputMethod(method.toString());
 	}
-	
+
 	@Deprecated
 	public void dontCache() {
 		userDataFetchMode = UserDataFetchMode.NO_CACHE;
