@@ -770,9 +770,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			@Override
 			public void onStart() {
 				debug("Starting background uuid/name task");
-				if (!getOptions().isOnlineMode()) {
-					setProcess(false);
-				}
 			}
 
 			@Override
@@ -1026,7 +1023,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					for (UserStartup start : userStartup) {
 						start.onFinish();
 					}
-					
+
 					for (UserStartup start : userStartup) {
 						start.onPostFinish();
 					}
