@@ -14,7 +14,7 @@ import com.bencodez.advancedcore.api.command.CommandHandler;
 import com.bencodez.advancedcore.api.command.PlayerCommandHandler;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
-import com.bencodez.advancedcore.api.misc.PlayerManager;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
@@ -52,6 +52,10 @@ public class CommandLoader {
 		return instance;
 	}
 
+	private static boolean isBlank(String s) {
+		return s == null || s.trim().isEmpty() || "null".equalsIgnoreCase(s.trim());
+	}
+
 	private ArrayList<String> perms = new ArrayList<>();
 
 	private AdvancedCorePlugin plugin;
@@ -71,6 +75,7 @@ public class CommandLoader {
 
 	public ArrayList<CommandHandler> getBasicAdminCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<>();
+
 		cmds.add(new CommandHandler(plugin, new String[] { "RunCMD", "All", "(List)" }, permPrefix + ".RunCMD.All",
 				"Run command for every user, use %player% for player") {
 
@@ -81,22 +86,21 @@ public class CommandLoader {
 					str += args[i] + " ";
 				}
 				final String cmd = str;
-				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
-				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+
+				// Stream instead of building a huge users list
+				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					users.add(user);
+					user.updateTempCacheWithColumns(columns);
 
 					plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
-
 						@Override
 						public void run() {
 							Bukkit.getServer().dispatchCommand(sender,
 									PlaceholderUtils.replacePlaceHolder(cmd, "player", user.getPlayerName()));
 						}
 					});
-
-				}
+				}, null);
 			}
 		});
 
@@ -155,7 +159,6 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "Total number of users: " + plugin.getUserManager().getAllUUIDs().size());
-
 			}
 		});
 
@@ -165,16 +168,22 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = plugin.getRewardHandler().getReward(args[1]);
-				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
-				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+
+				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					users.add(user);
-				}
-				for (AdvancedCoreUser user : users) {
-					new RewardBuilder(reward).send(user);
-				}
-				sendMessage(sender, "&cGave all players reward file " + args[1]);
+					user.updateTempCacheWithColumns(columns);
+
+					// safest: many reward actions touch Bukkit API
+					plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+						@Override
+						public void run() {
+							new RewardBuilder(reward).send(user);
+						}
+					});
+				}, (count) -> {
+					sendMessage(sender, "&cGave all players reward file " + args[1]);
+				});
 			}
 		});
 
@@ -190,6 +199,7 @@ public class CommandLoader {
 				}
 			}
 		});
+
 		cmds.add(new CommandHandler(plugin, new String[] { "GiveReward", "(Player)", "(Reward)" },
 				permPrefix + ".GiveReward", "Give a player a reward file", true) {
 
@@ -197,7 +207,6 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				plugin.getRewardHandler().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
-
 				sendMessage(sender, "&cGave " + args[1] + " the reward file " + args[2]);
 			}
 		});
@@ -208,26 +217,31 @@ public class CommandLoader {
 			@Override
 			public void executeAll(CommandSender sender, String[] args) {
 				Reward reward = plugin.getRewardHandler().getReward(args[3]);
-				ArrayList<AdvancedCoreUser> users = new ArrayList<>();
-				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+
+				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					users.add(user);
-				}
-				for (AdvancedCoreUser user : users) {
-					new RewardBuilder(reward).send(user);
-				}
-				sendMessage(sender, "&cGave all players reward file " + args[3]);
+					user.updateTempCacheWithColumns(columns);
+
+					plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
+						@Override
+						public void run() {
+							new RewardBuilder(reward).send(user);
+						}
+					});
+				}, (count) -> {
+					sendMessage(sender, "&cGave all players reward file " + args[3]);
+				});
 			}
 
 			@Override
 			public void executeSinglePlayer(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
-
 				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
 			}
 		});
+
 		cmds.add(new CommandHandler(plugin, new String[] { "GiveReward", "(Player)", "(Reward)", "(Text)", "(Text)" },
 				permPrefix + ".GiveReward", "Give a player a reward file and set a placeholder", true) {
 
@@ -236,10 +250,10 @@ public class CommandLoader {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				plugin.getRewardHandler().giveReward(user, args[2],
 						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
-
 				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]);
 			}
 		});
+
 		cmds.add(new CommandHandler(plugin, new String[] { "Report" }, permPrefix + ".Report", "Create Report File") {
 
 			@Override
@@ -248,6 +262,7 @@ public class CommandLoader {
 				sender.sendMessage("Created zip file");
 			}
 		});
+
 		cmds.add(new CommandHandler(plugin, new String[] { "ClearOfflineRewards" }, permPrefix + ".ClearOfflineRewards",
 				"Clear offline rewards", true, true) {
 
@@ -259,6 +274,7 @@ public class CommandLoader {
 				sendMessage(sender, "&cFinished clearing offline rewards");
 			}
 		});
+
 		cmds.add(new CommandHandler(plugin, new String[] { "ForceRunOfflineRewards" },
 				permPrefix + ".ForceRunOfflineRewards",
 				"Force run all offline rewards as if they were online for all players", true, true) {
@@ -330,13 +346,19 @@ public class CommandLoader {
 			}
 		});
 
+		// ===== UUIDNameCache removal: use UuidLookup everywhere =====
+
 		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "RemoveTempPermissions" },
 				permPrefix + ".RemoveTempPermission", "Remove temp permissions") {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				plugin.getPermissionHandler()
-						.removePermission(UUID.fromString(PlayerManager.getInstance().getUUID(args[1])));
+				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
+				if (isBlank(uuidStr)) {
+					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
+					return;
+				}
+				plugin.getPermissionHandler().removePermission(UUID.fromString(uuidStr));
 				sendMessage(sender, "&cRemoved temporary permissions from " + args[1]);
 			}
 		});
@@ -347,9 +369,12 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				plugin.getPermissionHandler().addPermission(
-						UUID.fromString(PlayerManager.getInstance().getUUID(args[1])), args[3],
-						Integer.valueOf(args[4]));
+				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
+				if (isBlank(uuidStr)) {
+					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
+					return;
+				}
+				plugin.getPermissionHandler().addPermission(UUID.fromString(uuidStr), args[3], Integer.valueOf(args[4]));
 				sendMessage(sender, "&cAdded temporary permission to " + args[1] + " for " + args[4]);
 			}
 		});
@@ -359,8 +384,12 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				plugin.getPermissionHandler()
-						.addPermission(UUID.fromString(PlayerManager.getInstance().getUUID(args[1])), args[3]);
+				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
+				if (isBlank(uuidStr)) {
+					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
+					return;
+				}
+				plugin.getPermissionHandler().addPermission(UUID.fromString(uuidStr), args[3]);
 				sendMessage(sender, "&cAdded temporary permission to " + args[1]);
 			}
 		});
@@ -381,14 +410,20 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
+
+				// Remove user data (DB/flatfile/etc)
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				user.getData().remove();
-				for (Entry<String, String> entry : plugin.getUuidNameCache().entrySet()) {
-					if (entry.getValue().equals(args[1])) {
-						plugin.getUuidNameCache().remove(entry.getKey());
-						break;
-					}
+
+				// Remove any cached mappings (UuidLookup maintains the name<->uuid cache now)
+				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
+				if (!isBlank(uuidStr)) {
+					UuidLookup.getInstance().invalidate(uuidStr);
+				} else {
+					// still invalidate by name key in case it exists
+					UuidLookup.getInstance().invalidate(args[1]);
 				}
+
 				sendMessage(sender, "&cRemoved " + args[1]);
 			}
 		});
@@ -399,9 +434,13 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
+
 				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(args[1]));
 				user.getData().remove();
-				plugin.getUuidNameCache().remove(args[1]);
+
+				// Clear mapping from UuidLookup (no plugin uuidNameCache anymore)
+				UuidLookup.getInstance().invalidate(args[1]);
+
 				sendMessage(sender, "&cRemoved " + args[1]);
 			}
 		});
@@ -534,13 +573,17 @@ public class CommandLoader {
 				if (data.equalsIgnoreCase("\"\"")) {
 					data = "";
 				}
-				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					user.getData().setString(args[3], data);
 
-				}
-				sender.sendMessage(MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
+				final String key = args[3];
+				final String value = data;
+
+				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
+					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
+					user.getData().setString(key, value);
+				}, (count) -> {
+					sender.sendMessage(MessageAPI.colorize("&cSet all users " + key + " to " + args[4]));
+				});
 			}
 		});
 
@@ -554,13 +597,17 @@ public class CommandLoader {
 					if (data.equalsIgnoreCase("\"\"")) {
 						data = "";
 					}
-					for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-						AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-						user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-						user.getData().setString(args[3], data);
 
-					}
-					sender.sendMessage(MessageAPI.colorize("&cSet all users " + args[3] + " to " + args[4]));
+					final String key = args[3];
+					final String value = data;
+
+					plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+						AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
+						user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
+						user.getData().setString(key, value);
+					}, (count) -> {
+						sender.sendMessage(MessageAPI.colorize("&cSet all users " + key + " to " + args[4]));
+					});
 				}
 			}
 

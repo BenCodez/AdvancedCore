@@ -13,6 +13,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.sql.Column;
@@ -30,13 +31,13 @@ public class UserManager {
 	@Getter
 	private UserDataManager dataManager;
 
-	private Object obj = new Object();
+	private final Object obj = new Object();
 
 	/** The plugin. */
-	private AdvancedCorePlugin plugin;
+	private final AdvancedCorePlugin plugin;
 
 	@Getter
-	private ArrayList<UserDataChanged> userDataChange = new ArrayList<>();
+	private final ArrayList<UserDataChanged> userDataChange = new ArrayList<>();
 
 	public UserManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -69,9 +70,11 @@ public class UserManager {
 			return plugin.getMysql().getColumns();
 		} else {
 			AdvancedCoreUser user = getRandomUser();
+			if (user == null) {
+				return new ArrayList<>();
+			}
 			user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 			return new ArrayList<>(user.getData().getData(user.getUUID()).getConfigurationSection("").getKeys(false));
-
 		}
 	}
 
@@ -98,7 +101,6 @@ public class UserManager {
 				cols.put(UUID.fromString(uuid), col);
 			}
 			return cols;
-
 		}
 	}
 
@@ -108,7 +110,7 @@ public class UserManager {
 			ArrayList<String> names = new ArrayList<>();
 			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.FLAT)) {
 				for (String uuid : getAllUUIDs()) {
-					AdvancedCoreUser user = getUser(java.util.UUID.fromString(uuid));
+					AdvancedCoreUser user = getUser(UUID.fromString(uuid));
 					String name = user.getPlayerName();
 					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 						names.add(name);
@@ -132,7 +134,6 @@ public class UserManager {
 			return ArrayUtils.removeDuplicates(names);
 		}
 		return new ArrayList<>();
-
 	}
 
 	/**
@@ -141,30 +142,28 @@ public class UserManager {
 	 * MYSQL: uses plugin.getMysql().forEachUser(...) SQLITE: uses
 	 * plugin.getSQLiteUserTable().forEachUser(...) FLAT: iterates UUID files and
 	 * builds columns per user (no giant map).
-	 *
-	 * @param perUser    called for each user with (uuid, columns)
-	 * @param onFinished called once at the end with the number of users processed
+	 * 
+	 * @param perUser    BiConsumer called per user with UUID and column list
+	 * @param onFinished Consumer called once after all users processed with total
 	 */
 	@SuppressWarnings("deprecation")
 	public void forEachUserKeys(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished) {
 		UserStorage storage = plugin.getStorageType();
 
 		if (storage == UserStorage.MYSQL) {
-			plugin.getMysql().forEachUser((uuid, cols) -> {
-				perUser.accept(uuid, cols);
-			}, (count) -> {
-				if (onFinished != null)
+			plugin.getMysql().forEachUser((uuid, cols) -> perUser.accept(uuid, cols), (count) -> {
+				if (onFinished != null) {
 					onFinished.accept(count);
+				}
 			});
 			return;
 		}
 
 		if (storage == UserStorage.SQLITE) {
-			plugin.getSQLiteUserTable().forEachUser((uuid, cols) -> {
-				perUser.accept(uuid, cols);
-			}, (count) -> {
-				if (onFinished != null)
+			plugin.getSQLiteUserTable().forEachUser((uuid, cols) -> perUser.accept(uuid, cols), (count) -> {
+				if (onFinished != null) {
 					onFinished.accept(count);
+				}
 			});
 			return;
 		}
@@ -187,7 +186,6 @@ public class UserManager {
 				AdvancedCoreUser user = getUser(uuid);
 				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 
-				// Build per-user columns from current values
 				ArrayList<Column> colList = new ArrayList<>();
 				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
 					colList.add(new Column(entry.getKey(), entry.getValue()));
@@ -197,8 +195,9 @@ public class UserManager {
 				perUser.accept(uuid, colList);
 			}
 		} finally {
-			if (onFinished != null)
+			if (onFinished != null) {
 				onFinished.accept(processed);
+			}
 		}
 	}
 
@@ -263,7 +262,6 @@ public class UserManager {
 				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 				int num = user.getData().getInt(columnName, 0, true, true);
 				nums.add(num);
-
 			}
 			return nums;
 		}
@@ -277,27 +275,54 @@ public class UserManager {
 		return "OfflineRewards";
 	}
 
+	/**
+	 * Returns the "proper" casing for a name if we have it. Uses UuidLookup cache
+	 * first, then falls back to the historical storage-based name lists.
+	 * 
+	 * @param name Name to look up
+	 * @return Properly-cased name if found, else the input name
+	 */
 	public String getProperName(String name) {
+		if (name == null || name.isEmpty()) {
+			return name;
+		}
 
-		for (String s : plugin.getUuidNameCache().values()) {
-			if (s.equalsIgnoreCase(name)) {
-				return s;
+		// If it's a UUID string, try cache -> return cached name
+		String cachedName = UuidLookup.getInstance().getCachedName(name);
+		if (cachedName != null && !cachedName.isEmpty()) {
+			return cachedName;
+		}
+
+		// If we have name->uuid cached, return the mapped cached name (preserves case
+		// if cached)
+		String cachedUuid = UuidLookup.getInstance().getCachedUUID(name);
+		if (cachedUuid != null && !cachedUuid.isEmpty()) {
+			String n = UuidLookup.getInstance().getCachedName(cachedUuid);
+			if (n != null && !n.isEmpty()) {
+				return n;
 			}
 		}
 
+		// Fall back to storage-derived player-name lists
 		for (String s : getAllPlayerNames()) {
 			if (s.equalsIgnoreCase(name)) {
 				return s;
 			}
 		}
+
 		return name;
 	}
 
 	public AdvancedCoreUser getRandomUser() {
-		if (getAllUUIDs().size() > 0) {
-			getUser(getAllUUIDs().get(0));
+		ArrayList<String> uuids = getAllUUIDs();
+		if (uuids == null || uuids.isEmpty()) {
+			return null;
 		}
-		return null;
+		try {
+			return getUser(UUID.fromString(uuids.get(0)));
+		} catch (Exception ignored) {
+			return null;
+		}
 	}
 
 	/**
@@ -328,6 +353,8 @@ public class UserManager {
 	 */
 	@SuppressWarnings("deprecation")
 	public AdvancedCoreUser getUser(String playerName) {
+		// keep behavior: AdvancedCoreUser handles name->uuid internally (but you can
+		// refactor later)
 		return new AdvancedCoreUser(plugin, getProperName(playerName));
 	}
 
@@ -376,7 +403,6 @@ public class UserManager {
 							int daysOld = plugin.getOptions().getPurgeMinimumDays();
 							int days = user.getNumberOfDaysSinceLogin();
 							if (days == -1) {
-								// fix ones with no last online
 								user.setLastOnline(System.currentTimeMillis());
 							} else if (days > daysOld) {
 								plugin.debug("Removing " + user.getUUID() + " because of purge");
@@ -407,7 +433,6 @@ public class UserManager {
 
 				@Override
 				public void onStart() {
-
 				}
 
 				@Override
@@ -415,7 +440,6 @@ public class UserManager {
 					int daysOld = plugin.getOptions().getPurgeMinimumDays();
 					int days = user.getNumberOfDaysSinceLogin();
 					if (days == -1) {
-						// fix ones with no last online
 						user.setLastOnline(System.currentTimeMillis());
 					} else if (days > daysOld) {
 						plugin.debug("Removing " + user.getUUID() + " because of purge");
@@ -446,7 +470,6 @@ public class UserManager {
 				default:
 					break;
 				}
-
 			}
 		}
 	}
@@ -460,26 +483,36 @@ public class UserManager {
 	}
 
 	public boolean userExist(String name) {
-		boolean exist = ArrayUtils.containsIgnoreCase(getAllPlayerNames(), name);
-		if (exist) {
-			return exist;
+		if (name == null || name.isEmpty()) {
+			return false;
 		}
 
-		for (String s : plugin.getUuidNameCache().values()) {
-			if (s.equalsIgnoreCase(name)) {
-				return true;
-			}
+		// Fast path: check cached name->uuid mapping
+		String cachedUuid = UuidLookup.getInstance().getCachedUUID(name);
+		if (cachedUuid != null && !cachedUuid.isEmpty()) {
+			return true;
 		}
+
+		// Storage-derived list
+		boolean exist = ArrayUtils.containsIgnoreCase(getAllPlayerNames(), name);
+		if (exist) {
+			return true;
+		}
+
+		// Best-effort: if it's a UUID string and exists as user
+		try {
+			UUID u = UUID.fromString(name);
+			return userExist(u);
+		} catch (Exception ignored) {
+		}
+
 		return false;
 	}
 
 	public boolean userExist(UUID uuid) {
 		if (uuid != null) {
-			if (getAllUUIDs().contains(uuid.toString())) {
-				return true;
-			}
+			return getAllUUIDs().contains(uuid.toString());
 		}
-
 		return false;
 	}
 }

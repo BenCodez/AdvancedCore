@@ -1,75 +1,63 @@
 package com.bencodez.advancedcore.listeners;
 
-import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 import lombok.Getter;
-import lombok.Setter;
 
-// TODO: Auto-generated Javadoc
 /**
- * The Class PlayerRewardEvent.
+ * Fired when AdvancedCore considers a player "logged in" (after optional auth
+ * delays).
+ *
+ * Identity is AdvancedCoreUser + a resolved UUID string chosen by the listener.
+ * (Listener decides online/offline mode rules and passes the UUID in.)
  */
 public class AdvancedCoreLoginEvent extends Event {
 
-	/** The Constant handlers. */
 	private static final HandlerList handlers = new HandlerList();
 
-	/**
-	 * Gets the handler list.
-	 *
-	 * @return the handler list
-	 */
 	public static HandlerList getHandlerList() {
 		return handlers;
 	}
 
-	/** The cancelled. */
 	private boolean cancelled;
 
 	@Getter
-	@Setter
-	private Player player;
+	private final AdvancedCoreUser user;
 
-	public AdvancedCoreLoginEvent(Player player) {
+	/**
+	 * UUID to use for storage/cache lookups. In offline-mode this should be the
+	 * name-derived UUID (OfflinePlayer:Name).
+	 */
+	@Getter
+	private final String uuid;
+
+	public AdvancedCoreLoginEvent(AdvancedCoreUser user, String uuid) {
 		super(true);
-		setPlayer(player);
+		this.user = user;
+		this.uuid = uuid;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see org.bukkit.event.Event#getHandlers()
-	 */
 	@Override
 	public HandlerList getHandlers() {
 		return handlers;
 	}
 
-	/**
-	 * Checks if is cancelled.
-	 *
-	 * @return true, if is cancelled
-	 */
 	public boolean isCancelled() {
 		return cancelled;
 	}
 
-	public boolean isUserInStorage() {
-		return AdvancedCorePlugin.getInstance().getUserManager().getAllUUIDs()
-				.contains(player.getUniqueId().toString());
-	}
-
-	/**
-	 * Sets the cancelled.
-	 *
-	 * @param bln the new cancelled
-	 */
 	public void setCancelled(boolean bln) {
 		cancelled = bln;
 	}
 
+	public boolean isUserInStorage() {
+		if (uuid == null || uuid.isEmpty()) {
+			return false;
+		}
+		return AdvancedCorePlugin.getInstance().getUserManager().getAllUUIDs().contains(uuid);
+	}
 }

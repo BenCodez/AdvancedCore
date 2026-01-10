@@ -11,7 +11,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.PlayerManager;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyBoolean;
@@ -88,7 +88,7 @@ public class UserDataManager {
 	public void cacheUser(UUID uuid, String playerName) {
 		if (playerName != null && !playerName.isEmpty()) {
 			if (!plugin.getOptions().isOnlineMode()) {
-				uuid = UUID.fromString(PlayerManager.getInstance().getUUID(playerName));
+				uuid = UUID.fromString(UuidLookup.getInstance().getUUID(playerName));
 			}
 		}
 		plugin.devDebug("Caching " + uuid.toString());
@@ -183,7 +183,7 @@ public class UserDataManager {
 	public void removeCache(UUID uuid, String playerName) {
 		if (playerName != null && !playerName.isEmpty()) {
 			if (!plugin.getOptions().isOnlineMode()) {
-				uuid = UUID.fromString(PlayerManager.getInstance().getUUID(playerName));
+				uuid = UUID.fromString(UuidLookup.getInstance().getUUID(playerName));
 			}
 		}
 		UserDataCache cache = getCache(uuid);

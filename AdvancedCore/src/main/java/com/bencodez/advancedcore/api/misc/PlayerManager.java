@@ -1,9 +1,6 @@
 package com.bencodez.advancedcore.api.misc;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Map.Entry;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
@@ -16,9 +13,8 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserDataFetchMode;
-import com.bencodez.advancedcore.api.user.UserStorage;
 
 public class PlayerManager {
 
@@ -67,45 +63,21 @@ public class PlayerManager {
 		return false;
 	}
 
+	/**
+	 * @deprecated Use {@link UuidLookup#getPlayerName(AdvancedCoreUser, String)}.
+	 */
+	@Deprecated
 	public String getPlayerName(AdvancedCoreUser user, String uuid) {
-		return getPlayerName(user, uuid, true);
+		return UuidLookup.getInstance().getPlayerName(user, uuid);
 	}
 
+	/**
+	 * @deprecated Use
+	 *             {@link UuidLookup#getPlayerName(AdvancedCoreUser, String, boolean)}.
+	 */
+	@Deprecated
 	public String getPlayerName(AdvancedCoreUser user, String uuid, boolean useCache) {
-		if ((uuid == null) || uuid.equalsIgnoreCase("null") || uuid.isEmpty()) {
-			plugin.debug("Null UUID");
-			return "";
-		}
-
-		if (plugin.getUuidNameCache().containsKey(uuid)) {
-			String n = plugin.getUuidNameCache().get(uuid);
-			if (n != null && !n.isEmpty() && !n.equalsIgnoreCase("Error getting name")) {
-				return n;
-			}
-		}
-
-		String name = "";
-
-		if (uuid.length() <= 5) {
-			return "Error getting name";
-		}
-		java.util.UUID u = java.util.UUID.fromString(uuid);
-		Player player = Bukkit.getPlayer(u);
-
-		String storedName = user.getData().getString("PlayerName", UserDataFetchMode.fromBooleans(useCache, true));
-		// String storedName = "";
-		if (player != null) {
-			name = player.getName();
-
-			if (storedName == null || name != storedName || storedName.isEmpty()
-					|| storedName.equalsIgnoreCase("Error getting name")) {
-				if (user.getUserData().hasData()) {
-					user.getData().setString("PlayerName", name);
-				}
-			}
-			return name;
-		}
-		return storedName;
+		return UuidLookup.getInstance().getPlayerName(user, uuid, useCache);
 	}
 
 	public ItemStack getPlayerSkull(UUID uuid, String name) {
@@ -114,21 +86,6 @@ public class PlayerManager {
 
 	public ItemStack getPlayerSkull(UUID uuid, String name, boolean force) {
 		return plugin.getSkullCacheHandler().getSkull(uuid, name);
-		/*
-		 * String skullMaterial = "PLAYER_HEAD"; if
-		 * (NMSManager.getInstance().isVersion("1.12")) { skullMaterial = "PAPER"; } if
-		 * (AdvancedCorePlugin.getInstance().getOptions().isLoadSkulls()) { if
-		 * (SkullHandler.getInstance().hasSkull(playerName)) { try { return
-		 * SkullHandler.getInstance().getItemStack(playerName); } catch (Exception e) {
-		 * e.printStackTrace(); } } else {
-		 * SkullHandler.getInstance().loadSkull(playerName); if (force) { return new
-		 * ItemBuilder(Material.valueOf(skullMaterial),
-		 * 1).setSkullOwner(playerName).toItemStack(); } else { return new
-		 * ItemBuilder(Material.valueOf(skullMaterial), 1).toItemStack(); } } } return
-		 * new ItemBuilder(Material.valueOf(skullMaterial),
-		 * 1).setSkullOwner(playerName).toItemStack();
-		 */
-
 	}
 
 	/**
@@ -136,73 +93,12 @@ public class PlayerManager {
 	 *
 	 * @param playerName the player name
 	 * @return the uuid
+	 *
+	 * @deprecated Use {@link UuidLookup#getUUID(String)}.
 	 */
+	@Deprecated
 	public String getUUID(String playerName) {
-		if (playerName == null || playerName.isEmpty()) {
-			return null;
-		}
-
-		if (!plugin.getOptions().isOnlineMode()) {
-			return UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes(StandardCharsets.UTF_8)).toString();
-		}
-
-		Player player = Bukkit.getPlayerExact(playerName);
-		if (player != null) {
-			return player.getUniqueId().toString();
-		}
-
-		String uuid = getUUIDLookup(playerName);
-
-		if (!uuid.equals("")) {
-			return uuid;
-		}
-
-		try {
-			@SuppressWarnings("deprecation")
-			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-			return p.getUniqueId().toString();
-		} catch (Exception e) {
-			plugin.getLogger().info("Unable to get UUID for: " + playerName);
-			plugin.debug(e);
-			return "";
-		}
-	}
-
-	private String getUUIDLookup(String playerName) {
-		if (playerName == null) {
-			return "";
-		}
-		ConcurrentHashMap<String, String> uuids = plugin.getUuidNameCache();
-		if (uuids != null) {
-			for (Entry<String, String> entry : uuids.entrySet()) {
-				if (entry.getValue().equalsIgnoreCase(playerName)) {
-					return entry.getKey();
-				}
-			}
-		}
-
-		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			String name = plugin.getMysql().getUUID(playerName);
-			if (name != null) {
-				return name;
-			}
-		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			String name = plugin.getSQLiteUserTable().getUUID(playerName);
-			if (name != null) {
-				return name;
-			}
-		} else {
-			for (String uuid : plugin.getUserManager().getAllUUIDs()) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
-				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-				String name = user.getData().getString("PlayerName", UserDataFetchMode.NO_CACHE);
-				if (name != null && name.equals(playerName)) {
-					plugin.getUuidNameCache().put(uuid, playerName);
-					return uuid;
-				}
-			}
-		}
-		return "";
+		return UuidLookup.getInstance().getUUID(playerName);
 	}
 
 	public boolean hasEitherPermission(CommandSender sender, String perm) {
@@ -321,9 +217,7 @@ public class PlayerManager {
 		}
 
 		if (plugin.getLuckPermsHandle() != null && plugin.getLuckPermsHandle().luckpermsApiLoaded()) {
-			// plugin.devDebug("Attempting to use luckperms");
 			if (plugin.getLuckPermsHandle().hasPermission(playerUUID, perm)) {
-				// plugin.devDebug("does have permission: " + perm);
 				return true;
 			}
 		}
@@ -348,7 +242,6 @@ public class PlayerManager {
 			return true;
 		}
 
-		// plugin.extraDebug("Checking if user exists in database: " + name);
 		boolean userExist = plugin.getUserManager().userExist(name);
 		if (userExist) {
 			return userExist;
@@ -364,10 +257,8 @@ public class PlayerManager {
 		}
 
 		if (checkServer && !name.startsWith(plugin.getOptions().getBedrockPlayerPrefix())) {
-			// plugin.extraDebug("Checking offline player: " + name);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
 			if (p.hasPlayedBefore() || p.isOnline() || p.getLastPlayed() != 0) {
-				// plugin.extraDebug(name + " has joined before");
 				return true;
 			}
 		}
@@ -375,5 +266,4 @@ public class PlayerManager {
 		plugin.extraDebug("Player " + name + " does not exist");
 		return false;
 	}
-
 }

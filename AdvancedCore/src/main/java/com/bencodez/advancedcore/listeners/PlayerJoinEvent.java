@@ -11,150 +11,159 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.MetadataValue;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.misc.PlayerManager;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.command.TabCompleteHandler;
 
-// TODO: Auto-generated Javadoc
-/**
- * The Class PlayerJoinEvent.
- */
 public class PlayerJoinEvent implements Listener {
 
-	/** The plugin. */
-	private AdvancedCorePlugin plugin;
+	private final AdvancedCorePlugin plugin;
 
-	/**
-	 * Instantiates a new player join event.
-	 *
-	 * @param plugin the plugin
-	 */
 	public PlayerJoinEvent(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
 	public void onJoin(AdvancedCoreLoginEvent event) {
-		if (event.isUserInStorage() && plugin.isLoadUserData()) {
-			Player player = event.getPlayer();
-
-			plugin.getBedrockHandle().learn(player);
-
-			boolean userExist = plugin.getUserManager().userExist(event.getPlayer().getUniqueId());
-			if (player.getName().startsWith(plugin.getOptions().getBedrockPlayerPrefix())) {
-				userExist = true;
-				plugin.extraDebug("Detected Geyser Player, Forcing player data to load");
-			}
-
-			plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId(), player.getName());
-
-			if (userExist) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(player);
-
-				user.checkOfflineRewards();
-				user.setLastOnline(System.currentTimeMillis());
-				user.updateName(false);
-			}
-			if (plugin.getOptions().isOnlineMode()) {
-				plugin.getUuidNameCache().put(player.getUniqueId().toString(), player.getName());
-			} else {
-				plugin.getUuidNameCache().put(PlayerManager.getInstance().getUUID(player.getName()), player.getName());
-			}
-
+		if (!plugin.isLoadUserData()) {
+			return;
+		}
+		if (!event.isUserInStorage()) {
+			return;
 		}
 
+		AdvancedCoreUser user = event.getUser();
+		if (user == null) {
+			return;
+		}
+
+		Player player = user.getPlayer();
+		if (player == null) {
+			return;
+		}
+		
+		plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId(), player.getName());
+
+		plugin.getBedrockHandle().learn(user);
+
+		
+
+		user.checkOfflineRewards();
+		user.setLastOnline(System.currentTimeMillis());
+		user.updateName(false);
+
+		// Keep UUID<->name cache correct (offline-mode uses name-derived UUID)
+		String uuid = event.getUuid();
+		if (uuid != null && !uuid.isEmpty()) {
+			UuidLookup.getInstance().cacheMapping(uuid, player.getName());
+		}
 	}
 
-	/**
-	 * On player login.
-	 *
-	 * @param event the event
-	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final org.bukkit.event.player.PlayerJoinEvent event) {
-		if (plugin != null && plugin.isEnabled() && plugin.isLoadUserData()) {
-			plugin.getLogger()
-					.info("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
-			plugin.getLoginTimer().schedule(new Runnable() {
+		if (plugin == null || !plugin.isEnabled() || !plugin.isLoadUserData()) {
+			return;
+		}
 
-				@Override
-				public void run() {
-					try {
-						if (plugin != null && plugin.isEnabled()) {
-							TabCompleteHandler.getInstance().onLogin();
-							if ((plugin.isAuthMeLoaded() || plugin.isLoginSecurityLoaded() || plugin.isNLoginLoaded())
-									&& plugin.getOptions().isWaitUntilLoggedIn()) {
+		plugin.getLogger().info("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+
+		plugin.getLoginTimer().schedule(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					if (plugin == null || !plugin.isEnabled()) {
+						return;
+					}
+
+					TabCompleteHandler.getInstance().onLogin();
+
+					if ((plugin.isAuthMeLoaded() || plugin.isLoginSecurityLoaded() || plugin.isNLoginLoaded())
+							&& plugin.getOptions().isWaitUntilLoggedIn()) {
+						return;
+					}
+
+					Player player = event.getPlayer();
+					if (player == null) {
+						return;
+					}
+
+					// Vanish metadata support
+					for (MetadataValue meta : player.getMetadata("vanished")) {
+						if (meta.asBoolean()) {
+							plugin.debug("Player " + player.getName() + " joined vanished");
+							if (plugin.getOptions().isTreatVanishAsOffline()) {
 								return;
 							}
+						}
+					}
 
-							Player player = event.getPlayer();
-
-							if (player != null) {
-								for (MetadataValue meta : player.getMetadata("vanished")) {
-									if (meta.asBoolean()) {
-										plugin.debug("Player " + player.getName() + " joined vanished");
-										if (plugin.getOptions().isTreatVanishAsOffline()) {
-											return;
-										}
-									}
-								}
-
-								try {
-									if (plugin.getCmiHandle() != null) {
-										if (plugin.getCmiHandle().isVanished(player)) {
-											plugin.debug("Player " + player.getName() + " joined vanished");
-											if (plugin.getOptions().isTreatVanishAsOffline()) {
-												return;
-											}
-										}
-									}
-								} catch (Exception e) {
-									plugin.debug(e);
-								}
-
-								plugin.debug("Login: " + event.getPlayer().getName() + " ("
-										+ event.getPlayer().getUniqueId() + ")");
-								if (plugin.getPermissionHandler() != null) {
-									plugin.getPermissionHandler().login(player);
-								}
-
-								AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(player);
-								Bukkit.getPluginManager().callEvent(login);
-
-								if (login.isCancelled()) {
-									return;
-								}
+					// CMI vanish support
+					try {
+						if (plugin.getCmiHandle() != null && plugin.getCmiHandle().isVanished(player)) {
+							plugin.debug("Player " + player.getName() + " joined vanished");
+							if (plugin.getOptions().isTreatVanishAsOffline()) {
+								return;
 							}
-
 						}
 					} catch (Exception e) {
-						e.printStackTrace();
+						plugin.debug(e);
 					}
+
+					plugin.debug("Login: " + player.getName() + " (" + player.getUniqueId() + ")");
+
+					if (plugin.getPermissionHandler() != null) {
+						plugin.getPermissionHandler().login(player);
+					}
+
+					// Resolve UUID BEFORE constructing/getting the user
+					final String resolvedUuid = plugin.getOptions().isOnlineMode() ? player.getUniqueId().toString()
+							: UuidLookup.getInstance().getUUID(player.getName()); // name-derived in offline mode
+
+					if (resolvedUuid == null || resolvedUuid.isEmpty()) {
+						return;
+					}
+
+					// Cache mapping using resolved UUID (offline-mode friendly).
+					UuidLookup.getInstance().cacheMapping(resolvedUuid, player.getName());
+
+					// IMPORTANT: create/get AdvancedCoreUser by resolved UUID, not Bukkit UUID
+					// (offline-mode correctness)
+					AdvancedCoreUser user = plugin.getUserManager().getUser(java.util.UUID.fromString(resolvedUuid),
+							player.getName());
+
+					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid);
+					Bukkit.getPluginManager().callEvent(login);
+
+					if (login.isCancelled()) {
+						return;
+					}
+
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-			}, 1500 + plugin.getOptions().getDelayLoginEvent(), TimeUnit.MILLISECONDS);
-		}
+			}
+		}, 1500 + plugin.getOptions().getDelayLoginEvent(), TimeUnit.MILLISECONDS);
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerQuit(PlayerQuitEvent event) {
-		if (plugin != null && plugin.isEnabled()) {
-			Player player = event.getPlayer();
-			plugin.debug("Logout: " + event.getPlayer().getName() + " (" + player.getUniqueId() + ")");
-
-			plugin.getLoginTimer().execute(new Runnable() {
-
-				@Override
-				public void run() {
-					if (plugin != null && plugin.isEnabled()) {
-						TabCompleteHandler.getInstance().onLogin();
-
-						plugin.getUserManager().getDataManager().removeCache(player.getUniqueId(), player.getName());
-
-					}
-				}
-			});
+		if (plugin == null || !plugin.isEnabled()) {
+			return;
 		}
 
-	}
+		Player player = event.getPlayer();
+		plugin.debug("Logout: " + player.getName() + " (" + player.getUniqueId() + ")");
 
+		plugin.getLoginTimer().execute(new Runnable() {
+
+			@Override
+			public void run() {
+				if (plugin != null && plugin.isEnabled()) {
+					TabCompleteHandler.getInstance().onLogin();
+					plugin.getUserManager().getDataManager().removeCache(player.getUniqueId(), player.getName());
+				}
+			}
+		});
+	}
 }

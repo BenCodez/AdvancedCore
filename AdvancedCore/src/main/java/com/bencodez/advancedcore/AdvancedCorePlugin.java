@@ -12,7 +12,6 @@ import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +37,7 @@ import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.permissions.LuckPermsHandle;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
@@ -180,9 +180,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private UserManager userManager;
 
 	private ArrayList<UserStartup> userStartup = new ArrayList<>();
-
-	@Getter
-	private ConcurrentHashMap<String, String> uuidNameCache;
 
 	@Getter
 	private String advancedCoreVersion = "";
@@ -579,11 +576,40 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			@Override
 			public void reload() {
 				ArrayList<String> players = new ArrayList<>();
-				for (String name : getUuidNameCache().values()) {
-					if (!players.contains(name)) {
+
+				// Prefer UUIDs from storage; names come from UuidLookup cache (seeded at
+				// startup)
+				for (String uuid : getUserManager().getAllUUIDs()) {
+					String name = UuidLookup.getInstance().getCachedName(uuid);
+					if (name == null || name.isEmpty()) {
+						// Fallback: try to read from user data without DB lookup
+						try {
+							AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
+							if (user != null) {
+								String stored = user.getData().getString("PlayerName", UserDataFetchMode.NO_DB_LOOKUP);
+								if (stored != null && !stored.isEmpty()
+										&& !stored.equalsIgnoreCase("Error getting name")
+										&& !stored.equalsIgnoreCase("null")) {
+									UuidLookup.getInstance().cacheMapping(uuid, stored);
+									name = stored;
+								}
+							}
+						} catch (Exception ignored) {
+						}
+					}
+
+					if (name != null && !name.isEmpty() && !players.contains(name)) {
 						players.add(name);
 					}
 				}
+
+				// Always include currently online players
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					if (!players.contains(p.getName())) {
+						players.add(p.getName());
+					}
+				}
+
 				setReplace(players);
 			}
 
@@ -594,7 +620,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						getReplace().add(player.getName());
 					}
 				}
-
 			}
 		});
 
@@ -646,19 +671,35 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			@Override
 			public void reload() {
 				ArrayList<String> uuids = new ArrayList<>();
-				for (String name : getUuidNameCache().keySet()) {
-					if (!uuids.contains(name)) {
-						uuids.add(name);
+
+				// UUIDs from storage
+				for (String uuid : getUserManager().getAllUUIDs()) {
+					if (uuid != null && !uuid.isEmpty() && !uuids.contains(uuid)) {
+						uuids.add(uuid);
 					}
 				}
+
+				// Also include online players UUIDs depending on mode
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					String uuid = getOptions().isOnlineMode() ? player.getUniqueId().toString()
+							: UuidLookup.getInstance().getUUID(player.getName()); // name-derived in offline-mode
+
+					if (uuid != null && !uuid.isEmpty() && !uuids.contains(uuid)) {
+						uuids.add(uuid);
+					}
+				}
+
 				setReplace(uuids);
 			}
 
 			@Override
 			public void updateReplacements() {
 				for (Player player : Bukkit.getOnlinePlayers()) {
-					if (!getReplace().contains(player.getUniqueId().toString())) {
-						getReplace().add(player.getUniqueId().toString());
+					String uuid = getOptions().isOnlineMode() ? player.getUniqueId().toString()
+							: UuidLookup.getInstance().getUUID(player.getName()); // name-derived in offline-mode
+
+					if (uuid != null && !uuid.isEmpty() && !getReplace().contains(uuid)) {
+						getReplace().add(uuid);
 					}
 				}
 			}
@@ -757,8 +798,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private void loadUUIDs() {
 
-		uuidNameCache = new ConcurrentHashMap<>();
-
 		addUserStartup(new UserStartup() {
 
 			@Override
@@ -776,26 +815,22 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			public void onStartUp(AdvancedCoreUser user) {
 				String uuid = user.getUUID();
 				String name = user.getData().getString("PlayerName", UserDataFetchMode.NO_DB_LOOKUP);
+
 				boolean add = true;
-				if (uuidNameCache.containsKey(uuid)) {
-					debug("Duplicate uuid? " + uuid + "/" + name);
+
+				if (name == null || name.isEmpty() || name.equalsIgnoreCase("Error getting name")
+						|| name.equalsIgnoreCase("null")) {
+					add = false;
 				}
 
-				if (name == null || name.equals("") || name.equals("Error getting name") || name.equals("null")) {
-					// extraDebug("Invalid player name: " + uuid);
-					add = false;
-				} else {
-					if (uuidNameCache.containsValue(name)) {
-						debug("Duplicate player name?" + uuid + "/" + name);
-					}
-				}
-				if (uuid == null || uuid.equals("")) {
+				if (uuid == null || uuid.isEmpty()) {
 					debug("Invalid uuid: " + uuid);
 					add = false;
 				}
 
 				if (add) {
-					uuidNameCache.put(uuid, name);
+					// Seed the centralized cache
+					UuidLookup.getInstance().cacheMapping(uuid, name);
 				}
 			}
 		});
