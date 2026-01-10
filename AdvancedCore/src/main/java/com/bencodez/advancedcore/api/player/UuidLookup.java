@@ -14,16 +14,6 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserStorage;
 
-/**
- * Central UUID <-> name lookup + caching for AdvancedCore.
- *
- * Goals: - Fast lookups (no scanning uuid->name map every call) - Works with
- * OnlineMode / OfflineMode (offline uses deterministic UUID from name) - Uses
- * Bukkit (online), local cache, storage (mysql/sqlite), then flatfile fallback
- *
- * Notes: - Name cache key is stored case-insensitive (lowercased key). - UUID
- * string is stored canonical (uuid.toString()).
- */
 public class UuidLookup {
 
 	private static final UuidLookup instance = new UuidLookup();
