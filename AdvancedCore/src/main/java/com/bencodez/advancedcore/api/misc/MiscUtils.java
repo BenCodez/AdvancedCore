@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -75,7 +76,7 @@ public class MiscUtils {
 		broadcast(broadcastMsg, new ArrayList<>(Bukkit.getOnlinePlayers()));
 	}
 
-	public void broadcast(String broadcastMsg, ArrayList<Player> players) {
+	public void broadcast(String broadcastMsg, Collection<? extends Player> players) {
 		if (broadcastMsg != null && !broadcastMsg.equals("")) {
 			String consoleMsg = broadcastMsg;
 			for (Player player : players) {
