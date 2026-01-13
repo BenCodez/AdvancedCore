@@ -29,7 +29,7 @@ public class UuidLookup {
 	private final ConcurrentHashMap<String, String> nameToUuid = new ConcurrentHashMap<>();
 
 	private UuidLookup() {
-		// No plugin uuidNameCache anymore. Cache is owned here.
+		// Cache is owned here.
 	}
 
 	/*
@@ -40,9 +40,9 @@ public class UuidLookup {
 	 * Resolve UUID string from a player name.
 	 *
 	 * Lookup order: 1) If input is already a UUID -> canonical UUID 2) Offline
-	 * mode: deterministic UUID from name 3) Online player (Bukkit) 4) Local cache
-	 * (name->uuid) 5) Storage (mysql/sqlite) or flatfile scan fallback 6) Bukkit
-	 * OfflinePlayer fallback (best-effort)
+	 * mode: deterministic UUID from NORMALIZED name 3) Online player (Bukkit) 4)
+	 * Local cache (name->uuid) 5) Storage (mysql/sqlite) or flatfile scan fallback
+	 * 6) Bukkit OfflinePlayer fallback (best-effort)
 	 *
 	 * @param playerName player name or UUID string
 	 * @return UUID string, or "" if not found / invalid input
@@ -62,13 +62,21 @@ public class UuidLookup {
 			return parsed.toString();
 		}
 
-		// Offline mode: deterministic UUID
+		// Offline mode: deterministic UUID from NORMALIZED name
 		if (!plugin.getOptions().isOnlineMode()) {
-			String uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes(StandardCharsets.UTF_8))
+			String normalized = normalizeOfflineName(playerName);
+			if (normalized.isEmpty()) {
+				return "";
+			}
+			String uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + normalized).getBytes(StandardCharsets.UTF_8))
 					.toString();
-			// Cache mapping so later lookups are instant + casing preserved for this
-			// session
+
+			// Cache mapping so later lookups are instant
+			// Keep display name as the original provided (casing preserved),
+			// but ensure name->uuid cache key uses normalized key.
 			cacheMapping(uuid, playerName);
+			nameToUuid.put(normNameKey(normalized), uuid);
+
 			return uuid;
 		}
 
@@ -191,6 +199,14 @@ public class UuidLookup {
 
 		uuidToName.put(uuid, name);
 		nameToUuid.put(normNameKey(name), uuid);
+
+		// Also cache normalized offline key when in offline mode
+		if (!plugin.getOptions().isOnlineMode()) {
+			String normalized = normalizeOfflineName(name);
+			if (!normalized.isEmpty()) {
+				nameToUuid.put(normNameKey(normalized), uuid);
+			}
+		}
 	}
 
 	/**
@@ -211,6 +227,12 @@ public class UuidLookup {
 			String name = uuidToName.remove(uuid);
 			if (name != null) {
 				nameToUuid.remove(normNameKey(name));
+				if (!plugin.getOptions().isOnlineMode()) {
+					String normalized = normalizeOfflineName(name);
+					if (!normalized.isEmpty()) {
+						nameToUuid.remove(normNameKey(normalized));
+					}
+				}
 			}
 			return;
 		}
@@ -219,6 +241,16 @@ public class UuidLookup {
 		String uuid = nameToUuid.remove(key);
 		if (uuid != null) {
 			uuidToName.remove(uuid);
+		}
+
+		if (!plugin.getOptions().isOnlineMode()) {
+			String normalized = normalizeOfflineName(s);
+			if (!normalized.isEmpty()) {
+				String uuid2 = nameToUuid.remove(normNameKey(normalized));
+				if (uuid2 != null) {
+					uuidToName.remove(uuid2);
+				}
+			}
 		}
 	}
 
@@ -230,7 +262,19 @@ public class UuidLookup {
 			return "";
 		}
 		String u = nameToUuid.get(normNameKey(playerName));
-		return isUuidString(u) ? u : "";
+		if (isUuidString(u)) {
+			return u;
+		}
+
+		if (!plugin.getOptions().isOnlineMode()) {
+			String normalized = normalizeOfflineName(playerName);
+			if (!normalized.isEmpty()) {
+				String u2 = nameToUuid.get(normNameKey(normalized));
+				return isUuidString(u2) ? u2 : "";
+			}
+		}
+
+		return "";
 	}
 
 	/**
@@ -276,6 +320,13 @@ public class UuidLookup {
 			plugin.debug(e);
 		}
 		return "";
+	}
+
+	private String normalizeOfflineName(String name) {
+		if (name == null) {
+			return "";
+		}
+		return name.trim().toLowerCase(Locale.ROOT);
 	}
 
 	private boolean isGoodName(String n) {
