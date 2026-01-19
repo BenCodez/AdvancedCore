@@ -225,7 +225,8 @@ public class RewardHandler {
 
 		for (Reward rewardFile : getRewards()) {
 			if (ArrayUtils.containsIgnoreCase(directlyDefinedPaths, rewardFile.getName())) {
-				plugin.getLogger().warning("Found reward file conflict: " + rewardFile.getName() + ", recommend deleting or renaming file to prevent issues");
+				plugin.getLogger().warning("Found reward file conflict: " + rewardFile.getName()
+						+ ", recommend deleting or renaming file to prevent issues");
 			}
 		}
 	}
@@ -1504,6 +1505,17 @@ public class RewardHandler {
 			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
 					HashMap<String, String> placeholders) {
 				user.sendMessage(value, placeholders);
+				return null;
+			}
+		});
+
+		injectedRewards.add(new RewardInjectStringList("RandomMessage") {
+
+			@Override
+			public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
+					HashMap<String, String> placeholders) {
+				String msg = value.get(ThreadLocalRandom.current().nextInt(0, value.size()));
+				user.sendMessage(msg, placeholders);
 				return null;
 			}
 		});

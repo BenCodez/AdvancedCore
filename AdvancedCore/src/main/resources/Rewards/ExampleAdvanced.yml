@@ -93,6 +93,12 @@ RandomItem:
   Iron:
     Material: IRON_INGOT
     Amount: 10
+    
+ # Send one of the following messages to the player
+RandomMessage:
+- 'random message 1'
+- 'random message 2'
+- 'random message 3'
 
 # Require permission to give this reward file
 # Permission is AdvancedCore.Reward.(REWARDNAME) by default
