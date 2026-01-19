@@ -132,7 +132,7 @@ public class PlayerJoinEvent implements Listener {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(java.util.UUID.fromString(resolvedUuid),
 							player.getName());
 
-					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid);
+					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid, event.getPlayer());
 					Bukkit.getPluginManager().callEvent(login);
 
 					if (login.isCancelled()) {

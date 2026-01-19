@@ -42,7 +42,7 @@ public class NLoginAuthenticate implements Listener {
 			plugin.debug("nLogin Login: " + player.getName() + " (" + resolvedUuid + ")");
 
 			AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(resolvedUuid));
-			AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid);
+			AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid, player);
 			Bukkit.getPluginManager().callEvent(login);
 
 		}, 2 + (plugin.getOptions().getDelayLoginEvent() / 1000));

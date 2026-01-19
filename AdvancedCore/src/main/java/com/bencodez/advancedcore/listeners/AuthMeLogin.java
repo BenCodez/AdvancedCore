@@ -43,7 +43,7 @@ public class AuthMeLogin implements Listener {
 					plugin.debug("Authme Login: " + player.getName() + " (" + resolvedUuid + ")");
 
 					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(resolvedUuid));
-					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid);
+					AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid, player);
 					Bukkit.getPluginManager().callEvent(login);
 				}
 			}

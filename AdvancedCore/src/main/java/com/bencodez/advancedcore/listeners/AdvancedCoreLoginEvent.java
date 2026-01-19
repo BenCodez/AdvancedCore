@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.listeners;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
@@ -28,6 +29,9 @@ public class AdvancedCoreLoginEvent extends Event {
 	@Getter
 	private final AdvancedCoreUser user;
 
+	@Getter
+	private final Player player;
+
 	/**
 	 * UUID to use for storage/cache lookups. In offline-mode this should be the
 	 * name-derived UUID (OfflinePlayer:Name).
@@ -35,10 +39,11 @@ public class AdvancedCoreLoginEvent extends Event {
 	@Getter
 	private final String uuid;
 
-	public AdvancedCoreLoginEvent(AdvancedCoreUser user, String uuid) {
+	public AdvancedCoreLoginEvent(AdvancedCoreUser user, String uuid, Player player) {
 		super(true);
 		this.user = user;
 		this.uuid = uuid;
+		this.player = player;
 	}
 
 	@Override

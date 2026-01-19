@@ -50,7 +50,7 @@ public class LoginSecurityLogin implements Listener {
 				plugin.debug("LoginSecurity Login: " + player.getName() + " (" + resolvedUuid + ")");
 
 				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(resolvedUuid));
-				AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid);
+				AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid,player);
 				Bukkit.getPluginManager().callEvent(login);
 			}
 		}, 2);
