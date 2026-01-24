@@ -41,12 +41,10 @@ public class PlayerJoinEvent implements Listener {
 		if (player == null) {
 			return;
 		}
-		
+
 		plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId(), player.getName());
 
 		plugin.getBedrockHandle().learn(user);
-
-		
 
 		user.checkOfflineRewards();
 		user.setLastOnline(System.currentTimeMillis());
@@ -155,6 +153,10 @@ public class PlayerJoinEvent implements Listener {
 		Player player = event.getPlayer();
 		plugin.debug("Logout: " + player.getName() + " (" + player.getUniqueId() + ")");
 
+		if (plugin.getPermissionHandler() != null) {
+			plugin.getPermissionHandler().login(player);
+		}
+
 		plugin.getLoginTimer().execute(new Runnable() {
 
 			@Override
@@ -162,6 +164,7 @@ public class PlayerJoinEvent implements Listener {
 				if (plugin != null && plugin.isEnabled()) {
 					TabCompleteHandler.getInstance().onLogin();
 					plugin.getUserManager().getDataManager().removeCache(player.getUniqueId(), player.getName());
+
 				}
 			}
 		});
