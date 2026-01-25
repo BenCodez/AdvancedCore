@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.api.player;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +33,19 @@ public class UuidLookup {
 	private UuidLookup() {
 		// Cache is owned here.
 	}
+	
+	/**
+	 * Retrieve all player names currently cached in memory.
+	 *
+	 * <p>This returns a snapshot of the internal uuid→name map values. It does not
+	 * hit any storage, so it’s safe to call from tab‑complete code.</p>
+	 *
+	 * @return list containing all cached player names (may include duplicates)
+	 */
+	public List<String> getAllCachedNames() {
+	    return new ArrayList<>(uuidToName.values());
+	}
+
 
 	/*
 	 * ========================= Public API =========================

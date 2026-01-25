@@ -577,31 +577,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			public void reload() {
 				ArrayList<String> players = new ArrayList<>();
 
-				// Prefer UUIDs from storage; names come from UuidLookup cache (seeded at
-				// startup)
-				for (String uuid : getUserManager().getAllUUIDs()) {
-					String name = UuidLookup.getInstance().getCachedName(uuid);
-					if (name == null || name.isEmpty()) {
-						// Fallback: try to read from user data without DB lookup
-						try {
-							AdvancedCoreUser user = getUserManager().getUser(UUID.fromString(uuid), false);
-							if (user != null) {
-								String stored = user.getData().getString("PlayerName", UserDataFetchMode.NO_DB_LOOKUP);
-								if (stored != null && !stored.isEmpty()
-										&& !stored.equalsIgnoreCase("Error getting name")
-										&& !stored.equalsIgnoreCase("null")) {
-									UuidLookup.getInstance().cacheMapping(uuid, stored);
-									name = stored;
-								}
-							}
-						} catch (Exception ignored) {
-						}
-					}
-
-					if (name != null && !name.isEmpty() && !players.contains(name)) {
-						players.add(name);
-					}
-				}
+				// fetch all cached names; this avoids hitting the DB
+				players.addAll(UuidLookup.getInstance().getAllCachedNames());
 
 				// Always include currently online players
 				for (Player p : Bukkit.getOnlinePlayers()) {
@@ -615,6 +592,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 			@Override
 			public void updateReplacements() {
+				// ensure new online players are added to the replacement list
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if (!getReplace().contains(player.getName())) {
 						getReplace().add(player.getName());
