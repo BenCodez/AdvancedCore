@@ -431,6 +431,9 @@ public class AdvancedCoreUser {
 	 * @return the player
 	 */
 	public Player getPlayer() {
+		if (!plugin.getOptions().isOnlineMode()) {
+			return Bukkit.getPlayer(getPlayerName());
+		}
 		if (uuid != null && !uuid.isEmpty()) {
 			return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
 		}
