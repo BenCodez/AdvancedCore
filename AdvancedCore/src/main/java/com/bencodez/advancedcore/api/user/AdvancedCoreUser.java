@@ -642,7 +642,7 @@ public class AdvancedCoreUser {
 	 * @param amplifier  the amplifier
 	 */
 	public void givePotionEffect(String potionName, int duration, int amplifier) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(getUUID()));
+		Player player = getPlayer();
 		if (player != null && plugin.isEnabled()) {
 			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
 
@@ -700,9 +700,6 @@ public class AdvancedCoreUser {
 		}
 
 		Player player = getPlayer();
-		if (!plugin.getOptions().isOnlineMode() && player == null) {
-			player = Bukkit.getPlayer(getPlayerName());
-		}
 
 		// Online fast path
 		if (player != null) {
@@ -892,7 +889,7 @@ public class AdvancedCoreUser {
 	 * @param pitch     the pitch
 	 */
 	public void playSound(String soundName, float volume, float pitch) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		Player player = getPlayer();
 		if (player != null) {
 			Sound sound = null;
 			try {
@@ -1100,7 +1097,7 @@ public class AdvancedCoreUser {
 	 * @param msg the msg
 	 */
 	public void sendMessage(String[] msg) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		Player player = getPlayer();
 		if ((player != null) && (msg != null)) {
 
 			ArrayList<TextComponent> texts = new ArrayList<>();
@@ -1133,7 +1130,7 @@ public class AdvancedCoreUser {
 	 * @param fadeOut  the fade out
 	 */
 	public void sendTitle(String title, String subTitle, int fadeIn, int showTime, int fadeOut) {
-		Player player = Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+		Player player = getPlayer();
 		if (player != null) {
 			try {
 				Title titleObject = new Title(PlaceholderUtils.replaceJavascript(getPlayer(), title),
