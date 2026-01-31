@@ -414,7 +414,11 @@ public class AdvancedCoreUser {
 		return -1;
 	}
 
+	@SuppressWarnings("deprecation")
 	public OfflinePlayer getOfflinePlayer() {
+		if (!plugin.getOptions().isOnlineMode()) {
+			return Bukkit.getOfflinePlayer(getPlayerName());
+		}
 		if (uuid != null && !uuid.equals("")) {
 			return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
 		}
@@ -674,7 +678,7 @@ public class AdvancedCoreUser {
 	 *
 	 * @return true, if successful
 	 */
-	public boolean hasLoggedOnBefore() {
+	public boolean hasLoggedOnBefore() {		
 		OfflinePlayer player = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			if (player.hasPlayedBefore() || player.isOnline()) {
