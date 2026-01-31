@@ -141,7 +141,7 @@ public class PlayerJoinEvent implements Listener {
 					e.printStackTrace();
 				}
 			}
-		}, 1500 + plugin.getOptions().getDelayLoginEvent(), TimeUnit.MILLISECONDS);
+		}, 1500 + plugin.getOptions().getDelayLoginEventMs(), TimeUnit.MILLISECONDS);
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

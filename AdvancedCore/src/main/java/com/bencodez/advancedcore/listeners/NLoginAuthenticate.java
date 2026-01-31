@@ -45,6 +45,6 @@ public class NLoginAuthenticate implements Listener {
 			AdvancedCoreLoginEvent login = new AdvancedCoreLoginEvent(user, resolvedUuid, player);
 			Bukkit.getPluginManager().callEvent(login);
 
-		}, 2 + (plugin.getOptions().getDelayLoginEvent() / 1000));
+		}, 2 + (plugin.getOptions().getDelayLoginEventMs() / 1000));
 	}
 }

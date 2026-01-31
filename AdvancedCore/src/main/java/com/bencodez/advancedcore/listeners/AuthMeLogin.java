@@ -47,6 +47,6 @@ public class AuthMeLogin implements Listener {
 					Bukkit.getPluginManager().callEvent(login);
 				}
 			}
-		}, 2 + (plugin.getOptions().getDelayLoginEvent() / 1000));
+		}, 2 + (plugin.getOptions().getDelayLoginEventMs() / 1000));
 	}
 }

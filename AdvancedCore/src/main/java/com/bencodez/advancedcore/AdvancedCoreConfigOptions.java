@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -17,6 +18,7 @@ import com.bencodez.simpleapi.file.annotation.ConfigDataDouble;
 import com.bencodez.simpleapi.file.annotation.ConfigDataInt;
 import com.bencodez.simpleapi.file.annotation.ConfigDataListString;
 import com.bencodez.simpleapi.file.annotation.ConfigDataString;
+import com.bencodez.simpleapi.time.ParsedDuration;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -126,7 +128,6 @@ public class AdvancedCoreConfigOptions {
 	@ConfigDataBoolean(path = "")
 	private boolean loadDefaultRewards = true;
 
-
 	@Getter
 	@Setter
 	@ConfigDataBoolean(path = "")
@@ -211,8 +212,8 @@ public class AdvancedCoreConfigOptions {
 
 	@Setter
 	@Getter
-	@ConfigDataInt(path = "SpamClickTime")
-	private int spamClickTime = 100;
+	@ConfigDataString(path = "SpamClickTime")
+	private String spamClickTime = "100ms";
 
 	@ConfigDataString(path = "DataStorage")
 	private String userStorageString = "SQLITE";
@@ -258,13 +259,13 @@ public class AdvancedCoreConfigOptions {
 
 	@Getter
 	@Setter
-	@ConfigDataInt(path = "DelayLoginEvent")
-	private int delayLoginEvent = 0;
+	@ConfigDataString(path = "DelayLoginEvent")
+	private String delayLoginEvent = "0s";
 
 	@Getter
 	@Setter
-	@ConfigDataInt(path = "SkullLoadDelay")
-	private int SkullLoadDelay = 4000;
+	@ConfigDataString(path = "SkullLoadDelay")
+	private String SkullLoadDelay = "4s";
 
 	@Getter
 	@Setter
@@ -289,6 +290,11 @@ public class AdvancedCoreConfigOptions {
 	public AdvancedCoreConfigOptions() {
 	}
 
+	@Getter
+	private long delayLoginEventMs = 0L;
+	@Getter
+	private long spamClickTimeMs = 100L;
+
 	public Sound getClickSoundSound() {
 
 		if (getClickSoundSoundStr().equalsIgnoreCase("none")) {
@@ -308,6 +314,9 @@ public class AdvancedCoreConfigOptions {
 			new AnnotationHandler().load(getYmlConfig().getData(), this);
 			debug = DebugLevel.getDebug(debugLevelStr);
 			storageType = UserStorage.value(userStorageString.toUpperCase());
+
+			delayLoginEventMs = ParsedDuration.parse(getDelayLoginEvent(), TimeUnit.MILLISECONDS).getMillis();
+			spamClickTimeMs = ParsedDuration.parse(getSpamClickTime(), TimeUnit.MILLISECONDS).getMillis();
 		}
 	}
 }
