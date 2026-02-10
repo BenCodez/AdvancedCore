@@ -1,5 +1,5 @@
 
-package com.bencodez.advancedcore.tests;
+package com.bencodez.advancedcore.tests.time;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

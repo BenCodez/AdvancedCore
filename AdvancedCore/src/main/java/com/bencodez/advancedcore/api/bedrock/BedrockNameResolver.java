@@ -394,7 +394,7 @@ public final class BedrockNameResolver {
 	// ====================== Embedded BedrockDetect with DEBUG
 	// ======================
 
-	public static final class BedrockDetect {
+	public static class BedrockDetect {
 		private volatile boolean floodgateAvailable = false;
 		private volatile boolean geyserAvailable = false;
 

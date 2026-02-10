@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.tests;
+package com.bencodez.advancedcore.tests.backup;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 
 import com.bencodez.advancedcore.api.backup.BackupHandle;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
+import com.bencodez.advancedcore.tests.BaseTest;
 
 @TestInstance(Lifecycle.PER_CLASS)
 public class BackupHandleTest {

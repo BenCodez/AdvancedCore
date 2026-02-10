@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.tests;
+package com.bencodez.advancedcore.tests.time;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,6 +22,7 @@ import org.mockito.Mockito;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.data.ServerData;
+import com.bencodez.advancedcore.tests.BaseTest;
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 
 public class TimeCheckerTest {
