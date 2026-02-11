@@ -353,30 +353,87 @@ public final class BedrockNameResolver {
 	}
 
 	/**
-	 * Find an online player matching the provided name in either: - exact form
-	 * (case-insensitive), OR - prefixed variant, OR - prefix-stripped comparison
-	 * (online ".name" matches input "name")
+	 * Find an online player matching the provided name in either:
+	 * <ul>
+	 * <li>Exact form (case-insensitive)</li>
+	 * <li>Prefixed variant (case-insensitive)</li>
+	 * <li>Prefix-stripped comparison (e.g. ".DarkAshley" matches "darkashley")</li>
+	 * </ul>
+	 *
+	 * <p>
+	 * IMPORTANT: If both a Java and Bedrock player effectively match the same
+	 * unprefixed input (e.g. "Name" and ".Name" are both online), this method will
+	 * deterministically prefer the Java player to avoid incorrectly forcing Bedrock
+	 * resolution due to non-deterministic iteration order.
+	 * </p>
+	 *
+	 * @param name incoming player name
+	 * @return matching online {@link Player} or null
 	 */
 	private Player findOnlineByNameOrStripped(String name) {
-		if (name == null || name.isEmpty())
+		if (name == null || name.isEmpty()) {
 			return null;
+		}
 
 		final String lower = name.toLowerCase(Locale.ROOT);
 		final String prefixed = buildPrefixedVariant(name);
 
+		// 1) Exact match first (deterministic preference)
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			final String pn = p.getName();
-			if (pn.equalsIgnoreCase(name))
+			if (pn != null && pn.equalsIgnoreCase(name)) {
 				return p;
-
-			if (prefixed != null && pn.equalsIgnoreCase(prefixed))
-				return p;
-
-			// ".DarkAshley" should match "darkashley"
-			if (stripPrefixIfPresent(pn).toLowerCase(Locale.ROOT).equals(lower))
-				return p;
+			}
 		}
-		return null;
+
+		// 2) Prefixed variant match next (if incoming was unprefixed)
+		if (prefixed != null) {
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				final String pn = p.getName();
+				if (pn != null && pn.equalsIgnoreCase(prefixed)) {
+					return p;
+				}
+			}
+		}
+
+		// 3) Prefix-stripped match last
+		// If multiple players match after stripping, prefer Java over Bedrock.
+		Player bedrockCandidate = null;
+		Player javaCandidate = null;
+
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			final String pn = p.getName();
+			if (pn == null) {
+				continue;
+			}
+
+			final String strippedLower = stripPrefixIfPresent(pn).toLowerCase(Locale.ROOT);
+			if (!strippedLower.equals(lower)) {
+				continue;
+			}
+
+			// Decide preference using UUID-based bedrock detection (authoritative online)
+			boolean isBedrock = false;
+			try {
+				isBedrock = bedrockDetect.isBedrock(p.getUniqueId());
+			} catch (Throwable ignored) {
+				// If detection fails, treat as unknown; prefer as java to avoid
+				// incorrectly forcing bedrock.
+				isBedrock = false;
+			}
+
+			if (isBedrock) {
+				if (bedrockCandidate == null) {
+					bedrockCandidate = p;
+				}
+			} else {
+				// Java (or unknown) wins immediately
+				javaCandidate = p;
+				break;
+			}
+		}
+
+		return (javaCandidate != null) ? javaCandidate : bedrockCandidate;
 	}
 
 	public static final class Result {
