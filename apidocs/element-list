@@ -20,13 +20,13 @@ com.bencodez.advancedcore.api.misc.files
 com.bencodez.advancedcore.api.misc.scoreboards
 com.bencodez.advancedcore.api.permissions
 com.bencodez.advancedcore.api.placeholder
+com.bencodez.advancedcore.api.player
 com.bencodez.advancedcore.api.rewards
 com.bencodez.advancedcore.api.rewards.editbuttons
 com.bencodez.advancedcore.api.rewards.injected
 com.bencodez.advancedcore.api.rewards.injectedrequirement
 com.bencodez.advancedcore.api.time
 com.bencodez.advancedcore.api.time.events
-com.bencodez.advancedcore.api.updater
 com.bencodez.advancedcore.api.user
 com.bencodez.advancedcore.api.user.usercache
 com.bencodez.advancedcore.api.user.usercache.change
