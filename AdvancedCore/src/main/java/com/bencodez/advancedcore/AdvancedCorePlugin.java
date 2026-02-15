@@ -172,6 +172,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * BungeeCord channel name.
 	 * 
 	 * @return the bungee channel name
+	 * @param bungeeChannel the channel name to set
 	 */
 	@Getter
 	@Setter
@@ -207,6 +208,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * JavaScript engine context map.
 	 * 
 	 * @return the javascript engine map
+	 * @param javascriptEngine the javascript engine map to set
 	 */
 	@Getter
 	@Setter
@@ -215,6 +217,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * List of JavaScript placeholder requests.
 	 * 
 	 * @return the javascript engine requests list
+	 * @param javascriptEngineRequests the requests list to set
 	 */
 	@Getter
 	@Setter
@@ -224,6 +227,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Whether rewards should be loaded.
 	 * 
 	 * @return true if rewards should be loaded
+	 * @param loadRewards true to load rewards
 	 */
 	@Getter
 	@Setter
@@ -233,6 +237,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Whether server data should be loaded.
 	 * 
 	 * @return true if server data should be loaded
+	 * @param loadServerData true to load server data
 	 */
 	@Getter
 	@Setter
@@ -242,6 +247,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Whether user data should be loaded.
 	 * 
 	 * @return true if user data should be loaded
+	 * @param loadUserData true to load user data
 	 */
 	@Getter
 	@Setter
@@ -325,6 +331,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Getter
 	private ScheduledExecutorService inventoryTimer;
 
+	/**
+	 * User manager instance.
+	 * 
+	 * @param userManager the user manager to set
+	 */
 	@Setter
 	private UserManager userManager;
 
@@ -382,6 +393,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Whether Bedrock API should be loaded.
 	 * 
 	 * @return true if Bedrock API should be loaded
+	 * @param loadBedrockAPI true to load Bedrock API
 	 */
 	@Getter
 	@Setter
@@ -391,6 +403,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Whether LuckPerms should be loaded.
 	 * 
 	 * @return true if LuckPerms should be loaded
+	 * @param loadLuckPerms true to load LuckPerms
 	 */
 	@Getter
 	@Setter
@@ -408,6 +421,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Whether skull handler should be loaded.
 	 * 
 	 * @return true if skull handler should be loaded
+	 * @param loadSkullHandler true to load skull handler
 	 */
 	@Getter
 	@Setter
@@ -417,6 +431,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Whether Vault should be loaded.
 	 * 
 	 * @return true if Vault should be loaded
+	 * @param loadVault true to load Vault
 	 */
 	@Getter
 	@Setter
