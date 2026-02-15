@@ -528,6 +528,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to close GUIs when shift-clicking items.
+	 * @return true if GUIs should close on shift-click, false otherwise
+	 * @param closeGUIOnShiftClick true to close GUIs on shift-click, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -536,6 +538,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * List of worlds where default rewards are enabled.
+	 * @return the list of worlds where default rewards are enabled
+	 * @param defaultRewardWorlds the list of worlds to set
 	 */
 	@Getter
 	@Setter
@@ -544,6 +548,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * List of worlds where default rewards are disabled.
+	 * @return the list of worlds where default rewards are disabled
+	 * @param defaultRewardBlackListedWorlds the list of worlds to set
 	 */
 	@Getter
 	@Setter
@@ -558,11 +564,13 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Delay in milliseconds before processing login events.
+	 * @return the delay in milliseconds before processing login events
 	 */
 	@Getter
 	private long delayLoginEventMs = 0L;
 	/**
 	 * Time in milliseconds for spam click detection.
+	 * @return the time in milliseconds for spam click detection
 	 */
 	@Getter
 	private long spamClickTimeMs = 100L;
