@@ -20,25 +20,49 @@ public class AdvancedCoreLoginEvent extends Event {
 
 	private static final HandlerList handlers = new HandlerList();
 
+	/**
+	 * Gets the handler list for this event.
+	 * 
+	 * @return the handler list
+	 */
 	public static HandlerList getHandlerList() {
 		return handlers;
 	}
 
 	private boolean cancelled;
 
+	/**
+	 * Gets the AdvancedCoreUser associated with this login event.
+	 * 
+	 * @return the user
+	 */
 	@Getter
 	private final AdvancedCoreUser user;
 
+	/**
+	 * Gets the Player associated with this login event.
+	 * 
+	 * @return the player
+	 */
 	@Getter
 	private final Player player;
 
 	/**
 	 * UUID to use for storage/cache lookups. In offline-mode this should be the
 	 * name-derived UUID (OfflinePlayer:Name).
+	 * 
+	 * @return the UUID string
 	 */
 	@Getter
 	private final String uuid;
 
+	/**
+	 * Creates a new AdvancedCoreLoginEvent.
+	 * 
+	 * @param user the AdvancedCoreUser
+	 * @param uuid the UUID string
+	 * @param player the Player
+	 */
 	public AdvancedCoreLoginEvent(AdvancedCoreUser user, String uuid, Player player) {
 		super(true);
 		this.user = user;
@@ -51,14 +75,29 @@ public class AdvancedCoreLoginEvent extends Event {
 		return handlers;
 	}
 
+	/**
+	 * Gets whether this event is cancelled.
+	 * 
+	 * @return true if cancelled, false otherwise
+	 */
 	public boolean isCancelled() {
 		return cancelled;
 	}
 
+	/**
+	 * Sets whether this event is cancelled.
+	 * 
+	 * @param bln true to cancel, false otherwise
+	 */
 	public void setCancelled(boolean bln) {
 		cancelled = bln;
 	}
 
+	/**
+	 * Checks if the user is already in storage.
+	 * 
+	 * @return true if user exists in storage, false otherwise
+	 */
 	public boolean isUserInStorage() {
 		if (uuid == null || uuid.isEmpty()) {
 			return false;

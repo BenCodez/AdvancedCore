@@ -78,10 +78,19 @@ import com.bencodez.simpleapi.utils.PluginUtils;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Abstract base class for plugins that use AdvancedCore.
+ * Provides core functionality for user management, rewards, permissions, and more.
+ */
 public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private static AdvancedCorePlugin javaPlugin;
 
+	/**
+	 * Gets the singleton instance of this plugin.
+	 * 
+	 * @return the plugin instance
+	 */
 	public static AdvancedCorePlugin getInstance() {
 		return javaPlugin;
 	}
@@ -90,89 +99,170 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		javaPlugin = plugin;
 	}
 
+	/**
+	 * Handler for Vault integration.
+	 */
 	@Getter
 	public VaultHandler vaultHandler;
 
+	/**
+	 * Command loader for AdvancedCore commands.
+	 */
 	@Getter
 	private CommandLoader advancedCoreCommandLoader;
 
+	/**
+	 * Handler for skull caching.
+	 */
 	@Getter
 	private SkullCacheHandler skullCacheHandler;
 
+	/**
+	 * Whether AuthMe is loaded.
+	 */
 	@Getter
 	private boolean authMeLoaded = false;
 
+	/**
+	 * Whether nLogin is loaded.
+	 */
 	@Getter
 	private boolean nLoginLoaded = false;
 
+	/**
+	 * Whether LoginSecurity is loaded.
+	 */
 	@Getter
 	private boolean loginSecurityLoaded = false;
 
+	/**
+	 * List of banned player UUIDs.
+	 */
 	@Getter
 	private ArrayList<String> bannedPlayers = new ArrayList<>();
 
+	/**
+	 * Build time of AdvancedCore.
+	 */
 	@Getter
 	private String buildTime = "";
 
+	/**
+	 * BungeeCord channel name.
+	 */
 	@Getter
 	@Setter
 	private String bungeeChannel;
 
+	/**
+	 * Handler for CMI integration.
+	 */
 	@Getter
 	private CMIHandler cmiHandle;
 
 	private Database database;
 
+	/**
+	 * Handler for full inventory management.
+	 */
 	@Getter
 	private FullInventoryHandler fullInventoryHandler;
 
+	/**
+	 * Handler for hologram management.
+	 */
 	@Getter
 	private HologramHandler hologramHandler;
 
+	/**
+	 * JavaScript engine context map.
+	 */
 	@Getter
 	@Setter
 	private HashMap<String, Object> javascriptEngine = new HashMap<>();
+	/**
+	 * List of JavaScript placeholder requests.
+	 */
 	@Getter
 	@Setter
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<>();
 
+	/**
+	 * Whether rewards should be loaded.
+	 */
 	@Getter
 	@Setter
 	private boolean loadRewards = true;
 
+	/**
+	 * Whether server data should be loaded.
+	 */
 	@Getter
 	@Setter
 	private boolean loadServerData = true;
 
+	/**
+	 * Whether user data should be loaded.
+	 */
 	@Getter
 	@Setter
 	private boolean loadUserData = true;
+	/**
+	 * MySQL database connection.
+	 */
 	@Getter
 	private MySQL mysql;
+	/**
+	 * Configuration options for AdvancedCore.
+	 */
 	@Getter
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
+	/**
+	 * Whether PlaceholderAPI is enabled.
+	 */
 	@Getter
 	private boolean placeHolderAPIEnabled;
 
+	/**
+	 * Plugin messaging handler.
+	 */
 	@Getter
 	private PluginMessage pluginMessaging;
 
+	/**
+	 * Server data file handler.
+	 */
 	@Getter
 	private ServerData serverDataFile;
 
+	/**
+	 * Sign menu for user input.
+	 */
 	@Getter
 	private SignMenu signMenu;
 
+	/**
+	 * Time checker for scheduled operations.
+	 */
 	@Getter
 	private TimeChecker timeChecker;
 
+	/**
+	 * Main timer for scheduled tasks.
+	 */
 	@Getter
 	private ScheduledExecutorService timer;
 
+	/**
+	 * Timer for login-related tasks.
+	 */
 	@Getter
 	private ScheduledExecutorService loginTimer;
 
+	/**
+	 * Timer for inventory-related tasks.
+	 */
 	@Getter
 	private ScheduledExecutorService inventoryTimer;
 
@@ -181,39 +271,72 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private ArrayList<UserStartup> userStartup = new ArrayList<>();
 
+	/**
+	 * Version string of AdvancedCore.
+	 */
 	@Getter
 	private String advancedCoreVersion = "";
 
+	/**
+	 * Build number of AdvancedCore.
+	 */
 	@Getter
 	private String advancedCoreBuildNumber = "NOTSET";
 
+	/**
+	 * Handler for permission management.
+	 */
 	@Getter
 	private PermissionHandler permissionHandler;
 
+	/**
+	 * Handler for rewards system.
+	 */
 	@Getter
 	private RewardHandler rewardHandler;
 
+	/**
+	 * Handler for LuckPerms integration.
+	 */
 	@Getter
 	private LuckPermsHandle luckPermsHandle;
 
+	/**
+	 * Bukkit scheduler wrapper.
+	 */
 	@Getter
 	private BukkitScheduler bukkitScheduler;
 
+	/**
+	 * Whether Bedrock API should be loaded.
+	 */
 	@Getter
 	@Setter
 	private boolean loadBedrockAPI = true;
 
+	/**
+	 * Whether LuckPerms should be loaded.
+	 */
 	@Getter
 	@Setter
 	private boolean loadLuckPerms = true;
 
+	/**
+	 * Handler for Bedrock player name resolution.
+	 */
 	@Getter
 	private BedrockNameResolver bedrockHandle;;
 
+	/**
+	 * Whether skull handler should be loaded.
+	 */
 	@Getter
 	@Setter
 	private boolean loadSkullHandler = true;
 
+	/**
+	 * Whether Vault should be loaded.
+	 */
 	@Getter
 	@Setter
 	private boolean loadVault = true;
@@ -256,6 +379,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	}
 
+	/**
+	 * Checks for plugin updates in the background.
+	 */
 	public void checkPluginUpdate() {
 		if (!loadServerData) {
 			return;
@@ -275,6 +401,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	}
 
+	/**
+	 * Converts data from one storage type to another.
+	 * 
+	 * @param from the source storage type
+	 * @param to the target storage type
+	 */
 	public void convertDataStorage(UserStorage from, UserStorage to) {
 		debug("Starting convert process");
 		if (to == null) {
@@ -306,6 +438,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	}
 
+	/**
+	 * Logs a debug message at the specified debug level.
+	 * 
+	 * @param debugLevel the debug level
+	 * @param debug the debug message
+	 */
 	public void debug(DebugLevel debugLevel, String debug) {
 		if (debugLevel.equals(DebugLevel.EXTRA)) {
 			debug = "ExtraDebug: " + debug;
@@ -331,14 +469,29 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Logs a debug message at INFO level.
+	 * 
+	 * @param debug the debug message
+	 */
 	public void debug(String debug) {
 		debug(DebugLevel.INFO, debug);
 	}
 
+	/**
+	 * Logs a debug message at DEV level.
+	 * 
+	 * @param debug the debug message
+	 */
 	public void devDebug(String debug) {
 		debug(DebugLevel.DEV, debug);
 	}
 
+	/**
+	 * Logs a debug message at EXTRA level.
+	 * 
+	 * @param debug the debug message
+	 */
 	public void extraDebug(String debug) {
 		debug(DebugLevel.EXTRA, debug);
 	}
