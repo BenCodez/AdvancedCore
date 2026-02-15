@@ -11,9 +11,17 @@ import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.advancedcore.api.time.events.DateChangedEvent;
 
+/**
+ * Handles automatic backups of plugin data.
+ */
 public class BackupHandle implements Listener {
 	private static BackupHandle instance = new BackupHandle();
 
+	/**
+	 * Gets the singleton instance.
+	 * 
+	 * @return the backup handler instance
+	 */
 	public static BackupHandle getInstance() {
 		return instance;
 	}
@@ -21,6 +29,9 @@ public class BackupHandle implements Listener {
 	private BackupHandle() {
 	}
 
+	/**
+	 * Checks for and deletes old backups older than 5 days.
+	 */
 	public void checkOldBackups() {
 		for (File file : new File(AdvancedCorePlugin.getInstance().getDataFolder(), "Backups").listFiles()) {
 			long lastModified = file.lastModified();
@@ -31,6 +42,11 @@ public class BackupHandle implements Listener {
 		}
 	}
 
+	/**
+	 * Handles date change events to create daily backups.
+	 * 
+	 * @param e the date changed event
+	 */
 	@EventHandler
 	public void onPostDateChange(DateChangedEvent e) {
 		if (!e.getTimeType().equals(TimeType.DAY) || !AdvancedCorePlugin.getInstance().getOptions().isCreateBackups()) {

@@ -5,13 +5,29 @@ import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
 
+/**
+ * API for running text animations.
+ */
 public class AnimationAPI {
+	/**
+	 * Interface for animation callbacks.
+	 */
 	public interface Animation {
+		/**
+		 * Called on each animation frame.
+		 * 
+		 * @param text the text to display
+		 */
 		public void onAnimate(String text);
 	}
 
 	private static AnimationAPI instance = new AnimationAPI();
 
+	/**
+	 * Gets the singleton instance.
+	 * 
+	 * @return the animation API instance
+	 */
 	public static AnimationAPI getInstance() {
 		return instance;
 	}

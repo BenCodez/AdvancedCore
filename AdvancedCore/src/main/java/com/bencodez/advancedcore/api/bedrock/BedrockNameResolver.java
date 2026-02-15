@@ -15,6 +15,9 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 
+/**
+ * Resolves Bedrock player names and detects Bedrock players.
+ */
 public final class BedrockNameResolver {
 
 	private final BedrockDetect bedrockDetect;
@@ -25,6 +28,11 @@ public final class BedrockNameResolver {
 	private final Map<String, Boolean> cache = new ConcurrentHashMap<>();
 	private final Map<String, String> ciIndex = new ConcurrentHashMap<>();
 
+	/**
+	 * Creates a new Bedrock name resolver.
+	 * 
+	 * @param plugin the plugin instance
+	 */
 	public BedrockNameResolver(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 		this.bedrockDetect = new BedrockDetect(plugin::debug);
@@ -56,10 +64,23 @@ public final class BedrockNameResolver {
 		});
 	}
 
+	/**
+	 * Checks if a player is a Bedrock player by name.
+	 * 
+	 * @param name the player name
+	 * @return true if the player is a Bedrock player
+	 */
 	public boolean isBedrock(String name) {
 		return isBedrockName(name);
 	}
 
+	/**
+	 * Checks if a player is a Bedrock player by UUID and name.
+	 * 
+	 * @param uuid the player UUID
+	 * @param name the player name
+	 * @return true if the player is a Bedrock player
+	 */
 	public boolean isBedrock(UUID uuid, String name) {
 		// 1) UUID is authoritative if present
 		if (uuid != null) {
@@ -138,6 +159,11 @@ public final class BedrockNameResolver {
 
 	// ------------ EXISTING METHODS (unchanged behavior) ------------
 
+	/**
+	 * Learns whether a user is a Bedrock player.
+	 * 
+	 * @param user the user to learn from
+	 */
 	public void learn(AdvancedCoreUser user) {
 		if (user == null)
 			return;
@@ -147,6 +173,11 @@ public final class BedrockNameResolver {
 		putLearned(name, user.isBedrockUser());
 	}
 
+	/**
+	 * Learns whether a player is a Bedrock player.
+	 * 
+	 * @param player the player to learn from
+	 */
 	public void learn(Player player) {
 		if (player == null)
 			return;
