@@ -18,27 +18,57 @@ import com.bencodez.simpleapi.array.ArrayUtils;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Button for editing GUI values.
+ */
 public class EditGUIButton extends BInventoryButton {
 
+	/**
+	 * @return the editor
+	 * @param editor the editor
+	 */
 	@Getter
 	@Setter
 	private EditGUIValue editor;
 
+	/**
+	 * Constructor for EditGUIButton.
+	 *
+	 * @param editer the GUI value editor
+	 */
 	public EditGUIButton(EditGUIValue editer) {
 		super(new ItemBuilder(Material.PAPER));
 		this.editor = editer;
 	}
 
+	/**
+	 * Constructor for EditGUIButton with custom item.
+	 *
+	 * @param item the item builder
+	 * @param editer the GUI value editor
+	 */
 	public EditGUIButton(ItemBuilder item, EditGUIValue editer) {
 		super(item);
 		this.editor = editer;
 	}
 
+	/**
+	 * Adds a lore line to the button.
+	 *
+	 * @param lore the lore line
+	 * @return this instance
+	 */
 	public EditGUIButton addLore(String lore) {
 		getEditor().addLore(lore);
 		return this;
 	}
 
+	/**
+	 * Adds options to the button.
+	 *
+	 * @param str the options
+	 * @return this instance
+	 */
 	public EditGUIButton addOptions(String... str) {
 		getEditor().addOptions(str);
 		return this;
@@ -84,6 +114,12 @@ public class EditGUIButton extends BInventoryButton {
 		getEditor().onClick(clickEvent);
 	}
 
+	/**
+	 * Sets the name of the button.
+	 *
+	 * @param name the name
+	 * @return this instance
+	 */
 	public EditGUIButton setName(String name) {
 		this.getBuilder().setName(name);
 		return this;

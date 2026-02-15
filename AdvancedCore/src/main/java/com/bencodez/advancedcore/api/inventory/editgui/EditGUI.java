@@ -9,12 +9,23 @@ import java.util.Map;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 
+/**
+ * Edit GUI for sorting and organizing edit buttons.
+ */
 public class EditGUI extends BInventory {
 
+	/**
+	 * Constructor for EditGUI.
+	 *
+	 * @param name the inventory name
+	 */
 	public EditGUI(String name) {
 		super(name);
 	}
 
+	/**
+	 * Sorts the edit buttons alphabetically by key.
+	 */
 	public void sort() {
 		Map<Integer, BInventoryButton> map = getButtons();
 		setButtons(new HashMap<>());

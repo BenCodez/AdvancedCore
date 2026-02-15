@@ -14,7 +14,16 @@ import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
 import com.bencodez.simpleapi.array.ArrayUtils;
 
+/**
+ * Abstract GUI value for list editing.
+ */
 public abstract class EditGUIValueList extends EditGUIValue {
+	/**
+	 * Constructor for EditGUIValueList.
+	 *
+	 * @param key the key
+	 * @param value the initial value
+	 */
 	public EditGUIValueList(String key, Object value) {
 		setKey(key);
 		setCurrentValue(value);
@@ -77,5 +86,11 @@ public abstract class EditGUIValueList extends EditGUIValue {
 		inv.openInventory(clickEvent.getPlayer());
 	}
 
+	/**
+	 * Sets the list value.
+	 *
+	 * @param player the player
+	 * @param value the list to set
+	 */
 	public abstract void setValue(Player player, ArrayList<String> value);
 }

@@ -19,6 +19,11 @@ public class FileThread {
 	 */
 	public class ReadThread extends java.lang.Thread {
 
+		/**
+		 * Deletes a player file.
+		 *
+		 * @param uuid the player UUID
+		 */
 		@Deprecated
 		public void deletePlayerFile(String uuid) {
 			synchronized (FileThread.getInstance()) {
@@ -35,6 +40,13 @@ public class FileThread {
 			}
 		}
 
+		/**
+		 * Gets data for a player.
+		 *
+		 * @param userData the user data
+		 * @param uuid the player UUID
+		 * @return the file configuration
+		 */
 		@Deprecated
 		public FileConfiguration getData(UserData userData, String uuid) {
 			synchronized (FileThread.getInstance()) {
@@ -54,6 +66,12 @@ public class FileThread {
 
 		}
 
+		/**
+		 * Gets the player file.
+		 *
+		 * @param uuid the player UUID
+		 * @return the file
+		 */
 		@Deprecated
 		public File getPlayerFile(String uuid) {
 			synchronized (FileThread.getInstance()) {
@@ -74,6 +92,12 @@ public class FileThread {
 			}
 		}
 
+		/**
+		 * Checks if a player file exists.
+		 *
+		 * @param uuid the player UUID
+		 * @return true if file exists
+		 */
 		@Deprecated
 		public boolean hasPlayerFile(String uuid) {
 			synchronized (FileThread.getInstance()) {
@@ -113,6 +137,14 @@ public class FileThread {
 
 		}
 
+		/**
+		 * Sets data for a player.
+		 *
+		 * @param userData the user data
+		 * @param uuid the player UUID
+		 * @param path the data path
+		 * @param value the value to set
+		 */
 		@Deprecated
 		public void setData(UserData userData, final String uuid, final String path, final Object value) {
 			synchronized (FileThread.getInstance()) {

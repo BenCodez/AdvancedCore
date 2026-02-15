@@ -17,6 +17,9 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
 
+/**
+ * Handler for launching fireworks.
+ */
 public class FireworkHandler implements Listener {
 
 	/** The instance. */
@@ -50,6 +53,7 @@ public class FireworkHandler implements Listener {
 	 * @param trail        the trail
 	 * @param flicker      the flicker
 	 * @param types        the types
+	 * @param detonate     whether to detonate immediately
 	 */
 	public void launchFirework(Location loc, int power, ArrayList<String> colors, ArrayList<String> fadeOutColor,
 			boolean trail, boolean flicker, ArrayList<String> types, boolean detonate) {
@@ -126,6 +130,11 @@ public class FireworkHandler implements Listener {
 
 	}
 
+	/**
+	 * Handles firework damage events.
+	 *
+	 * @param event the damage event
+	 */
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onFireworkDamage(EntityDamageByEntityEvent event) {
 		if (event.getDamager() instanceof Firework) {

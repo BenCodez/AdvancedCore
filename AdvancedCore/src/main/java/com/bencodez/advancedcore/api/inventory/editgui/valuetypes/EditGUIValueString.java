@@ -8,8 +8,17 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
+/**
+ * Abstract GUI value for string editing.
+ */
 public abstract class EditGUIValueString extends EditGUIValue {
 
+	/**
+	 * Constructor for EditGUIValueString.
+	 *
+	 * @param key the key
+	 * @param value the initial value
+	 */
 	public EditGUIValueString(String key, Object value) {
 		setKey(key);
 		setCurrentValue(value);
@@ -35,5 +44,11 @@ public abstract class EditGUIValueString extends EditGUIValue {
 				.usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
 
+	/**
+	 * Sets the string value.
+	 *
+	 * @param player the player
+	 * @param value the value to set
+	 */
 	public abstract void setValue(Player player, String value);
 }

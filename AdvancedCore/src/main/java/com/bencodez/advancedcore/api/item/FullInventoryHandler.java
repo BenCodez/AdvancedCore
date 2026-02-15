@@ -19,18 +19,35 @@ import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
+/**
+ * Handler for items when player inventories are full.
+ */
 public class FullInventoryHandler {
+	/**
+	 * @return the items waiting to be given
+	 */
 	@Getter
 	private ConcurrentHashMap<UUID, ArrayList<ItemStack>> items;
 
 	private AdvancedCorePlugin plugin;
 
+	/**
+	 * @return the timer executor service
+	 */
 	@Getter
 	private ScheduledExecutorService timer;
 
+	/**
+	 * @return the last message time for each player
+	 */
 	@Getter
 	private ConcurrentHashMap<UUID, Long> lastMessageTime;
 
+	/**
+	 * Constructor for FullInventoryHandler.
+	 *
+	 * @param plugin the plugin instance
+	 */
 	public FullInventoryHandler(AdvancedCorePlugin plugin) {
 		items = new ConcurrentHashMap<>();
 		lastMessageTime = new ConcurrentHashMap<>();
@@ -39,6 +56,12 @@ public class FullInventoryHandler {
 		startup();
 	}
 
+	/**
+	 * Adds multiple items for a player.
+	 *
+	 * @param uuid the player UUID
+	 * @param item the items to add
+	 */
 	public void add(UUID uuid, ArrayList<ItemStack> item) {
 		if (items.containsKey(uuid)) {
 			ArrayList<ItemStack> current = items.get(uuid);
@@ -49,6 +72,12 @@ public class FullInventoryHandler {
 		}
 	}
 
+	/**
+	 * Adds a single item for a player.
+	 *
+	 * @param uuid the player UUID
+	 * @param item the item to add
+	 */
 	public void add(UUID uuid, ItemStack item) {
 		if (items.containsKey(uuid)) {
 			ArrayList<ItemStack> current = items.get(uuid);
@@ -61,6 +90,9 @@ public class FullInventoryHandler {
 		}
 	}
 
+	/**
+	 * Checks all players for pending items.
+	 */
 	public void check() {
 		for (UUID entry : items.keySet()) {
 			Player p = Bukkit.getPlayer(entry);
@@ -73,6 +105,11 @@ public class FullInventoryHandler {
 		}
 	}
 
+	/**
+	 * Checks a specific player for pending items.
+	 *
+	 * @param p the player
+	 */
 	public void check(Player p) {
 		if (p != null && items.containsKey(p.getUniqueId())) {
 			ArrayList<ItemStack> extra = new ArrayList<>();
@@ -90,6 +127,12 @@ public class FullInventoryHandler {
 		}
 	}
 
+	/**
+	 * Gives items to a player.
+	 *
+	 * @param p the player
+	 * @param item the items to give
+	 */
 	public void giveItem(Player p, ItemStack... item) {
 		HashMap<Integer, ItemStack> excess = p.getInventory().addItem(item);
 		boolean full = false;
@@ -117,6 +160,9 @@ public class FullInventoryHandler {
 		p.updateInventory();
 	}
 
+	/**
+	 * Loads the timer for checking inventories.
+	 */
 	public void loadTimer() {
 		timer = Executors.newScheduledThreadPool(1);
 		timer.scheduleAtFixedRate(new Runnable() {
@@ -128,6 +174,9 @@ public class FullInventoryHandler {
 		}, 10, 30, TimeUnit.SECONDS);
 	}
 
+	/**
+	 * Saves pending items to disk.
+	 */
 	public void save() {
 		try {
 			if (plugin.getServerDataFile().getData() == null) {
@@ -155,6 +204,9 @@ public class FullInventoryHandler {
 		}
 	}
 
+	/**
+	 * Loads pending items from disk on startup.
+	 */
 	public void startup() {
 		try {
 			if (plugin.getServerDataFile().getData() == null
