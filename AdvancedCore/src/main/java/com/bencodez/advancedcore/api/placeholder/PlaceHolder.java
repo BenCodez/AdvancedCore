@@ -7,23 +7,63 @@ import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
+/**
+ * Abstract class for placeholders.
+ *
+ * @param <T> the user type
+ */
 public abstract class PlaceHolder<T> {
+	/**
+	 * Gets the description.
+	 *
+	 * @return the description
+	 */
 	@Getter
 	private String description;
+	/**
+	 * Gets the identifier.
+	 *
+	 * @return the identifier
+	 */
 	@Getter
 	private String identifier;
+	/**
+	 * Gets use starts with flag.
+	 *
+	 * @return true if uses starts with
+	 */
 	@Getter
 	private boolean useStartsWith = false;
 
+	/**
+	 * Gets the no value return string.
+	 *
+	 * @return the no value return string
+	 */
 	@Getter
 	private String noValueReturn = "0";
 
+	/**
+	 * Gets the cache.
+	 *
+	 * @return the cache map
+	 */
 	@Getter
 	private ConcurrentHashMap<String, ConcurrentHashMap<UUID, String>> cache;
 
+	/**
+	 * Gets the update data key.
+	 *
+	 * @return the update data key
+	 */
 	@Getter
 	private String updateDataKey = "";
 
+	/**
+	 * Gets uses cache flag.
+	 *
+	 * @return true if uses cache
+	 */
 	@Getter
 	private boolean usesCache = false;
 
@@ -47,6 +87,11 @@ public abstract class PlaceHolder<T> {
 		this.noValueReturn = noValueReturn;
 	}
 
+	/**
+	 * Clears cache for a player.
+	 *
+	 * @param javaUUID the player UUID
+	 */
 	public void clearCachePlayer(UUID javaUUID) {
 		for (String ident : cache.keySet()) {
 			if (cache.get(ident).containsKey(javaUUID)) {

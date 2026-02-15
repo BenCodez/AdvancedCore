@@ -19,6 +19,11 @@ import lombok.Getter;
  */
 public class BossBar {
 
+	/**
+	 * Gets the boss bar.
+	 *
+	 * @return the boss bar
+	 */
 	@Getter
 	private org.bukkit.boss.BossBar bossBar;
 
@@ -36,10 +41,21 @@ public class BossBar {
 		bossBar.setProgress(progress);
 	}
 
+	/**
+	 * Adds a player to the boss bar.
+	 *
+	 * @param player the player to add
+	 */
 	public void addPlayer(Player player) {
 		bossBar.addPlayer(player);
 	}
 
+	/**
+	 * Adds a player to the boss bar with delay.
+	 *
+	 * @param player the player to add
+	 * @param delay the delay in seconds before removing
+	 */
 	public void addPlayer(final Player player, int delay) {
 		try {
 			if (player == null) {
@@ -64,10 +80,18 @@ public class BossBar {
 		}
 	}
 
+	/**
+	 * Gets the players viewing the boss bar.
+	 *
+	 * @return the list of players
+	 */
 	public List<Player> getPlayers() {
 		return bossBar.getPlayers();
 	}
 
+	/**
+	 * Hides the boss bar.
+	 */
 	public void hide() {
 		if (bossBar != null) {
 			bossBar.setVisible(false);
@@ -86,14 +110,27 @@ public class BossBar {
 				}, delay * 50, TimeUnit.MILLISECONDS);
 	}
 
+	/**
+	 * Removes a player from the boss bar.
+	 *
+	 * @param player the player to remove
+	 */
 	public void removePlayer(Player player) {
 		bossBar.removePlayer(player);
 	}
 
+	/**
+	 * Sends the boss bar to all players.
+	 */
 	public void send() {
 		bossBar.setVisible(true);
 	}
 
+	/**
+	 * Sends the boss bar with delay.
+	 *
+	 * @param delay the delay in seconds
+	 */
 	public void send(int delay) {
 		bossBar.setVisible(true);
 
@@ -112,12 +149,22 @@ public class BossBar {
 		hideInDelay(delay);
 	}
 
+	/**
+	 * Sets the color of the boss bar.
+	 *
+	 * @param barColor the bar color
+	 */
 	public void setColor(String barColor) {
 		if (barColor != null) {
 			bossBar.setColor(BarColor.valueOf(barColor));
 		}
 	}
 
+	/**
+	 * Sets the progress of the boss bar.
+	 *
+	 * @param progress the progress (0.0 to 1.0)
+	 */
 	public void setProgress(double progress) {
 		if (progress > 1) {
 			progress = 1;
@@ -128,12 +175,22 @@ public class BossBar {
 		bossBar.setProgress(progress);
 	}
 
+	/**
+	 * Sets the style of the boss bar.
+	 *
+	 * @param barStyle the bar style
+	 */
 	public void setStyle(String barStyle) {
 		if (barStyle != null) {
 			bossBar.setStyle(BarStyle.valueOf(barStyle));
 		}
 	}
 
+	/**
+	 * Sets the title of the boss bar.
+	 *
+	 * @param title the title
+	 */
 	public void setTitle(String title) {
 		if (title != null) {
 			bossBar.setTitle(MessageAPI.colorize(title));
@@ -141,6 +198,11 @@ public class BossBar {
 
 	}
 
+	/**
+	 * Sets the visibility of the boss bar.
+	 *
+	 * @param visible true to show, false to hide
+	 */
 	public void setVisible(boolean visible) {
 		bossBar.setVisible(visible);
 	}

@@ -11,9 +11,18 @@ import lombok.Getter;
  */
 public abstract class CommandHandler extends com.bencodez.simpleapi.command.CommandHandler {
 
+	/**
+	 * Gets the plugin.
+	 *
+	 * @return the plugin
+	 */
 	@Getter
 	private AdvancedCorePlugin plugin;
 
+	/**
+	 * Instantiates a new command handler.
+	 * @deprecated Use constructor with plugin parameter
+	 */
 	@Deprecated
 	public CommandHandler() {
 		super(AdvancedCorePlugin.getInstance());
@@ -21,6 +30,11 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
 	}
 
+	/**
+	 * Instantiates a new command handler.
+	 *
+	 * @param plugin the plugin
+	 */
 	public CommandHandler(AdvancedCorePlugin plugin) {
 		super(plugin);
 		this.plugin = plugin;
@@ -89,6 +103,13 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
 	}
 
+	/**
+	 * Instantiates a new command handler.
+	 *
+	 * @param args the args
+	 * @param perm the permission
+	 * @deprecated Use constructor with plugin parameter
+	 */
 	@Deprecated
 	public CommandHandler(String[] args, String perm) {
 		super(AdvancedCorePlugin.getInstance(), args, perm);
@@ -98,6 +119,14 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 
 	}
 
+	/**
+	 * Instantiates a new command handler.
+	 *
+	 * @param args the args
+	 * @param perm the permission
+	 * @param helpMessage the help message
+	 * @deprecated Use constructor with plugin parameter
+	 */
 	@Deprecated
 	public CommandHandler(String[] args, String perm, String helpMessage) {
 		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage);
@@ -105,6 +134,15 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
 	}
 
+	/**
+	 * Instantiates a new command handler.
+	 *
+	 * @param args the args
+	 * @param perm the permission
+	 * @param helpMessage the help message
+	 * @param allowConsole whether console is allowed
+	 * @deprecated Use constructor with plugin parameter
+	 */
 	@Deprecated
 	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole) {
 		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage, allowConsole);
@@ -112,6 +150,16 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 		setAllowMultiplePermissions(plugin.getOptions().isMultiplePermissionChecks());
 	}
 
+	/**
+	 * Instantiates a new command handler.
+	 *
+	 * @param args the args
+	 * @param perm the permission
+	 * @param helpMessage the help message
+	 * @param allowConsole whether console is allowed
+	 * @param forceConsole whether to force console only
+	 * @deprecated Use constructor with plugin parameter
+	 */
 	@Deprecated
 	public CommandHandler(String[] args, String perm, String helpMessage, boolean allowConsole, boolean forceConsole) {
 		super(AdvancedCorePlugin.getInstance(), args, perm, helpMessage, allowConsole, forceConsole);
@@ -145,6 +193,11 @@ public abstract class CommandHandler extends com.bencodez.simpleapi.command.Comm
 		return plugin.getOptions().getHelpLine();
 	}
 
+	/**
+	 * Ignores number check.
+	 *
+	 * @return the command handler
+	 */
 	@Override
 	public CommandHandler ignoreNumberCheck() {
 		super.ignoreNumberCheck();

@@ -39,6 +39,11 @@ public class ChoiceGUI {
 	private ChoiceGUI() {
 	}
 
+	/**
+	 * Opens the claim choices GUI.
+	 *
+	 * @param player the player
+	 */
 	public void openClaimChoices(Player player) {
 		AdvancedCoreUser user = plugin.getUserManager().getUser(player);
 		BInventory inv = new BInventory("UnClaimed Choices");
@@ -67,6 +72,12 @@ public class ChoiceGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Opens the claim choices GUI for a reward.
+	 *
+	 * @param player the player
+	 * @param reward the reward
+	 */
 	public void openClaimChoices(Player player, Reward reward) {
 		if (!reward.getConfig().getEnableChoices()) {
 			player.sendMessage("Choice rewards not enabled");
@@ -113,6 +124,12 @@ public class ChoiceGUI {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Opens the preference reward GUI.
+	 *
+	 * @param player the player
+	 * @param rewardName the reward name
+	 */
 	public void openPreferenceReward(Player player, String rewardName) {
 		Reward reward = plugin.getRewardHandler().getReward(rewardName);
 		if (!reward.getConfig().getEnableChoices()) {
