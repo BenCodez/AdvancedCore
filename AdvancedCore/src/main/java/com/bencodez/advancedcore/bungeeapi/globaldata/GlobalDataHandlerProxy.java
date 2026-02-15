@@ -18,6 +18,8 @@ import lombok.Setter;
 public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 
 	/**
+	 * Whether time changed has happened.
+	 * 
 	 * @return whether time changed has happened
 	 * @param timeChangedHappened whether time changed has happened
 	 */
@@ -26,12 +28,16 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 	private boolean timeChangedHappened = false;
 
 	/**
+	 * The list of time changes.
+	 * 
 	 * @return the list of time changes
 	 */
 	@Getter
 	private ArrayList<TimeType> timeChanges = new ArrayList<>();
 
 	/**
+	 * The time changed timer.
+	 * 
 	 * @return the time changed timer
 	 */
 	@Getter

@@ -24,6 +24,8 @@ import lombok.Getter;
  */
 public class FullInventoryHandler {
 	/**
+	 * The items waiting to be given.
+	 * 
 	 * @return the items waiting to be given
 	 */
 	@Getter
@@ -32,12 +34,16 @@ public class FullInventoryHandler {
 	private AdvancedCorePlugin plugin;
 
 	/**
+	 * The timer executor service.
+	 * 
 	 * @return the timer executor service
 	 */
 	@Getter
 	private ScheduledExecutorService timer;
 
 	/**
+	 * The last message time for each player.
+	 * 
 	 * @return the last message time for each player
 	 */
 	@Getter

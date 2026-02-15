@@ -17,6 +17,8 @@ import lombok.Getter;
  */
 public class GlobalDataHandler {
 	/**
+	 * The global MySQL instance.
+	 * 
 	 * @return the global MySQL instance
 	 */
 	@Getter

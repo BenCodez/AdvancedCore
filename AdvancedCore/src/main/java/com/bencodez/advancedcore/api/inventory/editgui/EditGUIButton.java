@@ -24,6 +24,8 @@ import lombok.Setter;
 public class EditGUIButton extends BInventoryButton {
 
 	/**
+	 * The editor for this button.
+	 * 
 	 * @return the editor
 	 * @param editor the editor
 	 */

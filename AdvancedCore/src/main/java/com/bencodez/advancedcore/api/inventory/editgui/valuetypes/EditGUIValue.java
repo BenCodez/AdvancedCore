@@ -15,6 +15,8 @@ import lombok.Setter;
  */
 public abstract class EditGUIValue {
 	/**
+	 * Whether the value can be retrieved.
+	 * 
 	 * @return whether the value can be retrieved
 	 * @param canGetValue whether the value can be retrieved
 	 */
@@ -23,6 +25,8 @@ public abstract class EditGUIValue {
 	private boolean canGetValue = true;
 
 	/**
+	 * The current value.
+	 * 
 	 * @return the current value
 	 * @param currentValue the current value
 	 */
@@ -31,6 +35,8 @@ public abstract class EditGUIValue {
 	private Object currentValue;
 
 	/**
+	 * The input method.
+	 * 
 	 * @return the input method
 	 * @param inputMethod the input method
 	 */
@@ -39,6 +45,8 @@ public abstract class EditGUIValue {
 	private InputMethod inputMethod;
 
 	/**
+	 * The inventory.
+	 * 
 	 * @return the inventory
 	 * @param inv the inventory
 	 */
@@ -47,6 +55,8 @@ public abstract class EditGUIValue {
 	private BInventory inv;
 
 	/**
+	 * The key.
+	 * 
 	 * @return the key
 	 * @param key the key
 	 */
@@ -55,6 +65,8 @@ public abstract class EditGUIValue {
 	private String key;
 
 	/**
+	 * The lore lines.
+	 * 
 	 * @return the lore lines
 	 * @param lores the lore lines
 	 */
@@ -63,6 +75,8 @@ public abstract class EditGUIValue {
 	private ArrayList<String> lores;
 
 	/**
+	 * The options.
+	 * 
 	 * @return the options
 	 */
 	@Getter
