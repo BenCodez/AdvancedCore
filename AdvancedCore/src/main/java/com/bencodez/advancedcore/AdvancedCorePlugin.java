@@ -1098,6 +1098,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		TabCompleteHandler.getInstance().loadTimer(getTimer());
 	}
 
+	/**
+	 * Loads value request input commands.
+	 */
 	public void loadValueRequestInputCommands() {
 		CommandLoader.getInstance().loadValueRequestCommands();
 		try {
@@ -1112,6 +1115,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Loads Vault integration.
+	 */
 	public void loadVault() {
 		vaultHandler = new VaultHandler();
 		if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
