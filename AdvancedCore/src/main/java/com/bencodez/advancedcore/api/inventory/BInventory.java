@@ -40,27 +40,68 @@ public class BInventory {
 	 */
 	public class ClickEvent {
 
+		/**
+		 * The button that was clicked.
+		 * 
+		 * @return the button
+		 */
 		@Getter
 		private BInventoryButton button;
 
+		/**
+		 * The click type.
+		 * 
+		 * @return the click type
+		 */
 		@Getter
 		private ClickType click;
 
+		/**
+		 * The clicked item.
+		 * 
+		 * @return the clicked item
+		 */
 		@Getter
 		private ItemStack clickedItem;
 
+		/**
+		 * The inventory click event.
+		 * 
+		 * @return the inventory click event
+		 */
 		@Getter
 		private InventoryClickEvent event;
 
+		/**
+		 * The inventory.
+		 * 
+		 * @return the inventory
+		 */
 		@Getter
 		private Inventory inventory;
 
+		/**
+		 * The player who clicked.
+		 * 
+		 * @return the player
+		 */
 		@Getter
 		private Player player;
 
+		/**
+		 * The slot that was clicked.
+		 * 
+		 * @return the slot number
+		 */
 		@Getter
 		private int slot;
 
+		/**
+		 * Instantiates a new click event.
+		 * 
+		 * @param event the inventory click event
+		 * @param b the button
+		 */
 		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
 			this.event = event;
 			player = (Player) event.getWhoClicked();
@@ -71,6 +112,9 @@ public class BInventory {
 			button = b;
 		}
 
+		/**
+		 * Close the inventory for the player.
+		 */
 		public void closeInventory() {
 			runSync(new Runnable() {
 
@@ -122,6 +166,11 @@ public class BInventory {
 			return player;
 		}
 
+		/**
+		 * Run a task synchronously.
+		 * 
+		 * @param run the runnable to execute
+		 */
 		public void runSync(Runnable run) {
 			AdvancedCorePlugin.getInstance().getBukkitScheduler().runTask(AdvancedCorePlugin.getInstance(), run);
 		}
@@ -139,6 +188,11 @@ public class BInventory {
 
 	private Map<Integer, BInventoryButton> buttons = new HashMap<>();
 
+	/**
+	 * Whether the inventory should close after interaction.
+	 * 
+	 * @return whether the inventory should close
+	 */
 	@Getter
 	private boolean closeInv = true;
 
@@ -148,17 +202,33 @@ public class BInventory {
 
 	private String inventoryName;
 
+	/**
+	 * The last time a button was pressed in this inventory.
+	 * 
+	 * @return the last press time in milliseconds
+	 * @param lastPressTime the last press time to set
+	 */
 	@Getter
 	@Setter
 	private long lastPressTime = 0;
 
 	private int maxInvSize = 54;
 
+	/**
+	 * The maximum page number for paginated inventories.
+	 * 
+	 * @return the maximum page number
+	 */
 	@Getter
 	private int maxPage = 1;
 
 	private ItemStack nextItem;
 
+	/**
+	 * The current page number for paginated inventories.
+	 * 
+	 * @return the current page number
+	 */
 	@Getter
 	private int page = 1;
 
@@ -168,9 +238,20 @@ public class BInventory {
 
 	private String perm;
 
+	/**
+	 * Placeholders to be replaced in the inventory.
+	 * 
+	 * @return the placeholder map
+	 */
 	@Getter
 	private HashMap<String, String> placeholders = new HashMap<>();
 
+	/**
+	 * Whether to play sound on inventory interaction.
+	 * 
+	 * @return whether sound should play
+	 * @param playerSound whether sound should play
+	 */
 	@Getter
 	@Setter
 	private boolean playerSound = true;
@@ -232,6 +313,12 @@ public class BInventory {
 		}
 	}
 	
+	/**
+	 * Check if a slot is taken by a button.
+	 * 
+	 * @param slot the slot to check
+	 * @return true if the slot is taken
+	 */
 	public boolean isSlotTaken(int slot) {
 	    return buttons.containsKey(slot);
 	}
@@ -246,6 +333,13 @@ public class BInventory {
 		getButtons().put(position, button);
 	}
 
+	/**
+	 * Add data to this inventory.
+	 * 
+	 * @param key the key
+	 * @param object the value
+	 * @return this inventory
+	 */
 	public BInventory addData(String key, Object object) {
 		getData().put(key, object);
 		return this;
@@ -276,11 +370,26 @@ public class BInventory {
 		fillItems.clear();
 	}
 
+	/**
+	 * Add a placeholder to this inventory.
+	 * 
+	 * @param toReplace the string to replace
+	 * @param replaceWith the replacement string
+	 * @return this inventory
+	 */
 	public BInventory addPlaceholder(String toReplace, String replaceWith) {
 		placeholders.put(toReplace, replaceWith);
 		return this;
 	}
 
+	/**
+	 * Add an updating button with scheduled updates.
+	 * 
+	 * @param plugin the plugin instance
+	 * @param delay the initial delay
+	 * @param interval the update interval
+	 * @param runnable the runnable to execute
+	 */
 	public void addUpdatingButton(AdvancedCorePlugin plugin, long delay, long interval, Runnable runnable) {
 		if (futures == null) {
 			futures = new ArrayList<>();
@@ -288,6 +397,9 @@ public class BInventory {
 		futures.add(plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, delay, TimeUnit.MILLISECONDS));
 	}
 
+	/**
+	 * Cancel all scheduled timers for this inventory.
+	 */
 	@SuppressWarnings("rawtypes")
 	public void cancelTimer() {
 		if (futures != null) {
@@ -298,6 +410,12 @@ public class BInventory {
 		}
 	}
 
+	/**
+	 * Close the inventory for a player after button click.
+	 * 
+	 * @param p the player
+	 * @param b the button that was clicked
+	 */
 	public void closeInv(Player p, BInventoryButton b) {
 		if (!PlayerUtils.getTopInventory(p).equals(inv)) {
 			return;
@@ -318,11 +436,21 @@ public class BInventory {
 		cancelTimer();
 	}
 
+	/**
+	 * Set this inventory to not close after interaction.
+	 * 
+	 * @return this inventory
+	 */
 	public BInventory dontClose() {
 		closeInv = false;
 		return this;
 	}
 
+	/**
+	 * Force close the inventory for a player.
+	 * 
+	 * @param p the player
+	 */
 	public void forceClose(Player p) {
 		if (Bukkit.isPrimaryThread()) {
 			p.closeInventory();
@@ -364,10 +492,23 @@ public class BInventory {
 		return data;
 	}
 
+	/**
+	 * Get data by key.
+	 * 
+	 * @param key the key
+	 * @return the data value
+	 */
 	public Object getData(String key) {
 		return data.get(key);
 	}
 
+	/**
+	 * Get data by key with default value.
+	 * 
+	 * @param key the key
+	 * @param defaultValue the default value if key is not found
+	 * @return the data value or default value
+	 */
 	public Object getData(String key, Object defaultValue) {
 		if (data.containsKey(key)) {
 			return data.get(key);
@@ -375,6 +516,11 @@ public class BInventory {
 		return defaultValue;
 	}
 
+	/**
+	 * Get the first empty slot in the inventory.
+	 * 
+	 * @return the first empty slot number
+	 */
 	public int getFirstEmptySlot() {
 		if (buttons.keySet().size() == 0) {
 			return 0;
@@ -429,6 +575,13 @@ public class BInventory {
 		return maxInvSize;
 	}
 
+	/**
+	 * Get meta from player.
+	 * 
+	 * @param player the player
+	 * @param str the meta key
+	 * @return the meta value
+	 */
 	public Object getMeta(Player player, String str) {
 		return PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player, str);
 	}
@@ -483,6 +636,12 @@ public class BInventory {
 		}
 	}
 
+	/**
+	 * Check if the inventory is open for a player.
+	 * 
+	 * @param p the player
+	 * @return true if the inventory is open
+	 */
 	public boolean isOpen(Player p) {
 		GUISession session = GUISession.extractSession(p);
 		if (session != null && session.getInventoryGUI() == this) {
@@ -498,11 +657,22 @@ public class BInventory {
 		return pages;
 	}
 
+	/**
+	 * Disable sound for this inventory.
+	 * 
+	 * @return this inventory
+	 */
 	public BInventory noSound() {
 		playerSound = false;
 		return this;
 	}
 
+	/**
+	 * Handle button click.
+	 * 
+	 * @param event the inventory click event
+	 * @param b the button that was clicked
+	 */
 	public void onClick(InventoryClickEvent event, BInventoryButton b) {
 		playSound((Player) event.getWhoClicked());
 		b.onClick(new ClickEvent(event, b), this);
@@ -643,6 +813,11 @@ public class BInventory {
 		openInv(player, inv);
 	}
 
+	/**
+	 * Play sound for a player.
+	 * 
+	 * @param player the player
+	 */
 	public void playSound(Player player) {
 		if (playerSound) {
 			Sound sound = AdvancedCorePlugin.getInstance().getOptions().getClickSoundSound();
@@ -654,6 +829,11 @@ public class BInventory {
 		}
 	}
 
+	/**
+	 * Require permission to open this inventory.
+	 * 
+	 * @param permission the permission required
+	 */
 	public void requirePermission(String permission) {
 		this.perm = permission;
 	}
@@ -665,6 +845,12 @@ public class BInventory {
 		this.buttons = buttons;
 	}
 
+	/**
+	 * Set whether the inventory should close after interaction.
+	 * 
+	 * @param value whether to close
+	 * @return this inventory
+	 */
 	public BInventory setCloseInv(boolean value) {
 		closeInv = value;
 		return this;

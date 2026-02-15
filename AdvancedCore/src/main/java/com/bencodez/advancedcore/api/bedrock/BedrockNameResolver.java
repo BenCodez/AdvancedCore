@@ -196,9 +196,12 @@ public final class BedrockNameResolver {
 
 	/**
 	 * Detect whether a name corresponds to a Bedrock player.
-	 *
+	 * 
 	 * IMPORTANT: This method does NOT add prefixes. It only returns a boolean. Use
 	 * {@link #resolve(String)} if you want canonical (possibly prefixed) names.
+	 * 
+	 * @param name the player name
+	 * @return true if the player is a Bedrock player
 	 */
 	public boolean isBedrockName(String name) {
 		if (name == null || name.isEmpty())
@@ -247,6 +250,12 @@ public final class BedrockNameResolver {
 		return bedrockPrefix != null && !bedrockPrefix.isEmpty() && name.startsWith(bedrockPrefix);
 	}
 
+	/**
+	 * Resolve a name to its canonical form and determine if it's a Bedrock player.
+	 * 
+	 * @param incomingName the player name to resolve
+	 * @return the result containing the canonical name and Bedrock status
+	 */
 	public Result resolve(String incomingName) {
 		if (incomingName == null || incomingName.isEmpty())
 			return new Result(incomingName, false, "empty-name");
@@ -323,10 +332,19 @@ public final class BedrockNameResolver {
 		return new Result(incomingName, false, "unknown-default-java");
 	}
 
+	/**
+	 * Get the prefixed name if the player is a Bedrock player.
+	 * 
+	 * @param name the player name
+	 * @return the prefixed name if Bedrock, otherwise the original name
+	 */
 	public String getPrefixedIfBedrock(String name) {
 		return addPrefixIfNeeded(name, isBedrockName(name));
 	}
 
+	/**
+	 * Clear the cache and case-insensitive index.
+	 */
 	public void clearCache() {
 		cache.clear();
 		ciIndex.clear();
@@ -467,11 +485,24 @@ public final class BedrockNameResolver {
 		return (javaCandidate != null) ? javaCandidate : bedrockCandidate;
 	}
 
+	/**
+	 * Result of name resolution containing the final name, Bedrock status, and rationale.
+	 */
 	public static final class Result {
+		/** The final resolved name. */
 		public final String finalName;
+		/** Whether the player is a Bedrock player. */
 		public final boolean isBedrock;
+		/** The rationale for the resolution decision. */
 		public final String rationale;
 
+		/**
+		 * Instantiates a new result.
+		 * 
+		 * @param finalName the final resolved name
+		 * @param isBedrock whether the player is Bedrock
+		 * @param rationale the rationale for the decision
+		 */
 		public Result(String finalName, boolean isBedrock, String rationale) {
 			this.finalName = finalName;
 			this.isBedrock = isBedrock;
@@ -482,6 +513,9 @@ public final class BedrockNameResolver {
 	// ====================== Embedded BedrockDetect with DEBUG
 	// ======================
 
+	/**
+	 * Bedrock detection using Floodgate and Geyser APIs.
+	 */
 	public static class BedrockDetect {
 		private volatile boolean floodgateAvailable = false;
 		private volatile boolean geyserAvailable = false;
@@ -495,16 +529,27 @@ public final class BedrockNameResolver {
 
 		private final Consumer<String> debug;
 
+		/**
+		 * Instantiates a new Bedrock detector with no debug output.
+		 */
 		public BedrockDetect() {
 			this(s -> {
 			});
 		}
 
+		/**
+		 * Instantiates a new Bedrock detector with debug output.
+		 * 
+		 * @param debug the debug consumer
+		 */
 		public BedrockDetect(Consumer<String> debug) {
 			this.debug = (debug != null) ? debug : (s -> {
 			});
 		}
 
+		/**
+		 * Load Floodgate and Geyser APIs.
+		 */
 		public void load() {
 			loadFloodgate();
 			loadGeyser();
@@ -545,6 +590,12 @@ public final class BedrockNameResolver {
 			}
 		}
 
+		/**
+		 * Check if a player is a Bedrock player by UUID.
+		 * 
+		 * @param uuid the player UUID
+		 * @return true if the player is a Bedrock player
+		 */
 		public boolean isBedrock(UUID uuid) {
 			if (uuid == null)
 				return false;
@@ -574,6 +625,12 @@ public final class BedrockNameResolver {
 			return false;
 		}
 
+		/**
+		 * Get the Floodgate player object.
+		 * 
+		 * @param uuid the player UUID
+		 * @return the Floodgate player object or null
+		 */
 		public Object getFloodgatePlayer(UUID uuid) {
 			if (!floodgateAvailable || fgGetPlayer == null || uuid == null)
 				return null;
@@ -585,10 +642,20 @@ public final class BedrockNameResolver {
 			}
 		}
 
+		/**
+		 * Check if Floodgate API is available.
+		 * 
+		 * @return true if Floodgate is available
+		 */
 		public boolean isFloodgateAvailable() {
 			return floodgateAvailable;
 		}
 
+		/**
+		 * Check if Geyser API is available.
+		 * 
+		 * @return true if Geyser is available
+		 */
 		public boolean isGeyserAvailable() {
 			return geyserAvailable;
 		}

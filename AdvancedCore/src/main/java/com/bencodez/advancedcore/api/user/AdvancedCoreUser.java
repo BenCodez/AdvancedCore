@@ -62,6 +62,11 @@ public class AdvancedCoreUser {
 	@Getter
 	private UserDataFetchMode userDataFetchMode = UserDataFetchMode.DEFAULT;
 
+	/**
+	 * User data for this user.
+	 * 
+	 * @param data the user data to set
+	 */
 	@Setter
 	private UserData data;
 
