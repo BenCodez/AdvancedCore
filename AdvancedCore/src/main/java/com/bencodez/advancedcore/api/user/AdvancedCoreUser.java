@@ -54,6 +54,11 @@ import net.md_5.bungee.chat.ComponentSerializer;
  */
 public class AdvancedCoreUser {
 
+	/**
+	 * User data fetch mode for this user.
+	 * 
+	 * @return the user data fetch mode
+	 */
 	@Getter
 	private UserDataFetchMode userDataFetchMode = UserDataFetchMode.DEFAULT;
 
@@ -65,6 +70,11 @@ public class AdvancedCoreUser {
 	/** The player name. */
 	private String playerName;
 
+	/**
+	 * Plugin instance.
+	 * 
+	 * @return the plugin instance
+	 */
 	@Getter
 	private AdvancedCorePlugin plugin = null;
 
