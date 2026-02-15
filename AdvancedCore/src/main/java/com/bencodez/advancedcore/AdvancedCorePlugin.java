@@ -437,10 +437,20 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Setter
 	private boolean loadVault = true;
 
+	/**
+	 * Adds a user startup task to be executed on plugin startup.
+	 * 
+	 * @param start the startup task to add
+	 */
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
 
+	/**
+	 * Allows downloading plugin updates from Spigot.
+	 * 
+	 * @param resourceId the Spigot resource ID
+	 */
 	public void allowDownloadingFromSpigot(int resourceId) {
 		getOptions().setResourceId(resourceId);
 	}
