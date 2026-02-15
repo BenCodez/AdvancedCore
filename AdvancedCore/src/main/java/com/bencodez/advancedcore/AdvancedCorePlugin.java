@@ -95,6 +95,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return javaPlugin;
 	}
 
+	/**
+	 * Sets the singleton instance of this plugin.
+	 * 
+	 * @param plugin the plugin instance to set
+	 */
 	public static void setInstance(AdvancedCorePlugin plugin) {
 		javaPlugin = plugin;
 	}
@@ -496,6 +501,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		debug(DebugLevel.EXTRA, debug);
 	}
 
+	/**
+	 * Gets the SQLite user table.
+	 * 
+	 * @return the user table, or null if not using SQLite
+	 */
 	public UserTable getSQLiteUserTable() {
 		if (database == null && loadUserData) {
 			loadUserAPI(getStorageType());
@@ -510,10 +520,20 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return null;
 	}
 
+	/**
+	 * Gets the current storage type configuration.
+	 * 
+	 * @return the storage type
+	 */
 	public UserStorage getStorageType() {
 		return getOptions().getStorageType();
 	}
 
+	/**
+	 * Gets the user manager instance.
+	 * 
+	 * @return the user manager
+	 */
 	public UserManager getUserManager() {
 		if (userManager == null) {
 			userManager = new UserManager(this);
@@ -549,6 +569,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return null;
 	}
 
+	/**
+	 * Checks if MySQL connection is okay.
+	 * 
+	 * @return true if not using MySQL or if MySQL is connected, false otherwise
+	 */
 	public boolean isMySQLOkay() {
 		if (getStorageType().equals(UserStorage.MYSQL)) {
 			return mysql != null;
@@ -556,6 +581,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return true;
 	}
 
+	/**
+	 * Loads AdvancedCore event listeners.
+	 */
 	public void loadAdvancedCoreEvents() {
 		if (loadUserData) {
 			Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
@@ -723,6 +751,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Loads tab completion options.
+	 */
 	public void loadTabComplete() {
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(AllPlayer)", new ArrayList<>()) {
 
@@ -902,6 +933,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
 	}
 
+	/**
+	 * Loads user API for specified storage type.
+	 * 
+	 * @param storageType the storage type to load
+	 */
 	@SuppressWarnings("deprecation")
 	public void loadUserAPI(UserStorage storageType) {
 		if (storageType.equals(UserStorage.SQLITE)) {
@@ -1055,12 +1091,29 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getRewardHandler().checkDirectlyDefinedRewardFiles();
 	}
 
+	/**
+	 * Called after plugin loads.
+	 * Subclasses must implement this method.
+	 */
 	public abstract void onPostLoad();
 
+	/**
+	 * Called before plugin loads.
+	 * Subclasses must implement this method.
+	 */
 	public abstract void onPreLoad();
 
+	/**
+	 * Called when plugin unloads.
+	 * Subclasses must implement this method.
+	 */
 	public abstract void onUnLoad();
 
+	/**
+	 * Registers BungeeCord messaging channels.
+	 * 
+	 * @param name the channel name
+	 */
 	public void registerBungeeChannels(String name) {
 		this.bungeeChannel = name;
 		getServer().getMessenger().registerOutgoingPluginChannel(this, name);
@@ -1069,17 +1122,36 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getLogger().info("Loaded plugin message channels: " + name);
 	}
 
+	/**
+	 * Registers a listener.
+	 * 
+	 * @param listener the listener to register
+	 */
 	public void registerEvents(Listener listener) {
 		Bukkit.getPluginManager().registerEvents(listener, this);
 	}
 
+	/**
+	 * Reloads plugin configuration.
+	 * Subclasses must implement this method.
+	 */
 	public abstract void reload();
 
+	/**
+	 * Reloads AdvancedCore configuration.
+	 * 
+	 * @deprecated use {@link #reloadAdvancedCore(boolean)} instead
+	 */
 	@Deprecated
 	public void reloadAdvancedCore() {
 		reloadAdvancedCore(false);
 	}
 
+	/**
+	 * Reloads AdvancedCore configuration.
+	 * 
+	 * @param userStorage whether to reload user storage
+	 */
 	public void reloadAdvancedCore(boolean userStorage) {
 		getServerDataFile().reloadData();
 		rewardHandler.loadRewards();
@@ -1129,12 +1201,19 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		});
 	}
 
+	/**
+	 * Sets configuration data.
+	 * 
+	 * @param ymlConfig the configuration to set
+	 */
 	public void setConfigData(YMLConfig ymlConfig) {
 		getOptions().setYmlConfig(ymlConfig);
 	}
 
 	/**
-	 * @param mysql the mysql to set
+	 * Sets the MySQL database connection.
+	 * 
+	 * @param mysql the mysql connection to set
 	 */
 	public void setMysql(MySQL mysql) {
 		if (this.mysql != null) {
@@ -1144,6 +1223,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		this.mysql = mysql;
 	}
 
+	/**
+	 * Unregisters value request commands.
+	 */
 	public void unRegisterValueRequest() {
 		try {
 			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
@@ -1157,6 +1239,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Runs user startup tasks.
+	 */
 	public void userStartup() {
 		if (!loadUserData) {
 			debug("Not loading userdata");
