@@ -106,54 +106,72 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Handler for Vault integration.
+	 * 
+	 * @return the vault handler
 	 */
 	@Getter
 	public VaultHandler vaultHandler;
 
 	/**
 	 * Command loader for AdvancedCore commands.
+	 * 
+	 * @return the command loader
 	 */
 	@Getter
 	private CommandLoader advancedCoreCommandLoader;
 
 	/**
 	 * Handler for skull caching.
+	 * 
+	 * @return the skull cache handler
 	 */
 	@Getter
 	private SkullCacheHandler skullCacheHandler;
 
 	/**
 	 * Whether AuthMe is loaded.
+	 * 
+	 * @return true if AuthMe is loaded
 	 */
 	@Getter
 	private boolean authMeLoaded = false;
 
 	/**
 	 * Whether nLogin is loaded.
+	 * 
+	 * @return true if nLogin is loaded
 	 */
 	@Getter
 	private boolean nLoginLoaded = false;
 
 	/**
 	 * Whether LoginSecurity is loaded.
+	 * 
+	 * @return true if LoginSecurity is loaded
 	 */
 	@Getter
 	private boolean loginSecurityLoaded = false;
 
 	/**
 	 * List of banned player UUIDs.
+	 * 
+	 * @return list of banned player UUIDs
 	 */
 	@Getter
 	private ArrayList<String> bannedPlayers = new ArrayList<>();
 
 	/**
 	 * Build time of AdvancedCore.
+	 * 
+	 * @return the build time string
 	 */
 	@Getter
 	private String buildTime = "";
 
 	/**
 	 * BungeeCord channel name.
+	 * 
+	 * @return the bungee channel name
 	 */
 	@Getter
 	@Setter
@@ -161,6 +179,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Handler for CMI integration.
+	 * 
+	 * @return the CMI handler
 	 */
 	@Getter
 	private CMIHandler cmiHandle;
@@ -169,24 +189,32 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Handler for full inventory management.
+	 * 
+	 * @return the full inventory handler
 	 */
 	@Getter
 	private FullInventoryHandler fullInventoryHandler;
 
 	/**
 	 * Handler for hologram management.
+	 * 
+	 * @return the hologram handler
 	 */
 	@Getter
 	private HologramHandler hologramHandler;
 
 	/**
 	 * JavaScript engine context map.
+	 * 
+	 * @return the javascript engine map
 	 */
 	@Getter
 	@Setter
 	private HashMap<String, Object> javascriptEngine = new HashMap<>();
 	/**
 	 * List of JavaScript placeholder requests.
+	 * 
+	 * @return the javascript engine requests list
 	 */
 	@Getter
 	@Setter
@@ -194,6 +222,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Whether rewards should be loaded.
+	 * 
+	 * @return true if rewards should be loaded
 	 */
 	@Getter
 	@Setter
@@ -201,6 +231,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Whether server data should be loaded.
+	 * 
+	 * @return true if server data should be loaded
 	 */
 	@Getter
 	@Setter
@@ -208,65 +240,87 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Whether user data should be loaded.
+	 * 
+	 * @return true if user data should be loaded
 	 */
 	@Getter
 	@Setter
 	private boolean loadUserData = true;
 	/**
 	 * MySQL database connection.
+	 * 
+	 * @return the mysql connection
 	 */
 	@Getter
 	private MySQL mysql;
 	/**
 	 * Configuration options for AdvancedCore.
+	 * 
+	 * @return the configuration options
 	 */
 	@Getter
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
 	/**
 	 * Whether PlaceholderAPI is enabled.
+	 * 
+	 * @return true if PlaceholderAPI is enabled
 	 */
 	@Getter
 	private boolean placeHolderAPIEnabled;
 
 	/**
 	 * Plugin messaging handler.
+	 * 
+	 * @return the plugin messaging handler
 	 */
 	@Getter
 	private PluginMessage pluginMessaging;
 
 	/**
 	 * Server data file handler.
+	 * 
+	 * @return the server data file
 	 */
 	@Getter
 	private ServerData serverDataFile;
 
 	/**
 	 * Sign menu for user input.
+	 * 
+	 * @return the sign menu
 	 */
 	@Getter
 	private SignMenu signMenu;
 
 	/**
 	 * Time checker for scheduled operations.
+	 * 
+	 * @return the time checker
 	 */
 	@Getter
 	private TimeChecker timeChecker;
 
 	/**
 	 * Main timer for scheduled tasks.
+	 * 
+	 * @return the timer
 	 */
 	@Getter
 	private ScheduledExecutorService timer;
 
 	/**
 	 * Timer for login-related tasks.
+	 * 
+	 * @return the login timer
 	 */
 	@Getter
 	private ScheduledExecutorService loginTimer;
 
 	/**
 	 * Timer for inventory-related tasks.
+	 * 
+	 * @return the inventory timer
 	 */
 	@Getter
 	private ScheduledExecutorService inventoryTimer;
@@ -278,42 +332,56 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Version string of AdvancedCore.
+	 * 
+	 * @return the version string
 	 */
 	@Getter
 	private String advancedCoreVersion = "";
 
 	/**
 	 * Build number of AdvancedCore.
+	 * 
+	 * @return the build number
 	 */
 	@Getter
 	private String advancedCoreBuildNumber = "NOTSET";
 
 	/**
 	 * Handler for permission management.
+	 * 
+	 * @return the permission handler
 	 */
 	@Getter
 	private PermissionHandler permissionHandler;
 
 	/**
 	 * Handler for rewards system.
+	 * 
+	 * @return the reward handler
 	 */
 	@Getter
 	private RewardHandler rewardHandler;
 
 	/**
 	 * Handler for LuckPerms integration.
+	 * 
+	 * @return the LuckPerms handler
 	 */
 	@Getter
 	private LuckPermsHandle luckPermsHandle;
 
 	/**
 	 * Bukkit scheduler wrapper.
+	 * 
+	 * @return the bukkit scheduler
 	 */
 	@Getter
 	private BukkitScheduler bukkitScheduler;
 
 	/**
 	 * Whether Bedrock API should be loaded.
+	 * 
+	 * @return true if Bedrock API should be loaded
 	 */
 	@Getter
 	@Setter
@@ -321,6 +389,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Whether LuckPerms should be loaded.
+	 * 
+	 * @return true if LuckPerms should be loaded
 	 */
 	@Getter
 	@Setter
@@ -328,12 +398,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Handler for Bedrock player name resolution.
+	 * 
+	 * @return the bedrock handler
 	 */
 	@Getter
 	private BedrockNameResolver bedrockHandle;;
 
 	/**
 	 * Whether skull handler should be loaded.
+	 * 
+	 * @return true if skull handler should be loaded
 	 */
 	@Getter
 	@Setter
@@ -341,6 +415,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Whether Vault should be loaded.
+	 * 
+	 * @return true if Vault should be loaded
 	 */
 	@Getter
 	@Setter
