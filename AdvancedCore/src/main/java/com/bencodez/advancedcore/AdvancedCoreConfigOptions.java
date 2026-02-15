@@ -31,6 +31,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * The YML configuration file handler.
+	 * @return the YML configuration file handler
+	 * @param ymlConfig the YML configuration file handler
 	 */
 	@Getter
 	@Setter
@@ -38,6 +40,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether rewards are currently paused.
+	 * @return true if rewards are paused, false otherwise
+	 * @param pauseRewards true to pause rewards, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -45,6 +49,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * The pitch of the click sound (0.5 to 2.0).
+	 * @return the pitch of the click sound
+	 * @param clickSoundPitch the pitch of the click sound
 	 */
 	@Getter
 	@Setter
@@ -52,6 +58,8 @@ public class AdvancedCoreConfigOptions {
 	private double clickSoundPitch = 1;
 	/**
 	 * The sound string identifier for the click sound.
+	 * @return the sound string identifier for the click sound
+	 * @param clickSoundSoundStr the sound string identifier for the click sound
 	 */
 	@Getter
 	@Setter
@@ -60,6 +68,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * The volume of the click sound (0.0 to 1.0).
+	 * @return the volume of the click sound
+	 * @param clickSoundVolume the volume of the click sound
 	 */
 	@Getter
 	@Setter
@@ -68,6 +78,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to create backup files of configuration.
+	 * @return true if backups should be created, false otherwise
+	 * @param createBackups true to create backups, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -79,6 +91,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * The current debug level for logging.
+	 * @return the current debug level
+	 * @param debug the debug level to set
 	 */
 	@Getter
 	@Setter
@@ -86,6 +100,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * The default request method for user input (ANVIL, CHAT, etc).
+	 * @return the default request method
+	 * @param defaultRequestMethod the default request method to set
 	 */
 	@Getter
 	@Setter
@@ -94,6 +110,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to disable reward checks on world change events.
+	 * @return true if checks are disabled, false otherwise
+	 * @param disableCheckOnWorldChange true to disable checks, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -101,6 +119,8 @@ public class AdvancedCoreConfigOptions {
 	private boolean disableCheckOnWorldChange = false;
 	/**
 	 * List of disabled request methods.
+	 * @return the list of disabled request methods
+	 * @param disabledRequestMethods the list of disabled request methods to set
 	 */
 	@Getter
 	@Setter
@@ -109,6 +129,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to drop items on ground when inventory is full.
+	 * @return true if items should drop, false otherwise
+	 * @param dropOnFullInv true to drop items, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -117,6 +139,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether Jenkins download functionality is enabled.
+	 * @return true if Jenkins is enabled, false otherwise
+	 * @param enableJenkins true to enable Jenkins, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -125,6 +149,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Format string for choice rewards preference set message.
+	 * @return the format string for choice rewards preference set message
+	 * @param formatChoiceRewardsPreferenceSet the format string to set
 	 */
 	@Getter
 	@Setter
@@ -133,6 +159,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Format string for inventory full message.
+	 * @return the format string for inventory full message
+	 * @param formatInvFull the format string to set
 	 */
 	@Getter
 	@Setter
@@ -141,6 +169,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Format string for no permissions message.
+	 * @return the format string for no permissions message
+	 * @param formatNoPerms the format string to set
 	 */
 	@Getter
 	@Setter
@@ -149,6 +179,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Format string for not a number error message.
+	 * @return the format string for not a number error message
+	 * @param formatNotNumber the format string to set
 	 */
 	@Getter
 	@Setter
@@ -157,6 +189,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Time format string for displaying reward times.
+	 * @return the time format string for displaying reward times
+	 * @param formatRewardTimeFormat the format string to set
 	 */
 	@Getter
 	@Setter
@@ -165,6 +199,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Prefix for Bedrock Edition player names.
+	 * @return the prefix for Bedrock Edition player names
+	 * @param bedrockPlayerPrefix the prefix to set
 	 */
 	@Getter
 	@Setter
@@ -173,6 +209,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether the server is running in online mode.
+	 * @return true if server is in online mode, false otherwise
+	 * @param onlineMode true for online mode, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -181,6 +219,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Format string for help command lines.
+	 * @return the format string for help command lines
+	 * @param helpLine the format string to set
 	 */
 	@Getter
 	@Setter
@@ -189,6 +229,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to load default rewards on startup.
+	 * @return true if default rewards should be loaded, false otherwise
+	 * @param loadDefaultRewards true to load default rewards, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -197,6 +239,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to check multiple permission nodes for rewards.
+	 * @return true if multiple permission checks are enabled, false otherwise
+	 * @param multiplePermissionChecks true to enable multiple permission checks, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -205,6 +249,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Maximum length for item lore lines before wrapping.
+	 * @return the maximum length for item lore lines
+	 * @param newLoreLength the maximum length to set
 	 */
 	@Getter
 	@Setter
@@ -213,6 +259,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Configuration section for the next page button in GUIs.
+	 * @return the configuration section for the next page button
+	 * @param nextItem the configuration section to set
 	 */
 	@Getter
 	@Setter
@@ -221,6 +269,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Permission prefix for plugin permissions.
+	 * @return the permission prefix
+	 * @param permPrefix the permission prefix to set
 	 */
 	@Getter
 	@Setter
@@ -228,6 +278,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether rewards are specific to each server in a network.
+	 * @return true if rewards are per-server, false otherwise
+	 * @param perServerRewards true for per-server rewards, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -235,6 +287,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Configuration section for the previous page button in GUIs.
+	 * @return the configuration section for the previous page button
+	 * @param prevItem the configuration section to set
 	 */
 	@Getter
 	@Setter
@@ -243,6 +297,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to process rewards when giving them to players.
+	 * @return true if rewards should be processed, false otherwise
+	 * @param processRewards true to process rewards, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -251,6 +307,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Minimum number of days before player data can be purged.
+	 * @return the minimum number of days before purge
+	 * @param purgeMinimumDays the minimum number of days to set
 	 */
 	@Getter
 	@Setter
@@ -259,6 +317,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to automatically purge old player data.
+	 * @return true if old data should be purged, false otherwise
+	 * @param purgeOldData true to purge old data, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -267,6 +327,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to purge old data immediately on server startup.
+	 * @return true if data should be purged on startup, false otherwise
+	 * @param purgeDataOnStartup true to purge data on startup, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -275,6 +337,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * API URL for fetching player skull profiles.
+	 * @return the API URL for fetching player skull profiles
+	 * @param SkullProfileAPIURL the API URL to set
 	 */
 	@Getter
 	@Setter
@@ -283,6 +347,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether JavaScript execution is disabled.
+	 * @return true if JavaScript is disabled, false otherwise
+	 * @param disableJavascript true to disable JavaScript, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -291,6 +357,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether the JavaScript command is enabled.
+	 * @return true if JavaScript command is enabled, false otherwise
+	 * @param enableJavascriptCommand true to enable JavaScript command, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -299,6 +367,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Spigot resource ID for update checking.
+	 * @return the Spigot resource ID
+	 * @param resourceId the Spigot resource ID to set
 	 */
 	@Getter
 	@Setter
@@ -306,6 +376,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to send scoreboard packets to players.
+	 * @return true if scoreboards should be sent, false otherwise
+	 * @param sendScoreboards true to send scoreboards, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -314,6 +386,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Server name identifier for multi-server setups.
+	 * @return the server name identifier
+	 * @param server the server name to set
 	 */
 	@Setter
 	@Getter
@@ -322,6 +396,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Message to display when a player spam-clicks.
+	 * @return the spam click message
+	 * @param spamClickMessage the spam click message to set
 	 */
 	@Getter
 	@Setter
@@ -330,6 +406,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Time duration string for spam click detection.
+	 * @return the time duration string for spam click detection
+	 * @param spamClickTime the spam click time to set
 	 */
 	@Setter
 	@Getter
@@ -341,6 +419,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * The storage type for user data (SQLITE, MYSQL, etc).
+	 * @return the storage type for user data
+	 * @param storageType the storage type to set
 	 */
 	@Getter
 	@Setter
@@ -348,6 +428,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Hour offset for time-based features.
+	 * @return the hour offset for time-based features
+	 * @param timeHourOffSet the hour offset to set
 	 */
 	@Getter
 	@Setter
@@ -356,6 +438,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Week offset for time-based features.
+	 * @return the week offset for time-based features
+	 * @param timeWeekOffSet the week offset to set
 	 */
 	@Getter
 	@Setter
@@ -364,6 +448,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to bypass fail-safe checks for time changes.
+	 * @return true if fail-safe bypass is enabled, false otherwise
+	 * @param timeChangeFailSafeBypass true to bypass fail-safe checks, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -372,6 +458,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Time zone string for time-based features.
+	 * @return the time zone string for time-based features
+	 * @param timeZone the time zone string to set
 	 */
 	@Getter
 	@Setter
@@ -380,6 +468,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to treat vanished players as offline.
+	 * @return true if vanished players are treated as offline, false otherwise
+	 * @param treatVanishAsOffline true to treat vanished players as offline, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -388,6 +478,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to use Vault for permission checks.
+	 * @return true if Vault permissions are used, false otherwise
+	 * @param useVaultPermissions true to use Vault permissions, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -396,6 +488,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Whether to wait until players are logged in before processing rewards.
+	 * @return true if waiting for login is enabled, false otherwise
+	 * @param waitUntilLoggedIn true to wait until logged in, false otherwise
 	 */
 	@Getter
 	@Setter
@@ -404,6 +498,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Delay duration string before processing login events.
+	 * @return the delay duration string before processing login events
+	 * @param delayLoginEvent the delay duration string to set
 	 */
 	@Getter
 	@Setter
@@ -412,6 +508,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * Delay duration string before loading player skulls.
+	 * @return the delay duration string before loading player skulls
+	 * @param SkullLoadDelay the delay duration string to set
 	 */
 	@Getter
 	@Setter
@@ -420,6 +518,8 @@ public class AdvancedCoreConfigOptions {
 
 	/**
 	 * List of worlds where broadcasts are disabled.
+	 * @return the list of worlds where broadcasts are disabled
+	 * @param broadcastBlacklist the list of worlds to set
 	 */
 	@Getter
 	@Setter
