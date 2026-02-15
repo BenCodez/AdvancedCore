@@ -24,6 +24,9 @@ import com.bencodez.simpleapi.sql.mysql.MySQL;
 import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 import com.bencodez.simpleapi.sql.mysql.queries.Query;
 
+/**
+ * Abstract class for managing global MySQL database operations across multiple servers.
+ */
 public abstract class GlobalMySQL {
 	private List<String> columns = Collections.synchronizedList(new ArrayList<String>());
 
@@ -41,6 +44,12 @@ public abstract class GlobalMySQL {
 
 	private Set<String> servers = ConcurrentHashMap.newKeySet();
 
+	/**
+	 * Constructs a GlobalMySQL instance with the specified table name and MySQL connection.
+	 * 
+	 * @param tableName the name of the table
+	 * @param mysql the MySQL instance to use
+	 */
 	public GlobalMySQL(String tableName, MySQL mysql) {
 		this.mysql = mysql;
 		this.name = tableName;
@@ -55,6 +64,12 @@ public abstract class GlobalMySQL {
 		loadData();
 	}
 
+	/**
+	 * Constructs a GlobalMySQL instance with the specified table name and MySQL configuration.
+	 * 
+	 * @param tableName the name of the table
+	 * @param config the MySQL configuration
+	 */
 	public GlobalMySQL(String tableName, MysqlConfig config) {
 
 		if (config.hasTableNameSet()) {
@@ -169,6 +184,12 @@ public abstract class GlobalMySQL {
 	// Column management
 	// -------------------------
 
+	/**
+	 * Adds a new column to the database table.
+	 * 
+	 * @param column the name of the column to add
+	 * @param dataType the data type of the column
+	 */
 	public void addColumn(String column, DataType dataType) {
 		synchronized (object3) {
 			// TEXT works fine for both
@@ -291,6 +312,12 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	/**
+	 * Alters the type of an existing column in the database table.
+	 * 
+	 * @param column the name of the column to alter
+	 * @param newType the new data type for the column
+	 */
 	public void alterColumnType(final String column, final String newType) {
 		checkColumn(column, DataType.STRING);
 
@@ -350,6 +377,12 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	/**
+	 * Checks if a column exists in the table, and adds it if it does not.
+	 * 
+	 * @param column the name of the column to check
+	 * @param dataType the data type of the column
+	 */
 	public void checkColumn(String column, DataType dataType) {
 		synchronized (object4) {
 			if (!ArrayUtils.containsIgnoreCase((ArrayList<String>) getColumns(), column)) {
@@ -364,6 +397,9 @@ public abstract class GlobalMySQL {
 	// Cache / lifecycle
 	// -------------------------
 
+	/**
+	 * Clears the basic cache and reloads columns and servers from the database.
+	 */
 	public void clearCacheBasic() {
 		debugLog("Clearing cache basic");
 		columns.clear();
@@ -372,6 +408,9 @@ public abstract class GlobalMySQL {
 		servers.addAll(getServersQuery());
 	}
 
+	/**
+	 * Closes the database connection.
+	 */
 	public void close() {
 		mysql.disconnect();
 	}
@@ -380,10 +419,22 @@ public abstract class GlobalMySQL {
 	// Existence checks
 	// -------------------------
 
+	/**
+	 * Checks if the database contains a record for the specified server.
+	 * 
+	 * @param server the server name to check
+	 * @return true if the server exists, false otherwise
+	 */
 	public boolean containsKey(String server) {
 		return servers.contains(server) || containsKeyQuery(server);
 	}
 
+	/**
+	 * Queries the database to check if it contains a record for the specified server.
+	 * 
+	 * @param index the server name to check
+	 * @return true if the server exists in the database, false otherwise
+	 */
 	public boolean containsKeyQuery(String index) {
 		// Efficient: WHERE server = ?
 		String sqlStr = "SELECT server FROM " + getName() + " WHERE server = ?;";
@@ -399,14 +450,35 @@ public abstract class GlobalMySQL {
 		return false;
 	}
 
+	/**
+	 * Checks if the cached server list contains the specified server.
+	 * 
+	 * @param server the server name to check
+	 * @return true if the server is in the cache, false otherwise
+	 */
 	public boolean containsServer(String server) {
 		return servers.contains(server);
 	}
 
+	/**
+	 * Logs an exception for debugging purposes.
+	 * 
+	 * @param e the exception to log
+	 */
 	public abstract void debugEx(Exception e);
 
+	/**
+	 * Logs a debug message.
+	 * 
+	 * @param text the message to log
+	 */
 	public abstract void debugLog(String text);
 
+	/**
+	 * Deletes a server record from the database.
+	 * 
+	 * @param server the server name to delete
+	 */
 	public void deleteServer(String server) {
 		String q = "DELETE FROM " + getName() + " WHERE server='" + server + "';";
 		try {
@@ -418,6 +490,11 @@ public abstract class GlobalMySQL {
 		clearCacheBasic();
 	}
 
+	/**
+	 * Executes a SQL query with placeholder replacement.
+	 * 
+	 * @param str the SQL query string
+	 */
 	public void executeQuery(String str) {
 		try {
 			Query q = new Query(mysql, PlaceholderUtils.replacePlaceHolder(str, "tablename", getName()));
@@ -427,6 +504,11 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	/**
+	 * Gets the list of column names in the table.
+	 * 
+	 * @return the list of column names
+	 */
 	public List<String> getColumns() {
 		if (columns == null || columns.isEmpty()) {
 			loadData();
@@ -434,6 +516,11 @@ public abstract class GlobalMySQL {
 		return columns;
 	}
 
+	/**
+	 * Queries the database for the list of column names in the table.
+	 * 
+	 * @return the list of column names
+	 */
 	public ArrayList<String> getColumnsQueury() {
 		ArrayList<String> cols = new ArrayList<>();
 
@@ -469,10 +556,22 @@ public abstract class GlobalMySQL {
 		return cols;
 	}
 
+	/**
+	 * Gets the exact record for the specified server.
+	 * 
+	 * @param server the server name
+	 * @return the list of columns for the server
+	 */
 	public ArrayList<Column> getExact(String server) {
 		return getExactQuery(new Column("server", new DataValueString(server)));
 	}
 
+	/**
+	 * Queries the database for records matching the specified column.
+	 * 
+	 * @param column the column to match
+	 * @return the list of columns matching the query
+	 */
 	public ArrayList<Column> getExactQuery(Column column) {
 		ArrayList<Column> result = new ArrayList<>();
 
@@ -508,10 +607,20 @@ public abstract class GlobalMySQL {
 		return result;
 	}
 
+	/**
+	 * Gets the table name.
+	 * 
+	 * @return the table name
+	 */
 	public String getName() {
 		return name;
 	}
 
+	/**
+	 * Queries the database for all server records.
+	 * 
+	 * @return the list of server columns
+	 */
 	public ArrayList<Column> getRowsQuery() {
 		ArrayList<Column> result = new ArrayList<>();
 		String sqlStr = "SELECT server FROM " + getName() + ";";
@@ -531,6 +640,11 @@ public abstract class GlobalMySQL {
 		return result;
 	}
 
+	/**
+	 * Gets the set of server names from cache or database.
+	 * 
+	 * @return the set of server names
+	 */
 	public Set<String> getServers() {
 		if (servers == null || servers.isEmpty()) {
 			servers.clear();
@@ -539,6 +653,11 @@ public abstract class GlobalMySQL {
 		return servers;
 	}
 
+	/**
+	 * Queries the database for all server names.
+	 * 
+	 * @return the list of server names
+	 */
 	public ArrayList<String> getServersQuery() {
 		ArrayList<String> out = new ArrayList<>();
 
@@ -556,12 +675,30 @@ public abstract class GlobalMySQL {
 		return out;
 	}
 
+	/**
+	 * Logs an informational message.
+	 * 
+	 * @param text the message to log
+	 */
 	public abstract void info(String text);
 
+	/**
+	 * Inserts a single column value for the specified server.
+	 * 
+	 * @param index the server name
+	 * @param column the column name
+	 * @param value the value to insert
+	 */
 	public void insert(String index, String column, DataValue value) {
 		insertQuery(index, Arrays.asList(new Column(column, value)));
 	}
 
+	/**
+	 * Inserts or updates multiple column values for the specified server.
+	 * 
+	 * @param index the server name
+	 * @param cols the list of columns to insert
+	 */
 	public void insertQuery(String index, List<Column> cols) {
 		DbType dbType = dbType();
 
@@ -631,14 +768,28 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	/**
+	 * Checks if the specified column is an integer column.
+	 * 
+	 * @param key the column name
+	 * @return true if the column is an integer column, false otherwise
+	 */
 	public boolean isIntColumn(String key) {
 		return intColumns.contains(key);
 	}
 
+	/**
+	 * Checks if batch updates are supported.
+	 * 
+	 * @return true if batch updates are supported, false otherwise
+	 */
 	public boolean isUseBatchUpdates() {
 		return useBatchUpdates;
 	}
 
+	/**
+	 * Loads column and batch update support data from the database.
+	 */
 	public void loadData() {
 		columns = getColumnsQueury();
 
@@ -649,8 +800,20 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	/**
+	 * Logs a severe error message.
+	 * 
+	 * @param text the message to log
+	 */
 	public abstract void logSevere(String text);
 
+	/**
+	 * Updates multiple column values for the specified server.
+	 * 
+	 * @param index the server name
+	 * @param cols the list of columns to update
+	 * @param runAsync whether to run the update asynchronously
+	 */
 	public void update(String index, List<Column> cols, boolean runAsync) {
 		for (Column col : cols) {
 			checkColumn(col.getName(), col.getDataType());
@@ -705,6 +868,13 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	/**
+	 * Updates a single column value for the specified server.
+	 * 
+	 * @param index the server name
+	 * @param column the column name
+	 * @param value the value to update
+	 */
 	public void update(String index, String column, DataValue value) {
 		if (value == null) {
 			debugLog("Mysql value null: " + column);
@@ -741,8 +911,18 @@ public abstract class GlobalMySQL {
 		}
 	}
 
+	/**
+	 * Logs a warning message.
+	 * 
+	 * @param text the message to log
+	 */
 	public abstract void warning(String text);
 
+	/**
+	 * Wipes all data from the specified column by setting values to NULL.
+	 * 
+	 * @param columnName the name of the column to wipe
+	 */
 	public void wipeColumnData(String columnName) {
 		checkColumn(columnName, DataType.STRING);
 

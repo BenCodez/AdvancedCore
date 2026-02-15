@@ -450,6 +450,11 @@ public class ItemBuilder {
 		is = new ItemStack(material, amount);
 	}
 
+	/**
+	 * Constructs an ItemBuilder from a material string.
+	 * 
+	 * @param material the material name
+	 */
 	public ItemBuilder(String material) {
 		String materialStr = material;
 		if (NMSManager.getInstance().isVersion("1.12")) {
@@ -467,6 +472,13 @@ public class ItemBuilder {
 		}
 	}
 
+	/**
+	 * Adds an attribute modifier to the item.
+	 * 
+	 * @param att the attribute
+	 * @param modifier the attribute modifier
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder addAttributeModifier(Attribute att, AttributeModifier modifier) {
 		ItemMeta im = is.getItemMeta();
 		im.addAttributeModifier(att, modifier);
@@ -552,6 +564,11 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Adds a glow effect to the item.
+	 * 
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder addGlow() {
 		ItemMeta meta = is.getItemMeta();
 
@@ -575,6 +592,12 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Adds an item flag to the item.
+	 * 
+	 * @param flag the flag name
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder addItemFlag(String flag) {
 		try {
 			ItemMeta meta = is.getItemMeta();
@@ -626,6 +649,12 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Adds a placeholder mapping.
+	 * 
+	 * @param placeholders the map of placeholders
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder addPlaceholder(HashMap<String, String> placeholders) {
 		if (placeholders != null) {
 			this.placeholders.putAll(placeholders);
@@ -633,11 +662,27 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Adds a single placeholder.
+	 * 
+	 * @param toReplace the text to replace
+	 * @param replaceWith the replacement text
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder addPlaceholder(String toReplace, String replaceWith) {
 		placeholders.put(toReplace, replaceWith);
 		return this;
 	}
 
+	/**
+	 * Adds a potion effect to the item.
+	 * 
+	 * @param type the potion effect type
+	 * @param duration the duration
+	 * @param amplifier the amplifier
+	 * @param color the potion color
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder addPotionEffect(PotionEffectType type, int duration, int amplifier, Color color) {
 		PotionMeta meta = (PotionMeta) is.getItemMeta();
 		meta.addCustomEffect(new PotionEffect(type, duration, amplifier), false);
@@ -700,6 +745,11 @@ public class ItemBuilder {
 		return new ItemBuilder(is);
 	}
 
+	/**
+	 * Creates configuration data from this ItemBuilder.
+	 * 
+	 * @return the configuration data map
+	 */
 	@SuppressWarnings("deprecation")
 	public LinkedHashMap<String, Object> createConfigurationData() {
 		LinkedHashMap<String, Object> data = new LinkedHashMap<>();
@@ -733,6 +783,11 @@ public class ItemBuilder {
 
 	}
 
+	/**
+	 * Disables lore length checking.
+	 * 
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder dontCheckLoreLength() {
 		checkLoreLength = false;
 		return this;
@@ -752,18 +807,41 @@ public class ItemBuilder {
 		return is.getAmount();
 	}
 
+	/**
+	 * Gets the attribute modifiers multimap.
+	 * 
+	 * @return the attribute modifiers
+	 */
 	public Multimap<Attribute, AttributeModifier> getAttributeModifiers() {
 		return is.getItemMeta().getAttributeModifiers();
 	}
 
+	/**
+	 * Gets the attribute modifiers for a specific attribute.
+	 * 
+	 * @param att the attribute
+	 * @return the collection of attribute modifiers
+	 */
 	public Collection<AttributeModifier> getAttributeModifiers(Attribute att) {
 		return is.getItemMeta().getAttributeModifiers(att);
 	}
 
+	/**
+	 * Gets a conditional ItemBuilder based on player conditions.
+	 * 
+	 * @param player the player
+	 * @return the conditional ItemBuilder or this if no conditions match
+	 */
 	public ItemBuilder getConditionItemBuilder(OfflinePlayer player) {
 		return setConditional(new JavascriptEngine().addPlayer(player));
 	}
 
+	/**
+	 * Gets the configuration map.
+	 * 
+	 * @param deseralize whether to deserialize the item
+	 * @return the configuration map
+	 */
 	@SuppressWarnings("deprecation")
 	public Map<String, Object> getConfiguration(boolean deseralize) {
 		if (deseralize) {
@@ -801,6 +879,12 @@ public class ItemBuilder {
 
 	}
 
+	/**
+	 * Checks if the ItemMeta has getItemModel method.
+	 * 
+	 * @param meta the item meta
+	 * @return true if the method exists, false otherwise
+	 */
 	public boolean hasGetItemModel(ItemMeta meta) {
 		try {
 			Method method = meta.getClass().getMethod("getItemModel");
@@ -810,6 +894,12 @@ public class ItemBuilder {
 		}
 	}
 
+	/**
+	 * Gets custom data from persistent data container.
+	 * 
+	 * @param key the data key
+	 * @return the custom data value
+	 */
 	public String getCustomData(String key) {
 		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
 		ItemMeta itemMeta = is.getItemMeta();
@@ -820,6 +910,11 @@ public class ItemBuilder {
 		return null;
 	}
 
+	/**
+	 * Gets the lore of the item.
+	 * 
+	 * @return the lore list
+	 */
 	public ArrayList<String> getLore() {
 		if (hasCustomLore()) {
 			List<String> lore = is.getItemMeta().getLore();
@@ -833,6 +928,11 @@ public class ItemBuilder {
 
 	}
 
+	/**
+	 * Gets the lore length setting.
+	 * 
+	 * @return the lore length
+	 */
 	public int getLoreLength() {
 		if (loreLength < 0) {
 			return AdvancedCorePlugin.getInstance().getOptions().getNewLoreLength();
@@ -840,6 +940,11 @@ public class ItemBuilder {
 		return loreLength;
 	}
 
+	/**
+	 * Gets the item name.
+	 * 
+	 * @return the item name
+	 */
 	public String getName() {
 		if (hasCustomDisplayName()) {
 			return is.getItemMeta().getDisplayName();
@@ -847,6 +952,12 @@ public class ItemBuilder {
 		return "";
 	}
 
+	/**
+	 * Gets the rewards path for the player.
+	 * 
+	 * @param player the player
+	 * @return the rewards path
+	 */
 	public String getRewardsPath(Player player) {
 		if (conditional) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
@@ -871,6 +982,11 @@ public class ItemBuilder {
 		return "";
 	}
 
+	/**
+	 * Gets the skull owner.
+	 * 
+	 * @return the skull owner
+	 */
 	public OfflinePlayer getSkullOwner() {
 		try {
 			SkullMeta im = (SkullMeta) is.getItemMeta();
@@ -882,14 +998,29 @@ public class ItemBuilder {
 		return null;
 	}
 
+	/**
+	 * Gets the item material type.
+	 * 
+	 * @return the material
+	 */
 	public Material getType() {
 		return is.getType();
 	}
 
+	/**
+	 * Checks if the item has attributes.
+	 * 
+	 * @return true if the item has attributes, false otherwise
+	 */
 	public boolean hasAttributes() {
 		return is.getItemMeta().hasAttributeModifiers();
 	}
 
+	/**
+	 * Checks if the item has a custom display name.
+	 * 
+	 * @return true if the item has a custom display name, false otherwise
+	 */
 	public boolean hasCustomDisplayName() {
 		if (hasItemMeta()) {
 			return is.getItemMeta().hasDisplayName();
@@ -897,6 +1028,11 @@ public class ItemBuilder {
 		return false;
 	}
 
+	/**
+	 * Checks if the item has custom lore.
+	 * 
+	 * @return true if the item has lore, false otherwise
+	 */
 	public boolean hasCustomLore() {
 		if (hasItemMeta()) {
 			return is.getItemMeta().hasLore();
@@ -904,10 +1040,21 @@ public class ItemBuilder {
 		return false;
 	}
 
+	/**
+	 * Checks if the item has item meta.
+	 * 
+	 * @return true if the item has meta, false otherwise
+	 */
 	public boolean hasItemMeta() {
 		return is.hasItemMeta();
 	}
 
+	/**
+	 * Parses placeholders in the item for the player.
+	 * 
+	 * @param player the player
+	 * @return the itemstack with parsed placeholders
+	 */
 	public ItemStack parsePlaceholders(OfflinePlayer player) {
 		if (player == null) {
 			return toItemStack();
@@ -934,6 +1081,11 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Removes all lore from the item.
+	 * 
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder removeLore() {
 		setLore(new String[0]);
 		return this;
@@ -975,11 +1127,23 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets the amount of items.
+	 * 
+	 * @param amount the amount to set
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setAmount(int amount) {
 		is.setAmount(amount);
 		return this;
 	}
 
+	/**
+	 * Sets the amount only if current amount is zero.
+	 * 
+	 * @param i the amount to set
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setAmountNone(int i) {
 		if (getAmount() == 0) {
 			setAmount(i);
@@ -1003,6 +1167,13 @@ public class ItemBuilder {
 		return null;
 	}
 
+	/**
+	 * Sets custom data in the persistent data container.
+	 * 
+	 * @param key the data key
+	 * @param value the data value
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setCustomData(String key, String value) {
 		NamespacedKey namespace = new NamespacedKey(AdvancedCorePlugin.getInstance(), key);
 		ItemMeta itemMeta = is.getItemMeta();
@@ -1011,6 +1182,12 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets the custom model data.
+	 * 
+	 * @param data the custom model data
+	 * @return this ItemBuilder
+	 */
 	@SuppressWarnings("deprecation")
 	public ItemBuilder setCustomModelData(int data) {
 		ItemMeta im = is.getItemMeta();
@@ -1045,6 +1222,12 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets the firework power.
+	 * 
+	 * @param power the power level
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setFireworkPower(int power) {
 		try {
 			FireworkMeta meta = (FireworkMeta) is.getItemMeta();
@@ -1057,6 +1240,12 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets the skull head from base64 texture.
+	 * 
+	 * @param value the base64 texture value
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setHeadFromBase64(String value) {
 		is = SkullCache.getSkullBase64(value);
 		return this;
@@ -1124,6 +1313,12 @@ public class ItemBuilder {
 		return setLore(ArrayUtils.convert(lore));
 	}
 
+	/**
+	 * Sets the lore length for wrapping.
+	 * 
+	 * @param length the lore length
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setLoreLength(int length) {
 		loreLength = length;
 		return this;
@@ -1144,6 +1339,12 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets the item name only if it doesn't already have a custom display name.
+	 * 
+	 * @param name the name to set
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setNameIfNotExist(String name) {
 		if (!hasCustomDisplayName()) {
 			setName(name);
@@ -1151,11 +1352,23 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets the placeholder mappings.
+	 * 
+	 * @param placeholders the placeholders map
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setPlaceholders(HashMap<String, String> placeholders) {
 		this.placeholders = placeholders;
 		return this;
 	}
 
+	/**
+	 * Sets the skull owner by offline player.
+	 * 
+	 * @param offlinePlayer the offline player
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setSkullOwner(OfflinePlayer offlinePlayer) {
 		if (offlinePlayer != null) {
 			try {
@@ -1188,11 +1401,23 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets the slot for the item in an inventory.
+	 * 
+	 * @param slot the slot number
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setSlot(int slot) {
 		this.slot = slot;
 		return this;
 	}
 
+	/**
+	 * Sets whether the item is unbreakable.
+	 * 
+	 * @param unbreakable whether the item should be unbreakable
+	 * @return this ItemBuilder
+	 */
 	public ItemBuilder setUnbreakable(boolean unbreakable) {
 		try {
 			ItemMeta meta = is.getItemMeta();
@@ -1229,6 +1454,12 @@ public class ItemBuilder {
 		return is;
 	}
 
+	/**
+	 * Converts the ItemBuilder to an ItemStack with player-specific placeholders.
+	 * 
+	 * @param player the offline player for placeholder replacement
+	 * @return the final itemstack
+	 */
 	public ItemStack toItemStack(OfflinePlayer player) {
 		if (!placeholders.containsKey("player")) {
 			placeholders.put("player", player.getName());
@@ -1243,6 +1474,12 @@ public class ItemBuilder {
 		return is;
 	}
 
+	/**
+	 * Converts the ItemBuilder to an ItemStack with player-specific placeholders.
+	 * 
+	 * @param player the player for placeholder replacement
+	 * @return the final itemstack
+	 */
 	public ItemStack toItemStack(Player player) {
 		if (!placeholders.containsKey("player")) {
 			placeholders.put("player", player.getName());
