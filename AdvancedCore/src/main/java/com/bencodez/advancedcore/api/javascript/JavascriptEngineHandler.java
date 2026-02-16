@@ -8,10 +8,18 @@ import javax.script.ScriptEngineManager;
 
 import com.bencodez.simpleapi.nms.ReflectionUtils;
 
+/**
+ * Handler for Javascript engine creation across different Java versions.
+ */
 public class JavascriptEngineHandler {
 
 	private static JavascriptEngineHandler instance = new JavascriptEngineHandler();
 
+	/**
+	 * Gets the singleton instance.
+	 * 
+	 * @return the instance
+	 */
 	public static JavascriptEngineHandler getInstance() {
 		return instance;
 	}
@@ -22,6 +30,9 @@ public class JavascriptEngineHandler {
 
 	private Method methodToUse;
 
+	/**
+	 * Creates a new Javascript engine handler.
+	 */
 	public JavascriptEngineHandler() {
 		if (Double.parseDouble(System.getProperty("java.specification.version")) < 15) {
 			builtIn = true;
@@ -44,6 +55,11 @@ public class JavascriptEngineHandler {
 
 	}
 
+	/**
+	 * Gets a Javascript script engine.
+	 * 
+	 * @return the script engine
+	 */
 	public ScriptEngine getJSScriptEngine() {
 		if (builtIn) {
 			return new ScriptEngineManager().getEngineByName("js");

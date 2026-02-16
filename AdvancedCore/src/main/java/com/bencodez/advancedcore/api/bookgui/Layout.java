@@ -12,18 +12,38 @@ import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 
+/**
+ * Represents a layout for book GUIs.
+ */
 public class Layout {
 	private BaseComponent compToAdd;
 
 	private HashMap<String, String> placeholders = new HashMap<>();
+	/**
+	 * Gets the string layout.
+	 * 
+	 * @return the string layout
+	 */
 	@Getter
 	private ArrayList<String> stringLayout;
 	private String text;
 
+	/**
+	 * Creates a new layout.
+	 * 
+	 * @param layout the string layout
+	 */
 	public Layout(ArrayList<String> layout) {
 		this.stringLayout = layout;
 	}
 
+	/**
+	 * Adds a placeholder replacement.
+	 * 
+	 * @param toReplace the text to replace
+	 * @param replaceWith the replacement text
+	 * @return this layout for chaining
+	 */
 	public Layout addPlaceholder(String toReplace, String replaceWith) {
 		placeholders.put(toReplace, replaceWith);
 		return this;
@@ -33,6 +53,12 @@ public class Layout {
 		return ChatColor.translateAlternateColorCodes('&', s);
 	}
 
+	/**
+	 * Gets the layout with placeholders replaced.
+	 * 
+	 * @param placeholders the placeholders to replace
+	 * @return the layout components
+	 */
 	public BaseComponent[] getLayout(HashMap<String, String> placeholders) {
 		stringLayout = PlaceholderUtils.replacePlaceHolder(stringLayout, placeholders);
 		stringLayout = PlaceholderUtils.replacePlaceHolder(stringLayout, this.placeholders);
@@ -67,6 +93,13 @@ public class Layout {
 		return comps;
 	}
 
+	/**
+	 * Replaces text with a component.
+	 * 
+	 * @param text the text to replace
+	 * @param compToAdd the component to add
+	 * @return this layout for chaining
+	 */
 	public Layout replaceTextComponent(String text, BaseComponent compToAdd) {
 		this.text = text;
 		this.compToAdd = compToAdd;
