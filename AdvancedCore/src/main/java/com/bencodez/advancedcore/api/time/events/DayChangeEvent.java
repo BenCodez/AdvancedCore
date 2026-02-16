@@ -40,10 +40,20 @@ public class DayChangeEvent extends Event {
 		return handlers;
 	}
 
+	/**
+	 * Checks if fake.
+	 *
+	 * @return true if fake
+	 */
 	public boolean isFake() {
 		return fake;
 	}
 
+	/**
+	 * Sets fake.
+	 *
+	 * @param fake the fake flag
+	 */
 	public void setFake(boolean fake) {
 		this.fake = fake;
 	}

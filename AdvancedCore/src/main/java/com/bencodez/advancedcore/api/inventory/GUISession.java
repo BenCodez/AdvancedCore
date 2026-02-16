@@ -7,6 +7,9 @@ import org.bukkit.inventory.InventoryView;
 
 import com.bencodez.simpleapi.player.PlayerUtils;
 
+/**
+ * Session holder for managing GUI state across inventory interactions.
+ */
 public class GUISession implements InventoryHolder {
 	/**
 	 * Get the GUISession for a given inventory, or null if none exists for this

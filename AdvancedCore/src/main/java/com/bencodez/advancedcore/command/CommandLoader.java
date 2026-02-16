@@ -48,6 +48,11 @@ public class CommandLoader {
 
 	static CommandLoader instance = new CommandLoader(AdvancedCorePlugin.getInstance());
 
+	/**
+	 * Gets the instance.
+	 *
+	 * @return the instance
+	 */
 	public static CommandLoader getInstance() {
 		return instance;
 	}
@@ -60,19 +65,40 @@ public class CommandLoader {
 
 	private AdvancedCorePlugin plugin;
 
+	/**
+	 * Gets the value request commands.
+	 *
+	 * @return the value request commands
+	 */
 	@Getter
 	ArrayList<CommandHandler> valueRequestCommands = new ArrayList<>();
 
+	/**
+	 * Instantiates a new command loader.
+	 *
+	 * @param plugin the plugin
+	 */
 	public CommandLoader(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
 
+	/**
+	 * Adds a permission.
+	 *
+	 * @param perm the permission
+	 */
 	public void addPermission(String perm) {
 		if (!perms.contains(perm)) {
 			perms.add(perm);
 		}
 	}
 
+	/**
+	 * Gets the basic admin commands.
+	 *
+	 * @param permPrefix the permission prefix
+	 * @return the basic admin commands
+	 */
 	public ArrayList<CommandHandler> getBasicAdminCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<>();
 
@@ -717,6 +743,12 @@ public class CommandLoader {
 		return cmds;
 	}
 
+	/**
+	 * Gets the basic commands.
+	 *
+	 * @param permPrefix the permission prefix
+	 * @return the basic commands
+	 */
 	public ArrayList<CommandHandler> getBasicCommands(String permPrefix) {
 		ArrayList<CommandHandler> cmds = new ArrayList<>();
 
@@ -757,6 +789,9 @@ public class CommandLoader {
 		return cmds;
 	}
 
+	/**
+	 * Loads value request commands.
+	 */
 	public void loadValueRequestCommands() {
 		ArrayList<CommandHandler> cmds = new ArrayList<>();
 		cmds.add(

@@ -27,6 +27,11 @@ public class DateChangedEvent extends Event {
 
 	private TimeType timeType;
 
+	/**
+	 * Instantiates a new date changed event.
+	 *
+	 * @param time the time type
+	 */
 	public DateChangedEvent(TimeType time) {
 		super(true);
 		this.timeType = time;
@@ -49,10 +54,20 @@ public class DateChangedEvent extends Event {
 		return timeType;
 	}
 
+	/**
+	 * Checks if fake.
+	 *
+	 * @return true if fake
+	 */
 	public boolean isFake() {
 		return fake;
 	}
 
+	/**
+	 * Sets fake.
+	 *
+	 * @param fake the fake flag
+	 */
 	public void setFake(boolean fake) {
 		this.fake = fake;
 	}

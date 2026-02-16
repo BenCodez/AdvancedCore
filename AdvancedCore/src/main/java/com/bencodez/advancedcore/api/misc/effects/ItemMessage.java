@@ -32,12 +32,23 @@ import com.comphenix.protocol.events.PacketContainer;
  * up the chat window.
  */
 public class ItemMessage {
+/**
+ * Represents a message record for item messages.
+ */
 	public class MessageRecord implements Comparable<Object> {
 		private final int duration;
 		private final long id;
 		private final String message;
 		private final int priority;
 
+		/**
+		 * Creates a new message record.
+		 * 
+		 * @param message the message text
+		 * @param duration the duration in seconds
+		 * @param priority the priority level
+		 * @param id the unique ID
+		 */
 		public MessageRecord(String message, int duration, int priority, long id) {
 			this.message = message;
 			this.duration = duration;
@@ -187,6 +198,11 @@ public class ItemMessage {
 
 	private final Plugin plugin;
 
+	/**
+	 * Creates a new item message handler.
+	 * 
+	 * @param plugin the plugin instance
+	 */
 	public ItemMessage(Plugin plugin) {
 		this.plugin = plugin;
 	}

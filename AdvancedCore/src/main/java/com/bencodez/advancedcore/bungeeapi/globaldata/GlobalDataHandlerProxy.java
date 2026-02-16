@@ -12,15 +12,34 @@ import com.bencodez.advancedcore.api.time.TimeType;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Proxy handler for global data with time change support.
+ */
 public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 
+	/**
+	 * Whether time changed has happened.
+	 * 
+	 * @return whether time changed has happened
+	 * @param timeChangedHappened whether time changed has happened
+	 */
 	@Getter
 	@Setter
 	private boolean timeChangedHappened = false;
 
+	/**
+	 * The list of time changes.
+	 * 
+	 * @return the list of time changes
+	 */
 	@Getter
 	private ArrayList<TimeType> timeChanges = new ArrayList<>();
 
+	/**
+	 * The time changed timer.
+	 * 
+	 * @return the time changed timer
+	 */
 	@Getter
 	private ScheduledExecutorService timeChangedTimer;
 
@@ -28,6 +47,12 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 
 	private GlobalMySQL globalMysql;
 
+	/**
+	 * Constructor for GlobalDataHandlerProxy.
+	 *
+	 * @param globalMysql the global MySQL instance
+	 * @param servers the list of servers
+	 */
 	public GlobalDataHandlerProxy(GlobalMySQL globalMysql, ArrayList<String> servers) {
 		super(globalMysql);
 		timeChangedTimer = Executors.newScheduledThreadPool(1);
@@ -73,10 +98,16 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 		}, 60, 10, TimeUnit.SECONDS);
 	}
 	
+	/**
+	 * Shuts down the time changed timer.
+	 */
 	public void shutdown() {
 		timeChangedTimer.shutdownNow();
 	}
 
+	/**
+	 * Checks for finished time changes across servers.
+	 */
 	public void checkForFinishedTimeChanges() {
 		try {
 			if (timeChangedHappened) {
@@ -143,13 +174,29 @@ public abstract class GlobalDataHandlerProxy extends GlobalDataHandler {
 		}
 	}
 
+	/**
+	 * Called when a time change occurs.
+	 *
+	 * @param type the time type
+	 */
 	public void onTimeChange(TimeType type) {
 		timeChangedHappened = true;
 		timeChanges.add(type);
 	}
 
+	/**
+	 * Called when a time change failed on a server.
+	 *
+	 * @param server the server name
+	 * @param type the time type
+	 */
 	public abstract void onTimeChangedFailed(String server, TimeType type);
 
+	/**
+	 * Called when a time change finished successfully.
+	 *
+	 * @param type the time type
+	 */
 	public abstract void onTimeChangedFinished(TimeType type);
 
 }

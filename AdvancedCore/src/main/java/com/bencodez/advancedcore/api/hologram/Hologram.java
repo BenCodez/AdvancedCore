@@ -14,12 +14,27 @@ import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
+/**
+ * Represents a hologram using armor stands.
+ */
 public class Hologram {
+	/**
+	 * @return the armor stand entity
+	 */
 	@Getter
 	private ArmorStand armorStand;
+	/**
+	 * @return the location of the hologram
+	 */
 	@Getter
 	private Location loc;
 
+	/**
+	 * Creates a new hologram at the specified location with the given name.
+	 * 
+	 * @param loc the location
+	 * @param name the hologram name
+	 */
 	public Hologram(Location loc, String name) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
@@ -39,6 +54,13 @@ public class Hologram {
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
 	}
 
+	/**
+	 * Creates a new hologram with marker setting.
+	 * 
+	 * @param loc the location
+	 * @param name the hologram name
+	 * @param marker whether to set as marker
+	 */
 	public Hologram(Location loc, String name, boolean marker) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
@@ -57,6 +79,14 @@ public class Hologram {
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
 	}
 
+	/**
+	 * Creates a new hologram with marker and glowing settings.
+	 * 
+	 * @param loc the location
+	 * @param name the hologram name
+	 * @param marker whether to set as marker
+	 * @param glowing whether the hologram should glow
+	 */
 	public Hologram(Location loc, String name, boolean marker, boolean glowing) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
@@ -75,6 +105,16 @@ public class Hologram {
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
 	}
 
+	/**
+	 * Creates a new hologram with persistent data.
+	 * 
+	 * @param loc the location
+	 * @param name the hologram name
+	 * @param marker whether to set as marker
+	 * @param glowing whether the hologram should glow
+	 * @param key the namespaced key for persistent data
+	 * @param value the persistent data value
+	 */
 	public Hologram(Location loc, String name, boolean marker, boolean glowing, NamespacedKey key, int value) {
 		this.loc = loc;
 		if (!Bukkit.isPrimaryThread()) {
@@ -93,6 +133,18 @@ public class Hologram {
 		AdvancedCorePlugin.getInstance().getHologramHandler().add(this);
 	}
 
+	/**
+	 * Creates a new hologram with persistent data and entity metadata.
+	 * 
+	 * @param loc the location
+	 * @param name the hologram name
+	 * @param marker whether to set as marker
+	 * @param glowing whether the hologram should glow
+	 * @param key the namespaced key for persistent data
+	 * @param value the persistent data value
+	 * @param str the metadata key
+	 * @param value1 the metadata value
+	 */
 	public Hologram(Location loc, String name, boolean marker, boolean glowing, NamespacedKey key, int value,
 			String str, Object value1) {
 		this.loc = loc;
@@ -164,24 +216,47 @@ public class Hologram {
 		MiscUtils.getInstance().setEntityMeta(armorStand, str, object);
 	}
 
+	/**
+	 * Gets the persistent data container of the armor stand.
+	 * 
+	 * @return the persistent data container
+	 */
 	public PersistentDataContainer getPersistentDataHolder() {
 		return armorStand.getPersistentDataContainer();
 	}
 
+	/**
+	 * Sets the glowing state of the hologram.
+	 * 
+	 * @param value whether the hologram should glow
+	 */
 	public void glow(boolean value) {
 		if (armorStand != null) {
 			armorStand.setGlowing(value);
 		}
 	}
 
+	/**
+	 * Checks if the hologram is alive.
+	 * 
+	 * @return true if the armor stand is not dead, false otherwise
+	 */
 	public boolean isAlive() {
 		return !armorStand.isDead();
 	}
 
+	/**
+	 * Checks if the hologram has been created.
+	 * 
+	 * @return true if the armor stand exists, false otherwise
+	 */
 	public boolean isCreated() {
 		return armorStand != null;
 	}
 
+	/**
+	 * Kills and removes the hologram.
+	 */
 	public void kill() {
 		if (!Bukkit.isPrimaryThread()) {
 			AdvancedCorePlugin.getInstance().getBukkitScheduler()

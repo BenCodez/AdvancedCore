@@ -31,6 +31,9 @@ import com.bencodez.simpleapi.file.annotation.ConfigDataKeys;
 import com.bencodez.simpleapi.file.annotation.ConfigDataListString;
 import com.bencodez.simpleapi.file.annotation.ConfigDataString;
 
+/**
+ * Configuration editor GUI handler.
+ */
 public class ConfigEditor {
 	private YMLFile ymlFile;
 	private YMLConfig ymlConfig;
@@ -40,12 +43,26 @@ public class ConfigEditor {
 	private AdvancedCorePlugin plugin;
 	private HashMap<String, EditGUIButton> buttons = new HashMap<>();
 
+	/**
+	 * Instantiates a new config editor.
+	 *
+	 * @param plugin the plugin
+	 * @param ymlFile the yml file
+	 */
 	public ConfigEditor(AdvancedCorePlugin plugin, YMLFile ymlFile) {
 		this.ymlFile = ymlFile;
 		this.plugin = plugin;
 		load();
 	}
 
+	/**
+	 * Instantiates a new config editor.
+	 *
+	 * @param plugin the plugin
+	 * @param ymlFile the yml file
+	 * @param ymlConfig the yml config
+	 * @param ymlConfigClass the yml config class
+	 */
 	public ConfigEditor(AdvancedCorePlugin plugin, YMLFile ymlFile, YMLConfig ymlConfig, Class<?> ymlConfigClass) {
 		this.ymlFile = ymlFile;
 		this.ymlConfig = ymlConfig;
@@ -54,6 +71,13 @@ public class ConfigEditor {
 		load();
 	}
 
+	/**
+	 * Adds buttons from yml config.
+	 *
+	 * @param ymlConfig the yml config
+	 * @param clazz the class
+	 * @param config the configuration section
+	 */
 	@SuppressWarnings("unchecked")
 	public void addButtons(YMLConfig ymlConfig, Class<?> clazz, ConfigurationSection config) {
 
@@ -311,6 +335,13 @@ public class ConfigEditor {
 		}
 	}
 
+	/**
+	 * Adds buttons from yml file.
+	 *
+	 * @param ymlFile the yml file
+	 * @param clazz the class
+	 * @param config the configuration section
+	 */
 	@SuppressWarnings("unchecked")
 	public void addButtons(YMLFile ymlFile, Class<?> clazz, ConfigurationSection config) {
 
@@ -568,6 +599,9 @@ public class ConfigEditor {
 		}
 	}
 
+	/**
+	 * Load configuration buttons.
+	 */
 	public void load() {
 		Class<?> clazz = ymlFile.getClass();
 		ConfigurationSection config = ymlFile.getData();
@@ -582,6 +616,11 @@ public class ConfigEditor {
 		}
 	}
 
+	/**
+	 * Opens the config editor GUI.
+	 *
+	 * @param player the player
+	 */
 	public void open(Player player) {
 		EditGUI inv = new EditGUI("EDIT: " + ymlFile.getdFile().getName());
 		Set<String> configSections = new HashSet<>();
@@ -615,6 +654,12 @@ public class ConfigEditor {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Opens the config editor GUI for a section.
+	 *
+	 * @param player the player
+	 * @param sec the section path
+	 */
 	public void open(Player player, String sec) {
 		EditGUI inv = new EditGUI("EDIT: " + ymlFile.getdFile().getName());
 		Set<String> configSections = new HashSet<>();
@@ -668,6 +713,11 @@ public class ConfigEditor {
 		inv.openInventory(player);
 	}
 
+	/**
+	 * Opens the non-config section editor GUI.
+	 *
+	 * @param player the player
+	 */
 	public void openNonConfig(Player player) {
 		EditGUI inv = new EditGUI("EDIT: " + ymlFile.getdFile().getName());
 

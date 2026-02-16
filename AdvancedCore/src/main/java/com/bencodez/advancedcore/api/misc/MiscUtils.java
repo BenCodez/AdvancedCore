@@ -46,6 +46,9 @@ import com.bencodez.simpleapi.player.PlayerUtils;
 
 import net.md_5.bungee.api.ChatColor;
 
+/**
+ * Miscellaneous utility methods.
+ */
 public class MiscUtils {
 	/** The instance. */
 	static MiscUtils instance = new MiscUtils();
@@ -60,6 +63,13 @@ public class MiscUtils {
 	private MiscUtils() {
 	}
 
+	/**
+	 * Adds seconds to a date.
+	 * 
+	 * @param date the date to add to
+	 * @param seconds the number of seconds to add
+	 * @return the new date
+	 */
 	public Date addSeconds(Date date, int seconds) {
 		Calendar c = Calendar.getInstance();
 		c.setTime(new Date());
@@ -76,6 +86,12 @@ public class MiscUtils {
 		broadcast(broadcastMsg, new ArrayList<>(Bukkit.getOnlinePlayers()));
 	}
 
+	/**
+	 * Broadcasts a message to specific players.
+	 * 
+	 * @param broadcastMsg the message to broadcast
+	 * @param players the players to broadcast to
+	 */
 	public void broadcast(String broadcastMsg, Collection<? extends Player> players) {
 		if (broadcastMsg != null && !broadcastMsg.equals("")) {
 			String consoleMsg = broadcastMsg;

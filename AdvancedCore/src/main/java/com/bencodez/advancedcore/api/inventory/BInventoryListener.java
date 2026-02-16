@@ -13,13 +13,26 @@ import org.bukkit.inventory.ItemStack;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
+/**
+ * Listener for inventory interactions.
+ */
 public class BInventoryListener implements Listener {
 	private AdvancedCorePlugin plugin;
 
+	/**
+	 * Instantiates a new BInventory listener.
+	 * 
+	 * @param plugin the plugin instance
+	 */
 	public BInventoryListener(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
 
+	/**
+	 * Handle inventory click events.
+	 * 
+	 * @param event the inventory click event
+	 */
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onInventoryClick(InventoryClickEvent event) {
 		if (!(event.getWhoClicked() instanceof Player)) {

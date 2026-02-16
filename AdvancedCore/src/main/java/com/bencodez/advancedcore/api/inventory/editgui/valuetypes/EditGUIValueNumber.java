@@ -7,8 +7,17 @@ import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
+/**
+ * Abstract GUI value for number editing.
+ */
 public abstract class EditGUIValueNumber extends EditGUIValue {
 
+	/**
+	 * Constructor for EditGUIValueNumber.
+	 *
+	 * @param key the key
+	 * @param value the initial value
+	 */
 	public EditGUIValueNumber(String key, Object value) {
 		setKey(key);
 		setCurrentValue(value);
@@ -36,5 +45,11 @@ public abstract class EditGUIValueNumber extends EditGUIValue {
 				.request(clickEvent.getPlayer());
 	}
 
+	/**
+	 * Sets the number value.
+	 *
+	 * @param player the player
+	 * @param num the number to set
+	 */
 	public abstract void setValue(Player player, Number num);
 }

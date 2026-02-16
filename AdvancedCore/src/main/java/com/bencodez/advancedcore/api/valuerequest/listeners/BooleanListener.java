@@ -2,6 +2,9 @@ package com.bencodez.advancedcore.api.valuerequest.listeners;
 
 import org.bukkit.entity.Player;
 
+/**
+ * Listener for boolean input from players.
+ */
 public abstract class BooleanListener {
 
 	/**

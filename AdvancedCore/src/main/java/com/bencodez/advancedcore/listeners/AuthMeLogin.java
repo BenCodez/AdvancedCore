@@ -14,13 +14,26 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import fr.xephi.authme.api.v3.AuthMeApi;
 import fr.xephi.authme.events.AuthMeAsyncPreLoginEvent;
 
+/**
+ * Listens for AuthMe login events and triggers AdvancedCore login events.
+ */
 public class AuthMeLogin implements Listener {
 	private AdvancedCorePlugin plugin;
 
+	/**
+	 * Creates a new AuthMe login listener.
+	 * 
+	 * @param plugin the plugin instance
+	 */
 	public AuthMeLogin(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
 
+	/**
+	 * Handles AuthMe pre-login events.
+	 * 
+	 * @param event the AuthMe pre-login event
+	 */
 	@EventHandler
 	public void authmeLogin(AuthMeAsyncPreLoginEvent event) {
 		plugin.getBukkitScheduler().runTaskLaterAsynchronously(plugin, new Runnable() {

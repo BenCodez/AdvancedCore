@@ -13,13 +13,26 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.lenis0012.bukkit.loginsecurity.events.AuthActionEvent;
 import com.lenis0012.bukkit.loginsecurity.session.AuthActionType;
 
+/**
+ * Listener for LoginSecurity login events.
+ */
 public class LoginSecurityLogin implements Listener {
 	private AdvancedCorePlugin plugin;
 
+	/**
+	 * Creates a new LoginSecurity login listener.
+	 * 
+	 * @param plugin the plugin instance
+	 */
 	public LoginSecurityLogin(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 	}
 
+	/**
+	 * Handles LoginSecurity login events.
+	 * 
+	 * @param event the login event
+	 */
 	@EventHandler
 	public void loginSecurityLogin(AuthActionEvent event) {
 		if (!event.getType().equals(AuthActionType.LOGIN)) {

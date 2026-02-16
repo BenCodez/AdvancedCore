@@ -7,7 +7,16 @@ import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
 import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
+/**
+ * Abstract GUI value for boolean editing.
+ */
 public abstract class EditGUIValueBoolean extends EditGUIValue {
+	/**
+	 * Constructor for EditGUIValueBoolean.
+	 *
+	 * @param key the key
+	 * @param value the initial value
+	 */
 	public EditGUIValueBoolean(String key, Object value) {
 		setKey(key);
 		setCurrentValue(value);
@@ -33,6 +42,12 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 		}).currentValue(getCurrentValue().toString()).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
 	}
 
+	/**
+	 * Sets the boolean value.
+	 *
+	 * @param player the player
+	 * @param value the value to set
+	 */
 	public abstract void setValue(Player player, boolean value);
 
 }

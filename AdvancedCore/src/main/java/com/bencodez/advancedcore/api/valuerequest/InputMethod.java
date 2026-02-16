@@ -7,12 +7,24 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
  */
 public enum InputMethod {
 
+	/**
+	 * Book input method.
+	 */
 	BOOK,
 
+	/**
+	 * Chat input method.
+	 */
 	CHAT,
 
+	/**
+	 * Inventory input method.
+	 */
 	INVENTORY,
 
+	/**
+	 * Sign input method.
+	 */
 	SIGN;
 
 	/**

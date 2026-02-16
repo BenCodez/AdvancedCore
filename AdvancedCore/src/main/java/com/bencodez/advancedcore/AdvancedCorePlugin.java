@@ -78,150 +78,379 @@ import com.bencodez.simpleapi.utils.PluginUtils;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Abstract base class for plugins that use AdvancedCore.
+ * Provides core functionality for user management, rewards, permissions, and more.
+ */
 public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private static AdvancedCorePlugin javaPlugin;
 
+	/**
+	 * Gets the singleton instance of this plugin.
+	 * 
+	 * @return the plugin instance
+	 */
 	public static AdvancedCorePlugin getInstance() {
 		return javaPlugin;
 	}
 
+	/**
+	 * Sets the singleton instance of this plugin.
+	 * 
+	 * @param plugin the plugin instance to set
+	 */
 	public static void setInstance(AdvancedCorePlugin plugin) {
 		javaPlugin = plugin;
 	}
 
+	/**
+	 * Handler for Vault integration.
+	 * 
+	 * @return the vault handler
+	 */
 	@Getter
 	public VaultHandler vaultHandler;
 
+	/**
+	 * Command loader for AdvancedCore commands.
+	 * 
+	 * @return the command loader
+	 */
 	@Getter
 	private CommandLoader advancedCoreCommandLoader;
 
+	/**
+	 * Handler for skull caching.
+	 * 
+	 * @return the skull cache handler
+	 */
 	@Getter
 	private SkullCacheHandler skullCacheHandler;
 
+	/**
+	 * Whether AuthMe is loaded.
+	 * 
+	 * @return true if AuthMe is loaded
+	 */
 	@Getter
 	private boolean authMeLoaded = false;
 
+	/**
+	 * Whether nLogin is loaded.
+	 * 
+	 * @return true if nLogin is loaded
+	 */
 	@Getter
 	private boolean nLoginLoaded = false;
 
+	/**
+	 * Whether LoginSecurity is loaded.
+	 * 
+	 * @return true if LoginSecurity is loaded
+	 */
 	@Getter
 	private boolean loginSecurityLoaded = false;
 
+	/**
+	 * List of banned player UUIDs.
+	 * 
+	 * @return list of banned player UUIDs
+	 */
 	@Getter
 	private ArrayList<String> bannedPlayers = new ArrayList<>();
 
+	/**
+	 * Build time of AdvancedCore.
+	 * 
+	 * @return the build time string
+	 */
 	@Getter
 	private String buildTime = "";
 
+	/**
+	 * BungeeCord channel name.
+	 * 
+	 * @return the bungee channel name
+	 * @param bungeeChannel the channel name to set
+	 */
 	@Getter
 	@Setter
 	private String bungeeChannel;
 
+	/**
+	 * Handler for CMI integration.
+	 * 
+	 * @return the CMI handler
+	 */
 	@Getter
 	private CMIHandler cmiHandle;
 
 	private Database database;
 
+	/**
+	 * Handler for full inventory management.
+	 * 
+	 * @return the full inventory handler
+	 */
 	@Getter
 	private FullInventoryHandler fullInventoryHandler;
 
+	/**
+	 * Handler for hologram management.
+	 * 
+	 * @return the hologram handler
+	 */
 	@Getter
 	private HologramHandler hologramHandler;
 
+	/**
+	 * JavaScript engine context map.
+	 * 
+	 * @return the javascript engine map
+	 * @param javascriptEngine the javascript engine map to set
+	 */
 	@Getter
 	@Setter
 	private HashMap<String, Object> javascriptEngine = new HashMap<>();
+	/**
+	 * List of JavaScript placeholder requests.
+	 * 
+	 * @return the javascript engine requests list
+	 * @param javascriptEngineRequests the requests list to set
+	 */
 	@Getter
 	@Setter
 	private ArrayList<JavascriptPlaceholderRequest> javascriptEngineRequests = new ArrayList<>();
 
+	/**
+	 * Whether rewards should be loaded.
+	 * 
+	 * @return true if rewards should be loaded
+	 * @param loadRewards true to load rewards
+	 */
 	@Getter
 	@Setter
 	private boolean loadRewards = true;
 
+	/**
+	 * Whether server data should be loaded.
+	 * 
+	 * @return true if server data should be loaded
+	 * @param loadServerData true to load server data
+	 */
 	@Getter
 	@Setter
 	private boolean loadServerData = true;
 
+	/**
+	 * Whether user data should be loaded.
+	 * 
+	 * @return true if user data should be loaded
+	 * @param loadUserData true to load user data
+	 */
 	@Getter
 	@Setter
 	private boolean loadUserData = true;
+	/**
+	 * MySQL database connection.
+	 * 
+	 * @return the mysql connection
+	 */
 	@Getter
 	private MySQL mysql;
+	/**
+	 * Configuration options for AdvancedCore.
+	 * 
+	 * @return the configuration options
+	 */
 	@Getter
 	private AdvancedCoreConfigOptions options = new AdvancedCoreConfigOptions();
 
+	/**
+	 * Whether PlaceholderAPI is enabled.
+	 * 
+	 * @return true if PlaceholderAPI is enabled
+	 */
 	@Getter
 	private boolean placeHolderAPIEnabled;
 
+	/**
+	 * Plugin messaging handler.
+	 * 
+	 * @return the plugin messaging handler
+	 */
 	@Getter
 	private PluginMessage pluginMessaging;
 
+	/**
+	 * Server data file handler.
+	 * 
+	 * @return the server data file
+	 */
 	@Getter
 	private ServerData serverDataFile;
 
+	/**
+	 * Sign menu for user input.
+	 * 
+	 * @return the sign menu
+	 */
 	@Getter
 	private SignMenu signMenu;
 
+	/**
+	 * Time checker for scheduled operations.
+	 * 
+	 * @return the time checker
+	 */
 	@Getter
 	private TimeChecker timeChecker;
 
+	/**
+	 * Main timer for scheduled tasks.
+	 * 
+	 * @return the timer
+	 */
 	@Getter
 	private ScheduledExecutorService timer;
 
+	/**
+	 * Timer for login-related tasks.
+	 * 
+	 * @return the login timer
+	 */
 	@Getter
 	private ScheduledExecutorService loginTimer;
 
+	/**
+	 * Timer for inventory-related tasks.
+	 * 
+	 * @return the inventory timer
+	 */
 	@Getter
 	private ScheduledExecutorService inventoryTimer;
 
+	/**
+	 * User manager instance.
+	 * 
+	 * @param userManager the user manager to set
+	 */
 	@Setter
 	private UserManager userManager;
 
 	private ArrayList<UserStartup> userStartup = new ArrayList<>();
 
+	/**
+	 * Version string of AdvancedCore.
+	 * 
+	 * @return the version string
+	 */
 	@Getter
 	private String advancedCoreVersion = "";
 
+	/**
+	 * Build number of AdvancedCore.
+	 * 
+	 * @return the build number
+	 */
 	@Getter
 	private String advancedCoreBuildNumber = "NOTSET";
 
+	/**
+	 * Handler for permission management.
+	 * 
+	 * @return the permission handler
+	 */
 	@Getter
 	private PermissionHandler permissionHandler;
 
+	/**
+	 * Handler for rewards system.
+	 * 
+	 * @return the reward handler
+	 */
 	@Getter
 	private RewardHandler rewardHandler;
 
+	/**
+	 * Handler for LuckPerms integration.
+	 * 
+	 * @return the LuckPerms handler
+	 */
 	@Getter
 	private LuckPermsHandle luckPermsHandle;
 
+	/**
+	 * Bukkit scheduler wrapper.
+	 * 
+	 * @return the bukkit scheduler
+	 */
 	@Getter
 	private BukkitScheduler bukkitScheduler;
 
+	/**
+	 * Whether Bedrock API should be loaded.
+	 * 
+	 * @return true if Bedrock API should be loaded
+	 * @param loadBedrockAPI true to load Bedrock API
+	 */
 	@Getter
 	@Setter
 	private boolean loadBedrockAPI = true;
 
+	/**
+	 * Whether LuckPerms should be loaded.
+	 * 
+	 * @return true if LuckPerms should be loaded
+	 * @param loadLuckPerms true to load LuckPerms
+	 */
 	@Getter
 	@Setter
 	private boolean loadLuckPerms = true;
 
+	/**
+	 * Handler for Bedrock player name resolution.
+	 * 
+	 * @return the bedrock handler
+	 */
 	@Getter
 	private BedrockNameResolver bedrockHandle;;
 
+	/**
+	 * Whether skull handler should be loaded.
+	 * 
+	 * @return true if skull handler should be loaded
+	 * @param loadSkullHandler true to load skull handler
+	 */
 	@Getter
 	@Setter
 	private boolean loadSkullHandler = true;
 
+	/**
+	 * Whether Vault should be loaded.
+	 * 
+	 * @return true if Vault should be loaded
+	 * @param loadVault true to load Vault
+	 */
 	@Getter
 	@Setter
 	private boolean loadVault = true;
 
+	/**
+	 * Adds a user startup task to be executed on plugin startup.
+	 * 
+	 * @param start the startup task to add
+	 */
 	public void addUserStartup(UserStartup start) {
 		userStartup.add(start);
 	}
 
+	/**
+	 * Allows downloading plugin updates from Spigot.
+	 * 
+	 * @param resourceId the Spigot resource ID
+	 */
 	public void allowDownloadingFromSpigot(int resourceId) {
 		getOptions().setResourceId(resourceId);
 	}
@@ -256,6 +485,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	}
 
+	/**
+	 * Checks for plugin updates in the background.
+	 */
 	public void checkPluginUpdate() {
 		if (!loadServerData) {
 			return;
@@ -275,6 +507,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	}
 
+	/**
+	 * Converts data from one storage type to another.
+	 * 
+	 * @param from the source storage type
+	 * @param to the target storage type
+	 */
 	public void convertDataStorage(UserStorage from, UserStorage to) {
 		debug("Starting convert process");
 		if (to == null) {
@@ -306,6 +544,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	}
 
+	/**
+	 * Logs a debug message at the specified debug level.
+	 * 
+	 * @param debugLevel the debug level
+	 * @param debug the debug message
+	 */
 	public void debug(DebugLevel debugLevel, String debug) {
 		if (debugLevel.equals(DebugLevel.EXTRA)) {
 			debug = "ExtraDebug: " + debug;
@@ -331,18 +575,38 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Logs a debug message at INFO level.
+	 * 
+	 * @param debug the debug message
+	 */
 	public void debug(String debug) {
 		debug(DebugLevel.INFO, debug);
 	}
 
+	/**
+	 * Logs a debug message at DEV level.
+	 * 
+	 * @param debug the debug message
+	 */
 	public void devDebug(String debug) {
 		debug(DebugLevel.DEV, debug);
 	}
 
+	/**
+	 * Logs a debug message at EXTRA level.
+	 * 
+	 * @param debug the debug message
+	 */
 	public void extraDebug(String debug) {
 		debug(DebugLevel.EXTRA, debug);
 	}
 
+	/**
+	 * Gets the SQLite user table.
+	 * 
+	 * @return the user table, or null if not using SQLite
+	 */
 	public UserTable getSQLiteUserTable() {
 		if (database == null && loadUserData) {
 			loadUserAPI(getStorageType());
@@ -357,10 +621,20 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return null;
 	}
 
+	/**
+	 * Gets the current storage type configuration.
+	 * 
+	 * @return the storage type
+	 */
 	public UserStorage getStorageType() {
 		return getOptions().getStorageType();
 	}
 
+	/**
+	 * Gets the user manager instance.
+	 * 
+	 * @return the user manager
+	 */
 	public UserManager getUserManager() {
 		if (userManager == null) {
 			userManager = new UserManager(this);
@@ -396,6 +670,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return null;
 	}
 
+	/**
+	 * Checks if MySQL connection is okay.
+	 * 
+	 * @return true if not using MySQL or if MySQL is connected, false otherwise
+	 */
 	public boolean isMySQLOkay() {
 		if (getStorageType().equals(UserStorage.MYSQL)) {
 			return mysql != null;
@@ -403,6 +682,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return true;
 	}
 
+	/**
+	 * Loads AdvancedCore event listeners.
+	 */
 	public void loadAdvancedCoreEvents() {
 		if (loadUserData) {
 			Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(this), this);
@@ -570,6 +852,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Loads tab completion options.
+	 */
 	public void loadTabComplete() {
 		TabCompleteHandler.getInstance().addTabCompleteOption(new TabCompleteHandle("(AllPlayer)", new ArrayList<>()) {
 
@@ -749,6 +1034,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
 	}
 
+	/**
+	 * Loads user API for specified storage type.
+	 * 
+	 * @param storageType the storage type to load
+	 */
 	@SuppressWarnings("deprecation")
 	public void loadUserAPI(UserStorage storageType) {
 		if (storageType.equals(UserStorage.SQLITE)) {
@@ -818,6 +1108,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		TabCompleteHandler.getInstance().loadTimer(getTimer());
 	}
 
+	/**
+	 * Loads value request input commands.
+	 */
 	public void loadValueRequestInputCommands() {
 		CommandLoader.getInstance().loadValueRequestCommands();
 		try {
@@ -832,6 +1125,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Loads Vault integration.
+	 */
 	public void loadVault() {
 		vaultHandler = new VaultHandler();
 		if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
@@ -902,12 +1198,29 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getRewardHandler().checkDirectlyDefinedRewardFiles();
 	}
 
+	/**
+	 * Called after plugin loads.
+	 * Subclasses must implement this method.
+	 */
 	public abstract void onPostLoad();
 
+	/**
+	 * Called before plugin loads.
+	 * Subclasses must implement this method.
+	 */
 	public abstract void onPreLoad();
 
+	/**
+	 * Called when plugin unloads.
+	 * Subclasses must implement this method.
+	 */
 	public abstract void onUnLoad();
 
+	/**
+	 * Registers BungeeCord messaging channels.
+	 * 
+	 * @param name the channel name
+	 */
 	public void registerBungeeChannels(String name) {
 		this.bungeeChannel = name;
 		getServer().getMessenger().registerOutgoingPluginChannel(this, name);
@@ -916,17 +1229,36 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getLogger().info("Loaded plugin message channels: " + name);
 	}
 
+	/**
+	 * Registers a listener.
+	 * 
+	 * @param listener the listener to register
+	 */
 	public void registerEvents(Listener listener) {
 		Bukkit.getPluginManager().registerEvents(listener, this);
 	}
 
+	/**
+	 * Reloads plugin configuration.
+	 * Subclasses must implement this method.
+	 */
 	public abstract void reload();
 
+	/**
+	 * Reloads AdvancedCore configuration.
+	 * 
+	 * @deprecated use {@link #reloadAdvancedCore(boolean)} instead
+	 */
 	@Deprecated
 	public void reloadAdvancedCore() {
 		reloadAdvancedCore(false);
 	}
 
+	/**
+	 * Reloads AdvancedCore configuration.
+	 * 
+	 * @param userStorage whether to reload user storage
+	 */
 	public void reloadAdvancedCore(boolean userStorage) {
 		getServerDataFile().reloadData();
 		rewardHandler.loadRewards();
@@ -976,12 +1308,19 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		});
 	}
 
+	/**
+	 * Sets configuration data.
+	 * 
+	 * @param ymlConfig the configuration to set
+	 */
 	public void setConfigData(YMLConfig ymlConfig) {
 		getOptions().setYmlConfig(ymlConfig);
 	}
 
 	/**
-	 * @param mysql the mysql to set
+	 * Sets the MySQL database connection.
+	 * 
+	 * @param mysql the mysql connection to set
 	 */
 	public void setMysql(MySQL mysql) {
 		if (this.mysql != null) {
@@ -991,6 +1330,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		this.mysql = mysql;
 	}
 
+	/**
+	 * Unregisters value request commands.
+	 */
 	public void unRegisterValueRequest() {
 		try {
 			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
@@ -1004,6 +1346,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Runs user startup tasks.
+	 */
 	public void userStartup() {
 		if (!loadUserData) {
 			debug("Not loading userdata");
