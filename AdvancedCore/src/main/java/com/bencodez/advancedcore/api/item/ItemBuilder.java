@@ -428,7 +428,7 @@ public class ItemBuilder {
 	 * @param is The itemstack to create the ItemBuilder over.
 	 */
 	public ItemBuilder(ItemStack is) {
-		this.is = is;
+		this.is = is.clone();
 	}
 
 	/**
