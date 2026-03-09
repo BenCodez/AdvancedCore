@@ -92,11 +92,6 @@ public abstract class GUIHandler {
 	 */
 	public abstract void open();
 
-	/**
-	 * Opens the GUI using the specified method.
-	 * 
-	 * @param method the GUI method to use
-	 */
 	public void open(GUIMethod method) {
 		if (player instanceof Player) {
 			switch (method) {
@@ -109,14 +104,23 @@ public abstract class GUIHandler {
 			case CHEST:
 				onChest((Player) player);
 				return;
+			case DIALOG:
+				onDialog((Player) player);
+				return;
 			default:
 				break;
-
 			}
 		} else {
 			onChat(player);
 		}
 	}
+
+	/**
+	 * Opens the GUI as a dialog for the player.
+	 * 
+	 * @param player the player
+	 */
+	public abstract void onDialog(Player player);
 
 	/**
 	 * Sends messages to the command sender.
@@ -163,7 +167,7 @@ public abstract class GUIHandler {
 	/**
 	 * Sets data in the data map.
 	 * 
-	 * @param str the key
+	 * @param str   the key
 	 * @param value the value to set
 	 */
 	public void setData(String str, Object value) {

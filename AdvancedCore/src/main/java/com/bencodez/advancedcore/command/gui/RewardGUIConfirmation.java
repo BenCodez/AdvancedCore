@@ -41,6 +41,11 @@ public abstract class RewardGUIConfirmation extends GUIHandler {
 	}
 
 	@Override
+	public void onDialog(Player player) {
+
+	}
+
+	@Override
 	public void onChest(Player player) {
 		BInventory inv = new BInventory(title);
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.EMERALD_BLOCK).setName("&aConfirm")) {

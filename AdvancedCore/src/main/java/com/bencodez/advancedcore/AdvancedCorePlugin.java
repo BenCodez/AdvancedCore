@@ -64,6 +64,7 @@ import com.bencodez.advancedcore.listeners.WorldChangeEvent;
 import com.bencodez.simpleapi.command.TabCompleteHandle;
 import com.bencodez.simpleapi.command.TabCompleteHandler;
 import com.bencodez.simpleapi.debug.DebugLevel;
+import com.bencodez.simpleapi.dialog.UniDialogService;
 import com.bencodez.simpleapi.file.YMLConfig;
 import com.bencodez.simpleapi.nms.NMSManager;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
@@ -79,8 +80,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Abstract base class for plugins that use AdvancedCore.
- * Provides core functionality for user management, rewards, permissions, and more.
+ * Abstract base class for plugins that use AdvancedCore. Provides core
+ * functionality for user management, rewards, permissions, and more.
  */
 public abstract class AdvancedCorePlugin extends JavaPlugin {
 
@@ -415,7 +416,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * @return the bedrock handler
 	 */
 	@Getter
-	private BedrockNameResolver bedrockHandle;;
+	private BedrockNameResolver bedrockHandle;
+
+	@Getter
+	@Setter
+	private UniDialogService dialogService;
 
 	/**
 	 * Whether skull handler should be loaded.
@@ -511,7 +516,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Converts data from one storage type to another.
 	 * 
 	 * @param from the source storage type
-	 * @param to the target storage type
+	 * @param to   the target storage type
 	 */
 	public void convertDataStorage(UserStorage from, UserStorage to) {
 		debug("Starting convert process");
@@ -548,7 +553,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Logs a debug message at the specified debug level.
 	 * 
 	 * @param debugLevel the debug level
-	 * @param debug the debug message
+	 * @param debug      the debug message
 	 */
 	public void debug(DebugLevel debugLevel, String debug) {
 		if (debugLevel.equals(DebugLevel.EXTRA)) {
@@ -1194,25 +1199,30 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		onPreLoad();
 		loadHook();
 		onPostLoad();
+
+		try {
+			dialogService = new UniDialogService(this, getName().toLowerCase() + "_dialogs");
+			dialogService.register();
+		} catch (Exception e) {
+			debug("Failed to register UniDialogService, dialogs will not work");
+			debug(e);
+		}
 		getRewardHandler().checkSubRewards();
 		getRewardHandler().checkDirectlyDefinedRewardFiles();
 	}
 
 	/**
-	 * Called after plugin loads.
-	 * Subclasses must implement this method.
+	 * Called after plugin loads. Subclasses must implement this method.
 	 */
 	public abstract void onPostLoad();
 
 	/**
-	 * Called before plugin loads.
-	 * Subclasses must implement this method.
+	 * Called before plugin loads. Subclasses must implement this method.
 	 */
 	public abstract void onPreLoad();
 
 	/**
-	 * Called when plugin unloads.
-	 * Subclasses must implement this method.
+	 * Called when plugin unloads. Subclasses must implement this method.
 	 */
 	public abstract void onUnLoad();
 
@@ -1239,8 +1249,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	/**
-	 * Reloads plugin configuration.
-	 * Subclasses must implement this method.
+	 * Reloads plugin configuration. Subclasses must implement this method.
 	 */
 	public abstract void reload();
 
