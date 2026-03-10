@@ -52,6 +52,82 @@ public class NumberRequester {
 	public void request(Player player, InputMethod method, String currentValue,
 			LinkedHashMap<Number, ItemStack> options, String promptText, boolean allowCustomOption,
 			NumberListener listener) {
+		if (method.equals(InputMethod.DIALOG)) {
+			com.bencodez.simpleapi.dialog.UniDialogService dialogService = AdvancedCorePlugin.getInstance()
+					.getDialogService();
+
+			if (dialogService == null) {
+				new NumberRequester().request(player, InputMethod.CHAT, currentValue, options, promptText,
+						allowCustomOption, listener);
+				return;
+			}
+
+			boolean hasOptions = options != null && !options.isEmpty();
+			boolean canUseDialog = hasOptions || allowCustomOption;
+
+			if (!canUseDialog) {
+				new NumberRequester().request(player, InputMethod.CHAT, currentValue, options, promptText,
+						allowCustomOption, listener);
+				return;
+			}
+
+			final String inputId = "custom_value";
+			String title = (promptText != null && !promptText.isEmpty()) ? promptText : "Select a value";
+			String body = "";
+
+			if (currentValue != null && !currentValue.isEmpty()) {
+				body = "Current value: " + currentValue;
+			}
+
+			com.bencodez.simpleapi.dialog.MultiActionDialogBuilder builder = dialogService.multiAction(player)
+					.title(title).body(body);
+
+			if (allowCustomOption) {
+				builder.input(inputId, inputBuilder -> {
+					inputBuilder.label("Custom number");
+					if (currentValue != null && !currentValue.isEmpty()) {
+						inputBuilder.placeholder(currentValue);
+					} else {
+						inputBuilder.placeholder("Enter a number");
+					}
+					inputBuilder.required(!hasOptions);
+				});
+
+				builder.button("Use Custom Value", payload -> {
+					String input = payload.textValue(inputId);
+
+					if (input == null) {
+						input = "";
+					}
+
+					input = input.trim();
+
+					if (input.isEmpty()) {
+						player.sendMessage("No custom value entered");
+						return;
+					}
+
+					try {
+						Number number = Double.valueOf(input);
+						listener.onInput(player, number);
+					} catch (NumberFormatException ex) {
+						player.sendMessage("Invalid number: " + input);
+					}
+				});
+			}
+
+			if (hasOptions) {
+				for (Number num : options.keySet()) {
+					final Number selected = num;
+					builder.button(selected.toString(), payload -> {
+						listener.onInput(player, selected);
+					});
+				}
+			}
+
+			builder.open();
+			return;
+		}
 		if (method.equals(InputMethod.SIGN)) {
 			method = InputMethod.INVENTORY;
 		}

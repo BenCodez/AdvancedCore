@@ -42,7 +42,7 @@ public abstract class EditGUIValue {
 	 */
 	@Getter
 	@Setter
-	private InputMethod inputMethod;
+	private InputMethod inputMethod = InputMethod.DIALOG;
 
 	/**
 	 * The inventory.

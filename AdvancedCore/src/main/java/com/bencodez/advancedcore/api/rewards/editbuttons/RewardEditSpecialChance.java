@@ -36,7 +36,7 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 						reloadAdvancedCore();
 						open(player, reward);
 					}
-				}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
+				}, new Number[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
 
 			}
 		}).setName("&aAdd sub reward"));
@@ -158,7 +158,7 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 							reloadAdvancedCore();
 							open(player, reward);
 						}
-					}, new Number[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
+					}, new Number[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
 				}
 			});
 		}

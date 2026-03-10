@@ -45,7 +45,7 @@ public abstract class RewardEditAdvancedWorld extends RewardEdit {
 						reloadAdvancedCore();
 						open(player, reward);
 					}
-				}, ArrayUtils.convert(worlds)).usingMethod(InputMethod.CHAT).allowCustomOption(true)
+				}, ArrayUtils.convert(worlds)).usingMethod(InputMethod.DIALOG).allowCustomOption(true)
 						.request(clickEvent.getPlayer());
 
 			}
@@ -168,7 +168,7 @@ public abstract class RewardEditAdvancedWorld extends RewardEdit {
 							reloadAdvancedCore();
 							open(player, reward);
 						}
-					}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
+					}, new String[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
 				}
 			});
 		}

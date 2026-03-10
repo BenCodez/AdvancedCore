@@ -44,6 +44,34 @@ public class BooleanRequester {
 		if (AdvancedCorePlugin.getInstance().getOptions().getDisabledRequestMethods().contains(method.toString())) {
 			player.sendMessage("Disabled method: " + method.toString());
 		}
+		// Add support for the new DIALOG method using SimpleAPI's UniDialogService
+		// Handle dialog input before converting methods or presenting other UIs
+		if (method.equals(InputMethod.DIALOG)) {
+			// Attempt to retrieve the dialog service from the plugin
+			com.bencodez.simpleapi.dialog.UniDialogService dialogService = AdvancedCorePlugin.getInstance()
+					.getDialogService();
+			if (dialogService != null) {
+				// Build a confirmation dialog for boolean input. The prompt text becomes the
+				// title
+				// and the current value is displayed in the body for context.
+				String title = (promptText != null && !promptText.isEmpty()) ? promptText : "Select a value";
+				String body = (currentValue != null && !currentValue.isEmpty()) ? ("Current value: " + currentValue)
+						: "";
+				dialogService.confirmation(player).title(title).body(body).yesText("True").noText("False")
+						.onYes(payload -> {
+							// When the user clicks the yes button, invoke the listener with true
+							listener.onInput(player, true);
+						}).onNo(payload -> {
+							// When the user clicks the no button, invoke the listener with false
+							listener.onInput(player, false);
+						}).open();
+			} else {
+				// Dialog service unavailable, gracefully fall back to chat input
+				new BooleanRequester().request(player, InputMethod.CHAT, currentValue, promptText, listener);
+			}
+			return;
+		}
+
 		if (method.equals(InputMethod.SIGN)) {
 			method = InputMethod.INVENTORY;
 		}

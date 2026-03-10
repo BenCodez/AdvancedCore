@@ -25,7 +25,9 @@ public enum InputMethod {
 	/**
 	 * Sign input method.
 	 */
-	SIGN;
+	SIGN,
+	
+	DIALOG;
 
 	/**
 	 * Gets the method.

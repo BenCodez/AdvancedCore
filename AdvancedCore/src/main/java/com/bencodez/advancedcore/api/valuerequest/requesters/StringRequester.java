@@ -55,6 +55,77 @@ public class StringRequester {
 	public void request(Player player, InputMethod method, String currentValue,
 			LinkedHashMap<String, ItemStack> options, String promptText, boolean allowCustomOption,
 			StringListener listener) {
+		if (method.equals(InputMethod.DIALOG)) {
+			com.bencodez.simpleapi.dialog.UniDialogService dialogService = AdvancedCorePlugin.getInstance()
+					.getDialogService();
+
+			if (dialogService == null) {
+				new StringRequester().request(player, InputMethod.CHAT, currentValue, options, promptText,
+						allowCustomOption, listener);
+				return;
+			}
+
+			boolean hasOptions = options != null && !options.isEmpty();
+			boolean canUseDialog = hasOptions || allowCustomOption;
+
+			if (!canUseDialog) {
+				new StringRequester().request(player, InputMethod.CHAT, currentValue, options, promptText,
+						allowCustomOption, listener);
+				return;
+			}
+
+			final String inputId = "custom_value";
+			String title = (promptText != null && !promptText.isEmpty()) ? promptText : "Select a value";
+			String body = "";
+
+			if (currentValue != null && !currentValue.isEmpty()) {
+				body = "Current value: " + currentValue;
+			}
+
+			com.bencodez.simpleapi.dialog.MultiActionDialogBuilder builder = dialogService.multiAction(player)
+					.title(title).body(body);
+
+			if (allowCustomOption) {
+				builder.input(inputId, inputBuilder -> {
+					inputBuilder.label("Custom value");
+					if (currentValue != null && !currentValue.isEmpty()) {
+						inputBuilder.placeholder(currentValue);
+					} else {
+						inputBuilder.placeholder("Enter a value");
+					}
+					inputBuilder.required(!hasOptions);
+				});
+
+				builder.button("Use Custom Value", payload -> {
+					String input = payload.textValue(inputId);
+
+					if (input == null) {
+						input = "";
+					}
+
+					input = input.trim();
+
+					if (input.isEmpty()) {
+						player.sendMessage("No custom value entered");
+						return;
+					}
+
+					listener.onInput(player, input);
+				});
+			}
+
+			if (hasOptions) {
+				for (String option : options.keySet()) {
+					final String selected = option;
+					builder.button(selected, payload -> {
+						listener.onInput(player, selected);
+					});
+				}
+			}
+
+			builder.open();
+			return;
+		}
 		if ((options == null || options.size() == 0) && method.equals(InputMethod.INVENTORY) && allowCustomOption) {
 			method = InputMethod.CHAT;
 		}

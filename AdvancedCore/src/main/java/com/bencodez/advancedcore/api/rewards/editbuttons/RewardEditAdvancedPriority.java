@@ -36,7 +36,7 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 						reloadAdvancedCore();
 						open(player, reward);
 					}
-				}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
+				}, new String[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
 
 			}
 		}).setName("&aAdd sub reward").addLore("Rewards execute in order of addition"));
@@ -158,7 +158,7 @@ public abstract class RewardEditAdvancedPriority extends RewardEdit {
 							reloadAdvancedCore();
 							open(player, reward);
 						}
-					}, new String[] {}).usingMethod(InputMethod.CHAT).request(clickEvent.getPlayer());
+					}, new String[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
 				}
 			});
 		}
