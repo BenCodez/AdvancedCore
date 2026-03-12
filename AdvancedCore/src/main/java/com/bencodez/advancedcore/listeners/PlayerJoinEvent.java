@@ -63,7 +63,12 @@ public class PlayerJoinEvent implements Listener {
 			return;
 		}
 
-		plugin.getLogger().info("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+		if (!plugin.getOptions().isHideLoginMessage()) {
+			plugin.getLogger()
+					.info("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+		} else {
+			plugin.debug("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
+		}
 
 		plugin.getLoginTimer().schedule(new Runnable() {
 
