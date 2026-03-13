@@ -14,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.Timer;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -25,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -113,7 +113,7 @@ public class RewardHandler {
 	private CopyOnWriteArrayList<RewardInject> injectedRewards = new CopyOnWriteArrayList<RewardInject>();
 
 	@Getter
-	private ArrayList<RewardPlaceholderHandle> placeholders = new ArrayList<>();
+	private CopyOnWriteArrayList<RewardPlaceholderHandle> placeholders = new CopyOnWriteArrayList<RewardPlaceholderHandle>();
 
 	AdvancedCorePlugin plugin;
 
@@ -122,9 +122,6 @@ public class RewardHandler {
 
 	/** The rewards. */
 	private List<Reward> rewards;
-
-	@Getter
-	private Timer repeatTimer = new Timer();
 
 	@Getter
 	private ScheduledExecutorService delayedTimer = Executors.newSingleThreadScheduledExecutor();
@@ -401,9 +398,13 @@ public class RewardHandler {
 	 * @return the reward files
 	 */
 	public ArrayList<String> getRewardFiles(File folder) {
-		ArrayList<String> fileNames = new ArrayList<>();
+		ArrayList<String> fileNames = new ArrayList<String>();
 		if (folder != null && folder.exists()) {
-			for (File file : folder.listFiles()) {
+			File[] files = folder.listFiles();
+			if (files == null) {
+				return fileNames;
+			}
+			for (File file : files) {
 				if (getFileExtension(file).equals(".yml")) {
 					fileNames.add(file.getName());
 				}
@@ -623,6 +624,7 @@ public class RewardHandler {
 	}
 
 	public void loadInjectedRequirements() {
+		injectedRequirements.clear();
 		injectedRequirements.add(new RequirementInjectDouble("Chance", 100) {
 
 			@Override
@@ -1188,8 +1190,14 @@ public class RewardHandler {
 					plugin.debug("user not online");
 					return false;
 				}
-				Location loc = new Location(Bukkit.getWorld(section.getString("World")), section.getInt("X"),
-						section.getInt("Y"), section.getInt("Z"));
+				World world = Bukkit.getWorld(section.getString("World"));
+
+				if (world == null) {
+					plugin.debug("Invalid world for LocationDistance");
+					return false;
+				}
+
+				Location loc = new Location(world, section.getInt("X"), section.getInt("Y"), section.getInt("Z"));
 				Location pLoc = user.getPlayer().getLocation();
 				if (!loc.getWorld().getName().equals(pLoc.getWorld().getName())) {
 					plugin.debug("Worlds don't match");
@@ -1249,6 +1257,7 @@ public class RewardHandler {
 	}
 
 	public void loadInjectedRewards() {
+		injectedRewards.clear();
 		injectedRewards.add(new RewardInjectDouble("Money", 0) {
 
 			@Override
@@ -1306,8 +1315,23 @@ public class RewardHandler {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				if (data.getDouble("Money.Max", -1) == 0) {
-					warning(reward, inject, "Maxium money can not be 0");
+				double min = data.getDouble("Money.Min", 0);
+				double max = data.getDouble("Money.Max", 0);
+
+				if (!data.isConfigurationSection("Money")) {
+					return;
+				}
+
+				if (max == 0) {
+					warning(reward, inject, "Maximum money can not be 0");
+				}
+
+				if (min > max) {
+					warning(reward, inject, "Money.Min can not be greater than Money.Max");
+				}
+
+				if (min == max) {
+					warning(reward, inject, "Money.Min and Money.Max are the same, random range is unnecessary");
 				}
 			}
 		}));
@@ -1328,8 +1352,21 @@ public class RewardHandler {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				if (!data.isInt("Min") || !data.isInt("Max") || !data.isString("Command")) {
+				if (!data.isInt("NumberCommand.Min") || !data.isInt("NumberCommand.Max")
+						|| !data.isString("NumberCommand.Command")) {
 					warning(reward, inject, "NumberCommand requires Min, Max, and Command to be set");
+					return;
+				}
+
+				int min = data.getInt("NumberCommand.Min");
+				int max = data.getInt("NumberCommand.Max");
+
+				if (min > max) {
+					warning(reward, inject, "NumberCommand Min can not be greater than Max");
+				}
+
+				if (min == max) {
+					warning(reward, inject, "NumberCommand Min and Max are the same, random range is unnecessary");
 				}
 			}
 		}));
@@ -1417,8 +1454,19 @@ public class RewardHandler {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				if (data.getDouble("EXP.Max", -1) == 0) {
+				int min = data.getInt("EXP.Min", 0);
+				int max = data.getInt("EXP.Max", 0);
+
+				if (max == 0) {
 					warning(reward, inject, "Max EXP can not be 0");
+				}
+
+				if (min > max) {
+					warning(reward, inject, "EXP.Min can not be greater than EXP.Max");
+				}
+
+				if (min == max) {
+					warning(reward, inject, "EXP.Min and EXP.Max are the same, random range is unnecessary");
 				}
 			}
 		}));
@@ -1438,8 +1486,20 @@ public class RewardHandler {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				if (data.getDouble("EXP.Max", -1) == 0) {
-					warning(reward, inject, "Max EXP can not be 0");
+				int min = data.getInt("EXPLevels.Min", 0);
+				int max = data.getInt("EXPLevels.Max", 0);
+
+				if (max == 0) {
+					warning(reward, inject, "Max EXPLevels can not be 0");
+				}
+
+				if (min > max) {
+					warning(reward, inject, "EXPLevels.Min can not be greater than EXPLevels.Max");
+				}
+
+				if (min == max) {
+					warning(reward, inject,
+							"EXPLevels.Min and EXPLevels.Max are the same, random range is unnecessary");
 				}
 			}
 		}));
@@ -2637,8 +2697,14 @@ public class RewardHandler {
 
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
-				for (String item : data.getConfigurationSection("RandomItem").getKeys(false)) {
-					String material = data.getString("RandomItem." + item + ".Material", "");
+				ConfigurationSection randomItemSection = data.getConfigurationSection("RandomItem");
+				if (randomItemSection == null) {
+					warning(reward, inject, "RandomItem section is missing");
+					return;
+				}
+
+				for (String item : randomItemSection.getKeys(false)) {
+					String material = randomItemSection.getString(item + ".Material", "");
 					if (material.isEmpty()) {
 						warning(reward, inject, "No material is set on item: " + item);
 					} else {
@@ -2702,7 +2768,12 @@ public class RewardHandler {
 			@Override
 			public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
 				if (data.getBoolean("EnableChoices")) {
-					if (data.getConfigurationSection("Choices").getKeys(false).size() <= 1) {
+					ConfigurationSection choices = data.getConfigurationSection("Choices");
+					if (choices == null) {
+						warning(reward, inject, "Choices section is missing while EnableChoices is true");
+						return;
+					}
+					if (choices.getKeys(false).size() <= 1) {
 						warning(reward, inject, "Not enough choices for choice rewards, 1 or less is not a choice");
 					}
 				}
@@ -2845,10 +2916,6 @@ public class RewardHandler {
 					try {
 						Reward reward1 = new Reward(file, reward);
 						reward1.validate();
-						if (reward1.getRepeatHandle().isEnabled() && reward1.getRepeatHandle().isRepeatOnStartup()
-								&& !reward1.getConfig().isDirectlyDefinedReward()) {
-							reward1.getRepeatHandle().giveRepeatAll(plugin);
-						}
 						if (!reward1.getConfig().isDirectlyDefinedReward()
 								|| file.getName().equalsIgnoreCase("DirectlyDefined")) {
 							rewards.add(reward1);
@@ -2955,7 +3022,6 @@ public class RewardHandler {
 			e.printStackTrace();
 		}
 		delayedTimer.shutdownNow();
-		repeatTimer.cancel();
 	}
 
 	public void sortInjectedRequirements() {

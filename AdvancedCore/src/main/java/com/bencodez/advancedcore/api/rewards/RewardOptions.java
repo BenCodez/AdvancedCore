@@ -11,8 +11,6 @@ import lombok.Setter;
 
 public class RewardOptions {
 
-	@Getter
-	private boolean checkRepeat = true;
 	private boolean checkTimed = true;
 
 	@Getter
@@ -100,11 +98,6 @@ public class RewardOptions {
 
 	public RewardOptions orginalTrigger(long trigger) {
 		orginalTrigger = trigger;
-		return this;
-	}
-
-	public RewardOptions setCheckRepeat(boolean checkRepeat) {
-		this.checkRepeat = checkRepeat;
 		return this;
 	}
 

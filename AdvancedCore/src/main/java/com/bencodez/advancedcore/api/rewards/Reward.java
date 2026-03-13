@@ -74,9 +74,6 @@ public class Reward {
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	@Getter
-	private RepeatHandle repeatHandle;
-
-	@Getter
 	@Setter
 	private boolean timedEnabled;
 
@@ -396,12 +393,6 @@ public class Reward {
 			giveInjectedRewards(user, placeholders);
 
 			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
-
-			if (rewardOptions.isCheckRepeat()) {
-				if (repeatHandle.isEnabled() && !repeatHandle.isRepeatOnStartup()) {
-					repeatHandle.giveRepeat(plugin, user);
-				}
-			}
 		} else {
 			plugin.debug(getRewardName() + ": Player == null & forceoffline false, player: " + user.getPlayerName()
 					+ "/" + user.getUUID());
@@ -447,8 +438,6 @@ public class Reward {
 			setTimedHour(getConfig().getTimedHour());
 			setTimedMinute(getConfig().getTimedMinute());
 		}
-
-		repeatHandle = new RepeatHandle(this);
 
 		new AnnotationHandler().load(getConfig().getConfigData(), this);
 	}
