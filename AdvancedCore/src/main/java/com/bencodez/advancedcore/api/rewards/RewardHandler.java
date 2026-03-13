@@ -97,14 +97,6 @@ import lombok.Setter;
  */
 public class RewardHandler {
 
-	/** The instance. */
-	static RewardHandler instance = new RewardHandler();
-
-	@Deprecated
-	public static RewardHandler getInstance() {
-		return instance;
-	}
-
 	/** The default folder. */
 	private File defaultFolder;
 
@@ -123,8 +115,7 @@ public class RewardHandler {
 	@Getter
 	private ArrayList<RewardPlaceholderHandle> placeholders = new ArrayList<>();
 
-	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+	AdvancedCorePlugin plugin;
 
 	/** The reward folders. */
 	private ArrayList<File> rewardFolders;
@@ -142,12 +133,10 @@ public class RewardHandler {
 	@Setter
 	private Set<String> validPaths = new HashSet<>();
 
-	/**
-	 * Instantiates a new reward handler.
-	 */
-	private RewardHandler() {
+	public RewardHandler(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 		rewardFolders = new ArrayList<>();
-		setDefaultFolder(new File(AdvancedCorePlugin.getInstance().getDataFolder(), "Rewards"));
+		setDefaultFolder(new File(plugin.getDataFolder(), "Rewards"));
 	}
 
 	public void addDirectlyDefined(DirectlyDefinedReward directlyDefinedReward) {
@@ -1916,8 +1905,7 @@ public class RewardHandler {
 							if (rewards.size() > 0) {
 								String reward1 = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
 								if (!reward1.equals("")) {
-									RewardHandler.getInstance().giveReward(user, reward1,
-											new RewardOptions().setPlaceholders(placeholders));
+									giveReward(user, reward1, new RewardOptions().setPlaceholders(placeholders));
 								}
 							}
 						}
@@ -2186,7 +2174,7 @@ public class RewardHandler {
 			public String onRewardRequest(Reward r, AdvancedCoreUser user, ArrayList<String> list,
 					HashMap<String, String> placeholders) {
 				for (String str : list) {
-					Reward reward = RewardHandler.getInstance().getReward(str);
+					Reward reward = getReward(str);
 					if (reward.canGiveReward(user, new RewardOptions().withPlaceHolder(placeholders))) {
 						new RewardBuilder(reward).withPlaceHolder(placeholders).setIgnoreChance(true)
 								.setIgnoreRequirements(true).send(user);
@@ -2444,7 +2432,7 @@ public class RewardHandler {
 			public String onRewardRequested(Reward reward1, AdvancedCoreUser user, ConfigurationSection section,
 					HashMap<String, String> placeholders) {
 				for (String keys : section.getKeys(false)) {
-					Reward reward = RewardHandler.getInstance().getReward(section, keys, new RewardOptions());
+					Reward reward = getReward(section, keys, new RewardOptions());
 					if (reward != null
 							&& reward.canGiveReward(user, new RewardOptions().withPlaceHolder(placeholders))) {
 						plugin.extraDebug("AdvancedPriority: Giving reward " + reward.getName());

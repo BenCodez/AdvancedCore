@@ -719,7 +719,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	/**
 	 * Load AdvancedCore hook
 	 */
-	@SuppressWarnings("deprecation")
 	public void loadHook() {
 		serverDataFile = new ServerData(this);
 
@@ -780,7 +779,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			bedrockHandle = new BedrockNameResolver(this);
 		}
 
-		rewardHandler = RewardHandler.getInstance();
+		rewardHandler = new RewardHandler(this);
 		rewardHandler.loadInjectedRewards();
 		rewardHandler.loadInjectedRequirements();
 		if (loadRewards) {
