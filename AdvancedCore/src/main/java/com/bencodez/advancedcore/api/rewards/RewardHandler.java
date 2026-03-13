@@ -335,7 +335,7 @@ public class RewardHandler {
 		}
 
 		if (reward.equalsIgnoreCase("examplebasic") || reward.equalsIgnoreCase("exampleadvanced")) {
-			plugin.getLogger().warning("Using example rewards as a reward, becarefull");
+			plugin.getLogger().warning("Using example rewards as a reward, be carefull");
 		}
 
 		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
@@ -855,7 +855,7 @@ public class RewardHandler {
 				String currentServer = AdvancedCorePlugin.getInstance().getOptions().getServer();
 
 				if (ArrayUtils.containsIgnoreCase(servers, currentServer)) {
-					debug("Current server is in blocekd servers list: " + currentServer + " " + servers.toString());
+					debug("Current server is in blocked servers list: " + currentServer + " " + servers.toString());
 					return false;
 				}
 
@@ -1247,7 +1247,7 @@ public class RewardHandler {
 					}
 				}.open(clickEvent.getPlayer(), reward);
 			}
-		}.addLore("Require player to be within a certain distance of locaction to get reward"))));
+		}.addLore("Require player to be within a certain distance of location to get reward"))));
 
 		for (RequirementInject reward : injectedRequirements) {
 			reward.setInternalReward(true);
@@ -2629,7 +2629,7 @@ public class RewardHandler {
 								.send(user);
 
 						AdvancedCorePlugin.getInstance().debug("Giving special chance: " + entry.getValue()
-								+ ", Random numuber: " + randomNum + ", Total chance: " + totalChance);
+								+ ", Random number: " + randomNum + ", Total chance: " + totalChance);
 						return null;
 					}
 				}
