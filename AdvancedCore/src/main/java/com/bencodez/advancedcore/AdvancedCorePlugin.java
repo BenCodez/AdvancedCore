@@ -1128,6 +1128,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (getPermissionHandler() != null) {
 			getPermissionHandler().shutDown();
 		}
+		
+		if (dialogService != null) {
+			dialogService.unregister();
+		}
 
 		javaPlugin = null;
 	}
