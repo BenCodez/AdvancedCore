@@ -10,9 +10,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
-import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
 
 public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 	public RewardEditAdvancedRandomReward() {
@@ -27,17 +25,12 @@ public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
-				new ValueRequestBuilder(new StringListener() {
-
-					@Override
-					public void onInput(Player player, String value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.createSection("AdvancedRandomReward." + value);
-						reloadAdvancedCore();
-						open(player, reward);
-					}
-				}, new String[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
-
+				requestString(clickEvent.getPlayer(), "", "Enter sub reward name", InputMethod.DIALOG, (p, value) -> {
+					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+					reward.createSection("AdvancedRandomReward." + value);
+					reloadAdvancedCore();
+					open(p, reward);
+				});
 			}
 		}).setName("&aAdd sub reward"));
 
@@ -147,18 +140,14 @@ public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 
 				@Override
 				public void onClick(ClickEvent clickEvent) {
-					new ValueRequestBuilder(new StringListener() {
-
-						@Override
-						public void onInput(Player player, String value) {
-							RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-							reward.setValue("AdvancedRandomReward." + value,
-									reward.getData().getConfigurationSection("AdvancedRandomReward." + key));
-							reward.setValue("AdvancedRandomReward." + key, null);
-							reloadAdvancedCore();
-							open(player, reward);
-						}
-					}, new String[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
+					requestString(clickEvent.getPlayer(), key, "Rename sub reward", InputMethod.DIALOG, (p, value) -> {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue("AdvancedRandomReward." + value,
+								reward.getData().getConfigurationSection("AdvancedRandomReward." + key));
+						reward.setValue("AdvancedRandomReward." + key, null);
+						reloadAdvancedCore();
+						open(p, reward);
+					});
 				}
 			});
 		}
@@ -174,5 +163,4 @@ public abstract class RewardEditAdvancedRandomReward extends RewardEdit {
 
 		inv.openInventory(player);
 	}
-
 }

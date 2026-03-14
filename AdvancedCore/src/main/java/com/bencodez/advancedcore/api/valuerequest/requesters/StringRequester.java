@@ -32,6 +32,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 /**
  * The Class StringRequester.
  */
+@Deprecated
 public class StringRequester {
 
 	/**

@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.rewards.editbuttons;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.bukkit.entity.Player;
 
@@ -14,7 +15,11 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueNu
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
+import com.bencodez.simpleapi.valuerequest.MultiStringListener;
+import com.bencodez.simpleapi.valuerequest.NumberListener;
+import com.bencodez.simpleapi.valuerequest.StringListener;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 public abstract class RewardEdit {
 
@@ -101,6 +106,101 @@ public abstract class RewardEdit {
 				open(player, reward);
 			}
 		});
+	}
+
+	/**
+	 * Create a new value request using the plugin dialog service.
+	 *
+	 * @param method the input method
+	 * @return the value request
+	 */
+	public ValueRequest getValueRequest(InputMethod method) {
+		return new ValueRequest(AdvancedCorePlugin.getInstance(), AdvancedCorePlugin.getInstance().getDialogService(),
+				method);
+	}
+
+	/**
+	 * Request a string value using the given input method.
+	 *
+	 * @param player       the player
+	 * @param currentValue the current value
+	 * @param prompt       the prompt
+	 * @param listener     the listener
+	 */
+	public void requestString(Player player, String currentValue, String prompt, StringListener listener) {
+		requestString(player, currentValue, prompt, InputMethod.DIALOG, listener);
+	}
+
+	/**
+	 * Request a string value using the given input method.
+	 *
+	 * @param player       the player
+	 * @param currentValue the current value
+	 * @param prompt       the prompt
+	 * @param method       the method
+	 * @param listener     the listener
+	 */
+	public void requestString(Player player, String currentValue, String prompt, InputMethod method,
+			StringListener listener) {
+		getValueRequest(method).requestString(player, currentValue, null, true, prompt, listener);
+	}
+
+	/**
+	 * Request a string value with options.
+	 *
+	 * @param player            the player
+	 * @param currentValue      the current value
+	 * @param options           the options
+	 * @param allowCustomOption allow custom option
+	 * @param prompt            the prompt
+	 * @param method            the method
+	 * @param listener          the listener
+	 */
+	public void requestString(Player player, String currentValue, List<String> options, boolean allowCustomOption,
+			String prompt, InputMethod method, StringListener listener) {
+		getValueRequest(method).requestString(player, currentValue, options, allowCustomOption, prompt, listener);
+	}
+
+	/**
+	 * Request a number using the given input method.
+	 *
+	 * @param player       the player
+	 * @param currentValue the current value
+	 * @param prompt       the prompt
+	 * @param listener     the listener
+	 */
+	public void requestNumber(Player player, Number currentValue, String prompt, NumberListener listener) {
+		requestNumber(player, currentValue, null, true, prompt, InputMethod.DIALOG, listener);
+	}
+
+	/**
+	 * Request a number using the given input method.
+	 *
+	 * @param player            the player
+	 * @param currentValue      the current value
+	 * @param options           the options
+	 * @param allowCustomOption allow custom option
+	 * @param prompt            the prompt
+	 * @param method            the method
+	 * @param listener          the listener
+	 */
+	public void requestNumber(Player player, Number currentValue, List<? extends Number> options,
+			boolean allowCustomOption, String prompt, InputMethod method, NumberListener listener) {
+		getValueRequest(method).requestNumber(player, currentValue, options, allowCustomOption, prompt, listener);
+	}
+
+	/**
+	 * Request multiple strings at once. Dialog will use multiple fields, other
+	 * methods will request one after another.
+	 *
+	 * @param player        the player
+	 * @param prompts       the prompts
+	 * @param currentValues the current values
+	 * @param listener      the listener
+	 */
+	public void requestMultipleStrings(Player player, List<String> prompts, List<String> currentValues,
+			MultiStringListener listener) {
+		getValueRequest(InputMethod.DIALOG).requestMultipleStrings(player, prompts, currentValues, listener);
 	}
 
 	public abstract void open(Player player, RewardEditData reward);

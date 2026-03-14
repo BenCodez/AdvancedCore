@@ -38,7 +38,6 @@ import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.player.PlayerUtils;
 import com.bencodez.simpleapi.sql.Column;
@@ -90,7 +89,7 @@ public class AdvancedCoreUser {
 	 * Instantiates a new user from an existing user.
 	 *
 	 * @param plugin the plugin
-	 * @param user the user to copy from
+	 * @param user   the user to copy from
 	 */
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, AdvancedCoreUser user) {
 		this.userDataFetchMode = user.userDataFetchMode;
@@ -167,8 +166,8 @@ public class AdvancedCoreUser {
 	/**
 	 * Instantiates a new user.
 	 *
-	 * @param plugin the plugin
-	 * @param uuid the uuid
+	 * @param plugin   the plugin
+	 * @param uuid     the uuid
 	 * @param loadName the load name
 	 * @param loadData the load data
 	 */
@@ -189,8 +188,8 @@ public class AdvancedCoreUser {
 	/**
 	 * Instantiates a new user.
 	 *
-	 * @param plugin the plugin
-	 * @param uuid the uuid
+	 * @param plugin     the plugin
+	 * @param uuid       the uuid
 	 * @param playerName the player name
 	 */
 	@Deprecated
@@ -207,7 +206,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Adds offline rewards to be given when the player next logs in.
 	 *
-	 * @param reward the reward
+	 * @param reward       the reward
 	 * @param placeholders the placeholders
 	 */
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
@@ -231,7 +230,7 @@ public class AdvancedCoreUser {
 	 * Adds a permission to the player with a delay.
 	 *
 	 * @param permission the permission
-	 * @param delay the delay in milliseconds
+	 * @param delay      the delay in milliseconds
 	 */
 	public void addPermission(String permission, long delay) {
 		plugin.getPermissionHandler().addPermission(getPlayer(), permission, delay);
@@ -240,9 +239,10 @@ public class AdvancedCoreUser {
 	/**
 	 * Adds a timed reward to be given at a specific time.
 	 *
-	 * @param reward the reward
+	 * @param reward       the reward
 	 * @param placeholders the placeholders
-	 * @param epochMilli the epoch time in milliseconds when the reward should be given
+	 * @param epochMilli   the epoch time in milliseconds when the reward should be
+	 *                     given
 	 */
 	public synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
 		HashMap<String, Long> timed = getTimedRewards();
@@ -669,20 +669,6 @@ public class AdvancedCoreUser {
 	}
 
 	/**
-	 * Gets the user's input method.
-	 *
-	 * @return the input method
-	 */
-	public InputMethod getUserInputMethod() {
-		String inputMethod = getInputMethod();
-		if (inputMethod == null) {
-			return InputMethod.getMethod(plugin.getOptions().getDefaultRequestMethod());
-		}
-		return InputMethod.getMethod(inputMethod);
-
-	}
-
-	/**
 	 * Gets the uuid.
 	 *
 	 * @return the uuid
@@ -753,7 +739,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Gives an item to the player with placeholders.
 	 *
-	 * @param itemStack the item stack
+	 * @param itemStack    the item stack
 	 * @param placeholders the placeholders
 	 */
 	public void giveItem(ItemStack itemStack, HashMap<String, String> placeholders) {
@@ -862,8 +848,8 @@ public class AdvancedCoreUser {
 	/**
 	 * Gives a reward from a configuration file.
 	 *
-	 * @param data the configuration data
-	 * @param path the path to the reward
+	 * @param data          the configuration data
+	 * @param path          the path to the reward
 	 * @param rewardOptions the reward options
 	 */
 	public void giveReward(FileConfiguration data, String path, RewardOptions rewardOptions) {
@@ -873,7 +859,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Gives a reward to the user.
 	 *
-	 * @param reward the reward
+	 * @param reward        the reward
 	 * @param rewardOptions the reward options
 	 */
 	public void giveReward(Reward reward, RewardOptions rewardOptions) {
@@ -894,7 +880,7 @@ public class AdvancedCoreUser {
 	 *
 	 * @return true, if successful
 	 */
-	public boolean hasLoggedOnBefore() {		
+	public boolean hasLoggedOnBefore() {
 		OfflinePlayer player = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
 		if (player != null) {
 			if (player.hasPlayedBefore() || player.isOnline()) {
@@ -922,7 +908,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Checks if the user has a permission.
 	 *
-	 * @param perm the permission
+	 * @param perm         the permission
 	 * @param offlineCheck whether to check offline permissions
 	 * @return true if the user has the permission
 	 */
@@ -1148,9 +1134,9 @@ public class AdvancedCoreUser {
 	 * Plays a particle effect for the player.
 	 *
 	 * @param effectName the particle effect name
-	 * @param data the data value
-	 * @param particles the number of particles
-	 * @param radius the radius
+	 * @param data       the data value
+	 * @param particles  the number of particles
+	 * @param radius     the radius
 	 */
 	public void playParticle(String effectName, int data, int particles, int radius) {
 		Player player = getPlayer();
@@ -1174,9 +1160,9 @@ public class AdvancedCoreUser {
 	 * Plays a particle effect for the player.
 	 *
 	 * @param effectName the particle effect name
-	 * @param data the data value
-	 * @param particles the number of particles
-	 * @param radius the radius
+	 * @param data       the data value
+	 * @param particles  the number of particles
+	 * @param radius     the radius
 	 */
 	@Deprecated
 	public void playParticleEffect(String effectName, int data, int particles, int radius) {
@@ -1210,7 +1196,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Performs commands as the player with placeholders.
 	 *
-	 * @param commands the list of commands
+	 * @param commands     the list of commands
 	 * @param placeholders the placeholders
 	 */
 	public void preformCommand(ArrayList<String> commands, HashMap<String, String> placeholders) {
@@ -1237,7 +1223,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Performs a command as the player with placeholders.
 	 *
-	 * @param command the command
+	 * @param command      the command
 	 * @param placeholders the placeholders
 	 */
 	public void preformCommand(String command, HashMap<String, String> placeholders) {
@@ -1348,7 +1334,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Sends JSON messages to the player.
 	 *
-	 * @param messages the text component messages
+	 * @param messages   the text component messages
 	 * @param javascript whether to process javascript placeholders
 	 */
 	public void sendJson(ArrayList<TextComponent> messages, boolean javascript) {
@@ -1398,7 +1384,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Sends a message with placeholders to the player.
 	 *
-	 * @param msg the message list
+	 * @param msg          the message list
 	 * @param placeholders the placeholders
 	 */
 	public void sendMessage(ArrayList<String> msg, HashMap<String, String> placeholders) {
@@ -1425,7 +1411,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Sends a message with placeholders to the player.
 	 *
-	 * @param msg the message
+	 * @param msg          the message
 	 * @param placeholders the placeholders
 	 */
 	public void sendMessage(String msg, HashMap<String, String> placeholders) {
@@ -1435,9 +1421,9 @@ public class AdvancedCoreUser {
 	/**
 	 * Sends a message with a single placeholder replacement to the player.
 	 *
-	 * @param msg the message
+	 * @param msg       the message
 	 * @param toReplace the placeholder to replace
-	 * @param replace the replacement value
+	 * @param replace   the replacement value
 	 */
 	public void sendMessage(String msg, String toReplace, String replace) {
 		sendMessage(PlaceholderUtils.replacePlaceHolder(msg, toReplace, replace));
@@ -1507,7 +1493,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Sets the user's choice preference for a reward.
 	 *
-	 * @param reward the reward name
+	 * @param reward     the reward name
 	 * @param preference the preference
 	 */
 	public void setChoicePreference(String reward, String preference) {
@@ -1613,15 +1599,6 @@ public class AdvancedCoreUser {
 	 */
 	public void setUnClaimedChoice(ArrayList<String> rewards) {
 		getData().setStringList("UnClaimedChoices", rewards);
-	}
-
-	/**
-	 * Sets the user's input method.
-	 *
-	 * @param method the input method
-	 */
-	public void setUserInputMethod(InputMethod method) {
-		setInputMethod(method.toString());
 	}
 
 	/**

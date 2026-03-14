@@ -2,10 +2,10 @@ package com.bencodez.advancedcore.api.inventory.editgui.valuetypes;
 
 import org.bukkit.entity.Player;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
-import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
 import com.bencodez.simpleapi.messages.MessageAPI;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 /**
  * Abstract GUI value for boolean editing.
@@ -30,16 +30,15 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
-			setCurrentValue("false");
+			setCurrentValue(Boolean.FALSE);
 		}
-		new ValueRequestBuilder(new BooleanListener() {
-
-			@Override
-			public void onInput(Player player, boolean value) {
-				setValue(player, value);
-				player.sendMessage(MessageAPI.colorize("&cSetting " + getKey() + " to " + value));
-			}
-		}).currentValue(getCurrentValue().toString()).usingMethod(getInputMethod()).request(clickEvent.getPlayer());
+		new ValueRequest(AdvancedCorePlugin.getInstance(), AdvancedCorePlugin.getInstance().getDialogService(),
+				getInputMethod()).requestBoolean(clickEvent.getPlayer(), Boolean.valueOf(String.valueOf(getCurrentValue())),
+				"Type cancel to cancel", (Player player, boolean value) -> {
+					setValue(player, value);
+					setCurrentValue(Boolean.valueOf(value));
+					player.sendMessage(MessageAPI.colorize("&cSetting " + getKey() + " to " + value));
+				});
 	}
 
 	/**
@@ -49,5 +48,4 @@ public abstract class EditGUIValueBoolean extends EditGUIValue {
 	 * @param value the value to set
 	 */
 	public abstract void setValue(Player player, boolean value);
-
 }

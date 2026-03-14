@@ -10,9 +10,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
-import com.bencodez.advancedcore.api.valuerequest.listeners.NumberListener;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
 
 public abstract class RewardEditSpecialChance extends RewardEdit {
 	public RewardEditSpecialChance() {
@@ -27,17 +25,12 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
-				new ValueRequestBuilder(new NumberListener() {
-
-					@Override
-					public void onInput(Player player, Number value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.createSection("SpecialChance." + value.intValue());
-						reloadAdvancedCore();
-						open(player, reward);
-					}
-				}, new Number[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
-
+				requestNumber(clickEvent.getPlayer(), Integer.valueOf(0), "Enter sub reward key", (p, value) -> {
+					RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+					reward.createSection("SpecialChance." + value.intValue());
+					reloadAdvancedCore();
+					open(p, reward);
+				});
 			}
 		}).setName("&aAdd sub reward"));
 
@@ -147,18 +140,15 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 
 				@Override
 				public void onClick(ClickEvent clickEvent) {
-					new ValueRequestBuilder(new NumberListener() {
-
-						@Override
-						public void onInput(Player player, Number value) {
-							RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-							reward.setValue("SpecialChance." + value.intValue(),
-									reward.getData().getConfigurationSection("SpecialChance." + key));
-							reward.setValue("SpecialChance." + key, null);
-							reloadAdvancedCore();
-							open(player, reward);
-						}
-					}, new Number[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
+					requestNumber(clickEvent.getPlayer(), Integer.valueOf(0), null, true, "Rename sub reward key",
+							InputMethod.DIALOG, (p, value) -> {
+								RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+								reward.setValue("SpecialChance." + value.intValue(),
+										reward.getData().getConfigurationSection("SpecialChance." + key));
+								reward.setValue("SpecialChance." + key, null);
+								reloadAdvancedCore();
+								open(p, reward);
+							});
 				}
 			});
 		}
@@ -174,5 +164,4 @@ public abstract class RewardEditSpecialChance extends RewardEdit {
 
 		inv.openInventory(player);
 	}
-
 }

@@ -5,14 +5,13 @@ import java.util.ArrayList;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
-import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
-import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 /**
  * Abstract GUI value for list editing.
@@ -37,47 +36,44 @@ public abstract class EditGUIValueList extends EditGUIValue {
 	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
-			setCurrentValue(new ArrayList<>());
+			setCurrentValue(new ArrayList<String>());
 		}
 		BInventory inv = new BInventory("Edit list: " + getKey());
 		inv.setMeta(clickEvent.getPlayer(), "Value", getCurrentValue());
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.EMERALD_BLOCK).setName("&cAdd value")) {
-
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				new ValueRequestBuilder(new Listener<String>() {
-					@Override
-					public void onInput(Player player, String add) {
-						@SuppressWarnings("unchecked")
-						ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
-						if (list == null) {
-							list = new ArrayList<>();
-						}
-						list.add(add);
-						setValue(player, list);
-						sendMessage(player, "&cAdded " + add + " to " + getKey());
-					}
-				}, new String[] {}).request(clickEvent.getPlayer());
+				new ValueRequest(AdvancedCorePlugin.getInstance(), AdvancedCorePlugin.getInstance().getDialogService(),
+						getInputMethod()).requestString(clickEvent.getPlayer(), (String) null, null, true,
+						"Type cancel to cancel", (Player player, String add) -> {
+							@SuppressWarnings("unchecked")
+							ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
+							if (list == null) {
+								list = new ArrayList<String>();
+							}
+							list.add(add);
+							setCurrentValue(list);
+							setValue(player, list);
+							sendMessage(player, "&cAdded " + add + " to " + getKey());
+						});
 			}
 		});
 		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cRemove value")) {
-
 			@SuppressWarnings("unchecked")
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				ArrayList<String> list = (ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value");
 				if (!list.isEmpty()) {
-					new ValueRequestBuilder(new Listener<String>() {
-						@Override
-						public void onInput(Player player, String add) {
-							ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
-							list.remove(add);
-							setValue(player, list);
-							sendMessage(player, "&cRemoved " + add + " from " + getKey());
-						}
-					}, ArrayUtils.convert((ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value")))
-							.usingMethod(InputMethod.INVENTORY).allowCustomOption(false)
-							.request(clickEvent.getPlayer());
+					InputMethod removeMethod = getInputMethod() == InputMethod.BOOK ? InputMethod.CHAT : getInputMethod();
+					new ValueRequest(AdvancedCorePlugin.getInstance(), AdvancedCorePlugin.getInstance().getDialogService(),
+							removeMethod).requestString(clickEvent.getPlayer(), (String) null, new ArrayList<String>(list), false,
+							"Type cancel to cancel", (Player player, String remove) -> {
+								ArrayList<String> currentList = (ArrayList<String>) getMeta(player, "Value");
+								currentList.remove(remove);
+								setCurrentValue(currentList);
+								setValue(player, currentList);
+								sendMessage(player, "&cRemoved " + remove + " from " + getKey());
+							});
 				} else {
 					clickEvent.getPlayer().sendMessage("No values to remove");
 				}

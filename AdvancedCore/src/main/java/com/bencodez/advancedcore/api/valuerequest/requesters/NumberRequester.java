@@ -30,6 +30,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 /**
  * The Class NumberRequester.
  */
+@Deprecated
 public class NumberRequester {
 
 	/**

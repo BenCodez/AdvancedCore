@@ -1,17 +1,20 @@
 package com.bencodez.advancedcore.api.inventory.editgui.valuetypes;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+
 import org.bukkit.entity.Player;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
-import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
 import com.bencodez.simpleapi.messages.MessageAPI;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 /**
  * Abstract GUI value for number editing.
  */
 public abstract class EditGUIValueNumber extends EditGUIValue {
-
 	/**
 	 * Constructor for EditGUIValueNumber.
 	 *
@@ -31,18 +34,50 @@ public abstract class EditGUIValueNumber extends EditGUIValue {
 	@Override
 	public void onClick(ClickEvent clickEvent) {
 		if (getCurrentValue() == null) {
-			setCurrentValue(0);
+			setCurrentValue(Integer.valueOf(0));
 		}
-		new ValueRequestBuilder(new Listener<Number>() {
+		new ValueRequest(AdvancedCorePlugin.getInstance(), AdvancedCorePlugin.getInstance().getDialogService(),
+				getInputMethod()).requestNumber(clickEvent.getPlayer(), getCurrentNumber(), getDefaultOptions(), true,
+				"Type cancel to cancel", (Player player, Number number) -> {
+					setValue(player, number);
+					setCurrentValue(number);
+					player.sendMessage(MessageAPI.colorize("&cSetting " + getKey() + " to " + number.doubleValue()));
+				});
+	}
 
-			@Override
-			public void onInput(Player player, Number number) {
-				setValue(player, number);
-				player.sendMessage(MessageAPI.colorize("&cSetting " + getKey() + " to " + number.doubleValue()));
-			}
-		}, new Number[] { 0, 10, 25, 50, 100, 500, 1000, (Number) getCurrentValue() })
-				.currentValue(getCurrentValue().toString()).allowCustomOption(true).usingMethod(getInputMethod())
-				.request(clickEvent.getPlayer());
+	/**
+	 * Gets the current value as a number.
+	 *
+	 * @return the current number value
+	 */
+	private Number getCurrentNumber() {
+		Object current = getCurrentValue();
+		if (current instanceof Number) {
+			return (Number) current;
+		}
+		try {
+			return Double.valueOf(String.valueOf(current));
+		} catch (NumberFormatException ex) {
+			return Integer.valueOf(0);
+		}
+	}
+
+	/**
+	 * Builds the default number options including the current value.
+	 *
+	 * @return the list of default number options
+	 */
+	private List<Number> getDefaultOptions() {
+		LinkedHashSet<Number> values = new LinkedHashSet<Number>();
+		values.add(Integer.valueOf(0));
+		values.add(Integer.valueOf(10));
+		values.add(Integer.valueOf(25));
+		values.add(Integer.valueOf(50));
+		values.add(Integer.valueOf(100));
+		values.add(Integer.valueOf(500));
+		values.add(Integer.valueOf(1000));
+		values.add(getCurrentNumber());
+		return new ArrayList<Number>(values);
 	}
 
 	/**

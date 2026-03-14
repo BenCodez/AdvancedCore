@@ -21,6 +21,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 /**
  * The Class BooleanRequester.
  */
+@Deprecated
 public class BooleanRequester {
 
 	/**

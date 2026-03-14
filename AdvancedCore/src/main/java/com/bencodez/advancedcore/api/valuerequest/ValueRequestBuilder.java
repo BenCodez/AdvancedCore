@@ -11,6 +11,7 @@ import com.bencodez.advancedcore.api.valuerequest.listeners.Listener;
 import com.bencodez.advancedcore.api.valuerequest.listeners.NumberListener;
 import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 
+@Deprecated
 public class ValueRequestBuilder {
 
 	private boolean allowCustomOption = false;

@@ -23,22 +23,13 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
-import com.bencodez.advancedcore.api.valuerequest.listeners.BooleanListener;
-import com.bencodez.advancedcore.api.valuerequest.listeners.NumberListener;
-import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
 import com.bencodez.advancedcore.command.gui.AdminGUI;
 import com.bencodez.advancedcore.command.gui.ChoiceGUI;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.advancedcore.command.gui.UserGUI;
-import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
-import com.bencodez.simpleapi.player.PlayerUtils;
 import com.bencodez.simpleapi.sql.DataType;
 import com.bencodez.simpleapi.sql.data.DataValue;
-
-import lombok.Getter;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -64,14 +55,6 @@ public class CommandLoader {
 	private ArrayList<String> perms = new ArrayList<>();
 
 	private AdvancedCorePlugin plugin;
-
-	/**
-	 * Gets the value request commands.
-	 *
-	 * @return the value request commands
-	 */
-	@Getter
-	ArrayList<CommandHandler> valueRequestCommands = new ArrayList<>();
 
 	/**
 	 * Instantiates a new command loader.
@@ -400,7 +383,8 @@ public class CommandLoader {
 					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
 					return;
 				}
-				plugin.getPermissionHandler().addPermission(UUID.fromString(uuidStr), args[3], Integer.valueOf(args[4]));
+				plugin.getPermissionHandler().addPermission(UUID.fromString(uuidStr), args[3],
+						Integer.valueOf(args[4]));
 				sendMessage(sender, "&cAdded temporary permission to " + args[1] + " for " + args[4]);
 			}
 		});
@@ -548,47 +532,6 @@ public class CommandLoader {
 				}
 			});
 		}
-
-		cmds.add(new CommandHandler(plugin, new String[] { "SetRequestMethod", "(RequestMethod)" },
-				permPrefix + ".SetRequestMethod", "SetRequestMethod", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-
-				AdvancedCoreUser user = plugin.getUserManager().getUser((Player) sender);
-				InputMethod method = InputMethod.getMethod(args[1]);
-				if (method == null) {
-					user.sendMessage("&cInvalid request method: " + args[1]);
-				} else {
-					user.setUserInputMethod(method);
-					user.sendMessage("&cRequest method set to " + method.toString());
-				}
-
-			}
-		});
-
-		cmds.add(new CommandHandler(plugin, new String[] { "SetRequestMethod" }, permPrefix + ".SetRequestMethod",
-				"SetRequestMethod", false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				ArrayList<String> methods = new ArrayList<>();
-				for (InputMethod method : InputMethod.values()) {
-					methods.add(method.toString());
-				}
-				new ValueRequest(InputMethod.INVENTORY).requestString((Player) sender, "", ArrayUtils.convert(methods),
-						false, new StringListener() {
-
-							@Override
-							public void onInput(Player player, String value) {
-								AdvancedCoreUser user = plugin.getUserManager().getUser(player);
-								user.setUserInputMethod(InputMethod.getMethod(value));
-
-							}
-						});
-
-			}
-		});
 
 		cmds.add(new CommandHandler(plugin, new String[] { "User", "All", "SetData", "(text)", "(text)" },
 				permPrefix + ".SetAllData", "Set all users data") {
@@ -787,72 +730,5 @@ public class CommandLoader {
 		}
 
 		return cmds;
-	}
-
-	/**
-	 * Loads value request commands.
-	 */
-	public void loadValueRequestCommands() {
-		ArrayList<CommandHandler> cmds = new ArrayList<>();
-		cmds.add(
-				new CommandHandler(plugin, new String[] { "String", "(String)" }, "", "Command to Input value", false) {
-
-					@Override
-					public void execute(CommandSender sender, String[] args) {
-						Player player = (Player) sender;
-						try {
-							StringListener listener = (StringListener) PlayerUtils.getPlayerMeta(plugin, player,
-									"ValueRequestString");
-							if (args[1].equals("CustomValue")) {
-								new ValueRequest().requestString(player, listener);
-							} else {
-								listener.onInput(player, args[1]);
-							}
-						} catch (Exception ex) {
-							player.sendMessage("No where to input value or error occured");
-						}
-					}
-				});
-
-		cmds.add(
-				new CommandHandler(plugin, new String[] { "Number", "(Number)" }, "", "Command to Input value", false) {
-
-					@Override
-					public void execute(CommandSender sender, String[] args) {
-						Player player = (Player) sender;
-						try {
-							NumberListener listener = (NumberListener) PlayerUtils.getPlayerMeta(plugin, player,
-									"ValueRequestNumber");
-							if (args[1].equals("CustomValue")) {
-								new ValueRequest().requestNumber(player, listener);
-							} else {
-								Number number = Double.valueOf(args[1]);
-								listener.onInput(player, number);
-							}
-						} catch (Exception ex) {
-							player.sendMessage("No where to input value or error occured");
-						}
-					}
-				}.ignoreNumberCheck());
-
-		cmds.add(new CommandHandler(plugin, new String[] { "Boolean", "(Boolean)" }, "", "Command to Input value",
-				false) {
-
-			@Override
-			public void execute(CommandSender sender, String[] args) {
-				Player player = (Player) sender;
-				try {
-					BooleanListener listener = (BooleanListener) PlayerUtils.getPlayerMeta(plugin, player,
-							"ValueRequestBoolean");
-					listener.onInput(player, Boolean.valueOf(args[1]));
-				} catch (Exception ex) {
-					player.sendMessage("No where to input value");
-				}
-			}
-		});
-		for (CommandHandler cmd : cmds) {
-			cmd.setAdvancedCoreCommand(true);
-		}
-		valueRequestCommands = cmds;
 	}
 }

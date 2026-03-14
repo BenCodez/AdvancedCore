@@ -3,7 +3,6 @@ package com.bencodez.advancedcore;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.Field;
 import java.net.URL;
 import java.security.CodeSource;
 import java.util.ArrayList;
@@ -20,7 +19,6 @@ import java.util.zip.ZipInputStream;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -49,10 +47,8 @@ import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
 import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu;
 import com.bencodez.advancedcore.command.CommandLoader;
-import com.bencodez.advancedcore.command.executor.ValueRequestInputCommand;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.advancedcore.listeners.AuthMeLogin;
 import com.bencodez.advancedcore.listeners.LoginSecurityLogin;
@@ -790,7 +786,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			rewardHandler.loadRewards();
 		}
 
-		loadValueRequestInputCommands();
 		checkPluginUpdate();
 		loadVersionFile();
 
@@ -1019,12 +1014,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		});
 
-		ArrayList<String> method = new ArrayList<>();
-		for (InputMethod me : InputMethod.values()) {
-			method.add(me.toString());
-		}
-		TabCompleteHandler.getInstance().addTabCompleteOption("(RequestMethod)", method);
-
 		ArrayList<String> userStorage = new ArrayList<>();
 		for (UserStorage storage : UserStorage.values()) {
 			userStorage.add(storage.toString());
@@ -1113,23 +1102,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	/**
-	 * Loads value request input commands.
-	 */
-	public void loadValueRequestInputCommands() {
-		CommandLoader.getInstance().loadValueRequestCommands();
-		try {
-			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
-
-			bukkitCommandMap.setAccessible(true);
-			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
-			commandMap.register(this.getName() + "valuerequestinput",
-					new ValueRequestInputCommand(this, this.getName() + "valuerequestinput"));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
 	 * Loads Vault integration.
 	 */
 	public void loadVault() {
@@ -1175,7 +1147,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		onUnLoad();
 		getSkullCacheHandler().close();
 		fullInventoryHandler.save();
-		unRegisterValueRequest();
 
 		hologramHandler.onShutDown();
 
@@ -1336,22 +1307,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			this.mysql = null;
 		}
 		this.mysql = mysql;
-	}
-
-	/**
-	 * Unregisters value request commands.
-	 */
-	public void unRegisterValueRequest() {
-		try {
-			final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
-
-			bukkitCommandMap.setAccessible(true);
-			CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
-
-			commandMap.getCommand(this.getName() + "valuerequestinput").unregister(commandMap);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
 
 	/**

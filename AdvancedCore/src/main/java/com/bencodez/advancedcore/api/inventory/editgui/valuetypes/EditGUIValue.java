@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -16,9 +16,6 @@ import lombok.Setter;
 public abstract class EditGUIValue {
 	/**
 	 * Whether the value can be retrieved.
-	 * 
-	 * @return whether the value can be retrieved
-	 * @param canGetValue whether the value can be retrieved
 	 */
 	@Getter
 	@Setter
@@ -26,9 +23,6 @@ public abstract class EditGUIValue {
 
 	/**
 	 * The current value.
-	 * 
-	 * @return the current value
-	 * @param currentValue the current value
 	 */
 	@Getter
 	@Setter
@@ -36,9 +30,6 @@ public abstract class EditGUIValue {
 
 	/**
 	 * The input method.
-	 * 
-	 * @return the input method
-	 * @param inputMethod the input method
 	 */
 	@Getter
 	@Setter
@@ -46,9 +37,6 @@ public abstract class EditGUIValue {
 
 	/**
 	 * The inventory.
-	 * 
-	 * @return the inventory
-	 * @param inv the inventory
 	 */
 	@Getter
 	@Setter
@@ -56,9 +44,6 @@ public abstract class EditGUIValue {
 
 	/**
 	 * The key.
-	 * 
-	 * @return the key
-	 * @param key the key
 	 */
 	@Getter
 	@Setter
@@ -66,9 +51,6 @@ public abstract class EditGUIValue {
 
 	/**
 	 * The lore lines.
-	 * 
-	 * @return the lore lines
-	 * @param lores the lore lines
 	 */
 	@Getter
 	@Setter
@@ -76,11 +58,9 @@ public abstract class EditGUIValue {
 
 	/**
 	 * The options.
-	 * 
-	 * @return the options
 	 */
 	@Getter
-	private ArrayList<String> options = new ArrayList<>();
+	private ArrayList<String> options = new ArrayList<String>();
 
 	/**
 	 * Adds lore lines to this value.
@@ -90,7 +70,7 @@ public abstract class EditGUIValue {
 	 */
 	public EditGUIValue addLore(ArrayList<String> lore) {
 		if (lores == null) {
-			lores = new ArrayList<>();
+			lores = new ArrayList<String>();
 		}
 		lores.addAll(lore);
 		return this;
@@ -104,7 +84,7 @@ public abstract class EditGUIValue {
 	 */
 	public EditGUIValue addLore(String lore) {
 		if (lores == null) {
-			lores = new ArrayList<>();
+			lores = new ArrayList<String>();
 		}
 		lores.add(lore);
 		return this;
@@ -131,6 +111,51 @@ public abstract class EditGUIValue {
 	 */
 	public boolean containsKey(RewardEditData rewardEditData) {
 		return rewardEditData.hasPath(getKey());
+	}
+
+	/**
+	 * Uses the dialog input method.
+	 *
+	 * @return this instance
+	 */
+	public EditGUIValue dialog() {
+		return inputMethod(InputMethod.DIALOG);
+	}
+
+	/**
+	 * Uses the chat input method.
+	 *
+	 * @return this instance
+	 */
+	public EditGUIValue chat() {
+		return inputMethod(InputMethod.CHAT);
+	}
+
+	/**
+	 * Uses the inventory input method.
+	 *
+	 * @return this instance
+	 */
+	public EditGUIValue inventory() {
+		return inputMethod(InputMethod.INVENTORY);
+	}
+
+	/**
+	 * Uses the book input method.
+	 *
+	 * @return this instance
+	 */
+	public EditGUIValue book() {
+		return inputMethod(InputMethod.BOOK);
+	}
+
+	/**
+	 * Uses the sign input method.
+	 *
+	 * @return this instance
+	 */
+	public EditGUIValue sign() {
+		return inputMethod(InputMethod.SIGN);
 	}
 
 	/**

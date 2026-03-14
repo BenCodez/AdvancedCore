@@ -13,8 +13,8 @@ import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
-import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
+import com.bencodez.simpleapi.valuerequest.StringListener;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 /**
  * The Class AdminGUI.
@@ -74,7 +74,7 @@ public class AdminGUI {
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
 				if (event.getClick().equals(ClickType.MIDDLE)) {
-					new ValueRequest().requestString(player, new StringListener() {
+					new ValueRequest(plugin, plugin.getDialogService()).requestString(player, new StringListener() {
 
 						@Override
 						public void onInput(Player player, String value) {
@@ -82,7 +82,6 @@ public class AdminGUI {
 							player.sendMessage("Reward file created");
 							plugin.reloadAdvancedCore(false);
 							RewardEditGUI.getInstance().openRewardGUI(player, reward);
-
 						}
 					});
 				} else {
@@ -97,9 +96,7 @@ public class AdminGUI {
 			public void onClick(ClickEvent event) {
 				Player player = event.getWhoClicked();
 				UserGUI.getInstance().openUsersGUI(player);
-
 			}
-
 		});
 
 		if (pluginGUIs != null) {

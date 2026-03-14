@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.rewards.editbuttons;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -14,10 +15,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
-import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
-import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
 
 public abstract class RewardEditAdvancedWorld extends RewardEdit {
 	public RewardEditAdvancedWorld() {
@@ -32,22 +30,17 @@ public abstract class RewardEditAdvancedWorld extends RewardEdit {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
-				ArrayList<String> worlds = new ArrayList<>();
+				List<String> worlds = new ArrayList<String>();
 				for (World w : Bukkit.getWorlds()) {
 					worlds.add(w.getName());
 				}
-				new ValueRequestBuilder(new StringListener() {
-
-					@Override
-					public void onInput(Player player, String value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.createSection("AdvancedWorld." + value);
-						reloadAdvancedCore();
-						open(player, reward);
-					}
-				}, ArrayUtils.convert(worlds)).usingMethod(InputMethod.DIALOG).allowCustomOption(true)
-						.request(clickEvent.getPlayer());
-
+				requestString(clickEvent.getPlayer(), "", worlds, true, "Enter world name", InputMethod.DIALOG,
+						(p, value) -> {
+							RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+							reward.createSection("AdvancedWorld." + value);
+							reloadAdvancedCore();
+							open(p, reward);
+						});
 			}
 		}).setName("&aAdd sub reward").addLore("Rewards execute in order of addition"));
 
@@ -157,18 +150,14 @@ public abstract class RewardEditAdvancedWorld extends RewardEdit {
 
 				@Override
 				public void onClick(ClickEvent clickEvent) {
-					new ValueRequestBuilder(new StringListener() {
-
-						@Override
-						public void onInput(Player player, String value) {
-							RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-							reward.setValue("AdvancedWorld." + value,
-									reward.getData().getConfigurationSection("AdvancedWorld." + key));
-							reward.setValue("AdvancedWorld." + key, null);
-							reloadAdvancedCore();
-							open(player, reward);
-						}
-					}, new String[] {}).usingMethod(InputMethod.DIALOG).request(clickEvent.getPlayer());
+					requestString(clickEvent.getPlayer(), key, "Rename sub reward", InputMethod.DIALOG, (p, value) -> {
+						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+						reward.setValue("AdvancedWorld." + value,
+								reward.getData().getConfigurationSection("AdvancedWorld." + key));
+						reward.setValue("AdvancedWorld." + key, null);
+						reloadAdvancedCore();
+						open(p, reward);
+					});
 				}
 			});
 		}
@@ -184,5 +173,4 @@ public abstract class RewardEditAdvancedWorld extends RewardEdit {
 
 		inv.openInventory(player);
 	}
-
 }

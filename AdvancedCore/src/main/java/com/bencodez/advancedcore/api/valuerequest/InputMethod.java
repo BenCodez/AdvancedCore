@@ -5,6 +5,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 /**
  * The Enum InputMethod.
  */
+@Deprecated
 public enum InputMethod {
 
 	/**

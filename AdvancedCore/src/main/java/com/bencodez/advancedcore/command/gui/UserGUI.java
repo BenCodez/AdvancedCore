@@ -20,10 +20,9 @@ import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequest;
-import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
-import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.player.PlayerUtils;
+import com.bencodez.simpleapi.valuerequest.StringListener;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 /**
  * The Class UserGUI.
@@ -95,8 +94,8 @@ public class UserGUI {
 					rewards.add(reward.getRewardName());
 				}
 
-				new ValueRequest().requestString(clickEvent.getPlayer(), "", ArrayUtils.convert(rewards), true,
-						new StringListener() {
+				new ValueRequest(plugin, plugin.getDialogService()).requestString(clickEvent.getPlayer(), "",
+						rewards, true, null, new StringListener() {
 
 							@Override
 							public void onInput(Player player, String value) {
@@ -104,10 +103,8 @@ public class UserGUI {
 										.getUser(UserGUI.getInstance().getCurrentPlayer(player));
 								plugin.getRewardHandler().giveReward(user, value, new RewardOptions());
 								player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
-
 							}
 						});
-
 			}
 		});
 
@@ -135,7 +132,6 @@ public class UserGUI {
 				}
 
 				inv.openInventory(player);
-
 			}
 		});
 
@@ -173,14 +169,15 @@ public class UserGUI {
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			players.add(p.getName());
 		}
-		new ValueRequest().requestString(player, "", ArrayUtils.convert(players), true, new StringListener() {
+		new ValueRequest(plugin, plugin.getDialogService()).requestString(player, "", players, true,
+				null, new StringListener() {
 
-			@Override
-			public void onInput(Player player, String value) {
-				setCurrentPlayer(player, value);
-				openUserGUI(player, value);
-			}
-		});
+					@Override
+					public void onInput(Player player, String value) {
+						setCurrentPlayer(player, value);
+						openUserGUI(player, value);
+					}
+				});
 	}
 
 	/**
