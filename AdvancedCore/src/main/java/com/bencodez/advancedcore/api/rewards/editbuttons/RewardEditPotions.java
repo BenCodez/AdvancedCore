@@ -6,6 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.editgui.EditGUI;
@@ -13,10 +14,9 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
-import com.bencodez.advancedcore.api.valuerequest.InputMethod;
-import com.bencodez.advancedcore.api.valuerequest.ValueRequestBuilder;
-import com.bencodez.advancedcore.api.valuerequest.listeners.StringListener;
-import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
+import com.bencodez.simpleapi.valuerequest.StringListener;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 public abstract class RewardEditPotions extends RewardEdit {
 	public RewardEditPotions() {
@@ -27,27 +27,31 @@ public abstract class RewardEditPotions extends RewardEdit {
 	public void open(Player player, RewardEditData reward) {
 		EditGUI inv = new EditGUI("Edit Potions: " + reward.getName());
 		inv.addData("Reward", reward);
-		ArrayList<String> potionEffects = new ArrayList<>();
+		ArrayList<String> potionEffects = new ArrayList<String>();
 
 		for (PotionEffectType effect : PotionEffectType.values()) {
-			potionEffects.add(effect.toString());
+			if (effect != null) {
+				potionEffects.add(effect.toString());
+			}
 		}
 
 		inv.addButton(new EditGUIButton(new EditGUIValueInventory("Potions") {
 
 			@Override
 			public void openInventory(ClickEvent clickEvent) {
-				new ValueRequestBuilder(new StringListener() {
+				new ValueRequest(AdvancedCorePlugin.getInstance(),
+						AdvancedCorePlugin.getInstance().getDialogService(), InputMethod.INVENTORY).requestString(
+								clickEvent.getPlayer(), "", potionEffects, false, "Select potion effect",
+								new StringListener() {
 
-					@Override
-					public void onInput(Player player, String value) {
-						RewardEditData reward = (RewardEditData) getInv().getData("Reward");
-						reward.createSection("Potions." + value);
-						reloadAdvancedCore();
-						open(player, reward);
-					}
-				}, ArrayUtils.convert(potionEffects)).usingMethod(InputMethod.INVENTORY)
-						.request(clickEvent.getPlayer());
+									@Override
+									public void onInput(Player player, String value) {
+										RewardEditData reward = (RewardEditData) getInv().getData("Reward");
+										reward.createSection("Potions." + value);
+										reloadAdvancedCore();
+										open(player, reward);
+									}
+								});
 
 			}
 		}).setName("&aAdd potion effect"));

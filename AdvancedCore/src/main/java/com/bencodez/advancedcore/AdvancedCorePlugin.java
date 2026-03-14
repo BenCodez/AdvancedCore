@@ -47,7 +47,6 @@ import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
-import com.bencodez.advancedcore.api.valuerequest.sign.SignMenu;
 import com.bencodez.advancedcore.command.CommandLoader;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.advancedcore.listeners.AuthMeLogin;
@@ -62,7 +61,6 @@ import com.bencodez.simpleapi.command.TabCompleteHandler;
 import com.bencodez.simpleapi.debug.DebugLevel;
 import com.bencodez.simpleapi.dialog.UniDialogService;
 import com.bencodez.simpleapi.file.YMLConfig;
-import com.bencodez.simpleapi.nms.NMSManager;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 import com.bencodez.simpleapi.servercomm.pluginmessage.PluginMessage;
 import com.bencodez.simpleapi.skull.SkullCacheHandler;
@@ -287,14 +285,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 */
 	@Getter
 	private ServerData serverDataFile;
-
-	/**
-	 * Sign menu for user input.
-	 * 
-	 * @return the sign menu
-	 */
-	@Getter
-	private SignMenu signMenu;
 
 	/**
 	 * Time checker for scheduled operations.
@@ -727,7 +717,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 		}
 
-		loadSignAPI();
 		loadUUIDs();
 		getOptions().setPermPrefix(this.getName());
 		checkPlaceHolderAPI();
@@ -835,20 +824,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				+ " Free RAM: " + PluginUtils.getFreeMemory());
 
 		debug(DebugLevel.INFO, "Debug Level: " + getOptions().getDebug().toString());
-	}
-
-	private void loadSignAPI() {
-		if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null
-				&& !NMSManager.getInstance().isVersion("1.8", "1.9", "1.10", "1.11")) {
-			if (Bukkit.getPluginManager().getPlugin("ProtocolLib").isEnabled()) {
-				try {
-					this.signMenu = new SignMenu(this);
-				} catch (Exception e) {
-					getLogger().warning("ProtocolLib may not be up to date? Failed to load SignMenu");
-					debug(e);
-				}
-			}
-		}
 	}
 
 	/**
