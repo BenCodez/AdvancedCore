@@ -333,6 +333,51 @@ public final class BedrockNameResolver {
 		return new Result(incomingName, false, "unknown-default-java");
 	}
 
+	public Result resolveWithoutDb(String incomingName) {
+		if (incomingName == null || incomingName.isEmpty()) {
+			return new Result(incomingName, false, "empty-name");
+		}
+
+		// Online - match exact and stripped forms
+		Player match = findOnlineByNameOrStripped(incomingName);
+		if (match != null) {
+			boolean bedrock = bedrockDetect.isBedrock(match.getUniqueId());
+
+			String finalName = incomingName;
+			if (bedrock) {
+				finalName = addPrefixIfNeeded(match.getName(), true);
+			}
+
+			return new Result(finalName, bedrock, bedrock ? "online-uuid-bedrock" : "online-uuid-java");
+		}
+
+		// Cache on incoming name
+		Boolean cached = getCachedCaseInsensitive(incomingName);
+		if (cached != null) {
+			boolean bedrock = cached;
+			String finalName = addPrefixIfNeeded(incomingName, bedrock);
+			return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java"));
+		}
+
+		// Cache on prefixed variant
+		String prefixed = buildPrefixedVariant(incomingName);
+		if (prefixed != null) {
+			Boolean cachedPrefixed = getCachedCaseInsensitive(prefixed);
+			if (cachedPrefixed != null) {
+				boolean bedrock = cachedPrefixed;
+				String finalName = bedrock ? prefixed : incomingName;
+				return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
+			}
+		}
+
+		// Prefix-only fallback
+		if (bedrockPrefix != null && !bedrockPrefix.isEmpty() && incomingName.startsWith(bedrockPrefix)) {
+			return new Result(incomingName, true, "prefixed-only");
+		}
+
+		return new Result(incomingName, false, "unknown-no-db");
+	}
+
 	/**
 	 * Get the prefixed name if the player is a Bedrock player.
 	 * 

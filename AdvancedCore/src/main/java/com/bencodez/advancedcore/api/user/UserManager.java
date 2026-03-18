@@ -15,6 +15,8 @@ import org.bukkit.entity.Player;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.validation.UserValidationFactory;
+import com.bencodez.advancedcore.api.user.validation.UserValidationService;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.DataType;
@@ -38,6 +40,9 @@ public class UserManager {
 
 	@Getter
 	private final ArrayList<UserDataChanged> userDataChange = new ArrayList<>();
+
+	@Getter
+	private UserValidationService validationService;
 
 	public UserManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -381,6 +386,7 @@ public class UserManager {
 
 	public void load() {
 		dataManager = new UserDataManager(AdvancedCorePlugin.getInstance());
+		validationService = UserValidationFactory.create(plugin);
 	}
 
 	public void onChange(AdvancedCoreUser user, String... keys) {
@@ -472,6 +478,25 @@ public class UserManager {
 				}
 			}
 		}
+	}
+
+	public boolean userExistStored(String name) {
+		if (name == null || name.isEmpty()) {
+			return false;
+		}
+
+		boolean exist = ArrayUtils.containsIgnoreCase(getAllPlayerNames(), name);
+		if (exist) {
+			return true;
+		}
+
+		try {
+			UUID u = UUID.fromString(name);
+			return userExist(u);
+		} catch (Exception ignored) {
+		}
+
+		return false;
 	}
 
 	public void removeUUID(UUID key) {
