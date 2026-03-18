@@ -237,33 +237,66 @@ public class PlayerManager {
 
 	@SuppressWarnings("deprecation")
 	public boolean isValidUser(String name, boolean checkServer) {
+		plugin.extraDebug("isValidUser START: name=" + name + ", checkServer=" + checkServer);
+
+		if (name == null) {
+			plugin.extraDebug("isValidUser: name is null -> false");
+			return false;
+		}
+
+		name = name.trim();
+
 		Player player = Bukkit.getPlayerExact(name);
 		if (player != null) {
+			plugin.extraDebug("isValidUser: matched ONLINE player -> true (" + player.getName() + ")");
 			return true;
 		}
 
 		boolean userExist = plugin.getUserManager().userExist(name);
+		plugin.extraDebug("isValidUser: userExist(" + name + ")=" + userExist);
 		if (userExist) {
-			return userExist;
-		}
-
-		if (name.isEmpty()) {
-			return false;
-		}
-
-		if (plugin.getBedrockHandle().isBedrock(name)) {
-			plugin.extraDebug("Player " + name + " is a bedrock player, skipping offline check");
+			plugin.extraDebug("isValidUser: returning true from userExist");
 			return true;
 		}
 
-		if (checkServer && !name.startsWith(plugin.getOptions().getBedrockPlayerPrefix())) {
-			OfflinePlayer p = Bukkit.getOfflinePlayer(name);
-			if (p.hasPlayedBefore() || p.isOnline() || p.getLastPlayed() != 0) {
-				return true;
-			}
+		if (name.isEmpty()) {
+			plugin.extraDebug("isValidUser: empty name -> false");
+			return false;
 		}
 
-		plugin.extraDebug("Player " + name + " does not exist");
+		boolean isBedrock = plugin.getBedrockHandle().isBedrock(name);
+		plugin.extraDebug("isValidUser: isBedrock(" + name + ")=" + isBedrock);
+		if (isBedrock) {
+			plugin.extraDebug("isValidUser: bedrock match -> true (skipping offline check)");
+			return true;
+		}
+
+		if (checkServer) {
+			String prefix = plugin.getOptions().getBedrockPlayerPrefix();
+			plugin.extraDebug("isValidUser: checkServer enabled, bedrockPrefix=" + prefix);
+
+			if (!name.startsWith(prefix)) {
+				OfflinePlayer p = Bukkit.getOfflinePlayer(name);
+
+				boolean hasPlayed = p.hasPlayedBefore();
+				boolean isOnline = p.isOnline();
+				long lastPlayed = p.getLastPlayed();
+
+				plugin.extraDebug("isValidUser: OfflinePlayer check for " + name + " -> hasPlayedBefore=" + hasPlayed
+						+ ", isOnline=" + isOnline + ", lastPlayed=" + lastPlayed);
+
+				if (hasPlayed || isOnline || lastPlayed != 0) {
+					plugin.extraDebug("isValidUser: checkServer match -> true");
+					return true;
+				}
+			} else {
+				plugin.extraDebug("isValidUser: skipping checkServer due to bedrock prefix match");
+			}
+		} else {
+			plugin.extraDebug("isValidUser: checkServer disabled");
+		}
+
+		plugin.extraDebug("isValidUser: FINAL -> false (no checks passed for " + name + ")");
 		return false;
 	}
 }

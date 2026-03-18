@@ -207,9 +207,6 @@
             <version>2.12.2</version>
             <scope>provided</scope>
         </dependency>
-        <!-- <dependency> <groupId>com.github.Ben12345rocks</groupId>
-		<artifactId>ChatComponentAPI</artifactId> 
-			<version>master-SNAPSHOT</version> <scope>compile</scope> </dependency> -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>

@@ -17,6 +17,7 @@ import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyBoolean;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyString;
+import com.bencodez.simpleapi.debug.DebugLevel;
 
 import lombok.Getter;
 
@@ -73,6 +74,13 @@ public class UserDataManager {
 	@Deprecated
 	public void cacheUser(UUID uuid) {
 		plugin.devDebug("Caching " + uuid.toString());
+		if (plugin.getOptions().getDebug().isDebug(DebugLevel.DEV)) {
+			try {
+				throw new Exception("caching here: " + uuid.toString());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 		if (userDataCache.containsKey(uuid)) {
 			UserDataCache data = userDataCache.get(uuid);
 			data.clearChanges();
@@ -83,6 +91,7 @@ public class UserDataManager {
 				userDataCache.put(uuid, data);
 			}
 		}
+
 	}
 
 	public void cacheUser(UUID uuid, String playerName) {

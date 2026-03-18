@@ -301,6 +301,7 @@ public final class BedrockNameResolver {
 		// implementation)
 		try {
 			AdvancedCoreUser user = userManager.getUser(incomingName);
+
 			if (user == null) {
 				String canonical = ciIndex.get(incomingName.toLowerCase(Locale.ROOT));
 				if (canonical != null)
@@ -486,7 +487,8 @@ public final class BedrockNameResolver {
 	}
 
 	/**
-	 * Result of name resolution containing the final name, Bedrock status, and rationale.
+	 * Result of name resolution containing the final name, Bedrock status, and
+	 * rationale.
 	 */
 	public static final class Result {
 		/** The final resolved name. */
