@@ -456,16 +456,8 @@ public class ItemBuilder {
 	 * @param material the material name
 	 */
 	public ItemBuilder(String material) {
-		String materialStr = material;
-		if (NMSManager.getInstance().isVersion("1.12")) {
-			if (material.equalsIgnoreCase("player_head")) {
-				materialStr = "SKULL";
-			} else {
-				materialStr = "PAPER";
-			}
-		}
 		try {
-			this.is = new ItemStack(Material.valueOf(materialStr));
+			this.is = new ItemStack(Material.valueOf(material));
 		} catch (Exception e) {
 			this.is = new ItemStack(Material.PAPER);
 			AdvancedCorePlugin.getInstance().debug("Invalid material: " + material);
@@ -475,7 +467,7 @@ public class ItemBuilder {
 	/**
 	 * Adds an attribute modifier to the item.
 	 * 
-	 * @param att the attribute
+	 * @param att      the attribute
 	 * @param modifier the attribute modifier
 	 * @return this ItemBuilder
 	 */
@@ -582,7 +574,7 @@ public class ItemBuilder {
 			}
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
 				| SecurityException e) {
-			//e.printStackTrace();
+			// e.printStackTrace();
 		}
 
 		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -665,7 +657,7 @@ public class ItemBuilder {
 	/**
 	 * Adds a single placeholder.
 	 * 
-	 * @param toReplace the text to replace
+	 * @param toReplace   the text to replace
 	 * @param replaceWith the replacement text
 	 * @return this ItemBuilder
 	 */
@@ -677,10 +669,10 @@ public class ItemBuilder {
 	/**
 	 * Adds a potion effect to the item.
 	 * 
-	 * @param type the potion effect type
-	 * @param duration the duration
+	 * @param type      the potion effect type
+	 * @param duration  the duration
 	 * @param amplifier the amplifier
-	 * @param color the potion color
+	 * @param color     the potion color
 	 * @return this ItemBuilder
 	 */
 	public ItemBuilder addPotionEffect(PotionEffectType type, int duration, int amplifier, Color color) {
@@ -1170,7 +1162,7 @@ public class ItemBuilder {
 	/**
 	 * Sets custom data in the persistent data container.
 	 * 
-	 * @param key the data key
+	 * @param key   the data key
 	 * @param value the data value
 	 * @return this ItemBuilder
 	 */
