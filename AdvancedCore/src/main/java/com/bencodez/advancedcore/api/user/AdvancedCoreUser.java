@@ -30,7 +30,6 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
-import com.bencodez.advancedcore.api.misc.effects.ActionBar;
 import com.bencodez.advancedcore.api.misc.effects.BossBar;
 import com.bencodez.advancedcore.api.misc.effects.Title;
 import com.bencodez.advancedcore.api.rewards.Reward;
@@ -39,6 +38,7 @@ import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.messages.actionbar.ActionBar;
 import com.bencodez.simpleapi.player.PlayerUtils;
 import com.bencodez.simpleapi.sql.Column;
 

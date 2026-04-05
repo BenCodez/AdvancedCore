@@ -2896,7 +2896,6 @@ public class RewardHandler {
 		addValidPath("Delayed");
 		addValidPath("Timed");
 		addValidPath("DisplayItem");
-		addValidPath("Repeat");
 		addValidPath("ForceOffline");
 		for (File file : rewardFolders) {
 			loadRewards(file);

@@ -61,6 +61,8 @@ import com.bencodez.simpleapi.command.TabCompleteHandler;
 import com.bencodez.simpleapi.debug.DebugLevel;
 import com.bencodez.simpleapi.dialog.UniDialogService;
 import com.bencodez.simpleapi.file.YMLConfig;
+import com.bencodez.simpleapi.messages.actionbar.ActionBar;
+import com.bencodez.simpleapi.messages.actionbar.ActionBarManager;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 import com.bencodez.simpleapi.servercomm.pluginmessage.PluginMessage;
 import com.bencodez.simpleapi.skull.SkullCacheHandler;
@@ -1128,7 +1130,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (getPermissionHandler() != null) {
 			getPermissionHandler().shutDown();
 		}
-		
+
 		if (dialogService != null) {
 			dialogService.unregister();
 		}
@@ -1146,6 +1148,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		inventoryTimer = Executors.newSingleThreadScheduledExecutor();
 
 		onPreLoad();
+
+		ActionBarManager actionBarManager = new ActionBarManager(this);
+		ActionBar.setManager(actionBarManager);
+
 		loadHook();
 		onPostLoad();
 

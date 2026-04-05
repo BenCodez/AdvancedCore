@@ -6,7 +6,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.simpleapi.messages.MessageAPI;
-import com.bencodez.simpleapi.nms.NMSManager;
 
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -14,6 +13,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 /**
  * The Class ActionBar.
  */
+@Deprecated
 public class ActionBar {
 
 	/** The duration. */
@@ -33,6 +33,15 @@ public class ActionBar {
 	public ActionBar(String msg, int duration) {
 		setMsg(MessageAPI.colorize(msg));
 		setDuration(duration);
+	}
+
+	/**
+	 * Instantiates a new action bar.
+	 *
+	 * @param msg the msg
+	 */
+	public ActionBar(String msg) {
+		setMsg(MessageAPI.colorize(msg));
 	}
 
 	/**
@@ -72,9 +81,7 @@ public class ActionBar {
 	 */
 	@SuppressWarnings("deprecation")
 	public void sendActionBar(Player player, String message) {
-		if (!NMSManager.getInstance().isVersion("1.7", "1.8", "1.9", "1.10", "1.11", "1.12")) {
-			player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
-		}
+		player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
 	}
 
 	/**
