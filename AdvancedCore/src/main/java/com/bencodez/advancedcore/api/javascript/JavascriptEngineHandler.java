@@ -57,18 +57,18 @@ public class JavascriptEngineHandler {
 
 	/**
 	 * Gets a Javascript script engine.
-	 * 
+	 *
 	 * @return the script engine
 	 */
 	public ScriptEngine getJSScriptEngine() {
 		if (builtIn) {
 			return new ScriptEngineManager().getEngineByName("js");
 		}
-		if (factory != null) {
+		if (factory != null && methodToUse != null) {
 			try {
-				return (ScriptEngine) methodToUse.invoke(factory.newInstance(), new Object[] {});
+				return (ScriptEngine) methodToUse.invoke(factory.getDeclaredConstructor().newInstance());
 			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-					| InstantiationException e) {
+					| InstantiationException | NoSuchMethodException e) {
 				e.printStackTrace();
 			}
 		}

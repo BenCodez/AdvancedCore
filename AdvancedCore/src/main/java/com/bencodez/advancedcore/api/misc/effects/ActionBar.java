@@ -79,7 +79,6 @@ public class ActionBar {
 	 * @param player  the player
 	 * @param message the message
 	 */
-	@SuppressWarnings("deprecation")
 	public void sendActionBar(Player player, String message) {
 		player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
 	}
