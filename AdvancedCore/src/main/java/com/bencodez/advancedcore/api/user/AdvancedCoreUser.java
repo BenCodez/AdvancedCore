@@ -524,7 +524,7 @@ public class AdvancedCoreUser {
 		if (d != null && !d.equals("") && !d.equals("null")) {
 			time = Long.valueOf(d);
 		}
-		if (time == 0) {
+		if (time == 0 && getPlugin().getOptions().isOnlineMode()) {
 			time = getOfflinePlayer().getLastPlayed();
 			if (time > 0) {
 				setLastOnline(time);
