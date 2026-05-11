@@ -1099,7 +1099,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Override
 	public void onDisable() {
 
-		if (getOptions().getStorageType().equals(UserStorage.MYSQL)) {
+		if (loadUserData && getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 			getMysql().close();
 		}
 		getServerDataFile().setLastUpdated();
