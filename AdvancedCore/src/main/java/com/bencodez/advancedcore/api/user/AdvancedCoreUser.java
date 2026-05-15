@@ -525,10 +525,14 @@ public class AdvancedCoreUser {
 			time = Long.valueOf(d);
 		}
 		if (time == 0 && getPlugin().getOptions().isOnlineMode()) {
-			time = getOfflinePlayer().getLastPlayed();
-			if (time > 0) {
-				setLastOnline(time);
+			OfflinePlayer player = getOfflinePlayer();
+			if (player != null) {
+				time = player.getLastPlayed();
+				if (time > 0) {
+					setLastOnline(time);
+				}
 			}
+
 		}
 		return time;
 	}
@@ -557,6 +561,9 @@ public class AdvancedCoreUser {
 	 */
 	@SuppressWarnings("deprecation")
 	public OfflinePlayer getOfflinePlayer() {
+		if (getPlayerName().isBlank()) {
+			return null;
+		}
 		if (!plugin.getOptions().isOnlineMode()) {
 			return Bukkit.getOfflinePlayer(getPlayerName());
 		}
