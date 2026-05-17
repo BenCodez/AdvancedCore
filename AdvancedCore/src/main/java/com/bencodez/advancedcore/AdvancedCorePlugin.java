@@ -31,6 +31,7 @@ import com.bencodez.advancedcore.api.cmi.CMIHandler;
 import com.bencodez.advancedcore.api.hologram.HologramHandler;
 import com.bencodez.advancedcore.api.inventory.BInventoryListener;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
+import com.bencodez.advancedcore.api.javascript.JavascriptEngineHandler;
 import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderRequest;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.permissions.LuckPermsHandle;
@@ -806,6 +807,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (Bukkit.getPluginManager().getPlugin("LoginSecurity") != null) {
 			loginSecurityLoaded = true;
 			Bukkit.getPluginManager().registerEvents(new LoginSecurityLogin(this), this);
+		}
+
+		if (getOptions().isJavascriptEngineEnabled()) {
+			getLogger().info("Javascript engine enabled, loading engine");
+			JavascriptEngineHandler.getInstance().init(this, getOptions().isJavascriptEngineEnabled(),
+					getOptions().isJavascriptEngineAutoDownload());
+		} else {
+			getLogger().info("Javascript engine disabled, skipping engine load");
 		}
 
 		try {

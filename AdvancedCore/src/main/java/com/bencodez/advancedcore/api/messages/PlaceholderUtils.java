@@ -124,7 +124,7 @@ public class PlaceholderUtils {
 	}
 
 	public static String replaceJavascript(AdvancedCoreUser user, String text) {
-		if (!user.getPlugin().getOptions().isDisableJavascript()) {
+		if (user.getPlugin().getOptions().isJavascriptEngineEnabled()) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
 			return replaceJavascript(text, engine);
 		}
@@ -152,7 +152,7 @@ public class PlaceholderUtils {
 	}
 
 	public static String replaceJavascript(CommandSender player, String text) {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
 			if (player instanceof Player) {
 				return replaceJavascript((Player) player, text);
 			}
@@ -171,7 +171,7 @@ public class PlaceholderUtils {
 	}
 
 	public static String replaceJavascript(OfflinePlayer player, String text) {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
 			if (player.isOnline()) {
 				return replaceJavascript(player.getPlayer(), text);
 			}
@@ -190,7 +190,7 @@ public class PlaceholderUtils {
 	}
 
 	public static String replaceJavascript(Player player, String text) {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isDisableJavascript()) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
 			return replaceJavascript(replacePlaceHolders(player, text), engine);
 		}

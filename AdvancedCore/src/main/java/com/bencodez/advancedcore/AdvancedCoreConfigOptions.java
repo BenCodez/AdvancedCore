@@ -384,27 +384,40 @@ public class AdvancedCoreConfigOptions {
 	private String SkullProfileAPIURL = "";
 
 	/**
-	 * Whether JavaScript execution is disabled.
+	 * Whether JavaScript execution is enabled.
 	 * 
-	 * @return true if JavaScript is disabled, false otherwise
-	 * @param disableJavascript true to disable JavaScript, false otherwise
+	 * @return true if JavaScript is enabled, false otherwise
+	 * @param javascriptEngineEnabled true to enable JavaScript, false otherwise
 	 */
 	@Getter
 	@Setter
-	@ConfigDataBoolean(path = "DisableJavascript")
-	private boolean disableJavascript = false;
+	@ConfigDataBoolean(path = "JavascriptEngine.Enabled", secondPath = "DisableJavascript", secondPathInvert = true)
+	private boolean javascriptEngineEnabled = false;
+
+	/**
+	 * Whether JavaScript engine auto-download is enabled.
+	 * 
+	 * @return true if missing JavaScript engine dependencies should be downloaded,
+	 *         false otherwise
+	 * @param javascriptEngineAutoDownload true to allow missing JavaScript engine
+	 *                                     dependencies to download, false otherwise
+	 */
+	@Getter
+	@Setter
+	@ConfigDataBoolean(path = "JavascriptEngine.AutoDownload")
+	private boolean javascriptEngineAutoDownload = false;
 
 	/**
 	 * Whether the JavaScript command is enabled.
 	 * 
 	 * @return true if JavaScript command is enabled, false otherwise
-	 * @param enableJavascriptCommand true to enable JavaScript command, false
-	 *                                otherwise
+	 * @param javascriptEngineCommandEnabled true to enable JavaScript command,
+	 *                                       false otherwise
 	 */
 	@Getter
 	@Setter
-	@ConfigDataBoolean(path = "EnableJavascriptCommand")
-	private boolean enableJavascriptCommand = false;
+	@ConfigDataBoolean(path = "JavascriptEngine.CommandEnabled", secondPath = "EnableJavascriptCommand")
+	private boolean javascriptEngineCommandEnabled = false;
 
 	/**
 	 * Spigot resource ID for update checking.
