@@ -813,6 +813,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			getLogger().info("Javascript engine enabled, loading engine");
 			JavascriptEngineHandler.getInstance().init(this, getOptions().isJavascriptEngineEnabled(),
 					getOptions().isJavascriptEngineAutoDownload());
+
+			JavascriptEngineHandler.getInstance().prepareEngine();
 		} else {
 			getLogger().info("Javascript engine disabled, skipping engine load");
 		}
@@ -1107,6 +1109,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
+		if (getOptions().isJavascriptEngineEnabled()) {
+			getLogger().info("Shutting down Javascript engine");
+			JavascriptEngineHandler.getInstance().clearCachedEngine();
+		}
 
 		if (loadUserData && getOptions().getStorageType().equals(UserStorage.MYSQL)) {
 			getMysql().close();

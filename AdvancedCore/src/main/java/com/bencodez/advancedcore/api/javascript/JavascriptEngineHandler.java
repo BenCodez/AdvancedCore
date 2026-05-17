@@ -18,7 +18,7 @@ import java.util.List;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
-import org.bukkit.plugin.java.JavaPlugin;
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -41,7 +41,7 @@ public class JavascriptEngineHandler {
 
 	@Getter
 	@Setter
-	private JavaPlugin plugin;
+	private AdvancedCorePlugin plugin;
 
 	@Getter
 	@Setter
@@ -67,6 +67,18 @@ public class JavascriptEngineHandler {
 	@Setter
 	private String loadedVersion;
 
+	@Getter
+	@Setter
+	private ScriptEngine cachedEngine;
+
+	@Getter
+	@Setter
+	private boolean prepared;
+
+	@Getter
+	@Setter
+	private boolean preparing;
+
 	/**
 	 * Creates a new Javascript engine handler.
 	 */
@@ -80,10 +92,56 @@ public class JavascriptEngineHandler {
 	 * @param enabled true if Javascript support is enabled
 	 * @param autoDownload true if missing Nashorn dependencies should be downloaded
 	 */
-	public void init(JavaPlugin plugin, boolean enabled, boolean autoDownload) {
+	public void init(AdvancedCorePlugin plugin, boolean enabled, boolean autoDownload) {
 		this.plugin = plugin;
 		this.enabled = enabled;
 		this.autoDownload = autoDownload;
+		this.prepared = false;
+		this.preparing = false;
+		this.cachedEngine = null;
+		this.factory = null;
+		this.methodToUse = null;
+		this.loadedVersion = null;
+
+		logDebug("JavascriptEngine: initialized. Enabled=" + enabled + ", AutoDownload=" + autoDownload
+				+ ", LibraryFolder=" + getLibraryFolderSafe());
+	}
+
+	/**
+	 * Prepares the Javascript engine so dependencies are downloaded and the engine is ready before first use.
+	 *
+	 * @return true if an engine is ready, false otherwise
+	 */
+	public boolean prepareEngine() {
+		logDebug("JavascriptEngine: prepare requested.");
+
+		if (prepared && cachedEngine != null) {
+			logEngine("JavascriptEngine: already prepared", cachedEngine);
+			return true;
+		}
+
+		if (preparing) {
+			logDebug("JavascriptEngine: prepare already in progress.");
+			return cachedEngine != null;
+		}
+
+		preparing = true;
+
+		try {
+			cachedEngine = loadJSScriptEngine();
+
+			if (cachedEngine == null) {
+				prepared = false;
+				logWarning("JavascriptEngine: prepare failed, no JavaScript engine is available.");
+				return false;
+			}
+
+			prepared = true;
+			logEngine("JavascriptEngine: prepared engine", cachedEngine);
+			return true;
+		} finally {
+			preparing = false;
+		}
 	}
 
 	/**
@@ -92,31 +150,63 @@ public class JavascriptEngineHandler {
 	 * @return the script engine
 	 */
 	public ScriptEngine getJSScriptEngine() {
+		logDebug("JavascriptEngine: requested JavaScript engine.");
+
+		if (cachedEngine != null) {
+			logEngine("JavascriptEngine: returning cached engine", cachedEngine);
+			return cachedEngine;
+		}
+
+		logDebug("JavascriptEngine: engine was not prepared yet, preparing now.");
+		prepareEngine();
+
+		if (cachedEngine != null) {
+			return cachedEngine;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Loads a Javascript script engine.
+	 *
+	 * @return the script engine
+	 */
+	private ScriptEngine loadJSScriptEngine() {
 		if (!enabled) {
+			logDebug("JavascriptEngine: disabled by config.");
 			return null;
 		}
 
 		ScriptEngine engine = getServerProvidedEngine();
 
 		if (engine != null) {
+			logEngine("JavascriptEngine: using server-provided engine", engine);
 			return engine;
 		}
+
+		logDebug("JavascriptEngine: no server-provided JavaScript engine found.");
+		logDebug("JavascriptEngine: trying downloaded Nashorn " + PRIMARY_NASHORN_VERSION + " with ASM "
+				+ ASM_VERSION_FOR_PRIMARY + ".");
 
 		engine = getDownloadedEngine(PRIMARY_NASHORN_VERSION, ASM_VERSION_FOR_PRIMARY);
 
 		if (engine != null) {
+			logEngine("JavascriptEngine: using downloaded Nashorn " + PRIMARY_NASHORN_VERSION, engine);
 			return engine;
 		}
 
-		logWarning("Failed to load Nashorn " + PRIMARY_NASHORN_VERSION + ", trying fallback "
-				+ FALLBACK_NASHORN_VERSION + ".");
+		logWarning("JavascriptEngine: failed to load Nashorn " + PRIMARY_NASHORN_VERSION + ", trying fallback "
+				+ FALLBACK_NASHORN_VERSION + " with ASM " + ASM_VERSION_FOR_FALLBACK + ".");
 
 		engine = getDownloadedEngine(FALLBACK_NASHORN_VERSION, ASM_VERSION_FOR_FALLBACK);
 
 		if (engine == null) {
-			logWarning("No Javascript engine is available. Javascript features will be disabled.");
+			logWarning("JavascriptEngine: no JavaScript engine is available. JavaScript features will be disabled.");
+			return null;
 		}
 
+		logEngine("JavascriptEngine: using downloaded Nashorn fallback " + FALLBACK_NASHORN_VERSION, engine);
 		return engine;
 	}
 
@@ -126,38 +216,60 @@ public class JavascriptEngineHandler {
 	 * @return the script engine, or null if none exists
 	 */
 	private ScriptEngine getServerProvidedEngine() {
+		logDebug("JavascriptEngine: checking ScriptEngineManager name 'js'.");
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
 
 		if (engine != null) {
+			logEngine("JavascriptEngine: found engine by name 'js'", engine);
 			return engine;
 		}
 
+		logDebug("JavascriptEngine: checking ScriptEngineManager name 'JavaScript'.");
 		engine = new ScriptEngineManager().getEngineByName("JavaScript");
 
 		if (engine != null) {
+			logEngine("JavascriptEngine: found engine by name 'JavaScript'", engine);
 			return engine;
 		}
 
+		logDebug("JavascriptEngine: checking ScriptEngineManager name 'nashorn'.");
 		engine = new ScriptEngineManager().getEngineByName("nashorn");
 
 		if (engine != null) {
+			logEngine("JavascriptEngine: found engine by name 'nashorn'", engine);
 			return engine;
 		}
+
+		logDebug("JavascriptEngine: checking direct Nashorn factory class " + NASHORN_FACTORY_CLASS + ".");
 
 		try {
 			Class<?> foundFactory = Class.forName(NASHORN_FACTORY_CLASS);
 			Method foundMethod = getScriptEngineMethod(foundFactory);
 
 			if (foundMethod == null) {
+				logWarning("JavascriptEngine: server-provided Nashorn factory found, but getScriptEngine was not found.");
 				return null;
 			}
 
-			return (ScriptEngine) foundMethod.invoke(foundFactory.getDeclaredConstructor().newInstance());
+			engine = (ScriptEngine) foundMethod.invoke(foundFactory.getDeclaredConstructor().newInstance());
+
+			if (engine != null) {
+				factory = foundFactory;
+				methodToUse = foundMethod;
+				logEngine("JavascriptEngine: created engine from server-provided Nashorn factory", engine);
+			} else {
+				logWarning("JavascriptEngine: server-provided Nashorn factory returned null engine.");
+			}
+
+			return engine;
 		} catch (ClassNotFoundException ignored) {
+			logDebug("JavascriptEngine: server-provided Nashorn factory class was not found.");
 			return null;
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| InstantiationException | NoSuchMethodException e) {
-			logWarning("Failed to create server-provided Nashorn engine: " + e.getMessage());
+			logWarning("JavascriptEngine: failed to create server-provided Nashorn engine: "
+					+ e.getClass().getSimpleName() + ": " + e.getMessage());
+			logDebug(e);
 			return null;
 		}
 	}
@@ -171,32 +283,47 @@ public class JavascriptEngineHandler {
 	 */
 	private ScriptEngine getDownloadedEngine(String nashornVersion, String asmVersion) {
 		if (plugin == null) {
-			logWarning("Javascript engine handler has not been initialized with a plugin instance.");
+			logWarning("JavascriptEngine: handler has not been initialized with a plugin instance.");
 			return null;
 		}
+
+		logDebug("JavascriptEngine: preparing downloaded Nashorn " + nashornVersion + ".");
+		logDebug("JavascriptEngine: dependency folder: " + getLibraryFolder().resolve(nashornVersion));
 
 		try {
 			List<Path> jars = getOrDownloadJars(nashornVersion, asmVersion);
 
 			if (jars.isEmpty()) {
+				logWarning("JavascriptEngine: no jars available for Nashorn " + nashornVersion + ".");
 				return null;
 			}
 
+			logDebug("JavascriptEngine: creating classloader for Nashorn " + nashornVersion + " with " + jars.size()
+					+ " jar(s).");
+
+			for (Path jar : jars) {
+				logDebug("JavascriptEngine: classloader jar: " + jar);
+			}
+
 			URLClassLoader loader = createClassLoader(jars);
+
+			logDebug("JavascriptEngine: loading Nashorn factory class from downloaded classloader.");
 			Class<?> foundFactory = Class.forName(NASHORN_FACTORY_CLASS, true, loader);
 			Method foundMethod = getScriptEngineMethod(foundFactory);
 
 			if (foundMethod == null) {
 				closeQuietly(loader);
-				logWarning("Nashorn " + nashornVersion + " was loaded, but no getScriptEngine method was found.");
+				logWarning("JavascriptEngine: Nashorn " + nashornVersion
+						+ " was loaded, but no getScriptEngine method was found.");
 				return null;
 			}
 
+			logDebug("JavascriptEngine: invoking Nashorn " + nashornVersion + " factory getScriptEngine.");
 			ScriptEngine engine = (ScriptEngine) foundMethod.invoke(foundFactory.getDeclaredConstructor().newInstance());
 
 			if (engine == null) {
 				closeQuietly(loader);
-				logWarning("Nashorn " + nashornVersion + " returned a null script engine.");
+				logWarning("JavascriptEngine: Nashorn " + nashornVersion + " returned a null script engine.");
 				return null;
 			}
 
@@ -207,10 +334,13 @@ public class JavascriptEngineHandler {
 			methodToUse = foundMethod;
 			loadedVersion = nashornVersion;
 
-			logInfo("Loaded optional Nashorn Javascript engine " + nashornVersion + ".");
+			logDebug("JavascriptEngine: loaded optional Nashorn JavaScript engine " + nashornVersion + ".");
+			logEngine("JavascriptEngine: downloaded engine details", engine);
 			return engine;
 		} catch (Exception e) {
-			logWarning("Failed to load Nashorn " + nashornVersion + ": " + e.getMessage());
+			logWarning("JavascriptEngine: failed to load Nashorn " + nashornVersion + ": "
+					+ e.getClass().getSimpleName() + ": " + e.getMessage());
+			logDebug(e);
 			return null;
 		}
 	}
@@ -227,25 +357,35 @@ public class JavascriptEngineHandler {
 		Path libraryFolder = getLibraryFolder();
 		Files.createDirectories(libraryFolder);
 
+		logDebug("JavascriptEngine: checking dependencies for Nashorn " + nashornVersion + " in "
+				+ libraryFolder.resolve(nashornVersion) + ".");
+
 		List<MavenArtifact> artifacts = getArtifacts(nashornVersion, asmVersion);
 		List<Path> jars = new ArrayList<>();
 
 		for (MavenArtifact artifact : artifacts) {
 			Path jar = libraryFolder.resolve(nashornVersion).resolve(artifact.getFileName());
 
-			if (Files.notExists(jar)) {
-				if (!autoDownload) {
-					logWarning("Missing optional Javascript dependency: " + artifact.getCoordinate());
-					return List.of();
-				}
-
-				Files.createDirectories(jar.getParent());
-				downloadArtifact(artifact, jar);
+			if (Files.exists(jar)) {
+				logDebug("JavascriptEngine: found dependency: " + artifact.getCoordinate() + " at " + jar);
+				jars.add(jar);
+				continue;
 			}
 
+			logWarning("JavascriptEngine: missing dependency: " + artifact.getCoordinate() + " expected at " + jar);
+
+			if (!autoDownload) {
+				logWarning("JavascriptEngine: auto-download is disabled, cannot download "
+						+ artifact.getCoordinate() + ".");
+				return List.of();
+			}
+
+			Files.createDirectories(jar.getParent());
+			downloadArtifact(artifact, jar);
 			jars.add(jar);
 		}
 
+		logDebug("JavascriptEngine: dependency check complete for Nashorn " + nashornVersion + ".");
 		return jars;
 	}
 
@@ -256,6 +396,19 @@ public class JavascriptEngineHandler {
 	 */
 	private Path getLibraryFolder() {
 		return plugin.getDataFolder().toPath().resolve("libs").resolve("nashorn");
+	}
+
+	/**
+	 * Gets the local Nashorn library folder safely.
+	 *
+	 * @return library folder string
+	 */
+	private String getLibraryFolderSafe() {
+		if (plugin == null) {
+			return "plugin-not-set";
+		}
+
+		return getLibraryFolder().toString();
 	}
 
 	/**
@@ -271,6 +424,7 @@ public class JavascriptEngineHandler {
 		artifacts.add(new MavenArtifact("org.openjdk.nashorn", "nashorn-core", nashornVersion));
 		artifacts.add(new MavenArtifact("org.ow2.asm", "asm", asmVersion));
 		artifacts.add(new MavenArtifact("org.ow2.asm", "asm-commons", asmVersion));
+		artifacts.add(new MavenArtifact("org.ow2.asm", "asm-analysis", asmVersion));
 		artifacts.add(new MavenArtifact("org.ow2.asm", "asm-tree", asmVersion));
 		artifacts.add(new MavenArtifact("org.ow2.asm", "asm-util", asmVersion));
 
@@ -287,7 +441,9 @@ public class JavascriptEngineHandler {
 	private void downloadArtifact(MavenArtifact artifact, Path target) throws IOException {
 		Path tempFile = target.resolveSibling(target.getFileName() + ".tmp");
 
-		logInfo("Downloading optional Javascript dependency: " + artifact.getCoordinate());
+		logDebug("JavascriptEngine: downloading optional dependency: " + artifact.getCoordinate());
+		logDebug("JavascriptEngine: download URL: " + artifact.getMavenCentralJarUrl());
+		logDebug("JavascriptEngine: download target: " + target);
 
 		HttpURLConnection connection = (HttpURLConnection) URI.create(artifact.getMavenCentralJarUrl()).toURL()
 				.openConnection();
@@ -297,6 +453,8 @@ public class JavascriptEngineHandler {
 		connection.setRequestProperty("User-Agent", "AdvancedCore-JavascriptEngine");
 
 		int responseCode = connection.getResponseCode();
+		logDebug("JavascriptEngine: Maven Central response for " + artifact.getCoordinate() + ": HTTP "
+				+ responseCode);
 
 		if (responseCode < 200 || responseCode >= 300) {
 			connection.disconnect();
@@ -309,14 +467,17 @@ public class JavascriptEngineHandler {
 			connection.disconnect();
 		}
 
-		if (Files.size(tempFile) <= 0) {
+		long size = Files.size(tempFile);
+		logDebug("JavascriptEngine: downloaded " + artifact.getCoordinate() + " size=" + size + " bytes.");
+
+		if (size <= 0) {
 			Files.deleteIfExists(tempFile);
 			throw new IOException("Downloaded empty jar for " + artifact.getCoordinate());
 		}
 
 		Files.move(tempFile, target, StandardCopyOption.REPLACE_EXISTING);
 
-		logInfo("Downloaded optional Javascript dependency: " + target.getFileName());
+		logDebug("JavascriptEngine: saved optional dependency: " + target);
 	}
 
 	/**
@@ -331,6 +492,7 @@ public class JavascriptEngineHandler {
 
 		for (int i = 0; i < jars.size(); i++) {
 			urls[i] = jars.get(i).toUri().toURL();
+			logDebug("JavascriptEngine: adding classloader URL: " + urls[i]);
 		}
 
 		return new URLClassLoader(urls, getClass().getClassLoader());
@@ -358,9 +520,24 @@ public class JavascriptEngineHandler {
 	 */
 	public void closeExistingClassLoader() {
 		if (nashornClassLoader != null) {
+			logDebug("JavascriptEngine: closing existing Nashorn classloader for version " + loadedVersion + ".");
 			closeQuietly(nashornClassLoader);
 			nashornClassLoader = null;
+			loadedVersion = null;
 		}
+	}
+
+	/**
+	 * Clears the cached JavaScript engine.
+	 */
+	public void clearCachedEngine() {
+		logDebug("JavascriptEngine: clearing cached engine.");
+		cachedEngine = null;
+		prepared = false;
+		preparing = false;
+		factory = null;
+		methodToUse = null;
+		closeExistingClassLoader();
 	}
 
 	/**
@@ -376,13 +553,48 @@ public class JavascriptEngineHandler {
 	}
 
 	/**
-	 * Logs an info message.
+	 * Logs script engine details.
+	 *
+	 * @param prefix message prefix
+	 * @param engine script engine
+	 */
+	private void logEngine(String prefix, ScriptEngine engine) {
+		if (engine == null) {
+			logWarning(prefix + ": null");
+			return;
+		}
+
+		try {
+			logDebug(prefix + ": engineName=" + engine.getFactory().getEngineName()
+					+ ", engineVersion=" + engine.getFactory().getEngineVersion()
+					+ ", languageName=" + engine.getFactory().getLanguageName()
+					+ ", languageVersion=" + engine.getFactory().getLanguageVersion()
+					+ ", names=" + engine.getFactory().getNames());
+		} catch (Exception e) {
+			logWarning(prefix + ": failed to read engine details: " + e.getMessage());
+			logDebug(e);
+		}
+	}
+
+	/**
+	 * Logs a debug message.
 	 *
 	 * @param message message to log
 	 */
-	private void logInfo(String message) {
+	private void logDebug(String message) {
 		if (plugin != null) {
-			plugin.getLogger().info(message);
+			plugin.debug(message);
+		}
+	}
+
+	/**
+	 * Logs an exception in debug mode.
+	 *
+	 * @param throwable throwable to log
+	 */
+	private void logDebug(Throwable throwable) {
+		if (plugin != null) {
+			plugin.debug(throwable);
 		}
 	}
 

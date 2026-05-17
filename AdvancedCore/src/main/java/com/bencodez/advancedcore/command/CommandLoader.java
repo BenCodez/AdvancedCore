@@ -500,7 +500,7 @@ public class CommandLoader {
 			}
 		});
 
-		if (!plugin.getOptions().isJavascriptEngineEnabled()
+		if (plugin.getOptions().isJavascriptEngineEnabled()
 				&& plugin.getOptions().isJavascriptEngineCommandEnabled()) {
 			cmds.add(new CommandHandler(plugin, new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
 					"Execute javascript") {

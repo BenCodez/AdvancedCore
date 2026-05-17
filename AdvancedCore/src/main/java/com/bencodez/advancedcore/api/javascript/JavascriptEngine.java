@@ -120,7 +120,7 @@ public class JavascriptEngine {
 
 	public Object getResult(String expression) {
 		if (!expression.equals("")) {
-			if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
+			if (!AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
 				return null;
 			}
 			ScriptEngine engine = JavascriptEngineHandler.getInstance().getJSScriptEngine();
