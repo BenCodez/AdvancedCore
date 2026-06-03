@@ -346,8 +346,7 @@ public class RewardHandler {
 		}
 
 		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
-			if (direct.getFullPath().equalsIgnoreCase(reward)
-					|| direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
+			if (matchesSubDirectlyDefined(direct, reward)) {
 				plugin.debug("Using subdirectlydefined reward for: " + reward);
 				return direct.getReward();
 			}
@@ -452,8 +451,7 @@ public class RewardHandler {
 
 	public SubDirectlyDefinedReward getSubDirectlyDefined(String path) {
 		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
-			if (direct.getFullPath().equalsIgnoreCase(path)
-					|| direct.getFullPath().equalsIgnoreCase(path.replaceAll("_", "."))) {
+			if (matchesSubDirectlyDefined(direct, path)) {
 				return direct;
 			}
 		}
@@ -594,12 +592,17 @@ public class RewardHandler {
 		}
 
 		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
-			if (direct.getFullPath().equalsIgnoreCase(reward)
-					|| direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."))) {
+			if (matchesSubDirectlyDefined(direct, reward)) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	private boolean matchesSubDirectlyDefined(SubDirectlyDefinedReward direct, String reward) {
+		return direct.getFullPath().equalsIgnoreCase(reward)
+				|| direct.getFullPath().replace(".", "_").equalsIgnoreCase(reward)
+				|| direct.getFullPath().equalsIgnoreCase(reward.replaceAll("_", "."));
 	}
 
 	public boolean hasRewards(FileConfiguration data, String path) {
