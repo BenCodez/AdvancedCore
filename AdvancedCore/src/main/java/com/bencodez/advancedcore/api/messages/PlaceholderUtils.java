@@ -304,6 +304,14 @@ public class PlaceholderUtils {
 		return newList;
 	}
 
+	public static ArrayList<String> replacePlaceHolders(OfflinePlayer player, ArrayList<String> list) {
+		ArrayList<String> newList = new ArrayList<>();
+		for (int i = 0; i < list.size(); i++) {
+			newList.add(replacePlaceHolders(player, list.get(i)));
+		}
+		return newList;
+	}
+
 	public static String replacePlaceHolders(OfflinePlayer player, String text) {
 		if (player == null) {
 			return text;

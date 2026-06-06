@@ -174,10 +174,11 @@ public class MiscUtils {
 			final HashMap<String, String> placeholders, boolean stagger) {
 		if (cmds != null && !cmds.isEmpty()) {
 			placeholders.put("player", player.getName());
-			final ArrayList<String> commands = PlaceholderUtils.replaceJavascript(player,
-					PlaceholderUtils.replacePlaceHolder(cmds, placeholders));
+			ArrayList<String> commands = PlaceholderUtils.replacePlaceHolder(cmds, placeholders);
+			commands = PlaceholderUtils.replacePlaceHolders(commands, player);
+			final ArrayList<String> finalCommands = PlaceholderUtils.replaceJavascript(player, commands);
 			int tick = 0;
-			for (final String cmd : commands) {
+			for (final String cmd : finalCommands) {
 				plugin.debug("Executing console command: " + cmd);
 				runConsoleCommand(cmd, tick, stagger);
 			}
@@ -187,15 +188,16 @@ public class MiscUtils {
 
 	public void executeConsoleCommands(Player player, String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
-			final String cmd = PlaceholderUtils.replaceJavascript(player,
-					PlaceholderUtils.replacePlaceHolder(command, placeholders));
+			String cmd = PlaceholderUtils.replacePlaceHolder(command, placeholders);
+			cmd = PlaceholderUtils.replacePlaceHolders(player, cmd);
+			final String finalCommand = PlaceholderUtils.replaceJavascript(player, cmd);
 
 			plugin.debug("Executing console command: " + command);
 			plugin.getBukkitScheduler().executeOrScheduleSync(plugin, new Runnable() {
 
 				@Override
 				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
 				}
 
 			}, player);
@@ -209,11 +211,11 @@ public class MiscUtils {
 		if (cmds != null && !cmds.isEmpty()) {
 			placeholders.put("player", playerName);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-			ArrayList<String> commands1 = cmds;
+			ArrayList<String> commands = PlaceholderUtils.replacePlaceHolder(cmds, placeholders);
 			if (p != null) {
-				commands1 = PlaceholderUtils.replaceJavascript(p, commands1);
+				commands = PlaceholderUtils.replacePlaceHolders(p, commands);
+				commands = PlaceholderUtils.replaceJavascript(p, commands);
 			}
-			final ArrayList<String> commands = PlaceholderUtils.replacePlaceHolder(commands1, placeholders);
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
@@ -224,14 +226,16 @@ public class MiscUtils {
 
 	public void executeConsoleCommands(String playerName, String command, HashMap<String, String> placeholders) {
 		if (command != null && !command.isEmpty()) {
-			Player p = Bukkit.getPlayer(playerName);
+			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
+			command = PlaceholderUtils.replacePlaceHolder(command, placeholders);
 			if (p != null) {
+				command = PlaceholderUtils.replacePlaceHolders(p, command);
 				command = PlaceholderUtils.replaceJavascript(p, command);
 			}
 			if (command.startsWith("/")) {
 				command.replaceFirst("/", "");
 			}
-			final String cmd = PlaceholderUtils.replacePlaceHolder(command, placeholders);
+			final String cmd = command;
 
 			plugin.debug("Executing console command: " + command);
 			plugin.getBukkitScheduler().executeOrScheduleSync(plugin, new Runnable() {
