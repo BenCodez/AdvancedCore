@@ -104,8 +104,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	/**
 	 * Handler for Vault integration.
-	 * 
-	 * @return the vault handler
 	 */
 	@Getter
 	public VaultHandler vaultHandler;
