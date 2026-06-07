@@ -21,4 +21,4 @@ jobs:
           project: maven # or gradle
           # subdirectories: moduleA moduleB #for subdirectories support, needs to be run with custom command
           custom-command: mvn -f AdvancedCore/pom.xml deploy -P javadoc javadoc:aggregate
-          javadoc-source-folder: 'AdvancedCore/target/apidocs'
+          javadoc-source-folder: 'AdvancedCore/target/reports/apidocs'
