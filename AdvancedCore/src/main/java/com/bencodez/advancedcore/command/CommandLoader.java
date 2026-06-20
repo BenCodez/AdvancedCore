@@ -30,6 +30,9 @@ import com.bencodez.advancedcore.command.gui.UserGUI;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.sql.DataType;
 import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
+import com.bencodez.simpleapi.valuerequest.PlayerInputManager;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -500,8 +503,7 @@ public class CommandLoader {
 			}
 		});
 
-		if (plugin.getOptions().isJavascriptEngineEnabled()
-				&& plugin.getOptions().isJavascriptEngineCommandEnabled()) {
+		if (plugin.getOptions().isJavascriptEngineEnabled() && plugin.getOptions().isJavascriptEngineCommandEnabled()) {
 			cmds.add(new CommandHandler(plugin, new String[] { "Javascript", "(List)" }, permPrefix + ".Javascript",
 					"Execute javascript") {
 
@@ -679,6 +681,34 @@ public class CommandLoader {
 				}
 			});
 		}
+
+		cmds.add(new CommandHandler(plugin, new String[] { "SetInputMethod", "(InputMethod)" },
+				permPrefix + ".InputMethod", "Set your value request input method", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				Player player = (Player) sender;
+				InputMethod method = InputMethod.getMethod(args[1]);
+
+				PlayerInputManager.setInputMethod(player.getUniqueId(), method);
+
+				sendMessage(sender, "&aInput method set to &e" + method.name());
+			}
+		});
+
+		cmds.add(new CommandHandler(plugin, new String[] { "InputMethod" }, permPrefix + ".InputMethod",
+				"Set your value request input method", false) {
+
+			@Override
+			public void execute(CommandSender sender, String[] args) {
+				if (!(sender instanceof Player)) {
+					sendMessage(sender, "&cOnly players can use this command");
+					return;
+				}
+
+				new ValueRequest(plugin, plugin.getDialogService()).openInputMethodSelection((Player) sender);
+			}
+		});
 
 		for (CommandHandler cmd : cmds) {
 			cmd.setAdvancedCoreCommand(true);

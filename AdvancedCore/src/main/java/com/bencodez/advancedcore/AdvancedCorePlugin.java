@@ -72,6 +72,8 @@ import com.bencodez.simpleapi.sql.DataType;
 import com.bencodez.simpleapi.sql.sqlite.Database;
 import com.bencodez.simpleapi.sql.sqlite.Table;
 import com.bencodez.simpleapi.utils.PluginUtils;
+import com.bencodez.simpleapi.valuerequest.InputMethod;
+import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -1011,6 +1013,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			times.add(ty.toString());
 		}
 		TabCompleteHandler.getInstance().addTabCompleteOption("(TimeType)", times);
+
+		TabCompleteHandler.getInstance().addTabCompleteOption("(InputMethod)", InputMethod.getMethodNames());
 	}
 
 	/**
@@ -1167,6 +1171,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		loadHook();
 		onPostLoad();
+
+		ValueRequest.initializeInputMethodChanger(
+				"&7Input method not working? [Text=\"&e[Change Input Method]\",hover=\"&eClick to change your input method\",command=\"/av inputmethod\"]");
 
 		try {
 			dialogService = new UniDialogService(this, getName().toLowerCase() + "_dialogs");
