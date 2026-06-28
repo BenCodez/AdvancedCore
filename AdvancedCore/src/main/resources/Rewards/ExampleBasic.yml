@@ -35,8 +35,12 @@ Items:
     Material: 'DIAMOND'
     # Will only give Amount if min and max amounts are 0
     Amount: 1
-    # Set item durability
-    # Set to 0 or remove line for no durability
+    # Set item damage for damageable items # This replaces the old Durability option on newer Minecraft versions 
+    # Set to 0 or remove line for no damage 
+    #Damage: 100 
+    
+    # Legacy durability support for older configs 
+    # Prefer Damage on newer Minecraft versions 
     #Durability: 100
     
     # Random amount of items between Min and Max will be given
@@ -83,6 +87,13 @@ Items:
     
     # CustomModelData nbt tag
     #CustomModelData: 100
+    
+    # Leather armor color 
+    # 0-255 
+    #LeatherColor: 
+      #Red: 0 
+      #Green: 0 
+      #Blue: 0
     
     # Item models, 1.21.5+ only
     #ItemModel: "custom:modelname"

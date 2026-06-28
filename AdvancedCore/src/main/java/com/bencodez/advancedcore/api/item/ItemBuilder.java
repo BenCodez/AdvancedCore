@@ -27,6 +27,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -304,9 +305,13 @@ public class ItemBuilder {
 								addLoreLine(line);
 							}
 						}
-						int durability = data.getInt("Durability");
-						if (durability > 0) {
-							setDurability((short) durability);
+						if (data.contains("Damage")) {
+							setDamage(data.getInt("Damage"));
+						} else {
+							int durability = data.getInt("Durability");
+							if (durability > 0) {
+								setDurability((short) durability);
+							}
 						}
 
 						if (data.isConfigurationSection("Enchants")) {
@@ -335,6 +340,12 @@ public class ItemBuilder {
 							ConfigurationSection potionColor = data.getConfigurationSection("PotionColor");
 							color = Color.fromRGB(potionColor.getInt("Red", 0), potionColor.getInt("Green", 0),
 									potionColor.getInt("Blue", 0));
+						}
+
+						if (data.isConfigurationSection("LeatherColor")) {
+							ConfigurationSection leatherColor = data.getConfigurationSection("LeatherColor");
+							setLeatherArmorColor(Color.fromRGB(leatherColor.getInt("Red", 0), leatherColor.getInt("Green", 0),
+									leatherColor.getInt("Blue", 0)));
 						}
 
 						if (data.isConfigurationSection("Potions")) {
@@ -739,40 +750,11 @@ public class ItemBuilder {
 
 	/**
 	 * Creates configuration data from this ItemBuilder.
-	 * 
+	 *
 	 * @return the configuration data map
 	 */
-	@SuppressWarnings("deprecation")
 	public LinkedHashMap<String, Object> createConfigurationData() {
-		LinkedHashMap<String, Object> data = new LinkedHashMap<>();
-		data.put("Material", is.getType().toString());
-		data.put("Amount", getAmount());
-		if (hasCustomDisplayName()) {
-			data.put("Name", getName());
-		}
-		if (hasCustomLore()) {
-			data.put("Lore", getLore());
-		}
-		data.put("Durability", is.getDurability());
-		data.put("Data", is.getData().getData());
-
-		for (Entry<Enchantment, Integer> en : is.getItemMeta().getEnchants().entrySet()) {
-			data.put("Enchants." + en.getKey().getName(), en.getValue());
-		}
-
-		ArrayList<String> flags = new ArrayList<>();
-		for (ItemFlag fl : is.getItemMeta().getItemFlags()) {
-			flags.add(fl.toString());
-		}
-
-		data.put("ItemFlags", flags);
-
-		data.put("Unbreakable", is.getItemMeta().isUnbreakable());
-
-		data.put("Skull", getSkull());
-
-		return data;
-
+		return new LinkedHashMap<>(getConfiguration(false));
 	}
 
 	/**
@@ -830,45 +812,280 @@ public class ItemBuilder {
 
 	/**
 	 * Gets the configuration map.
-	 * 
-	 * @param deseralize whether to deserialize the item
+	 *
+	 * @param deseralize whether to return Bukkit's full serialized ItemStack data
 	 * @return the configuration map
 	 */
-	@SuppressWarnings("deprecation")
 	public Map<String, Object> getConfiguration(boolean deseralize) {
 		if (deseralize) {
 			return is.serialize();
 		}
-		HashMap<String, Object> map = new HashMap<>();
+
+		LinkedHashMap<String, Object> map = new LinkedHashMap<>();
 		map.put("Material", is.getType().toString());
 		map.put("Amount", is.getAmount());
-		if (hasCustomDisplayName()) {
-			map.put("Name", getName());
+
+		ItemMeta meta = is.getItemMeta();
+		if (meta == null) {
+			return map;
 		}
-		if (hasCustomLore()) {
-			map.put("Lore", getLore());
+
+		if (meta.hasDisplayName()) {
+			map.put("Name", meta.getDisplayName());
 		}
-		ItemMeta im = is.getItemMeta();
-		for (Entry<Enchantment, Integer> entry : im.getEnchants().entrySet()) {
-			map.put("Enchants." + entry.getKey().getKeyOrThrow().getKey(), entry.getValue().intValue());
+
+		if (meta.hasLore() && meta.getLore() != null) {
+			map.put("Lore", new ArrayList<>(meta.getLore()));
+		}
+
+		addDamageToConfiguration(map, meta);
+
+		addEnchantmentsToConfiguration(map, meta);
+		addItemFlagsToConfiguration(map, meta);
+		addUnbreakableToConfiguration(map, meta);
+		addCustomModelDataToConfiguration(map, meta);
+		addItemModelToConfiguration(map, meta);
+		addSkullToConfiguration(map, meta);
+		addLeatherArmorToConfiguration(map, meta);
+		addPotionToConfiguration(map, meta);
+		addFireworkToConfiguration(map, meta);
+		addHideToolTipToConfiguration(map, meta);
+
+		return map;
+	}
+
+	/**
+	 * Gets the configuration map for this item.
+	 *
+	 * @param deserialize true to return Bukkit's full serialized ItemStack data
+	 * @return the configuration map
+	 */
+	public Map<String, Object> getConfigurationData(boolean deserialize) {
+		return getConfiguration(deserialize);
+	}
+
+	/**
+	 * Adds item damage to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addDamageToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		if (meta instanceof Damageable damageable && damageable.hasDamage()) {
+			map.put("Damage", damageable.getDamage());
+		}
+	}
+
+	/**
+	 * Adds enchantments to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addEnchantmentsToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		Map<Enchantment, Integer> enchantments = new LinkedHashMap<>(meta.getEnchants());
+
+		if (meta instanceof EnchantmentStorageMeta storageMeta) {
+			enchantments.putAll(storageMeta.getStoredEnchants());
+		}
+
+		for (Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+			String enchantmentName = getEnchantmentConfigurationName(entry.getKey());
+			map.put("Enchants." + enchantmentName, entry.getValue());
+		}
+	}
+
+	/**
+	 * Gets the enchantment name to use in configuration.
+	 *
+	 * @param enchantment the enchantment
+	 * @return the configuration-safe enchantment name
+	 */
+	@SuppressWarnings("deprecation")
+	private String getEnchantmentConfigurationName(Enchantment enchantment) {
+		try {
+			return enchantment.getKey().getKey();
+		} catch (Throwable ignored) {
+			return enchantment.getName();
+		}
+	}
+
+	/**
+	 * Adds item flags to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addItemFlagsToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		if (meta.getItemFlags().isEmpty()) {
+			return;
 		}
 
 		ArrayList<String> flagList = new ArrayList<>();
-		for (ItemFlag flag : im.getItemFlags()) {
+		for (ItemFlag flag : meta.getItemFlags()) {
 			flagList.add(flag.toString());
 		}
 		map.put("ItemFlags", flagList);
+	}
 
-		if (im.hasCustomModelData()) {
-			map.put("CustomModelData", im.getCustomModelData());
+	/**
+	 * Adds the unbreakable value to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addUnbreakableToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		try {
+			if (meta.isUnbreakable()) {
+				map.put("Unbreakable", true);
+			}
+		} catch (Throwable ignored) {
+		}
+	}
+
+	/**
+	 * Adds custom model data to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	@SuppressWarnings("deprecation")
+	private void addCustomModelDataToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		try {
+			if (meta.hasCustomModelData()) {
+				map.put("CustomModelData", meta.getCustomModelData());
+			}
+		} catch (Throwable ignored) {
+		}
+	}
+
+	/**
+	 * Adds the item model to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addItemModelToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		if (!hasGetItemModel(meta)) {
+			return;
 		}
 
-		if (hasGetItemModel(im)) {
-			map.put("ItemModel", ItemModelHandler.getModel(is));
+		String model = ItemModelHandler.getModel(is);
+		if (model != null && !model.isEmpty()) {
+			map.put("ItemModel", model);
+		}
+	}
+
+	/**
+	 * Adds skull owner data to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	@SuppressWarnings("deprecation")
+	private void addSkullToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		if (!(meta instanceof SkullMeta skullMeta)) {
+			return;
 		}
 
-		return map;
+		if (skullMeta.getOwningPlayer() != null && skullMeta.getOwningPlayer().getName() != null) {
+			map.put("Skull", skullMeta.getOwningPlayer().getName());
+			return;
+		}
 
+		if (skullMeta.hasOwner()) {
+			map.put("Skull", skullMeta.getOwner());
+		}
+	}
+
+	/**
+	 * Adds leather armor color data to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addLeatherArmorToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		if (!(meta instanceof LeatherArmorMeta leatherArmorMeta)) {
+			return;
+		}
+
+		Color color = leatherArmorMeta.getColor();
+		map.put("LeatherColor.Red", color.getRed());
+		map.put("LeatherColor.Green", color.getGreen());
+		map.put("LeatherColor.Blue", color.getBlue());
+	}
+
+	/**
+	 * Adds potion data to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addPotionToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		if (!(meta instanceof PotionMeta potionMeta)) {
+			return;
+		}
+
+		if (potionMeta.getColor() != null) {
+			Color color = potionMeta.getColor();
+			map.put("PotionColor.Red", color.getRed());
+			map.put("PotionColor.Green", color.getGreen());
+			map.put("PotionColor.Blue", color.getBlue());
+		}
+
+		for (PotionEffect effect : potionMeta.getCustomEffects()) {
+			String effectName = getPotionEffectConfigurationName(effect.getType());
+			map.put("Potions." + effectName + ".Duration", effect.getDuration());
+			map.put("Potions." + effectName + ".Amplifier", effect.getAmplifier());
+		}
+	}
+
+	/**
+	 * Gets the potion effect name to use in configuration.
+	 *
+	 * @param effectType the potion effect type
+	 * @return the configuration-safe potion effect name
+	 */
+	@SuppressWarnings("deprecation")
+	private String getPotionEffectConfigurationName(PotionEffectType effectType) {
+		try {
+			return effectType.getKey().getKey();
+		} catch (Throwable ignored) {
+			return effectType.getName();
+		}
+	}
+
+	/**
+	 * Adds firework data to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addFireworkToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		if (!(meta instanceof FireworkMeta fireworkMeta)) {
+			return;
+		}
+
+		if (fireworkMeta.getPower() > 0) {
+			map.put("Power", fireworkMeta.getPower());
+		}
+	}
+
+	/**
+	 * Adds hide tooltip data to the configuration map.
+	 *
+	 * @param map  the configuration map
+	 * @param meta the item meta
+	 */
+	private void addHideToolTipToConfiguration(Map<String, Object> map, ItemMeta meta) {
+		try {
+			Method method = meta.getClass().getMethod("isHideTooltip");
+			Object value = method.invoke(meta);
+			if (value instanceof Boolean hidden && hidden) {
+				map.put("HideToolTip", true);
+			}
+		} catch (ReflectiveOperationException ignored) {
+		}
 	}
 
 	/**
@@ -1185,6 +1402,21 @@ public class ItemBuilder {
 		ItemMeta im = is.getItemMeta();
 		im.setCustomModelData(data);
 		is.setItemMeta(im);
+		return this;
+	}
+
+	/**
+	 * Sets the damage value of a damageable item.
+	 *
+	 * @param damage the damage value
+	 * @return this ItemBuilder
+	 */
+	public ItemBuilder setDamage(int damage) {
+		ItemMeta meta = is.getItemMeta();
+		if (meta instanceof Damageable damageable) {
+			damageable.setDamage(damage);
+			is.setItemMeta(meta);
+		}
 		return this;
 	}
 

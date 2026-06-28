@@ -11,7 +11,7 @@ public class ItemModelHandler {
 	/**
 	 * Sets a custom model on an item.
 	 * 
-	 * @param item the item to modify
+	 * @param item  the item to modify
 	 * @param model the model identifier
 	 * @return the modified item
 	 */
@@ -39,7 +39,9 @@ public class ItemModelHandler {
 		}
 		ItemMeta meta = item.getItemMeta();
 		if (meta != null) {
-			return meta.getItemModel().toString();
+			if (meta.hasItemModel()) {
+				return meta.getItemModel().toString();
+			}
 		}
 		return null;
 	}
