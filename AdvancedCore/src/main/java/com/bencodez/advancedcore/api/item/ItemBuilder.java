@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.item;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -977,7 +978,7 @@ public class ItemBuilder {
 	}
 
 	/**
-	 * Adds skull owner data to the configuration map.
+	 * Adds skull owner or texture data to the configuration map.
 	 *
 	 * @param map  the configuration map
 	 * @param meta the item meta
@@ -988,14 +989,465 @@ public class ItemBuilder {
 			return;
 		}
 
-		if (skullMeta.getOwningPlayer() != null && skullMeta.getOwningPlayer().getName() != null) {
+		String texture = getSkullTexture(skullMeta);
+		if (texture != null && !texture.isEmpty()) {
+			map.put("SkullTexture", texture);
+			return;
+		}
+
+		String skinUrl = getSkullSkinUrl(skullMeta);
+		if (skinUrl != null && !skinUrl.isEmpty()) {
+			map.put("SkullURL", skinUrl);
+			return;
+		}
+
+		if (skullMeta.getOwningPlayer() != null && skullMeta.getOwningPlayer().getName() != null
+				&& !skullMeta.getOwningPlayer().getName().isEmpty()) {
 			map.put("Skull", skullMeta.getOwningPlayer().getName());
 			return;
 		}
 
-		if (skullMeta.hasOwner()) {
+		if (skullMeta.hasOwner() && skullMeta.getOwner() != null && !skullMeta.getOwner().isEmpty()) {
 			map.put("Skull", skullMeta.getOwner());
 		}
+	}
+
+	/**
+	 * Gets the base64 skull texture from skull meta when available.
+	 *
+	 * @param skullMeta the skull meta
+	 * @return the base64 texture, or null
+	 */
+	private String getSkullTexture(SkullMeta skullMeta) {
+		String texture = getSkullTextureFromProfile(getSkullProfile(skullMeta, "getOwnerProfile"));
+		if (texture != null && !texture.isEmpty()) {
+			return texture;
+		}
+
+		texture = getSkullTextureFromProfile(getSkullProfile(skullMeta, "getPlayerProfile"));
+		if (texture != null && !texture.isEmpty()) {
+			return texture;
+		}
+
+		texture = getSkullTextureFromProfile(getDeclaredSkullProfile(skullMeta));
+		if (texture != null && !texture.isEmpty()) {
+			return texture;
+		}
+
+		texture = getSkullTextureFromProfile(getSkullProfileField(skullMeta));
+		if (texture != null && !texture.isEmpty()) {
+			return texture;
+		}
+
+		return getSkullTextureFromSerializedItem();
+	}
+
+	/**
+	 * Gets a skull profile using a public method.
+	 *
+	 * @param skullMeta  the skull meta
+	 * @param methodName the method name
+	 * @return the profile object, or null
+	 */
+	private Object getSkullProfile(SkullMeta skullMeta, String methodName) {
+		try {
+			Method method = skullMeta.getClass().getMethod(methodName);
+			return method.invoke(skullMeta);
+		} catch (ReflectiveOperationException ignored) {
+		}
+		return null;
+	}
+
+	/**
+	 * Gets a skull profile using CraftMetaSkull's declared getProfile method.
+	 *
+	 * @param skullMeta the skull meta
+	 * @return the profile object, or null
+	 */
+	private Object getDeclaredSkullProfile(SkullMeta skullMeta) {
+		try {
+			Method method = skullMeta.getClass().getDeclaredMethod("getProfile");
+			method.setAccessible(true);
+			return method.invoke(skullMeta);
+		} catch (ReflectiveOperationException ignored) {
+		}
+		return null;
+	}
+
+	/**
+	 * Gets a skull profile from common CraftMetaSkull profile fields.
+	 *
+	 * @param skullMeta the skull meta
+	 * @return the profile object, or null
+	 */
+	private Object getSkullProfileField(SkullMeta skullMeta) {
+		Object profile = getFieldValue(skullMeta, "profile");
+		if (profile != null) {
+			return profile;
+		}
+		return getFieldValue(skullMeta, "serializedProfile");
+	}
+
+	/**
+	 * Gets a field value from an object or its superclasses.
+	 *
+	 * @param object    the object
+	 * @param fieldName the field name
+	 * @return the field value, or null
+	 */
+	private Object getFieldValue(Object object, String fieldName) {
+		Class<?> clazz = object.getClass();
+		while (clazz != null) {
+			try {
+				Field field = clazz.getDeclaredField(fieldName);
+				field.setAccessible(true);
+				return field.get(object);
+			} catch (NoSuchFieldException ignored) {
+				clazz = clazz.getSuperclass();
+			} catch (IllegalAccessException | SecurityException ignored) {
+				return null;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Gets a base64 texture value from a profile object.
+	 *
+	 * @param profile the profile object
+	 * @return the base64 texture, or null
+	 */
+	private String getSkullTextureFromProfile(Object profile) {
+		if (profile == null) {
+			return null;
+		}
+
+		Object properties = getProfileProperties(profile);
+		String texture = getSkullTextureFromProperties(properties);
+		if (texture != null && !texture.isEmpty()) {
+			return texture;
+		}
+
+		return getTextureValueFromProperty(profile);
+	}
+
+	/**
+	 * Gets properties from a profile object.
+	 *
+	 * @param profile the profile object
+	 * @return the profile properties, or null
+	 */
+	private Object getProfileProperties(Object profile) {
+		try {
+			Method method = profile.getClass().getMethod("getProperties");
+			return method.invoke(profile);
+		} catch (ReflectiveOperationException ignored) {
+		}
+		return null;
+	}
+
+	/**
+	 * Gets a base64 texture value from profile properties.
+	 *
+	 * @param properties the profile properties
+	 * @return the base64 texture, or null
+	 */
+	@SuppressWarnings({ "unchecked" })
+	private String getSkullTextureFromProperties(Object properties) {
+		if (properties == null) {
+			return null;
+		}
+
+		if (properties instanceof Multimap multimap) {
+			Collection<?> textures = multimap.get("textures");
+			return getSkullTextureFromPropertyCollection(textures);
+		}
+
+		if (properties instanceof Iterable<?> iterable) {
+			return getSkullTextureFromPropertyCollection(iterable);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Gets a skull texture from the serialized ItemStack map.
+	 *
+	 * @return the base64 texture, or null
+	 */
+	private String getSkullTextureFromSerializedItem() {
+		try {
+			return getSkullTextureFromSerializedObject(is.serialize(), 0);
+		} catch (Throwable ignored) {
+		}
+		return null;
+	}
+
+	/**
+	 * Searches serialized objects for a textures property.
+	 *
+	 * @param object the object to search
+	 * @param depth  the recursion depth
+	 * @return the base64 texture, or null
+	 */
+	private String getSkullTextureFromSerializedObject(Object object, int depth) {
+		if (object == null || depth > 12) {
+			return null;
+		}
+
+		if (object instanceof String) {
+			return null;
+		}
+
+		if (object instanceof Map map) {
+			String texture = getSkullTextureFromSerializedMap(map);
+			if (texture != null && !texture.isEmpty()) {
+				return texture;
+			}
+
+			for (Object value : map.values()) {
+				texture = getSkullTextureFromSerializedObject(value, depth + 1);
+				if (texture != null && !texture.isEmpty()) {
+					return texture;
+				}
+			}
+			return null;
+		}
+
+		if (object instanceof Iterable<?> iterable) {
+			for (Object value : iterable) {
+				String texture = getSkullTextureFromSerializedObject(value, depth + 1);
+				if (texture != null && !texture.isEmpty()) {
+					return texture;
+				}
+			}
+			return null;
+		}
+
+		String texture = getTextureValueFromProperty(object);
+		if (texture != null && !texture.isEmpty()) {
+			return texture;
+		}
+
+		Object serialized = serializeObject(object);
+		if (serialized != null && serialized != object) {
+			return getSkullTextureFromSerializedObject(serialized, depth + 1);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Gets a skull texture from a serialized map.
+	 *
+	 * @param map the serialized map
+	 * @return the base64 texture, or null
+	 */
+	@SuppressWarnings({ "rawtypes" })
+	private String getSkullTextureFromSerializedMap(Map map) {
+		Object name = map.get("name");
+		Object value = map.get("value");
+		if (name instanceof String nameString && nameString.equalsIgnoreCase("textures")
+				&& value instanceof String valueString && !valueString.isEmpty()) {
+			return valueString;
+		}
+
+		Object textures = map.get("textures");
+		String texture = getSkullTextureFromSerializedTextureValue(textures);
+		if (texture != null && !texture.isEmpty()) {
+			return texture;
+		}
+
+		Object properties = map.get("properties");
+		texture = getSkullTextureFromSerializedTextureValue(properties);
+		if (texture != null && !texture.isEmpty()) {
+			return texture;
+		}
+
+		Object propertyMap = map.get("PropertyMap");
+		return getSkullTextureFromSerializedTextureValue(propertyMap);
+	}
+
+	/**
+	 * Gets a skull texture from a serialized texture value.
+	 *
+	 * @param value the serialized value
+	 * @return the base64 texture, or null
+	 */
+	private String getSkullTextureFromSerializedTextureValue(Object value) {
+		if (value == null) {
+			return null;
+		}
+
+		if (value instanceof String stringValue && !stringValue.isEmpty()) {
+			return stringValue;
+		}
+
+		if (value instanceof Map map) {
+			Object textures = map.get("textures");
+			if (textures != null) {
+				return getSkullTextureFromSerializedTextureValue(textures);
+			}
+
+			Object mapValue = map.get("value");
+			if (mapValue instanceof String stringValue && !stringValue.isEmpty()) {
+				return stringValue;
+			}
+		}
+
+		if (value instanceof Iterable<?> iterable) {
+			for (Object object : iterable) {
+				String texture = getSkullTextureFromSerializedObject(object, 0);
+				if (texture != null && !texture.isEmpty()) {
+					return texture;
+				}
+			}
+		}
+
+		return getSkullTextureFromSerializedObject(value, 0);
+	}
+
+	/**
+	 * Serializes an object if it supports Bukkit-style serialization.
+	 *
+	 * @param object the object
+	 * @return the serialized object, or null
+	 */
+	private Object serializeObject(Object object) {
+		try {
+			Method method = object.getClass().getMethod("serialize");
+			return method.invoke(object);
+		} catch (ReflectiveOperationException ignored) {
+		}
+		return null;
+	}
+
+	/**
+	 * Gets a base64 texture value from a property collection.
+	 *
+	 * @param properties the properties
+	 * @return the base64 texture, or null
+	 */
+	private String getSkullTextureFromPropertyCollection(Iterable<?> properties) {
+		if (properties == null) {
+			return null;
+		}
+
+		for (Object property : properties) {
+			String name = getTextureNameFromProperty(property);
+			if (name != null && !name.equalsIgnoreCase("textures")) {
+				continue;
+			}
+
+			String value = getTextureValueFromProperty(property);
+			if (value != null && !value.isEmpty()) {
+				return value;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Gets a texture property name.
+	 *
+	 * @param property the property
+	 * @return the property name, or null
+	 */
+	private String getTextureNameFromProperty(Object property) {
+		Object name = invokeNoArg(property, "getName");
+		if (name == null) {
+			name = invokeNoArg(property, "name");
+		}
+		if (name instanceof String value) {
+			return value;
+		}
+		return null;
+	}
+
+	/**
+	 * Gets a texture property value.
+	 *
+	 * @param property the property
+	 * @return the property value, or null
+	 */
+	private String getTextureValueFromProperty(Object property) {
+		Object value = invokeNoArg(property, "getValue");
+		if (value == null) {
+			value = invokeNoArg(property, "value");
+		}
+		if (value instanceof String stringValue && !stringValue.isEmpty()) {
+			return stringValue;
+		}
+		return null;
+	}
+
+	/**
+	 * Invokes a no-argument method.
+	 *
+	 * @param object     the object
+	 * @param methodName the method name
+	 * @return the method result, or null
+	 */
+	private Object invokeNoArg(Object object, String methodName) {
+		if (object == null) {
+			return null;
+		}
+
+		try {
+			Method method = object.getClass().getMethod(methodName);
+			return method.invoke(object);
+		} catch (ReflectiveOperationException ignored) {
+		}
+
+		try {
+			Method method = object.getClass().getDeclaredMethod(methodName);
+			method.setAccessible(true);
+			return method.invoke(object);
+		} catch (ReflectiveOperationException | SecurityException ignored) {
+		}
+		return null;
+	}
+
+	/**
+	 * Gets the skull skin URL from Bukkit profile APIs when available.
+	 *
+	 * @param skullMeta the skull meta
+	 * @return the skin URL, or null
+	 */
+	private String getSkullSkinUrl(SkullMeta skullMeta) {
+		String skinUrl = getSkullSkinUrlFromProfile(getSkullProfile(skullMeta, "getOwnerProfile"));
+		if (skinUrl != null && !skinUrl.isEmpty()) {
+			return skinUrl;
+		}
+		return getSkullSkinUrlFromProfile(getSkullProfile(skullMeta, "getPlayerProfile"));
+	}
+
+	/**
+	 * Gets the skull skin URL from a profile object.
+	 *
+	 * @param profile the profile object
+	 * @return the skin URL, or null
+	 */
+	private String getSkullSkinUrlFromProfile(Object profile) {
+		if (profile == null) {
+			return null;
+		}
+
+		try {
+			Method texturesMethod = profile.getClass().getMethod("getTextures");
+			Object textures = texturesMethod.invoke(profile);
+			if (textures == null) {
+				return null;
+			}
+
+			Method skinMethod = textures.getClass().getMethod("getSkin");
+			Object skin = skinMethod.invoke(textures);
+			if (skin != null) {
+				return skin.toString();
+			}
+		} catch (ReflectiveOperationException ignored) {
+		}
+		return null;
 	}
 
 	/**
