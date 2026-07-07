@@ -391,7 +391,7 @@ public class AdvancedCoreConfigOptions {
 	 */
 	@Getter
 	@Setter
-	@ConfigDataBoolean(path = "JavascriptEngine.Enabled", secondPath = "DisableJavascript", secondPathInvert = true)
+	@ConfigDataBoolean(path = "JavascriptEngine.Enabled")
 	private boolean javascriptEngineEnabled = false;
 
 	/**
@@ -416,7 +416,7 @@ public class AdvancedCoreConfigOptions {
 	 */
 	@Getter
 	@Setter
-	@ConfigDataBoolean(path = "JavascriptEngine.CommandEnabled", secondPath = "EnableJavascriptCommand")
+	@ConfigDataBoolean(path = "JavascriptEngine.CommandEnabled")
 	private boolean javascriptEngineCommandEnabled = false;
 
 	/**
