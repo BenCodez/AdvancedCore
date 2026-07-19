@@ -357,8 +357,8 @@ public class AdvancedCoreUser {
 			String rewardName = parts[0];
 			String placeholderStr = parts.length > 1 ? parts[1] : "";
 
-			RewardOptions options = new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
-					.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholderStr));
+			RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false)
+					.withPlaceHolder(ArrayUtils.fromString(placeholderStr));
 
 			rewardHandler.giveReward(user, rewardName, options);
 		}
