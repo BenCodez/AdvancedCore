@@ -1,6 +1,9 @@
 package com.bencodez.advancedcore.tests.user;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,11 +13,15 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.rewards.RewardHandler;
+import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserData;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
@@ -25,6 +32,7 @@ public class AdvancedCoreUserTest {
 	private UserManager userManager;
 	private UserDataManager dataManager;
 	private UserData data;
+	private RewardHandler rewardHandler;
 	private AdvancedCoreUser user;
 
 	@BeforeEach
@@ -33,6 +41,7 @@ public class AdvancedCoreUserTest {
 		userManager = mock(UserManager.class);
 		dataManager = mock(UserDataManager.class);
 		data = mock(UserData.class);
+		rewardHandler = mock(RewardHandler.class);
 		MySQL mysql = mock(MySQL.class);
 
 		AdvancedCoreConfigOptions configOptions = mock(AdvancedCoreConfigOptions.class);
@@ -41,11 +50,47 @@ public class AdvancedCoreUserTest {
 		when(plugin.getMysql()).thenReturn(mysql);
 		when(userManager.getDataManager()).thenReturn(dataManager);
 		when(plugin.getUserManager()).thenReturn(userManager);
+		when(plugin.getRewardHandler()).thenReturn(rewardHandler);
 		when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
 		when(userManager.getOfflineRewardsPath()).thenReturn("offlineRewardsPath");
+		when(configOptions.isProcessRewards()).thenReturn(true);
 
 		user = new AdvancedCoreUser(plugin, UUID.randomUUID(),"Test");
 		user.setData(data); // Inject the mocked UserData object
+	}
+
+	@Test
+	void checkOfflineRewards_preservesServerRequirementForNormalReplay() {
+		ArrayList<String> rewards = new ArrayList<>();
+		rewards.add("VoteReward%placeholders%Server%pair%server-a");
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenReturn(rewards);
+
+		user.checkOfflineRewards();
+
+		ArgumentCaptor<RewardOptions> optionsCaptor = ArgumentCaptor.forClass(RewardOptions.class);
+		verify(rewardHandler).giveReward(eq(user), eq("VoteReward"), optionsCaptor.capture());
+		RewardOptions options = optionsCaptor.getValue();
+		assertFalse(options.isForceOffline());
+		assertTrue(options.isGiveOffline());
+		assertFalse(options.isCheckTimed());
+		assertEquals("server-a", options.getPlaceholders().get("Server"));
+	}
+
+	@Test
+	void forceRunOfflineRewards_stillBypassesNormalReplayChecks() {
+		ArrayList<String> rewards = new ArrayList<>();
+		rewards.add("VoteReward%placeholders%Server%pair%server-a");
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenReturn(rewards);
+
+		user.forceRunOfflineRewards();
+
+		ArgumentCaptor<RewardOptions> optionsCaptor = ArgumentCaptor.forClass(RewardOptions.class);
+		verify(rewardHandler).giveReward(eq(user), eq("VoteReward"), optionsCaptor.capture());
+		RewardOptions options = optionsCaptor.getValue();
+		assertTrue(options.isForceOffline());
+		assertFalse(options.isGiveOffline());
+		assertFalse(options.isCheckTimed());
+		assertEquals("server-a", options.getPlaceholders().get("Server"));
 	}
 
 	@Test
