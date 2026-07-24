@@ -1116,7 +1116,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			JavascriptEngineHandler.getInstance().clearCachedEngine();
 		}
 
-		if (loadUserData && getOptions().getStorageType().equals(UserStorage.MYSQL)) {
+		if (loadUserData && UserStorage.MYSQL.equals(getOptions().getStorageType()) && getMysql() != null) {
 			getMysql().close();
 		}
 		getServerDataFile().setLastUpdated();
