@@ -190,11 +190,12 @@ public class PlaceholderUtils {
 	}
 
 	public static String replaceJavascript(Player player, String text) {
+		String msg = replacePlaceHolders(player, text);
 		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(replacePlaceHolders(player, text), engine);
+			return replaceJavascript(msg, engine);
 		}
-		return text;
+		return msg;
 	}
 
 	public static String replaceJavascript(String text) {
