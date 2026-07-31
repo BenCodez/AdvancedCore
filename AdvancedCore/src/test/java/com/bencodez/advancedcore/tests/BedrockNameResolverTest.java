@@ -145,6 +145,94 @@ public class BedrockNameResolverTest {
 	}
 
 	@Test
+	public void testResolve_storedJavaWinsWhenPrefixedBedrockIsOnline() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		DetectStub detect = new DetectStub();
+		setDetect(resolver, detect);
+
+		AdvancedCoreUser javaUser = mock(AdvancedCoreUser.class);
+		when(javaUser.isBedrockUser()).thenReturn(false);
+		when(userManager.userExistStored("SharedName")).thenReturn(true);
+		when(userManager.getUser("SharedName")).thenReturn(javaUser);
+
+		UUID bedrockUuid = UUID.randomUUID();
+		detect.set(bedrockUuid, true);
+		Player bedrockPlayer = mock(Player.class);
+		when(bedrockPlayer.getName()).thenReturn(".SharedName");
+		when(bedrockPlayer.getUniqueId()).thenReturn(bedrockUuid);
+		mockOnlinePlayers(bedrockPlayer);
+
+		BedrockNameResolver.Result r = resolver.resolve("SharedName");
+		assertFalse(r.isBedrock);
+		assertEquals("SharedName", r.finalName);
+		assertEquals("db-java", r.rationale);
+	}
+
+	@Test
+	public void testResolve_prefixedOnlineFallbackWhenNoExactIdentityExists() throws Exception {
+		BedrockNameResolver resolver = newResolverWithPrefix(".");
+		DetectStub detect = new DetectStub();
+		setDetect(resolver, detect);
+
+		UUID bedrockUuid = UUID.randomUUID();
+		detect.set(bedrockUuid, true);
+		Player bedrockPlayer = mock(Player.class);
+		when(bedrockPlayer.getName()).thenReturn(".OnlyBedrock");
+		when(bedrockPlayer.getUniqueId()).thenReturn(bedrockUuid);
+		mockOnlinePlayers(bedrockPlayer);
+
+		BedrockNameResolver.Result r = resolver.resolve("OnlyBedrock");
+		assertTrue(r.isBedrock);
+		assertEquals(".OnlyBedrock", r.finalName);
+		assertEquals("online-uuid-bedrock", r.rationale);
+	}
+
+	@Test
+	public void testResolve_explicitPrefixedVoteRemainsBedrockDuringCollision() throws Exception {
+		BedrockNameResolver resolver = newResolverWithPrefix(".");
+		DetectStub detect = new DetectStub();
+		setDetect(resolver, detect);
+
+		Player javaPlayer = mock(Player.class);
+		when(javaPlayer.getName()).thenReturn("SharedName");
+		when(javaPlayer.getUniqueId()).thenReturn(UUID.randomUUID());
+
+		UUID bedrockUuid = UUID.randomUUID();
+		detect.set(bedrockUuid, true);
+		Player bedrockPlayer = mock(Player.class);
+		when(bedrockPlayer.getName()).thenReturn(".SharedName");
+		when(bedrockPlayer.getUniqueId()).thenReturn(bedrockUuid);
+		mockOnlinePlayers(javaPlayer, bedrockPlayer);
+
+		BedrockNameResolver.Result r = resolver.resolve(".SharedName");
+		assertTrue(r.isBedrock);
+		assertEquals(".SharedName", r.finalName);
+		assertEquals("online-uuid-bedrock", r.rationale);
+	}
+
+	@Test
+	public void testResolve_prefixedDatabaseFallbackIsReachable() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+
+		AdvancedCoreUser bedrockUser = mock(AdvancedCoreUser.class);
+		when(bedrockUser.isBedrockUser()).thenReturn(true);
+		when(userManager.userExistStored("OnlyStored")).thenReturn(false);
+		when(userManager.userExistStored(".OnlyStored")).thenReturn(true);
+		when(userManager.getUser(".OnlyStored")).thenReturn(bedrockUser);
+
+		BedrockNameResolver.Result r = resolver.resolve("OnlyStored");
+		assertTrue(r.isBedrock);
+		assertEquals(".OnlyStored", r.finalName);
+		assertEquals("db-bedrock-prefixed-variant", r.rationale);
+	}
+
+	@Test
 	public void testIsBedrock_uuidAuthoritative_true() throws Exception {
 		BedrockNameResolver resolver = newResolverWithPrefix(".");
 		DetectStub detect = new DetectStub();
@@ -187,6 +275,7 @@ public class BedrockNameResolverTest {
 		AdvancedCoreUser dbUser = mock(AdvancedCoreUser.class);
 		when(dbUser.isBedrockUser()).thenReturn(true);
 
+		when(userManager.userExistStored("NotCached")).thenReturn(true);
 		when(userManager.getUser("NotCached")).thenReturn(dbUser);
 
 		assertTrue(resolver.isBedrockName("NotCached"));
