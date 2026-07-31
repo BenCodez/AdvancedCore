@@ -94,70 +94,15 @@ public final class BedrockNameResolver {
 			}
 		}
 
-		// 2) If name supplied, try the usual name resolution chain
-		if (name != null && !name.isEmpty()) {
-			// Online (authoritative) - match exact and (prefix-stripped) forms
-			Player match = findOnlineByNameOrStripped(name);
-			if (match != null) {
-				boolean online = bedrockDetect.isBedrock(match.getUniqueId());
-				plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): " + online + " via online UUID match");
-				return online;
-			}
-
-			// Cache (case-insensitive) - try incoming name, and prefixed variant if
-			// applicable
-			Boolean cached = getCachedCaseInsensitive(name);
-			if (cached != null) {
-				plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): " + cached + " via cache");
-				return cached;
-			}
-			String prefixed = buildPrefixedVariant(name);
-			if (prefixed != null) {
-				Boolean cachedPrefixed = getCachedCaseInsensitive(prefixed);
-				if (cachedPrefixed != null) {
-					plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): " + cachedPrefixed
-							+ " via cache (prefixed-variant)");
-					return cachedPrefixed;
-				}
-			}
-
-			// DB flag (NOTE: may trigger UUID lookups depending on your UserManager
-			// implementation)
-			try {
-				AdvancedCoreUser user = userManager.getUser(name);
-				if (user == null) {
-					String canonical = ciIndex.get(name.toLowerCase(Locale.ROOT));
-					if (canonical != null)
-						user = userManager.getUser(canonical);
-				}
-				if (user != null && user.isBedrockUser()) {
-					plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): TRUE via DB flag");
-					return true;
-				}
-
-				// Also try DB under prefixed variant if incoming is unprefixed
-				if (prefixed != null) {
-					AdvancedCoreUser u2 = userManager.getUser(prefixed);
-					if (u2 != null && u2.isBedrockUser()) {
-						plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): TRUE via DB flag (prefixed-variant)");
-						return true;
-					}
-				}
-			} catch (Throwable ignored) {
-			}
-
-			// Prefix fallback (only if prefix is non-empty)
-			if (bedrockPrefix != null && !bedrockPrefix.isEmpty() && name.startsWith(bedrockPrefix)) {
-				plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): TRUE via prefix fallback");
-				return true;
-			}
-		}
-
-		plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): FALSE (no signals)");
-		return false;
+		// 2) Resolve the name with the same exact-before-prefixed policy used by
+		// vote and user lookups.
+		Result resolved = resolve(name);
+		plugin.debug("[BedrockNameResolver] isBedrock(uuid,name): " + resolved.isBedrock + " via "
+				+ resolved.rationale);
+		return resolved.isBedrock;
 	}
 
-	// ------------ EXISTING METHODS (unchanged behavior) ------------
+	// ------------ Learning and name resolution ------------
 
 	/**
 	 * Learns whether a user is a Bedrock player.
@@ -204,50 +149,7 @@ public final class BedrockNameResolver {
 	 * @return true if the player is a Bedrock player
 	 */
 	public boolean isBedrockName(String name) {
-		if (name == null || name.isEmpty())
-			return false;
-
-		// Online - match exact and (prefix-stripped) forms
-		Player match = findOnlineByNameOrStripped(name);
-		if (match != null) {
-			return bedrockDetect.isBedrock(match.getUniqueId());
-		}
-
-		// Cache (case-insensitive) on incoming name
-		Boolean cached = getCachedCaseInsensitive(name);
-		if (cached != null)
-			return cached;
-
-		// Cache on prefixed variant (if incoming was unprefixed)
-		String prefixed = buildPrefixedVariant(name);
-		if (prefixed != null) {
-			Boolean cachedPrefixed = getCachedCaseInsensitive(prefixed);
-			if (cachedPrefixed != null)
-				return cachedPrefixed;
-		}
-
-		// DB flag (NOTE: may trigger UUID lookups depending on your UserManager
-		// implementation)
-		try {
-			AdvancedCoreUser user = userManager.getUser(name);
-			if (user == null) {
-				String canonical = ciIndex.get(name.toLowerCase(Locale.ROOT));
-				if (canonical != null)
-					user = userManager.getUser(canonical);
-			}
-			if (user != null && user.isBedrockUser())
-				return true;
-
-			// Also try DB under prefixed variant if incoming is unprefixed
-			if (prefixed != null) {
-				AdvancedCoreUser u2 = userManager.getUser(prefixed);
-				if (u2 != null && u2.isBedrockUser())
-					return true;
-			}
-		} catch (Throwable ignored) {
-		}
-
-		return bedrockPrefix != null && !bedrockPrefix.isEmpty() && name.startsWith(bedrockPrefix);
+		return resolve(name).isBedrock;
 	}
 
 	/**
@@ -260,29 +162,37 @@ public final class BedrockNameResolver {
 		if (incomingName == null || incomingName.isEmpty())
 			return new Result(incomingName, false, "empty-name");
 
-		// Online - match exact and (prefix-stripped) forms
-		Player match = findOnlineByNameOrStripped(incomingName);
+		// An exact online identity is authoritative.
+		Player match = findOnlineExact(incomingName);
 		if (match != null) {
-			boolean bedrock = bedrockDetect.isBedrock(match.getUniqueId());
-
-			// Canonical name: if bedrock and online name is prefixed, use the online name
-			String finalName = match.getName();
-			if (!bedrock) {
-				// if java, keep whatever was supplied (or the online exact, doesn't matter)
-				finalName = incomingName;
-			} else {
-				// ensure prefix if online name isn't prefixed for some reason
-				finalName = addPrefixIfNeeded(finalName, true);
-			}
-			return new Result(finalName, bedrock, bedrock ? "online-uuid-bedrock" : "online-uuid-java");
+			return resultFromOnlineMatch(incomingName, match);
 		}
 
-		// Cache on incoming name
+		// A known exact identity must win before an online prefixed variant. This
+		// prevents an online Bedrock account such as ".Name" from taking a vote for
+		// an offline Java account named "Name".
 		Boolean cached = getCachedCaseInsensitive(incomingName);
 		if (cached != null) {
 			boolean bedrock = cached;
 			String finalName = addPrefixIfNeeded(incomingName, bedrock);
 			return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java"));
+		}
+
+		try {
+			if (userManager.userExistStored(incomingName)) {
+				AdvancedCoreUser user = userManager.getUser(incomingName);
+				boolean bedrock = user.isBedrockUser();
+				String finalName = addPrefixIfNeeded(incomingName, bedrock);
+				return new Result(finalName, bedrock, "db-" + (bedrock ? "bedrock" : "java"));
+			}
+		} catch (Throwable ignored) {
+		}
+
+		// Only when no exact identity is known may an online prefixed/stripped
+		// Bedrock identity act as a fallback.
+		match = findOnlinePrefixedOrStripped(incomingName);
+		if (match != null) {
+			return resultFromOnlineMatch(incomingName, match);
 		}
 
 		// Cache on prefixed variant
@@ -297,31 +207,15 @@ public final class BedrockNameResolver {
 			}
 		}
 
-		// DB flag (NOTE: may trigger UUID lookups depending on your UserManager
-		// implementation)
+		// DB flag on the prefixed variant. Check storage existence before creating a
+		// user wrapper; getUser(String) itself never returns null for a missing name.
 		try {
-			AdvancedCoreUser user = userManager.getUser(incomingName);
-
-			if (user == null) {
-				String canonical = ciIndex.get(incomingName.toLowerCase(Locale.ROOT));
-				if (canonical != null)
-					user = userManager.getUser(canonical);
-			}
-			if (user != null) {
-				boolean bedrock = user.isBedrockUser();
-				String finalName = addPrefixIfNeeded(incomingName, bedrock);
-				return new Result(finalName, bedrock, "db-" + (bedrock ? "bedrock" : "java"));
-			}
-
-			// Also try DB under prefixed variant
-			if (prefixed != null) {
+			if (prefixed != null && userManager.userExistStored(prefixed)) {
 				AdvancedCoreUser u2 = userManager.getUser(prefixed);
-				if (u2 != null) {
-					boolean bedrock = u2.isBedrockUser();
-					// if the prefixed record is bedrock, credit prefixed
-					String finalName = bedrock ? prefixed : incomingName;
-					return new Result(finalName, bedrock, "db-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
-				}
+				boolean bedrock = u2.isBedrockUser();
+				String finalName = bedrock ? prefixed : incomingName;
+				return new Result(finalName, bedrock,
+						"db-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
 			}
 		} catch (Throwable ignored) {
 		}
@@ -338,17 +232,10 @@ public final class BedrockNameResolver {
 			return new Result(incomingName, false, "empty-name");
 		}
 
-		// Online - match exact and stripped forms
-		Player match = findOnlineByNameOrStripped(incomingName);
+		// Exact online identity first.
+		Player match = findOnlineExact(incomingName);
 		if (match != null) {
-			boolean bedrock = bedrockDetect.isBedrock(match.getUniqueId());
-
-			String finalName = incomingName;
-			if (bedrock) {
-				finalName = addPrefixIfNeeded(match.getName(), true);
-			}
-
-			return new Result(finalName, bedrock, bedrock ? "online-uuid-bedrock" : "online-uuid-java");
+			return resultFromOnlineMatch(incomingName, match);
 		}
 
 		// Cache on incoming name
@@ -357,6 +244,13 @@ public final class BedrockNameResolver {
 			boolean bedrock = cached;
 			String finalName = addPrefixIfNeeded(incomingName, bedrock);
 			return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java"));
+		}
+
+		// Only use an online prefixed/stripped fallback when no exact cached identity
+		// exists.
+		match = findOnlinePrefixedOrStripped(incomingName);
+		if (match != null) {
+			return resultFromOnlineMatch(incomingName, match);
 		}
 
 		// Cache on prefixed variant
@@ -447,25 +341,40 @@ public final class BedrockNameResolver {
 		return n;
 	}
 
+	private Result resultFromOnlineMatch(String incomingName, Player match) {
+		boolean bedrock = bedrockDetect.isBedrock(match.getUniqueId());
+		String finalName = bedrock ? addPrefixIfNeeded(match.getName(), true) : incomingName;
+		return new Result(finalName, bedrock, bedrock ? "online-uuid-bedrock" : "online-uuid-java");
+	}
+
 	/**
-	 * Find an online player matching the provided name in either:
-	 * <ul>
-	 * <li>Exact form (case-insensitive)</li>
-	 * <li>Prefixed variant (case-insensitive)</li>
-	 * <li>Prefix-stripped comparison (e.g. ".DarkAshley" matches "darkashley")</li>
-	 * </ul>
-	 *
-	 * <p>
-	 * IMPORTANT: If both a Java and Bedrock player effectively match the same
-	 * unprefixed input (e.g. "Name" and ".Name" are both online), this method will
-	 * deterministically prefer the Java player to avoid incorrectly forcing Bedrock
-	 * resolution due to non-deterministic iteration order.
-	 * </p>
+	 * Find an exact online player without considering prefixed or stripped aliases.
 	 *
 	 * @param name incoming player name
-	 * @return matching online {@link Player} or null
+	 * @return exact online player or null
 	 */
-	private Player findOnlineByNameOrStripped(String name) {
+	private Player findOnlineExact(String name) {
+		if (name == null || name.isEmpty()) {
+			return null;
+		}
+
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			final String pn = p.getName();
+			if (pn != null && pn.equalsIgnoreCase(name)) {
+				return p;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Find an online prefixed or prefix-stripped fallback. Callers must first rule
+	 * out exact online, cached, and stored identities.
+	 *
+	 * @param name incoming player name
+	 * @return fallback online player or null
+	 */
+	private Player findOnlinePrefixedOrStripped(String name) {
 		if (name == null || name.isEmpty()) {
 			return null;
 		}
@@ -473,15 +382,6 @@ public final class BedrockNameResolver {
 		final String lower = name.toLowerCase(Locale.ROOT);
 		final String prefixed = buildPrefixedVariant(name);
 
-		// 1) Exact match first (deterministic preference)
-		for (Player p : Bukkit.getOnlinePlayers()) {
-			final String pn = p.getName();
-			if (pn != null && pn.equalsIgnoreCase(name)) {
-				return p;
-			}
-		}
-
-		// 2) Prefixed variant match next (if incoming was unprefixed)
 		if (prefixed != null) {
 			for (Player p : Bukkit.getOnlinePlayers()) {
 				final String pn = p.getName();
@@ -491,7 +391,6 @@ public final class BedrockNameResolver {
 			}
 		}
 
-		// 3) Prefix-stripped match last
 		// If multiple players match after stripping, prefer Java over Bedrock.
 		Player bedrockCandidate = null;
 		Player javaCandidate = null;
