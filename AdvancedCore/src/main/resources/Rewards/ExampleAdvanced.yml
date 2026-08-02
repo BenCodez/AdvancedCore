@@ -41,7 +41,7 @@ Chance: 40
 # Item conditional example
 Items:
   Item1:
-    # Javacript for conditional
+    # Javascript for conditional
     # Uses return value to get item info (can be anything, like numbers)
     ConditionalJavascript: 'User.canVoteAll()'
     Conditional:
@@ -188,7 +188,7 @@ AdvancedWorld:
 #    - say test
       
 # Special chance
-# percentage is caculated with all numbers added up
+# Percentage is calculated with all numbers added up
 # E.g. below:
 # Total is 100, so 5 is 5 out of 100, and so on
 # The number represents a weight value essentially
@@ -323,7 +323,7 @@ BossBar:
   # Bar Styles:
   # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/boss/BarStyle.html
   Style: 'SOLID'
-  # Precentage for bar
+  # Percentage for bar
   Progress: 0.50
   # Delay until bar goes away (in ticks)
   Delay: 30
@@ -348,7 +348,7 @@ Sound:
 Effect:
   Enabled: false
   Effect: 'EXPLOSION_NORMAL'
-  # Ususally speed
+  # Usually speed
   Data: 1
   Particles: 10
   Radius: 5
