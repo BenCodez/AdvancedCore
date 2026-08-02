@@ -21,7 +21,7 @@
 
 # If true:
 # Only allow one item with chance to go through (from items below)
-# If no chance specificied it will only give the first item
+# If no chance is specified it will only give the first item
 OnlyOneItemChance: false
 
 # Items to give to user
