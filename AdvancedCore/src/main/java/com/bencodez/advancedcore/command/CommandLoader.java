@@ -657,7 +657,7 @@ public class CommandLoader {
 		if (plugin.isLoadUserData()) {
 			cmds.add(new CommandHandler(plugin, new String[] { "ConvertToData", "(UserStorage)" },
 					permPrefix + ".Commands.AdminVote.ConvertToData",
-					"Convert user storage from current storage type the one specificed", true, true) {
+					"Convert user storage from current storage type to the one specified", true, true) {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
@@ -670,7 +670,7 @@ public class CommandLoader {
 
 			cmds.add(new CommandHandler(plugin, new String[] { "ConvertFromData", "(UserStorage)" },
 					permPrefix + ".Commands.AdminVote.ConvertFromData",
-					"Convert user storage from current storage type from the one specificed", true, true) {
+					"Convert user storage from the specified storage type to the current one", true, true) {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
