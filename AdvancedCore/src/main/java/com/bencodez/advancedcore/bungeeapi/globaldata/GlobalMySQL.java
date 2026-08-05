@@ -329,7 +329,7 @@ public abstract class GlobalMySQL {
 			if (!columnNeedsAlter(conn, dbType, column, normalized)) {
 				debugLog("GlobalDB: Column " + qi(dbType == DbType.POSTGRESQL ? column.toLowerCase() : column)
 						+ " already matches " + normalized + ", skipping ALTER");
-				if (normalized.toUpperCase().contains("INT") && !intColumns.contains(column)) {
+				if (normalized.toUpperCase().contains("INT") && !isIntColumn(column)) {
 					intColumns.add(column);
 				}
 				return;
@@ -372,7 +372,7 @@ public abstract class GlobalMySQL {
 			e.printStackTrace();
 		}
 
-		if (normalized.toUpperCase().contains("INT") && !intColumns.contains(column)) {
+		if (normalized.toUpperCase().contains("INT") && !isIntColumn(column)) {
 			intColumns.add(column);
 		}
 	}
@@ -582,14 +582,14 @@ public abstract class GlobalMySQL {
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
 				PreparedStatement sql = conn.prepareStatement(query)) {
-			sql.setObject(1, toSqlValue(column.getValue()));
+			sql.setObject(1, toSqlValue(column.getName(), column.getValue()));
 			try (ResultSet rs = sql.executeQuery()) {
 
 				if (rs.next()) {
 					for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
 						String columnName = rs.getMetaData().getColumnLabel(i);
 						Column rCol;
-						if (intColumns.contains(columnName)) {
+						if (isIntColumn(columnName)) {
 							rCol = new Column(columnName, DataType.INTEGER);
 							rCol.setValue(new DataValueInt(rs.getInt(i)));
 						} else {
@@ -738,7 +738,8 @@ public abstract class GlobalMySQL {
 				Query prepared = new Query(mysql, query);
 				prepared.setParameter(1, index);
 				for (int i = 0; i < cols.size(); i++) {
-					prepared.setParameter(i + 2, toSqlValue(cols.get(i).getValue()));
+					Column column = cols.get(i);
+					prepared.setParameter(i + 2, toSqlValue(column.getName(), column.getValue()));
 				}
 				prepared.executeUpdate();
 				servers.add(index);
@@ -765,7 +766,8 @@ public abstract class GlobalMySQL {
 			Query prepared = new Query(mysql, query.toString());
 			prepared.setParameter(1, index);
 			for (int i = 0; i < cols.size(); i++) {
-				prepared.setParameter(i + 2, toSqlValue(cols.get(i).getValue()));
+				Column column = cols.get(i);
+				prepared.setParameter(i + 2, toSqlValue(column.getName(), column.getValue()));
 			}
 			prepared.executeUpdate();
 			servers.add(index);
@@ -783,7 +785,15 @@ public abstract class GlobalMySQL {
 	 * @return true if the column is an integer column, false otherwise
 	 */
 	public boolean isIntColumn(String key) {
-		return intColumns.contains(key);
+		if (key == null) {
+			return false;
+		}
+		for (String intColumn : intColumns) {
+			if (intColumn.equalsIgnoreCase(key)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -856,7 +866,8 @@ public abstract class GlobalMySQL {
 				try {
 					Query q = new Query(mysql, query);
 					for (int i = 0; i < cols.size(); i++) {
-						q.setParameter(i + 1, toSqlValue(cols.get(i).getValue()));
+						Column column = cols.get(i);
+						q.setParameter(i + 1, toSqlValue(column.getName(), column.getValue()));
 					}
 					q.setParameter(cols.size() + 1, index);
 					if (runAsync) {
@@ -897,7 +908,7 @@ public abstract class GlobalMySQL {
 
 				try {
 					Query prepared = new Query(mysql, query);
-					prepared.setParameter(1, toSqlValue(value));
+					prepared.setParameter(1, toSqlValue(column, value));
 					prepared.setParameter(2, index);
 					prepared.executeUpdate();
 				} catch (SQLException e) {
@@ -909,7 +920,7 @@ public abstract class GlobalMySQL {
 		}
 	}
 
-	private Object toSqlValue(DataValue value) {
+	private Object toSqlValue(String column, DataValue value) {
 		if (value == null) {
 			return null;
 		}
@@ -920,7 +931,7 @@ public abstract class GlobalMySQL {
 			return String.valueOf(value.getBoolean());
 		}
 		if (value.isInt()) {
-			return String.valueOf(value.getInt());
+			return isIntColumn(column) ? value.getInt() : String.valueOf(value.getInt());
 		}
 		return value.toString();
 	}
