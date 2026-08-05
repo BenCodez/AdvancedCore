@@ -323,15 +323,14 @@ public abstract class GlobalMySQL {
 
 		DbType dbType = dbType();
 		String normalized = normalizeColumnType(dbType, newType);
+		boolean integerType = normalized.toUpperCase().contains("INT");
 
 		// First inspect existing type; skip ALTER if it's already correct
 		try (Connection conn = mysql.getConnectionManager().getConnection()) {
 			if (!columnNeedsAlter(conn, dbType, column, normalized)) {
 				debugLog("GlobalDB: Column " + qi(dbType == DbType.POSTGRESQL ? column.toLowerCase() : column)
 						+ " already matches " + normalized + ", skipping ALTER");
-				if (normalized.toUpperCase().contains("INT") && !isIntColumn(column)) {
-					intColumns.add(column);
-				}
+				trackIntegerColumn(column, integerType);
 				return;
 			}
 		} catch (SQLException e) {
@@ -341,38 +340,54 @@ public abstract class GlobalMySQL {
 
 		debugLog("Altering column `" + column + "` to " + normalized);
 
-		// If going to INT, normalise empty strings to 0 first to avoid conversion issues.
-		if (normalized.toUpperCase().contains("INT")) {
+		// MySQL needs empty text values normalized before changing to an integer type.
+		if (integerType && dbType != DbType.POSTGRESQL) {
 			try {
-				if (dbType == DbType.POSTGRESQL) {
-					// Postgres: trim(coalesce(col::text,'')) = ''
-					String fix = "UPDATE " + getName() + " SET " + qi(column.toLowerCase()) + " = '0' "
-							+ "WHERE btrim(coalesce(" + qi(column.toLowerCase()) + "::text, '')) = '';";
-					new Query(mysql, fix).executeUpdateAsync();
-				} else {
-					String fix = "UPDATE " + getName() + " SET " + qi(column) + " = '0' "
-							+ "WHERE TRIM(COALESCE(" + column + ", '')) = '';";
-					new Query(mysql, fix).executeUpdateAsync();
-				}
+				String fix = "UPDATE " + getName() + " SET " + qi(column) + " = '0' "
+						+ "WHERE TRIM(COALESCE(" + qi(column) + ", '')) = '';";
+				new Query(mysql, fix).executeUpdate();
 			} catch (SQLException e) {
-				e.printStackTrace();
+				debugEx(e);
+				return;
 			}
 		}
 
 		try {
 			String alter;
 			if (dbType == DbType.POSTGRESQL) {
-				alter = "ALTER TABLE " + getName() + " ALTER COLUMN " + qi(column.toLowerCase()) + " TYPE " + normalized
-						+ ";";
+				String columnName = qi(column.toLowerCase());
+				alter = "ALTER TABLE " + getName() + " ALTER COLUMN " + columnName + " TYPE " + normalized;
+				if (integerType) {
+					alter += " USING CASE WHEN btrim(coalesce(" + columnName + "::text, '')) = '' THEN 0 ELSE "
+							+ columnName + "::" + normalized + " END";
+				}
+				alter += ";";
 			} else {
 				alter = "ALTER TABLE " + getName() + " MODIFY " + qi(column) + " " + normalized + ";";
 			}
-			new Query(mysql, alter).executeUpdateAsync();
+			new Query(mysql, alter).executeUpdate();
 		} catch (SQLException e) {
-			e.printStackTrace();
+			debugEx(e);
+			return;
 		}
 
-		if (normalized.toUpperCase().contains("INT") && !isIntColumn(column)) {
+		try (Connection conn = mysql.getConnectionManager().getConnection()) {
+			if (columnNeedsAlter(conn, dbType, column, normalized)) {
+				debugLog("GlobalDB: Column " + column + " did not change to " + normalized);
+				return;
+			}
+		} catch (SQLException e) {
+			debugLog("GlobalDB: Unable to verify column type for " + getName() + "." + column);
+			debugEx(e);
+			return;
+		}
+
+		trackIntegerColumn(column, integerType);
+	}
+
+	private void trackIntegerColumn(String column, boolean integerType) {
+		intColumns.removeIf(intColumn -> intColumn.equalsIgnoreCase(column));
+		if (integerType) {
 			intColumns.add(column);
 		}
 	}
