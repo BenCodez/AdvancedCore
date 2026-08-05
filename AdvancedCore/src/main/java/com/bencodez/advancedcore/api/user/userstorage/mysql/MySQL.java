@@ -395,24 +395,25 @@ public class MySQL extends AbstractSqlTable {
 	}
 
 	public String getUUID(String playerName) {
-		String query = "SELECT " + qi("uuid") + " FROM " + qi(tableName) + " WHERE " + qi("PlayerName") + "='"
-				+ playerName + "';";
+		String query = "SELECT " + qi("uuid") + " FROM " + qi(tableName) + " WHERE " + qi("PlayerName") + "=?;";
 		plugin.devDebug("DB QUERY: " + query);
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement(query);
-				ResultSet rs = sql.executeQuery()) {
+				PreparedStatement sql = conn.prepareStatement(query)) {
+			sql.setString(1, playerName);
+			try (ResultSet rs = sql.executeQuery()) {
 
-			if (rs.next()) {
-				if (dbType == DbType.POSTGRESQL) {
-					Object obj = rs.getObject(1);
-					if (obj instanceof java.util.UUID) {
-						return ((java.util.UUID) obj).toString();
+				if (rs.next()) {
+					if (dbType == DbType.POSTGRESQL) {
+						Object obj = rs.getObject(1);
+						if (obj instanceof java.util.UUID) {
+							return ((java.util.UUID) obj).toString();
+						}
 					}
-				}
-				String uuid = rs.getString(1);
-				if (uuid != null && !uuid.isEmpty()) {
-					return uuid;
+					String uuid = rs.getString(1);
+					if (uuid != null && !uuid.isEmpty()) {
+						return uuid;
+					}
 				}
 			}
 		} catch (SQLException e) {
@@ -537,17 +538,14 @@ public class MySQL extends AbstractSqlTable {
 	// -------------------------
 
 	public void deletePlayer(String uuid) {
-		String q;
-		if (dbType == DbType.POSTGRESQL) {
-			q = "DELETE FROM " + qi(tableName) + " WHERE " + qi("uuid") + "='" + uuid + "'::uuid;";
-		} else {
-			q = "DELETE FROM " + qi(tableName) + " WHERE " + qi("uuid") + "='" + uuid + "';";
-		}
+		String q = "DELETE FROM " + qi(tableName) + " WHERE " + qi("uuid") + "=?;";
 		plugin.devDebug("DB QUERY: " + q);
 
-		try {
-			new Query(mysql, q).executeUpdate();
-		} catch (SQLException e) {
+		try (Connection conn = mysql.getConnectionManager().getConnection();
+				PreparedStatement statement = conn.prepareStatement(q)) {
+			bindUuid(statement, 1, uuid);
+			statement.executeUpdate();
+		} catch (SQLException | IllegalArgumentException e) {
 			debug(e);
 		}
 
@@ -650,53 +648,52 @@ public class MySQL extends AbstractSqlTable {
 	public ArrayList<Column> getExactQuery(Column column) {
 		ArrayList<Column> result = new ArrayList<>();
 
-		String query;
-		if (dbType == DbType.POSTGRESQL && "uuid".equalsIgnoreCase(column.getName())) {
-			query = "SELECT * FROM " + qi(tableName) + " WHERE " + qi("uuid") + "='" + column.getValue().getString()
-					+ "'::uuid;";
-		} else {
-			query = "SELECT * FROM " + qi(tableName) + " WHERE " + qi(column.getName()) + "='"
-					+ column.getValue().getString() + "';";
-		}
+		String query = "SELECT * FROM " + qi(tableName) + " WHERE " + qi(column.getName()) + "=?;";
 
 		plugin.devDebug("DB QUERY: " + query);
 
 		try (Connection conn = mysql.getConnectionManager().getConnection();
-				PreparedStatement sql = conn.prepareStatement(query);
-				ResultSet rs = sql.executeQuery()) {
+				PreparedStatement sql = conn.prepareStatement(query)) {
+			if (dbType == DbType.POSTGRESQL && "uuid".equalsIgnoreCase(column.getName())) {
+				bindUuid(sql, 1, column.getValue().getString());
+			} else {
+				bindValue(sql, 1, column.getValue());
+			}
+			try (ResultSet rs = sql.executeQuery()) {
 
-			if (rs.next()) {
-				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-					String columnName = rs.getMetaData().getColumnLabel(i);
-					Column rCol;
+				if (rs.next()) {
+					for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+						String columnName = rs.getMetaData().getColumnLabel(i);
+						Column rCol;
 
-					if (plugin.getUserManager().getDataManager().isInt(columnName)) {
-						rCol = new Column(columnName, DataType.INTEGER);
-						try {
-							rCol.setValue(new DataValueInt(rs.getInt(i)));
-						} catch (Exception e) {
-							String data = rs.getString(i);
-							if (data != null) {
-								try {
-									rCol.setValue(new DataValueInt(Integer.parseInt(data)));
-								} catch (NumberFormatException ex) {
+						if (plugin.getUserManager().getDataManager().isInt(columnName)) {
+							rCol = new Column(columnName, DataType.INTEGER);
+							try {
+								rCol.setValue(new DataValueInt(rs.getInt(i)));
+							} catch (Exception e) {
+								String data = rs.getString(i);
+								if (data != null) {
+									try {
+										rCol.setValue(new DataValueInt(Integer.parseInt(data)));
+									} catch (NumberFormatException ex) {
+										rCol.setValue(new DataValueInt(0));
+									}
+								} else {
 									rCol.setValue(new DataValueInt(0));
 								}
-							} else {
-								rCol.setValue(new DataValueInt(0));
 							}
+						} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+							rCol = new Column(columnName, DataType.BOOLEAN);
+							rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
+						} else {
+							rCol = new Column(columnName, DataType.STRING);
+							rCol.setValue(new DataValueString(rs.getString(i)));
 						}
-					} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
-						rCol = new Column(columnName, DataType.BOOLEAN);
-						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
-					} else {
-						rCol = new Column(columnName, DataType.STRING);
-						rCol.setValue(new DataValueString(rs.getString(i)));
+						result.add(rCol);
 					}
-					result.add(rCol);
 				}
+				return result;
 			}
-			return result;
 		} catch (SQLException | ArrayIndexOutOfBoundsException e) {
 			debug(e);
 		}
@@ -728,10 +725,10 @@ public class MySQL extends AbstractSqlTable {
 				sb.append(", ").append(qi(col.getName()));
 			}
 
-			sb.append(") VALUES ('").append(index).append("'::uuid");
+			sb.append(") VALUES (?");
 
 			for (Column col : cols) {
-				sb.append(", '").append(col.getValue().toString()).append("'");
+				sb.append(", ?");
 			}
 
 			sb.append(") ON CONFLICT (").append(qi("uuid")).append(") DO UPDATE SET ");
@@ -749,32 +746,37 @@ public class MySQL extends AbstractSqlTable {
 			plugin.devDebug("DB QUERY: " + query);
 
 			try {
-				new Query(mysql, query).executeUpdate();
+				Query prepared = new Query(mysql, query);
+				prepared.setParameter(1, UUID.fromString(index));
+				for (int i = 0; i < cols.size(); i++) {
+					prepared.setParameter(i + 2, toSqlValue(cols.get(i).getValue()));
+				}
+				prepared.executeUpdate();
 			} catch (Exception e) {
 				debug(e);
 				plugin.debug("Failed to insert/upsert player " + index);
 			}
 		} else {
-			// MySQL/MariaDB: keep original INSERT IGNORE ... SET ...
-			String query = "INSERT IGNORE " + qi(tableName) + " set " + qi("uuid") + "='" + index + "', ";
-
-			for (int i = 0; i < cols.size(); i++) {
-				Column col = cols.get(i);
-				boolean last = (i == cols.size() - 1);
-
-				if (col.getValue().isString()) {
-					query += qi(col.getName()) + "='" + col.getValue().getString() + "'" + (last ? ";" : ", ");
-				} else if (col.getValue().isBoolean()) {
-					query += qi(col.getName()) + "='" + col.getValue().getBoolean() + "'" + (last ? ";" : ", ");
-				} else if (col.getValue().isInt()) {
-					query += qi(col.getName()) + "='" + col.getValue().getInt() + "'" + (last ? ";" : ", ");
-				}
+			StringBuilder query = new StringBuilder("INSERT IGNORE INTO ").append(qi(tableName)).append(" (")
+					.append(qi("uuid"));
+			for (Column col : cols) {
+				query.append(", ").append(qi(col.getName()));
 			}
+			query.append(") VALUES (?");
+			for (int i = 0; i < cols.size(); i++) {
+				query.append(", ?");
+			}
+			query.append(");");
 
-			plugin.devDebug("DB QUERY: " + query);
+			plugin.devDebug("DB QUERY: " + query.toString());
 
 			try {
-				new Query(mysql, query).executeUpdate();
+				Query prepared = new Query(mysql, query.toString());
+				prepared.setParameter(1, index);
+				for (int i = 0; i < cols.size(); i++) {
+					prepared.setParameter(i + 2, toSqlValue(cols.get(i).getValue()));
+				}
+				prepared.executeUpdate();
 			} catch (Exception e) {
 				debug(e);
 				plugin.debug("Failed to insert player " + index);
@@ -803,6 +805,9 @@ public class MySQL extends AbstractSqlTable {
 		for (Column col : cols) {
 			checkColumn(col.getName(), col.getDataType());
 		}
+		if (cols.isEmpty()) {
+			return;
+		}
 
 		synchronized (updateLock) {
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
@@ -810,33 +815,23 @@ public class MySQL extends AbstractSqlTable {
 				sb.append("UPDATE ").append(qi(tableName)).append(" SET ");
 
 				for (int i = 0; i < cols.size(); i++) {
-					Column col = cols.get(i);
-					boolean last = (i == cols.size() - 1);
-
-					if (col.getValue().isString()) {
-						sb.append(qi(col.getName())).append("='").append(col.getValue().getString()).append("'");
-					} else if (col.getValue().isBoolean()) {
-						sb.append(qi(col.getName())).append("='").append(col.getValue().getBoolean()).append("'");
-					} else if (col.getValue().isInt()) {
-						sb.append(qi(col.getName())).append("='").append(col.getValue().getInt()).append("'");
-					}
-
-					if (!last) {
+					sb.append(qi(cols.get(i).getName())).append("=?");
+					if (i != cols.size() - 1) {
 						sb.append(", ");
 					}
 				}
 
-				if (dbType == DbType.POSTGRESQL) {
-					sb.append(" WHERE ").append(qi("uuid")).append("='").append(index).append("'::uuid;");
-				} else {
-					sb.append(" WHERE ").append(qi("uuid")).append("='").append(index).append("';");
-				}
+				sb.append(" WHERE ").append(qi("uuid")).append("=?;");
 
 				String query = sb.toString();
 				plugin.devDebug("DB QUERY: " + query);
 
 				try {
 					Query q = new Query(mysql, query);
+					for (int i = 0; i < cols.size(); i++) {
+						q.setParameter(i + 1, toSqlValue(cols.get(i).getValue()));
+					}
+					q.setParameter(cols.size() + 1, toUuidValue(index));
 					if (runAsync) {
 						q.executeUpdateAsync();
 					} else {
@@ -861,26 +856,15 @@ public class MySQL extends AbstractSqlTable {
 
 		synchronized (updateLock) {
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
-				String query = "UPDATE " + qi(tableName) + " SET ";
-
-				if (value.isString()) {
-					query += qi(column) + "='" + value.getString() + "'";
-				} else if (value.isBoolean()) {
-					query += qi(column) + "='" + value.getBoolean() + "'";
-				} else if (value.isInt()) {
-					query += qi(column) + "='" + value.getInt() + "'";
-				}
-
-				if (dbType == DbType.POSTGRESQL) {
-					query += " WHERE " + qi("uuid") + "='" + index + "'::uuid;";
-				} else {
-					query += " WHERE " + qi("uuid") + "='" + index + "';";
-				}
+				String query = "UPDATE " + qi(tableName) + " SET " + qi(column) + "=? WHERE " + qi("uuid") + "=?;";
 
 				plugin.devDebug("DB QUERY: " + query);
 
 				try {
-					new Query(mysql, query).executeUpdate();
+					Query prepared = new Query(mysql, query);
+					prepared.setParameter(1, toSqlValue(value));
+					prepared.setParameter(2, toUuidValue(index));
+					prepared.executeUpdate();
 				} catch (SQLException e) {
 					debug(e);
 				}
@@ -888,6 +872,34 @@ public class MySQL extends AbstractSqlTable {
 				insert(index, column, value);
 			}
 		}
+	}
+
+	private void bindUuid(PreparedStatement statement, int parameter, String uuid) throws SQLException {
+		statement.setObject(parameter, toUuidValue(uuid));
+	}
+
+	private void bindValue(PreparedStatement statement, int parameter, DataValue value) throws SQLException {
+		statement.setObject(parameter, toSqlValue(value));
+	}
+
+	private Object toUuidValue(String uuid) {
+		return dbType == DbType.POSTGRESQL ? UUID.fromString(uuid) : uuid;
+	}
+
+	private Object toSqlValue(DataValue value) {
+		if (value == null) {
+			return null;
+		}
+		if (value.isString()) {
+			return value.getString();
+		}
+		if (value.isBoolean()) {
+			return String.valueOf(value.getBoolean());
+		}
+		if (value.isInt()) {
+			return value.getInt();
+		}
+		return value.toString();
 	}
 
 	public void wipeColumnData(String columnName, DataType dataType) {
