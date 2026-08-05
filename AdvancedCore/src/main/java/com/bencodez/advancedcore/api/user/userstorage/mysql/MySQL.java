@@ -894,7 +894,7 @@ public class MySQL extends AbstractSqlTable {
 			return value.getString();
 		}
 		if (value.isBoolean()) {
-			return value.getBoolean();
+			return String.valueOf(value.getBoolean());
 		}
 		if (value.isInt()) {
 			return value.getInt();
