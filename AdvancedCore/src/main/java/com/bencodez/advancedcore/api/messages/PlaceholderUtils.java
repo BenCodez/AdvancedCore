@@ -181,6 +181,25 @@ public class PlaceholderUtils {
 		return text;
 	}
 
+	public static ArrayList<String> replaceJavascriptOnly(OfflinePlayer player, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<>();
+		for (String str : list) {
+			msg.add(replaceJavascriptOnly(player, str));
+		}
+		return msg;
+	}
+
+	public static String replaceJavascriptOnly(OfflinePlayer player, String text) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
+			if (player.isOnline()) {
+				return replaceJavascriptOnly(player.getPlayer(), text);
+			}
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			return replaceJavascript(text, engine);
+		}
+		return text;
+	}
+
 	public static ArrayList<String> replaceJavascript(Player player, ArrayList<String> list) {
 		ArrayList<String> msg = new ArrayList<>();
 		for (String str : list) {
@@ -196,6 +215,22 @@ public class PlaceholderUtils {
 			return replaceJavascript(msg, engine);
 		}
 		return msg;
+	}
+
+	public static ArrayList<String> replaceJavascriptOnly(Player player, ArrayList<String> list) {
+		ArrayList<String> msg = new ArrayList<>();
+		for (String str : list) {
+			msg.add(replaceJavascriptOnly(player, str));
+		}
+		return msg;
+	}
+
+	public static String replaceJavascriptOnly(Player player, String text) {
+		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
+			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
+			return replaceJavascript(text, engine);
+		}
+		return text;
 	}
 
 	public static String replaceJavascript(String text) {
