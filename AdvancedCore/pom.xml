@@ -197,12 +197,6 @@
             <artifactId>spigot-api</artifactId>
             <version>26.2-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.velocitypowered</groupId>
-                    <artifactId>velocity-brigadier</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>net.milkbowl</groupId>
@@ -262,6 +256,12 @@
             <artifactId>velocity-api</artifactId>
             <version>3.4.0</version>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.velocitypowered</groupId>
+                    <artifactId>velocity-brigadier</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.github.LeonMangler</groupId>
