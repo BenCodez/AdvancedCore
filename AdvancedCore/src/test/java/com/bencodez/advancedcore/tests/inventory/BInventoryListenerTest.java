@@ -12,7 +12,6 @@ import java.util.Map;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.junit.jupiter.api.Test;
@@ -38,7 +37,6 @@ public class BInventoryListenerTest {
 		Player player = mock(Player.class);
 		InventoryView view = mock(InventoryView.class);
 		Inventory topInventory = mock(Inventory.class);
-		Inventory clickedInventory = mock(Inventory.class);
 		BInventory gui = mock(BInventory.class);
 		BInventoryButton button = mock(BInventoryButton.class);
 		GUISession session = new GUISession(gui, 1);
@@ -49,8 +47,7 @@ public class BInventoryListenerTest {
 		when(event.getWhoClicked()).thenReturn(player);
 		when(player.getOpenInventory()).thenReturn(view);
 		when(topInventory.getHolder()).thenReturn(session);
-		when(event.getClickedInventory()).thenReturn(clickedInventory);
-		when(clickedInventory.getType()).thenReturn(InventoryType.CHEST);
+		when(event.getClickedInventory()).thenReturn(topInventory);
 		when(event.getInventory()).thenReturn(topInventory);
 		when(event.getSlot()).thenReturn(3);
 		when(gui.getButtons()).thenReturn(Map.of(3, button));
