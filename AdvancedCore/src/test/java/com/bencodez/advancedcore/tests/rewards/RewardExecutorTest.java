@@ -23,7 +23,6 @@ import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.scheduler.BukkitScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -42,6 +41,7 @@ import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.SubDirectlyDefinedReward;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 public class RewardExecutorTest {
 
