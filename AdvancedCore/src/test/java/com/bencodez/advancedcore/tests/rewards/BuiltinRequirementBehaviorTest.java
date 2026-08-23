@@ -38,6 +38,16 @@ import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementChance;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementDate;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementDayOfMonth;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementJavascript;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementLocationDistance;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementPermission;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementRewardExpiration;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementRewardType;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementServer;
+import com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementWorld;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectConfigurationSection;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectDouble;
@@ -45,16 +55,6 @@ import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInje
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectString;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInjectStringList;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementChance;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementDate;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementDayOfMonth;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementJavascript;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementLocationDistance;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementPermission;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementRewardExpiration;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementRewardType;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementServer;
-import com.bencodez.advancedcore.rewards.builtin.requirements.RequirementWorld;
 
 public class BuiltinRequirementBehaviorTest {
 

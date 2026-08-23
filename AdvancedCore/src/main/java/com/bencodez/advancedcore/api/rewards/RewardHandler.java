@@ -562,7 +562,7 @@ public class RewardHandler {
 
 	public void loadInjectedRequirements() {
 		injectedRequirements.clear();
-		com.bencodez.advancedcore.rewards.builtin.requirements.BuiltinRequirements.register(this, plugin);
+		com.bencodez.advancedcore.api.rewards.builtin.requirements.BuiltinRequirements.register(this, plugin);
 		for (RequirementInject requirement : injectedRequirements) {
 			requirement.setInternalReward(true);
 		}
@@ -571,7 +571,7 @@ public class RewardHandler {
 
 	public void loadInjectedRewards() {
 		injectedRewards.clear();
-		com.bencodez.advancedcore.rewards.builtin.BuiltinRewards.register(this, plugin);
+		com.bencodez.advancedcore.api.rewards.builtin.BuiltinRewards.register(this, plugin);
 		for (RewardInject reward : injectedRewards) {
 			reward.setInternalReward(true);
 		}
