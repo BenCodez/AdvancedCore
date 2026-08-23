@@ -115,12 +115,12 @@ public class FileThread {
 
 		@Override
 		public void run() {
-			while (!thread.isInterrupted()) {
+			while (!isInterrupted()) {
 				try {
 					sleep(50);
 				} catch (InterruptedException e) {
-					e.printStackTrace();
-					System.exit(0);
+					interrupt();
+					break;
 				}
 			}
 		}
