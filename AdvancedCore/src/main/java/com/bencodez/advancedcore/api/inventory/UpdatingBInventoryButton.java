@@ -138,6 +138,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 					if (slot != null) {
 						topInventory.setItem(slot.intValue(), item);
 					}
+				}
 			} else {
 				topInventory.setItem(getSlot(), item);
 			}
