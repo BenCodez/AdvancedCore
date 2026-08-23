@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.tests.inventory;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,15 +18,15 @@ import com.bencodez.advancedcore.api.inventory.BInventory;
 public class BInventoryTest {
 
 	@Test
+	@SuppressWarnings("rawtypes")
 	public void updatingButtonUsesConfiguredIntervalAndCancelsFuture() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
-		@SuppressWarnings("unchecked")
-		ScheduledFuture<Object> future = mock(ScheduledFuture.class);
+		ScheduledFuture future = mock(ScheduledFuture.class);
 		Runnable runnable = mock(Runnable.class);
 		when(plugin.getInventoryTimer()).thenReturn(timer);
-		when(timer.scheduleWithFixedDelay(eq(runnable), eq(100L), eq(250L), eq(TimeUnit.MILLISECONDS)))
-				.thenReturn(future);
+		doReturn(future).when(timer).scheduleWithFixedDelay(eq(runnable), eq(100L), eq(250L),
+				eq(TimeUnit.MILLISECONDS));
 
 		BInventory inventory = new BInventory("Test");
 		inventory.addUpdatingButton(plugin, 100L, 250L, runnable);
