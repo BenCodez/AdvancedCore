@@ -1,5 +1,8 @@
 package com.bencodez.advancedcore.tests.inventory;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -19,6 +22,19 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 
 public class BInventoryTest {
+
+	@Test
+	public void clickCallbacksDefaultToAsyncAndCanOptIntoSync() {
+		BInventory inventory = new BInventory("Test");
+
+		assertTrue(inventory.isClickAsync());
+		assertSame(inventory, inventory.runClicksSync());
+		assertFalse(inventory.isClickAsync());
+		assertSame(inventory, inventory.runClicksAsync());
+		assertTrue(inventory.isClickAsync());
+		assertSame(inventory, inventory.setClickAsync(false));
+		assertFalse(inventory.isClickAsync());
+	}
 
 	@Test
 	@SuppressWarnings("rawtypes")
