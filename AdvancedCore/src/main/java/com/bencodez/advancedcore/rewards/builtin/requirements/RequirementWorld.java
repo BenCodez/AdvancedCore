@@ -74,7 +74,7 @@ public final class RequirementWorld {
                         reward.reOpenEditGUI(player);
                     }
                 }.addLore("Worlds to execute reward in, only executes into one reward")))
-                .validator(listValidator("Worlds"));
+                .validator(listValidator("Worlds")));
 
         handler.getInjectedRequirements().add(new RequirementInjectStringList("BlackListedWorlds", new ArrayList<>()) {
             @Override
@@ -126,7 +126,7 @@ public final class RequirementWorld {
                         plugin.reloadAdvancedCore(false);
                         reward.reOpenEditGUI(player);
                     }
-                }.addLore("Worlds to never execute the reward in"))).validator(listValidator("BlackListedWorlds"));
+                }.addLore("Worlds to never execute the reward in"))).validator(listValidator("BlackListedWorlds")));
     }
 
     private static RequirementInjectValidator listValidator(String path) {
