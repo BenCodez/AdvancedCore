@@ -7,11 +7,11 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.simpleapi.messages.MessageAPI;
+import com.bencodez.simpleapi.player.PlayerUtils;
 
 /**
  * Listener for inventory interactions.
@@ -41,7 +41,7 @@ public class BInventoryListener implements Listener {
 		event.setCancelled(true);
 		event.setResult(Result.DENY);
 
-		if (event.getClickedInventory() == null || event.getClickedInventory().getType() != InventoryType.CHEST) {
+		if (event.getClickedInventory() == null || event.getClickedInventory() != PlayerUtils.getTopInventory(player)) {
 			return;
 		}
 
