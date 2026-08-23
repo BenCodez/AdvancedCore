@@ -513,6 +513,7 @@ public class BInventory {
 				if (!buttons.containsKey(slot)) {
 					buttons.put(slot, copyButton(button, slot));
 				}
+			}
 		}
 		fillItems.clear();
 	}
@@ -583,7 +584,6 @@ public class BInventory {
 					return true;
 				}
 			}
-		}
 
 		player.sendMessage(MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
 		return false;
