@@ -22,12 +22,23 @@ import com.bencodez.advancedcore.api.rewards.injected.RewardInjectValidator;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.array.ArrayUtils;
 
+/** Registers all built-in item reward forms. */
 public final class RewardItems {
 
     private RewardItems() {
     }
 
+    /**
+     * Convenience registration for consumers that do not need to preserve the
+     * historical cross-feature ordering used by {@link BuiltinRewards}.
+     */
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
+        registerItem(handler, plugin);
+        registerRandomItem(handler, plugin);
+        registerItems(handler, plugin);
+    }
+
+    public static void registerItem(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("Item") {
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
@@ -38,7 +49,9 @@ public final class RewardItems {
                 return null;
             }
         }.validator(itemValidator()));
+    }
 
+    public static void registerRandomItem(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectKeys("RandomItem") {
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section,
@@ -53,7 +66,9 @@ public final class RewardItems {
                 return null;
             }
         }.asPlaceholder("RandomItem").priority(90).validator(randomItemValidator()));
+    }
 
+    public static void registerItems(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectKeys("Items") {
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section,
