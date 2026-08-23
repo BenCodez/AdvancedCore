@@ -1,7 +1,6 @@
 package com.bencodez.advancedcore.api.inventory;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -58,7 +57,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		if (inventory == null) {
 			return;
 		}
-		inventory.addUpdatingButton(plugin, delay, updateInterval, () -> scheduleUpdate(player, true));
+		inventory.addUpdatingButton(player, plugin, delay, updateInterval, () -> scheduleUpdate(player, true));
 	}
 
 	@Override
@@ -69,7 +68,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 		}
 
 		if (clickUpdateDelay > 0) {
-			plugin.getInventoryTimer().schedule(() -> update(event.getPlayer()), clickUpdateDelay, TimeUnit.MILLISECONDS);
+			inventory.addDelayedTask(event.getPlayer(), plugin, clickUpdateDelay, () -> update(event.getPlayer()));
 		} else {
 			update(event.getPlayer());
 		}
@@ -92,9 +91,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 			return;
 		}
 		if (!plugin.isEnabled()) {
-			if (cancelWhenUnavailable) {
-				inventory.cancelTimer();
-			}
+			cancelIfRequested(inventory, player, cancelWhenUnavailable);
 			return;
 		}
 
@@ -104,7 +101,7 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 	private void applyUpdate(Player player, boolean cancelWhenUnavailable) {
 		BInventory inventory = getInv();
 		if (inventory == null || player == null || !plugin.isEnabled()) {
-			cancelIfRequested(inventory, cancelWhenUnavailable);
+			cancelIfRequested(inventory, player, cancelWhenUnavailable);
 			return;
 		}
 
@@ -112,26 +109,26 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 			return;
 		}
 		if (!inventory.isOpen(player)) {
-			cancelIfRequested(inventory, cancelWhenUnavailable);
+			cancelIfRequested(inventory, player, cancelWhenUnavailable);
 			return;
 		}
 
 		try {
 			ItemBuilder builder = onUpdate(player);
 			if (builder == null) {
-				cancelIfRequested(inventory, cancelWhenUnavailable);
+				cancelIfRequested(inventory, player, cancelWhenUnavailable);
 				return;
 			}
 
 			ItemStack item = builder.toItemStack(player);
 			if (item == null) {
-				cancelIfRequested(inventory, cancelWhenUnavailable);
+				cancelIfRequested(inventory, player, cancelWhenUnavailable);
 				return;
 			}
 
 			Inventory topInventory = PlayerUtils.getTopInventory(player);
 			if (topInventory == null) {
-				cancelIfRequested(inventory, cancelWhenUnavailable);
+				cancelIfRequested(inventory, player, cancelWhenUnavailable);
 				return;
 			}
 
@@ -141,19 +138,18 @@ public abstract class UpdatingBInventoryButton extends BInventoryButton {
 					if (slot != null) {
 						topInventory.setItem(slot.intValue(), item);
 					}
-				}
 			} else {
 				topInventory.setItem(getSlot(), item);
 			}
 		} catch (Exception exception) {
 			plugin.debug(exception);
-			cancelIfRequested(inventory, cancelWhenUnavailable);
+			cancelIfRequested(inventory, player, cancelWhenUnavailable);
 		}
 	}
 
-	private void cancelIfRequested(BInventory inventory, boolean cancelWhenUnavailable) {
+	private void cancelIfRequested(BInventory inventory, Player player, boolean cancelWhenUnavailable) {
 		if (cancelWhenUnavailable && inventory != null) {
-			inventory.cancelTimer();
+			inventory.cancelTimer(player);
 		}
 	}
 }
