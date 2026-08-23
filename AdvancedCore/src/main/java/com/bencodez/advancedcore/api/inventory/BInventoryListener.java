@@ -102,11 +102,11 @@ public class BInventoryListener implements Listener {
 	private void handlePagedClick(InventoryClickEvent event, Player player, BInventory gui, GUISession session) {
 		int slot = event.getSlot();
 		int maxInventorySize = gui.getMaxInvSize();
-		int contentSize = maxInventorySize - 9;
+		int contentSize = InventoryPagination.getContentSize(maxInventorySize);
 		int page = session.getPage();
 
-		if (slot < contentSize) {
-			int buttonSlot = (page - 1) * contentSize + slot;
+		if (InventoryPagination.isContentSlot(slot, maxInventorySize)) {
+			int buttonSlot = InventoryPagination.getButtonSlot(page, slot, maxInventorySize);
 			BInventoryButton button = gui.getButtons().get(buttonSlot);
 			if (button != null) {
 				handleButtonClick(event, player, gui, button);
