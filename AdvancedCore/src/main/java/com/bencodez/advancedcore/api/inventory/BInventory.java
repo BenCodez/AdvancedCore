@@ -133,10 +133,6 @@ public class BInventory {
 		setInventoryName(name);
 	}
 
-	/**
-	 * Adds a button. Slot -1 selects the next slot and -2 selects the final slot of
-	 * the current inventory row size.
-	 */
 	public void addButton(BInventoryButton button) {
 		int slot = button.getSlot();
 		if (slot == -1) {
@@ -144,12 +140,10 @@ public class BInventory {
 		} else if (slot == -2) {
 			slot = getProperSize(getNextSlot()) - 1;
 		}
-
 		if (button.isFillEmptySlots()) {
 			fillItems.add(button);
 			return;
 		}
-
 		List<Integer> fillSlots = button.getFillSlots();
 		if (fillSlots != null && !fillSlots.isEmpty()) {
 			for (Integer fillSlot : fillSlots) {
@@ -159,7 +153,6 @@ public class BInventory {
 			}
 			return;
 		}
-
 		button.setSlot(slot);
 		buttons.put(slot, button);
 	}
@@ -182,19 +175,11 @@ public class BInventory {
 		return this;
 	}
 
-	/**
-	 * Compatibility form for update tasks that are not associated with a player.
-	 */
 	public void addUpdatingButton(AdvancedCorePlugin plugin, long delay, long interval, Runnable runnable) {
 		futures.add(plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, interval, TimeUnit.MILLISECONDS));
 	}
 
-	/**
-	 * Tracks an updating task for one viewer so closing another player's GUI does
-	 * not cancel it.
-	 */
-	public void addUpdatingButton(Player player, AdvancedCorePlugin plugin, long delay, long interval,
-			Runnable runnable) {
+	public void addUpdatingButton(Player player, AdvancedCorePlugin plugin, long delay, long interval, Runnable runnable) {
 		ScheduledFuture<?> future = plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, interval,
 				TimeUnit.MILLISECONDS);
 		trackFuture(player, future);
@@ -205,9 +190,6 @@ public class BInventory {
 		trackFuture(player, future);
 	}
 
-	/**
-	 * Cancels every task owned by this GUI.
-	 */
 	public void cancelTimer() {
 		cancelLegacyTimers();
 		for (List<ScheduledFuture<?>> viewerFutures : playerFutures.values()) {
@@ -216,9 +198,6 @@ public class BInventory {
 		playerFutures.clear();
 	}
 
-	/**
-	 * Cancels only tasks associated with one viewer.
-	 */
 	public void cancelTimer(Player player) {
 		if (player == null) {
 			return;
@@ -232,7 +211,6 @@ public class BInventory {
 		if (topInventory == null || inv == null || !topInventory.equals(inv)) {
 			return;
 		}
-
 		if (pages || (closeInv && (button == null || !button.isCloseInvSet()))) {
 			forceClose(player);
 			return;
@@ -257,7 +235,6 @@ public class BInventory {
 			player.closeInventory();
 			return;
 		}
-
 		AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 		plugin.getBukkitScheduler().runTask(plugin, player::closeInventory, player);
 	}
@@ -359,19 +336,16 @@ public class BInventory {
 		if (!hasPermission(player)) {
 			return;
 		}
-
 		addFillSlots();
 		if (getHighestSlot() >= maxInvSize) {
 			pages = true;
 		}
-
 		if (pages) {
 			maxPage = InventoryPagination.getPageCount(getHighestSlot(), maxInvSize);
 			addPlaceholder("totalpages", String.valueOf(maxPage));
 			openInventory(player, 1);
 			return;
 		}
-
 		cancelTimer(player);
 		inv = Bukkit.createInventory(new GUISession(this, 1), getInventorySize(), getDisplayName(player));
 		for (Entry<Integer, BInventoryButton> entry : buttons.entrySet()) {
@@ -384,16 +358,13 @@ public class BInventory {
 		if (page < 1) {
 			throw new IllegalArgumentException("Page must be >= 1");
 		}
-
 		maxPage = InventoryPagination.getPageCount(getHighestSlot(), maxInvSize);
 		int targetPage = Math.min(page, maxPage);
 		cancelTimer(player);
 		addPlaceholder("currentpage", String.valueOf(targetPage));
 		addPlaceholder("totalpages", String.valueOf(maxPage));
-
 		inv = Bukkit.createInventory(new GUISession(this, targetPage), maxInvSize, getDisplayName(player));
 		this.page = targetPage;
-
 		int contentSize = InventoryPagination.getContentSize(maxInvSize);
 		int startSlot = (targetPage - 1) * contentSize;
 		for (Entry<Integer, BInventoryButton> entry : buttons.entrySet()) {
@@ -403,13 +374,11 @@ public class BInventory {
 			}
 			loadButton(player, entry.getValue(), sourceSlot, sourceSlot - startSlot);
 		}
-
 		for (BInventoryButton button : pageButtons) {
 			int displayedSlot = contentSize + button.getSlot();
 			inv.setItem(displayedSlot, button.getItem(player, placeholders));
 			button.setInv(this);
 		}
-
 		loadNavigationItems(player);
 		inv.setItem(contentSize, prevItem);
 		inv.setItem(maxInvSize - 1, nextItem);
@@ -436,33 +405,15 @@ public class BInventory {
 		this.buttons = buttons;
 	}
 
-	/**
-	 * Set whether button callbacks are dispatched asynchronously. This defaults to
-	 * true for backwards compatibility with existing AdvancedCore GUI code.
-	 *
-	 * @param value true to run button callbacks asynchronously, false to run them
-	 *              on the inventory event thread
-	 * @return this inventory
-	 */
 	public BInventory setClickAsync(boolean value) {
 		clickAsync = value;
 		return this;
 	}
 
-	/**
-	 * Convenience method for opting this inventory into synchronous button callbacks.
-	 *
-	 * @return this inventory
-	 */
 	public BInventory runClicksSync() {
 		return setClickAsync(false);
 	}
 
-	/**
-	 * Convenience method for explicitly using the legacy asynchronous callback mode.
-	 *
-	 * @return this inventory
-	 */
 	public BInventory runClicksAsync() {
 		return setClickAsync(true);
 	}
@@ -573,7 +524,6 @@ public class BInventory {
 		if (perm == null) {
 			return true;
 		}
-
 		if (!perm.contains("|")) {
 			if (player.hasPermission(perm)) {
 				return true;
@@ -584,7 +534,7 @@ public class BInventory {
 					return true;
 				}
 			}
-
+		}
 		player.sendMessage(MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
 		return false;
 	}
