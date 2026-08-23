@@ -2,10 +2,7 @@ package com.bencodez.advancedcore.api.rewards;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -21,7 +18,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.exceptions.FileDirectoryException;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
@@ -31,45 +27,36 @@ import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
-import lombok.Setter;
 
 /**
- * The Class RewardHandler.
+ * Public reward facade. Specialized reward state and service responsibilities are
+ * delegated to focused classes while this class preserves the existing API.
  */
 public class RewardHandler {
 
-	/** The default folder. */
-	private File defaultFolder;
-
 	@Getter
 	private final RewardRegistry rewardRegistry;
-
 	@Getter
-	private CopyOnWriteArrayList<RequirementInject> injectedRequirements = new CopyOnWriteArrayList<RequirementInject>();
-
+	private final RewardLoader rewardLoader;
 	@Getter
-	private CopyOnWriteArrayList<RewardInject> injectedRewards = new CopyOnWriteArrayList<RewardInject>();
-
+	private final RewardValidator rewardValidator;
 	@Getter
-	private CopyOnWriteArrayList<RewardPlaceholderHandle> placeholders = new CopyOnWriteArrayList<RewardPlaceholderHandle>();
+	private final SubRewardResolver subRewardResolver;
+	@Getter
+	private final RewardInjectionRegistry rewardInjectionRegistry;
 
 	AdvancedCorePlugin plugin;
-
-	/** The reward folders. */
-	private ArrayList<File> rewardFolders;
 
 	@Getter
 	private ScheduledExecutorService delayedTimer = Executors.newSingleThreadScheduledExecutor();
 
-	@Getter
-	@Setter
-	private Set<String> validPaths = new HashSet<>();
-
 	public RewardHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 		rewardRegistry = new RewardRegistry(plugin);
-		rewardFolders = new ArrayList<>();
-		setDefaultFolder(new File(plugin.getDataFolder(), "Rewards"));
+		rewardInjectionRegistry = new RewardInjectionRegistry(this, plugin);
+		rewardValidator = new RewardValidator(this, plugin);
+		subRewardResolver = new SubRewardResolver(this, plugin);
+		rewardLoader = new RewardLoader(this, plugin);
 	}
 
 	public void addDirectlyDefined(DirectlyDefinedReward directlyDefinedReward) {
@@ -77,45 +64,23 @@ public class RewardHandler {
 	}
 
 	public void addInjectedRequirements(RequirementInject inject) {
-		injectedRequirements.add(inject);
-		sortInjectedRequirements();
+		rewardInjectionRegistry.addInjectedRequirement(inject);
 	}
 
 	public void addInjectedReward(RewardInject inject) {
-		injectedRewards.add(inject);
-		sortInjectedRewards();
+		rewardInjectionRegistry.addInjectedReward(inject);
 	}
 
 	public void addPlaceholder(RewardPlaceholderHandle handle) {
-		placeholders.add(handle);
+		rewardInjectionRegistry.addPlaceholder(handle);
 	}
 
 	public void addRewardFolder(File file) {
-		addRewardFolder(file, true, true);
+		rewardLoader.addRewardFolder(file);
 	}
 
 	public void addRewardFolder(File file, boolean load, boolean create) {
-		if (create) {
-			file.mkdirs();
-		}
-		if (!file.exists()) {
-			return;
-		}
-		if (file.isDirectory()) {
-			if (!rewardFolders.contains(file)) {
-				rewardFolders.add(file);
-				if (load) {
-					loadRewards();
-				}
-			}
-		} else {
-			plugin.debug(file.getAbsolutePath());
-			try {
-				throw new FileDirectoryException("File is not a directory");
-			} catch (FileDirectoryException e) {
-				e.printStackTrace();
-			}
-		}
+		rewardLoader.addRewardFolder(file, load, create);
 	}
 
 	public void addSubDirectlyDefined(SubDirectlyDefinedReward subDirectlyDefinedReward) {
@@ -123,80 +88,27 @@ public class RewardHandler {
 	}
 
 	public void addValidPath(String path) {
-		validPaths.add(path);
+		rewardValidator.addValidPath(path);
 	}
 
 	public void checkDirectlyDefinedRewardFiles() {
-		ArrayList<String> directlyDefinedPaths = new ArrayList<String>();
-		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
-			directlyDefinedPaths.add(direct.getPath().replace(".", "_"));
-		}
-
-		for (SubDirectlyDefinedReward direct : getSubDirectlyDefinedRewards()) {
-			directlyDefinedPaths.add(direct.getFullPath().replace(".", "_"));
-		}
-
-		for (Reward rewardFile : getRewards()) {
-			if (ArrayUtils.containsIgnoreCase(directlyDefinedPaths, rewardFile.getName())) {
-				plugin.getLogger().warning("Found reward file conflict: " + rewardFile.getName()
-						+ ", recommend deleting or renaming file to prevent issues");
-			}
-		}
+		rewardValidator.checkDirectlyDefinedRewardFiles();
 	}
 
 	public void checkDirectlyDefined() {
-		for (Reward rewardFile : getRewards()) {
-			File folder = rewardFile.getConfig().getRewardFolder();
-			if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
-				if (hasDirectRewardHandle(rewardFile.getName())) {
-					rewardFile.getFile().delete();
-				}
-			}
-		}
-		loadRewards();
+		rewardLoader.checkDirectlyDefined();
 	}
 
 	public void checkSubRewards() {
-		plugin.extraDebug("Checking directlydefined rewards for sub rewards");
-		rewardRegistry.resetSubDirectlyDefinedRewards();
-		for (DirectlyDefinedReward direct : getDirectlyDefinedRewards()) {
-			checkSubRewards(direct);
-		}
-
-		plugin.extraDebug("Checking reward file for sub rewards");
-		for (Reward reward : getRewards()) {
-			checkSubRewards(new RewardFileDefinedReward(reward));
-		}
+		subRewardResolver.checkSubRewards();
 	}
 
 	public void checkSubRewards(DefinedReward direct) {
-		for (RewardInject inject : getInjectedRewards()) {
-			for (SubDirectlyDefinedReward sub : inject.subRewards(direct)) {
-				addSubDirectlyDefined(sub);
-				checkSubRewards(sub);
-			}
-		}
+		subRewardResolver.checkSubRewards(direct);
 	}
 
-	/**
-	 * Copy file.
-	 *
-	 * @param fileName the file name
-	 */
-	private void copyFile(String fileName) {
-		File file = new File(plugin.getDataFolder(), "Rewards" + File.separator + fileName);
-		if (!file.exists()) {
-			plugin.saveResource("Rewards" + File.separator + fileName, true);
-		}
-	}
-
-	/**
-	 * Gets the default folder.
-	 *
-	 * @return the default folder
-	 */
 	public File getDefaultFolder() {
-		return defaultFolder;
+		return rewardLoader.getDefaultFolder();
 	}
 
 	public DirectlyDefinedReward getDirectlyDefined(String path) {
@@ -207,13 +119,16 @@ public class RewardHandler {
 		return rewardRegistry.getDirectlyDefinedRewards();
 	}
 
-	private String getFileExtension(File file) {
-		String name = file.getName();
-		int lastIndexOf = name.lastIndexOf(".");
-		if (lastIndexOf == -1) {
-			return ""; // empty extension
-		}
-		return name.substring(lastIndexOf);
+	public CopyOnWriteArrayList<RequirementInject> getInjectedRequirements() {
+		return rewardInjectionRegistry.getInjectedRequirements();
+	}
+
+	public CopyOnWriteArrayList<RewardInject> getInjectedRewards() {
+		return rewardInjectionRegistry.getInjectedRewards();
+	}
+
+	public CopyOnWriteArrayList<RewardPlaceholderHandle> getPlaceholders() {
+		return rewardInjectionRegistry.getPlaceholders();
 	}
 
 	public Reward getReward(ConfigurationSection data, String path, RewardOptions rewardOptions) {
@@ -243,95 +158,22 @@ public class RewardHandler {
 		return null;
 	}
 
-	/**
-	 * Gets the reward.
-	 *
-	 * @param reward the reward
-	 * @return the reward
-	 */
 	public Reward getReward(String reward) {
 		return rewardRegistry.getReward(reward);
 	}
 
 	public Reward getRewardDirectlyDefined(String reward) {
-		if (reward == null) {
-			reward = "";
-		}
-		reward = reward.replace(" ", "_");
-
-		for (Reward rewardFile : getRewards()) {
-			File folder = rewardFile.getConfig().getRewardFolder();
-			if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
-				if (rewardFile.getName().equalsIgnoreCase(reward)) {
-					return rewardFile;
-				}
-			}
-		}
-
-		if (reward.equals("")) {
-			plugin.getLogger().warning("Tried to get any empty reward file name, renaming to EmptyName");
-			reward = "EmptyName";
-		}
-
-		if (reward.equalsIgnoreCase("examplebasic") || reward.equalsIgnoreCase("exampleadvanced")) {
-			plugin.getLogger().warning("Using example rewards as a reward, becarefull");
-		}
-
-		File directFolder = new File(getDefaultFolder().getAbsolutePath() + File.separator + "DirectlyDefined");
-		directFolder.mkdirs();
-		return new Reward(directFolder, reward);
+		return rewardLoader.getRewardDirectlyDefined(reward);
 	}
 
-	/**
-	 * Gets the reward files.
-	 *
-	 * @param folder the folder
-	 * @return the reward files
-	 */
 	public ArrayList<String> getRewardFiles(File folder) {
-		ArrayList<String> fileNames = new ArrayList<String>();
-		if (folder != null && folder.exists()) {
-			File[] files = folder.listFiles();
-			if (files == null) {
-				return fileNames;
-			}
-			for (File file : files) {
-				if (getFileExtension(file).equals(".yml")) {
-					fileNames.add(file.getName());
-				}
-			}
-		}
-		return fileNames;
+		return rewardLoader.getRewardFiles(folder);
 	}
 
-	/**
-	 * Gets the reward names.
-	 *
-	 * @param file the file
-	 * @return the reward names
-	 */
 	public ArrayList<String> getRewardNames(File file) {
-		ArrayList<String> rewardFiles = getRewardFiles(file);
-		if (rewardFiles == null) {
-			return new ArrayList<>();
-		}
-		for (int i = 0; i < rewardFiles.size(); i++) {
-			if (rewardFiles.get(i).contains(".yml")) {
-				rewardFiles.set(i, rewardFiles.get(i).replace(".yml", ""));
-			} else {
-				plugin.debug("Not a proper reward file: " + rewardFiles.get(i));
-			}
-		}
-
-		Collections.sort(rewardFiles, String.CASE_INSENSITIVE_ORDER);
-		return rewardFiles;
+		return rewardLoader.getRewardNames(file);
 	}
 
-	/**
-	 * Gets the rewards.
-	 *
-	 * @return the rewards
-	 */
 	public List<Reward> getRewards() {
 		return rewardRegistry.getRewards();
 	}
@@ -342,6 +184,14 @@ public class RewardHandler {
 
 	public CopyOnWriteArrayList<SubDirectlyDefinedReward> getSubDirectlyDefinedRewards() {
 		return rewardRegistry.getSubDirectlyDefinedRewards();
+	}
+
+	public Set<String> getValidPaths() {
+		return rewardValidator.getValidPaths();
+	}
+
+	public void setValidPaths(Set<String> validPaths) {
+		rewardValidator.setValidPaths(validPaths);
 	}
 
 	public void giveChoicesReward(Reward mainReward, AdvancedCoreUser user, String choice) {
@@ -441,7 +291,6 @@ public class RewardHandler {
 
 	public void giveReward(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
 		if (reward != null) {
-			// make sure reward is async to avoid issues
 			if (Bukkit.isPrimaryThread()) {
 				plugin.getBukkitScheduler().runTaskAsynchronously(plugin, new Runnable() {
 					@Override
@@ -473,92 +322,19 @@ public class RewardHandler {
 	}
 
 	public boolean hasRewards(FileConfiguration data, String path) {
-		if (data.isList(path)) {
-			if (data.getList(path, new ArrayList<>()).size() != 0) {
-				return true;
-			}
-		}
-		if (data.isConfigurationSection(path)) {
-			if (data.getConfigurationSection(path).getKeys(false).size() != 0) {
-				return true;
-			}
-		}
-		if (data.isString(path)) {
-			if (!data.getString(path, "").equals("")) {
-				return true;
-			}
-		}
-		return false;
+		return rewardValidator.hasRewards(data, path);
 	}
 
 	public void loadInjectedRequirements() {
-		injectedRequirements.clear();
-		com.bencodez.advancedcore.api.rewards.builtin.requirements.BuiltinRequirements.register(this, plugin);
-		for (RequirementInject requirement : injectedRequirements) {
-			requirement.setInternalReward(true);
-		}
-		sortInjectedRequirements();
+		rewardInjectionRegistry.loadInjectedRequirements();
 	}
 
 	public void loadInjectedRewards() {
-		injectedRewards.clear();
-		com.bencodez.advancedcore.api.rewards.builtin.BuiltinRewards.register(this, plugin);
-		for (RewardInject reward : injectedRewards) {
-			reward.setInternalReward(true);
-		}
-		sortInjectedRewards();
+		rewardInjectionRegistry.loadInjectedRewards();
 	}
 
-	/**
-	 * Load rewards.
-	 */
 	public void loadRewards() {
-		rewardRegistry.resetRewards();
-		setupExample();
-		addValidPath("DirectlyDefinedReward");
-		addValidPath("Delayed");
-		addValidPath("Timed");
-		addValidPath("DisplayItem");
-		addValidPath("ForceOffline");
-		for (File file : rewardFolders) {
-			loadRewards(file);
-		}
-		sortInjectedRewards();
-		sortInjectedRequirements();
-		plugin.debug("Loaded rewards");
-	}
-
-	private void loadRewards(File file) {
-		for (String reward : getRewardNames(file)) {
-			if (!reward.equals("")) {
-				if (!rewardExist(reward)) {
-					try {
-						Reward reward1 = new Reward(file, reward);
-						reward1.validate();
-						if (!reward1.getConfig().isDirectlyDefinedReward()
-								|| file.getName().equalsIgnoreCase("DirectlyDefined")) {
-							getRewards().add(reward1);
-							if (reward1.getConfig().getConfigData().getConfigurationSection("").getKeys(true).size() > 0) {
-								plugin.extraDebug("Loaded Reward File: " + file.getAbsolutePath() + "/" + reward);
-							} else {
-								plugin.debug("Loaded empty reward file" + file.getAbsolutePath() + "/" + reward);
-							}
-						} else {
-							plugin.extraDebug("Ignoring directly defined reward file " + file.getAbsolutePath() + "/" + reward);
-						}
-					} catch (Exception e) {
-						plugin.getLogger().severe("Failed to load reward file " + reward + ".yml: " + e.getMessage());
-						e.printStackTrace();
-					}
-				} else {
-					plugin.debug("Detected that a reward file named " + reward
-							+ " already exists, cannot load reward file " + file.getAbsolutePath() + "/" + reward);
-				}
-			} else {
-				plugin.getLogger().warning(
-						"Detected getting a reward file with an empty name! That means you either didn't type a name or didn't properly make an empty list");
-			}
-		}
+		rewardLoader.loadRewards();
 	}
 
 	public void openSubReward(Player player, String path, RewardEditData reward) {
@@ -588,36 +364,16 @@ public class RewardHandler {
 		}, reward), reward.getName() + "." + path);
 	}
 
-	/**
-	 * Reward exist.
-	 *
-	 * @param reward the reward
-	 * @return true, if successful
-	 */
 	public boolean rewardExist(String reward) {
 		return rewardRegistry.rewardExist(reward);
 	}
 
-	/**
-	 * Sets the default folder.
-	 *
-	 * @param defaultFolder the new default folder
-	 */
 	public void setDefaultFolder(File defaultFolder) {
-		this.defaultFolder = defaultFolder;
+		rewardLoader.setDefaultFolder(defaultFolder);
 	}
 
-	/**
-	 * Setup example.
-	 */
 	public void setupExample() {
-		if (!plugin.getDataFolder().exists()) {
-			plugin.getDataFolder().mkdir();
-		}
-		if (AdvancedCorePlugin.getInstance().getOptions().isLoadDefaultRewards()) {
-			copyFile("ExampleBasic.yml");
-			copyFile("ExampleAdvanced.yml");
-		}
+		rewardLoader.setupExample();
 	}
 
 	public void shutdown() {
@@ -631,29 +387,12 @@ public class RewardHandler {
 	}
 
 	public void sortInjectedRequirements() {
-		Collections.sort(injectedRequirements, new Comparator<RequirementInject>() {
-			@Override
-			public int compare(RequirementInject o1, RequirementInject o2) {
-				return Integer.compare(o2.getPriority(), o1.getPriority());
-			}
-		});
+		rewardInjectionRegistry.sortInjectedRequirements();
 	}
 
 	public void sortInjectedRewards() {
-		Collections.sort(injectedRewards, new Comparator<RewardInject>() {
-			@Override
-			public int compare(RewardInject o1, RewardInject o2) {
-				return Integer.compare(o2.getPriority(), o1.getPriority());
-			}
-		});
+		rewardInjectionRegistry.sortInjectedRewards();
 	}
-
-	/*
-	 * private void updateReward(Reward reward) { for (int i = getRewards().size() -
-	 * 1; i >= 0; i--) { if
-	 * (getRewards().get(i).getFile().getName().equals(reward.getFile().getName()))
-	 * { getRewards().set(i, reward); return; } } getRewards().add(reward); }
-	 */
 
 	public void startup() {
 		plugin.addUserStartup(new UserStartup() {
