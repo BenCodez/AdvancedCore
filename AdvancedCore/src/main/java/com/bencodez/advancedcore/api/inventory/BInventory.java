@@ -394,7 +394,7 @@ public class BInventory {
 		if (futures == null) {
 			futures = new ArrayList<>();
 		}
-		futures.add(plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, delay, TimeUnit.MILLISECONDS));
+		futures.add(plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, interval, TimeUnit.MILLISECONDS));
 	}
 
 	/**
