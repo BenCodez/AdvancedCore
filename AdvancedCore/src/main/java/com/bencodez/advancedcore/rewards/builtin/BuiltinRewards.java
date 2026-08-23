@@ -11,8 +11,9 @@ public final class BuiltinRewards {
 
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         // Preserve the historical registration order because sorting by priority is stable,
-        // so order still matters for injects with the same priority. Command implementations
-        // live together in RewardCommands, but are registered at their original positions.
+        // so order still matters for injects with the same priority. Feature implementations
+        // remain grouped in their classes, but split registration methods are invoked at the
+        // same positions as the original RewardHandler implementation.
         RewardMoney.register(handler, plugin);
         RewardCommands.registerNumberCommand(handler, plugin);
         RewardExp.register(handler, plugin);
@@ -36,10 +37,12 @@ public final class BuiltinRewards {
         RewardSound.register(handler, plugin);
         RewardEffect.register(handler, plugin);
         RewardFirework.register(handler, plugin);
-        RewardItems.register(handler, plugin);
-        RewardChoices.register(handler, plugin);
+        RewardItems.registerItem(handler, plugin);
         RewardAdvancedPriority.register(handler, plugin);
         RewardAdvancedWorld.register(handler, plugin);
         RewardSpecialChance.register(handler, plugin);
+        RewardItems.registerRandomItem(handler, plugin);
+        RewardChoices.register(handler, plugin);
+        RewardItems.registerItems(handler, plugin);
     }
 }
