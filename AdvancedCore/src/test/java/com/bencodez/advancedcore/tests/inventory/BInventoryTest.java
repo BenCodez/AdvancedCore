@@ -41,6 +41,24 @@ public class BInventoryTest {
 
 	@Test
 	@SuppressWarnings("rawtypes")
+	public void legacyUpdatingButtonIsCancelledWhenGuiIsForceClosed() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledFuture future = mock(ScheduledFuture.class);
+		Runnable runnable = mock(Runnable.class);
+		when(plugin.getInventoryTimer()).thenReturn(timer);
+		doReturn(future).when(timer).scheduleWithFixedDelay(eq(runnable), eq(100L), eq(250L),
+				eq(TimeUnit.MILLISECONDS));
+
+		BInventory inventory = new BInventory("Test");
+		inventory.addUpdatingButton(plugin, 100L, 250L, runnable);
+		inventory.forceClose(null);
+
+		verify(future).cancel(true);
+	}
+
+	@Test
+	@SuppressWarnings("rawtypes")
 	public void viewerCancellationDoesNotCancelOtherViewerTasks() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
