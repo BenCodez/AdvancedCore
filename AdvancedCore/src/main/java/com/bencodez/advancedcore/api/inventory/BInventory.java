@@ -102,6 +102,8 @@ public class BInventory {
 	private Map<Integer, BInventoryButton> buttons = new HashMap<>();
 	@Getter
 	private boolean closeInv = true;
+	@Getter
+	private boolean clickAsync = true;
 	private final HashMap<String, Object> data = new HashMap<>();
 	private final ArrayList<BInventoryButton> fillItems = new ArrayList<>();
 	private final List<ScheduledFuture<?>> futures = new CopyOnWriteArrayList<>();
@@ -434,6 +436,37 @@ public class BInventory {
 		this.buttons = buttons;
 	}
 
+	/**
+	 * Set whether button callbacks are dispatched asynchronously. This defaults to
+	 * true for backwards compatibility with existing AdvancedCore GUI code.
+	 *
+	 * @param value true to run button callbacks asynchronously, false to run them
+	 *              on the inventory event thread
+	 * @return this inventory
+	 */
+	public BInventory setClickAsync(boolean value) {
+		clickAsync = value;
+		return this;
+	}
+
+	/**
+	 * Convenience method for opting this inventory into synchronous button callbacks.
+	 *
+	 * @return this inventory
+	 */
+	public BInventory runClicksSync() {
+		return setClickAsync(false);
+	}
+
+	/**
+	 * Convenience method for explicitly using the legacy asynchronous callback mode.
+	 *
+	 * @return this inventory
+	 */
+	public BInventory runClicksAsync() {
+		return setClickAsync(true);
+	}
+
 	public BInventory setCloseInv(boolean value) {
 		closeInv = value;
 		return this;
@@ -480,7 +513,6 @@ public class BInventory {
 				if (!buttons.containsKey(slot)) {
 					buttons.put(slot, copyButton(button, slot));
 				}
-			}
 		}
 		fillItems.clear();
 	}
