@@ -11,98 +11,81 @@ import com.bencodez.simpleapi.player.PlayerUtils;
  * Session holder for managing GUI state across inventory interactions.
  */
 public class GUISession implements InventoryHolder {
+
 	/**
 	 * Get the GUISession for a given inventory, or null if none exists for this
-	 * inventory
+	 * inventory.
 	 *
-	 * @param inventory The inventory to get the GUISession from
-	 * @return The GUISession or null if none exists
+	 * @param inventory the inventory to inspect
+	 * @return the GUISession or null if none exists
 	 */
 	public static GUISession extractSession(Inventory inventory) {
 		if (inventory == null) {
 			return null;
 		}
-		InventoryHolder ih = inventory.getHolder();
-		if (ih != null && ih instanceof GUISession) {
-			return (GUISession) ih;
-		}
-		return null;
+		InventoryHolder holder = inventory.getHolder();
+		return holder instanceof GUISession ? (GUISession) holder : null;
 	}
 
 	/**
-	 * Extract the GUISession from the inventory currently being viewed by a player,
-	 * or null if none exists
+	 * Extract the GUISession from the inventory currently being viewed by a player.
 	 *
-	 * @param player The player who's open inventory to extract the GUISession from
-	 * @return The GUISession or null if none exists
+	 * @param player the player whose open inventory should be inspected
+	 * @return the GUISession or null if none exists
 	 */
 	public static GUISession extractSession(Player player) {
 		if (player == null) {
 			return null;
 		}
-		InventoryView oInv = player.getOpenInventory();
-		if (oInv == null) {
+
+		InventoryView openInventory = player.getOpenInventory();
+		if (openInventory == null) {
 			return null;
 		}
-		Inventory inv = PlayerUtils.getTopInventory(player);
-		if (inv != null) {
-			return extractSession(inv);
-		}
-		return extractSession(oInv.getTopInventory());
 
+		Inventory topInventory = PlayerUtils.getTopInventory(player);
+		if (topInventory == null) {
+			topInventory = openInventory.getTopInventory();
+		}
+		return extractSession(topInventory);
 	}
 
-	private BInventory inventoryGUI; // GUI Being viewed
-	private int page = 1; // Currently displayed page number
+	private final BInventory inventoryGUI;
+	private int page = 1;
 
 	/**
-	 * Construct a new GUISession
+	 * Construct a new GUISession.
 	 *
-	 * @param inventoryGUI The inventory that this a session to view
-	 * @param page         The page currently being viewed
+	 * @param inventoryGUI the GUI represented by this session
+	 * @param page the page currently being viewed
 	 */
 	public GUISession(BInventory inventoryGUI, int page) {
 		if (inventoryGUI == null) {
 			throw new IllegalArgumentException("InventoryGUI must not be null");
 		}
-
 		this.inventoryGUI = inventoryGUI;
-		this.page = page;
+		setPage(page);
 	}
 
 	/**
-	 * Method inherited from Bukkit's InventoryHolder. Will always return null
+	 * InventoryHolder implementation. The concrete inventory owns this holder, so
+	 * no secondary inventory needs to be returned here.
 	 *
-	 * @return Null
+	 * @return null
 	 */
 	@Override
-	public Inventory getInventory() { // Part of InventoryHolder from bukkit
-		return null; // doesn't matter at all if null returned
+	public Inventory getInventory() {
+		return null;
 	}
 
-	/**
-	 * Get the InventoryGUI being viewed
-	 *
-	 * @return The InventoryGUI being viewed
-	 */
 	public BInventory getInventoryGUI() {
 		return inventoryGUI;
 	}
 
-	/**
-	 * Get the page currently being viewed
-	 *
-	 * @return The page
-	 */
 	public int getPage() {
 		return page;
 	}
 
-	/**
-	 * Set the page currently being viewed
-	 *
-	 * @param page The page
-	 */
 	public void setPage(int page) {
 		if (page < 1) {
 			throw new IllegalArgumentException("Page must be >= 1");
