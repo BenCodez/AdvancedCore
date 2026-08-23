@@ -6,8 +6,12 @@ package com.bencodez.advancedcore.api.inventory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -31,592 +35,481 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The Class BInventory.
+ * Inventory GUI with button, pagination and update-task lifecycle management.
  */
 public class BInventory {
 
-	/**
-	 * The Class ClickEvent.
-	 */
 	public class ClickEvent {
-
-		/**
-		 * The button that was clicked.
-		 * 
-		 * @return the button
-		 */
 		@Getter
-		private BInventoryButton button;
-
-		/**
-		 * The click type.
-		 * 
-		 * @return the click type
-		 */
+		private final BInventoryButton button;
 		@Getter
-		private ClickType click;
-
-		/**
-		 * The clicked item.
-		 * 
-		 * @return the clicked item
-		 */
+		private final ClickType click;
 		@Getter
-		private ItemStack clickedItem;
-
-		/**
-		 * The inventory click event.
-		 * 
-		 * @return the inventory click event
-		 */
+		private final ItemStack clickedItem;
 		@Getter
-		private InventoryClickEvent event;
-
-		/**
-		 * The inventory.
-		 * 
-		 * @return the inventory
-		 */
+		private final InventoryClickEvent event;
 		@Getter
-		private Inventory inventory;
-
-		/**
-		 * The player who clicked.
-		 * 
-		 * @return the player
-		 */
+		private final Inventory inventory;
 		@Getter
-		private Player player;
-
-		/**
-		 * The slot that was clicked.
-		 * 
-		 * @return the slot number
-		 */
+		private final Player player;
 		@Getter
-		private int slot;
+		private final int slot;
 
-		/**
-		 * Instantiates a new click event.
-		 * 
-		 * @param event the inventory click event
-		 * @param b the button
-		 */
-		public ClickEvent(InventoryClickEvent event, BInventoryButton b) {
+		public ClickEvent(InventoryClickEvent event, BInventoryButton button) {
 			this.event = event;
-			player = (Player) event.getWhoClicked();
-			click = event.getClick();
-			inventory = event.getInventory();
-			clickedItem = event.getCurrentItem();
-			slot = event.getSlot();
-			button = b;
+			this.player = (Player) event.getWhoClicked();
+			this.click = event.getClick();
+			this.inventory = event.getInventory();
+			this.clickedItem = event.getCurrentItem();
+			this.slot = event.getSlot();
+			this.button = button;
 		}
 
-		/**
-		 * Close the inventory for the player.
-		 */
 		public void closeInventory() {
-			runSync(new Runnable() {
-
-				@Override
-				public void run() {
-					if (player != null) {
-						player.closeInventory();
-					}
+			runSync(() -> {
+				if (player != null) {
+					player.closeInventory();
 				}
 			});
 		}
 
-		/**
-		 * Gets the current item.
-		 *
-		 * @return the current item
-		 */
 		public ItemStack getCurrentItem() {
 			return clickedItem;
 		}
 
-		/**
-		 * Gets the meta.
-		 *
-		 * @param player the player
-		 * @param str    the str
-		 * @return the meta
-		 */
 		public Object getMeta(Player player, String str) {
 			return PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player, str);
 		}
 
-		/**
-		 * Gets the meta.
-		 *
-		 * @param str the str
-		 * @return the meta
-		 */
 		public Object getMeta(String str) {
 			return PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player, str);
 		}
 
-		/**
-		 * Gets the who clicked.
-		 *
-		 * @return the who clicked
-		 */
 		public Player getWhoClicked() {
 			return player;
 		}
 
-		/**
-		 * Run a task synchronously.
-		 * 
-		 * @param run the runnable to execute
-		 */
-		public void runSync(Runnable run) {
-			AdvancedCorePlugin.getInstance().getBukkitScheduler().runTask(AdvancedCorePlugin.getInstance(), run);
+		public void runSync(Runnable runnable) {
+			AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+			plugin.getBukkitScheduler().runTask(plugin, runnable);
 		}
 	}
 
-	/**
-	 * Open inventory.
-	 *
-	 * @param player    the player
-	 * @param inventory the inventory
-	 */
 	public static void openInventory(Player player, BInventory inventory) {
 		inventory.openInventory(player);
 	}
 
 	private Map<Integer, BInventoryButton> buttons = new HashMap<>();
-
-	/**
-	 * Whether the inventory should close after interaction.
-	 * 
-	 * @return whether the inventory should close
-	 */
 	@Getter
 	private boolean closeInv = true;
-
-	private HashMap<String, Object> data = new HashMap<>();
-
+	private final HashMap<String, Object> data = new HashMap<>();
+	private final ArrayList<BInventoryButton> fillItems = new ArrayList<>();
+	private final List<ScheduledFuture<?>> futures = new CopyOnWriteArrayList<>();
+	private final Map<UUID, List<ScheduledFuture<?>>> playerFutures = new ConcurrentHashMap<>();
 	private Inventory inv;
-
 	private String inventoryName;
-
-	/**
-	 * The last time a button was pressed in this inventory.
-	 * 
-	 * @return the last press time in milliseconds
-	 * @param lastPressTime the last press time to set
-	 */
 	@Getter
 	@Setter
 	private long lastPressTime = 0;
-
 	private int maxInvSize = 54;
-
-	/**
-	 * The maximum page number for paginated inventories.
-	 * 
-	 * @return the maximum page number
-	 */
 	@Getter
 	private int maxPage = 1;
-
 	private ItemStack nextItem;
-
-	/**
-	 * The current page number for paginated inventories.
-	 * 
-	 * @return the current page number
-	 */
 	@Getter
 	private int page = 1;
-
 	private ArrayList<BInventoryButton> pageButtons = new ArrayList<>();
-
 	private boolean pages = false;
-
 	private String perm;
-
-	/**
-	 * Placeholders to be replaced in the inventory.
-	 * 
-	 * @return the placeholder map
-	 */
 	@Getter
-	private HashMap<String, String> placeholders = new HashMap<>();
-
-	/**
-	 * Whether to play sound on inventory interaction.
-	 * 
-	 * @return whether sound should play
-	 * @param playerSound whether sound should play
-	 */
+	private final HashMap<String, String> placeholders = new HashMap<>();
 	@Getter
 	@Setter
 	private boolean playerSound = true;
-
 	private ItemStack prevItem;
 
-	@SuppressWarnings("rawtypes")
-	ArrayList<ScheduledFuture> futures;
-
-	private ArrayList<BInventoryButton> fillItems = new ArrayList<>();
-
-	/**
-	 * Instantiates a new b inventory.
-	 *
-	 * @param name the name
-	 */
 	public BInventory(String name) {
 		setInventoryName(name);
 	}
 
 	/**
-	 * Adds the button.
-	 *
-	 * Slot of -2 will add item to end of the GUI (last available slot)
-	 *
-	 * @param button the button
+	 * Adds a button. Slot -1 selects the next slot and -2 selects the final slot of
+	 * the current inventory row size.
 	 */
 	public void addButton(BInventoryButton button) {
 		int slot = button.getSlot();
 		if (slot == -1) {
 			slot = getNextSlot();
-		}
-		if (slot == -2) {
+		} else if (slot == -2) {
 			slot = getProperSize(getNextSlot()) - 1;
 		}
-		if (!button.isFillEmptySlots()) {
-			if (button.getFillSlots() != null && button.getFillSlots().size() > 0) {
-				for (Integer fill : button.getFillSlots()) {
-					slot = fill.intValue();
-					BInventoryButton button1 = new BInventoryButton(button) {
 
-						@Override
-						public void onClick(ClickEvent clickEvent) {
-							button.onClick(clickEvent);
-						}
-					};
-					button1.setSlot(slot);
-					getButtons().put(slot, button1);
-				}
-			} else {
-				// no fill slots set
-				button.setSlot(slot);
-				getButtons().put(slot, button);
-			}
-		} else {
+		if (button.isFillEmptySlots()) {
 			fillItems.add(button);
-			// fill empty slots
-
+			return;
 		}
+
+		List<Integer> fillSlots = button.getFillSlots();
+		if (fillSlots != null && !fillSlots.isEmpty()) {
+			for (Integer fillSlot : fillSlots) {
+				if (fillSlot != null) {
+					buttons.put(fillSlot, copyButton(button, fillSlot));
+				}
+			}
+			return;
+		}
+
+		button.setSlot(slot);
+		buttons.put(slot, button);
 	}
-	
-	/**
-	 * Check if a slot is taken by a button.
-	 * 
-	 * @param slot the slot to check
-	 * @return true if the slot is taken
-	 */
+
 	public boolean isSlotTaken(int slot) {
-	    return buttons.containsKey(slot);
+		return buttons.containsKey(slot);
 	}
 
-	/**
-	 * Adds the button.
-	 *
-	 * @param position the position
-	 * @param button   the button
-	 */
 	public void addButton(int position, BInventoryButton button) {
-		getButtons().put(position, button);
+		buttons.put(position, button);
 	}
 
-	/**
-	 * Add data to this inventory.
-	 * 
-	 * @param key the key
-	 * @param object the value
-	 * @return this inventory
-	 */
 	public BInventory addData(String key, Object object) {
-		getData().put(key, object);
+		data.put(key, object);
 		return this;
 	}
 
-	private void addFillSlots() {
-		for (BInventoryButton button : fillItems) {
-			for (int i = 0; i < getInventorySize(); i++) {
-				boolean slotExist = false;
-				for (Integer exist : getButtons().keySet()) {
-					if (exist.intValue() == i) {
-						slotExist = true;
-					}
-				}
-				if (!slotExist) {
-					BInventoryButton button1 = new BInventoryButton(button) {
-
-						@Override
-						public void onClick(ClickEvent clickEvent) {
-							button.onClick(clickEvent);
-						}
-					};
-					button1.setSlot(i);
-					getButtons().put(i, button1);
-				}
-			}
-		}
-		fillItems.clear();
-	}
-
-	/**
-	 * Add a placeholder to this inventory.
-	 * 
-	 * @param toReplace the string to replace
-	 * @param replaceWith the replacement string
-	 * @return this inventory
-	 */
 	public BInventory addPlaceholder(String toReplace, String replaceWith) {
 		placeholders.put(toReplace, replaceWith);
 		return this;
 	}
 
 	/**
-	 * Add an updating button with scheduled updates.
-	 * 
-	 * @param plugin the plugin instance
-	 * @param delay the initial delay
-	 * @param interval the update interval
-	 * @param runnable the runnable to execute
+	 * Compatibility form for update tasks that are not associated with a player.
 	 */
 	public void addUpdatingButton(AdvancedCorePlugin plugin, long delay, long interval, Runnable runnable) {
-		if (futures == null) {
-			futures = new ArrayList<>();
-		}
 		futures.add(plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, interval, TimeUnit.MILLISECONDS));
 	}
 
 	/**
-	 * Cancel all scheduled timers for this inventory.
+	 * Tracks an updating task for one viewer so closing another player's GUI does
+	 * not cancel it.
 	 */
-	@SuppressWarnings("rawtypes")
+	public void addUpdatingButton(Player player, AdvancedCorePlugin plugin, long delay, long interval,
+			Runnable runnable) {
+		ScheduledFuture<?> future = plugin.getInventoryTimer().scheduleWithFixedDelay(runnable, delay, interval,
+				TimeUnit.MILLISECONDS);
+		trackFuture(player, future);
+	}
+
+	void addDelayedTask(Player player, AdvancedCorePlugin plugin, long delay, Runnable runnable) {
+		ScheduledFuture<?> future = plugin.getInventoryTimer().schedule(runnable, delay, TimeUnit.MILLISECONDS);
+		trackFuture(player, future);
+	}
+
+	/**
+	 * Cancels every task owned by this GUI.
+	 */
 	public void cancelTimer() {
-		if (futures != null) {
-			for (ScheduledFuture f : futures) {
-				f.cancel(true);
-			}
-			futures = null;
+		cancelFutures(futures);
+		futures.clear();
+		for (List<ScheduledFuture<?>> viewerFutures : playerFutures.values()) {
+			cancelFutures(viewerFutures);
 		}
+		playerFutures.clear();
 	}
 
 	/**
-	 * Close the inventory for a player after button click.
-	 * 
-	 * @param p the player
-	 * @param b the button that was clicked
+	 * Cancels only tasks associated with one viewer.
 	 */
-	public void closeInv(Player p, BInventoryButton b) {
-		if (!PlayerUtils.getTopInventory(p).equals(inv)) {
+	public void cancelTimer(Player player) {
+		if (player == null) {
+			return;
+		}
+		List<ScheduledFuture<?>> viewerFutures = playerFutures.remove(player.getUniqueId());
+		cancelFutures(viewerFutures);
+	}
+
+	public void closeInv(Player player, BInventoryButton button) {
+		Inventory topInventory = PlayerUtils.getTopInventory(player);
+		if (topInventory == null || inv == null || !topInventory.equals(inv)) {
 			return;
 		}
 
-		if (pages || (closeInv && (b == null || !b.isCloseInvSet()))) {
-			forceClose(p);
+		if (pages || (closeInv && (button == null || !button.isCloseInvSet()))) {
+			forceClose(player);
 			return;
 		}
-
-		if (b != null && b.isCloseInvSet() && b.isCloseInv()) {
-			forceClose(p);
-			return;
+		if (button != null && button.isCloseInvSet() && button.isCloseInv()) {
+			forceClose(player);
 		}
 	}
 
-	private void closeUpdatingBInv() {
-		cancelTimer();
-	}
-
-	/**
-	 * Set this inventory to not close after interaction.
-	 * 
-	 * @return this inventory
-	 */
 	public BInventory dontClose() {
 		closeInv = false;
 		return this;
 	}
 
-	/**
-	 * Force close the inventory for a player.
-	 * 
-	 * @param p the player
-	 */
-	public void forceClose(Player p) {
-		if (Bukkit.isPrimaryThread()) {
-			p.closeInventory();
-
-			AdvancedCorePlugin.getInstance().getBukkitScheduler()
-					.runTaskAsynchronously(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-						@Override
-						public void run() {
-							closeUpdatingBInv();
-						}
-					});
-		} else {
-			closeUpdatingBInv();
-			AdvancedCorePlugin.getInstance().getBukkitScheduler().runTask(AdvancedCorePlugin.getInstance(),
-					new Runnable() {
-
-						@Override
-						public void run() {
-							p.closeInventory();
-						}
-					}, p);
+	public void forceClose(Player player) {
+		cancelTimer(player);
+		if (player == null) {
+			return;
 		}
+		if (Bukkit.isPrimaryThread()) {
+			player.closeInventory();
+			return;
+		}
+
+		AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+		plugin.getBukkitScheduler().runTask(plugin, player::closeInventory, player);
 	}
 
-	/**
-	 * Gets the buttons.
-	 *
-	 * @return the buttons
-	 */
 	public Map<Integer, BInventoryButton> getButtons() {
 		return buttons;
 	}
 
-	/**
-	 * @return the data
-	 */
 	public HashMap<String, Object> getData() {
 		return data;
 	}
 
-	/**
-	 * Get data by key.
-	 * 
-	 * @param key the key
-	 * @return the data value
-	 */
 	public Object getData(String key) {
 		return data.get(key);
 	}
 
-	/**
-	 * Get data by key with default value.
-	 * 
-	 * @param key the key
-	 * @param defaultValue the default value if key is not found
-	 * @return the data value or default value
-	 */
 	public Object getData(String key, Object defaultValue) {
-		if (data.containsKey(key)) {
-			return data.get(key);
-		}
-		return defaultValue;
+		return data.containsKey(key) ? data.get(key) : defaultValue;
 	}
 
-	/**
-	 * Get the first empty slot in the inventory.
-	 * 
-	 * @return the first empty slot number
-	 */
 	public int getFirstEmptySlot() {
-		if (buttons.keySet().size() == 0) {
+		if (buttons.isEmpty()) {
 			return 0;
 		}
-
 		for (int i = 0; i < getInventorySize(); i++) {
 			if (!buttons.containsKey(i)) {
 				return i;
 			}
 		}
 		return getHighestSlot() + 1;
-
 	}
 
-	/**
-	 * Gets the highest slot.
-	 *
-	 * @return the highest slot
-	 */
 	public int getHighestSlot() {
-		int highestNum = 0;
-		for (int num : buttons.keySet()) {
-			if (num > highestNum) {
-				highestNum = num;
+		int highest = 0;
+		for (int slot : buttons.keySet()) {
+			if (slot > highest) {
+				highest = slot;
 			}
 		}
-		return highestNum;
+		return highest;
 	}
 
-	/**
-	 * Gets the inventory name.
-	 *
-	 * @return the inventory name
-	 */
 	public String getInventoryName() {
 		return inventoryName;
 	}
 
-	/**
-	 * Gets the inventory size.
-	 *
-	 * @return the inventory size
-	 */
 	public int getInventorySize() {
 		return getProperSize(getHighestSlot());
 	}
 
-	/**
-	 * @return the maxInvSize
-	 */
 	public int getMaxInvSize() {
 		return maxInvSize;
 	}
 
-	/**
-	 * Get meta from player.
-	 * 
-	 * @param player the player
-	 * @param str the meta key
-	 * @return the meta value
-	 */
 	public Object getMeta(Player player, String str) {
 		return PlayerUtils.getPlayerMeta(AdvancedCorePlugin.getInstance(), player, str);
 	}
 
-	/**
-	 * @return the nextItem
-	 */
 	public ItemStack getNextItem() {
 		return nextItem;
 	}
 
-	/**
-	 * Gets the next slot.
-	 *
-	 * @return the next slot
-	 */
 	public int getNextSlot() {
-		if (buttons.keySet().size() == 0) {
-			return 0;
-		}
-		return getHighestSlot() + 1;
+		return buttons.isEmpty() ? 0 : getHighestSlot() + 1;
 	}
 
-	/**
-	 * @return the pageButtons
-	 */
 	public ArrayList<BInventoryButton> getPageButtons() {
 		return pageButtons;
 	}
 
-	/**
-	 * @return the prevItem
-	 */
 	public ItemStack getPrevItem() {
 		return prevItem;
+	}
+
+	public boolean isOpen(Player player) {
+		GUISession session = GUISession.extractSession(player);
+		return session != null && session.getInventoryGUI() == this;
+	}
+
+	public boolean isPages() {
+		return pages;
+	}
+
+	public BInventory noSound() {
+		playerSound = false;
+		return this;
+	}
+
+	public void onClick(InventoryClickEvent event, BInventoryButton button) {
+		playSound((Player) event.getWhoClicked());
+		button.onClick(new ClickEvent(event, button), this);
+	}
+
+	public void openInventory(Player player) {
+		if (player.isSleeping()) {
+			AdvancedCorePlugin.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
+			return;
+		}
+		if (!hasPermission(player)) {
+			return;
+		}
+
+		addFillSlots();
+		if (getHighestSlot() >= maxInvSize) {
+			pages = true;
+		}
+
+		if (pages) {
+			maxPage = InventoryPagination.getPageCount(getHighestSlot(), maxInvSize);
+			addPlaceholder("totalpages", String.valueOf(maxPage));
+			openInventory(player, 1);
+			return;
+		}
+
+		cancelTimer(player);
+		inv = Bukkit.createInventory(new GUISession(this, 1), getInventorySize(), getDisplayName(player));
+		for (Entry<Integer, BInventoryButton> entry : buttons.entrySet()) {
+			loadButton(player, entry.getValue(), entry.getKey(), entry.getKey());
+		}
+		openInv(player, inv);
+	}
+
+	public void openInventory(Player player, int page) {
+		if (page < 1) {
+			throw new IllegalArgumentException("Page must be >= 1");
+		}
+
+		maxPage = InventoryPagination.getPageCount(getHighestSlot(), maxInvSize);
+		int targetPage = Math.min(page, maxPage);
+		cancelTimer(player);
+		addPlaceholder("currentpage", String.valueOf(targetPage));
+		addPlaceholder("totalpages", String.valueOf(maxPage));
+
+		inv = Bukkit.createInventory(new GUISession(this, targetPage), maxInvSize, getDisplayName(player));
+		this.page = targetPage;
+
+		int contentSize = InventoryPagination.getContentSize(maxInvSize);
+		int startSlot = (targetPage - 1) * contentSize;
+		for (Entry<Integer, BInventoryButton> entry : buttons.entrySet()) {
+			int sourceSlot = entry.getKey();
+			if (sourceSlot < startSlot || sourceSlot >= startSlot + contentSize) {
+				continue;
+			}
+			loadButton(player, entry.getValue(), sourceSlot, sourceSlot - startSlot);
+		}
+
+		for (BInventoryButton button : pageButtons) {
+			int displayedSlot = contentSize + button.getSlot();
+			inv.setItem(displayedSlot, button.getItem(player, placeholders));
+			button.setInv(this);
+		}
+
+		loadNavigationItems(player);
+		inv.setItem(contentSize, prevItem);
+		inv.setItem(maxInvSize - 1, nextItem);
+		openInv(player, inv);
+	}
+
+	public void playSound(Player player) {
+		if (!playerSound) {
+			return;
+		}
+		AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+		Sound sound = plugin.getOptions().getClickSoundSound();
+		if (sound != null) {
+			player.playSound(player.getLocation(), sound, (float) plugin.getOptions().getClickSoundVolume(),
+					(float) plugin.getOptions().getClickSoundPitch());
+		}
+	}
+
+	public void requirePermission(String permission) {
+		this.perm = permission;
+	}
+
+	public void setButtons(Map<Integer, BInventoryButton> buttons) {
+		this.buttons = buttons;
+	}
+
+	public BInventory setCloseInv(boolean value) {
+		closeInv = value;
+		return this;
+	}
+
+	public void setInventoryName(String inventoryName) {
+		this.inventoryName = MessageAPI.colorize(inventoryName);
+	}
+
+	public void setMaxInvSize(int maxInvSize) {
+		this.maxInvSize = getProperSize(maxInvSize);
+	}
+
+	public void setMeta(Player player, String str, Object ob) {
+		PlayerUtils.setPlayerMeta(AdvancedCorePlugin.getInstance(), player, str, ob);
+	}
+
+	public void setNextItem(ItemStack nextItem) {
+		this.nextItem = nextItem;
+	}
+
+	public void setPageButtons(ArrayList<BInventoryButton> pageButtons) {
+		this.pageButtons = pageButtons;
+	}
+
+	public void setPages(boolean pages) {
+		this.pages = pages;
+		if (!pages) {
+			maxPage = 1;
+		}
+	}
+
+	public void setPrevItem(ItemStack prevItem) {
+		this.prevItem = prevItem;
+	}
+
+	private void addFillSlots() {
+		if (fillItems.isEmpty()) {
+			return;
+		}
+		int inventorySize = getInventorySize();
+		for (BInventoryButton button : fillItems) {
+			for (int slot = 0; slot < inventorySize; slot++) {
+				if (!buttons.containsKey(slot)) {
+					buttons.put(slot, copyButton(button, slot));
+				}
+			}
+		}
+		fillItems.clear();
+	}
+
+	private BInventoryButton copyButton(BInventoryButton button, int slot) {
+		BInventoryButton copy = new BInventoryButton(button) {
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				button.onClick(clickEvent);
+			}
+		};
+		copy.setSlot(slot);
+		return copy;
+	}
+
+	private void cancelFutures(List<ScheduledFuture<?>> scheduledFutures) {
+		if (scheduledFutures == null) {
+			return;
+		}
+		for (ScheduledFuture<?> future : scheduledFutures) {
+			if (future != null) {
+				future.cancel(true);
+			}
+		}
+	}
+
+	private String getDisplayName(Player player) {
+		return PlaceholderUtils.replaceJavascript(player,
+				PlaceholderUtils.replacePlaceHolder(inventoryName, placeholders));
 	}
 
 	private int getProperSize(int size) {
@@ -625,290 +518,77 @@ public class BInventory {
 		}
 		if (size < 18) {
 			return 18;
-		} else if (size < 27) {
-			return 27;
-		} else if (size < 36) {
-			return 36;
-		} else if (size < 45) {
-			return 45;
-		} else {
-			return 54;
 		}
+		if (size < 27) {
+			return 27;
+		}
+		if (size < 36) {
+			return 36;
+		}
+		if (size < 45) {
+			return 45;
+		}
+		return 54;
 	}
 
-	/**
-	 * Check if the inventory is open for a player.
-	 * 
-	 * @param p the player
-	 * @return true if the inventory is open
-	 */
-	public boolean isOpen(Player p) {
-		GUISession session = GUISession.extractSession(p);
-		if (session != null && session.getInventoryGUI() == this) {
+	private boolean hasPermission(Player player) {
+		if (perm == null) {
 			return true;
 		}
+
+		if (!perm.contains("|")) {
+			if (player.hasPermission(perm)) {
+				return true;
+			}
+		} else {
+			for (String permission : perm.split(Pattern.quote("|"))) {
+				if (player.hasPermission(permission)) {
+					return true;
+				}
+			}
+		}
+
+		player.sendMessage(MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
 		return false;
 	}
 
-	/**
-	 * @return the pages
-	 */
-	public boolean isPages() {
-		return pages;
+	private void loadButton(Player player, BInventoryButton button, int sourceSlot, int displayedSlot) {
+		inv.setItem(displayedSlot, button.getItem(player, placeholders));
+		button.setInv(this);
+		button.setSlot(sourceSlot);
+		button.load(player);
 	}
 
-	/**
-	 * Disable sound for this inventory.
-	 * 
-	 * @return this inventory
-	 */
-	public BInventory noSound() {
-		playerSound = false;
-		return this;
-	}
-
-	/**
-	 * Handle button click.
-	 * 
-	 * @param event the inventory click event
-	 * @param b the button that was clicked
-	 */
-	public void onClick(InventoryClickEvent event, BInventoryButton b) {
-		playSound((Player) event.getWhoClicked());
-		b.onClick(new ClickEvent(event, b), this);
-	}
-
-	private void openInv(Player player, Inventory inv) {
-		AdvancedCorePlugin.getInstance().getBukkitScheduler().runTask(AdvancedCorePlugin.getInstance(), new Runnable() {
-
-			@Override
-			public void run() {
-				player.openInventory(inv);
-			}
-		}, player);
-	}
-
-	/**
-	 * Open inventory.
-	 *
-	 * @param player the player
-	 */
-	@SuppressWarnings({})
-	public void openInventory(Player player) {
-		if (player.isSleeping()) {
-			AdvancedCorePlugin.getInstance().debug(player.getName() + " is sleeping, not opening gui!");
-			return;
-		}
-		if (perm != null) {
-			if (!perm.contains("|")) {
-				if (!player.hasPermission(perm)) {
-					player.sendMessage(
-							MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
-					return;
-				}
-			} else {
-				boolean hasPerm = false;
-				for (String permStr : perm.split(Pattern.quote("|"))) {
-					if (player.hasPermission(permStr)) {
-						hasPerm = true;
-					}
-				}
-				if (!hasPerm) {
-					player.sendMessage(
-							MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatNoPerms()));
-					return;
-				}
-			}
-		}
-		addFillSlots();
-		BInventory inventory = this;
-
-		if (inventory.getHighestSlot() >= maxInvSize) {
-			pages = true;
-		}
-		if (!pages) {
-			inv = Bukkit.createInventory(new GUISession(this, 1), inventory.getInventorySize(),
-					PlaceholderUtils.replaceJavascript(player,
-							PlaceholderUtils.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
-			for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
-				ItemStack item = pair.getValue().getItem(player, getPlaceholders());
-				inv.setItem(pair.getKey(), item);
-
-				BInventoryButton b = pair.getValue();
-				b.setInv(this);
-				b.setSlot(pair.getKey());
-				b.load(player);
-
-			}
-
-			openInv(player, inv);
-
-		} else {
-			maxPage = getHighestSlot() / (maxInvSize - 9);
-			if (getHighestSlot() % (maxInvSize - 9) != 0) {
-				maxPage++;
-			}
-			addPlaceholder("totalpages", "" + maxPage);
-			openInventory(player, 1);
-		}
-
-	}
-
-	/**
-	 * Open inventory.
-	 *
-	 * @param player the player
-	 * @param page   the page
-	 */
-	public void openInventory(Player player, int page) {
-		BInventory inventory = this;
-		addPlaceholder("currentpage", "" + page);
-		inv = Bukkit.createInventory(new GUISession(this, page), maxInvSize, PlaceholderUtils.replaceJavascript(player,
-				PlaceholderUtils.replacePlaceHolder(inventory.getInventoryName(), getPlaceholders())));
-		this.page = page;
-		int startSlot = (page - 1) * (maxInvSize - 9);
-		for (Entry<Integer, BInventoryButton> pair : inventory.getButtons().entrySet()) {
-			int slot = pair.getKey();
-			if (slot >= startSlot) {
-				slot -= startSlot;
-				if (slot < (maxInvSize - 9)) {
-					ItemStack item = pair.getValue().getItem(player, getPlaceholders());
-					inv.setItem(slot, item);
-
-					BInventoryButton b = pair.getValue();
-					b.setInv(this);
-					b.setSlot(pair.getKey());
-					b.load(player);
-				}
-			}
-
-		}
-
-		for (BInventoryButton b : pageButtons) {
-			inv.setItem((maxInvSize - 9) + b.getSlot(), b.getItem(player, getPlaceholders()));
-		}
+	private void loadNavigationItems(Player player) {
+		AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 		if (prevItem == null) {
-			if (AdvancedCorePlugin.getInstance().getOptions().getPrevItem() != null) {
-				prevItem = new ItemBuilder(AdvancedCorePlugin.getInstance().getOptions().getPrevItem())
-						.addPlaceholder(getPlaceholders()).toItemStack(player);
+			if (plugin.getOptions().getPrevItem() != null) {
+				prevItem = new ItemBuilder(plugin.getOptions().getPrevItem()).addPlaceholder(placeholders).toItemStack(player);
 			} else {
 				prevItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aPrevious Page")
-						.addPlaceholder(getPlaceholders()).toItemStack(player);
+						.addPlaceholder(placeholders).toItemStack(player);
 			}
 		}
 		if (nextItem == null) {
-			if (AdvancedCorePlugin.getInstance().getOptions().getNextItem() != null) {
-				nextItem = new ItemBuilder(AdvancedCorePlugin.getInstance().getOptions().getNextItem())
-						.addPlaceholder(getPlaceholders()).toItemStack(player);
+			if (plugin.getOptions().getNextItem() != null) {
+				nextItem = new ItemBuilder(plugin.getOptions().getNextItem()).addPlaceholder(placeholders).toItemStack(player);
 			} else {
 				nextItem = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE, 1).setName("&aNext Page")
-						.addPlaceholder(getPlaceholders()).toItemStack(player);
-			}
-		}
-
-		inv.setItem(maxInvSize - 9, prevItem);
-
-		inv.setItem(maxInvSize - 1, nextItem);
-
-		openInv(player, inv);
-	}
-
-	/**
-	 * Play sound for a player.
-	 * 
-	 * @param player the player
-	 */
-	public void playSound(Player player) {
-		if (playerSound) {
-			Sound sound = AdvancedCorePlugin.getInstance().getOptions().getClickSoundSound();
-			if (sound != null) {
-				player.playSound(player.getLocation(), sound,
-						(float) AdvancedCorePlugin.getInstance().getOptions().getClickSoundVolume(),
-						(float) AdvancedCorePlugin.getInstance().getOptions().getClickSoundPitch());
+						.addPlaceholder(placeholders).toItemStack(player);
 			}
 		}
 	}
 
-	/**
-	 * Require permission to open this inventory.
-	 * 
-	 * @param permission the permission required
-	 */
-	public void requirePermission(String permission) {
-		this.perm = permission;
+	private void openInv(Player player, Inventory inventory) {
+		AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+		plugin.getBukkitScheduler().runTask(plugin, () -> player.openInventory(inventory), player);
 	}
 
-	/**
-	 * @param buttons the buttons to set
-	 */
-	public void setButtons(Map<Integer, BInventoryButton> buttons) {
-		this.buttons = buttons;
+	private void trackFuture(Player player, ScheduledFuture<?> future) {
+		if (player == null) {
+			futures.add(future);
+			return;
+		}
+		playerFutures.computeIfAbsent(player.getUniqueId(), ignored -> new CopyOnWriteArrayList<>()).add(future);
 	}
-
-	/**
-	 * Set whether the inventory should close after interaction.
-	 * 
-	 * @param value whether to close
-	 * @return this inventory
-	 */
-	public BInventory setCloseInv(boolean value) {
-		closeInv = value;
-		return this;
-	}
-
-	/**
-	 * Sets the inventory name.
-	 *
-	 * @param inventoryName the new inventory name
-	 */
-	public void setInventoryName(String inventoryName) {
-		this.inventoryName = MessageAPI.colorize(inventoryName);
-	}
-
-	/**
-	 * @param maxInvSize the maxInvSize to set
-	 */
-	public void setMaxInvSize(int maxInvSize) {
-		this.maxInvSize = getProperSize(maxInvSize);
-	}
-
-	/**
-	 * Sets the meta.
-	 *
-	 * @param player the player
-	 * @param str    the str
-	 * @param ob     the ob
-	 */
-	public void setMeta(Player player, String str, Object ob) {
-		PlayerUtils.setPlayerMeta(AdvancedCorePlugin.getInstance(), player, str, ob);
-	}
-
-	/**
-	 * @param nextItem the nextItem to set
-	 */
-	public void setNextItem(ItemStack nextItem) {
-		this.nextItem = nextItem;
-	}
-
-	/**
-	 * @param pageButtons the pageButtons to set
-	 */
-	public void setPageButtons(ArrayList<BInventoryButton> pageButtons) {
-		this.pageButtons = pageButtons;
-	}
-
-	/**
-	 * @param pages the pages to set
-	 */
-	public void setPages(boolean pages) {
-		this.pages = pages;
-	}
-
-	/**
-	 * @param prevItem the prevItem to set
-	 */
-	public void setPrevItem(ItemStack prevItem) {
-		this.prevItem = prevItem;
-	}
-
 }
