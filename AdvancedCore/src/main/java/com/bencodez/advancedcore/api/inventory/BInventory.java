@@ -207,8 +207,7 @@ public class BInventory {
 	 * Cancels every task owned by this GUI.
 	 */
 	public void cancelTimer() {
-		cancelFutures(futures);
-		futures.clear();
+		cancelLegacyTimers();
 		for (List<ScheduledFuture<?>> viewerFutures : playerFutures.values()) {
 			cancelFutures(viewerFutures);
 		}
@@ -247,6 +246,7 @@ public class BInventory {
 	}
 
 	public void forceClose(Player player) {
+		cancelLegacyTimers();
 		cancelTimer(player);
 		if (player == null) {
 			return;
@@ -505,6 +505,11 @@ public class BInventory {
 				future.cancel(true);
 			}
 		}
+	}
+
+	private void cancelLegacyTimers() {
+		cancelFutures(futures);
+		futures.clear();
 	}
 
 	private String getDisplayName(Player player) {
