@@ -144,10 +144,18 @@ public class BInventoryListener implements Listener {
 		}
 
 		gui.closeInv(player, button);
-		try {
-			gui.onClick(event, button);
-		} catch (Exception exception) {
-			plugin.debug(exception);
+		Runnable clickAction = () -> {
+			try {
+				gui.onClick(event, button);
+			} catch (Exception exception) {
+				plugin.debug(exception);
+			}
+		};
+
+		if (gui.isClickAsync()) {
+			plugin.getBukkitScheduler().runTaskAsynchronously(plugin, clickAction);
+		} else {
+			clickAction.run();
 		}
 	}
 }
