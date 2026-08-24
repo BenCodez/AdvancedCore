@@ -145,7 +145,10 @@ public class RewardRegistry {
     }
 
     static boolean isSafeRewardFileName(String reward) {
-        return reward != null && !reward.indexOf('\0') >= 0;
+        if (reward == null || reward.indexOf('\0') >= 0 || new File(reward).isAbsolute()) {
+            return false;
+        }
+        return reward.indexOf('/') < 0 && reward.indexOf('\\') < 0;
     }
 
     public boolean rewardExist(String reward) {
