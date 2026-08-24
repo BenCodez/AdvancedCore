@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.api.rewards;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -8,6 +9,9 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -17,6 +21,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserManager;
 
 class RewardLoaderSecurityTest {
 
@@ -60,6 +66,53 @@ class RewardLoaderSecurityTest {
 		assertFalse(stale.exists());
 		assertTrue(new File(directlyDefined, "Daily_Rewards.yml.disabled").exists());
 		assertTrue(handler.getRewards().isEmpty());
+	}
+
+	@Test
+	void loadRewardsPreservesQueuedGeneratedRewardAndRestrictsItToQueuedUser() throws IOException {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		RewardHandler handler = mock(RewardHandler.class);
+		RewardRegistry registry = mock(RewardRegistry.class);
+		UserManager userManager = mock(UserManager.class);
+		AdvancedCoreUser queuedUser = mock(AdvancedCoreUser.class);
+		Logger logger = mock(Logger.class);
+		ArrayList<Reward> rewards = new ArrayList<>();
+		UUID queuedUuid = UUID.randomUUID();
+
+		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
+		assertTrue(directlyDefined.mkdirs());
+		File queued = new File(directlyDefined, "QueuedReward.yml");
+		YamlConfiguration queuedData = new YamlConfiguration();
+		queuedData.set("DirectlyDefinedReward", true);
+		queuedData.set("Messages", List.of("queued reward"));
+		queuedData.save(queued);
+
+		when(plugin.getDataFolder()).thenReturn(tempDir);
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getLogger()).thenReturn(logger);
+		when(plugin.getUserManager()).thenReturn(userManager);
+		when(options.isLoadDefaultRewards()).thenReturn(false);
+		when(handler.getRewardRegistry()).thenReturn(registry);
+		when(handler.getRewards()).thenReturn(rewards);
+		when(handler.rewardExist("QueuedReward")).thenReturn(false);
+		when(userManager.getAllUUIDs()).thenReturn(new ArrayList<>(List.of(queuedUuid.toString())));
+		when(userManager.getUser(queuedUuid)).thenReturn(queuedUser);
+		when(queuedUser.getOfflineRewards())
+				.thenReturn(new ArrayList<>(List.of("QueuedReward%placeholders%player=Ben")));
+		when(queuedUser.getTimedRewards()).thenReturn(new HashMap<>());
+
+		AdvancedCorePlugin.setInstance(plugin);
+		RewardLoader loader = new RewardLoader(handler, plugin);
+		loader.addRewardFolder(directlyDefined, false, false);
+		loader.loadRewards();
+
+		assertTrue(queued.exists());
+		assertFalse(new File(directlyDefined, "QueuedReward.yml.disabled").exists());
+		assertEquals(1, rewards.size());
+		assertTrue(rewards.get(0) instanceof QueuedGeneratedReward);
+		assertEquals(java.util.Set.of(queuedUuid.toString()),
+				((QueuedGeneratedReward) rewards.get(0)).getAllowedUserUuids());
 	}
 
 	@Test
