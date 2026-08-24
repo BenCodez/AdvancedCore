@@ -122,7 +122,22 @@ public class RewardExecutor {
             MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward, context.getPlaceholders());
             return;
         }
-        giveReward(user, handler.getReward(reward), context.getOptions());
+
+        Reward resolved = handler.getReward(reward);
+        if (resolved == null && isPersistedQueueReplay(context.getOptions())) {
+            resolved = handler.getQueuedGeneratedReward(reward, user.getUUID());
+        }
+        giveReward(user, resolved, context.getOptions());
+    }
+
+    private boolean isPersistedQueueReplay(RewardOptions options) {
+        if (options == null || options.isCheckTimed()) {
+            return false;
+        }
+        if (options.isOnlineSet() && !options.isOnline()) {
+            return true;
+        }
+        return options.getPlaceholders().containsKey("date");
     }
 
     public void updateReward(Configuration data, String path, RewardOptions rewardOptions) {
