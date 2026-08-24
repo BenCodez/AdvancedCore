@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -28,41 +29,70 @@ class RewardLoaderSecurityTest {
 	}
 
 	@Test
-	void quarantinesPreviouslyMaterializedFileBackedSubReward() throws IOException {
+	void loadRewardsQuarantinesOrphanedGeneratedDirectReward() throws IOException {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		RewardHandler handler = mock(RewardHandler.class);
 		RewardRegistry registry = mock(RewardRegistry.class);
-		SubRewardResolver resolver = mock(SubRewardResolver.class);
-		Reward reward = mock(Reward.class);
-		RewardFileData config = mock(RewardFileData.class);
 		Logger logger = mock(Logger.class);
 
 		File rewardsFolder = new File(tempDir, "Rewards");
 		File directlyDefined = new File(rewardsFolder, "DirectlyDefined");
 		assertTrue(directlyDefined.mkdirs());
 		File stale = new File(directlyDefined, "Daily_Rewards.yml");
-		assertTrue(stale.createNewFile());
+		YamlConfiguration staleData = new YamlConfiguration();
+		staleData.set("DirectlyDefinedReward", true);
+		staleData.set("Messages", java.util.List.of("legacy generated reward"));
+		staleData.save(stale);
 
 		when(plugin.getDataFolder()).thenReturn(tempDir);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getLogger()).thenReturn(logger);
 		when(options.isLoadDefaultRewards()).thenReturn(false);
 		when(handler.getRewardRegistry()).thenReturn(registry);
-		when(handler.getSubRewardResolver()).thenReturn(resolver);
-		when(handler.getRewards()).thenReturn(new ArrayList<>(java.util.List.of(reward)));
-		when(reward.getConfig()).thenReturn(config);
-		when(config.getRewardFolder()).thenReturn(directlyDefined);
-		when(reward.getName()).thenReturn("Daily_Rewards");
-		when(reward.getFile()).thenReturn(stale);
-		when(resolver.getFileBackedSubReward("Daily_Rewards")).thenReturn(mock(SubDirectlyDefinedReward.class));
+		when(handler.getRewards()).thenReturn(new ArrayList<>());
 
 		AdvancedCorePlugin.setInstance(plugin);
 		RewardLoader loader = new RewardLoader(handler, plugin);
-		loader.checkDirectlyDefined();
+		loader.addRewardFolder(directlyDefined, false, false);
+		loader.loadRewards();
 
 		assertFalse(stale.exists());
 		assertTrue(new File(directlyDefined, "Daily_Rewards.yml.disabled").exists());
+		assertTrue(handler.getRewards().isEmpty());
+	}
+
+	@Test
+	void loadRewardsDoesNotQuarantineNormalDirectFolderFileWithoutGeneratedMarker() throws IOException {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		RewardHandler handler = mock(RewardHandler.class);
+		RewardRegistry registry = mock(RewardRegistry.class);
+		Logger logger = mock(Logger.class);
+		ArrayList<Reward> rewards = new ArrayList<>();
+
+		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
+		assertTrue(directlyDefined.mkdirs());
+		File manual = new File(directlyDefined, "Manual.yml");
+		YamlConfiguration manualData = new YamlConfiguration();
+		manualData.set("Messages", java.util.List.of("manual reward"));
+		manualData.save(manual);
+
+		when(plugin.getDataFolder()).thenReturn(tempDir);
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getLogger()).thenReturn(logger);
+		when(options.isLoadDefaultRewards()).thenReturn(false);
+		when(handler.getRewardRegistry()).thenReturn(registry);
+		when(handler.getRewards()).thenReturn(rewards);
+		when(handler.rewardExist("Manual")).thenReturn(false);
+
+		AdvancedCorePlugin.setInstance(plugin);
+		RewardLoader loader = new RewardLoader(handler, plugin);
+		loader.addRewardFolder(directlyDefined, false, false);
+		loader.loadRewards();
+
+		assertTrue(manual.exists());
+		assertFalse(new File(directlyDefined, "Manual.yml.disabled").exists());
 	}
 
 	@Test
