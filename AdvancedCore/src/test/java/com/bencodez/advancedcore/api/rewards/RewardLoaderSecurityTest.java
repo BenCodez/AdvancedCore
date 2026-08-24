@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -21,6 +22,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
+import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 
@@ -92,9 +95,12 @@ class RewardLoaderSecurityTest {
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getLogger()).thenReturn(logger);
 		when(plugin.getUserManager()).thenReturn(userManager);
+		when(plugin.getRewardHandler()).thenReturn(handler);
 		when(options.isLoadDefaultRewards()).thenReturn(false);
 		when(handler.getRewardRegistry()).thenReturn(registry);
 		when(handler.getRewards()).thenReturn(rewards);
+		when(handler.getInjectedRequirements()).thenReturn(new CopyOnWriteArrayList<RequirementInject>());
+		when(handler.getInjectedRewards()).thenReturn(new CopyOnWriteArrayList<RewardInject>());
 		when(handler.rewardExist("QueuedReward")).thenReturn(false);
 		when(userManager.getAllUUIDs()).thenReturn(new ArrayList<>(List.of(queuedUuid.toString())));
 		when(userManager.getUser(queuedUuid)).thenReturn(queuedUser);
@@ -134,9 +140,12 @@ class RewardLoaderSecurityTest {
 		when(plugin.getDataFolder()).thenReturn(tempDir);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getLogger()).thenReturn(logger);
+		when(plugin.getRewardHandler()).thenReturn(handler);
 		when(options.isLoadDefaultRewards()).thenReturn(false);
 		when(handler.getRewardRegistry()).thenReturn(registry);
 		when(handler.getRewards()).thenReturn(rewards);
+		when(handler.getInjectedRequirements()).thenReturn(new CopyOnWriteArrayList<RequirementInject>());
+		when(handler.getInjectedRewards()).thenReturn(new CopyOnWriteArrayList<RewardInject>());
 		when(handler.rewardExist("Manual")).thenReturn(false);
 
 		AdvancedCorePlugin.setInstance(plugin);
