@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.javascript;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -12,6 +13,9 @@ final class JavascriptPlaceholderParser {
 	private static final Pattern INTEGER_PATTERN = Pattern.compile("[-+]?\\d+");
 	private static final Pattern DECIMAL_PATTERN = Pattern.compile("[-+]?(?:\\d+\\.\\d*|\\d*\\.\\d+|\\d+)(?:[eE][-+]?\\d+)?");
 	private static final String VARIABLE_PREFIX = "__advancedCorePlaceholder";
+	private static final Set<String> REGEX_PREFIX_KEYWORDS = Set.of("return", "throw", "case", "delete", "void",
+			"typeof", "instanceof", "in", "of", "new", "yield", "await", "else", "do");
+	private static final Set<String> CONTROL_HEAD_KEYWORDS = Set.of("if", "while", "for", "with", "switch", "catch");
 
 	private JavascriptPlaceholderParser() {
 	}
@@ -195,14 +199,56 @@ final class JavascriptPlaceholderParser {
 	}
 
 	private static boolean startsRegexLiteral(String script, int slashIndex) {
-		for (int i = slashIndex - 1; i >= 0; i--) {
-			char previous = script.charAt(i);
-			if (Character.isWhitespace(previous)) {
-				continue;
-			}
-			return "([{:;,=!?&|+-*%^~<>".indexOf(previous) >= 0;
+		int previousIndex = previousNonWhitespace(script, slashIndex - 1);
+		if (previousIndex < 0) {
+			return true;
 		}
-		return true;
+		char previous = script.charAt(previousIndex);
+		if ("([{:;,=!?&|+-*%^~<>".indexOf(previous) >= 0) {
+			return true;
+		}
+		if (previous == ')' && closesControlHead(script, previousIndex)) {
+			return true;
+		}
+		String previousWord = previousIdentifier(script, previousIndex);
+		return REGEX_PREFIX_KEYWORDS.contains(previousWord);
+	}
+
+	private static boolean closesControlHead(String script, int closeParenIndex) {
+		int depth = 1;
+		for (int i = closeParenIndex - 1; i >= 0; i--) {
+			char current = script.charAt(i);
+			if (current == ')') {
+				depth++;
+			} else if (current == '(') {
+				depth--;
+				if (depth == 0) {
+					int keywordEnd = previousNonWhitespace(script, i - 1);
+					return CONTROL_HEAD_KEYWORDS.contains(previousIdentifier(script, keywordEnd));
+				}
+			}
+		}
+		return false;
+	}
+
+	private static int previousNonWhitespace(String script, int index) {
+		for (int i = index; i >= 0; i--) {
+			if (!Character.isWhitespace(script.charAt(i))) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	private static String previousIdentifier(String script, int endIndex) {
+		if (endIndex < 0 || !Character.isJavaIdentifierPart(script.charAt(endIndex))) {
+			return "";
+		}
+		int start = endIndex;
+		while (start > 0 && Character.isJavaIdentifierPart(script.charAt(start - 1))) {
+			start--;
+		}
+		return script.substring(start, endIndex + 1);
 	}
 
 	private static Context codeContext(Deque<TemplateFrame> templates) {
