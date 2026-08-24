@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +40,9 @@ public class FullInventoryHandler {
 	private final AdvancedCorePlugin plugin;
 
 	/**
-	 * The shared inventory timer executor service.
+	 * The handler-owned timer executor service. This remains isolated from
+	 * AdvancedCore's shared inventory timer so legacy callers of getTimer().shutdown()
+	 * cannot stop unrelated GUI scheduling.
 	 *
 	 * @return the timer executor service
 	 */
@@ -136,16 +139,16 @@ public class FullInventoryHandler {
 	}
 
 	/**
-	 * Loads the timer for checking inventories. The handler reuses AdvancedCore's
-	 * inventory executor and schedules Bukkit work back through the Bukkit scheduler.
+	 * Loads the timer for checking inventories. The handler keeps its historically
+	 * isolated executor, while actual Bukkit work is handed back to the Bukkit/Folia
+	 * scheduler.
 	 */
 	public synchronized void loadTimer() {
 		if (checkTask != null && !checkTask.isDone() && !checkTask.isCancelled()) {
 			return;
 		}
-		timer = plugin.getInventoryTimer();
-		if (timer == null || timer.isShutdown()) {
-			return;
+		if (timer == null || timer.isShutdown() || timer.isTerminated()) {
+			timer = Executors.newSingleThreadScheduledExecutor();
 		}
 		checkTask = timer.scheduleAtFixedRate(
 				() -> plugin.getBukkitScheduler().runTask(plugin, this::schedulePendingPlayerChecks), 10, 30,
@@ -153,13 +156,15 @@ public class FullInventoryHandler {
 	}
 
 	/**
-	 * Stops this handler's repeating task without shutting down the shared inventory
-	 * executor.
+	 * Stops this handler's repeating task and its handler-owned executor.
 	 */
 	public synchronized void shutdown() {
 		if (checkTask != null) {
 			checkTask.cancel(false);
 			checkTask = null;
+		}
+		if (timer != null) {
+			timer.shutdownNow();
 		}
 	}
 
