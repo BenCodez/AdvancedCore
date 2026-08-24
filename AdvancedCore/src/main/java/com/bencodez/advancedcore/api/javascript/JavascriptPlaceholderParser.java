@@ -30,8 +30,9 @@ final class JavascriptPlaceholderParser {
 
 			Context context = contextAt(script, matcher.start());
 			String replacement;
-			if (context == Context.CODE || context == Context.TEMPLATE_EXPRESSION || context == Context.COMMENT
-					|| context == Context.REGEX) {
+			if (context == Context.REGEX || context == Context.REGEX_CHARACTER_CLASS) {
+				replacement = escapeRegexLiteral(value, context == Context.REGEX_CHARACTER_CLASS);
+			} else if (context == Context.CODE || context == Context.TEMPLATE_EXPRESSION || context == Context.COMMENT) {
 				String variable = VARIABLE_PREFIX + index++;
 				bindings.accept(variable, coercePrimitive(value));
 				replacement = variable;
@@ -187,6 +188,9 @@ final class JavascriptPlaceholderParser {
 		if (context == Context.LINE_COMMENT || context == Context.BLOCK_COMMENT) {
 			return Context.COMMENT;
 		}
+		if (context == Context.REGEX && regexCharacterClass) {
+			return Context.REGEX_CHARACTER_CLASS;
+		}
 		return context;
 	}
 
@@ -205,6 +209,35 @@ final class JavascriptPlaceholderParser {
 		return !templates.isEmpty() && templates.peek().expressionDepth > 0 ? Context.TEMPLATE_EXPRESSION : Context.CODE;
 	}
 
+	private static String escapeRegexLiteral(String value, boolean characterClass) {
+		StringBuilder escaped = new StringBuilder(value.length());
+		String special = characterClass ? "\\/]^-" : "\\/.*+?^${}()|[]";
+		for (int i = 0; i < value.length(); i++) {
+			char current = value.charAt(i);
+			switch (current) {
+			case '\r':
+				escaped.append("\\r");
+				break;
+			case '\n':
+				escaped.append("\\n");
+				break;
+			case '\u2028':
+				escaped.append("\\u2028");
+				break;
+			case '\u2029':
+				escaped.append("\\u2029");
+				break;
+			default:
+				if (special.indexOf(current) >= 0) {
+					escaped.append('\\');
+				}
+				escaped.append(current);
+				break;
+			}
+		}
+		return escaped.toString();
+	}
+
 	private static String escape(String value, char quote) {
 		String escaped = value.replace("\\", "\\\\").replace("\r", "\\r").replace("\n", "\\n")
 				.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029");
@@ -216,7 +249,8 @@ final class JavascriptPlaceholderParser {
 	}
 
 	private enum Context {
-		CODE, SINGLE_QUOTE, DOUBLE_QUOTE, TEMPLATE_TEXT, TEMPLATE_EXPRESSION, REGEX, LINE_COMMENT, BLOCK_COMMENT, COMMENT
+		CODE, SINGLE_QUOTE, DOUBLE_QUOTE, TEMPLATE_TEXT, TEMPLATE_EXPRESSION, REGEX, REGEX_CHARACTER_CLASS,
+		LINE_COMMENT, BLOCK_COMMENT, COMMENT
 	}
 
 	private static final class TemplateFrame {
