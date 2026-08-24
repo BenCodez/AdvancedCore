@@ -14,7 +14,6 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueIn
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueList;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
-import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.rewards.DefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
@@ -39,8 +38,7 @@ public final class RewardJavascript {
                 if (!list.isEmpty()) {
                     JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
                     for (String script : list) {
-                        String expression = PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(), script);
-                        engine.execute(PlaceholderUtils.replacePlaceHolder(expression, placeholders));
+                        engine.execute(engine.preparePlaceholders(user.getOfflinePlayer(), script, placeholders));
                     }
                 }
                 return null;
@@ -61,9 +59,9 @@ public final class RewardJavascript {
                     HashMap<String, String> placeholders) {
                 if (section.getBoolean("Enabled")) {
                     String expression = section.getString("Expression");
-                    expression = PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(), expression);
-                    if (new JavascriptEngine().addPlayer(user.getOfflinePlayer())
-                            .getBooleanValue(PlaceholderUtils.replacePlaceHolder(expression, placeholders))) {
+                    JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
+                    if (engine.getBooleanValue(
+                            engine.preparePlaceholders(user.getOfflinePlayer(), expression, placeholders))) {
                         new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName() + ".Javascript").send(user);
                     } else {
                         new RewardBuilder(section, "FalseRewards").withPrefix(reward.getName() + ".Javascript").send(user);
