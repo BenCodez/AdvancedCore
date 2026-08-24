@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.api.rewards;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -93,6 +94,11 @@ public class RewardRegistry {
             }
         }
 
+        if (!isSafeRewardFileName(reward)) {
+            plugin.getLogger().warning("Rejected unsafe reward file name: " + reward);
+            throw new IllegalArgumentException("Reward name must not contain path separators or be an absolute path");
+        }
+
         return new Reward(reward);
     }
 
@@ -136,6 +142,10 @@ public class RewardRegistry {
 
     public static String normalizeDirectPath(String path) {
         return normalizeLookupName(path).replace('.', '_').toLowerCase(Locale.ROOT);
+    }
+
+    static boolean isSafeRewardFileName(String reward) {
+        return reward != null && !reward.indexOf('\0') >= 0;
     }
 
     public boolean rewardExist(String reward) {
