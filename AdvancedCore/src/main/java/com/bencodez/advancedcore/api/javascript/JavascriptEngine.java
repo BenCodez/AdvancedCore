@@ -120,6 +120,7 @@ public class JavascriptEngine {
 					if (entry.getKey().equalsIgnoreCase(key)) {
 						return entry.getValue();
 					}
+				}
 			}
 
 			if (placeholder.startsWith("%") && player != null
