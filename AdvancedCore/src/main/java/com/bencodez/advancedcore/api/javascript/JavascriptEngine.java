@@ -120,10 +120,10 @@ public class JavascriptEngine {
 					if (entry.getKey().equalsIgnoreCase(key)) {
 						return entry.getValue();
 					}
-				}
 			}
 
-			if (player != null && AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
+			if (placeholder.startsWith("%") && player != null
+					&& AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
 				return PlaceholderAPI.setPlaceholders(player, placeholder);
 			}
 			return placeholder;
