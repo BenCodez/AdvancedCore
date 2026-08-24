@@ -25,11 +25,6 @@ public class SubRewardResolver {
 		for (DirectlyDefinedReward direct : handler.getDirectlyDefinedRewards()) {
 			checkSubRewards(direct, new HashSet<>());
 		}
-
-		plugin.extraDebug("Checking reward file for sub rewards");
-		for (Reward reward : handler.getRewards()) {
-			checkSubRewards(new RewardFileDefinedReward(reward), new HashSet<>());
-		}
 	}
 
 	public void checkSubRewards(DefinedReward direct) {
