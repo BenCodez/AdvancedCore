@@ -86,6 +86,30 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void recognizesRegexLiteralAfterControlHead() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace("if (ok) /[']/.test('x'); %untrusted%", ignored -> injection,
+				bindings::put);
+
+		assertEquals("if (ok) /[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
+	void recognizesRegexLiteralAfterExpressionKeyword() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace("return /[']/.test('x'); %untrusted%", ignored -> injection,
+				bindings::put);
+
+		assertEquals("return /[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
 	void regexCharacterClassesAndEscapesRemainRegexText() {
 		HashMap<String, Object> bindings = new HashMap<>();
 
