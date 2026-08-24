@@ -43,7 +43,7 @@ public class FullInventoryHandlerTest {
 		fixture.handler.add(uuid, new ArrayList<>(java.util.List.of(second)));
 
 		assertEquals(java.util.List.of(first, second), fixture.handler.getItems().get(uuid));
-		assertFalse(fixture.handler.getItems().containsKey(null));
+		assertEquals(1, fixture.handler.getItems().size());
 	}
 
 	@Test
