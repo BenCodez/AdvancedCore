@@ -149,8 +149,8 @@ public class RewardLoader {
 		if (reward == null || reward.isEmpty() || userUuid == null || userUuid.isEmpty()) {
 			return null;
 		}
-		String normalized = RewardRegistry.normalizeDirectPath(reward);
-		if (normalized.isEmpty() || !normalized.equals(reward.replace(" ", "_"))) {
+		reward = RewardRegistry.normalizeLookupName(reward);
+		if (!RewardRegistry.isSafeRewardFileName(reward)) {
 			return null;
 		}
 		File directFolder = new File(getDefaultFolder().getAbsolutePath() + File.separator + "DirectlyDefined");
