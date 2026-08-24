@@ -144,11 +144,15 @@ public class FullInventoryHandler {
 	 * scheduler.
 	 */
 	public synchronized void loadTimer() {
+		if (timer == null || timer.isShutdown() || timer.isTerminated()) {
+			if (checkTask != null) {
+				checkTask.cancel(false);
+				checkTask = null;
+			}
+			timer = Executors.newSingleThreadScheduledExecutor();
+		}
 		if (checkTask != null && !checkTask.isDone() && !checkTask.isCancelled()) {
 			return;
-		}
-		if (timer == null || timer.isShutdown() || timer.isTerminated()) {
-			timer = Executors.newSingleThreadScheduledExecutor();
 		}
 		checkTask = timer.scheduleAtFixedRate(
 				() -> plugin.getBukkitScheduler().runTask(plugin, this::schedulePendingPlayerChecks), 10, 30,
