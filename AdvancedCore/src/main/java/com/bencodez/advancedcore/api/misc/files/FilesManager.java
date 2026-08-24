@@ -11,50 +11,42 @@ import com.bencodez.advancedcore.thread.FileThread;
 
 import net.md_5.bungee.api.ChatColor;
 
-// TODO: Auto-generated Javadoc
 /**
- * The Class FilesManager.
+ * Handles asynchronous file writes for AdvancedCore.
  */
 public class FilesManager {
 
-	/** The instance. */
-	static FilesManager instance = new FilesManager();
+	private static final FilesManager instance = new FilesManager();
 
-	/**
-	 * Gets the single instance of FilesManager.
-	 *
-	 * @return single instance of FilesManager
-	 */
 	public static FilesManager getInstance() {
 		return instance;
 	}
 
-	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-
-	/**
-	 * Instantiates a new files manager.
-	 */
 	private FilesManager() {
 	}
 
 	/**
-	 * Edits the file.
+	 * Saves the supplied configuration asynchronously. The replacement is written to
+	 * a temporary sibling file before it replaces the destination, preserving the
+	 * previous file if serialization fails.
 	 *
 	 * @param file the file
 	 * @param data the data
 	 */
 	public void editFile(File file, FileConfiguration data) {
-		FileThread.getInstance().run(new Runnable() {
-
-			@Override
-			public void run() {
-				try {
-					data.save(file);
-				} catch (IOException e) {
-					Bukkit.getServer().getLogger().severe(ChatColor.RED + "Could not save " + file.getName());
+		FileThread.getInstance().run(() -> {
+			try {
+				AtomicYamlWriter.save(file, data);
+			} catch (IOException | RuntimeException e) {
+				AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+				if (plugin != null) {
+					plugin.getLogger().severe("Could not save " + (file == null ? "null file" : file.getName())
+							+ ": " + e.getMessage());
+					plugin.debug(e);
+				} else {
+					Bukkit.getServer().getLogger().severe(ChatColor.RED + "Could not save "
+							+ (file == null ? "null file" : file.getName()) + ": " + e.getMessage());
 				}
-
 			}
 		});
 	}
