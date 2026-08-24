@@ -70,7 +70,6 @@ jobs:
           text = text.replace(old_enable, new_enable, 1)
           path.write_bytes(text.encode('utf-8'))
           PY
-          git diff --check
       - name: Commit focused lifecycle patch
         run: |
           git config user.name "github-actions[bot]"
