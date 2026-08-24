@@ -92,28 +92,22 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
-	public void asyncPlayerCheckMovesToBukkitScheduler() {
+	public void playerCheckAlwaysUsesEntityScheduler() {
 		Fixture fixture = createFixture();
 		Player player = mock(Player.class);
 
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-			fixture.handler.check(player);
-		}
+		fixture.handler.check(player);
 
 		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class), eq(player));
 	}
 
 	@Test
-	public void asyncGiveItemMovesToBukkitScheduler() {
+	public void giveItemAlwaysUsesEntityScheduler() {
 		Fixture fixture = createFixture();
 		Player player = mock(Player.class);
 		ItemStack item = mock(ItemStack.class);
 
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-			fixture.handler.giveItem(player, item);
-		}
+		fixture.handler.giveItem(player, item);
 
 		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class), eq(player));
 	}
