@@ -38,7 +38,8 @@ public final class RewardJavascript {
                 if (!list.isEmpty()) {
                     JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
                     for (String script : list) {
-                        engine.execute(engine.preparePlaceholders(user.getOfflinePlayer(), script, placeholders));
+                        String prepared = engine.preparePlaceholders(user.getOfflinePlayer(), script, placeholders);
+                        engine.execute(prepared == null ? script : prepared);
                     }
                 }
                 return null;
@@ -60,8 +61,8 @@ public final class RewardJavascript {
                 if (section.getBoolean("Enabled")) {
                     String expression = section.getString("Expression");
                     JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
-                    if (engine.getBooleanValue(
-                            engine.preparePlaceholders(user.getOfflinePlayer(), expression, placeholders))) {
+                    String prepared = engine.preparePlaceholders(user.getOfflinePlayer(), expression, placeholders);
+                    if (engine.getBooleanValue(prepared == null ? expression : prepared)) {
                         new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName() + ".Javascript").send(user);
                     } else {
                         new RewardBuilder(section, "FalseRewards").withPrefix(reward.getName() + ".Javascript").send(user);
