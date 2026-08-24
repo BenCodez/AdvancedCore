@@ -16,6 +16,7 @@ final class JavascriptPlaceholderParser {
 	private static final Set<String> REGEX_PREFIX_KEYWORDS = Set.of("return", "throw", "case", "delete", "void",
 			"typeof", "instanceof", "in", "of", "new", "yield", "await", "else", "do");
 	private static final Set<String> CONTROL_HEAD_KEYWORDS = Set.of("if", "while", "for", "with", "switch", "catch");
+	private static final Set<String> BLOCK_PREFIX_KEYWORDS = Set.of("else", "do", "try", "finally");
 
 	private JavascriptPlaceholderParser() {
 	}
@@ -210,6 +211,9 @@ final class JavascriptPlaceholderParser {
 		if (previous == ')' && closesControlHead(script, previousIndex)) {
 			return true;
 		}
+		if (previous == '}' && closesStatementBlock(script, previousIndex)) {
+			return true;
+		}
 		String previousWord = previousIdentifier(script, previousIndex);
 		return REGEX_PREFIX_KEYWORDS.contains(previousWord);
 	}
@@ -225,6 +229,33 @@ final class JavascriptPlaceholderParser {
 				if (depth == 0) {
 					int keywordEnd = previousNonWhitespace(script, i - 1);
 					return CONTROL_HEAD_KEYWORDS.contains(previousIdentifier(script, keywordEnd));
+				}
+			}
+		}
+		return false;
+	}
+
+	private static boolean closesStatementBlock(String script, int closeBraceIndex) {
+		int depth = 1;
+		for (int i = closeBraceIndex - 1; i >= 0; i--) {
+			char current = script.charAt(i);
+			if (current == '}') {
+				depth++;
+			} else if (current == '{') {
+				depth--;
+				if (depth == 0) {
+					int prefixIndex = previousNonWhitespace(script, i - 1);
+					if (prefixIndex < 0) {
+						return true;
+					}
+					char prefix = script.charAt(prefixIndex);
+					if (prefix == ')' || prefix == '}' || prefix == ';') {
+						return true;
+					}
+					if (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {
+						return true;
+					}
+					return BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));
 				}
 			}
 		}
