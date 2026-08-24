@@ -141,7 +141,8 @@ public class RewardExecutor {
         String rewardName = context.buildRewardName(path);
         DirectlyDefinedReward direct = handler.getDirectlyDefined(path);
         SubDirectlyDefinedReward sub = handler.getSubDirectlyDefined(rewardName);
-        SubDirectlyDefinedReward fileSub = handler.getSubRewardResolver().getFileBackedSubReward(rewardName);
+        SubRewardResolver resolver = handler.getSubRewardResolver();
+        SubDirectlyDefinedReward fileSub = resolver == null ? null : resolver.getFileBackedSubReward(rewardName);
 
         if (context.supportsDirectDispatch() && (direct != null || sub != null || fileSub != null)) {
             if (direct != null) {
