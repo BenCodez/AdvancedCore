@@ -1,16 +1,19 @@
 package com.bencodez.advancedcore.api.item;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -23,31 +26,36 @@ import lombok.Getter;
  * Handler for items when player inventories are full.
  */
 public class FullInventoryHandler {
+	private static final long MESSAGE_COOLDOWN_MS = 5000L;
+	private static final long PENDING_ITEM_RETENTION_MS = TimeUnit.DAYS.toMillis(1);
+
 	/**
 	 * The items waiting to be given.
-	 * 
+	 *
 	 * @return the items waiting to be given
 	 */
 	@Getter
-	private ConcurrentHashMap<UUID, ArrayList<ItemStack>> items;
+	private final ConcurrentHashMap<UUID, ArrayList<ItemStack>> items = new ConcurrentHashMap<>();
 
-	private AdvancedCorePlugin plugin;
+	private final AdvancedCorePlugin plugin;
 
 	/**
-	 * The timer executor service.
-	 * 
+	 * The shared inventory timer executor service.
+	 *
 	 * @return the timer executor service
 	 */
 	@Getter
 	private ScheduledExecutorService timer;
 
+	private ScheduledFuture<?> checkTask;
+
 	/**
 	 * The last message time for each player.
-	 * 
+	 *
 	 * @return the last message time for each player
 	 */
 	@Getter
-	private ConcurrentHashMap<UUID, Long> lastMessageTime;
+	private final ConcurrentHashMap<UUID, Long> lastMessageTime = new ConcurrentHashMap<>();
 
 	/**
 	 * Constructor for FullInventoryHandler.
@@ -55,8 +63,6 @@ public class FullInventoryHandler {
 	 * @param plugin the plugin instance
 	 */
 	public FullInventoryHandler(AdvancedCorePlugin plugin) {
-		items = new ConcurrentHashMap<>();
-		lastMessageTime = new ConcurrentHashMap<>();
 		this.plugin = plugin;
 		loadTimer();
 		startup();
@@ -69,13 +75,7 @@ public class FullInventoryHandler {
 	 * @param item the items to add
 	 */
 	public void add(UUID uuid, ArrayList<ItemStack> item) {
-		if (items.containsKey(uuid)) {
-			ArrayList<ItemStack> current = items.get(uuid);
-			current.addAll(item);
-			items.put(null, current);
-		} else {
-			items.put(uuid, item);
-		}
+		addItems(uuid, item);
 	}
 
 	/**
@@ -85,28 +85,33 @@ public class FullInventoryHandler {
 	 * @param item the item to add
 	 */
 	public void add(UUID uuid, ItemStack item) {
-		if (items.containsKey(uuid)) {
-			ArrayList<ItemStack> current = items.get(uuid);
-			current.add(item);
-			items.put(uuid, current);
-		} else {
-			ArrayList<ItemStack> itemList = new ArrayList<>();
-			itemList.add(item);
-			items.put(uuid, itemList);
+		if (item == null) {
+			return;
 		}
+		ArrayList<ItemStack> itemList = new ArrayList<>();
+		itemList.add(item);
+		addItems(uuid, itemList);
 	}
 
 	/**
-	 * Checks all players for pending items.
+	 * Checks all players for pending items. Bukkit player/inventory access is always
+	 * moved to the Bukkit scheduler when this method is invoked asynchronously.
 	 */
 	public void check() {
-		for (UUID entry : items.keySet()) {
-			Player p = Bukkit.getPlayer(entry);
-			check(p);
-			if (lastMessageTime.containsKey(entry)) {
-				if ((System.currentTimeMillis() - lastMessageTime.get(p.getUniqueId()).longValue()) > 5000) {
-					lastMessageTime.remove(entry);
-				}
+		if (!Bukkit.isPrimaryThread()) {
+			plugin.getBukkitScheduler().runTask(plugin, this::check);
+			return;
+		}
+
+		long now = System.currentTimeMillis();
+		for (UUID uuid : new ArrayList<>(items.keySet())) {
+			Player player = Bukkit.getPlayer(uuid);
+			if (player != null) {
+				check(player);
+			}
+			Long lastMessage = lastMessageTime.get(uuid);
+			if (lastMessage != null && now - lastMessage.longValue() > MESSAGE_COOLDOWN_MS) {
+				lastMessageTime.remove(uuid, lastMessage);
 			}
 		}
 	}
@@ -114,70 +119,99 @@ public class FullInventoryHandler {
 	/**
 	 * Checks a specific player for pending items.
 	 *
-	 * @param p the player
+	 * @param player the player
 	 */
-	public void check(Player p) {
-		if (p != null && items.containsKey(p.getUniqueId())) {
-			ArrayList<ItemStack> extra = new ArrayList<>();
-			for (ItemStack item : items.get(p.getUniqueId())) {
-				HashMap<Integer, ItemStack> excess = p.getInventory().addItem(item);
-				for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
-					extra.add(me.getValue());
-				}
+	public void check(Player player) {
+		if (player == null) {
+			return;
+		}
+		if (!Bukkit.isPrimaryThread()) {
+			plugin.getBukkitScheduler().runTask(plugin, () -> check(player), player);
+			return;
+		}
+
+		UUID uuid = player.getUniqueId();
+		ArrayList<ItemStack> pending = items.remove(uuid);
+		if (pending == null || pending.isEmpty()) {
+			return;
+		}
+
+		ArrayList<ItemStack> extra = new ArrayList<>();
+		for (ItemStack item : pending) {
+			if (item == null) {
+				continue;
 			}
-			if (extra.size() == 0) {
-				items.remove(p.getUniqueId());
-			} else {
-				items.put(p.getUniqueId(), extra);
-			}
+			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+			extra.addAll(excess.values());
+		}
+		if (!extra.isEmpty()) {
+			addItems(uuid, extra);
 		}
 	}
 
 	/**
-	 * Gives items to a player.
+	 * Gives items to a player. Bukkit inventory/world operations are moved to the
+	 * Bukkit scheduler when called asynchronously.
 	 *
-	 * @param p the player
+	 * @param player the player
 	 * @param item the items to give
 	 */
-	public void giveItem(Player p, ItemStack... item) {
-		HashMap<Integer, ItemStack> excess = p.getInventory().addItem(item);
-		boolean full = false;
+	public void giveItem(Player player, ItemStack... item) {
+		if (player == null || item == null || item.length == 0) {
+			return;
+		}
+		if (!Bukkit.isPrimaryThread()) {
+			ItemStack[] itemsToGive = item.clone();
+			plugin.getBukkitScheduler().runTask(plugin, () -> giveItem(player, itemsToGive), player);
+			return;
+		}
+
+		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+		if (excess.isEmpty()) {
+			player.updateInventory();
+			return;
+		}
+
 		boolean dropItems = plugin.getOptions().isDropOnFullInv();
-
-		for (Map.Entry<Integer, ItemStack> me : excess.entrySet()) {
-			full = true;
+		for (ItemStack extra : excess.values()) {
 			if (dropItems) {
-				p.getWorld().dropItem(p.getLocation(), me.getValue());
+				player.getWorld().dropItem(player.getLocation(), extra);
 			} else {
-				add(p.getUniqueId(), me.getValue());
+				add(player.getUniqueId(), extra);
 			}
 		}
-		if (full) {
-			if (lastMessageTime.containsKey(p.getUniqueId())) {
-				if ((System.currentTimeMillis() - lastMessageTime.get(p.getUniqueId()).longValue()) > 5000) {
-					sendMessage(p);
-				}
-			} else {
-				sendMessage(p);
-			}
 
+		if (shouldSendMessage(player.getUniqueId())) {
+			sendMessage(player);
 		}
-
-		p.updateInventory();
+		player.updateInventory();
 	}
 
 	/**
-	 * Loads the timer for checking inventories.
+	 * Loads the timer for checking inventories. The handler reuses AdvancedCore's
+	 * inventory executor and schedules Bukkit work back through the Bukkit scheduler.
 	 */
-	public void loadTimer() {
-		timer = Executors.newScheduledThreadPool(1);
-		timer.scheduleAtFixedRate(new Runnable() {
+	public synchronized void loadTimer() {
+		if (checkTask != null && !checkTask.isDone() && !checkTask.isCancelled()) {
+			return;
+		}
+		timer = plugin.getInventoryTimer();
+		if (timer == null || timer.isShutdown()) {
+			return;
+		}
+		checkTask = timer.scheduleAtFixedRate(() -> plugin.getBukkitScheduler().runTask(plugin, this::check), 10, 30,
+				TimeUnit.SECONDS);
+	}
 
-			@Override
-			public void run() {
-				check();
-			}
-		}, 10, 30, TimeUnit.SECONDS);
+	/**
+	 * Stops this handler's repeating task without shutting down the shared inventory
+	 * executor.
+	 */
+	public synchronized void shutdown() {
+		if (checkTask != null) {
+			checkTask.cancel(false);
+			checkTask = null;
+		}
 	}
 
 	/**
@@ -185,28 +219,19 @@ public class FullInventoryHandler {
 	 */
 	public void save() {
 		try {
-			if (plugin.getServerDataFile().getData() == null) {
+			if (plugin.getServerDataFile() == null || plugin.getServerDataFile().getData() == null) {
 				return;
 			}
+			plugin.getServerDataFile().setData("FullInventory", null);
 			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
-				ArrayList<ItemStack> items = entry.getValue();
-				for (int i = 0; i < items.size(); i++) {
-					plugin.getServerDataFile().setData("FullInventory." + entry.getKey().toString() + ".Items." + i,
-							items.get(i));
+				ArrayList<ItemStack> pending = new ArrayList<>(entry.getValue());
+				for (int i = 0; i < pending.size(); i++) {
+					plugin.getServerDataFile().setData("FullInventory." + entry.getKey() + ".Items." + i, pending.get(i));
 				}
-				plugin.getServerDataFile().setData("FullInventory." + entry.getKey().toString() + ".Time",
-						System.currentTimeMillis());
+				plugin.getServerDataFile().setData("FullInventory." + entry.getKey() + ".Time", System.currentTimeMillis());
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	private void sendMessage(Player p) {
-		String msg = MessageAPI.colorize(AdvancedCorePlugin.getInstance().getOptions().getFormatInvFull());
-		if (!msg.isEmpty()) {
-			p.sendMessage(msg);
-			lastMessageTime.put(p.getUniqueId(), System.currentTimeMillis());
+			plugin.getLogger().log(Level.WARNING, "Failed to save pending full-inventory items", e);
 		}
 	}
 
@@ -215,31 +240,68 @@ public class FullInventoryHandler {
 	 */
 	public void startup() {
 		try {
-			if (plugin.getServerDataFile().getData() == null
-					|| !plugin.getServerDataFile().getData().isConfigurationSection("FullInventory")) {
+			if (plugin.getServerDataFile() == null || plugin.getServerDataFile().getData() == null) {
+				return;
+			}
+			ConfigurationSection root = plugin.getServerDataFile().getData().getConfigurationSection("FullInventory");
+			if (root == null) {
 				return;
 			}
 
-			for (String uuid : plugin.getServerDataFile().getData().getConfigurationSection("FullInventory")
-					.getKeys(false)) {
-
-				// check time to keep a lot of items from long time offline players
-				long time = plugin.getServerDataFile().getData().getLong("FullInventory." + uuid + ".Time");
-				if (System.currentTimeMillis() - time < (1000 * 60 * 60 * 24)) {
-
-					for (String itemnum : plugin.getServerDataFile().getData()
-							.getConfigurationSection("FullInventory." + uuid + ".Items").getKeys(false)) {
-						add(UUID.fromString(uuid), plugin.getServerDataFile().getData()
-								.getItemStack("FullInventory." + uuid + ".Items." + itemnum));
+			long now = System.currentTimeMillis();
+			for (String uuidString : root.getKeys(false)) {
+				try {
+					UUID uuid = UUID.fromString(uuidString);
+					long time = root.getLong(uuidString + ".Time");
+					if (now - time >= PENDING_ITEM_RETENTION_MS) {
+						continue;
 					}
+					ConfigurationSection itemSection = root.getConfigurationSection(uuidString + ".Items");
+					if (itemSection == null) {
+						continue;
+					}
+					for (String itemNumber : itemSection.getKeys(false)) {
+						ItemStack item = itemSection.getItemStack(itemNumber);
+						if (item != null) {
+							add(uuid, item);
+						}
+					}
+				} catch (IllegalArgumentException e) {
+					plugin.getLogger().warning("Skipping invalid FullInventory UUID entry: " + uuidString);
 				}
 			}
 
 			plugin.getServerDataFile().setData("FullInventory", null);
 		} catch (Exception e) {
-			e.printStackTrace();
+			plugin.getLogger().log(Level.WARNING, "Failed to load pending full-inventory items", e);
 		}
-
 	}
 
+	private void addItems(UUID uuid, Collection<ItemStack> itemsToAdd) {
+		if (uuid == null || itemsToAdd == null || itemsToAdd.isEmpty()) {
+			return;
+		}
+		items.compute(uuid, (key, current) -> {
+			ArrayList<ItemStack> merged = current == null ? new ArrayList<>() : new ArrayList<>(current);
+			for (ItemStack item : itemsToAdd) {
+				if (item != null) {
+					merged.add(item);
+				}
+			}
+			return merged.isEmpty() ? null : merged;
+		});
+	}
+
+	private boolean shouldSendMessage(UUID uuid) {
+		Long lastMessage = lastMessageTime.get(uuid);
+		return lastMessage == null || System.currentTimeMillis() - lastMessage.longValue() > MESSAGE_COOLDOWN_MS;
+	}
+
+	private void sendMessage(Player player) {
+		String msg = MessageAPI.colorize(plugin.getOptions().getFormatInvFull());
+		if (!msg.isEmpty()) {
+			player.sendMessage(msg);
+			lastMessageTime.put(player.getUniqueId(), System.currentTimeMillis());
+		}
+	}
 }
