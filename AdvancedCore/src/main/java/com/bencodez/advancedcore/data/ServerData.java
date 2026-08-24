@@ -1,15 +1,16 @@
 package com.bencodez.advancedcore.data;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.misc.files.AtomicYamlWriter;
 import com.bencodez.simpleapi.file.YMLFile;
 
-// TODO: Auto-generated Javadoc
 /**
- * The Class ServerData.
+ * Persistent server-level AdvancedCore data.
  */
 public class ServerData extends YMLFile {
 	public ServerData(AdvancedCorePlugin plugin) {
@@ -20,39 +21,18 @@ public class ServerData extends YMLFile {
 		return getData().getLong("LastUpdated", -1);
 	}
 
-	/**
-	 * Gets the plugin version.
-	 *
-	 * @param plugin the plugin
-	 * @return the plugin version
-	 */
 	public String getPluginVersion(Plugin plugin) {
 		return getData().getString("PluginVersions." + plugin.getName(), "");
 	}
 
-	/**
-	 * Gets the prev day.
-	 *
-	 * @return the prev day
-	 */
 	public int getPrevDay() {
 		return getData().getInt("PrevDay", -1);
 	}
 
-	/**
-	 * Gets the prev month.
-	 *
-	 * @return the prev month
-	 */
 	public String getPrevMonth() {
 		return getData().getString("Month", "");
 	}
 
-	/**
-	 * Gets the prev week day.
-	 *
-	 * @return the prev week day
-	 */
 	public int getPrevWeekDay() {
 		return getData().getInt("PrevWeek", -1);
 	}
@@ -63,6 +43,18 @@ public class ServerData extends YMLFile {
 
 	@Override
 	public void onFileCreation() {
+	}
+
+	@Override
+	public void saveData() {
+		try {
+			AtomicYamlWriter.save(getdFile(), getData());
+		} catch (IOException | RuntimeException e) {
+			getPlugin().getLogger().severe("Failed to save " + getdFile().getName() + ": " + e.getMessage());
+			if (getPlugin() instanceof AdvancedCorePlugin) {
+				((AdvancedCorePlugin) getPlugin()).debug(e);
+			}
+		}
 	}
 
 	public void setData(String path, Object value) {
@@ -80,41 +72,21 @@ public class ServerData extends YMLFile {
 		saveData();
 	}
 
-	/**
-	 * Sets the plugin version.
-	 *
-	 * @param plugin the new plugin version
-	 */
 	public void setPluginVersion(Plugin plugin) {
 		getData().set("PluginVersions." + plugin.getName(), plugin.getDescription().getVersion());
 		saveData();
 	}
 
-	/**
-	 * Sets the prev day.
-	 *
-	 * @param day the new prev day
-	 */
 	public void setPrevDay(int day) {
 		getData().set("PrevDay", day);
 		saveData();
 	}
 
-	/**
-	 * Sets the prev month.
-	 *
-	 * @param month the new prev month
-	 */
 	public void setPrevMonth(String month) {
 		getData().set("Month", month);
 		saveData();
 	}
 
-	/**
-	 * Sets the prev week day.
-	 *
-	 * @param week the new prev week day
-	 */
 	public void setPrevWeekDay(int week) {
 		getData().set("PrevWeek", week);
 		saveData();
