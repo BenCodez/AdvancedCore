@@ -3,7 +3,6 @@ package com.bencodez.advancedcore.api.item;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -107,7 +106,9 @@ public class FullInventoryHandler {
 	}
 
 	/**
-	 * Checks a specific player for pending items.
+	 * Checks a specific player for pending items. The inventory work is always
+	 * scheduled through that player's entity scheduler so Folia region ownership is
+	 * respected even when the caller is already on a different tick/region thread.
 	 *
 	 * @param player the player
 	 */
@@ -115,16 +116,13 @@ public class FullInventoryHandler {
 		if (player == null) {
 			return;
 		}
-		if (!Bukkit.isPrimaryThread()) {
-			plugin.getBukkitScheduler().runTask(plugin, () -> checkOwnedPlayer(player), player);
-			return;
-		}
-		checkOwnedPlayer(player);
+		plugin.getBukkitScheduler().runTask(plugin, () -> checkOwnedPlayer(player), player);
 	}
 
 	/**
-	 * Gives items to a player. Bukkit inventory/world operations are moved to the
-	 * Bukkit scheduler when called asynchronously.
+	 * Gives items to a player. Inventory/world operations are always scheduled
+	 * through that player's entity scheduler so the public API is safe when called
+	 * from async code, the global region, or another entity's region.
 	 *
 	 * @param player the player
 	 * @param item the items to give
@@ -133,31 +131,8 @@ public class FullInventoryHandler {
 		if (player == null || item == null || item.length == 0) {
 			return;
 		}
-		if (!Bukkit.isPrimaryThread()) {
-			ItemStack[] itemsToGive = item.clone();
-			plugin.getBukkitScheduler().runTask(plugin, () -> giveItem(player, itemsToGive), player);
-			return;
-		}
-
-		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
-		if (excess.isEmpty()) {
-			player.updateInventory();
-			return;
-		}
-
-		boolean dropItems = plugin.getOptions().isDropOnFullInv();
-		for (ItemStack extra : excess.values()) {
-			if (dropItems) {
-				player.getWorld().dropItem(player.getLocation(), extra);
-			} else {
-				add(player.getUniqueId(), extra);
-			}
-		}
-
-		if (shouldSendMessage(player.getUniqueId())) {
-			sendMessage(player);
-		}
-		player.updateInventory();
+		ItemStack[] itemsToGive = item.clone();
+		plugin.getBukkitScheduler().runTask(plugin, () -> giveItemOwnedPlayer(player, itemsToGive), player);
 	}
 
 	/**
@@ -284,6 +259,28 @@ public class FullInventoryHandler {
 		if (!extra.isEmpty()) {
 			addItems(uuid, extra);
 		}
+	}
+
+	private void giveItemOwnedPlayer(Player player, ItemStack[] item) {
+		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+		if (excess.isEmpty()) {
+			player.updateInventory();
+			return;
+		}
+
+		boolean dropItems = plugin.getOptions().isDropOnFullInv();
+		for (ItemStack extra : excess.values()) {
+			if (dropItems) {
+				player.getWorld().dropItem(player.getLocation(), extra);
+			} else {
+				add(player.getUniqueId(), extra);
+			}
+		}
+
+		if (shouldSendMessage(player.getUniqueId())) {
+			sendMessage(player);
+		}
+		player.updateInventory();
 	}
 
 	private void schedulePendingPlayerChecks() {
