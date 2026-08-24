@@ -1,0 +1,73 @@
+name: Apply plugin lifecycle refactor
+
+on:
+  push:
+    branches:
+      - refactor/plugin-lifecycle
+    paths:
+      - .github/workflows/refactor-plugin-lifecycle.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/plugin-lifecycle
+          fetch-depth: 0
+      - name: Patch AdvancedCorePlugin lifecycle
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/AdvancedCorePlugin.java')
+          text = path.read_text()
+
+          disable_pattern = re.compile(
+              r'\t@Override\n\tpublic void onDisable\(\) \{.*?\n\t\}\n\n\t@Override\n\tpublic void onEnable\(\) \{',
+              re.DOTALL,
+          )
+          disable_replacement = '''\t@Override
+          \tpublic void onDisable() {
+          \t\tnew com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown();
+          \t\tjavaPlugin = null;
+          \t}
+
+          \t@Override
+          \tpublic void onEnable() {'''
+          text, count = disable_pattern.subn(disable_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit('Unable to locate onDisable/onEnable lifecycle boundary')
+
+          old_enable = '''\t\tjavaPlugin = this;
+          \t\tbukkitScheduler = new BukkitScheduler(this);
+          \t\ttimer = Executors.newSingleThreadScheduledExecutor();
+          \t\tloginTimer = Executors.newSingleThreadScheduledExecutor();
+          \t\tadvancedCoreCommandLoader = CommandLoader.getInstance();
+          \t\tinventoryTimer = Executors.newSingleThreadScheduledExecutor();'''
+          new_enable = '''\t\tjavaPlugin = this;
+          \t\tcom.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle.RuntimeExecutors runtimeExecutors = com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle
+          \t\t\t\t.createRuntimeExecutors(this);
+          \t\tbukkitScheduler = runtimeExecutors.getBukkitScheduler();
+          \t\ttimer = runtimeExecutors.getTimer();
+          \t\tloginTimer = runtimeExecutors.getLoginTimer();
+          \t\tadvancedCoreCommandLoader = CommandLoader.getInstance();
+          \t\tinventoryTimer = runtimeExecutors.getInventoryTimer();'''
+          if old_enable not in text:
+              raise SystemExit('Unable to locate runtime executor initialization')
+          text = text.replace(old_enable, new_enable, 1)
+          path.write_text(text)
+          PY
+          git diff --check
+      - name: Commit focused lifecycle patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AdvancedCore/src/main/java/com/bencodez/advancedcore/AdvancedCorePlugin.java
+          git rm .github/workflows/refactor-plugin-lifecycle.yml
+          git commit -m "Delegate plugin runtime lifecycle"
+          git push origin HEAD:refactor/plugin-lifecycle
