@@ -211,7 +211,7 @@ public class PlayerManager {
 			return player.hasPermission(perm);
 		} else {
 			player = Bukkit.getPlayer(playername);
-			if (player != null) {
+			if (player != null && playerUUID.equals(player.getUniqueId())) {
 				return player.hasPermission(perm);
 			}
 		}
