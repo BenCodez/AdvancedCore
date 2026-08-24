@@ -132,7 +132,7 @@ class RewardLoaderSecurityTest {
 
 		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
 		assertTrue(directlyDefined.mkdirs());
-		File manual = new File(directlyDefined, "Manual.yml");
+		File manual = new File(directlyDefined, "ExampleBasic.yml");
 		YamlConfiguration manualData = new YamlConfiguration();
 		manualData.set("Messages", java.util.List.of("manual reward"));
 		manualData.save(manual);
@@ -140,13 +140,10 @@ class RewardLoaderSecurityTest {
 		when(plugin.getDataFolder()).thenReturn(tempDir);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getLogger()).thenReturn(logger);
-		when(plugin.getRewardHandler()).thenReturn(handler);
 		when(options.isLoadDefaultRewards()).thenReturn(false);
 		when(handler.getRewardRegistry()).thenReturn(registry);
 		when(handler.getRewards()).thenReturn(rewards);
-		when(handler.getInjectedRequirements()).thenReturn(new CopyOnWriteArrayList<RequirementInject>());
-		when(handler.getInjectedRewards()).thenReturn(new CopyOnWriteArrayList<RewardInject>());
-		when(handler.rewardExist("Manual")).thenReturn(false);
+		when(handler.rewardExist("ExampleBasic")).thenReturn(false);
 
 		AdvancedCorePlugin.setInstance(plugin);
 		RewardLoader loader = new RewardLoader(handler, plugin);
@@ -154,7 +151,8 @@ class RewardLoaderSecurityTest {
 		loader.loadRewards();
 
 		assertTrue(manual.exists());
-		assertFalse(new File(directlyDefined, "Manual.yml.disabled").exists());
+		assertFalse(new File(directlyDefined, "ExampleBasic.yml.disabled").exists());
+		assertEquals(1, rewards.size());
 	}
 
 	@Test
