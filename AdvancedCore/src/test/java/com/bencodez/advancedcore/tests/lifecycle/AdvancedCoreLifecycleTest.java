@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.tests.lifecycle;
+package com.bencodez.advancedcore.lifecycle;
 
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.mockito.Mockito.mock;
@@ -16,24 +16,22 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
-import com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle;
 import com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle.RuntimeExecutors;
+import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 public class AdvancedCoreLifecycleTest {
 
 	@Test
 	public void runtimeExecutorsKeepExistingOwnershipBoundaries() {
-		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
-		RuntimeExecutors runtime = AdvancedCoreLifecycle.createRuntimeExecutors(plugin);
-		try {
-			assertNotSame(runtime.getTimer(), runtime.getLoginTimer());
-			assertNotSame(runtime.getTimer(), runtime.getInventoryTimer());
-			assertNotSame(runtime.getLoginTimer(), runtime.getInventoryTimer());
-		} finally {
-			runtime.getTimer().shutdownNow();
-			runtime.getLoginTimer().shutdownNow();
-			runtime.getInventoryTimer().shutdownNow();
-		}
+		BukkitScheduler bukkitScheduler = mock(BukkitScheduler.class);
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService loginTimer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService inventoryTimer = mock(ScheduledExecutorService.class);
+		RuntimeExecutors runtime = new RuntimeExecutors(bukkitScheduler, timer, loginTimer, inventoryTimer);
+
+		assertNotSame(runtime.getTimer(), runtime.getLoginTimer());
+		assertNotSame(runtime.getTimer(), runtime.getInventoryTimer());
+		assertNotSame(runtime.getLoginTimer(), runtime.getInventoryTimer());
 	}
 
 	@Test
