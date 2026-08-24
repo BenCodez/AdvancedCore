@@ -10,14 +10,19 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 
 class PlayerManagerSecurityTest {
+
+	@AfterEach
+	void tearDown() {
+		AdvancedCorePlugin.setInstance(null);
+	}
 
 	@Test
 	void nameFallbackRequiresMatchingUuid() {
@@ -29,16 +34,12 @@ class PlayerManagerSecurityTest {
 		when(differentPlayer.getUniqueId()).thenReturn(UUID.randomUUID());
 		when(differentPlayer.hasPermission("reward.permission")).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(options);
+		AdvancedCorePlugin.setInstance(plugin);
+		PlayerManager.getInstance().plugin = plugin;
 
-		// Some earlier tests initialize AdvancedCore's static singleton mock. Clear any
-		// inline registration before installing the isolated static mock used here.
-		Mockito.framework().clearInlineMocks();
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
-				MockedStatic<AdvancedCorePlugin> advancedCore = mockStatic(AdvancedCorePlugin.class)) {
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayer(requestedUuid)).thenReturn(null);
 			bukkit.when(() -> Bukkit.getPlayer("stored-name")).thenReturn(differentPlayer);
-			advancedCore.when(AdvancedCorePlugin::getInstance).thenReturn(plugin);
-			PlayerManager.getInstance().plugin = plugin;
 
 			assertFalse(PlayerManager.getInstance().hasServerPermission(requestedUuid, "stored-name",
 					"reward.permission"));
