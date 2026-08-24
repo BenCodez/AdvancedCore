@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.bukkit.configuration.file.YamlConfiguration;
+
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.exceptions.FileDirectoryException;
 
@@ -55,13 +57,10 @@ public class RewardLoader {
 	}
 
 	public void checkDirectlyDefined() {
-		suppressedDirectlyDefinedRewards.clear();
 		for (Reward rewardFile : handler.getRewards()) {
 			File folder = rewardFile.getConfig().getRewardFolder();
 			if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
-				if (handler.getSubRewardResolver().getFileBackedSubReward(rewardFile.getName()) != null) {
-					suppressStaleFileBackedSubReward(rewardFile);
-				} else if (handler.hasDirectRewardHandle(rewardFile.getName())) {
+				if (handler.hasDirectRewardHandle(rewardFile.getName())) {
 					rewardFile.getFile().delete();
 				}
 			}
@@ -69,23 +68,39 @@ public class RewardLoader {
 		loadRewards();
 	}
 
-	private void suppressStaleFileBackedSubReward(Reward rewardFile) {
-		String normalized = RewardRegistry.normalizeDirectPath(rewardFile.getName());
-		suppressedDirectlyDefinedRewards.add(normalized);
+	private void quarantineGeneratedDirectlyDefinedFiles() {
+		suppressedDirectlyDefinedRewards.clear();
+		for (File folder : rewardFolders) {
+			if (folder == null || !folder.getName().equalsIgnoreCase("DirectlyDefined")) {
+				continue;
+			}
+			for (String fileName : getRewardFiles(folder)) {
+				File staleFile = new File(folder, fileName);
+				YamlConfiguration data = YamlConfiguration.loadConfiguration(staleFile);
+				if (!data.getBoolean("DirectlyDefinedReward", false)) {
+					continue;
+				}
 
-		File staleFile = rewardFile.getFile();
+				String rewardName = fileName.substring(0, fileName.length() - ".yml".length());
+				suppressStaleGeneratedReward(staleFile, rewardName);
+			}
+		}
+	}
+
+	private void suppressStaleGeneratedReward(File staleFile, String rewardName) {
+		suppressedDirectlyDefinedRewards.add(RewardRegistry.normalizeDirectPath(rewardName));
 		if (staleFile == null || !staleFile.exists()) {
 			return;
 		}
 
 		File disabledFile = nextDisabledFile(staleFile);
 		if (staleFile.renameTo(disabledFile)) {
-			plugin.getLogger().warning("Disabled stale generated sub-reward file " + staleFile.getName()
-					+ " because its section is now dispatched only through its parent reward. Preserved as "
+			plugin.getLogger().warning("Disabled stale generated directly-defined reward file " + staleFile.getName()
+					+ " because generated reward files are no longer exposed as standalone rewards. Preserved as "
 					+ disabledFile.getName());
 		} else {
-			plugin.getLogger().warning("Failed to quarantine stale generated sub-reward file " + staleFile.getName()
-					+ "; it will remain suppressed from standalone reward lookup for this runtime");
+			plugin.getLogger().warning("Failed to quarantine stale generated directly-defined reward file "
+					+ staleFile.getName() + "; it will remain suppressed from standalone reward lookup for this runtime");
 		}
 	}
 
@@ -178,6 +193,7 @@ public class RewardLoader {
 	}
 
 	public void loadRewards() {
+		quarantineGeneratedDirectlyDefinedFiles();
 		handler.getRewardRegistry().resetRewards();
 		setupExample();
 		handler.addValidPath("DirectlyDefinedReward");
@@ -198,7 +214,8 @@ public class RewardLoader {
 			if (!reward.equals("")) {
 				if (file.getName().equalsIgnoreCase("DirectlyDefined")
 						&& suppressedDirectlyDefinedRewards.contains(RewardRegistry.normalizeDirectPath(reward))) {
-					plugin.getLogger().warning("Suppressing stale generated sub-reward file from standalone lookup: " + reward);
+					plugin.getLogger().warning("Suppressing stale generated directly-defined reward from standalone lookup: "
+							+ reward);
 					continue;
 				}
 				if (!handler.rewardExist(reward)) {
