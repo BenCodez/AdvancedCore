@@ -25,42 +25,50 @@ jobs:
           import re
 
           path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/AdvancedCorePlugin.java')
-          text = path.read_text()
+          raw = path.read_bytes()
+          text = raw.decode('utf-8')
+          newline = '\r\n' if '\r\n' in text else '\n'
 
           disable_pattern = re.compile(
-              r'\t@Override\n\tpublic void onDisable\(\) \{.*?\n\t\}\n\n\t@Override\n\tpublic void onEnable\(\) \{',
+              r'\t@Override\r?\n\tpublic void onDisable\(\) \{.*?\r?\n\t\}\r?\n\r?\n\t@Override\r?\n\tpublic void onEnable\(\) \{',
               re.DOTALL,
           )
-          disable_replacement = '''\t@Override
-          \tpublic void onDisable() {
-          \t\tnew com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown();
-          \t\tjavaPlugin = null;
-          \t}
-
-          \t@Override
-          \tpublic void onEnable() {'''
-          text, count = disable_pattern.subn(disable_replacement, text, count=1)
+          disable_replacement = newline.join([
+              '\t@Override',
+              '\tpublic void onDisable() {',
+              '\t\tnew com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown();',
+              '\t\tjavaPlugin = null;',
+              '\t}',
+              '',
+              '\t@Override',
+              '\tpublic void onEnable() {',
+          ])
+          text, count = disable_pattern.subn(lambda match: disable_replacement, text, count=1)
           if count != 1:
               raise SystemExit('Unable to locate onDisable/onEnable lifecycle boundary')
 
-          old_enable = '''\t\tjavaPlugin = this;
-          \t\tbukkitScheduler = new BukkitScheduler(this);
-          \t\ttimer = Executors.newSingleThreadScheduledExecutor();
-          \t\tloginTimer = Executors.newSingleThreadScheduledExecutor();
-          \t\tadvancedCoreCommandLoader = CommandLoader.getInstance();
-          \t\tinventoryTimer = Executors.newSingleThreadScheduledExecutor();'''
-          new_enable = '''\t\tjavaPlugin = this;
-          \t\tcom.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle.RuntimeExecutors runtimeExecutors = com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle
-          \t\t\t\t.createRuntimeExecutors(this);
-          \t\tbukkitScheduler = runtimeExecutors.getBukkitScheduler();
-          \t\ttimer = runtimeExecutors.getTimer();
-          \t\tloginTimer = runtimeExecutors.getLoginTimer();
-          \t\tadvancedCoreCommandLoader = CommandLoader.getInstance();
-          \t\tinventoryTimer = runtimeExecutors.getInventoryTimer();'''
+          old_enable = newline.join([
+              '\t\tjavaPlugin = this;',
+              '\t\tbukkitScheduler = new BukkitScheduler(this);',
+              '\t\ttimer = Executors.newSingleThreadScheduledExecutor();',
+              '\t\tloginTimer = Executors.newSingleThreadScheduledExecutor();',
+              '\t\tadvancedCoreCommandLoader = CommandLoader.getInstance();',
+              '\t\tinventoryTimer = Executors.newSingleThreadScheduledExecutor();',
+          ])
+          new_enable = newline.join([
+              '\t\tjavaPlugin = this;',
+              '\t\tcom.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle.RuntimeExecutors runtimeExecutors = com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle',
+              '\t\t\t\t.createRuntimeExecutors(this);',
+              '\t\tbukkitScheduler = runtimeExecutors.getBukkitScheduler();',
+              '\t\ttimer = runtimeExecutors.getTimer();',
+              '\t\tloginTimer = runtimeExecutors.getLoginTimer();',
+              '\t\tadvancedCoreCommandLoader = CommandLoader.getInstance();',
+              '\t\tinventoryTimer = runtimeExecutors.getInventoryTimer();',
+          ])
           if old_enable not in text:
               raise SystemExit('Unable to locate runtime executor initialization')
           text = text.replace(old_enable, new_enable, 1)
-          path.write_text(text)
+          path.write_bytes(text.encode('utf-8'))
           PY
           git diff --check
       - name: Commit focused lifecycle patch
