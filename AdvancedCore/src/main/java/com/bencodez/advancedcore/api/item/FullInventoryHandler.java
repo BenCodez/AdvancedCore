@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
@@ -36,6 +37,7 @@ public class FullInventoryHandler {
 	private final ConcurrentHashMap<UUID, ArrayList<ItemStack>> items = new ConcurrentHashMap<>();
 
 	private final AdvancedCorePlugin plugin;
+	private final ReentrantReadWriteLock deliveryLock = new ReentrantReadWriteLock(true);
 
 	@Getter
 	private ScheduledExecutorService timer;
@@ -113,10 +115,12 @@ public class FullInventoryHandler {
 	/**
 	 * Saves pending items to disk. The complete replacement section is first built in
 	 * a temporary configuration. Only after that succeeds is the live configuration
-	 * replaced in memory, followed by a single disk save. This avoids deliberately
-	 * persisting an empty/partial replacement before the new snapshot is complete.
+	 * replaced in memory, followed by a single disk save. Delivery operations hold a
+	 * shared lock, while saving holds the exclusive lock, so a snapshot cannot observe
+	 * the temporary remove/re-add state of an in-flight inventory check.
 	 */
 	public void save() {
+		deliveryLock.writeLock().lock();
 		try {
 			ServerData serverData = plugin.getServerDataFile();
 			if (serverData == null || serverData.getData() == null) {
@@ -142,11 +146,12 @@ public class FullInventoryHandler {
 					if (!replacement.isConfigurationSection(path)) {
 						data.set("FullInventory." + path, replacement.get(path));
 					}
-				}
 			}
 			serverData.saveData();
 		} catch (Exception e) {
 			plugin.getLogger().log(Level.WARNING, "Failed to save pending full-inventory items", e);
+		} finally {
+			deliveryLock.writeLock().unlock();
 		}
 	}
 
@@ -193,57 +198,72 @@ public class FullInventoryHandler {
 		if (uuid == null || itemsToAdd == null || itemsToAdd.isEmpty()) {
 			return;
 		}
-		items.compute(uuid, (key, current) -> {
-			ArrayList<ItemStack> merged = current == null ? new ArrayList<>() : new ArrayList<>(current);
-			for (ItemStack item : itemsToAdd) {
-				if (item != null) {
-					merged.add(item);
+		deliveryLock.readLock().lock();
+		try {
+			items.compute(uuid, (key, current) -> {
+				ArrayList<ItemStack> merged = current == null ? new ArrayList<>() : new ArrayList<>(current);
+				for (ItemStack item : itemsToAdd) {
+					if (item != null) {
+						merged.add(item);
+					}
 				}
-			}
-			return merged.isEmpty() ? null : merged;
-		});
+				return merged.isEmpty() ? null : merged;
+			});
+		} finally {
+			deliveryLock.readLock().unlock();
+		}
 	}
 
 	private void checkOwnedPlayer(Player player) {
-		UUID uuid = player.getUniqueId();
-		ArrayList<ItemStack> pending = items.remove(uuid);
-		if (pending == null || pending.isEmpty()) {
-			return;
-		}
-
-		ArrayList<ItemStack> extra = new ArrayList<>();
-		for (ItemStack item : pending) {
-			if (item == null) {
-				continue;
+		deliveryLock.readLock().lock();
+		try {
+			UUID uuid = player.getUniqueId();
+			ArrayList<ItemStack> pending = items.remove(uuid);
+			if (pending == null || pending.isEmpty()) {
+				return;
 			}
-			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
-			extra.addAll(excess.values());
-		}
-		if (!extra.isEmpty()) {
-			addItems(uuid, extra);
+
+			ArrayList<ItemStack> extra = new ArrayList<>();
+			for (ItemStack item : pending) {
+				if (item == null) {
+					continue;
+				}
+				HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+				extra.addAll(excess.values());
+			}
+			if (!extra.isEmpty()) {
+				addItems(uuid, extra);
+			}
+		} finally {
+			deliveryLock.readLock().unlock();
 		}
 	}
 
 	private void giveItemOwnedPlayer(Player player, ItemStack[] item) {
-		HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
-		if (excess.isEmpty()) {
-			player.updateInventory();
-			return;
-		}
-
-		boolean dropItems = plugin.getOptions().isDropOnFullInv();
-		for (ItemStack extra : excess.values()) {
-			if (dropItems) {
-				player.getWorld().dropItem(player.getLocation(), extra);
-			} else {
-				add(player.getUniqueId(), extra);
+		deliveryLock.readLock().lock();
+		try {
+			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+			if (excess.isEmpty()) {
+				player.updateInventory();
+				return;
 			}
-		}
 
-		if (shouldSendMessage(player.getUniqueId())) {
-			sendMessage(player);
+			boolean dropItems = plugin.getOptions().isDropOnFullInv();
+			for (ItemStack extra : excess.values()) {
+				if (dropItems) {
+					player.getWorld().dropItem(player.getLocation(), extra);
+				} else {
+					add(player.getUniqueId(), extra);
+				}
+			}
+
+			if (shouldSendMessage(player.getUniqueId())) {
+				sendMessage(player);
+			}
+			player.updateInventory();
+		} finally {
+			deliveryLock.readLock().unlock();
 		}
-		player.updateInventory();
 	}
 
 	private void schedulePendingPlayerChecks() {
