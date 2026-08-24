@@ -74,6 +74,29 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void regexLiteralQuotesDoNotChangePlaceholderContext() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace("/[']/.test('x'); %untrusted%", ignored -> injection,
+				bindings::put);
+
+		assertEquals("/[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
+	void regexCharacterClassesAndEscapesRemainRegexText() {
+		HashMap<String, Object> bindings = new HashMap<>();
+
+		String script = JavascriptPlaceholderParser.replace("/[/\\']+/.test(value); %name%", ignored -> "Ben",
+				bindings::put);
+
+		assertEquals("/[/\\']+/.test(value); __advancedCorePlaceholder0", script);
+		assertEquals("Ben", bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
 	void preservesBooleanAndNumericPlaceholderTypes() {
 		HashMap<String, Object> bindings = new HashMap<>();
 
