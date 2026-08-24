@@ -141,8 +141,9 @@ public class RewardExecutor {
         String rewardName = context.buildRewardName(path);
         DirectlyDefinedReward direct = handler.getDirectlyDefined(path);
         SubDirectlyDefinedReward sub = handler.getSubDirectlyDefined(rewardName);
+        SubDirectlyDefinedReward fileSub = handler.getSubRewardResolver().getFileBackedSubReward(rewardName);
 
-        if (context.supportsDirectDispatch() && (direct != null || sub != null)) {
+        if (context.supportsDirectDispatch() && (direct != null || sub != null || fileSub != null)) {
             if (direct != null) {
                 Reward reward = direct.getReward();
                 if (reward != null) {
@@ -156,14 +157,14 @@ public class RewardExecutor {
                 return;
             }
 
-            Reward reward = sub.getReward();
+            SubDirectlyDefinedReward selectedSub = sub != null ? sub : fileSub;
+            Reward reward = selectedSub.getReward();
             if (reward != null) {
-                plugin.debug("Giving subdirectlydefined reward " + rewardName + ", Options: " + options + " to "
+                plugin.debug("Giving sub reward " + rewardName + ", Options: " + options + " to "
                         + user.getPlayerName() + "/" + user.getUUID());
                 giveReward(user, reward, options);
             } else {
-                plugin.debug("Failed to give subdirectlydefined reward " + path + ", Options: " + options
-                        + ", Reward == null");
+                plugin.debug("Failed to give sub reward " + path + ", Options: " + options + ", Reward == null");
             }
             return;
         }
