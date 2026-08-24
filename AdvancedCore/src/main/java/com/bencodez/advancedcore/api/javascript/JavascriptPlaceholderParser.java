@@ -6,7 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 final class JavascriptPlaceholderParser {
-	private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("%([^%]+)%|\\{([^{}]+)\\}");
+	private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("%([^%]+)%|(?<!\\$)\\{([^{}]+)\\}");
 	private static final Pattern INTEGER_PATTERN = Pattern.compile("[-+]?\\d+");
 	private static final Pattern DECIMAL_PATTERN = Pattern.compile("[-+]?(?:\\d+\\.\\d*|\\d*\\.\\d+|\\d+)(?:[eE][-+]?\\d+)?");
 	private static final String VARIABLE_PREFIX = "__advancedCorePlaceholder";
