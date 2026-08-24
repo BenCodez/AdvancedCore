@@ -15,6 +15,8 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
+import me.clip.placeholderapi.PlaceholderAPI;
+
 public class JavascriptEngine {
 	private HashMap<String, Object> engineAPI;
 
@@ -100,6 +102,32 @@ public class JavascriptEngine {
 	public JavascriptEngine addToEngine(String text, Object ob) {
 		engineAPI.put(text, ob);
 		return this;
+	}
+
+	public String preparePlaceholders(OfflinePlayer player, String expression) {
+		return preparePlaceholders(player, expression, null);
+	}
+
+	public String preparePlaceholders(OfflinePlayer player, String expression, HashMap<String, String> placeholders) {
+		if (expression == null || expression.isEmpty()) {
+			return expression;
+		}
+
+		return JavascriptPlaceholderParser.replace(expression, placeholder -> {
+			String key = placeholder.substring(1, placeholder.length() - 1);
+			if (placeholders != null) {
+				for (Entry<String, String> entry : placeholders.entrySet()) {
+					if (entry.getKey().equalsIgnoreCase(key)) {
+						return entry.getValue();
+					}
+				}
+			}
+
+			if (player != null && AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
+				return PlaceholderAPI.setPlaceholders(player, placeholder);
+			}
+			return placeholder;
+		}, this::addToEngine);
 	}
 
 	public void execute(String expression) {
