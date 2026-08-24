@@ -64,7 +64,7 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
-	public void timerOnlySchedulesBukkitWork() {
+	public void timerSchedulesGlobalDiscoveryOnly() {
 		Fixture fixture = createFixture();
 		ArgumentCaptor<Runnable> timerTask = ArgumentCaptor.forClass(Runnable.class);
 		verify(fixture.timer).scheduleAtFixedRate(timerTask.capture(), eq(10L), eq(30L), eq(TimeUnit.SECONDS));
@@ -72,6 +72,23 @@ public class FullInventoryHandlerTest {
 		timerTask.getValue().run();
 
 		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class));
+	}
+
+	@Test
+	public void pendingSweepSchedulesEachOnlinePlayerOnEntityScheduler() {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		fixture.handler.add(uuid, mock(ItemStack.class));
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+
+			fixture.handler.check();
+		}
+
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class), eq(player));
 	}
 
 	@Test
