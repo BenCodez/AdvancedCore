@@ -25,6 +25,9 @@ import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
 
+/**
+ * Handler for items when player inventories are full.
+ */
 public class FullInventoryHandler {
 	private static final long MESSAGE_COOLDOWN_MS = 5000L;
 	private static final long PENDING_ITEM_RETENTION_MS = TimeUnit.DAYS.toMillis(1);
@@ -108,9 +111,10 @@ public class FullInventoryHandler {
 	}
 
 	/**
-	 * Builds the complete replacement section before changing the live config, then
-	 * persists it with one save. This avoids deliberately writing an empty/partial
-	 * recovery snapshot while the replacement is still being constructed.
+	 * Saves pending items to disk. The complete replacement section is first built in
+	 * a temporary configuration. Only after that succeeds is the live configuration
+	 * replaced in memory, followed by a single disk save. This avoids deliberately
+	 * persisting an empty/partial replacement before the new snapshot is complete.
 	 */
 	public void save() {
 		try {
