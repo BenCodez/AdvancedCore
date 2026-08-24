@@ -8,7 +8,6 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueString;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
-import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
@@ -28,9 +27,9 @@ public final class RequirementJavascript {
             @Override
             public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String expression,
                     RewardOptions rewardOptions) {
-                return expression.equals("") || new JavascriptEngine().addPlayer(user.getOfflinePlayer())
-                        .getBooleanValue(PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(),
-                                PlaceholderUtils.replacePlaceHolder(expression, rewardOptions.getPlaceholders())));
+                JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
+                return expression.equals("") || engine.getBooleanValue(
+                        engine.preparePlaceholders(user.getOfflinePlayer(), expression, rewardOptions.getPlaceholders()));
             }
         }.priority(90).addEditButton(new EditGUIButton(new ItemBuilder("DETECTOR_RAIL"),
                 new EditGUIValueString("JavascriptExpression", null) {
