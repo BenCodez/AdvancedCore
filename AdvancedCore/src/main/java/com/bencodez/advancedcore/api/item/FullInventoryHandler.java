@@ -94,26 +94,16 @@ public class FullInventoryHandler {
 	}
 
 	/**
-	 * Checks all players for pending items. Bukkit player/inventory access is always
-	 * moved to the Bukkit scheduler when this method is invoked asynchronously.
+	 * Checks all players for pending items. The sweep itself runs on the normal
+	 * Bukkit/global scheduler, but every player inventory operation is scheduled on
+	 * that player's scheduler/region before it is executed.
 	 */
 	public void check() {
 		if (!Bukkit.isPrimaryThread()) {
-			plugin.getBukkitScheduler().runTask(plugin, this::check);
+			plugin.getBukkitScheduler().runTask(plugin, this::schedulePendingPlayerChecks);
 			return;
 		}
-
-		long now = System.currentTimeMillis();
-		for (UUID uuid : new ArrayList<>(items.keySet())) {
-			Player player = Bukkit.getPlayer(uuid);
-			if (player != null) {
-				check(player);
-			}
-			Long lastMessage = lastMessageTime.get(uuid);
-			if (lastMessage != null && now - lastMessage.longValue() > MESSAGE_COOLDOWN_MS) {
-				lastMessageTime.remove(uuid, lastMessage);
-			}
-		}
+		schedulePendingPlayerChecks();
 	}
 
 	/**
@@ -126,27 +116,10 @@ public class FullInventoryHandler {
 			return;
 		}
 		if (!Bukkit.isPrimaryThread()) {
-			plugin.getBukkitScheduler().runTask(plugin, () -> check(player), player);
+			plugin.getBukkitScheduler().runTask(plugin, () -> checkOwnedPlayer(player), player);
 			return;
 		}
-
-		UUID uuid = player.getUniqueId();
-		ArrayList<ItemStack> pending = items.remove(uuid);
-		if (pending == null || pending.isEmpty()) {
-			return;
-		}
-
-		ArrayList<ItemStack> extra = new ArrayList<>();
-		for (ItemStack item : pending) {
-			if (item == null) {
-				continue;
-			}
-			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
-			extra.addAll(excess.values());
-		}
-		if (!extra.isEmpty()) {
-			addItems(uuid, extra);
-		}
+		checkOwnedPlayer(player);
 	}
 
 	/**
@@ -199,7 +172,8 @@ public class FullInventoryHandler {
 		if (timer == null || timer.isShutdown()) {
 			return;
 		}
-		checkTask = timer.scheduleAtFixedRate(() -> plugin.getBukkitScheduler().runTask(plugin, this::check), 10, 30,
+		checkTask = timer.scheduleAtFixedRate(
+				() -> plugin.getBukkitScheduler().runTask(plugin, this::schedulePendingPlayerChecks), 10, 30,
 				TimeUnit.SECONDS);
 	}
 
@@ -290,6 +264,40 @@ public class FullInventoryHandler {
 			}
 			return merged.isEmpty() ? null : merged;
 		});
+	}
+
+	private void checkOwnedPlayer(Player player) {
+		UUID uuid = player.getUniqueId();
+		ArrayList<ItemStack> pending = items.remove(uuid);
+		if (pending == null || pending.isEmpty()) {
+			return;
+		}
+
+		ArrayList<ItemStack> extra = new ArrayList<>();
+		for (ItemStack item : pending) {
+			if (item == null) {
+				continue;
+			}
+			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
+			extra.addAll(excess.values());
+		}
+		if (!extra.isEmpty()) {
+			addItems(uuid, extra);
+		}
+	}
+
+	private void schedulePendingPlayerChecks() {
+		long now = System.currentTimeMillis();
+		for (UUID uuid : new ArrayList<>(items.keySet())) {
+			Player player = Bukkit.getPlayer(uuid);
+			if (player != null) {
+				plugin.getBukkitScheduler().runTask(plugin, () -> checkOwnedPlayer(player), player);
+			}
+			Long lastMessage = lastMessageTime.get(uuid);
+			if (lastMessage != null && now - lastMessage.longValue() > MESSAGE_COOLDOWN_MS) {
+				lastMessageTime.remove(uuid, lastMessage);
+			}
+		}
 	}
 
 	private boolean shouldSendMessage(UUID uuid) {
