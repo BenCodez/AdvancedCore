@@ -97,6 +97,27 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void preservesPlaceholderValuesInsideRegexLiterals() {
+		HashMap<String, Object> bindings = new HashMap<>();
+
+		String script = JavascriptPlaceholderParser.replace("/^%player_name%$/.test(name)",
+				ignored -> "Ben.* /admin", bindings::put);
+
+		assertEquals("/^Ben\\.\\* \\/admin$/.test(name)", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
+	void escapesPlaceholderValuesInsideRegexCharacterClasses() {
+		HashMap<String, Object> bindings = new HashMap<>();
+
+		String script = JavascriptPlaceholderParser.replace("/[%chars%]/.test(name)", ignored -> "]^-", bindings::put);
+
+		assertEquals("/[\\]\\^\\-]/.test(name)", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
 	void preservesBooleanAndNumericPlaceholderTypes() {
 		HashMap<String, Object> bindings = new HashMap<>();
 
