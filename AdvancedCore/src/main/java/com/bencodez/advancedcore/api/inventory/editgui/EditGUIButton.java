@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.inventory.editgui;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -11,9 +12,7 @@ import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValue;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
-import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueList;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
-import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -22,89 +21,49 @@ import lombok.Setter;
  * Button for editing GUI values.
  */
 public class EditGUIButton extends BInventoryButton {
-
-	/**
-	 * The editor for this button.
-	 * 
-	 * @return the editor
-	 * @param editor the editor
-	 */
 	@Getter
 	@Setter
 	private EditGUIValue editor;
 
-	/**
-	 * Constructor for EditGUIButton.
-	 *
-	 * @param editer the GUI value editor
-	 */
-	public EditGUIButton(EditGUIValue editer) {
+	public EditGUIButton(EditGUIValue editor) {
 		super(new ItemBuilder(Material.PAPER));
-		this.editor = editer;
+		this.editor = editor;
 	}
 
-	/**
-	 * Constructor for EditGUIButton with custom item.
-	 *
-	 * @param item the item builder
-	 * @param editer the GUI value editor
-	 */
-	public EditGUIButton(ItemBuilder item, EditGUIValue editer) {
+	public EditGUIButton(ItemBuilder item, EditGUIValue editor) {
 		super(item);
-		this.editor = editer;
+		this.editor = editor;
 	}
 
-	/**
-	 * Adds a lore line to the button.
-	 *
-	 * @param lore the lore line
-	 * @return this instance
-	 */
 	public EditGUIButton addLore(String lore) {
 		getEditor().addLore(lore);
 		return this;
 	}
 
-	/**
-	 * Adds options to the button.
-	 *
-	 * @param str the options
-	 * @return this instance
-	 */
-	public EditGUIButton addOptions(String... str) {
-		getEditor().addOptions(str);
+	public EditGUIButton addOptions(String... values) {
+		getEditor().addOptions(values);
 		return this;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public ItemStack getItem(Player player, HashMap<String, String> placeholders) {
 		ItemBuilder builder = getBuilder();
 		builder.addPlaceholder(placeholders);
-		if ((getEditor() instanceof EditGUIValueInventory)) {
-			if (!builder.hasCustomDisplayName()) {
-				builder.setName("&cSet " + getEditor().getKey());
-			}
-			builder.setLore("&cClick to open");
-		} else if (!(getEditor() instanceof EditGUIValueList)) {
-			if (!builder.hasCustomDisplayName()) {
-				builder.setName("&cSet " + getEditor().getType() + " for " + getEditor().getKey());
-			}
-			builder.setLore("&cCurrent value: " + getEditor().getCurrentValue());
+
+		if (getEditor() instanceof EditGUIValueInventory) {
+			applyInventoryDisplay(builder);
 		} else {
 			if (!builder.hasCustomDisplayName()) {
-				builder.setName("&cEdit list for " + getEditor().getKey());
+				builder.setName(getEditor().getButtonName());
 			}
-			if (getEditor().getCurrentValue() instanceof ArrayList<?>) {
-				builder.setLore(ArrayUtils.makeStringList((ArrayList<String>) getEditor().getCurrentValue()));
-			} else {
-				builder.setLore("&cCurrent value: null");
-			}
+			List<String> lore = getEditor().getButtonLore();
+			builder.setLore(lore == null ? new String[0] : lore.toArray(new String[0]));
 		}
-		ArrayList<String> lores = getEditor().getLores();
-		if (lores != null) {
-			for (String t : lores) {
-				builder.addLoreLine("&3" + t);
+
+		ArrayList<String> customLore = getEditor().getLores();
+		if (customLore != null) {
+			for (String line : customLore) {
+				builder.addLoreLine("&3" + line);
 			}
 		}
 		return builder.toItemStack(player);
@@ -116,14 +75,15 @@ public class EditGUIButton extends BInventoryButton {
 		getEditor().onClick(clickEvent);
 	}
 
-	/**
-	 * Sets the name of the button.
-	 *
-	 * @param name the name
-	 * @return this instance
-	 */
 	public EditGUIButton setName(String name) {
-		this.getBuilder().setName(name);
+		getBuilder().setName(name);
 		return this;
+	}
+
+	private void applyInventoryDisplay(ItemBuilder builder) {
+		if (!builder.hasCustomDisplayName()) {
+			builder.setName("&cSet " + getEditor().getKey());
+		}
+		builder.setLore("&cClick to open");
 	}
 }

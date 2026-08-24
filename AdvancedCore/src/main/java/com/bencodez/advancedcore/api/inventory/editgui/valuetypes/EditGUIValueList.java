@@ -1,31 +1,23 @@
 package com.bencodez.advancedcore.api.inventory.editgui.valuetypes;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
-import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
 import com.bencodez.advancedcore.api.inventory.BInventoryButton;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.simpleapi.valuerequest.InputMethod;
-import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
 /**
  * Abstract GUI value for list editing.
  */
 public abstract class EditGUIValueList extends EditGUIValue {
-	/**
-	 * Constructor for EditGUIValueList.
-	 *
-	 * @param key the key
-	 * @param value the initial value
-	 */
 	public EditGUIValueList(String key, Object value) {
-		setKey(key);
-		setCurrentValue(value);
+		super(key, value);
 	}
 
 	@Override
@@ -34,59 +26,66 @@ public abstract class EditGUIValueList extends EditGUIValue {
 	}
 
 	@Override
+	public String getButtonName() {
+		return "&cEdit list for " + getKey();
+	}
+
+	@Override
+	public List<String> getButtonLore() {
+		ArrayList<String> current = currentStringList();
+		return current.isEmpty() && getCurrentValue() == null ? List.of("&cCurrent value: null") : current;
+	}
+
+	@Override
 	public void onClick(ClickEvent clickEvent) {
-		if (getCurrentValue() == null) {
-			setCurrentValue(new ArrayList<String>());
-		}
-		BInventory inv = new BInventory("Edit list: " + getKey());
-		inv.setMeta(clickEvent.getPlayer(), "Value", getCurrentValue());
-		inv.addButton(new BInventoryButton(new ItemBuilder(Material.EMERALD_BLOCK).setName("&cAdd value")) {
+		ArrayList<String> initial = currentStringList();
+		setCurrentValue(initial);
+
+		BInventory inventory = new BInventory("Edit list: " + getKey());
+		inventory.setMeta(clickEvent.getPlayer(), "Value", new ArrayList<>(initial));
+		inventory.addButton(createAddButton());
+		inventory.addButton(createRemoveButton());
+		inventory.openInventory(clickEvent.getPlayer());
+	}
+
+	private BInventoryButton createAddButton() {
+		return new BInventoryButton(new ItemBuilder(Material.EMERALD_BLOCK).setName("&cAdd value")) {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				new ValueRequest(AdvancedCorePlugin.getInstance(), AdvancedCorePlugin.getInstance().getDialogService(),
-						getInputMethod()).requestString(clickEvent.getPlayer(), (String) null, null, true,
+				createValueRequest().requestString(clickEvent.getPlayer(), (String) null, null, true,
 						"Type cancel to cancel", (Player player, String add) -> {
-							@SuppressWarnings("unchecked")
-							ArrayList<String> list = (ArrayList<String>) getMeta(player, "Value");
-							if (list == null) {
-								list = new ArrayList<String>();
-							}
+							ArrayList<String> list = EditGUIValueList.this.toStringList(getMeta(player, "Value"));
 							list.add(add);
-							setCurrentValue(list);
-							setValue(player, list);
+							setMeta(player, "Value", list);
+							applyValue(player, list, newValue -> setValue(player, new ArrayList<>(newValue)));
 							sendMessage(player, "&cAdded " + add + " to " + getKey());
 						});
 			}
-		});
-		inv.addButton(new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cRemove value")) {
-			@SuppressWarnings("unchecked")
-			@Override
-			public void onClick(ClickEvent clickEvent) {
-				ArrayList<String> list = (ArrayList<String>) getMeta(clickEvent.getPlayer(), "Value");
-				if (!list.isEmpty()) {
-					InputMethod removeMethod = getInputMethod() == InputMethod.BOOK ? InputMethod.CHAT : getInputMethod();
-					new ValueRequest(AdvancedCorePlugin.getInstance(), AdvancedCorePlugin.getInstance().getDialogService(),
-							removeMethod).requestString(clickEvent.getPlayer(), (String) null, new ArrayList<String>(list), false,
-							"Type cancel to cancel", (Player player, String remove) -> {
-								ArrayList<String> currentList = (ArrayList<String>) getMeta(player, "Value");
-								currentList.remove(remove);
-								setCurrentValue(currentList);
-								setValue(player, currentList);
-								sendMessage(player, "&cRemoved " + remove + " from " + getKey());
-							});
-				} else {
-					clickEvent.getPlayer().sendMessage("No values to remove");
-				}
-			}
-		});
-		inv.openInventory(clickEvent.getPlayer());
+		};
 	}
 
-	/**
-	 * Sets the list value.
-	 *
-	 * @param player the player
-	 * @param value the list to set
-	 */
+	private BInventoryButton createRemoveButton() {
+		return new BInventoryButton(new ItemBuilder(Material.BARRIER).setName("&cRemove value")) {
+			@Override
+			public void onClick(ClickEvent clickEvent) {
+				ArrayList<String> list = EditGUIValueList.this.toStringList(getMeta(clickEvent.getPlayer(), "Value"));
+				if (list.isEmpty()) {
+					clickEvent.getPlayer().sendMessage("No values to remove");
+					return;
+				}
+
+				InputMethod removeMethod = getInputMethod() == InputMethod.BOOK ? InputMethod.CHAT : getInputMethod();
+				createValueRequest(removeMethod).requestString(clickEvent.getPlayer(), (String) null, new ArrayList<>(list),
+						false, "Type cancel to cancel", (Player player, String remove) -> {
+							ArrayList<String> current = EditGUIValueList.this.toStringList(getMeta(player, "Value"));
+							current.remove(remove);
+							setMeta(player, "Value", current);
+							applyValue(player, current, newValue -> setValue(player, new ArrayList<>(newValue)));
+							sendMessage(player, "&cRemoved " + remove + " from " + getKey());
+						});
+			}
+		};
+	}
+
 	public abstract void setValue(Player player, ArrayList<String> value);
 }

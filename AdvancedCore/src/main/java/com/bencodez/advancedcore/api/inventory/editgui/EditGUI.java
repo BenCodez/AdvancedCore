@@ -3,7 +3,7 @@ package com.bencodez.advancedcore.api.inventory.editgui;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.bencodez.advancedcore.api.inventory.BInventory;
@@ -13,40 +13,38 @@ import com.bencodez.advancedcore.api.inventory.BInventoryButton;
  * Edit GUI for sorting and organizing edit buttons.
  */
 public class EditGUI extends BInventory {
-
-	/**
-	 * Constructor for EditGUI.
-	 *
-	 * @param name the inventory name
-	 */
 	public EditGUI(String name) {
 		super(name);
 	}
 
 	/**
-	 * Sorts the edit buttons alphabetically by key.
+	 * Sorts edit buttons alphabetically by editor key while retaining non-editor
+	 * buttons and duplicate editor keys.
 	 */
 	public void sort() {
-		Map<Integer, BInventoryButton> map = getButtons();
-		setButtons(new HashMap<>());
-		LinkedHashMap<String, EditGUIButton> buttons = new LinkedHashMap<>();
-		ArrayList<String> sortedList = new ArrayList<>();
-		for (BInventoryButton button : map.values()) {
+		Map<Integer, BInventoryButton> current = getButtons();
+		List<BInventoryButton> fixedButtons = new ArrayList<>();
+		List<EditGUIButton> editButtons = new ArrayList<>();
+
+		for (BInventoryButton button : current.values()) {
 			if (button instanceof EditGUIButton) {
-				EditGUIButton b = (EditGUIButton) button;
-				String key = b.getEditor().getKey();
-				sortedList.add(key);
-				b.setSlot(-1);
-				buttons.put(key, b);
+				EditGUIButton editButton = (EditGUIButton) button;
+				editButton.setSlot(-1);
+				editButtons.add(editButton);
 			} else {
-				addButton(button);
+				fixedButtons.add(button);
 			}
 		}
-		sortedList.sort(Comparator.naturalOrder());
 
-		for (String key : sortedList) {
-			addButton(buttons.get(key));
+		editButtons.sort(Comparator.comparing(button -> button.getEditor().getKey(),
+				Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
+
+		setButtons(new HashMap<>());
+		for (BInventoryButton button : fixedButtons) {
+			addButton(button);
+		}
+		for (EditGUIButton button : editButtons) {
+			addButton(button);
 		}
 	}
-
 }
