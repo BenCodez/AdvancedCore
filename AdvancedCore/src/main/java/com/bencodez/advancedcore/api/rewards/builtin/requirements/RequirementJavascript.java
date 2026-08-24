@@ -27,9 +27,16 @@ public final class RequirementJavascript {
             @Override
             public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String expression,
                     RewardOptions rewardOptions) {
+                if (expression.equals("")) {
+                    return true;
+                }
                 JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
-                return expression.equals("") || engine.getBooleanValue(
-                        engine.preparePlaceholders(user.getOfflinePlayer(), expression, rewardOptions.getPlaceholders()));
+                String prepared = engine.preparePlaceholders(user.getOfflinePlayer(), expression,
+                        rewardOptions.getPlaceholders());
+                if (prepared == null) {
+                    prepared = expression;
+                }
+                return engine.getBooleanValue(prepared);
             }
         }.priority(90).addEditButton(new EditGUIButton(new ItemBuilder("DETECTOR_RAIL"),
                 new EditGUIValueString("JavascriptExpression", null) {
