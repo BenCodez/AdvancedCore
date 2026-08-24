@@ -14,10 +14,13 @@ import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
 import lombok.Getter;
@@ -40,9 +43,7 @@ public class FullInventoryHandler {
 	private final AdvancedCorePlugin plugin;
 
 	/**
-	 * The handler-owned timer executor service. This remains isolated from
-	 * AdvancedCore's shared inventory timer so legacy callers of getTimer().shutdown()
-	 * cannot stop unrelated GUI scheduling.
+	 * The handler-owned timer executor service.
 	 *
 	 * @return the timer executor service
 	 */
@@ -145,11 +146,8 @@ public class FullInventoryHandler {
 	 */
 	public synchronized void loadTimer() {
 		if (timer == null || timer.isShutdown() || timer.isTerminated()) {
-			if (checkTask != null) {
-				checkTask.cancel(false);
-				checkTask = null;
-			}
 			timer = Executors.newSingleThreadScheduledExecutor();
+			checkTask = null;
 		}
 		if (checkTask != null && !checkTask.isDone() && !checkTask.isCancelled()) {
 			return;
@@ -173,21 +171,40 @@ public class FullInventoryHandler {
 	}
 
 	/**
-	 * Saves pending items to disk.
+	 * Saves pending items to disk. The replacement FullInventory section is built in
+	 * a temporary configuration first, then copied into the live configuration and
+	 * persisted in a single save so an incomplete replacement is never deliberately
+	 * written over the previous recovery snapshot.
 	 */
 	public void save() {
 		try {
-			if (plugin.getServerDataFile() == null || plugin.getServerDataFile().getData() == null) {
+			ServerData serverData = plugin.getServerDataFile();
+			if (serverData == null || serverData.getData() == null) {
 				return;
 			}
-			plugin.getServerDataFile().setData("FullInventory", null);
+
+			YamlConfiguration snapshot = new YamlConfiguration();
+			long now = System.currentTimeMillis();
 			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
 				ArrayList<ItemStack> pending = new ArrayList<>(entry.getValue());
+				String basePath = "FullInventory." + entry.getKey();
 				for (int i = 0; i < pending.size(); i++) {
-					plugin.getServerDataFile().setData("FullInventory." + entry.getKey() + ".Items." + i, pending.get(i));
+					snapshot.set(basePath + ".Items." + i, pending.get(i));
 				}
-				plugin.getServerDataFile().setData("FullInventory." + entry.getKey() + ".Time", System.currentTimeMillis());
+				snapshot.set(basePath + ".Time", now);
 			}
+
+			FileConfiguration data = serverData.getData();
+			data.set("FullInventory", null);
+			ConfigurationSection replacement = snapshot.getConfigurationSection("FullInventory");
+			if (replacement != null) {
+				for (String path : replacement.getKeys(true)) {
+					if (!replacement.isConfigurationSection(path)) {
+						data.set("FullInventory." + path, replacement.get(path));
+					}
+				}
+			}
+			serverData.saveData();
 		} catch (Exception e) {
 			plugin.getLogger().log(Level.WARNING, "Failed to save pending full-inventory items", e);
 		}
