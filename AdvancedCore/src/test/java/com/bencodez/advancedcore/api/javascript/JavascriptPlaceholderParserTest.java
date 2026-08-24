@@ -110,6 +110,28 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void recognizesRegexLiteralAfterStatementBlock() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace("if (ok) {} /[']/.test('x'); %untrusted%", ignored -> injection,
+				bindings::put);
+
+		assertEquals("if (ok) {} /[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
+	void objectLiteralFollowedByDivisionIsNotTreatedAsRegex() {
+		HashMap<String, Object> bindings = new HashMap<>();
+
+		String script = JavascriptPlaceholderParser.replace("value = {} / 2; %name%", ignored -> "Ben", bindings::put);
+
+		assertEquals("value = {} / 2; __advancedCorePlaceholder0", script);
+		assertEquals("Ben", bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
 	void regexCharacterClassesAndEscapesRemainRegexText() {
 		HashMap<String, Object> bindings = new HashMap<>();
 
