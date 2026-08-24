@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.tests.item;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -139,6 +141,25 @@ public class FullInventoryHandlerTest {
 		verify(fixture.sharedInventoryTimer, never()).shutdownNow();
 	}
 
+	@Test
+	public void savePersistsCompletedSnapshotOnce() {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		ItemStack item = mock(ItemStack.class);
+		fixture.data.set("FullInventory.previous.Time", 123L);
+		fixture.handler.add(uuid, item);
+
+		fixture.handler.save();
+
+		verify(fixture.serverData).saveData();
+		verify(fixture.serverData, never()).setData(eq("FullInventory"), any());
+		ConfigurationSection root = fixture.data.getConfigurationSection("FullInventory");
+		assertNotNull(root);
+		assertFalse(root.contains("previous"));
+		assertEquals(item, root.getItemStack(uuid + ".Items.0"));
+		assertTrue(root.getLong(uuid + ".Time") > 0L);
+	}
+
 	private Fixture createFixture() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		ScheduledExecutorService sharedInventoryTimer = mock(ScheduledExecutorService.class);
@@ -153,20 +174,25 @@ public class FullInventoryHandlerTest {
 
 		FullInventoryHandler handler = new FullInventoryHandler(plugin);
 		handlers.add(handler);
-		return new Fixture(plugin, sharedInventoryTimer, bukkitScheduler, handler);
+		return new Fixture(plugin, sharedInventoryTimer, bukkitScheduler, serverData, data, handler);
 	}
 
 	private static final class Fixture {
 		private final AdvancedCorePlugin plugin;
 		private final ScheduledExecutorService sharedInventoryTimer;
 		private final BukkitScheduler bukkitScheduler;
+		private final ServerData serverData;
+		private final YamlConfiguration data;
 		private final FullInventoryHandler handler;
 
 		private Fixture(AdvancedCorePlugin plugin, ScheduledExecutorService sharedInventoryTimer,
-				BukkitScheduler bukkitScheduler, FullInventoryHandler handler) {
+				BukkitScheduler bukkitScheduler, ServerData serverData, YamlConfiguration data,
+				FullInventoryHandler handler) {
 			this.plugin = plugin;
 			this.sharedInventoryTimer = sharedInventoryTimer;
 			this.bukkitScheduler = bukkitScheduler;
+			this.serverData = serverData;
+			this.data = data;
 			this.handler = handler;
 		}
 	}
