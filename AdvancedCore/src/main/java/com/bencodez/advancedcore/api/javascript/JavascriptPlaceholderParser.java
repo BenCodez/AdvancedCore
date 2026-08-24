@@ -1,5 +1,7 @@
 package com.bencodez.advancedcore.api.javascript;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -26,15 +28,15 @@ final class JavascriptPlaceholderParser {
 				continue;
 			}
 
-			char quote = quoteAt(script, matcher.start());
-			boolean templateExpression = quote == '`' && isInsideTemplateExpression(script, matcher.start());
+			Context context = contextAt(script, matcher.start());
 			String replacement;
-			if (quote == 0 || templateExpression) {
+			if (context == Context.CODE || context == Context.TEMPLATE_EXPRESSION || context == Context.COMMENT) {
 				String variable = VARIABLE_PREFIX + index++;
 				bindings.accept(variable, coercePrimitive(value));
 				replacement = variable;
 			} else {
-				replacement = escape(value, quote);
+				replacement = escape(value, context == Context.SINGLE_QUOTE ? '\''
+						: context == Context.DOUBLE_QUOTE ? '"' : '`');
 			}
 			matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
 		}
@@ -50,55 +52,51 @@ final class JavascriptPlaceholderParser {
 			try {
 				return Long.valueOf(value);
 			} catch (NumberFormatException ignored) {
-				// Fall through to string binding for values outside the long range.
 			}
 		}
 		if (DECIMAL_PATTERN.matcher(value).matches()) {
 			try {
 				return Double.valueOf(value);
 			} catch (NumberFormatException ignored) {
-				// Fall through to string binding for values outside the double range.
 			}
 		}
 		return value;
 	}
 
-	private static char quoteAt(String script, int end) {
-		char quote = 0;
+	private static Context contextAt(String script, int end) {
+		Deque<TemplateFrame> templates = new ArrayDeque<>();
+		Context context = Context.CODE;
 		boolean escaped = false;
-		for (int i = 0; i < end; i++) {
-			char current = script.charAt(i);
-			if (escaped) {
-				escaped = false;
-			} else if (current == '\\' && quote != 0) {
-				escaped = true;
-			} else if (current == quote) {
-				quote = 0;
-			} else if (quote == 0 && (current == '\'' || current == '"' || current == '`')) {
-				quote = current;
-			}
-		}
-		return quote;
-	}
-
-	private static boolean isInsideTemplateExpression(String script, int end) {
-		boolean inTemplate = false;
-		boolean escaped = false;
-		int expressionDepth = 0;
-		char expressionQuote = 0;
 
 		for (int i = 0; i < end; i++) {
 			char current = script.charAt(i);
-			if (!inTemplate) {
-				if (current == '`') {
-					inTemplate = true;
-					expressionDepth = 0;
-					escaped = false;
+			char next = i + 1 < end ? script.charAt(i + 1) : '\0';
+
+			if (context == Context.LINE_COMMENT) {
+				if (current == '\n' || current == '\r') {
+					context = codeContext(templates);
 				}
 				continue;
 			}
-
-			if (expressionDepth == 0) {
+			if (context == Context.BLOCK_COMMENT) {
+				if (current == '*' && next == '/') {
+					context = codeContext(templates);
+					i++;
+				}
+				continue;
+			}
+			if (context == Context.SINGLE_QUOTE || context == Context.DOUBLE_QUOTE) {
+				char quote = context == Context.SINGLE_QUOTE ? '\'' : '"';
+				if (escaped) {
+					escaped = false;
+				} else if (current == '\\') {
+					escaped = true;
+				} else if (current == quote) {
+					context = codeContext(templates);
+				}
+				continue;
+			}
+			if (context == Context.TEMPLATE_TEXT) {
 				if (escaped) {
 					escaped = false;
 					continue;
@@ -108,36 +106,62 @@ final class JavascriptPlaceholderParser {
 					continue;
 				}
 				if (current == '`') {
-					inTemplate = false;
+					templates.pop();
+					context = codeContext(templates);
 					continue;
 				}
-				if (current == '$' && i + 1 < end && script.charAt(i + 1) == '{') {
-					expressionDepth = 1;
+				if (current == '$' && next == '{') {
+					templates.peek().expressionDepth = 1;
+					context = Context.TEMPLATE_EXPRESSION;
 					i++;
 				}
 				continue;
 			}
 
-			if (expressionQuote != 0) {
-				if (escaped) {
-					escaped = false;
-				} else if (current == '\\') {
-					escaped = true;
-				} else if (current == expressionQuote) {
-					expressionQuote = 0;
-				}
+			if (current == '/' && next == '/') {
+				context = Context.LINE_COMMENT;
+				i++;
 				continue;
 			}
-
-			if (current == '\'' || current == '"') {
-				expressionQuote = current;
-			} else if (current == '{') {
-				expressionDepth++;
-			} else if (current == '}') {
-				expressionDepth--;
+			if (current == '/' && next == '*') {
+				context = Context.BLOCK_COMMENT;
+				i++;
+				continue;
+			}
+			if (current == '\'') {
+				context = Context.SINGLE_QUOTE;
+				escaped = false;
+				continue;
+			}
+			if (current == '"') {
+				context = Context.DOUBLE_QUOTE;
+				escaped = false;
+				continue;
+			}
+			if (current == '`') {
+				templates.push(new TemplateFrame());
+				context = Context.TEMPLATE_TEXT;
+				continue;
+			}
+			if (!templates.isEmpty() && templates.peek().expressionDepth > 0) {
+				if (current == '{') {
+					templates.peek().expressionDepth++;
+				} else if (current == '}') {
+					templates.peek().expressionDepth--;
+					if (templates.peek().expressionDepth == 0) {
+						context = Context.TEMPLATE_TEXT;
+					}
+				}
 			}
 		}
-		return inTemplate && expressionDepth > 0;
+		if (context == Context.LINE_COMMENT || context == Context.BLOCK_COMMENT) {
+			return Context.COMMENT;
+		}
+		return context;
+	}
+
+	private static Context codeContext(Deque<TemplateFrame> templates) {
+		return !templates.isEmpty() && templates.peek().expressionDepth > 0 ? Context.TEMPLATE_EXPRESSION : Context.CODE;
 	}
 
 	private static String escape(String value, char quote) {
@@ -148,5 +172,13 @@ final class JavascriptPlaceholderParser {
 			escaped = escaped.replace("${", "\\${");
 		}
 		return escaped;
+	}
+
+	private enum Context {
+		CODE, SINGLE_QUOTE, DOUBLE_QUOTE, TEMPLATE_TEXT, TEMPLATE_EXPRESSION, LINE_COMMENT, BLOCK_COMMENT, COMMENT
+	}
+
+	private static final class TemplateFrame {
+		private int expressionDepth;
 	}
 }
