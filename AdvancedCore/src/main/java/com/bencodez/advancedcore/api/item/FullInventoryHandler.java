@@ -146,6 +146,7 @@ public class FullInventoryHandler {
 					if (!replacement.isConfigurationSection(path)) {
 						data.set("FullInventory." + path, replacement.get(path));
 					}
+				}
 			}
 			serverData.saveData();
 		} catch (Exception e) {
