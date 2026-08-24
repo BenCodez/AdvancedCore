@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.rewards;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.exceptions.FileDirectoryException;
@@ -16,6 +18,7 @@ public class RewardLoader {
 	private final RewardHandler handler;
 	private final AdvancedCorePlugin plugin;
 	private final ArrayList<File> rewardFolders = new ArrayList<>();
+	private final Set<String> suppressedDirectlyDefinedRewards = new HashSet<>();
 
 	public RewardLoader(RewardHandler handler, AdvancedCorePlugin plugin) {
 		this.handler = handler;
@@ -52,15 +55,48 @@ public class RewardLoader {
 	}
 
 	public void checkDirectlyDefined() {
+		suppressedDirectlyDefinedRewards.clear();
 		for (Reward rewardFile : handler.getRewards()) {
 			File folder = rewardFile.getConfig().getRewardFolder();
 			if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
-				if (handler.hasDirectRewardHandle(rewardFile.getName())) {
+				if (handler.getSubRewardResolver().getFileBackedSubReward(rewardFile.getName()) != null) {
+					suppressStaleFileBackedSubReward(rewardFile);
+				} else if (handler.hasDirectRewardHandle(rewardFile.getName())) {
 					rewardFile.getFile().delete();
 				}
 			}
 		}
 		loadRewards();
+	}
+
+	private void suppressStaleFileBackedSubReward(Reward rewardFile) {
+		String normalized = RewardRegistry.normalizeDirectPath(rewardFile.getName());
+		suppressedDirectlyDefinedRewards.add(normalized);
+
+		File staleFile = rewardFile.getFile();
+		if (staleFile == null || !staleFile.exists()) {
+			return;
+		}
+
+		File disabledFile = nextDisabledFile(staleFile);
+		if (staleFile.renameTo(disabledFile)) {
+			plugin.getLogger().warning("Disabled stale generated sub-reward file " + staleFile.getName()
+					+ " because its section is now dispatched only through its parent reward. Preserved as "
+					+ disabledFile.getName());
+		} else {
+			plugin.getLogger().warning("Failed to quarantine stale generated sub-reward file " + staleFile.getName()
+					+ "; it will remain suppressed from standalone reward lookup for this runtime");
+		}
+	}
+
+	static File nextDisabledFile(File staleFile) {
+		File parent = staleFile.getParentFile();
+		File disabled = new File(parent, staleFile.getName() + ".disabled");
+		int suffix = 1;
+		while (disabled.exists()) {
+			disabled = new File(parent, staleFile.getName() + ".disabled." + suffix++);
+		}
+		return disabled;
 	}
 
 	private void copyFile(String fileName) {
@@ -160,6 +196,11 @@ public class RewardLoader {
 	private void loadRewards(File file) {
 		for (String reward : getRewardNames(file)) {
 			if (!reward.equals("")) {
+				if (file.getName().equalsIgnoreCase("DirectlyDefined")
+						&& suppressedDirectlyDefinedRewards.contains(RewardRegistry.normalizeDirectPath(reward))) {
+					plugin.getLogger().warning("Suppressing stale generated sub-reward file from standalone lookup: " + reward);
+					continue;
+				}
 				if (!handler.rewardExist(reward)) {
 					try {
 						Reward reward1 = new Reward(file, reward);
