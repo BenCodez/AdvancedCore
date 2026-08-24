@@ -42,7 +42,6 @@ public class PlaceholderUtils {
 			TextComponent t = new TextComponent(text);
 
 			String typeMsg = msg;
-			// types
 			boolean parsing = true;
 			while (parsing) {
 				int nextTypeIndex = typeMsg.indexOf("\",");
@@ -70,7 +69,6 @@ public class PlaceholderUtils {
 				} else if (type.equalsIgnoreCase("suggest_command")) {
 					t.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, typeData));
 				}
-
 			}
 
 			comp.addExtra(parseJson(preMessage));
@@ -266,6 +264,9 @@ public class PlaceholderUtils {
 					}
 					String scriptText = text.substring(startIndex + JAVASCRIPT_MARKER.length(), endIndex);
 					String prepared = engine.preparePlaceholders(player, scriptText, placeholders);
+					if (prepared == null) {
+						prepared = scriptText;
+					}
 					String script = engine.getStringValue(prepared);
 					if (script == null) {
 						script = "" + engine.getBooleanValue(prepared);
@@ -309,14 +310,6 @@ public class PlaceholderUtils {
 		return str;
 	}
 
-	/**
-	 * Replace place holder.
-	 *
-	 * @param str         the str
-	 * @param toReplace   the to replace
-	 * @param replaceWith the replace with
-	 * @return the string
-	 */
 	public static String replacePlaceHolder(String str, String toReplace, String replaceWith) {
 		return replacePlaceHolder(str, toReplace, replaceWith, true);
 	}
@@ -338,7 +331,7 @@ public class PlaceholderUtils {
 		if (value == null || value.isEmpty()) {
 			return value;
 		}
-		return MessageAPI.replaceIgnoreCase(value, JAVASCRIPT_MARKER, SAFE_JAVASCRIPT_MARKER);
+		return value.replace(JAVASCRIPT_MARKER, SAFE_JAVASCRIPT_MARKER);
 	}
 
 	public static ArrayList<String> replacePlaceHolders(ArrayList<String> list, Player p) {
@@ -367,13 +360,6 @@ public class PlaceholderUtils {
 		return text;
 	}
 
-	/**
-	 * Replace place holders.
-	 *
-	 * @param player the player
-	 * @param text   the text
-	 * @return the string
-	 */
 	public static String replacePlaceHolders(Player player, String text) {
 		if (player == null) {
 			return text;
