@@ -30,7 +30,8 @@ final class JavascriptPlaceholderParser {
 
 			Context context = contextAt(script, matcher.start());
 			String replacement;
-			if (context == Context.CODE || context == Context.TEMPLATE_EXPRESSION || context == Context.COMMENT) {
+			if (context == Context.CODE || context == Context.TEMPLATE_EXPRESSION || context == Context.COMMENT
+					|| context == Context.REGEX) {
 				String variable = VARIABLE_PREFIX + index++;
 				bindings.accept(variable, coercePrimitive(value));
 				replacement = variable;
@@ -67,6 +68,7 @@ final class JavascriptPlaceholderParser {
 		Deque<TemplateFrame> templates = new ArrayDeque<>();
 		Context context = Context.CODE;
 		boolean escaped = false;
+		boolean regexCharacterClass = false;
 
 		for (int i = 0; i < end; i++) {
 			char current = script.charAt(i);
@@ -82,6 +84,28 @@ final class JavascriptPlaceholderParser {
 				if (current == '*' && next == '/') {
 					context = codeContext(templates);
 					i++;
+				}
+				continue;
+			}
+			if (context == Context.REGEX) {
+				if (escaped) {
+					escaped = false;
+					continue;
+				}
+				if (current == '\\') {
+					escaped = true;
+					continue;
+				}
+				if (current == '[') {
+					regexCharacterClass = true;
+					continue;
+				}
+				if (current == ']' && regexCharacterClass) {
+					regexCharacterClass = false;
+					continue;
+				}
+				if (current == '/' && !regexCharacterClass) {
+					context = codeContext(templates);
 				}
 				continue;
 			}
@@ -128,6 +152,12 @@ final class JavascriptPlaceholderParser {
 				i++;
 				continue;
 			}
+			if (current == '/' && startsRegexLiteral(script, i)) {
+				context = Context.REGEX;
+				escaped = false;
+				regexCharacterClass = false;
+				continue;
+			}
 			if (current == '\'') {
 				context = Context.SINGLE_QUOTE;
 				escaped = false;
@@ -160,6 +190,17 @@ final class JavascriptPlaceholderParser {
 		return context;
 	}
 
+	private static boolean startsRegexLiteral(String script, int slashIndex) {
+		for (int i = slashIndex - 1; i >= 0; i--) {
+			char previous = script.charAt(i);
+			if (Character.isWhitespace(previous)) {
+				continue;
+			}
+			return "([{:;,=!?&|+-*%^~<>".indexOf(previous) >= 0;
+		}
+		return true;
+	}
+
 	private static Context codeContext(Deque<TemplateFrame> templates) {
 		return !templates.isEmpty() && templates.peek().expressionDepth > 0 ? Context.TEMPLATE_EXPRESSION : Context.CODE;
 	}
@@ -175,7 +216,7 @@ final class JavascriptPlaceholderParser {
 	}
 
 	private enum Context {
-		CODE, SINGLE_QUOTE, DOUBLE_QUOTE, TEMPLATE_TEXT, TEMPLATE_EXPRESSION, LINE_COMMENT, BLOCK_COMMENT, COMMENT
+		CODE, SINGLE_QUOTE, DOUBLE_QUOTE, TEMPLATE_TEXT, TEMPLATE_EXPRESSION, REGEX, LINE_COMMENT, BLOCK_COMMENT, COMMENT
 	}
 
 	private static final class TemplateFrame {
