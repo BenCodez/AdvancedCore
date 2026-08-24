@@ -52,6 +52,28 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void ignoresCommentBracesInsideTemplateExpressions() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace("`${/* } */ %untrusted%}`", ignored -> injection,
+				bindings::put);
+
+		assertEquals("`${/* } */ __advancedCorePlaceholder0}`", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
+	void preservesNestedTemplateLiteralTextInsideExpressions() {
+		HashMap<String, Object> bindings = new HashMap<>();
+
+		String script = JavascriptPlaceholderParser.replace("`${`Hello %name%`}`", ignored -> "Ben", bindings::put);
+
+		assertEquals("`${`Hello Ben`}`", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
 	void preservesBooleanAndNumericPlaceholderTypes() {
 		HashMap<String, Object> bindings = new HashMap<>();
 
