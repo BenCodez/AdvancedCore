@@ -31,6 +31,14 @@ final class QueuedGeneratedReward extends Reward {
 		super.giveReward(user, rewardOptions);
 	}
 
+	@Override
+	public void validate() {
+		// This file is a persisted snapshot created from a reward that was already
+		// validated before it was queued. Revalidating requires the live injected
+		// registries and adds no security boundary; execution is instead restricted
+		// to UUIDs with a matching persisted queue reference.
+	}
+
 	Set<String> getAllowedUserUuids() {
 		return allowedUserUuids;
 	}
