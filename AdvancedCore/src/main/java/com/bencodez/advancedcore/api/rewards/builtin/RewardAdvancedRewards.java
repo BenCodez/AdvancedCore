@@ -37,7 +37,7 @@ public final class RewardAdvancedRewards {
                 ArrayList<String> rewards = ArrayUtils.convert(keys);
                 for (String rewardName : rewards) {
                     handler.giveReward(user, section, rewardName, new RewardOptions().setPlaceholders(placeholders)
-                            .setPrefix(reward.getRewardName() + "_AdvancedRewards_" + rewardName));
+                            .setPrefix(reward.getRewardName() + "_AdvancedRewards"));
                 }
                 return null;
             }
