@@ -12,6 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -29,6 +30,9 @@ class PlayerManagerSecurityTest {
 		when(differentPlayer.hasPermission("reward.permission")).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(options);
 
+		// Some earlier tests initialize AdvancedCore's static singleton mock. Clear any
+		// inline registration before installing the isolated static mock used here.
+		Mockito.framework().clearInlineMocks();
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
 				MockedStatic<AdvancedCorePlugin> advancedCore = mockStatic(AdvancedCorePlugin.class)) {
 			bukkit.when(() -> Bukkit.getPlayer(requestedUuid)).thenReturn(null);
