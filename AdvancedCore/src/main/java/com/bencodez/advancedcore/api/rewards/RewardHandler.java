@@ -143,6 +143,10 @@ public class RewardHandler {
         return rewardLoader.getRewardDirectlyDefined(reward);
     }
 
+    public Reward getQueuedGeneratedReward(String reward, String userUuid) {
+        return rewardLoader.getQueuedGeneratedReward(reward, userUuid);
+    }
+
     public ArrayList<String> getRewardFiles(File folder) {
         return rewardLoader.getRewardFiles(folder);
     }
