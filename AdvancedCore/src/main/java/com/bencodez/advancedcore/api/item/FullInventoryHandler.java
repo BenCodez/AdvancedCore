@@ -32,61 +32,29 @@ public class FullInventoryHandler {
 	private static final long MESSAGE_COOLDOWN_MS = 5000L;
 	private static final long PENDING_ITEM_RETENTION_MS = TimeUnit.DAYS.toMillis(1);
 
-	/**
-	 * The items waiting to be given.
-	 *
-	 * @return the items waiting to be given
-	 */
 	@Getter
 	private final ConcurrentHashMap<UUID, ArrayList<ItemStack>> items = new ConcurrentHashMap<>();
 
 	private final AdvancedCorePlugin plugin;
 
-	/**
-	 * The handler-owned timer executor service.
-	 *
-	 * @return the timer executor service
-	 */
 	@Getter
 	private ScheduledExecutorService timer;
 
 	private ScheduledFuture<?> checkTask;
 
-	/**
-	 * The last message time for each player.
-	 *
-	 * @return the last message time for each player
-	 */
 	@Getter
 	private final ConcurrentHashMap<UUID, Long> lastMessageTime = new ConcurrentHashMap<>();
 
-	/**
-	 * Constructor for FullInventoryHandler.
-	 *
-	 * @param plugin the plugin instance
-	 */
 	public FullInventoryHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 		loadTimer();
 		startup();
 	}
 
-	/**
-	 * Adds multiple items for a player.
-	 *
-	 * @param uuid the player UUID
-	 * @param item the items to add
-	 */
 	public void add(UUID uuid, ArrayList<ItemStack> item) {
 		addItems(uuid, item);
 	}
 
-	/**
-	 * Adds a single item for a player.
-	 *
-	 * @param uuid the player UUID
-	 * @param item the item to add
-	 */
 	public void add(UUID uuid, ItemStack item) {
 		if (item == null) {
 			return;
@@ -96,11 +64,6 @@ public class FullInventoryHandler {
 		addItems(uuid, itemList);
 	}
 
-	/**
-	 * Checks all players for pending items. The sweep itself runs on the normal
-	 * Bukkit/global scheduler, but every player inventory operation is scheduled on
-	 * that player's scheduler/region before it is executed.
-	 */
 	public void check() {
 		if (!Bukkit.isPrimaryThread()) {
 			plugin.getBukkitScheduler().runTask(plugin, this::schedulePendingPlayerChecks);
@@ -109,13 +72,6 @@ public class FullInventoryHandler {
 		schedulePendingPlayerChecks();
 	}
 
-	/**
-	 * Checks a specific player for pending items. The inventory work is always
-	 * scheduled through that player's entity scheduler so Folia region ownership is
-	 * respected even when the caller is already on a different tick/region thread.
-	 *
-	 * @param player the player
-	 */
 	public void check(Player player) {
 		if (player == null) {
 			return;
@@ -123,14 +79,6 @@ public class FullInventoryHandler {
 		plugin.getBukkitScheduler().runTask(plugin, () -> checkOwnedPlayer(player), player);
 	}
 
-	/**
-	 * Gives items to a player. Inventory/world operations are always scheduled
-	 * through that player's entity scheduler so the public API is safe when called
-	 * from async code, the global region, or another entity's region.
-	 *
-	 * @param player the player
-	 * @param item the items to give
-	 */
 	public void giveItem(Player player, ItemStack... item) {
 		if (player == null || item == null || item.length == 0) {
 			return;
@@ -139,11 +87,6 @@ public class FullInventoryHandler {
 		plugin.getBukkitScheduler().runTask(plugin, () -> giveItemOwnedPlayer(player, itemsToGive), player);
 	}
 
-	/**
-	 * Loads the timer for checking inventories. The handler keeps its historically
-	 * isolated executor, while actual Bukkit work is handed back to the Bukkit/Folia
-	 * scheduler.
-	 */
 	public synchronized void loadTimer() {
 		if (timer == null || timer.isShutdown() || timer.isTerminated()) {
 			timer = Executors.newSingleThreadScheduledExecutor();
@@ -157,9 +100,6 @@ public class FullInventoryHandler {
 				TimeUnit.SECONDS);
 	}
 
-	/**
-	 * Stops this handler's repeating task and its handler-owned executor.
-	 */
 	public synchronized void shutdown() {
 		if (checkTask != null) {
 			checkTask.cancel(false);
@@ -171,10 +111,10 @@ public class FullInventoryHandler {
 	}
 
 	/**
-	 * Saves pending items to disk. The replacement FullInventory section is built in
-	 * a temporary configuration first, then copied into the live configuration and
-	 * persisted in a single save so an incomplete replacement is never deliberately
-	 * written over the previous recovery snapshot.
+	 * Saves pending items to disk. The complete replacement section is first built in
+	 * a temporary configuration. Only after that succeeds is the live configuration
+	 * replaced in memory, followed by a single disk save. This avoids deliberately
+	 * persisting an empty/partial replacement before the new snapshot is complete.
 	 */
 	public void save() {
 		try {
@@ -210,9 +150,6 @@ public class FullInventoryHandler {
 		}
 	}
 
-	/**
-	 * Loads pending items from disk on startup.
-	 */
 	public void startup() {
 		try {
 			if (plugin.getServerDataFile() == null || plugin.getServerDataFile().getData() == null) {
