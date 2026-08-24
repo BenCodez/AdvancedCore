@@ -15,17 +15,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -158,6 +163,54 @@ public class FullInventoryHandlerTest {
 		assertFalse(root.contains("previous"));
 		assertEquals(item, root.getItemStack(uuid + ".Items.0"));
 		assertTrue(root.getLong(uuid + ".Time") > 0L);
+	}
+
+	@Test
+	public void saveWaitsForInflightDeliveryBeforeSnapshotting() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack pending = mock(ItemStack.class);
+		ItemStack excessItem = mock(ItemStack.class);
+		CountDownLatch deliveryStarted = new CountDownLatch(1);
+		CountDownLatch releaseDelivery = new CountDownLatch(1);
+		CountDownLatch saveFinished = new CountDownLatch(1);
+
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(pending)).thenAnswer(invocation -> {
+			deliveryStarted.countDown();
+			assertTrue(releaseDelivery.await(2, TimeUnit.SECONDS));
+			HashMap<Integer, ItemStack> excess = new HashMap<>();
+			excess.put(0, excessItem);
+			return excess;
+		});
+		fixture.handler.add(uuid, pending);
+
+		fixture.handler.check(player);
+		ArgumentCaptor<Runnable> deliveryTask = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), deliveryTask.capture(), eq(player));
+
+		Thread deliveryThread = new Thread(deliveryTask.getValue());
+		deliveryThread.start();
+		assertTrue(deliveryStarted.await(2, TimeUnit.SECONDS));
+
+		Thread saveThread = new Thread(() -> {
+			fixture.handler.save();
+			saveFinished.countDown();
+		});
+		saveThread.start();
+		assertFalse(saveFinished.await(100, TimeUnit.MILLISECONDS));
+
+		releaseDelivery.countDown();
+		assertTrue(saveFinished.await(2, TimeUnit.SECONDS));
+		deliveryThread.join(2000L);
+		saveThread.join(2000L);
+
+		ConfigurationSection root = fixture.data.getConfigurationSection("FullInventory");
+		assertNotNull(root);
+		assertEquals(excessItem, root.getItemStack(uuid + ".Items.0"));
 	}
 
 	private Fixture createFixture() {
