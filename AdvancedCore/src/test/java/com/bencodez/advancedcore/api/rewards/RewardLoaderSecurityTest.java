@@ -9,10 +9,8 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -22,10 +20,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
-import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
-import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.advancedcore.api.user.UserManager;
 
 class RewardLoaderSecurityTest {
 
@@ -38,91 +32,97 @@ class RewardLoaderSecurityTest {
 	}
 
 	@Test
-	void loadRewardsQuarantinesOrphanedGeneratedDirectReward() throws IOException {
+	void loadRewardsSuppressesGeneratedSnapshotsWithoutDeletingThem() throws IOException {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		RewardHandler handler = mock(RewardHandler.class);
 		RewardRegistry registry = mock(RewardRegistry.class);
 		Logger logger = mock(Logger.class);
+		ArrayList<Reward> rewards = new ArrayList<>();
 
-		File rewardsFolder = new File(tempDir, "Rewards");
-		File directlyDefined = new File(rewardsFolder, "DirectlyDefined");
+		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
 		assertTrue(directlyDefined.mkdirs());
-		File stale = new File(directlyDefined, "Daily_Rewards.yml");
-		YamlConfiguration staleData = new YamlConfiguration();
-		staleData.set("DirectlyDefinedReward", true);
-		staleData.set("Messages", java.util.List.of("legacy generated reward"));
-		staleData.save(stale);
+		File generated = new File(directlyDefined, "Daily_Rewards.yml");
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("DirectlyDefinedReward", true);
+		data.set("Messages", List.of("generated reward"));
+		data.save(generated);
 
 		when(plugin.getDataFolder()).thenReturn(tempDir);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getLogger()).thenReturn(logger);
 		when(options.isLoadDefaultRewards()).thenReturn(false);
 		when(handler.getRewardRegistry()).thenReturn(registry);
+		when(handler.getRewards()).thenReturn(rewards);
+
+		AdvancedCorePlugin.setInstance(plugin);
+		RewardLoader loader = new RewardLoader(handler, plugin);
+		loader.addRewardFolder(directlyDefined, false, false);
+		loader.loadRewards();
+
+		assertTrue(generated.exists());
+		assertFalse(new File(directlyDefined, "Daily_Rewards.yml.disabled").exists());
+		assertTrue(rewards.isEmpty());
+	}
+
+	@Test
+	void standaloneDirectLookupOfGeneratedSnapshotIsBlocked() throws IOException {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		RewardHandler handler = mock(RewardHandler.class);
+		Logger logger = mock(Logger.class);
+
+		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
+		assertTrue(directlyDefined.mkdirs());
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("DirectlyDefinedReward", true);
+		data.set("Messages", List.of("generated reward"));
+		data.save(new File(directlyDefined, "QueuedReward.yml"));
+
+		when(plugin.getDataFolder()).thenReturn(tempDir);
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getLogger()).thenReturn(logger);
 		when(handler.getRewards()).thenReturn(new ArrayList<>());
 
 		AdvancedCorePlugin.setInstance(plugin);
 		RewardLoader loader = new RewardLoader(handler, plugin);
-		loader.addRewardFolder(directlyDefined, false, false);
-		loader.loadRewards();
+		Reward reward = loader.getRewardDirectlyDefined("QueuedReward");
 
-		assertFalse(stale.exists());
-		assertTrue(new File(directlyDefined, "Daily_Rewards.yml.disabled").exists());
-		assertTrue(handler.getRewards().isEmpty());
+		assertTrue(reward instanceof QueuedGeneratedReward);
+		assertTrue(((QueuedGeneratedReward) reward).getAllowedUserUuids().isEmpty());
 	}
 
 	@Test
-	void loadRewardsPreservesQueuedGeneratedRewardAndRestrictsItToQueuedUser() throws IOException {
+	void queueOnlyResolverBindsGeneratedSnapshotToRequestedUser() throws IOException {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		RewardHandler handler = mock(RewardHandler.class);
-		RewardRegistry registry = mock(RewardRegistry.class);
-		UserManager userManager = mock(UserManager.class);
-		AdvancedCoreUser queuedUser = mock(AdvancedCoreUser.class);
 		Logger logger = mock(Logger.class);
-		ArrayList<Reward> rewards = new ArrayList<>();
 		UUID queuedUuid = UUID.randomUUID();
 
 		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
 		assertTrue(directlyDefined.mkdirs());
-		File queued = new File(directlyDefined, "QueuedReward.yml");
-		YamlConfiguration queuedData = new YamlConfiguration();
-		queuedData.set("DirectlyDefinedReward", true);
-		queuedData.set("Messages", List.of("queued reward"));
-		queuedData.save(queued);
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("DirectlyDefinedReward", true);
+		data.set("Messages", List.of("queued reward"));
+		data.save(new File(directlyDefined, "QueuedReward.yml"));
 
 		when(plugin.getDataFolder()).thenReturn(tempDir);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getLogger()).thenReturn(logger);
-		when(plugin.getUserManager()).thenReturn(userManager);
-		when(plugin.getRewardHandler()).thenReturn(handler);
-		when(options.isLoadDefaultRewards()).thenReturn(false);
-		when(handler.getRewardRegistry()).thenReturn(registry);
-		when(handler.getRewards()).thenReturn(rewards);
-		when(handler.getInjectedRequirements()).thenReturn(new CopyOnWriteArrayList<RequirementInject>());
-		when(handler.getInjectedRewards()).thenReturn(new CopyOnWriteArrayList<RewardInject>());
-		when(handler.rewardExist("QueuedReward")).thenReturn(false);
-		when(userManager.getAllUUIDs()).thenReturn(new ArrayList<>(List.of(queuedUuid.toString())));
-		when(userManager.getUser(queuedUuid)).thenReturn(queuedUser);
-		when(queuedUser.getOfflineRewards())
-				.thenReturn(new ArrayList<>(List.of("QueuedReward%placeholders%player=Ben")));
-		when(queuedUser.getTimedRewards()).thenReturn(new HashMap<>());
+		when(handler.getRewards()).thenReturn(new ArrayList<>());
 
 		AdvancedCorePlugin.setInstance(plugin);
 		RewardLoader loader = new RewardLoader(handler, plugin);
-		loader.addRewardFolder(directlyDefined, false, false);
-		loader.loadRewards();
+		Reward reward = loader.getQueuedGeneratedReward("QueuedReward", queuedUuid.toString());
 
-		assertTrue(queued.exists());
-		assertFalse(new File(directlyDefined, "QueuedReward.yml.disabled").exists());
-		assertEquals(1, rewards.size());
-		assertTrue(rewards.get(0) instanceof QueuedGeneratedReward);
+		assertTrue(reward instanceof QueuedGeneratedReward);
 		assertEquals(java.util.Set.of(queuedUuid.toString()),
-				((QueuedGeneratedReward) rewards.get(0)).getAllowedUserUuids());
+				((QueuedGeneratedReward) reward).getAllowedUserUuids());
 	}
 
 	@Test
-	void loadRewardsDoesNotQuarantineNormalDirectFolderFileWithoutGeneratedMarker() throws IOException {
+	void loadRewardsDoesNotSuppressNormalDirectFolderFileWithoutGeneratedMarker() throws IOException {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		RewardHandler handler = mock(RewardHandler.class);
@@ -134,7 +134,7 @@ class RewardLoaderSecurityTest {
 		assertTrue(directlyDefined.mkdirs());
 		File manual = new File(directlyDefined, "ExampleBasic.yml");
 		YamlConfiguration manualData = new YamlConfiguration();
-		manualData.set("Messages", java.util.List.of("manual reward"));
+		manualData.set("Messages", List.of("manual reward"));
 		manualData.save(manual);
 
 		when(plugin.getDataFolder()).thenReturn(tempDir);
@@ -151,18 +151,6 @@ class RewardLoaderSecurityTest {
 		loader.loadRewards();
 
 		assertTrue(manual.exists());
-		assertFalse(new File(directlyDefined, "ExampleBasic.yml.disabled").exists());
 		assertEquals(1, rewards.size());
-	}
-
-	@Test
-	void choosesNonConflictingDisabledBackupName() throws IOException {
-		File stale = new File(tempDir, "Daily_Rewards.yml");
-		assertTrue(stale.createNewFile());
-		assertTrue(new File(tempDir, "Daily_Rewards.yml.disabled").createNewFile());
-
-		File disabled = RewardLoader.nextDisabledFile(stale);
-
-		assertTrue(disabled.getName().equals("Daily_Rewards.yml.disabled.1"));
 	}
 }
