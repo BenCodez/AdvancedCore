@@ -57,7 +57,7 @@ public class FullInventoryHandlerTest {
 			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
 			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
 
-			assertDoesNotThrow(fixture.handler::check);
+			assertDoesNotThrow(() -> fixture.handler.check());
 		}
 
 		assertFalse(fixture.handler.getLastMessageTime().containsKey(uuid));
