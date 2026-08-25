@@ -1,0 +1,136 @@
+name: Apply Codex 295 queue provenance fixes
+
+on:
+  push:
+    branches:
+      - security/reward-path-identity-hardening
+    paths:
+      - .github/workflows/fix-codex-295-queue-provenance.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/reward-path-identity-hardening
+          fetch-depth: 0
+      - name: Patch queue provenance and exact suppression
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          # Reward: remember whether this in-memory reward actually created a snapshot.
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/Reward.java')
+          text = path.read_text()
+          text = text.replace(
+              '\t@Getter\n\tprivate boolean needsRewardFile = true;\n',
+              '\t@Getter\n\tprivate boolean needsRewardFile = true;\n\n'
+              '\t@Getter\n\tprivate boolean generatedSnapshotCreated = false;\n')
+          text = text.replace(
+              '\t\treward.getConfig().save(reward.getConfig().getFileData());\n\t}\n\n\tpublic void validate()',
+              '\t\treward.getConfig().save(reward.getConfig().getFileData());\n'
+              '\t\tgeneratedSnapshotCreated = true;\n\t}\n\n\tpublic void validate()')
+          path.write_text(text)
+
+          # AdvancedCoreUser: persist explicit snapshot provenance in offline/timed queue references.
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/user/AdvancedCoreUser.java')
+          text = path.read_text()
+          text = text.replace(
+              'public class AdvancedCoreUser {\n',
+              'public class AdvancedCoreUser {\n\n\tprivate static final String QUEUED_SNAPSHOT_MARKER = "%generatedsnapshot%";\n', 1)
+          text = text.replace(
+              'offlineRewards.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.makeString(placeholders));',
+              'offlineRewards.add(queuedRewardReference(reward) + "%placeholders%" + ArrayUtils.makeString(placeholders));')
+          text = text.replace(
+              '\t\tString rewardName = reward.getRewardName();\n\t\trewardName += "%extime%" + System.currentTimeMillis();',
+              '\t\tString rewardName = queuedRewardReference(reward);\n\t\trewardName += "%extime%" + System.currentTimeMillis();')
+
+          insert_after = '''\tpublic synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {\n\t\tHashMap<String, Long> timed = getTimedRewards();\n\t\tString rewardName = queuedRewardReference(reward);\n\t\trewardName += "%extime%" + System.currentTimeMillis();\n\n\t\ttimed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(placeholders), epochMilli);\n\t\tsetTimedRewards(timed);\n\t\tloadTimedDelayedTimer(epochMilli);\n\t}\n'''
+          helper = insert_after + '''\n\tprivate String queuedRewardReference(Reward reward) {\n\t\treturn reward.getRewardName() + QUEUED_SNAPSHOT_MARKER + reward.isGeneratedSnapshotCreated();\n\t}\n'''
+          if insert_after not in text:
+              raise SystemExit('Unable to locate addTimedReward')
+          text = text.replace(insert_after, helper, 1)
+
+          old_timed = '''\t\t\t\t\tString[] data = entry.getKey().split("%placeholders%");\n\t\t\t\t\tString rewardName = data[0];\n\t\t\t\t\trewardName = rewardName.split("%extime%")[0];\n\t\t\t\t\tString placeholders = "";\n\t\t\t\t\tif (data.length > 1) {\n\t\t\t\t\t\tplaceholders = data[1];\n\t\t\t\t\t}\n\t\t\t\t\tcom.bencodez.advancedcore.api.rewards.Reward queuedReward = plugin.getRewardHandler()\n\t\t\t\t\t\t\t.getQueuedGeneratedReward(rewardName, getUUID());\n\t\t\t\t\tif (queuedReward == null) {\n\t\t\t\t\t\tqueuedReward = plugin.getRewardHandler().getReward(rewardName);\n\t\t\t\t\t}\n\t\t\t\t\tnew RewardBuilder(queuedReward).setCheckTimed(false)\n\t\t\t\t\t\t\t.withPlaceHolder(ArrayUtils.fromString(placeholders))\n\t\t\t\t\t\t\t.withPlaceHolder("date",\n\t\t\t\t\t\t\t\t\t"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))\n\t\t\t\t\t\t\t.send(this);\n\t\t\t\t\tplugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()\n'''
+          new_timed = '''\t\t\t\t\tString[] data = entry.getKey().split("%placeholders%", 2);\n\t\t\t\t\tString rewardReference = data[0].split("%extime%", 2)[0];\n\t\t\t\t\tString placeholders = "";\n\t\t\t\t\tif (data.length > 1) {\n\t\t\t\t\t\tplaceholders = data[1];\n\t\t\t\t\t}\n\t\t\t\t\tRewardOptions replayOptions = new RewardOptions().setCheckTimed(false)\n\t\t\t\t\t\t\t.withPlaceHolder(ArrayUtils.fromString(placeholders));\n\t\t\t\t\treplayOptions.addPlaceholder("date",\n\t\t\t\t\t\t\t"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));\n\t\t\t\t\tplugin.getRewardHandler().giveReward(this, rewardReference, replayOptions);\n\t\t\t\t\tString rewardName = rewardReference.split(QUEUED_SNAPSHOT_MARKER, 2)[0];\n\t\t\t\t\tplugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()\n'''
+          if old_timed not in text:
+              raise SystemExit('Unable to locate timed replay block')
+          text = text.replace(old_timed, new_timed, 1)
+
+          # Offline and forced-offline replay retain the raw reference so RewardExecutor can honor provenance.
+          text = text.replace(
+              '\t\t\tString rewardName = parts[0];\n\t\t\tString placeholderStr = parts.length > 1 ? parts[1] : "";\n',
+              '\t\t\tString rewardReference = parts[0];\n\t\t\tString placeholderStr = parts.length > 1 ? parts[1] : "";\n', 2)
+          text = text.replace('rewardHandler.giveReward(user, rewardName, options);',
+                              'rewardHandler.giveReward(user, rewardReference, options);', 2)
+          path.write_text(text)
+
+          # RewardExecutor: honor explicit provenance; legacy entries prefer an existing registered reward.
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardExecutor.java')
+          text = path.read_text()
+          text = text.replace(
+              'public class RewardExecutor {\n\n    private final RewardHandler handler;',
+              'public class RewardExecutor {\n\n    private static final String QUEUED_SNAPSHOT_MARKER = "%generatedsnapshot%";\n\n    private final RewardHandler handler;')
+          old = '''        Reward resolved = null;\n        if (isPersistedQueueReplay(context.getOptions())) {\n            resolved = handler.getQueuedGeneratedReward(reward, user.getUUID());\n        }\n        if (resolved == null) {\n            resolved = handler.getReward(reward);\n        }\n        giveReward(user, resolved, context.getOptions());\n'''
+          new = '''        String rewardName = reward;\n        Boolean generatedSnapshot = null;\n        int snapshotMarker = reward.indexOf(QUEUED_SNAPSHOT_MARKER);\n        if (snapshotMarker >= 0) {\n            rewardName = reward.substring(0, snapshotMarker);\n            generatedSnapshot = Boolean.valueOf(reward.substring(snapshotMarker + QUEUED_SNAPSHOT_MARKER.length()));\n        }\n\n        Reward resolved = null;\n        if (isPersistedQueueReplay(context.getOptions())) {\n            if (generatedSnapshot != null) {\n                if (generatedSnapshot.booleanValue()) {\n                    resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());\n                } else {\n                    resolved = handler.getReward(rewardName);\n                }\n            } else if (handler.rewardExist(rewardName) || handler.hasDirectRewardHandle(rewardName)) {\n                // Legacy queue entry: if a normal registered reward exists, it wins over any\n                // stale generated file with the same name.\n                resolved = handler.getReward(rewardName);\n            } else {\n                // Legacy generated entries did not persist provenance. Preserve them only when\n                // there is no registered reward they could shadow.\n                resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());\n                if (resolved == null) {\n                    resolved = handler.getReward(rewardName);\n                }\n            }\n        } else {\n            resolved = handler.getReward(rewardName);\n        }\n        giveReward(user, resolved, context.getOptions());\n'''
+          if old not in text:
+              raise SystemExit('Unable to locate RewardExecutor queue block')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+
+          # RewardBuilder: do not independently re-resolve by name; AdvancedCoreUser now carries provenance to RewardExecutor.
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardBuilder.java')
+          text = path.read_text()
+          old = '''\t\t} else {\n\t\t\tif (isPersistedQueueReplay()) {\n\t\t\t\tReward queued = handler.getQueuedGeneratedReward(reward.getRewardName(), user.getUUID());\n\t\t\t\tif (queued != null) {\n\t\t\t\t\thandler.giveReward(user, queued, rewardOptions);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t\thandler.giveReward(user, reward, rewardOptions);\n\t\t}\n\t}\n\n\tprivate boolean isPersistedQueueReplay() {\n\t\tif (rewardOptions == null || rewardOptions.isCheckTimed()) {\n\t\t\treturn false;\n\t\t}\n\t\tif (rewardOptions.isOnlineSet() && !rewardOptions.isOnline()) {\n\t\t\treturn true;\n\t\t}\n\t\treturn rewardOptions.getPlaceholders().containsKey("date");\n\t}\n'''
+          new = '''\t\t} else {\n\t\t\thandler.giveReward(user, reward, rewardOptions);\n\t\t}\n\t}\n'''
+          if old not in text:
+              raise SystemExit('Unable to locate RewardBuilder queue block')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+
+          # RewardLoader: suppress the exact marked filename, not a dot/underscore-normalized alias.
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardLoader.java')
+          text = path.read_text()
+          if 'import java.util.Locale;' not in text:
+              text = text.replace('import java.util.HashSet;\n', 'import java.util.HashSet;\nimport java.util.Locale;\n')
+          text = text.replace(
+              'String rewardName = fileName.substring(0, fileName.length() - ".yml".length());\n\t\t\t\t\tsuppressedDirectlyDefinedRewards.add(RewardRegistry.normalizeDirectPath(rewardName));',
+              'suppressedDirectlyDefinedRewards.add(fileName.toLowerCase(Locale.ROOT));')
+          text = text.replace(
+              '\t\t\t\tString normalized = RewardRegistry.normalizeDirectPath(reward);\n\t\t\t\tif (file.getName().equalsIgnoreCase("DirectlyDefined")\n\t\t\t\t\t\t&& suppressedDirectlyDefinedRewards.contains(normalized)) {',
+              '\t\t\t\tString exactFileName = (reward + ".yml").toLowerCase(Locale.ROOT);\n\t\t\t\tif (file.getName().equalsIgnoreCase("DirectlyDefined")\n\t\t\t\t\t\t&& suppressedDirectlyDefinedRewards.contains(exactFileName)) {')
+          path.write_text(text)
+
+          # Queue dispatch regression coverage.
+          path = Path('AdvancedCore/src/test/java/com/bencodez/advancedcore/tests/rewards/QueuedGeneratedRewardDispatchTest.java')
+          text = path.read_text()
+          marker = '''    @Test\n    void normalStandaloneDispatchCannotResolveGeneratedSnapshot() {\n'''
+          additions = '''    @Test\n    void explicitNormalQueueReferenceDoesNotUseStaleSnapshot() {\n        Reward normal = mock(Reward.class);\n        Reward stale = mock(Reward.class);\n        RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);\n        when(handler.getReward("Daily")).thenReturn(normal);\n        when(handler.getQueuedGeneratedReward("Daily", "uuid")).thenReturn(stale);\n\n        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {\n            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);\n            executor.giveReward(user, "Daily%generatedsnapshot%false", options);\n        }\n\n        verify(normal).giveReward(user, options);\n        verify(handler, never()).getQueuedGeneratedReward("Daily", "uuid");\n    }\n\n    @Test\n    void explicitSnapshotQueueReferenceUsesGeneratedSnapshot() {\n        Reward queued = mock(Reward.class);\n        Reward normal = mock(Reward.class);\n        RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);\n        when(handler.getQueuedGeneratedReward("Daily", "uuid")).thenReturn(queued);\n        when(handler.getReward("Daily")).thenReturn(normal);\n\n        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {\n            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);\n            executor.giveReward(user, "Daily%generatedsnapshot%true", options);\n        }\n\n        verify(queued).giveReward(user, options);\n        verify(handler, never()).getReward("Daily");\n    }\n\n    @Test\n    void legacyQueueReferencePrefersRegisteredRewardOverStaleSnapshot() {\n        Reward normal = mock(Reward.class);\n        Reward stale = mock(Reward.class);\n        RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);\n        when(handler.rewardExist("Daily")).thenReturn(true);\n        when(handler.getReward("Daily")).thenReturn(normal);\n        when(handler.getQueuedGeneratedReward("Daily", "uuid")).thenReturn(stale);\n\n        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {\n            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);\n            executor.giveReward(user, "Daily", options);\n        }\n\n        verify(normal).giveReward(user, options);\n        verify(handler, never()).getQueuedGeneratedReward("Daily", "uuid");\n    }\n\n'''
+          if marker not in text:
+              raise SystemExit('Unable to locate queue test insertion point')
+          text = text.replace(marker, additions + marker, 1)
+          path.write_text(text)
+
+          # Exact filename suppression regression.
+          path = Path('AdvancedCore/src/test/java/com/bencodez/advancedcore/api/rewards/RewardLoaderSecurityTest.java')
+          text = path.read_text()
+          marker = '''\t@Test\n\tvoid loadRewardsDoesNotSuppressNormalDirectFolderFileWithoutGeneratedMarker() throws IOException {\n'''
+          additions = '''\t@Test\n\tvoid generatedDotNameDoesNotSuppressManualUnderscoreName() throws IOException {\n\t\tAdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);\n\t\tAdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);\n\t\tRewardHandler handler = mock(RewardHandler.class);\n\t\tRewardRegistry registry = mock(RewardRegistry.class);\n\t\tLogger logger = mock(Logger.class);\n\t\tArrayList<Reward> rewards = new ArrayList<>();\n\n\t\tFile directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");\n\t\tassertTrue(directlyDefined.mkdirs());\n\t\tYamlConfiguration generatedData = new YamlConfiguration();\n\t\tgeneratedData.set("DirectlyDefinedReward", true);\n\t\tgeneratedData.set("Messages", List.of("generated"));\n\t\tgeneratedData.save(new File(directlyDefined, "Foo.Bar.yml"));\n\t\tYamlConfiguration manualData = new YamlConfiguration();\n\t\tmanualData.set("Messages", List.of("manual"));\n\t\tmanualData.save(new File(directlyDefined, "Foo_Bar.yml"));\n\n\t\twhen(plugin.getDataFolder()).thenReturn(tempDir);\n\t\twhen(plugin.getOptions()).thenReturn(options);\n\t\twhen(plugin.getLogger()).thenReturn(logger);\n\t\twhen(options.isLoadDefaultRewards()).thenReturn(false);\n\t\twhen(handler.getRewardRegistry()).thenReturn(registry);\n\t\twhen(handler.getRewards()).thenReturn(rewards);\n\t\twhen(handler.rewardExist("Foo_Bar")).thenReturn(false);\n\n\t\tAdvancedCorePlugin.setInstance(plugin);\n\t\tRewardLoader loader = new RewardLoader(handler, plugin);\n\t\tloader.addRewardFolder(directlyDefined, false, false);\n\t\tloader.loadRewards();\n\n\t\tassertEquals(1, rewards.size());\n\t\tassertEquals("Foo_Bar", rewards.get(0).getName());\n\t}\n\n'''
+          if marker not in text:
+              raise SystemExit('Unable to locate loader test insertion point')
+          text = text.replace(marker, additions + marker, 1)
+          path.write_text(text)
+          PY
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/Reward.java AdvancedCore/src/main/java/com/bencodez/advancedcore/api/user/AdvancedCoreUser.java AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardExecutor.java AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardBuilder.java AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardLoader.java AdvancedCore/src/test/java/com/bencodez/advancedcore/tests/rewards/QueuedGeneratedRewardDispatchTest.java AdvancedCore/src/test/java/com/bencodez/advancedcore/api/rewards/RewardLoaderSecurityTest.java
+          git rm .github/workflows/fix-codex-295-queue-provenance.yml
+          git commit -m "Bind queued snapshots to persisted provenance"
+          git push origin HEAD:security/reward-path-identity-hardening
