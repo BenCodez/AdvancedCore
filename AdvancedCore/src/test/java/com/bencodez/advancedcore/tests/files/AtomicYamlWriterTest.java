@@ -154,6 +154,40 @@ public class AtomicYamlWriterTest {
 	}
 
 	@Test
+	public void writableExistingFileSavesWhenParentDirectoryIsNotWritable() throws Exception {
+		FileStore store = Files.getFileStore(tempDir);
+		assumeTrue(store.supportsFileAttributeView("posix"), "POSIX attributes are not available");
+
+		Path lockedDir = tempDir.resolve("locked");
+		Files.createDirectory(lockedDir);
+		Path target = lockedDir.resolve("ServerData.yml");
+		Files.writeString(target, "Old: true\n");
+
+		Set<PosixFilePermission> originalDirPermissions = Files.getPosixFilePermissions(lockedDir);
+		Files.setPosixFilePermissions(target,
+				EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+		Files.setPosixFilePermissions(lockedDir,
+				EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_EXECUTE));
+
+		try {
+			assumeTrue(!Files.isWritable(lockedDir),
+					"test environment still permits sibling creation in a non-writable directory");
+			assumeTrue(Files.isWritable(target),
+					"existing target must remain writable for compatibility fallback");
+
+			YamlConfiguration replacement = new YamlConfiguration();
+			replacement.set("New", true);
+			AtomicYamlWriter.save(target.toFile(), replacement);
+
+			YamlConfiguration loaded = YamlConfiguration.loadConfiguration(target.toFile());
+			assertTrue(loaded.getBoolean("New"));
+			assertFalse(loaded.contains("Old"));
+		} finally {
+			Files.setPosixFilePermissions(lockedDir, originalDirPermissions);
+		}
+	}
+
+	@Test
 	public void preservesExistingPosixPermissionsOwnershipAndInode() throws Exception {
 		Path target = tempDir.resolve("permissions.yml");
 		FileStore store = Files.getFileStore(tempDir);
