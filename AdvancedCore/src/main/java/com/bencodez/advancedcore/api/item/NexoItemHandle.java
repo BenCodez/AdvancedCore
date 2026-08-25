@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.api.item;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,7 +14,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
  * Reflection-backed Nexo integration kept isolated from the rest of ItemBuilder.
  */
 public class NexoItemHandle {
-	private static final Map<ClassLoader, Map<String, ReflectionCache>> CACHES = new WeakHashMap<>();
+	private static final Map<ClassLoader, Map<String, WeakReference<ReflectionCache>>> CACHES = new WeakHashMap<>();
 
 	private final ReflectionCache cache;
 
@@ -82,10 +83,18 @@ public class NexoItemHandle {
 
 	private static synchronized ReflectionCache sharedCache(ClassLoader classLoader, String apiClassName,
 			String builderClassName) {
-		Map<String, ReflectionCache> classLoaderCaches = CACHES.computeIfAbsent(classLoader, ignored -> new HashMap<>());
+		Map<String, WeakReference<ReflectionCache>> classLoaderCaches = CACHES.computeIfAbsent(classLoader,
+				ignored -> new HashMap<>());
 		String key = apiClassName + '\0' + builderClassName;
-		return classLoaderCaches.computeIfAbsent(key,
-				ignored -> new ReflectionCache(classLoader, apiClassName, builderClassName));
+		WeakReference<ReflectionCache> reference = classLoaderCaches.get(key);
+		ReflectionCache existing = reference == null ? null : reference.get();
+		if (existing != null) {
+			return existing;
+		}
+
+		ReflectionCache created = new ReflectionCache(classLoader, apiClassName, builderClassName);
+		classLoaderCaches.put(key, new WeakReference<>(created));
+		return created;
 	}
 
 	private static final class ReflectionCache {
