@@ -161,19 +161,40 @@ public class UserDataCache {
 			}
 		}
 
-		manager.getPlugin().extraDebug("Processing changes for " + currentUuid + ", Changes: " + changes.size());
-		AdvancedCoreUser user = manager.getPlugin().getUserManager().getUser(currentUuid, false);
-		HashMap<String, DataValue> values = new HashMap<>();
-		ArrayList<String> keys = new ArrayList<>();
-		for (UserDataChange change : changes) {
-			values.put(change.getKey(), change.toUserDataValue());
-			keys.add(change.getKey());
-			change.dump();
+		boolean persisted = false;
+		try {
+			manager.getPlugin().extraDebug("Processing changes for " + currentUuid + ", Changes: " + changes.size());
+			AdvancedCoreUser user = manager.getPlugin().getUserManager().getUser(currentUuid, false);
+			HashMap<String, DataValue> values = new HashMap<>();
+			ArrayList<String> keys = new ArrayList<>();
+			for (UserDataChange change : changes) {
+				values.put(change.getKey(), change.toUserDataValue());
+				keys.add(change.getKey());
+			}
+			if (!values.isEmpty()) {
+				user.getUserData().setValues(values);
+			}
+			persisted = true;
+			manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(keys));
+			for (UserDataChange change : changes) {
+				change.dump();
+			}
+		} catch (RuntimeException | Error e) {
+			if (!persisted) {
+				requeueChanges(changes);
+			}
+			throw e;
 		}
-		if (!values.isEmpty()) {
-			user.getUserData().setValues(values);
+	}
+
+	private synchronized void requeueChanges(ArrayList<UserDataChange> changes) {
+		if (changes == null || changes.isEmpty() || cachedChanges == null) {
+			return;
 		}
-		manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(keys));
+		Queue<UserDataChange> restored = new ConcurrentLinkedQueue<>();
+		restored.addAll(changes);
+		restored.addAll(cachedChanges);
+		cachedChanges = restored;
 	}
 
 	public void processChangesAsync() {
