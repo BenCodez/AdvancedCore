@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.tests.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,8 +28,8 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.DefinedReward;
 import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardFileDefinedReward;
+import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.SubDirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
@@ -154,5 +155,28 @@ public class RewardServicesTest {
 
 		assertNull(handler.getSubDirectlyDefined("Daily_Rewards"));
 		assertSame(sub, handler.getSubRewardResolver().getFileBackedSubReward("Daily_Rewards"));
+	}
+
+	@Test
+	public void fileBackedSubRewardsRemainSnapshotCapableForDeferredExecution() {
+		YamlConfiguration config = new YamlConfiguration();
+		config.createSection("Parent.Child").set("Messages", List.of("queued"));
+
+		RewardFileDefinedReward fileMaster = mock(RewardFileDefinedReward.class);
+		when(fileMaster.getFullPath()).thenReturn("Daily");
+		when(fileMaster.needsDot()).thenReturn(".");
+		when(fileMaster.getPath()).thenReturn("Parent");
+		when(fileMaster.getFileData()).thenReturn(config);
+		Reward fileBacked = new SubDirectlyDefinedReward(fileMaster, "Child").getReward();
+
+		DirectlyDefinedReward directMaster = mock(DirectlyDefinedReward.class);
+		when(directMaster.getFullPath()).thenReturn("Direct");
+		when(directMaster.needsDot()).thenReturn(".");
+		when(directMaster.getPath()).thenReturn("Parent");
+		when(directMaster.getFileData()).thenReturn(config);
+		Reward directlyDefined = new SubDirectlyDefinedReward(directMaster, "Child").getReward();
+
+		assertTrue(fileBacked.isNeedsRewardFile());
+		assertFalse(directlyDefined.isNeedsRewardFile());
 	}
 }
