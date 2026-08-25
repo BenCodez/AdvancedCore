@@ -1,11 +1,13 @@
 package com.bencodez.advancedcore.api.user;
 
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -53,7 +55,7 @@ import net.md_5.bungee.chat.ComponentSerializer;
  */
 public class AdvancedCoreUser {
 
-	private static final String QUEUED_SNAPSHOT_MARKER = "%generatedsnapshot%";
+	private static final String QUEUED_REFERENCE_PREFIX = "\\AdvancedCoreQueue/1/";
 
 	/**
 	 * User data fetch mode for this user.
@@ -257,7 +259,10 @@ public class AdvancedCoreUser {
 	}
 
 	private String queuedRewardReference(Reward reward) {
-		return reward.getRewardName() + QUEUED_SNAPSHOT_MARKER + reward.isGeneratedSnapshotCreated();
+		String encodedName = Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(reward.getRewardName().getBytes(StandardCharsets.UTF_8));
+		return QUEUED_REFERENCE_PREFIX + (reward.isGeneratedSnapshotCreated() ? "snapshot/" : "normal/")
+				+ encodedName;
 	}
 
 	/**

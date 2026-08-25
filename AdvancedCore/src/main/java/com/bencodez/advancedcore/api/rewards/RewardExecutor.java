@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.api.rewards;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
@@ -17,7 +19,7 @@ import com.bencodez.simpleapi.array.ArrayUtils;
  */
 public class RewardExecutor {
 
-    private static final String QUEUED_SNAPSHOT_MARKER = "%generatedsnapshot%";
+    private static final String QUEUED_REFERENCE_PREFIX = "\\AdvancedCoreQueue/1/";
 
     private final RewardHandler handler;
     private final AdvancedCorePlugin plugin;
@@ -133,12 +135,20 @@ public class RewardExecutor {
 
         String rewardName = reward;
         Boolean generatedSnapshot = null;
-        int snapshotMarker = reward.lastIndexOf(QUEUED_SNAPSHOT_MARKER);
-        if (snapshotMarker >= 0) {
-            String markerValue = reward.substring(snapshotMarker + QUEUED_SNAPSHOT_MARKER.length());
-            if (markerValue.equalsIgnoreCase("true") || markerValue.equalsIgnoreCase("false")) {
-                rewardName = reward.substring(0, snapshotMarker);
-                generatedSnapshot = Boolean.valueOf(markerValue);
+        if (reward.startsWith(QUEUED_REFERENCE_PREFIX)) {
+            String encoded = reward.substring(QUEUED_REFERENCE_PREFIX.length());
+            int modeEnd = encoded.indexOf('/');
+            if (modeEnd > 0) {
+                String mode = encoded.substring(0, modeEnd);
+                String encodedName = encoded.substring(modeEnd + 1);
+                if ((mode.equals("snapshot") || mode.equals("normal")) && !encodedName.isEmpty()) {
+                    try {
+                        rewardName = new String(Base64.getUrlDecoder().decode(encodedName), StandardCharsets.UTF_8);
+                        generatedSnapshot = Boolean.valueOf(mode.equals("snapshot"));
+                    } catch (IllegalArgumentException ignored) {
+                        rewardName = reward;
+                    }
+                }
             }
         }
 
