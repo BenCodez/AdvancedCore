@@ -194,6 +194,54 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void functionExpressionBodyDoesNotBecomeStatementBlock() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; allowed=true; '";
+
+		String script = JavascriptPlaceholderParser.replace(
+				"var allowed=false,x=function() {} / 2; '%untrusted%'; allowed", ignored -> injection, bindings::put);
+
+		assertEquals("var allowed=false,x=function() {} / 2; '\\'; allowed=true; \\''; allowed", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
+	void namedFunctionExpressionBodyDoesNotBecomeStatementBlock() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; allowed=true; '";
+
+		String script = JavascriptPlaceholderParser.replace(
+				"var allowed=false,x=function named() {} / 2; '%untrusted%'; allowed", ignored -> injection, bindings::put);
+
+		assertEquals("var allowed=false,x=function named() {} / 2; '\\'; allowed=true; \\''; allowed", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
+	void arrowFunctionBodyDoesNotBecomeStatementBlock() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; allowed=true; '";
+
+		String script = JavascriptPlaceholderParser.replace(
+				"var allowed=false,x=()=>{} / 2; '%untrusted%'; allowed", ignored -> injection, bindings::put);
+
+		assertEquals("var allowed=false,x=()=>{} / 2; '\\'; allowed=true; \\''; allowed", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
+	void functionDeclarationBodyStillAllowsRegexStatement() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace(
+				"function named() {} /[']/.test('x'); %untrusted%", ignored -> injection, bindings::put);
+
+		assertEquals("function named() {} /[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
 	void objectLiteralStringBraceDoesNotBecomeStatementBlock() {
 		HashMap<String, Object> bindings = new HashMap<>();
 		String injection = "'; allowed=true; '";

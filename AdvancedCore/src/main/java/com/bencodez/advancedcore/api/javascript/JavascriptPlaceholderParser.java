@@ -76,11 +76,13 @@ final class JavascriptPlaceholderParser {
 	private static Context contextAt(String script, int end) {
 		Deque<TemplateFrame> templates = new ArrayDeque<>();
 		Deque<Boolean> controlParens = new ArrayDeque<>();
+		Deque<Boolean> functionExpressionParens = new ArrayDeque<>();
 		Deque<Boolean> statementBraces = new ArrayDeque<>();
 		Context context = Context.CODE;
 		boolean escaped = false;
 		boolean regexCharacterClass = false;
 		int lastControlHeadClose = -1;
+		int lastFunctionExpressionParenClose = -1;
 		int lastStatementBlockClose = -1;
 
 		for (int i = 0; i < end; i++) {
@@ -189,14 +191,18 @@ final class JavascriptPlaceholderParser {
 			if (current == '(') {
 				int keywordEnd = previousNonWhitespace(script, i - 1);
 				controlParens.push(isStandaloneControlHead(script, keywordEnd, statementBraces));
+				functionExpressionParens.push(opensFunctionExpressionParameters(script, i, statementBraces));
 			} else if (current == ')' && !controlParens.isEmpty()) {
 				if (controlParens.pop()) {
 					lastControlHeadClose = i;
 				}
+				if (!functionExpressionParens.isEmpty() && functionExpressionParens.pop()) {
+					lastFunctionExpressionParenClose = i;
+				}
 			}
 
 			if (current == '{') {
-				statementBraces.push(opensStatementBlock(script, i, statementBraces));
+				statementBraces.push(opensStatementBlock(script, i, statementBraces, lastFunctionExpressionParenClose));
 				if (!templates.isEmpty() && templates.peek().expressionDepth > 0) {
 					templates.peek().expressionDepth++;
 				}
@@ -272,22 +278,88 @@ final class JavascriptPlaceholderParser {
 				|| operand == '}';
 	}
 
-	private static boolean opensStatementBlock(String script, int openBraceIndex, Deque<Boolean> statementBraces) {
+	private static boolean opensStatementBlock(String script, int openBraceIndex, Deque<Boolean> statementBraces,
+			int lastFunctionExpressionParenClose) {
 		int prefixIndex = previousNonWhitespace(script, openBraceIndex - 1);
 		if (prefixIndex < 0) {
 			return true;
 		}
 		char prefix = script.charAt(prefixIndex);
-		if (prefix == ')' || prefix == '}' || prefix == ';') {
+		if (prefix == ')') {
+			return prefixIndex != lastFunctionExpressionParenClose;
+		}
+		if (prefix == '}' || prefix == ';') {
 			return true;
 		}
 		if (prefix == ':') {
 			return followsStatementLabel(script, prefixIndex, statementBraces);
 		}
 		if (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {
-			return true;
+			// Arrow-function bodies are part of an expression. Their closing brace is an
+			// operand and must not make a following slash look like a regex statement.
+			return false;
 		}
 		return BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));
+	}
+
+	private static boolean opensFunctionExpressionParameters(String script, int openParenIndex,
+			Deque<Boolean> statementBraces) {
+		int tokenEnd = previousNonWhitespace(script, openParenIndex - 1);
+		if (tokenEnd < 0 || !Character.isJavaIdentifierPart(script.charAt(tokenEnd))) {
+			return false;
+		}
+
+		String token = previousIdentifier(script, tokenEnd);
+		int functionEnd;
+		boolean anonymous;
+		if (token.equals("function")) {
+			functionEnd = tokenEnd;
+			anonymous = true;
+		} else {
+			int tokenStart = identifierStart(script, tokenEnd);
+			int beforeName = previousNonWhitespace(script, tokenStart - 1);
+			if (beforeName >= 0 && script.charAt(beforeName) == '*') {
+				beforeName = previousNonWhitespace(script, beforeName - 1);
+			}
+			if (beforeName < 0 || !previousIdentifier(script, beforeName).equals("function")) {
+				return false;
+			}
+			functionEnd = beforeName;
+			anonymous = false;
+		}
+
+		int functionStart = identifierStart(script, functionEnd);
+		int beforeFunction = previousNonWhitespace(script, functionStart - 1);
+		if (beforeFunction >= 0 && script.charAt(beforeFunction) == '.') {
+			return false;
+		}
+		if (anonymous) {
+			return true;
+		}
+
+		// Include a preceding async keyword when deciding whether a named function is
+		// a declaration or an expression.
+		if (beforeFunction >= 0 && Character.isJavaIdentifierPart(script.charAt(beforeFunction))
+				&& previousIdentifier(script, beforeFunction).equals("async")) {
+			int asyncStart = identifierStart(script, beforeFunction);
+			beforeFunction = previousNonWhitespace(script, asyncStart - 1);
+		}
+
+		return !isStatementBoundary(script, beforeFunction, statementBraces);
+	}
+
+	private static boolean isStatementBoundary(String script, int index, Deque<Boolean> statementBraces) {
+		if (index < 0) {
+			return true;
+		}
+		char previous = script.charAt(index);
+		if (previous == ';' || previous == '}') {
+			return true;
+		}
+		if (previous == '{') {
+			return statementBraces.isEmpty() || statementBraces.peek();
+		}
+		return false;
 	}
 
 	private static boolean followsStatementLabel(String script, int colonIndex, Deque<Boolean> statementBraces) {
