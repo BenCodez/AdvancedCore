@@ -173,6 +173,13 @@ public class RewardRegistry {
     }
 
     public void updateReward(Reward reward) {
+        if (reward != null && reward.getConfig().isDirectlyDefinedReward()) {
+            File folder = reward.getConfig().getRewardFolder();
+            if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
+                plugin.extraDebug("Keeping generated queued reward snapshot out of public registry: " + reward.getName());
+                return;
+            }
+        }
         reward.validate();
         for (int i = getRewards().size() - 1; i >= 0; i--) {
             if (getRewards().get(i).getFile().getPath().equals(reward.getFile().getPath())) {
