@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.tests.item;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.bukkit.Material;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -16,12 +18,26 @@ public class ItemCompatibilityTest {
 
 	@Test
 	public void nexoReflectionBuildsExpectedItemType() {
-		NexoItemHandle handle = new TestNexoItemHandle();
+		NexoItemHandle handle = new TestNexoItemHandle(ItemCompatibilityTest.class.getClassLoader());
 
 		ItemStack item = handle.getItem("test");
 
 		assertEquals(Material.STONE, item.getType());
 		assertNull(handle.getItem("missing"));
+	}
+
+	@Test
+	public void nexoReflectionCacheIsSharedAcrossHandles() {
+		CountingClassLoader loader = new CountingClassLoader(ItemCompatibilityTest.class.getClassLoader());
+		NexoItemHandle first = new TestNexoItemHandle(loader);
+		NexoItemHandle second = new TestNexoItemHandle(loader);
+
+		assertEquals(Material.STONE, first.getItem("test").getType());
+		int afterFirst = loader.getNexoLoads();
+		assertEquals(Material.STONE, second.getItem("test").getType());
+
+		assertEquals(2, afterFirst, "the API and builder classes should each be resolved once");
+		assertEquals(afterFirst, loader.getNexoLoads(), "a second handle must reuse the shared reflection cache");
 	}
 
 	@Test
@@ -33,8 +49,28 @@ public class ItemCompatibilityTest {
 	}
 
 	private static final class TestNexoItemHandle extends NexoItemHandle {
-		private TestNexoItemHandle() {
-			super(ItemCompatibilityTest.class.getClassLoader(), FakeNexoItems.class.getName(), FakeBuilder.class.getName());
+		private TestNexoItemHandle(ClassLoader classLoader) {
+			super(classLoader, FakeNexoItems.class.getName(), FakeBuilder.class.getName());
+		}
+	}
+
+	private static final class CountingClassLoader extends ClassLoader {
+		private final AtomicInteger nexoLoads = new AtomicInteger();
+
+		private CountingClassLoader(ClassLoader parent) {
+			super(parent);
+		}
+
+		@Override
+		protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+			if (name.equals(FakeNexoItems.class.getName()) || name.equals(FakeBuilder.class.getName())) {
+				nexoLoads.incrementAndGet();
+			}
+			return super.loadClass(name, resolve);
+		}
+
+		private int getNexoLoads() {
+			return nexoLoads.get();
 		}
 	}
 
