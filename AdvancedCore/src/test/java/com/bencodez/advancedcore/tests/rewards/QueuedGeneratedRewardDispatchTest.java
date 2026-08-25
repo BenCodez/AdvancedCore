@@ -201,6 +201,25 @@ class QueuedGeneratedRewardDispatchTest {
     }
 
     @Test
+    void forgedTimedPlaceholderCannotGrantQueueSnapshotAccess() {
+        Reward normal = mock(Reward.class);
+        Reward queued = mock(Reward.class);
+        RewardOptions options = new RewardOptions().setCheckTimed(false).addPlaceholder("date", "now");
+        when(handler.getReward("QueuedReward")).thenReturn(normal);
+        when(handler.getQueuedGeneratedReward("QueuedReward", "uuid")).thenReturn(queued);
+
+        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+            executor.giveReward(user, "QueuedReward", options);
+        }
+
+        verify(handler).getReward("QueuedReward");
+        verify(handler, never()).getQueuedGeneratedReward("QueuedReward", "uuid");
+        verify(normal).giveReward(user, options);
+        verify(queued, never()).giveReward(user, options);
+    }
+
+    @Test
     void normalStandaloneDispatchCannotResolveGeneratedSnapshot() {
         RewardOptions options = new RewardOptions();
 
