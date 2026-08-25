@@ -118,6 +118,7 @@ class RewardLoaderSecurityTest {
 		Reward reward = loader.getQueuedGeneratedReward("QueuedReward", queuedUuid.toString());
 
 		assertTrue(reward instanceof QueuedGeneratedReward);
+		assertTrue(reward.isGeneratedSnapshotCreated());
 		assertEquals(java.util.Set.of(queuedUuid.toString()),
 				((QueuedGeneratedReward) reward).getAllowedUserUuids());
 	}
