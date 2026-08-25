@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.tests.item;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,7 +47,22 @@ public class ItemCompatibilityTest {
 
 	@Test
 	@SuppressWarnings("unchecked")
-	public void sharedNexoCacheDoesNotStronglyRetainReflectionState() throws Exception {
+	public void defaultNexoCacheRetainsReflectionStateBetweenTransientHandles() throws Exception {
+		NexoItemHandle handle = new TestNexoItemHandle(NexoItemHandle.class.getClassLoader());
+		assertEquals(Material.STONE, handle.getItem("test").getType());
+
+		Field defaultCachesField = NexoItemHandle.class.getDeclaredField("DEFAULT_CACHES");
+		defaultCachesField.setAccessible(true);
+		Map<String, ?> defaultCaches = (Map<String, ?>) defaultCachesField.get(null);
+
+		assertFalse(defaultCaches.isEmpty());
+		assertTrue(defaultCaches.values().stream().noneMatch(WeakReference.class::isInstance),
+				"the production/default loader must retain resolved reflection state between temporary handles");
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void sharedNexoCacheDoesNotStronglyRetainDisposableClassLoaders() throws Exception {
 		CountingClassLoader loader = new CountingClassLoader(ItemCompatibilityTest.class.getClassLoader());
 		new TestNexoItemHandle(loader);
 
@@ -56,7 +72,7 @@ public class ItemCompatibilityTest {
 		Map<String, ?> loaderCache = caches.get(loader);
 
 		assertTrue(loaderCache.values().stream().allMatch(WeakReference.class::isInstance),
-				"weak class-loader keys must not have values that strongly retain the reflection cache");
+				"disposable class-loader keys must not have values that strongly retain reflection state");
 	}
 
 	@Test
