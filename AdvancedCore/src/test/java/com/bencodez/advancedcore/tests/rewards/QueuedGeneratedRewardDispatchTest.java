@@ -140,6 +140,24 @@ class QueuedGeneratedRewardDispatchTest {
     }
 
     @Test
+    void normalDispatchPreservesRewardNameContainingSnapshotMarkerText() {
+        String rewardName = "Promo%generatedsnapshot%Bonus";
+        Reward normal = mock(Reward.class);
+        RewardOptions options = new RewardOptions();
+        when(handler.getReward(rewardName)).thenReturn(normal);
+
+        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+            executor.giveReward(user, rewardName, options);
+        }
+
+        verify(handler).getReward(rewardName);
+        verify(normal).giveReward(user, options);
+        verify(handler, never()).getReward("Promo");
+        verify(handler, never()).getQueuedGeneratedReward("Promo", "uuid");
+    }
+
+    @Test
     void normalStandaloneDispatchCannotResolveGeneratedSnapshot() {
         RewardOptions options = new RewardOptions();
 
