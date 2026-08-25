@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
+import com.bencodez.advancedcore.api.javascript.JavascriptSafeValue;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
@@ -297,6 +298,7 @@ public class PlaceholderUtils {
 		if (str == null || placeholders == null || placeholders.isEmpty()) {
 			return str;
 		}
+		str = encodeJavascriptMarkerMapValues(str, placeholders, true);
 		String protectedMarker = createProtectedJavascriptMarkerToken(str, placeholders);
 		str = str.replace(JAVASCRIPT_MARKER, protectedMarker);
 		for (Entry<String, String> entry : placeholders.entrySet()) {
@@ -310,6 +312,7 @@ public class PlaceholderUtils {
 		if (str == null || placeholders == null || placeholders.isEmpty()) {
 			return str;
 		}
+		str = encodeJavascriptMarkerMapValues(str, placeholders, ignoreCase);
 		String protectedMarker = createProtectedJavascriptMarkerToken(str, placeholders);
 		str = str.replace(JAVASCRIPT_MARKER, protectedMarker);
 		for (Entry<String, String> entry : placeholders.entrySet()) {
@@ -344,6 +347,39 @@ public class PlaceholderUtils {
 			return value;
 		}
 		return value.replace(JAVASCRIPT_MARKER, SAFE_JAVASCRIPT_MARKER);
+	}
+
+	private static String encodeJavascriptMarkerMapValues(String text, HashMap<String, String> placeholders,
+			boolean ignoreCase) {
+		StringBuilder result = new StringBuilder(text.length());
+		int index = 0;
+		while (index < text.length()) {
+			int start = text.indexOf(JAVASCRIPT_MARKER, index);
+			if (start < 0) {
+				result.append(text, index, text.length());
+				break;
+			}
+			result.append(text, index, start);
+			int end = text.indexOf(']', start + JAVASCRIPT_MARKER.length());
+			if (end < 0) {
+				result.append(text, start, text.length());
+				break;
+			}
+			String script = text.substring(start + JAVASCRIPT_MARKER.length(), end);
+			for (Entry<String, String> entry : placeholders.entrySet()) {
+				String safeValue = JavascriptSafeValue.encodePlaceholder(entry.getValue());
+				if (ignoreCase) {
+					script = MessageAPI.replaceIgnoreCase(script, "%" + entry.getKey() + "%", safeValue);
+					script = MessageAPI.replaceIgnoreCase(script, "\\{" + entry.getKey() + "\\}", safeValue);
+				} else {
+					script = script.replace("%" + entry.getKey() + "%", safeValue);
+					script = script.replace("{" + entry.getKey() + "}", safeValue);
+				}
+			}
+			result.append(JAVASCRIPT_MARKER).append(script).append(']');
+			index = end + 1;
+		}
+		return result.toString();
 	}
 
 	private static String createProtectedJavascriptMarkerToken(String text, HashMap<String, String> placeholders) {
