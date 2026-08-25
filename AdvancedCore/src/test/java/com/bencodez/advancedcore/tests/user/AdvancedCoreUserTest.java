@@ -20,6 +20,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.PersistedQueueReference;
 import com.bencodez.advancedcore.api.user.UserData;
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
@@ -67,8 +68,10 @@ public class AdvancedCoreUserTest {
 
 		user.checkOfflineRewards();
 
+		ArgumentCaptor<PersistedQueueReference> referenceCaptor = ArgumentCaptor.forClass(PersistedQueueReference.class);
 		ArgumentCaptor<RewardOptions> optionsCaptor = ArgumentCaptor.forClass(RewardOptions.class);
-		verify(rewardHandler).giveReward(eq(user), eq("VoteReward"), optionsCaptor.capture());
+		verify(rewardHandler).givePersistedQueueReward(eq(user), referenceCaptor.capture(), optionsCaptor.capture());
+		assertEquals("VoteReward", referenceCaptor.getValue().getReference());
 		RewardOptions options = optionsCaptor.getValue();
 		assertFalse(options.isForceOffline());
 		assertTrue(options.isGiveOffline());
@@ -84,8 +87,10 @@ public class AdvancedCoreUserTest {
 
 		user.forceRunOfflineRewards();
 
+		ArgumentCaptor<PersistedQueueReference> referenceCaptor = ArgumentCaptor.forClass(PersistedQueueReference.class);
 		ArgumentCaptor<RewardOptions> optionsCaptor = ArgumentCaptor.forClass(RewardOptions.class);
-		verify(rewardHandler).giveReward(eq(user), eq("VoteReward"), optionsCaptor.capture());
+		verify(rewardHandler).givePersistedQueueReward(eq(user), referenceCaptor.capture(), optionsCaptor.capture());
+		assertEquals("VoteReward", referenceCaptor.getValue().getReference());
 		RewardOptions options = optionsCaptor.getValue();
 		assertTrue(options.isForceOffline());
 		assertFalse(options.isGiveOffline());

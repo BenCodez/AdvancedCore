@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.api.rewards;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -93,6 +94,11 @@ public class RewardRegistry {
             }
         }
 
+        if (!isSafeRewardFileName(reward)) {
+            plugin.getLogger().warning("Rejected unsafe reward file name: " + reward);
+            throw new IllegalArgumentException("Reward name must not contain path separators or be an absolute path");
+        }
+
         return new Reward(reward);
     }
 
@@ -138,6 +144,13 @@ public class RewardRegistry {
         return normalizeLookupName(path).replace('.', '_').toLowerCase(Locale.ROOT);
     }
 
+    static boolean isSafeRewardFileName(String reward) {
+        if (reward == null || reward.indexOf('\0') >= 0 || new File(reward).isAbsolute()) {
+            return false;
+        }
+        return reward.indexOf('/') < 0 && reward.indexOf('\\') < 0;
+    }
+
     public boolean rewardExist(String reward) {
         reward = normalizeLookupName(reward);
         if (reward.isEmpty()) {
@@ -160,6 +173,14 @@ public class RewardRegistry {
     }
 
     public void updateReward(Reward reward) {
+        RewardFileData config = reward == null ? null : reward.getConfig();
+        if (config != null && config.isDirectlyDefinedReward()) {
+            File folder = config.getRewardFolder();
+            if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
+                plugin.extraDebug("Keeping generated queued reward snapshot out of public registry: " + reward.getName());
+                return;
+            }
+        }
         reward.validate();
         for (int i = getRewards().size() - 1; i >= 0; i--) {
             if (getRewards().get(i).getFile().getPath().equals(reward.getFile().getPath())) {

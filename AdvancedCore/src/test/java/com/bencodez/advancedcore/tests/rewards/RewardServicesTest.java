@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.tests.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +27,8 @@ import org.junit.jupiter.api.io.TempDir;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.DefinedReward;
 import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
+import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardFileDefinedReward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.SubDirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
@@ -118,8 +122,7 @@ public class RewardServicesTest {
 		when(loop.isDirectlyDefined()).thenReturn(true);
 
 		RewardInject inject = mock(RewardInject.class);
-		when(inject.subRewards(any(DefinedReward.class)))
-				.thenReturn(new ArrayList<>(List.of(loop)));
+		when(inject.subRewards(any(DefinedReward.class))).thenReturn(new ArrayList<>(List.of(loop)));
 		handler.getInjectedRewards().add(inject);
 
 		handler.checkSubRewards(root);
@@ -127,5 +130,53 @@ public class RewardServicesTest {
 		assertEquals(1, handler.getSubDirectlyDefinedRewards().size());
 		assertSame(loop, handler.getSubDirectlyDefinedRewards().get(0));
 		verify(logger).warning("Detected recursive sub reward path, skipping: Loop");
+	}
+
+	@Test
+	public void fileBackedSubRewardsRemainInternalToSectionDispatch() {
+		Reward root = mock(Reward.class);
+		when(root.getName()).thenReturn("Daily");
+		handler.getRewards().add(root);
+
+		SubDirectlyDefinedReward sub = mock(SubDirectlyDefinedReward.class);
+		when(sub.getFullPath()).thenReturn("Daily.Rewards");
+
+		RewardInject inject = mock(RewardInject.class);
+		when(inject.subRewards(any(DefinedReward.class))).thenAnswer(invocation -> {
+			DefinedReward defined = invocation.getArgument(0);
+			if (defined instanceof RewardFileDefinedReward) {
+				return new ArrayList<>(List.of(sub));
+			}
+			return new ArrayList<>();
+		});
+		handler.getInjectedRewards().add(inject);
+
+		handler.checkSubRewards();
+
+		assertNull(handler.getSubDirectlyDefined("Daily_Rewards"));
+		assertSame(sub, handler.getSubRewardResolver().getFileBackedSubReward("Daily_Rewards"));
+	}
+
+	@Test
+	public void fileBackedSubRewardsRemainSnapshotCapableForDeferredExecution() {
+		YamlConfiguration config = new YamlConfiguration();
+		config.createSection("Parent.Child").set("Messages", List.of("queued"));
+
+		RewardFileDefinedReward fileMaster = mock(RewardFileDefinedReward.class);
+		when(fileMaster.getFullPath()).thenReturn("Daily");
+		when(fileMaster.needsDot()).thenReturn(".");
+		when(fileMaster.getPath()).thenReturn("Parent");
+		when(fileMaster.getFileData()).thenReturn(config);
+		Reward fileBacked = new SubDirectlyDefinedReward(fileMaster, "Child").getReward();
+
+		DirectlyDefinedReward directMaster = mock(DirectlyDefinedReward.class);
+		when(directMaster.getFullPath()).thenReturn("Direct");
+		when(directMaster.needsDot()).thenReturn(".");
+		when(directMaster.getPath()).thenReturn("Parent");
+		when(directMaster.getFileData()).thenReturn(config);
+		Reward directlyDefined = new SubDirectlyDefinedReward(directMaster, "Child").getReward();
+
+		assertTrue(fileBacked.isNeedsRewardFile());
+		assertFalse(directlyDefined.isNeedsRewardFile());
 	}
 }

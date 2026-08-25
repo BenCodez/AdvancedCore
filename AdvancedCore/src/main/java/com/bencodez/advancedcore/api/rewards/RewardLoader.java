@@ -3,6 +3,11 @@ package com.bencodez.advancedcore.api.rewards;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.exceptions.FileDirectoryException;
@@ -16,6 +21,7 @@ public class RewardLoader {
 	private final RewardHandler handler;
 	private final AdvancedCorePlugin plugin;
 	private final ArrayList<File> rewardFolders = new ArrayList<>();
+	private final Set<String> suppressedDirectlyDefinedRewards = new HashSet<>();
 
 	public RewardLoader(RewardHandler handler, AdvancedCorePlugin plugin) {
 		this.handler = handler;
@@ -61,6 +67,28 @@ public class RewardLoader {
 			}
 		}
 		loadRewards();
+	}
+
+	/**
+	 * Generated DirectlyDefinedReward files are persisted execution snapshots for
+	 * delayed/offline queues. They must remain on disk, but they are never loaded
+	 * into the public reward registry. Queue replay resolves them explicitly via
+	 * getQueuedGeneratedReward().
+	 */
+	private void suppressGeneratedDirectlyDefinedFiles() {
+		suppressedDirectlyDefinedRewards.clear();
+		for (File folder : rewardFolders) {
+			if (folder == null || !folder.getName().equalsIgnoreCase("DirectlyDefined")) {
+				continue;
+			}
+			for (String fileName : getRewardFiles(folder)) {
+				File generatedFile = new File(folder, fileName);
+				YamlConfiguration data = YamlConfiguration.loadConfiguration(generatedFile);
+				if (data.getBoolean("DirectlyDefinedReward", false)) {
+					suppressedDirectlyDefinedRewards.add(fileName.toLowerCase(Locale.ROOT));
+				}
+			}
+		}
 	}
 
 	private void copyFile(String fileName) {
@@ -109,7 +137,35 @@ public class RewardLoader {
 
 		File directFolder = new File(getDefaultFolder().getAbsolutePath() + File.separator + "DirectlyDefined");
 		directFolder.mkdirs();
+		File existing = new File(directFolder, reward + ".yml");
+		if (isGeneratedSnapshot(existing)) {
+			plugin.getLogger().warning("Blocked standalone lookup of generated queued reward " + reward);
+			return new QueuedGeneratedReward(directFolder, reward, Collections.emptySet());
+		}
 		return new Reward(directFolder, reward);
+	}
+
+	public Reward getQueuedGeneratedReward(String reward, String userUuid) {
+		if (reward == null || reward.isEmpty() || userUuid == null || userUuid.isEmpty()) {
+			return null;
+		}
+		reward = RewardRegistry.normalizeLookupName(reward);
+		if (!RewardRegistry.isSafeRewardFileName(reward)) {
+			return null;
+		}
+		File directFolder = new File(getDefaultFolder().getAbsolutePath() + File.separator + "DirectlyDefined");
+		File file = new File(directFolder, reward + ".yml");
+		if (!isGeneratedSnapshot(file)) {
+			return null;
+		}
+		return new QueuedGeneratedReward(directFolder, reward, Set.of(userUuid));
+	}
+
+	private boolean isGeneratedSnapshot(File file) {
+		if (file == null || !file.isFile()) {
+			return false;
+		}
+		return YamlConfiguration.loadConfiguration(file).getBoolean("DirectlyDefinedReward", false);
 	}
 
 	public ArrayList<String> getRewardFiles(File folder) {
@@ -142,6 +198,7 @@ public class RewardLoader {
 	}
 
 	public void loadRewards() {
+		suppressGeneratedDirectlyDefinedFiles();
 		handler.getRewardRegistry().resetRewards();
 		setupExample();
 		handler.addValidPath("DirectlyDefinedReward");
@@ -160,6 +217,12 @@ public class RewardLoader {
 	private void loadRewards(File file) {
 		for (String reward : getRewardNames(file)) {
 			if (!reward.equals("")) {
+				String exactFileName = (reward + ".yml").toLowerCase(Locale.ROOT);
+				if (file.getName().equalsIgnoreCase("DirectlyDefined")
+						&& suppressedDirectlyDefinedRewards.contains(exactFileName)) {
+					plugin.extraDebug("Suppressing generated queued reward from standalone lookup: " + reward);
+					continue;
+				}
 				if (!handler.rewardExist(reward)) {
 					try {
 						Reward reward1 = new Reward(file, reward);

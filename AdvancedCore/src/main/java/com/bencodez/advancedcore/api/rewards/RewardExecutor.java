@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.api.rewards;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
@@ -16,6 +18,8 @@ import com.bencodez.simpleapi.array.ArrayUtils;
  * compatibility facade exposed to callers.
  */
 public class RewardExecutor {
+
+    private static final String QUEUED_REFERENCE_PREFIX = "\\AdvancedCoreQueue/1/";
 
     private final RewardHandler handler;
     private final AdvancedCorePlugin plugin;
@@ -122,7 +126,55 @@ public class RewardExecutor {
             MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward, context.getPlaceholders());
             return;
         }
+
         giveReward(user, handler.getReward(reward), context.getOptions());
+    }
+
+    void givePersistedQueueReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        if (reward == null || reward.isEmpty()) {
+            return;
+        }
+
+        String rewardName = reward;
+        Boolean generatedSnapshot = null;
+        if (reward.startsWith(QUEUED_REFERENCE_PREFIX)) {
+            String encoded = reward.substring(QUEUED_REFERENCE_PREFIX.length());
+            int modeEnd = encoded.indexOf('/');
+            if (modeEnd > 0) {
+                String mode = encoded.substring(0, modeEnd);
+                String encodedName = encoded.substring(modeEnd + 1);
+                if ((mode.equals("snapshot") || mode.equals("normal")) && !encodedName.isEmpty()) {
+                    try {
+                        rewardName = new String(Base64.getUrlDecoder().decode(encodedName), StandardCharsets.UTF_8);
+                        generatedSnapshot = Boolean.valueOf(mode.equals("snapshot"));
+                    } catch (IllegalArgumentException ignored) {
+                        rewardName = reward;
+                    }
+                }
+            }
+        }
+
+        Reward resolved;
+        if (generatedSnapshot != null) {
+            if (generatedSnapshot.booleanValue()) {
+                resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());
+            } else {
+                resolved = handler.getReward(rewardName);
+            }
+        } else if (handler.rewardExist(rewardName) || handler.hasDirectRewardHandle(rewardName)) {
+            // Legacy persisted queue entry: a real registered reward wins over any
+            // stale generated file with the same name.
+            resolved = handler.getReward(rewardName);
+        } else {
+            // Legacy generated queue entries predate explicit provenance. This branch is
+            // reachable only through the PersistedQueueReference capability path.
+            resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());
+            if (resolved == null) {
+                resolved = handler.getReward(rewardName);
+            }
+        }
+        giveReward(user, resolved, context.getOptions());
     }
 
     public void updateReward(Configuration data, String path, RewardOptions rewardOptions) {
@@ -141,8 +193,10 @@ public class RewardExecutor {
         String rewardName = context.buildRewardName(path);
         DirectlyDefinedReward direct = handler.getDirectlyDefined(path);
         SubDirectlyDefinedReward sub = handler.getSubDirectlyDefined(rewardName);
+        SubRewardResolver resolver = handler.getSubRewardResolver();
+        SubDirectlyDefinedReward fileSub = resolver == null ? null : resolver.getFileBackedSubReward(rewardName);
 
-        if (context.supportsDirectDispatch() && (direct != null || sub != null)) {
+        if (context.supportsDirectDispatch() && (direct != null || sub != null || fileSub != null)) {
             if (direct != null) {
                 Reward reward = direct.getReward();
                 if (reward != null) {
@@ -156,14 +210,14 @@ public class RewardExecutor {
                 return;
             }
 
-            Reward reward = sub.getReward();
+            SubDirectlyDefinedReward selectedSub = sub != null ? sub : fileSub;
+            Reward reward = selectedSub.getReward();
             if (reward != null) {
-                plugin.debug("Giving subdirectlydefined reward " + rewardName + ", Options: " + options + " to "
+                plugin.debug("Giving sub reward " + rewardName + ", Options: " + options + " to "
                         + user.getPlayerName() + "/" + user.getUUID());
                 giveReward(user, reward, options);
             } else {
-                plugin.debug("Failed to give subdirectlydefined reward " + path + ", Options: " + options
-                        + ", Reward == null");
+                plugin.debug("Failed to give sub reward " + path + ", Options: " + options + ", Reward == null");
             }
             return;
         }

@@ -70,6 +70,9 @@ public class Reward {
 	@Getter
 	private boolean needsRewardFile = true;
 
+	@Getter
+	private boolean generatedSnapshotCreated = false;
+
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
@@ -456,7 +459,7 @@ public class Reward {
 				.header("Directly defined reward file. WRONG PLACE TO EDIT THIS! DO NOT EDIT");
 		reward.getConfig().setDirectlyDefinedReward(true);
 		reward.getConfig().save(reward.getConfig().getFileData());
-		plugin.getRewardHandler().updateReward(reward);
+		generatedSnapshotCreated = true;
 	}
 
 	public void validate() {

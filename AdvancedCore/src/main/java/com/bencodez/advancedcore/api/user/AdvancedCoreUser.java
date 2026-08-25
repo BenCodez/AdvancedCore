@@ -1,11 +1,13 @@
 package com.bencodez.advancedcore.api.user;
 
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -52,6 +54,8 @@ import net.md_5.bungee.chat.ComponentSerializer;
  * The Class User.
  */
 public class AdvancedCoreUser {
+
+	private static final String QUEUED_REFERENCE_PREFIX = "\\AdvancedCoreQueue/1/";
 
 	/**
 	 * User data fetch mode for this user.
@@ -212,7 +216,7 @@ public class AdvancedCoreUser {
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
 		synchronized (plugin) {
 			ArrayList<String> offlineRewards = getOfflineRewards();
-			offlineRewards.add(reward.getRewardName() + "%placeholders%" + ArrayUtils.makeString(placeholders));
+			offlineRewards.add(queuedRewardReference(reward) + "%placeholders%" + ArrayUtils.makeString(placeholders));
 			setOfflineRewards(offlineRewards);
 		}
 	}
@@ -246,12 +250,19 @@ public class AdvancedCoreUser {
 	 */
 	public synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
 		HashMap<String, Long> timed = getTimedRewards();
-		String rewardName = reward.getRewardName();
+		String rewardName = queuedRewardReference(reward);
 		rewardName += "%extime%" + System.currentTimeMillis();
 
 		timed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(placeholders), epochMilli);
 		setTimedRewards(timed);
 		loadTimedDelayedTimer(epochMilli);
+	}
+
+	private String queuedRewardReference(Reward reward) {
+		String encodedName = Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(reward.getRewardName().getBytes(StandardCharsets.UTF_8));
+		return QUEUED_REFERENCE_PREFIX + (reward.isGeneratedSnapshotCreated() ? "snapshot/" : "normal/")
+				+ encodedName;
 	}
 
 	/**
@@ -305,18 +316,18 @@ public class AdvancedCoreUser {
 			if (time != 0) {
 				Date timeDate = new Date(time);
 				if (new Date().after(timeDate)) {
-					String[] data = entry.getKey().split("%placeholders%");
-					String rewardName = data[0];
-					rewardName = rewardName.split("%extime%")[0];
+					String[] data = entry.getKey().split("%placeholders%", 2);
+					String rewardReference = data[0].split("%extime%", 2)[0];
 					String placeholders = "";
 					if (data.length > 1) {
 						placeholders = data[1];
 					}
-					new RewardBuilder(plugin.getRewardHandler().getReward(rewardName)).setCheckTimed(false)
-							.withPlaceHolder(ArrayUtils.fromString(placeholders))
-							.withPlaceHolder("date",
-									"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
-							.send(this);
+					RewardOptions replayOptions = new RewardOptions().setCheckTimed(false)
+							.withPlaceHolder(ArrayUtils.fromString(placeholders));
+					replayOptions.addPlaceholder("date",
+							"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));
+					plugin.getRewardHandler().givePersistedQueueReward(this, new PersistedQueueReference(rewardReference), replayOptions);
+					String rewardName = rewardReference;
 					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
 							+ " with placeholders " + ArrayUtils.fromString(placeholders));
 				} else {
@@ -354,13 +365,13 @@ public class AdvancedCoreUser {
 			}
 
 			String[] parts = rewardEntry.split("%placeholders%", 2);
-			String rewardName = parts[0];
+			String rewardReference = parts[0];
 			String placeholderStr = parts.length > 1 ? parts[1] : "";
 
 			RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false)
 					.withPlaceHolder(ArrayUtils.fromString(placeholderStr));
 
-			rewardHandler.giveReward(user, rewardName, options);
+			rewardHandler.givePersistedQueueReward(user, new PersistedQueueReference(rewardReference), options);
 		}
 
 	}
@@ -435,13 +446,13 @@ public class AdvancedCoreUser {
 			}
 
 			String[] parts = rewardEntry.split("%placeholders%", 2);
-			String rewardName = parts[0];
+			String rewardReference = parts[0];
 			String placeholderStr = parts.length > 1 ? parts[1] : "";
 
 			RewardOptions options = new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
 					.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholderStr));
 
-			rewardHandler.giveReward(user, rewardName, options);
+			rewardHandler.givePersistedQueueReward(user, new PersistedQueueReference(rewardReference), options);
 		}
 	}
 

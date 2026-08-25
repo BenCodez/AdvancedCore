@@ -79,12 +79,13 @@ public class RewardBuilder {
 	}
 
 	public void send(AdvancedCoreUser user) {
+		RewardHandler handler = user.getPlugin().getRewardHandler();
 		if (reward == null) {
 			if (data != null) {
-				user.getPlugin().getRewardHandler().giveReward(user, data, path, rewardOptions);
+				handler.giveReward(user, data, path, rewardOptions);
 			}
 		} else {
-			user.getPlugin().getRewardHandler().giveReward(user, reward, rewardOptions);
+			handler.giveReward(user, reward, rewardOptions);
 		}
 	}
 
