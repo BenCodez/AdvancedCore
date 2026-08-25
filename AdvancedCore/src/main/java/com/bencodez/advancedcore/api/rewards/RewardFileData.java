@@ -508,11 +508,23 @@ public class RewardFileData {
 	 */
 
 	public void setData(ConfigurationSection value) {
-		// getFileData().set("", value);
+		if (fileData == null || value == null) {
+			plugin.debug("Editing invalid reward: " + reward.getName());
+			return;
+		}
+
+		// Snapshot writes replace the previous contents completely. Reusing a generated
+		// queue file must not retain reward actions that were removed from the source
+		// section after an earlier snapshot was created.
+		for (String key : new HashSet<>(fileData.getKeys(false))) {
+			fileData.set(key, null);
+		}
 		Map<String, Object> map = value.getConfigurationSection("").getValues(true);
 		for (Entry<String, Object> entry : map.entrySet()) {
-			set(entry.getKey(), entry.getValue());
+			fileData.set(entry.getKey(), entry.getValue());
 		}
+		save(fileData);
+		reload();
 		reward.loadValues();
 	}
 

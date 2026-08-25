@@ -159,6 +159,29 @@ class RewardLoaderSecurityTest {
 	}
 
 	@Test
+	void reusedGeneratedSnapshotDropsRemovedRewardKeys() throws IOException {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCorePlugin.setInstance(plugin);
+
+		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
+		assertTrue(directlyDefined.mkdirs());
+		File snapshot = new File(directlyDefined, "Daily_AdvancedRewards_foo.yml");
+		YamlConfiguration oldData = new YamlConfiguration();
+		oldData.set("Commands", List.of("old command"));
+		oldData.set("Messages", List.of("old message"));
+		oldData.save(snapshot);
+
+		Reward reward = new Reward(directlyDefined, "Daily_AdvancedRewards_foo");
+		YamlConfiguration replacement = new YamlConfiguration();
+		replacement.set("Messages", List.of("new message"));
+		reward.getConfig().setData(replacement);
+
+		YamlConfiguration saved = YamlConfiguration.loadConfiguration(snapshot);
+		assertFalse(saved.contains("Commands"));
+		assertEquals(List.of("new message"), saved.getStringList("Messages"));
+	}
+
+	@Test
 	void loadRewardsDoesNotSuppressNormalDirectFolderFileWithoutGeneratedMarker() throws IOException {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
