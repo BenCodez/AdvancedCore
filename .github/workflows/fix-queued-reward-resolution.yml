@@ -1,0 +1,60 @@
+name: Apply queued reward resolution fixes
+
+on:
+  push:
+    branches:
+      - security/reward-path-identity-hardening
+    paths:
+      - .github/workflows/fix-queued-reward-resolution.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/reward-path-identity-hardening
+          fetch-depth: 0
+      - name: Patch timed replay and generated snapshot registration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          user_path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/user/AdvancedCoreUser.java')
+          text = user_path.read_text()
+          old = '''\t\t\t\t\tnew RewardBuilder(plugin.getRewardHandler().getReward(rewardName)).setCheckTimed(false)
+          \t\t\t\t\t\t\t.withPlaceHolder(ArrayUtils.fromString(placeholders))'''
+          new = '''\t\t\t\t\tcom.bencodez.advancedcore.api.rewards.Reward queuedReward = plugin.getRewardHandler()
+          \t\t\t\t\t\t\t.getQueuedGeneratedReward(rewardName, getUUID());
+          \t\t\t\t\tif (queuedReward == null) {
+          \t\t\t\t\t\tqueuedReward = plugin.getRewardHandler().getReward(rewardName);
+          \t\t\t\t\t}
+          \t\t\t\t\tnew RewardBuilder(queuedReward).setCheckTimed(false)
+          \t\t\t\t\t\t\t.withPlaceHolder(ArrayUtils.fromString(placeholders))'''
+          if old not in text:
+              raise SystemExit('Unable to locate timed reward replay lookup')
+          user_path.write_text(text.replace(old, new, 1))
+
+          reward_path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/Reward.java')
+          text = reward_path.read_text()
+          old = '''\t\treward.getConfig().setDirectlyDefinedReward(true);
+          \t\treward.getConfig().save(reward.getConfig().getFileData());
+          \t\tplugin.getRewardHandler().updateReward(reward);'''
+          new = '''\t\treward.getConfig().setDirectlyDefinedReward(true);
+          \t\treward.getConfig().save(reward.getConfig().getFileData());'''
+          if old not in text:
+              raise SystemExit('Unable to locate generated reward registration')
+          reward_path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit queued reward fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AdvancedCore/src/main/java/com/bencodez/advancedcore/api/user/AdvancedCoreUser.java
+          git add AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/Reward.java
+          git rm .github/workflows/fix-queued-reward-resolution.yml
+          git commit -m "Keep generated queue snapshots out of public lookup"
+          git push origin HEAD:security/reward-path-identity-hardening
