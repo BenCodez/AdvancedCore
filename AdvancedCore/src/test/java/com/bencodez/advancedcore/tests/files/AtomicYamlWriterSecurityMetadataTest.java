@@ -1,10 +1,10 @@
 package com.bencodez.advancedcore.tests.files;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import java.lang.reflect.Method;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,24 +27,21 @@ public class AtomicYamlWriterSecurityMetadataTest {
 	Path tempDir;
 
 	@Test
-	public void inPlaceFallbackPreservesExistingPosixInodeMetadata() throws Exception {
+	public void preservedInodeCommitKeepsExistingPosixMetadata() throws Exception {
 		FileStore store = Files.getFileStore(tempDir);
 		assumeTrue(store.supportsFileAttributeView("posix"), "POSIX attributes are not available");
 
 		Path target = tempDir.resolve("fallback.yml");
-		Path serialized = tempDir.resolve("serialized.tmp");
 		Files.writeString(target, "Old: true\n");
-		Files.writeString(serialized, "New: true\n");
 		Set<PosixFilePermission> expected = EnumSet.of(PosixFilePermission.OWNER_READ,
 				PosixFilePermission.OWNER_WRITE, PosixFilePermission.GROUP_READ);
 		Files.setPosixFilePermissions(target, expected);
 		PosixFileAttributes before = Files.readAttributes(target, PosixFileAttributes.class);
 		Object fileKeyBefore = Files.readAttributes(target, BasicFileAttributes.class).fileKey();
 
-		Method fallback = AtomicYamlWriter.class.getDeclaredMethod("writeInPlacePreservingMetadata", Path.class,
-				Path.class);
-		fallback.setAccessible(true);
-		fallback.invoke(null, serialized, target);
+		YamlConfiguration replacement = new YamlConfiguration();
+		replacement.set("New", true);
+		AtomicYamlWriter.save(target.toFile(), replacement);
 
 		PosixFileAttributes after = Files.readAttributes(target, PosixFileAttributes.class);
 		Object fileKeyAfter = Files.readAttributes(target, BasicFileAttributes.class).fileKey();
@@ -52,9 +49,11 @@ public class AtomicYamlWriterSecurityMetadataTest {
 		assertEquals(before.owner(), after.owner());
 		assertEquals(before.group(), after.group());
 		if (fileKeyBefore != null && fileKeyAfter != null) {
-			assertEquals(fileKeyBefore, fileKeyAfter, "fallback must preserve the existing destination inode");
+			assertEquals(fileKeyBefore, fileKeyAfter,
+					"the completed save must restore the original metadata-bearing inode");
 		}
 		assertTrue(YamlConfiguration.loadConfiguration(target.toFile()).getBoolean("New"));
+		assertFalse(Files.exists(tempDir.resolve(".fallback.yml.advancedcore-preserved-inode")));
 	}
 
 	@Test
