@@ -1,0 +1,105 @@
+name: Apply placeholder marker full-pass fix
+
+on:
+  push:
+    branches:
+      - security/javascript-placeholder-hardening
+    paths:
+      - .github/workflows/fix-placeholder-marker-pass.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/javascript-placeholder-hardening
+          fetch-depth: 0
+      - name: Patch PlaceholderUtils substitution pass
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/messages/PlaceholderUtils.java')
+          text = path.read_text()
+
+          methods = re.compile(
+              r'\tpublic static String replacePlaceHolder\(String str, HashMap<String, String> placeholders\) \{.*?'
+              r'\n\t\}\n\n'
+              r'\tpublic static String replacePlaceHolder\(String str, HashMap<String, String> placeholders, boolean ignoreCase\) \{.*?'
+              r'\n\t\}\n',
+              re.DOTALL,
+          )
+          replacement = '''\tpublic static String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
+          \t\tif (str == null || placeholders == null || placeholders.isEmpty()) {
+          \t\t\treturn str;
+          \t\t}
+          \t\tString protectedMarker = createProtectedJavascriptMarkerToken(str, placeholders);
+          \t\tstr = str.replace(JAVASCRIPT_MARKER, protectedMarker);
+          \t\tfor (Entry<String, String> entry : placeholders.entrySet()) {
+          \t\t\tstr = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+          \t\t}
+          \t\tstr = neutralizeJavascriptMarker(str);
+          \t\treturn str.replace(protectedMarker, JAVASCRIPT_MARKER);
+          \t}
+
+          \tpublic static String replacePlaceHolder(String str, HashMap<String, String> placeholders, boolean ignoreCase) {
+          \t\tif (str == null || placeholders == null || placeholders.isEmpty()) {
+          \t\t\treturn str;
+          \t\t}
+          \t\tString protectedMarker = createProtectedJavascriptMarkerToken(str, placeholders);
+          \t\tstr = str.replace(JAVASCRIPT_MARKER, protectedMarker);
+          \t\tfor (Entry<String, String> entry : placeholders.entrySet()) {
+          \t\t\tstr = replacePlaceHolder(str, entry.getKey(), entry.getValue(), ignoreCase);
+          \t\t}
+          \t\tstr = neutralizeJavascriptMarker(str);
+          \t\treturn str.replace(protectedMarker, JAVASCRIPT_MARKER);
+          \t}
+          '''
+          text, count = methods.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit('Unable to replace map placeholder methods')
+
+          neutralize = '''\tstatic String neutralizeJavascriptMarker(String value) {
+          \t\tif (value == null || value.isEmpty()) {
+          \t\t\treturn value;
+          \t\t}
+          \t\treturn value.replace(JAVASCRIPT_MARKER, SAFE_JAVASCRIPT_MARKER);
+          \t}
+          '''
+          helper = neutralize + '''
+          \tprivate static String createProtectedJavascriptMarkerToken(String text, HashMap<String, String> placeholders) {
+          \t\tString token;
+          \t\tboolean collision;
+          \t\tdo {
+          \t\t\ttoken = "<AdvancedCoreJavascriptMarker:" + java.util.UUID.randomUUID() + ">";
+          \t\t\tcollision = text != null && text.contains(token);
+          \t\t\tif (!collision && placeholders != null) {
+          \t\t\t\tfor (String value : placeholders.values()) {
+          \t\t\t\t\tif (value != null && value.contains(token)) {
+          \t\t\t\t\t\tcollision = true;
+          \t\t\t\t\t\tbreak;
+          \t\t\t\t\t}
+          \t\t\t\t}
+          \t\t\t}
+          \t\t} while (collision);
+          \t\treturn token;
+          \t}
+          '''
+          if neutralize not in text:
+              raise SystemExit('Unable to locate neutralizeJavascriptMarker')
+          text = text.replace(neutralize, helper, 1)
+          path.write_text(text)
+          PY
+      - name: Commit marker fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AdvancedCore/src/main/java/com/bencodez/advancedcore/api/messages/PlaceholderUtils.java
+          git rm .github/workflows/fix-placeholder-marker-pass.yml
+          git commit -m "Neutralize JavaScript markers after placeholder substitution"
+          git push origin HEAD:security/javascript-placeholder-hardening
