@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,7 +59,17 @@ public final class AtomicYamlWriter {
 		Path preserved = preservedPath(target);
 		recoverPreservedInode(target, preserved);
 
-		Path temp = Files.createTempFile(parent, "." + target.getFileName() + ".", ".tmp");
+		Path temp;
+		try {
+			temp = Files.createTempFile(parent, "." + target.getFileName() + ".", ".tmp");
+		} catch (IOException siblingCreationFailure) {
+			if (Files.exists(target) && Files.isWritable(target)) {
+				saveSerializedInPlace(target, data, siblingCreationFailure);
+				return;
+			}
+			throw siblingCreationFailure;
+		}
+
 		boolean committed = false;
 		try {
 			data.save(temp.toFile());
@@ -233,6 +244,44 @@ public final class AtomicYamlWriter {
 			// on failure. A later save will repair it from the complete live file before
 			// attempting another commit.
 			throw e;
+		}
+	}
+
+	private static void saveSerializedInPlace(Path target, FileConfiguration data, IOException siblingCreationFailure)
+			throws IOException {
+		byte[] replacement = data.saveToString().getBytes(StandardCharsets.UTF_8);
+		byte[] original = null;
+		try {
+			original = Files.readAllBytes(target);
+		} catch (IOException | SecurityException ignored) {
+			// The legacy save path required only write access. Preserve that compatibility
+			// even when this process cannot read the old file for rollback.
+		}
+
+		try {
+			writeCompleteBytes(target, replacement);
+		} catch (IOException writeFailure) {
+			writeFailure.addSuppressed(siblingCreationFailure);
+			if (original != null) {
+				try {
+					writeCompleteBytes(target, original);
+				} catch (IOException rollbackFailure) {
+					writeFailure.addSuppressed(rollbackFailure);
+				}
+			}
+			throw writeFailure;
+		}
+	}
+
+	private static void writeCompleteBytes(Path target, byte[] bytes) throws IOException {
+		try (FileChannel output = FileChannel.open(target, StandardOpenOption.WRITE)) {
+			ByteBuffer buffer = ByteBuffer.wrap(bytes);
+			output.position(0L);
+			while (buffer.hasRemaining()) {
+				output.write(buffer);
+			}
+			output.truncate(output.position());
+			output.force(true);
 		}
 	}
 
