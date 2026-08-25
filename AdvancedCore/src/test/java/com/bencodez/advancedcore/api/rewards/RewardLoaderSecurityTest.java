@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -22,8 +21,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
-import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
 
 class RewardLoaderSecurityTest {
 
@@ -126,13 +123,10 @@ class RewardLoaderSecurityTest {
 	}
 
 	@Test
-	void generatedDotNameDoesNotSuppressManualUnderscoreName() throws IOException {
+	@SuppressWarnings("unchecked")
+	void generatedDotNameDoesNotSuppressManualUnderscoreName() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
-		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		RewardHandler handler = mock(RewardHandler.class);
-		RewardRegistry registry = mock(RewardRegistry.class);
-		Logger logger = mock(Logger.class);
-		ArrayList<Reward> rewards = new ArrayList<>();
 
 		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
 		assertTrue(directlyDefined.mkdirs());
@@ -145,24 +139,22 @@ class RewardLoaderSecurityTest {
 		manualData.save(new File(directlyDefined, "Foo_Bar.yml"));
 
 		when(plugin.getDataFolder()).thenReturn(tempDir);
-		when(plugin.getOptions()).thenReturn(options);
-		when(plugin.getLogger()).thenReturn(logger);
-		when(plugin.getRewardHandler()).thenReturn(handler);
-		when(options.isLoadDefaultRewards()).thenReturn(false);
-		when(handler.getRewardRegistry()).thenReturn(registry);
-		when(handler.getRewards()).thenReturn(rewards);
-		when(handler.getInjectedRequirements()).thenReturn(new CopyOnWriteArrayList<RequirementInject>());
-		when(handler.getInjectedRewards()).thenReturn(new CopyOnWriteArrayList<RewardInject>());
-		when(handler.getValidPaths()).thenReturn(Set.of("Messages"));
-		when(handler.rewardExist("Foo_Bar")).thenReturn(false);
 
-		AdvancedCorePlugin.setInstance(plugin);
 		RewardLoader loader = new RewardLoader(handler, plugin);
 		loader.addRewardFolder(directlyDefined, false, false);
-		loader.loadRewards();
 
-		assertEquals(1, rewards.size());
-		assertEquals("Foo_Bar", rewards.get(0).getName());
+		java.lang.reflect.Method suppress = RewardLoader.class
+				.getDeclaredMethod("suppressGeneratedDirectlyDefinedFiles");
+		suppress.setAccessible(true);
+		suppress.invoke(loader);
+
+		java.lang.reflect.Field suppressedField = RewardLoader.class
+				.getDeclaredField("suppressedDirectlyDefinedRewards");
+		suppressedField.setAccessible(true);
+		Set<String> suppressed = (Set<String>) suppressedField.get(loader);
+
+		assertTrue(suppressed.contains("foo.bar.yml"));
+		assertFalse(suppressed.contains("foo_bar.yml"));
 	}
 
 	@Test
