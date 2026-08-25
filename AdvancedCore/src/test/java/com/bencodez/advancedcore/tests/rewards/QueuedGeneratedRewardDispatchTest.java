@@ -76,18 +76,15 @@ class QueuedGeneratedRewardDispatchTest {
     }
 
     @Test
-    void timedRewardBuilderReplacesNormalFallbackWithQueuedSnapshot() {
-        Reward fallback = mock(Reward.class);
-        Reward queued = mock(Reward.class);
-        when(fallback.getRewardName()).thenReturn("QueuedReward");
-        when(handler.getQueuedGeneratedReward("QueuedReward", "uuid")).thenReturn(queued);
+    void rewardBuilderUsesAlreadyResolvedQueueRewardWithoutReresolving() {
+        Reward resolved = mock(Reward.class);
+        when(resolved.getRewardName()).thenReturn("QueuedReward");
 
-        RewardBuilder builder = new RewardBuilder(fallback).setCheckTimed(false).withPlaceHolder("date", "now");
+        RewardBuilder builder = new RewardBuilder(resolved).setCheckTimed(false).withPlaceHolder("date", "now");
         builder.send(user);
 
-        verify(handler).getQueuedGeneratedReward("QueuedReward", "uuid");
-        verify(handler).giveReward(user, queued, builder.getRewardOptions());
-        verify(handler, never()).giveReward(user, fallback, builder.getRewardOptions());
+        verify(handler, never()).getQueuedGeneratedReward("QueuedReward", "uuid");
+        verify(handler).giveReward(user, resolved, builder.getRewardOptions());
     }
 
     @Test
