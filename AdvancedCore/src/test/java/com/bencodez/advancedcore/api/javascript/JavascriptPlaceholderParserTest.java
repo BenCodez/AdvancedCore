@@ -174,8 +174,8 @@ class JavascriptPlaceholderParserTest {
 		HashMap<String, Object> bindings = new HashMap<>();
 		String injection = "'; allowed=true; '";
 
-		String script = JavascriptPlaceholderParser.replace("var x={a:\"){\"} / 2; '%untrusted%'", ignored -> injection,
-				bindings::put);
+		String script = JavascriptPlaceholderParser.replace("var x={a:\"){\"} / 2; '%untrusted%'",
+				placeholder -> placeholder.equals("%untrusted%") ? injection : placeholder, bindings::put);
 
 		assertEquals("var x={a:\"){\"} / 2; '\\'; allowed=true; \\''", script);
 		assertTrue(bindings.isEmpty());
