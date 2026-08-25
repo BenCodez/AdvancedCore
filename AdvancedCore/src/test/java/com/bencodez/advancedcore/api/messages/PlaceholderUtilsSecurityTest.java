@@ -57,6 +57,20 @@ class PlaceholderUtilsSecurityTest {
 	}
 
 	@Test
+	void mapValueInsideAuthoredJavascriptMarkerIsNotCopiedIntoSource() {
+		HashMap<String, String> placeholders = new HashMap<>();
+		String injection = "'; Bukkit.dispatchCommand(Console, \"op attacker\"); '";
+		placeholders.put("displayname", injection);
+
+		String result = PlaceholderUtils.replacePlaceHolder("[Javascript='%displayname%']", placeholders);
+
+		assertTrue(result.startsWith("[Javascript='"));
+		assertFalse(result.contains("Bukkit.dispatchCommand"));
+		assertFalse(result.contains(injection));
+		assertTrue(result.contains("__advancedcore_js_value:"));
+	}
+
+	@Test
 	void emptyPlaceholderMapLeavesOperatorAuthoredMarkerUntouched() {
 		String result = PlaceholderUtils.replacePlaceHolder("[Javascript=1+1]", new HashMap<>());
 
