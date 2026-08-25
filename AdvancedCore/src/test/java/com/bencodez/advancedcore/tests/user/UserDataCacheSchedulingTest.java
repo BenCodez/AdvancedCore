@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -17,12 +18,16 @@ import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.usercache.change.UserDataChange;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeString;
 import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueString;
@@ -57,6 +62,45 @@ public class UserDataCacheSchedulingTest {
 		scheduledTasks.get(0).run();
 
 		assertEquals(2, scheduledTasks.size(), "a change queued during the flush must schedule another flush");
+	}
+
+	@Test
+	@SuppressWarnings("rawtypes")
+	public void failedFlushPreparationRestoresDrainedChanges() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager userManager = mock(UserManager.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledFuture future = mock(ScheduledFuture.class);
+		UUID uuid = UUID.randomUUID();
+
+		when(manager.getPlugin()).thenReturn(plugin);
+		when(manager.getTimer()).thenReturn(timer);
+		when(plugin.getUserManager()).thenReturn(userManager);
+		when(userManager.getUser(uuid, false)).thenReturn(user);
+		doReturn(future).when(timer).schedule(any(Runnable.class), eq(3L), eq(TimeUnit.SECONDS));
+
+		AtomicInteger conversions = new AtomicInteger();
+		UserDataChange failingChange = new UserDataChange("Custom") {
+			@Override
+			public void dump() {
+			}
+
+			@Override
+			public DataValue toUserDataValue() {
+				if (conversions.getAndIncrement() == 0) {
+					return new DataValueString("value");
+				}
+				throw new IllegalStateException("conversion failed");
+			}
+		};
+
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		cache.addChange(failingChange, true);
+
+		assertThrows(IllegalStateException.class, cache::processChanges);
+		assertTrue(cache.hasChangesToProcess(), "failed preparation must leave the drained change queued for retry");
 	}
 
 	@Test
