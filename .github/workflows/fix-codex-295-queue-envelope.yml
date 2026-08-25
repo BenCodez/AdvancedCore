@@ -1,0 +1,77 @@
+name: Apply Codex 295 queue-envelope fix
+
+on:
+  push:
+    branches:
+      - security/reward-path-identity-hardening
+    paths:
+      - .github/workflows/fix-codex-295-queue-envelope.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/reward-path-identity-hardening
+          fetch-depth: 0
+      - name: Patch queue reference handling and tests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # AdvancedCoreUser: persist and decode the versioned queue-only envelope.
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/user/AdvancedCoreUser.java')
+          text = path.read_text()
+          text = text.replace('import com.bencodez.advancedcore.api.rewards.RewardOptions;\n',
+                              'import com.bencodez.advancedcore.api.rewards.RewardOptions;\nimport com.bencodez.advancedcore.api.rewards.QueuedRewardReference;\n')
+          text = text.replace('\n\tprivate static final String QUEUED_SNAPSHOT_MARKER = "%generatedsnapshot%";\n', '\n')
+          text = text.replace(
+              '\tprivate String queuedRewardReference(Reward reward) {\n\t\treturn reward.getRewardName() + QUEUED_SNAPSHOT_MARKER + reward.isGeneratedSnapshotCreated();\n\t}\n',
+              '\tprivate String queuedRewardReference(Reward reward) {\n'
+              '\t\treturn QueuedRewardReference.encode(reward.getRewardName(), reward.isGeneratedSnapshotCreated());\n'
+              '\t}\n')
+          text = text.replace(
+              '\t\t\t\t\tString rewardName = rewardReference.split(QUEUED_SNAPSHOT_MARKER, 2)[0];\n',
+              '\t\t\t\t\tQueuedRewardReference.Parsed parsedReference = QueuedRewardReference.parse(rewardReference);\n'
+              '\t\t\t\t\tString rewardName = parsedReference == null ? rewardReference : parsedReference.getRewardName();\n')
+          path.write_text(text)
+
+          # RewardExecutor: decode metadata only during persisted replay; normal dispatch keeps names byte-for-byte.
+          path = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardExecutor.java')
+          text = path.read_text()
+          text = text.replace('    private static final String QUEUED_SNAPSHOT_MARKER = "%generatedsnapshot%";\n\n', '')
+          old = '''        String rewardName = reward;\n        Boolean generatedSnapshot = null;\n        int snapshotMarker = reward.indexOf(QUEUED_SNAPSHOT_MARKER);\n        if (snapshotMarker >= 0) {\n            rewardName = reward.substring(0, snapshotMarker);\n            generatedSnapshot = Boolean.valueOf(reward.substring(snapshotMarker + QUEUED_SNAPSHOT_MARKER.length()));\n        }\n\n        Reward resolved = null;\n        if (isPersistedQueueReplay(context.getOptions())) {\n            if (generatedSnapshot != null) {\n                if (generatedSnapshot.booleanValue()) {\n                    resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());\n                } else {\n                    resolved = handler.getReward(rewardName);\n                }\n            } else if (handler.rewardExist(rewardName) || handler.hasDirectRewardHandle(rewardName)) {\n                // Legacy queue entry: if a normal registered reward exists, it wins over any\n                // stale generated file with the same name.\n                resolved = handler.getReward(rewardName);\n            } else {\n                // Legacy generated entries did not persist provenance. Preserve them only when\n                // there is no registered reward they could shadow.\n                resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());\n                if (resolved == null) {\n                    resolved = handler.getReward(rewardName);\n                }\n            }\n        } else {\n            resolved = handler.getReward(rewardName);\n        }\n        giveReward(user, resolved, context.getOptions());\n'''
+          new = '''        Reward resolved = null;\n        if (isPersistedQueueReplay(context.getOptions())) {\n            QueuedRewardReference.Parsed queuedReference = QueuedRewardReference.parse(reward);\n            if (queuedReference != null) {\n                String rewardName = queuedReference.getRewardName();\n                if (queuedReference.isGeneratedSnapshot()) {\n                    resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());\n                } else {\n                    resolved = handler.getReward(rewardName);\n                }\n            } else if (handler.rewardExist(reward) || handler.hasDirectRewardHandle(reward)) {\n                // Legacy queue entry: if a normal registered reward exists, it wins over any\n                // stale generated file with the same name.\n                resolved = handler.getReward(reward);\n            } else {\n                // Legacy generated entries did not persist provenance. Preserve them only when\n                // there is no registered reward they could shadow.\n                resolved = handler.getQueuedGeneratedReward(reward, user.getUUID());\n                if (resolved == null) {\n                    resolved = handler.getReward(reward);\n                }\n            }\n        } else {\n            // Queue metadata is never decoded on ordinary dispatch, so every valid reward\n            // name remains unchanged.\n            resolved = handler.getReward(reward);\n        }\n        giveReward(user, resolved, context.getOptions());\n'''
+          if old not in text:
+              raise SystemExit('Unable to locate old queue marker handling')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+
+          # Update queue dispatch tests to use the versioned envelope and cover a marker-like normal name.
+          path = Path('AdvancedCore/src/test/java/com/bencodez/advancedcore/tests/rewards/QueuedGeneratedRewardDispatchTest.java')
+          text = path.read_text()
+          text = text.replace('import com.bencodez.advancedcore.api.rewards.RewardOptions;\n',
+                              'import com.bencodez.advancedcore.api.rewards.RewardOptions;\nimport com.bencodez.advancedcore.api.rewards.QueuedRewardReference;\n')
+          text = text.replace('executor.giveReward(user, "Daily%generatedsnapshot%false", options);',
+                              'executor.giveReward(user, QueuedRewardReference.encode("Daily", false), options);')
+          text = text.replace('executor.giveReward(user, "Daily%generatedsnapshot%true", options);',
+                              'executor.giveReward(user, QueuedRewardReference.encode("Daily", true), options);')
+          marker = '''    @Test\n    void normalStandaloneDispatchCannotResolveGeneratedSnapshot() {\n'''
+          additions = '''    @Test\n    void normalRewardNameContainingOldMarkerTextIsNotDecoded() {\n        String rewardName = "Promo%generatedsnapshot%Bonus";\n        Reward normal = mock(Reward.class);\n        RewardOptions options = new RewardOptions();\n        when(handler.getReward(rewardName)).thenReturn(normal);\n\n        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {\n            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);\n            executor.giveReward(user, rewardName, options);\n        }\n\n        verify(handler).getReward(rewardName);\n        verify(normal).giveReward(user, options);\n    }\n\n'''
+          if marker not in text:
+              raise SystemExit('Unable to locate test insertion point')
+          text = text.replace(marker, additions + marker, 1)
+          path.write_text(text)
+          PY
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AdvancedCore/src/main/java/com/bencodez/advancedcore/api/user/AdvancedCoreUser.java AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardExecutor.java AdvancedCore/src/test/java/com/bencodez/advancedcore/tests/rewards/QueuedGeneratedRewardDispatchTest.java
+          git rm .github/workflows/fix-codex-295-queue-envelope.yml
+          git commit -m "Version persisted queued reward references"
+          git push origin HEAD:security/reward-path-identity-hardening
