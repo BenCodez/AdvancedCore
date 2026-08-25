@@ -2,13 +2,16 @@ package com.bencodez.advancedcore.tests.files;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
@@ -133,6 +136,24 @@ public class AtomicYamlWriterTest {
 	}
 
 	@Test
+	public void rejectsCyclicSymlinkChains() throws Exception {
+		Path first = tempDir.resolve("first.yml");
+		Path second = tempDir.resolve("second.yml");
+		try {
+			Files.createSymbolicLink(first, second.getFileName());
+			Files.createSymbolicLink(second, first.getFileName());
+		} catch (UnsupportedOperationException | SecurityException e) {
+			assumeTrue(false, "symbolic links are not supported by this test environment");
+		}
+
+		YamlConfiguration replacement = new YamlConfiguration();
+		replacement.set("New", true);
+
+		IOException error = assertThrows(IOException.class, () -> AtomicYamlWriter.save(first.toFile(), replacement));
+		assertTrue(error.getMessage().contains("Cyclic") || error.getMessage().contains("deep"));
+	}
+
+	@Test
 	public void preservesExistingPosixPermissionsOwnershipAndInode() throws Exception {
 		Path target = tempDir.resolve("permissions.yml");
 		FileStore store = Files.getFileStore(tempDir);
@@ -159,6 +180,44 @@ public class AtomicYamlWriterTest {
 		if (beforeFileKey != null && afterFileKey != null) {
 			assertEquals(beforeFileKey, afterFileKey,
 					"existing POSIX files must retain their inode so extended POSIX ACLs are not discarded");
+		}
+		assertFalse(Files.exists(tempDir.resolve(".permissions.yml.advancedcore-preserved-inode")));
+	}
+
+	@Test
+	public void recoversPreservedInodeAfterInterruptedPosixCommit() throws Exception {
+		FileStore store = Files.getFileStore(tempDir);
+		assumeTrue(store.supportsFileAttributeView("posix"), "POSIX attributes are not available");
+
+		Path target = tempDir.resolve("recovery.yml");
+		YamlConfiguration original = new YamlConfiguration();
+		original.set("Old", true);
+		original.save(target.toFile());
+		Object originalFileKey = Files.readAttributes(target, BasicFileAttributes.class).fileKey();
+
+		Path preserved = tempDir.resolve(".recovery.yml.advancedcore-preserved-inode");
+		try {
+			Files.createLink(preserved, target);
+		} catch (UnsupportedOperationException | SecurityException e) {
+			assumeTrue(false, "hard links are not supported by this test environment");
+		}
+
+		Path simulatedLiveReplacement = tempDir.resolve("simulated-new.yml");
+		YamlConfiguration alreadyCommitted = new YamlConfiguration();
+		alreadyCommitted.set("Committed", true);
+		alreadyCommitted.save(simulatedLiveReplacement.toFile());
+		Files.move(simulatedLiveReplacement, target, StandardCopyOption.REPLACE_EXISTING);
+
+		YamlConfiguration nextSave = new YamlConfiguration();
+		nextSave.set("Final", true);
+		AtomicYamlWriter.save(target.toFile(), nextSave);
+
+		assertTrue(YamlConfiguration.loadConfiguration(target.toFile()).getBoolean("Final"));
+		assertFalse(Files.exists(preserved));
+		Object finalFileKey = Files.readAttributes(target, BasicFileAttributes.class).fileKey();
+		if (originalFileKey != null && finalFileKey != null) {
+			assertEquals(originalFileKey, finalFileKey,
+					"recovery should restore the preserved inode before the next successful commit");
 		}
 	}
 }
