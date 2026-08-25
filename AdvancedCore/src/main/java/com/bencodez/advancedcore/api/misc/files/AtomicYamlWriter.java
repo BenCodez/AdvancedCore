@@ -2,8 +2,8 @@ package com.bencodez.advancedcore.api.misc.files;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +13,7 @@ import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.UserPrincipal;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,10 +22,14 @@ import org.bukkit.configuration.file.FileConfiguration;
 /**
  * Writes YAML data to a sibling temporary file before committing it to the
  * destination. Serialization always completes before the existing file can be
- * modified. Existing POSIX files keep their inode so extended ACLs and other
- * inode metadata are not discarded by replacement.
+ * modified. Existing files whose security metadata cannot be recreated safely
+ * are committed through a preserved hard-link inode so the live path always
+ * points at a complete old or new file.
  */
 public final class AtomicYamlWriter {
+
+	private static final int MAX_SYMLINK_DEPTH = 32;
+	private static final String PRESERVED_SUFFIX = ".advancedcore-preserved-inode";
 
 	private AtomicYamlWriter() {
 	}
@@ -50,19 +55,17 @@ public final class AtomicYamlWriter {
 		}
 		Files.createDirectories(parent);
 
+		Path preserved = preservedPath(target);
+		recoverPreservedInode(target, preserved);
+
 		Path temp = Files.createTempFile(parent, "." + target.getFileName() + ".", ".tmp");
 		boolean committed = false;
 		try {
 			data.save(temp.toFile());
 			if (prepareReplacementMetadata(target, temp)) {
-				try {
-					Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-				} catch (AtomicMoveNotSupportedException e) {
-					Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
-				}
+				moveReplacement(temp, target);
 			} else {
-				writeInPlacePreservingMetadata(temp, target);
-				Files.deleteIfExists(temp);
+				commitThroughPreservedInode(temp, target, preserved);
 			}
 			committed = true;
 		} finally {
@@ -73,7 +76,13 @@ public final class AtomicYamlWriter {
 	}
 
 	static Path resolveWriteTarget(Path requestedTarget) throws IOException {
-		Path current = requestedTarget.toAbsolutePath();
+		return resolveWriteTarget(requestedTarget.toAbsolutePath(), new HashSet<>(), 0);
+	}
+
+	private static Path resolveWriteTarget(Path current, Set<Path> visited, int depth) throws IOException {
+		if (depth > MAX_SYMLINK_DEPTH || !visited.add(current)) {
+			throw new IOException("Cyclic or excessively deep symbolic link while resolving " + current);
+		}
 
 		// If the complete path exists, let the filesystem resolve every component.
 		// This is important for paths such as dirlink/../target.yml: lexical
@@ -82,13 +91,13 @@ public final class AtomicYamlWriter {
 			return current.toRealPath();
 		}
 
-		// A broken final symlink still needs write-through semantics. Follow that
-		// final link without normalizing its text, then resolve the longest existing
-		// parent through the filesystem.
+		// Files.exists follows links and therefore reports false for both a broken
+		// final link and a symlink cycle. Inspect the directory entry itself before
+		// recursing, while keeping a visited/depth guard for cycles.
 		if (Files.isSymbolicLink(current)) {
 			Path link = Files.readSymbolicLink(current);
 			Path linkedTarget = link.isAbsolute() ? link : current.getParent().resolve(link);
-			return resolveWriteTarget(linkedTarget);
+			return resolveWriteTarget(linkedTarget, visited, depth + 1);
 		}
 
 		Path parent = current.getParent();
@@ -105,10 +114,11 @@ public final class AtomicYamlWriter {
 		}
 
 		// Java's POSIX view exposes owner/group/mode, but not Linux extended POSIX
-		// ACL entries. Replacing the inode can therefore silently discard setfacl
-		// grants. Commit into the existing inode after successful serialization.
+		// ACL entries. Use the preserved-inode commit path so those ACLs and other
+		// inode metadata survive without truncating the live destination.
 		PosixFileAttributeView targetPosix = Files.getFileAttributeView(target, PosixFileAttributeView.class);
 		if (targetPosix != null) {
+			applyPosixMetadataBestEffort(target, temp);
 			return false;
 		}
 
@@ -151,11 +161,103 @@ public final class AtomicYamlWriter {
 		}
 	}
 
-	private static void writeInPlacePreservingMetadata(Path temp, Path target) throws IOException {
-		try (InputStream input = Files.newInputStream(temp);
-				OutputStream output = Files.newOutputStream(target, StandardOpenOption.WRITE,
-						StandardOpenOption.TRUNCATE_EXISTING)) {
-			input.transferTo(output);
+	private static void applyPosixMetadataBestEffort(Path target, Path temp) {
+		try {
+			PosixFileAttributes attributes = Files.readAttributes(target, PosixFileAttributes.class);
+			PosixFileAttributeView tempPosix = Files.getFileAttributeView(temp, PosixFileAttributeView.class);
+			if (tempPosix == null) {
+				return;
+			}
+			try {
+				tempPosix.setPermissions(attributes.permissions());
+			} catch (IOException | SecurityException ignored) {
+			}
+			try {
+				tempPosix.setGroup(attributes.group());
+			} catch (IOException | SecurityException ignored) {
+			}
+			try {
+				if (!attributes.owner().equals(tempPosix.getOwner())) {
+					tempPosix.setOwner(attributes.owner());
+				}
+			} catch (IOException | SecurityException ignored) {
+			}
+		} catch (IOException | SecurityException ignored) {
+		}
+	}
+
+	private static Path preservedPath(Path target) {
+		return target.getParent().resolve("." + target.getFileName() + PRESERVED_SUFFIX);
+	}
+
+	private static void recoverPreservedInode(Path target, Path preserved) throws IOException {
+		if (!Files.exists(preserved)) {
+			return;
+		}
+		if (Files.isSymbolicLink(preserved)) {
+			throw new IOException("Refusing to follow preserved-inode symlink: " + preserved);
+		}
+		if (!Files.exists(target)) {
+			moveReplacement(preserved, target);
+			return;
+		}
+		if (Files.isSameFile(target, preserved)) {
+			Files.delete(preserved);
+			return;
+		}
+
+		copyCompleteContents(target, preserved);
+		moveReplacement(preserved, target);
+	}
+
+	private static void commitThroughPreservedInode(Path temp, Path target, Path preserved) throws IOException {
+		Files.deleteIfExists(preserved);
+		Files.createLink(preserved, target);
+		boolean livePathReplaced = false;
+		try {
+			// The fully serialized temp becomes the live path first. If any later copy
+			// into the preserved inode fails, the live path still contains a complete
+			// new YAML rather than a truncated file.
+			moveReplacement(temp, target);
+			livePathReplaced = true;
+
+			// Refill the preserved original inode while it is off-path, then atomically
+			// restore that inode to the live path so POSIX ACLs/ownership/xattrs survive.
+			copyCompleteContents(target, preserved);
+			moveReplacement(preserved, target);
+		} catch (IOException | RuntimeException e) {
+			if (!livePathReplaced) {
+				Files.deleteIfExists(preserved);
+			}
+			// Once the live path has been replaced, leave the preserved inode in place
+			// on failure. A later save will repair it from the complete live file before
+			// attempting another commit.
+			throw e;
+		}
+	}
+
+	private static void copyCompleteContents(Path source, Path destination) throws IOException {
+		try (FileChannel input = FileChannel.open(source, StandardOpenOption.READ);
+				FileChannel output = FileChannel.open(destination, StandardOpenOption.WRITE)) {
+			ByteBuffer buffer = ByteBuffer.allocateDirect(64 * 1024);
+			output.position(0L);
+			while (input.read(buffer) != -1) {
+				buffer.flip();
+				while (buffer.hasRemaining()) {
+					output.write(buffer);
+				}
+				buffer.clear();
+			}
+			output.truncate(output.position());
+			output.force(true);
+		}
+	}
+
+	private static void moveReplacement(Path source, Path target) throws IOException {
+		try {
+			Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+		} catch (AtomicMoveNotSupportedException e) {
+			Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
 		}
 	}
 }
