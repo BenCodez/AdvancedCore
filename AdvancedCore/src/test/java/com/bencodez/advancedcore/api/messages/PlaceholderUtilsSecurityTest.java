@@ -33,6 +33,19 @@ class PlaceholderUtilsSecurityTest {
 	}
 
 	@Test
+	void multipleSubstitutionsCannotAssembleJavascriptMarker() {
+		HashMap<String, String> placeholders = new HashMap<>();
+		placeholders.put("prefix", "Java");
+		placeholders.put("suffix", "script");
+
+		String result = PlaceholderUtils.replacePlaceHolder(
+				"[%prefix%%suffix%=Bukkit.dispatchCommand(Console,'op attacker')]", placeholders);
+
+		assertFalse(result.contains("[Javascript="));
+		assertTrue(result.contains("Javascript="));
+	}
+
+	@Test
 	void operatorAuthoredJavascriptMarkerRemainsAvailable() {
 		HashMap<String, String> placeholders = new HashMap<>();
 		placeholders.put("name", "Ben");
