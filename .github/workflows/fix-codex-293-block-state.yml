@@ -1,0 +1,123 @@
+name: Apply Codex 293 block-state fixes
+
+on:
+  push:
+    branches:
+      - security/javascript-placeholder-hardening
+    paths:
+      - .github/workflows/fix-codex-293-block-state.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/javascript-placeholder-hardening
+          fetch-depth: 0
+      - name: Patch parser and tests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          parser = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderParser.java')
+          text = parser.read_text()
+
+          text = text.replace(
+              '\t\tDeque<Boolean> controlParens = new ArrayDeque<>();\n\t\tint lastControlHeadClose = -1;\n',
+              '\t\tDeque<Boolean> controlParens = new ArrayDeque<>();\n'
+              '\t\tDeque<Boolean> statementBraces = new ArrayDeque<>();\n'
+              '\t\tint lastControlHeadClose = -1;\n'
+              '\t\tint lastStatementBlockClose = -1;\n')
+
+          text = text.replace(
+              'startsRegexLiteral(script, i, lastControlHeadClose)',
+              'startsRegexLiteral(script, i, lastControlHeadClose, lastStatementBlockClose)')
+
+          text = text.replace(
+              '\t\t\tif (current == \'(\') {\n'
+              '\t\t\t\tint keywordEnd = previousNonWhitespace(script, i - 1);\n'
+              '\t\t\t\tcontrolParens.push(CONTROL_HEAD_KEYWORDS.contains(previousIdentifier(script, keywordEnd)));\n'
+              '\t\t\t} else if (current == \')\' && !controlParens.isEmpty()) {\n'
+              '\t\t\t\tif (controlParens.pop()) {\n'
+              '\t\t\t\t\tlastControlHeadClose = i;\n'
+              '\t\t\t\t}\n'
+              '\t\t\t}\n',
+              '\t\t\tif (current == \'(\') {\n'
+              '\t\t\t\tint keywordEnd = previousNonWhitespace(script, i - 1);\n'
+              '\t\t\t\tcontrolParens.push(isStandaloneControlHead(script, keywordEnd));\n'
+              '\t\t\t} else if (current == \')\' && !controlParens.isEmpty()) {\n'
+              '\t\t\t\tif (controlParens.pop()) {\n'
+              '\t\t\t\t\tlastControlHeadClose = i;\n'
+              '\t\t\t\t}\n'
+              '\t\t\t}\n'
+              '\t\t\tif (current == \'{\') {\n'
+              '\t\t\t\tstatementBraces.push(opensStatementBlock(script, i));\n'
+              '\t\t\t} else if (current == \'}\' && !statementBraces.isEmpty()) {\n'
+              '\t\t\t\tif (statementBraces.pop()) {\n'
+              '\t\t\t\t\tlastStatementBlockClose = i;\n'
+              '\t\t\t\t}\n'
+              '\t\t\t}\n')
+
+          text = text.replace(
+              'private static boolean startsRegexLiteral(String script, int slashIndex, int lastControlHeadClose) {',
+              'private static boolean startsRegexLiteral(String script, int slashIndex, int lastControlHeadClose,\n'
+              '\t\t\tint lastStatementBlockClose) {')
+          text = text.replace(
+              "\t\tif (previous == '}' && closesStatementBlock(script, previousIndex)) {\n\t\t\treturn true;\n\t\t}\n",
+              "\t\tif (previous == '}' && previousIndex == lastStatementBlockClose) {\n\t\t\treturn true;\n\t\t}\n")
+
+          old_block = re.compile(r'\n\tprivate static boolean closesStatementBlock\(String script, int closeBraceIndex\) \{.*?\n\t\}\n\n\tprivate static int previousNonWhitespace', re.DOTALL)
+          replacement = '''
+\tprivate static boolean isStandaloneControlHead(String script, int keywordEnd) {
+\t\tString keyword = previousIdentifier(script, keywordEnd);
+\t\tif (!CONTROL_HEAD_KEYWORDS.contains(keyword)) {
+\t\t\treturn false;
+\t\t}
+\t\tint keywordStart = keywordEnd - keyword.length() + 1;
+\t\tint prefixIndex = previousNonWhitespace(script, keywordStart - 1);
+\t\treturn prefixIndex < 0 || script.charAt(prefixIndex) != '.';
+\t}
+
+\tprivate static boolean opensStatementBlock(String script, int openBraceIndex) {
+\t\tint prefixIndex = previousNonWhitespace(script, openBraceIndex - 1);
+\t\tif (prefixIndex < 0) {
+\t\t\treturn true;
+\t\t}
+\t\tchar prefix = script.charAt(prefixIndex);
+\t\tif (prefix == ')' || prefix == '}' || prefix == ';' || prefix == '{') {
+\t\t\treturn true;
+\t\t}
+\t\tif (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {
+\t\t\treturn true;
+\t\t}
+\t\treturn BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));
+\t}
+
+\tprivate static int previousNonWhitespace'''
+          text, count = old_block.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit('Unable to replace statement-block scanner')
+          parser.write_text(text)
+
+          tests = Path('AdvancedCore/src/test/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderParserTest.java')
+          t = tests.read_text()
+          marker = '''\t@Test\n\tvoid objectLiteralFollowedByDivisionIsNotTreatedAsRegex() {\n'''
+          additions = '''\t@Test\n\tvoid keywordNamedMemberCallIsNotTreatedAsControlHead() {\n\t\tHashMap<String, Object> bindings = new HashMap<>();\n\t\tString injection = \"'; allowed=true; '\";\n\n\t\tString script = JavascriptPlaceholderParser.replace(\"obj.if(true) / 2; '%untrusted%'\",\n\t\t\t\tignored -> injection, bindings::put);\n\n\t\tassertEquals(\"obj.if(true) / 2; '\\\\'; allowed=true; \\\\''\", script);\n\t\tassertTrue(bindings.isEmpty());\n\t}\n\n\t@Test\n\tvoid bracesInsideObjectLiteralStringsDoNotCreateStatementBlockContext() {\n\t\tHashMap<String, Object> bindings = new HashMap<>();\n\t\tString injection = \"'; allowed=true; '\";\n\n\t\tString script = JavascriptPlaceholderParser.replace(\"var x={a:\\\"){\\\"} / 2; '%untrusted%'\",\n\t\t\t\tignored -> injection, bindings::put);\n\n\t\tassertEquals(\"var x={a:\\\"){\\\"} / 2; '\\\\'; allowed=true; \\\\''\", script);\n\t\tassertTrue(bindings.isEmpty());\n\t}\n\n'''
+          if marker not in t:
+              raise SystemExit('Unable to locate parser test insertion point')
+          t = t.replace(marker, additions + marker, 1)
+          tests.write_text(t)
+          PY
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderParser.java AdvancedCore/src/test/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderParserTest.java
+          git rm .github/workflows/fix-codex-293-block-state.yml
+          git commit -m "Track JavaScript block context lexically"
+          git push origin HEAD:security/javascript-placeholder-hardening
