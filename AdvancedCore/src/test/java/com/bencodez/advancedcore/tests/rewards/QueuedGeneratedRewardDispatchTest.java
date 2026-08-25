@@ -5,6 +5,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
@@ -21,6 +23,8 @@ import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 class QueuedGeneratedRewardDispatchTest {
+
+    private static final String QUEUE_PREFIX = "\\AdvancedCoreQueue/1/";
 
     private AdvancedCorePlugin plugin;
     private RewardHandler handler;
@@ -39,6 +43,12 @@ class QueuedGeneratedRewardDispatchTest {
         when(user.getUUID()).thenReturn("uuid");
         when(user.getPlayerName()).thenReturn("Ben");
         when(user.isOnline()).thenReturn(true);
+    }
+
+    private String queuedReference(String rewardName, boolean snapshot) {
+        String encodedName = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(rewardName.getBytes(StandardCharsets.UTF_8));
+        return QUEUE_PREFIX + (snapshot ? "snapshot/" : "normal/") + encodedName;
     }
 
     @Test
@@ -97,7 +107,7 @@ class QueuedGeneratedRewardDispatchTest {
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            executor.giveReward(user, "Daily%generatedsnapshot%false", options);
+            executor.giveReward(user, queuedReference("Daily", false), options);
         }
 
         verify(normal).giveReward(user, options);
@@ -114,7 +124,7 @@ class QueuedGeneratedRewardDispatchTest {
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            executor.giveReward(user, "Daily%generatedsnapshot%true", options);
+            executor.giveReward(user, queuedReference("Daily", true), options);
         }
 
         verify(queued).giveReward(user, options);
@@ -137,6 +147,25 @@ class QueuedGeneratedRewardDispatchTest {
 
         verify(normal).giveReward(user, options);
         verify(handler, never()).getQueuedGeneratedReward("Daily", "uuid");
+    }
+
+    @Test
+    void legacyQueueNameEndingInOldMarkerIsPreservedExactly() {
+        String rewardName = "Promo%generatedsnapshot%true";
+        Reward normal = mock(Reward.class);
+        RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);
+        when(handler.rewardExist(rewardName)).thenReturn(true);
+        when(handler.getReward(rewardName)).thenReturn(normal);
+
+        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+            executor.giveReward(user, rewardName, options);
+        }
+
+        verify(handler).getReward(rewardName);
+        verify(normal).giveReward(user, options);
+        verify(handler, never()).getQueuedGeneratedReward("Promo", "uuid");
+        verify(handler, never()).getReward("Promo");
     }
 
     @Test
