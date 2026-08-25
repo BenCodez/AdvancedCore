@@ -32,6 +32,13 @@ final class QueuedGeneratedReward extends Reward {
 	}
 
 	@Override
+	public boolean isGeneratedSnapshotCreated() {
+		// A loaded generated snapshot must retain snapshot provenance if execution is
+		// deferred again (paused rewards, vanish-as-offline, or another offline retry).
+		return true;
+	}
+
+	@Override
 	public void validate() {
 		// This file is a persisted snapshot created from a reward that was already
 		// validated before it was queued. Revalidating requires the live injected
