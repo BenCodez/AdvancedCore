@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -84,8 +85,7 @@ public class RewardLoader {
 				File generatedFile = new File(folder, fileName);
 				YamlConfiguration data = YamlConfiguration.loadConfiguration(generatedFile);
 				if (data.getBoolean("DirectlyDefinedReward", false)) {
-					String rewardName = fileName.substring(0, fileName.length() - ".yml".length());
-					suppressedDirectlyDefinedRewards.add(RewardRegistry.normalizeDirectPath(rewardName));
+					suppressedDirectlyDefinedRewards.add(fileName.toLowerCase(Locale.ROOT));
 				}
 			}
 		}
@@ -217,9 +217,9 @@ public class RewardLoader {
 	private void loadRewards(File file) {
 		for (String reward : getRewardNames(file)) {
 			if (!reward.equals("")) {
-				String normalized = RewardRegistry.normalizeDirectPath(reward);
+				String exactFileName = (reward + ".yml").toLowerCase(Locale.ROOT);
 				if (file.getName().equalsIgnoreCase("DirectlyDefined")
-						&& suppressedDirectlyDefinedRewards.contains(normalized)) {
+						&& suppressedDirectlyDefinedRewards.contains(exactFileName)) {
 					plugin.extraDebug("Suppressing generated queued reward from standalone lookup: " + reward);
 					continue;
 				}

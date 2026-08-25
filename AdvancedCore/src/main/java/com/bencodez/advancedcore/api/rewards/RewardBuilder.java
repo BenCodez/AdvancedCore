@@ -85,25 +85,8 @@ public class RewardBuilder {
 				handler.giveReward(user, data, path, rewardOptions);
 			}
 		} else {
-			if (isPersistedQueueReplay()) {
-				Reward queued = handler.getQueuedGeneratedReward(reward.getRewardName(), user.getUUID());
-				if (queued != null) {
-					handler.giveReward(user, queued, rewardOptions);
-					return;
-				}
-			}
 			handler.giveReward(user, reward, rewardOptions);
 		}
-	}
-
-	private boolean isPersistedQueueReplay() {
-		if (rewardOptions == null || rewardOptions.isCheckTimed()) {
-			return false;
-		}
-		if (rewardOptions.isOnlineSet() && !rewardOptions.isOnline()) {
-			return true;
-		}
-		return rewardOptions.getPlaceholders().containsKey("date");
 	}
 
 	public void send(AdvancedCoreUser... users) {

@@ -17,6 +17,8 @@ import com.bencodez.simpleapi.array.ArrayUtils;
  */
 public class RewardExecutor {
 
+    private static final String QUEUED_SNAPSHOT_MARKER = "%generatedsnapshot%";
+
     private final RewardHandler handler;
     private final AdvancedCorePlugin plugin;
 
@@ -123,12 +125,36 @@ public class RewardExecutor {
             return;
         }
 
+        String rewardName = reward;
+        Boolean generatedSnapshot = null;
+        int snapshotMarker = reward.indexOf(QUEUED_SNAPSHOT_MARKER);
+        if (snapshotMarker >= 0) {
+            rewardName = reward.substring(0, snapshotMarker);
+            generatedSnapshot = Boolean.valueOf(reward.substring(snapshotMarker + QUEUED_SNAPSHOT_MARKER.length()));
+        }
+
         Reward resolved = null;
         if (isPersistedQueueReplay(context.getOptions())) {
-            resolved = handler.getQueuedGeneratedReward(reward, user.getUUID());
-        }
-        if (resolved == null) {
-            resolved = handler.getReward(reward);
+            if (generatedSnapshot != null) {
+                if (generatedSnapshot.booleanValue()) {
+                    resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());
+                } else {
+                    resolved = handler.getReward(rewardName);
+                }
+            } else if (handler.rewardExist(rewardName) || handler.hasDirectRewardHandle(rewardName)) {
+                // Legacy queue entry: if a normal registered reward exists, it wins over any
+                // stale generated file with the same name.
+                resolved = handler.getReward(rewardName);
+            } else {
+                // Legacy generated entries did not persist provenance. Preserve them only when
+                // there is no registered reward they could shadow.
+                resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());
+                if (resolved == null) {
+                    resolved = handler.getReward(rewardName);
+                }
+            }
+        } else {
+            resolved = handler.getReward(rewardName);
         }
         giveReward(user, resolved, context.getOptions());
     }

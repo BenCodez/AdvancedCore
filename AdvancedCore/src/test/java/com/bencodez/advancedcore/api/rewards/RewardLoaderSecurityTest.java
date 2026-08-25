@@ -122,6 +122,42 @@ class RewardLoaderSecurityTest {
 	}
 
 	@Test
+	void generatedDotNameDoesNotSuppressManualUnderscoreName() throws IOException {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		RewardHandler handler = mock(RewardHandler.class);
+		RewardRegistry registry = mock(RewardRegistry.class);
+		Logger logger = mock(Logger.class);
+		ArrayList<Reward> rewards = new ArrayList<>();
+
+		File directlyDefined = new File(tempDir, "Rewards/DirectlyDefined");
+		assertTrue(directlyDefined.mkdirs());
+		YamlConfiguration generatedData = new YamlConfiguration();
+		generatedData.set("DirectlyDefinedReward", true);
+		generatedData.set("Messages", List.of("generated"));
+		generatedData.save(new File(directlyDefined, "Foo.Bar.yml"));
+		YamlConfiguration manualData = new YamlConfiguration();
+		manualData.set("Messages", List.of("manual"));
+		manualData.save(new File(directlyDefined, "Foo_Bar.yml"));
+
+		when(plugin.getDataFolder()).thenReturn(tempDir);
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getLogger()).thenReturn(logger);
+		when(options.isLoadDefaultRewards()).thenReturn(false);
+		when(handler.getRewardRegistry()).thenReturn(registry);
+		when(handler.getRewards()).thenReturn(rewards);
+		when(handler.rewardExist("Foo_Bar")).thenReturn(false);
+
+		AdvancedCorePlugin.setInstance(plugin);
+		RewardLoader loader = new RewardLoader(handler, plugin);
+		loader.addRewardFolder(directlyDefined, false, false);
+		loader.loadRewards();
+
+		assertEquals(1, rewards.size());
+		assertEquals("Foo_Bar", rewards.get(0).getName());
+	}
+
+	@Test
 	void loadRewardsDoesNotSuppressNormalDirectFolderFileWithoutGeneratedMarker() throws IOException {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);

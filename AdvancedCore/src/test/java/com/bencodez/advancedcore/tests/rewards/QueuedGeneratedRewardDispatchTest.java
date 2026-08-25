@@ -91,6 +91,58 @@ class QueuedGeneratedRewardDispatchTest {
     }
 
     @Test
+    void explicitNormalQueueReferenceDoesNotUseStaleSnapshot() {
+        Reward normal = mock(Reward.class);
+        Reward stale = mock(Reward.class);
+        RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);
+        when(handler.getReward("Daily")).thenReturn(normal);
+        when(handler.getQueuedGeneratedReward("Daily", "uuid")).thenReturn(stale);
+
+        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+            executor.giveReward(user, "Daily%generatedsnapshot%false", options);
+        }
+
+        verify(normal).giveReward(user, options);
+        verify(handler, never()).getQueuedGeneratedReward("Daily", "uuid");
+    }
+
+    @Test
+    void explicitSnapshotQueueReferenceUsesGeneratedSnapshot() {
+        Reward queued = mock(Reward.class);
+        Reward normal = mock(Reward.class);
+        RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);
+        when(handler.getQueuedGeneratedReward("Daily", "uuid")).thenReturn(queued);
+        when(handler.getReward("Daily")).thenReturn(normal);
+
+        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+            executor.giveReward(user, "Daily%generatedsnapshot%true", options);
+        }
+
+        verify(queued).giveReward(user, options);
+        verify(handler, never()).getReward("Daily");
+    }
+
+    @Test
+    void legacyQueueReferencePrefersRegisteredRewardOverStaleSnapshot() {
+        Reward normal = mock(Reward.class);
+        Reward stale = mock(Reward.class);
+        RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);
+        when(handler.rewardExist("Daily")).thenReturn(true);
+        when(handler.getReward("Daily")).thenReturn(normal);
+        when(handler.getQueuedGeneratedReward("Daily", "uuid")).thenReturn(stale);
+
+        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+            executor.giveReward(user, "Daily", options);
+        }
+
+        verify(normal).giveReward(user, options);
+        verify(handler, never()).getQueuedGeneratedReward("Daily", "uuid");
+    }
+
+    @Test
     void normalStandaloneDispatchCannotResolveGeneratedSnapshot() {
         RewardOptions options = new RewardOptions();
 
