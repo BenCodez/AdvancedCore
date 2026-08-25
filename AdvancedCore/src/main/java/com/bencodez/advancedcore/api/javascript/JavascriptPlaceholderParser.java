@@ -205,6 +205,9 @@ final class JavascriptPlaceholderParser {
 			return true;
 		}
 		char previous = script.charAt(previousIndex);
+		if ((previous == '+' || previous == '-') && isPostfixIncrementOrDecrement(script, previousIndex)) {
+			return false;
+		}
 		if ("([{:;,=!?&|+-*%^~<>".indexOf(previous) >= 0) {
 			return true;
 		}
@@ -216,6 +219,20 @@ final class JavascriptPlaceholderParser {
 		}
 		String previousWord = previousIdentifier(script, previousIndex);
 		return REGEX_PREFIX_KEYWORDS.contains(previousWord);
+	}
+
+	private static boolean isPostfixIncrementOrDecrement(String script, int operatorEndIndex) {
+		char operator = script.charAt(operatorEndIndex);
+		if (operatorEndIndex == 0 || script.charAt(operatorEndIndex - 1) != operator) {
+			return false;
+		}
+		int operandEnd = previousNonWhitespace(script, operatorEndIndex - 2);
+		if (operandEnd < 0) {
+			return false;
+		}
+		char operand = script.charAt(operandEnd);
+		return Character.isJavaIdentifierPart(operand) || Character.isDigit(operand) || operand == ')' || operand == ']'
+				|| operand == '}';
 	}
 
 	private static boolean closesControlHead(String script, int closeParenIndex) {
