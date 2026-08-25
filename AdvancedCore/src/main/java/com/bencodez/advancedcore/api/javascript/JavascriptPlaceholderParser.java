@@ -16,7 +16,7 @@ final class JavascriptPlaceholderParser {
 	private static final Set<String> REGEX_PREFIX_KEYWORDS = Set.of("return", "throw", "case", "delete", "void",
 			"typeof", "instanceof", "in", "of", "new", "yield", "await", "else", "do");
 	private static final Set<String> CONTROL_HEAD_KEYWORDS = Set.of("if", "while", "for", "with", "switch", "catch");
-	private static final Set<String> BLOCK_PREFIX_KEYWORDS = Set.of("else", "do", "try", "finally");
+	private static final Set<String> BLOCK_PREFIX_KEYWORDS = Set.of("else", "do", "try", "finally", "static");
 
 	private JavascriptPlaceholderParser() {
 	}
@@ -72,11 +72,13 @@ final class JavascriptPlaceholderParser {
 
 	private static Context contextAt(String script, int end) {
 		Deque<TemplateFrame> templates = new ArrayDeque<>();
+		Deque<Boolean> controlParens = new ArrayDeque<>();
+		Deque<Boolean> statementBraces = new ArrayDeque<>();
 		Context context = Context.CODE;
 		boolean escaped = false;
 		boolean regexCharacterClass = false;
-		Deque<Boolean> controlParens = new ArrayDeque<>();
 		int lastControlHeadClose = -1;
+		int lastStatementBlockClose = -1;
 
 		for (int i = 0; i < end; i++) {
 			char current = script.charAt(i);
@@ -160,7 +162,7 @@ final class JavascriptPlaceholderParser {
 				i++;
 				continue;
 			}
-			if (current == '/' && startsRegexLiteral(script, i, lastControlHeadClose)) {
+			if (current == '/' && startsRegexLiteral(script, i, lastControlHeadClose, lastStatementBlockClose)) {
 				context = Context.REGEX;
 				escaped = false;
 				regexCharacterClass = false;
@@ -183,16 +185,24 @@ final class JavascriptPlaceholderParser {
 			}
 			if (current == '(') {
 				int keywordEnd = previousNonWhitespace(script, i - 1);
-				controlParens.push(CONTROL_HEAD_KEYWORDS.contains(previousIdentifier(script, keywordEnd)));
+				controlParens.push(isStandaloneControlHead(script, keywordEnd, statementBraces));
 			} else if (current == ')' && !controlParens.isEmpty()) {
 				if (controlParens.pop()) {
 					lastControlHeadClose = i;
 				}
 			}
-			if (!templates.isEmpty() && templates.peek().expressionDepth > 0) {
-				if (current == '{') {
+
+			if (current == '{') {
+				statementBraces.push(opensStatementBlock(script, i));
+				if (!templates.isEmpty() && templates.peek().expressionDepth > 0) {
 					templates.peek().expressionDepth++;
-				} else if (current == '}') {
+				}
+			} else if (current == '}') {
+				boolean closesTemplateExpression = !templates.isEmpty() && templates.peek().expressionDepth == 1;
+				if (!closesTemplateExpression && !statementBraces.isEmpty() && statementBraces.pop()) {
+					lastStatementBlockClose = i;
+				}
+				if (!templates.isEmpty() && templates.peek().expressionDepth > 0) {
 					templates.peek().expressionDepth--;
 					if (templates.peek().expressionDepth == 0) {
 						context = Context.TEMPLATE_TEXT;
@@ -209,7 +219,8 @@ final class JavascriptPlaceholderParser {
 		return context;
 	}
 
-	private static boolean startsRegexLiteral(String script, int slashIndex, int lastControlHeadClose) {
+	private static boolean startsRegexLiteral(String script, int slashIndex, int lastControlHeadClose,
+			int lastStatementBlockClose) {
 		int previousIndex = previousNonWhitespace(script, slashIndex - 1);
 		if (previousIndex < 0) {
 			return true;
@@ -224,11 +235,28 @@ final class JavascriptPlaceholderParser {
 		if (previous == ')' && previousIndex == lastControlHeadClose) {
 			return true;
 		}
-		if (previous == '}' && closesStatementBlock(script, previousIndex)) {
+		if (previous == '}' && previousIndex == lastStatementBlockClose) {
 			return true;
 		}
 		String previousWord = previousIdentifier(script, previousIndex);
 		return REGEX_PREFIX_KEYWORDS.contains(previousWord);
+	}
+
+	private static boolean isStandaloneControlHead(String script, int keywordEnd, Deque<Boolean> statementBraces) {
+		String keyword = previousIdentifier(script, keywordEnd);
+		if (!CONTROL_HEAD_KEYWORDS.contains(keyword)) {
+			return false;
+		}
+		int keywordStart = identifierStart(script, keywordEnd);
+		int beforeKeyword = previousNonWhitespace(script, keywordStart - 1);
+		if (beforeKeyword >= 0 && script.charAt(beforeKeyword) == '.') {
+			return false;
+		}
+		// A control statement cannot occur directly at object-literal/class-member level.
+		// This prevents method/property names such as { if() {} } from being mistaken
+		// for statement keywords while still allowing control statements inside a
+		// nested method/function body (whose brace is classified as a statement block).
+		return statementBraces.isEmpty() || statementBraces.peek();
 	}
 
 	private static boolean isPostfixIncrementOrDecrement(String script, int operatorEndIndex) {
@@ -245,31 +273,19 @@ final class JavascriptPlaceholderParser {
 				|| operand == '}';
 	}
 
-	private static boolean closesStatementBlock(String script, int closeBraceIndex) {
-		int depth = 1;
-		for (int i = closeBraceIndex - 1; i >= 0; i--) {
-			char current = script.charAt(i);
-			if (current == '}') {
-				depth++;
-			} else if (current == '{') {
-				depth--;
-				if (depth == 0) {
-					int prefixIndex = previousNonWhitespace(script, i - 1);
-					if (prefixIndex < 0) {
-						return true;
-					}
-					char prefix = script.charAt(prefixIndex);
-					if (prefix == ')' || prefix == '}' || prefix == ';') {
-						return true;
-					}
-					if (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {
-						return true;
-					}
-					return BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));
-				}
-			}
+	private static boolean opensStatementBlock(String script, int openBraceIndex) {
+		int prefixIndex = previousNonWhitespace(script, openBraceIndex - 1);
+		if (prefixIndex < 0) {
+			return true;
 		}
-		return false;
+		char prefix = script.charAt(prefixIndex);
+		if (prefix == ')' || prefix == '}' || prefix == ';') {
+			return true;
+		}
+		if (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {
+			return true;
+		}
+		return BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));
 	}
 
 	private static int previousNonWhitespace(String script, int index) {
@@ -281,14 +297,22 @@ final class JavascriptPlaceholderParser {
 		return -1;
 	}
 
-	private static String previousIdentifier(String script, int endIndex) {
+	private static int identifierStart(String script, int endIndex) {
 		if (endIndex < 0 || !Character.isJavaIdentifierPart(script.charAt(endIndex))) {
-			return "";
+			return endIndex + 1;
 		}
 		int start = endIndex;
 		while (start > 0 && Character.isJavaIdentifierPart(script.charAt(start - 1))) {
 			start--;
 		}
+		return start;
+	}
+
+	private static String previousIdentifier(String script, int endIndex) {
+		if (endIndex < 0 || !Character.isJavaIdentifierPart(script.charAt(endIndex))) {
+			return "";
+		}
+		int start = identifierStart(script, endIndex);
 		return script.substring(start, endIndex + 1);
 	}
 
