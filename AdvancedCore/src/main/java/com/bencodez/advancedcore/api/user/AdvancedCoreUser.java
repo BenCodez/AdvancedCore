@@ -327,7 +327,7 @@ public class AdvancedCoreUser {
 					replayOptions.addPlaceholder("date",
 							"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));
 					plugin.getRewardHandler().giveReward(this, rewardReference, replayOptions);
-					String rewardName = rewardReference.split(QUEUED_SNAPSHOT_MARKER, 2)[0];
+					String rewardName = rewardReference;
 					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
 							+ " with placeholders " + ArrayUtils.fromString(placeholders));
 				} else {
