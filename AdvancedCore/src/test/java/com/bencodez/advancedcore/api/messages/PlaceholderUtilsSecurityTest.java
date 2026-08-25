@@ -57,6 +57,13 @@ class PlaceholderUtilsSecurityTest {
 	}
 
 	@Test
+	void emptyPlaceholderMapLeavesOperatorAuthoredMarkerUntouched() {
+		String result = PlaceholderUtils.replacePlaceHolder("[Javascript=1+1]", new HashMap<>());
+
+		assertTrue(result.contains("[Javascript=1+1]"));
+	}
+
+	@Test
 	void normalPlaceholderFormattingIsPreserved() {
 		HashMap<String, String> placeholders = new HashMap<>();
 		placeholders.put("displayname", "&aDisplay Name");
