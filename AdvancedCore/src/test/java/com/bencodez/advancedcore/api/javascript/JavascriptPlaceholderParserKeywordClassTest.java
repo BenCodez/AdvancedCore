@@ -16,7 +16,7 @@ class JavascriptPlaceholderParserKeywordClassTest {
 
 		String script = JavascriptPlaceholderParser.replace(
 				"var allowed=false,obj={return:4}; obj.return / 2; '%untrusted%'; allowed",
-				ignored -> injection, bindings::put);
+				placeholder -> placeholder.equals("%untrusted%") ? injection : placeholder, bindings::put);
 
 		assertEquals("var allowed=false,obj={return:4}; obj.return / 2; '\\'; allowed=true; \\''; allowed", script);
 		assertTrue(bindings.isEmpty());
