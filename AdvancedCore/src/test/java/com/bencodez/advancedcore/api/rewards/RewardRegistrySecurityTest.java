@@ -20,6 +20,7 @@ class RewardRegistrySecurityTest {
 		assertFalse(RewardRegistry.isSafeRewardFileName("../../OtherPlugin/config"));
 		assertFalse(RewardRegistry.isSafeRewardFileName("..\\..\\OtherPlugin\\config"));
 		assertFalse(RewardRegistry.isSafeRewardFileName("folder/reward"));
+		assertFalse(RewardRegistry.isSafeRewardFileName("reward\0name"));
 	}
 
 	@Test
