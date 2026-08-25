@@ -37,10 +37,23 @@ public class SubDirectlyDefinedReward implements DefinedReward {
 
 	public Reward getReward() {
 		if (isDirectlyDefined()) {
-			return new Reward((master.getFullPath() + master.needsDot() + getPath()).replace(".", "_"),
-					getFileData().getConfigurationSection(getPath())).needsRewardFile(false);
+			Reward reward = new Reward((master.getFullPath() + master.needsDot() + getPath()).replace(".", "_"),
+					getFileData().getConfigurationSection(getPath()));
+			// File-backed sub rewards are not exposed through standalone lookup, but they
+			// still need a generated queue snapshot if delayed/timed/offline execution
+			// defers them. Directly-defined sub rewards already have a stable internal
+			// definition and do not need snapshot materialization.
+			return isFileBacked() ? reward : reward.needsRewardFile(false);
 		}
 		return null;
+	}
+
+	private boolean isFileBacked() {
+		DefinedReward current = master;
+		while (current instanceof SubDirectlyDefinedReward) {
+			current = ((SubDirectlyDefinedReward) current).getMaster();
+		}
+		return current instanceof RewardFileDefinedReward;
 	}
 
 	public Object getValue(String path) {
