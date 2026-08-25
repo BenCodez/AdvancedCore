@@ -9,7 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 final class JavascriptPlaceholderParser {
-	private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("%([^%]+)%|(?<!\\$)\\{([^{}]+)\\}");
+	private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("%([^%]+)%|(?<!\\$)\\{([^{}%]+)\\}");
 	private static final Pattern INTEGER_PATTERN = Pattern.compile("[-+]?\\d+");
 	private static final Pattern DECIMAL_PATTERN = Pattern.compile("[-+]?(?:\\d+\\.\\d*|\\d*\\.\\d+|\\d+)(?:[eE][-+]?\\d+)?");
 	private static final String VARIABLE_PREFIX = "__advancedCorePlaceholder";
@@ -75,6 +75,8 @@ final class JavascriptPlaceholderParser {
 		Context context = Context.CODE;
 		boolean escaped = false;
 		boolean regexCharacterClass = false;
+		Deque<Boolean> controlParens = new ArrayDeque<>();
+		int lastControlHeadClose = -1;
 
 		for (int i = 0; i < end; i++) {
 			char current = script.charAt(i);
@@ -158,7 +160,7 @@ final class JavascriptPlaceholderParser {
 				i++;
 				continue;
 			}
-			if (current == '/' && startsRegexLiteral(script, i)) {
+			if (current == '/' && startsRegexLiteral(script, i, lastControlHeadClose)) {
 				context = Context.REGEX;
 				escaped = false;
 				regexCharacterClass = false;
@@ -178,6 +180,14 @@ final class JavascriptPlaceholderParser {
 				templates.push(new TemplateFrame());
 				context = Context.TEMPLATE_TEXT;
 				continue;
+			}
+			if (current == '(') {
+				int keywordEnd = previousNonWhitespace(script, i - 1);
+				controlParens.push(CONTROL_HEAD_KEYWORDS.contains(previousIdentifier(script, keywordEnd)));
+			} else if (current == ')' && !controlParens.isEmpty()) {
+				if (controlParens.pop()) {
+					lastControlHeadClose = i;
+				}
 			}
 			if (!templates.isEmpty() && templates.peek().expressionDepth > 0) {
 				if (current == '{') {
@@ -199,7 +209,7 @@ final class JavascriptPlaceholderParser {
 		return context;
 	}
 
-	private static boolean startsRegexLiteral(String script, int slashIndex) {
+	private static boolean startsRegexLiteral(String script, int slashIndex, int lastControlHeadClose) {
 		int previousIndex = previousNonWhitespace(script, slashIndex - 1);
 		if (previousIndex < 0) {
 			return true;
@@ -211,7 +221,7 @@ final class JavascriptPlaceholderParser {
 		if ("([{:;,=!?&|+-*%^~<>".indexOf(previous) >= 0) {
 			return true;
 		}
-		if (previous == ')' && closesControlHead(script, previousIndex)) {
+		if (previous == ')' && previousIndex == lastControlHeadClose) {
 			return true;
 		}
 		if (previous == '}' && closesStatementBlock(script, previousIndex)) {
@@ -233,23 +243,6 @@ final class JavascriptPlaceholderParser {
 		char operand = script.charAt(operandEnd);
 		return Character.isJavaIdentifierPart(operand) || Character.isDigit(operand) || operand == ')' || operand == ']'
 				|| operand == '}';
-	}
-
-	private static boolean closesControlHead(String script, int closeParenIndex) {
-		int depth = 1;
-		for (int i = closeParenIndex - 1; i >= 0; i--) {
-			char current = script.charAt(i);
-			if (current == ')') {
-				depth++;
-			} else if (current == '(') {
-				depth--;
-				if (depth == 0) {
-					int keywordEnd = previousNonWhitespace(script, i - 1);
-					return CONTROL_HEAD_KEYWORDS.contains(previousIdentifier(script, keywordEnd));
-				}
-			}
-		}
-		return false;
 	}
 
 	private static boolean closesStatementBlock(String script, int closeBraceIndex) {

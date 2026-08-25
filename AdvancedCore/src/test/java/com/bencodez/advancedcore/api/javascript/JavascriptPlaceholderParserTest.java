@@ -134,6 +134,41 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void controlHeadIgnoresParenthesesInsideStrings() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace("if (fn(\")\")) /[']/.test('x'); %untrusted%",
+				ignored -> injection, bindings::put);
+
+		assertEquals("if (fn(\")\")) /[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
+	void controlHeadIgnoresParenthesesInsideRegexLiterals() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace("if (/\\)/.test(value)) /[']/.test('x'); %untrusted%",
+				ignored -> injection, bindings::put);
+
+		assertEquals("if (/\\)/.test(value)) /[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
+	void objectLiteralDoesNotConsumeNestedPercentPlaceholder() {
+		HashMap<String, Object> bindings = new HashMap<>();
+
+		String script = JavascriptPlaceholderParser.replace("({allowed: %permission_result%}).allowed",
+				placeholder -> placeholder.equals("%permission_result%") ? "true" : placeholder, bindings::put);
+
+		assertEquals("({allowed: __advancedCorePlaceholder0}).allowed", script);
+		assertEquals(Boolean.TRUE, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
 	void objectLiteralFollowedByDivisionIsNotTreatedAsRegex() {
 		HashMap<String, Object> bindings = new HashMap<>();
 
