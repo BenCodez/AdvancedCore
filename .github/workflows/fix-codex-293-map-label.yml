@@ -1,0 +1,59 @@
+name: Apply Codex 293 map and label fixes
+
+on:
+  push:
+    branches:
+      - security/javascript-placeholder-hardening
+    paths:
+      - .github/workflows/fix-codex-293-map-label.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/javascript-placeholder-hardening
+          fetch-depth: 0
+      - name: Patch safe map Javascript flow and labeled blocks
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/messages/PlaceholderUtils.java')
+          text = p.read_text()
+          old = '''\tpublic static ArrayList<String> replaceJavascript(OfflinePlayer player, ArrayList<String> list) {\n\t\tArrayList<String> msg = new ArrayList<>();\n\t\tfor (String str : list) {\n\t\t\tmsg.add(replaceJavascript(player, str));\n\t\t}\n\t\treturn msg;\n\t}\n\n\tpublic static String replaceJavascript(OfflinePlayer player, String text) {\n\t\tif (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {\n\t\t\tif (player.isOnline()) {\n\t\t\t\treturn replaceJavascript(player.getPlayer(), text);\n\t\t\t}\n\t\t\tJavascriptEngine engine = new JavascriptEngine().addPlayer(player);\n\t\t\tString parsed = replaceJavascript(text, engine, player, null);\n\t\t\treturn replacePlaceHolders(player, parsed);\n\t\t}\n\t\treturn replacePlaceHolders(player, text);\n\t}\n'''
+          new = '''\tpublic static ArrayList<String> replaceJavascript(OfflinePlayer player, ArrayList<String> list) {\n\t\treturn replaceJavascript(player, list, null);\n\t}\n\n\tpublic static ArrayList<String> replaceJavascript(OfflinePlayer player, ArrayList<String> list,\n\t\t\tHashMap<String, String> placeholders) {\n\t\tArrayList<String> msg = new ArrayList<>();\n\t\tfor (String str : list) {\n\t\t\tmsg.add(replaceJavascript(player, str, placeholders));\n\t\t}\n\t\treturn msg;\n\t}\n\n\tpublic static String replaceJavascript(OfflinePlayer player, String text) {\n\t\treturn replaceJavascript(player, text, null);\n\t}\n\n\tpublic static String replaceJavascript(OfflinePlayer player, String text, HashMap<String, String> placeholders) {\n\t\tString parsed = text;\n\t\tif (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {\n\t\t\tJavascriptEngine engine = player.isOnline() ? new JavascriptEngine().addPlayer(player.getPlayer())\n\t\t\t\t\t: new JavascriptEngine().addPlayer(player);\n\t\t\tparsed = replaceJavascript(text, engine, player, placeholders);\n\t\t}\n\t\tparsed = replacePlaceHolder(parsed, placeholders);\n\t\treturn replacePlaceHolders(player, parsed);\n\t}\n'''
+          if old not in text:
+              raise SystemExit('PlaceholderUtils offline Javascript block not found')
+          text = text.replace(old, new, 1)
+          text = text.replace('''\tprivate static String replaceJavascript(String text, JavascriptEngine engine, OfflinePlayer player,\n\t\t\tHashMap<String, String> placeholders) {''', '''\tstatic String replaceJavascript(String text, JavascriptEngine engine, OfflinePlayer player,\n\t\t\tHashMap<String, String> placeholders) {''', 1)
+          p.write_text(text)
+
+          p = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/item/ItemBuilder.java')
+          text = p.read_text()
+          old = '''\t\tsetName(MessageAPI.colorize(PlaceholderUtils.replaceJavascript(player,\n\t\t\t\tPlaceholderUtils.replacePlaceHolder(getName(), placeholders))));\n\t\tsetLore(ArrayUtils.colorize(PlaceholderUtils.replaceJavascript(player,\n\t\t\t\tPlaceholderUtils.replacePlaceHolder(getLore(), placeholders))));\n\t\tif (skull.contains("%")) {\n\t\t\tsetSkullOwner(PlaceholderUtils.replaceJavascript(player,\n\t\t\t\t\tPlaceholderUtils.replacePlaceHolder(skull, placeholders)));\n\t\t}\n'''
+          new = '''\t\tsetName(MessageAPI.colorize(PlaceholderUtils.replaceJavascript(player, getName(), placeholders)));\n\t\tsetLore(ArrayUtils.colorize(PlaceholderUtils.replaceJavascript(player, getLore(), placeholders)));\n\t\tif (skull.contains("%")) {\n\t\t\tsetSkullOwner(PlaceholderUtils.replaceJavascript(player, skull, placeholders));\n\t\t}\n'''
+          if old not in text:
+              raise SystemExit('ItemBuilder parsePlaceholders block not found')
+          p.write_text(text.replace(old, new, 1))
+
+          p = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderParser.java')
+          text = p.read_text()
+          text = text.replace('statementBraces.push(opensStatementBlock(script, i));',
+                              'statementBraces.push(opensStatementBlock(script, i, statementBraces));', 1)
+          old = '''\tprivate static boolean opensStatementBlock(String script, int openBraceIndex) {\n\t\tint prefixIndex = previousNonWhitespace(script, openBraceIndex - 1);\n\t\tif (prefixIndex < 0) {\n\t\t\treturn true;\n\t\t}\n\t\tchar prefix = script.charAt(prefixIndex);\n\t\tif (prefix == ')' || prefix == '}' || prefix == ';') {\n\t\t\treturn true;\n\t\t}\n\t\tif (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {\n\t\t\treturn true;\n\t\t}\n\t\treturn BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));\n\t}\n'''
+          new = '''\tprivate static boolean opensStatementBlock(String script, int openBraceIndex, Deque<Boolean> statementBraces) {\n\t\tint prefixIndex = previousNonWhitespace(script, openBraceIndex - 1);\n\t\tif (prefixIndex < 0) {\n\t\t\treturn true;\n\t\t}\n\t\tchar prefix = script.charAt(prefixIndex);\n\t\tif (prefix == ')' || prefix == '}' || prefix == ';') {\n\t\t\treturn true;\n\t\t}\n\t\tif (prefix == ':') {\n\t\t\treturn isStatementLabel(script, prefixIndex, statementBraces);\n\t\t}\n\t\tif (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {\n\t\t\treturn true;\n\t\t}\n\t\treturn BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));\n\t}\n\n\tprivate static boolean isStatementLabel(String script, int colonIndex, Deque<Boolean> statementBraces) {\n\t\tif (!statementBraces.isEmpty() && !statementBraces.peek()) {\n\t\t\treturn false;\n\t\t}\n\t\tint labelEnd = previousNonWhitespace(script, colonIndex - 1);\n\t\tif (labelEnd < 0 || !Character.isJavaIdentifierPart(script.charAt(labelEnd))) {\n\t\t\treturn false;\n\t\t}\n\t\tint labelStart = identifierStart(script, labelEnd);\n\t\tint beforeLabel = previousNonWhitespace(script, labelStart - 1);\n\t\tif (beforeLabel < 0) {\n\t\t\treturn true;\n\t\t}\n\t\tchar before = script.charAt(beforeLabel);\n\t\treturn before == '{' || before == '}' || before == ';' || before == ':';\n\t}\n'''
+          if old not in text:
+              raise SystemExit('opensStatementBlock block not found')
+          p.write_text(text.replace(old, new, 1))
+          PY
+          rm .github/workflows/fix-codex-293-map-label.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Route map values through safe Javascript parsing"
+          git push origin HEAD:security/javascript-placeholder-hardening
