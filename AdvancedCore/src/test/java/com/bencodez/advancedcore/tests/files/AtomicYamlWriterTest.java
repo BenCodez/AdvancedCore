@@ -9,6 +9,7 @@ import java.io.File;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
 import java.util.Set;
@@ -81,10 +82,10 @@ public class AtomicYamlWriterTest {
 	}
 
 	@Test
-	public void preservesExistingPosixPermissions() throws Exception {
+	public void preservesExistingPosixPermissionsAndOwnership() throws Exception {
 		Path target = tempDir.resolve("permissions.yml");
 		FileStore store = Files.getFileStore(tempDir);
-		assumeTrue(store.supportsFileAttributeView("posix"), "POSIX permissions are not available");
+		assumeTrue(store.supportsFileAttributeView("posix"), "POSIX attributes are not available");
 
 		YamlConfiguration original = new YamlConfiguration();
 		original.set("Old", true);
@@ -92,11 +93,15 @@ public class AtomicYamlWriterTest {
 		Set<PosixFilePermission> expected = EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE,
 				PosixFilePermission.GROUP_READ);
 		Files.setPosixFilePermissions(target, expected);
+		PosixFileAttributes before = Files.readAttributes(target, PosixFileAttributes.class);
 
 		YamlConfiguration replacement = new YamlConfiguration();
 		replacement.set("New", true);
 		AtomicYamlWriter.save(target.toFile(), replacement);
 
-		assertEquals(expected, Files.getPosixFilePermissions(target));
+		PosixFileAttributes after = Files.readAttributes(target, PosixFileAttributes.class);
+		assertEquals(expected, after.permissions());
+		assertEquals(before.owner(), after.owner(), "atomic replacement must preserve the file owner");
+		assertEquals(before.group(), after.group(), "atomic replacement must preserve the configured POSIX group");
 	}
 }
