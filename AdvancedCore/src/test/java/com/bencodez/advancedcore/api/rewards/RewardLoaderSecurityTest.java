@@ -10,7 +10,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -20,6 +22,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
+import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
 
 class RewardLoaderSecurityTest {
 
@@ -143,9 +147,13 @@ class RewardLoaderSecurityTest {
 		when(plugin.getDataFolder()).thenReturn(tempDir);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getLogger()).thenReturn(logger);
+		when(plugin.getRewardHandler()).thenReturn(handler);
 		when(options.isLoadDefaultRewards()).thenReturn(false);
 		when(handler.getRewardRegistry()).thenReturn(registry);
 		when(handler.getRewards()).thenReturn(rewards);
+		when(handler.getInjectedRequirements()).thenReturn(new CopyOnWriteArrayList<RequirementInject>());
+		when(handler.getInjectedRewards()).thenReturn(new CopyOnWriteArrayList<RewardInject>());
+		when(handler.getValidPaths()).thenReturn(Set.of("Messages"));
 		when(handler.rewardExist("Foo_Bar")).thenReturn(false);
 
 		AdvancedCorePlugin.setInstance(plugin);
