@@ -123,9 +123,12 @@ public class RewardExecutor {
             return;
         }
 
-        Reward resolved = handler.getReward(reward);
-        if (resolved == null && isPersistedQueueReplay(context.getOptions())) {
+        Reward resolved = null;
+        if (isPersistedQueueReplay(context.getOptions())) {
             resolved = handler.getQueuedGeneratedReward(reward, user.getUUID());
+        }
+        if (resolved == null) {
+            resolved = handler.getReward(reward);
         }
         giveReward(user, resolved, context.getOptions());
     }
