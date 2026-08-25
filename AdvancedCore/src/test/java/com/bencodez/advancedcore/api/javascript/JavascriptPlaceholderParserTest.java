@@ -122,6 +122,30 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void recognizesRegexLiteralAfterLabeledStatementBlock() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \"op attacker\")";
+
+		String script = JavascriptPlaceholderParser.replace("label: {} /[']/.test('x'); %untrusted%", ignored -> injection,
+				bindings::put);
+
+		assertEquals("label: {} /[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
+	@Test
+	void nestedObjectPropertyBlockDoesNotBecomeStatementBlock() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; allowed=true; '";
+
+		String script = JavascriptPlaceholderParser.replace("var x={a: {}} / 2; '%untrusted%'",
+				ignored -> injection, bindings::put);
+
+		assertEquals("var x={a: {}} / 2; '\\'; allowed=true; \\''", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
 	void postfixIncrementBeforeDivisionDoesNotOpenRegexContext() {
 		HashMap<String, Object> bindings = new HashMap<>();
 		String injection = "'; allowed=true; '";
@@ -232,6 +256,18 @@ class JavascriptPlaceholderParserTest {
 
 		assertEquals("/[\\]\\^\\-]/.test(name)", script);
 		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
+	void encodedMapValueIsDecodedAndBoundAsData() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; Bukkit.dispatchCommand(Console, \"op attacker\"); '";
+		String encoded = JavascriptSafeValue.encodePlaceholder(injection);
+
+		String script = JavascriptPlaceholderParser.replace(encoded, value -> value, bindings::put);
+
+		assertEquals("__advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
 	}
 
 	@Test
