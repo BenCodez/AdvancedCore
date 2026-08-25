@@ -174,7 +174,23 @@ class RewardLoaderSecurityTest {
 		Reward reward = new Reward(directlyDefined, "Daily_AdvancedRewards_foo");
 		YamlConfiguration replacement = new YamlConfiguration();
 		replacement.set("Messages", List.of("new message"));
-		reward.getConfig().setData(replacement);
+
+		com.bencodez.advancedcore.api.misc.files.FilesManager filesManager =
+				mock(com.bencodez.advancedcore.api.misc.files.FilesManager.class);
+		org.mockito.Mockito.doAnswer(invocation -> {
+			File file = invocation.getArgument(0);
+			org.bukkit.configuration.file.FileConfiguration config = invocation.getArgument(1);
+			config.save(file);
+			return null;
+		}).when(filesManager).editFile(
+				org.mockito.ArgumentMatchers.any(File.class),
+				org.mockito.ArgumentMatchers.any(org.bukkit.configuration.file.FileConfiguration.class));
+
+		try (org.mockito.MockedStatic<com.bencodez.advancedcore.api.misc.files.FilesManager> files =
+				org.mockito.Mockito.mockStatic(com.bencodez.advancedcore.api.misc.files.FilesManager.class)) {
+			files.when(com.bencodez.advancedcore.api.misc.files.FilesManager::getInstance).thenReturn(filesManager);
+			reward.getConfig().setData(replacement);
+		}
 
 		YamlConfiguration saved = YamlConfiguration.loadConfiguration(snapshot);
 		assertFalse(saved.contains("Commands"));
