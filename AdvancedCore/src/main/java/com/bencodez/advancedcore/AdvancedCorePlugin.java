@@ -1111,58 +1111,20 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
-		if (getOptions().isJavascriptEngineEnabled()) {
-			getLogger().info("Shutting down Javascript engine");
-			JavascriptEngineHandler.getInstance().clearCachedEngine();
-		}
-
-		if (loadUserData && UserStorage.MYSQL.equals(getOptions().getStorageType()) && getMysql() != null) {
-			getMysql().close();
-		}
-		getServerDataFile().setLastUpdated();
-		timer.shutdown();
-		loginTimer.shutdown();
-		timeChecker.getTimer().shutdown();
-		inventoryTimer.shutdown();
-		try {
-			getLogger().info("Allowing background tasks to finish, this could take up to 5 seconds");
-			loginTimer.awaitTermination(2, TimeUnit.SECONDS);
-			timer.awaitTermination(2, TimeUnit.SECONDS);
-			timeChecker.getTimer().awaitTermination(2, TimeUnit.SECONDS);
-			inventoryTimer.awaitTermination(1, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-			debug(e);
-		}
-		rewardHandler.shutdown();
-		loginTimer.shutdownNow();
-		timer.shutdownNow();
-		inventoryTimer.shutdownNow();
-		timeChecker.getTimer().shutdownNow();
-		onUnLoad();
-		getSkullCacheHandler().close();
-		fullInventoryHandler.save();
-
-		hologramHandler.onShutDown();
-
-		if (getPermissionHandler() != null) {
-			getPermissionHandler().shutDown();
-		}
-
-		if (dialogService != null) {
-			dialogService.unregister();
-		}
-
+		new com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown();
 		javaPlugin = null;
 	}
 
 	@Override
 	public void onEnable() {
 		javaPlugin = this;
-		bukkitScheduler = new BukkitScheduler(this);
-		timer = Executors.newSingleThreadScheduledExecutor();
-		loginTimer = Executors.newSingleThreadScheduledExecutor();
+		com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle.RuntimeExecutors runtimeExecutors = com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle
+				.createRuntimeExecutors(this);
+		bukkitScheduler = runtimeExecutors.getBukkitScheduler();
+		timer = runtimeExecutors.getTimer();
+		loginTimer = runtimeExecutors.getLoginTimer();
 		advancedCoreCommandLoader = CommandLoader.getInstance();
-		inventoryTimer = Executors.newSingleThreadScheduledExecutor();
+		inventoryTimer = runtimeExecutors.getInventoryTimer();
 
 		onPreLoad();
 
