@@ -79,13 +79,31 @@ public class RewardBuilder {
 	}
 
 	public void send(AdvancedCoreUser user) {
+		RewardHandler handler = user.getPlugin().getRewardHandler();
 		if (reward == null) {
 			if (data != null) {
-				user.getPlugin().getRewardHandler().giveReward(user, data, path, rewardOptions);
+				handler.giveReward(user, data, path, rewardOptions);
 			}
 		} else {
-			user.getPlugin().getRewardHandler().giveReward(user, reward, rewardOptions);
+			if (isPersistedQueueReplay()) {
+				Reward queued = handler.getQueuedGeneratedReward(reward.getRewardName(), user.getUUID());
+				if (queued != null) {
+					handler.giveReward(user, queued, rewardOptions);
+					return;
+				}
+			}
+			handler.giveReward(user, reward, rewardOptions);
 		}
+	}
+
+	private boolean isPersistedQueueReplay() {
+		if (rewardOptions == null || rewardOptions.isCheckTimed()) {
+			return false;
+		}
+		if (rewardOptions.isOnlineSet() && !rewardOptions.isOnline()) {
+			return true;
+		}
+		return rewardOptions.getPlaceholders().containsKey("date");
 	}
 
 	public void send(AdvancedCoreUser... users) {
