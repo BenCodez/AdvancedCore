@@ -14,6 +14,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
  * Reflection-backed Nexo integration kept isolated from the rest of ItemBuilder.
  */
 public class NexoItemHandle {
+	private static final Map<String, ReflectionCache> DEFAULT_CACHES = new HashMap<>();
 	private static final Map<ClassLoader, Map<String, WeakReference<ReflectionCache>>> CACHES = new WeakHashMap<>();
 
 	private final ReflectionCache cache;
@@ -83,9 +84,14 @@ public class NexoItemHandle {
 
 	private static synchronized ReflectionCache sharedCache(ClassLoader classLoader, String apiClassName,
 			String builderClassName) {
+		String key = apiClassName + '\0' + builderClassName;
+		if (classLoader == NexoItemHandle.class.getClassLoader()) {
+			return DEFAULT_CACHES.computeIfAbsent(key,
+					ignored -> new ReflectionCache(classLoader, apiClassName, builderClassName));
+		}
+
 		Map<String, WeakReference<ReflectionCache>> classLoaderCaches = CACHES.computeIfAbsent(classLoader,
 				ignored -> new HashMap<>());
-		String key = apiClassName + '\0' + builderClassName;
 		WeakReference<ReflectionCache> reference = classLoaderCaches.get(key);
 		ReflectionCache existing = reference == null ? null : reference.get();
 		if (existing != null) {
