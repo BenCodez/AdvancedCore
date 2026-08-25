@@ -14,6 +14,7 @@ import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardExecutor;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
@@ -33,16 +34,20 @@ class QueuedGeneratedRewardDispatchTest {
         user = mock(AdvancedCoreUser.class);
         executor = new RewardExecutor(handler, plugin);
         when(plugin.getLogger()).thenReturn(mock(Logger.class));
+        when(plugin.getRewardHandler()).thenReturn(handler);
+        when(user.getPlugin()).thenReturn(plugin);
         when(user.getUUID()).thenReturn("uuid");
         when(user.getPlayerName()).thenReturn("Ben");
         when(user.isOnline()).thenReturn(true);
     }
 
     @Test
-    void offlineQueueReplayCanResolveGeneratedSnapshot() {
+    void offlineQueueReplayResolvesGeneratedSnapshotBeforeNormalFallback() {
         Reward queued = mock(Reward.class);
+        Reward fallback = mock(Reward.class);
         RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);
         when(handler.getQueuedGeneratedReward("QueuedReward", "uuid")).thenReturn(queued);
+        when(handler.getReward("QueuedReward")).thenReturn(fallback);
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
@@ -50,7 +55,9 @@ class QueuedGeneratedRewardDispatchTest {
         }
 
         verify(handler).getQueuedGeneratedReward("QueuedReward", "uuid");
+        verify(handler, never()).getReward("QueuedReward");
         verify(queued).giveReward(user, options);
+        verify(fallback, never()).giveReward(user, options);
     }
 
     @Test
@@ -66,6 +73,21 @@ class QueuedGeneratedRewardDispatchTest {
 
         verify(handler).getQueuedGeneratedReward("QueuedReward", "uuid");
         verify(queued).giveReward(user, options);
+    }
+
+    @Test
+    void timedRewardBuilderReplacesNormalFallbackWithQueuedSnapshot() {
+        Reward fallback = mock(Reward.class);
+        Reward queued = mock(Reward.class);
+        when(fallback.getRewardName()).thenReturn("QueuedReward");
+        when(handler.getQueuedGeneratedReward("QueuedReward", "uuid")).thenReturn(queued);
+
+        RewardBuilder builder = new RewardBuilder(fallback).setCheckTimed(false).withPlaceHolder("date", "now");
+        builder.send(user);
+
+        verify(handler).getQueuedGeneratedReward("QueuedReward", "uuid");
+        verify(handler).giveReward(user, queued, builder.getRewardOptions());
+        verify(handler, never()).giveReward(user, fallback, builder.getRewardOptions());
     }
 
     @Test
