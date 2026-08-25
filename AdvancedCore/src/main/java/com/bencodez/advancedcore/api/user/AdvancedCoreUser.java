@@ -326,7 +326,7 @@ public class AdvancedCoreUser {
 							.withPlaceHolder(ArrayUtils.fromString(placeholders));
 					replayOptions.addPlaceholder("date",
 							"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));
-					plugin.getRewardHandler().giveReward(this, rewardReference, replayOptions);
+					plugin.getRewardHandler().givePersistedQueueReward(this, new PersistedQueueReference(rewardReference), replayOptions);
 					String rewardName = rewardReference;
 					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
 							+ " with placeholders " + ArrayUtils.fromString(placeholders));
@@ -371,7 +371,7 @@ public class AdvancedCoreUser {
 			RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false)
 					.withPlaceHolder(ArrayUtils.fromString(placeholderStr));
 
-			rewardHandler.giveReward(user, rewardReference, options);
+			rewardHandler.givePersistedQueueReward(user, new PersistedQueueReference(rewardReference), options);
 		}
 
 	}
@@ -452,7 +452,7 @@ public class AdvancedCoreUser {
 			RewardOptions options = new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
 					.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholderStr));
 
-			rewardHandler.giveReward(user, rewardReference, options);
+			rewardHandler.givePersistedQueueReward(user, new PersistedQueueReference(rewardReference), options);
 		}
 	}
 

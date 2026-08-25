@@ -127,9 +127,12 @@ public class RewardExecutor {
             return;
         }
 
-        boolean queueReplay = isPersistedQueueReplay(context.getOptions());
-        if (!queueReplay) {
-            giveReward(user, handler.getReward(reward), context.getOptions());
+        giveReward(user, handler.getReward(reward), context.getOptions());
+    }
+
+    void givePersistedQueueReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        if (reward == null || reward.isEmpty()) {
             return;
         }
 
@@ -160,28 +163,18 @@ public class RewardExecutor {
                 resolved = handler.getReward(rewardName);
             }
         } else if (handler.rewardExist(rewardName) || handler.hasDirectRewardHandle(rewardName)) {
-            // Legacy queue entry: if a normal registered reward exists, it wins over any
+            // Legacy persisted queue entry: a real registered reward wins over any
             // stale generated file with the same name.
             resolved = handler.getReward(rewardName);
         } else {
-            // Legacy generated entries did not persist provenance. Preserve them only when
-            // there is no registered reward they could shadow.
+            // Legacy generated queue entries predate explicit provenance. This branch is
+            // reachable only through the PersistedQueueReference capability path.
             resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());
             if (resolved == null) {
                 resolved = handler.getReward(rewardName);
             }
         }
         giveReward(user, resolved, context.getOptions());
-    }
-
-    private boolean isPersistedQueueReplay(RewardOptions options) {
-        if (options == null || options.isCheckTimed()) {
-            return false;
-        }
-        if (options.isOnlineSet() && !options.isOnline()) {
-            return true;
-        }
-        return options.getPlaceholders().containsKey("date");
     }
 
     public void updateReward(Configuration data, String path, RewardOptions rewardOptions) {

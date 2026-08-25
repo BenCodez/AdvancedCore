@@ -20,6 +20,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.PersistedQueueReference;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 
@@ -189,6 +190,14 @@ public class RewardHandler {
 
     public void giveReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
         rewardExecutor.giveReward(user, reward, rewardOptions);
+    }
+
+    public void givePersistedQueueReward(AdvancedCoreUser user, PersistedQueueReference rewardReference,
+            RewardOptions rewardOptions) {
+        if (rewardReference == null) {
+            return;
+        }
+        rewardExecutor.givePersistedQueueReward(user, rewardReference.getReference(), rewardOptions);
     }
 
     public boolean hasDirectRewardHandle(String reward) {

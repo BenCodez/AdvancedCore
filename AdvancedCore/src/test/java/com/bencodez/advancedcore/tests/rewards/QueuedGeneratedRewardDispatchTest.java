@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.tests.rewards;
+package com.bencodez.advancedcore.api.rewards;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,11 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
-import com.bencodez.advancedcore.api.rewards.Reward;
-import com.bencodez.advancedcore.api.rewards.RewardBuilder;
-import com.bencodez.advancedcore.api.rewards.RewardExecutor;
-import com.bencodez.advancedcore.api.rewards.RewardHandler;
-import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 class QueuedGeneratedRewardDispatchTest {
@@ -61,7 +56,7 @@ class QueuedGeneratedRewardDispatchTest {
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            executor.giveReward(user, "QueuedReward", options);
+            executor.givePersistedQueueReward(user, "QueuedReward", options);
         }
 
         verify(handler).getQueuedGeneratedReward("QueuedReward", "uuid");
@@ -78,7 +73,7 @@ class QueuedGeneratedRewardDispatchTest {
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            executor.giveReward(user, "QueuedReward", options);
+            executor.givePersistedQueueReward(user, "QueuedReward", options);
         }
 
         verify(handler).getQueuedGeneratedReward("QueuedReward", "uuid");
@@ -107,7 +102,7 @@ class QueuedGeneratedRewardDispatchTest {
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            executor.giveReward(user, queuedReference("Daily", false), options);
+            executor.givePersistedQueueReward(user, queuedReference("Daily", false), options);
         }
 
         verify(normal).giveReward(user, options);
@@ -124,7 +119,7 @@ class QueuedGeneratedRewardDispatchTest {
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            executor.giveReward(user, queuedReference("Daily", true), options);
+            executor.givePersistedQueueReward(user, queuedReference("Daily", true), options);
         }
 
         verify(queued).giveReward(user, options);
@@ -142,7 +137,7 @@ class QueuedGeneratedRewardDispatchTest {
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            executor.giveReward(user, "Daily", options);
+            executor.givePersistedQueueReward(user, "Daily", options);
         }
 
         verify(normal).giveReward(user, options);
@@ -159,7 +154,7 @@ class QueuedGeneratedRewardDispatchTest {
 
         try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            executor.giveReward(user, rewardName, options);
+            executor.givePersistedQueueReward(user, rewardName, options);
         }
 
         verify(handler).getReward(rewardName);
@@ -184,6 +179,25 @@ class QueuedGeneratedRewardDispatchTest {
         verify(normal).giveReward(user, options);
         verify(handler, never()).getReward("Promo");
         verify(handler, never()).getQueuedGeneratedReward("Promo", "uuid");
+    }
+
+    @Test
+    void forgedOfflineOptionsCannotGrantQueueSnapshotAccess() {
+        Reward normal = mock(Reward.class);
+        Reward queued = mock(Reward.class);
+        RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false);
+        when(handler.getReward("QueuedReward")).thenReturn(normal);
+        when(handler.getQueuedGeneratedReward("QueuedReward", "uuid")).thenReturn(queued);
+
+        try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+            executor.giveReward(user, "QueuedReward", options);
+        }
+
+        verify(handler).getReward("QueuedReward");
+        verify(handler, never()).getQueuedGeneratedReward("QueuedReward", "uuid");
+        verify(normal).giveReward(user, options);
+        verify(queued, never()).giveReward(user, options);
     }
 
     @Test
