@@ -25,6 +25,7 @@ public class UserDataCache {
 
 	private final UserDataManager manager;
 	private boolean scheduled = false;
+	private int inFlightBatches = 0;
 	@Getter
 	private UUID uuid;
 
@@ -121,14 +122,28 @@ public class UserDataCache {
 		return list;
 	}
 
-	public synchronized void dump() {
-		if (hasChangesToProcess()) {
+	public void dump() {
+		while (true) {
 			processChanges();
+			synchronized (this) {
+				while (inFlightBatches > 0) {
+					try {
+						wait();
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						return;
+					}
+				}
+				if (cachedChanges != null && !cachedChanges.isEmpty()) {
+					continue;
+				}
+				cache = null;
+				cachedChanges = null;
+				uuid = null;
+				scheduled = false;
+				return;
+			}
 		}
-		cache = null;
-		cachedChanges = null;
-		uuid = null;
-		scheduled = false;
 	}
 
 	public AdvancedCoreUser getUser() {
@@ -159,6 +174,7 @@ public class UserDataCache {
 			while ((change = cachedChanges.poll()) != null) {
 				changes.add(change);
 			}
+			inFlightBatches++;
 		}
 
 		boolean persisted = false;
@@ -184,6 +200,8 @@ public class UserDataCache {
 				requeueChanges(changes);
 			}
 			throw e;
+		} finally {
+			finishInFlightBatch();
 		}
 	}
 
@@ -195,6 +213,13 @@ public class UserDataCache {
 		restored.addAll(changes);
 		restored.addAll(cachedChanges);
 		cachedChanges = restored;
+	}
+
+	private synchronized void finishInFlightBatch() {
+		if (inFlightBatches > 0) {
+			inFlightBatches--;
+		}
+		notifyAll();
 	}
 
 	public void processChangesAsync() {
