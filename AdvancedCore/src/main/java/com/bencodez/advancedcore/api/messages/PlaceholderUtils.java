@@ -294,21 +294,29 @@ public class PlaceholderUtils {
 	}
 
 	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
-			}
+		if (str == null || placeholders == null || placeholders.isEmpty()) {
+			return str;
 		}
-		return str;
+		String protectedMarker = createProtectedJavascriptMarkerToken(str, placeholders);
+		str = str.replace(JAVASCRIPT_MARKER, protectedMarker);
+		for (Entry<String, String> entry : placeholders.entrySet()) {
+			str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
+		}
+		str = neutralizeJavascriptMarker(str);
+		return str.replace(protectedMarker, JAVASCRIPT_MARKER);
 	}
 
 	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders, boolean ignoreCase) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue(), ignoreCase);
-			}
+		if (str == null || placeholders == null || placeholders.isEmpty()) {
+			return str;
 		}
-		return str;
+		String protectedMarker = createProtectedJavascriptMarkerToken(str, placeholders);
+		str = str.replace(JAVASCRIPT_MARKER, protectedMarker);
+		for (Entry<String, String> entry : placeholders.entrySet()) {
+			str = replacePlaceHolder(str, entry.getKey(), entry.getValue(), ignoreCase);
+		}
+		str = neutralizeJavascriptMarker(str);
+		return str.replace(protectedMarker, JAVASCRIPT_MARKER);
 	}
 
 	public static String replacePlaceHolder(String str, String toReplace, String replaceWith) {
@@ -336,6 +344,24 @@ public class PlaceholderUtils {
 			return value;
 		}
 		return value.replace(JAVASCRIPT_MARKER, SAFE_JAVASCRIPT_MARKER);
+	}
+
+	private static String createProtectedJavascriptMarkerToken(String text, HashMap<String, String> placeholders) {
+		String token;
+		boolean collision;
+		do {
+			token = "<AdvancedCoreJavascriptMarker:" + java.util.UUID.randomUUID() + ">";
+			collision = text != null && text.contains(token);
+			if (!collision && placeholders != null) {
+				for (String value : placeholders.values()) {
+					if (value != null && value.contains(token)) {
+						collision = true;
+						break;
+					}
+				}
+			}
+		} while (collision);
+		return token;
 	}
 
 	private static String neutralizeJavascriptReplacement(String value) {
