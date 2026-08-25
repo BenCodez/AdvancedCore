@@ -21,6 +21,29 @@ class PlaceholderUtilsSecurityTest {
 	}
 
 	@Test
+	void substitutionsCannotAssembleJavascriptMarkerAcrossTemplateText() {
+		HashMap<String, String> placeholders = new HashMap<>();
+		placeholders.put("part", "script");
+
+		String result = PlaceholderUtils.replacePlaceHolder(
+				"[Java%part%=Bukkit.dispatchCommand(Console,'op attacker')]", placeholders);
+
+		assertFalse(result.contains("[Javascript="));
+		assertTrue(result.contains("Javascript="));
+	}
+
+	@Test
+	void operatorAuthoredJavascriptMarkerRemainsAvailable() {
+		HashMap<String, String> placeholders = new HashMap<>();
+		placeholders.put("name", "Ben");
+
+		String result = PlaceholderUtils.replacePlaceHolder("[Javascript=1+1] %name%", placeholders);
+
+		assertTrue(result.contains("[Javascript=1+1]"));
+		assertTrue(result.contains("Ben"));
+	}
+
+	@Test
 	void normalPlaceholderFormattingIsPreserved() {
 		HashMap<String, String> placeholders = new HashMap<>();
 		placeholders.put("displayname", "&aDisplay Name");
