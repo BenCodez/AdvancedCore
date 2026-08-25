@@ -312,7 +312,12 @@ public class AdvancedCoreUser {
 					if (data.length > 1) {
 						placeholders = data[1];
 					}
-					new RewardBuilder(plugin.getRewardHandler().getReward(rewardName)).setCheckTimed(false)
+					com.bencodez.advancedcore.api.rewards.Reward queuedReward = plugin.getRewardHandler()
+							.getQueuedGeneratedReward(rewardName, getUUID());
+					if (queuedReward == null) {
+						queuedReward = plugin.getRewardHandler().getReward(rewardName);
+					}
+					new RewardBuilder(queuedReward).setCheckTimed(false)
 							.withPlaceHolder(ArrayUtils.fromString(placeholders))
 							.withPlaceHolder("date",
 									"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)))
