@@ -21,6 +21,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 public class PlaceholderUtils {
 	private static final String JAVASCRIPT_MARKER = "[Javascript=";
 	private static final String SAFE_JAVASCRIPT_MARKER = "[\u200BJavascript=";
+	private static final String PROTECTED_JAVASCRIPT_MARKER = "[\u2063Javascript=";
 
 	@SuppressWarnings("deprecation")
 	public static TextComponent parseJson(String msg) {
@@ -315,16 +316,19 @@ public class PlaceholderUtils {
 	}
 
 	public static String replacePlaceHolder(String str, String toReplace, String replaceWith, boolean ignoreCase) {
-		String safeReplacement = neutralizeJavascriptMarker(replaceWith);
+		String protectedSource = protectJavascriptMarkers(str);
+		String safeReplacement = neutralizeJavascriptReplacement(replaceWith);
+		String replaced;
 		if (ignoreCase) {
-			return MessageAPI.replaceIgnoreCase(
-					MessageAPI.replaceIgnoreCase(str, "%" + toReplace + "%", safeReplacement),
+			replaced = MessageAPI.replaceIgnoreCase(
+					MessageAPI.replaceIgnoreCase(protectedSource, "%" + toReplace + "%", safeReplacement),
 					"\\{" + toReplace + "\\}", safeReplacement);
+		} else {
+			replaced = protectedSource.replaceAll("\\{", "%");
+			replaced = replaced.replaceAll("\\}", "%");
+			replaced = replaced.replace("%" + toReplace + "%", safeReplacement);
 		}
-		str = str.replaceAll("\\{", "%");
-		str = str.replaceAll("\\}", "%");
-		str = str.replace("%" + toReplace + "%", safeReplacement);
-		return str;
+		return restoreJavascriptMarkers(neutralizeJavascriptMarker(replaced));
 	}
 
 	static String neutralizeJavascriptMarker(String value) {
@@ -332,6 +336,27 @@ public class PlaceholderUtils {
 			return value;
 		}
 		return value.replace(JAVASCRIPT_MARKER, SAFE_JAVASCRIPT_MARKER);
+	}
+
+	private static String neutralizeJavascriptReplacement(String value) {
+		if (value == null || value.isEmpty()) {
+			return value;
+		}
+		return neutralizeJavascriptMarker(value).replace(PROTECTED_JAVASCRIPT_MARKER, SAFE_JAVASCRIPT_MARKER);
+	}
+
+	private static String protectJavascriptMarkers(String value) {
+		if (value == null || value.isEmpty()) {
+			return value;
+		}
+		return value.replace(JAVASCRIPT_MARKER, PROTECTED_JAVASCRIPT_MARKER);
+	}
+
+	private static String restoreJavascriptMarkers(String value) {
+		if (value == null || value.isEmpty()) {
+			return value;
+		}
+		return value.replace(PROTECTED_JAVASCRIPT_MARKER, JAVASCRIPT_MARKER);
 	}
 
 	public static ArrayList<String> replacePlaceHolders(ArrayList<String> list, Player p) {
