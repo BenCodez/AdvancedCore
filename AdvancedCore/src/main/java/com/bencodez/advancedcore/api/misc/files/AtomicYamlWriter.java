@@ -2,12 +2,17 @@ package com.bencodez.advancedcore.api.misc.files;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.UserPrincipal;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -50,11 +55,15 @@ public final class AtomicYamlWriter {
 		boolean replaced = false;
 		try {
 			data.save(temp.toFile());
-			preservePosixAttributes(target, temp);
-			try {
-				Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-			} catch (AtomicMoveNotSupportedException e) {
-				Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+			if (prepareReplacementMetadata(target, temp)) {
+				try {
+					Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+				} catch (AtomicMoveNotSupportedException e) {
+					Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+				}
+			} else {
+				writeInPlacePreservingMetadata(temp, target);
+				Files.deleteIfExists(temp);
 			}
 			replaced = true;
 		} finally {
@@ -77,21 +86,51 @@ public final class AtomicYamlWriter {
 		return current;
 	}
 
-	private static void preservePosixAttributes(Path target, Path temp) throws IOException {
+	private static boolean prepareReplacementMetadata(Path target, Path temp) {
 		if (!Files.exists(target)) {
-			return;
-		}
-		PosixFileAttributeView targetView = Files.getFileAttributeView(target, PosixFileAttributeView.class);
-		PosixFileAttributeView tempView = Files.getFileAttributeView(temp, PosixFileAttributeView.class);
-		if (targetView == null || tempView == null) {
-			return;
+			return true;
 		}
 
-		PosixFileAttributes attributes = targetView.readAttributes();
-		// The temp inode becomes the destination inode after the move. Preserve all
-		// access-relevant POSIX metadata, not just mode bits.
-		tempView.setOwner(attributes.owner());
-		tempView.setGroup(attributes.group());
-		tempView.setPermissions(attributes.permissions());
+		PosixFileAttributeView targetPosix = Files.getFileAttributeView(target, PosixFileAttributeView.class);
+		PosixFileAttributeView tempPosix = Files.getFileAttributeView(temp, PosixFileAttributeView.class);
+		if (targetPosix != null && tempPosix != null) {
+			try {
+				PosixFileAttributes attributes = targetPosix.readAttributes();
+				tempPosix.setPermissions(attributes.permissions());
+				tempPosix.setGroup(attributes.group());
+				UserPrincipal tempOwner = tempPosix.getOwner();
+				if (!attributes.owner().equals(tempOwner)) {
+					tempPosix.setOwner(attributes.owner());
+				}
+				return true;
+			} catch (IOException | SecurityException e) {
+				return false;
+			}
+		}
+
+		AclFileAttributeView targetAcl = Files.getFileAttributeView(target, AclFileAttributeView.class);
+		AclFileAttributeView tempAcl = Files.getFileAttributeView(temp, AclFileAttributeView.class);
+		if (targetAcl != null && tempAcl != null) {
+			try {
+				tempAcl.setAcl(targetAcl.getAcl());
+				UserPrincipal targetOwner = targetAcl.getOwner();
+				if (!targetOwner.equals(tempAcl.getOwner())) {
+					tempAcl.setOwner(targetOwner);
+				}
+				return true;
+			} catch (IOException | SecurityException e) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static void writeInPlacePreservingMetadata(Path temp, Path target) throws IOException {
+		try (InputStream input = Files.newInputStream(temp);
+				OutputStream output = Files.newOutputStream(target, StandardOpenOption.WRITE,
+						StandardOpenOption.TRUNCATE_EXISTING)) {
+			input.transferTo(output);
+		}
 	}
 }
