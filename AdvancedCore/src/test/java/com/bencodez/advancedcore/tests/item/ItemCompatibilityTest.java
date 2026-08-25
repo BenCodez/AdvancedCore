@@ -2,7 +2,11 @@ package com.bencodez.advancedcore.tests.item;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.bukkit.Material;
@@ -38,6 +42,21 @@ public class ItemCompatibilityTest {
 
 		assertEquals(2, afterFirst, "the API and builder classes should each be resolved once");
 		assertEquals(afterFirst, loader.getNexoLoads(), "a second handle must reuse the shared reflection cache");
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void sharedNexoCacheDoesNotStronglyRetainReflectionState() throws Exception {
+		CountingClassLoader loader = new CountingClassLoader(ItemCompatibilityTest.class.getClassLoader());
+		new TestNexoItemHandle(loader);
+
+		Field cachesField = NexoItemHandle.class.getDeclaredField("CACHES");
+		cachesField.setAccessible(true);
+		Map<ClassLoader, Map<String, ?>> caches = (Map<ClassLoader, Map<String, ?>>) cachesField.get(null);
+		Map<String, ?> loaderCache = caches.get(loader);
+
+		assertTrue(loaderCache.values().stream().allMatch(WeakReference.class::isInstance),
+				"weak class-loader keys must not have values that strongly retain the reflection cache");
 	}
 
 	@Test
