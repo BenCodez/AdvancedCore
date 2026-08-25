@@ -173,8 +173,9 @@ public class RewardRegistry {
     }
 
     public void updateReward(Reward reward) {
-        if (reward != null && reward.getConfig().isDirectlyDefinedReward()) {
-            File folder = reward.getConfig().getRewardFolder();
+        RewardFileData config = reward == null ? null : reward.getConfig();
+        if (config != null && config.isDirectlyDefinedReward()) {
+            File folder = config.getRewardFolder();
             if (folder != null && folder.getName().equalsIgnoreCase("DirectlyDefined")) {
                 plugin.extraDebug("Keeping generated queued reward snapshot out of public registry: " + reward.getName());
                 return;
