@@ -32,7 +32,9 @@ public final class RewardAdvancedPriority {
             public String onRewardRequested(Reward sourceReward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
                 for (String key : section.getKeys(false)) {
-                    Reward reward = handler.getReward(section, key, new RewardOptions());
+                    RewardOptions namingOptions = new RewardOptions()
+                            .setPrefix(sourceReward.getName() + "_AdvancedPriority");
+                    Reward reward = handler.getReward(section, key, namingOptions);
                     if (reward != null && reward.canGiveReward(user, new RewardOptions().withPlaceHolder(placeholders))) {
                         plugin.extraDebug("AdvancedPriority: Giving reward " + reward.getName());
                         reward.giveReward(user, new RewardOptions().setIgnoreChance(true).setIgnoreRequirements(true)
