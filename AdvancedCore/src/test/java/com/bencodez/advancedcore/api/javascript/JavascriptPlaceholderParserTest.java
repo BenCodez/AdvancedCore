@@ -158,6 +158,30 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void memberNamedIfDoesNotCreateControlHeadRegexContext() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; allowed=true; '";
+
+		String script = JavascriptPlaceholderParser.replace("obj.if(true) / 2; '%untrusted%'", ignored -> injection,
+				bindings::put);
+
+		assertEquals("obj.if(true) / 2; '\\'; allowed=true; \\''", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
+	void objectLiteralStringBraceDoesNotBecomeStatementBlock() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; allowed=true; '";
+
+		String script = JavascriptPlaceholderParser.replace("var x={a:\"){\"} / 2; '%untrusted%'", ignored -> injection,
+				bindings::put);
+
+		assertEquals("var x={a:\"){\"} / 2; '\\'; allowed=true; \\''", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
 	void objectLiteralDoesNotConsumeNestedPercentPlaceholder() {
 		HashMap<String, Object> bindings = new HashMap<>();
 
