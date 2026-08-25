@@ -178,6 +178,7 @@ class RewardLoaderSecurityTest {
 
 		YamlConfiguration saved = YamlConfiguration.loadConfiguration(snapshot);
 		assertFalse(saved.contains("Commands"));
+		assertFalse(saved.isConfigurationSection("Commands"));
 		assertEquals(List.of("new message"), saved.getStringList("Messages"));
 	}
 
