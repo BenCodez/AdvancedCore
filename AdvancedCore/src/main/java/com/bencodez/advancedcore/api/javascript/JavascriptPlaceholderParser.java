@@ -27,7 +27,10 @@ final class JavascriptPlaceholderParser {
 		int index = 0;
 		while (matcher.find()) {
 			String placeholder = matcher.group();
-			String value = resolver.apply(placeholder);
+			String value = JavascriptSafeValue.decodePlaceholder(placeholder);
+			if (value == null) {
+				value = resolver.apply(placeholder);
+			}
 			if (value == null || value.equals(placeholder)) {
 				matcher.appendReplacement(result, Matcher.quoteReplacement(placeholder));
 				continue;
@@ -193,7 +196,7 @@ final class JavascriptPlaceholderParser {
 			}
 
 			if (current == '{') {
-				statementBraces.push(opensStatementBlock(script, i));
+				statementBraces.push(opensStatementBlock(script, i, statementBraces));
 				if (!templates.isEmpty() && templates.peek().expressionDepth > 0) {
 					templates.peek().expressionDepth++;
 				}
@@ -252,10 +255,6 @@ final class JavascriptPlaceholderParser {
 		if (beforeKeyword >= 0 && script.charAt(beforeKeyword) == '.') {
 			return false;
 		}
-		// A control statement cannot occur directly at object-literal/class-member level.
-		// This prevents method/property names such as { if() {} } from being mistaken
-		// for statement keywords while still allowing control statements inside a
-		// nested method/function body (whose brace is classified as a statement block).
 		return statementBraces.isEmpty() || statementBraces.peek();
 	}
 
@@ -273,7 +272,7 @@ final class JavascriptPlaceholderParser {
 				|| operand == '}';
 	}
 
-	private static boolean opensStatementBlock(String script, int openBraceIndex) {
+	private static boolean opensStatementBlock(String script, int openBraceIndex, Deque<Boolean> statementBraces) {
 		int prefixIndex = previousNonWhitespace(script, openBraceIndex - 1);
 		if (prefixIndex < 0) {
 			return true;
@@ -282,10 +281,34 @@ final class JavascriptPlaceholderParser {
 		if (prefix == ')' || prefix == '}' || prefix == ';') {
 			return true;
 		}
+		if (prefix == ':') {
+			return followsStatementLabel(script, prefixIndex, statementBraces);
+		}
 		if (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {
 			return true;
 		}
 		return BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));
+	}
+
+	private static boolean followsStatementLabel(String script, int colonIndex, Deque<Boolean> statementBraces) {
+		int labelEnd = previousNonWhitespace(script, colonIndex - 1);
+		if (labelEnd < 0 || !Character.isJavaIdentifierPart(script.charAt(labelEnd))) {
+			return false;
+		}
+		int labelStart = identifierStart(script, labelEnd);
+		int beforeLabel = previousNonWhitespace(script, labelStart - 1);
+		if (beforeLabel < 0) {
+			return true;
+		}
+		char previous = script.charAt(beforeLabel);
+		if (previous == ';' || previous == '}') {
+			return true;
+		}
+		if (previous == '{') {
+			return statementBraces.isEmpty() || statementBraces.peek();
+		}
+		String previousWord = previousIdentifier(script, beforeLabel);
+		return previousWord.equals("case");
 	}
 
 	private static int previousNonWhitespace(String script, int index) {
