@@ -122,6 +122,18 @@ class JavascriptPlaceholderParserTest {
 	}
 
 	@Test
+	void postfixIncrementBeforeDivisionDoesNotOpenRegexContext() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; allowed=true; '";
+
+		String script = JavascriptPlaceholderParser.replace("var allowed=false,i=1; i++ / 2; '%untrusted%'; allowed",
+				ignored -> injection, bindings::put);
+
+		assertEquals("var allowed=false,i=1; i++ / 2; '\\'; allowed=true; \\''; allowed", script);
+		assertTrue(bindings.isEmpty());
+	}
+
+	@Test
 	void objectLiteralFollowedByDivisionIsNotTreatedAsRegex() {
 		HashMap<String, Object> bindings = new HashMap<>();
 
