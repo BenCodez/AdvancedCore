@@ -6,7 +6,8 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFileAttributes;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -49,7 +50,7 @@ public final class AtomicYamlWriter {
 		boolean replaced = false;
 		try {
 			data.save(temp.toFile());
-			preservePermissions(target, temp);
+			preservePosixAttributes(target, temp);
 			try {
 				Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 			} catch (AtomicMoveNotSupportedException e) {
@@ -76,15 +77,21 @@ public final class AtomicYamlWriter {
 		return current;
 	}
 
-	private static void preservePermissions(Path target, Path temp) throws IOException {
+	private static void preservePosixAttributes(Path target, Path temp) throws IOException {
 		if (!Files.exists(target)) {
 			return;
 		}
-		try {
-			Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(target);
-			Files.setPosixFilePermissions(temp, permissions);
-		} catch (UnsupportedOperationException ignored) {
-			// Non-POSIX providers do not expose Unix mode bits.
+		PosixFileAttributeView targetView = Files.getFileAttributeView(target, PosixFileAttributeView.class);
+		PosixFileAttributeView tempView = Files.getFileAttributeView(temp, PosixFileAttributeView.class);
+		if (targetView == null || tempView == null) {
+			return;
 		}
+
+		PosixFileAttributes attributes = targetView.readAttributes();
+		// The temp inode becomes the destination inode after the move. Preserve all
+		// access-relevant POSIX metadata, not just mode bits.
+		tempView.setOwner(attributes.owner());
+		tempView.setGroup(attributes.group());
+		tempView.setPermissions(attributes.permissions());
 	}
 }
