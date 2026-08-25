@@ -6,6 +6,9 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -15,6 +18,8 @@ import org.bukkit.configuration.file.FileConfiguration;
  * configuration file.
  */
 public final class AtomicYamlWriter {
+
+	private static final int MAX_SYMLINK_DEPTH = 32;
 
 	private AtomicYamlWriter() {
 	}
@@ -27,20 +32,24 @@ public final class AtomicYamlWriter {
 			throw new IllegalArgumentException("data cannot be null");
 		}
 
-		File parentFile = file.getAbsoluteFile().getParentFile();
-		if (parentFile != null) {
-			Files.createDirectories(parentFile.toPath());
+		Path requestedTarget = file.toPath().toAbsolutePath().normalize();
+		Path requestedParent = requestedTarget.getParent();
+		if (requestedParent != null) {
+			Files.createDirectories(requestedParent);
 		}
 
-		Path target = file.toPath();
-		Path parent = target.toAbsolutePath().getParent();
+		Path target = resolveWriteTarget(requestedTarget);
+		Path parent = target.getParent();
 		if (parent == null) {
-			parent = Path.of(".").toAbsolutePath();
+			parent = Path.of(".").toAbsolutePath().normalize();
 		}
-		Path temp = Files.createTempFile(parent, "." + file.getName() + ".", ".tmp");
+		Files.createDirectories(parent);
+
+		Path temp = Files.createTempFile(parent, "." + target.getFileName() + ".", ".tmp");
 		boolean replaced = false;
 		try {
 			data.save(temp.toFile());
+			preservePermissions(target, temp);
 			try {
 				Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 			} catch (AtomicMoveNotSupportedException e) {
@@ -51,6 +60,31 @@ public final class AtomicYamlWriter {
 			if (!replaced) {
 				Files.deleteIfExists(temp);
 			}
+		}
+	}
+
+	static Path resolveWriteTarget(Path requestedTarget) throws IOException {
+		Path current = requestedTarget.toAbsolutePath().normalize();
+		Set<Path> visited = new HashSet<>();
+		for (int depth = 0; Files.isSymbolicLink(current); depth++) {
+			if (depth >= MAX_SYMLINK_DEPTH || !visited.add(current)) {
+				throw new IOException("Too many symbolic links while resolving " + requestedTarget);
+			}
+			Path link = Files.readSymbolicLink(current);
+			current = link.isAbsolute() ? link.normalize() : current.getParent().resolve(link).normalize();
+		}
+		return current;
+	}
+
+	private static void preservePermissions(Path target, Path temp) throws IOException {
+		if (!Files.exists(target)) {
+			return;
+		}
+		try {
+			Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(target);
+			Files.setPosixFilePermissions(temp, permissions);
+		} catch (UnsupportedOperationException ignored) {
+			// Non-POSIX providers do not expose Unix mode bits.
 		}
 	}
 }
