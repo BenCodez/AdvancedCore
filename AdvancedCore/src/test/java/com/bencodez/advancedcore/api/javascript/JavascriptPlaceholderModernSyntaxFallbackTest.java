@@ -118,6 +118,7 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
                 ignored -> "2.5", bindings::put);
 
         assertEquals("obj?.value; 10 / __advancedCorePlaceholder0 / 2", prepared);
+        assertEquals(1, bindings.size());
         assertEquals(2.5D, bindings.get("__advancedCorePlaceholder0"));
     }
 }
