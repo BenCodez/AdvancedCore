@@ -362,4 +362,15 @@ class JavascriptPlaceholderParserTest {
 		assertEquals("%unknown% == true && {unknown_brace} == false", script);
 		assertTrue(bindings.isEmpty());
 	}
+	@Test
+	void moduloOperatorDoesNotConsumeFollowingPercentPlaceholder() {
+		HashMap<String, Object> bindings = new HashMap<>();
+
+		String script = JavascriptPlaceholderParser.replace("5 % 2 == 1 && %permission_result%",
+				placeholder -> placeholder.equals("%permission_result%") ? "true" : placeholder, bindings::put);
+
+		assertEquals("5 % 2 == 1 && __advancedCorePlaceholder0", script);
+		assertEquals(Boolean.TRUE, bindings.get("__advancedCorePlaceholder0"));
+	}
+
 }
