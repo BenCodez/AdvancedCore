@@ -26,4 +26,15 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
         assertEquals("obj?.name && 'Ben' === 'Ben'", prepared);
         assertTrue(bindings.isEmpty());
     }
+
+    @Test
+    void newerEngineSyntaxStillPreservesRegexPlaceholderSemantics() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name && /^%name%$/.test(value)",
+                ignored -> "Ben.*", bindings::put);
+
+        assertEquals("obj?.name && /^Ben\\.\\*$/.test(value)", prepared);
+        assertTrue(bindings.isEmpty());
+    }
 }
