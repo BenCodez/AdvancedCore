@@ -34,4 +34,17 @@ class JavascriptFunctionExpressionParserTest {
 		assertEquals("var allowed=false,x=function* named() {} / 2; '\\'; allowed=true; \\''; allowed", script);
 		assertTrue(bindings.isEmpty());
 	}
+	@Test
+	void commentSeparatedFunctionExpressionFollowedByDivisionStaysDivision() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "'; allowed=true; '";
+
+		String script = JavascriptPlaceholderParser.replace(
+				"var allowed=false,x=function /* comment */ () {} / 2; '%untrusted%'; allowed",
+				ignored -> injection, bindings::put);
+
+		assertEquals("var allowed=false,x=function /* comment */ () {} / 2; '\\\\'; allowed=true; \\\\''; allowed", script);
+		assertTrue(bindings.isEmpty());
+	}
+
 }
