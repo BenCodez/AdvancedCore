@@ -320,11 +320,17 @@ public final class JavascriptPlaceholderBinder {
                 Class<?> diagnosticClass = Class.forName(DIAGNOSTIC_LISTENER_CLASS, true, loader);
                 Class<?> treeClass = Class.forName(TREE_CLASS, true, loader);
                 Object parser = createParser(parserClass);
+                boolean[] hadParseDiagnostic = new boolean[1];
                 Object diagnostic = Proxy.newProxyInstance(loader, new Class<?>[] { diagnosticClass },
-                        (proxy, method, args) -> null);
+                        (proxy, method, args) -> {
+                            if ("report".equals(method.getName())) {
+                                hadParseDiagnostic[0] = true;
+                            }
+                            return null;
+                        });
                 Method parse = parserClass.getMethod("parse", String.class, String.class, diagnosticClass);
                 Object root = parse.invoke(parser, "AdvancedCore", source, diagnostic);
-                if (root != null) {
+                if (root != null && !hadParseDiagnostic[0]) {
                     contexts.parsed = true;
                     walk(root, treeClass, contexts, new IdentityHashMap<>());
                 }
