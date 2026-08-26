@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.javascript;
 
 import java.util.ArrayDeque;
+import java.util.BitSet;
 import java.util.Deque;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -9,7 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 final class JavascriptPlaceholderParser {
-	private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("%([^%]+)%|(?<!\\$)\\{([^{}%]+)\\}");
+	private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("%([A-Za-z_][^%\\r\\n]*)%|(?<!\\$)\\{([^{}%]+)\\}");
 	private static final Pattern INTEGER_PATTERN = Pattern.compile("[-+]?\\d+");
 	private static final Pattern DECIMAL_PATTERN = Pattern.compile("[-+]?(?:\\d+\\.\\d*|\\d*\\.\\d+|\\d+)(?:[eE][-+]?\\d+)?");
 	private static final String VARIABLE_PREFIX = "__advancedCorePlaceholder";
@@ -78,6 +79,7 @@ final class JavascriptPlaceholderParser {
 		Deque<Boolean> controlParens = new ArrayDeque<>();
 		Deque<Boolean> functionExpressionParens = new ArrayDeque<>();
 		Deque<Boolean> statementBraces = new ArrayDeque<>();
+		BitSet comments = new BitSet(end);
 		Context context = Context.CODE;
 		boolean escaped = false;
 		boolean regexCharacterClass = false;
@@ -90,13 +92,16 @@ final class JavascriptPlaceholderParser {
 			char next = i + 1 < end ? script.charAt(i + 1) : '\0';
 
 			if (context == Context.LINE_COMMENT) {
+				comments.set(i);
 				if (current == '\n' || current == '\r') {
 					context = codeContext(templates);
 				}
 				continue;
 			}
 			if (context == Context.BLOCK_COMMENT) {
+				comments.set(i);
 				if (current == '*' && next == '/') {
+					comments.set(i + 1);
 					context = codeContext(templates);
 					i++;
 				}
@@ -158,16 +163,20 @@ final class JavascriptPlaceholderParser {
 			}
 
 			if (current == '/' && next == '/') {
+				comments.set(i);
+				comments.set(i + 1);
 				context = Context.LINE_COMMENT;
 				i++;
 				continue;
 			}
 			if (current == '/' && next == '*') {
+				comments.set(i);
+				comments.set(i + 1);
 				context = Context.BLOCK_COMMENT;
 				i++;
 				continue;
 			}
-			if (current == '/' && startsRegexLiteral(script, i, lastControlHeadClose, lastStatementBlockClose)) {
+			if (current == '/' && startsRegexLiteral(script, i, lastControlHeadClose, lastStatementBlockClose, comments)) {
 				context = Context.REGEX;
 				escaped = false;
 				regexCharacterClass = false;
@@ -189,9 +198,9 @@ final class JavascriptPlaceholderParser {
 				continue;
 			}
 			if (current == '(') {
-				int keywordEnd = previousNonWhitespace(script, i - 1);
-				controlParens.push(isStandaloneControlHead(script, keywordEnd, statementBraces));
-				functionExpressionParens.push(opensFunctionExpressionParameters(script, i, statementBraces));
+				int keywordEnd = previousNonWhitespace(script, i - 1, comments);
+				controlParens.push(isStandaloneControlHead(script, keywordEnd, statementBraces, comments));
+				functionExpressionParens.push(opensFunctionExpressionParameters(script, i, statementBraces, comments));
 			} else if (current == ')' && !controlParens.isEmpty()) {
 				if (controlParens.pop()) {
 					lastControlHeadClose = i;
@@ -202,7 +211,7 @@ final class JavascriptPlaceholderParser {
 			}
 
 			if (current == '{') {
-				statementBraces.push(opensStatementBlock(script, i, statementBraces, lastFunctionExpressionParenClose));
+				statementBraces.push(opensStatementBlock(script, i, statementBraces, lastFunctionExpressionParenClose, comments));
 				if (!templates.isEmpty() && templates.peek().expressionDepth > 0) {
 					templates.peek().expressionDepth++;
 				}
@@ -229,13 +238,13 @@ final class JavascriptPlaceholderParser {
 	}
 
 	private static boolean startsRegexLiteral(String script, int slashIndex, int lastControlHeadClose,
-			int lastStatementBlockClose) {
-		int previousIndex = previousNonWhitespace(script, slashIndex - 1);
+			int lastStatementBlockClose, BitSet comments) {
+		int previousIndex = previousNonWhitespace(script, slashIndex - 1, comments);
 		if (previousIndex < 0) {
 			return true;
 		}
 		char previous = script.charAt(previousIndex);
-		if ((previous == '+' || previous == '-') && isPostfixIncrementOrDecrement(script, previousIndex)) {
+		if ((previous == '+' || previous == '-') && isPostfixIncrementOrDecrement(script, previousIndex, comments)) {
 			return false;
 		}
 		if ("([{:;,=!?&|+-*%^~<>".indexOf(previous) >= 0) {
@@ -247,38 +256,39 @@ final class JavascriptPlaceholderParser {
 		if (previous == '}' && previousIndex == lastStatementBlockClose) {
 			return true;
 		}
-		return isStandaloneRegexPrefixKeyword(script, previousIndex);
+		return isStandaloneRegexPrefixKeyword(script, previousIndex, comments);
 	}
 
-	private static boolean isStandaloneRegexPrefixKeyword(String script, int keywordEnd) {
+	private static boolean isStandaloneRegexPrefixKeyword(String script, int keywordEnd, BitSet comments) {
 		String keyword = previousIdentifier(script, keywordEnd);
 		if (!REGEX_PREFIX_KEYWORDS.contains(keyword)) {
 			return false;
 		}
 		int keywordStart = identifierStart(script, keywordEnd);
-		int beforeKeyword = previousNonWhitespace(script, keywordStart - 1);
+		int beforeKeyword = previousNonWhitespace(script, keywordStart - 1, comments);
 		return beforeKeyword < 0 || script.charAt(beforeKeyword) != '.';
 	}
 
-	private static boolean isStandaloneControlHead(String script, int keywordEnd, Deque<Boolean> statementBraces) {
+	private static boolean isStandaloneControlHead(String script, int keywordEnd, Deque<Boolean> statementBraces,
+			BitSet comments) {
 		String keyword = previousIdentifier(script, keywordEnd);
 		if (!CONTROL_HEAD_KEYWORDS.contains(keyword)) {
 			return false;
 		}
 		int keywordStart = identifierStart(script, keywordEnd);
-		int beforeKeyword = previousNonWhitespace(script, keywordStart - 1);
+		int beforeKeyword = previousNonWhitespace(script, keywordStart - 1, comments);
 		if (beforeKeyword >= 0 && script.charAt(beforeKeyword) == '.') {
 			return false;
 		}
 		return statementBraces.isEmpty() || statementBraces.peek();
 	}
 
-	private static boolean isPostfixIncrementOrDecrement(String script, int operatorEndIndex) {
+	private static boolean isPostfixIncrementOrDecrement(String script, int operatorEndIndex, BitSet comments) {
 		char operator = script.charAt(operatorEndIndex);
 		if (operatorEndIndex == 0 || script.charAt(operatorEndIndex - 1) != operator) {
 			return false;
 		}
-		int operandEnd = previousNonWhitespace(script, operatorEndIndex - 2);
+		int operandEnd = previousNonWhitespace(script, operatorEndIndex - 2, comments);
 		if (operandEnd < 0) {
 			return false;
 		}
@@ -288,8 +298,8 @@ final class JavascriptPlaceholderParser {
 	}
 
 	private static boolean opensStatementBlock(String script, int openBraceIndex, Deque<Boolean> statementBraces,
-			int lastFunctionExpressionParenClose) {
-		int prefixIndex = previousNonWhitespace(script, openBraceIndex - 1);
+			int lastFunctionExpressionParenClose, BitSet comments) {
+		int prefixIndex = previousNonWhitespace(script, openBraceIndex - 1, comments);
 		if (prefixIndex < 0) {
 			return true;
 		}
@@ -301,24 +311,29 @@ final class JavascriptPlaceholderParser {
 			return true;
 		}
 		if (prefix == ':') {
-			return followsStatementLabel(script, prefixIndex, statementBraces);
+			return followsStatementLabel(script, prefixIndex, statementBraces, comments);
 		}
 		if (prefix == '>' && prefixIndex > 0 && script.charAt(prefixIndex - 1) == '=') {
 			// Arrow-function bodies are part of an expression. Their closing brace is an
 			// operand and must not make a following slash look like a regex statement.
 			return false;
 		}
-		if (opensClassDeclarationBody(script, prefixIndex, statementBraces)) {
+		if (opensClassDeclarationBody(script, prefixIndex, statementBraces, comments)) {
 			return true;
 		}
 		return BLOCK_PREFIX_KEYWORDS.contains(previousIdentifier(script, prefixIndex));
 	}
 
-	private static boolean opensClassDeclarationBody(String script, int prefixIndex, Deque<Boolean> statementBraces) {
+	private static boolean opensClassDeclarationBody(String script, int prefixIndex, Deque<Boolean> statementBraces,
+			BitSet comments) {
 		int cursor = prefixIndex;
 		int parenDepth = 0;
 		int bracketDepth = 0;
 		while (cursor >= 0) {
+			if (comments.get(cursor)) {
+				cursor--;
+				continue;
+			}
 			char current = script.charAt(cursor);
 			if (Character.isWhitespace(current)) {
 				cursor--;
@@ -352,10 +367,10 @@ final class JavascriptPlaceholderParser {
 				int start = identifierStart(script, cursor);
 				String word = script.substring(start, cursor + 1);
 				if (word.equals("class")) {
-					int beforeClass = previousNonWhitespace(script, start - 1);
-					return isClassDeclarationBoundary(script, beforeClass, statementBraces);
+					int beforeClass = previousNonWhitespace(script, start - 1, comments);
+					return isClassDeclarationBoundary(script, beforeClass, statementBraces, comments);
 				}
-				cursor = previousNonWhitespace(script, start - 1);
+				cursor = previousNonWhitespace(script, start - 1, comments);
 				continue;
 			}
 			if ("=?:,;".indexOf(current) >= 0) {
@@ -366,7 +381,8 @@ final class JavascriptPlaceholderParser {
 		return false;
 	}
 
-	private static boolean isClassDeclarationBoundary(String script, int beforeClass, Deque<Boolean> statementBraces) {
+	private static boolean isClassDeclarationBoundary(String script, int beforeClass, Deque<Boolean> statementBraces,
+			BitSet comments) {
 		if (isStatementBoundary(script, beforeClass, statementBraces)) {
 			return true;
 		}
@@ -376,24 +392,24 @@ final class JavascriptPlaceholderParser {
 		String previousWord = previousIdentifier(script, beforeClass);
 		if (previousWord.equals("export")) {
 			int exportStart = identifierStart(script, beforeClass);
-			return isStatementBoundary(script, previousNonWhitespace(script, exportStart - 1), statementBraces);
+			return isStatementBoundary(script, previousNonWhitespace(script, exportStart - 1, comments), statementBraces);
 		}
 		if (previousWord.equals("default")) {
 			int defaultStart = identifierStart(script, beforeClass);
-			int beforeDefault = previousNonWhitespace(script, defaultStart - 1);
+			int beforeDefault = previousNonWhitespace(script, defaultStart - 1, comments);
 			if (beforeDefault >= 0 && previousIdentifier(script, beforeDefault).equals("export")) {
 				int exportStart = identifierStart(script, beforeDefault);
-				return isStatementBoundary(script, previousNonWhitespace(script, exportStart - 1), statementBraces);
+				return isStatementBoundary(script, previousNonWhitespace(script, exportStart - 1, comments), statementBraces);
 			}
 		}
 		return false;
 	}
 
 	private static boolean opensFunctionExpressionParameters(String script, int openParenIndex,
-			Deque<Boolean> statementBraces) {
-		int tokenEnd = previousNonWhitespace(script, openParenIndex - 1);
+			Deque<Boolean> statementBraces, BitSet comments) {
+		int tokenEnd = previousNonWhitespace(script, openParenIndex - 1, comments);
 		if (tokenEnd >= 0 && script.charAt(tokenEnd) == '*') {
-			tokenEnd = previousNonWhitespace(script, tokenEnd - 1);
+			tokenEnd = previousNonWhitespace(script, tokenEnd - 1, comments);
 		}
 		if (tokenEnd < 0 || !Character.isJavaIdentifierPart(script.charAt(tokenEnd))) {
 			return false;
@@ -407,9 +423,9 @@ final class JavascriptPlaceholderParser {
 			anonymous = true;
 		} else {
 			int tokenStart = identifierStart(script, tokenEnd);
-			int beforeName = previousNonWhitespace(script, tokenStart - 1);
+			int beforeName = previousNonWhitespace(script, tokenStart - 1, comments);
 			if (beforeName >= 0 && script.charAt(beforeName) == '*') {
-				beforeName = previousNonWhitespace(script, beforeName - 1);
+				beforeName = previousNonWhitespace(script, beforeName - 1, comments);
 			}
 			if (beforeName < 0 || !previousIdentifier(script, beforeName).equals("function")) {
 				return false;
@@ -419,7 +435,7 @@ final class JavascriptPlaceholderParser {
 		}
 
 		int functionStart = identifierStart(script, functionEnd);
-		int beforeFunction = previousNonWhitespace(script, functionStart - 1);
+		int beforeFunction = previousNonWhitespace(script, functionStart - 1, comments);
 		if (beforeFunction >= 0 && script.charAt(beforeFunction) == '.') {
 			return false;
 		}
@@ -432,7 +448,7 @@ final class JavascriptPlaceholderParser {
 		if (beforeFunction >= 0 && Character.isJavaIdentifierPart(script.charAt(beforeFunction))
 				&& previousIdentifier(script, beforeFunction).equals("async")) {
 			int asyncStart = identifierStart(script, beforeFunction);
-			beforeFunction = previousNonWhitespace(script, asyncStart - 1);
+			beforeFunction = previousNonWhitespace(script, asyncStart - 1, comments);
 		}
 
 		return !isStatementBoundary(script, beforeFunction, statementBraces);
@@ -452,13 +468,14 @@ final class JavascriptPlaceholderParser {
 		return false;
 	}
 
-	private static boolean followsStatementLabel(String script, int colonIndex, Deque<Boolean> statementBraces) {
-		int labelEnd = previousNonWhitespace(script, colonIndex - 1);
+	private static boolean followsStatementLabel(String script, int colonIndex, Deque<Boolean> statementBraces,
+			BitSet comments) {
+		int labelEnd = previousNonWhitespace(script, colonIndex - 1, comments);
 		if (labelEnd < 0 || !Character.isJavaIdentifierPart(script.charAt(labelEnd))) {
 			return false;
 		}
 		int labelStart = identifierStart(script, labelEnd);
-		int beforeLabel = previousNonWhitespace(script, labelStart - 1);
+		int beforeLabel = previousNonWhitespace(script, labelStart - 1, comments);
 		if (beforeLabel < 0) {
 			return true;
 		}
@@ -474,8 +491,12 @@ final class JavascriptPlaceholderParser {
 	}
 
 	private static int previousNonWhitespace(String script, int index) {
+		return previousNonWhitespace(script, index, null);
+	}
+
+	private static int previousNonWhitespace(String script, int index, BitSet ignored) {
 		for (int i = index; i >= 0; i--) {
-			if (!Character.isWhitespace(script.charAt(i))) {
+			if ((ignored == null || !ignored.get(i)) && !Character.isWhitespace(script.charAt(i))) {
 				return i;
 			}
 		}
