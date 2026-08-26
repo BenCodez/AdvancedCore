@@ -109,7 +109,11 @@ public final class JavascriptPlaceholderBinder {
                 replacements[i] = escapeTemplate(match.value);
             } else if (string != null) {
                 char delimiter = literalDelimiter(expression, string);
-                replacements[i] = escapeString(match.value, delimiter);
+                if (delimiter == '`' && !contexts.insideTemplateExpression(match.start)) {
+                    replacements[i] = escapeTemplate(match.value);
+                } else {
+                    replacements[i] = escapeString(match.value, delimiter);
+                }
             } else {
                 String variable = VARIABLE_PREFIX + bindingIndex++;
                 bindings.accept(variable, coerce(match.value));
