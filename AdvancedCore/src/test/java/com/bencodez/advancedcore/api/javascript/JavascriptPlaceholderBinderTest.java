@@ -137,6 +137,39 @@ class JavascriptPlaceholderBinderTest {
         assertEquals(Double.valueOf(1.5), bindings.get("__advancedCorePlaceholder2"));
     }
 
+
+    @Test
+    void exactQuotedNumericLookingPlaceholderRemainsAString() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("'%code%' === '001'", ignored -> "001", bindings::put);
+
+        assertEquals("'001' === '001'", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void braceDelimitedCustomPlaceholderIsAutomaticallyBound() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("{count} > 0",
+                token -> token.equals("{count}") ? "5" : token, bindings::put);
+
+        assertEquals("__advancedCorePlaceholder0 > 0", prepared);
+        assertEquals(Long.valueOf(5), bindings.get("__advancedCorePlaceholder0"));
+    }
+
+    @Test
+    void unresolvedBraceSyntaxRemainsOrdinaryJavascript() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("var value = {count: 1}; %name%",
+                token -> token.equals("%name%") ? "Ben" : token, bindings::put);
+
+        assertEquals("var value = {count: 1}; __advancedCorePlaceholder0", prepared);
+        assertEquals("Ben", bindings.get("__advancedCorePlaceholder0"));
+    }
+
     @Test
     void unresolvedTokensRemainUntouched() {
         HashMap<String, Object> bindings = new HashMap<>();

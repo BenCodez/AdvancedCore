@@ -35,7 +35,7 @@ import me.clip.placeholderapi.PlaceholderAPI;
  * second JavaScript lexer inside AdvancedCore.
  */
 public final class JavascriptPlaceholderBinder {
-    private static final Pattern PLACEHOLDER = Pattern.compile("%([^%\\s]+)%");
+    private static final Pattern PLACEHOLDER = Pattern.compile("%([^%\\s]+)%|(?<!\\$)\\{([^{}%\\s]+)\\}");
     private static final Pattern INTEGER = Pattern.compile("[-+]?\\d+");
     private static final Pattern DECIMAL = Pattern
             .compile("[-+]?(?:\\d+\\.\\d*|\\d*\\.\\d+|\\d+)(?:[eE][-+]?\\d+)?");
@@ -68,10 +68,15 @@ public final class JavascriptPlaceholderBinder {
                 value = resolver.apply(token);
             }
             matches.add(new PlaceholderMatch(matcher.start(), matcher.end(), token, value));
-            // Keep all source offsets unchanged while making a bare %placeholder%
-            // parse as an ordinary identifier.
-            for (int i = matcher.start(); i < matcher.end(); i++) {
-                sanitized.setCharAt(i, 'p');
+            // Keep all source offsets unchanged while making resolved placeholders parse
+            // as an ordinary identifier. Unresolved brace syntax may be valid JavaScript
+            // (for example an object/block), so only sanitize brace placeholders when
+            // they actually resolve as AdvancedCore custom data.
+            boolean bracePlaceholder = token.charAt(0) == '{';
+            if (!bracePlaceholder || (value != null && !value.equals(token))) {
+                for (int i = matcher.start(); i < matcher.end(); i++) {
+                    sanitized.setCharAt(i, 'p');
+                }
             }
         }
         if (matches.isEmpty()) {
@@ -94,7 +99,12 @@ public final class JavascriptPlaceholderBinder {
             if (regex != null) {
                 replacements[i] = escapeRegex(match.value, expression, regex, match.start);
             } else if (string != null) {
-                replacements[i] = escapeString(match.value, expression.charAt(string.start));
+                char delimiter = literalDelimiter(expression, string);
+                if (delimiter == '`' && !contexts.insideTemplateExpression(match.start)) {
+                    replacements[i] = escapeTemplate(match.value);
+                } else {
+                    replacements[i] = escapeString(match.value, delimiter);
+                }
             } else if (template != null && !contexts.insideTemplateExpression(match.start)) {
                 replacements[i] = escapeTemplate(match.value);
             } else {
@@ -115,7 +125,9 @@ public final class JavascriptPlaceholderBinder {
 
     private static String resolve(String token, OfflinePlayer player, Map<String, String> placeholders) {
         AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
-        if (player != null && plugin != null && plugin.isPlaceHolderAPIEnabled()) {
+        // PlaceholderAPI uses percent-delimited placeholders. Brace-delimited tokens
+        // are AdvancedCore's legacy custom placeholder form and are resolved below.
+        if (token.startsWith("%") && player != null && plugin != null && plugin.isPlaceHolderAPIEnabled()) {
             String resolved = PlaceholderAPI.setPlaceholders(player, token);
             if (resolved != null && !resolved.equals(token)) {
                 return resolved;
@@ -150,6 +162,27 @@ public final class JavascriptPlaceholderBinder {
             }
         }
         return value;
+    }
+
+    private static char literalDelimiter(String expression, Range range) {
+        int[] candidates = { range.start - 1, range.start, range.end, range.end - 1 };
+        for (int candidate : candidates) {
+            if (candidate < 0 || candidate >= expression.length()) {
+                continue;
+            }
+            char value = expression.charAt(candidate);
+            if (value == '\'' || value == '"' || value == '`') {
+                return value;
+            }
+        }
+        for (int i = Math.max(0, range.start - 2);
+                i <= Math.min(expression.length() - 1, range.start + 1); i++) {
+            char value = expression.charAt(i);
+            if (value == '\'' || value == '"' || value == '`') {
+                return value;
+            }
+        }
+        return '\'';
     }
 
     private static String escapeString(String value, char quote) {
@@ -313,19 +346,32 @@ public final class JavascriptPlaceholderBinder {
 
         private static ClassLoader parserClassLoader() {
             JavascriptEngineHandler handler = JavascriptEngineHandler.getInstance();
-            if (handler.getNashornClassLoader() != null) {
-                return handler.getNashornClassLoader();
+            ClassLoader downloaded = handler.getNashornClassLoader();
+            if (canLoadParser(downloaded)) {
+                return downloaded;
             }
-            ScriptEngine cached = handler.getCachedEngine();
-            if (cached != null && cached.getClass().getClassLoader() != null) {
-                return cached.getClass().getClassLoader();
-            }
+
+            // nashorn-core is packaged with AdvancedCore so parser support remains
+            // available even when the active ScriptEngine is Rhino/GraalJS.
             ClassLoader own = JavascriptPlaceholderBinder.class.getClassLoader();
-            try {
-                Class.forName(PARSER_CLASS, false, own);
+            if (canLoadParser(own)) {
                 return own;
-            } catch (ClassNotFoundException ignored) {
-                return null;
+            }
+
+            ScriptEngine cached = handler.getCachedEngine();
+            ClassLoader cachedLoader = cached == null ? null : cached.getClass().getClassLoader();
+            return canLoadParser(cachedLoader) ? cachedLoader : null;
+        }
+
+        private static boolean canLoadParser(ClassLoader loader) {
+            if (loader == null) {
+                return false;
+            }
+            try {
+                Class.forName(PARSER_CLASS, false, loader);
+                return true;
+            } catch (ClassNotFoundException | LinkageError ignored) {
+                return false;
             }
         }
 
