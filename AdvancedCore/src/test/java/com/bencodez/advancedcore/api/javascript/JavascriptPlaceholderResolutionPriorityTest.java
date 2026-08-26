@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
@@ -14,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.tests.BaseTest;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 
@@ -21,15 +21,13 @@ class JavascriptPlaceholderResolutionPriorityTest {
 
     @Test
     void customPlaceholderWinsSameNamedPapiTokenThenExpandsPapiInsideCustomValue() {
-        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        AdvancedCorePlugin plugin = BaseTest.getInstance().plugin;
         OfflinePlayer player = mock(OfflinePlayer.class);
         JavascriptEngine engine = new JavascriptEngine();
 
         when(plugin.isPlaceHolderAPIEnabled()).thenReturn(true);
 
-        try (MockedStatic<AdvancedCorePlugin> pluginStatic = mockStatic(AdvancedCorePlugin.class);
-                MockedStatic<PlaceholderAPI> papiStatic = mockStatic(PlaceholderAPI.class)) {
-            pluginStatic.when(AdvancedCorePlugin::getInstance).thenReturn(plugin);
+        try (MockedStatic<PlaceholderAPI> papiStatic = mockStatic(PlaceholderAPI.class)) {
             papiStatic.when(() -> PlaceholderAPI.setPlaceholders(player, "%reward_alias%"))
                     .thenReturn("CustomName");
             papiStatic.when(() -> PlaceholderAPI.setPlaceholders(player, "%player_name%"))
