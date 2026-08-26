@@ -1,0 +1,37 @@
+name: Correct JavaScript fallback regex
+on:
+  push:
+    branches: [security/javascript-placeholder-bindings]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/javascript-placeholder-bindings
+      - name: Correct fallback regex
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderBinder.java')
+          lines = p.read_text().splitlines()
+          found = False
+          for i, line in enumerate(lines):
+              if line.strip().startswith('private static final Pattern FALLBACK_REGEX ='):
+                  lines[i] = r'''    private static final Pattern FALLBACK_REGEX = Pattern.compile("/(?:\\\\.|[^/\\\\\\r\\n])+/[dgimsuvy]*");'''
+                  found = True
+                  break
+          if not found:
+              raise SystemExit('FALLBACK_REGEX source line not found')
+          p.write_text('\n'.join(lines) + '\n')
+          PY
+          rm -f .github/workflows/fix-302-codeql-regex-linear.yml
+          git config user.name 'Ben'
+          git config user.email 'benbergen12@gmail.com'
+          git add -A
+          git commit -m 'Use disjoint JavaScript regex fallback'
+          git push origin HEAD:security/javascript-placeholder-bindings
