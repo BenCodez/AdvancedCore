@@ -65,6 +65,19 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
     }
 
     @Test
+    void regexFallbackHandlesLongOrdinaryRunsWithoutChangingPlaceholderSemantics() {
+        HashMap<String, Object> bindings = new HashMap<>();
+        String dots = ".".repeat(10_000);
+        String script = "obj?.name && /^" + dots + "%name%$/.test(value)";
+
+        String prepared = JavascriptPlaceholderBinder.bind(script, ignored -> "Ben", bindings::put);
+
+        assertTrue(prepared.startsWith("obj?.name && /^" + dots));
+        assertTrue(prepared.endsWith("Ben$/.test(value)"));
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
     void newerEngineSyntaxStillPreservesTemplatePlaceholderSemantics() {
         HashMap<String, Object> bindings = new HashMap<>();
 
