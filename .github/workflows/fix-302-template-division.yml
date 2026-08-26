@@ -1,7 +1,8 @@
 name: Fix latest JavaScript fallback findings
 on:
   push:
-    branches: [security/javascript-placeholder-bindings]
+    branches:
+      - security/javascript-placeholder-bindings
 permissions:
   contents: write
 jobs:
@@ -13,139 +14,10 @@ jobs:
         with:
           ref: security/javascript-placeholder-bindings
       - name: Apply fallback fixes
-        shell: bash
+        run: python3 .github/fix-302-latest.py
+      - name: Commit fixes
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderBinder.java')
-          text = p.read_text()
-
-          old = '            contexts = JavascriptContexts.fallback(expression);'
-          new = '            contexts = JavascriptContexts.fallback(sanitized.toString());'
-          if text.count(old) != 1:
-              raise SystemExit('fallback call match failed')
-          text = text.replace(old, new, 1)
-
-          old = '''            if (regex != null) {
-                replacements[i] = escapeRegex(match.value, expression, regex, match.start);
-            } else if (string != null) {
-                char delimiter = literalDelimiter(expression, string);
-                if (delimiter == '`' && !contexts.insideTemplateExpression(match.start)) {
-                    replacements[i] = escapeTemplate(match.value);
-                } else {
-                    replacements[i] = escapeString(match.value, delimiter);
-                }
-            } else if (template != null && !contexts.insideTemplateExpression(match.start)) {
-                replacements[i] = escapeTemplate(match.value);
-            } else {
-'''
-          new = '''            if (regex != null) {
-                replacements[i] = escapeRegex(match.value, expression, regex, match.start);
-            } else if (template != null && !contexts.insideTemplateExpression(match.start)) {
-                // Template text wins over quote-looking text inside the template. A value
-                // containing ${...} must never become a live interpolation.
-                replacements[i] = escapeTemplate(match.value);
-            } else if (string != null) {
-                char delimiter = literalDelimiter(expression, string);
-                replacements[i] = escapeString(match.value, delimiter);
-            } else {
-'''
-          if text.count(old) != 1:
-              raise SystemExit('binding priority match failed')
-          text = text.replace(old, new, 1)
-
-          old = '''        private static JavascriptContexts fallback(String source) {
-            JavascriptContexts contexts = new JavascriptContexts();
-            addPatternRanges(source, FALLBACK_STRING, contexts.strings, null);
-
-            Matcher templates = FALLBACK_TEMPLATE.matcher(source);
-            while (templates.find()) {
-                Range template = new Range(templates.start(), templates.end());
-                contexts.templates.add(template);
-                addFallbackTemplateExpressions(source, template, contexts.templateExpressions);
-            }
-
-            addFallbackRegexRanges(source, contexts);
-            contexts.sort();
-            return contexts;
-        }
-'''
-          new = '''        private static JavascriptContexts fallback(String source) {
-            JavascriptContexts contexts = new JavascriptContexts();
-
-            Matcher templates = FALLBACK_TEMPLATE.matcher(source);
-            while (templates.find()) {
-                Range template = new Range(templates.start(), templates.end());
-                contexts.templates.add(template);
-                addFallbackTemplateExpressions(source, template, contexts.templateExpressions);
-            }
-
-            // Do not classify quote-looking text inside a template as a string literal.
-            addPatternRanges(source, FALLBACK_STRING, contexts.strings, contexts);
-            addFallbackRegexRanges(source, contexts);
-            contexts.sort();
-            return contexts;
-        }
-'''
-          if text.count(old) != 1:
-              raise SystemExit('fallback ordering match failed')
-          text = text.replace(old, new, 1)
-
-          old = '''                if (source.charAt(i) != '/' || contexts.containing(contexts.strings, i) != null
-                        || contexts.containing(contexts.templates, i) != null) {
-                    continue;
-                }
-'''
-          new = '''                if (source.charAt(i) != '/' || contexts.containing(contexts.strings, i) != null
-                        || contexts.containing(contexts.templates, i) != null || !canStartRegex(source, i)) {
-                    continue;
-                }
-'''
-          if text.count(old) != 1:
-              raise SystemExit('regex start condition match failed')
-          text = text.replace(old, new, 1)
-
-          marker = '''        private static void addPatternRanges(String source, Pattern pattern, List<Range> target,
-                JavascriptContexts existing) {
-'''
-          helper = '''        private static boolean canStartRegex(String source, int slashIndex) {
-            int previousIndex = slashIndex - 1;
-            while (previousIndex >= 0 && Character.isWhitespace(source.charAt(previousIndex))) {
-                previousIndex--;
-            }
-            if (previousIndex < 0) {
-                return true;
-            }
-
-            char previous = source.charAt(previousIndex);
-            if ("([{:;,=!?&|+-*%^~<>".indexOf(previous) >= 0) {
-                return true;
-            }
-
-            if (Character.isJavaIdentifierPart(previous)) {
-                int end = previousIndex + 1;
-                int start = previousIndex;
-                while (start >= 0 && Character.isJavaIdentifierPart(source.charAt(start))) {
-                    start--;
-                }
-                String word = source.substring(start + 1, end);
-                return word.equals("return") || word.equals("case") || word.equals("throw")
-                        || word.equals("else") || word.equals("do") || word.equals("yield")
-                        || word.equals("await") || word.equals("typeof") || word.equals("void")
-                        || word.equals("delete") || word.equals("instanceof") || word.equals("in")
-                        || word.equals("new");
-            }
-            return false;
-        }
-
-'''
-          if text.count(marker) != 1:
-              raise SystemExit('helper insertion marker failed')
-          text = text.replace(marker, helper + marker, 1)
-
-          p.write_text(text)
-          PY
-          rm -f .github/workflows/fix-302-template-division.yml
+          rm -f .github/fix-302-latest.py .github/workflows/fix-302-template-division.yml
           git config user.name 'Ben'
           git config user.email 'benbergen12@gmail.com'
           git add -A
