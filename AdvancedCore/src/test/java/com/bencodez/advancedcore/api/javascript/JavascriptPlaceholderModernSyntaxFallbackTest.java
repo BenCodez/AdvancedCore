@@ -54,6 +54,17 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
     }
 
     @Test
+    void newerEngineSyntaxRegexFallbackKeepsEscapedSlashSemantics() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name && /^path\\/%name%$/.test(value)",
+                ignored -> "Ben.*", bindings::put);
+
+        assertEquals("obj?.name && /^path\\/Ben\\.\\*$/.test(value)", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
     void newerEngineSyntaxStillPreservesTemplatePlaceholderSemantics() {
         HashMap<String, Object> bindings = new HashMap<>();
 
