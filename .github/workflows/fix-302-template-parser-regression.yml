@@ -13,31 +13,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: security/javascript-placeholder-bindings
-      - name: Restore template delimiter handling
+      - name: Apply compatibility fix
+        run: python3 .github/fix-302-template-parser.py
+      - name: Commit compatibility fix
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderBinder.java')
-          text = p.read_text()
-          old = '''            } else if (string != null) {
-                char delimiter = literalDelimiter(expression, string);
-                replacements[i] = escapeString(match.value, delimiter);
-            } else {
-'''
-          new = '''            } else if (string != null) {
-                char delimiter = literalDelimiter(expression, string);
-                if (delimiter == '`' && !contexts.insideTemplateExpression(match.start)) {
-                    replacements[i] = escapeTemplate(match.value);
-                } else {
-                    replacements[i] = escapeString(match.value, delimiter);
-                }
-            } else {
-'''
-          if text.count(old) != 1:
-              raise SystemExit('template string branch not found')
-          p.write_text(text.replace(old, new, 1))
-          PY
-          rm -f .github/workflows/fix-302-template-parser-regression.yml
+          rm -f .github/fix-302-template-parser.py .github/workflows/fix-302-template-parser-regression.yml
           git config user.name 'Ben'
           git config user.email 'benbergen12@gmail.com'
           git add -A
