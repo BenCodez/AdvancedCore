@@ -171,6 +171,39 @@ class JavascriptPlaceholderBinderTest {
     }
 
     @Test
+    void parserFailurePreservesQuotedPlaceholderUnderModernSyntax() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name && '%name%' === 'Ben'",
+                ignored -> "Ben", bindings::put);
+
+        assertEquals("obj?.name && 'Ben' === 'Ben'", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void parserFailurePreservesTemplateTextUnderModernSyntax() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name && `Hello %name%`",
+                ignored -> "Ben` ${attack}", bindings::put);
+
+        assertEquals("obj?.name && `Hello Ben\\` \\${attack}`", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void parserFailurePreservesRegexPlaceholderUnderModernSyntax() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name && /^%name%$/.test(value)",
+                ignored -> "Ben.*", bindings::put);
+
+        assertEquals("obj?.name && /^Ben\\.\\*$/.test(value)", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
     void unresolvedTokensRemainUntouched() {
         HashMap<String, Object> bindings = new HashMap<>();
 

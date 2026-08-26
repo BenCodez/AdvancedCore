@@ -44,6 +44,9 @@ public final class JavascriptPlaceholderBinder {
     private static final String DIAGNOSTIC_LISTENER_CLASS = "org.openjdk.nashorn.api.tree.DiagnosticListener";
     private static final String TREE_CLASS = "org.openjdk.nashorn.api.tree.Tree";
     private static final String TREE_PACKAGE = "org.openjdk.nashorn.api.tree";
+    private static final Pattern FALLBACK_STRING = Pattern.compile("'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"");
+    private static final Pattern FALLBACK_TEMPLATE = Pattern.compile("`(?:\\.|[^`\\])*`");
+    private static final Pattern FALLBACK_REGEX = Pattern.compile("/(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\r\n])+/[dgimsuvy]*");
 
     private JavascriptPlaceholderBinder() {
     }
@@ -84,6 +87,9 @@ public final class JavascriptPlaceholderBinder {
         }
 
         JavascriptContexts contexts = JavascriptContexts.parse(sanitized.toString());
+        if (!contexts.parsed) {
+            contexts = JavascriptContexts.fallback(expression);
+        }
         String[] replacements = new String[matches.size()];
         int bindingIndex = 0;
         for (int i = 0; i < matches.size(); i++) {
@@ -300,6 +306,7 @@ public final class JavascriptPlaceholderBinder {
         private final List<Range> regexes = new ArrayList<>();
         private final List<Range> templates = new ArrayList<>();
         private final List<Range> templateExpressions = new ArrayList<>();
+        private boolean parsed;
 
         private static JavascriptContexts parse(String source) {
             JavascriptContexts contexts = new JavascriptContexts();
@@ -318,6 +325,7 @@ public final class JavascriptPlaceholderBinder {
                 Method parse = parserClass.getMethod("parse", String.class, String.class, diagnosticClass);
                 Object root = parse.invoke(parser, "AdvancedCore", source, diagnostic);
                 if (root != null) {
+                    contexts.parsed = true;
                     walk(root, treeClass, contexts, new IdentityHashMap<>());
                 }
             } catch (ReflectiveOperationException | RuntimeException ignored) {
@@ -326,6 +334,80 @@ public final class JavascriptPlaceholderBinder {
             }
             contexts.sort();
             return contexts;
+        }
+
+        private static JavascriptContexts fallback(String source) {
+            JavascriptContexts contexts = new JavascriptContexts();
+            addPatternRanges(source, FALLBACK_STRING, contexts.strings, null);
+
+            Matcher templates = FALLBACK_TEMPLATE.matcher(source);
+            while (templates.find()) {
+                Range template = new Range(templates.start(), templates.end());
+                contexts.templates.add(template);
+                addFallbackTemplateExpressions(source, template, contexts.templateExpressions);
+            }
+
+            addPatternRanges(source, FALLBACK_REGEX, contexts.regexes, contexts);
+            contexts.sort();
+            return contexts;
+        }
+
+        private static void addPatternRanges(String source, Pattern pattern, List<Range> target,
+                JavascriptContexts existing) {
+            Matcher matcher = pattern.matcher(source);
+            while (matcher.find()) {
+                Range candidate = new Range(matcher.start(), matcher.end());
+                if (existing == null || !existing.overlapsLiteral(candidate)) {
+                    target.add(candidate);
+                }
+            }
+        }
+
+        private static void addFallbackTemplateExpressions(String source, Range template, List<Range> target) {
+            boolean escaped = false;
+            int expressionStart = -1;
+            int depth = 0;
+            for (int i = template.start + 1; i < template.end - 1; i++) {
+                char current = source.charAt(i);
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+                if (current == '\\') {
+                    escaped = true;
+                    continue;
+                }
+                if (expressionStart < 0) {
+                    if (current == '$' && i + 1 < template.end && source.charAt(i + 1) == '{') {
+                        expressionStart = i + 2;
+                        depth = 1;
+                        i++;
+                    }
+                    continue;
+                }
+                if (current == '{') {
+                    depth++;
+                } else if (current == '}') {
+                    depth--;
+                    if (depth == 0) {
+                        target.add(new Range(expressionStart, i));
+                        expressionStart = -1;
+                    }
+                }
+            }
+        }
+
+        private boolean overlapsLiteral(Range candidate) {
+            return overlaps(strings, candidate) || overlaps(templates, candidate);
+        }
+
+        private boolean overlaps(List<Range> ranges, Range candidate) {
+            for (Range range : ranges) {
+                if (candidate.start < range.end && range.start < candidate.end) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static Object createParser(Class<?> parserClass) throws ReflectiveOperationException {
@@ -360,7 +442,12 @@ public final class JavascriptPlaceholderBinder {
 
             ScriptEngine cached = handler.getCachedEngine();
             ClassLoader cachedLoader = cached == null ? null : cached.getClass().getClassLoader();
-            return canLoadParser(cachedLoader) ? cachedLoader : null;
+            if (canLoadParser(cachedLoader)) {
+                return cachedLoader;
+            }
+
+            ClassLoader prepared = handler.getOrCreateNashornParserClassLoader();
+            return canLoadParser(prepared) ? prepared : null;
         }
 
         private static boolean canLoadParser(ClassLoader loader) {

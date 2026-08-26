@@ -275,6 +275,55 @@ public class JavascriptEngineHandler {
 	}
 
 	/**
+	 * Gets or prepares a Nashorn classloader for parser-only use. This is separate
+	 * from the active ScriptEngine so a server-provided Rhino/GraalJS engine can
+	 * still use Nashorn's parser for safe placeholder context detection.
+	 *
+	 * @return a classloader containing Nashorn's parser API, or null if unavailable
+	 */
+	public ClassLoader getOrCreateNashornParserClassLoader() {
+		if (nashornClassLoader != null) {
+			try {
+				Class.forName("org.openjdk.nashorn.api.tree.Parser", false, nashornClassLoader);
+				return nashornClassLoader;
+			} catch (ClassNotFoundException | LinkageError ignored) {
+			}
+		}
+		if (plugin == null) {
+			return null;
+		}
+
+		URLClassLoader loader = createParserClassLoader(PRIMARY_NASHORN_VERSION, ASM_VERSION_FOR_PRIMARY);
+		if (loader == null) {
+			loader = createParserClassLoader(FALLBACK_NASHORN_VERSION, ASM_VERSION_FOR_FALLBACK);
+		}
+		if (loader != null) {
+			nashornClassLoader = loader;
+		}
+		return loader;
+	}
+
+	private URLClassLoader createParserClassLoader(String nashornVersion, String asmVersion) {
+		try {
+			List<Path> jars = getOrDownloadJars(nashornVersion, asmVersion);
+			if (jars.isEmpty()) {
+				return null;
+			}
+			URLClassLoader loader = createClassLoader(jars);
+			try {
+				Class.forName("org.openjdk.nashorn.api.tree.Parser", false, loader);
+				return loader;
+			} catch (ClassNotFoundException | LinkageError e) {
+				closeQuietly(loader);
+				return null;
+			}
+		} catch (IOException e) {
+			logDebug(e);
+			return null;
+		}
+	}
+
+	/**
 	 * Gets a downloaded Nashorn engine.
 	 *
 	 * @param nashornVersion Nashorn version
