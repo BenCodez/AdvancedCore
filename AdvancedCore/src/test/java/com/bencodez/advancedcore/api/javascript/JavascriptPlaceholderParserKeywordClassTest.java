@@ -71,4 +71,16 @@ class JavascriptPlaceholderParserKeywordClassTest {
 		assertEquals("var allowed=false,C=class X {} / 2; '\\'; allowed=true; \\''; allowed", script);
 		assertTrue(bindings.isEmpty());
 	}
+	@Test
+	void classDeclarationCommentsDoNotAffectFollowingRegexStatement() {
+		HashMap<String, Object> bindings = new HashMap<>();
+		String injection = "Bukkit.dispatchCommand(Console, \\\"op attacker\\\")";
+
+		String script = JavascriptPlaceholderParser.replace(
+				"class /* = */ X {} /[']/.test('x'); %untrusted%", ignored -> injection, bindings::put);
+
+		assertEquals("class /* = */ X {} /[']/.test('x'); __advancedCorePlaceholder0", script);
+		assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+	}
+
 }
