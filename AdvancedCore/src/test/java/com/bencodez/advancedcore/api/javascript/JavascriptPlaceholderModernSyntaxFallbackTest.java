@@ -98,4 +98,26 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
         assertEquals("obj?.name && `Hello Ben\\` \\${attack}`", prepared);
         assertTrue(bindings.isEmpty());
     }
+
+    @Test
+    void quoteLookingTextInsideTemplateStillUsesTemplateEscaping() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name; `'%name%'`",
+                ignored -> "${attack()}", bindings::put);
+
+        assertEquals("obj?.name; `'\\${attack()}'`", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void divisionOperatorsDoNotBecomeFallbackRegexRanges() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.value; 10 / %count% / 2",
+                ignored -> "2.5", bindings::put);
+
+        assertEquals("obj?.value; 10 / __advancedCorePlaceholder0 / 2", prepared);
+        assertEquals(2.5D, bindings.get("__advancedCorePlaceholder0"));
+    }
 }
