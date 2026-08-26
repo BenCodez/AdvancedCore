@@ -87,7 +87,7 @@ public final class JavascriptPlaceholderBinder {
 
         JavascriptContexts contexts = JavascriptContexts.parse(sanitized.toString());
         if (!contexts.parsed) {
-            contexts = JavascriptContexts.fallback(expression);
+            contexts = JavascriptContexts.fallback(sanitized.toString());
         }
         String[] replacements = new String[matches.size()];
         int bindingIndex = 0;
@@ -103,15 +103,13 @@ public final class JavascriptPlaceholderBinder {
             Range template = contexts.containing(contexts.templates, match.start);
             if (regex != null) {
                 replacements[i] = escapeRegex(match.value, expression, regex, match.start);
+            } else if (template != null && !contexts.insideTemplateExpression(match.start)) {
+                // Template text wins over quote-looking text inside the template. A value
+                // containing ${...} must never become a live interpolation.
+                replacements[i] = escapeTemplate(match.value);
             } else if (string != null) {
                 char delimiter = literalDelimiter(expression, string);
-                if (delimiter == '`' && !contexts.insideTemplateExpression(match.start)) {
-                    replacements[i] = escapeTemplate(match.value);
-                } else {
-                    replacements[i] = escapeString(match.value, delimiter);
-                }
-            } else if (template != null && !contexts.insideTemplateExpression(match.start)) {
-                replacements[i] = escapeTemplate(match.value);
+                replacements[i] = escapeString(match.value, delimiter);
             } else {
                 String variable = VARIABLE_PREFIX + bindingIndex++;
                 bindings.accept(variable, coerce(match.value));
@@ -343,7 +341,6 @@ public final class JavascriptPlaceholderBinder {
 
         private static JavascriptContexts fallback(String source) {
             JavascriptContexts contexts = new JavascriptContexts();
-            addPatternRanges(source, FALLBACK_STRING, contexts.strings, null);
 
             Matcher templates = FALLBACK_TEMPLATE.matcher(source);
             while (templates.find()) {
@@ -352,6 +349,8 @@ public final class JavascriptPlaceholderBinder {
                 addFallbackTemplateExpressions(source, template, contexts.templateExpressions);
             }
 
+            // Do not classify quote-looking text inside a template as a string literal.
+            addPatternRanges(source, FALLBACK_STRING, contexts.strings, contexts);
             addFallbackRegexRanges(source, contexts);
             contexts.sort();
             return contexts;
@@ -360,7 +359,7 @@ public final class JavascriptPlaceholderBinder {
         private static void addFallbackRegexRanges(String source, JavascriptContexts contexts) {
             for (int i = 0; i < source.length(); i++) {
                 if (source.charAt(i) != '/' || contexts.containing(contexts.strings, i) != null
-                        || contexts.containing(contexts.templates, i) != null) {
+                        || contexts.containing(contexts.templates, i) != null || !canStartRegex(source, i)) {
                     continue;
                 }
 
@@ -403,6 +402,36 @@ public final class JavascriptPlaceholderBinder {
                     break;
                 }
             }
+        }
+
+        private static boolean canStartRegex(String source, int slashIndex) {
+            int previousIndex = slashIndex - 1;
+            while (previousIndex >= 0 && Character.isWhitespace(source.charAt(previousIndex))) {
+                previousIndex--;
+            }
+            if (previousIndex < 0) {
+                return true;
+            }
+
+            char previous = source.charAt(previousIndex);
+            if ("([{:;,=!?&|+-*%^~<>".indexOf(previous) >= 0) {
+                return true;
+            }
+
+            if (Character.isJavaIdentifierPart(previous)) {
+                int end = previousIndex + 1;
+                int start = previousIndex;
+                while (start >= 0 && Character.isJavaIdentifierPart(source.charAt(start))) {
+                    start--;
+                }
+                String word = source.substring(start + 1, end);
+                return word.equals("return") || word.equals("case") || word.equals("throw")
+                        || word.equals("else") || word.equals("do") || word.equals("yield")
+                        || word.equals("await") || word.equals("typeof") || word.equals("void")
+                        || word.equals("delete") || word.equals("instanceof") || word.equals("in")
+                        || word.equals("new");
+            }
+            return false;
         }
 
         private static void addPatternRanges(String source, Pattern pattern, List<Range> target,
