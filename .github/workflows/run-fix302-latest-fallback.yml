@@ -1,0 +1,25 @@
+name: Run latest JavaScript fallback fixes
+on:
+  push:
+    branches:
+      - security/javascript-placeholder-bindings
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/javascript-placeholder-bindings
+      - name: Apply latest fallback fixes
+        run: python3 .github/scripts/fix302_latest_fallback.py
+      - name: Commit fallback fixes
+        run: |
+          rm -f .github/scripts/fix302_latest_fallback.py .github/workflows/run-fix302-latest-fallback.yml
+          git config user.name 'Ben'
+          git config user.email 'benbergen12@gmail.com'
+          git add -A
+          git commit -m 'Harden template and regex fallback scanning'
+          git push origin HEAD:security/javascript-placeholder-bindings
