@@ -18,12 +18,18 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           p = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderBinder.java')
-          text = p.read_text()
-          old = '    private static final Pattern FALLBACK_REGEX = Pattern.compile("/(?:\\\\\\\\.|[^/\\\\r\\\\n])+/[dgimsuvy]*");'
-          new = '    private static final Pattern FALLBACK_REGEX = Pattern.compile("/(?:\\\\\\\\.|[^/\\\\\\\\\\\\r\\\\n])+/[dgimsuvy]*");'
-          if old not in text:
+          lines = p.read_text().splitlines()
+          found = False
+          for i, line in enumerate(lines):
+              if line.strip().startswith('private static final Pattern FALLBACK_REGEX ='):
+                  if ')++/' not in line:
+                      line = line.replace(')+/', ')++/')
+                  lines[i] = line
+                  found = True
+                  break
+          if not found:
               raise SystemExit('FALLBACK_REGEX source line not found')
-          p.write_text(text.replace(old, new, 1))
+          p.write_text('\n'.join(lines) + '\n')
           PY
           rm -f .github/workflows/fix-302-codeql-regex.yml
           git config user.name 'Ben'
