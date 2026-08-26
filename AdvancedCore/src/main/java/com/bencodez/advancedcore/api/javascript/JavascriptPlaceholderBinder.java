@@ -145,7 +145,14 @@ public final class JavascriptPlaceholderBinder {
             String name = token.substring(1, token.length() - 1);
             for (Entry<String, String> entry : placeholders.entrySet()) {
                 if (entry.getKey().equalsIgnoreCase(name)) {
-                    return entry.getValue();
+                    String value = entry.getValue();
+                    if (value != null && player != null && plugin != null && plugin.isPlaceHolderAPIEnabled()) {
+                        String resolved = PlaceholderAPI.setPlaceholders(player, value);
+                        if (resolved != null) {
+                            value = resolved;
+                        }
+                    }
+                    return value;
                 }
             }
         }
@@ -346,24 +353,59 @@ public final class JavascriptPlaceholderBinder {
         private static JavascriptContexts fallback(String source) {
             JavascriptContexts contexts = new JavascriptContexts();
 
-            Matcher templates = FALLBACK_TEMPLATE.matcher(source);
-            while (templates.find()) {
-                Range template = new Range(templates.start(), templates.end());
-                contexts.templates.add(template);
-                addFallbackTemplateExpressions(source, template, contexts.templateExpressions);
-            }
+            addFallbackTemplateRanges(source, 0, source.length(), contexts);
 
-            // Do not classify quote-looking text inside a template as a string literal.
+            // Quote-looking text is a string only outside template text. Strings inside
+            // ${...} remain ordinary JavaScript strings and are tracked normally.
             addPatternRanges(source, FALLBACK_STRING, contexts.strings, contexts);
             addFallbackRegexRanges(source, contexts);
             contexts.sort();
             return contexts;
         }
 
+        private static void addFallbackTemplateRanges(String source, int start, int limit,
+                JavascriptContexts contexts) {
+            for (int i = start; i < limit; i++) {
+                char current = source.charAt(i);
+                if (current == '\'' || current == '"') {
+                    i = skipQuotedLiteral(source, i, limit, current);
+                    continue;
+                }
+                if (current == '/' && canStartRegex(source, i)) {
+                    int regexEnd = skipRegexLiteral(source, i, limit);
+                    if (regexEnd > i) {
+                        i = regexEnd;
+                        continue;
+                    }
+                }
+                if (current != '`') {
+                    continue;
+                }
+
+                int templateEnd = skipTemplateLiteral(source, i, limit);
+                if (templateEnd <= i || templateEnd >= source.length() || source.charAt(templateEnd) != '`') {
+                    continue;
+                }
+
+                Range template = new Range(i, templateEnd + 1);
+                contexts.templates.add(template);
+                List<Range> expressions = new ArrayList<>();
+                addFallbackTemplateExpressions(source, template, expressions);
+                contexts.templateExpressions.addAll(expressions);
+
+                // Nested templates live inside an outer ${...}. Scan each interpolation
+                // recursively so their text ranges override the enclosing expression.
+                for (Range expression : expressions) {
+                    addFallbackTemplateRanges(source, expression.start, expression.end, contexts);
+                }
+                i = templateEnd;
+            }
+        }
+
         private static void addFallbackRegexRanges(String source, JavascriptContexts contexts) {
             for (int i = 0; i < source.length(); i++) {
                 if (source.charAt(i) != '/' || contexts.containing(contexts.strings, i) != null
-                        || contexts.containing(contexts.templates, i) != null || !canStartRegex(source, i)) {
+                        || contexts.isTemplateText(i) || !canStartRegex(source, i)) {
                     continue;
                 }
 
@@ -404,9 +446,7 @@ public final class JavascriptPlaceholderBinder {
                     // can start a regex, discard fallback string ranges fully contained by
                     // this regex instead of letting quote-looking regex text win.
                     contexts.removeContained(contexts.strings, candidate);
-                    if (!contexts.overlaps(contexts.templates, candidate)) {
-                        contexts.regexes.add(candidate);
-                    }
+                    contexts.regexes.add(candidate);
                     i = end - 1;
                     break;
                 }
@@ -448,7 +488,7 @@ public final class JavascriptPlaceholderBinder {
             Matcher matcher = pattern.matcher(source);
             while (matcher.find()) {
                 Range candidate = new Range(matcher.start(), matcher.end());
-                if (existing == null || !existing.overlapsLiteral(candidate)) {
+                if (existing == null || !existing.isTemplateText(candidate.start)) {
                     target.add(candidate);
                 }
             }
@@ -775,7 +815,31 @@ public final class JavascriptPlaceholderBinder {
         }
 
         private boolean insideTemplateExpression(int position) {
-            return containing(templateExpressions, position) != null;
+            Range expression = innermostContaining(templateExpressions, position);
+            if (expression == null) {
+                return false;
+            }
+            Range template = innermostContaining(templates, position);
+            // An enclosing template expression must not override the text context of a
+            // nested template literal that starts later inside that expression.
+            return template == null || expression.start > template.start;
+        }
+
+        private boolean isTemplateText(int position) {
+            return innermostContaining(templates, position) != null && !insideTemplateExpression(position);
+        }
+
+        private Range innermostContaining(List<Range> ranges, int position) {
+            Range best = null;
+            for (Range range : ranges) {
+                if (!range.contains(position)) {
+                    continue;
+                }
+                if (best == null || (range.end - range.start) < (best.end - best.start)) {
+                    best = range;
+                }
+            }
+            return best;
         }
 
         private void sort() {
