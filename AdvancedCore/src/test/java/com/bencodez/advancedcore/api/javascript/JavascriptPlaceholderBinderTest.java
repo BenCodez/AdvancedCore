@@ -6,9 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class JavascriptPlaceholderBinderTest {
+
+    @BeforeEach
+    void useTestClasspathNashornParser() {
+        JavascriptEngineHandler.getInstance().setNashornClassLoader(null);
+        JavascriptEngineHandler.getInstance().setCachedEngine(null);
+    }
 
     @Test
     void ordinaryJavascriptWithoutPlaceholdersIsUntouched() {
