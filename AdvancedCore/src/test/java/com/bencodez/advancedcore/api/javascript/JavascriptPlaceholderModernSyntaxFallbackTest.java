@@ -65,6 +65,17 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
     }
 
     @Test
+    void newerEngineSyntaxRegexFallbackKeepsCharacterClassSlashes() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name && /^[a/b]%name%$/.test(value)",
+                ignored -> "Ben.*", bindings::put);
+
+        assertEquals("obj?.name && /^[a/b]Ben\\.\\*$/.test(value)", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
     void regexFallbackHandlesLongOrdinaryRunsWithoutChangingPlaceholderSemantics() {
         HashMap<String, Object> bindings = new HashMap<>();
         String dots = ".".repeat(10_000);
