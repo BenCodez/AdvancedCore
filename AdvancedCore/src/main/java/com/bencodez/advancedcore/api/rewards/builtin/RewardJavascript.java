@@ -14,7 +14,6 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueIn
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueList;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
-import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.rewards.DefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
@@ -37,10 +36,10 @@ public final class RewardJavascript {
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
                     HashMap<String, String> placeholders) {
                 if (!list.isEmpty()) {
-                    JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer());
+                    JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer())
+                            .addPlaceholders(placeholders);
                     for (String script : list) {
-                        String expression = PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(), script);
-                        engine.execute(PlaceholderUtils.replacePlaceHolder(expression, placeholders));
+                        engine.execute(script);
                     }
                 }
                 return null;
@@ -61,9 +60,9 @@ public final class RewardJavascript {
                     HashMap<String, String> placeholders) {
                 if (section.getBoolean("Enabled")) {
                     String expression = section.getString("Expression");
-                    expression = PlaceholderUtils.replacePlaceHolders(user.getOfflinePlayer(), expression);
-                    if (new JavascriptEngine().addPlayer(user.getOfflinePlayer())
-                            .getBooleanValue(PlaceholderUtils.replacePlaceHolder(expression, placeholders))) {
+                    JavascriptEngine engine = new JavascriptEngine().addPlayer(user.getOfflinePlayer())
+                            .addPlaceholders(placeholders);
+                    if (engine.getBooleanValue(expression)) {
                         new RewardBuilder(section, "TrueRewards").withPrefix(reward.getName() + ".Javascript").send(user);
                     } else {
                         new RewardBuilder(section, "FalseRewards").withPrefix(reward.getName() + ".Javascript").send(user);

@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.messages;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -10,6 +11,7 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
+import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderValue;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
@@ -39,7 +41,6 @@ public class PlaceholderUtils {
 			TextComponent t = new TextComponent(text);
 
 			String typeMsg = msg;
-			// types
 			boolean parsing = true;
 			while (parsing) {
 				int nextTypeIndex = typeMsg.indexOf("\",");
@@ -69,11 +70,6 @@ public class PlaceholderUtils {
 				}
 
 			}
-			/*
-			 * int secondMiddle = msg.indexOf("=\"", middle); String type =
-			 * msg.substring(middle + "\",".length(), secondMiddle); String typeData =
-			 * msg.substring(secondMiddle + "=\"".length(), endIndex);
-			 */
 
 			comp.addExtra(parseJson(preMessage));
 
@@ -126,7 +122,7 @@ public class PlaceholderUtils {
 	public static String replaceJavascript(AdvancedCoreUser user, String text) {
 		if (user.getPlugin().getOptions().isJavascriptEngineEnabled()) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(user);
-			return replaceJavascript(text, engine);
+			return replaceJavascript(text, engine, user.getOfflinePlayer());
 		}
 		return text;
 	}
@@ -157,7 +153,7 @@ public class PlaceholderUtils {
 				return replaceJavascript((Player) player, text);
 			}
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(text, engine);
+			return replaceJavascript(text, engine, null);
 		}
 		return text;
 	}
@@ -176,7 +172,7 @@ public class PlaceholderUtils {
 				return replaceJavascript(player.getPlayer(), text);
 			}
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(text, engine);
+			return replaceJavascript(text, engine, player);
 		}
 		return text;
 	}
@@ -195,7 +191,7 @@ public class PlaceholderUtils {
 				return replaceJavascriptOnly(player.getPlayer(), text);
 			}
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(text, engine);
+			return replaceJavascript(text, engine, player);
 		}
 		return text;
 	}
@@ -212,7 +208,7 @@ public class PlaceholderUtils {
 		String msg = replacePlaceHolders(player, text);
 		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(msg, engine);
+			return replaceJavascript(msg, engine, player);
 		}
 		return msg;
 	}
@@ -228,7 +224,7 @@ public class PlaceholderUtils {
 	public static String replaceJavascriptOnly(Player player, String text) {
 		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
-			return replaceJavascript(text, engine);
+			return replaceJavascript(text, engine, player);
 		}
 		return text;
 	}
@@ -238,6 +234,10 @@ public class PlaceholderUtils {
 	}
 
 	public static String replaceJavascript(String text, JavascriptEngine engine) {
+		return replaceJavascript(text, engine, null);
+	}
+
+	private static String replaceJavascript(String text, JavascriptEngine engine, OfflinePlayer player) {
 		String msg = "";
 		if (MessageAPI.containsIgnorecase(text, "[Javascript=")) {
 			if (engine == null) {
@@ -259,8 +259,6 @@ public class PlaceholderUtils {
 					num++;
 					endIndex = text.indexOf("]", startIndex);
 					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
-					// plugin.debug(startIndex + ":" + endIndex + " from " +
-					// text + " to " + str + " currently " + msg);
 					String script = engine.getStringValue(str);
 					if (script == null) {
 						script = "" + engine.getBooleanValue(str);
@@ -279,7 +277,6 @@ public class PlaceholderUtils {
 		} else {
 			msg = text;
 		}
-		// plugin.debug(msg);
 		return msg;
 	}
 
@@ -292,21 +289,19 @@ public class PlaceholderUtils {
 	}
 
 	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
-			}
+		if (placeholders == null) {
+			return str;
 		}
-		return str;
+		return transformJavascriptMarkers(str, value -> replacePlaceHolderMapRaw(value, placeholders, true),
+				value -> replacePlaceHolderMapEncoded(value, placeholders, true));
 	}
 
 	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders, boolean ignoreCase) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue(), ignoreCase);
-			}
+		if (placeholders == null) {
+			return str;
 		}
-		return str;
+		return transformJavascriptMarkers(str, value -> replacePlaceHolderMapRaw(value, placeholders, ignoreCase),
+				value -> replacePlaceHolderMapEncoded(value, placeholders, ignoreCase));
 	}
 
 	/**
@@ -322,6 +317,30 @@ public class PlaceholderUtils {
 	}
 
 	public static String replacePlaceHolder(String str, String toReplace, String replaceWith, boolean ignoreCase) {
+		return transformJavascriptMarkers(str,
+				value -> replacePlaceHolderRaw(value, toReplace, replaceWith, ignoreCase),
+				value -> replacePlaceHolderRaw(value, toReplace, JavascriptPlaceholderValue.encode(replaceWith), ignoreCase));
+	}
+
+	private static String replacePlaceHolderMapRaw(String str, HashMap<String, String> placeholders, boolean ignoreCase) {
+		String result = str;
+		for (Entry<String, String> entry : placeholders.entrySet()) {
+			result = replacePlaceHolderRaw(result, entry.getKey(), entry.getValue(), ignoreCase);
+		}
+		return result;
+	}
+
+	private static String replacePlaceHolderMapEncoded(String str, HashMap<String, String> placeholders,
+			boolean ignoreCase) {
+		String result = str;
+		for (Entry<String, String> entry : placeholders.entrySet()) {
+			result = replacePlaceHolderRaw(result, entry.getKey(), JavascriptPlaceholderValue.encode(entry.getValue()),
+					ignoreCase);
+		}
+		return result;
+	}
+
+	private static String replacePlaceHolderRaw(String str, String toReplace, String replaceWith, boolean ignoreCase) {
 		if (ignoreCase) {
 			return MessageAPI.replaceIgnoreCase(MessageAPI.replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith),
 					"\\{" + toReplace + "\\}", replaceWith);
@@ -353,7 +372,8 @@ public class PlaceholderUtils {
 			return text;
 		}
 		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setPlaceholders(player, text);
+			return transformJavascriptMarkers(text, value -> PlaceholderAPI.setPlaceholders(player, value),
+					Function.identity());
 		}
 		return text;
 	}
@@ -366,13 +386,60 @@ public class PlaceholderUtils {
 	 * @return the string
 	 */
 	public static String replacePlaceHolders(Player player, String text) {
-		if (player == null) {
+		return replacePlaceHolders((OfflinePlayer) player, text);
+	}
+
+	private static String transformJavascriptMarkers(String text, Function<String, String> outsideTransform,
+			Function<String, String> insideTransform) {
+		if (text == null || text.isEmpty()) {
 			return text;
 		}
-		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setPlaceholders(player, text);
+		StringBuilder result = new StringBuilder(text.length());
+		int cursor = 0;
+		while (cursor < text.length()) {
+			int start = indexOfIgnoreCase(text, "[Javascript=", cursor);
+			if (start < 0) {
+				result.append(neutralizeJavascriptMarkers(outsideTransform.apply(text.substring(cursor))));
+				break;
+			}
+			int end = text.indexOf(']', start);
+			if (end < 0) {
+				result.append(neutralizeJavascriptMarkers(outsideTransform.apply(text.substring(cursor))));
+				break;
+			}
+			result.append(neutralizeJavascriptMarkers(outsideTransform.apply(text.substring(cursor, start))));
+			int bodyStart = start + "[Javascript=".length();
+			result.append(text, start, bodyStart);
+			result.append(insideTransform.apply(text.substring(bodyStart, end)));
+			result.append(']');
+			cursor = end + 1;
 		}
-		return text;
+		return result.toString();
+	}
+
+	private static String neutralizeJavascriptMarkers(String text) {
+		StringBuilder result = new StringBuilder(text.length());
+		int cursor = 0;
+		while (cursor < text.length()) {
+			int start = indexOfIgnoreCase(text, "[Javascript=", cursor);
+			if (start < 0) {
+				result.append(text.substring(cursor));
+				break;
+			}
+			result.append(text, cursor, start).append("[Javascript =");
+			cursor = start + "[Javascript=".length();
+		}
+		return result.toString();
+	}
+
+	private static int indexOfIgnoreCase(String text, String target, int fromIndex) {
+		int max = text.length() - target.length();
+		for (int i = Math.max(0, fromIndex); i <= max; i++) {
+			if (text.regionMatches(true, i, target, 0, target.length())) {
+				return i;
+			}
+		}
+		return -1;
 	}
 
 }
