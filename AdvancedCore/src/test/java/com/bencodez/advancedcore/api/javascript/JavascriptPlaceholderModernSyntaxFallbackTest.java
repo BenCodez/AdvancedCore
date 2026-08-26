@@ -144,4 +144,15 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
         assertEquals("obj?.name; /^'Ben\\.\\*'$/", prepared);
         assertTrue(bindings.isEmpty());
     }
+
+    @Test
+    void nestedTemplateLiteralTextRemainsDataInFallback() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name; `${`inner %name%`}`",
+                ignored -> "${attack()}", bindings::put);
+
+        assertEquals("obj?.name; `${`inner \\${attack()}`}`", prepared);
+        assertTrue(bindings.isEmpty());
+    }
 }
