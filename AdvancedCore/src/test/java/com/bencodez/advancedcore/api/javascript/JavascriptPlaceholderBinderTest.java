@@ -3,11 +3,20 @@ package com.bencodez.advancedcore.api.javascript;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 
+import org.bukkit.OfflinePlayer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import com.bencodez.advancedcore.tests.BaseTest;
+
+import me.clip.placeholderapi.PlaceholderAPI;
 
 class JavascriptPlaceholderBinderTest {
 
@@ -137,7 +146,6 @@ class JavascriptPlaceholderBinderTest {
         assertEquals(Double.valueOf(1.5), bindings.get("__advancedCorePlaceholder2"));
     }
 
-
     @Test
     void exactQuotedNumericLookingPlaceholderRemainsAString() {
         HashMap<String, Object> bindings = new HashMap<>();
@@ -201,6 +209,25 @@ class JavascriptPlaceholderBinderTest {
 
         assertEquals("obj?.name && /^Ben\\.\\*$/.test(value)", prepared);
         assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void customPlaceholderValueStillExpandsPlaceholderApiTokens() {
+        BaseTest base = BaseTest.getInstance();
+        when(base.plugin.isPlaceHolderAPIEnabled()).thenReturn(true);
+        OfflinePlayer player = mock(OfflinePlayer.class);
+        HashMap<String, String> placeholders = new HashMap<>();
+        placeholders.put("alias", "%player_name%");
+
+        try (MockedStatic<PlaceholderAPI> placeholderApi = mockStatic(PlaceholderAPI.class)) {
+            placeholderApi.when(() -> PlaceholderAPI.setPlaceholders(player, "%alias%")).thenReturn("%alias%");
+            placeholderApi.when(() -> PlaceholderAPI.setPlaceholders(player, "%player_name%")).thenReturn("Ben");
+
+            String prepared = JavascriptPlaceholderBinder.bind("'%alias%' == 'Ben'", player, placeholders,
+                    new JavascriptEngine());
+
+            assertEquals("'Ben' == 'Ben'", prepared);
+        }
     }
 
     @Test
