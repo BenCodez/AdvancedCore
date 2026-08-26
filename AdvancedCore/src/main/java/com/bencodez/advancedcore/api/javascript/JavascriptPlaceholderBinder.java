@@ -44,8 +44,8 @@ public final class JavascriptPlaceholderBinder {
     private static final String DIAGNOSTIC_LISTENER_CLASS = "org.openjdk.nashorn.api.tree.DiagnosticListener";
     private static final String TREE_CLASS = "org.openjdk.nashorn.api.tree.Tree";
     private static final String TREE_PACKAGE = "org.openjdk.nashorn.api.tree";
-    private static final Pattern FALLBACK_STRING = Pattern.compile("'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"");
-    private static final Pattern FALLBACK_TEMPLATE = Pattern.compile("`(?:\\.|[^`\\])*`");
+    private static final Pattern FALLBACK_STRING = Pattern.compile("'(?:\\\\.|[^'\\\\])*'|\"(?:\\\\.|[^\"\\\\])*\"");
+    private static final Pattern FALLBACK_TEMPLATE = Pattern.compile("`(?:\\\\.|[^`\\\\])*`");
     private static final Pattern FALLBACK_REGEX = Pattern.compile("/(?:\\.|[^/\r\n])+/[dgimsuvy]*");
 
     private JavascriptPlaceholderBinder() {
