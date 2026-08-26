@@ -121,4 +121,27 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
         assertEquals(1, bindings.size());
         assertEquals(2.5D, bindings.get("__advancedCorePlaceholder0"));
     }
+
+    @Test
+    void quotedClosingBraceInsideTemplateExpressionDoesNotEndExpression() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name; `${\"}\" + %name%}`",
+                ignored -> "Bukkit.dispatchCommand(Console, 'op attacker')", bindings::put);
+
+        assertEquals("obj?.name; `${\"}\" + __advancedCorePlaceholder0}`", prepared);
+        assertEquals(1, bindings.size());
+        assertEquals("Bukkit.dispatchCommand(Console, 'op attacker')", bindings.get("__advancedCorePlaceholder0"));
+    }
+
+    @Test
+    void quoteCharactersInsideRegexStillUseRegexEscaping() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name; /^'%name%'$/",
+                ignored -> "Ben.*", bindings::put);
+
+        assertEquals("obj?.name; /^'Ben\\.\\*'$/", prepared);
+        assertTrue(bindings.isEmpty());
+    }
 }
