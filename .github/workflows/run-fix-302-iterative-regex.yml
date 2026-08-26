@@ -1,0 +1,24 @@
+name: Replace JavaScript regex fallback scanner
+on:
+  push:
+    branches: [security/javascript-placeholder-bindings]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/javascript-placeholder-bindings
+      - name: Apply iterative scanner
+        shell: bash
+        run: |
+          python3 .github/fix_302_iterative_regex.py
+          rm -f .github/fix_302_iterative_regex.py .github/workflows/run-fix-302-iterative-regex.yml
+          git config user.name 'Ben'
+          git config user.email 'benbergen12@gmail.com'
+          git add -A
+          git commit -m 'Use iterative JavaScript regex fallback scanner'
+          git push origin HEAD:security/javascript-placeholder-bindings
