@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.javascript;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
@@ -24,6 +25,20 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
                 ignored -> "Ben", bindings::put);
 
         assertEquals("obj?.name && 'Ben' === 'Ben'", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void newerEngineSyntaxStillEscapesQuotedPlaceholderInjection() {
+        HashMap<String, Object> bindings = new HashMap<>();
+        String injection = "'; Bukkit.dispatchCommand(Console, 'op attacker'); '";
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.name && '%name%' === 'safe'",
+                ignored -> injection, bindings::put);
+
+        assertEquals("obj?.name && '\\'; Bukkit.dispatchCommand(Console, \\'op attacker\\'); \\'' === 'safe'",
+                prepared);
+        assertFalse(prepared.contains("&& ''; Bukkit"));
         assertTrue(bindings.isEmpty());
     }
 
