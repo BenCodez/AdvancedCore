@@ -1,0 +1,45 @@
+name: Fix JavaScript template parser compatibility
+on:
+  push:
+    branches:
+      - security/javascript-placeholder-bindings
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/javascript-placeholder-bindings
+      - name: Restore template delimiter handling
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptPlaceholderBinder.java')
+          text = p.read_text()
+          old = '''            } else if (string != null) {
+                char delimiter = literalDelimiter(expression, string);
+                replacements[i] = escapeString(match.value, delimiter);
+            } else {
+'''
+          new = '''            } else if (string != null) {
+                char delimiter = literalDelimiter(expression, string);
+                if (delimiter == '`' && !contexts.insideTemplateExpression(match.start)) {
+                    replacements[i] = escapeTemplate(match.value);
+                } else {
+                    replacements[i] = escapeString(match.value, delimiter);
+                }
+            } else {
+'''
+          if text.count(old) != 1:
+              raise SystemExit('template string branch not found')
+          p.write_text(text.replace(old, new, 1))
+          PY
+          rm -f .github/workflows/fix-302-template-parser-regression.yml
+          git config user.name 'Ben'
+          git config user.email 'benbergen12@gmail.com'
+          git add -A
+          git commit -m 'Preserve parser template escaping'
+          git push origin HEAD:security/javascript-placeholder-bindings
