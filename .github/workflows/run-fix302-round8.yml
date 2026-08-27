@@ -1,0 +1,27 @@
+name: Run round eight JavaScript placeholder fixes
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.ref == 'refs/heads/security/javascript-placeholder-bindings'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/javascript-placeholder-bindings
+          fetch-depth: 0
+      - name: Apply fixes
+        run: python .github/fix302_round8.py
+      - name: Commit fixes
+        run: |
+          git config user.name "Ben"
+          git config user.email "benbergen12@gmail.com"
+          git rm .github/fix302_round8.py .github/workflows/run-fix302-round8.yml
+          git add -A
+          git commit -m "Fix fallback comments and decoded PAPI values"
+          git push origin HEAD:security/javascript-placeholder-bindings
