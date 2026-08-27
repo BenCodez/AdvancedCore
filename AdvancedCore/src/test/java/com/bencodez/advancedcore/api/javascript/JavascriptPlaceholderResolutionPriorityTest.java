@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.javascript;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -41,6 +42,7 @@ class JavascriptPlaceholderResolutionPriorityTest {
             papiStatic.verify(() -> PlaceholderAPI.setPlaceholders(player, "%player_name%"), never());
         }
     }
+
     @Test
     void decodedCustomValueStillExpandsNestedPapiToken() {
         AdvancedCorePlugin plugin = BaseTest.getInstance().plugin;
@@ -58,8 +60,8 @@ class JavascriptPlaceholderResolutionPriorityTest {
                     Map.of(), engine);
 
             assertEquals("'Ben' == 'Ben'", prepared);
+            assertFalse(prepared.contains("%player_name%"));
             papiStatic.verify(() -> PlaceholderAPI.setPlaceholders(player, "%player_name%"));
         }
     }
-
 }
