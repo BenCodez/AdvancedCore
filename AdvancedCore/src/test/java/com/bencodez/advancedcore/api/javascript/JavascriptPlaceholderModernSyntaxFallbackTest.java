@@ -155,4 +155,30 @@ class JavascriptPlaceholderModernSyntaxFallbackTest {
         assertEquals("obj?.name; `${`inner \\${attack()}`}`", prepared);
         assertTrue(bindings.isEmpty());
     }
+    @Test
+    void commentsCannotCreateFakeStringRangeAroundExecutablePlaceholder() {
+        HashMap<String, Object> bindings = new HashMap<>();
+        String injection = "Bukkit.dispatchCommand(Console, 'op attacker')";
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.x; /* ' */ %name%; /* ' */",
+                ignored -> injection, bindings::put);
+
+        assertEquals("obj?.x; /* ' */ __advancedCorePlaceholder0; /* ' */", prepared);
+        assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+        assertFalse(prepared.contains(injection));
+    }
+
+    @Test
+    void lineCommentsCannotCreateFakeStringRangeAroundExecutablePlaceholder() {
+        HashMap<String, Object> bindings = new HashMap<>();
+        String injection = "Bukkit.dispatchCommand(Console, 'op attacker')";
+
+        String prepared = JavascriptPlaceholderBinder.bind("obj?.x; // '\n%name%; // '\n",
+                ignored -> injection, bindings::put);
+
+        assertEquals("obj?.x; // '\n__advancedCorePlaceholder0; // '\n", prepared);
+        assertEquals(injection, bindings.get("__advancedCorePlaceholder0"));
+        assertFalse(prepared.contains(injection));
+    }
+
 }

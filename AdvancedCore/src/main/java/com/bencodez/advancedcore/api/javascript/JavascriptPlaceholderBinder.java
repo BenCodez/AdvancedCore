@@ -52,10 +52,16 @@ public final class JavascriptPlaceholderBinder {
 
     public static String bind(String expression, OfflinePlayer player, Map<String, String> placeholders,
             JavascriptEngine engine) {
-        return bind(expression, token -> resolve(token, player, placeholders), engine::addToEngine);
+        return bind(expression, token -> resolve(token, player, placeholders),
+                value -> resolvePapiValue(value, player), engine::addToEngine);
     }
 
     static String bind(String expression, Function<String, String> resolver, BiConsumer<String, Object> bindings) {
+        return bind(expression, resolver, Function.identity(), bindings);
+    }
+
+    private static String bind(String expression, Function<String, String> resolver,
+            Function<String, String> decodedResolver, BiConsumer<String, Object> bindings) {
         if (expression == null || expression.isEmpty()) {
             return expression;
         }
@@ -68,6 +74,11 @@ public final class JavascriptPlaceholderBinder {
             String value = JavascriptPlaceholderValue.decode(token);
             if (value == null) {
                 value = resolver.apply(token);
+            } else {
+                // Values encoded by PlaceholderUtils are already known to be data, but
+                // they may still contain PlaceholderAPI tokens from legacy custom -> PAPI
+                // replacement chains. Resolve those tokens before escaping/binding.
+                value = decodedResolver.apply(value);
             }
             matches.add(new PlaceholderMatch(matcher.start(), matcher.end(), token, value));
             // Keep all source offsets unchanged while making resolved placeholders parse
@@ -140,14 +151,7 @@ public final class JavascriptPlaceholderBinder {
             String name = token.substring(1, token.length() - 1);
             for (Entry<String, String> entry : placeholders.entrySet()) {
                 if (entry.getKey().equalsIgnoreCase(name)) {
-                    String value = entry.getValue();
-                    if (value != null && player != null && plugin != null && plugin.isPlaceHolderAPIEnabled()) {
-                        String resolved = PlaceholderAPI.setPlaceholders(player, value);
-                        if (resolved != null) {
-                            value = resolved;
-                        }
-                    }
-                    return value;
+                    return resolvePapiValue(entry.getValue(), player);
                 }
             }
         }
@@ -161,6 +165,17 @@ public final class JavascriptPlaceholderBinder {
             }
         }
         return token;
+    }
+
+    private static String resolvePapiValue(String value, OfflinePlayer player) {
+        AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+        if (value != null && player != null && plugin != null && plugin.isPlaceHolderAPIEnabled()) {
+            String resolved = PlaceholderAPI.setPlaceholders(player, value);
+            if (resolved != null) {
+                return resolved;
+            }
+        }
+        return value;
     }
 
     private static Object coerce(String value) {
@@ -318,6 +333,7 @@ public final class JavascriptPlaceholderBinder {
         private final List<Range> regexes = new ArrayList<>();
         private final List<Range> templates = new ArrayList<>();
         private final List<Range> templateExpressions = new ArrayList<>();
+        private final List<Range> comments = new ArrayList<>();
         private boolean parsed;
 
         private static JavascriptContexts parse(String source) {
@@ -357,14 +373,93 @@ public final class JavascriptPlaceholderBinder {
         private static JavascriptContexts fallback(String source) {
             JavascriptContexts contexts = new JavascriptContexts();
 
+            // First identify template text so comment delimiters inside template text are
+            // ignored. Then find comments, mask them with same-length whitespace, and
+            // rebuild every literal range from the masked source. This prevents quotes or
+            // backticks inside comments from manufacturing fake literal ranges around
+            // executable placeholders.
             addFallbackTemplateRanges(source, 0, source.length(), contexts);
+            addFallbackCommentRanges(source, contexts);
+            String scanSource = maskRanges(source, contexts.comments);
+
+            contexts.templates.clear();
+            contexts.templateExpressions.clear();
+            addFallbackTemplateRanges(scanSource, 0, scanSource.length(), contexts);
 
             // Quote-looking text is a string only outside template text. Strings inside
             // ${...} remain ordinary JavaScript strings and are tracked normally.
-            addPatternRanges(source, FALLBACK_STRING, contexts.strings, contexts);
-            addFallbackRegexRanges(source, contexts);
+            addPatternRanges(scanSource, FALLBACK_STRING, contexts.strings, contexts);
+            addFallbackRegexRanges(scanSource, contexts);
             contexts.sort();
             return contexts;
+        }
+
+        private static void addFallbackCommentRanges(String source, JavascriptContexts contexts) {
+            for (int i = 0; i < source.length(); i++) {
+                if (contexts.isTemplateText(i)) {
+                    continue;
+                }
+
+                char current = source.charAt(i);
+                if (current == '\'' || current == '"') {
+                    i = skipQuotedLiteral(source, i, source.length(), current);
+                    continue;
+                }
+                if (current != '/' || i + 1 >= source.length()) {
+                    continue;
+                }
+
+                char next = source.charAt(i + 1);
+                if (next == '/') {
+                    int end = i + 2;
+                    while (end < source.length() && source.charAt(end) != '\n' && source.charAt(end) != '\r') {
+                        end++;
+                    }
+                    addFallbackComment(contexts, new Range(i, end));
+                    i = end - 1;
+                    continue;
+                }
+                if (next == '*') {
+                    int end = i + 2;
+                    while (end + 1 < source.length()
+                            && !(source.charAt(end) == '*' && source.charAt(end + 1) == '/')) {
+                        end++;
+                    }
+                    end = end + 1 < source.length() ? end + 2 : source.length();
+                    addFallbackComment(contexts, new Range(i, end));
+                    i = end - 1;
+                    continue;
+                }
+
+                if (canStartRegex(source, i)) {
+                    int regexEnd = skipRegexLiteral(source, i, source.length());
+                    if (regexEnd > i) {
+                        i = regexEnd;
+                    }
+                }
+            }
+        }
+
+        private static void addFallbackComment(JavascriptContexts contexts, Range comment) {
+            contexts.comments.add(comment);
+            // Initial template discovery is only used to distinguish template text from
+            // comments. A backtick inside a comment can create a false template range, so
+            // discard any such range as soon as the comment is known.
+            contexts.removeOverlapping(contexts.templates, comment);
+            contexts.removeOverlapping(contexts.templateExpressions, comment);
+        }
+
+        private static String maskRanges(String source, List<Range> ranges) {
+            StringBuilder masked = new StringBuilder(source);
+            for (Range range : ranges) {
+                for (int i = Math.max(0, range.start); i < Math.min(masked.length(), range.end); i++) {
+                    char current = masked.charAt(i);
+                    if (current != '\n' && current != '\r') {
+                        masked.setCharAt(i, ' ');
+                    }
+                }
+            }
+            return masked.toString();
         }
 
         private static void addFallbackTemplateRanges(String source, int start, int limit,
@@ -712,6 +807,10 @@ public final class JavascriptPlaceholderBinder {
             ranges.removeIf(range -> range.start >= container.start && range.end <= container.end);
         }
 
+        private void removeOverlapping(List<Range> ranges, Range overlap) {
+            ranges.removeIf(range -> range.start < overlap.end && overlap.start < range.end);
+        }
+
         private static Object createParser(Class<?> parserClass) throws ReflectiveOperationException {
             for (Method method : parserClass.getMethods()) {
                 if (!method.getName().equals("create") || !Modifier.isStatic(method.getModifiers())) {
@@ -923,6 +1022,7 @@ public final class JavascriptPlaceholderBinder {
             regexes.sort(comparator);
             templates.sort(comparator);
             templateExpressions.sort(comparator);
+            comments.sort(comparator);
         }
     }
 }

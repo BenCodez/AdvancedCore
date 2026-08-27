@@ -41,4 +41,25 @@ class JavascriptPlaceholderResolutionPriorityTest {
             papiStatic.verify(() -> PlaceholderAPI.setPlaceholders(player, "%player_name%"), never());
         }
     }
+    @Test
+    void decodedCustomValueStillExpandsNestedPapiToken() {
+        AdvancedCorePlugin plugin = BaseTest.getInstance().plugin;
+        OfflinePlayer player = mock(OfflinePlayer.class);
+        JavascriptEngine engine = new JavascriptEngine();
+
+        when(plugin.isPlaceHolderAPIEnabled()).thenReturn(true);
+        String encoded = JavascriptPlaceholderValue.encode("%player_name%");
+
+        try (MockedStatic<PlaceholderAPI> papiStatic = mockStatic(PlaceholderAPI.class)) {
+            papiStatic.when(() -> PlaceholderAPI.setPlaceholders(player, "%player_name%"))
+                    .thenReturn("Ben");
+
+            String prepared = JavascriptPlaceholderBinder.bind("'" + encoded + "' == 'Ben'", player,
+                    Map.of(), engine);
+
+            assertEquals("'Ben' == 'Ben'", prepared);
+            papiStatic.verify(() -> PlaceholderAPI.setPlaceholders(player, "%player_name%"));
+        }
+    }
+
 }
