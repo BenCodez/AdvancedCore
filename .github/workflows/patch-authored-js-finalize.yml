@@ -1,0 +1,30 @@
+name: Patch authored JavaScript finalizer
+
+on:
+  push:
+    branches:
+      - security/authored-javascript-boundaries
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch finalizer
+        run: python3 .github/scripts/patch_authored_js_finalize.py
+
+      - name: Remove patch helpers and commit
+        run: |
+          rm .github/scripts/patch_authored_js_finalize.py
+          rm .github/workflows/patch-authored-js-finalize.yml
+          git config user.name "BenCodez"
+          git config user.email "17074231+BenCodez@users.noreply.github.com"
+          git add -A
+          git commit -m "Restore legacy JavaScript helper overload"
+          git push origin HEAD:security/authored-javascript-boundaries
