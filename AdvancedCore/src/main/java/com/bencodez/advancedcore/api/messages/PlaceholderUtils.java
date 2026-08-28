@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.messages;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -10,6 +11,8 @@ import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
+import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderValue;
+import com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
@@ -238,49 +241,11 @@ public class PlaceholderUtils {
 	}
 
 	public static String replaceJavascript(String text, JavascriptEngine engine) {
-		String msg = "";
-		if (MessageAPI.containsIgnorecase(text, "[Javascript=")) {
-			if (engine == null) {
-				engine = new JavascriptEngine();
-			}
-			int lastIndex = 0;
-			int startIndex = 0;
-			int num = 0;
-			while (startIndex != -1) {
-				startIndex = text.indexOf("[Javascript=", lastIndex);
-
-				int endIndex = -1;
-				if (startIndex != -1) {
-					if (num != 0) {
-						msg += text.substring(lastIndex + 1, startIndex);
-					} else {
-						msg += text.substring(lastIndex, startIndex);
-					}
-					num++;
-					endIndex = text.indexOf("]", startIndex);
-					String str = text.substring(startIndex + "[Javascript=".length(), endIndex);
-					// plugin.debug(startIndex + ":" + endIndex + " from " +
-					// text + " to " + str + " currently " + msg);
-					String script = engine.getStringValue(str);
-					if (script == null) {
-						script = "" + engine.getBooleanValue(str);
-
-					}
-
-					if (script != null) {
-						msg += script;
-					}
-					lastIndex = endIndex;
-				}
-
-			}
-			msg += text.substring(lastIndex + 1);
-
-		} else {
-			msg = text;
+		if (text == null || text.isEmpty()) {
+			return text;
 		}
-		// plugin.debug(msg);
-		return msg;
+		JavascriptEngine activeEngine = engine == null ? new JavascriptEngine() : engine;
+		return JavascriptTextTemplate.parse(text).evaluate(Function.identity(), activeEngine::getStringValue);
 	}
 
 	public static ArrayList<String> replacePlaceHolder(ArrayList<String> list, HashMap<String, String> placeholders) {
@@ -292,21 +257,16 @@ public class PlaceholderUtils {
 	}
 
 	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue());
-			}
-		}
-		return str;
+		return replacePlaceHolder(str, placeholders, true);
 	}
 
 	public static String replacePlaceHolder(String str, HashMap<String, String> placeholders, boolean ignoreCase) {
-		if (placeholders != null) {
-			for (Entry<String, String> entry : placeholders.entrySet()) {
-				str = replacePlaceHolder(str, entry.getKey(), entry.getValue(), ignoreCase);
-			}
+		if (str == null || placeholders == null || placeholders.isEmpty()) {
+			return str;
 		}
-		return str;
+		return JavascriptTextTemplate.parse(str).transform(
+				value -> replacePlaceHolderMapRaw(value, placeholders, ignoreCase),
+				value -> replacePlaceHolderMapEncoded(value, placeholders, ignoreCase));
 	}
 
 	/**
@@ -322,14 +282,44 @@ public class PlaceholderUtils {
 	}
 
 	public static String replacePlaceHolder(String str, String toReplace, String replaceWith, boolean ignoreCase) {
+		if (str == null) {
+			return null;
+		}
+		return JavascriptTextTemplate.parse(str).transform(
+				value -> replacePlaceHolderRaw(value, toReplace, replaceWith, ignoreCase),
+				value -> replacePlaceHolderRaw(value, toReplace, JavascriptPlaceholderValue.encode(replaceWith),
+						ignoreCase));
+	}
+
+	private static String replacePlaceHolderMapRaw(String str, HashMap<String, String> placeholders,
+			boolean ignoreCase) {
+		String result = str;
+		for (Entry<String, String> entry : placeholders.entrySet()) {
+			result = replacePlaceHolderRaw(result, entry.getKey(), entry.getValue(), ignoreCase);
+		}
+		return result;
+	}
+
+	private static String replacePlaceHolderMapEncoded(String str, HashMap<String, String> placeholders,
+			boolean ignoreCase) {
+		String result = str;
+		for (Entry<String, String> entry : placeholders.entrySet()) {
+			result = replacePlaceHolderRaw(result, entry.getKey(), JavascriptPlaceholderValue.encode(entry.getValue()),
+					ignoreCase);
+		}
+		return result;
+	}
+
+	private static String replacePlaceHolderRaw(String str, String toReplace, String replaceWith, boolean ignoreCase) {
+		String safeReplacement = replaceWith == null ? "" : replaceWith;
 		if (ignoreCase) {
-			return MessageAPI.replaceIgnoreCase(MessageAPI.replaceIgnoreCase(str, "%" + toReplace + "%", replaceWith),
-					"\\{" + toReplace + "\\}", replaceWith);
+			return MessageAPI.replaceIgnoreCase(
+					MessageAPI.replaceIgnoreCase(str, "%" + toReplace + "%", safeReplacement),
+					"\\{" + toReplace + "\\}", safeReplacement);
 		}
 		str = str.replaceAll("\\{", "%");
 		str = str.replaceAll("\\}", "%");
-		str = str.replace("%" + toReplace + "%", replaceWith);
-		return str;
+		return str.replace("%" + toReplace + "%", safeReplacement);
 	}
 
 	public static ArrayList<String> replacePlaceHolders(ArrayList<String> list, Player p) {
@@ -349,11 +339,12 @@ public class PlaceholderUtils {
 	}
 
 	public static String replacePlaceHolders(OfflinePlayer player, String text) {
-		if (player == null) {
+		if (player == null || text == null || text.isEmpty()) {
 			return text;
 		}
 		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setPlaceholders(player, text);
+			return JavascriptTextTemplate.parse(text).transform(
+					value -> PlaceholderAPI.setPlaceholders(player, value), Function.identity());
 		}
 		return text;
 	}
@@ -366,13 +357,7 @@ public class PlaceholderUtils {
 	 * @return the string
 	 */
 	public static String replacePlaceHolders(Player player, String text) {
-		if (player == null) {
-			return text;
-		}
-		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
-			return PlaceholderAPI.setPlaceholders(player, text);
-		}
-		return text;
+		return replacePlaceHolders((OfflinePlayer) player, text);
 	}
 
 }
