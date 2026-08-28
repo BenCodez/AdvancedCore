@@ -227,6 +227,10 @@ placeholder = placeholder[:start] + r'''	public static String replaceJavascript(
 		}
 		return AuthoredJavascriptText.evaluate(text, engine);
 	}
+
+	private static String replaceJavascript(String text, JavascriptEngine engine, OfflinePlayer player) {
+		return replaceJavascript(text, engine);
+	}
 ''' + placeholder[end:]
 
 start = placeholder.index("\tpublic static ArrayList<String> replacePlaceHolder(")
