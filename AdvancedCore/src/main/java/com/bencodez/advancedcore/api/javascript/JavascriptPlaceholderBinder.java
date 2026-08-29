@@ -44,9 +44,9 @@ public final class JavascriptPlaceholderBinder {
     }
 
     public static String bind(String expression, OfflinePlayer player, Map<String, String> placeholders,
-            JavascriptEngine engine) {
+            Map<String, Object> bindings) {
         return bind(expression, token -> resolve(token, player, placeholders),
-                value -> resolvePapiValue(value, player), engine::addToEngine);
+                value -> resolvePapiValue(value, player), bindings::put);
     }
 
     static String bind(String expression, Function<String, String> resolver, BiConsumer<String, Object> bindings) {

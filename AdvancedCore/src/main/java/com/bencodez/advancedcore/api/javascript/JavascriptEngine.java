@@ -143,9 +143,11 @@ public class JavascriptEngine {
 				return null;
 			}
 
+			HashMap<String, Object> placeholderBindings = new HashMap<>();
 			String preparedExpression;
 			try {
-				preparedExpression = JavascriptPlaceholderBinder.bind(expression, placeholderPlayer, placeholders, this);
+				preparedExpression = JavascriptPlaceholderBinder.bind(expression, placeholderPlayer, placeholders,
+						placeholderBindings);
 			} catch (IllegalArgumentException e) {
 				AdvancedCorePlugin.getInstance().getLogger()
 						.warning("Failed to safely prepare javascript placeholders: " + e.getMessage());
@@ -153,21 +155,19 @@ public class JavascriptEngine {
 				return null;
 			}
 
-			engine.put("Bukkit", Bukkit.getServer());
-			engine.put("AdvancedCore", AdvancedCorePlugin.getInstance());
-			engine.put("Console", Bukkit.getConsoleSender());
-			engine.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
-			engine.put("RewardHandler", AdvancedCorePlugin.getInstance().getRewardHandler());
-			engine.put("MessageAPI", MessageAPI.class);
-
-			engineAPI.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
-
-			for (Entry<String, Object> entry : engineAPI.entrySet()) {
-				engine.put(entry.getKey(), entry.getValue());
-			}
+			HashMap<String, Object> evaluationBindings = new HashMap<>();
+			evaluationBindings.put("Bukkit", Bukkit.getServer());
+			evaluationBindings.put("AdvancedCore", AdvancedCorePlugin.getInstance());
+			evaluationBindings.put("Console", Bukkit.getConsoleSender());
+			evaluationBindings.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
+			evaluationBindings.put("RewardHandler", AdvancedCorePlugin.getInstance().getRewardHandler());
+			evaluationBindings.put("MessageAPI", MessageAPI.class);
+			evaluationBindings.putAll(engineAPI);
+			evaluationBindings.putAll(placeholderBindings);
+			evaluationBindings.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
 
 			try {
-				return engine.eval(preparedExpression);
+				return evaluateWithBindings(engine, preparedExpression, evaluationBindings);
 			} catch (ScriptException e) {
 				AdvancedCorePlugin.getInstance().getLogger().warning(
 						"Error occoured while evaluating javascript, turn debug on to see stacktrace: " + e.toString());
@@ -175,6 +175,21 @@ public class JavascriptEngine {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * The configured engine is cached and shared by every JavascriptEngine wrapper.
+	 * Keep binding writes and evaluation under the same lock so concurrent rewards
+	 * cannot observe or overwrite one another's per-evaluation values.
+	 */
+	static Object evaluateWithBindings(ScriptEngine engine, String expression, Map<String, Object> bindings)
+			throws ScriptException {
+		synchronized (engine) {
+			for (Entry<String, Object> entry : bindings.entrySet()) {
+				engine.put(entry.getKey(), entry.getValue());
+			}
+			return engine.eval(expression);
+		}
 	}
 
 	public String getStringValue(String expression) {
