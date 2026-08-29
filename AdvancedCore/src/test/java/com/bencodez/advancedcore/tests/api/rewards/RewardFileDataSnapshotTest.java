@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.api.rewards;
+package com.bencodez.advancedcore.tests.api.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -20,6 +20,8 @@ import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.files.FilesManager;
+import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardFileData;
 
 class RewardFileDataSnapshotTest {
 

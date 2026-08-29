@@ -144,7 +144,7 @@ public class RewardRegistry {
         return normalizeLookupName(path).replace('.', '_').toLowerCase(Locale.ROOT);
     }
 
-    static boolean isSafeRewardFileName(String reward) {
+    public static boolean isSafeRewardFileName(String reward) {
         if (reward == null || reward.indexOf('\0') >= 0 || new File(reward).isAbsolute()) {
             return false;
         }

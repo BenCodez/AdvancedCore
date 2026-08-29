@@ -150,7 +150,7 @@ public final class AdvancedCoreLifecycle {
 		private final ScheduledExecutorService loginTimer;
 		private final ScheduledExecutorService inventoryTimer;
 
-		RuntimeExecutors(BukkitScheduler bukkitScheduler, ScheduledExecutorService timer,
+		public RuntimeExecutors(BukkitScheduler bukkitScheduler, ScheduledExecutorService timer,
 				ScheduledExecutorService loginTimer, ScheduledExecutorService inventoryTimer) {
 			this.bukkitScheduler = bukkitScheduler;
 			this.timer = timer;

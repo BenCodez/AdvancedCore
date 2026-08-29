@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.api.rewards;
+package com.bencodez.advancedcore.tests.rewards;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,6 +15,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardBuilder;
+import com.bencodez.advancedcore.api.rewards.RewardExecutor;
+import com.bencodez.advancedcore.api.rewards.RewardHandler;
+import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 class QueuedGeneratedRewardDispatchTest {

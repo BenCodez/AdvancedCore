@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.api.misc;
+package com.bencodez.advancedcore.tests.api.misc;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,6 +16,7 @@ import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 
 class PlayerManagerSecurityTest {
 
@@ -35,7 +36,7 @@ class PlayerManagerSecurityTest {
 		when(differentPlayer.hasPermission("reward.permission")).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(options);
 		AdvancedCorePlugin.setInstance(plugin);
-		PlayerManager.getInstance().plugin = plugin;
+		PlayerManager.getInstance().setPlugin(plugin);
 
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayer(requestedUuid)).thenReturn(null);

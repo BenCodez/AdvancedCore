@@ -130,7 +130,7 @@ public class RewardExecutor {
         giveReward(user, handler.getReward(reward), context.getOptions());
     }
 
-    void givePersistedQueueReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
+    public void givePersistedQueueReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         if (reward == null || reward.isEmpty()) {
             return;

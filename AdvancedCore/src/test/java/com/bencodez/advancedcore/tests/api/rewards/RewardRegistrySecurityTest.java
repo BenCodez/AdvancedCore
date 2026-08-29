@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.api.rewards;
+package com.bencodez.advancedcore.tests.api.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,6 +12,9 @@ import java.io.File;
 import org.junit.jupiter.api.Test;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardFileData;
+import com.bencodez.advancedcore.api.rewards.RewardRegistry;
 
 class RewardRegistrySecurityTest {
 

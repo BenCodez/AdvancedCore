@@ -1,4 +1,4 @@
-package com.bencodez.advancedcore.api.rewards;
+package com.bencodez.advancedcore.tests.api.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -21,6 +21,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.rewards.QueuedGeneratedReward;
+import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardHandler;
+import com.bencodez.advancedcore.api.rewards.RewardLoader;
+import com.bencodez.advancedcore.api.rewards.RewardRegistry;
 
 class RewardLoaderSecurityTest {
 

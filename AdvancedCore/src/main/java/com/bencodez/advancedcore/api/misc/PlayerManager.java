@@ -16,6 +16,9 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class PlayerManager {
 
 	/** The instance. */
@@ -25,8 +28,9 @@ public class PlayerManager {
 		return instance;
 	}
 
-	/** The plugin. */
-	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+	@Getter
+	@Setter
+	private AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
 
 	private PlayerManager() {
 	}

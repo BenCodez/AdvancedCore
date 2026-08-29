@@ -12,7 +12,7 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
  * offline or timed queue. These rewards are intentionally restricted to the
  * users whose persisted queue references the generated reward name.
  */
-final class QueuedGeneratedReward extends Reward {
+public final class QueuedGeneratedReward extends Reward {
 
 	private final Set<String> allowedUserUuids;
 
@@ -46,7 +46,7 @@ final class QueuedGeneratedReward extends Reward {
 		// to UUIDs with a matching persisted queue reference.
 	}
 
-	Set<String> getAllowedUserUuids() {
+	public Set<String> getAllowedUserUuids() {
 		return allowedUserUuids;
 	}
 }
