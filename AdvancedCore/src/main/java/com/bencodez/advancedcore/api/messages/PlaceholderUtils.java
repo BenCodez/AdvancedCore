@@ -212,8 +212,9 @@ public class PlaceholderUtils {
 	}
 
 	public static String replaceJavascript(Player player, String text) {
-		String msg = replacePlaceHolders(player, text);
-		if (AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
+		boolean javascriptEnabled = AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled();
+		String msg = replacePlaceHolders(player, text, !javascriptEnabled);
+		if (javascriptEnabled) {
 			JavascriptEngine engine = new JavascriptEngine().addPlayer(player);
 			return replaceJavascript(msg, engine);
 		}
@@ -339,12 +340,21 @@ public class PlaceholderUtils {
 	}
 
 	public static String replacePlaceHolders(OfflinePlayer player, String text) {
+		return replacePlaceHolders(player, text, false);
+	}
+
+	private static String replacePlaceHolders(OfflinePlayer player, String text,
+			boolean replaceJavascriptSegments) {
 		if (player == null || text == null || text.isEmpty()) {
 			return text;
 		}
 		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
+			Function<String, String> replacement = value -> PlaceholderAPI.setPlaceholders(player, value);
+			Function<String, String> javascriptReplacement = replaceJavascriptSegments
+					? value -> JavascriptTextTemplate.neutralizeGeneratedMarkers(replacement.apply(value))
+					: Function.identity();
 			return JavascriptTextTemplate.parse(text).transform(
-					value -> PlaceholderAPI.setPlaceholders(player, value), Function.identity());
+					replacement, javascriptReplacement);
 		}
 		return text;
 	}
