@@ -14,7 +14,6 @@ import org.bukkit.OfflinePlayer;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Parser;
-import org.mozilla.javascript.ast.AstNode;
 import org.mozilla.javascript.ast.AstRoot;
 import org.mozilla.javascript.ast.Comment;
 import org.mozilla.javascript.ast.RegExpLiteral;
@@ -32,7 +31,10 @@ import me.clip.placeholderapi.PlaceholderAPI;
  * classification, so AdvancedCore does not maintain a JavaScript lexer.
  */
 public final class JavascriptPlaceholderBinder {
-    private static final Pattern PLACEHOLDER = Pattern.compile("%([^%\\s]+)%|(?<!\\$)\\{([^{}%\\s]+)\\}");
+    // Keep the percent-token range aligned with PlaceholderAPI. Resolution below
+    // decides whether a percent-delimited candidate is really a placeholder; this
+    // is important because ordinary JavaScript such as 10%3%2 has the same shape.
+    private static final Pattern PLACEHOLDER = Pattern.compile("%([^%]+)%|(?<!\\$)\\{([^{}%]+)\\}");
     private static final Pattern INTEGER = Pattern.compile("[-+]?\\d+");
     private static final Pattern DECIMAL = Pattern
             .compile("[-+]?(?:\\d+\\.\\d*|\\d*\\.\\d+|\\d+)(?:[eE][-+]?\\d+)?");
@@ -60,18 +62,27 @@ public final class JavascriptPlaceholderBinder {
         Matcher matcher = PLACEHOLDER.matcher(expression);
         List<PlaceholderMatch> matches = new ArrayList<>();
         StringBuilder sanitized = new StringBuilder(expression);
-        while (matcher.find()) {
+        int searchFrom = 0;
+        while (searchFrom < expression.length() && matcher.find(searchFrom)) {
             String token = matcher.group();
             String decoded = JavascriptPlaceholderValue.decode(token);
             String value = decoded == null ? resolver.apply(token) : decodedResolver.apply(decoded);
-            matches.add(new PlaceholderMatch(matcher.start(), matcher.end(), token, value));
 
-            boolean bracePlaceholder = token.charAt(0) == '{';
-            if (!bracePlaceholder || (value != null && !value.equals(token))) {
-                for (int i = matcher.start(); i < matcher.end(); i++) {
-                    sanitized.setCharAt(i, 'p');
-                }
+            // Percent signs are also JavaScript modulo operators, and brace-delimited
+            // text may be an object or block. Do not parse or rewrite a candidate that
+            // the configured placeholder sources did not actually resolve.
+            if (value == null || (decoded == null && value.equals(token))) {
+                // Retry after this opening delimiter instead of after the candidate's
+                // closing delimiter. An unresolved modulo-shaped candidate can overlap
+                // the opening percent of a real placeholder later in the expression.
+                searchFrom = matcher.start() + 1;
+                continue;
             }
+            matches.add(new PlaceholderMatch(matcher.start(), matcher.end(), token, value));
+            for (int i = matcher.start(); i < matcher.end(); i++) {
+                sanitized.setCharAt(i, 'p');
+            }
+            searchFrom = matcher.end();
         }
         if (matches.isEmpty()) {
             return expression;
@@ -79,14 +90,12 @@ public final class JavascriptPlaceholderBinder {
 
         JavascriptContexts contexts = JavascriptContexts.parse(sanitized.toString());
         String[] replacements = new String[matches.size()];
+        int[] replacementStarts = new int[matches.size()];
         int bindingIndex = 0;
         for (int i = 0; i < matches.size(); i++) {
             PlaceholderMatch match = matches.get(i);
+            replacementStarts[i] = match.start;
             if (contexts.containing(contexts.comments, match.start) != null) {
-                replacements[i] = match.token;
-                continue;
-            }
-            if (match.value == null || match.value.equals(match.token)) {
                 replacements[i] = match.token;
                 continue;
             }
@@ -95,10 +104,13 @@ public final class JavascriptPlaceholderBinder {
             LiteralRange string = contexts.containingLiteral(match.start);
             Range templateText = contexts.containing(contexts.templateText, match.start);
             if (regex != null) {
+                replacementStarts[i] = literalReplacementStart(expression, match.start);
                 replacements[i] = escapeRegex(match.value, expression, regex, match.start);
             } else if (templateText != null) {
+                replacementStarts[i] = literalReplacementStart(expression, match.start);
                 replacements[i] = escapeTemplate(match.value);
             } else if (string != null) {
+                replacementStarts[i] = literalReplacementStart(expression, match.start);
                 replacements[i] = escapeString(match.value, string.quote);
             } else {
                 String variable = VARIABLE_PREFIX + bindingIndex++;
@@ -110,9 +122,24 @@ public final class JavascriptPlaceholderBinder {
         StringBuilder result = new StringBuilder(expression);
         for (int i = matches.size() - 1; i >= 0; i--) {
             PlaceholderMatch match = matches.get(i);
-            result.replace(match.start, match.end, replacements[i]);
+            result.replace(replacementStarts[i], match.end, replacements[i]);
         }
         return result.toString();
+    }
+
+    /**
+     * An odd authored backslash immediately before a placeholder already escapes
+     * the placeholder's first character. Consume that pending escape before
+     * inserting a separately escaped value. Otherwise the authored slash and the
+     * value's leading escape can pair off and reactivate a quote, template
+     * interpolation, or regex delimiter.
+     */
+    private static int literalReplacementStart(String expression, int placeholderStart) {
+        int slashRunStart = placeholderStart;
+        while (slashRunStart > 0 && expression.charAt(slashRunStart - 1) == '\\') {
+            slashRunStart--;
+        }
+        return ((placeholderStart - slashRunStart) & 1) == 1 ? placeholderStart - 1 : placeholderStart;
     }
 
     private static String resolve(String token, OfflinePlayer player, Map<String, String> placeholders) {

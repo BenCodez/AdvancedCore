@@ -36,6 +36,59 @@ class JavascriptPlaceholderBinderTest {
     }
 
     @Test
+    void ordinaryCompactModuloExpressionIsNotTreatedAsAPlaceholder() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("10%3%2", token -> token, bindings::put);
+
+        assertEquals("10%3%2", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void unresolvedPercentTokenRemainsUntouched() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("'%unknown%'", token -> token, bindings::put);
+
+        assertEquals("'%unknown%'", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void compactModuloCanAppearBesideAResolvedPlaceholder() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("10%3%2 + %value%",
+                token -> token.equals("%value%") ? "4" : token, bindings::put);
+
+        assertEquals("10%3%2 + __advancedCorePlaceholder0", prepared);
+        assertEquals(4L, bindings.get("__advancedCorePlaceholder0"));
+    }
+
+    @Test
+    void moduloCandidateCannotHideAnOverlappingResolvedPlaceholder() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("10%3 == 1 && %value% == true",
+                token -> token.equals("%value%") ? "true" : token, bindings::put);
+
+        assertEquals("10%3 == 1 && __advancedCorePlaceholder0 == true", prepared);
+        assertEquals(Boolean.TRUE, bindings.get("__advancedCorePlaceholder0"));
+    }
+
+    @Test
+    void placeholderApiStyleTokenMayContainWhitespace() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("%exp_argument with spaces% == true",
+                ignored -> "true", bindings::put);
+
+        assertEquals("__advancedCorePlaceholder0 == true", prepared);
+        assertEquals(Boolean.TRUE, bindings.get("__advancedCorePlaceholder0"));
+    }
+
+    @Test
     void quotedAndEmbeddedPlaceholdersStayStrings() {
         HashMap<String, Object> bindings = new HashMap<>();
 
@@ -68,6 +121,37 @@ class JavascriptPlaceholderBinderTest {
     }
 
     @Test
+    void oddBackslashBeforeTemplatePlaceholderCannotReactivateInterpolation() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("`\\%value%`", ignored -> "${attack()}", bindings::put);
+
+        assertEquals("`\\${attack()}`", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void evenBackslashesBeforeTemplatePlaceholderRemainLiteralAndSafe() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("`\\\\%value%`", ignored -> "${attack()}", bindings::put);
+
+        assertEquals("`\\\\\\${attack()}`", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void oddBackslashBeforeStringPlaceholderCannotReactivateQuote() {
+        HashMap<String, Object> bindings = new HashMap<>();
+        String injection = "'; attack(); '";
+
+        String prepared = JavascriptPlaceholderBinder.bind("'\\%value%'", ignored -> injection, bindings::put);
+
+        assertEquals("'\\'; attack(); \\''", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
     void regexPlaceholderIsEscapedAsLiteralPatternText() {
         HashMap<String, Object> bindings = new HashMap<>();
 
@@ -75,6 +159,17 @@ class JavascriptPlaceholderBinderTest {
                 ignored -> "Ben.*", bindings::put);
 
         assertEquals("/^Ben\\.\\*$/i.test(value)", prepared);
+        assertTrue(bindings.isEmpty());
+    }
+
+    @Test
+    void oddBackslashBeforeRegexPlaceholderCannotReactivateDelimiter() {
+        HashMap<String, Object> bindings = new HashMap<>();
+
+        String prepared = JavascriptPlaceholderBinder.bind("/\\%value%/.test(input)",
+                ignored -> "/; attack() //", bindings::put);
+
+        assertEquals("/\\/; attack\\(\\) \\/\\//.test(input)", prepared);
         assertTrue(bindings.isEmpty());
     }
 
