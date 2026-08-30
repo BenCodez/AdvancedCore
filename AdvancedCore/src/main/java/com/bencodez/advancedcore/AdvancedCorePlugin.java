@@ -7,6 +7,7 @@ import java.net.URL;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Queue;
@@ -920,11 +921,11 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 			@Override
 			public void reload() {
-				ArrayList<String> uuids = new ArrayList<>();
+				LinkedHashSet<String> uuids = new LinkedHashSet<>();
 
 				// UUIDs from storage
 				for (String uuid : getUserManager().getAllUUIDs()) {
-					if (uuid != null && !uuid.isEmpty() && !uuids.contains(uuid)) {
+					if (uuid != null && !uuid.isEmpty()) {
 						uuids.add(uuid);
 					}
 				}
@@ -934,12 +935,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					String uuid = getOptions().isOnlineMode() ? player.getUniqueId().toString()
 							: UuidLookup.getInstance().getUUID(player.getName()); // name-derived in offline-mode
 
-					if (uuid != null && !uuid.isEmpty() && !uuids.contains(uuid)) {
+					if (uuid != null && !uuid.isEmpty()) {
 						uuids.add(uuid);
 					}
 				}
 
-				setReplace(uuids);
+				setReplace(new ArrayList<>(uuids));
 			}
 
 			@Override
