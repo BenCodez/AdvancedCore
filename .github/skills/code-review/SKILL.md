@@ -246,11 +246,25 @@ Coverage: <complete, static-only, partial, or stale; material limitations>
 <prioritized findings, or the applicable zero-finding result below>
 ```
 
-When required coverage and validation are complete with no findings, the findings
-section is exactly `No findings.` Otherwise use `Review incomplete.` with specific
-limitations, while still reporting verified findings. An explicitly scoped
-static-only review can be complete within that scope but does not pass a gate
-requiring builds. Do not add praise, scores, generic advice, or merge approval.
+Determine review completeness independently from findings and publishing readiness:
+
+- Complete review with findings: when required coverage and validation evidence
+  are complete, report the verified findings in priority order and keep coverage
+  marked complete. Do not label the review incomplete or invent limitations merely
+  because defects were found.
+- Complete review without findings: when required coverage and validation evidence
+  are complete and no findings remain, the findings section is exactly
+  `No findings.`
+- Incomplete review, with or without findings: only when required coverage or
+  validation evidence is missing, unresolved, or stale, use `Review incomplete.`
+  with the actual limitations. Still report all verified findings; do not present
+  an incomplete review as a clean verdict.
+
+A completed, investigated check that demonstrates a defect is validation evidence,
+not by itself a coverage gap; unresolved failures still block publishing. An
+explicitly scoped static-only review can be complete within that scope but does
+not pass a gate requiring builds. Do not add praise, scores, generic advice, or
+merge approval.
 
 For a pre-publish gate, the implementation coordinator, not the reviewer, fixes
 accepted findings, reruns required checks, and obtains a fresh independent review
