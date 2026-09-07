@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.command;
 import org.bukkit.command.CommandSender;
 
 import java.util.regex.Pattern;
+import java.util.Collections;
+import java.util.List;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 
@@ -80,6 +82,21 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Returns permissions used by special player targets in addition to the normal
+	 * command permission. Permission-listing commands can use this without granting
+	 * the bulk permission during ordinary command checks.
+	 *
+	 * @return the dedicated permission for the {@code all} target
+	 */
+	public List<String> getAdditionalPermissions() {
+		String permission = getPerm();
+		if (permission == null || permission.isEmpty()) {
+			return Collections.emptyList();
+		}
+		return Collections.singletonList(permission.split(Pattern.quote("|"))[0] + ".All");
 	}
 
 	private void figureOutPlayerArg() {
