@@ -350,13 +350,21 @@ public class PlaceholderUtils {
 		}
 		if (AdvancedCorePlugin.getInstance().isPlaceHolderAPIEnabled()) {
 			Function<String, String> replacement = value -> PlaceholderAPI.setPlaceholders(player, value);
-			Function<String, String> javascriptReplacement = replaceJavascriptSegments
-					? value -> JavascriptTextTemplate.neutralizeGeneratedMarkers(replacement.apply(value))
-					: Function.identity();
-			return JavascriptTextTemplate.parse(text).transform(
-					replacement, javascriptReplacement);
+			return replaceExternalPlaceholders(text, replacement, replaceJavascriptSegments);
 		}
 		return text;
+	}
+
+	/**
+	 * Applies an external placeholder provider while preserving the JavaScript
+	 * boundaries parsed from the configured text.
+	 */
+	public static String replaceExternalPlaceholders(String text, Function<String, String> replacement,
+			boolean replaceJavascriptSegments) {
+		Function<String, String> javascriptReplacement = replaceJavascriptSegments
+				? value -> JavascriptTextTemplate.neutralizeGeneratedMarkers(replacement.apply(value))
+				: Function.identity();
+		return JavascriptTextTemplate.parse(text).transform(replacement, javascriptReplacement);
 	}
 
 	/**
