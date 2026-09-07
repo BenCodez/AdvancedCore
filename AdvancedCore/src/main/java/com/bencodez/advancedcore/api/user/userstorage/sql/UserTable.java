@@ -24,6 +24,12 @@ import com.bencodez.simpleapi.sql.data.DataValueString;
 import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
 
 public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
+	static String quoteIdentifier(String identifier) {
+		if (identifier == null) {
+			throw new IllegalArgumentException("SQL identifier cannot be null");
+		}
+		return "`" + identifier.replace("`", "``") + "`";
+	}
 
 	private List<Column> columns = new ArrayList<>();
 	private String name;
@@ -194,7 +200,7 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 			return;
 		}
 		try {
-			String query = "ALTER TABLE " + getName() + " ADD COLUMN `" + column.getName() + "` "
+			String query = "ALTER TABLE " + quoteIdentifier(getName()) + " ADD COLUMN " + quoteIdentifier(column.getName()) + " "
 					+ column.getDataType().toString();
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			s.executeUpdate();
@@ -210,7 +216,7 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 			return;
 		}
 		try {
-			String query = "ALTER TABLE " + getName() + " ADD COLUMN `" + column.getKey() + "` "
+			String query = "ALTER TABLE " + quoteIdentifier(getName()) + " ADD COLUMN " + quoteIdentifier(column.getKey()) + " "
 					+ column.getColumnType();
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
 			s.executeUpdate();
@@ -283,7 +289,8 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 	public void copyColumnData(String columnFromName, String columnToName, DataType dataType) {
 		checkColumn(new Column(columnToName, dataType));
 		checkColumn(new Column(columnFromName, dataType));
-		String sql = "UPDATE `" + getName() + "` SET `" + columnToName + "` = `" + columnFromName + "`;";
+		String sql = "UPDATE " + quoteIdentifier(getName()) + " SET " + quoteIdentifier(columnToName) + " = "
+				+ quoteIdentifier(columnFromName) + ";";
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
 			s.executeUpdate();
@@ -489,7 +496,7 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 
 	public ArrayList<Integer> getNumbersInColumn(String column) {
 		ArrayList<Integer> result = new ArrayList<>();
-		String sqlStr = "SELECT " + column + " FROM " + getName() + ";";
+		String sqlStr = "SELECT " + quoteIdentifier(column) + " FROM " + quoteIdentifier(getName()) + ";";
 
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sqlStr);
@@ -784,7 +791,8 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 
 	public void wipeColumnData(String columnName, DataType dataType) {
 		checkColumn(new Column(columnName, dataType));
-		String sql = "UPDATE " + getName() + " SET " + columnName + " = " + dataType.getNoValue() + ";";
+		String sql = "UPDATE " + quoteIdentifier(getName()) + " SET " + quoteIdentifier(columnName) + " = "
+				+ dataType.getNoValue() + ";";
 		try {
 			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(sql);
 			s.executeUpdate();
