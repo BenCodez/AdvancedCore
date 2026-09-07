@@ -14,9 +14,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
+import com.bencodez.advancedcore.api.item.ItemBuilder;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 
@@ -54,10 +57,22 @@ class JavascriptSecurityFindingRegressionTest {
 	}
 
 	@Test
-	void conditionalItemPlaceholderCannotCreateExecutableJavascript() {
+	void itemBuilderPlaceholderCannotCreateExecutableJavascript() {
 		HashMap<String, String> placeholders = new HashMap<>();
 		placeholders.put("conditional_value", INJECTED_MARKER);
-		String itemText = PlaceholderUtils.replacePlaceHolder("Item lore: {conditional_value}", placeholders);
-		assertEquals("Item lore: [Javascript =Bukkit.shutdown()]", PlaceholderUtils.replaceJavascript(itemText));
+		ItemStack stack = mock(ItemStack.class);
+		ItemMeta meta = mock(ItemMeta.class);
+		java.util.concurrent.atomic.AtomicReference<String> displayName = new java.util.concurrent.atomic.AtomicReference<>();
+		org.mockito.Mockito.when(stack.clone()).thenReturn(stack);
+		org.mockito.Mockito.when(stack.hasItemMeta()).thenReturn(true);
+		org.mockito.Mockito.when(stack.getItemMeta()).thenReturn(meta);
+		org.mockito.Mockito.when(meta.hasDisplayName()).thenReturn(true);
+		org.mockito.Mockito.when(meta.getDisplayName()).thenAnswer(invocation -> displayName.get());
+		org.mockito.Mockito.doAnswer(invocation -> { displayName.set(invocation.getArgument(0)); return null; })
+				.when(meta).setDisplayName(anyString());
+		ItemBuilder item = new ItemBuilder(stack).setName("Item: {conditional_value}")
+				.setPlaceholders(placeholders).dontCheckLoreLength();
+		item.toItemStack();
+		assertEquals("Item: [Javascript =Bukkit.shutdown()]", item.getName());
 	}
 }
