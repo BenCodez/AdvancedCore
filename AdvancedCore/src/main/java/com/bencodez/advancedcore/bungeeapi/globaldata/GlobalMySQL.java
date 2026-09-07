@@ -966,7 +966,7 @@ public abstract class GlobalMySQL {
 	public void wipeColumnData(String columnName) {
 		checkColumn(columnName, DataType.STRING);
 
-		String colName = (dbType() == DbType.POSTGRESQL) ? quoteIdent(dbType(), columnName.toLowerCase()) : columnName;
+		String colName = (dbType() == DbType.POSTGRESQL) ? quoteIdent(dbType(), columnName.toLowerCase()) : qi(columnName);
 
 		String sql = "UPDATE " + getName() + " SET " + colName + " = NULL;";
 		try {
