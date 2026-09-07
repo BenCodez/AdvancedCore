@@ -3,11 +3,11 @@ package com.bencodez.advancedcore.tests.user;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -81,5 +81,36 @@ class UserTablePreparedStatementTest {
 
 		verify(statement).setString(1, "O'Brien");
 		verify(statement).executeQuery();
+	}
+
+	@Test
+	void addColumnEscapesAttackerControlledIdentifier() throws Exception {
+		Column primaryKey = new Column("uuid", new DataValueString(UUID));
+		UserTable table = spy(new UserTable(mock(AdvancedCorePlugin.class), "Users",
+				Collections.singletonList(primaryKey), primaryKey));
+		table.setSqLite(sqlite);
+		doReturn(false).when(table).hasColumn(any(Column.class));
+
+		String sql = "ALTER TABLE `Users` ADD COLUMN `name``; DROP TABLE Users;--` STRING";
+		when(connection.prepareStatement(sql)).thenReturn(statement);
+		table.addColoumn(new Column("name`; DROP TABLE Users;--", new DataValueString("value")));
+
+		verify(connection).prepareStatement(sql);
+		verify(statement).executeUpdate();
+	}
+
+	@Test
+	void wipeColumnEscapesIdentifier() throws Exception {
+		Column primaryKey = new Column("uuid", new DataValueString(UUID));
+		UserTable table = spy(new UserTable(mock(AdvancedCorePlugin.class), "Users",
+				Collections.singletonList(primaryKey), primaryKey));
+		table.setSqLite(sqlite);
+		doNothing().when(table).checkColumn(any(Column.class));
+		String sql = "UPDATE `Users` SET `points``; DROP TABLE Users;--` = 0;";
+		when(connection.prepareStatement(sql)).thenReturn(statement);
+
+		table.wipeColumnData("points`; DROP TABLE Users;--", com.bencodez.simpleapi.sql.DataType.INTEGER);
+		verify(connection).prepareStatement(sql);
+		verify(statement).executeUpdate();
 	}
 }
