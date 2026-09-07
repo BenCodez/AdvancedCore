@@ -15,8 +15,11 @@ class BuildInputPinningTest {
 	void javadocPublisherUsesImmutableRevisionAndExplicitPermissions() throws IOException {
 		String workflow = Files.readString(Path.of("..", ".github", "workflows", "publish-javadoc.yml"));
 
-		assertTrue(workflow.matches("(?s).*MathieuSoysal/Javadoc-publisher\\.yml@[0-9a-f]{40}.*"));
-		assertTrue(workflow.contains("permissions:\n  contents: write"));
+		assertFalse(workflow.contains("MathieuSoysal/Javadoc-publisher"));
+		assertTrue(workflow.matches("(?s).*actions/checkout@[0-9a-f]{40}.*"));
+		assertTrue(workflow.matches("(?s).*actions/setup-java@[0-9a-f]{40}.*"));
+		assertTrue(workflow.matches("(?s).*actions/deploy-pages@[0-9a-f]{40}.*"));
+		assertTrue(workflow.contains("permissions:\n  contents: read\n  pages: write\n  id-token: write"));
 		assertFalse(workflow.contains("Javadoc-publisher.yml@main"));
 	}
 
