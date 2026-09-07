@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.command;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +40,12 @@ class PlayerCommandHandlerTest {
 		when(sender.hasPermission("example.admin")).thenReturn(true);
 
 		assertTrue(handler.hasAllPermission(sender));
+	}
+
+	@Test
+	void exposesBulkPermissionForPermissionListings() {
+		assertEquals(java.util.Collections.singletonList("example.command.All"),
+				handler(false).getAdditionalPermissions());
 	}
 
 	private TestHandler handler(boolean forceConsole) {
