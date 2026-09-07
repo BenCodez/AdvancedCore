@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.javascript;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.script.ScriptEngine;
@@ -16,17 +17,20 @@ import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
 public class JavascriptEngine {
-	private HashMap<String, Object> engineAPI;
+	private final HashMap<String, Object> engineAPI;
+	private final HashMap<String, String> placeholders;
+	private OfflinePlayer placeholderPlayer;
 
 	public JavascriptEngine() {
 		engineAPI = new HashMap<>();
+		placeholders = new HashMap<>();
 	}
 
 	public JavascriptEngine addPlayer(AdvancedCoreUser user) {
+		placeholderPlayer = user.getOfflinePlayer();
 		addToEngine("PlayerName", user.getPlayerName());
 		addToEngine("PlayerUUID", user.getUUID());
 		addToEngine("AdvancedCoreUser", user);
-		// addToEngine("CommandSender", player);
 
 		for (JavascriptPlaceholderRequest request : AdvancedCorePlugin.getInstance().getJavascriptEngineRequests()) {
 			addToEngine(request.getStr(), request.getObject(user.getOfflinePlayer()));
@@ -42,6 +46,7 @@ public class JavascriptEngine {
 		addToEngine("CommandSender", player);
 		if (player instanceof Player) {
 			Player p = (Player) player;
+			placeholderPlayer = p;
 			addToEngine("Player", p);
 			addToEngine("PlayerName", p.getName());
 			addToEngine("PlayerUUID", p.getUniqueId().toString());
@@ -58,6 +63,7 @@ public class JavascriptEngine {
 	}
 
 	public JavascriptEngine addPlayer(OfflinePlayer player) {
+		placeholderPlayer = player;
 		addToEngine("Player", player);
 		addToEngine("PlayerName", player.getName());
 		addToEngine("PlayerUUID", player.getUniqueId().toString());
@@ -76,6 +82,7 @@ public class JavascriptEngine {
 
 	public JavascriptEngine addPlayer(Player player) {
 		if (player != null) {
+			placeholderPlayer = player;
 			addToEngine("Player", player);
 			addToEngine("PlayerName", player.getName());
 			addToEngine("PlayerUUID", player.getUniqueId().toString());
@@ -86,6 +93,13 @@ public class JavascriptEngine {
 					.getJavascriptEngineRequests()) {
 				addToEngine(request.getStr(), request.getObject(player));
 			}
+		}
+		return this;
+	}
+
+	public JavascriptEngine addPlaceholders(Map<String, String> placeholders) {
+		if (placeholders != null && !placeholders.isEmpty()) {
+			this.placeholders.putAll(placeholders);
 		}
 		return this;
 	}
@@ -119,7 +133,7 @@ public class JavascriptEngine {
 	}
 
 	public Object getResult(String expression) {
-		if (!expression.equals("")) {
+		if (expression != null && !expression.isEmpty()) {
 			if (!AdvancedCorePlugin.getInstance().getOptions().isJavascriptEngineEnabled()) {
 				return null;
 			}
@@ -128,21 +142,32 @@ public class JavascriptEngine {
 				AdvancedCorePlugin.getInstance().debug("Failed to process javascript, engine == null");
 				return null;
 			}
-			engine.put("Bukkit", Bukkit.getServer());
-			engine.put("AdvancedCore", AdvancedCorePlugin.getInstance());
-			engine.put("Console", Bukkit.getConsoleSender());
-			engine.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
-			engine.put("RewardHandler", AdvancedCorePlugin.getInstance().getRewardHandler());
-			engine.put("MessageAPI", MessageAPI.class);
 
-			engineAPI.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
-
-			for (Entry<String, Object> entry : engineAPI.entrySet()) {
-				engine.put(entry.getKey(), entry.getValue());
+			HashMap<String, Object> placeholderBindings = new HashMap<>();
+			String preparedExpression;
+			try {
+				preparedExpression = JavascriptPlaceholderBinder.bind(expression, placeholderPlayer, placeholders,
+						placeholderBindings);
+			} catch (IllegalArgumentException e) {
+				AdvancedCorePlugin.getInstance().getLogger()
+						.warning("Failed to safely prepare javascript placeholders: " + e.getMessage());
+				AdvancedCorePlugin.getInstance().debug(e);
+				return null;
 			}
 
+			HashMap<String, Object> evaluationBindings = new HashMap<>();
+			evaluationBindings.put("Bukkit", Bukkit.getServer());
+			evaluationBindings.put("AdvancedCore", AdvancedCorePlugin.getInstance());
+			evaluationBindings.put("Console", Bukkit.getConsoleSender());
+			evaluationBindings.put("UserManager", AdvancedCorePlugin.getInstance().getUserManager());
+			evaluationBindings.put("RewardHandler", AdvancedCorePlugin.getInstance().getRewardHandler());
+			evaluationBindings.put("MessageAPI", MessageAPI.class);
+			evaluationBindings.putAll(engineAPI);
+			evaluationBindings.putAll(placeholderBindings);
+			evaluationBindings.putAll(AdvancedCorePlugin.getInstance().getJavascriptEngine());
+
 			try {
-				return engine.eval(expression);
+				return evaluateWithBindings(engine, preparedExpression, evaluationBindings);
 			} catch (ScriptException e) {
 				AdvancedCorePlugin.getInstance().getLogger().warning(
 						"Error occoured while evaluating javascript, turn debug on to see stacktrace: " + e.toString());
@@ -150,6 +175,21 @@ public class JavascriptEngine {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * The configured engine is cached and shared by every JavascriptEngine wrapper.
+	 * Keep binding writes and evaluation under the same lock so concurrent rewards
+	 * cannot observe or overwrite one another's per-evaluation values.
+	 */
+	static Object evaluateWithBindings(ScriptEngine engine, String expression, Map<String, Object> bindings)
+			throws ScriptException {
+		synchronized (engine) {
+			for (Entry<String, Object> entry : bindings.entrySet()) {
+				engine.put(entry.getKey(), entry.getValue());
+			}
+			return engine.eval(expression);
+		}
 	}
 
 	public String getStringValue(String expression) {

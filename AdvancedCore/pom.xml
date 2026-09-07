@@ -116,6 +116,10 @@
                                     <shadedPattern>
                                         ${project.groupId}.advancedcore.folialib</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>org.mozilla.javascript</pattern>
+                                    <shadedPattern>${project.groupId}.advancedcore.rhino</shadedPattern>
+                                </relocation>
                             </relocations>
                             <artifactSet>
                                 <excludes>
@@ -230,6 +234,11 @@
             <artifactId>placeholderapi</artifactId>
             <version>2.12.2</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mozilla</groupId>
+            <artifactId>rhino</artifactId>
+            <version>1.9.1</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
