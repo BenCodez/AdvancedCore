@@ -7,9 +7,10 @@ import java.util.Map.Entry;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
-import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeString;
+import com.bencodez.advancedcore.bukkit.user.BukkitUserDataReadContext;
+import com.bencodez.advancedcore.core.user.UserDataReader;
 import com.bencodez.advancedcore.thread.FileThread;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.sql.Column;
@@ -26,9 +27,11 @@ public class UserData {
 	private HashMap<String, DataValue> tempCache;
 
 	private AdvancedCoreUser user;
+	private final UserDataReader reader;
 
 	public UserData(AdvancedCoreUser user) {
 		this.user = user;
+		this.reader = new UserDataReader(new BukkitUserDataReadContext(this, user, () -> tempCache));
 	}
 
 	public void clearTempCache() {
@@ -129,126 +132,7 @@ public class UserData {
 
 	@SuppressWarnings("deprecation")
 	public int getInt(UserStorage storage, String key, int def, UserDataFetchMode mode) {
-		if (key == null || key.isEmpty()) {
-			if (storage.equals(UserStorage.FLAT)) {
-				try {
-					return getData(user.getUUID()).getInt(key, def);
-				} catch (Exception ignored) {
-				}
-			}
-			return def;
-		}
-
-		// 1) Temp cache
-		if (mode.allowTempCache() && tempCache != null) {
-			DataValue v = tempCache.get(key);
-			if (v != null) {
-				if (v.isInt()) {
-					return v.getInt();
-				}
-				if (v.isString()) {
-					try {
-						return Integer.parseInt(v.getString());
-					} catch (Exception ignored) {
-					}
-				}
-			} else {
-				// If temp cache is enabled but key is absent, keep old behavior (return def)
-				// ONLY when temp cache is the only allowed source.
-				if (!mode.allowUserCache() && !mode.allowStorageLookup()) {
-					return def;
-				}
-			}
-		}
-
-		// 2) UserDataCache
-		if (mode.allowUserCache()) {
-			UserDataCache cache = user.getCache();
-			if (cache != null) {
-				// preserve previous behavior
-				user.cacheIfNeeded();
-
-				if (cache.isCached(key)) {
-					DataValue cv = cache.getCache().get(key);
-					if (cv != null) {
-						if (cv.isInt()) {
-							return cv.getInt();
-						}
-						String str = cv.getString();
-						if (str != null && !str.equalsIgnoreCase("null")) {
-							try {
-								return Integer.parseInt(str);
-							} catch (Exception ignored) {
-							}
-						}
-					}
-				}
-			} else {
-				user.cache();
-			}
-
-			if (!mode.allowStorageLookup()) {
-				return def;
-			}
-		} else {
-			if (!mode.allowStorageLookup()) {
-				return def;
-			}
-		}
-
-		// 3) Storage lookup
-		if (storage.equals(UserStorage.SQLITE)) {
-			List<Column> row = getSQLiteRow();
-			if (row != null) {
-				for (Column element : row) {
-					if (element.getName().equals(key)) {
-						DataValue value = element.getValue();
-						if (value.isInt()) {
-							return value.getInt();
-						}
-						if (value.isString()) {
-							String str = value.getString();
-							if (str != null) {
-								try {
-									return Integer.parseInt(str);
-								} catch (Exception ignored) {
-								}
-							}
-							return def;
-						}
-					}
-				}
-			}
-		} else if (storage.equals(UserStorage.MYSQL)) {
-			List<Column> row = getMySqlRow();
-			if (row != null) {
-				for (Column element : row) {
-					if (element.getName().equals(key)) {
-						DataValue value = element.getValue();
-						if (value.isInt()) {
-							return value.getInt();
-						}
-						if (value.isString()) {
-							String str = value.getString();
-							if (str != null) {
-								try {
-									return Integer.parseInt(str);
-								} catch (Exception ignored) {
-								}
-							}
-							return def;
-						}
-					}
-				}
-			}
-		} else if (storage.equals(UserStorage.FLAT)) {
-			try {
-				return getData(user.getUUID()).getInt(key, def);
-			} catch (Exception ignored) {
-			}
-		}
-
-		return def;
+		return reader.getInt(storage, key, def, mode);
 	}
 
 	/**
@@ -321,81 +205,7 @@ public class UserData {
 
 	@SuppressWarnings("deprecation")
 	public String getString(UserStorage storage, String key, UserDataFetchMode mode) {
-		if (key == null || key.isEmpty()) {
-			return "";
-		}
-
-		// 1) Temp cache
-		if (mode.allowTempCache() && tempCache != null) {
-			DataValue v = tempCache.get(key);
-			if (v != null) {
-				if (v.isString() || v.isBoolean()) {
-					String str = v.getString();
-					return (str != null) ? str : "";
-				}
-			} else {
-				if (!mode.allowUserCache() && !mode.allowStorageLookup()) {
-					return "";
-				}
-			}
-		}
-
-		// 2) UserDataCache
-		if (mode.allowUserCache()) {
-			UserDataCache cache = user.getCache();
-			if (cache != null) {
-				if (cache.isCached(key)) {
-					DataValue cv = cache.getCache().get(key);
-					if (cv != null) {
-						String str = cv.getString();
-						return (str != null) ? str : "";
-					}
-					return "";
-				}
-			} else {
-				user.cache();
-			}
-
-			if (!mode.allowStorageLookup()) {
-				return "";
-			}
-		} else {
-			if (!mode.allowStorageLookup()) {
-				return "";
-			}
-		}
-
-		// 3) Storage lookup
-		if (storage.equals(UserStorage.SQLITE)) {
-			List<Column> row = getSQLiteRow();
-			if (row != null) {
-				for (Column element : row) {
-					if (element.getName().equals(key)
-							&& (element.getValue().isString() || element.getValue().isBoolean())) {
-						String st = element.getValue().getString();
-						return (st != null && !st.equalsIgnoreCase("null")) ? st : "";
-					}
-				}
-			}
-		} else if (storage.equals(UserStorage.MYSQL)) {
-			List<Column> row = getMySqlRow();
-			if (row != null) {
-				for (Column element : row) {
-					if (element.getName().equals(key)
-							&& (element.getValue().isString() || element.getValue().isBoolean())) {
-						String st = element.getValue().getString();
-						return (st != null && !st.equalsIgnoreCase("null")) ? st : "";
-					}
-				}
-			}
-		} else if (storage.equals(UserStorage.FLAT)) {
-			try {
-				return getData(user.getUUID()).getString(key, "");
-			} catch (Exception ignored) {
-			}
-		}
-
-		return "";
+		return reader.getString(storage, key, mode);
 	}
 
 	/**
