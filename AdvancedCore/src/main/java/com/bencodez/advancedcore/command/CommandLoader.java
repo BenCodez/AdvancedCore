@@ -568,7 +568,7 @@ public class CommandLoader {
 				user.getData().setString(args[3], data);
 				sender.sendMessage(MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
 			}
-		});
+		}.withLegacyAllPermissionAliases(permPrefix + ".SetAllData"));
 
 		cmds.add(new CommandHandler(plugin, new String[] { "User", "(Player)", "ViewData" }, permPrefix + ".ViewData",
 				"View playerdata") {

@@ -16,6 +16,8 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 	private static final String ALL_SELECTOR_SENTINEL = new String("__advancedcore_all_selector__");
 	private int playerArg = -1;
 	private final Set<String> allPermissionOverrides = new LinkedHashSet<>();
+	private final Set<String> legacyAllPermissionAliases = new LinkedHashSet<>();
+	private final ThreadLocal<Boolean> legacyBulkDispatch = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
 	public PlayerCommandHandler(AdvancedCorePlugin plugin) {
 		super(plugin);
@@ -51,7 +53,19 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 				|| !"all".equalsIgnoreCase(args[playerArg])) return super.runCommand(sender, args);
 		String[] preservedArgs = args.clone();
 		preservedArgs[playerArg] = ALL_SELECTOR_SENTINEL;
-		return super.runCommand(sender, preservedArgs);
+		boolean legacyAlias = hasLegacyAllPermissionAlias(sender);
+		if (legacyAlias) legacyBulkDispatch.set(Boolean.TRUE);
+		try {
+			return super.runCommand(sender, preservedArgs);
+		} finally {
+			if (legacyAlias) legacyBulkDispatch.remove();
+		}
+	}
+
+	@Override
+	public boolean hasPerm(CommandSender sender) {
+		return Boolean.TRUE.equals(legacyBulkDispatch.get()) && hasLegacyAllPermissionAlias(sender)
+				|| super.hasPerm(sender);
 	}
 
 	@Override
@@ -90,20 +104,25 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 	 */
 	public boolean hasAllPermission(CommandSender sender) {
 		List<String> configured = configuredPermissions();
-		if (sender == null || configured.isEmpty() || !hasPerm(sender)) return false;
-		List<String> additionalPermissions = derivedAllPermissions(configured, isAllowMultiplePermissions());
-		for (String permission : additionalPermissions) {
-			if (sender.hasPermission(permission)) return true;
+		if (sender == null || configured.isEmpty()) return false;
+		if (hasLegacyAllPermissionAlias(sender)) return true;
+		if (!hasPerm(sender)) return false;
+		int limit = isAllowMultiplePermissions() ? configured.size() : 1;
+		for (int i = 0; i < limit; i++) {
+			String permission = configured.get(i);
+			// Keep the granular permission and its bulk node paired. A bulk node
+			// for one alternative must not combine with the base node of another.
+			if (!sender.hasPermission(permission)) continue;
+			if (allPermissionOverrides.contains(permission)
+					|| sender.hasPermission(permission + ".All")) return true;
 		}
-		if (!isAllowMultiplePermissions()) {
-			// With one permission check, SimpleAPI evaluates only the first
-			// configured node. That node may be the command's explicitly
-			// configured administrator override, so it must still authorize the
-			// bulk target even though secondary alternatives are ignored.
-			return !configured.isEmpty() && allPermissionOverrides.contains(configured.get(0));
-		}
-		for (String permission : configuredAllPermissionOverrides()) {
-			if (sender.hasPermission(permission)) return true;
+		return false;
+	}
+
+	private boolean hasLegacyAllPermissionAlias(CommandSender sender) {
+		if (sender == null) return false;
+		for (String alias : legacyAllPermissionAliases) {
+			if (sender.hasPermission(alias)) return true;
 		}
 		return false;
 	}
@@ -118,7 +137,9 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 	public List<String> getAdditionalPermissions() {
 		List<String> configured = configuredPermissions();
 		if (configured.isEmpty()) return Collections.emptyList();
-		return Collections.unmodifiableList(derivedAllPermissions(configured, isAllowMultiplePermissions()));
+		ArrayList<String> permissions = derivedAllPermissions(configured, isAllowMultiplePermissions());
+		permissions.addAll(legacyAllPermissionAliases);
+		return Collections.unmodifiableList(permissions);
 	}
 
 	private ArrayList<String> derivedAllPermissions(List<String> configured, boolean includeAlternatives) {
@@ -146,6 +167,23 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 		if (permissions == null || configured.isEmpty()) return this;
 		for (String permission : permissions) {
 			if (permission != null && configured.contains(permission)) allPermissionOverrides.add(permission);
+		}
+		return this;
+	}
+
+	/**
+	 * Retains a previously published permission that represented the complete bulk
+	 * operation by itself. Unlike a normal configured alternative, an alias never
+	 * grants named-player execution.
+	 */
+	public PlayerCommandHandler withLegacyAllPermissionAliases(String... permissions) {
+		legacyAllPermissionAliases.clear();
+		if (permissions == null) return this;
+		for (String permission : permissions) {
+			if (permission != null && !permission.isBlank() && !permission.endsWith(".All")
+					&& permission.chars().noneMatch(Character::isWhitespace)) {
+				legacyAllPermissionAliases.add(permission);
+			}
 		}
 		return this;
 	}

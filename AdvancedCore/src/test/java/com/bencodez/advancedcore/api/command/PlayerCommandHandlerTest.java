@@ -97,6 +97,19 @@ class PlayerCommandHandlerTest {
 	}
 
 	@Test
+	void bulkPermissionCannotCombineDifferentPermissionAlternatives() {
+		TestHandler handler = handler(false, true, "example.command|example.alternate");
+		CommandSender sender = mock(Player.class);
+		when(sender.hasPermission("example.alternate")).thenReturn(true);
+		when(sender.hasPermission("example.command.All")).thenReturn(true);
+
+		assertFalse(handler.hasAllPermission(sender));
+
+		when(sender.hasPermission("example.alternate.All")).thenReturn(true);
+		assertTrue(handler.hasAllPermission(sender));
+	}
+
+	@Test
 	void disabledMultipleChecksIgnoreSecondaryGranularBulkPermission() {
 		TestHandler handler = handler(false, false, "example.command|example.alternate");
 		CommandSender sender = mock(Player.class);
@@ -124,6 +137,18 @@ class PlayerCommandHandlerTest {
 		when(sender.hasPermission("example.command.All")).thenReturn(true);
 
 		assertFalse(handler.hasAllPermission(sender));
+	}
+
+	@Test
+	void legacyCombinedBulkAliasDoesNotGrantNamedPlayerAccess() {
+		TestHandler handler = handler(false).withLegacyAliases("example.legacyAll");
+		CommandSender sender = mock(Player.class);
+		when(sender.hasPermission("example.legacyAll")).thenReturn(true);
+
+		assertTrue(handler.hasAllPermission(sender));
+		assertFalse(handler.hasPerm(sender));
+		assertEquals(java.util.List.of("example.command.All", "example.admin.All", "example.legacyAll"),
+				handler.getAdditionalPermissions());
 	}
 
 	@Test
@@ -347,6 +372,11 @@ class PlayerCommandHandlerTest {
 
 		private TestHandler withOverrides(String... permissions) {
 			withAllPermissionOverrides(permissions);
+			return this;
+		}
+
+		private TestHandler withLegacyAliases(String... permissions) {
+			withLegacyAllPermissionAliases(permissions);
 			return this;
 		}
 
