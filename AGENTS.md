@@ -15,7 +15,7 @@ Confirm the current workflow and POM before relying on these commands. Do not us
 
 ## Architecture and compatibility boundaries
 
-- `AdvancedCorePlugin` owns the shared plugin lifecycle.
+- `AdvancedCorePlugin` is the shared plugin entry point; `lifecycle/`, `core/runtime/`, and `bukkit/runtime/` coordinate its shared executor group plus shutdown and platform-cleanup sequencing. Component-specific executors remain with their owning handlers and managers.
 - `api/command/` contains command parsing, permissions, player/console dispatch, aliases, and tab completion.
 - `api/rewards/` parses and executes configured rewards, including conditions, chances, delayed work, and nested definitions.
 - `api/user/` and storage packages own identity, cached user state, persistence, migrations, and shutdown flushing.
