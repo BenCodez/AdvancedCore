@@ -89,9 +89,9 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 	 * @return whether bulk execution is authorized
 	 */
 	public boolean hasAllPermission(CommandSender sender) {
-		if (sender == null || configuredPermissions().isEmpty() || !hasPerm(sender)) return false;
-		List<String> additionalPermissions = getAdditionalPermissions();
-		if (additionalPermissions.isEmpty()) return false;
+		List<String> configured = configuredPermissions();
+		if (sender == null || configured.isEmpty() || !hasPerm(sender)) return false;
+		List<String> additionalPermissions = derivedAllPermissions(configured, isAllowMultiplePermissions());
 		for (String permission : additionalPermissions) {
 			if (sender.hasPermission(permission)) return true;
 		}
@@ -112,11 +112,17 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 	public List<String> getAdditionalPermissions() {
 		List<String> configured = configuredPermissions();
 		if (configured.isEmpty()) return Collections.emptyList();
+		return Collections.unmodifiableList(derivedAllPermissions(configured, true));
+	}
+
+	private ArrayList<String> derivedAllPermissions(List<String> configured, boolean includeAlternatives) {
 		LinkedHashSet<String> permissions = new LinkedHashSet<>();
-		for (String permission : configured) {
+		int limit = includeAlternatives ? configured.size() : 1;
+		for (int i = 0; i < limit; i++) {
+			String permission = configured.get(i);
 			if (!allPermissionOverrides.contains(permission)) permissions.add(permission + ".All");
 		}
-		return Collections.unmodifiableList(new ArrayList<>(permissions));
+		return new ArrayList<>(permissions);
 	}
 
 	/**

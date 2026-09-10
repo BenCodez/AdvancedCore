@@ -88,6 +88,26 @@ class PlayerCommandHandlerTest {
 	}
 
 	@Test
+	void disabledMultipleChecksIgnoreSecondaryGranularBulkPermission() {
+		TestHandler handler = handler(false, false, "example.command|example.alternate");
+		CommandSender sender = mock(Player.class);
+		when(sender.hasPermission("example.command")).thenReturn(true);
+		when(sender.hasPermission("example.alternate.All")).thenReturn(true);
+
+		assertFalse(handler.hasAllPermission(sender));
+	}
+
+	@Test
+	void soleConfiguredOverrideCanAuthorizeBulkWhenMultipleChecksEnabled() {
+		TestHandler handler = handler(false, true, "example.admin").withOverrides("example.admin");
+		CommandSender sender = mock(Player.class);
+		when(sender.hasPermission("example.admin")).thenReturn(true);
+
+		assertEquals(java.util.Collections.emptyList(), handler.getAdditionalPermissions());
+		assertTrue(handler.hasAllPermission(sender));
+	}
+
+	@Test
 	void allPermissionWithoutBasePermissionDoesNotAuthorizeBulk() {
 		TestHandler handler = handler(false);
 		CommandSender sender = mock(Player.class);
