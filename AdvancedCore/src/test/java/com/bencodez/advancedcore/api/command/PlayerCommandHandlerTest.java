@@ -68,6 +68,15 @@ class PlayerCommandHandlerTest {
 	}
 
 	@Test
+	void primaryAdministratorOverrideStillAuthorizesWhenMultipleChecksDisabled() {
+		TestHandler handler = handler(false, false, "example.admin|example.command").withOverrides("example.admin");
+		CommandSender sender = mock(Player.class);
+		when(sender.hasPermission("example.admin")).thenReturn(true);
+
+		assertTrue(handler.hasAllPermission(sender));
+	}
+
+	@Test
 	void exposesBulkPermissionForPermissionListings() {
 		assertEquals(java.util.Collections.singletonList("example.command.All"),
 				handler(false).withOverrides("example.admin").getAdditionalPermissions());
@@ -94,6 +103,7 @@ class PlayerCommandHandlerTest {
 		when(sender.hasPermission("example.command")).thenReturn(true);
 		when(sender.hasPermission("example.alternate.All")).thenReturn(true);
 
+		assertEquals(java.util.List.of("example.command.All"), handler.getAdditionalPermissions());
 		assertFalse(handler.hasAllPermission(sender));
 	}
 

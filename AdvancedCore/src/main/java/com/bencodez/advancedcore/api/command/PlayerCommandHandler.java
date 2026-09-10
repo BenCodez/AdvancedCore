@@ -95,7 +95,13 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 		for (String permission : additionalPermissions) {
 			if (sender.hasPermission(permission)) return true;
 		}
-		if (!isAllowMultiplePermissions()) return false;
+		if (!isAllowMultiplePermissions()) {
+			// With one permission check, SimpleAPI evaluates only the first
+			// configured node. That node may be the command's explicitly
+			// configured administrator override, so it must still authorize the
+			// bulk target even though secondary alternatives are ignored.
+			return !configured.isEmpty() && allPermissionOverrides.contains(configured.get(0));
+		}
 		for (String permission : configuredAllPermissionOverrides()) {
 			if (sender.hasPermission(permission)) return true;
 		}
@@ -112,7 +118,7 @@ public abstract class PlayerCommandHandler extends CommandHandler {
 	public List<String> getAdditionalPermissions() {
 		List<String> configured = configuredPermissions();
 		if (configured.isEmpty()) return Collections.emptyList();
-		return Collections.unmodifiableList(derivedAllPermissions(configured, true));
+		return Collections.unmodifiableList(derivedAllPermissions(configured, isAllowMultiplePermissions()));
 	}
 
 	private ArrayList<String> derivedAllPermissions(List<String> configured, boolean includeAlternatives) {
