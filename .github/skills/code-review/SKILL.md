@@ -134,6 +134,9 @@ claims that every subsystem exists or must be redesigned.
   segments or another evaluation pass not authorized by the original configured
   text. Distinguish deliberately operator-authored scripts from untrusted data;
   verify engine binding isolation, parser behavior, and disabled-engine paths.
+- In placeholder/parser changes, explicitly test literal modulo/percent text,
+  whitespace-containing PlaceholderAPI tokens, even/odd escape parity, bindings
+  isolated per evaluation, and placeholder resolution when JavaScript is disabled.
 - For GUI/editor changes, examine click, shift-click, drag, close, permission
   rechecks, item serialization, and save/reload paths. Look for item duplication,
   lost configuration, stale edits, and actions applied to the wrong user or slot.
