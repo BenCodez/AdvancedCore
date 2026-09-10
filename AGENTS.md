@@ -20,7 +20,8 @@ Confirm the current workflow and POM before relying on these commands. Do not us
 - `api/rewards/` parses and executes configured rewards, including conditions, chances, delayed work, and nested definitions.
 - `api/user/` and storage packages own identity, cached user state, persistence, migrations, and shutdown flushing.
 - `api/javascript/` and placeholder/message packages perform placeholder and script evaluation.
-- `api/inventory/` contains GUI/editor behavior and item serialization.
+- `api/inventory/` contains GUI/editor behavior.
+- `api/item/` owns item construction and compatibility-sensitive item serialization.
 - SimpleAPI is a lower-level dependency. Verify its pinned contract instead of assuming an unreleased or unmerged API.
 
 Treat public classes, constructors, methods, return values, callback threading, configuration shapes, serialized data, and shaded packages as compatibility surfaces. Before changing one, search downstream usage in VotingPlugin and other affected repositories when authorized.
