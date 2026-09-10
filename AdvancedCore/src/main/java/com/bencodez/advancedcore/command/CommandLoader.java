@@ -536,11 +536,11 @@ public class CommandLoader {
 			});
 		}
 
-		cmds.add(new CommandHandler(plugin, new String[] { "User", "All", "SetData", "(text)", "(text)" },
-				permPrefix + ".SetAllData", "Set all users data") {
+		cmds.add(new PlayerCommandHandler(plugin, new String[] { "User", "(player)", "SetData", "(text)", "(text)" },
+				permPrefix + ".SetData", "Set user data") {
 
 			@Override
-			public void execute(CommandSender sender, String[] args) {
+			public void executeAll(CommandSender sender, String[] args) {
 				String data = args[4];
 				if (data.equalsIgnoreCase("\"\"")) {
 					data = "";
@@ -556,31 +556,6 @@ public class CommandLoader {
 				}, (count) -> {
 					sender.sendMessage(MessageAPI.colorize("&cSet all users " + key + " to " + args[4]));
 				});
-			}
-		});
-
-		cmds.add(new PlayerCommandHandler(plugin, new String[] { "User", "(player)", "SetData", "(text)", "(text)" },
-				permPrefix + ".SetData", "Set user data") {
-
-			@Override
-			public void executeAll(CommandSender sender, String[] args) {
-				if (sender.hasPermission(permPrefix + ".SetAllData")) {
-					String data = args[4];
-					if (data.equalsIgnoreCase("\"\"")) {
-						data = "";
-					}
-
-					final String key = args[3];
-					final String value = data;
-
-					plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
-						AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
-						user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-						user.getData().setString(key, value);
-					}, (count) -> {
-						sender.sendMessage(MessageAPI.colorize("&cSet all users " + key + " to " + args[4]));
-					});
-				}
 			}
 
 			@Override
