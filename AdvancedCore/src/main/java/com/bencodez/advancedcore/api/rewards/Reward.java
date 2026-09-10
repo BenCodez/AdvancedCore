@@ -8,6 +8,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -245,6 +251,152 @@ public class Reward {
 		}
 	}
 
+	/**
+	 * Gives injected rewards in registration order, waiting for each asynchronous
+	 * injection before evaluating the next one. Synchronous injections retain
+	 * their existing behavior, and post-reward injections run after all normal
+	 * injections have completed.
+	 *
+	 * @param user         receiving user
+	 * @param placeholders current placeholders
+	 * @return completion stage that completes after all injections have run
+	 */
+	public CompletionStage<Void> giveInjectedRewardsAsync(AdvancedCoreUser user,
+			HashMap<String, String> placeholders) {
+		List<RewardInject> postRewards = new ArrayList<>();
+		CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+
+		for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
+			if (inject.isPostReward()) {
+				postRewards.add(inject);
+				continue;
+			}
+			sequence = sequence.thenCompose(ignored -> invokeInjectionAsync(inject, user, placeholders))
+					.thenCompose(result -> resumeOnServerThread(user).thenRun(() -> {
+						if (inject.isAddAsPlaceholder() && result != null) addPlaceholder(inject, result, placeholders);
+					}));
+		}
+
+		for (RewardInject inject : postRewards) {
+			sequence = sequence.thenCompose(ignored -> invokeInjectionAsync(inject, user, placeholders))
+					.thenCompose(result -> resumeOnServerThread(user));
+		}
+		return sequence;
+	}
+
+	private CompletionStage<Object> invokeInjectionAsync(RewardInject inject, AdvancedCoreUser user,
+			HashMap<String, String> placeholders) {
+		try {
+			if (!plugin.isEnabled()) return CompletableFuture.failedFuture(
+					new IllegalStateException("Plugin disabled before reward injection completed"));
+			Supplier<CompletionStage<Object>> request = () -> requestOnServerThread(user,
+					() -> requestInjectionAsync(inject, user, placeholders));
+			CompletionStage<Object> result = inject.isSynchronize()
+					? inject.runSynchronizedAsync(request)
+					: request.get();
+			if (result == null) {
+				return CompletableFuture.failedFuture(new IllegalStateException(
+						"Reward injection returned a null asynchronous result: " + inject.getPath()));
+			}
+			return result;
+		} catch (Throwable throwable) {
+			return CompletableFuture.failedFuture(throwable);
+		}
+	}
+
+	private <T> CompletionStage<T> requestOnServerThread(AdvancedCoreUser user,
+			Supplier<CompletionStage<T>> request) {
+		CompletableFuture<CompletionStage<T>> handoff = new CompletableFuture<>();
+		Runnable invocation = () -> {
+			if (!plugin.isEnabled()) {
+				handoff.complete(CompletableFuture.failedFuture(
+						new IllegalStateException("Plugin disabled before reward injection completed")));
+				return;
+			}
+			CompletableFuture<T> result = new CompletableFuture<>();
+			// Claim the handoff before invoking user code. If the timeout won, this
+			// queued task must not produce late reward side effects.
+			if (!handoff.complete(result)) return;
+			try {
+				CompletionStage<T> stage = request.get();
+				if (stage == null) {
+					result.completeExceptionally(
+							new IllegalStateException("Reward injection returned a null asynchronous result"));
+					return;
+				}
+				stage.whenComplete((value, failure) -> {
+					if (failure == null) result.complete(value);
+					else result.completeExceptionally(failure);
+				});
+			} catch (Throwable failure) {
+				result.completeExceptionally(failure);
+			}
+		};
+		Runnable resolvePlayer = () -> {
+			if (!plugin.isEnabled()) {
+				handoff.complete(CompletableFuture.failedFuture(
+						new IllegalStateException("Plugin disabled before reward injection completed")));
+				return;
+			}
+			try {
+				Player player = user.getPlayer();
+				if (player != null) plugin.getBukkitScheduler().executeOrScheduleSync(plugin, invocation, player);
+				else invocation.run();
+			} catch (Throwable failure) {
+				handoff.completeExceptionally(failure);
+			}
+		};
+		try {
+			plugin.getBukkitScheduler().executeOrScheduleSync(plugin, resolvePlayer);
+		} catch (Throwable failure) {
+			handoff.completeExceptionally(failure);
+		}
+		return handoff.orTimeout(getServerThreadDispatchTimeoutMillis(), TimeUnit.MILLISECONDS)
+				.thenCompose(stage -> stage);
+	}
+
+	private CompletionStage<Void> resumeOnServerThread(AdvancedCoreUser user) {
+		return requestOnServerThread(user, () -> CompletableFuture.completedFuture(null));
+	}
+
+	/** Maximum time to wait when a scheduler drops a task during plugin shutdown. */
+	protected long getServerThreadDispatchTimeoutMillis() {
+		return TimeUnit.SECONDS.toMillis(30);
+	}
+
+	private CompletionStage<Object> requestInjectionAsync(RewardInject inject, AdvancedCoreUser user,
+			HashMap<String, String> placeholders) {
+		if (inject.supportsAsyncRequest()) {
+			return inject.onRewardRequestAsync(this, user, getConfig().getConfigData(), placeholders);
+		}
+		return CompletableFuture.completedFuture(inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders));
+	}
+
+	private void addPlaceholder(RewardInject inject, Object obj, HashMap<String, String> placeholders) {
+		String placeholderName = inject.getPlaceholderName();
+		String value = "";
+		if (obj instanceof Boolean) {
+			value = obj.toString();
+		} else if (obj instanceof String) {
+			value = (String) obj;
+		} else if (obj instanceof Double) {
+			value = obj.toString();
+		} else if (obj instanceof Integer) {
+			value = obj.toString();
+		}
+		plugin.extraDebug("Adding placeholder " + placeholderName + ":" + value);
+		placeholders.put(placeholderName, value);
+	}
+
+	private boolean hasAsyncRewardInjection() {
+		for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
+			if (inject.supportsAsyncRequest()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public void giveReward(AdvancedCoreUser user, RewardOptions rewardOptions) {
 		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
 			AdvancedCorePlugin.getInstance().debug("Processing rewards is disabled");
@@ -363,6 +515,48 @@ public class Reward {
 	 * @param rewardOptions rewardOptions
 	 */
 	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
+		if (hasAsyncRewardInjection()) {
+			giveRewardUserAsync(user, phs, rewardOptions).exceptionally(failure -> {
+				logRewardUserFailure(failure);
+				return null;
+			});
+			return;
+		}
+
+		HashMap<String, String> placeholders = prepareRewardUser(user, phs);
+		if (placeholders == null) {
+			return;
+		}
+		giveInjectedRewards(user, placeholders);
+		plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
+	}
+
+	/**
+	 * Asynchronously gives a reward to a user when an injection opts into the
+	 * asynchronous API. Preparation remains on the calling thread; only the
+	 * opted-in injection chain is asynchronous.
+	 *
+	 * @param user          receiving user
+	 * @param phs           placeholders
+	 * @param rewardOptions reward options (reserved for API symmetry)
+	 * @return completion stage that completes after reward injections finish
+	 */
+	public CompletionStage<Void> giveRewardUserAsync(AdvancedCoreUser user, HashMap<String, String> phs,
+			RewardOptions rewardOptions) {
+		final HashMap<String, String> placeholders;
+		try {
+			placeholders = prepareRewardUser(user, phs);
+		} catch (Throwable throwable) {
+			return CompletableFuture.failedFuture(throwable);
+		}
+		if (placeholders == null) {
+			return CompletableFuture.completedFuture(null);
+		}
+		return giveInjectedRewardsAsync(user, placeholders)
+				.thenRun(() -> plugin.debug("Gave " + user.getPlayerName() + " reward " + name));
+	}
+
+	private HashMap<String, String> prepareRewardUser(AdvancedCoreUser user, HashMap<String, String> phs) {
 
 		Player player = user.getPlayer();
 		if (player == null) {
@@ -391,14 +585,19 @@ public class Reward {
 				}
 			}
 
-			final HashMap<String, String> placeholders = new HashMap<>(phs);
-
-			giveInjectedRewards(user, placeholders);
-
-			plugin.debug("Gave " + user.getPlayerName() + " reward " + name);
+			return new HashMap<>(phs);
 		} else {
 			plugin.debug(getRewardName() + ": Player == null & forceoffline false, player: " + user.getPlayerName()
 					+ "/" + user.getUUID());
+			return null;
+		}
+	}
+
+	private void logRewardUserFailure(Throwable failure) {
+		if (plugin.getLogger() != null) {
+			plugin.getLogger().log(Level.WARNING, "Failed to give reward " + getRewardName(), failure);
+		} else {
+			failure.printStackTrace();
 		}
 	}
 

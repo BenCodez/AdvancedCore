@@ -2,6 +2,9 @@ package com.bencodez.advancedcore.api.rewards.injected;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
 
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -17,6 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 public abstract class RewardInject extends Inject {
+	private CompletableFuture<Void> synchronizedAsyncTail = CompletableFuture.completedFuture(null);
 
 	@Getter
 	private boolean addAsPlaceholder = false;
@@ -89,12 +93,64 @@ public abstract class RewardInject extends Inject {
 		return getValidate() != null;
 	}
 
+	/**
+	 * Whether this injection has an asynchronous implementation. Existing
+	 * injections remain synchronous by default.
+	 *
+	 * @return true when {@link #onRewardRequestAsync(Reward, AdvancedCoreUser,
+	 *         ConfigurationSection, HashMap)} should be used
+	 */
+	public boolean supportsAsyncRequest() {
+		return false;
+	}
+
 	public boolean isEditable() {
 		return !getEditButtons().isEmpty();
 	}
 
 	public abstract Object onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
+
+	/**
+	 * Asynchronously evaluates this injection. The default implementation keeps
+	 * the compatibility behavior by wrapping the existing synchronous callback.
+	 *
+	 * @param reward       reward being given
+	 * @param user         receiving user
+	 * @param data         reward configuration
+	 * @param placeholders current placeholders
+	 * @return completion stage containing the injection result
+	 */
+	public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+			ConfigurationSection data, HashMap<String, String> placeholders) {
+		try {
+			return CompletableFuture.completedFuture(onRewardRequest(reward, user, data, placeholders));
+		} catch (Throwable throwable) {
+			return CompletableFuture.failedFuture(throwable);
+		}
+	}
+
+	/** Serializes a synchronized asynchronous injection through completion, not just invocation. */
+	public synchronized CompletionStage<Object> runSynchronizedAsync(Supplier<CompletionStage<Object>> request) {
+		CompletableFuture<Object> result = new CompletableFuture<>();
+		synchronizedAsyncTail = synchronizedAsyncTail.handle((ignored, previousFailure) -> null)
+				.thenCompose(ignored -> {
+					CompletionStage<Object> stage;
+					try {
+						stage = request.get();
+						if (stage == null) throw new IllegalStateException("Asynchronous reward injection returned null");
+					} catch (Throwable failure) {
+						result.completeExceptionally(failure);
+						return CompletableFuture.<Void>completedFuture(null);
+					}
+					return stage.handle((value, failure) -> {
+						if (failure == null) result.complete(value);
+						else result.completeExceptionally(failure);
+						return (Void) null;
+					});
+				}).toCompletableFuture();
+		return result;
+	}
 
 	public RewardInject postReward() {
 		postReward = true;
