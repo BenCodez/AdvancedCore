@@ -310,6 +310,8 @@ public class AdvancedCoreUser {
 		plugin.debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
 		HashMap<String, Long> newTimed = new HashMap<>();
+		HashMap<String, Long> replayingTimed = new HashMap<>();
+		HashMap<String, java.util.concurrent.CompletionStage<Void>> replayCompletions = new HashMap<>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 			long time = entry.getValue();
 
@@ -326,7 +328,9 @@ public class AdvancedCoreUser {
 							.withPlaceHolder(ArrayUtils.fromString(placeholders));
 					replayOptions.addPlaceholder("date",
 							"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));
-					plugin.getRewardHandler().givePersistedQueueReward(this, new PersistedQueueReference(rewardReference), replayOptions);
+					replayingTimed.put(entry.getKey(), time);
+					replayCompletions.put(entry.getKey(), plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
+							new PersistedQueueReference(rewardReference), replayOptions));
 					String rewardName = rewardReference;
 					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
 							+ " with placeholders " + ArrayUtils.fromString(placeholders));
@@ -337,6 +341,14 @@ public class AdvancedCoreUser {
 
 		}
 		setTimedRewards(newTimed);
+		for (Entry<String, java.util.concurrent.CompletionStage<Void>> replay : replayCompletions.entrySet()) {
+			String rewardEntry = replay.getKey();
+			long time = replayingTimed.get(rewardEntry);
+			replay.getValue().exceptionally(failure -> {
+				restoreTimedReward(rewardEntry, time, failure);
+				return null;
+			});
+		}
 	}
 
 	/**
@@ -371,9 +383,37 @@ public class AdvancedCoreUser {
 			RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false)
 					.withPlaceHolder(ArrayUtils.fromString(placeholderStr));
 
-			rewardHandler.givePersistedQueueReward(user, new PersistedQueueReference(rewardReference), options);
+			rewardHandler.givePersistedQueueRewardAsync(user, new PersistedQueueReference(rewardReference), options)
+					.exceptionally(failure -> {
+						restoreOfflineReward(rewardEntry, failure);
+						return null;
+					});
 		}
 
+	}
+
+	/** Restores a queue entry only after an asynchronous replay fails. */
+	private void restoreOfflineReward(String rewardEntry, Throwable failure) {
+		// Match addOfflineRewards' lock so a newly queued reward cannot be lost
+		// while a failed replay is being restored.
+		synchronized (plugin) {
+			ArrayList<String> pending = getOfflineRewards();
+			// Queue entries are allowed to repeat; each failed replay must restore
+			// its own occurrence rather than collapsing identical rewards.
+			pending.add(rewardEntry);
+			setOfflineRewards(pending);
+		}
+		plugin.getLogger().warning("Could not deliver queued offline reward for " + getPlayerName()
+				+ "; it will be retried: " + failure.getMessage());
+	}
+
+	/** Restores a due timed entry after an asynchronous replay fails. */
+	private synchronized void restoreTimedReward(String rewardEntry, long time, Throwable failure) {
+		HashMap<String, Long> pending = getTimedRewards();
+		pending.putIfAbsent(rewardEntry, time);
+		setTimedRewards(pending);
+		plugin.getLogger().warning("Could not deliver queued timed reward for " + getPlayerName()
+				+ "; it will be retried: " + failure.getMessage());
 	}
 
 	/**
@@ -452,7 +492,11 @@ public class AdvancedCoreUser {
 			RewardOptions options = new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
 					.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholderStr));
 
-			rewardHandler.givePersistedQueueReward(user, new PersistedQueueReference(rewardReference), options);
+			rewardHandler.givePersistedQueueRewardAsync(user, new PersistedQueueReference(rewardReference), options)
+					.exceptionally(failure -> {
+						restoreOfflineReward(rewardEntry, failure);
+						return null;
+					});
 		}
 	}
 

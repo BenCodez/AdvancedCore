@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -32,6 +34,7 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectInt;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardSubRewards;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 class RewardAsyncInjectionTest {
@@ -202,6 +205,22 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void failingLegacyInjectionDoesNotStopLaterAsyncChainSteps() {
+		AtomicBoolean laterRan = new AtomicBoolean();
+		handler.getInjectedRewards().add(new RewardInject("BrokenLegacy") {
+			@Override
+			public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				throw new IllegalStateException("bad legacy configuration");
+			}
+		});
+		handler.getInjectedRewards().add(asyncInjection("Later", CompletableFuture.completedFuture(null), laterRan));
+
+		reward.giveInjectedRewardsAsync(user, new HashMap<>()).toCompletableFuture().join();
+		assertTrue(laterRan.get());
+	}
+
+	@Test
 	void synchronizedAsyncInjectionSerializesThroughCompletion() {
 		List<CompletableFuture<Object>> completions = new ArrayList<>();
 		List<Integer> starts = new ArrayList<>();
@@ -303,6 +322,60 @@ class RewardAsyncInjectionTest {
 		assertFalse(result.toCompletableFuture().isDone());
 		completion.complete(null);
 		result.toCompletableFuture().join();
+	}
+
+	@Test
+	void nestedPostRewardWaitsForChildRewardBeforeAdvancing() {
+		handler = org.mockito.Mockito.spy(new RewardHandler(plugin));
+		when(plugin.getRewardHandler()).thenReturn(handler);
+		when(user.getPlugin()).thenReturn(plugin);
+		data.createSection("Rewards");
+		CompletableFuture<Void> child = new CompletableFuture<>();
+		doReturn(child).when(handler).giveRewardAsync(eq(user), any(ConfigurationSection.class), eq("Rewards"),
+				any());
+		List<String> events = new ArrayList<>();
+		RewardSubRewards.register(handler, plugin);
+		RewardInject after = new RewardInject("After") {
+			@Override
+			public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				events.add("after-child");
+				return null;
+			}
+		};
+		after.postReward();
+		handler.getInjectedRewards().add(after);
+
+		CompletionStage<Void> result = reward.giveInjectedRewardsAsync(user, new HashMap<>());
+		assertFalse(result.toCompletableFuture().isDone());
+		assertTrue(events.isEmpty());
+
+		child.complete(null);
+		result.toCompletableFuture().join();
+		assertEquals(List.of("after-child"), events);
+	}
+
+	@Test
+	void nestedAsyncInjectorCanAwaitTheSameSharedInjectorWithoutDeadlocking() {
+		AtomicInteger invocations = new AtomicInteger();
+		RewardInject nested = new RewardInject("Nested") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public boolean supportsAsyncSynchronization() { return false; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward current, AdvancedCoreUser currentUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				if (invocations.incrementAndGet() == 1) {
+					return current.giveInjectedRewardsAsync(currentUser, new HashMap<>()).thenApply(ignored -> null);
+				}
+				return CompletableFuture.completedFuture(null);
+			}
+		};
+		nested.synchronize();
+		handler.getInjectedRewards().add(nested);
+
+		reward.giveInjectedRewardsAsync(user, new HashMap<>()).toCompletableFuture().join();
+		assertEquals(2, invocations.get());
 	}
 
 	private RewardInject asyncInjection(String path, CompletionStage<Object> completion, AtomicBoolean invoked) {

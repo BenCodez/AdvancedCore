@@ -4,12 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +56,7 @@ public class AdvancedCoreUserTest {
 		when(plugin.getUserManager()).thenReturn(userManager);
 		when(plugin.getRewardHandler()).thenReturn(rewardHandler);
 		when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(plugin.getLogger()).thenReturn(mock(Logger.class));
 		when(userManager.getOfflineRewardsPath()).thenReturn("offlineRewardsPath");
 		when(configOptions.isProcessRewards()).thenReturn(true);
 
@@ -66,11 +70,12 @@ public class AdvancedCoreUserTest {
 		rewards.add("VoteReward%placeholders%Server%pair%server-a");
 		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenReturn(rewards);
 
-		user.checkOfflineRewards();
-
 		ArgumentCaptor<PersistedQueueReference> referenceCaptor = ArgumentCaptor.forClass(PersistedQueueReference.class);
 		ArgumentCaptor<RewardOptions> optionsCaptor = ArgumentCaptor.forClass(RewardOptions.class);
-		verify(rewardHandler).givePersistedQueueReward(eq(user), referenceCaptor.capture(), optionsCaptor.capture());
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(CompletableFuture.completedFuture(null));
+		user.checkOfflineRewards();
+		verify(rewardHandler).givePersistedQueueRewardAsync(eq(user), referenceCaptor.capture(), optionsCaptor.capture());
 		assertEquals("VoteReward", referenceCaptor.getValue().getReference());
 		RewardOptions options = optionsCaptor.getValue();
 		assertFalse(options.isForceOffline());
@@ -85,11 +90,12 @@ public class AdvancedCoreUserTest {
 		rewards.add("VoteReward%placeholders%Server%pair%server-a");
 		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenReturn(rewards);
 
-		user.forceRunOfflineRewards();
-
 		ArgumentCaptor<PersistedQueueReference> referenceCaptor = ArgumentCaptor.forClass(PersistedQueueReference.class);
 		ArgumentCaptor<RewardOptions> optionsCaptor = ArgumentCaptor.forClass(RewardOptions.class);
-		verify(rewardHandler).givePersistedQueueReward(eq(user), referenceCaptor.capture(), optionsCaptor.capture());
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(CompletableFuture.completedFuture(null));
+		user.forceRunOfflineRewards();
+		verify(rewardHandler).givePersistedQueueRewardAsync(eq(user), referenceCaptor.capture(), optionsCaptor.capture());
 		assertEquals("VoteReward", referenceCaptor.getValue().getReference());
 		RewardOptions options = optionsCaptor.getValue();
 		assertTrue(options.isForceOffline());
@@ -142,5 +148,40 @@ public class AdvancedCoreUserTest {
 		rewards.add("reward2");
 		user.setOfflineRewards(rewards);
 		verify(data).setStringList("offlineRewardsPath", rewards);
+	}
+
+	@Test
+	void failedAsyncOfflineReplayIsRestoredForRetry() {
+		ArrayList<String> initial = new ArrayList<>();
+		initial.add("VoteReward%placeholders%Server%pair%server-a");
+		initial.add("VoteReward%placeholders%Server%pair%server-a");
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenReturn(new ArrayList<>(initial)).thenReturn(new ArrayList<>());
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")));
+
+		user.checkOfflineRewards();
+
+		ArgumentCaptor<ArrayList<String>> saved = ArgumentCaptor.forClass(ArrayList.class);
+		verify(data, org.mockito.Mockito.times(3)).setStringList(eq("offlineRewardsPath"), saved.capture());
+		assertEquals(initial, saved.getAllValues().get(2));
+	}
+
+	@Test
+	void failedAsyncTimedReplayIsRestoredAfterDueEntriesAreSaved() {
+		long due = System.currentTimeMillis() - 1_000;
+		String entry = "VoteReward%extime%1%placeholders%Server%pair%server-a";
+		ArrayList<String> timed = new ArrayList<>();
+		timed.add(entry + "%ExecutionTime/%" + due);
+		when(data.getStringList("TimedRewards", UserDataFetchMode.DEFAULT))
+				.thenReturn(new ArrayList<>(timed)).thenReturn(new ArrayList<>());
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")));
+
+		user.checkDelayedTimedRewards();
+
+		ArgumentCaptor<ArrayList<String>> saved = ArgumentCaptor.forClass(ArrayList.class);
+		verify(data, org.mockito.Mockito.times(2)).setStringList(eq("TimedRewards"), saved.capture());
+		assertEquals(timed, saved.getAllValues().get(1));
 	}
 }

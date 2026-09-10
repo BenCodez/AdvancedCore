@@ -104,6 +104,24 @@ public abstract class RewardInject extends Inject {
 		return false;
 	}
 
+	/**
+	 * Whether this asynchronous implementation is relevant only when its
+	 * configured path exists. Existing third-party injectors keep the historic
+	 * always-async opt-in behavior unless they explicitly opt into this guard.
+	 */
+	public boolean requiresConfiguredDataForAsync() {
+		return false;
+	}
+
+	/**
+	 * Whether asynchronous dispatch may serialize this injection across reward
+	 * chains. Nested reward injectors opt out because awaiting a child that uses
+	 * the same shared injection would otherwise wait on its own unfinished tail.
+	 */
+	public boolean supportsAsyncSynchronization() {
+		return true;
+	}
+
 	public boolean isEditable() {
 		return !getEditButtons().isEmpty();
 	}

@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.rewards;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
@@ -101,6 +103,31 @@ public class RewardExecutor {
         }
     }
 
+    /**
+     * Asynchronous counterpart for nested rewards that must preserve injection
+     * ordering. The legacy void dispatch methods intentionally remain unchanged.
+     */
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, ConfigurationSection data, String path,
+            RewardOptions rewardOptions) {
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        RewardOptions options = context.getOptions();
+        if (path == null || data == null || !plugin.isEnabled()) return CompletableFuture.completedFuture(null);
+
+        if (data.isList(path)) {
+            CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+            for (String nestedReward : new ArrayList<>(data.getStringList(path))) {
+                sequence = sequence.thenCompose(ignored -> giveRewardAsync(user, nestedReward, options));
+            }
+            return sequence;
+        }
+        if (data.isConfigurationSection(path)) {
+            return giveSectionRewardAsync(user, data, path, context);
+        }
+        String nestedReward = data.getString(path, "");
+        return nestedReward.isEmpty() ? CompletableFuture.completedFuture(null)
+                : giveRewardAsync(user, nestedReward, options);
+    }
+
     public void giveReward(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         if (reward == null) {
@@ -116,6 +143,12 @@ public class RewardExecutor {
         }
     }
 
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
+        if (reward == null || !plugin.isEnabled()) return CompletableFuture.completedFuture(null);
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        return reward.giveRewardAsync(user, context.getOptions());
+    }
+
     public void giveReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         if (reward == null || reward.isEmpty()) {
@@ -128,6 +161,16 @@ public class RewardExecutor {
         }
 
         giveReward(user, handler.getReward(reward), context.getOptions());
+    }
+
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
+        if (reward.startsWith("/")) {
+            MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward, context.getPlaceholders());
+            return CompletableFuture.completedFuture(null);
+        }
+        return giveRewardAsync(user, handler.getReward(reward), context.getOptions());
     }
 
     public void givePersistedQueueReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
@@ -175,6 +218,43 @@ public class RewardExecutor {
             }
         }
         giveReward(user, resolved, context.getOptions());
+    }
+
+    /** Resolves and awaits a persisted queue item so a failed async injection can be requeued. */
+    public CompletionStage<Void> givePersistedQueueRewardAsync(AdvancedCoreUser user, String reward,
+            RewardOptions rewardOptions) {
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
+
+        String rewardName = reward;
+        Boolean generatedSnapshot = null;
+        if (reward.startsWith(QUEUED_REFERENCE_PREFIX)) {
+            String encoded = reward.substring(QUEUED_REFERENCE_PREFIX.length());
+            int modeEnd = encoded.indexOf('/');
+            if (modeEnd > 0) {
+                String mode = encoded.substring(0, modeEnd);
+                String encodedName = encoded.substring(modeEnd + 1);
+                if ((mode.equals("snapshot") || mode.equals("normal")) && !encodedName.isEmpty()) {
+                    try {
+                        rewardName = new String(Base64.getUrlDecoder().decode(encodedName), StandardCharsets.UTF_8);
+                        generatedSnapshot = Boolean.valueOf(mode.equals("snapshot"));
+                    } catch (IllegalArgumentException ignored) {
+                        rewardName = reward;
+                    }
+                }
+            }
+        }
+        Reward resolved;
+        if (generatedSnapshot != null) {
+            resolved = generatedSnapshot.booleanValue() ? handler.getQueuedGeneratedReward(rewardName, user.getUUID())
+                    : handler.getReward(rewardName);
+        } else if (handler.rewardExist(rewardName) || handler.hasDirectRewardHandle(rewardName)) {
+            resolved = handler.getReward(rewardName);
+        } else {
+            resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());
+            if (resolved == null) resolved = handler.getReward(rewardName);
+        }
+        return giveRewardAsync(user, resolved, context.getOptions());
     }
 
     public void updateReward(Configuration data, String path, RewardOptions rewardOptions) {
@@ -227,5 +307,22 @@ public class RewardExecutor {
         plugin.debug("Giving reward " + path + ", Options: " + options + " to " + user.getPlayerName() + "/"
                 + user.getUUID());
         giveReward(user, reward, options);
+    }
+
+    private CompletionStage<Void> giveSectionRewardAsync(AdvancedCoreUser user, ConfigurationSection data, String path,
+            RewardExecutionContext context) {
+        RewardOptions options = context.getOptions();
+        String rewardName = context.buildRewardName(path);
+        DirectlyDefinedReward direct = handler.getDirectlyDefined(path);
+        SubDirectlyDefinedReward sub = handler.getSubDirectlyDefined(rewardName);
+        SubRewardResolver resolver = handler.getSubRewardResolver();
+        SubDirectlyDefinedReward fileSub = resolver == null ? null : resolver.getFileBackedSubReward(rewardName);
+        if (context.supportsDirectDispatch() && (direct != null || sub != null || fileSub != null)) {
+            Reward selected = direct != null ? direct.getReward() : (sub != null ? sub : fileSub).getReward();
+            return giveRewardAsync(user, selected, options);
+        }
+        Reward selected = new Reward(rewardName, data.getConfigurationSection(path));
+        selected.checkRewardFile();
+        return giveRewardAsync(user, selected, options);
     }
 }

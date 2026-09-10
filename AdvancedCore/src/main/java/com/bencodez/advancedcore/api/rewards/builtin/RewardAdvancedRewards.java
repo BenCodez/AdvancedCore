@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -30,6 +32,23 @@ public final class RewardAdvancedRewards {
 
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("AdvancedRewards") {
+			@Override
+			public boolean supportsAsyncRequest() {
+				return true;
+			}
+
+			@Override
+			public boolean requiresConfiguredDataForAsync() {
+				return true;
+			}
+
+			@Override
+			public boolean supportsAsyncSynchronization() {
+				// This injector awaits nested rewards, which can invoke this same
+				// shared instance. Serializing that recursive chain would deadlock.
+				return false;
+			}
+
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
@@ -41,6 +60,23 @@ public final class RewardAdvancedRewards {
                 }
                 return null;
             }
+
+			@Override
+			public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+					ConfigurationSection data, HashMap<String, String> placeholders) {
+				if (!data.isConfigurationSection(getPath()) && !(isAlwaysForce() && data.contains(getPath(), true))
+						&& !isAlwaysForceNoData()) {
+					return CompletableFuture.completedFuture(null);
+				}
+				CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+				for (String rewardName : ArrayUtils.convert(data.getConfigurationSection(getPath()).getKeys(false))) {
+					sequence = sequence.thenCompose(ignored -> handler.giveRewardAsync(user,
+							data.getConfigurationSection(getPath()), rewardName,
+							new RewardOptions().setPlaceholders(placeholders)
+									.setPrefix(reward.getRewardName() + "_AdvancedRewards")));
+				}
+				return sequence.thenApply(ignored -> null);
+			}
 
             @Override
             public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {

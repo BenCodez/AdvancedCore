@@ -291,7 +291,7 @@ public class Reward {
 					new IllegalStateException("Plugin disabled before reward injection completed"));
 			Supplier<CompletionStage<Object>> request = () -> requestOnServerThread(user,
 					() -> requestInjectionAsync(inject, user, placeholders));
-			CompletionStage<Object> result = inject.isSynchronize()
+			CompletionStage<Object> result = inject.isSynchronize() && inject.supportsAsyncSynchronization()
 					? inject.runSynchronizedAsync(request)
 					: request.get();
 			if (result == null) {
@@ -369,7 +369,15 @@ public class Reward {
 		if (inject.supportsAsyncRequest()) {
 			return inject.onRewardRequestAsync(this, user, getConfig().getConfigData(), placeholders);
 		}
-		return CompletableFuture.completedFuture(inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders));
+		try {
+			return CompletableFuture.completedFuture(
+					inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders));
+		} catch (Exception failure) {
+			// Preserve the legacy per-injection isolation contract while allowing
+			// opted-in asynchronous injections to propagate durable failures.
+			failure.printStackTrace();
+			return CompletableFuture.completedFuture(null);
+		}
 	}
 
 	private void addPlaceholder(RewardInject inject, Object obj, HashMap<String, String> placeholders) {
@@ -390,11 +398,17 @@ public class Reward {
 
 	private boolean hasAsyncRewardInjection() {
 		for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
-			if (inject.supportsAsyncRequest()) {
+			if (inject.supportsAsyncRequest()
+					&& (!inject.requiresConfiguredDataForAsync() || isRewardInjectionApplicable(inject))) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	private boolean isRewardInjectionApplicable(RewardInject inject) {
+		ConfigurationSection data = getConfig().getConfigData();
+		return inject.isAlwaysForceNoData() || data.contains(inject.getPath(), true);
 	}
 
 	public void giveReward(AdvancedCoreUser user, RewardOptions rewardOptions) {
@@ -505,6 +519,98 @@ public class Reward {
 					+ user.getUUID());
 			giveRewardUser(user, rewardOptions.getPlaceholders(), rewardOptions);
 		}
+	}
+
+	/**
+	 * Gives this reward and completes when an asynchronous injection chain has
+	 * finished. This is used by nested reward injectors so a child reward cannot
+	 * overtake later parent post-reward injections.
+	 *
+	 * <p>The established void API deliberately remains fire-and-forget. Callers
+	 * that need ordering or durable replay semantics must use this method.</p>
+	 *
+	 * @param user receiving user
+	 * @param rewardOptions reward options
+	 * @return completion stage for the complete reward injection chain
+	 */
+	public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions) {
+		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
+			AdvancedCorePlugin.getInstance().debug("Processing rewards is disabled");
+			return CompletableFuture.completedFuture(null);
+		}
+
+		if (rewardOptions == null) rewardOptions = new RewardOptions();
+		if (!rewardOptions.getPlaceholders().containsKey("ExecDate")) {
+			rewardOptions.addPlaceholder("ExecDate", "" + System.currentTimeMillis());
+		}
+		if (!rewardOptions.getPlaceholders().containsKey("date")) {
+			try {
+				LocalDateTime ldt = LocalDateTime.now();
+				Date date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+				rewardOptions.addPlaceholder("Date", "" + new SimpleDateFormat(
+						plugin.getOptions().getFormatRewardTimeFormat()).format(date));
+			} catch (Exception e) {
+				return CompletableFuture.failedFuture(e);
+			}
+		}
+
+		PlayerRewardEvent event = new PlayerRewardEvent(this, user, rewardOptions);
+		Bukkit.getPluginManager().callEvent(event);
+		if (event.isCancelled()) {
+			plugin.debug("Reward " + name + " was cancelled for " + user.getPlayerName());
+			return CompletableFuture.completedFuture(null);
+		}
+		if (rewardOptions.isCheckTimed() && (checkDelayed(user, rewardOptions.getPlaceholders())
+				|| checkTimed(user, rewardOptions.getPlaceholders()))) {
+			return CompletableFuture.completedFuture(null);
+		}
+		if (!rewardOptions.isOnlineSet()) rewardOptions.setOnline(user.isOnline());
+		for (RewardPlaceholderHandle handle : plugin.getRewardHandler().getPlaceholders()) {
+			if (handle.isPreProcess()) rewardOptions.addPlaceholder(handle.getKey(), handle.getValue(this, user));
+		}
+
+		boolean allowOffline = false;
+		boolean canGive = true;
+		if (!rewardOptions.isIgnoreRequirements()) {
+			for (RequirementInject inject : plugin.getRewardHandler().getInjectedRequirements()) {
+				try {
+					if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
+						canGive = false;
+						if (!inject.isAllowReattempt()) return CompletableFuture.completedFuture(null);
+						allowOffline = true;
+					}
+				} catch (Exception e) {
+					plugin.debug("Failed to check requirement " + inject.getPath());
+					e.printStackTrace();
+					canGive = false;
+				}
+			}
+		}
+		if (plugin.getOptions().isPauseRewards() || (plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
+			checkRewardFile();
+			user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+			return CompletableFuture.completedFuture(null);
+		}
+		if (((((!rewardOptions.isOnline() || rewardOptions.getServer() != null) && !user.isOnline()) || allowOffline)
+				&& (!isForceOffline() && !rewardOptions.isForceOffline()))) {
+			if (rewardOptions.isGiveOffline()) {
+				checkRewardFile();
+				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+			}
+			return CompletableFuture.completedFuture(null);
+		}
+		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
+			plugin.debug(name + ": Passed requirements, attempting to give to " + user.getPlayerName() + "/"
+					+ user.getUUID());
+			if (hasAsyncRewardInjection()) return giveRewardUserAsync(user, rewardOptions.getPlaceholders(), rewardOptions);
+			try {
+				giveRewardUser(user, rewardOptions.getPlaceholders(), rewardOptions);
+				return CompletableFuture.completedFuture(null);
+			} catch (Throwable failure) {
+				return CompletableFuture.failedFuture(failure);
+			}
+		}
+		return CompletableFuture.completedFuture(null);
 	}
 
 	/**

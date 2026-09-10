@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -27,6 +28,16 @@ public final class RewardSubRewards {
 
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("Rewards") {
+			@Override
+			public boolean supportsAsyncRequest() {
+				return true;
+			}
+
+			@Override
+			public boolean requiresConfiguredDataForAsync() {
+				return true;
+			}
+
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
@@ -35,6 +46,17 @@ public final class RewardSubRewards {
                         .withPlaceHolder(placeholders).send(user);
                 return null;
             }
+
+			@Override
+			public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+					ConfigurationSection data, HashMap<String, String> placeholders) {
+				if (!data.isConfigurationSection(getPath()) && !(isAlwaysForce() && data.contains(getPath(), true))
+						&& !isAlwaysForceNoData()) {
+					return java.util.concurrent.CompletableFuture.completedFuture(null);
+				}
+				return new RewardBuilder(reward.getConfig().getConfigData(), "Rewards").withPrefix(reward.getName())
+						.withPlaceHolder(placeholders).sendAsync(user).thenApply(ignored -> null);
+			}
 
             @Override
             public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
