@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,9 +36,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Answers;
+import org.mockito.MockedConstruction;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
@@ -45,6 +49,8 @@ import com.bencodez.advancedcore.api.rewards.injected.RewardInjectInt;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectString;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardSubRewards;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardRandomReward;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardJavascript;
+import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 class RewardAsyncInjectionTest {
@@ -458,6 +464,36 @@ class RewardAsyncInjectionTest {
 		child.complete(null);
 		result.toCompletableFuture().join();
 		assertEquals(List.of("after-child"), events);
+	}
+
+	@Test
+	void javascriptChildCarriesSelectionAndReplayStateIntoItsCheckpoint() {
+		ConfigurationSection javascript = data.createSection("Javascript");
+		javascript.set("Enabled", true);
+		javascript.set("Expression", "true");
+		javascript.createSection("TrueRewards");
+		RewardJavascript.register(handler, plugin);
+		RewardOptions nestedOptions = new RewardOptions();
+
+		try (MockedConstruction<JavascriptEngine> engines = mockConstruction(JavascriptEngine.class,
+				org.mockito.Mockito.withSettings().defaultAnswer(Answers.RETURNS_SELF),
+				(engine, context) -> when(engine.getBooleanValue("true")).thenReturn(true));
+				MockedConstruction<RewardBuilder> builders = mockConstruction(RewardBuilder.class,
+						org.mockito.Mockito.withSettings().defaultAnswer(Answers.RETURNS_SELF),
+						(builder, context) -> {
+							when(builder.getRewardOptions()).thenReturn(nestedOptions);
+							when(builder.withPlaceHolder(any())).thenAnswer(invocation -> {
+								nestedOptions.withPlaceHolder(invocation.getArgument(0));
+								return builder;
+							});
+							when(builder.sendAsync(user)).thenReturn(CompletableFuture.completedFuture(null));
+						})) {
+			reward.giveInjectedRewardsAsync(user, new HashMap<>()).toCompletableFuture().join();
+		}
+
+		assertNotNull(nestedOptions.getAsyncReplayState());
+		assertTrue(nestedOptions.getAsyncReplayKey().endsWith("/path:TrueRewards"));
+		assertFalse(nestedOptions.getPlaceholders().isEmpty());
 	}
 
 	@Test

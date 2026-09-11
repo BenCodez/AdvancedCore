@@ -87,8 +87,11 @@ public final class RewardJavascript {
                 String path = Reward.replaySelection(placeholders,
                         () -> new JavascriptEngine().addPlayer(user.getOfflinePlayer()).addPlaceholders(placeholders)
                                 .getBooleanValue(section.getString("Expression")) ? "TrueRewards" : "FalseRewards");
-                return new RewardBuilder(section, path).withPrefix(reward.getName() + ".Javascript").sendAsync(user)
-                        .thenApply(ignored -> null);
+                RewardBuilder builder = new RewardBuilder(section, path).withPrefix(reward.getName() + ".Javascript")
+                        .withPlaceHolder(placeholders);
+                Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
+                        Reward.currentReplayKey(), "path:" + path, Reward.currentReplayOccurrenceId());
+                return builder.sendAsync(user).thenApply(ignored -> null);
             }
 
             @Override
