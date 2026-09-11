@@ -309,9 +309,13 @@ public class Reward {
 		AtomicInteger completed = new AtomicInteger(resumeAfter);
 		CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
 		for (int index = 0; index < orderedRewards.size(); index++) {
-			if (index < resumeAfter) continue;
 			final RewardInject inject = orderedRewards.get(index);
 			final String injectionKey = replayKey + "/" + index;
+			if (index < resumeAfter) {
+				sequence = sequence.thenCompose(ignored -> notifyReplayCheckpointPersisted(inject, user, occurrenceId,
+						injectionKey));
+				continue;
+			}
 			sequence = sequence.thenCompose(ignored -> {
 				// A nested injector can checkpoint a child before this parent injector
 				// completes. Bind the parent's registry first so that child checkpoint
@@ -324,7 +328,10 @@ public class Reward {
 						int checkpoint = completed.incrementAndGet();
 						replayState.setCompleted(replayKey, checkpoint);
 						replayState.setRegistryFingerprint(replayKey, registryFingerprint);
-						return replayState.persistCheckpointAsync(plugin, placeholders).thenApply(ignored -> result);
+						return replayState.persistCheckpointAsync(plugin, placeholders)
+								.thenCompose(ignored -> notifyReplayCheckpointPersisted(inject, user, occurrenceId,
+										injectionKey))
+								.thenApply(ignored -> result);
 					}).thenCompose(ignored -> resumeOnServerThread(user));
 		}
 		return sequence.handle((ignored, failure) -> {
@@ -334,6 +341,19 @@ public class Reward {
 			replayState.setCompleted(replayKey, completed.get());
 			throw new RewardReplayFailure(replayState, placeholders, failure);
 		});
+	}
+
+	private CompletionStage<Void> notifyReplayCheckpointPersisted(RewardInject inject, AdvancedCoreUser user,
+			String occurrenceId,
+			String injectionKey) {
+		try {
+			CompletionStage<Void> notification = inject.onReplayCheckpointPersisted(this, user, occurrenceId,
+					injectionKey);
+			return notification == null ? CompletableFuture.failedFuture(new IllegalStateException(
+					"Reward injection returned a null replay-checkpoint result: " + inject.getPath())) : notification;
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
 	}
 
 	private List<RewardInject> orderedInjectedRewards() {

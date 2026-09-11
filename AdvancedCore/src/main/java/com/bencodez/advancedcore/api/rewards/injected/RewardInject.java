@@ -148,6 +148,24 @@ public abstract class RewardInject extends Inject {
 		}
 	}
 
+	/**
+	 * Notifies this injection after its replay progress has been durably persisted.
+	 * Implementations may use the stable occurrence and injection identities to
+	 * retire their own idempotency records. A failed callback keeps the replay
+	 * pending, but the persisted checkpoint prevents the injection itself from
+	 * running again; recovery retries only this callback. Implementations must be
+	 * idempotent because recovery can repeat a notification that already succeeded.
+	 *
+	 * @param reward reward being given
+	 * @param user receiving user
+	 * @param occurrenceId stable identity of this logical reward occurrence
+	 * @param injectionKey stable replay path for this injection
+	 */
+	public CompletionStage<Void> onReplayCheckpointPersisted(Reward reward, AdvancedCoreUser user, String occurrenceId,
+			String injectionKey) {
+		return CompletableFuture.completedFuture(null);
+	}
+
 	/** Serializes a synchronized asynchronous injection through completion, not just invocation. */
 	public synchronized CompletionStage<Object> runSynchronizedAsync(Supplier<CompletionStage<Object>> request) {
 		CompletableFuture<Object> result = new CompletableFuture<>();

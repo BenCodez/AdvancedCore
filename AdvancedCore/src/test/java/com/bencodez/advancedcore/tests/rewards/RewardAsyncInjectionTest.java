@@ -1117,6 +1117,99 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void injectionIsNotifiedOnlyAfterItsReplayCheckpointIsPersisted() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		List<String> events = new ArrayList<>();
+		handler.getInjectedRewards().add(new RewardInject("Points") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				events.add("injection");
+				return null;
+			}
+			@Override public CompletionStage<Void> onReplayCheckpointPersisted(Reward ignored, AdvancedCoreUser ignoredUser,
+					String occurrenceId, String injectionKey) {
+				events.add("ack:" + occurrenceId + ":" + injectionKey);
+				return CompletableFuture.completedFuture(null);
+			}
+		});
+
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		constructor.setAccessible(true);
+		Object replayState = constructor.newInstance(null, null, false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState, (java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoint ->
+				events.add("checkpoint"));
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0,
+				replayState, "AsyncReward", "occurrence-1");
+
+		ArgumentCaptor<Runnable> writes = ArgumentCaptor.forClass(Runnable.class);
+		verify(storageExecutor).execute(writes.capture());
+		assertEquals(List.of("injection"), events);
+		assertFalse(result.toCompletableFuture().isDone());
+
+		writes.getValue().run();
+		result.toCompletableFuture().join();
+		assertEquals(List.of("injection", "checkpoint", "ack:occurrence-1:AsyncReward/0"), events);
+	}
+
+	@Test
+	void replayRetriesFailedCheckpointNotificationWithoutRepeatingInjection() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		AtomicInteger injections = new AtomicInteger();
+		AtomicInteger notifications = new AtomicInteger();
+		handler.getInjectedRewards().add(new RewardInject("Points") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				injections.incrementAndGet();
+				return null;
+			}
+			@Override public CompletionStage<Void> onReplayCheckpointPersisted(Reward ignored,
+					AdvancedCoreUser ignoredUser, String occurrenceId, String injectionKey) {
+				return notifications.incrementAndGet() == 1
+						? CompletableFuture.failedFuture(new IllegalStateException("ack unavailable"))
+						: CompletableFuture.completedFuture(null);
+			}
+		});
+
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		constructor.setAccessible(true);
+		Object replayState = constructor.newInstance(null, null, false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState, (java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoint -> { });
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> first = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0,
+				replayState, "AsyncReward", "occurrence-1");
+		assertThrows(java.util.concurrent.CompletionException.class, () -> first.toCompletableFuture().join());
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> retry = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0,
+				replayState, "AsyncReward", "occurrence-1");
+		retry.toCompletableFuture().join();
+
+		assertEquals(1, injections.get());
+		assertEquals(2, notifications.get());
+	}
+
+	@Test
 	void typedIntegerAsyncHookUsesParsedValue() {
 		data.set("Amount", 7);
 		HashMap<String, String> placeholders = new HashMap<>();
