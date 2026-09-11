@@ -1475,6 +1475,7 @@ public class AdvancedCoreUser {
 	 */
 	public void giveExp(int exp) {
 		Player player = getPlayer();
+		if (scheduleOwnedPlayerAction(player, () -> player.giveExp(exp), "exp:" + exp)) return;
 		if (player != null) {
 			player.giveExp(exp);
 		}
@@ -1487,6 +1488,7 @@ public class AdvancedCoreUser {
 	 */
 	public void giveExpLevels(int num) {
 		Player p = getPlayer();
+		if (scheduleOwnedPlayerAction(p, () -> p.setLevel(p.getLevel() + num), "exp-levels:" + num)) return;
 		if (p != null) {
 			p.setLevel(p.getLevel() + num);
 		}
@@ -1721,6 +1723,24 @@ public class AdvancedCoreUser {
 			action.run();
 			return CompletableFuture.completedFuture(null);
 		}, player, playerAware, descriptor);
+	}
+
+	/**
+	 * Makes a direct player mutation durable only while this user's replay scope is
+	 * active. Outside that scope callers retain the legacy immediate behavior.
+	 */
+	private boolean scheduleOwnedPlayerAction(Player player, Runnable action, String descriptor) {
+		if (!hasOwnedAsyncActionCollection()) return false;
+		if (player == null) {
+			collectAsyncFailure(new IllegalStateException("Player became unavailable before reward delivery"));
+			return true;
+		}
+		if (!plugin.isEnabled()) {
+			collectAsyncFailure(new IllegalStateException("Plugin disabled before player reward delivery"));
+			return true;
+		}
+		scheduleLegacyRewardAction(action, player, true, descriptor);
+		return true;
 	}
 
 	private void scheduleLegacyRewardActionAsync(Supplier<CompletionStage<Void>> action, Player player,
@@ -2193,6 +2213,7 @@ public class AdvancedCoreUser {
 		Runnable dispatch = () -> {
 			if (!claimed.compareAndSet(false, true)) return;
 			try {
+				validateLiveScheduledPlayer(player);
 				player.chat("/" + command);
 				completion.complete(null);
 			} catch (Throwable failure) {
@@ -2200,7 +2221,7 @@ public class AdvancedCoreUser {
 			}
 		};
 		try {
-			getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
+			getPlugin().getBukkitScheduler().runTask(plugin, dispatch, player);
 		} catch (Throwable failure) {
 			claimed.set(true);
 			completion.completeExceptionally(failure);

@@ -57,6 +57,7 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardExp;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardItems;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardPotions;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
@@ -344,6 +345,74 @@ class RewardAsyncInjectionTest {
 			assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
 		}
 		verify(player, never()).addPotionEffect(any());
+	}
+
+	@Test
+	void replayExperienceRemainsPendingForNullAndDisconnectedPlayers() throws Exception {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		UUID uuid = UUID.randomUUID();
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, uuid, false, false);
+		realUser.setPlayerName("ExperienceDispatch");
+		Player player = mock(Player.class);
+		when(player.getDisplayName()).thenReturn("ExperienceDispatch");
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		AtomicReference<Player> availablePlayer = new AtomicReference<>(player);
+		AtomicReference<Runnable> queuedInjection = new AtomicReference<>();
+		doAnswer(invocation -> {
+			queuedInjection.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		data.set("EXP", 5);
+		RewardExp.register(handler, plugin);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenAnswer(ignored -> availablePlayer.get());
+			CompletionStage<Void> delivery = reward.giveRewardUserAsync(realUser, new HashMap<>(), new RewardOptions());
+			assertFalse(delivery.toCompletableFuture().isDone());
+			availablePlayer.set(null);
+			Throwable failure = assertThrows(java.util.concurrent.CompletionException.class,
+					() -> {
+						queuedInjection.get().run();
+						delivery.toCompletableFuture().join();
+					});
+			Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
+			assertEquals(0, checkpoint.getCompletedInjectionCount());
+			verify(player, never()).giveExp(5);
+
+			availablePlayer.set(player);
+			doAnswer(invocation -> {
+				invocation.getArgument(1, Runnable.class).run();
+				return null;
+			}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+			doAnswer(invocation -> {
+				invocation.getArgument(1, Runnable.class).run();
+				return null;
+			}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), eq(player));
+			AtomicReference<Runnable> queuedExperience = new AtomicReference<>();
+			doAnswer(invocation -> {
+				queuedExperience.set(invocation.getArgument(1, Runnable.class));
+				return null;
+			}).when(scheduler).runTask(eq(plugin), any(Runnable.class), eq(player));
+			Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+			java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+			state.setAccessible(true);
+			java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+					AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+			replay.setAccessible(true);
+			CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, realUser,
+					checkpoint.getReplayPlaceholders(), 0,
+					state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
+					"AsyncReward");
+			assertFalse(resumed.toCompletableFuture().isDone());
+			assertNotNull(queuedExperience.get());
+			availablePlayer.set(null);
+			queuedExperience.get().run();
+			assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
+		}
+		verify(player, never()).giveExp(5);
 	}
 
 	@Test
