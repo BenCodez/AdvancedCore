@@ -326,6 +326,7 @@ public class BuiltinRewardBehaviorTest {
 			when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(console), eq(placeholders), eq(false)))
 					.thenReturn(sectionConsole);
             ArrayList<String> player = new ArrayList<>(List.of("spawn"));
+            when(user.validatePlayerCommandAvailabilityAsync()).thenReturn(CompletableFuture.completedFuture(null));
             when(user.preformCommandAsync(eq(player), eq(placeholders))).thenReturn(sectionPlayer);
             ArrayList<String> randomList = new ArrayList<>(List.of("say random"));
             HashMap<String, String> randomPlaceholders = new HashMap<>();
@@ -359,7 +360,10 @@ public class BuiltinRewardBehaviorTest {
             commands.set("Stagger", false);
             CompletionStage<String> sectionStage = ((RewardInjectConfigurationSection) injects.get(3))
                     .onRewardRequestedAsync(reward, user, commands, placeholders);
+            verify(misc).executeConsoleCommandsAsync(eq("Ben"), eq(console), eq(placeholders), eq(false));
+            verify(user, never()).preformCommandAsync(eq(player), eq(placeholders));
             sectionConsole.complete(null);
+            verify(user).preformCommandAsync(eq(player), eq(placeholders));
             assertFalse(sectionStage.toCompletableFuture().isDone());
             sectionPlayer.complete(null);
             sectionStage.toCompletableFuture().join();
@@ -378,7 +382,7 @@ public class BuiltinRewardBehaviorTest {
         MiscUtils misc = mock(MiscUtils.class);
         ArrayList<String> console = new ArrayList<>(List.of("give Ben diamond"));
         ArrayList<String> player = new ArrayList<>(List.of("spawn"));
-        when(user.preformCommandAsync(eq(player), eq(placeholders)))
+        when(user.validatePlayerCommandAvailabilityAsync())
                 .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("player unavailable")));
         ConfigurationSection commands = section("Commands");
         commands.set("Console", console);
@@ -393,6 +397,7 @@ public class BuiltinRewardBehaviorTest {
             assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
             verify(misc, never()).executeConsoleCommandsAsync(anyString(), any(), any(), anyBoolean());
             verify(misc, never()).executeConsoleCommandsAsync(anyString(), anyString(), any());
+			verify(user, never()).preformCommandAsync(any(), any());
         }
     }
 

@@ -19,6 +19,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.function.Consumer;
@@ -786,13 +788,20 @@ public class Reward {
 		}
 		public CompletionStage<Void> persistCheckpointAsync(AdvancedCorePlugin plugin,
 				HashMap<String, String> placeholders) {
+			return persistCheckpointAsync(plugin, placeholders, 30, TimeUnit.SECONDS);
+		}
+
+		private CompletionStage<Void> persistCheckpointAsync(AdvancedCorePlugin plugin,
+				HashMap<String, String> placeholders, long timeout, TimeUnit timeoutUnit) {
 			Consumer<ReplayCheckpoint> consumer;
 			synchronized (this) { consumer = checkpointConsumer; }
 			if (consumer == null) return CompletableFuture.completedFuture(null);
 			ReplayCheckpoint checkpoint = new ReplayCheckpoint(copyProgress(), copyRegistryFingerprints(), placeholders);
 			CompletableFuture<Void> persisted = new CompletableFuture<>();
+			AtomicBoolean claimed = new AtomicBoolean();
 			try {
 				plugin.getTimer().execute(() -> {
+					if (!claimed.compareAndSet(false, true)) return;
 					try {
 						consumer.accept(checkpoint);
 						persisted.complete(null);
@@ -801,12 +810,18 @@ public class Reward {
 					}
 				});
 			} catch (Throwable failure) {
-				persisted.completeExceptionally(failure);
+				if (claimed.compareAndSet(false, true)) persisted.completeExceptionally(failure);
 			}
 			// shutdownNow() may remove a task that was accepted just before runtime
 			// teardown. Bound that indeterminate state so the replay fails closed
-			// instead of waiting forever without advancing its checkpoint.
-			return persisted.orTimeout(30, TimeUnit.SECONDS);
+			// instead of waiting forever without advancing its checkpoint. The same
+			// claim prevents a backlogged task from persisting after timeout recovery.
+			CompletableFuture.delayedExecutor(timeout, timeoutUnit).execute(() -> {
+				if (claimed.compareAndSet(false, true)) {
+					persisted.completeExceptionally(new TimeoutException("Timed out waiting to persist reward checkpoint"));
+				}
+			});
+			return persisted;
 		}
 
 	}

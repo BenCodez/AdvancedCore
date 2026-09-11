@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -68,6 +69,7 @@ import com.bencodez.advancedcore.api.rewards.builtin.RewardRandomReward;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardJavascript;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.thread.FileThread;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -98,6 +100,13 @@ class RewardAsyncInjectionTest {
 		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
 		AdvancedCorePlugin.setInstance(plugin);
+		try {
+			java.lang.reflect.Field pluginField = FileThread.class.getDeclaredField("plugin");
+			pluginField.setAccessible(true);
+			pluginField.set(FileThread.getInstance(), plugin);
+		} catch (ReflectiveOperationException failure) {
+			throw new AssertionError(failure);
+		}
 		handler = new RewardHandler(plugin);
 		when(plugin.getRewardHandler()).thenReturn(handler);
 
@@ -1158,6 +1167,34 @@ class RewardAsyncInjectionTest {
 		writes.getValue().run();
 		result.toCompletableFuture().join();
 		assertEquals(List.of("injection", "checkpoint", "ack:occurrence-1:AsyncReward/0"), events);
+	}
+
+	@Test
+	void timedOutQueuedCheckpointCannotPersistLater() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		AtomicInteger writes = new AtomicInteger();
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		constructor.setAccessible(true);
+		Object replayState = constructor.newInstance(null, null, false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoint -> writes.incrementAndGet());
+		java.lang.reflect.Method persist = stateType.getDeclaredMethod("persistCheckpointAsync",
+				AdvancedCorePlugin.class, HashMap.class, long.class, TimeUnit.class);
+		persist.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) persist.invoke(replayState, plugin, new HashMap<>(), 0L,
+				TimeUnit.MILLISECONDS);
+
+		ArgumentCaptor<Runnable> queued = ArgumentCaptor.forClass(Runnable.class);
+		verify(storageExecutor).execute(queued.capture());
+		assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
+		queued.getValue().run();
+		assertEquals(0, writes.get());
 	}
 
 	@Test

@@ -212,13 +212,14 @@ public final class RewardCommands {
                     ConfigurationSection section, HashMap<String, String> placeholders) {
                 ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console", new ArrayList<>());
                 ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<>());
-                CompletionStage<Void> player = user.preformCommandAsync(userCommands, placeholders);
-                // Player availability is a prerequisite for the mixed section. Do not
-                // schedule console side effects until that prerequisite has completed,
-                // otherwise a disconnect can fail the replay after grants already ran.
-				return player.thenCompose(ignored -> consoleCommands.isEmpty() ? CompletableFuture.completedFuture(null)
+				CompletionStage<Void> availability = userCommands.isEmpty() ? CompletableFuture.completedFuture(null)
+						: user.validatePlayerCommandAvailabilityAsync();
+				// Validate the player before any mixed-section side effect, then preserve
+				// the established console-before-player command order.
+				return availability.thenCompose(ignored -> consoleCommands.isEmpty() ? CompletableFuture.completedFuture(null)
 						: MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
 								placeholders, section.getBoolean("Stagger", true)))
+						.thenCompose(ignored -> user.preformCommandAsync(userCommands, placeholders))
                         .thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands.Console", null) {

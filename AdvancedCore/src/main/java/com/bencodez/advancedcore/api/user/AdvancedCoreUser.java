@@ -2207,6 +2207,14 @@ public class AdvancedCoreUser {
 		}
 	}
 
+	/** Fails before mixed reward sections run console commands for an unavailable player. */
+	public CompletionStage<Void> validatePlayerCommandAvailabilityAsync() {
+		return getPlayer() == null || !plugin.isEnabled()
+				? CompletableFuture.failedFuture(
+						new IllegalStateException("Player command could not run because the player or plugin is unavailable"))
+				: CompletableFuture.completedFuture(null);
+	}
+
 	private CompletableFuture<Void> runPlayerCommandAsync(Player player, String command) {
 		CompletableFuture<Void> completion = new CompletableFuture<>();
 		AtomicBoolean claimed = new AtomicBoolean();
