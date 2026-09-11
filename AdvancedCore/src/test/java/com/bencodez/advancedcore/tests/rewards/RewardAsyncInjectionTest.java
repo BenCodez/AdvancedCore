@@ -41,6 +41,7 @@ import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectInt;
+import com.bencodez.advancedcore.api.rewards.injected.RewardInjectString;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardSubRewards;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardRandomReward;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -244,6 +245,23 @@ class RewardAsyncInjectionTest {
 		reward.giveInjectedRewardsAsync(user, placeholders).toCompletableFuture().join();
 		assertTrue(received.contains(7));
 		assertEquals("async-7", placeholders.get("amount"));
+	}
+
+	@Test
+	void typedStringAsyncHookPreservesConfiguredValueWhenCallbackReturnsNull() {
+		data.set("Message", "configured-value");
+		HashMap<String, String> placeholders = new HashMap<>();
+		RewardInjectString message = new RewardInjectString("Message") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public String onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser, String value,
+					HashMap<String, String> ignoredPlaceholders) { return null; }
+		};
+		message.asPlaceholder("message");
+		handler.getInjectedRewards().add(message);
+
+		reward.giveInjectedRewardsAsync(user, placeholders).toCompletableFuture().join();
+
+		assertEquals("configured-value", placeholders.get("message"));
 	}
 
 	@Test

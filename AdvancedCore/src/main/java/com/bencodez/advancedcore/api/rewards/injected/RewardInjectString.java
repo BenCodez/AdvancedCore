@@ -66,7 +66,12 @@ public abstract class RewardInjectString extends RewardInject {
 			return CompletableFuture.completedFuture(null);
 		}
 		String value = data.getString(getPath(), getDefaultValue());
-		return onRewardRequestAsync(reward, user, value, placeholders).thenApply(result -> result);
+		CompletionStage<String> result = onRewardRequestAsync(reward, user, value, placeholders);
+		if (result == null) {
+			return CompletableFuture.failedFuture(new IllegalStateException(
+					"Reward injection returned a null asynchronous result: " + getPath()));
+		}
+		return result.thenApply(valueResult -> (Object) (valueResult == null ? value : valueResult));
 	}
 
 }

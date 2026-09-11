@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -259,6 +260,27 @@ public class RewardExecutorTest {
         }
 
         verify(reward).giveReward(user, options);
+    }
+
+    @Test
+    public void disabledPluginFailsEveryConfiguredAsyncDispatchWithoutExecuting() {
+        Reward reward = mock(Reward.class);
+        RewardOptions options = new RewardOptions();
+        YamlConfiguration data = new YamlConfiguration();
+        data.set("Reward", "Daily");
+        when(handler.getReward("Daily")).thenReturn(reward);
+        when(plugin.isEnabled()).thenReturn(false);
+
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> executor.giveRewardAsync(user, reward, options).toCompletableFuture().join());
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> executor.giveRewardAsync(user, "Daily", options).toCompletableFuture().join());
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> executor.giveRewardAsync(user, data, "Reward", options).toCompletableFuture().join());
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> executor.givePersistedQueueRewardAsync(user, "Daily", options).toCompletableFuture().join());
+
+        verify(reward, never()).giveRewardAsync(eq(user), any(RewardOptions.class));
     }
 
     @Test

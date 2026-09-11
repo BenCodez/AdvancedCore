@@ -111,7 +111,8 @@ public class RewardExecutor {
             RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         RewardOptions options = context.getOptions();
-        if (path == null || data == null || !plugin.isEnabled()) return CompletableFuture.completedFuture(null);
+        if (path == null || data == null) return CompletableFuture.completedFuture(null);
+        if (!plugin.isEnabled()) return disabledDispatch();
 
         if (data.isList(path)) {
             CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
@@ -152,7 +153,8 @@ public class RewardExecutor {
     }
 
     public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
-        if (reward == null || !plugin.isEnabled()) return CompletableFuture.completedFuture(null);
+        if (reward == null) return CompletableFuture.completedFuture(null);
+        if (!plugin.isEnabled()) return disabledDispatch();
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         return reward.giveRewardAsync(user, context.getOptions());
     }
@@ -174,6 +176,7 @@ public class RewardExecutor {
     public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
+        if (!plugin.isEnabled()) return disabledDispatch();
         if (reward.startsWith("/")) {
             return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), reward,
                     context.getPlaceholders());
@@ -233,6 +236,7 @@ public class RewardExecutor {
             RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
+        if (!plugin.isEnabled()) return disabledDispatch();
 
         String rewardName = reward;
         Boolean generatedSnapshot = null;
@@ -263,6 +267,11 @@ public class RewardExecutor {
             if (resolved == null) resolved = handler.getReward(rewardName);
         }
         return giveRewardAsync(user, resolved, context.getOptions());
+    }
+
+    private CompletionStage<Void> disabledDispatch() {
+        return CompletableFuture.failedFuture(
+                new IllegalStateException("Plugin disabled before asynchronous reward dispatch"));
     }
 
     public void updateReward(Configuration data, String path, RewardOptions rewardOptions) {
