@@ -642,6 +642,11 @@ public class Reward {
 		return REPLAY_LEGACY_ACTION_PREFIX + encoded;
 	}
 
+	/** Stable fingerprint for an already-resolved legacy reward action payload. */
+	public static String legacyActionFingerprint(String descriptor) {
+		return digest(descriptor == null ? "" : descriptor);
+	}
+
 	/** Reads the number of legacy actions that have a durable per-injection checkpoint. */
 	public static int completedLegacyActions(ReplayState replayState, HashMap<String, String> placeholders,
 			String checkpointKey) {

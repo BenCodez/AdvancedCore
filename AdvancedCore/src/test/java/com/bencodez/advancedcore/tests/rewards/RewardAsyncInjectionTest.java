@@ -13,6 +13,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,6 +22,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -125,10 +127,12 @@ class RewardAsyncInjectionTest {
 		when(plugin.getVaultHandler()).thenReturn(vault);
 		FullInventoryHandler inventory = mock(FullInventoryHandler.class);
 		when(plugin.getFullInventoryHandler()).thenReturn(inventory);
+		CompletableFuture<Void> itemDelivery = new CompletableFuture<>();
 		UUID uuid = UUID.randomUUID();
 		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, uuid, false, false);
 		realUser.setPlayerName("Legacy");
 		Player player = mock(Player.class);
+		when(inventory.giveItemAsync(eq(player), any(ItemStack.class))).thenReturn(itemDelivery);
 		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
 		ArrayList<Runnable> queued = new ArrayList<>();
 		doAnswer(invocation -> {
@@ -162,12 +166,34 @@ class RewardAsyncInjectionTest {
 			assertFalse(result.toCompletableFuture().isDone());
 			assertEquals(1, queued.size());
 			queued.remove(0).run();
-			assertEquals(1, queued.size());
-			queued.remove(0).run();
+			assertTrue(queued.isEmpty(), "replay hands the item directly to the awaited inventory task");
+			assertFalse(result.toCompletableFuture().isDone(), "the inner item delivery still owns completion");
+			itemDelivery.complete(null);
 			result.toCompletableFuture().join();
 		}
 		verify(economy).depositPlayer(offlinePlayer, 2);
-		verify(inventory).giveItem(eq(player), any(ItemStack.class));
+		verify(inventory).giveItemAsync(eq(player), any(ItemStack.class));
+	}
+
+	@Test
+	void ordinaryItemGrantUsesTheVoidInventoryApiWithoutAnAsyncTimeout() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		FullInventoryHandler inventory = mock(FullInventoryHandler.class);
+		when(plugin.getFullInventoryHandler()).thenReturn(inventory);
+		UUID uuid = UUID.randomUUID();
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, uuid, false, false);
+		Player player = mock(Player.class);
+		ItemStack item = new ItemStack(Material.STONE);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			realUser.giveItem(item);
+		}
+
+		verify(inventory).giveItem(player, item);
+		verify(inventory, never()).giveItemAsync(any(Player.class), any(ItemStack.class));
 	}
 
 	@Test
@@ -250,7 +276,9 @@ class RewardAsyncInjectionTest {
 					() -> first.toCompletableFuture().join());
 			Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
 			assertTrue(checkpoint.getReplayPlaceholders().entrySet().stream().anyMatch(entry ->
-					entry.getKey().startsWith("__advancedcore_replay_legacy_actions_") && entry.getValue().equals("1")));
+					entry.getKey().startsWith("__advancedcore_replay_legacy_actions_") && entry.getValue().startsWith("v2:")));
+			assertTrue(checkpoint.getReplayPlaceholders().keySet().stream()
+					.anyMatch(key -> key.startsWith("__advancedcore_replay_legacy_actions_") && key.endsWith("_snapshot")));
 
 			enabled.set(true);
 			Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
@@ -269,6 +297,92 @@ class RewardAsyncInjectionTest {
 		}
 		verify(economy).depositPlayer(offlinePlayer, 1);
 		verify(economy).depositPlayer(offlinePlayer, 2);
+	}
+
+	@Test
+	void legacyActionSnapshotsSurviveReorderRemovalAndExtension() throws Exception {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("ActionSnapshot");
+		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
+		ArrayList<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> {
+			queued.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		AtomicReference<List<Double>> amounts = new AtomicReference<>(new ArrayList<>(List.of(1D, 2D)));
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				for (double amount : amounts.get()) realUser.giveMoney(amount);
+				return CompletableFuture.completedFuture(null);
+			}
+		});
+
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
+			CompletionStage<Void> first = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+			queued.remove(0).run();
+			enabled.set(false);
+			queued.remove(0).run();
+			Reward.RewardReplayFailure checkpoint = findCheckpoint(assertThrows(
+					java.util.concurrent.CompletionException.class, () -> first.toCompletableFuture().join()));
+
+			enabled.set(true);
+			amounts.set(new ArrayList<>(List.of(2D, 3D)));
+			Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+			java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+			state.setAccessible(true);
+			java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+					AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+			replay.setAccessible(true);
+			CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, realUser,
+					checkpoint.getReplayPlaceholders(), 0,
+					state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
+					"AsyncReward");
+			assertEquals(1, queued.size(), "the completed, removed action is not rescheduled");
+			queued.remove(0).run();
+			assertEquals(1, queued.size(), "the extended action runs after the unfinished stable action");
+			queued.remove(0).run();
+			resumed.toCompletableFuture().join();
+		}
+		verify(economy).depositPlayer(offlinePlayer, 1D);
+		verify(economy).depositPlayer(offlinePlayer, 2D);
+		verify(economy).depositPlayer(offlinePlayer, 3D);
+	}
+
+	@Test
+	void itemActionFingerprintIsCanonicalAndIncludesMetadata() throws Exception {
+		LinkedHashMap<String, Object> first = new LinkedHashMap<>();
+		first.put("type", "DIAMOND");
+		first.put("amount", 1);
+		first.put("meta", Map.of("display-name", "Original", "lore", List.of("one", "two")));
+		LinkedHashMap<String, Object> reordered = new LinkedHashMap<>();
+		reordered.put("meta", Map.of("lore", List.of("one", "two"), "display-name", "Original"));
+		reordered.put("amount", 1);
+		reordered.put("type", "DIAMOND");
+		LinkedHashMap<String, Object> changedMetadata = new LinkedHashMap<>(reordered);
+		changedMetadata.put("meta", Map.of("display-name", "Changed", "lore", List.of("one", "two")));
+		java.lang.reflect.Method descriptor = AdvancedCoreUser.class.getDeclaredMethod("canonicalActionDescriptor",
+				Object.class);
+		descriptor.setAccessible(true);
+		String firstDescriptor = (String) descriptor.invoke(null, first);
+		String reorderedDescriptor = (String) descriptor.invoke(null, reordered);
+		String changedDescriptor = (String) descriptor.invoke(null, changedMetadata);
+
+		assertEquals(Reward.legacyActionFingerprint(firstDescriptor), Reward.legacyActionFingerprint(reorderedDescriptor));
+		assertNotEquals(Reward.legacyActionFingerprint(firstDescriptor), Reward.legacyActionFingerprint(changedDescriptor));
 	}
 
 	@Test
@@ -582,11 +696,11 @@ class RewardAsyncInjectionTest {
 	void commandSnapshotIsCheckpointedBeforeItsFirstDispatch() throws Exception {
 		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
 		when(plugin.getTimer()).thenReturn(storageExecutor);
+		List<Reward.ReplayCheckpoint> checkpoints = new ArrayList<>();
 		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
 		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
 		constructor.setAccessible(true);
 		Object replayState = constructor.newInstance(new HashMap<>(), new HashMap<>(), false);
-		List<Reward.ReplayCheckpoint> checkpoints = new ArrayList<>();
 		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
 				java.util.function.Consumer.class);
 		setConsumer.setAccessible(true);
@@ -1161,6 +1275,44 @@ class RewardAsyncInjectionTest {
 		assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
 		assertEquals(1, applied.get());
 		assertEquals(0, inserted.get());
+	}
+
+	@Test
+	void completedInjectorIsNotReplayedWhenItsConfigurationChangesDuringRecovery() throws Exception {
+		AtomicInteger applied = new AtomicInteger();
+		data.set("Applied", "before");
+		handler.getInjectedRewards().add(new RewardInject("Applied") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				applied.incrementAndGet();
+				return null;
+			}
+		});
+		handler.getInjectedRewards().add(new RewardInject("Fails") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				return CompletableFuture.failedFuture(new IllegalStateException("temporary"));
+			}
+		});
+
+		Reward.RewardReplayFailure checkpoint = findCheckpoint(assertThrows(
+				java.util.concurrent.CompletionException.class,
+				() -> reward.giveInjectedRewardsAsync(user, new HashMap<>()).toCompletableFuture().join()));
+		data.set("Applied", "after");
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		state.setAccessible(true);
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+		replay.setAccessible(true);
+		CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0,
+				state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
+				"AsyncReward");
+		assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
+		assertEquals(1, applied.get());
 	}
 
 	@Test

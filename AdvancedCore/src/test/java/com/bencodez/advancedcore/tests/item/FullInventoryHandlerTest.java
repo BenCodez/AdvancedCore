@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -118,6 +120,47 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
+	public void giveItemAsyncCompletesOnlyAfterOwnedInventoryDelivery() {
+		Fixture fixture = createFixture();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>());
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		assertFalse(delivery.toCompletableFuture().isDone());
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+
+		task.getValue().run();
+
+		assertTrue(delivery.toCompletableFuture().isDone());
+		verify(inventory).addItem(item);
+	}
+
+	@Test
+	public void timedOutGiveItemAsyncSuppressesTheQueuedDeliveryToPreventReplayDuplicates() throws Exception {
+		Fixture fixture = createFixture(0L);
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>());
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		assertThrows(java.util.concurrent.ExecutionException.class,
+				() -> delivery.toCompletableFuture().get(2, TimeUnit.SECONDS));
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+
+		task.getValue().run();
+		task.getValue().run();
+
+		verify(inventory, never()).addItem(item);
+	}
+
+	@Test
 	public void handlerTimerIsIsolatedFromPluginInventoryTimer() {
 		Fixture fixture = createFixture();
 		ScheduledExecutorService handlerTimer = fixture.handler.getTimer();
@@ -214,6 +257,10 @@ public class FullInventoryHandlerTest {
 	}
 
 	private Fixture createFixture() {
+		return createFixture(TimeUnit.SECONDS.toMillis(30));
+	}
+
+	private Fixture createFixture(long itemDeliveryTimeoutMillis) {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		ScheduledExecutorService sharedInventoryTimer = mock(ScheduledExecutorService.class);
 		BukkitScheduler bukkitScheduler = mock(BukkitScheduler.class);
@@ -225,7 +272,12 @@ public class FullInventoryHandlerTest {
 		when(plugin.getServerDataFile()).thenReturn(serverData);
 		when(serverData.getData()).thenReturn(data);
 
-		FullInventoryHandler handler = new FullInventoryHandler(plugin);
+		FullInventoryHandler handler = new FullInventoryHandler(plugin) {
+			@Override
+			protected long getItemDeliveryTimeoutMillis() {
+				return itemDeliveryTimeoutMillis;
+			}
+		};
 		handlers.add(handler);
 		return new Fixture(plugin, sharedInventoryTimer, bukkitScheduler, serverData, data, handler);
 	}

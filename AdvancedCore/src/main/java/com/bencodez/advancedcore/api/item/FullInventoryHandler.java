@@ -6,10 +6,14 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
@@ -82,11 +86,62 @@ public class FullInventoryHandler {
 	}
 
 	public void giveItem(Player player, ItemStack... item) {
+		scheduleItemDelivery(player, item, null);
+	}
+
+	/**
+	 * Gives items on the owning player scheduler and completes after the inventory
+	 * mutation, including full-inventory handling, has finished. The established
+	 * void API remains fire-and-forget; replay-aware callers use this boundary so
+	 * they never checkpoint a queued delivery as completed.
+	 */
+	public CompletionStage<Void> giveItemAsync(Player player, ItemStack... item) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		scheduleItemDelivery(player, item, completion);
+		return completion;
+	}
+
+	private void scheduleItemDelivery(Player player, ItemStack[] item, CompletableFuture<Void> completion) {
 		if (player == null || item == null || item.length == 0) {
+			if (completion != null) completion.complete(null);
 			return;
 		}
 		ItemStack[] itemsToGive = item.clone();
-		plugin.getBukkitScheduler().runTask(plugin, () -> giveItemOwnedPlayer(player, itemsToGive), player);
+		AtomicBoolean deliveryClaimed = new AtomicBoolean();
+		Runnable delivery = () -> {
+			if (!deliveryClaimed.compareAndSet(false, true)) return;
+			try {
+				giveItemOwnedPlayer(player, itemsToGive);
+				if (completion != null) completion.complete(null);
+			} catch (Throwable failure) {
+				if (completion != null) completion.completeExceptionally(failure);
+				else rethrowDeliveryFailure(failure);
+			}
+		};
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, delivery, player);
+		} catch (Throwable failure) {
+			deliveryClaimed.set(true);
+			if (completion != null) completion.completeExceptionally(failure);
+			else rethrowDeliveryFailure(failure);
+		}
+		if (completion == null) return;
+		CompletableFuture.delayedExecutor(getItemDeliveryTimeoutMillis(), TimeUnit.MILLISECONDS).execute(() -> {
+			if (deliveryClaimed.compareAndSet(false, true)) {
+				completion.completeExceptionally(new TimeoutException("Timed out waiting for item delivery"));
+			}
+		});
+	}
+
+	/** Bounds a replay-aware delivery; timeout claims the delivery to prevent a duplicate retry. */
+	protected long getItemDeliveryTimeoutMillis() {
+		return TimeUnit.SECONDS.toMillis(30);
+	}
+
+	private static void rethrowDeliveryFailure(Throwable failure) {
+		if (failure instanceof RuntimeException) throw (RuntimeException) failure;
+		if (failure instanceof Error) throw (Error) failure;
+		throw new IllegalStateException("Failed to schedule item delivery", failure);
 	}
 
 	public synchronized void loadTimer() {
