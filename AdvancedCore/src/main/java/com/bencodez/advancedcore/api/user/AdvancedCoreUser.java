@@ -8,14 +8,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +21,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.bukkit.Bukkit;
@@ -74,45 +72,139 @@ public class AdvancedCoreUser {
 	private static final Object REPLAY_CLAIMS_LOCK = new Object();
 	private static final WeakHashMap<AdvancedCorePlugin, HashMap<String, ReplayClaims>> REPLAY_CLAIMS = new WeakHashMap<>();
 	private static final ThreadLocal<AsyncActionCollection> ASYNC_ACTION_COLLECTION = new ThreadLocal<>();
-	private static final ThreadLocal<ArrayList<CompletionStage<Void>>> CONTINUATION_ASYNC_ACTIONS =
-			ThreadLocal.withInitial(ArrayList::new);
-	private final Set<AsyncActionCollection> activeAsyncActionCollections = Collections
-			.newSetFromMap(new IdentityHashMap<>());
 
 	/** Internal completion scope used by asynchronous reward dispatch. */
 	public static final class AsyncActionCollection {
 		private final AsyncActionCollection previous;
-		private final ArrayList<CompletionStage<Void>> actions = new ArrayList<>();
+		private final AdvancedCoreUser owner;
+		private final ArrayList<Supplier<CompletionStage<Void>>> actions = new ArrayList<>();
+		private final Reward.ReplayState replayState;
+		private final HashMap<String, String> placeholders;
+		private final String checkpointKey;
+		private final int completedActions;
+		private final AdvancedCorePlugin plugin;
 		private boolean closed;
 
-		private AsyncActionCollection(AsyncActionCollection previous) {
+		private AsyncActionCollection(AsyncActionCollection previous, AdvancedCoreUser owner, Reward.ReplayState replayState,
+				HashMap<String, String> placeholders, String injectionKey, AdvancedCorePlugin plugin) {
 			this.previous = previous;
+			this.owner = owner;
+			this.replayState = replayState;
+			this.placeholders = placeholders;
+			this.checkpointKey = Reward.legacyActionReplayKey(injectionKey);
+			this.completedActions = Reward.completedLegacyActions(replayState, placeholders, checkpointKey);
+			this.plugin = plugin;
 		}
 
-		private synchronized boolean add(CompletionStage<Void> action) {
+		private synchronized boolean add(Supplier<CompletionStage<Void>> action) {
 			if (closed) return false;
 			actions.add(action);
 			return true;
 		}
 
+		private boolean belongsTo(AdvancedCoreUser user) {
+			return owner == user;
+		}
+
 		private synchronized CompletionStage<Void> closeAndAwait() {
 			closed = true;
 			CompletionStage<Void> result = CompletableFuture.completedFuture(null);
-			for (CompletionStage<Void> action : actions) {
-				result = result.thenCompose(ignored -> action);
+			for (int index = 0; index < actions.size(); index++) {
+				if (index < completedActions) continue;
+				Supplier<CompletionStage<Void>> action = actions.get(index);
+				int checkpoint = index + 1;
+				result = result.thenCompose(ignored -> {
+					try {
+						CompletionStage<Void> stage = action.get();
+						return stage == null ? CompletableFuture.failedFuture(
+								new IllegalStateException("Scheduled reward action returned null")) : stage;
+					} catch (Throwable failure) {
+						return CompletableFuture.failedFuture(failure);
+					}
+				}).thenCompose(ignored -> checkpoint(checkpoint));
 			}
 			return result;
+		}
+
+		private CompletionStage<Void> checkpoint(int completed) {
+			if (replayState == null || placeholders == null) return CompletableFuture.completedFuture(null);
+			String value = String.valueOf(completed);
+			placeholders.put(checkpointKey, value);
+			replayState.recordReplayMetadata(checkpointKey, value);
+			return replayState.persistCheckpointAsync(plugin, placeholders);
+		}
+	}
+
+	/**
+	 * Explicitly carries an async injector's originating action scope into a
+	 * completion callback. Injectors capture this while their request method is
+	 * invoked, then wrap only callbacks whose legacy user actions belong to that
+	 * request. It deliberately does not infer ownership from other pending work
+	 * on the callback thread.
+	 */
+	public static final class AsyncActionContext {
+		private final AsyncActionCollection collection;
+
+		private AsyncActionContext(AsyncActionCollection collection) {
+			this.collection = collection;
+		}
+
+		/** Wraps a CompletionStage callback that has no return value. */
+		public Runnable wrap(Runnable callback) {
+			if (callback == null) throw new IllegalArgumentException("callback cannot be null");
+			return () -> runInScope(() -> {
+				callback.run();
+				return null;
+			});
+		}
+
+		/** Wraps a CompletionStage mapping callback while preserving its result. */
+		public <T, R> Function<T, R> wrap(Function<T, R> callback) {
+			if (callback == null) throw new IllegalArgumentException("callback cannot be null");
+			return value -> runInScope(() -> callback.apply(value));
+		}
+
+		/** Wraps a deferred supplier used by an asynchronous injector. */
+		public <T> Supplier<T> wrap(Supplier<T> callback) {
+			if (callback == null) throw new IllegalArgumentException("callback cannot be null");
+			return () -> runInScope(callback);
+		}
+
+		private <T> T runInScope(Supplier<T> callback) {
+			if (collection == null) return callback.get();
+			AsyncActionCollection previous = ASYNC_ACTION_COLLECTION.get();
+			ASYNC_ACTION_COLLECTION.set(collection);
+			try {
+				return callback.get();
+			} finally {
+				if (previous == null) ASYNC_ACTION_COLLECTION.remove();
+				else ASYNC_ACTION_COLLECTION.set(previous);
+			}
 		}
 	}
 
 	/** Starts collecting completion stages created by legacy reward callbacks. */
 	public AsyncActionCollection beginAsyncActionCollection() {
-		AsyncActionCollection collection = new AsyncActionCollection(ASYNC_ACTION_COLLECTION.get());
-		synchronized (activeAsyncActionCollections) {
-			activeAsyncActionCollections.add(collection);
-		}
+		return beginAsyncActionCollection(null, null, null);
+	}
+
+	/** Starts a collection whose legacy actions advance the current replay checkpoint individually. */
+	public AsyncActionCollection beginAsyncActionCollection(Reward.ReplayState replayState,
+			HashMap<String, String> placeholders, String injectionKey) {
+		AsyncActionCollection collection = new AsyncActionCollection(ASYNC_ACTION_COLLECTION.get(), this, replayState,
+				placeholders, injectionKey, plugin);
 		ASYNC_ACTION_COLLECTION.set(collection);
 		return collection;
+	}
+
+	/**
+	 * Captures this user's active injector scope for an explicitly wrapped async
+	 * continuation. Calling this outside the originating injector returns an
+	 * inert context, so unrelated work keeps its ordinary scheduling semantics.
+	 */
+	public AsyncActionContext captureAsyncActionContext() {
+		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
+		return new AsyncActionContext(collection != null && collection.belongsTo(this) ? collection : null);
 	}
 
 	/** Restores the calling thread's previous collection while keeping this scope active for its returned stage. */
@@ -126,34 +218,30 @@ public class AdvancedCoreUser {
 	public CompletionStage<Void> endAsyncActionCollection(AsyncActionCollection collection) {
 		if (collection == null) return CompletableFuture.completedFuture(null);
 		restoreAsyncActionCollectionScope(collection);
-		synchronized (activeAsyncActionCollections) {
-			activeAsyncActionCollections.remove(collection);
-			return collection.closeAndAwait();
-		}
+		return collection.closeAndAwait();
 	}
 
 	private boolean collectAsyncAction(CompletionStage<Void> action) {
-		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
-		if (collection != null && collection.add(action)) return true;
-		synchronized (activeAsyncActionCollections) {
-			if (activeAsyncActionCollections.isEmpty()) return false;
-			// A CompletionStage continuation runs before completion callbacks attached
-			// to its returned stage. Hold its legacy action on that same thread until
-			// requestInjectionAsync's callback claims it for the exact collection.
-			CONTINUATION_ASYNC_ACTIONS.get().add(action);
-			return true;
-		}
+		return collectAsyncAction(() -> action);
 	}
 
-	/** Claims legacy actions created by the continuation that just completed on this thread. */
-	public void claimAsyncContinuationActions(AsyncActionCollection collection) {
-		if (collection == null) return;
-		ArrayList<CompletionStage<Void>> pending = CONTINUATION_ASYNC_ACTIONS.get();
-		if (pending.isEmpty()) return;
-		for (CompletionStage<Void> action : pending) collection.add(action);
-		pending.clear();
-		CONTINUATION_ASYNC_ACTIONS.remove();
+	private boolean collectAsyncAction(Supplier<CompletionStage<Void>> action) {
+		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
+		if (collection != null && collection.belongsTo(this) && collection.add(action)) return true;
+		// Do not infer ownership from another pending collection. A normal synchronous
+		// reward can run while an unrelated async injection is waiting; it must retain
+		// its established fire-and-forget scheduling semantics instead of being made a
+		// dependency of whichever injection completes next on this thread.
+		return false;
 	}
+
+	/**
+	 * Retained for binary compatibility with integrations that previously called
+	 * this internal hand-off hook. Unscoped actions are intentionally not claimed:
+	 * only actions created while their originating collection is active may become
+	 * part of that collection.
+	 */
+	public void claimAsyncContinuationActions(AsyncActionCollection collection) { }
 
 	private void collectAsyncFailure(Throwable failure) {
 		collectAsyncAction(CompletableFuture.failedFuture(failure));
@@ -1407,38 +1495,39 @@ public class AdvancedCoreUser {
 
 	/** Queues a legacy Bukkit action while exposing a nonblocking completion internally. */
 	private void scheduleLegacyRewardAction(Runnable action, Player player, boolean playerAware) {
-		CompletableFuture<Void> completion = new CompletableFuture<>();
-		if (!collectAsyncAction(completion)) {
-			if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, action, player);
-			else getPlugin().getBukkitScheduler().runTask(plugin, action);
-			return;
-		}
-		AtomicBoolean claimed = new AtomicBoolean();
-		Runnable dispatch = () -> {
-			if (!claimed.compareAndSet(false, true)) return;
-			if (!plugin.isEnabled()) {
-				completion.completeExceptionally(new IllegalStateException("Plugin disabled before scheduled reward action ran"));
-				return;
-			}
+		if (!collectAsyncAction(() -> {
+			CompletableFuture<Void> completion = new CompletableFuture<>();
+			AtomicBoolean claimed = new AtomicBoolean();
+			Runnable dispatch = () -> {
+				if (!claimed.compareAndSet(false, true)) return;
+				if (!plugin.isEnabled()) {
+					completion.completeExceptionally(new IllegalStateException("Plugin disabled before scheduled reward action ran"));
+					return;
+				}
+				try {
+					action.run();
+					completion.complete(null);
+				} catch (Throwable failure) {
+					completion.completeExceptionally(failure);
+				}
+			};
 			try {
-				action.run();
-				completion.complete(null);
+				if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, dispatch, player);
+				else getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
 			} catch (Throwable failure) {
+				claimed.set(true);
 				completion.completeExceptionally(failure);
 			}
-		};
-		try {
-			if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, dispatch, player);
-			else getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
-		} catch (Throwable failure) {
-			claimed.set(true);
-			completion.completeExceptionally(failure);
+			CompletableFuture.delayedExecutor(30, TimeUnit.SECONDS).execute(() -> {
+				if (claimed.compareAndSet(false, true)) {
+					completion.completeExceptionally(new TimeoutException("Timed out waiting for scheduled reward action"));
+				}
+			});
+			return completion;
+		})) {
+			if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, action, player);
+			else getPlugin().getBukkitScheduler().runTask(plugin, action);
 		}
-		CompletableFuture.delayedExecutor(30, TimeUnit.SECONDS).execute(() -> {
-			if (claimed.compareAndSet(false, true)) {
-				completion.completeExceptionally(new TimeoutException("Timed out waiting for scheduled reward action"));
-			}
-		});
 	}
 
 	/**

@@ -52,6 +52,7 @@ public class Reward {
 	private static final ThreadLocal<String> ACTIVE_REPLAY_OCCURRENCE_ID = new ThreadLocal<>();
 	private static final String REPLAY_SELECTION_PREFIX = "__advancedcore_replay_selection_";
 	private static final String REPLAY_COMMAND_PREFIX = "__advancedcore_replay_commands_";
+	private static final String REPLAY_LEGACY_ACTION_PREFIX = "__advancedcore_replay_legacy_actions_";
 
 	@Getter
 	@Setter
@@ -630,7 +631,27 @@ public class Reward {
 	}
 
 	private static boolean isReplayMetadataKey(String key) {
-		return key != null && (key.startsWith(REPLAY_SELECTION_PREFIX) || key.startsWith(REPLAY_COMMAND_PREFIX));
+		return key != null && (key.startsWith(REPLAY_SELECTION_PREFIX) || key.startsWith(REPLAY_COMMAND_PREFIX)
+				|| key.startsWith(REPLAY_LEGACY_ACTION_PREFIX));
+	}
+
+	/** Stable metadata key for the individual legacy actions produced by one injector. */
+	public static String legacyActionReplayKey(String injectionKey) {
+		String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(
+				(injectionKey == null ? "" : injectionKey).getBytes(StandardCharsets.UTF_8));
+		return REPLAY_LEGACY_ACTION_PREFIX + encoded;
+	}
+
+	/** Reads the number of legacy actions that have a durable per-injection checkpoint. */
+	public static int completedLegacyActions(ReplayState replayState, HashMap<String, String> placeholders,
+			String checkpointKey) {
+		String value = placeholders == null ? null : placeholders.get(checkpointKey);
+		if (value == null && replayState != null) value = replayState.replayMetadata(checkpointKey);
+		try {
+			return Math.max(0, value == null ? 0 : Integer.parseInt(value));
+		} catch (NumberFormatException ignored) {
+			return 0;
+		}
 	}
 
 	/** Attaches a captured replay state to an option object for a deferred child. */
@@ -708,6 +729,7 @@ public class Reward {
 		public synchronized void mergeReplayMetadataInto(HashMap<String, String> target) {
 			Reward.mergeReplayMetadata(target, replayMetadata);
 		}
+		public synchronized String replayMetadata(String key) { return replayMetadata.get(key); }
 		private synchronized boolean hasPersistedCheckpoint() {
 			return legacyCheckpoint || !completed.isEmpty() || !registryFingerprints.isEmpty();
 		}
@@ -737,7 +759,7 @@ public class Reward {
 		private synchronized void setCheckpointConsumer(Consumer<ReplayCheckpoint> consumer) {
 			checkpointConsumer = consumer;
 		}
-		private CompletionStage<Void> persistCheckpointAsync(AdvancedCorePlugin plugin,
+		public CompletionStage<Void> persistCheckpointAsync(AdvancedCorePlugin plugin,
 				HashMap<String, String> placeholders) {
 			Consumer<ReplayCheckpoint> consumer;
 			synchronized (this) { consumer = checkpointConsumer; }
@@ -761,6 +783,7 @@ public class Reward {
 			// instead of waiting forever without advancing its checkpoint.
 			return persisted.orTimeout(30, TimeUnit.SECONDS);
 		}
+
 	}
 
 	/** Immutable durable replay data emitted after every completed injection. */
@@ -868,7 +891,8 @@ public class Reward {
 		ACTIVE_REPLAY_KEY.set(injectionKey);
 		if (occurrenceId == null) ACTIVE_REPLAY_OCCURRENCE_ID.remove();
 		else ACTIVE_REPLAY_OCCURRENCE_ID.set(occurrenceId);
-		AdvancedCoreUser.AsyncActionCollection actionCollection = user.beginAsyncActionCollection();
+		AdvancedCoreUser.AsyncActionCollection actionCollection = user.beginAsyncActionCollection(replayState, placeholders,
+				injectionKey);
 		CompletionStage<Object> result = CompletableFuture.failedFuture(
 				new IllegalStateException("Reward injection did not produce a result"));
 		try {
@@ -896,7 +920,6 @@ public class Reward {
 		}
 		CompletableFuture<Object> combined = new CompletableFuture<>();
 		result.whenComplete((value, failure) -> {
-			user.claimAsyncContinuationActions(actionCollection);
 			user.endAsyncActionCollection(actionCollection).whenComplete((ignored, actionFailure) -> {
 			if (failure != null) combined.completeExceptionally(failure);
 			else if (actionFailure != null) combined.completeExceptionally(actionFailure);

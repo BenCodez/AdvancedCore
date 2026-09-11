@@ -160,8 +160,10 @@ class RewardAsyncInjectionTest {
 			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
 			CompletionStage<Void> result = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
 			assertFalse(result.toCompletableFuture().isDone());
-			assertEquals(2, queued.size());
-			for (Runnable action : queued) action.run();
+			assertEquals(1, queued.size());
+			queued.remove(0).run();
+			assertEquals(1, queued.size());
+			queued.remove(0).run();
 			result.toCompletableFuture().join();
 		}
 		verify(economy).depositPlayer(offlinePlayer, 2);
@@ -194,6 +196,79 @@ class RewardAsyncInjectionTest {
 			assertThrows(java.util.concurrent.CompletionException.class,
 					() -> reward.giveInjectedRewardsAsync(realUser, new HashMap<>()).toCompletableFuture().join());
 		}
+	}
+
+	@Test
+	void capturedAsyncContinuationActionCheckpointsRetryOnlyTheUnfinishedSuffix() throws Exception {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Checkpointed");
+		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
+		ArrayList<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> {
+			queued.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		CompletableFuture<Void> continuation = new CompletableFuture<>();
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				realUser.giveMoney(1);
+				realUser.giveMoney(2);
+				return null;
+			}
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				AdvancedCoreUser.AsyncActionContext context = ignoredUser.captureAsyncActionContext();
+				return continuation.thenApply(context.wrap(nothing -> {
+					realUser.giveMoney(1);
+					realUser.giveMoney(2);
+					return null;
+				}));
+			}
+		});
+
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
+			CompletionStage<Void> first = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+			continuation.complete(null);
+			assertEquals(1, queued.size());
+			queued.remove(0).run();
+			assertEquals(1, queued.size());
+			enabled.set(false);
+			queued.remove(0).run();
+			Throwable failure = assertThrows(java.util.concurrent.CompletionException.class,
+					() -> first.toCompletableFuture().join());
+			Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
+			assertTrue(checkpoint.getReplayPlaceholders().entrySet().stream().anyMatch(entry ->
+					entry.getKey().startsWith("__advancedcore_replay_legacy_actions_") && entry.getValue().equals("1")));
+
+			enabled.set(true);
+			Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+			java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+			state.setAccessible(true);
+			java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+					AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+			replay.setAccessible(true);
+			CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, realUser,
+					checkpoint.getReplayPlaceholders(), 0,
+					state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
+					"AsyncReward");
+			assertEquals(1, queued.size(), "the completed first action is never scheduled again");
+			queued.remove(0).run();
+			resumed.toCompletableFuture().join();
+		}
+		verify(economy).depositPlayer(offlinePlayer, 1);
+		verify(economy).depositPlayer(offlinePlayer, 2);
 	}
 
 	@Test
@@ -231,7 +306,7 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
-	void legacyActionsCreatedByAnAsyncContinuationAreAwaited() {
+	void legacyActionsCapturedByAsyncContextAreAwaited() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(config);
@@ -254,10 +329,11 @@ class RewardAsyncInjectionTest {
 					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
 			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
 					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
-				return continuation.thenApply(nothing -> {
+				AdvancedCoreUser.AsyncActionContext context = ignoredUser.captureAsyncActionContext();
+				return continuation.thenApply(context.wrap(nothing -> {
 					realUser.giveMoney(2);
 					return null;
-				});
+				}));
 			}
 		});
 
@@ -276,7 +352,7 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
-	void serializedPersistedReplaysWaitForThePriorContinuationAndLegacyAction() throws Exception {
+	void serializedPersistedReplaysDoNotClaimUnscopedContinuationActions() throws Exception {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(config);
@@ -325,10 +401,9 @@ class RewardAsyncInjectionTest {
 
 			continuations.get(0).complete(null);
 			assertEquals(1, queuedActions.size());
-			assertEquals(1, invocations.get(), "the first legacy action is part of the replay tail");
+			assertEquals(2, invocations.get(), "the second replay starts after the first async stage completes");
 			queuedActions.get(0).run();
 
-			assertEquals(2, invocations.get(), "the second replay starts only after the first action completed");
 			continuations.get(1).complete(null);
 			assertEquals(2, queuedActions.size());
 			queuedActions.get(1).run();
@@ -338,7 +413,7 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
-	void legacyContinuationActionIsClaimedOnlyByItsCompletingScope() {
+	void unscopedActionsAreNotClaimedByAnArbitraryCollection() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(config);
@@ -367,7 +442,7 @@ class RewardAsyncInjectionTest {
 				CompletionStage<Void> innerCompletion = realUser.endAsyncActionCollection(inner);
 				assertEquals(1, queuedActions.size());
 				assertTrue(outerCompletion.toCompletableFuture().isDone());
-				assertFalse(innerCompletion.toCompletableFuture().isDone());
+				assertTrue(innerCompletion.toCompletableFuture().isDone());
 			queuedActions.get(0).run();
 			outerCompletion.toCompletableFuture().join();
 			innerCompletion.toCompletableFuture().join();
@@ -375,7 +450,43 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
-	void failedLegacyActionCreatedByAnAsyncContinuationFailsTheReward() {
+	void synchronousRewardActionIsNotClaimedByPendingAsyncInjection() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		when(vault.getEcon()).thenReturn(mock(Economy.class));
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Independent");
+		ArrayList<Runnable> queuedActions = new ArrayList<>();
+		doAnswer(invocation -> {
+			queuedActions.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		CompletableFuture<Object> pending = new CompletableFuture<>();
+		handler.getInjectedRewards().add(new RewardInject("Async") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return pending; }
+		});
+
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			CompletionStage<Void> result = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+			realUser.giveMoney(4);
+			assertEquals(1, queuedActions.size());
+			pending.complete(null);
+			assertTrue(result.toCompletableFuture().isDone(),
+					"an unrelated queued action must not become this async reward's dependency");
+		}
+	}
+
+	@Test
+	void failedLegacyActionCreatedByAnAsyncContinuationDoesNotFailAnUnrelatedReward() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(config);
@@ -410,12 +521,12 @@ class RewardAsyncInjectionTest {
 			continuation.complete(null);
 			enabled.set(false);
 			queued.get().run();
-			assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
+			result.toCompletableFuture().join();
 		}
 	}
 
 	@Test
-	void concurrentContinuationActionsRemainBoundToTheirOwnReward() {
+	void concurrentContinuationsDoNotClaimOneAnotherActions() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(config);
@@ -457,7 +568,7 @@ class RewardAsyncInjectionTest {
 			CompletionStage<Void> second = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
 
 			continuations.get(0).complete(null);
-			assertThrows(java.util.concurrent.CompletionException.class, () -> first.toCompletableFuture().join());
+			first.toCompletableFuture().join();
 			assertFalse(second.toCompletableFuture().isDone());
 
 			continuations.get(1).complete(null);
