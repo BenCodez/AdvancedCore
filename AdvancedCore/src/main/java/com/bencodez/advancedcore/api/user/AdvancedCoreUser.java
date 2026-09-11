@@ -8,11 +8,14 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +24,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -69,10 +73,96 @@ public class AdvancedCoreUser {
 	private static final String ASYNC_OCCURRENCE_DELIMITER = "%asyncoccurrence%";
 	private static final Object REPLAY_CLAIMS_LOCK = new Object();
 	private static final WeakHashMap<AdvancedCorePlugin, HashMap<String, ReplayClaims>> REPLAY_CLAIMS = new WeakHashMap<>();
+	private static final ThreadLocal<AsyncActionCollection> ASYNC_ACTION_COLLECTION = new ThreadLocal<>();
+	private static final ThreadLocal<ArrayList<CompletionStage<Void>>> CONTINUATION_ASYNC_ACTIONS =
+			ThreadLocal.withInitial(ArrayList::new);
+	private final Set<AsyncActionCollection> activeAsyncActionCollections = Collections
+			.newSetFromMap(new IdentityHashMap<>());
+
+	/** Internal completion scope used by asynchronous reward dispatch. */
+	public static final class AsyncActionCollection {
+		private final AsyncActionCollection previous;
+		private final ArrayList<CompletionStage<Void>> actions = new ArrayList<>();
+		private boolean closed;
+
+		private AsyncActionCollection(AsyncActionCollection previous) {
+			this.previous = previous;
+		}
+
+		private synchronized boolean add(CompletionStage<Void> action) {
+			if (closed) return false;
+			actions.add(action);
+			return true;
+		}
+
+		private synchronized CompletionStage<Void> closeAndAwait() {
+			closed = true;
+			CompletionStage<Void> result = CompletableFuture.completedFuture(null);
+			for (CompletionStage<Void> action : actions) {
+				result = result.thenCompose(ignored -> action);
+			}
+			return result;
+		}
+	}
+
+	/** Starts collecting completion stages created by legacy reward callbacks. */
+	public AsyncActionCollection beginAsyncActionCollection() {
+		AsyncActionCollection collection = new AsyncActionCollection(ASYNC_ACTION_COLLECTION.get());
+		synchronized (activeAsyncActionCollections) {
+			activeAsyncActionCollections.add(collection);
+		}
+		ASYNC_ACTION_COLLECTION.set(collection);
+		return collection;
+	}
+
+	/** Restores the calling thread's previous collection while keeping this scope active for its returned stage. */
+	public void restoreAsyncActionCollectionScope(AsyncActionCollection collection) {
+		if (collection == null || ASYNC_ACTION_COLLECTION.get() != collection) return;
+		if (collection.previous == null) ASYNC_ACTION_COLLECTION.remove();
+		else ASYNC_ACTION_COLLECTION.set(collection.previous);
+	}
+
+	/** Closes a completed async scope and returns completion for every collected action. */
+	public CompletionStage<Void> endAsyncActionCollection(AsyncActionCollection collection) {
+		if (collection == null) return CompletableFuture.completedFuture(null);
+		restoreAsyncActionCollectionScope(collection);
+		synchronized (activeAsyncActionCollections) {
+			activeAsyncActionCollections.remove(collection);
+			return collection.closeAndAwait();
+		}
+	}
+
+	private boolean collectAsyncAction(CompletionStage<Void> action) {
+		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
+		if (collection != null && collection.add(action)) return true;
+		synchronized (activeAsyncActionCollections) {
+			if (activeAsyncActionCollections.isEmpty()) return false;
+			// A CompletionStage continuation runs before completion callbacks attached
+			// to its returned stage. Hold its legacy action on that same thread until
+			// requestInjectionAsync's callback claims it for the exact collection.
+			CONTINUATION_ASYNC_ACTIONS.get().add(action);
+			return true;
+		}
+	}
+
+	/** Claims legacy actions created by the continuation that just completed on this thread. */
+	public void claimAsyncContinuationActions(AsyncActionCollection collection) {
+		if (collection == null) return;
+		ArrayList<CompletionStage<Void>> pending = CONTINUATION_ASYNC_ACTIONS.get();
+		if (pending.isEmpty()) return;
+		for (CompletionStage<Void> action : pending) collection.add(action);
+		pending.clear();
+		CONTINUATION_ASYNC_ACTIONS.remove();
+	}
+
+	private void collectAsyncFailure(Throwable failure) {
+		collectAsyncAction(CompletableFuture.failedFuture(failure));
+	}
 
 	private static final class ReplayClaims {
 		private final HashMap<String, Integer> offline = new HashMap<>();
 		private final HashSet<String> timed = new HashSet<>();
+		private CompletableFuture<Void> serialReplayTail = CompletableFuture.completedFuture(null);
 	}
 
 	/**
@@ -564,10 +654,21 @@ public class AdvancedCoreUser {
 					AtomicReference<String> currentEntry = new AtomicReference<>(entry.getKey());
 					replayOptions.setAsyncReplayCheckpointConsumer(
 							checkpoint -> checkpointTimedReward(currentEntry, time, checkpoint));
-					plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
-							new PersistedQueueReference(rewardReference), replayOptions).whenComplete((ignored, failure) -> {
-						if (failure == null) completeTimedReward(currentEntry.get(), time);
-						else restoreTimedReward(currentEntry.get(), time, failure);
+					enqueuePersistedReplay(() -> {
+						CompletionStage<Void> replay;
+						try {
+							replay = plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
+									new PersistedQueueReference(rewardReference), replayOptions);
+							if (replay == null) throw new IllegalStateException("Timed reward replay returned no completion stage");
+						} catch (Throwable failure) {
+							restoreTimedReward(currentEntry.get(), time, failure);
+							return CompletableFuture.completedFuture(null);
+						}
+						return replay.handle((ignored, failure) -> {
+							if (failure == null) completeTimedReward(currentEntry.get(), time);
+							else restoreTimedReward(currentEntry.get(), time, failure);
+							return null;
+						});
 					});
 					String rewardName = rewardReference;
 					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
@@ -616,12 +717,55 @@ public class AdvancedCoreUser {
 			AtomicReference<String> currentEntry = new AtomicReference<>(rewardEntry);
 			options.setAsyncReplayCheckpointConsumer(checkpoint -> checkpointOfflineReward(currentEntry, checkpoint));
 
-			plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
-					new PersistedQueueReference(rewardReference), options).whenComplete((ignored, failure) -> {
-						if (failure == null) completeOfflineReward(currentEntry.get());
-						else restoreOfflineReward(currentEntry.get(), failure);
-					});
+			enqueuePersistedReplay(() -> {
+				CompletionStage<Void> replay;
+				try {
+					replay = plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
+							new PersistedQueueReference(rewardReference), options);
+					if (replay == null) throw new IllegalStateException("Offline reward replay returned no completion stage");
+				} catch (Throwable failure) {
+					restoreOfflineReward(currentEntry.get(), failure);
+					return CompletableFuture.completedFuture(null);
+				}
+				return replay.handle((ignored, failure) -> {
+					if (failure == null) completeOfflineReward(currentEntry.get());
+					else restoreOfflineReward(currentEntry.get(), failure);
+					return null;
+				});
+			});
 		}
+	}
+
+	/**
+	 * Runs persisted offline and timed occurrences one at a time for this plugin
+	 * and user. The tail deliberately absorbs a completed occurrence's failure:
+	 * its own restore path retains the queue entry, while the next occurrence must
+	 * still be allowed to start without blocking a caller thread.
+	 */
+	private void enqueuePersistedReplay(Supplier<CompletionStage<Void>> replay) {
+		ReplayClaims claims;
+		CompletableFuture<Void> previous;
+		CompletableFuture<Void> next = new CompletableFuture<>();
+		synchronized (plugin) {
+			claims = replayClaims();
+			previous = claims.serialReplayTail;
+			claims.serialReplayTail = next;
+		}
+		previous.whenComplete((ignored, previousFailure) -> {
+			CompletionStage<Void> stage;
+			try {
+				stage = replay.get();
+				if (stage == null) throw new IllegalStateException("Persisted reward replay returned no completion stage");
+			} catch (Throwable failure) {
+				next.complete(null);
+				releaseReplayClaimsIfEmpty(claims);
+				return;
+			}
+			stage.whenComplete((result, failure) -> {
+				next.complete(null);
+				releaseReplayClaimsIfEmpty(claims);
+			});
+		});
 	}
 
 	private void checkpointOfflineReward(AtomicReference<String> currentEntry, Reward.ReplayCheckpoint checkpoint) {
@@ -1119,15 +1263,11 @@ public class AdvancedCoreUser {
 		final Player player = getPlayer();
 
 		if (plugin.isEnabled()) {
-			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					if (player != null) {
-						plugin.getFullInventoryHandler().giveItem(player, item);
-					}
-				}
-			}, player);
+			scheduleLegacyRewardAction(() -> {
+				if (player != null) plugin.getFullInventoryHandler().giveItem(player, item);
+			}, player, true);
+		} else {
+			collectAsyncFailure(new IllegalStateException("Plugin disabled before item reward was scheduled"));
 		}
 
 	}
@@ -1155,15 +1295,11 @@ public class AdvancedCoreUser {
 		final Player player = getPlayer();
 
 		if (plugin.isEnabled()) {
-			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					if (player != null) {
-						plugin.getFullInventoryHandler().giveItem(player, item);
-					}
-				}
-			}, player);
+			scheduleLegacyRewardAction(() -> {
+				if (player != null) plugin.getFullInventoryHandler().giveItem(player, item);
+			}, player, true);
+		} else {
+			collectAsyncFailure(new IllegalStateException("Plugin disabled before item reward was scheduled"));
 		}
 
 	}
@@ -1175,36 +1311,28 @@ public class AdvancedCoreUser {
 	 */
 	public void giveMoney(double m) {
 		if (!plugin.isEnabled()) {
+			collectAsyncFailure(new IllegalStateException("Plugin disabled before money reward was scheduled"));
 			return;
 		}
 		if (plugin.getVaultHandler() != null && plugin.getVaultHandler().getEcon() != null) {
 			try {
 				if (m > 0) {
 					final double money = m;
-					getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-						@Override
-						public void run() {
-							plugin.getVaultHandler().getEcon().depositPlayer(getOfflinePlayer(), money);
-						}
-					});
+					scheduleLegacyRewardAction(
+							() -> plugin.getVaultHandler().getEcon().depositPlayer(getOfflinePlayer(), money), null, false);
 
 				} else if (m < 0) {
 					m = m * -1;
 					final double money = m;
-					getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-						@Override
-						public void run() {
-							plugin.getVaultHandler().getEcon().withdrawPlayer(getOfflinePlayer(), money);
-						}
-					});
+					scheduleLegacyRewardAction(
+							() -> plugin.getVaultHandler().getEcon().withdrawPlayer(getOfflinePlayer(), money), null, false);
 
 				}
 			} catch (
 
 			IllegalStateException e) {
 				e.printStackTrace();
+				collectAsyncFailure(e);
 			}
 		}
 	}
@@ -1228,17 +1356,48 @@ public class AdvancedCoreUser {
 	public void givePotionEffect(String potionName, int duration, int amplifier) {
 		Player player = getPlayer();
 		if (player != null && plugin.isEnabled()) {
-			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-				@SuppressWarnings("deprecation")
-				@Override
-				public void run() {
-					player.addPotionEffect(
-							new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier));
-				}
-			}, player);
-
+			scheduleLegacyRewardAction(() -> player.addPotionEffect(
+					new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier)), player, true);
+		} else if (player != null && ASYNC_ACTION_COLLECTION.get() != null) {
+			collectAsyncFailure(new IllegalStateException(
+					"Potion reward could not be scheduled because the plugin is unavailable"));
 		}
+	}
+
+	/** Queues a legacy Bukkit action while exposing a nonblocking completion internally. */
+	private void scheduleLegacyRewardAction(Runnable action, Player player, boolean playerAware) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		if (!collectAsyncAction(completion)) {
+			if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, action, player);
+			else getPlugin().getBukkitScheduler().runTask(plugin, action);
+			return;
+		}
+		AtomicBoolean claimed = new AtomicBoolean();
+		Runnable dispatch = () -> {
+			if (!claimed.compareAndSet(false, true)) return;
+			if (!plugin.isEnabled()) {
+				completion.completeExceptionally(new IllegalStateException("Plugin disabled before scheduled reward action ran"));
+				return;
+			}
+			try {
+				action.run();
+				completion.complete(null);
+			} catch (Throwable failure) {
+				completion.completeExceptionally(failure);
+			}
+		};
+		try {
+			if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, dispatch, player);
+			else getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
+		} catch (Throwable failure) {
+			claimed.set(true);
+			completion.completeExceptionally(failure);
+		}
+		CompletableFuture.delayedExecutor(30, TimeUnit.SECONDS).execute(() -> {
+			if (claimed.compareAndSet(false, true)) {
+				completion.completeExceptionally(new TimeoutException("Timed out waiting for scheduled reward action"));
+			}
+		});
 	}
 
 	/**
@@ -1630,7 +1789,7 @@ public class AdvancedCoreUser {
 				return CompletableFuture.failedFuture(
 						new IllegalStateException("Player command could not run because the player or plugin is unavailable"));
 			}
-			return Reward.replayCommandSequence(plugin, placeholders, "player", cmds, command -> {
+			return Reward.replayCommandSequence(plugin, placeholders, "player", commands, cmds, (command, ignoredIndex) -> {
 				plugin.debug("Executing player command for " + getPlayerName() + ": " + command);
 				return runPlayerCommandAsync(player, command);
 			});

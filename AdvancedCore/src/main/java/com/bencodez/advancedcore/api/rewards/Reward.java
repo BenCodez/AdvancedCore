@@ -51,6 +51,7 @@ public class Reward {
 	private static final ThreadLocal<String> ACTIVE_REPLAY_KEY = new ThreadLocal<>();
 	private static final ThreadLocal<String> ACTIVE_REPLAY_OCCURRENCE_ID = new ThreadLocal<>();
 	private static final String REPLAY_SELECTION_PREFIX = "__advancedcore_replay_selection_";
+	private static final String REPLAY_COMMAND_PREFIX = "__advancedcore_replay_commands_";
 
 	@Getter
 	@Setter
@@ -389,7 +390,9 @@ public class Reward {
 					cause);
 			this.replayState = replayState;
 			this.completedInjectionCount = replayState.highestCompletedCount();
-			this.replayPlaceholders = new HashMap<>(replayPlaceholders);
+			HashMap<String, String> placeholders = new HashMap<>(replayPlaceholders);
+			replayState.mergeReplayMetadataInto(placeholders);
+			this.replayPlaceholders = placeholders;
 		}
 
 		public Map<String, Integer> getReplayProgress() { return replayState.copyProgress(); }
@@ -448,11 +451,16 @@ public class Reward {
 				.encodeToString((activeKey == null ? "root" : activeKey).getBytes(StandardCharsets.UTF_8));
 		if (placeholders.containsKey(storageKey)) {
 			String stored = placeholders.get(storageKey);
+			ReplayState replayState = ACTIVE_REPLAY_STATE.get();
+			if (replayState != null) replayState.recordReplayMetadata(storageKey, stored);
 			return stored.isEmpty() ? null : new String(Base64.getUrlDecoder().decode(stored), StandardCharsets.UTF_8);
 		}
 		String selected = selector.get();
-		placeholders.put(storageKey, selected == null ? "" : Base64.getUrlEncoder().withoutPadding()
-				.encodeToString(selected.getBytes(StandardCharsets.UTF_8)));
+		String encoded = selected == null ? "" : Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(selected.getBytes(StandardCharsets.UTF_8));
+		placeholders.put(storageKey, encoded);
+		ReplayState replayState = ACTIVE_REPLAY_STATE.get();
+		if (replayState != null) replayState.recordReplayMetadata(storageKey, encoded);
 		return selected;
 	}
 
@@ -468,18 +476,30 @@ public class Reward {
 	public static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
 			HashMap<String, String> placeholders, String lane, List<String> commands,
 			BiFunction<String, Integer, CompletionStage<Void>> dispatch) {
-		return replayCommandSequence(plugin, placeholders, lane, commands, currentReplayState(), currentReplayKey(), dispatch);
+		return replayCommandSequence(plugin, placeholders, lane, commands, commands, currentReplayState(), currentReplayKey(), dispatch);
+	}
+
+	/** Executes expanded commands while identifying the sequence by stable templates. */
+	public static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders, String lane, List<String> commandTemplates,
+			List<String> expandedCommands, BiFunction<String, Integer, CompletionStage<Void>> dispatch) {
+		return replayCommandSequence(plugin, placeholders, lane, commandTemplates, expandedCommands,
+				currentReplayState(), currentReplayKey(), dispatch);
 	}
 
 	static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
-			HashMap<String, String> placeholders, String lane, List<String> commands,
+			HashMap<String, String> placeholders, String lane, List<String> commandTemplates,
+			List<String> expandedCommands,
 			ReplayState replayState, String activeKey,
 			BiFunction<String, Integer, CompletionStage<Void>> dispatch) {
-		if (commands == null || commands.isEmpty()) return CompletableFuture.completedFuture(null);
+		if (commandTemplates == null || commandTemplates.isEmpty()) return CompletableFuture.completedFuture(null);
+		if (expandedCommands == null || expandedCommands.size() != commandTemplates.size()) {
+			return CompletableFuture.failedFuture(new IllegalArgumentException("Command templates and expansions differ in size"));
+		}
 		if (replayState == null || activeKey == null) {
 			CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
-			for (int index = 0; index < commands.size(); index++) {
-				String command = commands.get(index);
+			for (int index = 0; index < expandedCommands.size(); index++) {
+				String command = expandedCommands.get(index);
 				int commandIndex = index;
 				sequence = sequence.thenCompose(ignored -> dispatch.apply(command, commandIndex));
 			}
@@ -487,25 +507,95 @@ public class Reward {
 		}
 		StringBuilder identity = new StringBuilder(activeKey == null ? "root" : activeKey)
 				.append('\n').append(lane == null ? "commands" : lane);
-		for (String command : commands) identity.append('\n').append(command == null ? "" : command);
-		String storageKey = "__advancedcore_replay_commands_" + digest(identity.toString());
+		identity.append('\n').append(encodeCommandSnapshot(commandTemplates));
+		String storageKey = REPLAY_COMMAND_PREFIX + digest(identity.toString());
+		String snapshotKey = storageKey + "_snapshot";
+		List<String> commands;
+		String storedSnapshot = placeholders.get(snapshotKey);
+		boolean createdSnapshot = storedSnapshot == null;
+		if (storedSnapshot == null) {
+			commands = new ArrayList<>(expandedCommands);
+			String encodedSnapshot = encodeCommandSnapshot(commands);
+			placeholders.put(snapshotKey, encodedSnapshot);
+			replayState.recordReplayMetadata(snapshotKey, encodedSnapshot);
+		} else {
+			replayState.recordReplayMetadata(snapshotKey, storedSnapshot);
+			try {
+				commands = decodeCommandSnapshot(storedSnapshot, commandTemplates.size());
+			} catch (IllegalArgumentException failure) {
+				return CompletableFuture.failedFuture(new IllegalStateException("Malformed command replay snapshot", failure));
+			}
+		}
 		int completed = 0;
 		try {
 			completed = Integer.parseInt(placeholders.getOrDefault(storageKey, "0"));
 		} catch (NumberFormatException ignored) { }
-		if (completed < 0 || completed > commands.size()) completed = 0;
-		CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+		if (placeholders.containsKey(storageKey)) {
+			replayState.recordReplayMetadata(storageKey, placeholders.get(storageKey));
+		}
+		if (completed < 0 || completed > commandTemplates.size()) completed = 0;
+		// Persist the concrete expansion before issuing its first side effect. A
+		// restart during an indeterminate dispatch must reuse this exact payload,
+		// even though no command-progress marker exists yet.
+		CompletionStage<Void> sequence = createdSnapshot
+				? replayState.persistCheckpointAsync(plugin, placeholders)
+				: CompletableFuture.completedFuture(null);
 		for (int index = completed; index < commands.size(); index++) {
 			String command = commands.get(index);
 			int completedCount = index + 1;
 			int commandIndex = index;
 			sequence = sequence.thenCompose(ignored -> dispatch.apply(command, commandIndex)).thenCompose(ignored -> {
 				placeholders.put(storageKey, String.valueOf(completedCount));
+				replayState.recordReplayMetadata(storageKey, String.valueOf(completedCount));
 				return replayState == null ? CompletableFuture.completedFuture(null)
 						: replayState.persistCheckpointAsync(plugin, placeholders);
 			});
 		}
 		return sequence;
+	}
+
+	static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders, String lane, List<String> commands,
+			ReplayState replayState, String activeKey,
+			BiFunction<String, Integer, CompletionStage<Void>> dispatch) {
+		return replayCommandSequence(plugin, placeholders, lane, commands, commands, replayState, activeKey, dispatch);
+	}
+
+	private static String encodeCommandSnapshot(List<String> commands) {
+		StringBuilder encoded = new StringBuilder("v1:");
+		for (String command : commands) {
+			if (encoded.length() > 3) encoded.append('.');
+			if (command == null) encoded.append('~');
+			else if (command.isEmpty()) encoded.append('=');
+			else encoded.append(Base64.getUrlEncoder().withoutPadding()
+					.encodeToString(command.getBytes(StandardCharsets.UTF_8)));
+		}
+		return encoded.toString();
+	}
+
+	private static List<String> decodeCommandSnapshot(String encoded, int expectedSize) {
+		if (!encoded.startsWith("v1:")) throw new IllegalArgumentException("Unknown command snapshot version");
+		String body = encoded.substring(3);
+		ArrayList<String> commands = new ArrayList<>();
+		if (!body.isEmpty()) {
+			for (String item : body.split("\\.", -1)) {
+				if (item.equals("~")) {
+					commands.add(null);
+					continue;
+				}
+				if (item.equals("=")) {
+					commands.add("");
+					continue;
+				}
+				try {
+					commands.add(new String(Base64.getUrlDecoder().decode(item), StandardCharsets.UTF_8));
+				} catch (IllegalArgumentException failure) {
+					throw new IllegalArgumentException("Invalid command snapshot encoding", failure);
+				}
+			}
+		}
+		if (commands.size() != expectedSize) throw new IllegalArgumentException("Command snapshot size changed");
+		return commands;
 	}
 
 	private static String digest(String value) {
@@ -517,6 +607,18 @@ public class Reward {
 		} catch (NoSuchAlgorithmException failure) {
 			throw new IllegalStateException("SHA-256 is unavailable for reward replay checkpoints", failure);
 		}
+	}
+
+	/** Copies only durable replay markers; ordinary reward placeholders stay isolated. */
+	public static void mergeReplayMetadata(HashMap<String, String> target, Map<String, String> source) {
+		if (target == null || source == null) return;
+		for (Entry<String, String> entry : source.entrySet()) {
+			if (isReplayMetadataKey(entry.getKey())) target.put(entry.getKey(), entry.getValue());
+		}
+	}
+
+	private static boolean isReplayMetadataKey(String key) {
+		return key != null && (key.startsWith(REPLAY_SELECTION_PREFIX) || key.startsWith(REPLAY_COMMAND_PREFIX));
 	}
 
 	/** Attaches a captured replay state to an option object for a deferred child. */
@@ -566,6 +668,7 @@ public class Reward {
 	public static final class ReplayState {
 		private final HashMap<String, Integer> completed = new HashMap<>();
 		private final HashMap<String, String> registryFingerprints = new HashMap<>();
+		private final HashMap<String, String> replayMetadata = new HashMap<>();
 		private final boolean legacyCheckpoint;
 		private Consumer<ReplayCheckpoint> checkpointConsumer;
 		private ReplayState(Map<String, Integer> initial) { this(initial, null, false); }
@@ -585,6 +688,13 @@ public class Reward {
 		}
 		private synchronized Map<String, String> copyRegistryFingerprints() {
 			return new HashMap<>(registryFingerprints);
+		}
+		/** Records a reserved marker produced by a nested replay-aware injector. */
+		public synchronized void recordReplayMetadata(String key, String value) {
+			if (isReplayMetadataKey(key)) replayMetadata.put(key, value);
+		}
+		public synchronized void mergeReplayMetadataInto(HashMap<String, String> target) {
+			Reward.mergeReplayMetadata(target, replayMetadata);
 		}
 		private synchronized boolean hasPersistedCheckpoint() {
 			return legacyCheckpoint || !completed.isEmpty() || !registryFingerprints.isEmpty();
@@ -739,25 +849,42 @@ public class Reward {
 		ACTIVE_REPLAY_KEY.set(injectionKey);
 		if (occurrenceId == null) ACTIVE_REPLAY_OCCURRENCE_ID.remove();
 		else ACTIVE_REPLAY_OCCURRENCE_ID.set(occurrenceId);
+		AdvancedCoreUser.AsyncActionCollection actionCollection = user.beginAsyncActionCollection();
+		CompletionStage<Object> result = CompletableFuture.failedFuture(
+				new IllegalStateException("Reward injection did not produce a result"));
 		try {
-		if (inject.supportsAsyncRequest()) {
-			return inject.onRewardRequestAsync(this, user, getConfig().getConfigData(), placeholders);
-		}
-		try {
-			return CompletableFuture.completedFuture(
-					inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders));
-		} catch (Exception failure) {
-			// Preserve the legacy per-injection isolation contract while allowing
-			// opted-in asynchronous injections to propagate durable failures.
-			failure.printStackTrace();
-			return CompletableFuture.completedFuture(null);
-		}
+			if (inject.supportsAsyncRequest()) {
+				result = inject.onRewardRequestAsync(this, user, getConfig().getConfigData(), placeholders);
+			} else {
+				try {
+					result = CompletableFuture.completedFuture(
+							inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders));
+				} catch (Exception failure) {
+					// Preserve the legacy per-injection isolation contract while allowing
+					// opted-in asynchronous injections to propagate durable failures.
+					failure.printStackTrace();
+					result = CompletableFuture.completedFuture(null);
+				}
+			}
+			if (result == null) result = CompletableFuture.failedFuture(
+					new IllegalStateException("Reward injection returned a null asynchronous result"));
 		} finally {
+			user.restoreAsyncActionCollectionScope(actionCollection);
 			if (previous == null) ACTIVE_REPLAY_STATE.remove(); else ACTIVE_REPLAY_STATE.set(previous);
 			if (previousKey == null) ACTIVE_REPLAY_KEY.remove(); else ACTIVE_REPLAY_KEY.set(previousKey);
 			if (previousOccurrenceId == null) ACTIVE_REPLAY_OCCURRENCE_ID.remove();
 			else ACTIVE_REPLAY_OCCURRENCE_ID.set(previousOccurrenceId);
 		}
+		CompletableFuture<Object> combined = new CompletableFuture<>();
+		result.whenComplete((value, failure) -> {
+			user.claimAsyncContinuationActions(actionCollection);
+			user.endAsyncActionCollection(actionCollection).whenComplete((ignored, actionFailure) -> {
+			if (failure != null) combined.completeExceptionally(failure);
+			else if (actionFailure != null) combined.completeExceptionally(actionFailure);
+			else combined.complete(value);
+			});
+		});
+		return combined;
 	}
 
 	private void addPlaceholder(RewardInject inject, Object obj, HashMap<String, String> placeholders) {

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletionException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
@@ -120,12 +121,26 @@ public class RewardExecutor {
             String parentReplayKey = options.getAsyncReplayKey();
             if (parentReplayKey == null) parentReplayKey = Reward.currentReplayKey();
             if (parentReplayKey == null) parentReplayKey = "list:" + path;
+            final String stableParentReplayKey = parentReplayKey;
             int rewardIndex = 0;
             for (String nestedReward : new ArrayList<>(data.getStringList(path))) {
-                RewardOptions nestedOptions = options.copyForNestedDispatch(
-                        parentReplayKey + "/" + nestedReward + ":" + rewardIndex++);
-                nestedOptions.setAsyncReplayState(replayState);
-                sequence = sequence.thenCompose(ignored -> giveRewardAsync(user, nestedReward, nestedOptions));
+                final int nestedIndex = rewardIndex++;
+                sequence = sequence.thenCompose(ignored -> {
+                    // Clone only when this child is actually reached. This lets
+                    // metadata from earlier children be merged before a later
+                    // child receives its isolated ordinary placeholders.
+                    RewardOptions nestedOptions = options.copyForNestedDispatch(
+                            stableParentReplayKey + "/" + nestedReward + ":" + nestedIndex);
+                    nestedOptions.setAsyncReplayState(replayState);
+                    return giveRewardAsync(user, nestedReward, nestedOptions).handle((childResult, failure) -> {
+                        // Child options stay isolated for normal placeholders. Replay
+                        // markers are shared lazily so an earlier child remains durable
+                        // when a later child fails and the list is restarted.
+                        replayState.mergeReplayMetadataInto(options.getPlaceholders());
+                        if (failure != null) throw new CompletionException(failure);
+                        return childResult;
+                    });
+                });
             }
             return sequence;
         }

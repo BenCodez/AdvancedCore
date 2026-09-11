@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.times;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,8 +31,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +47,9 @@ import org.mockito.Answers;
 import org.mockito.MockedConstruction;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
+import com.bencodez.advancedcore.VaultHandler;
+import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
@@ -52,6 +62,8 @@ import com.bencodez.advancedcore.api.rewards.builtin.RewardRandomReward;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardJavascript;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+
+import net.milkbowl.vault.economy.Economy;
 
 class RewardAsyncInjectionTest {
 
@@ -100,6 +112,414 @@ class RewardAsyncInjectionTest {
 	void tearDown() {
 		handler.getDelayedTimer().shutdownNow();
 		AdvancedCorePlugin.setInstance(null);
+	}
+
+	@Test
+	void legacyScheduledRewardsWaitForQueuedBukkitActions() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		FullInventoryHandler inventory = mock(FullInventoryHandler.class);
+		when(plugin.getFullInventoryHandler()).thenReturn(inventory);
+		UUID uuid = UUID.randomUUID();
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, uuid, false, false);
+		realUser.setPlayerName("Legacy");
+		Player player = mock(Player.class);
+		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
+		ArrayList<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> {
+			queued.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		doAnswer(invocation -> {
+			queued.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class), eq(player));
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		})
+				.when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), eq(player));
+
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override
+			public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				realUser.giveMoney(2);
+				realUser.giveItem(new ItemStack(Material.STONE));
+				return null;
+			}
+		});
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
+			CompletionStage<Void> result = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+			assertFalse(result.toCompletableFuture().isDone());
+			assertEquals(2, queued.size());
+			for (Runnable action : queued) action.run();
+			result.toCompletableFuture().join();
+		}
+		verify(economy).depositPlayer(offlinePlayer, 2);
+		verify(inventory).giveItem(eq(player), any(ItemStack.class));
+	}
+
+	@Test
+	void legacySchedulerRejectionFailsAsyncRewardClosed() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		when(vault.getEcon()).thenReturn(mock(Economy.class));
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Legacy");
+		doThrow(new IllegalStateException("scheduler stopped")).when(scheduler)
+				.runTask(eq(plugin), any(Runnable.class));
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override
+			public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				realUser.giveMoney(2);
+				return null;
+			}
+		});
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			assertThrows(java.util.concurrent.CompletionException.class,
+					() -> reward.giveInjectedRewardsAsync(realUser, new HashMap<>()).toCompletableFuture().join());
+		}
+	}
+
+	@Test
+	void legacyQueuedActionFailsWhenPluginShutsDownBeforeExecution() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		when(vault.getEcon()).thenReturn(mock(Economy.class));
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Legacy");
+		AtomicReference<Runnable> queued = new AtomicReference<>();
+		doAnswer(invocation -> {
+			queued.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override
+			public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				realUser.giveMoney(2);
+				return null;
+			}
+		});
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			CompletionStage<Void> result = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+			assertFalse(result.toCompletableFuture().isDone());
+			enabled.set(false);
+			queued.get().run();
+			assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
+		}
+	}
+
+	@Test
+	void legacyActionsCreatedByAnAsyncContinuationAreAwaited() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Legacy");
+		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
+		ArrayList<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> {
+			queued.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		CompletableFuture<Void> continuation = new CompletableFuture<>();
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				return continuation.thenApply(nothing -> {
+					realUser.giveMoney(2);
+					return null;
+				});
+			}
+		});
+
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
+			CompletionStage<Void> result = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+			continuation.complete(null);
+			assertEquals(1, queued.size());
+			assertFalse(result.toCompletableFuture().isDone());
+			queued.get(0).run();
+			result.toCompletableFuture().join();
+		}
+		verify(economy).depositPlayer(offlinePlayer, 2);
+	}
+
+	@Test
+	void serializedPersistedReplaysWaitForThePriorContinuationAndLegacyAction() throws Exception {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Serialized");
+		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
+		ArrayList<Runnable> queuedActions = new ArrayList<>();
+		doAnswer(invocation -> {
+			queuedActions.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		ArrayList<CompletableFuture<Void>> continuations = new ArrayList<>();
+		continuations.add(new CompletableFuture<>());
+		continuations.add(new CompletableFuture<>());
+		AtomicInteger invocations = new AtomicInteger();
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				int index = invocations.getAndIncrement();
+				return continuations.get(index).thenApply(nothing -> {
+					realUser.giveMoney(index + 1);
+					return null;
+				});
+			}
+		});
+
+		java.lang.reflect.Method enqueue = AdvancedCoreUser.class.getDeclaredMethod("enqueuePersistedReplay",
+				java.util.function.Supplier.class);
+		enqueue.setAccessible(true);
+		java.util.function.Supplier<CompletionStage<Void>> replay =
+				() -> reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
+			enqueue.invoke(realUser, replay);
+			enqueue.invoke(realUser, replay);
+			assertEquals(1, invocations.get(), "the second replay must remain behind the first continuation");
+
+			continuations.get(0).complete(null);
+			assertEquals(1, queuedActions.size());
+			assertEquals(1, invocations.get(), "the first legacy action is part of the replay tail");
+			queuedActions.get(0).run();
+
+			assertEquals(2, invocations.get(), "the second replay starts only after the first action completed");
+			continuations.get(1).complete(null);
+			assertEquals(2, queuedActions.size());
+			queuedActions.get(1).run();
+		}
+		verify(economy).depositPlayer(offlinePlayer, 1);
+		verify(economy).depositPlayer(offlinePlayer, 2);
+	}
+
+	@Test
+	void legacyContinuationActionIsClaimedOnlyByItsCompletingScope() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		when(vault.getEcon()).thenReturn(mock(Economy.class));
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Nested");
+		ArrayList<Runnable> queuedActions = new ArrayList<>();
+		doAnswer(invocation -> {
+			queuedActions.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(mock(OfflinePlayer.class));
+			AdvancedCoreUser.AsyncActionCollection outer = realUser.beginAsyncActionCollection();
+			AdvancedCoreUser.AsyncActionCollection inner = realUser.beginAsyncActionCollection();
+			realUser.restoreAsyncActionCollectionScope(inner);
+				realUser.restoreAsyncActionCollectionScope(outer);
+				realUser.giveMoney(1);
+				realUser.claimAsyncContinuationActions(inner);
+
+				CompletionStage<Void> outerCompletion = realUser.endAsyncActionCollection(outer);
+				CompletionStage<Void> innerCompletion = realUser.endAsyncActionCollection(inner);
+				assertEquals(1, queuedActions.size());
+				assertTrue(outerCompletion.toCompletableFuture().isDone());
+				assertFalse(innerCompletion.toCompletableFuture().isDone());
+			queuedActions.get(0).run();
+			outerCompletion.toCompletableFuture().join();
+			innerCompletion.toCompletableFuture().join();
+		}
+	}
+
+	@Test
+	void failedLegacyActionCreatedByAnAsyncContinuationFailsTheReward() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		when(vault.getEcon()).thenReturn(mock(Economy.class));
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Legacy");
+		AtomicReference<Runnable> queued = new AtomicReference<>();
+		doAnswer(invocation -> {
+			queued.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		CompletableFuture<Void> continuation = new CompletableFuture<>();
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				return continuation.thenApply(nothing -> {
+					realUser.giveMoney(2);
+					return null;
+				});
+			}
+		});
+
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			CompletionStage<Void> result = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+			continuation.complete(null);
+			enabled.set(false);
+			queued.get().run();
+			assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
+		}
+	}
+
+	@Test
+	void concurrentContinuationActionsRemainBoundToTheirOwnReward() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Concurrent");
+		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
+		AtomicReference<Runnable> successfulAction = new AtomicReference<>();
+		doThrow(new IllegalStateException("first scheduler failure")).doAnswer(invocation -> {
+			successfulAction.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		ArrayList<CompletableFuture<Void>> continuations = new ArrayList<>();
+		continuations.add(new CompletableFuture<>());
+		continuations.add(new CompletableFuture<>());
+		AtomicInteger invocation = new AtomicInteger();
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				int index = invocation.getAndIncrement();
+				return continuations.get(index).thenApply(nothing -> {
+					realUser.giveMoney(index + 1);
+					return null;
+				});
+			}
+		});
+
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
+			CompletionStage<Void> first = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+			CompletionStage<Void> second = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
+
+			continuations.get(0).complete(null);
+			assertThrows(java.util.concurrent.CompletionException.class, () -> first.toCompletableFuture().join());
+			assertFalse(second.toCompletableFuture().isDone());
+
+			continuations.get(1).complete(null);
+			successfulAction.get().run();
+			second.toCompletableFuture().join();
+		}
+		verify(economy).depositPlayer(offlinePlayer, 2);
+	}
+
+	@Test
+	void commandSnapshotIsCheckpointedBeforeItsFirstDispatch() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		constructor.setAccessible(true);
+		Object replayState = constructor.newInstance(new HashMap<>(), new HashMap<>(), false);
+		List<Reward.ReplayCheckpoint> checkpoints = new ArrayList<>();
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState, (java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoints::add);
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("replayCommandSequence",
+				AdvancedCorePlugin.class, HashMap.class, String.class, List.class, List.class, stateType, String.class,
+				java.util.function.BiFunction.class);
+		replay.setAccessible(true);
+		List<String> dispatched = new ArrayList<>();
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(null, plugin, new HashMap<>(), "console",
+				List.of("say %value%"), List.of("say fixed"), replayState, "AsyncReward/0",
+					(java.util.function.BiFunction<String, Integer, CompletionStage<Void>>) (command, index) -> {
+					dispatched.add(command);
+					return CompletableFuture.completedFuture(null);
+				});
+
+		ArgumentCaptor<Runnable> writes = ArgumentCaptor.forClass(Runnable.class);
+		verify(storageExecutor).execute(writes.capture());
+		assertTrue(dispatched.isEmpty());
+		assertFalse(result.toCompletableFuture().isDone());
+		writes.getValue().run();
+		assertEquals(List.of("say fixed"), dispatched);
+		assertTrue(checkpoints.get(0).getReplayProgress().isEmpty());
+		assertTrue(checkpoints.get(0).getPlaceholders().entrySet().stream()
+				.anyMatch(entry -> entry.getKey().startsWith("__advancedcore_replay_commands_")
+						&& entry.getKey().endsWith("_snapshot") && entry.getValue().contains("c2F5IGZpeGVk")));
+		ArgumentCaptor<Runnable> progressWrite = ArgumentCaptor.forClass(Runnable.class);
+		verify(storageExecutor, times(2)).execute(progressWrite.capture());
+		progressWrite.getAllValues().get(1).run();
+		result.toCompletableFuture().join();
+	}
+
+	@Test
+	void commandSnapshotDistinguishesAnEmptyElementFromAnEmptyList() throws Exception {
+		java.lang.reflect.Method encode = Reward.class.getDeclaredMethod("encodeCommandSnapshot", List.class);
+		encode.setAccessible(true);
+		String emptyList = (String) encode.invoke(null, List.of());
+		String emptyElement = (String) encode.invoke(null, List.of(""));
+		assertNotEquals(emptyList, emptyElement);
+		java.lang.reflect.Method decode = Reward.class.getDeclaredMethod("decodeCommandSnapshot", String.class, int.class);
+		decode.setAccessible(true);
+		assertEquals(List.of(), decode.invoke(null, emptyList, 0));
+		assertEquals(List.of(""), decode.invoke(null, emptyElement, 1));
 	}
 
 	@Test
@@ -539,16 +959,20 @@ class RewardAsyncInjectionTest {
 	void commandReplayRetriesOnlyTheFailedSuffix() throws Exception {
 		ArrayList<String> dispatched = new ArrayList<>();
 		AtomicBoolean failSecond = new AtomicBoolean(true);
+		AtomicInteger expansion = new AtomicInteger();
 		handler.getInjectedRewards().add(new RewardInject("Commands") {
 			@Override public boolean supportsAsyncRequest() { return true; }
 			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
 					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
 			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
 					ConfigurationSection ignoredData, HashMap<String, String> commandPlaceholders) {
-				return Reward.replayCommandSequence(plugin, commandPlaceholders, "console",
-						List.of("first", "second"), command -> {
+				List<String> templates = List.of("first %value%", "second %value%");
+				int currentExpansion = expansion.incrementAndGet();
+				List<String> expanded = List.of("first-" + currentExpansion, "second-" + currentExpansion);
+				return Reward.replayCommandSequence(plugin, commandPlaceholders, "console", templates, expanded,
+						(command, ignoredIndex) -> {
 							dispatched.add(command);
-							return command.equals("second") && failSecond.get()
+							return command.startsWith("second-") && failSecond.get()
 									? CompletableFuture.failedFuture(new IllegalStateException("temporary"))
 									: CompletableFuture.completedFuture(null);
 						}).thenApply(nothing -> null);
@@ -571,7 +995,7 @@ class RewardAsyncInjectionTest {
 				"AsyncReward");
 		resumed.toCompletableFuture().join();
 
-		assertEquals(List.of("first", "second", "second"), dispatched);
+		assertEquals(List.of("first-1", "second-1", "second-1"), dispatched);
 	}
 
 	@Test

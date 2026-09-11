@@ -149,6 +149,34 @@ public class RewardExecutorTest {
 	}
 
 	@Test
+	public void asyncListLazilyClonesAndCarriesOnlyReplayMetadata() {
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("Rewards", new ArrayList<>(List.of("First", "Second")));
+		Reward first = mock(Reward.class);
+		Reward second = mock(Reward.class);
+		when(handler.getReward("First")).thenReturn(first);
+		when(handler.getReward("Second")).thenReturn(second);
+		RewardOptions parent = new RewardOptions().addPlaceholder("ordinary", "parent");
+		when(first.giveRewardAsync(eq(user), any(RewardOptions.class))).thenAnswer(invocation -> {
+			RewardOptions child = invocation.getArgument(1);
+			child.getPlaceholders().put("ordinary", "child");
+			child.getAsyncReplayState().recordReplayMetadata("__advancedcore_replay_commands_test_snapshot", "v1:c2");
+			return CompletableFuture.completedFuture(null);
+		});
+		when(second.giveRewardAsync(eq(user), any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.failedFuture(new IllegalStateException("later child failed")));
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, data, "Rewards", parent).toCompletableFuture().join());
+
+		ArgumentCaptor<RewardOptions> captured = ArgumentCaptor.forClass(RewardOptions.class);
+		verify(second).giveRewardAsync(eq(user), captured.capture());
+		assertEquals("parent", captured.getValue().getPlaceholders().get("ordinary"));
+		assertEquals("v1:c2", captured.getValue().getPlaceholders()
+				.get("__advancedcore_replay_commands_test_snapshot"));
+	}
+
+	@Test
 	public void asyncListReplayDoesNotRepeatCompletedDirectCommands() {
 		YamlConfiguration data = new YamlConfiguration();
 		data.set("Rewards", new ArrayList<>(List.of("/first", "/second")));

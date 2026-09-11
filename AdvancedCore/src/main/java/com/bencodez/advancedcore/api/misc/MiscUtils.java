@@ -284,12 +284,13 @@ public class MiscUtils {
 		try {
 			placeholders.put("player", playerName);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
+			ArrayList<String> templates = new ArrayList<>(cmds);
 			ArrayList<String> commands = cmds;
 			if (p != null) commands = PlaceholderUtils.replaceJavascriptOnly(p, commands);
 			commands = PlaceholderUtils.replacePlaceHolder(commands, placeholders);
 			if (p != null) commands = PlaceholderUtils.replacePlaceHolders(p, commands);
 
-			return Reward.replayCommandSequence(plugin, placeholders, "console:" + stagger, commands,
+			return Reward.replayCommandSequence(plugin, placeholders, "console:" + stagger, templates, commands,
 					(command, index) -> {
 						plugin.debug("Executing console command: " + command);
 						return runConsoleCommandAsync(stripLeadingSlash(command), index > 0 ? 1 : 0,

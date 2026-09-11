@@ -289,21 +289,25 @@ public class AdvancedCoreUserTest {
 		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
 				any(RewardOptions.class))).thenReturn(pending);
 
-		ArgumentCaptor<RewardOptions> options = ArgumentCaptor.forClass(RewardOptions.class);
-		user.checkOfflineRewards();
-		verify(rewardHandler, org.mockito.Mockito.times(2)).givePersistedQueueRewardAsync(eq(user),
-				any(PersistedQueueReference.class), options.capture());
-		options.getAllValues().get(0).getAsyncReplayCheckpointConsumer().accept(replayCheckpoint(Map.of("VoteReward", 1),
-				new HashMap<>(Map.of("Server", "server-a"))));
+			ArgumentCaptor<RewardOptions> options = ArgumentCaptor.forClass(RewardOptions.class);
+			user.checkOfflineRewards();
+			verify(rewardHandler).givePersistedQueueRewardAsync(eq(user),
+					any(PersistedQueueReference.class), options.capture());
+			options.getValue().getAsyncReplayCheckpointConsumer().accept(replayCheckpoint(Map.of("VoteReward", 1),
+					new HashMap<>(Map.of("Server", "server-a"))));
 
 		assertEquals(2, persisted.size());
 		assertTrue(persisted.stream().anyMatch(value -> value.contains("%asyncprogress%v2-")));
-		assertTrue(persisted.stream().anyMatch(value -> value.equals(entry)));
-		user.checkOfflineRewards();
-		verify(rewardHandler, org.mockito.Mockito.times(2)).givePersistedQueueRewardAsync(eq(user),
-				any(PersistedQueueReference.class), any(RewardOptions.class));
-		verify(data).setStringList(eq("offlineRewardsPath"), any(), eq(false));
-	}
+			assertTrue(persisted.stream().anyMatch(value -> value.equals(entry)));
+			user.checkOfflineRewards();
+			verify(rewardHandler).givePersistedQueueRewardAsync(eq(user),
+					any(PersistedQueueReference.class), any(RewardOptions.class));
+			verify(data).setStringList(eq("offlineRewardsPath"), any(), eq(false));
+
+			pending.complete(null);
+			verify(rewardHandler, org.mockito.Mockito.times(2)).givePersistedQueueRewardAsync(eq(user),
+					any(PersistedQueueReference.class), any(RewardOptions.class));
+		}
 
 	@Test
 	void timedAsyncReplayPreservesItsStoredCheckpointAfterExecutionMarker() {
