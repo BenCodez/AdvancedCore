@@ -52,7 +52,10 @@ public final class RewardRandomReward {
                 if (list.isEmpty()) return java.util.concurrent.CompletableFuture.completedFuture(null);
                 String selected = Reward.replaySelection(placeholders,
                         () -> list.get(ThreadLocalRandom.current().nextInt(list.size())));
-                return handler.giveRewardAsync(user, selected, new RewardOptions().setPlaceholders(placeholders))
+                RewardOptions childOptions = Reward.withReplayState(
+                        new RewardOptions().setPlaceholders(placeholders), Reward.currentReplayState(),
+                        Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
+                return handler.giveRewardAsync(user, selected, childOptions)
                         .thenApply(ignored -> selected);
             }
         }.asPlaceholder("RandomReward").priority(20).addEditButton(

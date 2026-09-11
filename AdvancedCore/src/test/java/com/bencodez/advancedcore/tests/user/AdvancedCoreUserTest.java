@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
@@ -12,15 +13,18 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import org.bukkit.Bukkit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -249,6 +253,23 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void pendingOfflineReplayClaimIsSharedAcrossWrappersForTheSameUuid() {
+		ArrayList<String> rewards = new ArrayList<>(List.of("VoteReward"));
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenReturn(rewards);
+		CompletableFuture<Void> pending = new CompletableFuture<>();
+		when(rewardHandler.givePersistedQueueRewardAsync(any(AdvancedCoreUser.class),
+				any(PersistedQueueReference.class), any(RewardOptions.class))).thenReturn(pending);
+		AdvancedCoreUser second = new AdvancedCoreUser(plugin, UUID.fromString(user.getUUID()), "Test");
+		second.setData(data);
+
+		user.checkOfflineRewards();
+		second.checkOfflineRewards();
+
+		verify(rewardHandler, org.mockito.Mockito.times(1)).givePersistedQueueRewardAsync(
+				any(AdvancedCoreUser.class), any(PersistedQueueReference.class), any(RewardOptions.class));
+	}
+
+	@Test
 	void offlineCheckpointMigratesOnlyItsOwnDuplicateInFlightClaim() throws Exception {
 		String entry = "VoteReward%placeholders%Server%pair%server-a";
 		ArrayList<String> persisted = new ArrayList<>();
@@ -330,6 +351,38 @@ public class AdvancedCoreUserTest {
 		user.checkDelayedTimedRewards();
 		verify(rewardHandler, org.mockito.Mockito.times(1)).givePersistedQueueRewardAsync(eq(user),
 				any(PersistedQueueReference.class), any(RewardOptions.class));
+	}
+
+	@Test
+	void pendingTimedReplayClaimIsSharedAcrossWrappersForTheSameUuid() {
+		long due = System.currentTimeMillis() - 1_000;
+		ArrayList<String> timed = new ArrayList<>(List.of("VoteReward%ExecutionTime/%" + due));
+		when(data.getStringList("TimedRewards", UserDataFetchMode.DEFAULT)).thenReturn(timed);
+		CompletableFuture<Void> pending = new CompletableFuture<>();
+		when(rewardHandler.givePersistedQueueRewardAsync(any(AdvancedCoreUser.class),
+				any(PersistedQueueReference.class), any(RewardOptions.class))).thenReturn(pending);
+		AdvancedCoreUser second = new AdvancedCoreUser(plugin, UUID.fromString(user.getUUID()), "Test");
+		second.setData(data);
+
+		user.checkDelayedTimedRewards();
+		second.checkDelayedTimedRewards();
+
+		verify(rewardHandler, org.mockito.Mockito.times(1)).givePersistedQueueRewardAsync(
+				any(AdvancedCoreUser.class), any(PersistedQueueReference.class), any(RewardOptions.class));
+	}
+
+	@Test
+	void unavailablePlayerFailsAsyncCommandDispatch() {
+		AdvancedCorePlugin.setInstance(plugin);
+		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(UUID.fromString(user.getUUID()))).thenReturn(null);
+
+			assertThrows(java.util.concurrent.CompletionException.class,
+					() -> user.preformCommandAsync(new ArrayList<>(List.of("say hello")), new HashMap<>())
+							.toCompletableFuture().join());
+		} finally {
+			AdvancedCorePlugin.setInstance(null);
+		}
 	}
 
 	@Test

@@ -75,10 +75,12 @@ public final class RewardAdvancedPriority {
 				if (selectedKey == null) return CompletableFuture.completedFuture(null);
 				Reward selected = handler.getReward(section, selectedKey, new RewardOptions()
 						.setPrefix(sourceReward.getName() + "_AdvancedPriority"));
+				RewardOptions childOptions = Reward.withReplayState(new RewardOptions().setIgnoreChance(true)
+						.setIgnoreRequirements(true).setPrefix(sourceReward.getName() + "_AdvancedPriority")
+						.withPlaceHolder(placeholders), Reward.currentReplayState(), Reward.currentReplayKey(),
+						"selected:" + selectedKey, Reward.currentReplayOccurrenceId());
 				return selected == null ? CompletableFuture.completedFuture(null)
-						: handler.giveRewardAsync(user, selected, new RewardOptions().setIgnoreChance(true)
-								.setIgnoreRequirements(true).setPrefix(sourceReward.getName() + "_AdvancedPriority")
-								.withPlaceHolder(placeholders)).thenApply(ignored -> selected.getName());
+						: handler.giveRewardAsync(user, selected, childOptions).thenApply(ignored -> selected.getName());
             }
 
             @Override

@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.tests.rewards;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -437,7 +438,8 @@ class RewardAsyncInjectionTest {
 		when(user.getPlugin()).thenReturn(plugin);
 		data.set("RandomReward", new ArrayList<>(List.of("child")));
 		CompletableFuture<Void> child = new CompletableFuture<>();
-		doReturn(child).when(handler).giveRewardAsync(eq(user), eq("child"), any());
+		ArgumentCaptor<RewardOptions> childOptions = ArgumentCaptor.forClass(RewardOptions.class);
+		doReturn(child).when(handler).giveRewardAsync(eq(user), eq("child"), childOptions.capture());
 		List<String> events = new ArrayList<>();
 		RewardRandomReward.register(handler, plugin);
 		handler.getInjectedRewards().add(new RewardInject("After") {
@@ -451,6 +453,8 @@ class RewardAsyncInjectionTest {
 		CompletionStage<Void> result = reward.giveInjectedRewardsAsync(user, new HashMap<>());
 		assertFalse(result.toCompletableFuture().isDone());
 		assertTrue(events.isEmpty());
+		assertNotNull(childOptions.getValue().getAsyncReplayState());
+		assertTrue(childOptions.getValue().getAsyncReplayKey().endsWith("/selected:child"));
 		child.complete(null);
 		result.toCompletableFuture().join();
 		assertEquals(List.of("after-child"), events);

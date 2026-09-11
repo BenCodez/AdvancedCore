@@ -65,9 +65,13 @@ public final class RewardPriority {
 				});
 				if (selectedName == null) return CompletableFuture.completedFuture(null);
 				Reward selected = handler.getReward(selectedName);
+				RewardOptions childOptions = Reward.withReplayState(
+						new RewardOptions().withPlaceHolder(placeholders).setIgnoreChance(true)
+								.setIgnoreRequirements(true),
+						Reward.currentReplayState(), Reward.currentReplayKey(), "selected:" + selectedName,
+						Reward.currentReplayOccurrenceId());
 				return selected == null ? CompletableFuture.completedFuture(null)
-						: handler.giveRewardAsync(user, selected, new RewardOptions().withPlaceHolder(placeholders)
-								.setIgnoreChance(true).setIgnoreRequirements(true)).thenApply(ignored -> selected.getName());
+						: handler.giveRewardAsync(user, selected, childOptions).thenApply(ignored -> selected.getName());
             }
         }.asPlaceholder("Priority").addEditButton(
                 new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Priority", null) {

@@ -3,9 +3,12 @@ package com.bencodez.advancedcore.tests.rewards;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -366,6 +369,29 @@ public class BuiltinRewardBehaviorTest {
             assertFalse(randomStage.toCompletableFuture().isDone());
             random.complete(null);
             randomStage.toCompletableFuture().join();
+        }
+    }
+
+    @Test
+    public void mixedAsyncCommandsDoNotScheduleConsoleWorkWhenPlayerDispatchFails() {
+        RewardCommands.register(handler, plugin);
+        MiscUtils misc = mock(MiscUtils.class);
+        ArrayList<String> console = new ArrayList<>(List.of("give Ben diamond"));
+        ArrayList<String> player = new ArrayList<>(List.of("spawn"));
+        when(user.preformCommandAsync(eq(player), eq(placeholders)))
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("player unavailable")));
+        ConfigurationSection commands = section("Commands");
+        commands.set("Console", console);
+        commands.set("Player", player);
+
+        try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
+            miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
+
+            CompletionStage<String> result = ((RewardInjectConfigurationSection) injects.get(3))
+                    .onRewardRequestedAsync(reward, user, commands, placeholders);
+
+            assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
+            verify(misc, never()).executeConsoleCommandsAsync(anyString(), any(), any(), anyBoolean());
         }
     }
 

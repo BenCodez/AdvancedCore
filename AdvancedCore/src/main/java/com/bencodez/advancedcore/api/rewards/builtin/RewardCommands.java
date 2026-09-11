@@ -212,11 +212,13 @@ public final class RewardCommands {
                     ConfigurationSection section, HashMap<String, String> placeholders) {
                 ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console", new ArrayList<>());
                 ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<>());
-                CompletionStage<Void> console = consoleCommands.isEmpty() ? CompletableFuture.completedFuture(null)
-                        : MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
-                                placeholders, section.getBoolean("Stagger", true));
                 CompletionStage<Void> player = user.preformCommandAsync(userCommands, placeholders);
-                return CompletableFuture.allOf(console.toCompletableFuture(), player.toCompletableFuture())
+                // Player availability is a prerequisite for the mixed section. Do not
+                // schedule console side effects until that prerequisite has completed,
+                // otherwise a disconnect can fail the replay after grants already ran.
+                return player.thenCompose(ignored -> consoleCommands.isEmpty() ? CompletableFuture.completedFuture(null)
+                        : MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
+                                placeholders, section.getBoolean("Stagger", true)))
                         .thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands.Console", null) {

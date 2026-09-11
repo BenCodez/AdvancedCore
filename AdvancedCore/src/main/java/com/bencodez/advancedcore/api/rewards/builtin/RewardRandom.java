@@ -73,13 +73,18 @@ public final class RewardRandom {
                 if (selection == null || selection.equals("none")) return CompletableFuture.completedFuture(null);
                 if (selection.startsWith("pick:")) {
                     String selected = selection.substring("pick:".length());
+                    RewardOptions childOptions = Reward.withReplayState(
+                            new RewardOptions().setPlaceholders(placeholders), Reward.currentReplayState(),
+                            Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
                     return selected.isEmpty() ? CompletableFuture.completedFuture(null)
-                            : handler.giveRewardAsync(user, selected,
-                                    new RewardOptions().setPlaceholders(placeholders)).thenApply(ignored -> null);
+                            : handler.giveRewardAsync(user, selected, childOptions).thenApply(ignored -> null);
                 }
                 String path = selection.equals("rewards") ? "Random.Rewards" : "Random.FallBack";
-                return new RewardBuilder(reward.getConfig().getConfigData(), path).withPrefix(reward.getName())
-                        .withPlaceHolder(placeholders).sendAsync(user).thenApply(ignored -> null);
+                RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(), path)
+                        .withPrefix(reward.getName()).withPlaceHolder(placeholders);
+                Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
+                        Reward.currentReplayKey(), "path:" + path, Reward.currentReplayOccurrenceId());
+                return builder.sendAsync(user).thenApply(ignored -> null);
             }
 
             @Override

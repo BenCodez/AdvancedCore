@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -66,8 +67,13 @@ public class AdvancedCoreUser {
 	private static final String ASYNC_PROGRESS_DELIMITER = "%asyncprogress%";
 	private static final String ASYNC_RETRY_DELIMITER = "%asyncretry%";
 	private static final String ASYNC_OCCURRENCE_DELIMITER = "%asyncoccurrence%";
-	private final HashMap<String, Integer> offlineReplayInFlight = new HashMap<>();
-	private final HashSet<String> timedReplayInFlight = new HashSet<>();
+	private static final Object REPLAY_CLAIMS_LOCK = new Object();
+	private static final WeakHashMap<AdvancedCorePlugin, HashMap<String, ReplayClaims>> REPLAY_CLAIMS = new WeakHashMap<>();
+
+	private static final class ReplayClaims {
+		private final HashMap<String, Integer> offline = new HashMap<>();
+		private final HashSet<String> timed = new HashSet<>();
+	}
 
 	/**
 	 * User data fetch mode for this user.
@@ -618,19 +624,20 @@ public class AdvancedCoreUser {
 
 	private void checkpointOfflineReward(AtomicReference<String> currentEntry, Reward.ReplayCheckpoint checkpoint) {
 		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
 			String current = currentEntry.get();
 			String updated = withAsyncReplayProgress(current, checkpoint);
 			ArrayList<String> pending = getOfflineRewards();
 			int index = pending.indexOf(current);
 			if (index >= 0) {
 				pending.set(index, updated);
-				int claimed = offlineReplayInFlight.getOrDefault(current, 0);
+				int claimed = claims.offline.getOrDefault(current, 0);
 				// Migrate this occurrence only. Identical legacy queue entries share a
 				// serialized key, but may each already be executing; moving the whole
 				// count would make the remaining old entry appear unclaimed.
-				if (claimed <= 1) offlineReplayInFlight.remove(current);
-				else offlineReplayInFlight.put(current, claimed - 1);
-				offlineReplayInFlight.put(updated, offlineReplayInFlight.getOrDefault(updated, 0) + 1);
+				if (claimed <= 1) claims.offline.remove(current);
+				else claims.offline.put(current, claimed - 1);
+				claims.offline.put(updated, claims.offline.getOrDefault(updated, 0) + 1);
 				currentEntry.set(updated);
 				setOfflineRewardsDurably(pending);
 			}
@@ -639,11 +646,12 @@ public class AdvancedCoreUser {
 
 	private boolean claimOfflineReward(String rewardEntry) {
 		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
 			int occurrences = 0;
 			for (String pending : getOfflineRewards()) if (rewardEntry.equals(pending)) occurrences++;
-			int claimed = offlineReplayInFlight.getOrDefault(rewardEntry, 0);
+			int claimed = claims.offline.getOrDefault(rewardEntry, 0);
 			if (claimed >= occurrences) return false;
-			offlineReplayInFlight.put(rewardEntry, claimed + 1);
+			claims.offline.put(rewardEntry, claimed + 1);
 			return true;
 		}
 	}
@@ -673,26 +681,35 @@ public class AdvancedCoreUser {
 	}
 
 	private void releaseOfflineReward(String rewardEntry) {
-		int claimed = offlineReplayInFlight.getOrDefault(rewardEntry, 0);
-		if (claimed <= 1) offlineReplayInFlight.remove(rewardEntry);
-		else offlineReplayInFlight.put(rewardEntry, claimed - 1);
+		ReplayClaims claims = replayClaims();
+		int claimed = claims.offline.getOrDefault(rewardEntry, 0);
+		if (claimed <= 1) claims.offline.remove(rewardEntry);
+		else claims.offline.put(rewardEntry, claimed - 1);
+		releaseReplayClaimsIfEmpty(claims);
 	}
 
-	private synchronized boolean claimTimedReward(String rewardEntry, long time) {
-		if (timedReplayInFlight.contains(rewardEntry) || !Long.valueOf(time).equals(getTimedRewards().get(rewardEntry))) {
-			return false;
+	private boolean claimTimedReward(String rewardEntry, long time) {
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			if (claims.timed.contains(rewardEntry) || !Long.valueOf(time).equals(getTimedRewards().get(rewardEntry))) {
+				return false;
+			}
+			claims.timed.add(rewardEntry);
+			return true;
 		}
-		timedReplayInFlight.add(rewardEntry);
-		return true;
 	}
 
-	private synchronized void completeTimedReward(String rewardEntry, long time) {
-		HashMap<String, Long> pending = getTimedRewards();
-		if (Long.valueOf(time).equals(pending.get(rewardEntry))) {
-			pending.remove(rewardEntry);
-			setTimedRewards(pending);
+	private void completeTimedReward(String rewardEntry, long time) {
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			HashMap<String, Long> pending = getTimedRewards();
+			if (Long.valueOf(time).equals(pending.get(rewardEntry))) {
+				pending.remove(rewardEntry);
+				setTimedRewards(pending);
+			}
+			claims.timed.remove(rewardEntry);
+			releaseReplayClaimsIfEmpty(claims);
 		}
-		timedReplayInFlight.remove(rewardEntry);
 	}
 
 	/**
@@ -700,36 +717,61 @@ public class AdvancedCoreUser {
 	 * Timed reward keys are map keys, so migrate the exact current key while
 	 * retaining its execution time and its in-flight claim.
 	 */
-	private synchronized void checkpointTimedReward(AtomicReference<String> currentEntry, long time,
+	private void checkpointTimedReward(AtomicReference<String> currentEntry, long time,
 			Reward.ReplayCheckpoint checkpoint) {
-		String current = currentEntry.get();
-		String updated = withAsyncReplayProgress(current, checkpoint);
-		if (current.equals(updated)) return;
-		HashMap<String, Long> pending = getTimedRewards();
-		if (!Long.valueOf(time).equals(pending.get(current))) return;
-		pending.remove(current);
-		pending.put(updated, time);
-		setTimedRewardsDurably(pending);
-		timedReplayInFlight.remove(current);
-		timedReplayInFlight.add(updated);
-		currentEntry.set(updated);
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			String current = currentEntry.get();
+			String updated = withAsyncReplayProgress(current, checkpoint);
+			if (current.equals(updated)) return;
+			HashMap<String, Long> pending = getTimedRewards();
+			if (!Long.valueOf(time).equals(pending.get(current))) return;
+			pending.remove(current);
+			pending.put(updated, time);
+			setTimedRewardsDurably(pending);
+			claims.timed.remove(current);
+			claims.timed.add(updated);
+			currentEntry.set(updated);
+		}
 	}
 
 	/** Restores a due timed entry after an asynchronous replay fails. */
-	private synchronized void restoreTimedReward(String rewardEntry, long time, Throwable failure) {
-		HashMap<String, Long> pending = getTimedRewards();
-		int retry = Math.min(8, asyncRetryCount(rewardEntry) + 1);
-		long retryDelay = Math.min(TimeUnit.MINUTES.toMillis(5), TimeUnit.SECONDS.toMillis(1L << retry));
-		long retryTime = System.currentTimeMillis() + retryDelay;
-		pending.remove(rewardEntry);
-		pending.put(withAsyncRetryCount(withAsyncReplayProgress(rewardEntry, failure), retry), retryTime);
-		setTimedRewards(pending);
-		timedReplayInFlight.remove(rewardEntry);
+	private void restoreTimedReward(String rewardEntry, long time, Throwable failure) {
+		long retryTime;
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			HashMap<String, Long> pending = getTimedRewards();
+			int retry = Math.min(8, asyncRetryCount(rewardEntry) + 1);
+			long retryDelay = Math.min(TimeUnit.MINUTES.toMillis(5), TimeUnit.SECONDS.toMillis(1L << retry));
+			retryTime = System.currentTimeMillis() + retryDelay;
+			pending.remove(rewardEntry);
+			pending.put(withAsyncRetryCount(withAsyncReplayProgress(rewardEntry, failure), retry), retryTime);
+			setTimedRewards(pending);
+			claims.timed.remove(rewardEntry);
+			releaseReplayClaimsIfEmpty(claims);
+		}
 		// A due entry restored after its original timer fired needs its own retry
 		// timer; waiting for reconnect would strand it indefinitely.
 		loadTimedDelayedTimer(retryTime);
 		plugin.getLogger().warning("Could not deliver queued timed reward for " + getPlayerName()
 				+ "; it will be retried: " + failure.getMessage());
+	}
+
+	private ReplayClaims replayClaims() {
+		synchronized (REPLAY_CLAIMS_LOCK) {
+			return REPLAY_CLAIMS.computeIfAbsent(plugin, ignored -> new HashMap<>())
+					.computeIfAbsent(getUUID(), ignored -> new ReplayClaims());
+		}
+	}
+
+	private void releaseReplayClaimsIfEmpty(ReplayClaims claims) {
+		if (!claims.offline.isEmpty() || !claims.timed.isEmpty()) return;
+		synchronized (REPLAY_CLAIMS_LOCK) {
+			HashMap<String, ReplayClaims> byUser = REPLAY_CLAIMS.get(plugin);
+			if (byUser == null || byUser.get(getUUID()) != claims) return;
+			byUser.remove(getUUID());
+			if (byUser.isEmpty()) REPLAY_CLAIMS.remove(plugin);
+		}
 	}
 
 	/**
@@ -1582,7 +1624,10 @@ public class AdvancedCoreUser {
 			final ArrayList<String> cmds = PlaceholderUtils.replaceJavascript(getPlayer(),
 					PlaceholderUtils.replacePlaceHolder(commands, placeholders));
 			final Player player = getPlayer();
-			if (player == null || !plugin.isEnabled()) return CompletableFuture.completedFuture(null);
+			if (player == null || !plugin.isEnabled()) {
+				return CompletableFuture.failedFuture(
+						new IllegalStateException("Player command could not run because the player or plugin is unavailable"));
+			}
 			ArrayList<CompletableFuture<Void>> completions = new ArrayList<>();
 			for (String command : cmds) {
 				plugin.debug("Executing player command for " + getPlayerName() + ": " + command);

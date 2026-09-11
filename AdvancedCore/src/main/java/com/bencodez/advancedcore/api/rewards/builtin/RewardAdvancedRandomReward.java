@@ -63,8 +63,11 @@ public final class RewardAdvancedRandomReward {
                 if (rewards.isEmpty()) return CompletableFuture.completedFuture(null);
                 String selected = Reward.replaySelection(placeholders,
                         () -> rewards.get(ThreadLocalRandom.current().nextInt(rewards.size())));
-                return handler.giveRewardAsync(user, section, selected, new RewardOptions().setPlaceholders(placeholders)
-                        .setPrefix(reward.getRewardName() + "_AdvancedRandomReward")).thenApply(ignored -> selected);
+                RewardOptions childOptions = Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders),
+                        Reward.currentReplayState(), Reward.currentReplayKey(), "selected:" + selected,
+                        Reward.currentReplayOccurrenceId())
+                        .setPrefix(reward.getRewardName() + "_AdvancedRandomReward");
+                return handler.giveRewardAsync(user, section, selected, childOptions).thenApply(ignored -> selected);
             }
 
             @Override
