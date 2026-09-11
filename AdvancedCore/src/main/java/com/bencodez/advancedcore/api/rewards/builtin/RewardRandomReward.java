@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Material;
@@ -26,6 +27,15 @@ public final class RewardRandomReward {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectStringList("RandomReward") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
+            @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
                     HashMap<String, String> placeholders) {
                 if (!list.isEmpty()) {
@@ -34,6 +44,16 @@ public final class RewardRandomReward {
                     return selected;
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+                    ArrayList<String> list, HashMap<String, String> placeholders) {
+                if (list.isEmpty()) return java.util.concurrent.CompletableFuture.completedFuture(null);
+                String selected = Reward.replaySelection(placeholders,
+                        () -> list.get(ThreadLocalRandom.current().nextInt(list.size())));
+                return handler.giveRewardAsync(user, selected, new RewardOptions().setPlaceholders(placeholders))
+                        .thenApply(ignored -> selected);
             }
         }.asPlaceholder("RandomReward").priority(20).addEditButton(
                 new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomReward", null) {

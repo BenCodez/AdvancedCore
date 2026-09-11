@@ -35,6 +35,7 @@ import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectInt;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardSubRewards;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardRandomReward;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 class RewardAsyncInjectionTest {
@@ -356,6 +357,109 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void everyNestedRewardInjectorWaitsForItsSelectedChild() {
+		handler = org.mockito.Mockito.spy(new RewardHandler(plugin));
+		when(plugin.getRewardHandler()).thenReturn(handler);
+		when(user.getPlugin()).thenReturn(plugin);
+		data.set("RandomReward", new ArrayList<>(List.of("child")));
+		CompletableFuture<Void> child = new CompletableFuture<>();
+		doReturn(child).when(handler).giveRewardAsync(eq(user), eq("child"), any());
+		List<String> events = new ArrayList<>();
+		RewardRandomReward.register(handler, plugin);
+		handler.getInjectedRewards().add(new RewardInject("After") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				events.add("after-child");
+				return null;
+			}
+		}.postReward());
+
+		CompletionStage<Void> result = reward.giveInjectedRewardsAsync(user, new HashMap<>());
+		assertFalse(result.toCompletableFuture().isDone());
+		assertTrue(events.isEmpty());
+		child.complete(null);
+		result.toCompletableFuture().join();
+		assertEquals(List.of("after-child"), events);
+	}
+
+	@Test
+	void replayCheckpointSkipsAlreadyAppliedInjectionAfterLaterFailure() throws Exception {
+		AtomicInteger alreadyApplied = new AtomicInteger();
+		AtomicBoolean fail = new AtomicBoolean(true);
+		RewardInject applied = new RewardInject("Money") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				alreadyApplied.incrementAndGet();
+				return "receipt-1";
+			}
+		};
+		applied.asPlaceholder("receipt");
+		handler.getInjectedRewards().add(applied);
+		handler.getInjectedRewards().add(new RewardInject("Durable") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				return fail.get() ? CompletableFuture.failedFuture(new IllegalStateException("temporary"))
+						: CompletableFuture.completedFuture(null);
+			}
+		});
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class);
+		replay.setAccessible(true);
+		CompletionStage<Void> first = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0);
+		Throwable failure = assertThrows(java.util.concurrent.CompletionException.class,
+				() -> first.toCompletableFuture().join());
+		Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
+		assertEquals(1, checkpoint.getCompletedInjectionCount());
+		assertEquals("receipt-1", checkpoint.getReplayPlaceholders().get("receipt"));
+		fail.set(false);
+		CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(),
+				checkpoint.getCompletedInjectionCount());
+		resumed.toCompletableFuture().join();
+		assertEquals(1, alreadyApplied.get());
+	}
+
+	@Test
+	void replayProgressDoesNotSuppressASecondSameNamedChildOccurrence() throws Exception {
+		AtomicInteger deliveries = new AtomicInteger();
+		handler.getInjectedRewards().add(new RewardInject("Deliver") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				deliveries.incrementAndGet();
+				return CompletableFuture.completedFuture(null);
+			}
+		});
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(java.util.Map.class);
+		constructor.setAccessible(true);
+		Object state = constructor.newInstance((Object) null);
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+		replay.setAccessible(true);
+		((CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0, state,
+				"root/Rewards/child:0")).toCompletableFuture().join();
+		((CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0, state,
+				"root/Rewards/child:1")).toCompletableFuture().join();
+		assertEquals(2, deliveries.get());
+	}
+
+	@Test
+	void replaySelectionKeepsTheFirstNondeterministicChoice() {
+		HashMap<String, String> placeholders = new HashMap<>();
+		AtomicInteger selections = new AtomicInteger();
+		assertEquals("first", Reward.replaySelection(placeholders,
+				() -> selections.incrementAndGet() == 1 ? "first" : "second"));
+		assertEquals("first", Reward.replaySelection(placeholders,
+				() -> selections.incrementAndGet() == 1 ? "first" : "second"));
+		assertEquals(1, selections.get());
+	}
+
+	@Test
 	void nestedAsyncInjectorCanAwaitTheSameSharedInjectorWithoutDeadlocking() {
 		AtomicInteger invocations = new AtomicInteger();
 		RewardInject nested = new RewardInject("Nested") {
@@ -389,5 +493,12 @@ class RewardAsyncInjectionTest {
 				return completion;
 			}
 		};
+	}
+
+	private Reward.RewardReplayFailure findCheckpoint(Throwable failure) {
+		for (Throwable current = failure; current != null; current = current.getCause()) {
+			if (current instanceof Reward.RewardReplayFailure) return (Reward.RewardReplayFailure) current;
+		}
+		throw new AssertionError("missing replay checkpoint", failure);
 	}
 }

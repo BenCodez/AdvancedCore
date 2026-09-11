@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -30,15 +32,43 @@ public final class RewardAdvancedWorld {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("AdvancedWorld") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
+            @Override
             public String onRewardRequested(Reward sourceReward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
-                for (String key : section.getKeys(false)) {
+				for (String key : section.getKeys(false)) {
                     plugin.extraDebug("AdvancedWorld: Giving reward " + sourceReward.getName() + "_AdvancedWorld");
                     section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
                     handler.giveReward(user, section, key, new RewardOptions().withPlaceHolder(placeholders)
                             .setPrefix(sourceReward.getName() + "_AdvancedWorld"));
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward sourceReward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+				CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
+				String parentReplayKey = Reward.currentReplayKey();
+				int worldIndex = 0;
+                for (String key : section.getKeys(false)) {
+					final int childIndex = worldIndex++;
+                    section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
+                    sequence = sequence.thenCompose(ignored -> handler.giveRewardAsync(user, section, key,
+							Reward.withReplayState(new RewardOptions().withPlaceHolder(placeholders), replayState,
+									parentReplayKey,
+									key + ":" + childIndex)
+                                    .setPrefix(sourceReward.getRewardName() + "_AdvancedWorld")));
+                }
+                return sequence.thenApply(ignored -> null);
             }
 
             @Override

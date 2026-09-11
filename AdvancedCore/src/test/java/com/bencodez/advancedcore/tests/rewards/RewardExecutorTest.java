@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -122,6 +123,25 @@ public class RewardExecutorTest {
         verify(first).giveReward(user, options);
         verify(second).giveReward(user, options);
         assertTrue(options.isOnlineSet());
+    }
+
+    @Test
+    public void asyncListDispatchUsesASeparateReplayContextForEveryEntry() {
+        YamlConfiguration data = new YamlConfiguration();
+        data.set("Rewards", new ArrayList<>(List.of("Child", "Child")));
+        Reward child = mock(Reward.class);
+        when(handler.getReward("Child")).thenReturn(child);
+        when(child.giveRewardAsync(eq(user), any(RewardOptions.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        executor.giveRewardAsync(user, data, "Rewards", new RewardOptions()).toCompletableFuture().join();
+
+        ArgumentCaptor<RewardOptions> captured = ArgumentCaptor.forClass(RewardOptions.class);
+        verify(child, org.mockito.Mockito.times(2)).giveRewardAsync(eq(user), captured.capture());
+        List<RewardOptions> children = captured.getAllValues();
+        assertFalse(children.get(0) == children.get(1));
+        assertFalse(children.get(0).getAsyncReplayKey().equals(children.get(1).getAsyncReplayKey()));
+        assertSame(children.get(0).getAsyncReplayState(), children.get(1).getAsyncReplayState());
     }
 
     @Test

@@ -115,8 +115,16 @@ public class RewardExecutor {
 
         if (data.isList(path)) {
             CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+            Reward.ReplayState replayState = Reward.replayStateFor(options);
+            String parentReplayKey = options.getAsyncReplayKey();
+            if (parentReplayKey == null) parentReplayKey = Reward.currentReplayKey();
+            if (parentReplayKey == null) parentReplayKey = "list:" + path;
+            int rewardIndex = 0;
             for (String nestedReward : new ArrayList<>(data.getStringList(path))) {
-                sequence = sequence.thenCompose(ignored -> giveRewardAsync(user, nestedReward, options));
+                RewardOptions nestedOptions = options.copyForNestedDispatch(
+                        parentReplayKey + "/" + nestedReward + ":" + rewardIndex++);
+                nestedOptions.setAsyncReplayState(replayState);
+                sequence = sequence.thenCompose(ignored -> giveRewardAsync(user, nestedReward, nestedOptions));
             }
             return sequence;
         }

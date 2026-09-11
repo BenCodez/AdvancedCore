@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -32,6 +34,15 @@ public final class RewardAdvancedRandomReward {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("AdvancedRandomReward") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
+            @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
                 Set<String> keys = section.getKeys(false);
@@ -43,6 +54,17 @@ public final class RewardAdvancedRandomReward {
                     return selected;
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+                ArrayList<String> rewards = ArrayUtils.convert(section.getKeys(false));
+                if (rewards.isEmpty()) return CompletableFuture.completedFuture(null);
+                String selected = Reward.replaySelection(placeholders,
+                        () -> rewards.get(ThreadLocalRandom.current().nextInt(rewards.size())));
+                return handler.giveRewardAsync(user, section, selected, new RewardOptions().setPlaceholders(placeholders)
+                        .setPrefix(reward.getRewardName() + "_AdvancedRandomReward")).thenApply(ignored -> selected);
             }
 
             @Override

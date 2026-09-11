@@ -69,10 +69,16 @@ public final class RewardAdvancedRewards {
 					return CompletableFuture.completedFuture(null);
 				}
 				CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
+				String parentReplayKey = Reward.currentReplayKey();
+				int rewardIndex = 0;
 				for (String rewardName : ArrayUtils.convert(data.getConfigurationSection(getPath()).getKeys(false))) {
+					final int childIndex = rewardIndex++;
 					sequence = sequence.thenCompose(ignored -> handler.giveRewardAsync(user,
 							data.getConfigurationSection(getPath()), rewardName,
-							new RewardOptions().setPlaceholders(placeholders)
+							Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders), replayState,
+									parentReplayKey,
+									rewardName + ":" + childIndex)
 									.setPrefix(reward.getRewardName() + "_AdvancedRewards")));
 				}
 				return sequence.thenApply(ignored -> null);

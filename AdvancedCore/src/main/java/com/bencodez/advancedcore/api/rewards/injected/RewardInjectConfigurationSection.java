@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.api.rewards.injected;
 
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -27,5 +29,26 @@ public abstract class RewardInjectConfigurationSection extends RewardInject {
 
 	public abstract String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
 			HashMap<String, String> placeholders);
+
+	/** Completion-aware counterpart for section injections. */
+	public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
+			ConfigurationSection section, HashMap<String, String> placeholders) {
+		try {
+			return CompletableFuture.completedFuture(onRewardRequested(reward, user, section, placeholders));
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
+	}
+
+	@Override
+	public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+			ConfigurationSection data, HashMap<String, String> placeholders) {
+		if (!data.isConfigurationSection(getPath()) && !(isAlwaysForce() && data.contains(getPath(), true))
+				&& !isAlwaysForceNoData()) {
+			return CompletableFuture.completedFuture(null);
+		}
+		return onRewardRequestedAsync(reward, user, data.getConfigurationSection(getPath()), placeholders)
+				.thenApply(result -> result);
+	}
 
 }

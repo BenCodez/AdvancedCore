@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -56,6 +57,15 @@ public final class RewardJavascript {
 
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("Javascript") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
+            @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
                 if (section.getBoolean("Enabled")) {
@@ -68,6 +78,17 @@ public final class RewardJavascript {
                     }
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+                if (!section.getBoolean("Enabled")) return java.util.concurrent.CompletableFuture.completedFuture(null);
+                String path = Reward.replaySelection(placeholders,
+                        () -> new JavascriptEngine().addPlayer(user.getOfflinePlayer()).addPlaceholders(placeholders)
+                                .getBooleanValue(section.getString("Expression")) ? "TrueRewards" : "FalseRewards");
+                return new RewardBuilder(section, path).withPrefix(reward.getName() + ".Javascript").sendAsync(user)
+                        .thenApply(ignored -> null);
             }
 
             @Override

@@ -1,7 +1,9 @@
 package com.bencodez.advancedcore.api.rewards;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.simpleapi.array.ArrayUtils;
@@ -43,6 +45,35 @@ public class RewardOptions {
 
 	@Getter
 	private long orginalTrigger = -1;
+
+	/**
+	 * Number of completed injection stages recorded for a persisted replay. This
+	 * is intentionally internal queue metadata: normal reward dispatch always
+	 * starts at zero.
+	 */
+	@Getter
+	@Setter
+	private int completedAsyncInjections;
+
+	@Getter
+	@Setter
+	private Map<String, Integer> asyncReplayProgress = new HashMap<>();
+
+	@Getter
+	@Setter
+	private Reward.ReplayState asyncReplayState;
+
+	/**
+	 * Stable execution path for a nested asynchronous reward. The path is queue
+	 * metadata only; callers that do not participate in replay leave it unset.
+	 */
+	@Getter
+	@Setter
+	private String asyncReplayKey;
+
+	@Getter
+	@Setter
+	private Consumer<Reward.ReplayCheckpoint> asyncReplayCheckpointConsumer;
 
 	public RewardOptions() {
 	}
@@ -177,6 +208,25 @@ public class RewardOptions {
 			placeholders.put(entry.getKey(), entry.getValue());
 		}
 		return this;
+	}
+
+	/**
+	 * Makes an isolated option object for one member of an asynchronously
+	 * dispatched list. Mutable placeholders and replay metadata must not leak
+	 * from one list member into the next.
+	 */
+	RewardOptions copyForNestedDispatch(String replayKey) {
+		RewardOptions copy = new RewardOptions().setCheckTimed(checkTimed).setGiveOffline(giveOffline)
+				.setIgnoreChance(ignoreChance).setIgnoreRequirements(ignoreRequirements).setPrefix(prefix).setSuffix(suffix)
+				.orginalTrigger(orginalTrigger).setPlaceholders(new HashMap<>(placeholders));
+		if (forceOffline) copy.forceOffline();
+		if (!useDefaultWorlds) copy.disableDefaultWorlds();
+		if (onlineSet) copy.setOnline(online);
+		if (!server.isEmpty()) copy.setServer(server);
+		copy.setAsyncReplayState(asyncReplayState);
+		copy.setAsyncReplayKey(replayKey);
+		copy.setAsyncReplayCheckpointConsumer(asyncReplayCheckpointConsumer);
+		return copy;
 	}
 
 }

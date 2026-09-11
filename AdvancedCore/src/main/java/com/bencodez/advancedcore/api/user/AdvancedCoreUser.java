@@ -10,9 +10,12 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -56,6 +59,10 @@ import net.md_5.bungee.chat.ComponentSerializer;
 public class AdvancedCoreUser {
 
 	private static final String QUEUED_REFERENCE_PREFIX = "\\AdvancedCoreQueue/1/";
+	private static final String ASYNC_PROGRESS_DELIMITER = "%asyncprogress%";
+	private static final String ASYNC_RETRY_DELIMITER = "%asyncretry%";
+	private final HashMap<String, Integer> offlineReplayInFlight = new HashMap<>();
+	private final HashSet<String> timedReplayInFlight = new HashSet<>();
 
 	/**
 	 * User data fetch mode for this user.
@@ -249,7 +256,7 @@ public class AdvancedCoreUser {
 	 *                     given
 	 */
 	public synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
-		HashMap<String, Long> timed = getTimedRewards();
+		HashMap<String, Long> timed = new HashMap<>(getTimedRewards());
 		String rewardName = queuedRewardReference(reward);
 		rewardName += "%extime%" + System.currentTimeMillis();
 
@@ -263,6 +270,136 @@ public class AdvancedCoreUser {
 				.encodeToString(reward.getRewardName().getBytes(StandardCharsets.UTF_8));
 		return QUEUED_REFERENCE_PREFIX + (reward.isGeneratedSnapshotCreated() ? "snapshot/" : "normal/")
 				+ encodedName;
+	}
+
+	private static QueuedReplay parseQueuedReplay(String storedReference) {
+		int marker = storedReference.lastIndexOf(ASYNC_PROGRESS_DELIMITER);
+		if (marker < 0) return new QueuedReplay(storedReference, 0, new HashMap<>());
+		String value = storedReference.substring(marker + ASYNC_PROGRESS_DELIMITER.length());
+		if (value.startsWith("v2-")) {
+			try {
+				HashMap<String, Integer> progress = new HashMap<>();
+				String decoded = new String(Base64.getUrlDecoder().decode(value.substring(3)), StandardCharsets.UTF_8);
+				for (String line : decoded.split("\\n")) {
+					String[] pair = line.split("\\t", 2);
+					if (pair.length == 2) progress.put(pair[0], Integer.parseInt(pair[1]));
+				}
+				return new QueuedReplay(storedReference.substring(0, marker), 0, progress);
+			} catch (IllegalArgumentException ignored) {
+				return new QueuedReplay(storedReference, 0, new HashMap<>());
+			}
+		}
+		try {
+			int progress = Integer.parseInt(value);
+			return progress > 0 ? new QueuedReplay(storedReference.substring(0, marker), progress, new HashMap<>())
+					: new QueuedReplay(storedReference.substring(0, marker), 0, new HashMap<>());
+		} catch (NumberFormatException ignored) {
+			// Preserve malformed legacy values as a normal reward reference instead
+			// of accidentally skipping an arbitrary portion of a reward chain.
+			return new QueuedReplay(storedReference, 0, new HashMap<>());
+		}
+	}
+
+	private static String encodeAsyncReplayProgress(Map<String, Integer> progress) {
+		if (progress.isEmpty()) return "";
+		StringBuilder encoded = new StringBuilder();
+		for (Entry<String, Integer> entry : progress.entrySet()) {
+			if (entry.getValue() != null && entry.getValue() > 0) {
+				encoded.append(entry.getKey()).append('\t').append(entry.getValue()).append('\n');
+			}
+		}
+		return encoded.length() == 0 ? "" : "v2-" + Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(encoded.toString().getBytes(StandardCharsets.UTF_8));
+	}
+
+	private static String stripTimedExecutionMarker(String storedReference) {
+		int marker = storedReference.indexOf("%extime%");
+		if (marker < 0) return stripAsyncRetryMarker(storedReference);
+		int valueStart = marker + "%extime%".length();
+		int nextMarker = storedReference.indexOf('%', valueStart);
+		return stripAsyncRetryMarker(storedReference.substring(0, marker)
+				+ (nextMarker < 0 ? "" : storedReference.substring(nextMarker)));
+	}
+
+	private static String stripAsyncRetryMarker(String storedReference) {
+		int marker = storedReference.indexOf(ASYNC_RETRY_DELIMITER);
+		if (marker < 0) return storedReference;
+		int valueStart = marker + ASYNC_RETRY_DELIMITER.length();
+		int nextMarker = storedReference.indexOf('%', valueStart);
+		return storedReference.substring(0, marker) + (nextMarker < 0 ? "" : storedReference.substring(nextMarker));
+	}
+
+	private static int asyncRetryCount(String rewardEntry) {
+		int marker = rewardEntry.indexOf(ASYNC_RETRY_DELIMITER);
+		if (marker < 0) return 0;
+		int valueStart = marker + ASYNC_RETRY_DELIMITER.length();
+		int nextMarker = rewardEntry.indexOf('%', valueStart);
+		try { return Integer.parseInt(rewardEntry.substring(valueStart, nextMarker < 0 ? rewardEntry.length() : nextMarker)); }
+		catch (NumberFormatException ignored) { return 0; }
+	}
+
+	private static String withAsyncRetryCount(String rewardEntry, int count) {
+		int placeholders = rewardEntry.indexOf("%placeholders%");
+		String reference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
+		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
+		return stripAsyncRetryMarker(reference) + ASYNC_RETRY_DELIMITER + count + suffix;
+	}
+
+	private static String withAsyncReplayProgress(String rewardEntry, Throwable failure) {
+		Reward.RewardReplayFailure replayFailure = replayFailure(failure);
+		int completed = completedAsyncInjections(failure);
+		String serializedProgress = replayFailure == null ? "" : encodeAsyncReplayProgress(replayFailure.getReplayProgress());
+		if (completed <= 0 && serializedProgress.isEmpty()) return rewardEntry;
+		int placeholders = rewardEntry.indexOf("%placeholders%");
+		String storedReference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
+		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
+		if (replayFailure != null) suffix = "%placeholders%" + ArrayUtils.makeString(replayFailure.getReplayPlaceholders());
+		QueuedReplay queuedReplay = parseQueuedReplay(stripAsyncRetryMarker(storedReference));
+		if (!serializedProgress.isEmpty()) return queuedReplay.rewardReference + ASYNC_PROGRESS_DELIMITER
+				+ serializedProgress + suffix;
+		return queuedReplay.rewardReference + ASYNC_PROGRESS_DELIMITER
+				+ Math.max(queuedReplay.completedAsyncInjections, completed) + suffix;
+	}
+
+	private static String withAsyncReplayProgress(String rewardEntry, Map<String, Integer> progress,
+			HashMap<String, String> placeholders) {
+		int marker = rewardEntry.indexOf("%placeholders%");
+		String reference = marker < 0 ? rewardEntry : rewardEntry.substring(0, marker);
+		QueuedReplay queuedReplay = parseQueuedReplay(stripAsyncRetryMarker(reference));
+		String serialized = encodeAsyncReplayProgress(progress);
+		return queuedReplay.rewardReference + (serialized.isEmpty() ? "" : ASYNC_PROGRESS_DELIMITER + serialized)
+				+ "%placeholders%" + ArrayUtils.makeString(placeholders);
+	}
+
+	private static int completedAsyncInjections(Throwable failure) {
+		Throwable current = failure;
+		while (current != null) {
+			if (current instanceof Reward.RewardReplayFailure) {
+				return ((Reward.RewardReplayFailure) current).getCompletedInjectionCount();
+			}
+			current = current.getCause();
+		}
+		return 0;
+	}
+
+	private static Reward.RewardReplayFailure replayFailure(Throwable failure) {
+		for (Throwable current = failure; current != null; current = current.getCause()) {
+			if (current instanceof Reward.RewardReplayFailure) return (Reward.RewardReplayFailure) current;
+		}
+		return null;
+	}
+
+	private static final class QueuedReplay {
+		private final String rewardReference;
+		private final int completedAsyncInjections;
+		private final Map<String, Integer> asyncReplayProgress;
+
+		private QueuedReplay(String rewardReference, int completedAsyncInjections,
+				Map<String, Integer> asyncReplayProgress) {
+			this.rewardReference = rewardReference;
+			this.completedAsyncInjections = completedAsyncInjections;
+			this.asyncReplayProgress = asyncReplayProgress;
+		}
 	}
 
 	/**
@@ -309,45 +446,43 @@ public class AdvancedCoreUser {
 	public void checkDelayedTimedRewards() {
 		plugin.debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
-		HashMap<String, Long> newTimed = new HashMap<>();
-		HashMap<String, Long> replayingTimed = new HashMap<>();
-		HashMap<String, java.util.concurrent.CompletionStage<Void>> replayCompletions = new HashMap<>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 			long time = entry.getValue();
 
 			if (time != 0) {
 				Date timeDate = new Date(time);
-				if (new Date().after(timeDate)) {
+				if (new Date().after(timeDate) && claimTimedReward(entry.getKey(), time)) {
 					String[] data = entry.getKey().split("%placeholders%", 2);
-					String rewardReference = data[0].split("%extime%", 2)[0];
+					QueuedReplay queuedReplay = parseQueuedReplay(stripTimedExecutionMarker(data[0]));
+					String rewardReference = queuedReplay.rewardReference;
 					String placeholders = "";
 					if (data.length > 1) {
 						placeholders = data[1];
 					}
 					RewardOptions replayOptions = new RewardOptions().setCheckTimed(false)
 							.withPlaceHolder(ArrayUtils.fromString(placeholders));
+					replayOptions.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
+					replayOptions.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
 					replayOptions.addPlaceholder("date",
 							"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));
-					replayingTimed.put(entry.getKey(), time);
-					replayCompletions.put(entry.getKey(), plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
-							new PersistedQueueReference(rewardReference), replayOptions));
+					// Keep the due entry durable while asynchronous stages are running.  A
+					// checkpoint can change its serialized key (for example by adding the
+					// v2 progress marker), so completion and failure must follow this
+					// reference rather than the original entry key.
+					AtomicReference<String> currentEntry = new AtomicReference<>(entry.getKey());
+					replayOptions.setAsyncReplayCheckpointConsumer(
+							checkpoint -> checkpointTimedReward(currentEntry, time, checkpoint));
+					plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
+							new PersistedQueueReference(rewardReference), replayOptions).whenComplete((ignored, failure) -> {
+						if (failure == null) completeTimedReward(currentEntry.get(), time);
+						else restoreTimedReward(currentEntry.get(), time, failure);
+					});
 					String rewardName = rewardReference;
 					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
 							+ " with placeholders " + ArrayUtils.fromString(placeholders));
-				} else {
-					newTimed.put(entry.getKey(), time);
 				}
 			}
 
-		}
-		setTimedRewards(newTimed);
-		for (Entry<String, java.util.concurrent.CompletionStage<Void>> replay : replayCompletions.entrySet()) {
-			String rewardEntry = replay.getKey();
-			long time = replayingTimed.get(rewardEntry);
-			replay.getValue().exceptionally(failure -> {
-				restoreTimedReward(rewardEntry, time, failure);
-				return null;
-			});
 		}
 	}
 
@@ -362,56 +497,150 @@ public class AdvancedCoreUser {
 		if (isCheckWorld()) {
 			setCheckWorld(false);
 		}
-		ArrayList<String> rewards = getOfflineRewards();
-		if (rewards.isEmpty()) {
-			return;
-		}
+		dispatchOfflineRewards(false);
+	}
 
-		setOfflineRewards(new ArrayList<>());
-		RewardHandler rewardHandler = plugin.getRewardHandler();
-		AdvancedCoreUser user = this;
-
+	private void dispatchOfflineRewards(boolean force) {
+		ArrayList<String> rewards = new ArrayList<>(getOfflineRewards());
 		for (String rewardEntry : rewards) {
 			if (rewardEntry == null || rewardEntry.equals("null")) {
 				continue;
 			}
+			if (!claimOfflineReward(rewardEntry)) continue;
 
 			String[] parts = rewardEntry.split("%placeholders%", 2);
-			String rewardReference = parts[0];
+			QueuedReplay queuedReplay = parseQueuedReplay(parts[0]);
+			String rewardReference = queuedReplay.rewardReference;
 			String placeholderStr = parts.length > 1 ? parts[1] : "";
 
 			RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false)
 					.withPlaceHolder(ArrayUtils.fromString(placeholderStr));
+			if (force) options.setGiveOffline(false).forceOffline();
+			options.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
+			options.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
+			AtomicReference<String> currentEntry = new AtomicReference<>(rewardEntry);
+			options.setAsyncReplayCheckpointConsumer(checkpoint -> checkpointOfflineReward(currentEntry, checkpoint));
 
-			rewardHandler.givePersistedQueueRewardAsync(user, new PersistedQueueReference(rewardReference), options)
-					.exceptionally(failure -> {
-						restoreOfflineReward(rewardEntry, failure);
-						return null;
+			plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
+					new PersistedQueueReference(rewardReference), options).whenComplete((ignored, failure) -> {
+						if (failure == null) completeOfflineReward(currentEntry.get());
+						else restoreOfflineReward(currentEntry.get(), failure);
 					});
 		}
-
 	}
 
-	/** Restores a queue entry only after an asynchronous replay fails. */
+	private void checkpointOfflineReward(AtomicReference<String> currentEntry, Reward.ReplayCheckpoint checkpoint) {
+		synchronized (plugin) {
+			String current = currentEntry.get();
+			String updated = withAsyncReplayProgress(current, checkpoint.getReplayProgress(), checkpoint.getPlaceholders());
+			ArrayList<String> pending = getOfflineRewards();
+			int index = pending.indexOf(current);
+			if (index >= 0) {
+				pending.set(index, updated);
+				int claimed = offlineReplayInFlight.getOrDefault(current, 0);
+				// Migrate this occurrence only. Identical legacy queue entries share a
+				// serialized key, but may each already be executing; moving the whole
+				// count would make the remaining old entry appear unclaimed.
+				if (claimed <= 1) offlineReplayInFlight.remove(current);
+				else offlineReplayInFlight.put(current, claimed - 1);
+				offlineReplayInFlight.put(updated, offlineReplayInFlight.getOrDefault(updated, 0) + 1);
+				currentEntry.set(updated);
+				setOfflineRewardsDurably(pending);
+			}
+		}
+	}
+
+	private boolean claimOfflineReward(String rewardEntry) {
+		synchronized (plugin) {
+			int occurrences = 0;
+			for (String pending : getOfflineRewards()) if (rewardEntry.equals(pending)) occurrences++;
+			int claimed = offlineReplayInFlight.getOrDefault(rewardEntry, 0);
+			if (claimed >= occurrences) return false;
+			offlineReplayInFlight.put(rewardEntry, claimed + 1);
+			return true;
+		}
+	}
+
+	private void completeOfflineReward(String rewardEntry) {
+		synchronized (plugin) {
+			ArrayList<String> pending = getOfflineRewards();
+			pending.remove(rewardEntry);
+			setOfflineRewards(pending);
+			releaseOfflineReward(rewardEntry);
+		}
+	}
+
+	/** Retains and updates a queue entry only after an asynchronous replay fails. */
 	private void restoreOfflineReward(String rewardEntry, Throwable failure) {
 		// Match addOfflineRewards' lock so a newly queued reward cannot be lost
 		// while a failed replay is being restored.
 		synchronized (plugin) {
 			ArrayList<String> pending = getOfflineRewards();
-			// Queue entries are allowed to repeat; each failed replay must restore
-			// its own occurrence rather than collapsing identical rewards.
-			pending.add(rewardEntry);
+			int index = pending.indexOf(rewardEntry);
+			if (index >= 0) pending.set(index, withAsyncReplayProgress(rewardEntry, failure));
+			releaseOfflineReward(rewardEntry);
 			setOfflineRewards(pending);
 		}
 		plugin.getLogger().warning("Could not deliver queued offline reward for " + getPlayerName()
 				+ "; it will be retried: " + failure.getMessage());
 	}
 
+	private void releaseOfflineReward(String rewardEntry) {
+		int claimed = offlineReplayInFlight.getOrDefault(rewardEntry, 0);
+		if (claimed <= 1) offlineReplayInFlight.remove(rewardEntry);
+		else offlineReplayInFlight.put(rewardEntry, claimed - 1);
+	}
+
+	private synchronized boolean claimTimedReward(String rewardEntry, long time) {
+		if (timedReplayInFlight.contains(rewardEntry) || !Long.valueOf(time).equals(getTimedRewards().get(rewardEntry))) {
+			return false;
+		}
+		timedReplayInFlight.add(rewardEntry);
+		return true;
+	}
+
+	private synchronized void completeTimedReward(String rewardEntry, long time) {
+		HashMap<String, Long> pending = getTimedRewards();
+		if (Long.valueOf(time).equals(pending.get(rewardEntry))) {
+			pending.remove(rewardEntry);
+			setTimedRewards(pending);
+		}
+		timedReplayInFlight.remove(rewardEntry);
+	}
+
+	/**
+	 * Persists every completed asynchronous stage before the next one can run.
+	 * Timed reward keys are map keys, so migrate the exact current key while
+	 * retaining its execution time and its in-flight claim.
+	 */
+	private synchronized void checkpointTimedReward(AtomicReference<String> currentEntry, long time,
+			Reward.ReplayCheckpoint checkpoint) {
+		String current = currentEntry.get();
+		String updated = withAsyncReplayProgress(current, checkpoint.getReplayProgress(), checkpoint.getPlaceholders());
+		if (current.equals(updated)) return;
+		HashMap<String, Long> pending = getTimedRewards();
+		if (!Long.valueOf(time).equals(pending.get(current))) return;
+		pending.remove(current);
+		pending.put(updated, time);
+		setTimedRewardsDurably(pending);
+		timedReplayInFlight.remove(current);
+		timedReplayInFlight.add(updated);
+		currentEntry.set(updated);
+	}
+
 	/** Restores a due timed entry after an asynchronous replay fails. */
 	private synchronized void restoreTimedReward(String rewardEntry, long time, Throwable failure) {
 		HashMap<String, Long> pending = getTimedRewards();
-		pending.putIfAbsent(rewardEntry, time);
+		int retry = Math.min(8, asyncRetryCount(rewardEntry) + 1);
+		long retryDelay = Math.min(TimeUnit.MINUTES.toMillis(5), TimeUnit.SECONDS.toMillis(1L << retry));
+		long retryTime = System.currentTimeMillis() + retryDelay;
+		pending.remove(rewardEntry);
+		pending.put(withAsyncRetryCount(withAsyncReplayProgress(rewardEntry, failure), retry), retryTime);
 		setTimedRewards(pending);
+		timedReplayInFlight.remove(rewardEntry);
+		// A due entry restored after its original timer fired needs its own retry
+		// timer; waiting for reconnect would strand it indefinitely.
+		loadTimedDelayedTimer(retryTime);
 		plugin.getLogger().warning("Could not deliver queued timed reward for " + getPlayerName()
 				+ "; it will be retried: " + failure.getMessage());
 	}
@@ -471,33 +700,7 @@ public class AdvancedCoreUser {
 		}
 
 		setCheckWorld(false);
-		ArrayList<String> rewards = getOfflineRewards();
-		if (rewards.isEmpty()) {
-			return;
-		}
-
-		setOfflineRewards(new ArrayList<>());
-		RewardHandler rewardHandler = plugin.getRewardHandler();
-		AdvancedCoreUser user = this;
-
-		for (String rewardEntry : rewards) {
-			if (rewardEntry == null || rewardEntry.equals("null")) {
-				continue;
-			}
-
-			String[] parts = rewardEntry.split("%placeholders%", 2);
-			String rewardReference = parts[0];
-			String placeholderStr = parts.length > 1 ? parts[1] : "";
-
-			RewardOptions options = new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
-					.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholderStr));
-
-			rewardHandler.givePersistedQueueRewardAsync(user, new PersistedQueueReference(rewardReference), options)
-					.exceptionally(failure -> {
-						restoreOfflineReward(rewardEntry, failure);
-						return null;
-					});
-		}
+		dispatchOfflineRewards(true);
 	}
 
 	/**
@@ -1604,6 +1807,15 @@ public class AdvancedCoreUser {
 	 * @param offlineRewards the offline rewards
 	 */
 	public void setOfflineRewards(ArrayList<String> offlineRewards) {
+		setOfflineRewards(offlineRewards, true);
+	}
+
+	/** Writes an async replay checkpoint before the next stage can execute. */
+	private void setOfflineRewardsDurably(ArrayList<String> offlineRewards) {
+		persistReplayCheckpoint(() -> setOfflineRewards(offlineRewards, false));
+	}
+
+	private void setOfflineRewards(ArrayList<String> offlineRewards, boolean queue) {
 		// MySQL TEXT max length is 65535 bytes
 		int maxLength = 65535;
 		String str = String.join("%line%", offlineRewards);
@@ -1614,7 +1826,8 @@ public class AdvancedCoreUser {
 			str = String.join("%line%", offlineRewards);
 		}
 
-		data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards);
+		if (queue) data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards);
+		else data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards, false);
 	}
 
 	/**
@@ -1642,6 +1855,25 @@ public class AdvancedCoreUser {
 	 * @param timed the timed rewards
 	 */
 	public void setTimedRewards(HashMap<String, Long> timed) {
+		setTimedRewards(timed, true);
+	}
+
+	/** Writes an async replay checkpoint before the next stage can execute. */
+	private void setTimedRewardsDurably(HashMap<String, Long> timed) {
+		persistReplayCheckpoint(() -> setTimedRewards(timed, false));
+	}
+
+	/**
+	 * A cached user may already have an older queued value for this key. Drain it
+	 * before the direct write so the delayed cache flush cannot replace a replay
+	 * checkpoint that an asynchronous reward stage has already relied on.
+	 */
+	private void persistReplayCheckpoint(Runnable write) {
+		if (isCached()) getCache().flushChangesAndRun(write);
+		else write.run();
+	}
+
+	private void setTimedRewards(HashMap<String, Long> timed, boolean queue) {
 		ArrayList<String> timedRewards = new ArrayList<>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 
@@ -1651,7 +1883,8 @@ public class AdvancedCoreUser {
 			timedRewards.add(str);
 
 		}
-		data.setStringList("TimedRewards", timedRewards);
+		if (queue) data.setStringList("TimedRewards", timedRewards);
+		else data.setStringList("TimedRewards", timedRewards, false);
 	}
 
 	/**

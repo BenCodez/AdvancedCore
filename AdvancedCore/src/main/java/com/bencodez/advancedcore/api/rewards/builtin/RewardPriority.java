@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -26,6 +28,15 @@ public final class RewardPriority {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectStringList("Priority") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
+            @Override
             public String onRewardRequest(Reward source, AdvancedCoreUser user, ArrayList<String> list,
                     HashMap<String, String> placeholders) {
                 for (String rewardName : list) {
@@ -37,6 +48,26 @@ public final class RewardPriority {
                     }
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestAsync(Reward source, AdvancedCoreUser user,
+                    ArrayList<String> list, HashMap<String, String> placeholders) {
+				String selectedName = Reward.replaySelection(placeholders, () -> {
+                for (String rewardName : list) {
+                    Reward reward = handler.getReward(rewardName);
+                    if (reward != null && reward.canGiveReward(user,
+                            new RewardOptions().withPlaceHolder(placeholders))) {
+						return rewardName;
+                    }
+                }
+					return null;
+				});
+				if (selectedName == null) return CompletableFuture.completedFuture(null);
+				Reward selected = handler.getReward(selectedName);
+				return selected == null ? CompletableFuture.completedFuture(null)
+						: handler.giveRewardAsync(user, selected, new RewardOptions().withPlaceHolder(placeholders)
+								.setIgnoreChance(true).setIgnoreRequirements(true)).thenApply(ignored -> selected.getName());
             }
         }.asPlaceholder("Priority").addEditButton(
                 new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Priority", null) {
