@@ -15,7 +15,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeoutException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -1566,6 +1570,55 @@ public class AdvancedCoreUser {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Completion-aware player-command dispatch used by durable asynchronous reward
+	 * replay. It completes only after each queued player command has run.
+	 */
+	public CompletionStage<Void> preformCommandAsync(ArrayList<String> commands, HashMap<String, String> placeholders) {
+		if (commands == null || commands.isEmpty()) return CompletableFuture.completedFuture(null);
+		try {
+			final ArrayList<String> cmds = PlaceholderUtils.replaceJavascript(getPlayer(),
+					PlaceholderUtils.replacePlaceHolder(commands, placeholders));
+			final Player player = getPlayer();
+			if (player == null || !plugin.isEnabled()) return CompletableFuture.completedFuture(null);
+			ArrayList<CompletableFuture<Void>> completions = new ArrayList<>();
+			for (String command : cmds) {
+				plugin.debug("Executing player command for " + getPlayerName() + ": " + command);
+				completions.add(runPlayerCommandAsync(player, command));
+			}
+			return CompletableFuture.allOf(completions.toArray(new CompletableFuture[0]));
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
+	}
+
+	private CompletableFuture<Void> runPlayerCommandAsync(Player player, String command) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		AtomicBoolean claimed = new AtomicBoolean();
+		Runnable dispatch = () -> {
+			if (!claimed.compareAndSet(false, true)) return;
+			try {
+				player.chat("/" + command);
+				completion.complete(null);
+			} catch (Throwable failure) {
+				completion.completeExceptionally(failure);
+			}
+		};
+		try {
+			getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
+		} catch (Throwable failure) {
+			claimed.set(true);
+			completion.completeExceptionally(failure);
+			return completion;
+		}
+		CompletableFuture.delayedExecutor(30, TimeUnit.SECONDS).execute(() -> {
+			if (claimed.compareAndSet(false, true)) {
+				completion.completeExceptionally(new TimeoutException("Timed out waiting for scheduled player command"));
+			}
+		});
+		return completion;
 	}
 
 	/**

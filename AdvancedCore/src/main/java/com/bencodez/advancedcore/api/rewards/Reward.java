@@ -315,13 +315,12 @@ public class Reward {
 				replayState.setRegistryFingerprint(replayKey, registryFingerprint);
 				return invokeInjectionAsync(inject, user, placeholders, replayState, injectionKey, occurrenceId);
 			})
-					.thenApply(result -> {
+					.thenCompose(result -> {
 						if (inject.isAddAsPlaceholder() && result != null) addPlaceholder(inject, result, placeholders);
 						int checkpoint = completed.incrementAndGet();
 						replayState.setCompleted(replayKey, checkpoint);
 						replayState.setRegistryFingerprint(replayKey, registryFingerprint);
-						replayState.persistCheckpoint(placeholders);
-						return result;
+						return replayState.persistCheckpointAsync(plugin, placeholders).thenApply(ignored -> result);
 					}).thenCompose(ignored -> resumeOnServerThread(user));
 		}
 		return sequence.handle((ignored, failure) -> {
@@ -544,10 +543,29 @@ public class Reward {
 		private synchronized void setCheckpointConsumer(Consumer<ReplayCheckpoint> consumer) {
 			checkpointConsumer = consumer;
 		}
-		private void persistCheckpoint(HashMap<String, String> placeholders) {
+		private CompletionStage<Void> persistCheckpointAsync(AdvancedCorePlugin plugin,
+				HashMap<String, String> placeholders) {
 			Consumer<ReplayCheckpoint> consumer;
 			synchronized (this) { consumer = checkpointConsumer; }
-			if (consumer != null) consumer.accept(new ReplayCheckpoint(copyProgress(), copyRegistryFingerprints(), placeholders));
+			if (consumer == null) return CompletableFuture.completedFuture(null);
+			ReplayCheckpoint checkpoint = new ReplayCheckpoint(copyProgress(), copyRegistryFingerprints(), placeholders);
+			CompletableFuture<Void> persisted = new CompletableFuture<>();
+			try {
+				plugin.getTimer().execute(() -> {
+					try {
+						consumer.accept(checkpoint);
+						persisted.complete(null);
+					} catch (Throwable failure) {
+						persisted.completeExceptionally(failure);
+					}
+				});
+			} catch (Throwable failure) {
+				persisted.completeExceptionally(failure);
+			}
+			// shutdownNow() may remove a task that was accepted just before runtime
+			// teardown. Bound that indeterminate state so the replay fails closed
+			// instead of waiting forever without advancing its checkpoint.
+			return persisted.orTimeout(30, TimeUnit.SECONDS);
 		}
 	}
 

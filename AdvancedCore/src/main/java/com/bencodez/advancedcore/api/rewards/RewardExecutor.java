@@ -175,8 +175,8 @@ public class RewardExecutor {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
         if (reward.startsWith("/")) {
-            MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), reward, context.getPlaceholders());
-            return CompletableFuture.completedFuture(null);
+            return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), reward,
+                    context.getPlaceholders());
         }
         return giveRewardAsync(user, handler.getReward(reward), context.getOptions());
     }

@@ -19,7 +19,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
@@ -232,7 +237,18 @@ public class MiscUtils {
 	}
 
 	public void executeConsoleCommands(String playerName, String command, HashMap<String, String> placeholders) {
-		if (command != null && !command.isEmpty()) {
+		executeConsoleCommandsAsync(playerName, command, placeholders);
+	}
+
+	/**
+	 * Schedules one console command and completes only after Bukkit has dispatched
+	 * it. Async reward replay uses this completion boundary so it never records a
+	 * durable checkpoint ahead of a queued command.
+	 */
+	public CompletionStage<Void> executeConsoleCommandsAsync(String playerName, String command,
+			HashMap<String, String> placeholders) {
+		if (command == null || command.isEmpty()) return CompletableFuture.completedFuture(null);
+		try {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
 			if (p != null) {
 				command = PlaceholderUtils.replaceJavascriptOnly(p, command);
@@ -244,16 +260,40 @@ public class MiscUtils {
 			final String cmd = stripLeadingSlash(command);
 
 			plugin.debug("Executing console command: " + command);
-			plugin.getBukkitScheduler().executeOrScheduleSync(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), cmd);
-				}
-
-			});
+			return runConsoleCommandAsync(cmd, 0, false, false);
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
 		}
+	}
 
+	/**
+	 * Schedules every console command using the legacy stagger timing and completes
+	 * only after every dispatch has run. This keeps an async reward injector from
+	 * checkpointing a command list while any member is still queued.
+	 */
+	@SuppressWarnings("deprecation")
+	public CompletionStage<Void> executeConsoleCommandsAsync(final String playerName, final ArrayList<String> cmds,
+			final HashMap<String, String> placeholders, final boolean stagger) {
+		if (cmds == null || cmds.isEmpty()) return CompletableFuture.completedFuture(null);
+		try {
+			placeholders.put("player", playerName);
+			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
+			ArrayList<String> commands = cmds;
+			if (p != null) commands = PlaceholderUtils.replaceJavascriptOnly(p, commands);
+			commands = PlaceholderUtils.replacePlaceHolder(commands, placeholders);
+			if (p != null) commands = PlaceholderUtils.replacePlaceHolders(p, commands);
+
+			ArrayList<CompletableFuture<Void>> completions = new ArrayList<>();
+			int delay = 0;
+			for (String command : commands) {
+				plugin.debug("Executing console command: " + command);
+				completions.add(runConsoleCommandAsync(stripLeadingSlash(command), delay++, stagger, true)
+						.toCompletableFuture());
+			}
+			return CompletableFuture.allOf(completions.toArray(new CompletableFuture[0]));
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
 	}
 
 	public Object getBlockMeta(Block block, String str) {
@@ -477,6 +517,42 @@ public class MiscUtils {
 				}
 			});
 		}
+	}
+
+	/**
+	 * Schedules one command with a completion boundary. The timeout claims the
+	 * runnable before it can execute, so a task delayed past shutdown cannot run
+	 * after a failed replay has already been retried.
+	 */
+	private CompletionStage<Void> runConsoleCommandAsync(String command, int delay, boolean hasDelay,
+			boolean scheduleAsTask) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		AtomicBoolean claimed = new AtomicBoolean();
+		Runnable dispatch = () -> {
+			if (!claimed.compareAndSet(false, true)) return;
+			try {
+				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+				completion.complete(null);
+			} catch (Throwable failure) {
+				completion.completeExceptionally(failure);
+			}
+		};
+		try {
+			if (hasDelay && delay > 0) plugin.getBukkitScheduler().runTaskLater(plugin, dispatch, delay);
+			else if (scheduleAsTask) plugin.getBukkitScheduler().runTask(plugin, dispatch);
+			else plugin.getBukkitScheduler().executeOrScheduleSync(plugin, dispatch);
+		} catch (Throwable failure) {
+			claimed.set(true);
+			completion.completeExceptionally(failure);
+			return completion;
+		}
+		long timeoutSeconds = 30L + Math.max(0, delay);
+		CompletableFuture.delayedExecutor(timeoutSeconds, TimeUnit.SECONDS).execute(() -> {
+			if (claimed.compareAndSet(false, true)) {
+				completion.completeExceptionally(new TimeoutException("Timed out waiting for scheduled console command"));
+			}
+		});
+		return completion;
 	}
 
 	private String stripLeadingSlash(String command) {

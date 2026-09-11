@@ -10,6 +10,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,6 +33,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
@@ -158,6 +162,55 @@ class RewardAsyncInjectionTest {
 		assertEquals(List.of("first-start", "second:first-value", "post:second-value"), events);
 		assertEquals("first-value", placeholders.get("first"));
 		assertEquals("second-value", placeholders.get("second"));
+	}
+
+	@Test
+	void checkpointWriteRunsOffServerThreadAndGatesTheNextInjection() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		List<String> events = new ArrayList<>();
+		handler.getInjectedRewards().add(new RewardInject("First") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				events.add("first");
+				return null;
+			}
+		});
+		handler.getInjectedRewards().add(new RewardInject("Second") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				events.add("second");
+				return null;
+			}
+		});
+
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		constructor.setAccessible(true);
+		Object replayState = constructor.newInstance(null, null, false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState, (java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoint ->
+				events.add("checkpoint:" + checkpoint.getReplayProgress().get("AsyncReward")));
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0,
+				replayState, "AsyncReward", "occurrence");
+
+		ArgumentCaptor<Runnable> writes = ArgumentCaptor.forClass(Runnable.class);
+		verify(storageExecutor).execute(writes.capture());
+		assertEquals(List.of("first"), events);
+		assertFalse(result.toCompletableFuture().isDone());
+
+		writes.getValue().run();
+		verify(storageExecutor, times(2)).execute(writes.capture());
+		assertEquals(List.of("first", "checkpoint:1", "second"), events);
+		writes.getAllValues().get(writes.getAllValues().size() - 1).run();
+		result.toCompletableFuture().join();
+		assertEquals(List.of("first", "checkpoint:1", "second", "checkpoint:2"), events);
 	}
 
 	@Test

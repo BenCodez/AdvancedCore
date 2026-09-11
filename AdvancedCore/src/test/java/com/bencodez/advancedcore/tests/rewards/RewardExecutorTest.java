@@ -216,13 +216,17 @@ public class RewardExecutorTest {
     public void commandStyleRewardExecutesConsoleCommand() {
         MiscUtils misc = mock(MiscUtils.class);
         RewardOptions options = new RewardOptions().addPlaceholder("player", "Ben");
+        when(misc.executeConsoleCommandsAsync("Ben", "/say hi", options.getPlaceholders()))
+                .thenReturn(CompletableFuture.completedFuture(null));
 
         try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
             miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
             executor.giveReward(user, "/say hi", options);
+            executor.giveRewardAsync(user, "/say hi", options).toCompletableFuture().join();
         }
 
         verify(misc).executeConsoleCommands("Ben", "/say hi", options.getPlaceholders());
+        verify(misc).executeConsoleCommandsAsync("Ben", "/say hi", options.getPlaceholders());
     }
 
     @Test

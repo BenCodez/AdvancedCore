@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.tests.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,6 +20,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
 
 import org.bukkit.Location;
@@ -295,6 +298,74 @@ public class BuiltinRewardBehaviorTest {
             ArrayList<String> random = new ArrayList<>(List.of("say only"));
             ((RewardInjectStringList) injects.get(4)).onRewardRequest(reward, user, random, placeholders);
             verify(misc).executeConsoleCommands("Ben", "say only", placeholders);
+        }
+    }
+
+    @Test
+    public void asyncCommandsWaitForTheirDispatchStages() {
+        RewardCommands.register(handler, plugin);
+        MiscUtils misc = mock(MiscUtils.class);
+        CompletableFuture<Void> numberCommand = new CompletableFuture<>();
+        CompletableFuture<Void> command = new CompletableFuture<>();
+        CompletableFuture<Void> commandList = new CompletableFuture<>();
+        CompletableFuture<Void> sectionConsole = new CompletableFuture<>();
+        CompletableFuture<Void> sectionPlayer = new CompletableFuture<>();
+        CompletableFuture<Void> random = new CompletableFuture<>();
+        try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
+            miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
+            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("give Ben stone 5"), eq(placeholders)))
+                    .thenReturn(numberCommand);
+            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("say hi"), eq(placeholders))).thenReturn(command);
+            ArrayList<String> list = new ArrayList<>(List.of("say one", "say two"));
+            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(list), eq(placeholders), eq(true)))
+                    .thenReturn(commandList);
+            ArrayList<String> console = new ArrayList<>(List.of("say console"));
+            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(console), eq(placeholders), eq(false)))
+                    .thenReturn(sectionConsole);
+            ArrayList<String> player = new ArrayList<>(List.of("spawn"));
+            when(user.preformCommandAsync(eq(player), eq(placeholders))).thenReturn(sectionPlayer);
+            ArrayList<String> randomList = new ArrayList<>(List.of("say random"));
+            HashMap<String, String> randomPlaceholders = new HashMap<>();
+            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("say random"), eq(randomPlaceholders))).thenReturn(random);
+
+            ConfigurationSection number = section("NumberCommand");
+            number.set("Min", 5);
+            number.set("Max", 5);
+            number.set("Command", "give Ben stone %number%");
+            CompletionStage<String> numberStage = ((RewardInjectConfigurationSection) injects.get(0))
+                    .onRewardRequestedAsync(reward, user, number, placeholders);
+            assertFalse(numberStage.toCompletableFuture().isDone());
+            numberCommand.complete(null);
+            assertEquals("5", numberStage.toCompletableFuture().join());
+
+            CompletionStage<String> commandStage = ((RewardInjectString) injects.get(1))
+                    .onRewardRequestAsync(reward, user, "say hi", placeholders);
+            assertFalse(commandStage.toCompletableFuture().isDone());
+            command.complete(null);
+            commandStage.toCompletableFuture().join();
+
+            CompletionStage<String> listStage = ((RewardInjectStringList) injects.get(2))
+                    .onRewardRequestAsync(reward, user, list, placeholders);
+            assertFalse(listStage.toCompletableFuture().isDone());
+            commandList.complete(null);
+            listStage.toCompletableFuture().join();
+
+            ConfigurationSection commands = section("Commands");
+            commands.set("Console", console);
+            commands.set("Player", player);
+            commands.set("Stagger", false);
+            CompletionStage<String> sectionStage = ((RewardInjectConfigurationSection) injects.get(3))
+                    .onRewardRequestedAsync(reward, user, commands, placeholders);
+            sectionConsole.complete(null);
+            assertFalse(sectionStage.toCompletableFuture().isDone());
+            sectionPlayer.complete(null);
+            sectionStage.toCompletableFuture().join();
+
+            CompletionStage<String> randomStage = ((RewardInjectStringList) injects.get(4))
+                    .onRewardRequestAsync(reward, user, randomList, randomPlaceholders);
+            assertFalse(randomStage.toCompletableFuture().isDone());
+            random.complete(null);
+            randomStage.toCompletableFuture().join();
         }
     }
 
