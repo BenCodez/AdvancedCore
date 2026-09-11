@@ -504,6 +504,23 @@ public class Reward {
 		return selected;
 	}
 
+	/** Returns whether the active injection already persisted a selected branch. */
+	public static boolean hasReplaySelection(HashMap<String, String> placeholders) {
+		String activeKey = ACTIVE_REPLAY_KEY.get();
+		if (activeKey == null) return false;
+		String storageKey = REPLAY_SELECTION_PREFIX + Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(activeKey.getBytes(StandardCharsets.UTF_8));
+		return replayMetadata(placeholders, ACTIVE_REPLAY_STATE.get(), storageKey) != null;
+	}
+
+	/** Durably records replay metadata before dispatching its selected side effect. */
+	public static CompletionStage<Void> persistReplayMetadataAsync(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders) {
+		ReplayState replayState = ACTIVE_REPLAY_STATE.get();
+		return replayState == null ? CompletableFuture.completedFuture(null)
+				: replayState.persistCheckpointAsync(plugin, placeholders);
+	}
+
 	/** Executes a command list sequentially and durably records each successful item. */
 	public static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
 			HashMap<String, String> placeholders, String lane, List<String> commands,

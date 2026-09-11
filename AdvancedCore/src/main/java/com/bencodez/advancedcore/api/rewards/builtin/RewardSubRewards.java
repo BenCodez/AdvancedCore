@@ -38,6 +38,11 @@ public final class RewardSubRewards {
 				return true;
 			}
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayNestedRewardSnapshot(placeholders, "nested-list:" + getPath());
+			}
+
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
@@ -52,7 +57,10 @@ public final class RewardSubRewards {
 					ConfigurationSection data, HashMap<String, String> placeholders) {
 				if (!data.isConfigurationSection(getPath()) && !(isAlwaysForce() && data.contains(getPath(), true))
 						&& !isAlwaysForceNoData()) {
-					return java.util.concurrent.CompletableFuture.completedFuture(null);
+					return hasPendingReplayWork(placeholders)
+							? java.util.concurrent.CompletableFuture.failedFuture(new IllegalStateException(
+									"Pending reward replay configuration is missing: " + getPath()))
+							: java.util.concurrent.CompletableFuture.completedFuture(null);
 				}
 				return new RewardBuilder(reward.getConfig().getConfigData(), "Rewards").withPrefix(reward.getName())
 						.withPlaceHolder(placeholders).sendAsync(user).thenApply(ignored -> null);

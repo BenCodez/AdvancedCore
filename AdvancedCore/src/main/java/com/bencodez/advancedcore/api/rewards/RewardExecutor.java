@@ -155,9 +155,12 @@ public class RewardExecutor {
         if (data.isConfigurationSection(path)) {
             return giveSectionRewardAsync(user, data, path, context);
         }
-        String nestedReward = data.getString(path, "");
-        return nestedReward.isEmpty() ? CompletableFuture.completedFuture(null)
-                : giveRewardAsync(user, nestedReward, options);
+		String nestedReward = data.getString(path, "");
+		if (nestedReward.isEmpty()) {
+			return CompletableFuture.failedFuture(
+					new IllegalStateException("Nested replay configuration could not be resolved: " + path));
+		}
+		return giveRewardAsync(user, nestedReward, options);
     }
 
     public void giveReward(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
@@ -207,7 +210,12 @@ public class RewardExecutor {
 					(command, ignoredIndex) -> MiscUtils.getInstance().executeConsoleCommandsAsync(
 							user.getPlayerName(), command, context.getPlaceholders()));
 		}
-        return giveRewardAsync(user, handler.getReward(reward), context.getOptions());
+		Reward resolved = handler.getReward(reward);
+		if (resolved == null && context.getOptions().getAsyncReplayState() != null) {
+			return CompletableFuture.failedFuture(
+					new IllegalStateException("Nested replay reward could not be resolved: " + reward));
+		}
+		return giveRewardAsync(user, resolved, context.getOptions());
     }
 
     public void givePersistedQueueReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {

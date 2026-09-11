@@ -32,6 +32,11 @@ public final class RewardRandomReward {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
             @Override
             public boolean supportsAsyncSynchronization() { return false; }
 
@@ -49,14 +54,17 @@ public final class RewardRandomReward {
             @Override
             public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
                     ArrayList<String> list, HashMap<String, String> placeholders) {
-                if (list.isEmpty()) return java.util.concurrent.CompletableFuture.completedFuture(null);
+				if (list.isEmpty() && !hasPendingReplayWork(placeholders)) {
+					return java.util.concurrent.CompletableFuture.completedFuture(null);
+				}
                 String selected = Reward.replaySelection(placeholders,
                         () -> list.get(ThreadLocalRandom.current().nextInt(list.size())));
-                RewardOptions childOptions = Reward.withReplayState(
-                        new RewardOptions().setPlaceholders(placeholders), Reward.currentReplayState(),
-                        Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
-                return handler.giveRewardAsync(user, selected, childOptions)
-                        .thenApply(ignored -> selected);
+				RewardOptions childOptions = Reward.withReplayState(
+						new RewardOptions().setPlaceholders(placeholders), Reward.currentReplayState(),
+						Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> handler.giveRewardAsync(user, selected, childOptions))
+						.thenApply(ignored -> selected);
             }
         }.asPlaceholder("RandomReward").priority(20).addEditButton(
                 new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomReward", null) {

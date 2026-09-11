@@ -39,6 +39,11 @@ public final class RewardAdvancedRandomReward {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
             @Override
             public boolean supportsAsyncSynchronization() { return false; }
 
@@ -58,16 +63,20 @@ public final class RewardAdvancedRandomReward {
 
             @Override
             public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
-                    ConfigurationSection section, HashMap<String, String> placeholders) {
-                ArrayList<String> rewards = ArrayUtils.convert(section.getKeys(false));
-                if (rewards.isEmpty()) return CompletableFuture.completedFuture(null);
+					ConfigurationSection section, HashMap<String, String> placeholders) {
+				ArrayList<String> rewards = ArrayUtils.convert(section.getKeys(false));
+				if (rewards.isEmpty() && !hasPendingReplayWork(placeholders)) {
+					return CompletableFuture.completedFuture(null);
+				}
                 String selected = Reward.replaySelection(placeholders,
                         () -> rewards.get(ThreadLocalRandom.current().nextInt(rewards.size())));
                 RewardOptions childOptions = Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders),
                         Reward.currentReplayState(), Reward.currentReplayKey(), "selected:" + selected,
                         Reward.currentReplayOccurrenceId())
                         .setPrefix(reward.getRewardName() + "_AdvancedRandomReward");
-                return handler.giveRewardAsync(user, section, selected, childOptions).thenApply(ignored -> selected);
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> handler.giveRewardAsync(user, section, selected, childOptions))
+						.thenApply(ignored -> selected);
             }
 
             @Override

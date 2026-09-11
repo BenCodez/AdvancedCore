@@ -62,6 +62,11 @@ public final class RewardJavascript {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
             @Override
             public boolean supportsAsyncSynchronization() { return false; }
 
@@ -91,7 +96,8 @@ public final class RewardJavascript {
                         .withPlaceHolder(placeholders);
                 Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
                         Reward.currentReplayKey(), "path:" + path, Reward.currentReplayOccurrenceId());
-                return builder.sendAsync(user).thenApply(ignored -> null);
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> builder.sendAsync(user)).thenApply(ignored -> null);
             }
 
             @Override

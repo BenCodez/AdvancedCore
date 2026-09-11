@@ -42,6 +42,11 @@ public final class RewardSpecialChance {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
             @Override
             public boolean supportsAsyncSynchronization() { return false; }
 
@@ -116,12 +121,15 @@ public final class RewardSpecialChance {
                 if (selected.length != 2) return CompletableFuture.completedFuture(null);
                 for (Entry<Double, String> entry : map.entrySet()) {
                     if (entry.getValue().equals(selected[0])) {
-                        return new RewardBuilder(section, entry.getValue())
-                                .withPrefix(reward.getName() + "_SpecialChance").withPlaceHolder(placeholders)
-                                .withPlaceHolder("chance", selected[1]).sendAsync(user).thenApply(ignored -> null);
-                    }
-                }
-                return CompletableFuture.completedFuture(null);
+						RewardBuilder builder = new RewardBuilder(section, entry.getValue())
+								.withPrefix(reward.getName() + "_SpecialChance").withPlaceHolder(placeholders)
+								.withPlaceHolder("chance", selected[1]);
+						return Reward.persistReplayMetadataAsync(plugin, placeholders)
+								.thenCompose(ignored -> builder.sendAsync(user)).thenApply(ignored -> null);
+					}
+				}
+				return CompletableFuture.failedFuture(
+						new IllegalStateException("Selected special-chance reward could not be resolved: " + selected[0]));
             }
 
             @Override

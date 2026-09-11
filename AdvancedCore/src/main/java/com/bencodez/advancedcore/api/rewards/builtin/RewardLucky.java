@@ -43,6 +43,11 @@ public final class RewardLucky {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
             @Override
             public boolean supportsAsyncSynchronization() { return false; }
 
@@ -105,7 +110,7 @@ public final class RewardLucky {
 					return paths.isEmpty() ? null : String.join("\n", paths);
 				});
 				if (choices == null) return CompletableFuture.completedFuture(null);
-				CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+				CompletionStage<Void> sequence = Reward.persistReplayMetadataAsync(plugin, placeholders);
 				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
 				String parentReplayKey = Reward.currentReplayKey();
 				String parentOccurrenceId = Reward.currentReplayOccurrenceId();

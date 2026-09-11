@@ -1463,6 +1463,28 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void removedSubRewardsSectionCannotDropItsPendingNestedSnapshot() throws Exception {
+		RewardSubRewards.register(handler, plugin);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class,
+				boolean.class);
+		constructor.setAccessible(true);
+		Object replayState = constructor.newInstance(new HashMap<>(), new HashMap<>(), false);
+		@SuppressWarnings("unchecked")
+		CompletionStage<List<String>> snapshot = Reward.replayNestedRewardSnapshot(plugin, new HashMap<>(),
+				"nested-list:Rewards", List.of("First", "Second"), (Reward.ReplayState) replayState,
+				"AsyncReward/0");
+		snapshot.toCompletableFuture().join();
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+		CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0,
+				replayState, "AsyncReward", "occurrence");
+
+		assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
+	}
+
+	@Test
 	void everyNestedRewardInjectorWaitsForItsSelectedChild() {
 		handler = org.mockito.Mockito.spy(new RewardHandler(plugin));
 		when(plugin.getRewardHandler()).thenReturn(handler);
@@ -1489,6 +1511,52 @@ class RewardAsyncInjectionTest {
 		child.complete(null);
 		result.toCompletableFuture().join();
 		assertEquals(List.of("after-child"), events);
+	}
+
+	@Test
+	void randomRewardResumesItsSelectedChildAfterConfigurationRemoval() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		handler = org.mockito.Mockito.spy(new RewardHandler(plugin));
+		when(plugin.getRewardHandler()).thenReturn(handler);
+		when(user.getPlugin()).thenReturn(plugin);
+		data.set("RandomReward", new ArrayList<>(List.of("child")));
+		doReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")))
+				.when(handler).giveRewardAsync(eq(user), eq("child"), any(RewardOptions.class));
+		RewardRandomReward.register(handler, plugin);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		state.setAccessible(true);
+		Object initialState = state.newInstance(new HashMap<>(), new HashMap<>(), false);
+		List<Reward.ReplayCheckpoint> checkpoints = new ArrayList<>();
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(initialState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoints::add);
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+		CompletionStage<Void> first = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0,
+				initialState, "AsyncReward", "occurrence");
+		ArgumentCaptor<Runnable> writes = ArgumentCaptor.forClass(Runnable.class);
+		verify(storageExecutor).execute(writes.capture());
+		verify(handler, never()).giveRewardAsync(eq(user), eq("child"), any(RewardOptions.class));
+
+		writes.getValue().run();
+		assertThrows(java.util.concurrent.CompletionException.class, () -> first.toCompletableFuture().join());
+		assertEquals(1, checkpoints.size());
+		assertTrue(checkpoints.get(0).getPlaceholders().keySet().stream()
+				.anyMatch(key -> key.startsWith("__advancedcore_replay_selection_")));
+		data.set("RandomReward", null);
+		CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, user,
+				checkpoints.get(0).getPlaceholders(), 0,
+				state.newInstance(checkpoints.get(0).getReplayProgress(),
+						checkpoints.get(0).getReplayRegistryFingerprints(), false),
+				"AsyncReward", "occurrence");
+
+		assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
+		verify(handler, times(2)).giveRewardAsync(eq(user), eq("child"), any(RewardOptions.class));
 	}
 
 	@Test

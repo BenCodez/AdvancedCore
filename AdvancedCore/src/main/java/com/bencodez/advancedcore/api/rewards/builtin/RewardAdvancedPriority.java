@@ -36,6 +36,11 @@ public final class RewardAdvancedPriority {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
             @Override
             public boolean supportsAsyncSynchronization() { return false; }
 
@@ -79,8 +84,11 @@ public final class RewardAdvancedPriority {
 						.setIgnoreRequirements(true).setPrefix(sourceReward.getName() + "_AdvancedPriority")
 						.withPlaceHolder(placeholders), Reward.currentReplayState(), Reward.currentReplayKey(),
 						"selected:" + selectedKey, Reward.currentReplayOccurrenceId());
-				return selected == null ? CompletableFuture.completedFuture(null)
-						: handler.giveRewardAsync(user, selected, childOptions).thenApply(ignored -> selected.getName());
+				if (selected == null) return CompletableFuture.failedFuture(
+						new IllegalStateException("Selected advanced priority reward could not be resolved: " + selectedKey));
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> handler.giveRewardAsync(user, selected, childOptions))
+						.thenApply(ignored -> selected.getName());
             }
 
             @Override

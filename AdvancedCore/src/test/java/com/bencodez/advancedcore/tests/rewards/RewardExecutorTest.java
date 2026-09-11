@@ -214,6 +214,40 @@ public class RewardExecutorTest {
 		verify(misc, never()).executeConsoleCommandsAsync(eq("Ben"), eq("/inserted"), any());
 	}
 
+	@Test
+	public void snapshottedListFailsWhenANamedChildDisappears() {
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("Rewards", new ArrayList<>(List.of("First", "Missing")));
+		Reward firstReward = mock(Reward.class);
+		Reward missingReward = mock(Reward.class);
+		when(firstReward.giveRewardAsync(eq(user), any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		when(missingReward.giveRewardAsync(eq(user), any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")));
+		when(handler.getReward("First")).thenReturn(firstReward);
+		when(handler.getReward("Missing")).thenReturn(missingReward, (Reward) null);
+		AtomicReference<Reward.ReplayCheckpoint> checkpoint = new AtomicReference<>();
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(0).run();
+			return null;
+		}).when(timer).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(timer);
+		RewardOptions first = new RewardOptions();
+		first.setAsyncReplayCheckpointConsumer(checkpoint::set);
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, data, "Rewards", first).toCompletableFuture().join());
+		assertNotNull(checkpoint.get());
+		RewardOptions retry = new RewardOptions()
+				.setPlaceholders(new java.util.HashMap<>(checkpoint.get().getPlaceholders()));
+		retry.setAsyncReplayCheckpointConsumer(ignored -> { });
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, data, "Rewards", retry).toCompletableFuture().join());
+		verify(missingReward).giveRewardAsync(eq(user), any(RewardOptions.class));
+	}
+
     @Test
     public void stringRewardDispatchesNamedReward() {
         YamlConfiguration data = new YamlConfiguration();
@@ -363,6 +397,15 @@ public class RewardExecutorTest {
                 () -> executor.givePersistedQueueRewardAsync(user, "Missing", new RewardOptions())
                         .toCompletableFuture().join());
     }
+
+	@Test
+	public void unresolvedNestedConfigurationFailsSoReplayCannotDropIt() {
+		YamlConfiguration data = new YamlConfiguration();
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, data, "Removed", new RewardOptions())
+						.toCompletableFuture().join());
+	}
 
     @Test
     public void choicesDispatchThroughRewardBuilder() {

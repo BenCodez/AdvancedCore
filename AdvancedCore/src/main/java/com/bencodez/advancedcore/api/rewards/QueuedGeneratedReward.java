@@ -23,12 +23,23 @@ public final class QueuedGeneratedReward extends Reward {
 
 	@Override
 	public void giveReward(AdvancedCoreUser user, RewardOptions rewardOptions) {
-		if (user == null || user.getUUID() == null || !allowedUserUuids.contains(user.getUUID())) {
-			plugin.getLogger().warning("Blocked generated queued reward " + getRewardName()
-					+ " for a user without a matching persisted queue entry");
-			return;
-		}
+		if (!isAllowed(user)) return;
 		super.giveReward(user, rewardOptions);
+	}
+
+	@Override
+	public java.util.concurrent.CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user,
+			RewardOptions rewardOptions) {
+		if (!isAllowed(user)) return java.util.concurrent.CompletableFuture.failedFuture(
+				new IllegalStateException("Generated queued reward is not authorized for this user"));
+		return super.giveRewardAsync(user, rewardOptions);
+	}
+
+	private boolean isAllowed(AdvancedCoreUser user) {
+		if (user != null && user.getUUID() != null && allowedUserUuids.contains(user.getUUID())) return true;
+		plugin.getLogger().warning("Blocked generated queued reward " + getRewardName()
+				+ " for a user without a matching persisted queue entry");
+		return false;
 	}
 
 	@Override
