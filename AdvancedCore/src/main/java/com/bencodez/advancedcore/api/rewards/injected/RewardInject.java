@@ -114,6 +114,14 @@ public abstract class RewardInject extends Inject {
 	}
 
 	/**
+	 * Whether durable replay metadata requires this injection to run even when its
+	 * configured path was removed or changed while the reward was queued.
+	 */
+	public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+		return false;
+	}
+
+	/**
 	 * Whether asynchronous dispatch may serialize this injection across reward
 	 * chains. Nested reward injectors opt out because awaiting a child that uses
 	 * the same shared injection would otherwise wait on its own unfinished tail.

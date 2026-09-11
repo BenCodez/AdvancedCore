@@ -9,6 +9,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -51,6 +52,18 @@ public final class RewardCommands {
 
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console");
+			}
+
+			@Override
+			protected CompletionStage<Object> onMissingConfiguredDataAsync(Reward reward, AdvancedCoreUser user,
+					HashMap<String, String> placeholders) {
+				return onRewardRequestedAsync(reward, user, new YamlConfiguration(), placeholders)
+						.thenApply(result -> result);
+			}
 
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
@@ -103,6 +116,11 @@ public final class RewardCommands {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console");
+			}
+
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
                     HashMap<String, String> placeholders) {
@@ -142,6 +160,11 @@ public final class RewardCommands {
 
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console");
+			}
 
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
@@ -190,6 +213,19 @@ public final class RewardCommands {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console")
+						|| Reward.hasReplayCommandSnapshot(placeholders, "player");
+			}
+
+			@Override
+			protected CompletionStage<Object> onMissingConfiguredDataAsync(Reward reward, AdvancedCoreUser user,
+					HashMap<String, String> placeholders) {
+				return onRewardRequestedAsync(reward, user, new YamlConfiguration(), placeholders)
+						.thenApply(result -> result);
+			}
+
             @SuppressWarnings("unchecked")
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
@@ -212,13 +248,18 @@ public final class RewardCommands {
                     ConfigurationSection section, HashMap<String, String> placeholders) {
                 ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console", new ArrayList<>());
                 ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<>());
-				CompletionStage<Void> availability = userCommands.isEmpty() ? CompletableFuture.completedFuture(null)
+				boolean stagger = section.getBoolean("Stagger", true);
+				CompletionStage<Void> availability = userCommands.isEmpty()
+						&& !Reward.hasReplayCommandSnapshot(placeholders, "player")
+						? CompletableFuture.completedFuture(null)
 						: user.validatePlayerCommandAvailabilityAsync();
 				// Validate the player before any mixed-section side effect, then preserve
 				// the established console-before-player command order.
-				return availability.thenCompose(ignored -> consoleCommands.isEmpty() ? CompletableFuture.completedFuture(null)
+				return availability.thenCompose(ignored -> consoleCommands.isEmpty()
+						&& !Reward.hasReplayCommandSnapshot(placeholders, "console")
+						? CompletableFuture.completedFuture(null)
 						: MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
-								placeholders, section.getBoolean("Stagger", true)))
+								placeholders, stagger))
 						.thenCompose(ignored -> user.preformCommandAsync(userCommands, placeholders))
                         .thenApply(ignored -> null);
             }
@@ -250,6 +291,11 @@ public final class RewardCommands {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console");
+			}
+
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
                     HashMap<String, String> placeholders) {
@@ -263,7 +309,9 @@ public final class RewardCommands {
             @Override
             public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
                 ArrayList<String> list, HashMap<String, String> placeholders) {
-                if (list.isEmpty()) return CompletableFuture.completedFuture(null);
+				if (list.isEmpty() && !hasPendingReplayWork(placeholders)) {
+					return CompletableFuture.completedFuture(null);
+				}
                 String command = Reward.replaySelection(placeholders,
                         () -> list.get(ThreadLocalRandom.current().nextInt(list.size())));
                 return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), command, placeholders)

@@ -67,7 +67,9 @@ public abstract class RewardInjectStringList extends RewardInject {
 	public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
 			ConfigurationSection data, HashMap<String, String> placeholders) {
 		if (!data.isList(getPath()) && !(isAlwaysForce() && data.contains(getPath(), true)) && !isAlwaysForceNoData()) {
-			return CompletableFuture.completedFuture(null);
+			return hasPendingReplayWork(placeholders)
+					? onRewardRequestAsync(reward, user, new ArrayList<>(), placeholders).thenApply(result -> result)
+					: CompletableFuture.completedFuture(null);
 		}
 		List<?> stored = data.getList(getPath(), getDefaultValue());
 		ArrayList<String> value = new ArrayList<>();

@@ -1565,15 +1565,18 @@ class RewardAsyncInjectionTest {
 		ArrayList<String> dispatched = new ArrayList<>();
 		AtomicBoolean failSecond = new AtomicBoolean(true);
 		AtomicInteger expansion = new AtomicInteger();
+		AtomicReference<List<String>> configuredTemplates = new AtomicReference<>(
+				List.of("first %value%", "second %value%"));
 		handler.getInjectedRewards().add(new RewardInject("Commands") {
 			@Override public boolean supportsAsyncRequest() { return true; }
 			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
 					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
 			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
 					ConfigurationSection ignoredData, HashMap<String, String> commandPlaceholders) {
-				List<String> templates = List.of("first %value%", "second %value%");
+				List<String> templates = configuredTemplates.get();
 				int currentExpansion = expansion.incrementAndGet();
-				List<String> expanded = List.of("first-" + currentExpansion, "second-" + currentExpansion);
+				List<String> expanded = templates.stream()
+						.map(template -> template.substring(0, template.indexOf(' ')) + "-" + currentExpansion).toList();
 				return Reward.replayCommandSequence(plugin, commandPlaceholders, "console", templates, expanded,
 						(command, ignoredIndex) -> {
 							dispatched.add(command);
@@ -1588,6 +1591,7 @@ class RewardAsyncInjectionTest {
 				() -> reward.giveInjectedRewardsAsync(user, new HashMap<>()).toCompletableFuture().join());
 		Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
 		failSecond.set(false);
+		configuredTemplates.set(List.of("inserted %value%", "second %value%", "first %value%"));
 		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
 		java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
 		state.setAccessible(true);
@@ -1601,6 +1605,25 @@ class RewardAsyncInjectionTest {
 		resumed.toCompletableFuture().join();
 
 		assertEquals(List.of("first-1", "second-1", "second-1"), dispatched);
+	}
+
+	@Test
+	void replayProgressBeyondTheInjectorRegistryFailsClosed() throws Exception {
+		AtomicInteger invoked = new AtomicInteger();
+		handler.getInjectedRewards().add(new RewardInject("Only") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				invoked.incrementAndGet();
+				return null;
+			}
+		});
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class);
+		replay.setAccessible(true);
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 2);
+
+		assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
+		assertEquals(0, invoked.get());
 	}
 
 	@Test

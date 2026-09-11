@@ -248,25 +248,23 @@ public class MiscUtils {
 	 */
 	public CompletionStage<Void> executeConsoleCommandsAsync(String playerName, String command,
 			HashMap<String, String> placeholders) {
-		return executeConsoleCommandAsync(playerName, command, placeholders, false);
-	}
-
-	private CompletionStage<Void> executeConsoleCommandAsync(String playerName, String command,
-			HashMap<String, String> placeholders, boolean delayed) {
-		if (command == null || command.isEmpty()) return CompletableFuture.completedFuture(null);
 		try {
+			ArrayList<String> templates = command == null || command.isEmpty()
+					? new ArrayList<>() : new ArrayList<>(java.util.List.of(command));
+			String expanded = command;
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-			if (p != null) {
-				command = PlaceholderUtils.replaceJavascriptOnly(p, command);
+			if (expanded != null && !expanded.isEmpty()) {
+				if (p != null) expanded = PlaceholderUtils.replaceJavascriptOnly(p, expanded);
+				expanded = PlaceholderUtils.replacePlaceHolder(expanded, placeholders);
+				if (p != null) expanded = PlaceholderUtils.replacePlaceHolders(p, expanded);
 			}
-			command = PlaceholderUtils.replacePlaceHolder(command, placeholders);
-			if (p != null) {
-				command = PlaceholderUtils.replacePlaceHolders(p, command);
-			}
-			final String cmd = stripLeadingSlash(command);
-
-			plugin.debug("Executing console command: " + command);
-			return runConsoleCommandAsync(cmd, delayed ? 1 : 0, delayed, delayed);
+			ArrayList<String> commands = expanded == null || expanded.isEmpty()
+					? new ArrayList<>() : new ArrayList<>(java.util.List.of(expanded));
+			return Reward.replayCommandSequence(plugin, placeholders, "console", templates, commands,
+					(cmd, ignoredIndex) -> {
+						plugin.debug("Executing console command: " + cmd);
+						return runConsoleCommandAsync(stripLeadingSlash(cmd), 0, false, false);
+					});
 		} catch (Throwable failure) {
 			return CompletableFuture.failedFuture(failure);
 		}
@@ -280,17 +278,16 @@ public class MiscUtils {
 	@SuppressWarnings("deprecation")
 	public CompletionStage<Void> executeConsoleCommandsAsync(final String playerName, final ArrayList<String> cmds,
 			final HashMap<String, String> placeholders, final boolean stagger) {
-		if (cmds == null || cmds.isEmpty()) return CompletableFuture.completedFuture(null);
 		try {
 			placeholders.put("player", playerName);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-			ArrayList<String> templates = new ArrayList<>(cmds);
-			ArrayList<String> commands = cmds;
+			ArrayList<String> templates = cmds == null ? new ArrayList<>() : new ArrayList<>(cmds);
+			ArrayList<String> commands = new ArrayList<>(templates);
 			if (p != null) commands = PlaceholderUtils.replaceJavascriptOnly(p, commands);
 			commands = PlaceholderUtils.replacePlaceHolder(commands, placeholders);
 			if (p != null) commands = PlaceholderUtils.replacePlaceHolders(p, commands);
 
-			return Reward.replayCommandSequence(plugin, placeholders, "console:" + stagger, templates, commands,
+			return Reward.replayCommandSequence(plugin, placeholders, "console", templates, commands,
 					(command, index) -> {
 						plugin.debug("Executing console command: " + command);
 						return runConsoleCommandAsync(stripLeadingSlash(command), index > 0 ? 1 : 0,

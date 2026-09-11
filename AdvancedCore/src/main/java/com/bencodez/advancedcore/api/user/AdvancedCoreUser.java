@@ -1021,6 +1021,7 @@ public class AdvancedCoreUser {
 			int index = pending.indexOf(current);
 			if (index >= 0) {
 				pending.set(index, updated);
+				setOfflineRewardsDurably(pending, updated);
 				int claimed = claims.offline.getOrDefault(current, 0);
 				// Migrate this occurrence only. Identical legacy queue entries share a
 				// serialized key, but may each already be executing; moving the whole
@@ -1029,7 +1030,6 @@ public class AdvancedCoreUser {
 				else claims.offline.put(current, claimed - 1);
 				claims.offline.put(updated, claims.offline.getOrDefault(updated, 0) + 1);
 				currentEntry.set(updated);
-				setOfflineRewardsDurably(pending);
 			}
 		}
 	}
@@ -1062,9 +1062,17 @@ public class AdvancedCoreUser {
 		synchronized (plugin) {
 			ArrayList<String> pending = getOfflineRewards();
 			int index = pending.indexOf(rewardEntry);
-			if (index >= 0) pending.set(index, withAsyncReplayProgress(rewardEntry, failure));
-			releaseOfflineReward(rewardEntry);
-			setOfflineRewards(pending);
+			try {
+				if (index >= 0) {
+					String restored = withAsyncReplayProgress(rewardEntry, failure);
+					pending.set(index, restored);
+					setOfflineRewards(pending, true, restored);
+				} else {
+					setOfflineRewards(pending);
+				}
+			} finally {
+				releaseOfflineReward(rewardEntry);
+			}
 		}
 		plugin.getLogger().warning("Could not deliver queued offline reward for " + getPlayerName()
 				+ "; it will be retried: " + failure.getMessage());
@@ -2189,16 +2197,16 @@ public class AdvancedCoreUser {
 	 * replay. It completes only after each queued player command has run.
 	 */
 	public CompletionStage<Void> preformCommandAsync(ArrayList<String> commands, HashMap<String, String> placeholders) {
-		if (commands == null || commands.isEmpty()) return CompletableFuture.completedFuture(null);
 		try {
+			ArrayList<String> templates = commands == null ? new ArrayList<>() : new ArrayList<>(commands);
 			final ArrayList<String> cmds = PlaceholderUtils.replaceJavascript(getPlayer(),
-					PlaceholderUtils.replacePlaceHolder(commands, placeholders));
-			final Player player = getPlayer();
-			if (player == null || !plugin.isEnabled()) {
-				return CompletableFuture.failedFuture(
-						new IllegalStateException("Player command could not run because the player or plugin is unavailable"));
-			}
-			return Reward.replayCommandSequence(plugin, placeholders, "player", commands, cmds, (command, ignoredIndex) -> {
+					PlaceholderUtils.replacePlaceHolder(templates, placeholders));
+			return Reward.replayCommandSequence(plugin, placeholders, "player", templates, cmds, (command, ignoredIndex) -> {
+				final Player player = getPlayer();
+				if (player == null || !plugin.isEnabled()) {
+					return CompletableFuture.failedFuture(new IllegalStateException(
+							"Player command could not run because the player or plugin is unavailable"));
+				}
 				plugin.debug("Executing player command for " + getPlayerName() + ": " + command);
 				return runPlayerCommandAsync(player, command);
 			});
@@ -2568,19 +2576,34 @@ public class AdvancedCoreUser {
 		setOfflineRewards(offlineRewards, true);
 	}
 
-	/** Writes an async replay checkpoint before the next stage can execute. */
-	private void setOfflineRewardsDurably(ArrayList<String> offlineRewards) {
-		persistReplayCheckpoint(() -> setOfflineRewards(offlineRewards, false));
+	/** Writes a checkpoint without allowing size trimming to discard its active entry. */
+	private void setOfflineRewardsDurably(ArrayList<String> offlineRewards, String protectedEntry) {
+		persistReplayCheckpoint(() -> setOfflineRewards(offlineRewards, false, protectedEntry));
 	}
 
 	private void setOfflineRewards(ArrayList<String> offlineRewards, boolean queue) {
+		setOfflineRewards(offlineRewards, queue, null);
+	}
+
+	private void setOfflineRewards(ArrayList<String> offlineRewards, boolean queue, String protectedEntry) {
 		// MySQL TEXT max length is 65535 bytes
 		int maxLength = 65535;
 		String str = String.join("%line%", offlineRewards);
 
 		// Remove oldest rewards until within limit
 		while (str.getBytes().length > maxLength && !offlineRewards.isEmpty()) {
-			offlineRewards.remove(0);
+			int removalIndex = 0;
+			while (removalIndex < offlineRewards.size()
+					&& protectedEntry != null && protectedEntry.equals(offlineRewards.get(removalIndex))) {
+				removalIndex++;
+			}
+			if (removalIndex >= offlineRewards.size()) {
+				// Never trade a durable in-flight checkpoint for queue-size compliance.
+				// The storage write must retain the only record that prevents already
+				// completed non-idempotent stages from running again.
+				break;
+			}
+			offlineRewards.remove(removalIndex);
 			str = String.join("%line%", offlineRewards);
 		}
 

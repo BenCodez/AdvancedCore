@@ -201,6 +201,7 @@ public class RewardExecutorTest {
 			assertThrows(CompletionException.class,
 					() -> executor.giveRewardAsync(user, data, "Rewards", first).toCompletableFuture().join());
 			assertNotNull(checkpoint.get());
+			data.set("Rewards", "/inserted");
 
 			RewardOptions retry = new RewardOptions()
 					.setPlaceholders(new java.util.HashMap<>(checkpoint.get().getPlaceholders()));
@@ -210,6 +211,7 @@ public class RewardExecutorTest {
 
 		verify(misc).executeConsoleCommandsAsync(eq("Ben"), eq("/first"), any());
 		verify(misc, org.mockito.Mockito.times(2)).executeConsoleCommandsAsync(eq("Ben"), eq("/second"), any());
+		verify(misc, never()).executeConsoleCommandsAsync(eq("Ben"), eq("/inserted"), any());
 	}
 
     @Test
@@ -348,6 +350,18 @@ public class RewardExecutorTest {
                 () -> executor.givePersistedQueueRewardAsync(user, "Daily", options).toCompletableFuture().join());
 
         verify(reward, never()).giveRewardAsync(eq(user), any(RewardOptions.class));
+    }
+
+    @Test
+    public void unresolvedPersistedRewardFailsSoTheQueueCanRetainIt() {
+        when(handler.rewardExist("Missing")).thenReturn(false);
+        when(handler.hasDirectRewardHandle("Missing")).thenReturn(false);
+        when(handler.getQueuedGeneratedReward("Missing", user.getUUID())).thenReturn(null);
+        when(handler.getReward("Missing")).thenReturn(null);
+
+        assertThrows(CompletionException.class,
+                () -> executor.givePersistedQueueRewardAsync(user, "Missing", new RewardOptions())
+                        .toCompletableFuture().join());
     }
 
     @Test

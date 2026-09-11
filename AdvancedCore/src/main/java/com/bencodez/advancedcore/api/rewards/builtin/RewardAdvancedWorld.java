@@ -37,6 +37,11 @@ public final class RewardAdvancedWorld {
             @Override
             public boolean requiresConfiguredDataForAsync() { return true; }
 
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayNestedRewardSnapshot(placeholders, "advanced-world:" + getPath());
+			}
+
             @Override
             public boolean supportsAsyncSynchronization() { return false; }
 
@@ -55,21 +60,29 @@ public final class RewardAdvancedWorld {
             @Override
             public CompletionStage<String> onRewardRequestedAsync(Reward sourceReward, AdvancedCoreUser user,
                     ConfigurationSection section, HashMap<String, String> placeholders) {
-				CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
 				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
 				String parentReplayKey = Reward.currentReplayKey();
 				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
-				int worldIndex = 0;
-                for (String key : section.getKeys(false)) {
-					final int childIndex = worldIndex++;
-                    section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
-                    sequence = sequence.thenCompose(ignored -> handler.giveRewardAsync(user, section, key,
-							Reward.withReplayState(new RewardOptions().withPlaceHolder(placeholders), replayState,
-									parentReplayKey,
-									key + ":" + childIndex, parentOccurrenceId)
-                                    .setPrefix(sourceReward.getRewardName() + "_AdvancedWorld")));
-                }
-                return sequence.thenApply(ignored -> null);
+				return Reward.replayNestedRewardSnapshot(plugin, placeholders, "advanced-world:" + getPath(),
+						new ArrayList<>(section.getKeys(false)), replayState, parentReplayKey).thenCompose(worlds -> {
+					for (String key : worlds) {
+						if (!section.contains(key, true)) {
+							return CompletableFuture.failedFuture(new IllegalStateException(
+									"Pending nested reward configuration is missing: " + key));
+						}
+					}
+					CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+					for (int index = 0; index < worlds.size(); index++) {
+						String key = worlds.get(index);
+						int childIndex = index;
+						section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
+						sequence = sequence.thenCompose(ignored -> handler.giveRewardAsync(user, section, key,
+								Reward.withReplayState(new RewardOptions().withPlaceHolder(placeholders), replayState,
+										parentReplayKey, key + ":" + childIndex, parentOccurrenceId)
+										.setPrefix(sourceReward.getRewardName() + "_AdvancedWorld")));
+					}
+					return sequence.thenApply(ignored -> (String) null);
+				});
             }
 
             @Override

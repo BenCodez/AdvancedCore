@@ -271,6 +271,20 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void durableCheckpointTrimmingPreservesTheActiveEntry() throws Exception {
+		String active = "active-" + "a".repeat(70_000);
+		ArrayList<String> rewards = new ArrayList<>(List.of(active, "old-reward"));
+		java.lang.reflect.Method write = AdvancedCoreUser.class.getDeclaredMethod(
+				"setOfflineRewards", ArrayList.class, boolean.class, String.class);
+		write.setAccessible(true);
+
+		write.invoke(user, rewards, false, active);
+
+		assertEquals(List.of(active), rewards);
+		verify(data).setStringList("offlineRewardsPath", rewards, false);
+	}
+
+	@Test
 	void failedAsyncOfflineReplayIsRestoredForRetry() {
 		ArrayList<String> initial = new ArrayList<>();
 		initial.add("VoteReward%placeholders%Server%pair%server-a");

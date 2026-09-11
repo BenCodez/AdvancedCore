@@ -63,7 +63,7 @@ public abstract class RewardInjectString extends RewardInject {
 			ConfigurationSection data, HashMap<String, String> placeholders) {
 		if (!((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty())
 				|| (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData())) {
-			return CompletableFuture.completedFuture(null);
+			if (!hasPendingReplayWork(placeholders)) return CompletableFuture.completedFuture(null);
 		}
 		String value = data.getString(getPath(), getDefaultValue());
 		CompletionStage<String> result = onRewardRequestAsync(reward, user, value, placeholders);

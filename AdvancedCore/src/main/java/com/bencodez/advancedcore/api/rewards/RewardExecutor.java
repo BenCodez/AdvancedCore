@@ -115,34 +115,42 @@ public class RewardExecutor {
         if (path == null || data == null) return CompletableFuture.completedFuture(null);
         if (!plugin.isEnabled()) return disabledDispatch();
 
-        if (data.isList(path)) {
-            CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
-            Reward.ReplayState replayState = Reward.replayStateFor(options);
-            String parentReplayKey = options.getAsyncReplayKey();
-            if (parentReplayKey == null) parentReplayKey = Reward.currentReplayKey();
-            if (parentReplayKey == null) parentReplayKey = "list:" + path;
+        Reward.ReplayState replayState = Reward.replayStateFor(options);
+        String parentReplayKey = options.getAsyncReplayKey();
+        if (parentReplayKey == null) parentReplayKey = Reward.currentReplayKey();
+        if (parentReplayKey == null) parentReplayKey = "list:" + path;
+        String nestedLane = "nested-list:" + path;
+        if (data.isList(path)
+                || Reward.hasReplayNestedRewardSnapshot(options.getPlaceholders(), nestedLane, replayState,
+                        parentReplayKey)) {
             final String stableParentReplayKey = parentReplayKey;
-            int rewardIndex = 0;
-            for (String nestedReward : new ArrayList<>(data.getStringList(path))) {
-                final int nestedIndex = rewardIndex++;
-                sequence = sequence.thenCompose(ignored -> {
-                    // Clone only when this child is actually reached. This lets
-                    // metadata from earlier children be merged before a later
-                    // child receives its isolated ordinary placeholders.
-                    RewardOptions nestedOptions = options.copyForNestedDispatch(
-                            stableParentReplayKey + "/" + nestedReward + ":" + nestedIndex);
-                    nestedOptions.setAsyncReplayState(replayState);
-                    return giveRewardAsync(user, nestedReward, nestedOptions).handle((childResult, failure) -> {
-                        // Child options stay isolated for normal placeholders. Replay
-                        // markers are shared lazily so an earlier child remains durable
-                        // when a later child fails and the list is restarted.
-                        replayState.mergeReplayMetadataInto(options.getPlaceholders());
-                        if (failure != null) throw new CompletionException(failure);
-                        return childResult;
-                    });
-                });
-            }
-            return sequence;
+			return Reward.replayNestedRewardSnapshot(plugin, options.getPlaceholders(), nestedLane,
+					data.isList(path) ? new ArrayList<>(data.getStringList(path)) : java.util.List.of(), replayState,
+					stableParentReplayKey)
+					.thenCompose(rewards -> {
+						CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+						for (int index = 0; index < rewards.size(); index++) {
+							String nestedReward = rewards.get(index);
+							int nestedIndex = index;
+							sequence = sequence.thenCompose(ignored -> {
+								// Clone only when this child is actually reached. This lets
+								// metadata from earlier children be merged before a later
+								// child receives its isolated ordinary placeholders.
+								RewardOptions nestedOptions = options.copyForNestedDispatch(
+										stableParentReplayKey + "/" + nestedReward + ":" + nestedIndex);
+								nestedOptions.setAsyncReplayState(replayState);
+								return giveRewardAsync(user, nestedReward, nestedOptions).handle((childResult, failure) -> {
+									// Child options stay isolated for normal placeholders. Replay
+									// markers are shared lazily so an earlier child remains durable
+									// when a later child fails and the list is restarted.
+									replayState.mergeReplayMetadataInto(options.getPlaceholders());
+									if (failure != null) throw new CompletionException(failure);
+									return childResult;
+								});
+							});
+						}
+						return sequence;
+					});
         }
         if (data.isConfigurationSection(path)) {
             return giveSectionRewardAsync(user, data, path, context);
@@ -283,6 +291,10 @@ public class RewardExecutor {
         } else {
             resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());
             if (resolved == null) resolved = handler.getReward(rewardName);
+        }
+        if (resolved == null) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("Persisted queued reward could not be resolved: " + rewardName));
         }
         return giveRewardAsync(user, resolved, context.getOptions());
     }
