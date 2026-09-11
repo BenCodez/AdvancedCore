@@ -130,6 +130,22 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void queuedOccurrenceIsForwardedBeforeAnyAsyncInjectorRuns() {
+		String occurrence = UUID.randomUUID().toString();
+		ArrayList<String> rewards = new ArrayList<>();
+		rewards.add("VoteReward%asyncoccurrence%" + occurrence + "%placeholders%Server%pair%server-a");
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenReturn(rewards);
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(CompletableFuture.completedFuture(null));
+
+		ArgumentCaptor<RewardOptions> options = ArgumentCaptor.forClass(RewardOptions.class);
+		user.checkOfflineRewards();
+
+		verify(rewardHandler).givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class), options.capture());
+		assertEquals(occurrence, options.getValue().getAsyncReplayOccurrenceId());
+	}
+
+	@Test
 	void setOfflineRewards_emptyList() {
 		ArrayList<String> rewards = new ArrayList<>();
 		user.setOfflineRewards(rewards);
@@ -350,6 +366,41 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void timedAsyncCheckpointPersistsAndRestoresItsRegistryFingerprint() throws Exception {
+		long due = System.currentTimeMillis() - 1_000;
+		ArrayList<String> persisted = new ArrayList<>();
+		persisted.add("VoteReward%placeholders%Server%pair%server-a%ExecutionTime/%" + due);
+		when(data.getStringList("TimedRewards", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			persisted.clear();
+			persisted.addAll(invocation.getArgument(1));
+			return null;
+		}).when(data).setStringList(eq("TimedRewards"), any(), eq(false));
+		CompletableFuture<Void> pending = new CompletableFuture<>();
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(pending);
+
+		ArgumentCaptor<RewardOptions> firstOptions = ArgumentCaptor.forClass(RewardOptions.class);
+		user.checkDelayedTimedRewards();
+		verify(rewardHandler).givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class), firstOptions.capture());
+		firstOptions.getValue().getAsyncReplayCheckpointConsumer().accept(replayCheckpoint(Map.of("VoteReward", 1),
+				Map.of("VoteReward", "fingerprint", "VoteReward/0", "parent-fingerprint"),
+				new HashMap<>(Map.of("Server", "server-a"))));
+		assertTrue(persisted.get(0).contains("%asyncprogress%v3-"));
+
+		AdvancedCoreUser restarted = new AdvancedCoreUser(plugin, UUID.randomUUID(), "Test");
+		restarted.setData(data);
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(restarted), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(CompletableFuture.completedFuture(null));
+		ArgumentCaptor<RewardOptions> resumed = ArgumentCaptor.forClass(RewardOptions.class);
+		restarted.checkDelayedTimedRewards();
+		verify(rewardHandler).givePersistedQueueRewardAsync(eq(restarted), any(PersistedQueueReference.class), resumed.capture());
+		assertEquals("fingerprint", resumed.getValue().getAsyncReplayRegistryFingerprints().get("VoteReward"));
+		assertEquals("parent-fingerprint", resumed.getValue().getAsyncReplayRegistryFingerprints().get("VoteReward/0"));
+	}
+
+	@Test
 	void timedRetryParsesProgressAfterTheExecutionMarkerWasConsumed() {
 		long due = System.currentTimeMillis() - 1_000;
 		ArrayList<String> timed = new ArrayList<>();
@@ -373,5 +424,13 @@ public class AdvancedCoreUserTest {
 				.getDeclaredConstructor(Map.class, HashMap.class);
 		constructor.setAccessible(true);
 		return constructor.newInstance(progress, placeholders);
+	}
+
+	private Reward.ReplayCheckpoint replayCheckpoint(Map<String, Integer> progress, Map<String, String> fingerprints,
+			HashMap<String, String> placeholders) throws Exception {
+		java.lang.reflect.Constructor<Reward.ReplayCheckpoint> constructor = Reward.ReplayCheckpoint.class
+				.getDeclaredConstructor(Map.class, Map.class, HashMap.class);
+		constructor.setAccessible(true);
+		return constructor.newInstance(progress, fingerprints, placeholders);
 	}
 }

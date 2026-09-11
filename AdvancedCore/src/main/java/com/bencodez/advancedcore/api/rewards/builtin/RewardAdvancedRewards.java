@@ -71,6 +71,7 @@ public final class RewardAdvancedRewards {
 				CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
 				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
 				String parentReplayKey = Reward.currentReplayKey();
+				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
 				int rewardIndex = 0;
 				for (String rewardName : ArrayUtils.convert(data.getConfigurationSection(getPath()).getKeys(false))) {
 					final int childIndex = rewardIndex++;
@@ -78,7 +79,7 @@ public final class RewardAdvancedRewards {
 							data.getConfigurationSection(getPath()), rewardName,
 							Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders), replayState,
 									parentReplayKey,
-									rewardName + ":" + childIndex)
+									rewardName + ":" + childIndex, parentOccurrenceId)
 									.setPrefix(reward.getRewardName() + "_AdvancedRewards")));
 				}
 				return sequence.thenApply(ignored -> null);

@@ -108,6 +108,7 @@ public final class RewardLucky {
 				CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
 				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
 				String parentReplayKey = Reward.currentReplayKey();
+				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
 				int luckyIndex = 0;
 				for (String path : choices.split("\\n")) {
 					final int childIndex = luckyIndex++;
@@ -115,7 +116,7 @@ public final class RewardLucky {
 						RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(), path)
 								.withPrefix(reward.getName()).withPlaceHolder(placeholders);
 						Reward.withReplayState(builder.getRewardOptions(), replayState, parentReplayKey,
-								path + ":" + childIndex);
+								path + ":" + childIndex, parentOccurrenceId);
 						return builder.sendAsync(user);
 					});
                 }

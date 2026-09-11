@@ -61,6 +61,7 @@ public class AdvancedCoreUser {
 	private static final String QUEUED_REFERENCE_PREFIX = "\\AdvancedCoreQueue/1/";
 	private static final String ASYNC_PROGRESS_DELIMITER = "%asyncprogress%";
 	private static final String ASYNC_RETRY_DELIMITER = "%asyncretry%";
+	private static final String ASYNC_OCCURRENCE_DELIMITER = "%asyncoccurrence%";
 	private final HashMap<String, Integer> offlineReplayInFlight = new HashMap<>();
 	private final HashSet<String> timedReplayInFlight = new HashSet<>();
 
@@ -269,13 +270,34 @@ public class AdvancedCoreUser {
 		String encodedName = Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(reward.getRewardName().getBytes(StandardCharsets.UTF_8));
 		return QUEUED_REFERENCE_PREFIX + (reward.isGeneratedSnapshotCreated() ? "snapshot/" : "normal/")
-				+ encodedName;
+				+ encodedName + ASYNC_OCCURRENCE_DELIMITER + UUID.randomUUID();
 	}
 
 	private static QueuedReplay parseQueuedReplay(String storedReference) {
-		int marker = storedReference.lastIndexOf(ASYNC_PROGRESS_DELIMITER);
-		if (marker < 0) return new QueuedReplay(storedReference, 0, new HashMap<>());
-		String value = storedReference.substring(marker + ASYNC_PROGRESS_DELIMITER.length());
+		String occurrenceId = occurrenceId(storedReference);
+		String withoutOccurrence = stripAsyncOccurrenceMarker(storedReference);
+		int marker = withoutOccurrence.lastIndexOf(ASYNC_PROGRESS_DELIMITER);
+		if (marker < 0) return new QueuedReplay(withoutOccurrence, 0, new HashMap<>(), new HashMap<>(), false,
+				occurrenceId);
+		String value = withoutOccurrence.substring(marker + ASYNC_PROGRESS_DELIMITER.length());
+		if (value.startsWith("v3-")) {
+			try {
+				HashMap<String, Integer> progress = new HashMap<>();
+				HashMap<String, String> fingerprints = new HashMap<>();
+				String decoded = new String(Base64.getUrlDecoder().decode(value.substring(3)), StandardCharsets.UTF_8);
+				for (String line : decoded.split("\\n")) {
+					String[] pair = line.split("\\t", 3);
+					if (pair.length != 3) throw new IllegalArgumentException("Malformed replay checkpoint");
+					progress.put(new String(Base64.getUrlDecoder().decode(pair[0]), StandardCharsets.UTF_8),
+							Integer.parseInt(pair[1]));
+					fingerprints.put(new String(Base64.getUrlDecoder().decode(pair[0]), StandardCharsets.UTF_8), pair[2]);
+				}
+				return new QueuedReplay(withoutOccurrence.substring(0, marker), 0, progress, fingerprints, false,
+						occurrenceId);
+			} catch (IllegalArgumentException ignored) {
+				return new QueuedReplay(withoutOccurrence, 0, new HashMap<>(), new HashMap<>(), false, occurrenceId);
+			}
+		}
 		if (value.startsWith("v2-")) {
 			try {
 				HashMap<String, Integer> progress = new HashMap<>();
@@ -284,20 +306,49 @@ public class AdvancedCoreUser {
 					String[] pair = line.split("\\t", 2);
 					if (pair.length == 2) progress.put(pair[0], Integer.parseInt(pair[1]));
 				}
-				return new QueuedReplay(storedReference.substring(0, marker), 0, progress);
+				return new QueuedReplay(withoutOccurrence.substring(0, marker), 0, progress, new HashMap<>(), true,
+						occurrenceId);
 			} catch (IllegalArgumentException ignored) {
-				return new QueuedReplay(storedReference, 0, new HashMap<>());
+				return new QueuedReplay(withoutOccurrence, 0, new HashMap<>(), new HashMap<>(), false, occurrenceId);
 			}
 		}
 		try {
 			int progress = Integer.parseInt(value);
-			return progress > 0 ? new QueuedReplay(storedReference.substring(0, marker), progress, new HashMap<>())
-					: new QueuedReplay(storedReference.substring(0, marker), 0, new HashMap<>());
+			return progress > 0 ? new QueuedReplay(withoutOccurrence.substring(0, marker), progress, new HashMap<>(), new HashMap<>(), true,
+						occurrenceId)
+					: new QueuedReplay(withoutOccurrence.substring(0, marker), 0, new HashMap<>(), new HashMap<>(), false,
+							occurrenceId);
 		} catch (NumberFormatException ignored) {
 			// Preserve malformed legacy values as a normal reward reference instead
 			// of accidentally skipping an arbitrary portion of a reward chain.
-			return new QueuedReplay(storedReference, 0, new HashMap<>());
+			return new QueuedReplay(withoutOccurrence, 0, new HashMap<>(), new HashMap<>(), false, occurrenceId);
 		}
+	}
+
+	private static String occurrenceId(String storedReference) {
+		int marker = storedReference.indexOf(ASYNC_OCCURRENCE_DELIMITER);
+		if (marker < 0) return null;
+		int start = marker + ASYNC_OCCURRENCE_DELIMITER.length();
+		int end = storedReference.indexOf('%', start);
+		String candidate = storedReference.substring(start, end < 0 ? storedReference.length() : end);
+		try {
+			return UUID.fromString(candidate).toString();
+		} catch (IllegalArgumentException ignored) {
+			return null;
+		}
+	}
+
+	private static String stripAsyncOccurrenceMarker(String storedReference) {
+		int marker = storedReference.indexOf(ASYNC_OCCURRENCE_DELIMITER);
+		if (marker < 0) return storedReference;
+		int start = marker + ASYNC_OCCURRENCE_DELIMITER.length();
+		int end = storedReference.indexOf('%', start);
+		return storedReference.substring(0, marker) + (end < 0 ? "" : storedReference.substring(end));
+	}
+
+	private static String queuedReference(QueuedReplay replay) {
+		return replay.rewardReference + (replay.asyncReplayOccurrenceId == null ? ""
+				: ASYNC_OCCURRENCE_DELIMITER + replay.asyncReplayOccurrenceId);
 	}
 
 	private static String encodeAsyncReplayProgress(Map<String, Integer> progress) {
@@ -310,6 +361,25 @@ public class AdvancedCoreUser {
 		}
 		return encoded.length() == 0 ? "" : "v2-" + Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(encoded.toString().getBytes(StandardCharsets.UTF_8));
+	}
+
+	private static String encodeAsyncReplayProgress(Map<String, Integer> progress, Map<String, String> fingerprints) {
+		if (fingerprints.isEmpty()) return encodeAsyncReplayProgress(progress);
+		StringBuilder encoded = new StringBuilder();
+		for (Entry<String, Integer> entry : progress.entrySet()) {
+			String fingerprint = fingerprints.get(entry.getKey());
+			if (entry.getValue() != null && entry.getValue() > 0 && fingerprint == null) {
+				return encodeAsyncReplayProgress(progress);
+			}
+		}
+		for (Entry<String, String> entry : fingerprints.entrySet()) {
+			if (entry.getValue() == null) continue;
+			encoded.append(Base64.getUrlEncoder().withoutPadding()
+						.encodeToString(entry.getKey().getBytes(StandardCharsets.UTF_8))).append('\t')
+						.append(progress.getOrDefault(entry.getKey(), 0)).append('\t').append(entry.getValue()).append('\n');
+		}
+		return encoded.length() == 0 ? encodeAsyncReplayProgress(progress) : "v3-"
+				+ Base64.getUrlEncoder().withoutPadding().encodeToString(encoded.toString().getBytes(StandardCharsets.UTF_8));
 	}
 
 	private static String stripTimedExecutionMarker(String storedReference) {
@@ -348,27 +418,27 @@ public class AdvancedCoreUser {
 	private static String withAsyncReplayProgress(String rewardEntry, Throwable failure) {
 		Reward.RewardReplayFailure replayFailure = replayFailure(failure);
 		int completed = completedAsyncInjections(failure);
-		String serializedProgress = replayFailure == null ? "" : encodeAsyncReplayProgress(replayFailure.getReplayProgress());
+		String serializedProgress = replayFailure == null ? "" : encodeAsyncReplayProgress(replayFailure.getReplayProgress(),
+				replayFailure.getReplayRegistryFingerprints());
 		if (completed <= 0 && serializedProgress.isEmpty()) return rewardEntry;
 		int placeholders = rewardEntry.indexOf("%placeholders%");
 		String storedReference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
 		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
 		if (replayFailure != null) suffix = "%placeholders%" + ArrayUtils.makeString(replayFailure.getReplayPlaceholders());
 		QueuedReplay queuedReplay = parseQueuedReplay(stripAsyncRetryMarker(storedReference));
-		if (!serializedProgress.isEmpty()) return queuedReplay.rewardReference + ASYNC_PROGRESS_DELIMITER
+		if (!serializedProgress.isEmpty()) return queuedReference(queuedReplay) + ASYNC_PROGRESS_DELIMITER
 				+ serializedProgress + suffix;
-		return queuedReplay.rewardReference + ASYNC_PROGRESS_DELIMITER
+		return queuedReference(queuedReplay) + ASYNC_PROGRESS_DELIMITER
 				+ Math.max(queuedReplay.completedAsyncInjections, completed) + suffix;
 	}
 
-	private static String withAsyncReplayProgress(String rewardEntry, Map<String, Integer> progress,
-			HashMap<String, String> placeholders) {
+	private static String withAsyncReplayProgress(String rewardEntry, Reward.ReplayCheckpoint checkpoint) {
 		int marker = rewardEntry.indexOf("%placeholders%");
 		String reference = marker < 0 ? rewardEntry : rewardEntry.substring(0, marker);
 		QueuedReplay queuedReplay = parseQueuedReplay(stripAsyncRetryMarker(reference));
-		String serialized = encodeAsyncReplayProgress(progress);
-		return queuedReplay.rewardReference + (serialized.isEmpty() ? "" : ASYNC_PROGRESS_DELIMITER + serialized)
-				+ "%placeholders%" + ArrayUtils.makeString(placeholders);
+		String serialized = encodeAsyncReplayProgress(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints());
+		return queuedReference(queuedReplay) + (serialized.isEmpty() ? "" : ASYNC_PROGRESS_DELIMITER + serialized)
+				+ "%placeholders%" + ArrayUtils.makeString(checkpoint.getPlaceholders());
 	}
 
 	private static int completedAsyncInjections(Throwable failure) {
@@ -393,12 +463,19 @@ public class AdvancedCoreUser {
 		private final String rewardReference;
 		private final int completedAsyncInjections;
 		private final Map<String, Integer> asyncReplayProgress;
+		private final Map<String, String> asyncReplayRegistryFingerprints;
+		private final boolean legacyAsyncReplayCheckpoint;
+		private final String asyncReplayOccurrenceId;
 
 		private QueuedReplay(String rewardReference, int completedAsyncInjections,
-				Map<String, Integer> asyncReplayProgress) {
+				Map<String, Integer> asyncReplayProgress, Map<String, String> asyncReplayRegistryFingerprints,
+				boolean legacyAsyncReplayCheckpoint, String asyncReplayOccurrenceId) {
 			this.rewardReference = rewardReference;
 			this.completedAsyncInjections = completedAsyncInjections;
 			this.asyncReplayProgress = asyncReplayProgress;
+			this.asyncReplayRegistryFingerprints = asyncReplayRegistryFingerprints;
+			this.legacyAsyncReplayCheckpoint = legacyAsyncReplayCheckpoint;
+			this.asyncReplayOccurrenceId = asyncReplayOccurrenceId;
 		}
 	}
 
@@ -463,6 +540,9 @@ public class AdvancedCoreUser {
 							.withPlaceHolder(ArrayUtils.fromString(placeholders));
 					replayOptions.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
 					replayOptions.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
+					replayOptions.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
+					replayOptions.setLegacyAsyncReplayCheckpoint(queuedReplay.legacyAsyncReplayCheckpoint);
+					replayOptions.setAsyncReplayOccurrenceId(queuedReplay.asyncReplayOccurrenceId);
 					replayOptions.addPlaceholder("date",
 							"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));
 					// Keep the due entry durable while asynchronous stages are running.  A
@@ -518,6 +598,9 @@ public class AdvancedCoreUser {
 			if (force) options.setGiveOffline(false).forceOffline();
 			options.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
 			options.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
+			options.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
+			options.setLegacyAsyncReplayCheckpoint(queuedReplay.legacyAsyncReplayCheckpoint);
+			options.setAsyncReplayOccurrenceId(queuedReplay.asyncReplayOccurrenceId);
 			AtomicReference<String> currentEntry = new AtomicReference<>(rewardEntry);
 			options.setAsyncReplayCheckpointConsumer(checkpoint -> checkpointOfflineReward(currentEntry, checkpoint));
 
@@ -532,7 +615,7 @@ public class AdvancedCoreUser {
 	private void checkpointOfflineReward(AtomicReference<String> currentEntry, Reward.ReplayCheckpoint checkpoint) {
 		synchronized (plugin) {
 			String current = currentEntry.get();
-			String updated = withAsyncReplayProgress(current, checkpoint.getReplayProgress(), checkpoint.getPlaceholders());
+			String updated = withAsyncReplayProgress(current, checkpoint);
 			ArrayList<String> pending = getOfflineRewards();
 			int index = pending.indexOf(current);
 			if (index >= 0) {
@@ -616,7 +699,7 @@ public class AdvancedCoreUser {
 	private synchronized void checkpointTimedReward(AtomicReference<String> currentEntry, long time,
 			Reward.ReplayCheckpoint checkpoint) {
 		String current = currentEntry.get();
-		String updated = withAsyncReplayProgress(current, checkpoint.getReplayProgress(), checkpoint.getPlaceholders());
+		String updated = withAsyncReplayProgress(current, checkpoint);
 		if (current.equals(updated)) return;
 		HashMap<String, Long> pending = getTimedRewards();
 		if (!Long.valueOf(time).equals(pending.get(current))) return;

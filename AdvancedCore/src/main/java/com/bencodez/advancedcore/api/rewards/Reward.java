@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.api.rewards;
 
 import java.io.File;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -12,6 +14,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -43,6 +47,7 @@ import lombok.Setter;
 public class Reward {
 	private static final ThreadLocal<ReplayState> ACTIVE_REPLAY_STATE = new ThreadLocal<>();
 	private static final ThreadLocal<String> ACTIVE_REPLAY_KEY = new ThreadLocal<>();
+	private static final ThreadLocal<String> ACTIVE_REPLAY_OCCURRENCE_ID = new ThreadLocal<>();
 	private static final String REPLAY_SELECTION_PREFIX = "__advancedcore_replay_selection_";
 
 	@Getter
@@ -271,7 +276,16 @@ public class Reward {
 	 */
 	public CompletionStage<Void> giveInjectedRewardsAsync(AdvancedCoreUser user,
 			HashMap<String, String> placeholders) {
-		return giveInjectedRewardsAsync(user, placeholders, 0, new ReplayState(null), getRewardName());
+		return giveInjectedRewardsAsync(user, placeholders, 0, new ReplayState(null), getRewardName(),
+				UUID.randomUUID().toString());
+	}
+
+	// Compatibility bridge for internal callers/tests that only carry replay path
+	// metadata. Persisted queue dispatch supplies the explicit occurrence id below.
+	private CompletionStage<Void> giveInjectedRewardsAsync(AdvancedCoreUser user,
+			HashMap<String, String> placeholders, int completedStages, ReplayState replayState, String replayKey) {
+		return giveInjectedRewardsAsync(user, placeholders, completedStages, replayState, replayKey,
+				UUID.randomUUID().toString());
 	}
 
 	/**
@@ -280,27 +294,32 @@ public class Reward {
 	 * avoid replaying already-applied non-idempotent injections.
 	 */
 	private CompletionStage<Void> giveInjectedRewardsAsync(AdvancedCoreUser user,
-			HashMap<String, String> placeholders, int completedStages, ReplayState replayState, String replayKey) {
-		List<RewardInject> postRewards = new ArrayList<>();
-		List<RewardInject> orderedRewards = new ArrayList<>();
-		for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
-			if (inject.isPostReward()) postRewards.add(inject);
-			else orderedRewards.add(inject);
-		}
-		orderedRewards.addAll(postRewards);
+			HashMap<String, String> placeholders, int completedStages, ReplayState replayState, String replayKey,
+			String occurrenceId) {
+		List<RewardInject> orderedRewards = orderedInjectedRewards();
 		int resumeAfter = Math.max(0, replayState.getCompleted(replayKey, completedStages));
+		String registryFingerprint = injectionRegistryFingerprint(orderedRewards);
+		if (!replayState.matchesRegistryFingerprint(registryFingerprint)) {
+			return CompletableFuture.failedFuture(new IncompatibleReplayCheckpointException(replayKey));
+		}
 		AtomicInteger completed = new AtomicInteger(resumeAfter);
 		CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
 		for (int index = 0; index < orderedRewards.size(); index++) {
 			if (index < resumeAfter) continue;
 			final RewardInject inject = orderedRewards.get(index);
 			final String injectionKey = replayKey + "/" + index;
-			sequence = sequence.thenCompose(ignored -> invokeInjectionAsync(inject, user, placeholders, replayState,
-					injectionKey))
+			sequence = sequence.thenCompose(ignored -> {
+				// A nested injector can checkpoint a child before this parent injector
+				// completes. Bind the parent's registry first so that child checkpoint
+				// cannot later be resumed against a shifted parent ordinal.
+				replayState.setRegistryFingerprint(replayKey, registryFingerprint);
+				return invokeInjectionAsync(inject, user, placeholders, replayState, injectionKey, occurrenceId);
+			})
 					.thenApply(result -> {
 						if (inject.isAddAsPlaceholder() && result != null) addPlaceholder(inject, result, placeholders);
 						int checkpoint = completed.incrementAndGet();
 						replayState.setCompleted(replayKey, checkpoint);
+						replayState.setRegistryFingerprint(replayKey, registryFingerprint);
 						replayState.persistCheckpoint(placeholders);
 						return result;
 					}).thenCompose(ignored -> resumeOnServerThread(user));
@@ -314,11 +333,47 @@ public class Reward {
 		});
 	}
 
+	private List<RewardInject> orderedInjectedRewards() {
+		List<RewardInject> postRewards = new ArrayList<>();
+		List<RewardInject> orderedRewards = new ArrayList<>();
+		for (RewardInject inject : plugin.getRewardHandler().getInjectedRewards()) {
+			if (inject.isPostReward()) postRewards.add(inject);
+			else orderedRewards.add(inject);
+		}
+		orderedRewards.addAll(postRewards);
+		return orderedRewards;
+	}
+
+	/**
+	 * A persisted checkpoint is valid only for this exact ordered injector
+	 * registry. Paths, implementation classes, priorities, and post-reward
+	 * placement are all included because each affects which side effect an
+	 * ordinal identifies.
+	 */
+	private static String injectionRegistryFingerprint(List<RewardInject> orderedRewards) {
+		StringBuilder registry = new StringBuilder();
+		for (RewardInject inject : orderedRewards) {
+			String path = inject.getPath() == null ? "" : inject.getPath();
+			registry.append(inject.getClass().getName()).append('\t').append(Base64.getUrlEncoder().withoutPadding()
+					.encodeToString(path.getBytes(StandardCharsets.UTF_8))).append('\t')
+					.append(inject.getPriority()).append('\t').append(inject.isPostReward()).append('\n');
+		}
+		try {
+			byte[] digest = MessageDigest.getInstance("SHA-256").digest(registry.toString().getBytes(StandardCharsets.UTF_8));
+			StringBuilder hex = new StringBuilder(digest.length * 2);
+			for (byte value : digest) hex.append(String.format("%02x", value & 0xff));
+			return hex.toString();
+		} catch (NoSuchAlgorithmException failure) {
+			throw new IllegalStateException("SHA-256 is unavailable for reward replay checkpoints", failure);
+		}
+	}
+
 	// Kept as a narrow compatibility bridge for internal callers/tests that only
 	// have a single reward checkpoint.
 	private CompletionStage<Void> giveInjectedRewardsAsync(AdvancedCoreUser user,
 			HashMap<String, String> placeholders, int completedStages) {
-		return giveInjectedRewardsAsync(user, placeholders, completedStages, new ReplayState(null), getRewardName());
+		return giveInjectedRewardsAsync(user, placeholders, completedStages, new ReplayState(null), getRewardName(),
+				UUID.randomUUID().toString());
 	}
 
 	/** Details the last durably safe replay checkpoint when an async chain fails. */
@@ -337,6 +392,16 @@ public class Reward {
 		}
 
 		public Map<String, Integer> getReplayProgress() { return replayState.copyProgress(); }
+		public Map<String, String> getReplayRegistryFingerprints() { return replayState.copyRegistryFingerprints(); }
+	}
+
+	/** Prevents an ordinal checkpoint from targeting a changed injector registry. */
+	private static final class IncompatibleReplayCheckpointException extends IllegalStateException {
+		private static final long serialVersionUID = 1L;
+		private IncompatibleReplayCheckpointException(String replayKey) {
+			super("Cannot safely resume asynchronous reward replay '" + replayKey
+					+ "' because its injector registry changed or its legacy checkpoint has no registry fingerprint");
+		}
 	}
 
 	private static RewardReplayFailure findReplayFailure(Throwable failure) {
@@ -352,12 +417,16 @@ public class Reward {
 	/** Captures the active parent execution path before deferred work runs. */
 	public static String currentReplayKey() { return ACTIVE_REPLAY_KEY.get(); }
 
+	/** Returns the unique logical reward occurrence currently invoking an injector. */
+	public static String currentReplayOccurrenceId() { return ACTIVE_REPLAY_OCCURRENCE_ID.get(); }
+
 	/** Obtains one shared replay state for a group of nested dispatches. */
 	public static ReplayState replayStateFor(RewardOptions options) {
 		ReplayState replayState = options.getAsyncReplayState();
 		if (replayState == null) {
 			replayState = ACTIVE_REPLAY_STATE.get();
-			if (replayState == null) replayState = new ReplayState(options.getAsyncReplayProgress());
+			if (replayState == null) replayState = new ReplayState(options.getAsyncReplayProgress(),
+					options.getAsyncReplayRegistryFingerprints(), options.isLegacyAsyncReplayCheckpoint());
 			options.setAsyncReplayState(replayState);
 		}
 		if (options.getAsyncReplayCheckpointConsumer() != null) {
@@ -389,6 +458,8 @@ public class Reward {
 	/** Attaches a captured replay state to an option object for a deferred child. */
 	public static RewardOptions withReplayState(RewardOptions options, ReplayState replayState) {
 		if (replayState != null) options.setAsyncReplayState(replayState);
+		String occurrenceId = ACTIVE_REPLAY_OCCURRENCE_ID.get();
+		if (occurrenceId != null) options.setAsyncReplayOccurrenceId(occurrenceId);
 		return options;
 	}
 
@@ -409,7 +480,18 @@ public class Reward {
 	 */
 	public static RewardOptions withReplayState(RewardOptions options, ReplayState replayState,
 			String parentKey, String childOccurrence) {
-		withReplayState(options, replayState);
+		return withReplayState(options, replayState, parentKey, childOccurrence, ACTIVE_REPLAY_OCCURRENCE_ID.get());
+	}
+
+	/**
+	 * Explicit deferred-child form. Completion callbacks must carry both the
+	 * replay path and its logical occurrence because ThreadLocal context is not
+	 * retained after an asynchronous parent injector returns.
+	 */
+	public static RewardOptions withReplayState(RewardOptions options, ReplayState replayState,
+			String parentKey, String childOccurrence, String occurrenceId) {
+		if (replayState != null) options.setAsyncReplayState(replayState);
+		if (occurrenceId != null) options.setAsyncReplayOccurrenceId(occurrenceId);
 		if (parentKey != null && childOccurrence != null) {
 			options.setAsyncReplayKey(parentKey + "/" + childOccurrence);
 		}
@@ -419,13 +501,41 @@ public class Reward {
 	/** Internal shared state passed through nested async reward dispatch. */
 	public static final class ReplayState {
 		private final HashMap<String, Integer> completed = new HashMap<>();
+		private final HashMap<String, String> registryFingerprints = new HashMap<>();
+		private final boolean legacyCheckpoint;
 		private Consumer<ReplayCheckpoint> checkpointConsumer;
-		private ReplayState(Map<String, Integer> initial) { if (initial != null) completed.putAll(initial); }
+		private ReplayState(Map<String, Integer> initial) { this(initial, null, false); }
+		private ReplayState(Map<String, Integer> initial, Map<String, String> initialFingerprints,
+				boolean legacyCheckpoint) {
+			if (initial != null) completed.putAll(initial);
+			if (initialFingerprints != null) registryFingerprints.putAll(initialFingerprints);
+			this.legacyCheckpoint = legacyCheckpoint;
+		}
 		private synchronized int getCompleted(String rewardName, int fallback) {
 			return completed.getOrDefault(rewardName, fallback);
 		}
 		private synchronized void setCompleted(String rewardName, int count) { completed.put(rewardName, count); }
 		private synchronized Map<String, Integer> copyProgress() { return new HashMap<>(completed); }
+		private synchronized void setRegistryFingerprint(String rewardName, String fingerprint) {
+			registryFingerprints.put(rewardName, fingerprint);
+		}
+		private synchronized Map<String, String> copyRegistryFingerprints() {
+			return new HashMap<>(registryFingerprints);
+		}
+		private synchronized boolean hasPersistedCheckpoint() {
+			return legacyCheckpoint || !completed.isEmpty() || !registryFingerprints.isEmpty();
+		}
+		private synchronized boolean matchesRegistryFingerprint(String currentFingerprint) {
+			if (legacyCheckpoint) return false;
+			for (Entry<String, Integer> entry : completed.entrySet()) {
+				if (entry.getValue() != null && entry.getValue() > 0
+						&& !currentFingerprint.equals(registryFingerprints.get(entry.getKey()))) return false;
+			}
+			for (String fingerprint : registryFingerprints.values()) {
+				if (!currentFingerprint.equals(fingerprint)) return false;
+			}
+			return true;
+		}
 		private synchronized int highestCompletedCount() {
 			int highest = 0;
 			for (int count : completed.values()) highest = Math.max(highest, count);
@@ -437,27 +547,33 @@ public class Reward {
 		private void persistCheckpoint(HashMap<String, String> placeholders) {
 			Consumer<ReplayCheckpoint> consumer;
 			synchronized (this) { consumer = checkpointConsumer; }
-			if (consumer != null) consumer.accept(new ReplayCheckpoint(copyProgress(), placeholders));
+			if (consumer != null) consumer.accept(new ReplayCheckpoint(copyProgress(), copyRegistryFingerprints(), placeholders));
 		}
 	}
 
 	/** Immutable durable replay data emitted after every completed injection. */
 	public static final class ReplayCheckpoint {
 		@Getter private final Map<String, Integer> replayProgress;
+		@Getter private final Map<String, String> replayRegistryFingerprints;
 		@Getter private final HashMap<String, String> placeholders;
 		private ReplayCheckpoint(Map<String, Integer> replayProgress, HashMap<String, String> placeholders) {
+			this(replayProgress, new HashMap<>(), placeholders);
+		}
+		private ReplayCheckpoint(Map<String, Integer> replayProgress, Map<String, String> replayRegistryFingerprints,
+				HashMap<String, String> placeholders) {
 			this.replayProgress = new HashMap<>(replayProgress);
+			this.replayRegistryFingerprints = new HashMap<>(replayRegistryFingerprints);
 			this.placeholders = new HashMap<>(placeholders);
 		}
 	}
 
 	private CompletionStage<Object> invokeInjectionAsync(RewardInject inject, AdvancedCoreUser user,
-			HashMap<String, String> placeholders, ReplayState replayState, String injectionKey) {
+			HashMap<String, String> placeholders, ReplayState replayState, String injectionKey, String occurrenceId) {
 		try {
 			if (!plugin.isEnabled()) return CompletableFuture.failedFuture(
 					new IllegalStateException("Plugin disabled before reward injection completed"));
 			Supplier<CompletionStage<Object>> request = () -> requestOnServerThread(user,
-					() -> requestInjectionAsync(inject, user, placeholders, replayState, injectionKey));
+					() -> requestInjectionAsync(inject, user, placeholders, replayState, injectionKey, occurrenceId));
 			CompletionStage<Object> result = inject.isSynchronize() && inject.supportsAsyncSynchronization()
 					? inject.runSynchronizedAsync(request)
 					: request.get();
@@ -532,11 +648,14 @@ public class Reward {
 	}
 
 	private CompletionStage<Object> requestInjectionAsync(RewardInject inject, AdvancedCoreUser user,
-			HashMap<String, String> placeholders, ReplayState replayState, String injectionKey) {
+			HashMap<String, String> placeholders, ReplayState replayState, String injectionKey, String occurrenceId) {
 		ReplayState previous = ACTIVE_REPLAY_STATE.get();
 		String previousKey = ACTIVE_REPLAY_KEY.get();
+		String previousOccurrenceId = ACTIVE_REPLAY_OCCURRENCE_ID.get();
 		ACTIVE_REPLAY_STATE.set(replayState);
 		ACTIVE_REPLAY_KEY.set(injectionKey);
+		if (occurrenceId == null) ACTIVE_REPLAY_OCCURRENCE_ID.remove();
+		else ACTIVE_REPLAY_OCCURRENCE_ID.set(occurrenceId);
 		try {
 		if (inject.supportsAsyncRequest()) {
 			return inject.onRewardRequestAsync(this, user, getConfig().getConfigData(), placeholders);
@@ -553,6 +672,8 @@ public class Reward {
 		} finally {
 			if (previous == null) ACTIVE_REPLAY_STATE.remove(); else ACTIVE_REPLAY_STATE.set(previous);
 			if (previousKey == null) ACTIVE_REPLAY_KEY.remove(); else ACTIVE_REPLAY_KEY.set(previousKey);
+			if (previousOccurrenceId == null) ACTIVE_REPLAY_OCCURRENCE_ID.remove();
+			else ACTIVE_REPLAY_OCCURRENCE_ID.set(previousOccurrenceId);
 		}
 	}
 
@@ -778,7 +899,9 @@ public class Reward {
 		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
 			plugin.debug(name + ": Passed requirements, attempting to give to " + user.getPlayerName() + "/"
 					+ user.getUUID());
-			if (hasAsyncRewardInjection()) return giveRewardUserAsync(user, rewardOptions.getPlaceholders(), rewardOptions);
+			if (hasAsyncRewardInjection() || hasPersistedReplayCheckpoint(rewardOptions)) {
+				return giveRewardUserAsync(user, rewardOptions.getPlaceholders(), rewardOptions);
+			}
 			try {
 				giveRewardUser(user, rewardOptions.getPlaceholders(), rewardOptions);
 				return CompletableFuture.completedFuture(null);
@@ -797,7 +920,7 @@ public class Reward {
 	 * @param rewardOptions rewardOptions
 	 */
 	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
-		if (hasAsyncRewardInjection()) {
+		if (hasAsyncRewardInjection() || hasPersistedReplayCheckpoint(rewardOptions)) {
 			giveRewardUserAsync(user, phs, rewardOptions).exceptionally(failure -> {
 				logRewardUserFailure(failure);
 				return null;
@@ -825,6 +948,27 @@ public class Reward {
 	 */
 	public CompletionStage<Void> giveRewardUserAsync(AdvancedCoreUser user, HashMap<String, String> phs,
 			RewardOptions rewardOptions) {
+		ReplayState replayState = replayStateFor(rewardOptions);
+		String replayKey = rewardOptions.getAsyncReplayKey();
+		if (replayKey == null) {
+			String parentKey = ACTIVE_REPLAY_KEY.get();
+			replayKey = parentKey == null ? getRewardName() : parentKey + "/" + getRewardName();
+			rewardOptions.setAsyncReplayKey(replayKey);
+		}
+		if (!replayState.matchesRegistryFingerprint(injectionRegistryFingerprint(orderedInjectedRewards()))) {
+			return CompletableFuture.failedFuture(new IncompatibleReplayCheckpointException(replayKey));
+		}
+		String occurrenceId = rewardOptions.getAsyncReplayOccurrenceId();
+		if (occurrenceId == null || occurrenceId.isEmpty()) {
+			occurrenceId = ACTIVE_REPLAY_OCCURRENCE_ID.get();
+			// A pre-occurrence persisted entry cannot safely survive an ambiguous
+			// side effect, so leave it on the legacy compatibility path rather than
+			// inventing a different id for each retry.
+			if (occurrenceId == null && rewardOptions.getAsyncReplayCheckpointConsumer() == null) {
+				occurrenceId = UUID.randomUUID().toString();
+				rewardOptions.setAsyncReplayOccurrenceId(occurrenceId);
+			}
+		}
 		final HashMap<String, String> placeholders;
 		try {
 			placeholders = prepareRewardUser(user, phs);
@@ -834,15 +978,15 @@ public class Reward {
 		if (placeholders == null) {
 			return CompletableFuture.completedFuture(null);
 		}
-		ReplayState replayState = replayStateFor(rewardOptions);
-		String replayKey = rewardOptions.getAsyncReplayKey();
-		if (replayKey == null) {
-			String parentKey = ACTIVE_REPLAY_KEY.get();
-			replayKey = parentKey == null ? getRewardName() : parentKey + "/" + getRewardName();
-			rewardOptions.setAsyncReplayKey(replayKey);
-		}
-		return giveInjectedRewardsAsync(user, placeholders, rewardOptions.getCompletedAsyncInjections(), replayState, replayKey)
+		return giveInjectedRewardsAsync(user, placeholders, rewardOptions.getCompletedAsyncInjections(), replayState, replayKey,
+				occurrenceId)
 				.thenRun(() -> plugin.debug("Gave " + user.getPlayerName() + " reward " + name));
+	}
+
+	private static boolean hasPersistedReplayCheckpoint(RewardOptions options) {
+		return options.isLegacyAsyncReplayCheckpoint() || options.getCompletedAsyncInjections() > 0
+				|| !options.getAsyncReplayProgress().isEmpty() || !options.getAsyncReplayRegistryFingerprints().isEmpty()
+				|| (options.getAsyncReplayState() != null && options.getAsyncReplayState().hasPersistedCheckpoint());
 	}
 
 	private HashMap<String, String> prepareRewardUser(AdvancedCoreUser user, HashMap<String, String> phs) {

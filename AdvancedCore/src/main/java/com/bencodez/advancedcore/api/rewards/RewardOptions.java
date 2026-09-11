@@ -61,6 +61,15 @@ public class RewardOptions {
 
 	@Getter
 	@Setter
+	private Map<String, String> asyncReplayRegistryFingerprints = new HashMap<>();
+
+	/** True when this queued entry used the old count-only replay format. */
+	@Getter
+	@Setter
+	private boolean legacyAsyncReplayCheckpoint;
+
+	@Getter
+	@Setter
 	private Reward.ReplayState asyncReplayState;
 
 	/**
@@ -70,6 +79,15 @@ public class RewardOptions {
 	@Getter
 	@Setter
 	private String asyncReplayKey;
+
+	/**
+	 * Stable identity for one logical queued reward occurrence. It is distinct
+	 * from {@link #asyncReplayKey}, which identifies a stage path shared by
+	 * independent executions of the same reward definition.
+	 */
+	@Getter
+	@Setter
+	private String asyncReplayOccurrenceId;
 
 	@Getter
 	@Setter
@@ -224,7 +242,10 @@ public class RewardOptions {
 		if (onlineSet) copy.setOnline(online);
 		if (!server.isEmpty()) copy.setServer(server);
 		copy.setAsyncReplayState(asyncReplayState);
+		copy.setAsyncReplayRegistryFingerprints(new HashMap<>(asyncReplayRegistryFingerprints));
+		copy.setLegacyAsyncReplayCheckpoint(legacyAsyncReplayCheckpoint);
 		copy.setAsyncReplayKey(replayKey);
+		copy.setAsyncReplayOccurrenceId(asyncReplayOccurrenceId);
 		copy.setAsyncReplayCheckpointConsumer(asyncReplayCheckpointConsumer);
 		return copy;
 	}
