@@ -1609,14 +1609,19 @@ public class AdvancedCoreUser {
 	 */
 	public void givePotionEffect(String potionName, int duration, int amplifier) {
 		Player player = getPlayer();
-		if (player != null && plugin.isEnabled()) {
-			scheduleLegacyRewardAction(() -> player.addPotionEffect(
-					new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier)), player, true,
-					"potion:" + potionName + ":" + duration + ":" + amplifier);
-		} else if (player != null && ASYNC_ACTION_COLLECTION.get() != null) {
-			collectAsyncFailure(new IllegalStateException(
-					"Potion reward could not be scheduled because the plugin is unavailable"));
+		if (player == null) {
+			if (hasOwnedAsyncActionCollection()) collectAsyncFailure(new IllegalStateException(
+					"Player became unavailable before potion reward delivery"));
+			return;
 		}
+		if (!plugin.isEnabled()) {
+			if (hasOwnedAsyncActionCollection()) collectAsyncFailure(new IllegalStateException(
+					"Potion reward could not be scheduled because the plugin is unavailable"));
+			return;
+		}
+		scheduleLegacyRewardAction(() -> player.addPotionEffect(
+				new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier)), player, true,
+				"potion:" + potionName + ":" + duration + ":" + amplifier);
 	}
 
 	/** Queues a legacy Bukkit action while exposing a nonblocking completion internally. */
@@ -1730,6 +1735,7 @@ public class AdvancedCoreUser {
 					return;
 				}
 				try {
+					if (playerAware) validateLiveScheduledPlayer(player);
 					CompletionStage<Void> stage = action.get();
 					if (stage == null) {
 						completion.completeExceptionally(new IllegalStateException("Scheduled reward action returned null"));
@@ -1769,6 +1775,17 @@ public class AdvancedCoreUser {
 			};
 			if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, dispatch, player);
 			else getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
+		}
+	}
+
+	/** Runs on the player-owned scheduler before a replay-aware player mutation. */
+	private void validateLiveScheduledPlayer(Player player) {
+		if (player == null || player.getUniqueId() == null) {
+			throw new IllegalStateException("Scheduled player reward has no live player identity");
+		}
+		Player current = Bukkit.getPlayer(player.getUniqueId());
+		if (current != player || !current.isOnline()) {
+			throw new IllegalStateException("Player became unavailable before scheduled reward delivery");
 		}
 	}
 

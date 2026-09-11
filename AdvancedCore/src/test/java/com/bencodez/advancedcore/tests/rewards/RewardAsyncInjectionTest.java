@@ -58,6 +58,7 @@ import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardItems;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardPotions;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectInt;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectString;
@@ -274,6 +275,106 @@ class RewardAsyncInjectionTest {
 					"placeholder-expanded items use the same replay-only unavailable-player failure");
 		}
 		verify(inventory).giveItemAsync(eq(player), any(ItemStack.class));
+	}
+
+	@Test
+	void replayPotionsRemainPendingWhenThePlayerDisconnectsBeforeTheirInjectionRuns() throws Exception {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		UUID uuid = UUID.randomUUID();
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, uuid, false, false);
+		realUser.setPlayerName("PotionDispatch");
+		Player player = mock(Player.class);
+		when(player.getDisplayName()).thenReturn("PotionDispatch");
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		AtomicReference<Player> availablePlayer = new AtomicReference<>(player);
+		AtomicReference<Runnable> queuedInjection = new AtomicReference<>();
+		doAnswer(invocation -> {
+			queuedInjection.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		data.createSection("Potions").createSection("SPEED").set("Duration", 1);
+		RewardPotions.register(handler, plugin);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenAnswer(ignored -> availablePlayer.get());
+			CompletionStage<Void> delivery = reward.giveRewardUserAsync(realUser, new HashMap<>(), new RewardOptions());
+			assertFalse(delivery.toCompletableFuture().isDone());
+			availablePlayer.set(null);
+			Throwable failure = assertThrows(java.util.concurrent.CompletionException.class,
+					() -> {
+						queuedInjection.get().run();
+						delivery.toCompletableFuture().join();
+					});
+			Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
+			assertEquals(0, checkpoint.getCompletedInjectionCount());
+			assertEquals(0, checkpoint.getReplayProgress().getOrDefault("AsyncReward", 0));
+			verify(player, never()).addPotionEffect(any());
+
+			availablePlayer.set(player);
+			doAnswer(invocation -> {
+				invocation.getArgument(1, Runnable.class).run();
+				return null;
+			}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+			doAnswer(invocation -> {
+				invocation.getArgument(1, Runnable.class).run();
+				return null;
+			}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), eq(player));
+			AtomicReference<Runnable> queuedPotionDelivery = new AtomicReference<>();
+			doAnswer(invocation -> {
+				queuedPotionDelivery.set(invocation.getArgument(1, Runnable.class));
+				return null;
+			}).when(scheduler).runTask(eq(plugin), any(Runnable.class), eq(player));
+			Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+			java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+			state.setAccessible(true);
+			java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+					AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+			replay.setAccessible(true);
+			CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, realUser,
+					checkpoint.getReplayPlaceholders(), 0,
+					state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
+					"AsyncReward");
+			assertFalse(resumed.toCompletableFuture().isDone(), "recovery must requeue the unfinished potion action");
+			assertNotNull(queuedPotionDelivery.get());
+			availablePlayer.set(null);
+			queuedPotionDelivery.get().run();
+			assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
+		}
+		verify(player, never()).addPotionEffect(any());
+	}
+
+	@Test
+	void offlineRequeueRetainsReplayStateAndLegacyActionMarkers() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.isPauseRewards()).thenReturn(false);
+		when(config.isTreatVanishAsOffline()).thenReturn(false);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		when(user.isOnline()).thenReturn(false);
+		when(user.getPlayerName()).thenReturn("Offline");
+		RewardOptions options = new RewardOptions().setCheckTimed(false).setIgnoreRequirements(true).setGiveOffline(true);
+		options.setOnline(false);
+		options.setAsyncReplayProgress(Map.of("AsyncReward", 1));
+		options.setAsyncReplayRegistryFingerprints(Map.of("AsyncReward", "registry-fingerprint"));
+		options.getPlaceholders().put("__advancedcore_replay_legacy_actions_marker", "v2:completed");
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			reward.giveReward(user, options);
+		}
+
+		ArgumentCaptor<RewardOptions> queuedOptions = ArgumentCaptor.forClass(RewardOptions.class);
+		verify(user).addOfflineRewards(eq(reward), eq(options.getPlaceholders()), queuedOptions.capture());
+		assertEquals(options, queuedOptions.getValue());
+		assertEquals(1, queuedOptions.getValue().getAsyncReplayProgress().get("AsyncReward"));
+		assertEquals("registry-fingerprint", queuedOptions.getValue().getAsyncReplayRegistryFingerprints().get("AsyncReward"));
+		assertEquals("v2:completed", queuedOptions.getValue().getPlaceholders()
+				.get("__advancedcore_replay_legacy_actions_marker"));
 	}
 
 	@Test

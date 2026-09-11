@@ -966,8 +966,8 @@ public class Reward {
 	}
 
 	public void giveReward(AdvancedCoreUser user, RewardOptions rewardOptions) {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
-			AdvancedCorePlugin.getInstance().debug("Processing rewards is disabled");
+		if (!plugin.getOptions().isProcessRewards()) {
+			plugin.debug("Processing rewards is disabled");
 			return;
 		}
 
@@ -1063,7 +1063,8 @@ public class Reward {
 				&& (!isForceOffline() && !rewardOptions.isForceOffline()))) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
-				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+				preserveReplayState(rewardOptions);
+				user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
 				plugin.debug("Saving offline reward " + getRewardName() + " for " + user.getPlayerName());
 			}
 			return;
@@ -1090,8 +1091,8 @@ public class Reward {
 	 * @return completion stage for the complete reward injection chain
 	 */
 	public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions) {
-		if (!AdvancedCorePlugin.getInstance().getOptions().isProcessRewards()) {
-			AdvancedCorePlugin.getInstance().debug("Processing rewards is disabled");
+		if (!plugin.getOptions().isProcessRewards()) {
+			plugin.debug("Processing rewards is disabled");
 			return CompletableFuture.completedFuture(null);
 		}
 
@@ -1152,7 +1153,8 @@ public class Reward {
 				&& (!isForceOffline() && !rewardOptions.isForceOffline()))) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
-				user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+				preserveReplayState(rewardOptions);
+				user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
 			}
 			return CompletableFuture.completedFuture(null);
 		}
