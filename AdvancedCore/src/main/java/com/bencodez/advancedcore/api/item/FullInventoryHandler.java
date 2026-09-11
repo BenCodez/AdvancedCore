@@ -106,11 +106,26 @@ public class FullInventoryHandler {
 			if (completion != null) completion.complete(null);
 			return;
 		}
+		UUID playerId = null;
+		if (completion != null) {
+			try {
+				playerId = player.getUniqueId();
+				if (playerId == null) {
+					completion.completeExceptionally(new IllegalStateException("Item delivery player has no UUID"));
+					return;
+				}
+			} catch (Throwable failure) {
+				completion.completeExceptionally(failure);
+				return;
+			}
+		}
+		final UUID deliveryPlayerId = playerId;
 		ItemStack[] itemsToGive = item.clone();
 		AtomicBoolean deliveryClaimed = new AtomicBoolean();
 		Runnable delivery = () -> {
 			if (!deliveryClaimed.compareAndSet(false, true)) return;
 			try {
+				if (completion != null) validateReplayDeliveryTarget(player, deliveryPlayerId);
 				giveItemOwnedPlayer(player, itemsToGive);
 				if (completion != null) completion.complete(null);
 			} catch (Throwable failure) {
@@ -136,6 +151,22 @@ public class FullInventoryHandler {
 	/** Bounds a replay-aware delivery; timeout claims the delivery to prevent a duplicate retry. */
 	protected long getItemDeliveryTimeoutMillis() {
 		return TimeUnit.SECONDS.toMillis(30);
+	}
+
+	/**
+	 * Runs on the owning player scheduler immediately before a replay-aware inventory
+	 * mutation. A reconnect creates a different player entity, so require both the
+	 * captured UUID and entity identity to remain current; a retry can then safely
+	 * schedule delivery for the live entity.
+	 */
+	private void validateReplayDeliveryTarget(Player player, UUID playerId) {
+		if (!plugin.isEnabled()) {
+			throw new IllegalStateException("Plugin disabled before item delivery");
+		}
+		Player current = Bukkit.getPlayer(playerId);
+		if (current != player || !current.isOnline()) {
+			throw new IllegalStateException("Player became unavailable before item delivery");
+		}
 	}
 
 	private static void rethrowDeliveryFailure(Throwable failure) {

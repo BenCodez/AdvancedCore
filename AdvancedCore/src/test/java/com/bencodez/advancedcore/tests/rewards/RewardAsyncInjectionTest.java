@@ -52,10 +52,12 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.VaultHandler;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
+import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardItems;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectInt;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectString;
@@ -194,6 +196,84 @@ class RewardAsyncInjectionTest {
 
 		verify(inventory).giveItem(player, item);
 		verify(inventory, never()).giveItemAsync(any(Player.class), any(ItemStack.class));
+	}
+
+	@Test
+	void replayItemsRemainPendingWhenThePlayerDisconnectsBeforeTheirInjectionRuns() throws Exception {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		FullInventoryHandler inventory = mock(FullInventoryHandler.class);
+		when(plugin.getFullInventoryHandler()).thenReturn(inventory);
+		UUID uuid = UUID.randomUUID();
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, uuid, false, false);
+		realUser.setPlayerName("Dispatch");
+		Player player = mock(Player.class);
+		when(player.getDisplayName()).thenReturn("Dispatch");
+		AtomicReference<Player> availablePlayer = new AtomicReference<>(player);
+		AtomicReference<Runnable> queuedInjection = new AtomicReference<>();
+		doAnswer(invocation -> {
+			queuedInjection.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		data.createSection("Items").createSection("Stone").set("Material", "STONE");
+		RewardItems.registerItems(handler, plugin);
+
+		try (MockedConstruction<ItemBuilder> builders = mockConstruction(ItemBuilder.class, (builder, context) -> {
+			when(builder.setPlaceholders(any(HashMap.class))).thenReturn(builder);
+			when(builder.toItemStack(any(Player.class))).thenReturn(new ItemStack(Material.STONE));
+		}); org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenAnswer(ignored -> availablePlayer.get());
+			CompletionStage<Void> delivery = reward.giveRewardUserAsync(realUser, new HashMap<>(), new RewardOptions());
+			assertFalse(delivery.toCompletableFuture().isDone(), "the initial online check only queues injection dispatch");
+			assertNotNull(queuedInjection.get());
+
+			availablePlayer.set(null);
+			Throwable failure = assertThrows(java.util.concurrent.CompletionException.class,
+					() -> {
+						queuedInjection.get().run();
+						delivery.toCompletableFuture().join();
+					});
+			Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
+			assertEquals(0, checkpoint.getCompletedInjectionCount());
+			assertEquals(0, checkpoint.getReplayProgress().getOrDefault("AsyncReward", 0));
+			assertTrue(checkpoint.getReplayPlaceholders().entrySet().stream().noneMatch(entry ->
+					entry.getKey().startsWith("__advancedcore_replay_legacy_actions_")
+							&& !entry.getKey().endsWith("_snapshot")),
+					"an undelivered item must not receive an action-completion checkpoint");
+			verify(inventory, never()).giveItemAsync(any(Player.class), any(ItemStack.class));
+
+			availablePlayer.set(player);
+			when(inventory.giveItemAsync(eq(player), any(ItemStack.class)))
+					.thenReturn(CompletableFuture.completedFuture(null));
+			doAnswer(invocation -> {
+				invocation.getArgument(1, Runnable.class).run();
+				return null;
+			}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+			doAnswer(invocation -> {
+				invocation.getArgument(1, Runnable.class).run();
+				return null;
+			}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), eq(player));
+			Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+			java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+			state.setAccessible(true);
+			java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+					AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+			replay.setAccessible(true);
+			CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, realUser,
+					checkpoint.getReplayPlaceholders(), 0,
+					state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
+					"AsyncReward");
+			resumed.toCompletableFuture().join();
+
+			availablePlayer.set(null);
+			AdvancedCoreUser.AsyncActionCollection placeholderContext = realUser.beginAsyncActionCollection();
+			realUser.giveItem(new ItemStack(Material.STONE), new HashMap<>());
+			assertThrows(java.util.concurrent.CompletionException.class,
+					() -> realUser.endAsyncActionCollection(placeholderContext).toCompletableFuture().join(),
+					"placeholder-expanded items use the same replay-only unavailable-player failure");
+		}
+		verify(inventory).giveItemAsync(eq(player), any(ItemStack.class));
 	}
 
 	@Test

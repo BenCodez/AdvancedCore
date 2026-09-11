@@ -352,6 +352,11 @@ public class AdvancedCoreUser {
 		return false;
 	}
 
+	private boolean hasOwnedAsyncActionCollection() {
+		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
+		return collection != null && collection.belongsTo(this);
+	}
+
 	/**
 	 * Retained for binary compatibility with integrations that previously called
 	 * this internal hand-off hook. Unscoped actions are intentionally not claimed:
@@ -1493,7 +1498,12 @@ public class AdvancedCoreUser {
 	 * @param builder the item builder
 	 */
 	public void giveItem(ItemBuilder builder) {
-		giveItem(builder.toItemStack(getPlayer()));
+		Player player = getPlayer();
+		if (player == null && hasOwnedAsyncActionCollection()) {
+			collectAsyncFailure(new IllegalStateException("Player became unavailable before item reward delivery"));
+			return;
+		}
+		giveItem(builder.toItemStack(player));
 	}
 
 	/**
@@ -1523,7 +1533,7 @@ public class AdvancedCoreUser {
 	 * @param placeholders the placeholders
 	 */
 	public void giveItem(ItemStack itemStack, HashMap<String, String> placeholders) {
-		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack(getPlayer()));
+		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders));
 	}
 
 	/**
@@ -1615,7 +1625,8 @@ public class AdvancedCoreUser {
 		for (ItemStack current : item) {
 			descriptor.append('\n').append(itemDescriptor(current));
 		}
-		if (collectAsyncAction(() -> player == null ? CompletableFuture.completedFuture(null)
+		if (collectAsyncAction(() -> player == null ? CompletableFuture.failedFuture(
+				new IllegalStateException("Player became unavailable before item reward delivery"))
 				: plugin.getFullInventoryHandler().giveItemAsync(player, item), descriptor.toString())) {
 			return;
 		}

@@ -122,9 +122,12 @@ public class FullInventoryHandlerTest {
 	@Test
 	public void giveItemAsyncCompletesOnlyAfterOwnedInventoryDelivery() {
 		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
 		Player player = mock(Player.class);
 		PlayerInventory inventory = mock(PlayerInventory.class);
 		ItemStack item = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
 		when(player.getInventory()).thenReturn(inventory);
 		when(inventory.addItem(item)).thenReturn(new HashMap<>());
 
@@ -133,18 +136,47 @@ public class FullInventoryHandlerTest {
 		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
 		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
 
-		task.getValue().run();
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			task.getValue().run();
+		}
 
 		assertTrue(delivery.toCompletableFuture().isDone());
 		verify(inventory).addItem(item);
 	}
 
 	@Test
-	public void timedOutGiveItemAsyncSuppressesTheQueuedDeliveryToPreventReplayDuplicates() throws Exception {
-		Fixture fixture = createFixture(0L);
+	public void giveItemAsyncFailsWithoutMutationWhenPlayerDisconnectsAfterEnqueue() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
 		Player player = mock(Player.class);
 		PlayerInventory inventory = mock(PlayerInventory.class);
 		ItemStack item = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.getInventory()).thenReturn(inventory);
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			task.getValue().run();
+		}
+
+		assertThrows(java.util.concurrent.ExecutionException.class,
+				() -> delivery.toCompletableFuture().get(2, TimeUnit.SECONDS));
+		verify(inventory, never()).addItem(item);
+	}
+
+	@Test
+	public void timedOutGiveItemAsyncSuppressesTheQueuedDeliveryToPreventReplayDuplicates() throws Exception {
+		Fixture fixture = createFixture(0L);
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
 		when(player.getInventory()).thenReturn(inventory);
 		when(inventory.addItem(item)).thenReturn(new HashMap<>());
 
@@ -268,6 +300,7 @@ public class FullInventoryHandlerTest {
 		YamlConfiguration data = new YamlConfiguration();
 
 		when(plugin.getInventoryTimer()).thenReturn(sharedInventoryTimer);
+		when(plugin.isEnabled()).thenReturn(true);
 		when(plugin.getBukkitScheduler()).thenReturn(bukkitScheduler);
 		when(plugin.getServerDataFile()).thenReturn(serverData);
 		when(serverData.getData()).thenReturn(data);
