@@ -16,6 +16,9 @@ import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -372,6 +375,53 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void timedRewardMutationsAreSharedAcrossUserWrappers() throws Exception {
+		java.util.concurrent.atomic.AtomicReference<ArrayList<String>> stored =
+				new java.util.concurrent.atomic.AtomicReference<>(new ArrayList<>());
+		java.util.concurrent.atomic.AtomicInteger reads = new java.util.concurrent.atomic.AtomicInteger();
+		CountDownLatch firstRead = new CountDownLatch(1);
+		CountDownLatch releaseFirstRead = new CountDownLatch(1);
+		CountDownLatch secondRead = new CountDownLatch(1);
+		when(data.getStringList("TimedRewards", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> {
+					if (reads.getAndIncrement() == 0) {
+						firstRead.countDown();
+						await(releaseFirstRead);
+					} else {
+						secondRead.countDown();
+					}
+					return new ArrayList<>(stored.get());
+				});
+		org.mockito.Mockito.doAnswer(invocation -> {
+			stored.set(new ArrayList<>(invocation.getArgument(1)));
+			return null;
+		}).when(data).setStringList(eq("TimedRewards"), any());
+		AdvancedCoreUser second = new AdvancedCoreUser(plugin, UUID.fromString(user.getUUID()), "Test");
+		second.setData(data);
+		Reward firstReward = mock(Reward.class);
+		Reward secondReward = mock(Reward.class);
+		when(firstReward.getRewardName()).thenReturn("First");
+		when(secondReward.getRewardName()).thenReturn("Second");
+		ExecutorService workers = Executors.newFixedThreadPool(2);
+		try {
+			java.util.concurrent.Future<?> first = workers.submit(
+					() -> user.addTimedReward(firstReward, new HashMap<>(), 1));
+			assertTrue(firstRead.await(5, TimeUnit.SECONDS));
+			java.util.concurrent.Future<?> secondTask = workers.submit(
+					() -> second.addTimedReward(secondReward, new HashMap<>(), 2));
+			assertFalse(secondRead.await(100, TimeUnit.MILLISECONDS));
+			releaseFirstRead.countDown();
+			first.get(10, TimeUnit.SECONDS);
+			secondTask.get(10, TimeUnit.SECONDS);
+		} finally {
+			releaseFirstRead.countDown();
+			workers.shutdownNow();
+		}
+
+		assertEquals(2, stored.get().size());
+	}
+
+	@Test
 	void unavailablePlayerFailsAsyncCommandDispatch() {
 		AdvancedCorePlugin.setInstance(plugin);
 		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
@@ -477,6 +527,15 @@ public class AdvancedCoreUserTest {
 				.getDeclaredConstructor(Map.class, HashMap.class);
 		constructor.setAccessible(true);
 		return constructor.newInstance(progress, placeholders);
+	}
+
+	private static void await(CountDownLatch latch) {
+		try {
+			latch.await();
+		} catch (InterruptedException failure) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(failure);
+		}
 	}
 
 	private Reward.ReplayCheckpoint replayCheckpoint(Map<String, Integer> progress, Map<String, String> fingerprints,

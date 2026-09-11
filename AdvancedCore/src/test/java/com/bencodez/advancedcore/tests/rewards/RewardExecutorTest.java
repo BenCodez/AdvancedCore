@@ -13,12 +13,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -127,7 +130,7 @@ public class RewardExecutorTest {
     }
 
     @Test
-    public void asyncListDispatchUsesASeparateReplayContextForEveryEntry() {
+	public void asyncListDispatchUsesASeparateReplayContextForEveryEntry() {
         YamlConfiguration data = new YamlConfiguration();
         data.set("Rewards", new ArrayList<>(List.of("Child", "Child")));
         Reward child = mock(Reward.class);
@@ -143,7 +146,43 @@ public class RewardExecutorTest {
         assertFalse(children.get(0) == children.get(1));
         assertFalse(children.get(0).getAsyncReplayKey().equals(children.get(1).getAsyncReplayKey()));
         assertSame(children.get(0).getAsyncReplayState(), children.get(1).getAsyncReplayState());
-    }
+	}
+
+	@Test
+	public void asyncListReplayDoesNotRepeatCompletedDirectCommands() {
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("Rewards", new ArrayList<>(List.of("/first", "/second")));
+		MiscUtils misc = mock(MiscUtils.class);
+		when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("/first"), any()))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("/second"), any()))
+				.thenReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")),
+						CompletableFuture.completedFuture(null));
+		AtomicReference<Reward.ReplayCheckpoint> checkpoint = new AtomicReference<>();
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(0).run();
+			return null;
+		}).when(timer).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(timer);
+		RewardOptions first = new RewardOptions();
+		first.setAsyncReplayCheckpointConsumer(checkpoint::set);
+
+		try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
+			miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
+			assertThrows(CompletionException.class,
+					() -> executor.giveRewardAsync(user, data, "Rewards", first).toCompletableFuture().join());
+			assertNotNull(checkpoint.get());
+
+			RewardOptions retry = new RewardOptions()
+					.setPlaceholders(new java.util.HashMap<>(checkpoint.get().getPlaceholders()));
+			retry.setAsyncReplayCheckpointConsumer(ignored -> { });
+			executor.giveRewardAsync(user, data, "Rewards", retry).toCompletableFuture().join();
+		}
+
+		verify(misc).executeConsoleCommandsAsync(eq("Ben"), eq("/first"), any());
+		verify(misc, org.mockito.Mockito.times(2)).executeConsoleCommandsAsync(eq("Ben"), eq("/second"), any());
+	}
 
     @Test
     public void stringRewardDispatchesNamedReward() {

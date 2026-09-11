@@ -266,13 +266,15 @@ public class AdvancedCoreUser {
 	 * @param epochMilli   the epoch time in milliseconds when the reward should be
 	 *                     given
 	 */
-	public synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
-		HashMap<String, Long> timed = new HashMap<>(getTimedRewards());
-		String rewardName = queuedRewardReference(reward);
-		rewardName += "%extime%" + System.currentTimeMillis();
+	public void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
+		synchronized (plugin) {
+			HashMap<String, Long> timed = new HashMap<>(getTimedRewards());
+			String rewardName = queuedRewardReference(reward);
+			rewardName += "%extime%" + System.currentTimeMillis();
 
-		timed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(placeholders), epochMilli);
-		setTimedRewards(timed);
+			timed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(placeholders), epochMilli);
+			setTimedRewards(timed);
+		}
 		loadTimedDelayedTimer(epochMilli);
 	}
 
@@ -1628,12 +1630,10 @@ public class AdvancedCoreUser {
 				return CompletableFuture.failedFuture(
 						new IllegalStateException("Player command could not run because the player or plugin is unavailable"));
 			}
-			ArrayList<CompletableFuture<Void>> completions = new ArrayList<>();
-			for (String command : cmds) {
+			return Reward.replayCommandSequence(plugin, placeholders, "player", cmds, command -> {
 				plugin.debug("Executing player command for " + getPlayerName() + ": " + command);
-				completions.add(runPlayerCommandAsync(player, command));
-			}
-			return CompletableFuture.allOf(completions.toArray(new CompletableFuture[0]));
+				return runPlayerCommandAsync(player, command);
+			});
 		} catch (Throwable failure) {
 			return CompletableFuture.failedFuture(failure);
 		}
@@ -2036,7 +2036,9 @@ public class AdvancedCoreUser {
 	 * @param timed the timed rewards
 	 */
 	public void setTimedRewards(HashMap<String, Long> timed) {
-		setTimedRewards(timed, true);
+		synchronized (plugin) {
+			setTimedRewards(timed, true);
+		}
 	}
 
 	/** Writes an async replay checkpoint before the next stage can execute. */

@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -116,7 +117,8 @@ public class MiscUtilsTest {
 		Server server = mock(Server.class);
 		ConsoleCommandSender console = mock(ConsoleCommandSender.class);
 		ArgumentCaptor<Runnable> immediate = ArgumentCaptor.forClass(Runnable.class);
-		ArgumentCaptor<Runnable> delayed = ArgumentCaptor.forClass(Runnable.class);
+		ArgumentCaptor<Runnable> firstDelayed = ArgumentCaptor.forClass(Runnable.class);
+		ArgumentCaptor<Runnable> secondDelayed = ArgumentCaptor.forClass(Runnable.class);
 
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(server);
@@ -126,14 +128,16 @@ public class MiscUtilsTest {
 			java.util.concurrent.CompletionStage<Void> completion = miscUtils.executeConsoleCommandsAsync("Ben",
 					new ArrayList<>(List.of("say one", "say two", "say three")), new HashMap<>(), true);
 			verify(scheduler).runTask(eq(plugin), immediate.capture());
-			verify(scheduler, times(2)).runTaskLater(eq(plugin), delayed.capture(), anyLong());
+			verify(scheduler, never()).runTaskLater(eq(plugin), any(Runnable.class), anyLong());
 			assertFalse(completion.toCompletableFuture().isDone());
 
 			immediate.getValue().run();
 			assertFalse(completion.toCompletableFuture().isDone());
-			delayed.getAllValues().get(0).run();
+			verify(scheduler).runTaskLater(eq(plugin), firstDelayed.capture(), eq(1L));
+			firstDelayed.getValue().run();
 			assertFalse(completion.toCompletableFuture().isDone());
-			delayed.getAllValues().get(1).run();
+			verify(scheduler, times(2)).runTaskLater(eq(plugin), secondDelayed.capture(), eq(1L));
+			secondDelayed.getAllValues().get(1).run();
 			completion.toCompletableFuture().join();
 
 			verify(server).dispatchCommand(console, "say one");

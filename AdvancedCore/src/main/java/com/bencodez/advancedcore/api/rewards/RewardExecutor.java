@@ -176,11 +176,14 @@ public class RewardExecutor {
     public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
-        if (!plugin.isEnabled()) return disabledDispatch();
-        if (reward.startsWith("/")) {
-            return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), reward,
-                    context.getPlaceholders());
-        }
+		if (!plugin.isEnabled()) return disabledDispatch();
+		if (reward.startsWith("/")) {
+			RewardOptions options = context.getOptions();
+			return Reward.replayCommandSequence(plugin, context.getPlaceholders(), "direct", java.util.List.of(reward),
+					Reward.replayStateFor(options), options.getAsyncReplayKey(),
+					(command, ignoredIndex) -> MiscUtils.getInstance().executeConsoleCommandsAsync(
+							user.getPlayerName(), command, context.getPlaceholders()));
+		}
         return giveRewardAsync(user, handler.getReward(reward), context.getOptions());
     }
 

@@ -155,8 +155,8 @@ public final class RewardCommands {
             @Override
             public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
                     ArrayList<String> list, HashMap<String, String> placeholders) {
-                return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), list, placeholders, true)
-                        .thenApply(ignored -> null);
+				return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), list, placeholders, true)
+						.thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder("COMMAND_BLOCK"), new EditGUIValueList("Commands", null) {
             @Override
@@ -216,9 +216,9 @@ public final class RewardCommands {
                 // Player availability is a prerequisite for the mixed section. Do not
                 // schedule console side effects until that prerequisite has completed,
                 // otherwise a disconnect can fail the replay after grants already ran.
-                return player.thenCompose(ignored -> consoleCommands.isEmpty() ? CompletableFuture.completedFuture(null)
-                        : MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
-                                placeholders, section.getBoolean("Stagger", true)))
+				return player.thenCompose(ignored -> consoleCommands.isEmpty() ? CompletableFuture.completedFuture(null)
+						: MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
+								placeholders, section.getBoolean("Stagger", true)))
                         .thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands.Console", null) {

@@ -536,6 +536,45 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void commandReplayRetriesOnlyTheFailedSuffix() throws Exception {
+		ArrayList<String> dispatched = new ArrayList<>();
+		AtomicBoolean failSecond = new AtomicBoolean(true);
+		handler.getInjectedRewards().add(new RewardInject("Commands") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> commandPlaceholders) {
+				return Reward.replayCommandSequence(plugin, commandPlaceholders, "console",
+						List.of("first", "second"), command -> {
+							dispatched.add(command);
+							return command.equals("second") && failSecond.get()
+									? CompletableFuture.failedFuture(new IllegalStateException("temporary"))
+									: CompletableFuture.completedFuture(null);
+						}).thenApply(nothing -> null);
+			}
+		});
+
+		Throwable failure = assertThrows(java.util.concurrent.CompletionException.class,
+				() -> reward.giveInjectedRewardsAsync(user, new HashMap<>()).toCompletableFuture().join());
+		Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
+		failSecond.set(false);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		state.setAccessible(true);
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+		replay.setAccessible(true);
+		CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward,
+				user, checkpoint.getReplayPlaceholders(), 0,
+				state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
+				"AsyncReward");
+		resumed.toCompletableFuture().join();
+
+		assertEquals(List.of("first", "second", "second"), dispatched);
+	}
+
+	@Test
 	void persistedReplayRejectsAChangedInjectorRegistryBeforeAnyStageRuns() throws Exception {
 		AtomicInteger applied = new AtomicInteger();
 		AtomicInteger inserted = new AtomicInteger();

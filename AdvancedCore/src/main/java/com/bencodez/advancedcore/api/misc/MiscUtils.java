@@ -43,6 +43,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffectType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -247,6 +248,11 @@ public class MiscUtils {
 	 */
 	public CompletionStage<Void> executeConsoleCommandsAsync(String playerName, String command,
 			HashMap<String, String> placeholders) {
+		return executeConsoleCommandAsync(playerName, command, placeholders, false);
+	}
+
+	private CompletionStage<Void> executeConsoleCommandAsync(String playerName, String command,
+			HashMap<String, String> placeholders, boolean delayed) {
 		if (command == null || command.isEmpty()) return CompletableFuture.completedFuture(null);
 		try {
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
@@ -260,7 +266,7 @@ public class MiscUtils {
 			final String cmd = stripLeadingSlash(command);
 
 			plugin.debug("Executing console command: " + command);
-			return runConsoleCommandAsync(cmd, 0, false, false);
+			return runConsoleCommandAsync(cmd, delayed ? 1 : 0, delayed, delayed);
 		} catch (Throwable failure) {
 			return CompletableFuture.failedFuture(failure);
 		}
@@ -283,14 +289,12 @@ public class MiscUtils {
 			commands = PlaceholderUtils.replacePlaceHolder(commands, placeholders);
 			if (p != null) commands = PlaceholderUtils.replacePlaceHolders(p, commands);
 
-			ArrayList<CompletableFuture<Void>> completions = new ArrayList<>();
-			int delay = 0;
-			for (String command : commands) {
-				plugin.debug("Executing console command: " + command);
-				completions.add(runConsoleCommandAsync(stripLeadingSlash(command), delay++, stagger, true)
-						.toCompletableFuture());
-			}
-			return CompletableFuture.allOf(completions.toArray(new CompletableFuture[0]));
+			return Reward.replayCommandSequence(plugin, placeholders, "console:" + stagger, commands,
+					(command, index) -> {
+						plugin.debug("Executing console command: " + command);
+						return runConsoleCommandAsync(stripLeadingSlash(command), index > 0 ? 1 : 0,
+								stagger && index > 0, true);
+					});
 		} catch (Throwable failure) {
 			return CompletableFuture.failedFuture(failure);
 		}

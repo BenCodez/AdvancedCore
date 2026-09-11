@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.function.Consumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
@@ -452,6 +454,69 @@ public class Reward {
 		placeholders.put(storageKey, selected == null ? "" : Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(selected.getBytes(StandardCharsets.UTF_8)));
 		return selected;
+	}
+
+	/** Executes a command list sequentially and durably records each successful item. */
+	public static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders, String lane, List<String> commands,
+			Function<String, CompletionStage<Void>> dispatch) {
+		return replayCommandSequence(plugin, placeholders, lane, commands,
+				(command, ignoredIndex) -> dispatch.apply(command));
+	}
+
+	/** Executes an indexed command list sequentially and durably records each successful item. */
+	public static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders, String lane, List<String> commands,
+			BiFunction<String, Integer, CompletionStage<Void>> dispatch) {
+		return replayCommandSequence(plugin, placeholders, lane, commands, currentReplayState(), currentReplayKey(), dispatch);
+	}
+
+	static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders, String lane, List<String> commands,
+			ReplayState replayState, String activeKey,
+			BiFunction<String, Integer, CompletionStage<Void>> dispatch) {
+		if (commands == null || commands.isEmpty()) return CompletableFuture.completedFuture(null);
+		if (replayState == null || activeKey == null) {
+			CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+			for (int index = 0; index < commands.size(); index++) {
+				String command = commands.get(index);
+				int commandIndex = index;
+				sequence = sequence.thenCompose(ignored -> dispatch.apply(command, commandIndex));
+			}
+			return sequence;
+		}
+		StringBuilder identity = new StringBuilder(activeKey == null ? "root" : activeKey)
+				.append('\n').append(lane == null ? "commands" : lane);
+		for (String command : commands) identity.append('\n').append(command == null ? "" : command);
+		String storageKey = "__advancedcore_replay_commands_" + digest(identity.toString());
+		int completed = 0;
+		try {
+			completed = Integer.parseInt(placeholders.getOrDefault(storageKey, "0"));
+		} catch (NumberFormatException ignored) { }
+		if (completed < 0 || completed > commands.size()) completed = 0;
+		CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+		for (int index = completed; index < commands.size(); index++) {
+			String command = commands.get(index);
+			int completedCount = index + 1;
+			int commandIndex = index;
+			sequence = sequence.thenCompose(ignored -> dispatch.apply(command, commandIndex)).thenCompose(ignored -> {
+				placeholders.put(storageKey, String.valueOf(completedCount));
+				return replayState == null ? CompletableFuture.completedFuture(null)
+						: replayState.persistCheckpointAsync(plugin, placeholders);
+			});
+		}
+		return sequence;
+	}
+
+	private static String digest(String value) {
+		try {
+			byte[] bytes = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+			StringBuilder hex = new StringBuilder(bytes.length * 2);
+			for (byte item : bytes) hex.append(String.format("%02x", item & 0xff));
+			return hex.toString();
+		} catch (NoSuchAlgorithmException failure) {
+			throw new IllegalStateException("SHA-256 is unavailable for reward replay checkpoints", failure);
+		}
 	}
 
 	/** Attaches a captured replay state to an option object for a deferred child. */

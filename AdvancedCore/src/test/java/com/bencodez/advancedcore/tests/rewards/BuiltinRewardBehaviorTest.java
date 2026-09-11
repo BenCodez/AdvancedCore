@@ -310,7 +310,7 @@ public class BuiltinRewardBehaviorTest {
         MiscUtils misc = mock(MiscUtils.class);
         CompletableFuture<Void> numberCommand = new CompletableFuture<>();
         CompletableFuture<Void> command = new CompletableFuture<>();
-        CompletableFuture<Void> commandList = new CompletableFuture<>();
+		CompletableFuture<Void> commandList = new CompletableFuture<>();
         CompletableFuture<Void> sectionConsole = new CompletableFuture<>();
         CompletableFuture<Void> sectionPlayer = new CompletableFuture<>();
         CompletableFuture<Void> random = new CompletableFuture<>();
@@ -320,11 +320,11 @@ public class BuiltinRewardBehaviorTest {
                     .thenReturn(numberCommand);
             when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("say hi"), eq(placeholders))).thenReturn(command);
             ArrayList<String> list = new ArrayList<>(List.of("say one", "say two"));
-            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(list), eq(placeholders), eq(true)))
-                    .thenReturn(commandList);
+			when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(list), eq(placeholders), eq(true)))
+					.thenReturn(commandList);
             ArrayList<String> console = new ArrayList<>(List.of("say console"));
-            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(console), eq(placeholders), eq(false)))
-                    .thenReturn(sectionConsole);
+			when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(console), eq(placeholders), eq(false)))
+					.thenReturn(sectionConsole);
             ArrayList<String> player = new ArrayList<>(List.of("spawn"));
             when(user.preformCommandAsync(eq(player), eq(placeholders))).thenReturn(sectionPlayer);
             ArrayList<String> randomList = new ArrayList<>(List.of("say random"));
@@ -350,7 +350,7 @@ public class BuiltinRewardBehaviorTest {
             CompletionStage<String> listStage = ((RewardInjectStringList) injects.get(2))
                     .onRewardRequestAsync(reward, user, list, placeholders);
             assertFalse(listStage.toCompletableFuture().isDone());
-            commandList.complete(null);
+			commandList.complete(null);
             listStage.toCompletableFuture().join();
 
             ConfigurationSection commands = section("Commands");
@@ -392,6 +392,7 @@ public class BuiltinRewardBehaviorTest {
 
             assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
             verify(misc, never()).executeConsoleCommandsAsync(anyString(), any(), any(), anyBoolean());
+            verify(misc, never()).executeConsoleCommandsAsync(anyString(), anyString(), any());
         }
     }
 
