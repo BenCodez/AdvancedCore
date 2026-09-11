@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
@@ -21,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
@@ -150,6 +152,76 @@ public class AdvancedCoreUserTest {
 
 		verify(rewardHandler).givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class), options.capture());
 		assertEquals(occurrence, options.getValue().getAsyncReplayOccurrenceId());
+	}
+
+	@Test
+	void deferredReplayRetainsOccurrenceAndCheckpoint() {
+		ArrayList<String> persisted = new ArrayList<>();
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			persisted.clear();
+			persisted.addAll(invocation.getArgument(1));
+			return null;
+		}).when(data).setStringList(eq("offlineRewardsPath"), any());
+		Reward reward = mock(Reward.class);
+		when(reward.getRewardName()).thenReturn("VoteReward");
+		RewardOptions options = new RewardOptions().addPlaceholder("Server", "server-a");
+		String occurrence = UUID.randomUUID().toString();
+		options.setAsyncReplayOccurrenceId(occurrence);
+		options.setAsyncReplayProgress(Map.of("root/Grant:0", 1));
+		options.setAsyncReplayRegistryFingerprints(Map.of("root/Grant:0", "fingerprint"));
+
+		user.addOfflineRewards(reward, options.getPlaceholders(), options);
+
+		assertEquals(1, persisted.size());
+		assertTrue(persisted.get(0).contains("%asyncoccurrence%" + occurrence));
+		assertTrue(persisted.get(0).contains("%asyncprogress%v3-"));
+		assertTrue(persisted.get(0).contains("Server%pair%server-a"));
+	}
+
+	@Test
+	void replayClaimCleanupRechecksSharedStateUnderItsLock() throws Exception {
+		java.lang.reflect.Method replayClaims = AdvancedCoreUser.class.getDeclaredMethod("replayClaims");
+		replayClaims.setAccessible(true);
+		Object claims = replayClaims.invoke(user);
+		java.lang.reflect.Field lockField = AdvancedCoreUser.class.getDeclaredField("REPLAY_CLAIMS_LOCK");
+		lockField.setAccessible(true);
+		Object lock = lockField.get(null);
+		java.lang.reflect.Field offlineField = claims.getClass().getDeclaredField("offline");
+		offlineField.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		Map<String, Integer> offline = (Map<String, Integer>) offlineField.get(claims);
+		AtomicReference<Throwable> failure = new AtomicReference<>();
+		Thread cleanup;
+		synchronized (lock) {
+			cleanup = new Thread(() -> {
+				try {
+					java.lang.reflect.Method release = AdvancedCoreUser.class
+							.getDeclaredMethod("releaseReplayClaimsIfEmpty", claims.getClass());
+					release.setAccessible(true);
+					release.invoke(user, claims);
+				} catch (Throwable error) {
+					failure.set(error);
+				}
+			}, "replay-claim-cleanup-test");
+			cleanup.start();
+			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+			while (cleanup.getState() != Thread.State.BLOCKED && System.nanoTime() < deadline) {
+				Thread.yield();
+			}
+			assertEquals(Thread.State.BLOCKED, cleanup.getState());
+			offline.put("new-claim", 1);
+		}
+		cleanup.join(TimeUnit.SECONDS.toMillis(5));
+		assertFalse(cleanup.isAlive());
+		assertTrue(failure.get() == null, () -> "cleanup failed: " + failure.get());
+		assertSame(claims, replayClaims.invoke(user));
+		offline.clear();
+		java.lang.reflect.Method release = AdvancedCoreUser.class
+				.getDeclaredMethod("releaseReplayClaimsIfEmpty", claims.getClass());
+		release.setAccessible(true);
+		release.invoke(user, claims);
 	}
 
 	@Test

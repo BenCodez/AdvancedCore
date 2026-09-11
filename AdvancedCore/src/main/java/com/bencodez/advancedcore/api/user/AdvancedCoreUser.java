@@ -322,9 +322,27 @@ public class AdvancedCoreUser {
 	 * @param placeholders the placeholders
 	 */
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
+		addOfflineRewards(reward, placeholders, null);
+	}
+
+	/**
+	 * Adds an offline reward while retaining an in-flight asynchronous replay's
+	 * occurrence and durable checkpoint.  This overload is used when pause or
+	 * vanish handling defers a reward before its async chain can complete.
+	 *
+	 * @param reward       the reward
+	 * @param placeholders the placeholders
+	 * @param options      replay options to preserve, if any
+	 */
+	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders, RewardOptions options) {
 		synchronized (plugin) {
 			ArrayList<String> offlineRewards = getOfflineRewards();
-			offlineRewards.add(queuedRewardReference(reward) + "%placeholders%" + ArrayUtils.makeString(placeholders));
+			Reward.preserveReplayState(options);
+			HashMap<String, String> savedPlaceholders = placeholders == null ? new HashMap<>()
+					: new HashMap<>(placeholders);
+			if (options != null) savedPlaceholders.putAll(options.getPlaceholders());
+			offlineRewards.add(queuedRewardReference(reward, options) + "%placeholders%"
+					+ ArrayUtils.makeString(savedPlaceholders));
 			setOfflineRewards(offlineRewards);
 		}
 	}
@@ -369,10 +387,26 @@ public class AdvancedCoreUser {
 	}
 
 	private String queuedRewardReference(Reward reward) {
+		return queuedRewardReference(reward, null);
+	}
+
+	private String queuedRewardReference(Reward reward, RewardOptions options) {
 		String encodedName = Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(reward.getRewardName().getBytes(StandardCharsets.UTF_8));
-		return QUEUED_REFERENCE_PREFIX + (reward.isGeneratedSnapshotCreated() ? "snapshot/" : "normal/")
-				+ encodedName + ASYNC_OCCURRENCE_DELIMITER + UUID.randomUUID();
+		String reference = QUEUED_REFERENCE_PREFIX + (reward.isGeneratedSnapshotCreated() ? "snapshot/" : "normal/")
+				+ encodedName + ASYNC_OCCURRENCE_DELIMITER
+				+ (options == null || options.getAsyncReplayOccurrenceId() == null
+						|| options.getAsyncReplayOccurrenceId().isEmpty() ? UUID.randomUUID()
+							: options.getAsyncReplayOccurrenceId());
+		if (options != null) {
+			String serialized = encodeAsyncReplayProgress(options.getAsyncReplayProgress(),
+					options.getAsyncReplayRegistryFingerprints());
+			if (!serialized.isEmpty()) reference += ASYNC_PROGRESS_DELIMITER + serialized;
+			else if (options.getCompletedAsyncInjections() > 0) {
+				reference += ASYNC_PROGRESS_DELIMITER + options.getCompletedAsyncInjections();
+			}
+		}
+		return reference;
 	}
 
 	private static QueuedReplay parseQueuedReplay(String storedReference) {
@@ -911,12 +945,19 @@ public class AdvancedCoreUser {
 	}
 
 	private void releaseReplayClaimsIfEmpty(ReplayClaims claims) {
-		if (!claims.offline.isEmpty() || !claims.timed.isEmpty()) return;
-		synchronized (REPLAY_CLAIMS_LOCK) {
-			HashMap<String, ReplayClaims> byUser = REPLAY_CLAIMS.get(plugin);
-			if (byUser == null || byUser.get(getUUID()) != claims) return;
-			byUser.remove(getUUID());
-			if (byUser.isEmpty()) REPLAY_CLAIMS.remove(plugin);
+		synchronized (plugin) {
+			synchronized (REPLAY_CLAIMS_LOCK) {
+				// Claim mutations use the same lock ordering (plugin, then this
+				// lock). Recheck only while holding both locks; checking before
+				// entering them permits a concurrent wrapper to add a claim that
+				// cleanup then drops.
+				if (!claims.offline.isEmpty() || !claims.timed.isEmpty()
+						|| !claims.serialReplayTail.isDone()) return;
+				HashMap<String, ReplayClaims> byUser = REPLAY_CLAIMS.get(plugin);
+				if (byUser == null || byUser.get(getUUID()) != claims) return;
+				byUser.remove(getUUID());
+				if (byUser.isEmpty()) REPLAY_CLAIMS.remove(plugin);
+			}
 		}
 	}
 

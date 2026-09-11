@@ -1095,6 +1095,30 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void publicRewardUserApiRetainsNullOptionsCompatibilityWithAsyncInjectors() {
+		AtomicReference<RewardOptions> receivedOptions = new AtomicReference<>();
+		handler.getInjectedRewards().add(new RewardInject("Async") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public boolean requiresConfiguredDataForAsync() { return false; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				return CompletableFuture.completedFuture(null);
+			}
+		});
+		Reward spyReward = org.mockito.Mockito.spy(reward);
+		doAnswer(invocation -> {
+			receivedOptions.set(invocation.getArgument(2));
+			return CompletableFuture.completedFuture(null);
+		}).when(spyReward).giveRewardUserAsync(eq(user), any(HashMap.class), any(RewardOptions.class));
+
+		spyReward.giveRewardUser(user, new HashMap<>(), null);
+
+		assertNotNull(receivedOptions.get());
+	}
+
+	@Test
 	void sharedNestedReplayStatePreventsSynchronousFallbackWhenOptionMapsAreEmpty() throws Exception {
 		AtomicInteger invoked = new AtomicInteger();
 		handler.getInjectedRewards().add(new RewardInject("Synchronous") {

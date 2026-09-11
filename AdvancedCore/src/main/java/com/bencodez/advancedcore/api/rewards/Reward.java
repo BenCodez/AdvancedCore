@@ -440,6 +440,18 @@ public class Reward {
 	}
 
 	/**
+	 * Copies the durable portion of an in-flight replay into options before the
+	 * reward is deferred.  Pause/vanish handling happens before the async
+	 * injector creates its next checkpoint, so the queue must carry the state
+	 * already accumulated by a nested replay rather than starting a new
+	 * occurrence with placeholders only.
+	 */
+	public static void preserveReplayState(RewardOptions options) {
+		if (options == null || options.getAsyncReplayState() == null) return;
+		options.getAsyncReplayState().copyTo(options);
+	}
+
+	/**
 	 * Records a nondeterministic nested-reward decision in the placeholder
 	 * snapshot carried by {@link RewardReplayFailure}. A retry consequently
 	 * executes the same selected branch instead of rolling a new outcome after a
@@ -698,6 +710,13 @@ public class Reward {
 		}
 		private synchronized boolean hasPersistedCheckpoint() {
 			return legacyCheckpoint || !completed.isEmpty() || !registryFingerprints.isEmpty();
+		}
+		private synchronized void copyTo(RewardOptions options) {
+			options.setCompletedAsyncInjections(Math.max(options.getCompletedAsyncInjections(), highestCompletedCount()));
+			options.setAsyncReplayProgress(copyProgress());
+			options.setAsyncReplayRegistryFingerprints(copyRegistryFingerprints());
+			options.setLegacyAsyncReplayCheckpoint(legacyCheckpoint);
+			mergeReplayMetadataInto(options.getPlaceholders());
 		}
 		private synchronized boolean matchesRegistryFingerprint(String currentFingerprint) {
 			if (legacyCheckpoint) return false;
@@ -995,7 +1014,8 @@ public class Reward {
 
 		if (plugin.getOptions().isPauseRewards()) {
 			checkRewardFile();
-			user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+			preserveReplayState(rewardOptions);
+			user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
 			plugin.getLogger()
 					.info("Rewards are paused, saving offline reward " + getRewardName() + ": " + user.getPlayerName());
 			return;
@@ -1003,7 +1023,8 @@ public class Reward {
 
 		if ((plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
 			checkRewardFile();
-			user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+			preserveReplayState(rewardOptions);
+			user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
 			plugin.getLogger()
 					.info(getRewardName() + ": " + user.getPlayerName() + " is vanished, saving reward offline");
 			return;
@@ -1095,7 +1116,8 @@ public class Reward {
 		}
 		if (plugin.getOptions().isPauseRewards() || (plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
 			checkRewardFile();
-			user.addOfflineRewards(this, rewardOptions.getPlaceholders());
+			preserveReplayState(rewardOptions);
+			user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
 			return CompletableFuture.completedFuture(null);
 		}
 		if (((((!rewardOptions.isOnline() || rewardOptions.getServer() != null) && !user.isOnline()) || allowOffline)
@@ -1130,8 +1152,9 @@ public class Reward {
 	 * @param rewardOptions rewardOptions
 	 */
 	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
-		if (hasAsyncRewardInjection() || hasPersistedReplayCheckpoint(rewardOptions)) {
-			giveRewardUserAsync(user, phs, rewardOptions).exceptionally(failure -> {
+		RewardOptions effectiveOptions = rewardOptions == null ? new RewardOptions() : rewardOptions;
+		if (hasAsyncRewardInjection() || hasPersistedReplayCheckpoint(effectiveOptions)) {
+			giveRewardUserAsync(user, phs, effectiveOptions).exceptionally(failure -> {
 				logRewardUserFailure(failure);
 				return null;
 			});
