@@ -291,7 +291,7 @@ public class MiscUtils {
 					(command, index) -> {
 						plugin.debug("Executing console command: " + command);
 						return runConsoleCommandAsync(stripLeadingSlash(command), index > 0 ? 1 : 0,
-								stagger && index > 0, true);
+								stagger && index > 0, stagger || index == 0);
 					});
 		} catch (Throwable failure) {
 			return CompletableFuture.failedFuture(failure);

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -162,6 +163,38 @@ public class MiscUtilsTest {
 			secondDelayed.getAllValues().get(1).run();
 			completion.toCompletableFuture().join();
 
+			verify(server).dispatchCommand(console, "say one");
+			verify(server).dispatchCommand(console, "say two");
+			verify(server).dispatchCommand(console, "say three");
+		}
+	}
+
+	@Test
+	public void asyncNonStaggeredCommandsStayOnTheInitialServerTick() {
+		Server server = mock(Server.class);
+		ConsoleCommandSender console = mock(ConsoleCommandSender.class);
+		ArgumentCaptor<Runnable> initial = ArgumentCaptor.forClass(Runnable.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+			bukkit.when(() -> Bukkit.getOfflinePlayer("Ben")).thenReturn(null);
+
+			java.util.concurrent.CompletionStage<Void> completion = miscUtils.executeConsoleCommandsAsync("Ben",
+					new ArrayList<>(List.of("say one", "say two", "say three")), new HashMap<>(), false);
+			verify(scheduler).runTask(eq(plugin), initial.capture());
+			assertFalse(completion.toCompletableFuture().isDone());
+
+			initial.getValue().run();
+			completion.toCompletableFuture().join();
+
+			verify(scheduler).runTask(eq(plugin), any(Runnable.class));
+			verify(scheduler, times(2)).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+			verify(scheduler, never()).runTaskLater(eq(plugin), any(Runnable.class), anyLong());
 			verify(server).dispatchCommand(console, "say one");
 			verify(server).dispatchCommand(console, "say two");
 			verify(server).dispatchCommand(console, "say three");
