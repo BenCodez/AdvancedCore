@@ -261,6 +261,31 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void deferredReplayAtomicallyReplacesItsExistingOccurrence() {
+		String occurrence = UUID.randomUUID().toString();
+		ArrayList<String> persisted = new ArrayList<>(List.of(
+				"old%asyncoccurrence%" + occurrence + "%placeholders%Server%pair%old",
+				"duplicate%asyncoccurrence%" + occurrence + "%placeholders%Server%pair%stale"));
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			persisted.clear();
+			persisted.addAll(invocation.getArgument(1));
+			return null;
+		}).when(data).setStringList(eq("offlineRewardsPath"), any());
+		Reward reward = mock(Reward.class);
+		when(reward.getRewardName()).thenReturn("VoteReward");
+		RewardOptions options = new RewardOptions().addPlaceholder("Server", "server-a");
+		options.setAsyncReplayOccurrenceId(occurrence);
+
+		user.addOfflineRewards(reward, options.getPlaceholders(), options);
+
+		assertEquals(1, persisted.size());
+		assertTrue(persisted.get(0).contains("%asyncoccurrence%" + occurrence));
+		assertTrue(persisted.get(0).contains("Server%pair%server-a"));
+	}
+
+	@Test
 	void replayClaimCleanupRechecksSharedStateUnderItsLock() throws Exception {
 		java.lang.reflect.Method replayClaims = AdvancedCoreUser.class.getDeclaredMethod("replayClaims");
 		replayClaims.setAccessible(true);

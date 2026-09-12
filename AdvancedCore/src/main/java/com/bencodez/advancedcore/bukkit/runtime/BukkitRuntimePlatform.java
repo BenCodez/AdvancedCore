@@ -39,12 +39,6 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                         JavascriptEngineHandler.getInstance().clearCachedEngine();
                     }
                 }),
-                new Cleanup("MySQL", () -> {
-                    if (plugin.isLoadUserData() && plugin.getOptions() != null
-                            && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType()) && plugin.getMysql() != null) {
-                        plugin.getMysql().close();
-                    }
-                }),
                 new Cleanup("server data timestamp", () -> {
                     if (plugin.getServerDataFile() != null) plugin.getServerDataFile().setLastUpdated();
                 }));
@@ -58,6 +52,12 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     @Override public List<Cleanup> afterExecutorShutdown() {
         return List.of(
+                new Cleanup("MySQL", () -> {
+                    if (plugin.isLoadUserData() && plugin.getOptions() != null
+                            && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType()) && plugin.getMysql() != null) {
+                        plugin.getMysql().close();
+                    }
+                }),
                 new Cleanup("plugin unload hook", plugin::onUnLoad),
                 new Cleanup("skull cache", () -> {
                     if (plugin.getSkullCacheHandler() != null) plugin.getSkullCacheHandler().close();

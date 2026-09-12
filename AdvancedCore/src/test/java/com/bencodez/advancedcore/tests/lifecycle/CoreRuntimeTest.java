@@ -10,8 +10,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
+import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.bukkit.runtime.BukkitRuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -112,7 +115,13 @@ class CoreRuntimeTest {
 	@Test void bukkitAdapterFlushesFullInventoryBeforeExecutorShutdown() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		FullInventoryHandler handler = mock(FullInventoryHandler.class);
+		MySQL mysql = mock(MySQL.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		when(plugin.getFullInventoryHandler()).thenReturn(handler);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(plugin.getMysql()).thenReturn(mysql);
 		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
 
 		platform.beforeExecutorShutdown().stream()
@@ -120,6 +129,12 @@ class CoreRuntimeTest {
 				.findFirst().orElseThrow().action().run();
 
 		verify(handler).shutdown();
+		assertTrue(platform.beforeExecutorShutdown().stream()
+				.noneMatch(cleanup -> cleanup.name().equals("MySQL")));
+		platform.afterExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("MySQL"))
+				.findFirst().orElseThrow().action().run();
+		verify(mysql).close();
 		assertTrue(platform.afterExecutorShutdown().stream()
 				.noneMatch(cleanup -> cleanup.name().equals("full inventory handler")));
 	}

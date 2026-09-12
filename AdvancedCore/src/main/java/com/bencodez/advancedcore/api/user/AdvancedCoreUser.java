@@ -616,8 +616,19 @@ public class AdvancedCoreUser {
 			HashMap<String, String> savedPlaceholders = placeholders == null ? new HashMap<>()
 					: new HashMap<>(placeholders);
 			if (options != null) savedPlaceholders.putAll(options.getPlaceholders());
-			offlineRewards.add(queuedRewardReference(reward, options) + "%placeholders%"
-					+ ArrayUtils.makeString(savedPlaceholders));
+			String queued = queuedRewardReference(reward, options) + "%placeholders%"
+					+ ArrayUtils.makeString(savedPlaceholders);
+			String occurrence = options == null ? null : options.getAsyncReplayOccurrenceId();
+			int replacement = -1;
+			if (occurrence != null && !occurrence.isEmpty()) {
+				for (int index = offlineRewards.size() - 1; index >= 0; index--) {
+					if (!occurrence.equals(occurrenceId(offlineRewards.get(index)))) continue;
+					replacement = index;
+					offlineRewards.remove(index);
+				}
+			}
+			if (replacement < 0) offlineRewards.add(queued);
+			else offlineRewards.add(Math.min(replacement, offlineRewards.size()), queued);
 			setOfflineRewards(offlineRewards);
 		}
 	}
@@ -1178,6 +1189,14 @@ public class AdvancedCoreUser {
 	private boolean claimOfflineReward(String rewardEntry) {
 		synchronized (plugin) {
 			ReplayClaims claims = replayClaims();
+			String occurrence = occurrenceId(rewardEntry);
+			if (occurrence != null) {
+				boolean claimed = claims.offline.entrySet().stream().anyMatch(entry -> entry.getValue() > 0
+						&& occurrence.equals(occurrenceId(entry.getKey())));
+				if (claimed) return false;
+				claims.offline.put(rewardEntry, 1);
+				return true;
+			}
 			int occurrences = 0;
 			for (String pending : getOfflineRewards()) if (rewardEntry.equals(pending)) occurrences++;
 			int claimed = claims.offline.getOrDefault(rewardEntry, 0);
