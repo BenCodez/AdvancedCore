@@ -48,6 +48,9 @@ public abstract class RewardInject extends Inject {
 	private boolean alwaysValid = false;
 
 	@Getter
+	private boolean playerRequired;
+
+	@Getter
 	private RewardInjectValidator validate;
 
 	public RewardInject(String path) {
@@ -198,6 +201,12 @@ public abstract class RewardInject extends Inject {
 
 	public RewardInject postReward() {
 		postReward = true;
+		return this;
+	}
+
+	/** Marks a legacy injection whose side effect cannot succeed without a live player. */
+	public RewardInject requiresPlayer() {
+		playerRequired = true;
 		return this;
 	}
 

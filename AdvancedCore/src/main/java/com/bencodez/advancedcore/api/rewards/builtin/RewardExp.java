@@ -34,7 +34,7 @@ public final class RewardExp {
                 user.giveExp(num);
                 return null;
             }
-        }.asPlaceholder("EXP").priority(100).addEditButton(
+		}.requiresPlayer().asPlaceholder("EXP").priority(100).addEditButton(
                 new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueInventory("EXP") {
                     @Override
                     public void openInventory(ClickEvent clickEvent) {
@@ -57,7 +57,7 @@ public final class RewardExp {
                 user.giveExpLevels(num);
                 return null;
             }
-        }.asPlaceholder("EXP").priority(100).addEditButton(
+		}.requiresPlayer().asPlaceholder("EXP").priority(100).addEditButton(
                 new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueInventory("EXPLevels") {
                     @Override
                     public void openInventory(ClickEvent clickEvent) {
@@ -83,7 +83,7 @@ public final class RewardExp {
                 user.giveExp(value);
                 return "" + value;
             }
-        }.asPlaceholder("EXP").priority(100).validator(rangeValidator("EXP")));
+		}.requiresPlayer().asPlaceholder("EXP").priority(100).validator(rangeValidator("EXP")));
 
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("EXPLevels") {
             @Override
@@ -95,7 +95,7 @@ public final class RewardExp {
                 user.giveExpLevels(value);
                 return "" + value;
             }
-        }.asPlaceholder("EXP").priority(100).validator(rangeValidator("EXPLevels")));
+		}.requiresPlayer().asPlaceholder("EXP").priority(100).validator(rangeValidator("EXPLevels")));
     }
 
     private static RewardInjectValidator zeroValidator(String message) {

@@ -48,7 +48,7 @@ public final class RewardItems {
                 user.giveItem(builder);
                 return null;
             }
-        }.validator(itemValidator()));
+		}.requiresPlayer().validator(itemValidator()));
     }
 
     public static void registerRandomItem(RewardHandler handler, AdvancedCorePlugin plugin) {
@@ -65,7 +65,7 @@ public final class RewardItems {
                 }
                 return null;
             }
-        }.asPlaceholder("RandomItem").priority(90).validator(randomItemValidator()));
+		}.requiresPlayer().asPlaceholder("RandomItem").priority(90).validator(randomItemValidator()));
     }
 
     public static void registerItems(RewardHandler handler, AdvancedCorePlugin plugin) {
@@ -87,7 +87,7 @@ public final class RewardItems {
                 }
                 return "";
             }
-        }.priority(90).asPlaceholder("Item").validator(itemsValidator().addPath("OnlyOneItemChance"))
+		}.requiresPlayer().priority(90).asPlaceholder("Item").validator(itemsValidator().addPath("OnlyOneItemChance"))
                 .addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Items") {
                     @Override
                     public void openInventory(ClickEvent clickEvent) {

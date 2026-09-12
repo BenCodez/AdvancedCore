@@ -37,7 +37,7 @@ public final class RewardSound {
                 }
                 return null;
             }
-        }.addEditButton(new EditGUIButton(new ItemBuilder(Material.NOTE_BLOCK), new EditGUIValueInventory("Sound") {
+		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder(Material.NOTE_BLOCK), new EditGUIValueInventory("Sound") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");

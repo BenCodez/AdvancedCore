@@ -1556,6 +1556,40 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void silentPlayerBoundLegacyInjectionRetainsPersistedReplay() throws Exception {
+		AtomicBoolean invoked = new AtomicBoolean();
+		RewardInject playerOutput = new RewardInject("Sound") {
+			@Override
+			public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				invoked.set(true);
+				return null;
+			}
+		}.requiresPlayer();
+		handler.getInjectedRewards().add(playerOutput);
+		AdvancedCoreUser disconnected = mock(AdvancedCoreUser.class);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		state.setAccessible(true);
+		Object replayState = state.newInstance(new HashMap<>(), new HashMap<>(), false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) ignored -> { });
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(reward, disconnected, new HashMap<>(), 0,
+				replayState, "AsyncReward", "occurrence");
+
+		assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
+		assertFalse(invoked.get());
+	}
+
+	@Test
 	void synchronizedAsyncInjectionSerializesThroughCompletion() {
 		List<CompletableFuture<Object>> completions = new ArrayList<>();
 		List<Integer> starts = new ArrayList<>();

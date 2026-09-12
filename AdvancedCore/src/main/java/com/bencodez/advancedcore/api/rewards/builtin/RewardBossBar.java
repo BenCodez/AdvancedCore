@@ -34,7 +34,7 @@ public final class RewardBossBar {
                 }
                 return null;
             }
-        }.addEditButton(new EditGUIButton(new ItemBuilder("DRAGON_HEAD"), new EditGUIValueInventory("BossBar") {
+		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder("DRAGON_HEAD"), new EditGUIValueInventory("BossBar") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");
