@@ -1439,6 +1439,31 @@ public class Reward {
 	 * @return completion stage for the complete reward injection chain
 	 */
 	public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions) {
+		boolean primaryThread = false;
+		try {
+			primaryThread = Bukkit.isPrimaryThread();
+		} catch (IllegalStateException | NullPointerException ignored) {
+			// Early bootstrap and unit tests may not have an installed Bukkit server.
+		}
+		if (!primaryThread) return giveRewardAsyncOffPrimary(user, rewardOptions);
+
+		CompletableFuture<CompletionStage<Void>> handoff = new CompletableFuture<>();
+		try {
+			RewardOptions requestedOptions = rewardOptions;
+			plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> {
+				try {
+					handoff.complete(giveRewardAsyncOffPrimary(user, requestedOptions));
+				} catch (Throwable failure) {
+					handoff.completeExceptionally(failure);
+				}
+			});
+		} catch (Throwable failure) {
+			handoff.completeExceptionally(failure);
+		}
+		return handoff.thenCompose(stage -> stage);
+	}
+
+	private CompletionStage<Void> giveRewardAsyncOffPrimary(AdvancedCoreUser user, RewardOptions rewardOptions) {
 		if (!plugin.getOptions().isProcessRewards()) {
 			plugin.debug("Processing rewards is disabled");
 			return CompletableFuture.completedFuture(null);

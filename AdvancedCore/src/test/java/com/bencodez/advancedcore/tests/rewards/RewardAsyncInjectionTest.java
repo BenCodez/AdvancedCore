@@ -590,6 +590,32 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void directAsyncDispatchLeavesBukkitPrimaryThreadBeforeFiringEvent() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		when(user.isOnline()).thenReturn(true);
+		when(user.getPlayer()).thenReturn(mock(Player.class));
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+		ArgumentCaptor<Runnable> asyncTask = ArgumentCaptor.forClass(Runnable.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			CompletionStage<Void> result = reward.giveRewardAsync(user,
+					new RewardOptions().setCheckTimed(false).setIgnoreRequirements(true));
+
+			verify(scheduler).runTaskAsynchronously(eq(plugin), asyncTask.capture());
+			verify(pluginManager, never()).callEvent(any());
+			assertFalse(result.toCompletableFuture().isDone());
+			asyncTask.getValue().run();
+			result.toCompletableFuture().join();
+			verify(pluginManager).callEvent(any());
+		}
+	}
+
+	@Test
 	void durableReplayRetainsOccurrenceWhenRequirementEvaluationThrows() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isProcessRewards()).thenReturn(true);
