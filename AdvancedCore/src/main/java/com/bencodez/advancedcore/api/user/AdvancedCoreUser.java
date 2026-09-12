@@ -159,13 +159,26 @@ public class AdvancedCoreUser {
 				recordReplayValue(snapshotKey, encodeSnapshot(persistedSnapshot));
 				result = checkpoint();
 			}
+			HashMap<String, String> snapshotLedger = persistedSnapshot;
 			for (ReplayAction action : actions) {
 				if (completed.contains(action.identity)) continue;
 				result = result.thenCompose(ignored -> {
 					try {
 						CompletionStage<Void> stage = action.action.get();
-						return stage == null ? CompletableFuture.failedFuture(
-								new IllegalStateException("Scheduled reward action returned null")) : stage;
+						if (stage == null) return CompletableFuture.failedFuture(
+								new IllegalStateException("Scheduled reward action returned null"));
+						return stage.exceptionallyCompose(failure -> {
+							Throwable cause = unwrapCompletionFailure(failure);
+							if (!(cause instanceof LegacyActionNotStartedException)) {
+								return CompletableFuture.failedFuture(cause);
+							}
+							// Scheduler rejection, shutdown-before-dispatch, and the bounded
+							// pre-dispatch timeout all prove the action never began. Release its
+							// reservation so a retry may safely regenerate a random payload.
+							snapshotLedger.remove(action.identity);
+							recordReplayValue(snapshotKey, encodeSnapshot(snapshotLedger));
+							return checkpoint().thenCompose(unused -> CompletableFuture.failedFuture(cause));
+						});
 					} catch (Throwable failure) {
 						return CompletableFuture.failedFuture(failure);
 					}
@@ -177,6 +190,15 @@ public class AdvancedCoreUser {
 				});
 			}
 			return result;
+		}
+
+		private static Throwable unwrapCompletionFailure(Throwable failure) {
+			Throwable current = failure;
+			while ((current instanceof java.util.concurrent.CompletionException
+					|| current instanceof java.util.concurrent.ExecutionException) && current.getCause() != null) {
+				current = current.getCause();
+			}
+			return current;
 		}
 
 		private String readReplayValue(String key) {
@@ -263,6 +285,19 @@ public class AdvancedCoreUser {
 				this.action = action;
 				this.durable = durable;
 			}
+		}
+	}
+
+	/** Signals a replay-aware legacy action that was conclusively never started. */
+	private static final class LegacyActionNotStartedException extends IllegalStateException {
+		private static final long serialVersionUID = 1L;
+
+		private LegacyActionNotStartedException(String message) {
+			super(message);
+		}
+
+		private LegacyActionNotStartedException(String message, Throwable cause) {
+			super(message, cause);
 		}
 	}
 
@@ -1773,7 +1808,8 @@ public class AdvancedCoreUser {
 			Runnable dispatch = () -> {
 				if (!claimed.compareAndSet(false, true)) return;
 				if (!plugin.isEnabled()) {
-					completion.completeExceptionally(new IllegalStateException("Plugin disabled before scheduled reward action ran"));
+					completion.completeExceptionally(new LegacyActionNotStartedException(
+							"Plugin disabled before scheduled reward action ran"));
 					return;
 				}
 				try {
@@ -1796,11 +1832,13 @@ public class AdvancedCoreUser {
 				else getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
 			} catch (Throwable failure) {
 				claimed.set(true);
-				completion.completeExceptionally(failure);
+				completion.completeExceptionally(new LegacyActionNotStartedException(
+						"Scheduler rejected reward action before dispatch", failure));
 			}
 			CompletableFuture.delayedExecutor(30, TimeUnit.SECONDS).execute(() -> {
 				if (claimed.compareAndSet(false, true)) {
-					completion.completeExceptionally(new TimeoutException("Timed out waiting for scheduled reward action"));
+					completion.completeExceptionally(new LegacyActionNotStartedException(
+							"Timed out waiting for scheduled reward action", new TimeoutException()));
 				}
 			});
 			return completion;

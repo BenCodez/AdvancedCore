@@ -486,6 +486,65 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void schedulerRejectionReleasesUnstartedRandomActionForReplay() throws Exception {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("RandomReplay");
+		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
+		AtomicReference<Double> amount = new AtomicReference<>(1D);
+		AtomicBoolean reject = new AtomicBoolean(true);
+		ArrayList<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> {
+			if (reject.get()) throw new IllegalStateException("scheduler stopped");
+			queued.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				realUser.giveMoney(amount.get());
+				return CompletableFuture.completedFuture(null);
+			}
+		});
+
+		UUID uuid = UUID.fromString(realUser.getUUID());
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
+			Reward.RewardReplayFailure checkpoint = findCheckpoint(assertThrows(
+					java.util.concurrent.CompletionException.class,
+					() -> reward.giveInjectedRewardsAsync(realUser, new HashMap<>()).toCompletableFuture().join()));
+
+			amount.set(2D);
+			reject.set(false);
+			Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+			java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+			state.setAccessible(true);
+			java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+					AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+			replay.setAccessible(true);
+			CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, realUser,
+					checkpoint.getReplayPlaceholders(), 0,
+					state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
+					"AsyncReward");
+			assertEquals(1, queued.size(), "the safely unstarted action is regenerated on retry");
+			queued.remove(0).run();
+			resumed.toCompletableFuture().join();
+		}
+		verify(economy, never()).depositPlayer(offlinePlayer, 1D);
+		verify(economy).depositPlayer(offlinePlayer, 2D);
+	}
+
+	@Test
 	void capturedAsyncContinuationActionCheckpointsRetryOnlyTheUnfinishedSuffix() throws Exception {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
@@ -624,7 +683,7 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
-	void legacyActionReplayRejectsRemovalOfAnUnfinishedAction() throws Exception {
+	void legacyActionReplayAllowsRemovalOfAConclusiveUnstartedAction() throws Exception {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(config);
@@ -675,9 +734,11 @@ class RewardAsyncInjectionTest {
 					checkpoint.getReplayPlaceholders(), 0,
 					state.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false),
 					"AsyncReward");
-			assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
-			assertTrue(queued.isEmpty(), "no action may run after an unfinished persisted action disappears");
+			resumed.toCompletableFuture().join();
+			assertTrue(queued.isEmpty(), "an action proven unstarted may disappear before retry");
 		}
+		verify(economy).depositPlayer(offlinePlayer, 1D);
+		verify(economy, never()).depositPlayer(offlinePlayer, 2D);
 	}
 
 	@Test
