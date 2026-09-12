@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,6 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.PluginManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -403,6 +406,45 @@ public class AdvancedCoreUserTest {
 		ArgumentCaptor<ArrayList<String>> saved = ArgumentCaptor.forClass(ArrayList.class);
 		verify(data, org.mockito.Mockito.atLeastOnce()).setStringList(eq("offlineRewardsPath"), saved.capture());
 		assertTrue(saved.getAllValues().stream().allMatch(value -> value.size() == initial.size()));
+	}
+
+	@Test
+	void identicalOfflineRedeferralSurvivesClaimCompletion() throws Exception {
+		AtomicReference<ArrayList<String>> stored = new AtomicReference<>(new ArrayList<>());
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(stored.get()));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			stored.set(new ArrayList<>(invocation.getArgument(1)));
+			return null;
+		}).when(data).setStringList(eq("offlineRewardsPath"), any());
+		org.mockito.Mockito.doAnswer(invocation -> {
+			stored.set(new ArrayList<>(invocation.getArgument(1)));
+			return null;
+		}).when(data).setStringList(eq("offlineRewardsPath"), any(), eq(false));
+		when(plugin.getOptions().isPauseRewards()).thenReturn(true);
+		when(rewardHandler.getPlaceholders()).thenReturn(new CopyOnWriteArrayList<>());
+		when(rewardHandler.getInjectedRequirements()).thenReturn(new CopyOnWriteArrayList<>());
+		Reward queuedReward = new Reward("VoteReward", new YamlConfiguration().createSection("Reward"));
+		java.lang.reflect.Field pluginField = Reward.class.getDeclaredField("plugin");
+		pluginField.setAccessible(true);
+		pluginField.set(queuedReward, plugin);
+		RewardOptions queuedOptions = new RewardOptions();
+		queuedOptions.setAsyncReplayOccurrenceId(UUID.randomUUID().toString());
+		queuedOptions.addPlaceholder("ExecDate", "123");
+		queuedOptions.addPlaceholder("date", "stored-date");
+		user.addOfflineRewards(queuedReward, queuedOptions.getPlaceholders(), queuedOptions);
+		String original = stored.get().get(0);
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenAnswer(invocation -> queuedReward.giveRewardAsync(user,
+					invocation.getArgument(2, RewardOptions.class)));
+		PluginManager pluginManager = mock(PluginManager.class);
+
+		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			user.checkOfflineRewards();
+		}
+
+		assertEquals(List.of(original), stored.get());
 	}
 
 	@Test

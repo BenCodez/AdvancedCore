@@ -1126,6 +1126,7 @@ public class AdvancedCoreUser {
 				}
 				return replay.handle((ignored, failure) -> {
 					if (failure == null) completeOfflineReward(currentEntry.get());
+					else if (Reward.isOfflineReplayDeferred(failure)) releaseDeferredOfflineReward(currentEntry.get());
 					else restoreOfflineReward(currentEntry.get(), failure);
 					return null;
 				});
@@ -1212,6 +1213,12 @@ public class AdvancedCoreUser {
 			ArrayList<String> pending = getOfflineRewards();
 			pending.remove(rewardEntry);
 			setOfflineRewards(pending);
+			releaseOfflineReward(rewardEntry);
+		}
+	}
+
+	private void releaseDeferredOfflineReward(String rewardEntry) {
+		synchronized (plugin) {
 			releaseOfflineReward(rewardEntry);
 		}
 	}

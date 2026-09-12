@@ -30,6 +30,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -2044,6 +2045,36 @@ class RewardAsyncInjectionTest {
 					() -> result.toCompletableFuture().join());
 			assertTrue(failure.getCause().getMessage().contains("Player became unavailable"));
 		}
+	}
+
+	@Test
+	void freshPersistedReplayUsesAwaitedLegacyInjectionChain() throws Exception {
+		Player player = mock(Player.class);
+		when(user.getPlayer()).thenReturn(player);
+		when(user.getPlayerName()).thenReturn("Queued");
+		when(user.getUUID()).thenReturn(UUID.randomUUID().toString());
+		when(plugin.getTimer()).thenReturn(handler.getDelayedTimer());
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), eq(player));
+		AtomicBoolean injected = new AtomicBoolean();
+		handler.getInjectedRewards().add(new RewardInject("LegacyItem") {
+			@Override
+			public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				injected.set(true);
+				return null;
+			}
+		});
+		CountDownLatch checkpointed = new CountDownLatch(1);
+		RewardOptions options = new RewardOptions();
+		options.setAsyncReplayCheckpointConsumer(ignored -> checkpointed.countDown());
+
+		reward.giveRewardUser(user, new HashMap<>(), options);
+
+		assertTrue(checkpointed.await(2, TimeUnit.SECONDS));
+		assertTrue(injected.get());
 	}
 
 	@Test

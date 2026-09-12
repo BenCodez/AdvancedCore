@@ -436,6 +436,22 @@ public class Reward {
 		}
 	}
 
+	/** Internal completion signal for a persisted offline occurrence that was re-queued. */
+	private static final class OfflineReplayDeferredException extends IllegalStateException {
+		private static final long serialVersionUID = 1L;
+		private OfflineReplayDeferredException() {
+			super("Persisted offline reward remains deferred");
+		}
+	}
+
+	/** Whether a completion failure means the offline occurrence was durably re-queued. */
+	public static boolean isOfflineReplayDeferred(Throwable failure) {
+		for (Throwable current = failure; current != null; current = current.getCause()) {
+			if (current instanceof OfflineReplayDeferredException) return true;
+		}
+		return false;
+	}
+
 	private static RewardReplayFailure findReplayFailure(Throwable failure) {
 		for (Throwable current = failure; current != null; current = current.getCause()) {
 			if (current instanceof RewardReplayFailure) return (RewardReplayFailure) current;
@@ -1322,7 +1338,7 @@ public class Reward {
 		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
 			plugin.debug(name + ": Passed requirements, attempting to give to " + user.getPlayerName() + "/"
 					+ user.getUUID());
-			if (hasAsyncRewardInjection() || hasPersistedReplayCheckpoint(rewardOptions)) {
+			if (requiresAwaitedDelivery(rewardOptions)) {
 				return giveRewardUserAsync(user, rewardOptions.getPlaceholders(), rewardOptions);
 			}
 			try {
@@ -1341,7 +1357,9 @@ public class Reward {
 					new IllegalStateException("Timed reward replay remains deferred in its original queue"));
 		}
 		user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
-		return CompletableFuture.completedFuture(null);
+		return rewardOptions.getAsyncReplayCheckpointConsumer() == null
+				? CompletableFuture.completedFuture(null)
+				: CompletableFuture.failedFuture(new OfflineReplayDeferredException());
 	}
 
 	/**
@@ -1353,7 +1371,7 @@ public class Reward {
 	 */
 	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 		RewardOptions effectiveOptions = rewardOptions == null ? new RewardOptions() : rewardOptions;
-		if (hasAsyncRewardInjection() || hasPersistedReplayCheckpoint(effectiveOptions)) {
+		if (requiresAwaitedDelivery(effectiveOptions)) {
 			giveRewardUserAsync(user, phs, effectiveOptions).exceptionally(failure -> {
 				logRewardUserFailure(failure);
 				return null;
@@ -1422,6 +1440,11 @@ public class Reward {
 		return options.isLegacyAsyncReplayCheckpoint() || options.getCompletedAsyncInjections() > 0
 				|| !options.getAsyncReplayProgress().isEmpty() || !options.getAsyncReplayRegistryFingerprints().isEmpty()
 				|| (options.getAsyncReplayState() != null && options.getAsyncReplayState().hasPersistedCheckpoint());
+	}
+
+	private boolean requiresAwaitedDelivery(RewardOptions options) {
+		return options.getAsyncReplayCheckpointConsumer() != null || hasAsyncRewardInjection()
+				|| hasPersistedReplayCheckpoint(options);
 	}
 
 	private HashMap<String, String> prepareRewardUser(AdvancedCoreUser user, HashMap<String, String> phs) {
