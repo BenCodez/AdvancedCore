@@ -2794,29 +2794,64 @@ public class AdvancedCoreUser {
 	}
 
 	private void setOfflineRewards(ArrayList<String> offlineRewards, boolean queue, String protectedEntry) {
-		// MySQL TEXT max length is 65535 bytes
-		int maxLength = 65535;
-		String str = String.join("%line%", offlineRewards);
+		synchronized (plugin) {
+			// MySQL TEXT max length is 65535 bytes
+			int maxLength = 65535;
+			String str = String.join("%line%", offlineRewards);
+			ReplayClaims claims = existingReplayClaims();
+			HashMap<String, Integer> removableLegacyOccurrences = new HashMap<>();
+			HashSet<String> claimedOccurrenceIds = new HashSet<>();
+			for (String rewardEntry : offlineRewards) {
+				if (occurrenceId(rewardEntry) == null) {
+					removableLegacyOccurrences.merge(rewardEntry, 1, Integer::sum);
+				}
+			}
+			if (claims != null) {
+				for (Entry<String, Integer> claim : claims.offline.entrySet()) {
+					if (claim.getValue() == null || claim.getValue() <= 0) continue;
+					String occurrence = occurrenceId(claim.getKey());
+					if (occurrence != null) claimedOccurrenceIds.add(occurrence);
+					else removableLegacyOccurrences.computeIfPresent(claim.getKey(),
+							(ignored, count) -> Math.max(0, count - claim.getValue()));
+				}
+			}
 
-		// Remove oldest rewards until within limit
-		while (str.getBytes().length > maxLength && !offlineRewards.isEmpty()) {
-			int removalIndex = 0;
-			while (removalIndex < offlineRewards.size()
-					&& protectedEntry != null && protectedEntry.equals(offlineRewards.get(removalIndex))) {
-				removalIndex++;
+			// Remove oldest unclaimed rewards until within limit. Claimed entries may
+			// be waiting in the serial replay backlog and remain the only durable copy.
+			while (str.getBytes().length > maxLength && !offlineRewards.isEmpty()) {
+				int removalIndex = 0;
+				while (removalIndex < offlineRewards.size()) {
+					String candidate = offlineRewards.get(removalIndex);
+					String occurrence = occurrenceId(candidate);
+					boolean explicitlyProtected = protectedEntry != null && protectedEntry.equals(candidate);
+					boolean claimed = occurrence != null ? claimedOccurrenceIds.contains(occurrence)
+							: removableLegacyOccurrences.getOrDefault(candidate, 0) <= 0;
+					if (!explicitlyProtected && !claimed) break;
+					removalIndex++;
+				}
+				if (removalIndex >= offlineRewards.size()) {
+					// Never trade a durable in-flight checkpoint for queue-size compliance.
+					break;
+				}
+				String removed = offlineRewards.remove(removalIndex);
+				if (occurrenceId(removed) == null) {
+					removableLegacyOccurrences.computeIfPresent(removed,
+							(ignored, count) -> Math.max(0, count - 1));
+				}
+				str = String.join("%line%", offlineRewards);
 			}
-			if (removalIndex >= offlineRewards.size()) {
-				// Never trade a durable in-flight checkpoint for queue-size compliance.
-				// The storage write must retain the only record that prevents already
-				// completed non-idempotent stages from running again.
-				break;
-			}
-			offlineRewards.remove(removalIndex);
-			str = String.join("%line%", offlineRewards);
+
+			if (queue) data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards);
+			else data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards, false);
 		}
+	}
 
-		if (queue) data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards);
-		else data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards, false);
+	/** Returns shared replay state without creating an empty entry for ordinary writes. */
+	private ReplayClaims existingReplayClaims() {
+		synchronized (REPLAY_CLAIMS_LOCK) {
+			HashMap<String, ReplayClaims> byUser = REPLAY_CLAIMS.get(plugin);
+			return byUser == null ? null : byUser.get(getUUID());
+		}
 	}
 
 	/**

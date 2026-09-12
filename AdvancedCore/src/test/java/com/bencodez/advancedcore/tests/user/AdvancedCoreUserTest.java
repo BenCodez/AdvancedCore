@@ -439,6 +439,40 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void queueTrimmingPreservesEveryClaimedBacklogOccurrence() throws Exception {
+		String claimed = "claimed%asyncoccurrence%" + UUID.randomUUID();
+		String oversizedUnclaimed = "unclaimed-" + "x".repeat(70_000);
+		ArrayList<String> rewards = new ArrayList<>(List.of(claimed, oversizedUnclaimed));
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenReturn(new ArrayList<>(rewards));
+		java.lang.reflect.Method claim = AdvancedCoreUser.class.getDeclaredMethod("claimOfflineReward", String.class);
+		claim.setAccessible(true);
+
+		assertTrue((boolean) claim.invoke(user, claimed));
+		user.setOfflineRewards(rewards);
+
+		assertEquals(List.of(claimed), rewards);
+		verify(data).setStringList("offlineRewardsPath", rewards);
+	}
+
+	@Test
+	void queueTrimmingRetainsClaimedCountOfIdenticalLegacyEntries() throws Exception {
+		String legacy = "legacy-" + "x".repeat(30_000);
+		ArrayList<String> rewards = new ArrayList<>(List.of(legacy, legacy, legacy));
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenReturn(new ArrayList<>(rewards));
+		java.lang.reflect.Method claim = AdvancedCoreUser.class.getDeclaredMethod("claimOfflineReward", String.class);
+		claim.setAccessible(true);
+
+		assertTrue((boolean) claim.invoke(user, legacy));
+		assertTrue((boolean) claim.invoke(user, legacy));
+		user.setOfflineRewards(rewards);
+
+		assertEquals(List.of(legacy, legacy), rewards);
+		verify(data).setStringList("offlineRewardsPath", rewards);
+	}
+
+	@Test
 	void failedAsyncOfflineReplayIsRestoredForRetry() {
 		ArrayList<String> initial = new ArrayList<>();
 		initial.add("VoteReward%placeholders%Server%pair%server-a");
