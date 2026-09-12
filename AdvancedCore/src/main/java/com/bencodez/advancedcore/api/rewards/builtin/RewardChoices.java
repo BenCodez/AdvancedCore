@@ -86,6 +86,16 @@ public final class RewardChoices {
 								() -> builder.sendAsync(user))).thenApply(ignored -> choice);
 			}
 
+			@Override
+			public CompletionStage<Void> onReplayCheckpointPersisted(Reward reward, AdvancedCoreUser user,
+					String occurrenceId, String injectionKey) {
+				String choiceOccurrence = Reward.replaySideEffectOccurrenceId(occurrenceId, injectionKey);
+				return Reward.continueOnServerThread(plugin, user, () -> {
+					user.checkpointUnClaimedChoiceReward(choiceOccurrence);
+					return CompletableFuture.completedFuture(null);
+				});
+			}
+
             @Override
             public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
                 ArrayList<SubDirectlyDefinedReward> subs = new ArrayList<>();

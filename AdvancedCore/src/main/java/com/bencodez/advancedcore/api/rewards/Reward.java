@@ -474,8 +474,11 @@ public class Reward {
 	 * distinct replay keys, so both parts are required for deduplication.
 	 */
 	public static String currentReplaySideEffectOccurrenceId() {
-		String occurrenceId = currentReplayOccurrenceId();
-		String replayKey = currentReplayKey();
+		return replaySideEffectOccurrenceId(currentReplayOccurrenceId(), currentReplayKey());
+	}
+
+	/** Builds the stable side-effect identity for an explicitly captured replay path. */
+	public static String replaySideEffectOccurrenceId(String occurrenceId, String replayKey) {
 		if (occurrenceId == null || occurrenceId.isEmpty() || replayKey == null || replayKey.isEmpty()) {
 			return occurrenceId;
 		}

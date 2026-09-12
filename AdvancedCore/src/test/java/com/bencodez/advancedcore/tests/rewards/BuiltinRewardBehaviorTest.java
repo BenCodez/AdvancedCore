@@ -718,6 +718,25 @@ public class BuiltinRewardBehaviorTest {
 		}
 	}
 
+	@Test
+	public void choicesRetireConsumedOccurrenceAfterOwningCheckpointPersists() {
+		RewardChoices.register(handler, plugin);
+		RewardInjectBoolean choices = (RewardInjectBoolean) injects.get(0);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.isEnabled()).thenReturn(true);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(1).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+
+		choices.onReplayCheckpointPersisted(reward, user, "occurrence-one", "SourceReward/0")
+				.toCompletableFuture().join();
+
+		verify(user).checkpointUnClaimedChoiceReward(
+				Reward.replaySideEffectOccurrenceId("occurrence-one", "SourceReward/0"));
+	}
+
     @Test
     public void javascriptActuallyExecutesScriptsAndTrueBranch() {
         RewardJavascript.register(handler, plugin);

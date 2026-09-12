@@ -114,11 +114,57 @@ public class AdvancedCoreUserTest {
 		}).when(data).setStringList(eq("UnClaimedChoices"), any());
 		user.addUnClaimedChoiceReward("ChoiceReward", "occurrence-one");
 		user.addUnClaimedChoiceReward("ChoiceReward", "occurrence-two");
+		user.checkpointUnClaimedChoiceReward("occurrence-one");
+		user.checkpointUnClaimedChoiceReward("occurrence-two");
 
 		user.removeUnClaimedChoiceReward("ChoiceReward");
 
 		assertEquals(List.of("ChoiceReward"), user.getUnClaimedChoices());
 		assertEquals(1, stored.get().size());
+	}
+
+	@Test
+	void claimedChoiceRemainsDeduplicatedUntilOwningCheckpointPersists() {
+		AtomicReference<ArrayList<String>> stored = new AtomicReference<>(new ArrayList<>());
+		when(data.getStringList("UnClaimedChoices", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(stored.get()));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			stored.set(new ArrayList<>(invocation.getArgument(1)));
+			return null;
+		}).when(data).setStringList(eq("UnClaimedChoices"), any());
+
+		user.addUnClaimedChoiceReward("ChoiceReward", "occurrence-one");
+		user.addUnClaimedChoiceReward("ChoiceReward", "occurrence-two");
+		user.removeUnClaimedChoiceReward("ChoiceReward");
+		assertEquals(List.of("ChoiceReward"), user.getUnClaimedChoices());
+		user.removeUnClaimedChoiceReward("ChoiceReward");
+		assertTrue(user.getUnClaimedChoices().isEmpty());
+
+		user.addUnClaimedChoiceReward("ChoiceReward", "occurrence-one");
+		assertTrue(user.getUnClaimedChoices().isEmpty());
+		assertEquals(2, stored.get().size());
+
+		user.checkpointUnClaimedChoiceReward("occurrence-one");
+		user.checkpointUnClaimedChoiceReward("occurrence-two");
+		assertTrue(stored.get().isEmpty());
+	}
+
+	@Test
+	void choiceClaimAfterOwningCheckpointRemovesOccurrenceImmediately() {
+		AtomicReference<ArrayList<String>> stored = new AtomicReference<>(new ArrayList<>());
+		when(data.getStringList("UnClaimedChoices", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(stored.get()));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			stored.set(new ArrayList<>(invocation.getArgument(1)));
+			return null;
+		}).when(data).setStringList(eq("UnClaimedChoices"), any());
+
+		user.addUnClaimedChoiceReward("ChoiceReward", "occurrence-one");
+		user.checkpointUnClaimedChoiceReward("occurrence-one");
+		assertEquals(List.of("ChoiceReward"), user.getUnClaimedChoices());
+
+		user.removeUnClaimedChoiceReward("ChoiceReward");
+		assertTrue(stored.get().isEmpty());
 	}
 
 	@Test

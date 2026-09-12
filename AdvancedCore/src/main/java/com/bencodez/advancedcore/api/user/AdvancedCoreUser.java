@@ -72,6 +72,8 @@ public class AdvancedCoreUser {
 	private static final String ASYNC_RETRY_DELIMITER = "%asyncretry%";
 	private static final String ASYNC_OCCURRENCE_DELIMITER = "%asyncoccurrence%";
 	private static final String CHOICE_OCCURRENCE_PREFIX = "\\AdvancedCoreChoice/1/";
+	private static final String CHECKPOINTED_CHOICE_OCCURRENCE_PREFIX = "\\AdvancedCoreChoice/2/";
+	private static final String CONSUMED_CHOICE_OCCURRENCE_PREFIX = "\\AdvancedCoreChoice/3/";
 	private static final Object REPLAY_CLAIMS_LOCK = new Object();
 	private static final WeakHashMap<AdvancedCorePlugin, HashMap<String, ReplayClaims>> REPLAY_CLAIMS = new WeakHashMap<>();
 	private static final ThreadLocal<AsyncActionCollection> ASYNC_ACTION_COLLECTION = new ThreadLocal<>();
@@ -969,10 +971,33 @@ public class AdvancedCoreUser {
 			return;
 		}
 		ArrayList<String> stored = getStoredUnClaimedChoices();
-		String entry = encodeUnclaimedChoice(name, occurrenceId);
-		if (stored.contains(entry)) return;
+		if (stored.stream().anyMatch(entry -> occurrenceId.equals(decodeChoiceOccurrence(entry)))) return;
+		String entry = encodeUnclaimedChoice(CHOICE_OCCURRENCE_PREFIX, name, occurrenceId);
 		stored.add(entry);
 		getData().setStringList("UnClaimedChoices", stored);
+	}
+
+	/**
+	 * Marks a choice occurrence safe to remove after its owning reward checkpoint
+	 * has been persisted. If it was claimed before that checkpoint, its tombstone
+	 * is retired now; otherwise a later claim can remove it immediately.
+	 *
+	 * @param occurrenceId stable choice side-effect occurrence
+	 */
+	public synchronized void checkpointUnClaimedChoiceReward(String occurrenceId) {
+		if (occurrenceId == null || occurrenceId.isEmpty()) return;
+		ArrayList<String> stored = getStoredUnClaimedChoices();
+		for (int index = 0; index < stored.size(); index++) {
+			String entry = stored.get(index);
+			if (!occurrenceId.equals(decodeChoiceOccurrence(entry))) continue;
+			if (entry.startsWith(CONSUMED_CHOICE_OCCURRENCE_PREFIX)) stored.remove(index);
+			else if (entry.startsWith(CHOICE_OCCURRENCE_PREFIX)) {
+				stored.set(index, CHECKPOINTED_CHOICE_OCCURRENCE_PREFIX
+						+ entry.substring(CHOICE_OCCURRENCE_PREFIX.length()));
+			} else return;
+			getData().setStringList("UnClaimedChoices", stored);
+			return;
+		}
 	}
 
 	/**
@@ -1621,7 +1646,9 @@ public class AdvancedCoreUser {
 	 */
 	public synchronized ArrayList<String> getUnClaimedChoices() {
 		ArrayList<String> choices = new ArrayList<>();
-		for (String stored : getStoredUnClaimedChoices()) choices.add(decodeUnclaimedChoice(stored));
+		for (String stored : getStoredUnClaimedChoices()) {
+			if (!stored.startsWith(CONSUMED_CHOICE_OCCURRENCE_PREFIX)) choices.add(decodeUnclaimedChoice(stored));
+		}
 		return choices;
 	}
 
@@ -2475,8 +2502,13 @@ public class AdvancedCoreUser {
 	public synchronized void removeUnClaimedChoiceReward(String name) {
 		ArrayList<String> choices = getStoredUnClaimedChoices();
 		for (int index = 0; index < choices.size(); index++) {
-			if (java.util.Objects.equals(name, decodeUnclaimedChoice(choices.get(index)))) {
-				choices.remove(index);
+			String entry = choices.get(index);
+			if (entry.startsWith(CONSUMED_CHOICE_OCCURRENCE_PREFIX)) continue;
+			if (java.util.Objects.equals(name, decodeUnclaimedChoice(entry))) {
+				if (entry.startsWith(CHOICE_OCCURRENCE_PREFIX)) {
+					choices.set(index, CONSUMED_CHOICE_OCCURRENCE_PREFIX
+							+ entry.substring(CHOICE_OCCURRENCE_PREFIX.length()));
+				} else choices.remove(index);
 				break;
 			}
 		}
@@ -2861,16 +2893,16 @@ public class AdvancedCoreUser {
 		return getData().getStringList("UnClaimedChoices", userDataFetchMode);
 	}
 
-	private static String encodeUnclaimedChoice(String name, String occurrenceId) {
+	private static String encodeUnclaimedChoice(String prefix, String name, String occurrenceId) {
 		Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
-		return CHOICE_OCCURRENCE_PREFIX
+		return prefix
 				+ encoder.encodeToString(occurrenceId.getBytes(StandardCharsets.UTF_8)) + "."
 				+ encoder.encodeToString((name == null ? "" : name).getBytes(StandardCharsets.UTF_8));
 	}
 
 	private static String decodeUnclaimedChoice(String stored) {
-		if (stored == null || !stored.startsWith(CHOICE_OCCURRENCE_PREFIX)) return stored;
-		String encoded = stored.substring(CHOICE_OCCURRENCE_PREFIX.length());
+		String encoded = encodedChoice(stored);
+		if (encoded == null) return stored;
 		int separator = encoded.indexOf('.');
 		if (separator < 1) return stored;
 		try {
@@ -2879,6 +2911,30 @@ public class AdvancedCoreUser {
 		} catch (IllegalArgumentException failure) {
 			return stored;
 		}
+	}
+
+	private static String decodeChoiceOccurrence(String stored) {
+		String encoded = encodedChoice(stored);
+		if (encoded == null) return null;
+		int separator = encoded.indexOf('.');
+		if (separator < 1) return null;
+		try {
+			return new String(Base64.getUrlDecoder().decode(encoded.substring(0, separator)), StandardCharsets.UTF_8);
+		} catch (IllegalArgumentException failure) {
+			return null;
+		}
+	}
+
+	private static String encodedChoice(String stored) {
+		if (stored == null) return null;
+		if (stored.startsWith(CHOICE_OCCURRENCE_PREFIX)) return stored.substring(CHOICE_OCCURRENCE_PREFIX.length());
+		if (stored.startsWith(CHECKPOINTED_CHOICE_OCCURRENCE_PREFIX)) {
+			return stored.substring(CHECKPOINTED_CHOICE_OCCURRENCE_PREFIX.length());
+		}
+		if (stored.startsWith(CONSUMED_CHOICE_OCCURRENCE_PREFIX)) {
+			return stored.substring(CONSUMED_CHOICE_OCCURRENCE_PREFIX.length());
+		}
+		return null;
 	}
 
 	/**
