@@ -55,6 +55,11 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                 new Cleanup("MySQL", () -> {
                     if (plugin.isLoadUserData() && plugin.getOptions() != null
                             && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType()) && plugin.getMysql() != null) {
+                        ScheduledExecutorService timer = plugin.getTimer();
+                        if (timer != null && !timer.isTerminated()) {
+                            plugin.getLogger().warning("Leaving MySQL open because reward checkpoint tasks did not terminate");
+                            return;
+                        }
                         plugin.getMysql().close();
                     }
                 }),

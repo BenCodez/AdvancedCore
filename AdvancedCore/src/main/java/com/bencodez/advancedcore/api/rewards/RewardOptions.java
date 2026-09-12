@@ -93,6 +93,11 @@ public class RewardOptions {
 	@Setter
 	private Consumer<Reward.ReplayCheckpoint> asyncReplayCheckpointConsumer;
 
+	/** True while replaying an entry that must remain in the timed queue on deferral. */
+	@Getter
+	@Setter
+	private boolean timedQueueReplay;
+
 	public RewardOptions() {
 	}
 
@@ -247,6 +252,7 @@ public class RewardOptions {
 		copy.setAsyncReplayKey(replayKey);
 		copy.setAsyncReplayOccurrenceId(asyncReplayOccurrenceId);
 		copy.setAsyncReplayCheckpointConsumer(asyncReplayCheckpointConsumer);
+		copy.setTimedQueueReplay(timedQueueReplay);
 		return copy;
 	}
 

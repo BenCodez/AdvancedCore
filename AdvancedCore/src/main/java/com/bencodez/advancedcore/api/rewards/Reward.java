@@ -1303,15 +1303,14 @@ public class Reward {
 		if (plugin.getOptions().isPauseRewards() || (plugin.getOptions().isTreatVanishAsOffline() && user.isVanished())) {
 			checkRewardFile();
 			preserveReplayState(rewardOptions);
-			user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
-			return CompletableFuture.completedFuture(null);
+			return deferRewardAsync(user, rewardOptions);
 		}
 		if (((((!rewardOptions.isOnline() || rewardOptions.getServer() != null) && !user.isOnline()) || allowOffline)
 				&& (!isForceOffline() && !rewardOptions.isForceOffline()))) {
 			if (rewardOptions.isGiveOffline()) {
 				checkRewardFile();
 				preserveReplayState(rewardOptions);
-				user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
+				return deferRewardAsync(user, rewardOptions);
 			}
 			return CompletableFuture.completedFuture(null);
 		}
@@ -1328,6 +1327,15 @@ public class Reward {
 				return CompletableFuture.failedFuture(failure);
 			}
 		}
+		return CompletableFuture.completedFuture(null);
+	}
+
+	private CompletionStage<Void> deferRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions) {
+		if (rewardOptions.isTimedQueueReplay()) {
+			return CompletableFuture.failedFuture(
+					new IllegalStateException("Timed reward replay remains deferred in its original queue"));
+		}
+		user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
 		return CompletableFuture.completedFuture(null);
 	}
 

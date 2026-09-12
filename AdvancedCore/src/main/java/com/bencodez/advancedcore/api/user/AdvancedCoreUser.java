@@ -1035,6 +1035,7 @@ public class AdvancedCoreUser {
 					replayOptions.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
 					replayOptions.setLegacyAsyncReplayCheckpoint(queuedReplay.legacyAsyncReplayCheckpoint);
 					replayOptions.setAsyncReplayOccurrenceId(queuedReplay.asyncReplayOccurrenceId);
+					replayOptions.setTimedQueueReplay(true);
 					replayOptions.addPlaceholder("date",
 							"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));
 					// Keep the due entry durable while asynchronous stages are running.  A

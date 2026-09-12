@@ -513,6 +513,27 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void timedReplayDeferralRemainsInTheTimedQueue() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.isPauseRewards()).thenReturn(true);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		when(user.getPlayerName()).thenReturn("Offline");
+		RewardOptions options = new RewardOptions().setCheckTimed(false).setIgnoreRequirements(true);
+		options.setTimedQueueReplay(true);
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			assertThrows(java.util.concurrent.CompletionException.class,
+					() -> reward.giveRewardAsync(user, options).toCompletableFuture().join());
+		}
+
+		verify(user, never()).addOfflineRewards(any(), any(), any());
+	}
+
+	@Test
 	void legacySchedulerRejectionFailsAsyncRewardClosed() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
