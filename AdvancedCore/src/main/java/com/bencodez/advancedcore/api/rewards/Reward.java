@@ -785,6 +785,19 @@ public class Reward {
 		});
 	}
 
+	/** Returns whether the active single nested child is already durably complete. */
+	public static boolean hasCompletedSingleNestedReward(HashMap<String, String> placeholders, String lane) {
+		ReplayState replayState = currentReplayState();
+		String activeKey = currentReplayKey();
+		if (replayState == null || activeKey == null) return false;
+		String storageKey = replaySequenceKey(REPLAY_SINGLE_CHILD_PREFIX, activeKey,
+				lane == null ? "selected" : lane);
+		String stored = replayMetadata(placeholders, replayState, storageKey);
+		if (!"1".equals(stored)) return false;
+		replayState.recordReplayMetadata(storageKey, stored);
+		return true;
+	}
+
 	private static String replaySequenceKey(String prefix, String activeKey, String lane) {
 		return prefix + digest(activeKey.length() + ":" + activeKey + lane.length() + ":" + lane);
 	}

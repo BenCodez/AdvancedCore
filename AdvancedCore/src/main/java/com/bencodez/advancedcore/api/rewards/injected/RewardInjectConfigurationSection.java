@@ -52,9 +52,11 @@ public abstract class RewardInjectConfigurationSection extends RewardInject {
 			ConfigurationSection data, HashMap<String, String> placeholders) {
 		if (!data.isConfigurationSection(getPath()) && !(isAlwaysForce() && data.contains(getPath(), true))
 				&& !isAlwaysForceNoData()) {
-			return hasPendingReplayWork(placeholders)
-					? onMissingConfiguredDataAsync(reward, user, placeholders)
-					: CompletableFuture.completedFuture(null);
+			if (!hasPendingReplayWork(placeholders)
+					|| Reward.hasCompletedSingleNestedReward(placeholders, "selected")) {
+				return CompletableFuture.completedFuture(null);
+			}
+			return onMissingConfiguredDataAsync(reward, user, placeholders);
 		}
 		return onRewardRequestedAsync(reward, user, data.getConfigurationSection(getPath()), placeholders)
 				.thenApply(result -> result);
