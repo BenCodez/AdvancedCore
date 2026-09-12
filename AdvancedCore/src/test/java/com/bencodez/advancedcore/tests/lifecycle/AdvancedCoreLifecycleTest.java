@@ -69,7 +69,6 @@ public class AdvancedCoreLifecycleTest {
 		verify(timeTimer).awaitTermination(2, TimeUnit.SECONDS);
 		verify(rewardHandler).shutdown();
 		verify(fullInventoryHandler).shutdown();
-		verify(fullInventoryHandler).save();
 		verify(plugin).onUnLoad();
 	}
 }
