@@ -1,8 +1,9 @@
 # JAR packaging contract
 
-AdvancedCore consumes SimpleAPI's `thin` classifier so Maven Shade sees the
-project classes and each dependency exactly once. The normal SimpleAPI artifact
-remains a self-contained compatibility artifact for other consumers.
+AdvancedCore consumes SimpleAPI's normal self-contained artifact for SNAPSHOT
+compatibility, then applies an artifact-specific Shade filter for features it
+does not use. This also removes content already embedded upstream, which Maven
+dependency exclusions alone cannot affect.
 
 AdvancedCore does not use SimpleAPI's HTTP, Redis, or MQTT implementations.
 Its SimpleAPI dependency therefore excludes Bouncy Castle, Jedis, and Paho.

@@ -101,6 +101,18 @@
                         </goals>
                         <configuration>
                             <filters>
+                                <!-- SimpleAPI's public artifact is intentionally self-contained.
+                                     Strip only features AdvancedCore does not consume. -->
+                                <filter>
+                                    <artifact>com.bencodez:simpleapi</artifact>
+                                    <excludes>
+                                        <exclude>org/bouncycastle/**</exclude>
+                                        <exclude>com/bencodez/simpleapi/servercomm/http/**</exclude>
+                                        <exclude>redis/clients/**</exclude>
+                                        <exclude>org/eclipse/paho/**</exclude>
+                                        <exclude>META-INF/versions/**</exclude>
+                                    </excludes>
+                                </filter>
                                 <filter>
                                     <artifact>*:*</artifact>
                                     <excludes>
@@ -239,7 +251,6 @@
             <groupId>com.bencodez</groupId>
             <artifactId>simpleapi</artifactId>
             <version>1.0.2-SNAPSHOT</version>
-            <classifier>thin</classifier>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
