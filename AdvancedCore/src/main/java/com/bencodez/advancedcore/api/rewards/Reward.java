@@ -1432,6 +1432,9 @@ public class Reward {
 			return CompletableFuture.failedFuture(
 					new IllegalStateException("Timed reward replay remains deferred in its original queue"));
 		}
+		if (isDurableReplay(rewardOptions) && rewardOptions.getAsyncReplayCheckpointConsumer() == null) {
+			return CompletableFuture.failedFuture(new OfflineReplayDeferredException());
+		}
 		user.addOfflineRewards(this, rewardOptions.getPlaceholders(), rewardOptions);
 		return rewardOptions.getAsyncReplayCheckpointConsumer() == null
 				? CompletableFuture.completedFuture(null)
@@ -1501,7 +1504,7 @@ public class Reward {
 			return CompletableFuture.failedFuture(throwable);
 		}
 		if (placeholders == null) {
-			if (rewardOptions.getAsyncReplayCheckpointConsumer() != null || hasPersistedReplayCheckpoint(rewardOptions)) {
+			if (isDurableReplay(rewardOptions) || hasPersistedReplayCheckpoint(rewardOptions)) {
 				return CompletableFuture.failedFuture(
 						new IllegalStateException("Player became unavailable before persisted reward replay"));
 			}

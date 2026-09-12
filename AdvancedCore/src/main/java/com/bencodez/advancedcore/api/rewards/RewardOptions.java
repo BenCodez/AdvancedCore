@@ -251,7 +251,9 @@ public class RewardOptions {
 		copy.setLegacyAsyncReplayCheckpoint(legacyAsyncReplayCheckpoint);
 		copy.setAsyncReplayKey(replayKey);
 		copy.setAsyncReplayOccurrenceId(asyncReplayOccurrenceId);
-		copy.setAsyncReplayCheckpointConsumer(asyncReplayCheckpointConsumer);
+		// The checkpoint consumer belongs to the queued parent occurrence. Nested
+		// children share its ReplayState but must never replace or complete that
+		// queue entry independently.
 		copy.setTimedQueueReplay(timedQueueReplay);
 		return copy;
 	}
