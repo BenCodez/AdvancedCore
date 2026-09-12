@@ -505,6 +505,14 @@ public class Reward {
 		return replayState;
 	}
 
+	/** Returns whether these options participate in durable queued replay. */
+	public static boolean isDurableReplay(RewardOptions options) {
+		if (options == null) return false;
+		if (options.getAsyncReplayCheckpointConsumer() != null) return true;
+		ReplayState replayState = options.getAsyncReplayState();
+		return replayState != null && replayState.hasCheckpointConsumer();
+	}
+
 	/**
 	 * Copies the durable portion of an in-flight replay into options before the
 	 * reward is deferred.  Pause/vanish handling happens before the async

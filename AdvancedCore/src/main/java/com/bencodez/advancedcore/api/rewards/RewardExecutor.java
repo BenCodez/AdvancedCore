@@ -153,8 +153,10 @@ public class RewardExecutor {
         }
 		String nestedReward = data.getString(path, "");
 		if (nestedReward.isEmpty()) {
-			return CompletableFuture.failedFuture(
-					new IllegalStateException("Nested replay configuration could not be resolved: " + path));
+			return Reward.isDurableReplay(options)
+					? CompletableFuture.failedFuture(
+							new IllegalStateException("Nested replay configuration could not be resolved: " + path))
+					: CompletableFuture.completedFuture(null);
 		}
 		return giveRewardAsync(user, nestedReward, options);
     }
@@ -251,7 +253,7 @@ public class RewardExecutor {
 							user.getPlayerName(), command, context.getPlaceholders()));
 		}
 		Reward resolved = handler.getReward(reward);
-		if (resolved == null && context.getOptions().getAsyncReplayCheckpointConsumer() != null) {
+		if (resolved == null && Reward.isDurableReplay(context.getOptions())) {
 			return CompletableFuture.failedFuture(
 					new IllegalStateException("Nested replay reward could not be resolved: " + reward));
 		}

@@ -312,6 +312,26 @@ public class RewardExecutorTest {
 		verify(valid).giveRewardAsync(eq(user), any(RewardOptions.class));
 	}
 
+	@Test
+	public void freshMissingConfigurationPathIsANoOp() {
+		YamlConfiguration data = new YamlConfiguration();
+
+		executor.giveRewardAsync(user, data, "Optional.Fallback", new RewardOptions())
+				.toCompletableFuture().join();
+	}
+
+	@Test
+	public void inheritedDurableStateFailsWhenSelectedRewardDisappears() {
+		RewardOptions queued = new RewardOptions();
+		queued.setAsyncReplayCheckpointConsumer(ignored -> { });
+		Reward.ReplayState durableState = Reward.replayStateFor(queued);
+		RewardOptions child = new RewardOptions();
+		child.setAsyncReplayState(durableState);
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, "Missing", child).toCompletableFuture().join());
+	}
+
     @Test
     public void stringRewardDispatchesNamedReward() {
         YamlConfiguration data = new YamlConfiguration();
@@ -465,9 +485,11 @@ public class RewardExecutorTest {
 	@Test
 	public void unresolvedNestedConfigurationFailsSoReplayCannotDropIt() {
 		YamlConfiguration data = new YamlConfiguration();
+		RewardOptions replay = new RewardOptions();
+		replay.setAsyncReplayCheckpointConsumer(ignored -> { });
 
 		assertThrows(CompletionException.class,
-				() -> executor.giveRewardAsync(user, data, "Removed", new RewardOptions())
+				() -> executor.giveRewardAsync(user, data, "Removed", replay)
 						.toCompletableFuture().join());
 	}
 
