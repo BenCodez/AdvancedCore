@@ -1886,6 +1886,48 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void completedSingleNestedRewardIsNotResolvedAgainAfterParentCheckpointFailure() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class,
+				boolean.class);
+		constructor.setAccessible(true);
+		Reward.ReplayState replayState = (Reward.ReplayState) constructor.newInstance(
+				Map.of("AsyncReward", 0), Map.of("AsyncReward", "registry"), false);
+		List<Reward.ReplayCheckpoint> checkpoints = new ArrayList<>();
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoints::add);
+		AtomicInteger dispatches = new AtomicInteger();
+		HashMap<String, String> placeholders = new HashMap<>();
+
+		CompletionStage<Void> first = Reward.replaySingleNestedReward(plugin, placeholders, "selected",
+				replayState, "AsyncReward/0", () -> {
+				dispatches.incrementAndGet();
+				return CompletableFuture.completedFuture(null);
+			});
+		ArgumentCaptor<Runnable> writes = ArgumentCaptor.forClass(Runnable.class);
+		verify(storageExecutor).execute(writes.capture());
+		assertFalse(first.toCompletableFuture().isDone());
+		writes.getValue().run();
+		first.toCompletableFuture().join();
+		assertEquals(1, checkpoints.size());
+
+		Reward.ReplayState restored = (Reward.ReplayState) constructor.newInstance(
+				checkpoints.get(0).getReplayProgress(), checkpoints.get(0).getReplayRegistryFingerprints(), false);
+		Reward.replaySingleNestedReward(plugin, checkpoints.get(0).getPlaceholders(), "selected", restored,
+				"AsyncReward/0", () -> {
+				dispatches.incrementAndGet();
+				return CompletableFuture.failedFuture(new IllegalStateException("selected reward was removed"));
+			}).toCompletableFuture().join();
+
+		assertEquals(1, dispatches.get(), "completed child must be skipped before it is resolved again");
+	}
+
+	@Test
 	void everyNestedRewardInjectorWaitsForItsSelectedChild() {
 		handler = org.mockito.Mockito.spy(new RewardHandler(plugin));
 		when(plugin.getRewardHandler()).thenReturn(handler);

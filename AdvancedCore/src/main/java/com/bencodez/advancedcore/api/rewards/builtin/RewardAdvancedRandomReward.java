@@ -70,13 +70,17 @@ public final class RewardAdvancedRandomReward {
 				}
                 String selected = Reward.replaySelection(placeholders,
                         () -> rewards.get(ThreadLocalRandom.current().nextInt(rewards.size())));
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
                 RewardOptions childOptions = Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders),
-                        Reward.currentReplayState(), Reward.currentReplayKey(), "selected:" + selected,
+                        replayState, replayKey, "selected:" + selected,
                         Reward.currentReplayOccurrenceId())
                         .setPrefix(reward.getRewardName() + "_AdvancedRandomReward");
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-								() -> handler.giveRewardAsync(user, section, selected, childOptions)))
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey,
+								() -> Reward.continueOnServerThread(plugin, user,
+										() -> handler.giveRewardAsync(user, section, selected, childOptions))))
 						.thenApply(ignored -> selected);
             }
 

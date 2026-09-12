@@ -94,13 +94,18 @@ public final class RewardJavascript {
                 String path = Reward.replaySelection(placeholders,
                         () -> new JavascriptEngine().addPlayer(user.getOfflinePlayer()).addPlaceholders(placeholders)
                                 .getBooleanValue(section.getString("Expression")) ? "TrueRewards" : "FalseRewards");
-                RewardBuilder builder = new RewardBuilder(section, path).withPrefix(reward.getName() + ".Javascript")
-                        .withPlaceHolder(placeholders);
-                Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
-                        Reward.currentReplayKey(), "path:" + path, Reward.currentReplayOccurrenceId());
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
+				String occurrenceId = Reward.currentReplayOccurrenceId();
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-								() -> builder.sendAsync(user))).thenApply(ignored -> null);
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey, () -> Reward.continueOnServerThread(plugin, user, () -> {
+							RewardBuilder builder = new RewardBuilder(section, path)
+									.withPrefix(reward.getName() + ".Javascript").withPlaceHolder(placeholders);
+							Reward.withReplayState(builder.getRewardOptions(), replayState,
+									replayKey, "path:" + path, occurrenceId);
+							return builder.sendAsync(user);
+						}))).thenApply(ignored -> null);
             }
 
             @Override

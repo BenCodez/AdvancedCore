@@ -59,12 +59,16 @@ public final class RewardRandomReward {
 				}
                 String selected = Reward.replaySelection(placeholders,
                         () -> list.get(ThreadLocalRandom.current().nextInt(list.size())));
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
 				RewardOptions childOptions = Reward.withReplayState(
-						new RewardOptions().setPlaceholders(placeholders), Reward.currentReplayState(),
-						Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
+						new RewardOptions().setPlaceholders(placeholders), replayState,
+						replayKey, "selected:" + selected, Reward.currentReplayOccurrenceId());
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-								() -> handler.giveRewardAsync(user, selected, childOptions)))
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey,
+								() -> Reward.continueOnServerThread(plugin, user,
+										() -> handler.giveRewardAsync(user, selected, childOptions))))
 						.thenApply(ignored -> selected);
             }
         }.asPlaceholder("RandomReward").priority(20).addEditButton(

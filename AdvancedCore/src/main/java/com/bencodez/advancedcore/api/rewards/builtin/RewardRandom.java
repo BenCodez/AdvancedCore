@@ -76,25 +76,32 @@ public final class RewardRandom {
                             : "pick:" + rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
                 });
                 if (selection == null || selection.equals("none")) return CompletableFuture.completedFuture(null);
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
+				String occurrenceId = Reward.currentReplayOccurrenceId();
                 if (selection.startsWith("pick:")) {
                     String selected = selection.substring("pick:".length());
                     RewardOptions childOptions = Reward.withReplayState(
-                            new RewardOptions().setPlaceholders(placeholders), Reward.currentReplayState(),
-                            Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
+							new RewardOptions().setPlaceholders(placeholders), replayState,
+							replayKey, "selected:" + selected, occurrenceId);
 					return selected.isEmpty() ? CompletableFuture.completedFuture(null)
 							: Reward.persistReplayMetadataAsync(plugin, placeholders)
-									.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-											() -> handler.giveRewardAsync(user, selected, childOptions)))
+									.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+											"selected", replayState, replayKey,
+											() -> Reward.continueOnServerThread(plugin, user,
+													() -> handler.giveRewardAsync(user, selected, childOptions))))
 									.thenApply(ignored -> null);
                 }
                 String path = selection.equals("rewards") ? "Random.Rewards" : "Random.FallBack";
-                RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(), path)
-                        .withPrefix(reward.getName()).withPlaceHolder(placeholders);
-                Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
-                        Reward.currentReplayKey(), "path:" + path, Reward.currentReplayOccurrenceId());
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-								() -> builder.sendAsync(user))).thenApply(ignored -> null);
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey, () -> Reward.continueOnServerThread(plugin, user, () -> {
+							RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(), path)
+									.withPrefix(reward.getName()).withPlaceHolder(placeholders);
+							Reward.withReplayState(builder.getRewardOptions(), replayState,
+									replayKey, "path:" + path, occurrenceId);
+							return builder.sendAsync(user);
+						}))).thenApply(ignored -> null);
             }
 
             @Override

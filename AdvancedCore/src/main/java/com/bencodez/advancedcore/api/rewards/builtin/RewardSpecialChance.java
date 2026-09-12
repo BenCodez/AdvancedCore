@@ -119,20 +119,25 @@ public final class RewardSpecialChance {
                 if (selection == null) return CompletableFuture.completedFuture(null);
                 String[] selected = selection.split("\n", 2);
                 if (selected.length != 2) return CompletableFuture.completedFuture(null);
-                for (Entry<Double, String> entry : map.entrySet()) {
-                    if (entry.getValue().equals(selected[0])) {
-						RewardBuilder builder = new RewardBuilder(section, entry.getValue())
-								.withPrefix(reward.getName() + "_SpecialChance").withPlaceHolder(placeholders)
-								.withPlaceHolder("chance", selected[1]);
-						Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
-								Reward.currentReplayKey(), "path:" + entry.getValue(), Reward.currentReplayOccurrenceId());
-						return Reward.persistReplayMetadataAsync(plugin, placeholders)
-								.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-										() -> builder.sendAsync(user))).thenApply(ignored -> null);
-					}
-				}
-				return CompletableFuture.failedFuture(
-						new IllegalStateException("Selected special-chance reward could not be resolved: " + selected[0]));
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
+				String occurrenceId = Reward.currentReplayOccurrenceId();
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey, () -> Reward.continueOnServerThread(plugin, user, () -> {
+							for (Entry<Double, String> entry : map.entrySet()) {
+								if (entry.getValue().equals(selected[0])) {
+									RewardBuilder builder = new RewardBuilder(section, entry.getValue())
+											.withPrefix(reward.getName() + "_SpecialChance").withPlaceHolder(placeholders)
+											.withPlaceHolder("chance", selected[1]);
+									Reward.withReplayState(builder.getRewardOptions(), replayState, replayKey,
+											"path:" + entry.getValue(), occurrenceId);
+									return builder.sendAsync(user);
+								}
+							}
+							return CompletableFuture.failedFuture(new IllegalStateException(
+									"Selected special-chance reward could not be resolved: " + selected[0]));
+						}))).thenApply(ignored -> null);
             }
 
             @Override

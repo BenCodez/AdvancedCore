@@ -69,18 +69,21 @@ public final class RewardPriority {
 					return null;
 				});
 				if (selectedName == null) return CompletableFuture.completedFuture(null);
-				Reward selected = handler.getReward(selectedName);
-				RewardOptions childOptions = Reward.withReplayState(
-						new RewardOptions().withPlaceHolder(placeholders).setIgnoreChance(true)
-								.setIgnoreRequirements(true),
-						Reward.currentReplayState(), Reward.currentReplayKey(), "selected:" + selectedName,
-						Reward.currentReplayOccurrenceId());
-				if (selected == null) return CompletableFuture.failedFuture(
-						new IllegalStateException("Selected priority reward could not be resolved: " + selectedName));
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
+				String occurrenceId = Reward.currentReplayOccurrenceId();
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-								() -> handler.giveRewardAsync(user, selected, childOptions)))
-						.thenApply(ignored -> selected.getName());
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey, () -> Reward.continueOnServerThread(plugin, user, () -> {
+							Reward selected = handler.getReward(selectedName);
+							if (selected == null) return CompletableFuture.failedFuture(new IllegalStateException(
+									"Selected priority reward could not be resolved: " + selectedName));
+							RewardOptions childOptions = Reward.withReplayState(
+									new RewardOptions().withPlaceHolder(placeholders).setIgnoreChance(true)
+											.setIgnoreRequirements(true), replayState, replayKey,
+									"selected:" + selectedName, occurrenceId);
+							return handler.giveRewardAsync(user, selected, childOptions);
+						}))).thenApply(ignored -> selectedName);
             }
         }.asPlaceholder("Priority").addEditButton(
                 new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Priority", null) {

@@ -78,18 +78,22 @@ public final class RewardAdvancedPriority {
 					return null;
 				});
 				if (selectedKey == null) return CompletableFuture.completedFuture(null);
-				Reward selected = handler.getReward(section, selectedKey, new RewardOptions()
-						.setPrefix(sourceReward.getName() + "_AdvancedPriority"));
-				RewardOptions childOptions = Reward.withReplayState(new RewardOptions().setIgnoreChance(true)
-						.setIgnoreRequirements(true).setPrefix(sourceReward.getName() + "_AdvancedPriority")
-						.withPlaceHolder(placeholders), Reward.currentReplayState(), Reward.currentReplayKey(),
-						"selected:" + selectedKey, Reward.currentReplayOccurrenceId());
-				if (selected == null) return CompletableFuture.failedFuture(
-						new IllegalStateException("Selected advanced priority reward could not be resolved: " + selectedKey));
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
+				String occurrenceId = Reward.currentReplayOccurrenceId();
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-								() -> handler.giveRewardAsync(user, selected, childOptions)))
-						.thenApply(ignored -> selected.getName());
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey, () -> Reward.continueOnServerThread(plugin, user, () -> {
+							Reward selected = handler.getReward(section, selectedKey, new RewardOptions()
+									.setPrefix(sourceReward.getName() + "_AdvancedPriority"));
+							if (selected == null) return CompletableFuture.failedFuture(new IllegalStateException(
+									"Selected advanced priority reward could not be resolved: " + selectedKey));
+							RewardOptions childOptions = Reward.withReplayState(new RewardOptions().setIgnoreChance(true)
+									.setIgnoreRequirements(true).setPrefix(sourceReward.getName() + "_AdvancedPriority")
+									.withPlaceHolder(placeholders), replayState, replayKey,
+									"selected:" + selectedKey, occurrenceId);
+							return handler.giveRewardAsync(user, selected, childOptions);
+						}))).thenApply(ignored -> selectedKey);
             }
 
             @Override

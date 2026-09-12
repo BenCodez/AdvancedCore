@@ -76,14 +76,19 @@ public final class RewardChoices {
 								return CompletableFuture.completedFuture(null);
 							}));
 				}
-				RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(),
-						reward.getConfig().getChoicesRewardsPath(choice)).withPrefix(reward.getName())
-						.withPlaceHolder(placeholders).withPlaceHolder("choice", choice);
-				Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
-						Reward.currentReplayKey(), "choice:" + choice, Reward.currentReplayOccurrenceId());
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
+				String replayOccurrence = Reward.currentReplayOccurrenceId();
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-								() -> builder.sendAsync(user))).thenApply(ignored -> choice);
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey, () -> Reward.continueOnServerThread(plugin, user, () -> {
+							RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(),
+									reward.getConfig().getChoicesRewardsPath(choice)).withPrefix(reward.getName())
+									.withPlaceHolder(placeholders).withPlaceHolder("choice", choice);
+							Reward.withReplayState(builder.getRewardOptions(), replayState, replayKey,
+									"choice:" + choice, replayOccurrence);
+							return builder.sendAsync(user);
+						}))).thenApply(ignored -> choice);
 			}
 
 			@Override

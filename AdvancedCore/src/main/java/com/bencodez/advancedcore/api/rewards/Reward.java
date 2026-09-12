@@ -55,6 +55,7 @@ public class Reward {
 	private static final String REPLAY_SELECTION_PREFIX = "__advancedcore_replay_selection_";
 	private static final String REPLAY_COMMAND_PREFIX = "__advancedcore_replay_commands_";
 	private static final String REPLAY_NESTED_LIST_PREFIX = "__advancedcore_replay_nested_list_";
+	private static final String REPLAY_SINGLE_CHILD_PREFIX = "__advancedcore_replay_single_child_";
 	private static final String REPLAY_LEGACY_ACTION_PREFIX = "__advancedcore_replay_legacy_actions_";
 
 	@Getter
@@ -742,6 +743,46 @@ public class Reward {
 					}
 					return sequence;
 				});
+	}
+
+	/**
+	 * Dispatches one nested child and persists its completion before the parent
+	 * injector can complete. A retry consults this marker before resolving the
+	 * child, so a completed child may safely disappear from configuration.
+	 */
+	public static CompletionStage<Void> replaySingleNestedReward(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders, String lane, ReplayState replayState, String activeKey,
+			Supplier<CompletionStage<Void>> dispatch) {
+		if (replayState == null || activeKey == null) {
+			try {
+				CompletionStage<Void> result = dispatch.get();
+				return result == null ? CompletableFuture.failedFuture(
+						new IllegalStateException("Nested reward dispatch returned no completion stage")) : result;
+			} catch (Throwable failure) {
+				return CompletableFuture.failedFuture(failure);
+			}
+		}
+		String storageKey = replaySequenceKey(REPLAY_SINGLE_CHILD_PREFIX, activeKey,
+				lane == null ? "selected" : lane);
+		String stored = replayMetadata(placeholders, replayState, storageKey);
+		if (stored != null) {
+			if (!"1".equals(stored)) return CompletableFuture.failedFuture(
+					new IllegalStateException("Malformed nested reward completion marker"));
+			replayState.recordReplayMetadata(storageKey, stored);
+			return CompletableFuture.completedFuture(null);
+		}
+		CompletionStage<Void> result;
+		try {
+			result = dispatch.get();
+			if (result == null) return CompletableFuture.failedFuture(
+					new IllegalStateException("Nested reward dispatch returned no completion stage"));
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
+		return result.thenCompose(ignored -> {
+			recordReplayMetadata(placeholders, replayState, storageKey, "1");
+			return replayState.persistCheckpointAsync(plugin, placeholders);
+		});
 	}
 
 	private static String replaySequenceKey(String prefix, String activeKey, String lane) {
