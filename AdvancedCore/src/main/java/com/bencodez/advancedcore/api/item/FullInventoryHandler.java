@@ -129,8 +129,17 @@ public class FullInventoryHandler {
 			if (!deliveryClaimed.compareAndSet(false, true)) return;
 			try {
 				if (completion != null) validateReplayDeliveryTarget(player, deliveryPlayerId);
-				giveItemOwnedPlayer(player, itemsToGive);
-				if (completion != null) completion.complete(null);
+				boolean pendingOverflow = giveItemOwnedPlayer(player, itemsToGive);
+				if (completion != null) {
+					if (pendingOverflow) {
+						persistPendingItemsAsync().whenComplete((ignored, failure) -> {
+							if (failure == null) completion.complete(null);
+							else completion.completeExceptionally(failure);
+						});
+					} else {
+						completion.complete(null);
+					}
+				}
 			} catch (Throwable failure) {
 				if (completion != null) completion.completeExceptionally(failure);
 				else rethrowDeliveryFailure(failure);
@@ -211,11 +220,16 @@ public class FullInventoryHandler {
 	 * the temporary remove/re-add state of an in-flight inventory check.
 	 */
 	public void save() {
+		saveDurably();
+	}
+
+	/** Saves pending items and reports whether the disk snapshot completed. */
+	public boolean saveDurably() {
 		deliveryLock.writeLock().lock();
 		try {
 			ServerData serverData = plugin.getServerDataFile();
 			if (serverData == null || serverData.getData() == null) {
-				return;
+				return false;
 			}
 
 			YamlConfiguration snapshot = new YamlConfiguration();
@@ -240,11 +254,27 @@ public class FullInventoryHandler {
 				}
 			}
 			serverData.saveData();
+			return true;
 		} catch (Exception e) {
 			plugin.getLogger().log(Level.WARNING, "Failed to save pending full-inventory items", e);
+			return false;
 		} finally {
 			deliveryLock.writeLock().unlock();
 		}
+	}
+
+	private CompletionStage<Void> persistPendingItemsAsync() {
+		CompletableFuture<Void> persisted = new CompletableFuture<>();
+		try {
+			timer.execute(() -> {
+				if (saveDurably()) persisted.complete(null);
+				else persisted.completeExceptionally(
+						new IllegalStateException("Unable to persist full-inventory reward overflow"));
+			});
+		} catch (Throwable failure) {
+			persisted.completeExceptionally(failure);
+		}
+		return persisted;
 	}
 
 	public void startup() {
@@ -331,13 +361,13 @@ public class FullInventoryHandler {
 		}
 	}
 
-	private void giveItemOwnedPlayer(Player player, ItemStack[] item) {
+	private boolean giveItemOwnedPlayer(Player player, ItemStack[] item) {
 		deliveryLock.readLock().lock();
 		try {
 			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
 			if (excess.isEmpty()) {
 				player.updateInventory();
-				return;
+				return false;
 			}
 
 			boolean dropItems = plugin.getOptions().isDropOnFullInv();
@@ -353,6 +383,7 @@ public class FullInventoryHandler {
 				sendMessage(player);
 			}
 			player.updateInventory();
+			return !dropItems;
 		} finally {
 			deliveryLock.readLock().unlock();
 		}

@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
+import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -144,6 +146,42 @@ public class FullInventoryHandlerTest {
 
 		assertTrue(delivery.toCompletableFuture().isDone());
 		verify(inventory).addItem(item);
+	}
+
+	@Test
+	public void giveItemAsyncWaitsForOverflowToBePersisted() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		CountDownLatch saveStarted = new CountDownLatch(1);
+		CountDownLatch releaseSave = new CountDownLatch(1);
+		doAnswer(invocation -> {
+			saveStarted.countDown();
+			assertTrue(releaseSave.await(2, TimeUnit.SECONDS));
+			return null;
+		}).when(fixture.serverData).saveData();
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			task.getValue().run();
+		}
+
+		assertTrue(saveStarted.await(2, TimeUnit.SECONDS));
+		assertFalse(delivery.toCompletableFuture().isDone());
+		releaseSave.countDown();
+		delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		assertEquals(List.of(excess), fixture.handler.getItems().get(uuid));
 	}
 
 	@Test
@@ -313,12 +351,14 @@ public class FullInventoryHandlerTest {
 
 	private Fixture createFixture(long itemDeliveryTimeoutMillis) {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		ScheduledExecutorService sharedInventoryTimer = mock(ScheduledExecutorService.class);
 		BukkitScheduler bukkitScheduler = mock(BukkitScheduler.class);
 		ServerData serverData = mock(ServerData.class);
 		YamlConfiguration data = new YamlConfiguration();
 
 		when(plugin.getInventoryTimer()).thenReturn(sharedInventoryTimer);
+		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.isEnabled()).thenReturn(true);
 		when(plugin.getBukkitScheduler()).thenReturn(bukkitScheduler);
 		when(plugin.getServerDataFile()).thenReturn(serverData);
