@@ -1876,11 +1876,11 @@ public class AdvancedCoreUser {
 	/** Runs on the player-owned scheduler before a replay-aware player mutation. */
 	private void validateLiveScheduledPlayer(Player player) {
 		if (player == null || player.getUniqueId() == null) {
-			throw new IllegalStateException("Scheduled player reward has no live player identity");
+			throw replayActionNotStarted("Scheduled player reward has no live player identity");
 		}
 		Player current = Bukkit.getPlayer(player.getUniqueId());
 		if (current != player || !current.isOnline()) {
-			throw new IllegalStateException("Player became unavailable before scheduled reward delivery");
+			throw replayActionNotStarted("Player became unavailable before scheduled reward delivery");
 		}
 	}
 

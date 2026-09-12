@@ -423,7 +423,24 @@ class RewardAsyncInjectionTest {
 			assertNotNull(queuedExperience.get());
 			availablePlayer.set(null);
 			queuedExperience.get().run();
-			assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
+			Throwable scheduledFailure = assertThrows(java.util.concurrent.CompletionException.class,
+					() -> resumed.toCompletableFuture().join());
+			Reward.RewardReplayFailure retryCheckpoint = findCheckpoint(scheduledFailure);
+
+			// The disconnected owner task never mutated the player, so its reservation
+			// must be released and a changed retry payload must be accepted.
+			data.set("EXP", 7);
+			availablePlayer.set(player);
+			doAnswer(invocation -> {
+				invocation.getArgument(1, Runnable.class).run();
+				return null;
+			}).when(scheduler).runTask(eq(plugin), any(Runnable.class), eq(player));
+			CompletionStage<Void> changedRetry = (CompletionStage<Void>) replay.invoke(reward, realUser,
+					retryCheckpoint.getReplayPlaceholders(), 0,
+					state.newInstance(retryCheckpoint.getReplayProgress(),
+							retryCheckpoint.getReplayRegistryFingerprints(), false), "AsyncReward");
+			changedRetry.toCompletableFuture().join();
+			verify(player).giveExp(7);
 		}
 		verify(player, never()).giveExp(5);
 	}
