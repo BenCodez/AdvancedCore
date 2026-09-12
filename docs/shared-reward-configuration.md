@@ -47,13 +47,15 @@ reading it. Empty/malformed non-list settings return an empty list.
 ## Dependencies and validation
 
 This source requires SimpleAPI's merged structured configuration APIs (SimpleAPI
-PR #78 and its follow-ups). The dependency is pinned to the published build
-`1.0.2-20260910.221115-20`, which supplies `StructuredConfigView`,
-`BukkitStructuredConfigView`, and `ConfigurateStructuredConfigView`. The earlier
-`1.0.2-20260905.234759-10` build predates these APIs and cannot compile this source.
-Keep the POM and `BuildInputPinningTest` on the same verified timestamped version.
-Do not substitute an invented timestamp, weaken the dependency-pinning regression
-test, or assume a mutable local snapshot proves the pinned build works.
+PR #78 and its follow-ups): `StructuredConfigView`, `BukkitStructuredConfigView`,
+and `ConfigurateStructuredConfigView`. The dependency uses `1.0.2-SNAPSHOT` so
+builds can consume newer published snapshots from Nexus. The existing repository
+configuration enables snapshots with `updatePolicy` set to `always`.
+
+The SimpleAPI timestamp-pinning test has been removed at the maintainer's request.
+The separate Javadoc workflow security test remains unchanged. When validating,
+record the timestamped SimpleAPI artifact Maven actually resolves; a successful
+build with one snapshot does not validate later snapshots automatically.
 
 Tests cover portable setting/nested-definition behavior, an isolated runtime
 that rejects Bukkit and JUnit, native Bukkit defaults and list semantics,
