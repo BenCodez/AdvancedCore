@@ -258,8 +258,8 @@ public class MiscUtils {
 				expanded = PlaceholderUtils.replacePlaceHolder(expanded, placeholders);
 				if (p != null) expanded = PlaceholderUtils.replacePlaceHolders(p, expanded);
 			}
-			ArrayList<String> commands = expanded == null || expanded.isEmpty()
-					? new ArrayList<>() : new ArrayList<>(java.util.List.of(expanded));
+			ArrayList<String> commands = command == null || command.isEmpty()
+					? new ArrayList<>() : new ArrayList<>(java.util.List.of(expanded == null ? "" : expanded));
 			return Reward.replayCommandSequence(plugin, placeholders, "console", templates, commands,
 					(cmd, ignoredIndex) -> {
 						plugin.debug("Executing console command: " + cmd);

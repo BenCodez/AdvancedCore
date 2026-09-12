@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.bukkit.runtime.BukkitRuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -107,4 +108,19 @@ class CoreRuntimeTest {
         assertNull(platform.getTimeTimer());
         assertDoesNotThrow(() -> new AdvancedCoreLifecycle(null).shutdown());
     }
+
+	@Test void bukkitAdapterFlushesFullInventoryBeforeExecutorShutdown() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		FullInventoryHandler handler = mock(FullInventoryHandler.class);
+		when(plugin.getFullInventoryHandler()).thenReturn(handler);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("full inventory handler"))
+				.findFirst().orElseThrow().action().run();
+
+		verify(handler).shutdown();
+		assertTrue(platform.afterExecutorShutdown().stream()
+				.noneMatch(cleanup -> cleanup.name().equals("full inventory handler")));
+	}
 }

@@ -113,6 +113,28 @@ public class MiscUtilsTest {
 	}
 
 	@Test
+	public void asyncConsoleCommandPreservesAnEmptyPlaceholderExpansion() {
+		Server server = mock(Server.class);
+		ConsoleCommandSender console = mock(ConsoleCommandSender.class);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		HashMap<String, String> placeholders = new HashMap<>();
+		placeholders.put("command", "");
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+			bukkit.when(() -> Bukkit.getOfflinePlayer("Ben")).thenReturn(null);
+
+			java.util.concurrent.CompletionStage<Void> completion = miscUtils.executeConsoleCommandsAsync("Ben",
+					"%command%", placeholders);
+			verify(scheduler).executeOrScheduleSync(eq(plugin), task.capture());
+			task.getValue().run();
+			completion.toCompletableFuture().join();
+			verify(server).dispatchCommand(console, "");
+		}
+	}
+
+	@Test
 	public void asyncStaggeredCommandsCompleteOnlyAfterEveryScheduledDispatch() {
 		Server server = mock(Server.class);
 		ConsoleCommandSender console = mock(ConsoleCommandSender.class);
