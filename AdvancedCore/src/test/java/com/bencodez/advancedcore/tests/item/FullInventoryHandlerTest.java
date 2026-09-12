@@ -155,6 +155,53 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
+	public void noOverflowCompletionPrecedesShutdownSnapshot() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>());
+		CountDownLatch saveStarted = new CountDownLatch(1);
+		doAnswer(invocation -> {
+			saveStarted.countDown();
+			return null;
+		}).when(fixture.serverData).saveData();
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		AtomicReference<Thread> shutdownThread = new AtomicReference<>();
+		CompletionStage<Void> completionObserved = delivery.thenRun(() -> {
+			Thread shutdown = new Thread(fixture.handler::shutdown, "full-inventory-shutdown-race");
+			shutdownThread.set(shutdown);
+			shutdown.start();
+			try {
+				assertFalse(saveStarted.await(100, TimeUnit.MILLISECONDS),
+						"shutdown snapshot overtook the successful delivery completion");
+			} catch (InterruptedException interrupted) {
+				Thread.currentThread().interrupt();
+				throw new AssertionError(interrupted);
+			}
+		});
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			task.getValue().run();
+		}
+
+		completionObserved.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		Thread shutdown = shutdownThread.get();
+		assertNotNull(shutdown);
+		shutdown.join(TimeUnit.SECONDS.toMillis(2));
+		assertFalse(shutdown.isAlive());
+		assertEquals(0, saveStarted.getCount());
+		verify(inventory).addItem(item);
+	}
+
+	@Test
 	public void giveItemAsyncWaitsForOverflowToBePersisted() throws Exception {
 		Fixture fixture = createFixture();
 		UUID uuid = UUID.randomUUID();

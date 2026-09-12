@@ -157,7 +157,12 @@ public class FullInventoryHandler {
 		AtomicBoolean deliveryClaimed = new AtomicBoolean();
 		Runnable delivery = () -> {
 			if (!deliveryClaimed.compareAndSet(false, true)) return;
+			boolean replayDeliveryLocked = false;
 			try {
+				if (completion != null) {
+					deliveryLock.readLock().lock();
+					replayDeliveryLocked = true;
+				}
 				if (completion != null) validateReplayDeliveryTarget(player, deliveryPlayerId);
 				if (completion != null) replayOverflowCompletions.put(reservationId, completion);
 				boolean pendingOverflow = giveItemOwnedPlayer(player, itemsToGive, reservationId);
@@ -178,6 +183,8 @@ public class FullInventoryHandler {
 					completion.completeExceptionally(failure);
 				}
 				else rethrowDeliveryFailure(failure);
+			} finally {
+				if (replayDeliveryLocked) deliveryLock.readLock().unlock();
 			}
 		};
 		try {
