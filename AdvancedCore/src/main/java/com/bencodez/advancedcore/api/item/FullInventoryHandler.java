@@ -290,37 +290,33 @@ public class FullInventoryHandler {
 
 	/**
 	 * A save failure happens after Bukkit has already accepted part of this reward.
-	 * Complete the replay action after a best-effort owner-thread handoff instead of
-	 * replaying those already-inserted items. Un-dropped items stay reserved and are
-	 * retried for persistence without being visible to the normal delivery sweep.
+	 * Complete the replay action only after an owner-thread fallback consumes every
+	 * reserved item or a later retry persists the remainder. Reserved items stay
+	 * excluded from the normal delivery sweep while either handoff is pending.
 	 */
 	private void completeStartedOverflowWithFallback(Player player, UUID playerId, String reservationId,
 			CompletableFuture<Void> completion) {
 		Runnable fallback = () -> {
-			try {
-				dropReservedOverflowOwnedPlayer(player, playerId, reservationId);
-			} finally {
-				scheduleReservedOverflowPersistenceRetry(reservationId);
-				completion.complete(null);
-			}
+			if (dropReservedOverflowOwnedPlayer(player, playerId, reservationId)) completion.complete(null);
+			else scheduleReservedOverflowPersistenceRetry(reservationId, completion);
 		};
 		try {
 			plugin.getBukkitScheduler().runTask(plugin, fallback, player);
 		} catch (Throwable failure) {
-			// The mutation has already started. Retain the reservation for a later disk
-			// retry, but never make the outer replay issue the full item stack again.
-			scheduleReservedOverflowPersistenceRetry(reservationId);
-			completion.complete(null);
+			// The mutation has already started, so neither acknowledge it nor fail it as
+			// replayable. Keep the stage pending until the reservation is durable.
+			scheduleReservedOverflowPersistenceRetry(reservationId, completion);
 		}
 	}
 
 	/** Runs only on the player owner scheduler. */
-	private void dropReservedOverflowOwnedPlayer(Player player, UUID playerId, String reservationId) {
-		if (player == null || playerId == null || Bukkit.getPlayer(playerId) != player || !player.isOnline()) return;
+	private boolean dropReservedOverflowOwnedPlayer(Player player, UUID playerId, String reservationId) {
+		if (player == null || playerId == null || Bukkit.getPlayer(playerId) != player || !player.isOnline()) return false;
 		deliveryLock.writeLock().lock();
 		try {
 			ReservedOverflow reservation = replayOverflowReservations.get(reservationId);
-			if (reservation == null || !playerId.equals(reservation.playerId)) return;
+			if (reservation == null) return true;
+			if (!playerId.equals(reservation.playerId)) return false;
 			ArrayList<ItemStack> remaining = new ArrayList<>();
 			for (ItemStack item : reservation.items) {
 				try {
@@ -331,20 +327,25 @@ public class FullInventoryHandler {
 			}
 			if (remaining.isEmpty()) replayOverflowReservations.remove(reservationId, reservation);
 			else replayOverflowReservations.put(reservationId, new ReservedOverflow(playerId, remaining));
+			return remaining.isEmpty();
 		} finally {
 			deliveryLock.writeLock().unlock();
 		}
 	}
 
-	private void scheduleReservedOverflowPersistenceRetry(String reservationId) {
-		if (!replayOverflowReservations.containsKey(reservationId)) return;
+	private void scheduleReservedOverflowPersistenceRetry(String reservationId, CompletableFuture<Void> completion) {
+		if (!replayOverflowReservations.containsKey(reservationId)) {
+			completion.complete(null);
+			return;
+		}
 		try {
 			timer.schedule(() -> {
-				if (!persistReservedOverflow(reservationId)) scheduleReservedOverflowPersistenceRetry(reservationId);
+				if (persistReservedOverflow(reservationId)) completion.complete(null);
+				else scheduleReservedOverflowPersistenceRetry(reservationId, completion);
 			}, 30, TimeUnit.SECONDS);
 		} catch (Throwable ignored) {
-			// Shutdown may reject this retry. The retained reservation remains excluded
-			// from normal checks and can be saved by a later live handler instance.
+			// Shutdown may reject this retry. Leave the completion pending: acknowledging
+			// an in-memory-only remainder would lose it from the durable reward replay.
 		}
 	}
 

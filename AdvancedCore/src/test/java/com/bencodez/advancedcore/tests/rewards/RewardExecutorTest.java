@@ -156,13 +156,10 @@ public class RewardExecutorTest {
 	}
 
     @Test
-    public void asyncRewardDispatchLeavesThePrimaryThreadAndRetainsCompletion() {
+    public void asyncRewardSetupStaysOnThePrimaryThreadAndRetainsCompletion() {
         Reward child = mock(Reward.class);
         CompletableFuture<Void> childResult = new CompletableFuture<>();
         when(child.giveRewardAsync(eq(user), any(RewardOptions.class))).thenReturn(childResult);
-        BukkitScheduler scheduler = mock(BukkitScheduler.class);
-        when(plugin.getBukkitScheduler()).thenReturn(scheduler);
-        ArgumentCaptor<Runnable> dispatch = ArgumentCaptor.forClass(Runnable.class);
         RewardOptions options = new RewardOptions();
         Reward.ReplayState replayState = Reward.replayStateFor(new RewardOptions());
 
@@ -175,13 +172,10 @@ public class RewardExecutorTest {
             when(child.getRewardName()).thenReturn("child");
             CompletionStage<Void> result = executor.giveRewardAsync(user, child, options);
 
-            verify(scheduler).runTaskAsynchronously(eq(plugin), dispatch.capture());
-            verify(child, never()).giveRewardAsync(eq(user), any(RewardOptions.class));
+            verify(child).giveRewardAsync(eq(user), any(RewardOptions.class));
             assertSame(replayState, options.getAsyncReplayState());
             assertEquals("parent/child", options.getAsyncReplayKey());
             assertEquals("occurrence", options.getAsyncReplayOccurrenceId());
-            assertFalse(result.toCompletableFuture().isDone());
-            dispatch.getValue().run();
             assertFalse(result.toCompletableFuture().isDone());
             childResult.completeExceptionally(new IllegalStateException("child failed"));
             assertThrows(CompletionException.class, () -> result.toCompletableFuture().join());

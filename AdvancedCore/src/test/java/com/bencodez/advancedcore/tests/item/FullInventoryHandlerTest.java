@@ -249,6 +249,52 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
+	public void replayOverflowDoesNotAcknowledgeAnUnavailableFallback() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(false);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		doAnswer(invocation -> {
+			throw new IllegalStateException("disk unavailable");
+		}).when(fixture.serverData).saveData();
+
+		AtomicReference<Runnable> initialDelivery = new AtomicReference<>();
+		AtomicReference<Runnable> fallback = new AtomicReference<>();
+		CountDownLatch fallbackScheduled = new CountDownLatch(1);
+		doAnswer(invocation -> {
+			Runnable task = invocation.getArgument(1);
+			if (initialDelivery.get() == null) initialDelivery.set(task);
+			else {
+				fallback.set(task);
+				fallbackScheduled.countDown();
+			}
+			return null;
+		}).when(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class), eq(player));
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			initialDelivery.get().run();
+			assertTrue(fallbackScheduled.await(2, TimeUnit.SECONDS));
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			fallback.get().run();
+		}
+
+		assertFalse(delivery.toCompletableFuture().isDone());
+		verify(inventory, times(1)).addItem(item);
+		assertFalse(fixture.handler.getItems().containsKey(uuid));
+		assertFalse(fixture.data.contains("FullInventory"));
+	}
+
+	@Test
 	public void giveItemAsyncFailsWithoutMutationWhenPlayerDisconnectsAfterEnqueue() throws Exception {
 		Fixture fixture = createFixture();
 		UUID uuid = UUID.randomUUID();

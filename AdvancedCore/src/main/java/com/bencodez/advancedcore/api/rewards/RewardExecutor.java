@@ -204,36 +204,9 @@ public class RewardExecutor {
         if (options.getAsyncReplayOccurrenceId() == null && activeOccurrenceId != null) {
             options.setAsyncReplayOccurrenceId(activeOccurrenceId);
         }
-        boolean primaryThread = false;
-        try {
-            primaryThread = Bukkit.isPrimaryThread();
-        } catch (IllegalStateException | NullPointerException ignored) {
-            // Unit tests and early bootstrap have no primary server thread.
-        }
-        if (primaryThread) {
-            CompletableFuture<Void> dispatched = new CompletableFuture<>();
-            try {
-                plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> {
-                    try {
-                        CompletionStage<Void> result = reward.giveRewardAsync(user, options);
-                        if (result == null) {
-                            dispatched.completeExceptionally(
-                                    new IllegalStateException("Asynchronous reward dispatch returned no completion stage"));
-                        } else {
-                            result.whenComplete((ignored, failure) -> {
-                                if (failure == null) dispatched.complete(null);
-                                else dispatched.completeExceptionally(failure);
-                            });
-                        }
-                    } catch (Throwable failure) {
-                        dispatched.completeExceptionally(failure);
-                    }
-                });
-            } catch (Throwable failure) {
-                dispatched.completeExceptionally(failure);
-            }
-            return dispatched;
-        }
+        // Reward setup fires Bukkit events and resolves live player state. Keep that
+        // work on the caller's owner thread; individual injectors explicitly hand
+        // off only the portions that are safe to execute asynchronously.
         return reward.giveRewardAsync(user, options);
     }
 
