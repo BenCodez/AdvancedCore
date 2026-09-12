@@ -212,6 +212,29 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void legacyQueuedOccurrenceIsPersistedBeforeAnyAsyncInjectorRuns() {
+		ArrayList<String> persisted = new ArrayList<>(
+				List.of("VoteReward%placeholders%Server%pair%server-a"));
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			persisted.clear();
+			persisted.addAll(invocation.getArgument(1));
+			return null;
+		}).when(data).setStringList(eq("offlineRewardsPath"), any(), eq(false));
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(new CompletableFuture<>());
+
+		ArgumentCaptor<RewardOptions> options = ArgumentCaptor.forClass(RewardOptions.class);
+		user.checkOfflineRewards();
+
+		verify(rewardHandler).givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class), options.capture());
+		String occurrence = options.getValue().getAsyncReplayOccurrenceId();
+		assertTrue(occurrence != null && !occurrence.isEmpty());
+		assertTrue(persisted.get(0).contains("%asyncoccurrence%" + occurrence));
+	}
+
+	@Test
 	void deferredReplayRetainsOccurrenceAndCheckpoint() {
 		ArrayList<String> persisted = new ArrayList<>();
 		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
@@ -363,7 +386,13 @@ public class AdvancedCoreUserTest {
 		String entry = "VoteReward%extime%1%placeholders%Server%pair%server-a";
 		ArrayList<String> timed = new ArrayList<>();
 		timed.add(entry + "%ExecutionTime/%" + due);
-		when(data.getStringList("TimedRewards", UserDataFetchMode.DEFAULT)).thenReturn(new ArrayList<>(timed));
+		when(data.getStringList("TimedRewards", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(timed));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			timed.clear();
+			timed.addAll(invocation.getArgument(1));
+			return null;
+		}).when(data).setStringList(eq("TimedRewards"), any(), eq(false));
 		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
 				any(RewardOptions.class))).thenReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")));
 
@@ -441,11 +470,11 @@ public class AdvancedCoreUserTest {
 
 		assertEquals(2, persisted.size());
 		assertTrue(persisted.stream().anyMatch(value -> value.contains("%asyncprogress%v2-")));
-			assertTrue(persisted.stream().anyMatch(value -> value.equals(entry)));
+			assertTrue(persisted.stream().allMatch(value -> value.contains("%asyncoccurrence%")));
 			user.checkOfflineRewards();
 			verify(rewardHandler).givePersistedQueueRewardAsync(eq(user),
 					any(PersistedQueueReference.class), any(RewardOptions.class));
-			verify(data).setStringList(eq("offlineRewardsPath"), any(), eq(false));
+				verify(data, org.mockito.Mockito.atLeastOnce()).setStringList(eq("offlineRewardsPath"), any(), eq(false));
 
 			pending.complete(null);
 			verify(rewardHandler, org.mockito.Mockito.times(2)).givePersistedQueueRewardAsync(eq(user),
@@ -494,9 +523,10 @@ public class AdvancedCoreUserTest {
 				new HashMap<>(Map.of("Server", "server-a"))));
 
 		assertEquals(1, persisted.size());
-		assertTrue(persisted.get(0).startsWith("VoteReward%extime%12345%asyncprogress%v2-"));
+		assertTrue(persisted.get(0).startsWith("VoteReward%extime%12345%asyncoccurrence%"));
+		assertTrue(persisted.get(0).contains("%asyncprogress%v2-"));
 		assertTrue(persisted.get(0).endsWith("%ExecutionTime/%" + due));
-		verify(data).setStringList(eq("TimedRewards"), any(), eq(false));
+		verify(data, org.mockito.Mockito.atLeastOnce()).setStringList(eq("TimedRewards"), any(), eq(false));
 		// The key has migrated, but its in-flight claim must migrate with it too.
 		user.checkDelayedTimedRewards();
 		verify(rewardHandler, org.mockito.Mockito.times(1)).givePersistedQueueRewardAsync(eq(user),

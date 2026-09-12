@@ -762,6 +762,49 @@ public class AdvancedCoreUser {
 				: ASYNC_OCCURRENCE_DELIMITER + replay.asyncReplayOccurrenceId);
 	}
 
+	private static String withAsyncOccurrence(String rewardEntry, String occurrenceId) {
+		int placeholders = rewardEntry.indexOf("%placeholders%");
+		String reference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
+		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
+		return stripAsyncOccurrenceMarker(reference) + ASYNC_OCCURRENCE_DELIMITER + occurrenceId + suffix;
+	}
+
+	private String ensureOfflineRewardOccurrence(String rewardEntry) {
+		if (occurrenceId(rewardEntry) != null) return rewardEntry;
+		synchronized (plugin) {
+			ArrayList<String> pending = getOfflineRewards();
+			int index = pending.indexOf(rewardEntry);
+			if (index < 0) throw new IllegalStateException("Claimed offline reward disappeared before migration");
+			String updated = withAsyncOccurrence(rewardEntry, UUID.randomUUID().toString());
+			pending.set(index, updated);
+			setOfflineRewardsDurably(pending, updated);
+			ReplayClaims claims = replayClaims();
+			int claimed = claims.offline.getOrDefault(rewardEntry, 0);
+			if (claimed <= 1) claims.offline.remove(rewardEntry);
+			else claims.offline.put(rewardEntry, claimed - 1);
+			claims.offline.put(updated, claims.offline.getOrDefault(updated, 0) + 1);
+			return updated;
+		}
+	}
+
+	private String ensureTimedRewardOccurrence(String rewardEntry, long time) {
+		if (occurrenceId(stripTimedExecutionMarker(rewardEntry)) != null) return rewardEntry;
+		synchronized (plugin) {
+			HashMap<String, Long> pending = getTimedRewards();
+			if (!Long.valueOf(time).equals(pending.get(rewardEntry))) {
+				throw new IllegalStateException("Claimed timed reward disappeared before migration");
+			}
+			String updated = withAsyncOccurrence(rewardEntry, UUID.randomUUID().toString());
+			pending.remove(rewardEntry);
+			pending.put(updated, time);
+			setTimedRewardsDurably(pending);
+			ReplayClaims claims = replayClaims();
+			claims.timed.remove(rewardEntry);
+			claims.timed.add(updated);
+			return updated;
+		}
+	}
+
 	private static String encodeAsyncReplayProgress(Map<String, Integer> progress) {
 		if (progress.isEmpty()) return "";
 		StringBuilder encoded = new StringBuilder();
@@ -960,7 +1003,14 @@ public class AdvancedCoreUser {
 			if (time != 0) {
 				Date timeDate = new Date(time);
 				if (new Date().after(timeDate) && claimTimedReward(entry.getKey(), time)) {
-					String[] data = entry.getKey().split("%placeholders%", 2);
+					String migratedEntry;
+					try {
+						migratedEntry = ensureTimedRewardOccurrence(entry.getKey(), time);
+					} catch (Throwable failure) {
+						restoreTimedReward(entry.getKey(), time, failure);
+						continue;
+					}
+					String[] data = migratedEntry.split("%placeholders%", 2);
 					QueuedReplay queuedReplay = parseQueuedReplay(stripTimedExecutionMarker(data[0]));
 					String rewardReference = queuedReplay.rewardReference;
 					String placeholders = "";
@@ -980,7 +1030,7 @@ public class AdvancedCoreUser {
 					// checkpoint can change its serialized key (for example by adding the
 					// v2 progress marker), so completion and failure must follow this
 					// reference rather than the original entry key.
-					AtomicReference<String> currentEntry = new AtomicReference<>(entry.getKey());
+					AtomicReference<String> currentEntry = new AtomicReference<>(migratedEntry);
 					replayOptions.setAsyncReplayCheckpointConsumer(
 							checkpoint -> checkpointTimedReward(currentEntry, time, checkpoint));
 					enqueuePersistedReplay(() -> {
@@ -1029,6 +1079,12 @@ public class AdvancedCoreUser {
 				continue;
 			}
 			if (!claimOfflineReward(rewardEntry)) continue;
+			try {
+				rewardEntry = ensureOfflineRewardOccurrence(rewardEntry);
+			} catch (Throwable failure) {
+				restoreOfflineReward(rewardEntry, failure);
+				continue;
+			}
 
 			String[] parts = rewardEntry.split("%placeholders%", 2);
 			QueuedReplay queuedReplay = parseQueuedReplay(parts[0]);

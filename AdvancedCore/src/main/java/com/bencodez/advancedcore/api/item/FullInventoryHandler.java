@@ -52,6 +52,7 @@ public class FullInventoryHandler {
 
 	private final AdvancedCorePlugin plugin;
 	private final ReentrantReadWriteLock deliveryLock = new ReentrantReadWriteLock(true);
+	private final AtomicBoolean shuttingDown = new AtomicBoolean();
 
 	@Getter
 	private ScheduledExecutorService timer;
@@ -127,6 +128,11 @@ public class FullInventoryHandler {
 	private void scheduleItemDelivery(Player player, ItemStack[] item, CompletableFuture<Void> completion) {
 		if (player == null || item == null || item.length == 0) {
 			if (completion != null) completion.complete(null);
+			return;
+		}
+		if (completion != null && shuttingDown.get()) {
+			completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+					"Full-inventory handler is shutting down before item delivery"));
 			return;
 		}
 		UUID playerId = null;
@@ -227,6 +233,7 @@ public class FullInventoryHandler {
 	}
 
 	public synchronized void shutdown() {
+		shuttingDown.set(true);
 		// Flush accepted replay reservations while their completion stages can still
 		// advance the outer reward checkpoint. Stopping the executor first can discard
 		// an accepted persistence task and later replay the already-inserted items.
@@ -534,6 +541,10 @@ public class FullInventoryHandler {
 	private boolean giveItemOwnedPlayer(Player player, ItemStack[] item, String reservationId) {
 		deliveryLock.readLock().lock();
 		try {
+			if (reservationId != null && shuttingDown.get()) {
+				throw AdvancedCoreUser.replayActionNotStarted(
+						"Full-inventory handler shut down before queued item delivery began");
+			}
 			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
 			if (excess.isEmpty()) {
 				player.updateInventory();
