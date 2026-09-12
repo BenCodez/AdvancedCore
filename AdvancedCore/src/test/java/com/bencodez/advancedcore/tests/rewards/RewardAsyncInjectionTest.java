@@ -224,6 +224,7 @@ class RewardAsyncInjectionTest {
 		Player player = mock(Player.class);
 		when(player.getDisplayName()).thenReturn("Dispatch");
 		AtomicReference<Player> availablePlayer = new AtomicReference<>(player);
+		AtomicReference<Material> itemType = new AtomicReference<>(Material.STONE);
 		AtomicReference<Runnable> queuedInjection = new AtomicReference<>();
 		doAnswer(invocation -> {
 			queuedInjection.set(invocation.getArgument(1, Runnable.class));
@@ -234,7 +235,7 @@ class RewardAsyncInjectionTest {
 
 		try (MockedConstruction<ItemBuilder> builders = mockConstruction(ItemBuilder.class, (builder, context) -> {
 			when(builder.setPlaceholders(any(HashMap.class))).thenReturn(builder);
-			when(builder.toItemStack(any(Player.class))).thenReturn(new ItemStack(Material.STONE));
+			when(builder.toItemStack(any(Player.class))).thenAnswer(ignored -> new ItemStack(itemType.get()));
 		}); org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenAnswer(ignored -> availablePlayer.get());
 			CompletionStage<Void> delivery = reward.giveRewardUserAsync(realUser, new HashMap<>(), new RewardOptions());
@@ -257,6 +258,7 @@ class RewardAsyncInjectionTest {
 			verify(inventory, never()).giveItemAsync(any(Player.class), any(ItemStack.class));
 
 			availablePlayer.set(player);
+			itemType.set(Material.DIRT);
 			when(inventory.giveItemAsync(eq(player), any(ItemStack.class)))
 					.thenReturn(CompletableFuture.completedFuture(null));
 			doAnswer(invocation -> {

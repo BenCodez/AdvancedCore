@@ -1705,7 +1705,7 @@ public class AdvancedCoreUser {
 			descriptor.append('\n').append(itemDescriptor(current));
 		}
 		if (collectAsyncAction(() -> player == null ? CompletableFuture.failedFuture(
-				new IllegalStateException("Player became unavailable before item reward delivery"))
+				replayActionNotStarted("Player became unavailable before item reward delivery"))
 				: plugin.getFullInventoryHandler().giveItemAsync(player, item), descriptor.toString())) {
 			return;
 		}
