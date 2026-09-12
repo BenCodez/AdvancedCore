@@ -1023,8 +1023,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * 
 	 * @param storageType the storage type to load
 	 */
-	@SuppressWarnings("deprecation")
 	public void loadUserAPI(UserStorage storageType) {
+		if (storageType == null) {
+			throw new IllegalArgumentException("User storage must be SQLITE or MYSQL");
+		}
 		if (storageType.equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<>();
 			Column key = new Column("uuid", DataType.STRING);
@@ -1043,8 +1045,6 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						getOptions().getYmlConfig().getData().getConfigurationSection("MySQL")));
 			}
 
-		} else if (storageType.equals(UserStorage.FLAT)) {
-			getLogger().severe("Detected using FLAT storage, this will be removed in the future!");
 		}
 	}
 
