@@ -172,6 +172,44 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void reusableFreshPlaceholdersDoNotRetainLegacyActionCompletionMarkers() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		VaultHandler vault = mock(VaultHandler.class);
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		when(plugin.getVaultHandler()).thenReturn(vault);
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+		realUser.setPlayerName("Reusable");
+		OfflinePlayer offlinePlayer = mock(OfflinePlayer.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		handler.getInjectedRewards().add(new RewardInject("Legacy") {
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				realUser.giveMoney(2);
+				return null;
+			}
+		});
+		HashMap<String, String> placeholders = new HashMap<>();
+		UUID uuid = UUID.fromString(realUser.getUUID());
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offlinePlayer);
+			reward.giveInjectedRewardsAsync(realUser, placeholders).toCompletableFuture().join();
+			reward.giveInjectedRewardsAsync(realUser, placeholders).toCompletableFuture().join();
+		}
+
+		verify(economy, times(2)).depositPlayer(offlinePlayer, 2);
+		assertFalse(placeholders.keySet().stream()
+				.anyMatch(key -> key.startsWith("__advancedcore_replay_legacy_actions_")));
+	}
+
+	@Test
 	void legacyScheduledRewardsWaitForQueuedBukkitActions() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);

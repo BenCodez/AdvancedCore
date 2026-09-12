@@ -27,6 +27,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -187,6 +188,42 @@ public class FullInventoryHandlerTest {
 		releaseSave.countDown();
 		delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
 		assertEquals(List.of(excess), fixture.handler.getItems().get(uuid));
+	}
+
+	@Test
+	public void replayCompletionIsRegisteredBeforeOverflowReservationCanRaceShutdown() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		doAnswer(invocation -> {
+			java.lang.reflect.Field completionsField = FullInventoryHandler.class
+					.getDeclaredField("replayOverflowCompletions");
+			completionsField.setAccessible(true);
+			@SuppressWarnings("unchecked")
+			ConcurrentHashMap<String, java.util.concurrent.CompletableFuture<Void>> completions =
+					(ConcurrentHashMap<String, java.util.concurrent.CompletableFuture<Void>>) completionsField
+							.get(fixture.handler);
+			assertEquals(1, completions.size(),
+					"shutdown must be able to find the completion before it can snapshot a reservation");
+			return new HashMap<>(java.util.Map.of(0, excess));
+		}).when(inventory).addItem(item);
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			task.getValue().run();
+		}
+
+		delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
 	}
 
 	@Test

@@ -159,20 +159,24 @@ public class FullInventoryHandler {
 			if (!deliveryClaimed.compareAndSet(false, true)) return;
 			try {
 				if (completion != null) validateReplayDeliveryTarget(player, deliveryPlayerId);
+				if (completion != null) replayOverflowCompletions.put(reservationId, completion);
 				boolean pendingOverflow = giveItemOwnedPlayer(player, itemsToGive, reservationId);
 				if (completion != null) {
 					if (pendingOverflow) {
-						replayOverflowCompletions.put(reservationId, completion);
 						persistReservedOverflowAsync(reservationId).whenComplete((ignored, failure) -> {
 							if (failure == null) completeReplayOverflow(reservationId, completion);
 							else completeStartedOverflowWithFallback(player, deliveryPlayerId, reservationId, completion);
 						});
 					} else {
+						replayOverflowCompletions.remove(reservationId, completion);
 						completion.complete(null);
 					}
 				}
 			} catch (Throwable failure) {
-				if (completion != null) completion.completeExceptionally(failure);
+				if (completion != null) {
+					replayOverflowCompletions.remove(reservationId, completion);
+					completion.completeExceptionally(failure);
+				}
 				else rethrowDeliveryFailure(failure);
 			}
 		};

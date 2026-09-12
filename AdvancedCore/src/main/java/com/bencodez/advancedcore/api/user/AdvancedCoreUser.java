@@ -205,13 +205,11 @@ public class AdvancedCoreUser {
 		}
 
 		private String readReplayValue(String key) {
-			String value = placeholders == null ? null : placeholders.get(key);
-			return value == null && replayState != null ? replayState.replayMetadata(key) : value;
+			return Reward.replayMetadata(placeholders, replayState, key);
 		}
 
 		private void recordReplayValue(String key, String value) {
-			if (placeholders != null) placeholders.put(key, value);
-			if (replayState != null) replayState.recordReplayMetadata(key, value);
+			Reward.recordReplayMetadata(placeholders, replayState, key, value);
 		}
 
 		private CompletionStage<Void> checkpoint() {

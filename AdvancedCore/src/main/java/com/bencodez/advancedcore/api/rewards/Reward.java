@@ -882,13 +882,15 @@ public class Reward {
 		return completed == rewards.size();
 	}
 
-	private static String replayMetadata(HashMap<String, String> placeholders, ReplayState replayState, String key) {
+	/** Reads reserved replay metadata without accepting stale caller values for a fresh execution. */
+	public static String replayMetadata(HashMap<String, String> placeholders, ReplayState replayState, String key) {
 		String value = placeholders == null || (replayState != null && !replayState.acceptsPersistedMetadata())
 				? null : placeholders.get(key);
 		return value == null && replayState != null ? replayState.replayMetadata(key) : value;
 	}
 
-	private static void recordReplayMetadata(HashMap<String, String> placeholders, ReplayState replayState,
+	/** Records reserved replay metadata in the execution-local state and only durable caller placeholders. */
+	public static void recordReplayMetadata(HashMap<String, String> placeholders, ReplayState replayState,
 			String key, String value) {
 		if (replayState != null) replayState.recordReplayMetadata(key, value);
 		if (placeholders != null && (replayState == null || replayState.hasCheckpointConsumer())) {
