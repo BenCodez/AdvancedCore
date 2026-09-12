@@ -1034,6 +1034,29 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void emptyLegacyActionCollectionDoesNotCreateItsOwnCheckpoint() {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		AtomicInteger checkpoints = new AtomicInteger();
+		RewardOptions options = new RewardOptions();
+		options.setAsyncReplayCheckpointConsumer(ignored -> checkpoints.incrementAndGet());
+		HashMap<String, String> placeholders = new HashMap<>();
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
+
+		AdvancedCoreUser.AsyncActionCollection collection = realUser.beginAsyncActionCollection(
+				Reward.replayStateFor(options), placeholders, "AsyncReward/0");
+		realUser.endAsyncActionCollection(collection).toCompletableFuture().join();
+
+		assertEquals(0, checkpoints.get());
+		assertFalse(placeholders.keySet().stream()
+				.anyMatch(key -> key.startsWith("__advancedcore_replay_legacy_actions_")));
+	}
+
+	@Test
 	void serializedPersistedReplaysDoNotClaimUnscopedContinuationActions() throws Exception {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);

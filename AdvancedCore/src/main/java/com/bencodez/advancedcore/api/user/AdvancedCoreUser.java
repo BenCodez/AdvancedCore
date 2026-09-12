@@ -140,7 +140,7 @@ public class AdvancedCoreUser {
 				return CompletableFuture.failedFuture(new IllegalStateException(
 						"Cannot safely resume legacy reward actions from an ordinal-only or malformed checkpoint", failure));
 			}
-			boolean snapshotChanged = persistedSnapshot.isEmpty();
+			boolean snapshotChanged = persistedSnapshot.isEmpty() && !currentSnapshot.isEmpty();
 			if (snapshotChanged) persistedSnapshot = new HashMap<>(currentSnapshot);
 			else if (!persistedSnapshot.equals(currentSnapshot)) {
 				for (Entry<String, String> persisted : persistedSnapshot.entrySet()) {
