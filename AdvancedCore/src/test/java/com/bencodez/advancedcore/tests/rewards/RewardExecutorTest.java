@@ -62,9 +62,19 @@ public class RewardExecutorTest {
         handler = mock(RewardHandler.class);
         user = mock(AdvancedCoreUser.class);
         executor = new RewardExecutor(handler, plugin);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
 
         when(plugin.getLogger()).thenReturn(mock(Logger.class));
         when(plugin.isEnabled()).thenReturn(true);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(1).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(1).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), any(org.bukkit.entity.Entity.class));
         when(user.getPlayerName()).thenReturn("Ben");
         when(user.getUUID()).thenReturn("uuid");
         when(user.isOnline()).thenReturn(true);
