@@ -561,6 +561,33 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void freshAsyncDispatchAlwaysUsesCompletionAwareRewardUserPath() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		when(user.isOnline()).thenReturn(true);
+		when(user.getPlayer()).thenReturn(mock(Player.class));
+		Reward spyReward = org.mockito.Mockito.spy(reward);
+		CompletableFuture<Void> legacyActions = new CompletableFuture<>();
+		doReturn(legacyActions).when(spyReward).giveRewardUserAsync(eq(user), any(HashMap.class),
+				any(RewardOptions.class));
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		CompletionStage<Void> result;
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			result = spyReward.giveRewardAsync(user,
+					new RewardOptions().setCheckTimed(false).setIgnoreRequirements(true));
+		}
+
+		assertFalse(result.toCompletableFuture().isDone());
+		legacyActions.complete(null);
+		result.toCompletableFuture().join();
+		verify(spyReward).giveRewardUserAsync(eq(user), any(HashMap.class), any(RewardOptions.class));
+	}
+
+	@Test
 	void legacySchedulerRejectionFailsAsyncRewardClosed() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);

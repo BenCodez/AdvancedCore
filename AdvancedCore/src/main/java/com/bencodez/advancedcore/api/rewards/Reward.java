@@ -1480,15 +1480,7 @@ public class Reward {
 		if (canGive || isForceOffline() || rewardOptions.isForceOffline()) {
 			plugin.debug(name + ": Passed requirements, attempting to give to " + user.getPlayerName() + "/"
 					+ user.getUUID());
-			if (requiresAwaitedDelivery(rewardOptions)) {
-				return giveRewardUserAsync(user, rewardOptions.getPlaceholders(), rewardOptions);
-			}
-			try {
-				giveRewardUser(user, rewardOptions.getPlaceholders(), rewardOptions);
-				return CompletableFuture.completedFuture(null);
-			} catch (Throwable failure) {
-				return CompletableFuture.failedFuture(failure);
-			}
+			return giveRewardUserAsync(user, rewardOptions.getPlaceholders(), rewardOptions);
 		}
 		return CompletableFuture.completedFuture(null);
 	}
