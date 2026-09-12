@@ -298,6 +298,20 @@ public class RewardExecutorTest {
 		verify(missingReward).giveRewardAsync(eq(user), any(RewardOptions.class));
 	}
 
+	@Test
+	public void freshAsyncListSkipsUnknownChildAndContinues() {
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("Rewards", new ArrayList<>(List.of("Missing", "Valid")));
+		Reward valid = mock(Reward.class);
+		when(handler.getReward("Valid")).thenReturn(valid);
+		when(valid.giveRewardAsync(eq(user), any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.completedFuture(null));
+
+		executor.giveRewardAsync(user, data, "Rewards", new RewardOptions()).toCompletableFuture().join();
+
+		verify(valid).giveRewardAsync(eq(user), any(RewardOptions.class));
+	}
+
     @Test
     public void stringRewardDispatchesNamedReward() {
         YamlConfiguration data = new YamlConfiguration();

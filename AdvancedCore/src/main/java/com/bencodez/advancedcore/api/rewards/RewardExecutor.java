@@ -251,7 +251,7 @@ public class RewardExecutor {
 							user.getPlayerName(), command, context.getPlaceholders()));
 		}
 		Reward resolved = handler.getReward(reward);
-		if (resolved == null && context.getOptions().getAsyncReplayState() != null) {
+		if (resolved == null && context.getOptions().getAsyncReplayCheckpointConsumer() != null) {
 			return CompletableFuture.failedFuture(
 					new IllegalStateException("Nested replay reward could not be resolved: " + reward));
 		}
