@@ -124,6 +124,8 @@ public final class RewardSpecialChance {
 						RewardBuilder builder = new RewardBuilder(section, entry.getValue())
 								.withPrefix(reward.getName() + "_SpecialChance").withPlaceHolder(placeholders)
 								.withPlaceHolder("chance", selected[1]);
+						Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
+								Reward.currentReplayKey(), "path:" + entry.getValue(), Reward.currentReplayOccurrenceId());
 						return Reward.persistReplayMetadataAsync(plugin, placeholders)
 								.thenCompose(ignored -> builder.sendAsync(user)).thenApply(ignored -> null);
 					}

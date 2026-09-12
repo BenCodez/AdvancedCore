@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
@@ -130,7 +131,7 @@ public class RewardExecutorTest {
     }
 
     @Test
-	public void asyncListDispatchUsesASeparateReplayContextForEveryEntry() {
+    public void asyncListDispatchUsesASeparateReplayContextForEveryEntry() {
         YamlConfiguration data = new YamlConfiguration();
         data.set("Rewards", new ArrayList<>(List.of("Child", "Child")));
         Reward child = mock(Reward.class);
@@ -138,7 +139,11 @@ public class RewardExecutorTest {
         when(child.giveRewardAsync(eq(user), any(RewardOptions.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        executor.giveRewardAsync(user, data, "Rewards", new RewardOptions()).toCompletableFuture().join();
+        try (MockedStatic<Reward> replay = mockStatic(Reward.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            replay.when(Reward::currentReplayOccurrenceId).thenReturn("parent-occurrence");
+            executor.giveRewardAsync(user, data, "Rewards", new RewardOptions()).toCompletableFuture().join();
+        }
 
         ArgumentCaptor<RewardOptions> captured = ArgumentCaptor.forClass(RewardOptions.class);
         verify(child, org.mockito.Mockito.times(2)).giveRewardAsync(eq(user), captured.capture());
@@ -146,7 +151,42 @@ public class RewardExecutorTest {
         assertFalse(children.get(0) == children.get(1));
         assertFalse(children.get(0).getAsyncReplayKey().equals(children.get(1).getAsyncReplayKey()));
         assertSame(children.get(0).getAsyncReplayState(), children.get(1).getAsyncReplayState());
+		assertEquals("parent-occurrence", children.get(0).getAsyncReplayOccurrenceId());
+		assertEquals("parent-occurrence", children.get(1).getAsyncReplayOccurrenceId());
 	}
+
+    @Test
+    public void asyncRewardDispatchLeavesThePrimaryThreadAndRetainsCompletion() {
+        Reward child = mock(Reward.class);
+        CompletableFuture<Void> childResult = new CompletableFuture<>();
+        when(child.giveRewardAsync(eq(user), any(RewardOptions.class))).thenReturn(childResult);
+        BukkitScheduler scheduler = mock(BukkitScheduler.class);
+        when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+        ArgumentCaptor<Runnable> dispatch = ArgumentCaptor.forClass(Runnable.class);
+        RewardOptions options = new RewardOptions();
+        Reward.ReplayState replayState = Reward.replayStateFor(new RewardOptions());
+
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+                MockedStatic<Reward> replay = mockStatic(Reward.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+            replay.when(Reward::currentReplayState).thenReturn(replayState);
+            replay.when(Reward::currentReplayKey).thenReturn("parent");
+            replay.when(Reward::currentReplayOccurrenceId).thenReturn("occurrence");
+            when(child.getRewardName()).thenReturn("child");
+            CompletionStage<Void> result = executor.giveRewardAsync(user, child, options);
+
+            verify(scheduler).runTaskAsynchronously(eq(plugin), dispatch.capture());
+            verify(child, never()).giveRewardAsync(eq(user), any(RewardOptions.class));
+            assertSame(replayState, options.getAsyncReplayState());
+            assertEquals("parent/child", options.getAsyncReplayKey());
+            assertEquals("occurrence", options.getAsyncReplayOccurrenceId());
+            assertFalse(result.toCompletableFuture().isDone());
+            dispatch.getValue().run();
+            assertFalse(result.toCompletableFuture().isDone());
+            childResult.completeExceptionally(new IllegalStateException("child failed"));
+            assertThrows(CompletionException.class, () -> result.toCompletableFuture().join());
+        }
+    }
 
 	@Test
 	public void asyncListLazilyClonesAndCarriesOnlyReplayMetadata() {

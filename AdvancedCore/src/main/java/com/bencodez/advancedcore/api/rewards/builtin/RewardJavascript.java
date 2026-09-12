@@ -88,7 +88,9 @@ public final class RewardJavascript {
             @Override
             public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
                     ConfigurationSection section, HashMap<String, String> placeholders) {
-                if (!section.getBoolean("Enabled")) return java.util.concurrent.CompletableFuture.completedFuture(null);
+                if (!section.getBoolean("Enabled") && !hasPendingReplayWork(placeholders)) {
+					return java.util.concurrent.CompletableFuture.completedFuture(null);
+				}
                 String path = Reward.replaySelection(placeholders,
                         () -> new JavascriptEngine().addPlayer(user.getOfflinePlayer()).addPlaceholders(placeholders)
                                 .getBooleanValue(section.getString("Expression")) ? "TrueRewards" : "FalseRewards");

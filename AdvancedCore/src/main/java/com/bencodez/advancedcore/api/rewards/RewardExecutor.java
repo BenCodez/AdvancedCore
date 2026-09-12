@@ -116,6 +116,10 @@ public class RewardExecutor {
         if (!plugin.isEnabled()) return disabledDispatch();
 
         Reward.ReplayState replayState = Reward.replayStateFor(options);
+        if (options.getAsyncReplayOccurrenceId() == null) {
+            String activeOccurrenceId = Reward.currentReplayOccurrenceId();
+            if (activeOccurrenceId != null) options.setAsyncReplayOccurrenceId(activeOccurrenceId);
+        }
         String parentReplayKey = options.getAsyncReplayKey();
         if (parentReplayKey == null) parentReplayKey = Reward.currentReplayKey();
         if (parentReplayKey == null) parentReplayKey = "list:" + path;
@@ -170,7 +174,14 @@ public class RewardExecutor {
             return;
         }
 
-        if (Bukkit.isPrimaryThread()) {
+        boolean primaryThread = false;
+        try {
+            primaryThread = Bukkit.isPrimaryThread();
+        } catch (IllegalStateException | NullPointerException ignored) {
+            // Unit tests and early bootstrap can call this facade before Bukkit has
+            // installed a server. There is no primary server thread to leave then.
+        }
+        if (primaryThread) {
             plugin.getBukkitScheduler().runTaskAsynchronously(plugin,
                     () -> reward.giveReward(user, context.getOptions()));
         } else {
@@ -182,7 +193,48 @@ public class RewardExecutor {
         if (reward == null) return CompletableFuture.completedFuture(null);
         if (!plugin.isEnabled()) return disabledDispatch();
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
-        return reward.giveRewardAsync(user, context.getOptions());
+        RewardOptions options = context.getOptions();
+        Reward.ReplayState activeState = Reward.currentReplayState();
+        if (options.getAsyncReplayState() == null && activeState != null) options.setAsyncReplayState(activeState);
+        String activeKey = Reward.currentReplayKey();
+        if (options.getAsyncReplayKey() == null && activeKey != null) {
+            options.setAsyncReplayKey(activeKey + "/" + reward.getRewardName());
+        }
+        String activeOccurrenceId = Reward.currentReplayOccurrenceId();
+        if (options.getAsyncReplayOccurrenceId() == null && activeOccurrenceId != null) {
+            options.setAsyncReplayOccurrenceId(activeOccurrenceId);
+        }
+        boolean primaryThread = false;
+        try {
+            primaryThread = Bukkit.isPrimaryThread();
+        } catch (IllegalStateException | NullPointerException ignored) {
+            // Unit tests and early bootstrap have no primary server thread.
+        }
+        if (primaryThread) {
+            CompletableFuture<Void> dispatched = new CompletableFuture<>();
+            try {
+                plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> {
+                    try {
+                        CompletionStage<Void> result = reward.giveRewardAsync(user, options);
+                        if (result == null) {
+                            dispatched.completeExceptionally(
+                                    new IllegalStateException("Asynchronous reward dispatch returned no completion stage"));
+                        } else {
+                            result.whenComplete((ignored, failure) -> {
+                                if (failure == null) dispatched.complete(null);
+                                else dispatched.completeExceptionally(failure);
+                            });
+                        }
+                    } catch (Throwable failure) {
+                        dispatched.completeExceptionally(failure);
+                    }
+                });
+            } catch (Throwable failure) {
+                dispatched.completeExceptionally(failure);
+            }
+            return dispatched;
+        }
+        return reward.giveRewardAsync(user, options);
     }
 
     public void giveReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {

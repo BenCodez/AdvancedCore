@@ -107,7 +107,8 @@ public class AdvancedCoreUser {
 			String fingerprint = Reward.legacyActionFingerprint(descriptor);
 			int occurrence = actionOccurrences.getOrDefault(fingerprint, 0);
 			actionOccurrences.put(fingerprint, occurrence + 1);
-			actions.add(new ReplayAction(fingerprint + "/" + occurrence, fingerprint, action));
+			actions.add(new ReplayAction(fingerprint + "/" + occurrence, fingerprint, action,
+					!descriptor.startsWith("failure:")));
 			return true;
 		}
 
@@ -118,7 +119,9 @@ public class AdvancedCoreUser {
 		private synchronized CompletionStage<Void> closeAndAwait() {
 			closed = true;
 			HashMap<String, String> currentSnapshot = new HashMap<>();
-			for (ReplayAction action : actions) currentSnapshot.put(action.identity, action.fingerprint);
+			for (ReplayAction action : actions) {
+				if (action.durable) currentSnapshot.put(action.identity, action.fingerprint);
+			}
 			HashMap<String, String> persistedSnapshot;
 			HashSet<String> completed;
 			try {
@@ -137,6 +140,13 @@ public class AdvancedCoreUser {
 			boolean snapshotChanged = persistedSnapshot.isEmpty();
 			if (snapshotChanged) persistedSnapshot = new HashMap<>(currentSnapshot);
 			else if (!persistedSnapshot.equals(currentSnapshot)) {
+				for (Entry<String, String> persisted : persistedSnapshot.entrySet()) {
+					if (!completed.contains(persisted.getKey())
+							&& !persisted.getValue().equals(currentSnapshot.get(persisted.getKey()))) {
+						return CompletableFuture.failedFuture(new IllegalStateException(
+								"Cannot safely resume because an unfinished legacy reward action changed or disappeared"));
+					}
+				}
 				// The actions are deliberately matched individually below. Retaining the
 				// original snapshot lets a reordered, shortened, or extended config skip
 				// only the exact effects known to have completed. New actions are added
@@ -160,6 +170,7 @@ public class AdvancedCoreUser {
 						return CompletableFuture.failedFuture(failure);
 					}
 				}).thenCompose(ignored -> {
+					if (!action.durable) return CompletableFuture.completedFuture(null);
 					completed.add(action.identity);
 					recordReplayValue(checkpointKey, encodeCompleted(completed));
 					return checkpoint();
@@ -243,11 +254,14 @@ public class AdvancedCoreUser {
 			private final String identity;
 			private final String fingerprint;
 			private final Supplier<CompletionStage<Void>> action;
+			private final boolean durable;
 
-			private ReplayAction(String identity, String fingerprint, Supplier<CompletionStage<Void>> action) {
+			private ReplayAction(String identity, String fingerprint, Supplier<CompletionStage<Void>> action,
+					boolean durable) {
 				this.identity = identity;
 				this.fingerprint = fingerprint;
 				this.action = action;
+				this.durable = durable;
 			}
 		}
 	}

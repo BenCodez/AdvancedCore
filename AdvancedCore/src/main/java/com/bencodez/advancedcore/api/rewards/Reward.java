@@ -1371,6 +1371,10 @@ public class Reward {
 			return CompletableFuture.failedFuture(throwable);
 		}
 		if (placeholders == null) {
+			if (rewardOptions.getAsyncReplayCheckpointConsumer() != null || hasPersistedReplayCheckpoint(rewardOptions)) {
+				return CompletableFuture.failedFuture(
+						new IllegalStateException("Player became unavailable before persisted reward replay"));
+			}
 			return CompletableFuture.completedFuture(null);
 		}
 		return giveInjectedRewardsAsync(user, placeholders, rewardOptions.getCompletedAsyncInjections(), replayState, replayKey,
