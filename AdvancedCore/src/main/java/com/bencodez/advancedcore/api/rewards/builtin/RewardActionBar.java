@@ -34,7 +34,8 @@ public final class RewardActionBar {
                         section.getInt("Delay", 30));
                 return null;
             }
-		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("ActionBar") {
+		}.requiresPlayerWhen((data, placeholders) -> !data.getString("ActionBar.Message", "").isEmpty())
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("ActionBar") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");

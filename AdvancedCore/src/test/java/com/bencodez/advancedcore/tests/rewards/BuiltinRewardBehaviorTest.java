@@ -176,6 +176,18 @@ public class BuiltinRewardBehaviorTest {
         verify(user).sendActionBar("Hello Ben", 42);
     }
 
+	@Test
+	public void emptyActionBarDoesNotRequireAnOnlinePlayer() {
+		RewardActionBar.register(handler, plugin);
+		YamlConfiguration data = new YamlConfiguration();
+		data.createSection("ActionBar");
+		RewardInject inject = injects.get(0);
+
+		assertFalse(inject.isPlayerRequiredFor(data, placeholders));
+		data.set("ActionBar.Message", "Visible");
+		assertTrue(inject.isPlayerRequiredFor(data, placeholders));
+	}
+
     @Test
     public void bossBarActuallySendsConfiguredBossBar() {
         RewardBossBar.register(handler, plugin);
