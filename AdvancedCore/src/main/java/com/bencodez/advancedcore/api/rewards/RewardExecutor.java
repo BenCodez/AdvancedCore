@@ -128,15 +128,9 @@ public class RewardExecutor {
                 || Reward.hasReplayNestedRewardSnapshot(options.getPlaceholders(), nestedLane, replayState,
                         parentReplayKey)) {
             final String stableParentReplayKey = parentReplayKey;
-			return Reward.replayNestedRewardSnapshot(plugin, options.getPlaceholders(), nestedLane,
+			return Reward.replayNestedRewardSequence(plugin, options.getPlaceholders(), nestedLane,
 					data.isList(path) ? new ArrayList<>(data.getStringList(path)) : java.util.List.of(), replayState,
-					stableParentReplayKey)
-					.thenCompose(rewards -> {
-						CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
-						for (int index = 0; index < rewards.size(); index++) {
-							String nestedReward = rewards.get(index);
-							int nestedIndex = index;
-							sequence = sequence.thenCompose(ignored -> {
+					stableParentReplayKey, (nestedReward, nestedIndex) -> {
 								// Clone only when this child is actually reached. This lets
 								// metadata from earlier children be merged before a later
 								// child receives its isolated ordinary placeholders.
@@ -153,9 +147,6 @@ public class RewardExecutor {
 									return childResult;
 								});
 							});
-						}
-						return sequence;
-					});
         }
         if (data.isConfigurationSection(path)) {
             return giveSectionRewardAsync(user, data, path, context);

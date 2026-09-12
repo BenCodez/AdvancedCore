@@ -671,6 +671,60 @@ public class Reward {
 		return replayState.persistCheckpointAsync(plugin, placeholders).thenApply(ignored -> snapshot);
 	}
 
+	/**
+	 * Executes a frozen nested reward list sequentially and checkpoints each
+	 * completed child. The parent cursor is consulted before dispatch so a child
+	 * that disappeared from the reward registry after completing is never
+	 * resolved again during replay.
+	 */
+	public static CompletionStage<Void> replayNestedRewardSequence(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders, String lane, List<String> configuredRewards,
+			ReplayState replayState, String activeKey,
+			BiFunction<String, Integer, CompletionStage<Void>> dispatch) {
+		if (replayState == null || activeKey == null) {
+			CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+			List<String> rewards = configuredRewards == null ? List.of() : configuredRewards;
+			for (int index = 0; index < rewards.size(); index++) {
+				String rewardName = rewards.get(index);
+				int rewardIndex = index;
+				sequence = sequence.thenCompose(ignored -> dispatch.apply(rewardName, rewardIndex));
+			}
+			return sequence;
+		}
+		String stableLane = lane == null ? "nested" : lane;
+		String storageKey = replaySequenceKey(REPLAY_NESTED_LIST_PREFIX, activeKey, stableLane);
+		return replayNestedRewardSnapshot(plugin, placeholders, stableLane, configuredRewards, replayState, activeKey)
+				.thenCompose(rewards -> {
+					String storedProgress = replayMetadata(placeholders, replayState, storageKey);
+					int completed;
+					try {
+						completed = storedProgress == null ? 0 : Integer.parseInt(storedProgress);
+					} catch (NumberFormatException failure) {
+						return CompletableFuture.failedFuture(
+								new IllegalStateException("Malformed nested reward replay progress", failure));
+					}
+					if (storedProgress != null) replayState.recordReplayMetadata(storageKey, storedProgress);
+					if (completed < 0 || completed > rewards.size()) {
+						return CompletableFuture.failedFuture(
+								new IllegalStateException("Nested reward replay progress exceeds snapshot"));
+					}
+					CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+					for (int index = completed; index < rewards.size(); index++) {
+						String rewardName = rewards.get(index);
+						int rewardIndex = index;
+						int completedCount = index + 1;
+						sequence = sequence.thenCompose(ignored -> dispatch.apply(rewardName, rewardIndex))
+								.thenCompose(ignored -> {
+									String progress = String.valueOf(completedCount);
+									placeholders.put(storageKey, progress);
+									replayState.recordReplayMetadata(storageKey, progress);
+									return replayState.persistCheckpointAsync(plugin, placeholders);
+								});
+					}
+					return sequence;
+				});
+	}
+
 	private static String replaySequenceKey(String prefix, String activeKey, String lane) {
 		return prefix + digest(activeKey.length() + ":" + activeKey + lane.length() + ":" + lane);
 	}

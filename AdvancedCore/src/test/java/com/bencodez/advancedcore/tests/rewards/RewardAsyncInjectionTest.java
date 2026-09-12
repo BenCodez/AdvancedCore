@@ -1818,6 +1818,49 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void completedNestedChildIsSkippedBeforeRegistryResolutionOnRetry() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class,
+				boolean.class);
+		constructor.setAccessible(true);
+		Reward.ReplayState replayState = (Reward.ReplayState) constructor.newInstance(new HashMap<>(),
+				new HashMap<>(), false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		List<Reward.ReplayCheckpoint> checkpoints = new ArrayList<>();
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoints::add);
+		HashMap<String, String> placeholders = new HashMap<>();
+		List<String> firstAttempt = new ArrayList<>();
+
+		CompletionStage<Void> failed = Reward.replayNestedRewardSequence(plugin, placeholders,
+				"nested-list:Rewards", List.of("removed", "remaining"), replayState, "AsyncReward/0",
+				(rewardName, index) -> {
+					firstAttempt.add(rewardName);
+					return index == 0 ? CompletableFuture.completedFuture(null)
+							: CompletableFuture.failedFuture(new IllegalStateException("later child failed"));
+				});
+		assertThrows(java.util.concurrent.CompletionException.class, () -> failed.toCompletableFuture().join());
+		assertEquals(List.of("removed", "remaining"), firstAttempt);
+		assertFalse(checkpoints.isEmpty());
+
+		List<String> retried = new ArrayList<>();
+		Reward.replayNestedRewardSequence(plugin, placeholders, "nested-list:Rewards", List.of(), replayState,
+				"AsyncReward/0", (rewardName, index) -> {
+					retried.add(rewardName);
+					return CompletableFuture.completedFuture(null);
+				}).toCompletableFuture().join();
+		assertEquals(List.of("remaining"), retried);
+	}
+
+	@Test
 	void everyNestedRewardInjectorWaitsForItsSelectedChild() {
 		handler = org.mockito.Mockito.spy(new RewardHandler(plugin));
 		when(plugin.getRewardHandler()).thenReturn(handler);
