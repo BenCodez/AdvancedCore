@@ -1558,6 +1558,7 @@ class RewardAsyncInjectionTest {
 	@Test
 	void silentPlayerBoundLegacyInjectionRetainsPersistedReplay() throws Exception {
 		AtomicBoolean invoked = new AtomicBoolean();
+		data.set("Sound", "configured");
 		RewardInject playerOutput = new RewardInject("Sound") {
 			@Override
 			public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
@@ -1587,6 +1588,44 @@ class RewardAsyncInjectionTest {
 
 		assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
 		assertFalse(invoked.get());
+	}
+
+	@Test
+	void absentPlayerBoundInjectionDoesNotBlockOfflineSafeReplay() throws Exception {
+		AtomicBoolean playerOutputRan = new AtomicBoolean();
+		AtomicBoolean offlineSafeOutputRan = new AtomicBoolean();
+		when(plugin.getTimer()).thenReturn(handler.getDelayedTimer());
+		handler.getInjectedRewards().add(new RewardInjectString("Sound") {
+			@Override
+			public String onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser, String ignoredValue,
+					HashMap<String, String> ignoredPlaceholders) {
+				playerOutputRan.set(true);
+				return null;
+			}
+		}.requiresPlayer());
+		handler.getInjectedRewards().add(
+				asyncInjection("OfflineSafe", CompletableFuture.completedFuture(null), offlineSafeOutputRan));
+		AdvancedCoreUser disconnected = mock(AdvancedCoreUser.class);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		state.setAccessible(true);
+		Object replayState = state.newInstance(new HashMap<>(), new HashMap<>(), false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) ignored -> { });
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(reward, disconnected, new HashMap<>(), 0,
+				replayState, "AsyncReward", "occurrence");
+
+		result.toCompletableFuture().join();
+		assertFalse(playerOutputRan.get());
+		assertTrue(offlineSafeOutputRan.get());
 	}
 
 	@Test
