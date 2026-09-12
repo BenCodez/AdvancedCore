@@ -119,6 +119,26 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void legacyChoiceAdditionPreservesModernOccurrenceIdentity() {
+		AtomicReference<ArrayList<String>> stored = new AtomicReference<>(new ArrayList<>());
+		when(data.getStringList("UnClaimedChoices", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(stored.get()));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			stored.set(new ArrayList<>(invocation.getArgument(1)));
+			return null;
+		}).when(data).setStringList(eq("UnClaimedChoices"), any());
+
+		user.addUnClaimedChoiceReward("Modern", "occurrence-one");
+		String encodedModern = stored.get().get(0);
+		user.addUnClaimedChoiceReward("Legacy");
+		user.addUnClaimedChoiceReward("Modern", "occurrence-one");
+
+		assertEquals(List.of("Modern", "Legacy"), user.getUnClaimedChoices());
+		assertEquals(encodedModern, stored.get().get(0));
+		assertEquals(2, stored.get().size());
+	}
+
+	@Test
 	void checkOfflineRewards_preservesServerRequirementForNormalReplay() {
 		ArrayList<String> rewards = new ArrayList<>();
 		rewards.add("VoteReward%placeholders%Server%pair%server-a");

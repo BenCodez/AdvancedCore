@@ -896,9 +896,9 @@ public class AdvancedCoreUser {
 	 * @param name the reward name
 	 */
 	public synchronized void addUnClaimedChoiceReward(String name) {
-		ArrayList<String> choices = getUnClaimedChoices();
+		ArrayList<String> choices = getStoredUnClaimedChoices();
 		choices.add(name);
-		setUnClaimedChoice(choices);
+		getData().setStringList("UnClaimedChoices", choices);
 	}
 
 	/**
