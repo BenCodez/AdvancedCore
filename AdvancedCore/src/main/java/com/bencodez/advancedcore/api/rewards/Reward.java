@@ -457,9 +457,17 @@ public class Reward {
 		ReplayState replayState = options.getAsyncReplayState();
 		if (replayState == null) {
 			replayState = ACTIVE_REPLAY_STATE.get();
-			if (replayState == null) replayState = new ReplayState(options.getAsyncReplayProgress(),
-					options.getAsyncReplayRegistryFingerprints(), options.isLegacyAsyncReplayCheckpoint());
-			options.setAsyncReplayState(replayState);
+			if (replayState == null) {
+				// A caller may reuse its RewardOptions for independent recipients. Keep
+				// fresh top-level execution state local to this dispatch so completed
+				// stages cannot leak into the next send.
+				replayState = new ReplayState(options.getAsyncReplayProgress(),
+						options.getAsyncReplayRegistryFingerprints(), options.isLegacyAsyncReplayCheckpoint());
+			} else {
+				// Deferred/nested options must retain their explicitly inherited parent
+				// state after the current thread-local scope ends.
+				options.setAsyncReplayState(replayState);
+			}
 		}
 		if (options.getAsyncReplayCheckpointConsumer() != null) {
 			replayState.setCheckpointConsumer(options.getAsyncReplayCheckpointConsumer());
@@ -1348,7 +1356,6 @@ public class Reward {
 		if (replayKey == null) {
 			String parentKey = ACTIVE_REPLAY_KEY.get();
 			replayKey = parentKey == null ? getRewardName() : parentKey + "/" + getRewardName();
-			rewardOptions.setAsyncReplayKey(replayKey);
 		}
 		if (!replayState.matchesRegistryFingerprint(injectionRegistryFingerprint(orderedInjectedRewards()))) {
 			return CompletableFuture.failedFuture(new IncompatibleReplayCheckpointException(replayKey));
@@ -1361,7 +1368,6 @@ public class Reward {
 			// inventing a different id for each retry.
 			if (occurrenceId == null && rewardOptions.getAsyncReplayCheckpointConsumer() == null) {
 				occurrenceId = UUID.randomUUID().toString();
-				rewardOptions.setAsyncReplayOccurrenceId(occurrenceId);
 			}
 		}
 		final HashMap<String, String> placeholders;

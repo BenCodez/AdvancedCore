@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -129,6 +131,39 @@ class RewardAsyncInjectionTest {
 	void tearDown() {
 		handler.getDelayedTimer().shutdownNow();
 		AdvancedCorePlugin.setInstance(null);
+	}
+
+	@Test
+	void reusedTopLevelOptionsDoNotShareCompletedReplayState() {
+		AtomicInteger invocations = new AtomicInteger();
+		Player player = mock(Player.class);
+		when(user.getPlayer()).thenReturn(player);
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), eq(player));
+		handler.getInjectedRewards().add(new RewardInject("Async") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				invocations.incrementAndGet();
+				return CompletableFuture.completedFuture(null);
+			}
+		});
+		RewardOptions options = new RewardOptions().forceOffline();
+
+		Reward.ReplayState firstDispatch = Reward.replayStateFor(options);
+		Reward.ReplayState secondDispatch = Reward.replayStateFor(options);
+		reward.giveRewardUserAsync(user, new HashMap<>(), options).toCompletableFuture().join();
+		reward.giveRewardUserAsync(user, new HashMap<>(), options).toCompletableFuture().join();
+
+		assertNotSame(firstDispatch, secondDispatch);
+		assertEquals(2, invocations.get());
+		assertNull(options.getAsyncReplayState());
+		assertNull(options.getAsyncReplayKey());
+		assertNull(options.getAsyncReplayOccurrenceId());
 	}
 
 	@Test
