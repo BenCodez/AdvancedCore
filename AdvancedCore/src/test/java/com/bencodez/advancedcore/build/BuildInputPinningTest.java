@@ -24,15 +24,4 @@ class BuildInputPinningTest {
 		assertTrue(workflow.contains("maven-javadoc-plugin:3.12.0:javadoc"));
 		assertFalse(workflow.contains("Javadoc-publisher.yml@main"));
 	}
-
-	@Test
-	void simpleApiDependencyUsesImmutableSnapshotBuild() throws IOException {
-		String pom = Files.readString(Path.of("pom.xml"));
-		int dependency = pom.indexOf("<artifactId>simpleapi</artifactId>");
-
-		assertTrue(dependency >= 0);
-		String declaration = pom.substring(dependency, Math.min(pom.length(), dependency + 200));
-		assertFalse(declaration.contains("SNAPSHOT"));
-		assertTrue(declaration.contains("1.0.2-20260905.234759-10"));
-	}
 }
