@@ -14,6 +14,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.files.FilesManager;
+import com.bencodez.advancedcore.bukkit.rewards.BukkitRewardConfigReader;
+import com.bencodez.advancedcore.core.rewards.RewardConfigReader;
 import com.bencodez.simpleapi.file.CaseInsensitiveSection;
 
 import lombok.Getter;
@@ -25,6 +27,10 @@ import net.md_5.bungee.api.ChatColor;
 public class RewardFileData {
 
 	private ConfigurationSection configData;
+
+	// Resolve through the public getter on each read, including after reloads
+	// and for subclasses that supply their own configuration section.
+	private final RewardConfigReader rewardConfig = new BukkitRewardConfigReader(this::getConfigData);
 
 	/** The data file. */
 	private File dataFile;
@@ -79,14 +85,11 @@ public class RewardFileData {
 	 * @return the chance
 	 */
 	public double getChance() {
-		return getConfigData().getDouble("Chance");
+		return rewardConfig.getChance();
 	}
 
 	public Set<String> getChoices() {
-		if (getConfigData().isConfigurationSection("Choices")) {
-			return getConfigData().getConfigurationSection("Choices").getKeys(false);
-		}
-		return new HashSet<>();
+		return rewardConfig.getChoices();
 	}
 
 	public ConfigurationSection getChoicesItem(String choice) {
@@ -94,7 +97,7 @@ public class RewardFileData {
 	}
 
 	public String getChoicesRewardsPath(String choice) {
-		return "Choices." + choice + ".Rewards";
+		return rewardConfig.getChoicesRewardsPath(choice);
 	}
 
 	/**
@@ -104,11 +107,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsConsole() {
-		if (getConfigData().isList("Commands")) {
-			return (ArrayList<String>) getConfigData().getList("Commands", new ArrayList<>());
-		}
-		return (ArrayList<String>) getConfigData().getList("Commands.Console", new ArrayList<>());
-
+		return (ArrayList<String>) rewardConfig.getCommandsConsole();
 	}
 
 	/**
@@ -118,7 +117,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getCommandsPlayer() {
-		return (ArrayList<String>) getConfigData().getList("Commands.Player", new ArrayList<>());
+		return (ArrayList<String>) rewardConfig.getCommandsPlayer();
 	}
 
 	public ConfigurationSection getConfigData() {
@@ -138,7 +137,7 @@ public class RewardFileData {
 	 * @return the delayed enabled
 	 */
 	public boolean getDelayedEnabled() {
-		return getConfigData().getBoolean("Delayed.Enabled");
+		return rewardConfig.getDelayedEnabled();
 	}
 
 	/**
@@ -147,11 +146,11 @@ public class RewardFileData {
 	 * @return the delayed hours
 	 */
 	public int getDelayedHours() {
-		return getConfigData().getInt("Delayed.Hours");
+		return rewardConfig.getDelayedHours();
 	}
 
 	public int getDelayedMilliSeconds() {
-		return getConfigData().getInt("Delayed.MilliSeconds");
+		return rewardConfig.getDelayedMilliSeconds();
 	}
 
 	/**
@@ -160,11 +159,11 @@ public class RewardFileData {
 	 * @return the delayed minutes
 	 */
 	public int getDelayedMinutes() {
-		return getConfigData().getInt("Delayed.Minutes");
+		return rewardConfig.getDelayedMinutes();
 	}
 
 	public int getDelayedSeconds() {
-		return getConfigData().getInt("Delayed.Seconds");
+		return rewardConfig.getDelayedSeconds();
 	}
 
 	/**
@@ -186,7 +185,7 @@ public class RewardFileData {
 	 * @return the choice rewards enabled
 	 */
 	public boolean getEnableChoices() {
-		return getConfigData().getBoolean("EnableChoices");
+		return rewardConfig.getEnableChoices();
 	}
 
 	public FileConfiguration getFileData() {
@@ -194,7 +193,7 @@ public class RewardFileData {
 	}
 
 	public boolean getForceOffline() {
-		return getConfigData().getBoolean("ForceOffline");
+		return rewardConfig.getForceOffline();
 	}
 
 	/**
@@ -352,7 +351,7 @@ public class RewardFileData {
 
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getPriority() {
-		return (ArrayList<String>) getConfigData().getList("Priority", new ArrayList<>());
+		return (ArrayList<String>) rewardConfig.getPriority();
 	}
 
 	/**
@@ -361,7 +360,7 @@ public class RewardFileData {
 	 * @return the require permission
 	 */
 	public boolean getRequirePermission() {
-		return getConfigData().getBoolean("RequirePermission");
+		return rewardConfig.getRequirePermission();
 	}
 
 	/**
@@ -370,22 +369,11 @@ public class RewardFileData {
 	 * @return the reward type
 	 */
 	public String getRewardType() {
-		String str = getConfigData().getString("RewardType", "BOTH");
-		if (str != null) {
-			if (str.equalsIgnoreCase("online")) {
-				return "ONLINE";
-			}
-			if (str.equalsIgnoreCase("offline")) {
-				return "OFFLINE";
-			} else {
-				return "BOTH";
-			}
-		}
-		return "BOTH";
+		return rewardConfig.getRewardType();
 	}
 
 	public String getServer() {
-		return getConfigData().getString("Server", "");
+		return rewardConfig.getServer();
 	}
 
 	/**
@@ -394,7 +382,7 @@ public class RewardFileData {
 	 * @return the timed enabled
 	 */
 	public boolean getTimedEnabled() {
-		return getConfigData().getBoolean("Timed.Enabled");
+		return rewardConfig.getTimedEnabled();
 	}
 
 	/**
@@ -403,7 +391,7 @@ public class RewardFileData {
 	 * @return the timed hour
 	 */
 	public int getTimedHour() {
-		return getConfigData().getInt("Timed.Hour");
+		return rewardConfig.getTimedHour();
 	}
 
 	/**
@@ -412,7 +400,7 @@ public class RewardFileData {
 	 * @return the timed minute
 	 */
 	public int getTimedMinute() {
-		return getConfigData().getInt("Timed.Minute");
+		return rewardConfig.getTimedMinute();
 	}
 
 	/**
@@ -422,9 +410,7 @@ public class RewardFileData {
 	 */
 	@SuppressWarnings("unchecked")
 	public ArrayList<String> getWorlds() {
-
-		return (ArrayList<String>) getConfigData().getList("Worlds", new ArrayList<>());
-
+		return (ArrayList<String>) rewardConfig.getWorlds();
 	}
 
 	public boolean hasRewardFile() {
@@ -432,7 +418,7 @@ public class RewardFileData {
 	}
 
 	public boolean isDirectlyDefinedReward() {
-		return getConfigData().getBoolean("DirectlyDefinedReward");
+		return rewardConfig.isDirectlyDefinedReward();
 	}
 
 	public boolean isRewardFile() {
