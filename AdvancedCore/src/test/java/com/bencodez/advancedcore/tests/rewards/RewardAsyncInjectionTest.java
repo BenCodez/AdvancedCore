@@ -1975,6 +1975,22 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void replaySideEffectOccurrenceDistinguishesRepeatedNestedChildren() {
+		try (org.mockito.MockedStatic<Reward> replay = org.mockito.Mockito.mockStatic(Reward.class,
+				org.mockito.Mockito.CALLS_REAL_METHODS)) {
+			replay.when(Reward::currentReplayOccurrenceId).thenReturn("parent-occurrence");
+			replay.when(Reward::currentReplayKey).thenReturn("parent/Choice:0/0");
+			String first = Reward.currentReplaySideEffectOccurrenceId();
+			replay.when(Reward::currentReplayKey).thenReturn("parent/Choice:1/0");
+			String second = Reward.currentReplaySideEffectOccurrenceId();
+
+			assertNotEquals(first, second);
+			assertTrue(first.startsWith("parent-occurrence:"));
+			assertTrue(second.startsWith("parent-occurrence:"));
+		}
+	}
+
+	@Test
 	void javascriptChildCarriesSelectionAndReplayStateIntoItsCheckpoint() {
 		ConfigurationSection javascript = data.createSection("Javascript");
 		javascript.set("Enabled", true);

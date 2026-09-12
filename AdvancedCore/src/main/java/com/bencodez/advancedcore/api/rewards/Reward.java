@@ -468,6 +468,20 @@ public class Reward {
 	/** Returns the unique logical reward occurrence currently invoking an injector. */
 	public static String currentReplayOccurrenceId() { return ACTIVE_REPLAY_OCCURRENCE_ID.get(); }
 
+	/**
+	 * Returns a stable side-effect identity scoped to the current replay path.
+	 * Repeated nested occurrences share a top-level occurrence id but have
+	 * distinct replay keys, so both parts are required for deduplication.
+	 */
+	public static String currentReplaySideEffectOccurrenceId() {
+		String occurrenceId = currentReplayOccurrenceId();
+		String replayKey = currentReplayKey();
+		if (occurrenceId == null || occurrenceId.isEmpty() || replayKey == null || replayKey.isEmpty()) {
+			return occurrenceId;
+		}
+		return occurrenceId + ":" + digest(replayKey);
+	}
+
 	/** Obtains one shared replay state for a group of nested dispatches. */
 	public static ReplayState replayStateFor(RewardOptions options) {
 		ReplayState replayState = options.getAsyncReplayState();

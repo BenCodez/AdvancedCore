@@ -66,7 +66,7 @@ public final class RewardChoices {
 			public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user, boolean value,
 					HashMap<String, String> placeholders) {
 				if (!value && !hasPendingReplayWork(placeholders)) return CompletableFuture.completedFuture(null);
-				String occurrenceId = Reward.currentReplayOccurrenceId();
+				String occurrenceId = Reward.currentReplaySideEffectOccurrenceId();
 				String choice = Reward.replaySelection(placeholders,
 						() -> value ? user.getChoicePreference(reward.getName()) : null);
 				if (choice == null || choice.isEmpty() || choice.equalsIgnoreCase("none")) {
