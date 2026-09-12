@@ -25,6 +25,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
@@ -111,11 +112,13 @@ public class FullInventoryHandler {
 			try {
 				playerId = player.getUniqueId();
 				if (playerId == null) {
-					completion.completeExceptionally(new IllegalStateException("Item delivery player has no UUID"));
+					completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+							"Item delivery player has no UUID"));
 					return;
 				}
 			} catch (Throwable failure) {
-				completion.completeExceptionally(failure);
+				completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+						"Unable to resolve item delivery player before dispatch", failure));
 				return;
 			}
 		}
@@ -137,13 +140,15 @@ public class FullInventoryHandler {
 			plugin.getBukkitScheduler().runTask(plugin, delivery, player);
 		} catch (Throwable failure) {
 			deliveryClaimed.set(true);
-			if (completion != null) completion.completeExceptionally(failure);
+			if (completion != null) completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+					"Scheduler rejected item delivery before dispatch", failure));
 			else rethrowDeliveryFailure(failure);
 		}
 		if (completion == null) return;
 		CompletableFuture.delayedExecutor(getItemDeliveryTimeoutMillis(), TimeUnit.MILLISECONDS).execute(() -> {
 			if (deliveryClaimed.compareAndSet(false, true)) {
-				completion.completeExceptionally(new TimeoutException("Timed out waiting for item delivery"));
+				completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+						"Timed out waiting for item delivery", new TimeoutException()));
 			}
 		});
 	}
@@ -161,11 +166,11 @@ public class FullInventoryHandler {
 	 */
 	private void validateReplayDeliveryTarget(Player player, UUID playerId) {
 		if (!plugin.isEnabled()) {
-			throw new IllegalStateException("Plugin disabled before item delivery");
+			throw AdvancedCoreUser.replayActionNotStarted("Plugin disabled before item delivery");
 		}
 		Player current = Bukkit.getPlayer(playerId);
 		if (current != player || !current.isOnline()) {
-			throw new IllegalStateException("Player became unavailable before item delivery");
+			throw AdvancedCoreUser.replayActionNotStarted("Player became unavailable before item delivery");
 		}
 	}
 

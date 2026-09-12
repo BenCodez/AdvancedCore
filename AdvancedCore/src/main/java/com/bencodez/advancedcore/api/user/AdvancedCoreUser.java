@@ -301,6 +301,21 @@ public class AdvancedCoreUser {
 		}
 	}
 
+	/** Internal cross-package signal for a replay action proven not to have begun. */
+	public static RuntimeException replayActionNotStarted(String message) {
+		return new LegacyActionNotStartedException(message);
+	}
+
+	/** Internal cross-package signal for scheduler rejection before a replay action began. */
+	public static RuntimeException replayActionNotStarted(String message, Throwable cause) {
+		return new LegacyActionNotStartedException(message, cause);
+	}
+
+	/** Returns whether a completion failed before its replay-aware action began. */
+	public static boolean isReplayActionNotStarted(Throwable failure) {
+		return AsyncActionCollection.unwrapCompletionFailure(failure) instanceof LegacyActionNotStartedException;
+	}
+
 	/**
 	 * Explicitly carries an async injector's originating action scope into a
 	 * completion callback. Injectors capture this while their request method is

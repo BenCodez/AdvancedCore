@@ -37,6 +37,7 @@ import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
@@ -164,9 +165,26 @@ public class FullInventoryHandlerTest {
 			task.getValue().run();
 		}
 
-		assertThrows(java.util.concurrent.ExecutionException.class,
+		java.util.concurrent.ExecutionException failure = assertThrows(java.util.concurrent.ExecutionException.class,
 				() -> delivery.toCompletableFuture().get(2, TimeUnit.SECONDS));
+		assertTrue(AdvancedCoreUser.isReplayActionNotStarted(failure));
 		verify(inventory, never()).addItem(item);
+	}
+
+	@Test
+	public void rejectedItemSchedulerSignalsThatDeliveryNeverStarted() throws Exception {
+		Fixture fixture = createFixture();
+		Player player = mock(Player.class);
+		ItemStack item = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+		org.mockito.Mockito.doThrow(new IllegalStateException("scheduler stopped"))
+				.when(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class), eq(player));
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		java.util.concurrent.ExecutionException failure = assertThrows(java.util.concurrent.ExecutionException.class,
+				() -> delivery.toCompletableFuture().get(2, TimeUnit.SECONDS));
+
+		assertTrue(AdvancedCoreUser.isReplayActionNotStarted(failure));
 	}
 
 	@Test
@@ -181,8 +199,9 @@ public class FullInventoryHandlerTest {
 		when(inventory.addItem(item)).thenReturn(new HashMap<>());
 
 		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
-		assertThrows(java.util.concurrent.ExecutionException.class,
+		java.util.concurrent.ExecutionException failure = assertThrows(java.util.concurrent.ExecutionException.class,
 				() -> delivery.toCompletableFuture().get(2, TimeUnit.SECONDS));
+		assertTrue(AdvancedCoreUser.isReplayActionNotStarted(failure));
 		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
 		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
 
