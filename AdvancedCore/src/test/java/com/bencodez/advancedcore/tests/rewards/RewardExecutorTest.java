@@ -199,7 +199,7 @@ public class RewardExecutorTest {
     }
 
 	@Test
-	public void asyncListLazilyClonesAndCarriesOnlyReplayMetadata() {
+	public void asyncListLazilyClonesAndSharesReplayMetadataThroughState() {
 		YamlConfiguration data = new YamlConfiguration();
 		data.set("Rewards", new ArrayList<>(List.of("First", "Second")));
 		Reward first = mock(Reward.class);
@@ -222,8 +222,10 @@ public class RewardExecutorTest {
 		ArgumentCaptor<RewardOptions> captured = ArgumentCaptor.forClass(RewardOptions.class);
 		verify(second).giveRewardAsync(eq(user), captured.capture());
 		assertEquals("parent", captured.getValue().getPlaceholders().get("ordinary"));
-		assertEquals("v1:c2", captured.getValue().getPlaceholders()
-				.get("__advancedcore_replay_commands_test_snapshot"));
+		assertEquals("v1:c2", captured.getValue().getAsyncReplayState()
+				.replayMetadata("__advancedcore_replay_commands_test_snapshot"));
+		assertFalse(captured.getValue().getPlaceholders()
+				.containsKey("__advancedcore_replay_commands_test_snapshot"));
 	}
 
 	@Test
@@ -262,6 +264,32 @@ public class RewardExecutorTest {
 		verify(misc).executeConsoleCommandsAsync(eq("Ben"), eq("/first"), any());
 		verify(misc, org.mockito.Mockito.times(2)).executeConsoleCommandsAsync(eq("Ben"), eq("/second"), any());
 		verify(misc, never()).executeConsoleCommandsAsync(eq("Ben"), eq("/inserted"), any());
+	}
+
+	@Test
+	public void reusedFreshOptionsDoNotRetainCommandReplayCursor() throws Exception {
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("Rewards", new ArrayList<>(List.of("/once-per-send")));
+		MiscUtils misc = mock(MiscUtils.class);
+		when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("/once-per-send"), any()))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		RewardOptions reused = new RewardOptions();
+		for (String fieldName : List.of("ACTIVE_REPLAY_STATE", "ACTIVE_REPLAY_KEY", "ACTIVE_REPLAY_OCCURRENCE_ID")) {
+			java.lang.reflect.Field field = Reward.class.getDeclaredField(fieldName);
+			field.setAccessible(true);
+			((ThreadLocal<?>) field.get(null)).remove();
+		}
+
+		try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
+			miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
+			executor.giveRewardAsync(user, data, "Rewards", reused).toCompletableFuture().join();
+			executor.giveRewardAsync(user, data, "Rewards", reused).toCompletableFuture().join();
+		}
+
+		verify(misc, org.mockito.Mockito.times(2))
+				.executeConsoleCommandsAsync(eq("Ben"), eq("/once-per-send"), any());
+		assertTrue(reused.getPlaceholders().keySet().stream()
+				.noneMatch(key -> key.startsWith("__advancedcore_replay_")));
 	}
 
 	@Test

@@ -2042,7 +2042,8 @@ class RewardAsyncInjectionTest {
 
 		assertNotNull(nestedOptions.getAsyncReplayState());
 		assertTrue(nestedOptions.getAsyncReplayKey().endsWith("/path:TrueRewards"));
-		assertFalse(nestedOptions.getPlaceholders().isEmpty());
+		assertTrue(nestedOptions.getPlaceholders().isEmpty(),
+				"fresh replay metadata must stay in the shared state, not caller placeholders");
 	}
 
 	@Test
@@ -2113,7 +2114,8 @@ class RewardAsyncInjectionTest {
 
 		assertNotNull(nestedOptions.getAsyncReplayState());
 		assertTrue(nestedOptions.getAsyncReplayKey().endsWith("/path:1"));
-		assertFalse(nestedOptions.getPlaceholders().isEmpty());
+		assertTrue(nestedOptions.getPlaceholders().isEmpty(),
+				"fresh replay metadata must stay in the shared state, not caller placeholders");
 	}
 
 	@Test

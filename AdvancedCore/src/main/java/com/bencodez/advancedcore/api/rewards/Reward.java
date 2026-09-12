@@ -535,18 +535,16 @@ public class Reward {
 		String activeKey = ACTIVE_REPLAY_KEY.get();
 		String storageKey = REPLAY_SELECTION_PREFIX + Base64.getUrlEncoder().withoutPadding()
 				.encodeToString((activeKey == null ? "root" : activeKey).getBytes(StandardCharsets.UTF_8));
-		if (placeholders.containsKey(storageKey)) {
-			String stored = placeholders.get(storageKey);
-			ReplayState replayState = ACTIVE_REPLAY_STATE.get();
+		ReplayState replayState = ACTIVE_REPLAY_STATE.get();
+		String stored = replayMetadata(placeholders, replayState, storageKey);
+		if (stored != null) {
 			if (replayState != null) replayState.recordReplayMetadata(storageKey, stored);
 			return stored.isEmpty() ? null : new String(Base64.getUrlDecoder().decode(stored), StandardCharsets.UTF_8);
 		}
 		String selected = selector.get();
 		String encoded = selected == null ? "" : Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(selected.getBytes(StandardCharsets.UTF_8));
-		placeholders.put(storageKey, encoded);
-		ReplayState replayState = ACTIVE_REPLAY_STATE.get();
-		if (replayState != null) replayState.recordReplayMetadata(storageKey, encoded);
+		recordReplayMetadata(placeholders, replayState, storageKey, encoded);
 		return selected;
 	}
 
@@ -624,8 +622,7 @@ public class Reward {
 			}
 			commands = new ArrayList<>(expansions);
 			String encodedSnapshot = encodeCommandSnapshot(commands);
-			placeholders.put(snapshotKey, encodedSnapshot);
-			replayState.recordReplayMetadata(snapshotKey, encodedSnapshot);
+			recordReplayMetadata(placeholders, replayState, snapshotKey, encodedSnapshot);
 		} else {
 			replayState.recordReplayMetadata(snapshotKey, storedSnapshot);
 			try {
@@ -657,8 +654,7 @@ public class Reward {
 			int completedCount = index + 1;
 			int commandIndex = index;
 			sequence = sequence.thenCompose(ignored -> dispatch.apply(command, commandIndex)).thenCompose(ignored -> {
-				placeholders.put(storageKey, String.valueOf(completedCount));
-				replayState.recordReplayMetadata(storageKey, String.valueOf(completedCount));
+				recordReplayMetadata(placeholders, replayState, storageKey, String.valueOf(completedCount));
 				return replayState == null ? CompletableFuture.completedFuture(null)
 						: replayState.persistCheckpointAsync(plugin, placeholders);
 			});
@@ -688,8 +684,7 @@ public class Reward {
 		}
 		List<String> snapshot = configuredRewards == null ? List.of() : new ArrayList<>(configuredRewards);
 		String encodedSnapshot = encodeCommandSnapshot(snapshot);
-		placeholders.put(snapshotKey, encodedSnapshot);
-		replayState.recordReplayMetadata(snapshotKey, encodedSnapshot);
+		recordReplayMetadata(placeholders, replayState, snapshotKey, encodedSnapshot);
 		return replayState.persistCheckpointAsync(plugin, placeholders).thenApply(ignored -> snapshot);
 	}
 
@@ -738,8 +733,7 @@ public class Reward {
 						sequence = sequence.thenCompose(ignored -> dispatch.apply(rewardName, rewardIndex))
 								.thenCompose(ignored -> {
 									String progress = String.valueOf(completedCount);
-									placeholders.put(storageKey, progress);
-									replayState.recordReplayMetadata(storageKey, progress);
+									recordReplayMetadata(placeholders, replayState, storageKey, progress);
 									return replayState.persistCheckpointAsync(plugin, placeholders);
 								});
 					}
@@ -776,8 +770,17 @@ public class Reward {
 	}
 
 	private static String replayMetadata(HashMap<String, String> placeholders, ReplayState replayState, String key) {
-		String value = placeholders == null ? null : placeholders.get(key);
+		String value = placeholders == null || (replayState != null && !replayState.acceptsPersistedMetadata())
+				? null : placeholders.get(key);
 		return value == null && replayState != null ? replayState.replayMetadata(key) : value;
+	}
+
+	private static void recordReplayMetadata(HashMap<String, String> placeholders, ReplayState replayState,
+			String key, String value) {
+		if (replayState != null) replayState.recordReplayMetadata(key, value);
+		if (placeholders != null && (replayState == null || replayState.hasCheckpointConsumer())) {
+			placeholders.put(key, value);
+		}
 	}
 
 	static CompletionStage<Void> replayCommandSequence(AdvancedCorePlugin plugin,
@@ -927,6 +930,7 @@ public class Reward {
 		private final HashMap<String, String> registryFingerprints = new HashMap<>();
 		private final HashMap<String, String> replayMetadata = new HashMap<>();
 		private final boolean legacyCheckpoint;
+		private final boolean restoredCheckpoint;
 		private Consumer<ReplayCheckpoint> checkpointConsumer;
 		private ReplayState(Map<String, Integer> initial) { this(initial, null, false); }
 		private ReplayState(Map<String, Integer> initial, Map<String, String> initialFingerprints,
@@ -934,6 +938,8 @@ public class Reward {
 			if (initial != null) completed.putAll(initial);
 			if (initialFingerprints != null) registryFingerprints.putAll(initialFingerprints);
 			this.legacyCheckpoint = legacyCheckpoint;
+			this.restoredCheckpoint = legacyCheckpoint || (initial != null && !initial.isEmpty())
+					|| (initialFingerprints != null && !initialFingerprints.isEmpty());
 		}
 		private synchronized int getCompleted(String rewardName, int fallback) {
 			return completed.getOrDefault(rewardName, fallback);
@@ -985,6 +991,9 @@ public class Reward {
 		}
 		private synchronized boolean hasCheckpointConsumer() {
 			return checkpointConsumer != null;
+		}
+		private synchronized boolean acceptsPersistedMetadata() {
+			return restoredCheckpoint || checkpointConsumer != null;
 		}
 		public CompletionStage<Void> persistCheckpointAsync(AdvancedCorePlugin plugin,
 				HashMap<String, String> placeholders) {
