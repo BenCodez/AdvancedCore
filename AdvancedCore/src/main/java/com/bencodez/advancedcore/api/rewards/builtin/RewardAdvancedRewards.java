@@ -81,26 +81,18 @@ public final class RewardAdvancedRewards {
 				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
 				ConfigurationSection section = data.getConfigurationSection(getPath());
 				ArrayList<String> configured = ArrayUtils.convert(section.getKeys(false));
-				return Reward.replayNestedRewardSnapshot(plugin, placeholders, "advanced-rewards:" + getPath(),
-						configured, replayState, parentReplayKey).thenCompose(rewards -> {
-					for (String rewardName : rewards) {
+				return Reward.replayNestedRewardSequence(plugin, placeholders, "advanced-rewards:" + getPath(),
+						configured, replayState, parentReplayKey, (rewardName, childIndex) -> {
 						if (!section.contains(rewardName, true)) {
 							return CompletableFuture.failedFuture(new IllegalStateException(
 									"Pending nested reward configuration is missing: " + rewardName));
 						}
-					}
-					CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
-					for (int index = 0; index < rewards.size(); index++) {
-						String rewardName = rewards.get(index);
-						int childIndex = index;
-						sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+						return Reward.continueOnServerThread(plugin, user,
 								() -> handler.giveRewardAsync(user, section, rewardName,
 										Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders), replayState,
 												parentReplayKey, rewardName + ":" + childIndex, parentOccurrenceId)
-												.setPrefix(reward.getRewardName() + "_AdvancedRewards"))));
-					}
-					return sequence.thenApply(ignored -> (Object) null);
-				});
+												.setPrefix(reward.getRewardName() + "_AdvancedRewards")));
+				}).thenApply(ignored -> (Object) null);
 			}
 
             @Override

@@ -110,22 +110,18 @@ public final class RewardLucky {
 					return paths.isEmpty() ? null : String.join("\n", paths);
 				});
 				if (choices == null) return CompletableFuture.completedFuture(null);
-				CompletionStage<Void> sequence = Reward.persistReplayMetadataAsync(plugin, placeholders);
 				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
 				String parentReplayKey = Reward.currentReplayKey();
 				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
-				int luckyIndex = 0;
-				for (String path : choices.split("\\n")) {
-					final int childIndex = luckyIndex++;
-					sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user, () -> {
+				return Reward.replayNestedRewardSequence(plugin, placeholders, "lucky:" + getPath(),
+						java.util.List.of(choices.split("\\n")), replayState, parentReplayKey, (path, childIndex) ->
+						Reward.continueOnServerThread(plugin, user, () -> {
 						RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(), path)
 								.withPrefix(reward.getName()).withPlaceHolder(placeholders);
 						Reward.withReplayState(builder.getRewardOptions(), replayState, parentReplayKey,
 								path + ":" + childIndex, parentOccurrenceId);
 						return builder.sendAsync(user);
-					}));
-                }
-                return sequence.thenApply(ignored -> null);
+					})).thenApply(ignored -> null);
             }
 
             @Override

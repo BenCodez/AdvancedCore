@@ -63,28 +63,20 @@ public final class RewardAdvancedWorld {
 				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
 				String parentReplayKey = Reward.currentReplayKey();
 				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
-				return Reward.replayNestedRewardSnapshot(plugin, placeholders, "advanced-world:" + getPath(),
-						new ArrayList<>(section.getKeys(false)), replayState, parentReplayKey)
-						.thenCompose(worlds -> Reward.continueOnServerThread(plugin, user, () -> {
-					for (String key : worlds) {
+				return Reward.replayNestedRewardSequence(plugin, placeholders, "advanced-world:" + getPath(),
+						new ArrayList<>(section.getKeys(false)), replayState, parentReplayKey, (key, childIndex) -> {
 						if (!section.contains(key, true)) {
 							return CompletableFuture.failedFuture(new IllegalStateException(
 									"Pending nested reward configuration is missing: " + key));
 						}
-					}
-					CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
-					for (int index = 0; index < worlds.size(); index++) {
-						String key = worlds.get(index);
-						int childIndex = index;
-						section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
-						sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
-								() -> handler.giveRewardAsync(user, section, key,
-										Reward.withReplayState(new RewardOptions().withPlaceHolder(placeholders), replayState,
-												parentReplayKey, key + ":" + childIndex, parentOccurrenceId)
-												.setPrefix(sourceReward.getRewardName() + "_AdvancedWorld"))));
-					}
-					return sequence.thenApply(ignored -> (String) null);
-				}));
+						return Reward.continueOnServerThread(plugin, user, () -> {
+							section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
+							return handler.giveRewardAsync(user, section, key,
+									Reward.withReplayState(new RewardOptions().withPlaceHolder(placeholders), replayState,
+											parentReplayKey, key + ":" + childIndex, parentOccurrenceId)
+											.setPrefix(sourceReward.getRewardName() + "_AdvancedWorld"));
+						});
+				}).thenApply(ignored -> (String) null);
             }
 
             @Override
