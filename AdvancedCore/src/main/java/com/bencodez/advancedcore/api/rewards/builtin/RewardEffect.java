@@ -33,7 +33,8 @@ public final class RewardEffect {
                 }
                 return null;
             }
-		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueInventory("Effect") {
+		}.requiresPlayerWhen((data, placeholders) -> data.getBoolean("Effect.Enabled"))
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.DIAMOND), new EditGUIValueInventory("Effect") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");

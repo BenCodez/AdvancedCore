@@ -54,7 +54,9 @@ public final class RewardTempPermission {
                 }
                 return null;
             }
-		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("TempPermission") {
+		}.requiresPlayerWhen((data, placeholders) -> !data.getString("TempPermission.Permission", "").isEmpty()
+				&& data.getInt("TempPermission.Expiration") > 0)
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("TempPermission") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");

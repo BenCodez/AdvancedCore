@@ -36,7 +36,8 @@ public final class RewardMessages {
                 user.sendMessage(value, placeholders);
                 return null;
             }
-		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder("OAK_SIGN"), new EditGUIValueInventory("Messages") {
+		}.requiresPlayerWhen((data, placeholders) -> !data.getString("Message", "").isEmpty())
+				.addEditButton(new EditGUIButton(new ItemBuilder("OAK_SIGN"), new EditGUIValueInventory("Messages") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");
@@ -58,7 +59,7 @@ public final class RewardMessages {
                 user.sendMessage(value, placeholders);
 				return null;
 			}
-		}.requiresPlayer());
+		}.requiresPlayerWhen((data, placeholders) -> !data.getStringList("Messages.Player").isEmpty()));
 
 		handler.getInjectedRewards().add(new RewardInjectStringList("Message") {
             @Override
@@ -67,7 +68,7 @@ public final class RewardMessages {
                 user.sendMessage(value, placeholders);
 				return null;
 			}
-		}.requiresPlayer());
+		}.requiresPlayerWhen((data, placeholders) -> !data.getStringList("Message").isEmpty()));
 
         handler.getInjectedRewards().add(new RewardInjectStringList("RandomMessage") {
             @Override
@@ -76,7 +77,7 @@ public final class RewardMessages {
                 user.sendMessage(value.get(ThreadLocalRandom.current().nextInt(0, value.size())), placeholders);
 				return null;
 			}
-		}.requiresPlayer());
+		}.requiresPlayerWhen((data, placeholders) -> !data.getStringList("RandomMessage").isEmpty()));
 
         handler.getInjectedRewards().add(new RewardInjectString("Messages.Player") {
             @Override
@@ -85,7 +86,8 @@ public final class RewardMessages {
                 user.sendMessage(value, placeholders);
                 return null;
             }
-		}.requiresPlayer().validator(new RewardInjectValidator() {
+		}.requiresPlayerWhen((data, placeholders) -> !data.getString("Messages.Player", "").isEmpty())
+				.validator(new RewardInjectValidator() {
             @Override
             public void onValidate(Reward reward, RewardInject inject, ConfigurationSection data) {
                 if (data.isString(inject.getPath()) && data.getString(inject.getPath()).isEmpty()) {

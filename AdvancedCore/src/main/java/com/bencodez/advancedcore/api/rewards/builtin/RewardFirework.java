@@ -40,7 +40,8 @@ public final class RewardFirework {
                 }
                 return null;
             }
-		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder("FIREWORK_ROCKET"), new EditGUIValueInventory("Firework") {
+		}.requiresPlayerWhen((data, placeholders) -> data.getBoolean("Firework.Enabled"))
+				.addEditButton(new EditGUIButton(new ItemBuilder("FIREWORK_ROCKET"), new EditGUIValueInventory("Firework") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");

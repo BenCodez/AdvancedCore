@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -49,6 +50,8 @@ public abstract class RewardInject extends Inject {
 
 	@Getter
 	private boolean playerRequired;
+	private BiPredicate<ConfigurationSection, HashMap<String, String>> playerRequiredWhen =
+			(data, placeholders) -> true;
 
 	@Getter
 	private RewardInjectValidator validate;
@@ -208,6 +211,26 @@ public abstract class RewardInject extends Inject {
 	public RewardInject requiresPlayer() {
 		playerRequired = true;
 		return this;
+	}
+
+	/**
+	 * Marks a player-bound injection and limits the requirement to payloads that
+	 * actually produce player output. Pending replay work remains player-bound even
+	 * if the current configuration no longer enables that output.
+	 */
+	public RewardInject requiresPlayerWhen(
+			BiPredicate<ConfigurationSection, HashMap<String, String>> playerRequiredWhen) {
+		this.playerRequired = true;
+		this.playerRequiredWhen = java.util.Objects.requireNonNull(playerRequiredWhen, "playerRequiredWhen");
+		return this;
+	}
+
+	/** Whether this configured or pending payload currently needs a live player. */
+	public boolean isPlayerRequiredFor(ConfigurationSection data, HashMap<String, String> placeholders) {
+		if (!playerRequired) return false;
+		if (hasPendingReplayWork(placeholders)) return true;
+		if (!isAlwaysForceNoData() && !data.contains(getPath(), true)) return false;
+		return playerRequiredWhen.test(data, placeholders);
 	}
 
 	public RewardInject priority(int priority) {

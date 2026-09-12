@@ -33,7 +33,9 @@ public final class RewardPotions {
                 }
                 return null;
             }
-		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder(Material.PAINTING), new EditGUIValueInventory("Potions") {
+		}.requiresPlayerWhen((data, placeholders) -> data.isConfigurationSection("Potions")
+				&& !data.getConfigurationSection("Potions").getKeys(false).isEmpty())
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAINTING), new EditGUIValueInventory("Potions") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");

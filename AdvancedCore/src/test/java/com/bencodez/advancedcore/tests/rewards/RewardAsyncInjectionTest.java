@@ -64,6 +64,7 @@ import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardExp;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardItems;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardPotions;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardSound;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectInt;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectString;
@@ -1625,6 +1626,36 @@ class RewardAsyncInjectionTest {
 
 		result.toCompletableFuture().join();
 		assertFalse(playerOutputRan.get());
+		assertTrue(offlineSafeOutputRan.get());
+	}
+
+	@Test
+	void disabledPlayerBoundInjectionDoesNotBlockOfflineSafeReplay() throws Exception {
+		AtomicBoolean offlineSafeOutputRan = new AtomicBoolean();
+		when(plugin.getTimer()).thenReturn(handler.getDelayedTimer());
+		data.set("Sound.Enabled", false);
+		RewardSound.register(handler, plugin);
+		handler.getInjectedRewards().add(
+				asyncInjection("OfflineSafe", CompletableFuture.completedFuture(null), offlineSafeOutputRan));
+		AdvancedCoreUser disconnected = mock(AdvancedCoreUser.class);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> state = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class);
+		state.setAccessible(true);
+		Object replayState = state.newInstance(new HashMap<>(), new HashMap<>(), false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) ignored -> { });
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(reward, disconnected, new HashMap<>(), 0,
+				replayState, "AsyncReward", "occurrence");
+
+		result.toCompletableFuture().join();
 		assertTrue(offlineSafeOutputRan.get());
 	}
 

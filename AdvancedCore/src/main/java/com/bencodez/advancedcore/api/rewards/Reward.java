@@ -1055,8 +1055,8 @@ public class Reward {
 		CompletionStage<Object> result = CompletableFuture.failedFuture(
 				new IllegalStateException("Reward injection did not produce a result"));
 		try {
-			if (replayState.hasCheckpointConsumer() && inject.isPlayerRequired()
-					&& (isRewardInjectionApplicable(inject) || inject.hasPendingReplayWork(placeholders))
+			if (replayState.hasCheckpointConsumer()
+					&& inject.isPlayerRequiredFor(getConfig().getConfigData(), placeholders)
 					&& user.getPlayer() == null) {
 				result = CompletableFuture.failedFuture(
 						new IllegalStateException("Player became unavailable before " + inject.getPath() + " delivery"));
