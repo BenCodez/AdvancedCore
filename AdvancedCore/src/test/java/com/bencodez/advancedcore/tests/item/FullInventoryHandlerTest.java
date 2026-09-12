@@ -13,6 +13,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,8 +25,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -182,6 +187,65 @@ public class FullInventoryHandlerTest {
 		releaseSave.countDown();
 		delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
 		assertEquals(List.of(excess), fixture.handler.getItems().get(uuid));
+	}
+
+	@Test
+	public void replayOverflowSaveFailureDropsOnlyReservedOverflowWithoutReplayingPartialInsert() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		World world = mock(World.class);
+		Location location = mock(Location.class);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(false);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(player.getWorld()).thenReturn(world);
+		when(player.getLocation()).thenReturn(location);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		when(world.dropItem(location, excess)).thenReturn(mock(org.bukkit.entity.Item.class));
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		doAnswer(invocation -> {
+			throw new IllegalStateException("disk unavailable");
+		}).when(fixture.serverData).saveData();
+
+		AtomicInteger scheduled = new AtomicInteger();
+		AtomicReference<Runnable> initialDelivery = new AtomicReference<>();
+		AtomicReference<Runnable> fallback = new AtomicReference<>();
+		CountDownLatch fallbackScheduled = new CountDownLatch(1);
+		doAnswer(invocation -> {
+			Runnable task = invocation.getArgument(1);
+			if (scheduled.incrementAndGet() == 1) initialDelivery.set(task);
+			else {
+				fallback.set(task);
+				fallbackScheduled.countDown();
+			}
+			return null;
+		}).when(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class), eq(player));
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			initialDelivery.get().run();
+			assertTrue(fallbackScheduled.await(2, TimeUnit.SECONDS));
+			assertFalse(delivery.toCompletableFuture().isDone());
+
+			// The overflow remains reserved while its persistence is failing, so an
+			// ordinary sweep cannot consume it before the fallback owns it.
+			fixture.handler.check();
+			assertEquals(2, scheduled.get());
+			fallback.get().run();
+		}
+
+		delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		verify(inventory, times(1)).addItem(item);
+		verify(world).dropItem(location, excess);
+		assertFalse(fixture.handler.getItems().containsKey(uuid));
+		assertFalse(fixture.data.contains("FullInventory"));
 	}
 
 	@Test
