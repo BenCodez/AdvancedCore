@@ -113,8 +113,11 @@
                             <relocations>
                                 <relocation>
                                     <pattern>com.tcoded.folialib</pattern>
-                                    <shadedPattern>
-                                        ${project.groupId}.advancedcore.folialib</shadedPattern>
+                                    <shadedPattern>com.bencodez.simpleapi.folialib</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.zaxxer.hikari</pattern>
+                                    <shadedPattern>com.bencodez.simpleapi.hikari</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.mozilla.javascript</pattern>
@@ -127,6 +130,33 @@
                                 </excludes>
                             </artifactSet>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/PackagedArtifactTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>packaged-artifact-test</id>
+                        <phase>package</phase>
+                        <goals><goal>test</goal></goals>
+                        <configuration>
+                            <includes><include>**/PackagedArtifactTest.java</include></includes>
+                            <reportsDirectory>${project.build.directory}/packaged-artifact-reports</reportsDirectory>
+                            <systemPropertyVariables>
+                                <advancedcore.packagedJar>${project.build.directory}/${project.name}.jar</advancedcore.packagedJar>
+                            </systemPropertyVariables>
                         </configuration>
                     </execution>
                 </executions>
@@ -209,7 +239,30 @@
             <groupId>com.bencodez</groupId>
             <artifactId>simpleapi</artifactId>
             <version>1.0.2-SNAPSHOT</version>
+            <classifier>thin</classifier>
             <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcpkix-jdk18on</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-jdk18on</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcutil-jdk18on</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.paho</groupId>
+                    <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>redis.clients</groupId>
+                    <artifactId>jedis</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.github.LoneDev6</groupId>
@@ -239,6 +292,12 @@
             <groupId>org.mozilla</groupId>
             <artifactId>rhino</artifactId>
             <version>1.9.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.14.0</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
