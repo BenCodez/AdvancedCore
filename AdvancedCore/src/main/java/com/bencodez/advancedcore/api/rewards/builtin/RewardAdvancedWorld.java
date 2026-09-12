@@ -64,7 +64,8 @@ public final class RewardAdvancedWorld {
 				String parentReplayKey = Reward.currentReplayKey();
 				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
 				return Reward.replayNestedRewardSnapshot(plugin, placeholders, "advanced-world:" + getPath(),
-						new ArrayList<>(section.getKeys(false)), replayState, parentReplayKey).thenCompose(worlds -> {
+						new ArrayList<>(section.getKeys(false)), replayState, parentReplayKey)
+						.thenCompose(worlds -> Reward.continueOnServerThread(plugin, user, () -> {
 					for (String key : worlds) {
 						if (!section.contains(key, true)) {
 							return CompletableFuture.failedFuture(new IllegalStateException(
@@ -83,7 +84,7 @@ public final class RewardAdvancedWorld {
 												.setPrefix(sourceReward.getRewardName() + "_AdvancedWorld"))));
 					}
 					return sequence.thenApply(ignored -> (String) null);
-				});
+				}));
             }
 
             @Override

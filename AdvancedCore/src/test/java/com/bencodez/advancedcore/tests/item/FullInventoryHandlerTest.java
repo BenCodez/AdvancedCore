@@ -342,6 +342,48 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
+	public void shutdownPersistsAcceptedOverflowBeforeDiscardingQueuedPersistence() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(false);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		CountDownLatch executorBlocked = new CountDownLatch(1);
+		CountDownLatch releaseExecutor = new CountDownLatch(1);
+		fixture.handler.getTimer().execute(() -> {
+			executorBlocked.countDown();
+			try {
+				releaseExecutor.await(2, TimeUnit.SECONDS);
+			} catch (InterruptedException ignored) {
+				Thread.currentThread().interrupt();
+			}
+		});
+		assertTrue(executorBlocked.await(2, TimeUnit.SECONDS));
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			task.getValue().run();
+		}
+		assertFalse(delivery.toCompletableFuture().isDone());
+
+		fixture.handler.shutdown();
+		delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		releaseExecutor.countDown();
+		assertEquals(excess, fixture.data.getItemStack("FullInventory." + uuid + ".Items.0"));
+		verify(inventory, times(1)).addItem(item);
+	}
+
+	@Test
 	public void giveItemAsyncFailsWithoutMutationWhenPlayerDisconnectsAfterEnqueue() throws Exception {
 		Fixture fixture = createFixture();
 		UUID uuid = UUID.randomUUID();

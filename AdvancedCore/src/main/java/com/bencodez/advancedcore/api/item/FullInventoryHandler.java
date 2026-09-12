@@ -48,6 +48,7 @@ public class FullInventoryHandler {
 	 * from a delivery that has already happened and a replay can duplicate items.
 	 */
 	private final ConcurrentHashMap<String, ReservedOverflow> replayOverflowReservations = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<String, CompletableFuture<Void>> replayOverflowCompletions = new ConcurrentHashMap<>();
 
 	private final AdvancedCorePlugin plugin;
 	private final ReentrantReadWriteLock deliveryLock = new ReentrantReadWriteLock(true);
@@ -154,8 +155,9 @@ public class FullInventoryHandler {
 				boolean pendingOverflow = giveItemOwnedPlayer(player, itemsToGive, reservationId);
 				if (completion != null) {
 					if (pendingOverflow) {
+						replayOverflowCompletions.put(reservationId, completion);
 						persistReservedOverflowAsync(reservationId).whenComplete((ignored, failure) -> {
-							if (failure == null) completion.complete(null);
+							if (failure == null) completeReplayOverflow(reservationId, completion);
 							else completeStartedOverflowWithFallback(player, deliveryPlayerId, reservationId, completion);
 						});
 					} else {
@@ -225,6 +227,10 @@ public class FullInventoryHandler {
 	}
 
 	public synchronized void shutdown() {
+		// Flush accepted replay reservations while their completion stages can still
+		// advance the outer reward checkpoint. Stopping the executor first can discard
+		// an accepted persistence task and later replay the already-inserted items.
+		saveDurably();
 		if (checkTask != null) {
 			checkTask.cancel(false);
 			checkTask = null;
@@ -247,17 +253,23 @@ public class FullInventoryHandler {
 
 	/** Saves pending items and reports whether the disk snapshot completed. */
 	public boolean saveDurably() {
+		HashMap<String, ReservedOverflow> reservations;
+		boolean saved;
 		deliveryLock.writeLock().lock();
 		try {
-			HashMap<String, ReservedOverflow> reservations = new HashMap<>(replayOverflowReservations);
+			reservations = new HashMap<>(replayOverflowReservations);
 			if (!savePendingItemsLocked(reservations.values())) return false;
 			for (Entry<String, ReservedOverflow> entry : reservations.entrySet()) {
 				promoteReservedOverflowLocked(entry.getKey(), entry.getValue());
 			}
-			return true;
+			saved = true;
 		} finally {
 			deliveryLock.writeLock().unlock();
 		}
+		if (saved) {
+			for (String reservationId : reservations.keySet()) completeReplayOverflow(reservationId, null);
+		}
+		return true;
 	}
 
 	/** Persists one replay reservation before making it visible to ordinary pending checks. */
@@ -297,7 +309,9 @@ public class FullInventoryHandler {
 	private void completeStartedOverflowWithFallback(Player player, UUID playerId, String reservationId,
 			CompletableFuture<Void> completion) {
 		Runnable fallback = () -> {
-			if (dropReservedOverflowOwnedPlayer(player, playerId, reservationId)) completion.complete(null);
+			if (dropReservedOverflowOwnedPlayer(player, playerId, reservationId)) {
+				completeReplayOverflow(reservationId, completion);
+			}
 			else scheduleReservedOverflowPersistenceRetry(reservationId, completion);
 		};
 		try {
@@ -335,18 +349,24 @@ public class FullInventoryHandler {
 
 	private void scheduleReservedOverflowPersistenceRetry(String reservationId, CompletableFuture<Void> completion) {
 		if (!replayOverflowReservations.containsKey(reservationId)) {
-			completion.complete(null);
+			completeReplayOverflow(reservationId, completion);
 			return;
 		}
 		try {
 			timer.schedule(() -> {
-				if (persistReservedOverflow(reservationId)) completion.complete(null);
+				if (persistReservedOverflow(reservationId)) completeReplayOverflow(reservationId, completion);
 				else scheduleReservedOverflowPersistenceRetry(reservationId, completion);
 			}, 30, TimeUnit.SECONDS);
 		} catch (Throwable ignored) {
 			// Shutdown may reject this retry. Leave the completion pending: acknowledging
 			// an in-memory-only remainder would lose it from the durable reward replay.
 		}
+	}
+
+	private void completeReplayOverflow(String reservationId, CompletableFuture<Void> fallbackCompletion) {
+		CompletableFuture<Void> completion = replayOverflowCompletions.remove(reservationId);
+		if (completion == null) completion = fallbackCompletion;
+		if (completion != null) completion.complete(null);
 	}
 
 	/** Caller holds the write lock. Includes only the reservations in this durable handoff. */
