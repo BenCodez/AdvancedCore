@@ -5,6 +5,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -117,6 +120,76 @@ class BukkitPlatformServicesTest {
             assertEquals(1, calls.get());
             verify(nativePlayer).sendMessage("&a%literal%");
             verify(nativePlayer, never()).setOp(anyBoolean());
+        }
+    }
+
+    @Test
+    void asyncPlayerHandoffDoesNotReadEntityStateOnCallerThread() throws Exception {
+        Thread entityThread = Thread.currentThread();
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        BukkitScheduler scheduler = mock(BukkitScheduler.class);
+        when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+        when(plugin.isEnabled()).thenReturn(true);
+        Player player = mock(Player.class);
+        UUID id = UUID.randomUUID();
+        when(player.isOnline()).thenAnswer(invocation -> {
+            assertSame(entityThread, Thread.currentThread(), "Player state read before entity handoff");
+            return true;
+        });
+        BukkitPlatformServices services = new BukkitPlatformServices(() -> plugin);
+        AtomicInteger calls = new AtomicInteger();
+        ExecutorService worker = Executors.newSingleThreadExecutor();
+        try {
+            assertTrue(worker.submit(() -> {
+                assertNotSame(entityThread, Thread.currentThread());
+                // Static mocks are thread-scoped: install lookup on the submitting thread.
+                try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+                    bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(player);
+                    return services.scheduler().runPlayer(id, session -> {
+                        assertSame(entityThread, Thread.currentThread());
+                        assertEquals(id, session.getUniqueId());
+                        calls.incrementAndGet();
+                    });
+                }
+            }).get(5, TimeUnit.SECONDS));
+            verifyNoInteractions(player);
+            assertEquals(0, calls.get());
+            ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+            verify(scheduler).runTask(eq(plugin), task.capture(), same(player));
+            verify(scheduler, never()).runTask(any(), any(Runnable.class));
+            try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+                bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(player);
+                task.getValue().run();
+            }
+            verify(player).isOnline();
+            assertEquals(1, calls.get());
+        } finally {
+            worker.shutdownNow();
+            assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS), "Worker did not terminate");
+        }
+    }
+
+    @Test
+    void alreadyDisconnectedPlayerIsCheckedOnlyInsideEntityCallback() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        BukkitScheduler scheduler = mock(BukkitScheduler.class);
+        when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+        when(plugin.isEnabled()).thenReturn(true);
+        Player player = mock(Player.class);
+        when(player.isOnline()).thenReturn(false);
+        UUID id = UUID.randomUUID();
+        BukkitPlatformServices services = new BukkitPlatformServices(() -> plugin);
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            // Lookup can still find the entity while its login is being retired.
+            bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(player);
+            assertTrue(services.scheduler().runPlayer(id, session -> fail("disconnected callback")));
+            verifyNoInteractions(player);
+            ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+            verify(scheduler).runTask(eq(plugin), task.capture(), same(player));
+            task.getValue().run();
+            verify(player).isOnline();
+            verifyNoMoreInteractions(player);
+            verify(scheduler, never()).runTask(any(), any(Runnable.class));
         }
     }
 

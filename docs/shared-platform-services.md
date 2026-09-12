@@ -30,9 +30,11 @@ unchanged.
 
 Player operations must run on that player's owning game thread. A synchronous
 lookup does not grant thread ownership; asynchronous consumers should use
-`runPlayer`. Its callback uses the captured entity's scheduler, not the global or
-location scheduler. If that login disconnects, is replaced, or the plugin is
-disabled before the callback, it will not execute the action. A stale handle
+`runPlayer`. Submission only locates the entity by UUID; it does not read player
+state such as `isOnline()` on the caller's thread. Online/session checks run inside
+the captured entity's scheduler callback, not on the global or location scheduler.
+If that login disconnects, is replaced, or the plugin is disabled before the
+callback, it will not execute the action. A stale handle
 returns false for permission checks and rejects messages/commands; it does not
 look up a replacement login and redirect the operation.
 
@@ -51,7 +53,8 @@ Negative delays are rejected. `runServer` uses the existing `runTask` handoff.
 global execution). The plugin's existing scheduler owns shutdown cancellation;
 no parallel lifecycle or background work is introduced here.
 
-A true `runPlayer` result means submitted, **not completed**. Disconnect/retirement
+A false `runPlayer` result means UUID lookup found no player to schedule. A true
+result means submitted, **not completed** or confirmed online. Disconnect/retirement
 or shutdown can prevent callbacks from running. Rejection and callback exceptions
 are not swallowed. These methods provide no durable completion acknowledgement,
 retry policy, persistence, timeout, or exactly-once guarantee; do not use their
@@ -78,8 +81,9 @@ combining branches, and rerun both suites.
 The existing command remains `mvn -B -f AdvancedCore/pom.xml package` on Java 21.
 Tests cover core command policy in a JDK-only fixture and isolated classloader,
 Bukkit UUID lookup/native dispatch, entity-versus-global routing, stale sessions,
-disable, failures, lazy ownership, and the existing command-list facade. No new
-workflow, module, dependency pin, or test skip is introduced. SimpleAPI remains
+disable, failures, lazy ownership, worker-thread submission with no early player
+state reads, already-disconnected submissions, and the existing command-list facade.
+No new workflow, module, dependency pin, or test skip is introduced. SimpleAPI remains
 `1.0.2-SNAPSHOT`; record the actual resolved snapshot when validating downstream.
 
 Before release, build SimpleAPI, AdvancedCore, and VotingPlugin against the actual

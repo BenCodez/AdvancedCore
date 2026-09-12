@@ -21,11 +21,14 @@ public interface PlatformScheduler {
 
     /**
      * Queues work on the current online session's owning entity/game thread.
-     * Returns false when no online session exists at submission; true means only
-     * submitted. A disconnected/replaced session must never fall back to a global
-     * callback or transfer the action to a new login. The callback may therefore
-     * not run. Rejection exceptions propagate; task failures belong to the native
-     * scheduler. Do not block on, retry, or acknowledge rewards from this boolean.
+     * Async callers may locate the entity for scheduling, but must defer player
+     * state reads (including online checks) to the owning-thread callback.
+     * Returns false when UUID lookup finds no player; true means only submitted,
+     * not that the captured session is still online. A disconnected/replaced
+     * session must never fall back to a global callback or transfer the action
+     * to a new login. The callback may therefore not run. Rejection exceptions
+     * propagate; task failures belong to the native scheduler. Do not block on,
+     * retry, or acknowledge rewards from this boolean.
      */
     boolean runPlayer(UUID playerId, Consumer<PlatformPlayer> task);
 }

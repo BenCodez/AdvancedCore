@@ -79,8 +79,10 @@ public final class BukkitPlatformServices implements PlatformServices {
         public boolean runPlayer(UUID playerId, Consumer<PlatformPlayer> task) {
             Objects.requireNonNull(playerId, "playerId");
             Objects.requireNonNull(task, "task");
+            // Async callers may locate the entity, but must not read player
+            // state until the entity scheduler transfers us to its owning thread.
             Player player = Bukkit.getPlayer(playerId);
-            if (player == null || !player.isOnline()) {
+            if (player == null) {
                 return false;
             }
             AdvancedCorePlugin owner = owner();
