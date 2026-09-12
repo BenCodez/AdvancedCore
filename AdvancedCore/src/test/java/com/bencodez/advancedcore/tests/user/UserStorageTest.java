@@ -15,7 +15,6 @@ public class UserStorageTest {
 	public void testValue_caseInsensitiveMatches() {
 		assertEquals(UserStorage.MYSQL, UserStorage.value("mysql"));
 		assertEquals(UserStorage.SQLITE, UserStorage.value("SQLITE"));
-		assertEquals(UserStorage.FLAT, UserStorage.value("flat"));
 	}
 
 	@Test
@@ -23,5 +22,19 @@ public class UserStorageTest {
 		assertNull(UserStorage.value("nope"));
 		assertNull(UserStorage.value(""));
 		assertNull(UserStorage.value("   "));
+	}
+
+	@Test
+	public void flatIsNotAnAvailableStorageType() {
+		assertArrayEquals(new UserStorage[] { UserStorage.MYSQL, UserStorage.SQLITE }, UserStorage.values());
+		assertThrows(IllegalArgumentException.class, () -> UserStorage.valueOf("FLAT"));
+	}
+
+	@Test
+	public void retiredFlatConfigurationFailsRatherThanSelectingAnEmptySqlDatabase() {
+		for (String value : new String[] { "FLAT", "flat", "Flat", " FLAT " }) {
+			IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> UserStorage.value(value));
+			assertTrue(failure.getMessage().contains("previous version"));
+		}
 	}
 }
