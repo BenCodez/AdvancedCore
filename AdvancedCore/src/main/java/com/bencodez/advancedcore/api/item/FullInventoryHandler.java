@@ -95,6 +95,7 @@ public class FullInventoryHandler {
 	}
 
 	public void check() {
+		if (shuttingDown.get()) return;
 		if (!Bukkit.isPrimaryThread()) {
 			plugin.getBukkitScheduler().runTask(plugin, this::schedulePendingPlayerChecks);
 			return;
@@ -103,7 +104,7 @@ public class FullInventoryHandler {
 	}
 
 	public void check(Player player) {
-		if (player == null) {
+		if (player == null || shuttingDown.get()) {
 			return;
 		}
 		plugin.getBukkitScheduler().runTask(plugin, () -> checkOwnedPlayer(player), player);
@@ -234,14 +235,14 @@ public class FullInventoryHandler {
 
 	public synchronized void shutdown() {
 		shuttingDown.set(true);
-		// Flush accepted replay reservations while their completion stages can still
-		// advance the outer reward checkpoint. Stopping the executor first can discard
-		// an accepted persistence task and later replay the already-inserted items.
-		saveDurably();
 		if (checkTask != null) {
 			checkTask.cancel(false);
 			checkTask = null;
 		}
+		// Flush accepted replay reservations while their completion stages can still
+		// advance the outer reward checkpoint. Stopping the executor first can discard
+		// an accepted persistence task and later replay the already-inserted items.
+		saveDurably();
 		if (timer != null) {
 			timer.shutdownNow();
 		}
@@ -516,6 +517,7 @@ public class FullInventoryHandler {
 	private void checkOwnedPlayer(Player player) {
 		deliveryLock.readLock().lock();
 		try {
+			if (shuttingDown.get()) return;
 			UUID uuid = player.getUniqueId();
 			ArrayList<ItemStack> pending = items.remove(uuid);
 			if (pending == null || pending.isEmpty()) {
@@ -588,8 +590,10 @@ public class FullInventoryHandler {
 	}
 
 	private void schedulePendingPlayerChecks() {
+		if (shuttingDown.get()) return;
 		long now = System.currentTimeMillis();
 		for (UUID uuid : new ArrayList<>(items.keySet())) {
+			if (shuttingDown.get()) return;
 			Player player = Bukkit.getPlayer(uuid);
 			if (player != null) {
 				plugin.getBukkitScheduler().runTask(plugin, () -> checkOwnedPlayer(player), player);

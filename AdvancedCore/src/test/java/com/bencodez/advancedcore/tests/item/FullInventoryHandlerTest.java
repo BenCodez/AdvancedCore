@@ -410,6 +410,29 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
+	public void queuedPendingCheckCannotMutateItemsAfterShutdownSnapshot() {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.getInventory()).thenReturn(inventory);
+		fixture.handler.add(uuid, item);
+
+		fixture.handler.check(player);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+		fixture.handler.shutdown();
+		assertEquals(item, fixture.data.getItemStack("FullInventory." + uuid + ".Items.0"));
+
+		task.getValue().run();
+
+		verify(inventory, never()).addItem(any(ItemStack[].class));
+		assertEquals(List.of(item), fixture.handler.getItems().get(uuid));
+	}
+
+	@Test
 	public void giveItemAsyncFailsWithoutMutationWhenPlayerDisconnectsAfterEnqueue() throws Exception {
 		Fixture fixture = createFixture();
 		UUID uuid = UUID.randomUUID();
