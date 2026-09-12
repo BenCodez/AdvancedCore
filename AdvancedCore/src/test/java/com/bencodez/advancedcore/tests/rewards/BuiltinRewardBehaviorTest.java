@@ -660,6 +660,24 @@ public class BuiltinRewardBehaviorTest {
         verify(handler).giveChoicesReward(reward, user, "OptionA");
     }
 
+	@Test
+	public void choicesAsyncDispatchWaitsForSelectedReward() {
+		RewardChoices.register(handler, plugin);
+		RewardInjectBoolean choices = (RewardInjectBoolean) injects.get(0);
+		when(user.getChoicePreference("SourceReward")).thenReturn("OptionA");
+		CompletableFuture<Void> child = new CompletableFuture<>();
+
+		try (MockedConstruction<RewardBuilder> builders = mockConstruction(RewardBuilder.class,
+				withSettings().defaultAnswer(Answers.RETURNS_SELF),
+				(builder, context) -> when(builder.sendAsync(user)).thenReturn(child))) {
+			CompletionStage<String> result = choices.onRewardRequestAsync(reward, user, true, placeholders);
+			assertFalse(result.toCompletableFuture().isDone());
+			child.complete(null);
+			assertEquals("OptionA", result.toCompletableFuture().join());
+			verify(builders.constructed().get(0)).sendAsync(user);
+		}
+	}
+
     @Test
     public void javascriptActuallyExecutesScriptsAndTrueBranch() {
         RewardJavascript.register(handler, plugin);

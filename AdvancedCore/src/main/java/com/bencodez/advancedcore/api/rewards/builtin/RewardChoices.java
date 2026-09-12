@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -13,6 +15,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueIn
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.DefinedReward;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.SubDirectlyDefinedReward;
@@ -29,6 +32,20 @@ public final class RewardChoices {
 
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectBoolean("EnableChoices") {
+			@Override
+			public boolean supportsAsyncRequest() { return true; }
+
+			@Override
+			public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
+			@Override
+			public boolean supportsAsyncSynchronization() { return false; }
+
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, boolean value,
                     HashMap<String, String> placeholders) {
@@ -44,6 +61,25 @@ public final class RewardChoices {
                 }
                 return null;
             }
+
+			@Override
+			public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user, boolean value,
+					HashMap<String, String> placeholders) {
+				if (!value && !hasPendingReplayWork(placeholders)) return CompletableFuture.completedFuture(null);
+				String choice = Reward.replaySelection(placeholders,
+						() -> value ? user.getChoicePreference(reward.getName()) : null);
+				if (choice == null || choice.isEmpty() || choice.equalsIgnoreCase("none")) {
+					user.addUnClaimedChoiceReward(reward.getName());
+					return CompletableFuture.completedFuture(null);
+				}
+				RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(),
+						reward.getConfig().getChoicesRewardsPath(choice)).withPrefix(reward.getName())
+						.withPlaceHolder(placeholders).withPlaceHolder("choice", choice);
+				Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
+						Reward.currentReplayKey(), "choice:" + choice, Reward.currentReplayOccurrenceId());
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> builder.sendAsync(user)).thenApply(ignored -> choice);
+			}
 
             @Override
             public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {
