@@ -69,8 +69,10 @@ public final class RewardChoices {
 				String choice = Reward.replaySelection(placeholders,
 						() -> value ? user.getChoicePreference(reward.getName()) : null);
 				if (choice == null || choice.isEmpty() || choice.equalsIgnoreCase("none")) {
-					user.addUnClaimedChoiceReward(reward.getName());
-					return CompletableFuture.completedFuture(null);
+					return Reward.persistReplayMetadataAsync(plugin, placeholders).thenApply(ignored -> {
+						user.addUnClaimedChoiceReward(reward.getName());
+						return null;
+					});
 				}
 				RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(),
 						reward.getConfig().getChoicesRewardsPath(choice)).withPrefix(reward.getName())

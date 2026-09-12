@@ -70,6 +70,7 @@ import com.bencodez.advancedcore.api.rewards.injected.RewardInjectString;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardSubRewards;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardRandomReward;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardJavascript;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardChoices;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardSpecialChance;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -1731,6 +1732,45 @@ class RewardAsyncInjectionTest {
 
 		assertThrows(java.util.concurrent.CompletionException.class, () -> resumed.toCompletableFuture().join());
 		verify(handler, times(2)).giveRewardAsync(eq(user), eq("child"), any(RewardOptions.class));
+	}
+
+	@Test
+	void unclaimedChoiceIsAddedOnlyAfterItsSelectionIsDurable() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		data.set("EnableChoices", true);
+		when(user.getChoicePreference("AsyncReward")).thenReturn("");
+		RewardChoices.register(handler, plugin);
+		List<Runnable> writes = new ArrayList<>();
+		doAnswer(invocation -> {
+			writes.add(invocation.getArgument(0));
+			return null;
+		}).when(storageExecutor).execute(any(Runnable.class));
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> stateConstructor = stateType.getDeclaredConstructor(Map.class, Map.class,
+				boolean.class);
+		stateConstructor.setAccessible(true);
+		Object replayState = stateConstructor.newInstance(new HashMap<>(), new HashMap<>(), false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) ignored -> { });
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class);
+		replay.setAccessible(true);
+
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0,
+				replayState, "AsyncReward");
+
+		assertEquals(1, writes.size());
+		verify(user, never()).addUnClaimedChoiceReward("AsyncReward");
+		writes.get(0).run();
+		verify(user).addUnClaimedChoiceReward("AsyncReward");
+		assertEquals(2, writes.size());
+		writes.get(1).run();
+		result.toCompletableFuture().join();
 	}
 
 	@Test
