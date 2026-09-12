@@ -6,10 +6,14 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
@@ -21,6 +25,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
@@ -36,8 +41,18 @@ public class FullInventoryHandler {
 	@Getter
 	private final ConcurrentHashMap<UUID, ArrayList<ItemStack>> items = new ConcurrentHashMap<>();
 
+	/*
+	 * Replay-aware delivery cannot place an overflow into the ordinary pending map
+	 * until its snapshot has been written.  The ordinary periodic sweep is allowed
+	 * to consume that map, so doing so earlier makes a failed save indistinguishable
+	 * from a delivery that has already happened and a replay can duplicate items.
+	 */
+	private final ConcurrentHashMap<String, ReservedOverflow> replayOverflowReservations = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<String, CompletableFuture<Void>> replayOverflowCompletions = new ConcurrentHashMap<>();
+
 	private final AdvancedCorePlugin plugin;
 	private final ReentrantReadWriteLock deliveryLock = new ReentrantReadWriteLock(true);
+	private final AtomicBoolean shuttingDown = new AtomicBoolean();
 
 	@Getter
 	private ScheduledExecutorService timer;
@@ -46,6 +61,19 @@ public class FullInventoryHandler {
 
 	@Getter
 	private final ConcurrentHashMap<UUID, Long> lastMessageTime = new ConcurrentHashMap<>();
+
+	private static final class ReservedOverflow {
+		private final UUID playerId;
+		private final ArrayList<ItemStack> items;
+
+		private ReservedOverflow(UUID playerId, Collection<ItemStack> items) {
+			this.playerId = playerId;
+			this.items = new ArrayList<>();
+			for (ItemStack item : items) {
+				if (item != null) this.items.add(item);
+			}
+		}
+	}
 
 	public FullInventoryHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -82,11 +110,113 @@ public class FullInventoryHandler {
 	}
 
 	public void giveItem(Player player, ItemStack... item) {
+		scheduleItemDelivery(player, item, null);
+	}
+
+	/**
+	 * Gives items on the owning player scheduler and completes after the inventory
+	 * mutation, including full-inventory handling, has finished. The established
+	 * void API remains fire-and-forget; replay-aware callers use this boundary so
+	 * they never checkpoint a queued delivery as completed.
+	 */
+	public CompletionStage<Void> giveItemAsync(Player player, ItemStack... item) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		scheduleItemDelivery(player, item, completion);
+		return completion;
+	}
+
+	private void scheduleItemDelivery(Player player, ItemStack[] item, CompletableFuture<Void> completion) {
 		if (player == null || item == null || item.length == 0) {
+			if (completion != null) completion.complete(null);
 			return;
 		}
+		if (completion != null && shuttingDown.get()) {
+			completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+					"Full-inventory handler is shutting down before item delivery"));
+			return;
+		}
+		UUID playerId = null;
+		if (completion != null) {
+			try {
+				playerId = player.getUniqueId();
+				if (playerId == null) {
+					completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+							"Item delivery player has no UUID"));
+					return;
+				}
+			} catch (Throwable failure) {
+				completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+						"Unable to resolve item delivery player before dispatch", failure));
+				return;
+			}
+		}
+		final UUID deliveryPlayerId = playerId;
+		final String reservationId = completion == null ? null : UUID.randomUUID().toString();
 		ItemStack[] itemsToGive = item.clone();
-		plugin.getBukkitScheduler().runTask(plugin, () -> giveItemOwnedPlayer(player, itemsToGive), player);
+		AtomicBoolean deliveryClaimed = new AtomicBoolean();
+		Runnable delivery = () -> {
+			if (!deliveryClaimed.compareAndSet(false, true)) return;
+			try {
+				if (completion != null) validateReplayDeliveryTarget(player, deliveryPlayerId);
+				boolean pendingOverflow = giveItemOwnedPlayer(player, itemsToGive, reservationId);
+				if (completion != null) {
+					if (pendingOverflow) {
+						replayOverflowCompletions.put(reservationId, completion);
+						persistReservedOverflowAsync(reservationId).whenComplete((ignored, failure) -> {
+							if (failure == null) completeReplayOverflow(reservationId, completion);
+							else completeStartedOverflowWithFallback(player, deliveryPlayerId, reservationId, completion);
+						});
+					} else {
+						completion.complete(null);
+					}
+				}
+			} catch (Throwable failure) {
+				if (completion != null) completion.completeExceptionally(failure);
+				else rethrowDeliveryFailure(failure);
+			}
+		};
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, delivery, player);
+		} catch (Throwable failure) {
+			deliveryClaimed.set(true);
+			if (completion != null) completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+					"Scheduler rejected item delivery before dispatch", failure));
+			else rethrowDeliveryFailure(failure);
+		}
+		if (completion == null) return;
+		CompletableFuture.delayedExecutor(getItemDeliveryTimeoutMillis(), TimeUnit.MILLISECONDS).execute(() -> {
+			if (deliveryClaimed.compareAndSet(false, true)) {
+				completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+						"Timed out waiting for item delivery", new TimeoutException()));
+			}
+		});
+	}
+
+	/** Bounds a replay-aware delivery; timeout claims the delivery to prevent a duplicate retry. */
+	protected long getItemDeliveryTimeoutMillis() {
+		return TimeUnit.SECONDS.toMillis(30);
+	}
+
+	/**
+	 * Runs on the owning player scheduler immediately before a replay-aware inventory
+	 * mutation. A reconnect creates a different player entity, so require both the
+	 * captured UUID and entity identity to remain current; a retry can then safely
+	 * schedule delivery for the live entity.
+	 */
+	private void validateReplayDeliveryTarget(Player player, UUID playerId) {
+		if (!plugin.isEnabled()) {
+			throw AdvancedCoreUser.replayActionNotStarted("Plugin disabled before item delivery");
+		}
+		Player current = Bukkit.getPlayer(playerId);
+		if (current != player || !current.isOnline()) {
+			throw AdvancedCoreUser.replayActionNotStarted("Player became unavailable before item delivery");
+		}
+	}
+
+	private static void rethrowDeliveryFailure(Throwable failure) {
+		if (failure instanceof RuntimeException) throw (RuntimeException) failure;
+		if (failure instanceof Error) throw (Error) failure;
+		throw new IllegalStateException("Failed to schedule item delivery", failure);
 	}
 
 	public synchronized void loadTimer() {
@@ -103,6 +233,11 @@ public class FullInventoryHandler {
 	}
 
 	public synchronized void shutdown() {
+		shuttingDown.set(true);
+		// Flush accepted replay reservations while their completion stages can still
+		// advance the outer reward checkpoint. Stopping the executor first can discard
+		// an accepted persistence task and later replay the already-inserted items.
+		saveDurably();
 		if (checkTask != null) {
 			checkTask.cancel(false);
 			checkTask = null;
@@ -120,40 +255,203 @@ public class FullInventoryHandler {
 	 * the temporary remove/re-add state of an in-flight inventory check.
 	 */
 	public void save() {
+		saveDurably();
+	}
+
+	/** Saves pending items and reports whether the disk snapshot completed. */
+	public boolean saveDurably() {
+		HashMap<String, ReservedOverflow> reservations;
+		boolean saved;
 		deliveryLock.writeLock().lock();
 		try {
+			reservations = new HashMap<>(replayOverflowReservations);
+			if (!savePendingItemsLocked(reservations.values())) return false;
+			for (Entry<String, ReservedOverflow> entry : reservations.entrySet()) {
+				promoteReservedOverflowLocked(entry.getKey(), entry.getValue());
+			}
+			saved = true;
+		} finally {
+			deliveryLock.writeLock().unlock();
+		}
+		if (saved) {
+			for (String reservationId : reservations.keySet()) completeReplayOverflow(reservationId, null);
+		}
+		return true;
+	}
+
+	/** Persists one replay reservation before making it visible to ordinary pending checks. */
+	private CompletionStage<Void> persistReservedOverflowAsync(String reservationId) {
+		CompletableFuture<Void> persisted = new CompletableFuture<>();
+		try {
+			timer.execute(() -> {
+				if (persistReservedOverflow(reservationId)) persisted.complete(null);
+				else persisted.completeExceptionally(
+						new IllegalStateException("Unable to persist full-inventory reward overflow"));
+			});
+		} catch (Throwable failure) {
+			persisted.completeExceptionally(failure);
+		}
+		return persisted;
+	}
+
+	private boolean persistReservedOverflow(String reservationId) {
+		deliveryLock.writeLock().lock();
+		try {
+			ReservedOverflow reservation = replayOverflowReservations.get(reservationId);
+			if (reservation == null || reservation.items.isEmpty()) return true;
+			if (!savePendingItemsLocked(java.util.List.of(reservation))) return false;
+			promoteReservedOverflowLocked(reservationId, reservation);
+			return true;
+		} finally {
+			deliveryLock.writeLock().unlock();
+		}
+	}
+
+	/**
+	 * A save failure happens after Bukkit has already accepted part of this reward.
+	 * Complete the replay action only after an owner-thread fallback consumes every
+	 * reserved item or a later retry persists the remainder. Reserved items stay
+	 * excluded from the normal delivery sweep while either handoff is pending.
+	 */
+	private void completeStartedOverflowWithFallback(Player player, UUID playerId, String reservationId,
+			CompletableFuture<Void> completion) {
+		Runnable fallback = () -> {
+			if (dropReservedOverflowOwnedPlayer(player, playerId, reservationId)) {
+				completeReplayOverflow(reservationId, completion);
+			}
+			else scheduleReservedOverflowPersistenceRetry(reservationId, completion);
+		};
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, fallback, player);
+		} catch (Throwable failure) {
+			// The mutation has already started, so neither acknowledge it nor fail it as
+			// replayable. Keep the stage pending until the reservation is durable.
+			scheduleReservedOverflowPersistenceRetry(reservationId, completion);
+		}
+	}
+
+	/** Runs only on the player owner scheduler. */
+	private boolean dropReservedOverflowOwnedPlayer(Player player, UUID playerId, String reservationId) {
+		if (player == null || playerId == null || Bukkit.getPlayer(playerId) != player || !player.isOnline()) return false;
+		deliveryLock.writeLock().lock();
+		try {
+			ReservedOverflow reservation = replayOverflowReservations.get(reservationId);
+			if (reservation == null) return true;
+			if (!playerId.equals(reservation.playerId)) return false;
+			ArrayList<ItemStack> remaining = new ArrayList<>();
+			for (ItemStack item : reservation.items) {
+				try {
+					if (player.getWorld().dropItem(player.getLocation(), item) == null) remaining.add(item);
+				} catch (Throwable failure) {
+					remaining.add(item);
+				}
+			}
+			if (remaining.isEmpty()) replayOverflowReservations.remove(reservationId, reservation);
+			else replayOverflowReservations.put(reservationId, new ReservedOverflow(playerId, remaining));
+			return remaining.isEmpty();
+		} finally {
+			deliveryLock.writeLock().unlock();
+		}
+	}
+
+	private void scheduleReservedOverflowPersistenceRetry(String reservationId, CompletableFuture<Void> completion) {
+		if (!replayOverflowReservations.containsKey(reservationId)) {
+			completeReplayOverflow(reservationId, completion);
+			return;
+		}
+		try {
+			timer.schedule(() -> {
+				if (persistReservedOverflow(reservationId)) completeReplayOverflow(reservationId, completion);
+				else scheduleReservedOverflowPersistenceRetry(reservationId, completion);
+			}, 30, TimeUnit.SECONDS);
+		} catch (Throwable ignored) {
+			// Shutdown may reject this retry. Leave the completion pending: acknowledging
+			// an in-memory-only remainder would lose it from the durable reward replay.
+		}
+	}
+
+	private void completeReplayOverflow(String reservationId, CompletableFuture<Void> fallbackCompletion) {
+		CompletableFuture<Void> completion = replayOverflowCompletions.remove(reservationId);
+		if (completion == null) completion = fallbackCompletion;
+		if (completion != null) completion.complete(null);
+	}
+
+	/** Caller holds the write lock. Includes only the reservations in this durable handoff. */
+	private boolean savePendingItemsLocked(Collection<ReservedOverflow> reservedOverflows) {
+		FileConfiguration data = null;
+		YamlConfiguration previous = null;
+		try {
 			ServerData serverData = plugin.getServerDataFile();
-			if (serverData == null || serverData.getData() == null) {
-				return;
+			if (serverData == null || serverData.getData() == null) return false;
+
+			HashMap<UUID, ArrayList<ItemStack>> snapshotItems = new HashMap<>();
+			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
+				snapshotItems.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+			}
+			for (ReservedOverflow reservedOverflow : reservedOverflows) {
+				if (!reservedOverflow.items.isEmpty()) {
+					snapshotItems.computeIfAbsent(reservedOverflow.playerId, ignored -> new ArrayList<>())
+						.addAll(reservedOverflow.items);
+				}
 			}
 
 			YamlConfiguration snapshot = new YamlConfiguration();
 			long now = System.currentTimeMillis();
-			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
-				ArrayList<ItemStack> pending = new ArrayList<>(entry.getValue());
+			for (Entry<UUID, ArrayList<ItemStack>> entry : snapshotItems.entrySet()) {
 				String basePath = "FullInventory." + entry.getKey();
-				for (int i = 0; i < pending.size(); i++) {
-					snapshot.set(basePath + ".Items." + i, pending.get(i));
+				for (int i = 0; i < entry.getValue().size(); i++) {
+					snapshot.set(basePath + ".Items." + i, entry.getValue().get(i));
 				}
 				snapshot.set(basePath + ".Time", now);
 			}
 
-			FileConfiguration data = serverData.getData();
+			data = serverData.getData();
+			previous = copySection(data, "FullInventory");
 			data.set("FullInventory", null);
 			ConfigurationSection replacement = snapshot.getConfigurationSection("FullInventory");
 			if (replacement != null) {
 				for (String path : replacement.getKeys(true)) {
-					if (!replacement.isConfigurationSection(path)) {
-						data.set("FullInventory." + path, replacement.get(path));
-					}
+					if (!replacement.isConfigurationSection(path)) data.set("FullInventory." + path, replacement.get(path));
 				}
 			}
 			serverData.saveData();
+			return true;
 		} catch (Exception e) {
-			plugin.getLogger().log(Level.WARNING, "Failed to save pending full-inventory items", e);
-		} finally {
-			deliveryLock.writeLock().unlock();
+			if (data != null && previous != null) replaceSection(data, "FullInventory", previous);
+			try {
+				plugin.getLogger().log(Level.WARNING, "Failed to save pending full-inventory items", e);
+			} catch (Throwable ignored) {
+				// A partially initialized plugin can still retain the reservation for retry.
+			}
+			return false;
 		}
+	}
+
+	private static YamlConfiguration copySection(ConfigurationSection source, String path) {
+		YamlConfiguration copy = new YamlConfiguration();
+		ConfigurationSection section = source.getConfigurationSection(path);
+		if (section == null) return copy;
+		for (String child : section.getKeys(true)) {
+			if (!section.isConfigurationSection(child)) copy.set(child, section.get(child));
+		}
+		return copy;
+	}
+
+	private static void replaceSection(ConfigurationSection target, String path, YamlConfiguration replacement) {
+		target.set(path, null);
+		for (String child : replacement.getKeys(true)) {
+			if (!replacement.isConfigurationSection(child)) target.set(path + "." + child, replacement.get(child));
+		}
+	}
+
+	/** Caller holds the write lock. */
+	private void promoteReservedOverflowLocked(String reservationId, ReservedOverflow reservation) {
+		if (!replayOverflowReservations.remove(reservationId, reservation)) return;
+		items.compute(reservation.playerId, (key, current) -> {
+			ArrayList<ItemStack> merged = current == null ? new ArrayList<>() : new ArrayList<>(current);
+			merged.addAll(reservation.items);
+			return merged;
+		});
 	}
 
 	public void startup() {
@@ -240,28 +538,50 @@ public class FullInventoryHandler {
 		}
 	}
 
-	private void giveItemOwnedPlayer(Player player, ItemStack[] item) {
+	private boolean giveItemOwnedPlayer(Player player, ItemStack[] item, String reservationId) {
 		deliveryLock.readLock().lock();
 		try {
+			if (reservationId != null && shuttingDown.get()) {
+				throw AdvancedCoreUser.replayActionNotStarted(
+						"Full-inventory handler shut down before queued item delivery began");
+			}
 			HashMap<Integer, ItemStack> excess = player.getInventory().addItem(item);
 			if (excess.isEmpty()) {
 				player.updateInventory();
-				return;
+				return false;
 			}
 
 			boolean dropItems = plugin.getOptions().isDropOnFullInv();
-			for (ItemStack extra : excess.values()) {
-				if (dropItems) {
-					player.getWorld().dropItem(player.getLocation(), extra);
+			if (dropItems) {
+				if (reservationId == null) {
+					for (ItemStack extra : excess.values()) player.getWorld().dropItem(player.getLocation(), extra);
 				} else {
-					add(player.getUniqueId(), extra);
+					ReservedOverflow reservation = new ReservedOverflow(player.getUniqueId(), excess.values());
+					replayOverflowReservations.put(reservationId, reservation);
+					ArrayList<ItemStack> undropped = new ArrayList<>();
+					for (ItemStack extra : reservation.items) {
+						try {
+							if (player.getWorld().dropItem(player.getLocation(), extra) == null) undropped.add(extra);
+						} catch (Throwable failure) {
+							undropped.add(extra);
+						}
+					}
+					if (undropped.isEmpty()) replayOverflowReservations.remove(reservationId, reservation);
+					else replayOverflowReservations.put(reservationId,
+							new ReservedOverflow(player.getUniqueId(), undropped));
 				}
+			} else if (reservationId != null) {
+				replayOverflowReservations.put(reservationId,
+						new ReservedOverflow(player.getUniqueId(), excess.values()));
+			} else {
+				for (ItemStack extra : excess.values()) add(player.getUniqueId(), extra);
 			}
 
 			if (shouldSendMessage(player.getUniqueId())) {
 				sendMessage(player);
 			}
 			player.updateInventory();
+			return reservationId != null && replayOverflowReservations.containsKey(reservationId);
 		} finally {
 			deliveryLock.readLock().unlock();
 		}

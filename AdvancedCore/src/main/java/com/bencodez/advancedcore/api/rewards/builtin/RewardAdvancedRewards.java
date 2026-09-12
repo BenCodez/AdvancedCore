@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -30,6 +32,28 @@ public final class RewardAdvancedRewards {
 
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("AdvancedRewards") {
+			@Override
+			public boolean supportsAsyncRequest() {
+				return true;
+			}
+
+			@Override
+			public boolean requiresConfiguredDataForAsync() {
+				return true;
+			}
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayNestedRewardSnapshot(placeholders, "advanced-rewards:" + getPath());
+			}
+
+			@Override
+			public boolean supportsAsyncSynchronization() {
+				// This injector awaits nested rewards, which can invoke this same
+				// shared instance. Serializing that recursive chain would deadlock.
+				return false;
+			}
+
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
@@ -41,6 +65,43 @@ public final class RewardAdvancedRewards {
                 }
                 return null;
             }
+
+			@Override
+			public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+					ConfigurationSection data, HashMap<String, String> placeholders) {
+				if (!data.isConfigurationSection(getPath()) && !(isAlwaysForce() && data.contains(getPath(), true))
+						&& !isAlwaysForceNoData()) {
+					return hasPendingReplayWork(placeholders)
+							? CompletableFuture.failedFuture(new IllegalStateException(
+									"Pending reward replay configuration is missing: " + getPath()))
+							: CompletableFuture.completedFuture(null);
+				}
+				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
+				String parentReplayKey = Reward.currentReplayKey();
+				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
+				ConfigurationSection section = data.getConfigurationSection(getPath());
+				ArrayList<String> configured = ArrayUtils.convert(section.getKeys(false));
+				return Reward.replayNestedRewardSnapshot(plugin, placeholders, "advanced-rewards:" + getPath(),
+						configured, replayState, parentReplayKey).thenCompose(rewards -> {
+					for (String rewardName : rewards) {
+						if (!section.contains(rewardName, true)) {
+							return CompletableFuture.failedFuture(new IllegalStateException(
+									"Pending nested reward configuration is missing: " + rewardName));
+						}
+					}
+					CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+					for (int index = 0; index < rewards.size(); index++) {
+						String rewardName = rewards.get(index);
+						int childIndex = index;
+						sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> handler.giveRewardAsync(user, section, rewardName,
+										Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders), replayState,
+												parentReplayKey, rewardName + ":" + childIndex, parentOccurrenceId)
+												.setPrefix(reward.getRewardName() + "_AdvancedRewards"))));
+					}
+					return sequence.thenApply(ignored -> (Object) null);
+				});
+			}
 
             @Override
             public ArrayList<SubDirectlyDefinedReward> subRewards(DefinedReward direct) {

@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -30,15 +32,59 @@ public final class RewardAdvancedWorld {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("AdvancedWorld") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayNestedRewardSnapshot(placeholders, "advanced-world:" + getPath());
+			}
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
+            @Override
             public String onRewardRequested(Reward sourceReward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
-                for (String key : section.getKeys(false)) {
+				for (String key : section.getKeys(false)) {
                     plugin.extraDebug("AdvancedWorld: Giving reward " + sourceReward.getName() + "_AdvancedWorld");
                     section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
                     handler.giveReward(user, section, key, new RewardOptions().withPlaceHolder(placeholders)
                             .setPrefix(sourceReward.getName() + "_AdvancedWorld"));
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward sourceReward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
+				String parentReplayKey = Reward.currentReplayKey();
+				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
+				return Reward.replayNestedRewardSnapshot(plugin, placeholders, "advanced-world:" + getPath(),
+						new ArrayList<>(section.getKeys(false)), replayState, parentReplayKey)
+						.thenCompose(worlds -> Reward.continueOnServerThread(plugin, user, () -> {
+					for (String key : worlds) {
+						if (!section.contains(key, true)) {
+							return CompletableFuture.failedFuture(new IllegalStateException(
+									"Pending nested reward configuration is missing: " + key));
+						}
+					}
+					CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+					for (int index = 0; index < worlds.size(); index++) {
+						String key = worlds.get(index);
+						int childIndex = index;
+						section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
+						sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> handler.giveRewardAsync(user, section, key,
+										Reward.withReplayState(new RewardOptions().withPlaceHolder(placeholders), replayState,
+												parentReplayKey, key + ":" + childIndex, parentOccurrenceId)
+												.setPrefix(sourceReward.getRewardName() + "_AdvancedWorld"))));
+					}
+					return sequence.thenApply(ignored -> (String) null);
+				}));
             }
 
             @Override

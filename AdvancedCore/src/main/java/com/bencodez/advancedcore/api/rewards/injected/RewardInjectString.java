@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.api.rewards.injected;
 
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -45,5 +47,31 @@ public abstract class RewardInjectString extends RewardInject {
 
 	public abstract String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
 			HashMap<String, String> placeholders);
+
+	/** Completion-aware counterpart for string injections. */
+	public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user, String value,
+			HashMap<String, String> placeholders) {
+		try {
+			return CompletableFuture.completedFuture(onRewardRequest(reward, user, value, placeholders));
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
+	}
+
+	@Override
+	public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+			ConfigurationSection data, HashMap<String, String> placeholders) {
+		if (!((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty())
+				|| (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData())) {
+			if (!hasPendingReplayWork(placeholders)) return CompletableFuture.completedFuture(null);
+		}
+		String value = data.getString(getPath(), getDefaultValue());
+		CompletionStage<String> result = onRewardRequestAsync(reward, user, value, placeholders);
+		if (result == null) {
+			return CompletableFuture.failedFuture(new IllegalStateException(
+					"Reward injection returned a null asynchronous result: " + getPath()));
+		}
+		return result.thenApply(valueResult -> (Object) (valueResult == null ? value : valueResult));
+	}
 
 }

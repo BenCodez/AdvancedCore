@@ -1,11 +1,16 @@
 package com.bencodez.advancedcore.tests.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
@@ -19,6 +24,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
 
 import org.bukkit.Location;
@@ -76,6 +83,7 @@ import com.bencodez.advancedcore.api.rewards.injected.RewardInjectKeys;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectString;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectStringList;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 public class BuiltinRewardBehaviorTest {
 
@@ -253,10 +261,28 @@ public class BuiltinRewardBehaviorTest {
         ConfigurationSection section = section("TempPermission");
         section.set("Permission", "advancedcore.test");
         section.set("Expiration", 90);
+        when(user.getPlayer()).thenReturn(mock(Player.class));
 
         configInject(0).onRewardRequested(reward, user, section, placeholders);
 
         verify(user).addPermission("advancedcore.test", 90);
+    }
+
+    @Test
+    public void temporaryPermissionFailurePropagatesDuringAsyncReplay() {
+        RewardTempPermission.register(handler, plugin);
+        ConfigurationSection data = new YamlConfiguration();
+        ConfigurationSection section = data.createSection("TempPermission");
+        section.set("Permission", "advancedcore.test");
+        section.set("Expiration", 90);
+        when(user.getPlayer()).thenReturn(null);
+
+        RewardInject inject = injects.get(0);
+        assertTrue(inject.supportsAsyncRequest());
+        assertTrue(inject.requiresConfiguredDataForAsync());
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> inject.onRewardRequestAsync(reward, user, data, placeholders).toCompletableFuture().join());
+        verify(user, never()).addPermission(anyString(), org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Test
@@ -295,6 +321,103 @@ public class BuiltinRewardBehaviorTest {
             ArrayList<String> random = new ArrayList<>(List.of("say only"));
             ((RewardInjectStringList) injects.get(4)).onRewardRequest(reward, user, random, placeholders);
             verify(misc).executeConsoleCommands("Ben", "say only", placeholders);
+        }
+    }
+
+    @Test
+    public void asyncCommandsWaitForTheirDispatchStages() {
+        RewardCommands.register(handler, plugin);
+        MiscUtils misc = mock(MiscUtils.class);
+        CompletableFuture<Void> numberCommand = new CompletableFuture<>();
+        CompletableFuture<Void> command = new CompletableFuture<>();
+		CompletableFuture<Void> commandList = new CompletableFuture<>();
+        CompletableFuture<Void> sectionConsole = new CompletableFuture<>();
+        CompletableFuture<Void> sectionPlayer = new CompletableFuture<>();
+        CompletableFuture<Void> random = new CompletableFuture<>();
+        try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
+            miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
+            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("give Ben stone 5"), eq(placeholders)))
+                    .thenReturn(numberCommand);
+            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("say hi"), eq(placeholders))).thenReturn(command);
+            ArrayList<String> list = new ArrayList<>(List.of("say one", "say two"));
+			when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(list), eq(placeholders), eq(true)))
+					.thenReturn(commandList);
+            ArrayList<String> console = new ArrayList<>(List.of("say console"));
+			when(misc.executeConsoleCommandsAsync(eq("Ben"), eq(console), eq(placeholders), eq(false)))
+					.thenReturn(sectionConsole);
+            ArrayList<String> player = new ArrayList<>(List.of("spawn"));
+            when(user.validatePlayerCommandAvailabilityAsync()).thenReturn(CompletableFuture.completedFuture(null));
+            when(user.preformCommandAsync(eq(player), eq(placeholders))).thenReturn(sectionPlayer);
+            ArrayList<String> randomList = new ArrayList<>(List.of("say random"));
+            HashMap<String, String> randomPlaceholders = new HashMap<>();
+            when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("say random"), eq(randomPlaceholders))).thenReturn(random);
+
+            ConfigurationSection number = section("NumberCommand");
+            number.set("Min", 5);
+            number.set("Max", 5);
+            number.set("Command", "give Ben stone %number%");
+            CompletionStage<String> numberStage = ((RewardInjectConfigurationSection) injects.get(0))
+                    .onRewardRequestedAsync(reward, user, number, placeholders);
+            assertFalse(numberStage.toCompletableFuture().isDone());
+            numberCommand.complete(null);
+            assertEquals("5", numberStage.toCompletableFuture().join());
+
+            CompletionStage<String> commandStage = ((RewardInjectString) injects.get(1))
+                    .onRewardRequestAsync(reward, user, "say hi", placeholders);
+            assertFalse(commandStage.toCompletableFuture().isDone());
+            command.complete(null);
+            commandStage.toCompletableFuture().join();
+
+            CompletionStage<String> listStage = ((RewardInjectStringList) injects.get(2))
+                    .onRewardRequestAsync(reward, user, list, placeholders);
+            assertFalse(listStage.toCompletableFuture().isDone());
+			commandList.complete(null);
+            listStage.toCompletableFuture().join();
+
+            ConfigurationSection commands = section("Commands");
+            commands.set("Console", console);
+            commands.set("Player", player);
+            commands.set("Stagger", false);
+            CompletionStage<String> sectionStage = ((RewardInjectConfigurationSection) injects.get(3))
+                    .onRewardRequestedAsync(reward, user, commands, placeholders);
+            verify(misc).executeConsoleCommandsAsync(eq("Ben"), eq(console), eq(placeholders), eq(false));
+            verify(user, never()).preformCommandAsync(eq(player), eq(placeholders));
+            sectionConsole.complete(null);
+            verify(user).preformCommandAsync(eq(player), eq(placeholders));
+            assertFalse(sectionStage.toCompletableFuture().isDone());
+            sectionPlayer.complete(null);
+            sectionStage.toCompletableFuture().join();
+
+            CompletionStage<String> randomStage = ((RewardInjectStringList) injects.get(4))
+                    .onRewardRequestAsync(reward, user, randomList, randomPlaceholders);
+            assertFalse(randomStage.toCompletableFuture().isDone());
+            random.complete(null);
+            randomStage.toCompletableFuture().join();
+        }
+    }
+
+    @Test
+    public void mixedAsyncCommandsDoNotScheduleConsoleWorkWhenPlayerDispatchFails() {
+        RewardCommands.register(handler, plugin);
+        MiscUtils misc = mock(MiscUtils.class);
+        ArrayList<String> console = new ArrayList<>(List.of("give Ben diamond"));
+        ArrayList<String> player = new ArrayList<>(List.of("spawn"));
+        when(user.validatePlayerCommandAvailabilityAsync())
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("player unavailable")));
+        ConfigurationSection commands = section("Commands");
+        commands.set("Console", console);
+        commands.set("Player", player);
+
+        try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
+            miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
+
+            CompletionStage<String> result = ((RewardInjectConfigurationSection) injects.get(3))
+                    .onRewardRequestedAsync(reward, user, commands, placeholders);
+
+            assertThrows(java.util.concurrent.CompletionException.class, () -> result.toCompletableFuture().join());
+            verify(misc, never()).executeConsoleCommandsAsync(anyString(), any(), any(), anyBoolean());
+            verify(misc, never()).executeConsoleCommandsAsync(anyString(), anyString(), any());
+			verify(user, never()).preformCommandAsync(any(), any());
         }
     }
 
@@ -556,6 +679,32 @@ public class BuiltinRewardBehaviorTest {
         choices.onRewardRequest(reward, user, true, placeholders);
         verify(handler).giveChoicesReward(reward, user, "OptionA");
     }
+
+	@Test
+	public void choicesAsyncDispatchWaitsForSelectedReward() {
+		RewardChoices.register(handler, plugin);
+		RewardInjectBoolean choices = (RewardInjectBoolean) injects.get(0);
+		when(user.getChoicePreference("SourceReward")).thenReturn("OptionA");
+		CompletableFuture<Void> child = new CompletableFuture<>();
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.isEnabled()).thenReturn(true);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(1).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+
+		try (MockedConstruction<RewardBuilder> builders = mockConstruction(RewardBuilder.class,
+				withSettings().defaultAnswer(Answers.RETURNS_SELF),
+				(builder, context) -> when(builder.sendAsync(user)).thenReturn(child))) {
+			CompletionStage<String> result = choices.onRewardRequestAsync(reward, user, true, placeholders);
+			assertFalse(result.toCompletableFuture().isDone());
+			child.complete(null);
+			assertEquals("OptionA", result.toCompletableFuture().join());
+			verify(builders.constructed().get(0)).sendAsync(user);
+			verify(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		}
+	}
 
     @Test
     public void javascriptActuallyExecutesScriptsAndTrueBranch() {

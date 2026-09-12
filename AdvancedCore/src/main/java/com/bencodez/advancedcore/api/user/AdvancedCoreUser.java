@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.api.user;
 
+import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -10,9 +11,19 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
@@ -22,6 +33,7 @@ import org.bukkit.Particle;
 import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
@@ -56,6 +68,377 @@ import net.md_5.bungee.chat.ComponentSerializer;
 public class AdvancedCoreUser {
 
 	private static final String QUEUED_REFERENCE_PREFIX = "\\AdvancedCoreQueue/1/";
+	private static final String ASYNC_PROGRESS_DELIMITER = "%asyncprogress%";
+	private static final String ASYNC_RETRY_DELIMITER = "%asyncretry%";
+	private static final String ASYNC_OCCURRENCE_DELIMITER = "%asyncoccurrence%";
+	private static final String CHOICE_OCCURRENCE_PREFIX = "\\AdvancedCoreChoice/1/";
+	private static final Object REPLAY_CLAIMS_LOCK = new Object();
+	private static final WeakHashMap<AdvancedCorePlugin, HashMap<String, ReplayClaims>> REPLAY_CLAIMS = new WeakHashMap<>();
+	private static final ThreadLocal<AsyncActionCollection> ASYNC_ACTION_COLLECTION = new ThreadLocal<>();
+
+	/** Internal completion scope used by asynchronous reward dispatch. */
+	public static final class AsyncActionCollection {
+		private static final String ACTION_SNAPSHOT_SUFFIX = "_snapshot";
+		private static final String ACTION_COMPLETION_VERSION = "v2:";
+		private static final String ACTION_SNAPSHOT_VERSION = "v1:";
+		private final AsyncActionCollection previous;
+		private final AdvancedCoreUser owner;
+		private final ArrayList<ReplayAction> actions = new ArrayList<>();
+		private final HashMap<String, Integer> actionOccurrences = new HashMap<>();
+		private final Reward.ReplayState replayState;
+		private final HashMap<String, String> placeholders;
+		private final String checkpointKey;
+		private final String snapshotKey;
+		private final AdvancedCorePlugin plugin;
+		private boolean closed;
+
+		private AsyncActionCollection(AsyncActionCollection previous, AdvancedCoreUser owner, Reward.ReplayState replayState,
+				HashMap<String, String> placeholders, String injectionKey, AdvancedCorePlugin plugin) {
+			this.previous = previous;
+			this.owner = owner;
+			this.replayState = replayState;
+			this.placeholders = placeholders;
+			this.checkpointKey = Reward.legacyActionReplayKey(injectionKey);
+			this.snapshotKey = checkpointKey + ACTION_SNAPSHOT_SUFFIX;
+			this.plugin = plugin;
+		}
+
+		private synchronized boolean add(Supplier<CompletionStage<Void>> action, String descriptor) {
+			if (closed) return false;
+			String fingerprint = Reward.legacyActionFingerprint(descriptor);
+			int occurrence = actionOccurrences.getOrDefault(fingerprint, 0);
+			actionOccurrences.put(fingerprint, occurrence + 1);
+			actions.add(new ReplayAction(fingerprint + "/" + occurrence, fingerprint, action,
+					!descriptor.startsWith("failure:")));
+			return true;
+		}
+
+		private boolean belongsTo(AdvancedCoreUser user) {
+			return owner == user;
+		}
+
+		private synchronized CompletionStage<Void> closeAndAwait() {
+			closed = true;
+			HashMap<String, String> currentSnapshot = new HashMap<>();
+			for (ReplayAction action : actions) {
+				if (action.durable) currentSnapshot.put(action.identity, action.fingerprint);
+			}
+			HashMap<String, String> persistedSnapshot;
+			HashSet<String> completed;
+			try {
+				persistedSnapshot = snapshot(readReplayValue(snapshotKey));
+				completed = completed(readReplayValue(checkpointKey));
+				for (String identity : completed) {
+					if (!persistedSnapshot.containsKey(identity)) {
+						return CompletableFuture.failedFuture(new IllegalStateException(
+								"Legacy action checkpoint does not match its persisted action snapshot"));
+					}
+				}
+			} catch (IllegalArgumentException failure) {
+				return CompletableFuture.failedFuture(new IllegalStateException(
+						"Cannot safely resume legacy reward actions from an ordinal-only or malformed checkpoint", failure));
+			}
+			boolean snapshotChanged = persistedSnapshot.isEmpty();
+			if (snapshotChanged) persistedSnapshot = new HashMap<>(currentSnapshot);
+			else if (!persistedSnapshot.equals(currentSnapshot)) {
+				for (Entry<String, String> persisted : persistedSnapshot.entrySet()) {
+					if (!completed.contains(persisted.getKey())
+							&& !persisted.getValue().equals(currentSnapshot.get(persisted.getKey()))) {
+						return CompletableFuture.failedFuture(new IllegalStateException(
+								"Cannot safely resume because an unfinished legacy reward action changed or disappeared"));
+					}
+				}
+				// The actions are deliberately matched individually below. Retaining the
+				// original snapshot lets a reordered, shortened, or extended config skip
+				// only the exact effects known to have completed. New actions are added
+				// before they can receive a completion marker.
+				persistedSnapshot.putAll(currentSnapshot);
+				snapshotChanged = true;
+			}
+			CompletionStage<Void> result = CompletableFuture.completedFuture(null);
+			if (snapshotChanged) {
+				recordReplayValue(snapshotKey, encodeSnapshot(persistedSnapshot));
+				result = checkpoint();
+			}
+			HashMap<String, String> snapshotLedger = persistedSnapshot;
+			for (ReplayAction action : actions) {
+				if (completed.contains(action.identity)) continue;
+				result = result.thenCompose(ignored -> {
+					try {
+						CompletionStage<Void> stage = action.action.get();
+						if (stage == null) return CompletableFuture.failedFuture(
+								new IllegalStateException("Scheduled reward action returned null"));
+						return stage.exceptionallyCompose(failure -> {
+							Throwable cause = unwrapCompletionFailure(failure);
+							if (!(cause instanceof LegacyActionNotStartedException)) {
+								return CompletableFuture.failedFuture(cause);
+							}
+							// Scheduler rejection, shutdown-before-dispatch, and the bounded
+							// pre-dispatch timeout all prove the action never began. Release its
+							// reservation so a retry may safely regenerate a random payload.
+							snapshotLedger.remove(action.identity);
+							recordReplayValue(snapshotKey, encodeSnapshot(snapshotLedger));
+							return checkpoint().thenCompose(unused -> CompletableFuture.failedFuture(cause));
+						});
+					} catch (Throwable failure) {
+						return CompletableFuture.failedFuture(failure);
+					}
+				}).thenCompose(ignored -> {
+					if (!action.durable) return CompletableFuture.completedFuture(null);
+					completed.add(action.identity);
+					recordReplayValue(checkpointKey, encodeCompleted(completed));
+					return checkpoint();
+				});
+			}
+			return result;
+		}
+
+		private static Throwable unwrapCompletionFailure(Throwable failure) {
+			Throwable current = failure;
+			while ((current instanceof java.util.concurrent.CompletionException
+					|| current instanceof java.util.concurrent.ExecutionException) && current.getCause() != null) {
+				current = current.getCause();
+			}
+			return current;
+		}
+
+		private String readReplayValue(String key) {
+			String value = placeholders == null ? null : placeholders.get(key);
+			return value == null && replayState != null ? replayState.replayMetadata(key) : value;
+		}
+
+		private void recordReplayValue(String key, String value) {
+			if (placeholders != null) placeholders.put(key, value);
+			if (replayState != null) replayState.recordReplayMetadata(key, value);
+		}
+
+		private CompletionStage<Void> checkpoint() {
+			if (replayState == null || placeholders == null) return CompletableFuture.completedFuture(null);
+			return replayState.persistCheckpointAsync(plugin, placeholders);
+		}
+
+		private static HashSet<String> completed(String encoded) {
+			HashSet<String> values = new HashSet<>();
+			if (encoded == null || encoded.isEmpty()) return values;
+			if (!encoded.startsWith(ACTION_COMPLETION_VERSION)) {
+				throw new IllegalArgumentException("Unknown legacy action checkpoint version");
+			}
+			for (String value : encoded.substring(ACTION_COMPLETION_VERSION.length()).split("\\.", -1)) {
+				if (value.isEmpty()) continue;
+				values.add(new String(Base64.getUrlDecoder().decode(value), StandardCharsets.UTF_8));
+			}
+			return values;
+		}
+
+		private static String encodeCompleted(HashSet<String> completed) {
+			ArrayList<String> values = new ArrayList<>(completed);
+			java.util.Collections.sort(values);
+			StringBuilder encoded = new StringBuilder(ACTION_COMPLETION_VERSION);
+			for (String value : values) {
+				if (encoded.length() > ACTION_COMPLETION_VERSION.length()) encoded.append('.');
+				encoded.append(Base64.getUrlEncoder().withoutPadding()
+						.encodeToString(value.getBytes(StandardCharsets.UTF_8)));
+			}
+			return encoded.toString();
+		}
+
+		private static HashMap<String, String> snapshot(String encoded) {
+			HashMap<String, String> values = new HashMap<>();
+			if (encoded == null || encoded.isEmpty()) return values;
+			if (!encoded.startsWith(ACTION_SNAPSHOT_VERSION)) {
+				throw new IllegalArgumentException("Unknown legacy action snapshot version");
+			}
+			for (String entry : encoded.substring(ACTION_SNAPSHOT_VERSION.length()).split("\\.", -1)) {
+				if (entry.isEmpty()) continue;
+				String[] pair = entry.split("~", 2);
+				if (pair.length != 2 || values.put(new String(Base64.getUrlDecoder().decode(pair[0]), StandardCharsets.UTF_8),
+						new String(Base64.getUrlDecoder().decode(pair[1]), StandardCharsets.UTF_8)) != null) {
+					throw new IllegalArgumentException("Malformed legacy action snapshot");
+				}
+			}
+			return values;
+		}
+
+		private static String encodeSnapshot(HashMap<String, String> snapshot) {
+			ArrayList<String> identities = new ArrayList<>(snapshot.keySet());
+			java.util.Collections.sort(identities);
+			StringBuilder encoded = new StringBuilder(ACTION_SNAPSHOT_VERSION);
+			for (String identity : identities) {
+				if (encoded.length() > ACTION_SNAPSHOT_VERSION.length()) encoded.append('.');
+				encoded.append(Base64.getUrlEncoder().withoutPadding()
+						.encodeToString(identity.getBytes(StandardCharsets.UTF_8))).append('~')
+						.append(Base64.getUrlEncoder().withoutPadding().encodeToString(
+								snapshot.get(identity).getBytes(StandardCharsets.UTF_8)));
+			}
+			return encoded.toString();
+		}
+
+		private static final class ReplayAction {
+			private final String identity;
+			private final String fingerprint;
+			private final Supplier<CompletionStage<Void>> action;
+			private final boolean durable;
+
+			private ReplayAction(String identity, String fingerprint, Supplier<CompletionStage<Void>> action,
+					boolean durable) {
+				this.identity = identity;
+				this.fingerprint = fingerprint;
+				this.action = action;
+				this.durable = durable;
+			}
+		}
+	}
+
+	/** Signals a replay-aware legacy action that was conclusively never started. */
+	private static final class LegacyActionNotStartedException extends IllegalStateException {
+		private static final long serialVersionUID = 1L;
+
+		private LegacyActionNotStartedException(String message) {
+			super(message);
+		}
+
+		private LegacyActionNotStartedException(String message, Throwable cause) {
+			super(message, cause);
+		}
+	}
+
+	/** Internal cross-package signal for a replay action proven not to have begun. */
+	public static RuntimeException replayActionNotStarted(String message) {
+		return new LegacyActionNotStartedException(message);
+	}
+
+	/** Internal cross-package signal for scheduler rejection before a replay action began. */
+	public static RuntimeException replayActionNotStarted(String message, Throwable cause) {
+		return new LegacyActionNotStartedException(message, cause);
+	}
+
+	/** Returns whether a completion failed before its replay-aware action began. */
+	public static boolean isReplayActionNotStarted(Throwable failure) {
+		return AsyncActionCollection.unwrapCompletionFailure(failure) instanceof LegacyActionNotStartedException;
+	}
+
+	/**
+	 * Explicitly carries an async injector's originating action scope into a
+	 * completion callback. Injectors capture this while their request method is
+	 * invoked, then wrap only callbacks whose legacy user actions belong to that
+	 * request. It deliberately does not infer ownership from other pending work
+	 * on the callback thread.
+	 */
+	public static final class AsyncActionContext {
+		private final AsyncActionCollection collection;
+
+		private AsyncActionContext(AsyncActionCollection collection) {
+			this.collection = collection;
+		}
+
+		/** Wraps a CompletionStage callback that has no return value. */
+		public Runnable wrap(Runnable callback) {
+			if (callback == null) throw new IllegalArgumentException("callback cannot be null");
+			return () -> runInScope(() -> {
+				callback.run();
+				return null;
+			});
+		}
+
+		/** Wraps a CompletionStage mapping callback while preserving its result. */
+		public <T, R> Function<T, R> wrap(Function<T, R> callback) {
+			if (callback == null) throw new IllegalArgumentException("callback cannot be null");
+			return value -> runInScope(() -> callback.apply(value));
+		}
+
+		/** Wraps a deferred supplier used by an asynchronous injector. */
+		public <T> Supplier<T> wrap(Supplier<T> callback) {
+			if (callback == null) throw new IllegalArgumentException("callback cannot be null");
+			return () -> runInScope(callback);
+		}
+
+		private <T> T runInScope(Supplier<T> callback) {
+			if (collection == null) return callback.get();
+			AsyncActionCollection previous = ASYNC_ACTION_COLLECTION.get();
+			ASYNC_ACTION_COLLECTION.set(collection);
+			try {
+				return callback.get();
+			} finally {
+				if (previous == null) ASYNC_ACTION_COLLECTION.remove();
+				else ASYNC_ACTION_COLLECTION.set(previous);
+			}
+		}
+	}
+
+	/** Starts collecting completion stages created by legacy reward callbacks. */
+	public AsyncActionCollection beginAsyncActionCollection() {
+		return beginAsyncActionCollection(null, null, null);
+	}
+
+	/** Starts a collection whose legacy actions advance the current replay checkpoint individually. */
+	public AsyncActionCollection beginAsyncActionCollection(Reward.ReplayState replayState,
+			HashMap<String, String> placeholders, String injectionKey) {
+		AsyncActionCollection collection = new AsyncActionCollection(ASYNC_ACTION_COLLECTION.get(), this, replayState,
+				placeholders, injectionKey, plugin);
+		ASYNC_ACTION_COLLECTION.set(collection);
+		return collection;
+	}
+
+	/**
+	 * Captures this user's active injector scope for an explicitly wrapped async
+	 * continuation. Calling this outside the originating injector returns an
+	 * inert context, so unrelated work keeps its ordinary scheduling semantics.
+	 */
+	public AsyncActionContext captureAsyncActionContext() {
+		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
+		return new AsyncActionContext(collection != null && collection.belongsTo(this) ? collection : null);
+	}
+
+	/** Restores the calling thread's previous collection while keeping this scope active for its returned stage. */
+	public void restoreAsyncActionCollectionScope(AsyncActionCollection collection) {
+		if (collection == null || ASYNC_ACTION_COLLECTION.get() != collection) return;
+		if (collection.previous == null) ASYNC_ACTION_COLLECTION.remove();
+		else ASYNC_ACTION_COLLECTION.set(collection.previous);
+	}
+
+	/** Closes a completed async scope and returns completion for every collected action. */
+	public CompletionStage<Void> endAsyncActionCollection(AsyncActionCollection collection) {
+		if (collection == null) return CompletableFuture.completedFuture(null);
+		restoreAsyncActionCollectionScope(collection);
+		return collection.closeAndAwait();
+	}
+
+	private boolean collectAsyncAction(CompletionStage<Void> action) {
+		return collectAsyncAction(() -> action, "failure:" + action.getClass().getName());
+	}
+
+	private boolean collectAsyncAction(Supplier<CompletionStage<Void>> action, String descriptor) {
+		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
+		if (collection != null && collection.belongsTo(this) && collection.add(action, descriptor)) return true;
+		// Do not infer ownership from another pending collection. A normal synchronous
+		// reward can run while an unrelated async injection is waiting; it must retain
+		// its established fire-and-forget scheduling semantics instead of being made a
+		// dependency of whichever injection completes next on this thread.
+		return false;
+	}
+
+	private boolean hasOwnedAsyncActionCollection() {
+		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
+		return collection != null && collection.belongsTo(this);
+	}
+
+	/**
+	 * Retained for binary compatibility with integrations that previously called
+	 * this internal hand-off hook. Unscoped actions are intentionally not claimed:
+	 * only actions created while their originating collection is active may become
+	 * part of that collection.
+	 */
+	public void claimAsyncContinuationActions(AsyncActionCollection collection) { }
+
+	private void collectAsyncFailure(Throwable failure) {
+		collectAsyncAction(CompletableFuture.failedFuture(failure));
+	}
+
+	private static final class ReplayClaims {
+		private final HashMap<String, Integer> offline = new HashMap<>();
+		private final HashSet<String> timed = new HashSet<>();
+		private CompletableFuture<Void> serialReplayTail = CompletableFuture.completedFuture(null);
+	}
 
 	/**
 	 * User data fetch mode for this user.
@@ -214,9 +597,38 @@ public class AdvancedCoreUser {
 	 * @param placeholders the placeholders
 	 */
 	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders) {
+		addOfflineRewards(reward, placeholders, null);
+	}
+
+	/**
+	 * Adds an offline reward while retaining an in-flight asynchronous replay's
+	 * occurrence and durable checkpoint.  This overload is used when pause or
+	 * vanish handling defers a reward before its async chain can complete.
+	 *
+	 * @param reward       the reward
+	 * @param placeholders the placeholders
+	 * @param options      replay options to preserve, if any
+	 */
+	public void addOfflineRewards(Reward reward, HashMap<String, String> placeholders, RewardOptions options) {
 		synchronized (plugin) {
 			ArrayList<String> offlineRewards = getOfflineRewards();
-			offlineRewards.add(queuedRewardReference(reward) + "%placeholders%" + ArrayUtils.makeString(placeholders));
+			Reward.preserveReplayState(options);
+			HashMap<String, String> savedPlaceholders = placeholders == null ? new HashMap<>()
+					: new HashMap<>(placeholders);
+			if (options != null) savedPlaceholders.putAll(options.getPlaceholders());
+			String queued = queuedRewardReference(reward, options) + "%placeholders%"
+					+ ArrayUtils.makeString(savedPlaceholders);
+			String occurrence = options == null ? null : options.getAsyncReplayOccurrenceId();
+			int replacement = -1;
+			if (occurrence != null && !occurrence.isEmpty()) {
+				for (int index = offlineRewards.size() - 1; index >= 0; index--) {
+					if (!occurrence.equals(occurrenceId(offlineRewards.get(index)))) continue;
+					replacement = index;
+					offlineRewards.remove(index);
+				}
+			}
+			if (replacement < 0) offlineRewards.add(queued);
+			else offlineRewards.add(Math.min(replacement, offlineRewards.size()), queued);
 			setOfflineRewards(offlineRewards);
 		}
 	}
@@ -248,21 +660,288 @@ public class AdvancedCoreUser {
 	 * @param epochMilli   the epoch time in milliseconds when the reward should be
 	 *                     given
 	 */
-	public synchronized void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
-		HashMap<String, Long> timed = getTimedRewards();
-		String rewardName = queuedRewardReference(reward);
-		rewardName += "%extime%" + System.currentTimeMillis();
+	public void addTimedReward(Reward reward, HashMap<String, String> placeholders, long epochMilli) {
+		synchronized (plugin) {
+			HashMap<String, Long> timed = new HashMap<>(getTimedRewards());
+			String rewardName = queuedRewardReference(reward);
+			rewardName += "%extime%" + System.currentTimeMillis();
 
-		timed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(placeholders), epochMilli);
-		setTimedRewards(timed);
+			timed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(placeholders), epochMilli);
+			setTimedRewards(timed);
+		}
 		loadTimedDelayedTimer(epochMilli);
 	}
 
 	private String queuedRewardReference(Reward reward) {
+		return queuedRewardReference(reward, null);
+	}
+
+	private String queuedRewardReference(Reward reward, RewardOptions options) {
 		String encodedName = Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(reward.getRewardName().getBytes(StandardCharsets.UTF_8));
-		return QUEUED_REFERENCE_PREFIX + (reward.isGeneratedSnapshotCreated() ? "snapshot/" : "normal/")
-				+ encodedName;
+		String reference = QUEUED_REFERENCE_PREFIX + (reward.isGeneratedSnapshotCreated() ? "snapshot/" : "normal/")
+				+ encodedName + ASYNC_OCCURRENCE_DELIMITER
+				+ (options == null || options.getAsyncReplayOccurrenceId() == null
+						|| options.getAsyncReplayOccurrenceId().isEmpty() ? UUID.randomUUID()
+							: options.getAsyncReplayOccurrenceId());
+		if (options != null) {
+			String serialized = encodeAsyncReplayProgress(options.getAsyncReplayProgress(),
+					options.getAsyncReplayRegistryFingerprints());
+			if (!serialized.isEmpty()) reference += ASYNC_PROGRESS_DELIMITER + serialized;
+			else if (options.getCompletedAsyncInjections() > 0) {
+				reference += ASYNC_PROGRESS_DELIMITER + options.getCompletedAsyncInjections();
+			}
+		}
+		return reference;
+	}
+
+	private static QueuedReplay parseQueuedReplay(String storedReference) {
+		String occurrenceId = occurrenceId(storedReference);
+		String withoutOccurrence = stripAsyncOccurrenceMarker(storedReference);
+		int marker = withoutOccurrence.lastIndexOf(ASYNC_PROGRESS_DELIMITER);
+		if (marker < 0) return new QueuedReplay(withoutOccurrence, 0, new HashMap<>(), new HashMap<>(), false,
+				occurrenceId);
+		String value = withoutOccurrence.substring(marker + ASYNC_PROGRESS_DELIMITER.length());
+		if (value.startsWith("v3-")) {
+			try {
+				HashMap<String, Integer> progress = new HashMap<>();
+				HashMap<String, String> fingerprints = new HashMap<>();
+				String decoded = new String(Base64.getUrlDecoder().decode(value.substring(3)), StandardCharsets.UTF_8);
+				for (String line : decoded.split("\\n")) {
+					String[] pair = line.split("\\t", 3);
+					if (pair.length != 3) throw new IllegalArgumentException("Malformed replay checkpoint");
+					progress.put(new String(Base64.getUrlDecoder().decode(pair[0]), StandardCharsets.UTF_8),
+							Integer.parseInt(pair[1]));
+					fingerprints.put(new String(Base64.getUrlDecoder().decode(pair[0]), StandardCharsets.UTF_8), pair[2]);
+				}
+				return new QueuedReplay(withoutOccurrence.substring(0, marker), 0, progress, fingerprints, false,
+						occurrenceId);
+			} catch (IllegalArgumentException ignored) {
+				return new QueuedReplay(withoutOccurrence, 0, new HashMap<>(), new HashMap<>(), false, occurrenceId);
+			}
+		}
+		if (value.startsWith("v2-")) {
+			try {
+				HashMap<String, Integer> progress = new HashMap<>();
+				String decoded = new String(Base64.getUrlDecoder().decode(value.substring(3)), StandardCharsets.UTF_8);
+				for (String line : decoded.split("\\n")) {
+					String[] pair = line.split("\\t", 2);
+					if (pair.length == 2) progress.put(pair[0], Integer.parseInt(pair[1]));
+				}
+				return new QueuedReplay(withoutOccurrence.substring(0, marker), 0, progress, new HashMap<>(), true,
+						occurrenceId);
+			} catch (IllegalArgumentException ignored) {
+				return new QueuedReplay(withoutOccurrence, 0, new HashMap<>(), new HashMap<>(), false, occurrenceId);
+			}
+		}
+		try {
+			int progress = Integer.parseInt(value);
+			return progress > 0 ? new QueuedReplay(withoutOccurrence.substring(0, marker), progress, new HashMap<>(), new HashMap<>(), true,
+						occurrenceId)
+					: new QueuedReplay(withoutOccurrence.substring(0, marker), 0, new HashMap<>(), new HashMap<>(), false,
+							occurrenceId);
+		} catch (NumberFormatException ignored) {
+			// Preserve malformed legacy values as a normal reward reference instead
+			// of accidentally skipping an arbitrary portion of a reward chain.
+			return new QueuedReplay(withoutOccurrence, 0, new HashMap<>(), new HashMap<>(), false, occurrenceId);
+		}
+	}
+
+	private static String occurrenceId(String storedReference) {
+		int marker = storedReference.indexOf(ASYNC_OCCURRENCE_DELIMITER);
+		if (marker < 0) return null;
+		int start = marker + ASYNC_OCCURRENCE_DELIMITER.length();
+		int end = storedReference.indexOf('%', start);
+		String candidate = storedReference.substring(start, end < 0 ? storedReference.length() : end);
+		try {
+			return UUID.fromString(candidate).toString();
+		} catch (IllegalArgumentException ignored) {
+			return null;
+		}
+	}
+
+	private static String stripAsyncOccurrenceMarker(String storedReference) {
+		int marker = storedReference.indexOf(ASYNC_OCCURRENCE_DELIMITER);
+		if (marker < 0) return storedReference;
+		int start = marker + ASYNC_OCCURRENCE_DELIMITER.length();
+		int end = storedReference.indexOf('%', start);
+		return storedReference.substring(0, marker) + (end < 0 ? "" : storedReference.substring(end));
+	}
+
+	private static String queuedReference(QueuedReplay replay) {
+		return replay.rewardReference + (replay.asyncReplayOccurrenceId == null ? ""
+				: ASYNC_OCCURRENCE_DELIMITER + replay.asyncReplayOccurrenceId);
+	}
+
+	private static String withAsyncOccurrence(String rewardEntry, String occurrenceId) {
+		int placeholders = rewardEntry.indexOf("%placeholders%");
+		String reference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
+		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
+		return stripAsyncOccurrenceMarker(reference) + ASYNC_OCCURRENCE_DELIMITER + occurrenceId + suffix;
+	}
+
+	private String ensureOfflineRewardOccurrence(String rewardEntry) {
+		if (occurrenceId(rewardEntry) != null) return rewardEntry;
+		synchronized (plugin) {
+			ArrayList<String> pending = getOfflineRewards();
+			int index = pending.indexOf(rewardEntry);
+			if (index < 0) throw new IllegalStateException("Claimed offline reward disappeared before migration");
+			String updated = withAsyncOccurrence(rewardEntry, UUID.randomUUID().toString());
+			pending.set(index, updated);
+			setOfflineRewardsDurably(pending, updated);
+			ReplayClaims claims = replayClaims();
+			int claimed = claims.offline.getOrDefault(rewardEntry, 0);
+			if (claimed <= 1) claims.offline.remove(rewardEntry);
+			else claims.offline.put(rewardEntry, claimed - 1);
+			claims.offline.put(updated, claims.offline.getOrDefault(updated, 0) + 1);
+			return updated;
+		}
+	}
+
+	private String ensureTimedRewardOccurrence(String rewardEntry, long time) {
+		if (occurrenceId(stripTimedExecutionMarker(rewardEntry)) != null) return rewardEntry;
+		synchronized (plugin) {
+			HashMap<String, Long> pending = getTimedRewards();
+			if (!Long.valueOf(time).equals(pending.get(rewardEntry))) {
+				throw new IllegalStateException("Claimed timed reward disappeared before migration");
+			}
+			String updated = withAsyncOccurrence(rewardEntry, UUID.randomUUID().toString());
+			pending.remove(rewardEntry);
+			pending.put(updated, time);
+			setTimedRewardsDurably(pending);
+			ReplayClaims claims = replayClaims();
+			claims.timed.remove(rewardEntry);
+			claims.timed.add(updated);
+			return updated;
+		}
+	}
+
+	private static String encodeAsyncReplayProgress(Map<String, Integer> progress) {
+		if (progress.isEmpty()) return "";
+		StringBuilder encoded = new StringBuilder();
+		for (Entry<String, Integer> entry : progress.entrySet()) {
+			if (entry.getValue() != null && entry.getValue() > 0) {
+				encoded.append(entry.getKey()).append('\t').append(entry.getValue()).append('\n');
+			}
+		}
+		return encoded.length() == 0 ? "" : "v2-" + Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(encoded.toString().getBytes(StandardCharsets.UTF_8));
+	}
+
+	private static String encodeAsyncReplayProgress(Map<String, Integer> progress, Map<String, String> fingerprints) {
+		if (fingerprints.isEmpty()) return encodeAsyncReplayProgress(progress);
+		StringBuilder encoded = new StringBuilder();
+		for (Entry<String, Integer> entry : progress.entrySet()) {
+			String fingerprint = fingerprints.get(entry.getKey());
+			if (entry.getValue() != null && entry.getValue() > 0 && fingerprint == null) {
+				return encodeAsyncReplayProgress(progress);
+			}
+		}
+		for (Entry<String, String> entry : fingerprints.entrySet()) {
+			if (entry.getValue() == null) continue;
+			encoded.append(Base64.getUrlEncoder().withoutPadding()
+						.encodeToString(entry.getKey().getBytes(StandardCharsets.UTF_8))).append('\t')
+						.append(progress.getOrDefault(entry.getKey(), 0)).append('\t').append(entry.getValue()).append('\n');
+		}
+		return encoded.length() == 0 ? encodeAsyncReplayProgress(progress) : "v3-"
+				+ Base64.getUrlEncoder().withoutPadding().encodeToString(encoded.toString().getBytes(StandardCharsets.UTF_8));
+	}
+
+	private static String stripTimedExecutionMarker(String storedReference) {
+		int marker = storedReference.indexOf("%extime%");
+		if (marker < 0) return stripAsyncRetryMarker(storedReference);
+		int valueStart = marker + "%extime%".length();
+		int nextMarker = storedReference.indexOf('%', valueStart);
+		return stripAsyncRetryMarker(storedReference.substring(0, marker)
+				+ (nextMarker < 0 ? "" : storedReference.substring(nextMarker)));
+	}
+
+	private static String stripAsyncRetryMarker(String storedReference) {
+		int marker = storedReference.indexOf(ASYNC_RETRY_DELIMITER);
+		if (marker < 0) return storedReference;
+		int valueStart = marker + ASYNC_RETRY_DELIMITER.length();
+		int nextMarker = storedReference.indexOf('%', valueStart);
+		return storedReference.substring(0, marker) + (nextMarker < 0 ? "" : storedReference.substring(nextMarker));
+	}
+
+	private static int asyncRetryCount(String rewardEntry) {
+		int marker = rewardEntry.indexOf(ASYNC_RETRY_DELIMITER);
+		if (marker < 0) return 0;
+		int valueStart = marker + ASYNC_RETRY_DELIMITER.length();
+		int nextMarker = rewardEntry.indexOf('%', valueStart);
+		try { return Integer.parseInt(rewardEntry.substring(valueStart, nextMarker < 0 ? rewardEntry.length() : nextMarker)); }
+		catch (NumberFormatException ignored) { return 0; }
+	}
+
+	private static String withAsyncRetryCount(String rewardEntry, int count) {
+		int placeholders = rewardEntry.indexOf("%placeholders%");
+		String reference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
+		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
+		return stripAsyncRetryMarker(reference) + ASYNC_RETRY_DELIMITER + count + suffix;
+	}
+
+	private static String withAsyncReplayProgress(String rewardEntry, Throwable failure) {
+		Reward.RewardReplayFailure replayFailure = replayFailure(failure);
+		int completed = completedAsyncInjections(failure);
+		String serializedProgress = replayFailure == null ? "" : encodeAsyncReplayProgress(replayFailure.getReplayProgress(),
+				replayFailure.getReplayRegistryFingerprints());
+		if (completed <= 0 && serializedProgress.isEmpty()) return rewardEntry;
+		int placeholders = rewardEntry.indexOf("%placeholders%");
+		String storedReference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
+		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
+		if (replayFailure != null) suffix = "%placeholders%" + ArrayUtils.makeString(replayFailure.getReplayPlaceholders());
+		QueuedReplay queuedReplay = parseQueuedReplay(stripAsyncRetryMarker(storedReference));
+		if (!serializedProgress.isEmpty()) return queuedReference(queuedReplay) + ASYNC_PROGRESS_DELIMITER
+				+ serializedProgress + suffix;
+		return queuedReference(queuedReplay) + ASYNC_PROGRESS_DELIMITER
+				+ Math.max(queuedReplay.completedAsyncInjections, completed) + suffix;
+	}
+
+	private static String withAsyncReplayProgress(String rewardEntry, Reward.ReplayCheckpoint checkpoint) {
+		int marker = rewardEntry.indexOf("%placeholders%");
+		String reference = marker < 0 ? rewardEntry : rewardEntry.substring(0, marker);
+		QueuedReplay queuedReplay = parseQueuedReplay(stripAsyncRetryMarker(reference));
+		String serialized = encodeAsyncReplayProgress(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints());
+		return queuedReference(queuedReplay) + (serialized.isEmpty() ? "" : ASYNC_PROGRESS_DELIMITER + serialized)
+				+ "%placeholders%" + ArrayUtils.makeString(checkpoint.getPlaceholders());
+	}
+
+	private static int completedAsyncInjections(Throwable failure) {
+		Throwable current = failure;
+		while (current != null) {
+			if (current instanceof Reward.RewardReplayFailure) {
+				return ((Reward.RewardReplayFailure) current).getCompletedInjectionCount();
+			}
+			current = current.getCause();
+		}
+		return 0;
+	}
+
+	private static Reward.RewardReplayFailure replayFailure(Throwable failure) {
+		for (Throwable current = failure; current != null; current = current.getCause()) {
+			if (current instanceof Reward.RewardReplayFailure) return (Reward.RewardReplayFailure) current;
+		}
+		return null;
+	}
+
+	private static final class QueuedReplay {
+		private final String rewardReference;
+		private final int completedAsyncInjections;
+		private final Map<String, Integer> asyncReplayProgress;
+		private final Map<String, String> asyncReplayRegistryFingerprints;
+		private final boolean legacyAsyncReplayCheckpoint;
+		private final String asyncReplayOccurrenceId;
+
+		private QueuedReplay(String rewardReference, int completedAsyncInjections,
+				Map<String, Integer> asyncReplayProgress, Map<String, String> asyncReplayRegistryFingerprints,
+				boolean legacyAsyncReplayCheckpoint, String asyncReplayOccurrenceId) {
+			this.rewardReference = rewardReference;
+			this.completedAsyncInjections = completedAsyncInjections;
+			this.asyncReplayProgress = asyncReplayProgress;
+			this.asyncReplayRegistryFingerprints = asyncReplayRegistryFingerprints;
+			this.legacyAsyncReplayCheckpoint = legacyAsyncReplayCheckpoint;
+			this.asyncReplayOccurrenceId = asyncReplayOccurrenceId;
+		}
 	}
 
 	/**
@@ -270,10 +949,30 @@ public class AdvancedCoreUser {
 	 *
 	 * @param name the reward name
 	 */
-	public void addUnClaimedChoiceReward(String name) {
-		ArrayList<String> choices = getUnClaimedChoices();
+	public synchronized void addUnClaimedChoiceReward(String name) {
+		ArrayList<String> choices = getStoredUnClaimedChoices();
 		choices.add(name);
-		setUnClaimedChoice(choices);
+		getData().setStringList("UnClaimedChoices", choices);
+	}
+
+	/**
+	 * Adds an unclaimed choice once for a stable reward occurrence. The encoded
+	 * occurrence remains in the same durable list as the user-facing reward name,
+	 * so a replay cannot append a duplicate after a crash.
+	 *
+	 * @param name reward name shown in the choice UI
+	 * @param occurrenceId stable logical reward occurrence
+	 */
+	public synchronized void addUnClaimedChoiceReward(String name, String occurrenceId) {
+		if (occurrenceId == null || occurrenceId.isEmpty()) {
+			addUnClaimedChoiceReward(name);
+			return;
+		}
+		ArrayList<String> stored = getStoredUnClaimedChoices();
+		String entry = encodeUnclaimedChoice(name, occurrenceId);
+		if (stored.contains(entry)) return;
+		stored.add(entry);
+		getData().setStringList("UnClaimedChoices", stored);
 	}
 
 	/**
@@ -309,34 +1008,66 @@ public class AdvancedCoreUser {
 	public void checkDelayedTimedRewards() {
 		plugin.debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
-		HashMap<String, Long> newTimed = new HashMap<>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 			long time = entry.getValue();
 
 			if (time != 0) {
 				Date timeDate = new Date(time);
-				if (new Date().after(timeDate)) {
-					String[] data = entry.getKey().split("%placeholders%", 2);
-					String rewardReference = data[0].split("%extime%", 2)[0];
+				if (new Date().after(timeDate) && claimTimedReward(entry.getKey(), time)) {
+					String migratedEntry;
+					try {
+						migratedEntry = ensureTimedRewardOccurrence(entry.getKey(), time);
+					} catch (Throwable failure) {
+						restoreTimedReward(entry.getKey(), time, failure);
+						continue;
+					}
+					String[] data = migratedEntry.split("%placeholders%", 2);
+					QueuedReplay queuedReplay = parseQueuedReplay(stripTimedExecutionMarker(data[0]));
+					String rewardReference = queuedReplay.rewardReference;
 					String placeholders = "";
 					if (data.length > 1) {
 						placeholders = data[1];
 					}
 					RewardOptions replayOptions = new RewardOptions().setCheckTimed(false)
 							.withPlaceHolder(ArrayUtils.fromString(placeholders));
+					replayOptions.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
+					replayOptions.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
+					replayOptions.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
+					replayOptions.setLegacyAsyncReplayCheckpoint(queuedReplay.legacyAsyncReplayCheckpoint);
+					replayOptions.setAsyncReplayOccurrenceId(queuedReplay.asyncReplayOccurrenceId);
+					replayOptions.setTimedQueueReplay(true);
 					replayOptions.addPlaceholder("date",
 							"" + new SimpleDateFormat("EEE, d MMM yyyy HH:mm").format(new Date(time)));
-					plugin.getRewardHandler().givePersistedQueueReward(this, new PersistedQueueReference(rewardReference), replayOptions);
+					// Keep the due entry durable while asynchronous stages are running.  A
+					// checkpoint can change its serialized key (for example by adding the
+					// v2 progress marker), so completion and failure must follow this
+					// reference rather than the original entry key.
+					AtomicReference<String> currentEntry = new AtomicReference<>(migratedEntry);
+					replayOptions.setAsyncReplayCheckpointConsumer(
+							checkpoint -> checkpointTimedReward(currentEntry, time, checkpoint));
+					enqueuePersistedReplay(() -> {
+						CompletionStage<Void> replay;
+						try {
+							replay = plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
+									new PersistedQueueReference(rewardReference), replayOptions);
+							if (replay == null) throw new IllegalStateException("Timed reward replay returned no completion stage");
+						} catch (Throwable failure) {
+							restoreTimedReward(currentEntry.get(), time, failure);
+							return CompletableFuture.completedFuture(null);
+						}
+						return replay.handle((ignored, failure) -> {
+							if (failure == null) completeTimedReward(currentEntry.get(), time);
+							else restoreTimedReward(currentEntry.get(), time, failure);
+							return null;
+						});
+					});
 					String rewardName = rewardReference;
 					plugin.debug("Giving timed/delayed reward " + rewardName + " for " + getPlayerName()
 							+ " with placeholders " + ArrayUtils.fromString(placeholders));
-				} else {
-					newTimed.put(entry.getKey(), time);
 				}
 			}
 
 		}
-		setTimedRewards(newTimed);
 	}
 
 	/**
@@ -350,30 +1081,263 @@ public class AdvancedCoreUser {
 		if (isCheckWorld()) {
 			setCheckWorld(false);
 		}
-		ArrayList<String> rewards = getOfflineRewards();
-		if (rewards.isEmpty()) {
-			return;
-		}
+		dispatchOfflineRewards(false);
+	}
 
-		setOfflineRewards(new ArrayList<>());
-		RewardHandler rewardHandler = plugin.getRewardHandler();
-		AdvancedCoreUser user = this;
-
+	private void dispatchOfflineRewards(boolean force) {
+		ArrayList<String> rewards = new ArrayList<>(getOfflineRewards());
 		for (String rewardEntry : rewards) {
 			if (rewardEntry == null || rewardEntry.equals("null")) {
 				continue;
 			}
+			if (!claimOfflineReward(rewardEntry)) continue;
+			try {
+				rewardEntry = ensureOfflineRewardOccurrence(rewardEntry);
+			} catch (Throwable failure) {
+				restoreOfflineReward(rewardEntry, failure);
+				continue;
+			}
 
 			String[] parts = rewardEntry.split("%placeholders%", 2);
-			String rewardReference = parts[0];
+			QueuedReplay queuedReplay = parseQueuedReplay(parts[0]);
+			String rewardReference = queuedReplay.rewardReference;
 			String placeholderStr = parts.length > 1 ? parts[1] : "";
 
 			RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false)
 					.withPlaceHolder(ArrayUtils.fromString(placeholderStr));
+			if (force) options.setGiveOffline(false).forceOffline();
+			options.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
+			options.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
+			options.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
+			options.setLegacyAsyncReplayCheckpoint(queuedReplay.legacyAsyncReplayCheckpoint);
+			options.setAsyncReplayOccurrenceId(queuedReplay.asyncReplayOccurrenceId);
+			AtomicReference<String> currentEntry = new AtomicReference<>(rewardEntry);
+			options.setAsyncReplayCheckpointConsumer(checkpoint -> checkpointOfflineReward(currentEntry, checkpoint));
 
-			rewardHandler.givePersistedQueueReward(user, new PersistedQueueReference(rewardReference), options);
+			enqueuePersistedReplay(() -> {
+				CompletionStage<Void> replay;
+				try {
+					replay = plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
+							new PersistedQueueReference(rewardReference), options);
+					if (replay == null) throw new IllegalStateException("Offline reward replay returned no completion stage");
+				} catch (Throwable failure) {
+					restoreOfflineReward(currentEntry.get(), failure);
+					return CompletableFuture.completedFuture(null);
+				}
+				return replay.handle((ignored, failure) -> {
+					if (failure == null) completeOfflineReward(currentEntry.get());
+					else restoreOfflineReward(currentEntry.get(), failure);
+					return null;
+				});
+			});
 		}
+	}
 
+	/**
+	 * Runs persisted offline and timed occurrences one at a time for this plugin
+	 * and user. The tail deliberately absorbs a completed occurrence's failure:
+	 * its own restore path retains the queue entry, while the next occurrence must
+	 * still be allowed to start without blocking a caller thread.
+	 */
+	private void enqueuePersistedReplay(Supplier<CompletionStage<Void>> replay) {
+		ReplayClaims claims;
+		CompletableFuture<Void> previous;
+		CompletableFuture<Void> next = new CompletableFuture<>();
+		synchronized (plugin) {
+			claims = replayClaims();
+			previous = claims.serialReplayTail;
+			claims.serialReplayTail = next;
+		}
+		previous.whenComplete((ignored, previousFailure) -> {
+			CompletionStage<Void> stage;
+			try {
+				stage = replay.get();
+				if (stage == null) throw new IllegalStateException("Persisted reward replay returned no completion stage");
+			} catch (Throwable failure) {
+				next.complete(null);
+				releaseReplayClaimsIfEmpty(claims);
+				return;
+			}
+			stage.whenComplete((result, failure) -> {
+				next.complete(null);
+				releaseReplayClaimsIfEmpty(claims);
+			});
+		});
+	}
+
+	private void checkpointOfflineReward(AtomicReference<String> currentEntry, Reward.ReplayCheckpoint checkpoint) {
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			String current = currentEntry.get();
+			String updated = withAsyncReplayProgress(current, checkpoint);
+			ArrayList<String> pending = getOfflineRewards();
+			int index = pending.indexOf(current);
+			if (index >= 0) {
+				pending.set(index, updated);
+				setOfflineRewardsDurably(pending, updated);
+				int claimed = claims.offline.getOrDefault(current, 0);
+				// Migrate this occurrence only. Identical legacy queue entries share a
+				// serialized key, but may each already be executing; moving the whole
+				// count would make the remaining old entry appear unclaimed.
+				if (claimed <= 1) claims.offline.remove(current);
+				else claims.offline.put(current, claimed - 1);
+				claims.offline.put(updated, claims.offline.getOrDefault(updated, 0) + 1);
+				currentEntry.set(updated);
+			}
+		}
+	}
+
+	private boolean claimOfflineReward(String rewardEntry) {
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			String occurrence = occurrenceId(rewardEntry);
+			if (occurrence != null) {
+				boolean claimed = claims.offline.entrySet().stream().anyMatch(entry -> entry.getValue() > 0
+						&& occurrence.equals(occurrenceId(entry.getKey())));
+				if (claimed) return false;
+				claims.offline.put(rewardEntry, 1);
+				return true;
+			}
+			int occurrences = 0;
+			for (String pending : getOfflineRewards()) if (rewardEntry.equals(pending)) occurrences++;
+			int claimed = claims.offline.getOrDefault(rewardEntry, 0);
+			if (claimed >= occurrences) return false;
+			claims.offline.put(rewardEntry, claimed + 1);
+			return true;
+		}
+	}
+
+	private void completeOfflineReward(String rewardEntry) {
+		synchronized (plugin) {
+			ArrayList<String> pending = getOfflineRewards();
+			pending.remove(rewardEntry);
+			setOfflineRewards(pending);
+			releaseOfflineReward(rewardEntry);
+		}
+	}
+
+	/** Retains and updates a queue entry only after an asynchronous replay fails. */
+	private void restoreOfflineReward(String rewardEntry, Throwable failure) {
+		// Match addOfflineRewards' lock so a newly queued reward cannot be lost
+		// while a failed replay is being restored.
+		synchronized (plugin) {
+			ArrayList<String> pending = getOfflineRewards();
+			int index = pending.indexOf(rewardEntry);
+			try {
+				if (index >= 0) {
+					String restored = withAsyncReplayProgress(rewardEntry, failure);
+					pending.set(index, restored);
+					setOfflineRewards(pending, true, restored);
+				} else {
+					setOfflineRewards(pending);
+				}
+			} finally {
+				releaseOfflineReward(rewardEntry);
+			}
+		}
+		plugin.getLogger().warning("Could not deliver queued offline reward for " + getPlayerName()
+				+ "; it will be retried: " + failure.getMessage());
+	}
+
+	private void releaseOfflineReward(String rewardEntry) {
+		ReplayClaims claims = replayClaims();
+		int claimed = claims.offline.getOrDefault(rewardEntry, 0);
+		if (claimed <= 1) claims.offline.remove(rewardEntry);
+		else claims.offline.put(rewardEntry, claimed - 1);
+		releaseReplayClaimsIfEmpty(claims);
+	}
+
+	private boolean claimTimedReward(String rewardEntry, long time) {
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			if (claims.timed.contains(rewardEntry) || !Long.valueOf(time).equals(getTimedRewards().get(rewardEntry))) {
+				return false;
+			}
+			claims.timed.add(rewardEntry);
+			return true;
+		}
+	}
+
+	private void completeTimedReward(String rewardEntry, long time) {
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			HashMap<String, Long> pending = getTimedRewards();
+			if (Long.valueOf(time).equals(pending.get(rewardEntry))) {
+				pending.remove(rewardEntry);
+				setTimedRewards(pending);
+			}
+			claims.timed.remove(rewardEntry);
+			releaseReplayClaimsIfEmpty(claims);
+		}
+	}
+
+	/**
+	 * Persists every completed asynchronous stage before the next one can run.
+	 * Timed reward keys are map keys, so migrate the exact current key while
+	 * retaining its execution time and its in-flight claim.
+	 */
+	private void checkpointTimedReward(AtomicReference<String> currentEntry, long time,
+			Reward.ReplayCheckpoint checkpoint) {
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			String current = currentEntry.get();
+			String updated = withAsyncReplayProgress(current, checkpoint);
+			if (current.equals(updated)) return;
+			HashMap<String, Long> pending = getTimedRewards();
+			if (!Long.valueOf(time).equals(pending.get(current))) return;
+			pending.remove(current);
+			pending.put(updated, time);
+			setTimedRewardsDurably(pending);
+			claims.timed.remove(current);
+			claims.timed.add(updated);
+			currentEntry.set(updated);
+		}
+	}
+
+	/** Restores a due timed entry after an asynchronous replay fails. */
+	private void restoreTimedReward(String rewardEntry, long time, Throwable failure) {
+		long retryTime;
+		synchronized (plugin) {
+			ReplayClaims claims = replayClaims();
+			HashMap<String, Long> pending = getTimedRewards();
+			int retry = Math.min(8, asyncRetryCount(rewardEntry) + 1);
+			long retryDelay = Math.min(TimeUnit.MINUTES.toMillis(5), TimeUnit.SECONDS.toMillis(1L << retry));
+			retryTime = System.currentTimeMillis() + retryDelay;
+			pending.remove(rewardEntry);
+			pending.put(withAsyncRetryCount(withAsyncReplayProgress(rewardEntry, failure), retry), retryTime);
+			setTimedRewards(pending);
+			claims.timed.remove(rewardEntry);
+			releaseReplayClaimsIfEmpty(claims);
+		}
+		// A due entry restored after its original timer fired needs its own retry
+		// timer; waiting for reconnect would strand it indefinitely.
+		loadTimedDelayedTimer(retryTime);
+		plugin.getLogger().warning("Could not deliver queued timed reward for " + getPlayerName()
+				+ "; it will be retried: " + failure.getMessage());
+	}
+
+	private ReplayClaims replayClaims() {
+		synchronized (REPLAY_CLAIMS_LOCK) {
+			return REPLAY_CLAIMS.computeIfAbsent(plugin, ignored -> new HashMap<>())
+					.computeIfAbsent(getUUID(), ignored -> new ReplayClaims());
+		}
+	}
+
+	private void releaseReplayClaimsIfEmpty(ReplayClaims claims) {
+		synchronized (plugin) {
+			synchronized (REPLAY_CLAIMS_LOCK) {
+				// Claim mutations use the same lock ordering (plugin, then this
+				// lock). Recheck only while holding both locks; checking before
+				// entering them permits a concurrent wrapper to add a claim that
+				// cleanup then drops.
+				if (!claims.offline.isEmpty() || !claims.timed.isEmpty()
+						|| !claims.serialReplayTail.isDone()) return;
+				HashMap<String, ReplayClaims> byUser = REPLAY_CLAIMS.get(plugin);
+				if (byUser == null || byUser.get(getUUID()) != claims) return;
+				byUser.remove(getUUID());
+				if (byUser.isEmpty()) REPLAY_CLAIMS.remove(plugin);
+			}
+		}
 	}
 
 	/**
@@ -431,29 +1395,7 @@ public class AdvancedCoreUser {
 		}
 
 		setCheckWorld(false);
-		ArrayList<String> rewards = getOfflineRewards();
-		if (rewards.isEmpty()) {
-			return;
-		}
-
-		setOfflineRewards(new ArrayList<>());
-		RewardHandler rewardHandler = plugin.getRewardHandler();
-		AdvancedCoreUser user = this;
-
-		for (String rewardEntry : rewards) {
-			if (rewardEntry == null || rewardEntry.equals("null")) {
-				continue;
-			}
-
-			String[] parts = rewardEntry.split("%placeholders%", 2);
-			String rewardReference = parts[0];
-			String placeholderStr = parts.length > 1 ? parts[1] : "";
-
-			RewardOptions options = new RewardOptions().setOnline(false).setGiveOffline(false).forceOffline()
-					.setCheckTimed(false).withPlaceHolder(ArrayUtils.fromString(placeholderStr));
-
-			rewardHandler.givePersistedQueueReward(user, new PersistedQueueReference(rewardReference), options);
-		}
+		dispatchOfflineRewards(true);
 	}
 
 	/**
@@ -670,8 +1612,10 @@ public class AdvancedCoreUser {
 	 *
 	 * @return the unclaimed choices
 	 */
-	public ArrayList<String> getUnClaimedChoices() {
-		return getData().getStringList("UnClaimedChoices", userDataFetchMode);
+	public synchronized ArrayList<String> getUnClaimedChoices() {
+		ArrayList<String> choices = new ArrayList<>();
+		for (String stored : getStoredUnClaimedChoices()) choices.add(decodeUnclaimedChoice(stored));
+		return choices;
 	}
 
 	/**
@@ -702,6 +1646,7 @@ public class AdvancedCoreUser {
 	 */
 	public void giveExp(int exp) {
 		Player player = getPlayer();
+		if (scheduleOwnedPlayerAction(player, () -> player.giveExp(exp), "exp:" + exp)) return;
 		if (player != null) {
 			player.giveExp(exp);
 		}
@@ -714,6 +1659,7 @@ public class AdvancedCoreUser {
 	 */
 	public void giveExpLevels(int num) {
 		Player p = getPlayer();
+		if (scheduleOwnedPlayerAction(p, () -> p.setLevel(p.getLevel() + num), "exp-levels:" + num)) return;
 		if (p != null) {
 			p.setLevel(p.getLevel() + num);
 		}
@@ -725,7 +1671,12 @@ public class AdvancedCoreUser {
 	 * @param builder the item builder
 	 */
 	public void giveItem(ItemBuilder builder) {
-		giveItem(builder.toItemStack(getPlayer()));
+		Player player = getPlayer();
+		if (player == null && hasOwnedAsyncActionCollection()) {
+			collectAsyncFailure(new IllegalStateException("Player became unavailable before item reward delivery"));
+			return;
+		}
+		giveItem(builder.toItemStack(player));
 	}
 
 	/**
@@ -741,15 +1692,9 @@ public class AdvancedCoreUser {
 		final Player player = getPlayer();
 
 		if (plugin.isEnabled()) {
-			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					if (player != null) {
-						plugin.getFullInventoryHandler().giveItem(player, item);
-					}
-				}
-			}, player);
+			scheduleLegacyItemAction(player, item);
+		} else {
+			collectAsyncFailure(new IllegalStateException("Plugin disabled before item reward was scheduled"));
 		}
 
 	}
@@ -761,7 +1706,7 @@ public class AdvancedCoreUser {
 	 * @param placeholders the placeholders
 	 */
 	public void giveItem(ItemStack itemStack, HashMap<String, String> placeholders) {
-		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders).toItemStack(getPlayer()));
+		giveItem(new ItemBuilder(itemStack).setPlaceholders(placeholders));
 	}
 
 	/**
@@ -777,15 +1722,9 @@ public class AdvancedCoreUser {
 		final Player player = getPlayer();
 
 		if (plugin.isEnabled()) {
-			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					if (player != null) {
-						plugin.getFullInventoryHandler().giveItem(player, item);
-					}
-				}
-			}, player);
+			scheduleLegacyItemAction(player, item);
+		} else {
+			collectAsyncFailure(new IllegalStateException("Plugin disabled before item reward was scheduled"));
 		}
 
 	}
@@ -797,36 +1736,30 @@ public class AdvancedCoreUser {
 	 */
 	public void giveMoney(double m) {
 		if (!plugin.isEnabled()) {
+			collectAsyncFailure(new IllegalStateException("Plugin disabled before money reward was scheduled"));
 			return;
 		}
 		if (plugin.getVaultHandler() != null && plugin.getVaultHandler().getEcon() != null) {
 			try {
 				if (m > 0) {
 					final double money = m;
-					getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-						@Override
-						public void run() {
-							plugin.getVaultHandler().getEcon().depositPlayer(getOfflinePlayer(), money);
-						}
-					});
+					scheduleLegacyRewardAction(
+							() -> plugin.getVaultHandler().getEcon().depositPlayer(getOfflinePlayer(), money), null, false,
+							"money:deposit:" + Double.toString(money));
 
 				} else if (m < 0) {
 					m = m * -1;
 					final double money = m;
-					getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
-
-						@Override
-						public void run() {
-							plugin.getVaultHandler().getEcon().withdrawPlayer(getOfflinePlayer(), money);
-						}
-					});
+					scheduleLegacyRewardAction(
+							() -> plugin.getVaultHandler().getEcon().withdrawPlayer(getOfflinePlayer(), money), null, false,
+							"money:withdraw:" + Double.toString(money));
 
 				}
 			} catch (
 
 			IllegalStateException e) {
 				e.printStackTrace();
+				collectAsyncFailure(e);
 			}
 		}
 	}
@@ -849,17 +1782,204 @@ public class AdvancedCoreUser {
 	 */
 	public void givePotionEffect(String potionName, int duration, int amplifier) {
 		Player player = getPlayer();
-		if (player != null && plugin.isEnabled()) {
-			getPlugin().getBukkitScheduler().runTask(plugin, new Runnable() {
+		if (player == null) {
+			if (hasOwnedAsyncActionCollection()) collectAsyncFailure(new IllegalStateException(
+					"Player became unavailable before potion reward delivery"));
+			return;
+		}
+		if (!plugin.isEnabled()) {
+			if (hasOwnedAsyncActionCollection()) collectAsyncFailure(new IllegalStateException(
+					"Potion reward could not be scheduled because the plugin is unavailable"));
+			return;
+		}
+		scheduleLegacyRewardAction(() -> player.addPotionEffect(
+				new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier)), player, true,
+				"potion:" + potionName + ":" + duration + ":" + amplifier);
+	}
 
-				@SuppressWarnings("deprecation")
-				@Override
-				public void run() {
-					player.addPotionEffect(
-							new PotionEffect(PotionEffectType.getByName(potionName), 20 * duration, amplifier));
+	/** Queues a legacy Bukkit action while exposing a nonblocking completion internally. */
+	private void scheduleLegacyItemAction(Player player, ItemStack... item) {
+		StringBuilder descriptor = new StringBuilder("item");
+		for (ItemStack current : item) {
+			descriptor.append('\n').append(itemDescriptor(current));
+		}
+		if (collectAsyncAction(() -> player == null ? CompletableFuture.failedFuture(
+				replayActionNotStarted("Player became unavailable before item reward delivery"))
+				: plugin.getFullInventoryHandler().giveItemAsync(player, item), descriptor.toString())) {
+			return;
+		}
+		// Preserve ordinary fire-and-forget behavior without adding an ignored async
+		// timeout or a second scheduler boundary. Replay scopes above await the
+		// inventory handler's actual owner-task completion directly.
+		plugin.getFullInventoryHandler().giveItem(player, item);
+	}
+
+	private static String itemDescriptor(ItemStack item) {
+		if (item == null) return "null";
+		try {
+			return canonicalActionDescriptor(item.serialize());
+		} catch (Throwable ignored) {
+			// Unit-test and early-bootstrap environments can lack Bukkit's unsafe
+			// serializer. Retain every independently accessible item property instead
+			// of collapsing different metadata to an unstable display string.
+			HashMap<String, Object> fallback = new HashMap<>();
+			try {
+				fallback.put("type", item.getType());
+			} catch (Throwable ignoredAgain) { }
+			try {
+				fallback.put("amount", item.getAmount());
+			} catch (Throwable ignoredAgain) { }
+			try {
+				fallback.put("durability", item.getDurability());
+			} catch (Throwable ignoredAgain) { }
+			try {
+				fallback.put("meta", item.getItemMeta());
+			} catch (Throwable ignoredAgain) { }
+			fallback.put("class", item.getClass().getName());
+			return canonicalActionDescriptor(fallback);
+		}
+	}
+
+	/** Deterministic, delimiter-safe encoding for replayed action payloads. */
+	private static String canonicalActionDescriptor(Object value) {
+		if (value == null) return encodedActionPart("null", "");
+		if (value instanceof CharSequence || value instanceof Character || value instanceof Boolean
+				|| value instanceof Number || value instanceof Enum<?>) {
+			return encodedActionPart(value.getClass().getName(), value instanceof Enum<?>
+					? ((Enum<?>) value).name() : String.valueOf(value));
+		}
+		if (value instanceof ConfigurationSerializable) {
+			ConfigurationSerializable serializable = (ConfigurationSerializable) value;
+			return encodedActionPart("serializable-class", value.getClass().getName())
+					+ canonicalActionDescriptor(serializable.serialize());
+		}
+		if (value instanceof Map<?, ?>) {
+			ArrayList<String> entries = new ArrayList<>();
+			for (Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+				entries.add(canonicalActionDescriptor(entry.getKey()) + canonicalActionDescriptor(entry.getValue()));
+			}
+			java.util.Collections.sort(entries);
+			return encodedActionParts("map", entries);
+		}
+		if (value instanceof Iterable<?>) {
+			ArrayList<String> entries = new ArrayList<>();
+			for (Object entry : (Iterable<?>) value) entries.add(canonicalActionDescriptor(entry));
+			return encodedActionParts("list", entries);
+		}
+		if (value.getClass().isArray()) {
+			ArrayList<String> entries = new ArrayList<>();
+			for (int index = 0; index < Array.getLength(value); index++) {
+				entries.add(canonicalActionDescriptor(Array.get(value, index)));
+			}
+			return encodedActionParts("array:" + value.getClass().getComponentType().getName(), entries);
+		}
+		return encodedActionPart("object-class", value.getClass().getName());
+	}
+
+	private static String encodedActionParts(String type, Iterable<String> values) {
+		StringBuilder encoded = new StringBuilder(encodedActionPart("collection", type));
+		for (String value : values) encoded.append(encodedActionPart("entry", value));
+		return encoded.toString();
+	}
+
+	private static String encodedActionPart(String type, String value) {
+		String encodedType = Base64.getUrlEncoder().withoutPadding().encodeToString(type.getBytes(StandardCharsets.UTF_8));
+		String encodedValue = Base64.getUrlEncoder().withoutPadding().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+		return encodedType.length() + ":" + encodedType + encodedValue.length() + ":" + encodedValue;
+	}
+
+	/** Queues a legacy Bukkit action while exposing a nonblocking completion internally. */
+	private void scheduleLegacyRewardAction(Runnable action, Player player, boolean playerAware, String descriptor) {
+		scheduleLegacyRewardActionAsync(() -> {
+			action.run();
+			return CompletableFuture.completedFuture(null);
+		}, player, playerAware, descriptor);
+	}
+
+	/**
+	 * Makes a direct player mutation durable only while this user's replay scope is
+	 * active. Outside that scope callers retain the legacy immediate behavior.
+	 */
+	private boolean scheduleOwnedPlayerAction(Player player, Runnable action, String descriptor) {
+		if (!hasOwnedAsyncActionCollection()) return false;
+		if (player == null) {
+			collectAsyncFailure(new IllegalStateException("Player became unavailable before reward delivery"));
+			return true;
+		}
+		if (!plugin.isEnabled()) {
+			collectAsyncFailure(new IllegalStateException("Plugin disabled before player reward delivery"));
+			return true;
+		}
+		scheduleLegacyRewardAction(action, player, true, descriptor);
+		return true;
+	}
+
+	private void scheduleLegacyRewardActionAsync(Supplier<CompletionStage<Void>> action, Player player,
+			boolean playerAware, String descriptor) {
+		if (!collectAsyncAction(() -> {
+			CompletableFuture<Void> completion = new CompletableFuture<>();
+			AtomicBoolean claimed = new AtomicBoolean();
+			Runnable dispatch = () -> {
+				if (!claimed.compareAndSet(false, true)) return;
+				if (!plugin.isEnabled()) {
+					completion.completeExceptionally(new LegacyActionNotStartedException(
+							"Plugin disabled before scheduled reward action ran"));
+					return;
 				}
-			}, player);
+				try {
+					if (playerAware) validateLiveScheduledPlayer(player);
+					CompletionStage<Void> stage = action.get();
+					if (stage == null) {
+						completion.completeExceptionally(new IllegalStateException("Scheduled reward action returned null"));
+						return;
+					}
+					stage.whenComplete((ignored, failure) -> {
+						if (failure == null) completion.complete(null);
+						else completion.completeExceptionally(failure);
+					});
+				} catch (Throwable failure) {
+					completion.completeExceptionally(failure);
+				}
+			};
+			try {
+				if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, dispatch, player);
+				else getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
+			} catch (Throwable failure) {
+				claimed.set(true);
+				completion.completeExceptionally(new LegacyActionNotStartedException(
+						"Scheduler rejected reward action before dispatch", failure));
+			}
+			CompletableFuture.delayedExecutor(30, TimeUnit.SECONDS).execute(() -> {
+				if (claimed.compareAndSet(false, true)) {
+					completion.completeExceptionally(new LegacyActionNotStartedException(
+							"Timed out waiting for scheduled reward action", new TimeoutException()));
+				}
+			});
+			return completion;
+		}, descriptor)) {
+			Runnable dispatch = () -> {
+				try {
+					CompletionStage<Void> stage = action.get();
+					if (stage == null) throw new IllegalStateException("Scheduled reward action returned null");
+				} catch (Throwable failure) {
+					if (failure instanceof RuntimeException) throw (RuntimeException) failure;
+					if (failure instanceof Error) throw (Error) failure;
+					throw new IllegalStateException("Failed to schedule legacy reward action", failure);
+				}
+			};
+			if (playerAware) getPlugin().getBukkitScheduler().runTask(plugin, dispatch, player);
+			else getPlugin().getBukkitScheduler().runTask(plugin, dispatch);
+		}
+	}
 
+	/** Runs on the player-owned scheduler before a replay-aware player mutation. */
+	private void validateLiveScheduledPlayer(Player player) {
+		if (player == null || player.getUniqueId() == null) {
+			throw replayActionNotStarted("Scheduled player reward has no live player identity");
+		}
+		Player current = Bukkit.getPlayer(player.getUniqueId());
+		if (current != player || !current.isOnline()) {
+			throw replayActionNotStarted("Player became unavailable before scheduled reward delivery");
 		}
 	}
 
@@ -1239,6 +2359,65 @@ public class AdvancedCoreUser {
 	}
 
 	/**
+	 * Completion-aware player-command dispatch used by durable asynchronous reward
+	 * replay. It completes only after each queued player command has run.
+	 */
+	public CompletionStage<Void> preformCommandAsync(ArrayList<String> commands, HashMap<String, String> placeholders) {
+		try {
+			ArrayList<String> templates = commands == null ? new ArrayList<>() : new ArrayList<>(commands);
+			final ArrayList<String> cmds = PlaceholderUtils.replaceJavascript(getPlayer(),
+					PlaceholderUtils.replacePlaceHolder(templates, placeholders));
+			return Reward.replayCommandSequence(plugin, placeholders, "player", templates, cmds, (command, ignoredIndex) -> {
+				final Player player = getPlayer();
+				if (player == null || !plugin.isEnabled()) {
+					return CompletableFuture.failedFuture(new IllegalStateException(
+							"Player command could not run because the player or plugin is unavailable"));
+				}
+				plugin.debug("Executing player command for " + getPlayerName() + ": " + command);
+				return runPlayerCommandAsync(player, command);
+			});
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
+	}
+
+	/** Fails before mixed reward sections run console commands for an unavailable player. */
+	public CompletionStage<Void> validatePlayerCommandAvailabilityAsync() {
+		return getPlayer() == null || !plugin.isEnabled()
+				? CompletableFuture.failedFuture(
+						new IllegalStateException("Player command could not run because the player or plugin is unavailable"))
+				: CompletableFuture.completedFuture(null);
+	}
+
+	private CompletableFuture<Void> runPlayerCommandAsync(Player player, String command) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		AtomicBoolean claimed = new AtomicBoolean();
+		Runnable dispatch = () -> {
+			if (!claimed.compareAndSet(false, true)) return;
+			try {
+				validateLiveScheduledPlayer(player);
+				player.chat("/" + command);
+				completion.complete(null);
+			} catch (Throwable failure) {
+				completion.completeExceptionally(failure);
+			}
+		};
+		try {
+			getPlugin().getBukkitScheduler().runTask(plugin, dispatch, player);
+		} catch (Throwable failure) {
+			claimed.set(true);
+			completion.completeExceptionally(failure);
+			return completion;
+		}
+		CompletableFuture.delayedExecutor(30, TimeUnit.SECONDS).execute(() -> {
+			if (claimed.compareAndSet(false, true)) {
+				completion.completeExceptionally(new TimeoutException("Timed out waiting for scheduled player command"));
+			}
+		});
+		return completion;
+	}
+
+	/**
 	 * Performs a command as the player with placeholders.
 	 *
 	 * @param command      the command
@@ -1286,10 +2465,15 @@ public class AdvancedCoreUser {
 	 *
 	 * @param name the reward name
 	 */
-	public void removeUnClaimedChoiceReward(String name) {
-		ArrayList<String> choices = getUnClaimedChoices();
-		choices.remove(name);
-		setUnClaimedChoice(choices);
+	public synchronized void removeUnClaimedChoiceReward(String name) {
+		ArrayList<String> choices = getStoredUnClaimedChoices();
+		for (int index = 0; index < choices.size(); index++) {
+			if (java.util.Objects.equals(name, decodeUnclaimedChoice(choices.get(index)))) {
+				choices.remove(index);
+				break;
+			}
+		}
+		getData().setStringList("UnClaimedChoices", choices);
 	}
 
 	/**
@@ -1560,17 +2744,42 @@ public class AdvancedCoreUser {
 	 * @param offlineRewards the offline rewards
 	 */
 	public void setOfflineRewards(ArrayList<String> offlineRewards) {
+		setOfflineRewards(offlineRewards, true);
+	}
+
+	/** Writes a checkpoint without allowing size trimming to discard its active entry. */
+	private void setOfflineRewardsDurably(ArrayList<String> offlineRewards, String protectedEntry) {
+		persistReplayCheckpoint(() -> setOfflineRewards(offlineRewards, false, protectedEntry));
+	}
+
+	private void setOfflineRewards(ArrayList<String> offlineRewards, boolean queue) {
+		setOfflineRewards(offlineRewards, queue, null);
+	}
+
+	private void setOfflineRewards(ArrayList<String> offlineRewards, boolean queue, String protectedEntry) {
 		// MySQL TEXT max length is 65535 bytes
 		int maxLength = 65535;
 		String str = String.join("%line%", offlineRewards);
 
 		// Remove oldest rewards until within limit
 		while (str.getBytes().length > maxLength && !offlineRewards.isEmpty()) {
-			offlineRewards.remove(0);
+			int removalIndex = 0;
+			while (removalIndex < offlineRewards.size()
+					&& protectedEntry != null && protectedEntry.equals(offlineRewards.get(removalIndex))) {
+				removalIndex++;
+			}
+			if (removalIndex >= offlineRewards.size()) {
+				// Never trade a durable in-flight checkpoint for queue-size compliance.
+				// The storage write must retain the only record that prevents already
+				// completed non-idempotent stages from running again.
+				break;
+			}
+			offlineRewards.remove(removalIndex);
 			str = String.join("%line%", offlineRewards);
 		}
 
-		data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards);
+		if (queue) data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards);
+		else data.setStringList(plugin.getUserManager().getOfflineRewardsPath(), offlineRewards, false);
 	}
 
 	/**
@@ -1598,6 +2807,27 @@ public class AdvancedCoreUser {
 	 * @param timed the timed rewards
 	 */
 	public void setTimedRewards(HashMap<String, Long> timed) {
+		synchronized (plugin) {
+			setTimedRewards(timed, true);
+		}
+	}
+
+	/** Writes an async replay checkpoint before the next stage can execute. */
+	private void setTimedRewardsDurably(HashMap<String, Long> timed) {
+		persistReplayCheckpoint(() -> setTimedRewards(timed, false));
+	}
+
+	/**
+	 * A cached user may already have an older queued value for this key. Drain it
+	 * before the direct write so the delayed cache flush cannot replace a replay
+	 * checkpoint that an asynchronous reward stage has already relied on.
+	 */
+	private void persistReplayCheckpoint(Runnable write) {
+		if (isCached()) getCache().flushChangesAndRun(write);
+		else write.run();
+	}
+
+	private void setTimedRewards(HashMap<String, Long> timed, boolean queue) {
 		ArrayList<String> timedRewards = new ArrayList<>();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 
@@ -1607,7 +2837,8 @@ public class AdvancedCoreUser {
 			timedRewards.add(str);
 
 		}
-		data.setStringList("TimedRewards", timedRewards);
+		if (queue) data.setStringList("TimedRewards", timedRewards);
+		else data.setStringList("TimedRewards", timedRewards, false);
 	}
 
 	/**
@@ -1617,6 +2848,30 @@ public class AdvancedCoreUser {
 	 */
 	public void setUnClaimedChoice(ArrayList<String> rewards) {
 		getData().setStringList("UnClaimedChoices", rewards);
+	}
+
+	private ArrayList<String> getStoredUnClaimedChoices() {
+		return getData().getStringList("UnClaimedChoices", userDataFetchMode);
+	}
+
+	private static String encodeUnclaimedChoice(String name, String occurrenceId) {
+		Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+		return CHOICE_OCCURRENCE_PREFIX
+				+ encoder.encodeToString(occurrenceId.getBytes(StandardCharsets.UTF_8)) + "."
+				+ encoder.encodeToString((name == null ? "" : name).getBytes(StandardCharsets.UTF_8));
+	}
+
+	private static String decodeUnclaimedChoice(String stored) {
+		if (stored == null || !stored.startsWith(CHOICE_OCCURRENCE_PREFIX)) return stored;
+		String encoded = stored.substring(CHOICE_OCCURRENCE_PREFIX.length());
+		int separator = encoded.indexOf('.');
+		if (separator < 1) return stored;
+		try {
+			Base64.getUrlDecoder().decode(encoded.substring(0, separator));
+			return new String(Base64.getUrlDecoder().decode(encoded.substring(separator + 1)), StandardCharsets.UTF_8);
+		} catch (IllegalArgumentException failure) {
+			return stored;
+		}
 	}
 
 	/**

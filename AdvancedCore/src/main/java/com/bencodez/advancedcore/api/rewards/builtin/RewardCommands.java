@@ -3,10 +3,13 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -45,6 +48,24 @@ public final class RewardCommands {
     public static void registerNumberCommand(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("NumberCommand") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console");
+			}
+
+			@Override
+			protected CompletionStage<Object> onMissingConfiguredDataAsync(Reward reward, AdvancedCoreUser user,
+					HashMap<String, String> placeholders) {
+				return onRewardRequestedAsync(reward, user, new YamlConfiguration(), placeholders)
+						.thenApply(result -> result);
+			}
+
+            @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
                 int min = section.getInt("Min", 0);
@@ -53,6 +74,19 @@ public final class RewardCommands {
                 String command = section.getString("Command", "").replace("%number%", String.valueOf(number));
                 MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), command, placeholders);
                 return String.valueOf(number);
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+                int min = section.getInt("Min", 0);
+                int max = section.getInt("Max", 100);
+                String number = Reward.replaySelection(placeholders,
+                        () -> String.valueOf(ThreadLocalRandom.current().nextInt(min, max + 1)));
+                if (number == null) return CompletableFuture.completedFuture(null);
+                String command = section.getString("Command", "").replace("%number%", number);
+                return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), command, placeholders)
+                        .thenApply(ignored -> number);
             }
         }.asPlaceholder("Number").priority(100).validator(new RewardInjectValidator() {
             @Override
@@ -77,10 +111,28 @@ public final class RewardCommands {
     public static void registerCommand(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectString("Command") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console");
+			}
+
+            @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
                     HashMap<String, String> placeholders) {
                 MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), value, placeholders);
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user, String value,
+                    HashMap<String, String> placeholders) {
+                return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), value, placeholders)
+                        .thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder("COMMAND_BLOCK"), new EditGUIValueString("Command", null) {
             @Override
@@ -104,12 +156,30 @@ public final class RewardCommands {
     public static void registerCommands(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectStringList("Commands") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console");
+			}
+
+            @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
                     HashMap<String, String> placeholders) {
                 if (!list.isEmpty()) {
                     MiscUtils.getInstance().executeConsoleCommands(user.getPlayerName(), list, placeholders, true);
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+                    ArrayList<String> list, HashMap<String, String> placeholders) {
+				return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), list, placeholders, true)
+						.thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder("COMMAND_BLOCK"), new EditGUIValueList("Commands", null) {
             @Override
@@ -137,6 +207,25 @@ public final class RewardCommands {
         }));
 
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("Commands") {
+            @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console")
+						|| Reward.hasReplayCommandSnapshot(placeholders, "player");
+			}
+
+			@Override
+			protected CompletionStage<Object> onMissingConfiguredDataAsync(Reward reward, AdvancedCoreUser user,
+					HashMap<String, String> placeholders) {
+				return onRewardRequestedAsync(reward, user, new YamlConfiguration(), placeholders)
+						.thenApply(result -> result);
+			}
+
             @SuppressWarnings("unchecked")
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
@@ -151,6 +240,28 @@ public final class RewardCommands {
                     user.preformCommand(userCommands, placeholders);
                 }
                 return null;
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+                ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console", new ArrayList<>());
+                ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<>());
+				boolean stagger = section.getBoolean("Stagger", true);
+				CompletionStage<Void> availability = userCommands.isEmpty()
+						&& !Reward.hasReplayCommandSnapshot(placeholders, "player")
+						? CompletableFuture.completedFuture(null)
+						: user.validatePlayerCommandAvailabilityAsync();
+				// Validate the player before any mixed-section side effect, then preserve
+				// the established console-before-player command order.
+				return availability.thenCompose(ignored -> consoleCommands.isEmpty()
+						&& !Reward.hasReplayCommandSnapshot(placeholders, "console")
+						? CompletableFuture.completedFuture(null)
+						: MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
+								placeholders, stagger))
+						.thenCompose(ignored -> user.preformCommandAsync(userCommands, placeholders))
+                        .thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands.Console", null) {
             @Override
@@ -175,6 +286,17 @@ public final class RewardCommands {
     public static void registerRandomCommand(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectStringList("RandomCommand") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplayCommandSnapshot(placeholders, "console");
+			}
+
+            @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
                     HashMap<String, String> placeholders) {
                 if (!list.isEmpty()) {
@@ -182,6 +304,18 @@ public final class RewardCommands {
                             list.get(ThreadLocalRandom.current().nextInt(list.size())), placeholders);
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+                ArrayList<String> list, HashMap<String, String> placeholders) {
+				if (list.isEmpty() && !hasPendingReplayWork(placeholders)) {
+					return CompletableFuture.completedFuture(null);
+				}
+                String command = Reward.replaySelection(placeholders,
+                        () -> list.get(ThreadLocalRandom.current().nextInt(list.size())));
+                return MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), command, placeholders)
+                        .thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomCommand", null) {
             @Override

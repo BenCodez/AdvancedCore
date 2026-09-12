@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -35,6 +37,20 @@ public final class RewardLucky {
 
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("Lucky") {
+            @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
@@ -69,6 +85,47 @@ public final class RewardLucky {
                     }
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+                HashMap<Integer, String> luckyRewards = new HashMap<>();
+                for (String key : section.getKeys(false)) {
+                    if (MessageAPI.isInt(key)) {
+                        int num = Integer.parseInt(key);
+                        if (num > 0) luckyRewards.put(num, "Lucky." + num);
+                    }
+                }
+				String choices = Reward.replaySelection(placeholders, () -> {
+					HashMap<String, Integer> selected = new LinkedHashMap<>();
+					for (Entry<Integer, String> entry : luckyRewards.entrySet()) {
+						if (MiscUtils.getInstance().checkChance(1, entry.getKey())) selected.put(entry.getValue(), entry.getKey());
+					}
+					selected = ArrayUtils.sortByValuesStr(selected, false);
+					ArrayList<String> paths = new ArrayList<>(selected.keySet());
+					if (reward.getConfig().getConfigData().getBoolean("OnlyOneLucky", false) && paths.size() > 1) {
+						paths.subList(1, paths.size()).clear();
+					}
+					return paths.isEmpty() ? null : String.join("\n", paths);
+				});
+				if (choices == null) return CompletableFuture.completedFuture(null);
+				CompletionStage<Void> sequence = Reward.persistReplayMetadataAsync(plugin, placeholders);
+				com.bencodez.advancedcore.api.rewards.Reward.ReplayState replayState = Reward.currentReplayState();
+				String parentReplayKey = Reward.currentReplayKey();
+				String parentOccurrenceId = Reward.currentReplayOccurrenceId();
+				int luckyIndex = 0;
+				for (String path : choices.split("\\n")) {
+					final int childIndex = luckyIndex++;
+					sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user, () -> {
+						RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(), path)
+								.withPrefix(reward.getName()).withPlaceHolder(placeholders);
+						Reward.withReplayState(builder.getRewardOptions(), replayState, parentReplayKey,
+								path + ":" + childIndex, parentOccurrenceId);
+						return builder.sendAsync(user);
+					}));
+                }
+                return sequence.thenApply(ignored -> null);
             }
 
             @Override

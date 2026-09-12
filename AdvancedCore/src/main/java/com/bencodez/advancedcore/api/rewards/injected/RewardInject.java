@@ -2,6 +2,9 @@ package com.bencodez.advancedcore.api.rewards.injected;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
 
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -17,6 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 public abstract class RewardInject extends Inject {
+	private CompletableFuture<Void> synchronizedAsyncTail = CompletableFuture.completedFuture(null);
 
 	@Getter
 	private boolean addAsPlaceholder = false;
@@ -42,6 +46,9 @@ public abstract class RewardInject extends Inject {
 
 	@Getter
 	private boolean alwaysValid = false;
+
+	@Getter
+	private boolean playerRequired;
 
 	@Getter
 	private RewardInjectValidator validate;
@@ -89,6 +96,43 @@ public abstract class RewardInject extends Inject {
 		return getValidate() != null;
 	}
 
+	/**
+	 * Whether this injection has an asynchronous implementation. Existing
+	 * injections remain synchronous by default.
+	 *
+	 * @return true when {@link #onRewardRequestAsync(Reward, AdvancedCoreUser,
+	 *         ConfigurationSection, HashMap)} should be used
+	 */
+	public boolean supportsAsyncRequest() {
+		return false;
+	}
+
+	/**
+	 * Whether this asynchronous implementation is relevant only when its
+	 * configured path exists. Existing third-party injectors keep the historic
+	 * always-async opt-in behavior unless they explicitly opt into this guard.
+	 */
+	public boolean requiresConfiguredDataForAsync() {
+		return false;
+	}
+
+	/**
+	 * Whether durable replay metadata requires this injection to run even when its
+	 * configured path was removed or changed while the reward was queued.
+	 */
+	public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+		return false;
+	}
+
+	/**
+	 * Whether asynchronous dispatch may serialize this injection across reward
+	 * chains. Nested reward injectors opt out because awaiting a child that uses
+	 * the same shared injection would otherwise wait on its own unfinished tail.
+	 */
+	public boolean supportsAsyncSynchronization() {
+		return true;
+	}
+
 	public boolean isEditable() {
 		return !getEditButtons().isEmpty();
 	}
@@ -96,8 +140,73 @@ public abstract class RewardInject extends Inject {
 	public abstract Object onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders);
 
+	/**
+	 * Asynchronously evaluates this injection. The default implementation keeps
+	 * the compatibility behavior by wrapping the existing synchronous callback.
+	 *
+	 * @param reward       reward being given
+	 * @param user         receiving user
+	 * @param data         reward configuration
+	 * @param placeholders current placeholders
+	 * @return completion stage containing the injection result
+	 */
+	public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+			ConfigurationSection data, HashMap<String, String> placeholders) {
+		try {
+			return CompletableFuture.completedFuture(onRewardRequest(reward, user, data, placeholders));
+		} catch (Throwable throwable) {
+			return CompletableFuture.failedFuture(throwable);
+		}
+	}
+
+	/**
+	 * Notifies this injection after its replay progress has been durably persisted.
+	 * Implementations may use the stable occurrence and injection identities to
+	 * retire their own idempotency records. A failed callback keeps the replay
+	 * pending, but the persisted checkpoint prevents the injection itself from
+	 * running again; recovery retries only this callback. Implementations must be
+	 * idempotent because recovery can repeat a notification that already succeeded.
+	 *
+	 * @param reward reward being given
+	 * @param user receiving user
+	 * @param occurrenceId stable identity of this logical reward occurrence
+	 * @param injectionKey stable replay path for this injection
+	 */
+	public CompletionStage<Void> onReplayCheckpointPersisted(Reward reward, AdvancedCoreUser user, String occurrenceId,
+			String injectionKey) {
+		return CompletableFuture.completedFuture(null);
+	}
+
+	/** Serializes a synchronized asynchronous injection through completion, not just invocation. */
+	public synchronized CompletionStage<Object> runSynchronizedAsync(Supplier<CompletionStage<Object>> request) {
+		CompletableFuture<Object> result = new CompletableFuture<>();
+		synchronizedAsyncTail = synchronizedAsyncTail.handle((ignored, previousFailure) -> null)
+				.thenCompose(ignored -> {
+					CompletionStage<Object> stage;
+					try {
+						stage = request.get();
+						if (stage == null) throw new IllegalStateException("Asynchronous reward injection returned null");
+					} catch (Throwable failure) {
+						result.completeExceptionally(failure);
+						return CompletableFuture.<Void>completedFuture(null);
+					}
+					return stage.handle((value, failure) -> {
+						if (failure == null) result.complete(value);
+						else result.completeExceptionally(failure);
+						return (Void) null;
+					});
+				}).toCompletableFuture();
+		return result;
+	}
+
 	public RewardInject postReward() {
 		postReward = true;
+		return this;
+	}
+
+	/** Marks a legacy injection whose side effect cannot succeed without a live player. */
+	public RewardInject requiresPlayer() {
+		playerRequired = true;
 		return this;
 	}
 

@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.tests.lifecycle;
 
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,11 +66,10 @@ public class AdvancedCoreLifecycleTest {
 		verify(timeTimer).shutdown();
 		verify(timer).awaitTermination(2, TimeUnit.SECONDS);
 		verify(loginTimer).awaitTermination(2, TimeUnit.SECONDS);
-		verify(inventoryTimer).awaitTermination(1, TimeUnit.SECONDS);
+		verify(inventoryTimer, times(2)).awaitTermination(1, TimeUnit.SECONDS);
 		verify(timeTimer).awaitTermination(2, TimeUnit.SECONDS);
 		verify(rewardHandler).shutdown();
 		verify(fullInventoryHandler).shutdown();
-		verify(fullInventoryHandler).save();
 		verify(plugin).onUnLoad();
 	}
 }

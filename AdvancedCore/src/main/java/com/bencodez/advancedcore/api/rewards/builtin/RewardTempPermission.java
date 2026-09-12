@@ -25,12 +25,26 @@ public final class RewardTempPermission {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("TempPermission") {
             @Override
+            public boolean supportsAsyncRequest() {
+                return true;
+            }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() {
+                return true;
+            }
+
+            @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
                 String permission = section.getString("Permission", "");
                 int time = section.getInt("Expiration");
                 if (!permission.isEmpty()) {
                     if (time > 0) {
+                        if (user.getPlayer() == null) {
+                            throw new IllegalStateException(
+                                    "Player became unavailable before temporary permission delivery");
+                        }
                         user.addPermission(permission, time);
                     } else {
                         extraDebug("Time is 0");
@@ -40,7 +54,7 @@ public final class RewardTempPermission {
                 }
                 return null;
             }
-        }.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("TempPermission") {
+		}.requiresPlayer().addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("TempPermission") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");

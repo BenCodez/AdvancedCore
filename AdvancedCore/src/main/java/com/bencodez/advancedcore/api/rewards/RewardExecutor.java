@@ -3,6 +3,9 @@ package com.bencodez.advancedcore.api.rewards;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletionException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
@@ -101,6 +104,70 @@ public class RewardExecutor {
         }
     }
 
+    /**
+     * Asynchronous counterpart for nested rewards that must preserve injection
+     * ordering. The legacy void dispatch methods intentionally remain unchanged.
+     */
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, ConfigurationSection data, String path,
+            RewardOptions rewardOptions) {
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        RewardOptions options = context.getOptions();
+        if (path == null || data == null) return CompletableFuture.completedFuture(null);
+        if (!plugin.isEnabled()) return disabledDispatch();
+
+        Reward.ReplayState replayState = Reward.replayStateFor(options);
+        if (options.getAsyncReplayOccurrenceId() == null) {
+            String activeOccurrenceId = Reward.currentReplayOccurrenceId();
+            if (activeOccurrenceId != null) options.setAsyncReplayOccurrenceId(activeOccurrenceId);
+        }
+        String parentReplayKey = options.getAsyncReplayKey();
+        if (parentReplayKey == null) parentReplayKey = Reward.currentReplayKey();
+        if (parentReplayKey == null) parentReplayKey = "list:" + path;
+        String nestedLane = "nested-list:" + path;
+        if (data.isList(path)
+                || Reward.hasReplayNestedRewardSnapshot(options.getPlaceholders(), nestedLane, replayState,
+                        parentReplayKey)) {
+            final String stableParentReplayKey = parentReplayKey;
+			return Reward.replayNestedRewardSnapshot(plugin, options.getPlaceholders(), nestedLane,
+					data.isList(path) ? new ArrayList<>(data.getStringList(path)) : java.util.List.of(), replayState,
+					stableParentReplayKey)
+					.thenCompose(rewards -> {
+						CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+						for (int index = 0; index < rewards.size(); index++) {
+							String nestedReward = rewards.get(index);
+							int nestedIndex = index;
+							sequence = sequence.thenCompose(ignored -> {
+								// Clone only when this child is actually reached. This lets
+								// metadata from earlier children be merged before a later
+								// child receives its isolated ordinary placeholders.
+								RewardOptions nestedOptions = options.copyForNestedDispatch(
+										stableParentReplayKey + "/" + nestedReward + ":" + nestedIndex);
+								nestedOptions.setAsyncReplayState(replayState);
+								return Reward.continueOnServerThread(plugin, user,
+										() -> giveRewardAsync(user, nestedReward, nestedOptions)).handle((childResult, failure) -> {
+									// Child options stay isolated for normal placeholders. Replay
+									// markers are shared lazily so an earlier child remains durable
+									// when a later child fails and the list is restarted.
+									replayState.mergeReplayMetadataInto(options.getPlaceholders());
+									if (failure != null) throw new CompletionException(failure);
+									return childResult;
+								});
+							});
+						}
+						return sequence;
+					});
+        }
+        if (data.isConfigurationSection(path)) {
+            return giveSectionRewardAsync(user, data, path, context);
+        }
+		String nestedReward = data.getString(path, "");
+		if (nestedReward.isEmpty()) {
+			return CompletableFuture.failedFuture(
+					new IllegalStateException("Nested replay configuration could not be resolved: " + path));
+		}
+		return giveRewardAsync(user, nestedReward, options);
+    }
+
     public void giveReward(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
         if (reward == null) {
@@ -108,12 +175,63 @@ public class RewardExecutor {
             return;
         }
 
-        if (Bukkit.isPrimaryThread()) {
+        boolean primaryThread = false;
+        try {
+            primaryThread = Bukkit.isPrimaryThread();
+        } catch (IllegalStateException | NullPointerException ignored) {
+            // Unit tests and early bootstrap can call this facade before Bukkit has
+            // installed a server. There is no primary server thread to leave then.
+        }
+        if (primaryThread) {
             plugin.getBukkitScheduler().runTaskAsynchronously(plugin,
                     () -> reward.giveReward(user, context.getOptions()));
         } else {
             reward.giveReward(user, context.getOptions());
         }
+    }
+
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
+        if (reward == null) return CompletableFuture.completedFuture(null);
+        if (!plugin.isEnabled()) return disabledDispatch();
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        RewardOptions options = context.getOptions();
+        Reward.ReplayState activeState = Reward.currentReplayState();
+        if (options.getAsyncReplayState() == null && activeState != null) options.setAsyncReplayState(activeState);
+        String activeKey = Reward.currentReplayKey();
+        if (options.getAsyncReplayKey() == null && activeKey != null) {
+            options.setAsyncReplayKey(activeKey + "/" + reward.getRewardName());
+        }
+        String activeOccurrenceId = Reward.currentReplayOccurrenceId();
+        if (options.getAsyncReplayOccurrenceId() == null && activeOccurrenceId != null) {
+            options.setAsyncReplayOccurrenceId(activeOccurrenceId);
+        }
+        // PlayerRewardEvent is explicitly asynchronous, so Bukkit rejects it when
+        // a nested reward reaches this dispatcher from an owner thread. Hand only
+        // reward setup to the async scheduler; injectors marshal their player/world
+        // work back to the appropriate owner thread and the flattened stage keeps
+        // the parent replay waiting for the complete child reward.
+        boolean primaryThread = false;
+        try {
+            primaryThread = Bukkit.isPrimaryThread();
+        } catch (IllegalStateException | NullPointerException ignored) {
+            // Unit tests and early bootstrap can call this facade before Bukkit has
+            // installed a server. There is no primary server thread to leave then.
+        }
+        if (!primaryThread) return reward.giveRewardAsync(user, options);
+
+        CompletableFuture<CompletionStage<Void>> handoff = new CompletableFuture<>();
+        try {
+            plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    handoff.complete(reward.giveRewardAsync(user, options));
+                } catch (Throwable failure) {
+                    handoff.completeExceptionally(failure);
+                }
+            });
+        } catch (Throwable failure) {
+            handoff.completeExceptionally(failure);
+        }
+        return handoff.thenCompose(stage -> stage);
     }
 
     public void giveReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
@@ -128,6 +246,25 @@ public class RewardExecutor {
         }
 
         giveReward(user, handler.getReward(reward), context.getOptions());
+    }
+
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
+		if (!plugin.isEnabled()) return disabledDispatch();
+		if (reward.startsWith("/")) {
+			RewardOptions options = context.getOptions();
+			return Reward.replayCommandSequence(plugin, context.getPlaceholders(), "direct", java.util.List.of(reward),
+					Reward.replayStateFor(options), options.getAsyncReplayKey(),
+					(command, ignoredIndex) -> MiscUtils.getInstance().executeConsoleCommandsAsync(
+							user.getPlayerName(), command, context.getPlaceholders()));
+		}
+		Reward resolved = handler.getReward(reward);
+		if (resolved == null && context.getOptions().getAsyncReplayState() != null) {
+			return CompletableFuture.failedFuture(
+					new IllegalStateException("Nested replay reward could not be resolved: " + reward));
+		}
+		return giveRewardAsync(user, resolved, context.getOptions());
     }
 
     public void givePersistedQueueReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
@@ -175,6 +312,53 @@ public class RewardExecutor {
             }
         }
         giveReward(user, resolved, context.getOptions());
+    }
+
+    /** Resolves and awaits a persisted queue item so a failed async injection can be requeued. */
+    public CompletionStage<Void> givePersistedQueueRewardAsync(AdvancedCoreUser user, String reward,
+            RewardOptions rewardOptions) {
+        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
+        if (!plugin.isEnabled()) return disabledDispatch();
+
+        String rewardName = reward;
+        Boolean generatedSnapshot = null;
+        if (reward.startsWith(QUEUED_REFERENCE_PREFIX)) {
+            String encoded = reward.substring(QUEUED_REFERENCE_PREFIX.length());
+            int modeEnd = encoded.indexOf('/');
+            if (modeEnd > 0) {
+                String mode = encoded.substring(0, modeEnd);
+                String encodedName = encoded.substring(modeEnd + 1);
+                if ((mode.equals("snapshot") || mode.equals("normal")) && !encodedName.isEmpty()) {
+                    try {
+                        rewardName = new String(Base64.getUrlDecoder().decode(encodedName), StandardCharsets.UTF_8);
+                        generatedSnapshot = Boolean.valueOf(mode.equals("snapshot"));
+                    } catch (IllegalArgumentException ignored) {
+                        rewardName = reward;
+                    }
+                }
+            }
+        }
+        Reward resolved;
+        if (generatedSnapshot != null) {
+            resolved = generatedSnapshot.booleanValue() ? handler.getQueuedGeneratedReward(rewardName, user.getUUID())
+                    : handler.getReward(rewardName);
+        } else if (handler.rewardExist(rewardName) || handler.hasDirectRewardHandle(rewardName)) {
+            resolved = handler.getReward(rewardName);
+        } else {
+            resolved = handler.getQueuedGeneratedReward(rewardName, user.getUUID());
+            if (resolved == null) resolved = handler.getReward(rewardName);
+        }
+        if (resolved == null) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("Persisted queued reward could not be resolved: " + rewardName));
+        }
+        return giveRewardAsync(user, resolved, context.getOptions());
+    }
+
+    private CompletionStage<Void> disabledDispatch() {
+        return CompletableFuture.failedFuture(
+                new IllegalStateException("Plugin disabled before asynchronous reward dispatch"));
     }
 
     public void updateReward(Configuration data, String path, RewardOptions rewardOptions) {
@@ -227,5 +411,22 @@ public class RewardExecutor {
         plugin.debug("Giving reward " + path + ", Options: " + options + " to " + user.getPlayerName() + "/"
                 + user.getUUID());
         giveReward(user, reward, options);
+    }
+
+    private CompletionStage<Void> giveSectionRewardAsync(AdvancedCoreUser user, ConfigurationSection data, String path,
+            RewardExecutionContext context) {
+        RewardOptions options = context.getOptions();
+        String rewardName = context.buildRewardName(path);
+        DirectlyDefinedReward direct = handler.getDirectlyDefined(path);
+        SubDirectlyDefinedReward sub = handler.getSubDirectlyDefined(rewardName);
+        SubRewardResolver resolver = handler.getSubRewardResolver();
+        SubDirectlyDefinedReward fileSub = resolver == null ? null : resolver.getFileBackedSubReward(rewardName);
+        if (context.supportsDirectDispatch() && (direct != null || sub != null || fileSub != null)) {
+            Reward selected = direct != null ? direct.getReward() : (sub != null ? sub : fileSub).getReward();
+            return giveRewardAsync(user, selected, options);
+        }
+        Reward selected = new Reward(rewardName, data.getConfigurationSection(path));
+        selected.checkRewardFile();
+        return giveRewardAsync(user, selected, options);
     }
 }

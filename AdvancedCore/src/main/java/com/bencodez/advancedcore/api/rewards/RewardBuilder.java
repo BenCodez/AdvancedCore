@@ -6,6 +6,8 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
@@ -87,6 +89,16 @@ public class RewardBuilder {
 		} else {
 			handler.giveReward(user, reward, rewardOptions);
 		}
+	}
+
+	/** Sends this builder's reward and completes when its async injection chain finishes. */
+	public CompletionStage<Void> sendAsync(AdvancedCoreUser user) {
+		RewardHandler handler = user.getPlugin().getRewardHandler();
+		if (reward == null) {
+			return data == null ? CompletableFuture.completedFuture(null)
+					: handler.giveRewardAsync(user, data, path, rewardOptions);
+		}
+		return handler.giveRewardAsync(user, reward, rewardOptions);
 	}
 
 	public void send(AdvancedCoreUser... users) {

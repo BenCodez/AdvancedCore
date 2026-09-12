@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -184,12 +185,25 @@ public class RewardHandler {
         rewardExecutor.giveReward(user, data, path, rewardOptions);
     }
 
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, ConfigurationSection data, String path,
+            RewardOptions rewardOptions) {
+        return rewardExecutor.giveRewardAsync(user, data, path, rewardOptions);
+    }
+
     public void giveReward(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
         rewardExecutor.giveReward(user, reward, rewardOptions);
     }
 
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
+        return rewardExecutor.giveRewardAsync(user, reward, rewardOptions);
+    }
+
     public void giveReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
         rewardExecutor.giveReward(user, reward, rewardOptions);
+    }
+
+    public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
+        return rewardExecutor.giveRewardAsync(user, reward, rewardOptions);
     }
 
     public void givePersistedQueueReward(AdvancedCoreUser user, PersistedQueueReference rewardReference,
@@ -198,6 +212,14 @@ public class RewardHandler {
             return;
         }
         rewardExecutor.givePersistedQueueReward(user, rewardReference.getReference(), rewardOptions);
+    }
+
+    public CompletionStage<Void> givePersistedQueueRewardAsync(AdvancedCoreUser user,
+            PersistedQueueReference rewardReference, RewardOptions rewardOptions) {
+        if (rewardReference == null) {
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        }
+        return rewardExecutor.givePersistedQueueRewardAsync(user, rewardReference.getReference(), rewardOptions);
     }
 
     public boolean hasDirectRewardHandle(String reward) {

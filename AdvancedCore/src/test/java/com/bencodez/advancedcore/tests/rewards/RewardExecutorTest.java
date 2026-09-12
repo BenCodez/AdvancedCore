@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -12,11 +13,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -56,9 +62,19 @@ public class RewardExecutorTest {
         handler = mock(RewardHandler.class);
         user = mock(AdvancedCoreUser.class);
         executor = new RewardExecutor(handler, plugin);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
 
         when(plugin.getLogger()).thenReturn(mock(Logger.class));
         when(plugin.isEnabled()).thenReturn(true);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(1).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(1).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), any(org.bukkit.entity.Entity.class));
         when(user.getPlayerName()).thenReturn("Ben");
         when(user.getUUID()).thenReturn("uuid");
         when(user.isOnline()).thenReturn(true);
@@ -123,6 +139,164 @@ public class RewardExecutorTest {
         verify(second).giveReward(user, options);
         assertTrue(options.isOnlineSet());
     }
+
+    @Test
+    public void asyncListDispatchUsesASeparateReplayContextForEveryEntry() {
+        YamlConfiguration data = new YamlConfiguration();
+        data.set("Rewards", new ArrayList<>(List.of("Child", "Child")));
+        Reward child = mock(Reward.class);
+        when(handler.getReward("Child")).thenReturn(child);
+        when(child.giveRewardAsync(eq(user), any(RewardOptions.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        try (MockedStatic<Reward> replay = mockStatic(Reward.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            replay.when(Reward::currentReplayOccurrenceId).thenReturn("parent-occurrence");
+            executor.giveRewardAsync(user, data, "Rewards", new RewardOptions()).toCompletableFuture().join();
+        }
+
+        ArgumentCaptor<RewardOptions> captured = ArgumentCaptor.forClass(RewardOptions.class);
+        verify(child, org.mockito.Mockito.times(2)).giveRewardAsync(eq(user), captured.capture());
+        List<RewardOptions> children = captured.getAllValues();
+        assertFalse(children.get(0) == children.get(1));
+        assertFalse(children.get(0).getAsyncReplayKey().equals(children.get(1).getAsyncReplayKey()));
+        assertSame(children.get(0).getAsyncReplayState(), children.get(1).getAsyncReplayState());
+		assertEquals("parent-occurrence", children.get(0).getAsyncReplayOccurrenceId());
+		assertEquals("parent-occurrence", children.get(1).getAsyncReplayOccurrenceId());
+	}
+
+    @Test
+    public void asyncRewardSetupLeavesThePrimaryThreadAndRetainsCompletion() {
+        Reward child = mock(Reward.class);
+        CompletableFuture<Void> childResult = new CompletableFuture<>();
+        when(child.giveRewardAsync(eq(user), any(RewardOptions.class))).thenReturn(childResult);
+        RewardOptions options = new RewardOptions();
+        Reward.ReplayState replayState = Reward.replayStateFor(new RewardOptions());
+        BukkitScheduler scheduler = plugin.getBukkitScheduler();
+        ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+                MockedStatic<Reward> replay = mockStatic(Reward.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+            replay.when(Reward::currentReplayState).thenReturn(replayState);
+            replay.when(Reward::currentReplayKey).thenReturn("parent");
+            replay.when(Reward::currentReplayOccurrenceId).thenReturn("occurrence");
+            when(child.getRewardName()).thenReturn("child");
+            CompletionStage<Void> result = executor.giveRewardAsync(user, child, options);
+
+            verify(scheduler).runTaskAsynchronously(eq(plugin), task.capture());
+            verify(child, never()).giveRewardAsync(eq(user), any(RewardOptions.class));
+            assertFalse(result.toCompletableFuture().isDone());
+            task.getValue().run();
+            verify(child).giveRewardAsync(eq(user), any(RewardOptions.class));
+            assertSame(replayState, options.getAsyncReplayState());
+            assertEquals("parent/child", options.getAsyncReplayKey());
+            assertEquals("occurrence", options.getAsyncReplayOccurrenceId());
+            assertFalse(result.toCompletableFuture().isDone());
+            childResult.completeExceptionally(new IllegalStateException("child failed"));
+            assertThrows(CompletionException.class, () -> result.toCompletableFuture().join());
+        }
+    }
+
+	@Test
+	public void asyncListLazilyClonesAndCarriesOnlyReplayMetadata() {
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("Rewards", new ArrayList<>(List.of("First", "Second")));
+		Reward first = mock(Reward.class);
+		Reward second = mock(Reward.class);
+		when(handler.getReward("First")).thenReturn(first);
+		when(handler.getReward("Second")).thenReturn(second);
+		RewardOptions parent = new RewardOptions().addPlaceholder("ordinary", "parent");
+		when(first.giveRewardAsync(eq(user), any(RewardOptions.class))).thenAnswer(invocation -> {
+			RewardOptions child = invocation.getArgument(1);
+			child.getPlaceholders().put("ordinary", "child");
+			child.getAsyncReplayState().recordReplayMetadata("__advancedcore_replay_commands_test_snapshot", "v1:c2");
+			return CompletableFuture.completedFuture(null);
+		});
+		when(second.giveRewardAsync(eq(user), any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.failedFuture(new IllegalStateException("later child failed")));
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, data, "Rewards", parent).toCompletableFuture().join());
+
+		ArgumentCaptor<RewardOptions> captured = ArgumentCaptor.forClass(RewardOptions.class);
+		verify(second).giveRewardAsync(eq(user), captured.capture());
+		assertEquals("parent", captured.getValue().getPlaceholders().get("ordinary"));
+		assertEquals("v1:c2", captured.getValue().getPlaceholders()
+				.get("__advancedcore_replay_commands_test_snapshot"));
+	}
+
+	@Test
+	public void asyncListReplayDoesNotRepeatCompletedDirectCommands() {
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("Rewards", new ArrayList<>(List.of("/first", "/second")));
+		MiscUtils misc = mock(MiscUtils.class);
+		when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("/first"), any()))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		when(misc.executeConsoleCommandsAsync(eq("Ben"), eq("/second"), any()))
+				.thenReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")),
+						CompletableFuture.completedFuture(null));
+		AtomicReference<Reward.ReplayCheckpoint> checkpoint = new AtomicReference<>();
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(0).run();
+			return null;
+		}).when(timer).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(timer);
+		RewardOptions first = new RewardOptions();
+		first.setAsyncReplayCheckpointConsumer(checkpoint::set);
+
+		try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
+			miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
+			assertThrows(CompletionException.class,
+					() -> executor.giveRewardAsync(user, data, "Rewards", first).toCompletableFuture().join());
+			assertNotNull(checkpoint.get());
+			data.set("Rewards", "/inserted");
+
+			RewardOptions retry = new RewardOptions()
+					.setPlaceholders(new java.util.HashMap<>(checkpoint.get().getPlaceholders()));
+			retry.setAsyncReplayCheckpointConsumer(ignored -> { });
+			executor.giveRewardAsync(user, data, "Rewards", retry).toCompletableFuture().join();
+		}
+
+		verify(misc).executeConsoleCommandsAsync(eq("Ben"), eq("/first"), any());
+		verify(misc, org.mockito.Mockito.times(2)).executeConsoleCommandsAsync(eq("Ben"), eq("/second"), any());
+		verify(misc, never()).executeConsoleCommandsAsync(eq("Ben"), eq("/inserted"), any());
+	}
+
+	@Test
+	public void snapshottedListFailsWhenANamedChildDisappears() {
+		YamlConfiguration data = new YamlConfiguration();
+		data.set("Rewards", new ArrayList<>(List.of("First", "Missing")));
+		Reward firstReward = mock(Reward.class);
+		Reward missingReward = mock(Reward.class);
+		when(firstReward.giveRewardAsync(eq(user), any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		when(missingReward.giveRewardAsync(eq(user), any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")));
+		when(handler.getReward("First")).thenReturn(firstReward);
+		when(handler.getReward("Missing")).thenReturn(missingReward, (Reward) null);
+		AtomicReference<Reward.ReplayCheckpoint> checkpoint = new AtomicReference<>();
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(0).run();
+			return null;
+		}).when(timer).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(timer);
+		RewardOptions first = new RewardOptions();
+		first.setAsyncReplayCheckpointConsumer(checkpoint::set);
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, data, "Rewards", first).toCompletableFuture().join());
+		assertNotNull(checkpoint.get());
+		RewardOptions retry = new RewardOptions()
+				.setPlaceholders(new java.util.HashMap<>(checkpoint.get().getPlaceholders()));
+		retry.setAsyncReplayCheckpointConsumer(ignored -> { });
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, data, "Rewards", retry).toCompletableFuture().join());
+		verify(missingReward).giveRewardAsync(eq(user), any(RewardOptions.class));
+	}
 
     @Test
     public void stringRewardDispatchesNamedReward() {
@@ -196,13 +370,17 @@ public class RewardExecutorTest {
     public void commandStyleRewardExecutesConsoleCommand() {
         MiscUtils misc = mock(MiscUtils.class);
         RewardOptions options = new RewardOptions().addPlaceholder("player", "Ben");
+        when(misc.executeConsoleCommandsAsync("Ben", "/say hi", options.getPlaceholders()))
+                .thenReturn(CompletableFuture.completedFuture(null));
 
         try (MockedStatic<MiscUtils> miscStatic = mockStatic(MiscUtils.class)) {
             miscStatic.when(MiscUtils::getInstance).thenReturn(misc);
             executor.giveReward(user, "/say hi", options);
+            executor.giveRewardAsync(user, "/say hi", options).toCompletableFuture().join();
         }
 
         verify(misc).executeConsoleCommands("Ben", "/say hi", options.getPlaceholders());
+        verify(misc).executeConsoleCommandsAsync("Ben", "/say hi", options.getPlaceholders());
     }
 
     @Test
@@ -236,6 +414,48 @@ public class RewardExecutorTest {
 
         verify(reward).giveReward(user, options);
     }
+
+    @Test
+    public void disabledPluginFailsEveryConfiguredAsyncDispatchWithoutExecuting() {
+        Reward reward = mock(Reward.class);
+        RewardOptions options = new RewardOptions();
+        YamlConfiguration data = new YamlConfiguration();
+        data.set("Reward", "Daily");
+        when(handler.getReward("Daily")).thenReturn(reward);
+        when(plugin.isEnabled()).thenReturn(false);
+
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> executor.giveRewardAsync(user, reward, options).toCompletableFuture().join());
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> executor.giveRewardAsync(user, "Daily", options).toCompletableFuture().join());
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> executor.giveRewardAsync(user, data, "Reward", options).toCompletableFuture().join());
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> executor.givePersistedQueueRewardAsync(user, "Daily", options).toCompletableFuture().join());
+
+        verify(reward, never()).giveRewardAsync(eq(user), any(RewardOptions.class));
+    }
+
+    @Test
+    public void unresolvedPersistedRewardFailsSoTheQueueCanRetainIt() {
+        when(handler.rewardExist("Missing")).thenReturn(false);
+        when(handler.hasDirectRewardHandle("Missing")).thenReturn(false);
+        when(handler.getQueuedGeneratedReward("Missing", user.getUUID())).thenReturn(null);
+        when(handler.getReward("Missing")).thenReturn(null);
+
+        assertThrows(CompletionException.class,
+                () -> executor.givePersistedQueueRewardAsync(user, "Missing", new RewardOptions())
+                        .toCompletableFuture().join());
+    }
+
+	@Test
+	public void unresolvedNestedConfigurationFailsSoReplayCannotDropIt() {
+		YamlConfiguration data = new YamlConfiguration();
+
+		assertThrows(CompletionException.class,
+				() -> executor.giveRewardAsync(user, data, "Removed", new RewardOptions())
+						.toCompletableFuture().join());
+	}
 
     @Test
     public void choicesDispatchThroughRewardBuilder() {

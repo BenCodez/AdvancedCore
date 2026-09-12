@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -24,6 +26,20 @@ public final class RewardRandom {
 
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("Random") {
+            @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
             @SuppressWarnings("unchecked")
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
@@ -46,6 +62,39 @@ public final class RewardRandom {
                             .withPrefix(reward.getName()).withPlaceHolder(placeholders).send(user);
                 }
                 return null;
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+                String selection = Reward.replaySelection(placeholders, () -> {
+                    if (!MiscUtils.getInstance().checkChance(section.getDouble("Chance", 100), 100)) return "fallback";
+                    if (!section.getBoolean("PickRandom", true)) return "rewards";
+                    ArrayList<String> rewards = (ArrayList<String>) section.getList("Rewards", new ArrayList<>());
+                    return rewards == null || rewards.isEmpty() ? "none"
+                            : "pick:" + rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
+                });
+                if (selection == null || selection.equals("none")) return CompletableFuture.completedFuture(null);
+                if (selection.startsWith("pick:")) {
+                    String selected = selection.substring("pick:".length());
+                    RewardOptions childOptions = Reward.withReplayState(
+                            new RewardOptions().setPlaceholders(placeholders), Reward.currentReplayState(),
+                            Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
+					return selected.isEmpty() ? CompletableFuture.completedFuture(null)
+							: Reward.persistReplayMetadataAsync(plugin, placeholders)
+									.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+											() -> handler.giveRewardAsync(user, selected, childOptions)))
+									.thenApply(ignored -> null);
+                }
+                String path = selection.equals("rewards") ? "Random.Rewards" : "Random.FallBack";
+                RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(), path)
+                        .withPrefix(reward.getName()).withPlaceHolder(placeholders);
+                Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
+                        Reward.currentReplayKey(), "path:" + path, Reward.currentReplayOccurrenceId());
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> builder.sendAsync(user))).thenApply(ignored -> null);
             }
 
             @Override

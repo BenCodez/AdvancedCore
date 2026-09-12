@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -29,6 +31,20 @@ public final class RewardAdvancedPriority {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("AdvancedPriority") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
+            @Override
             public String onRewardRequested(Reward sourceReward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
                 for (String key : section.getKeys(false)) {
@@ -44,6 +60,36 @@ public final class RewardAdvancedPriority {
                     plugin.extraDebug("AdvancedPriority: Can't give reward " + key);
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestedAsync(Reward sourceReward, AdvancedCoreUser user,
+                    ConfigurationSection section, HashMap<String, String> placeholders) {
+				String selectedKey = Reward.replaySelection(placeholders, () -> {
+                for (String key : section.getKeys(false)) {
+                    RewardOptions namingOptions = new RewardOptions()
+                            .setPrefix(sourceReward.getName() + "_AdvancedPriority");
+                    Reward reward = handler.getReward(section, key, namingOptions);
+                    if (reward != null && reward.canGiveReward(user,
+                            new RewardOptions().withPlaceHolder(placeholders))) {
+						return key;
+                    }
+                }
+					return null;
+				});
+				if (selectedKey == null) return CompletableFuture.completedFuture(null);
+				Reward selected = handler.getReward(section, selectedKey, new RewardOptions()
+						.setPrefix(sourceReward.getName() + "_AdvancedPriority"));
+				RewardOptions childOptions = Reward.withReplayState(new RewardOptions().setIgnoreChance(true)
+						.setIgnoreRequirements(true).setPrefix(sourceReward.getName() + "_AdvancedPriority")
+						.withPlaceHolder(placeholders), Reward.currentReplayState(), Reward.currentReplayKey(),
+						"selected:" + selectedKey, Reward.currentReplayOccurrenceId());
+				if (selected == null) return CompletableFuture.failedFuture(
+						new IllegalStateException("Selected advanced priority reward could not be resolved: " + selectedKey));
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> handler.giveRewardAsync(user, selected, childOptions)))
+						.thenApply(ignored -> selected.getName());
             }
 
             @Override
