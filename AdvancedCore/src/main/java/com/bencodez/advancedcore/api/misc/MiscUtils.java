@@ -41,6 +41,8 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.bukkit.platform.BukkitPlatformServices;
+import com.bencodez.advancedcore.core.platform.ConsoleCommandDispatcher;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.player.PlayerUtils;
 
@@ -59,6 +61,9 @@ public class MiscUtils {
 
 	/** The plugin. */
 	AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+
+	private final ConsoleCommandDispatcher consoleCommands = new ConsoleCommandDispatcher(
+			new BukkitPlatformServices(() -> plugin));
 
 	private MiscUtils() {
 	}
@@ -458,25 +463,7 @@ public class MiscUtils {
 	}
 
 	private void runConsoleCommand(String command, int delay, boolean hasDelay) {
-		final String commandToRun = stripLeadingSlash(command);
-		if (hasDelay && delay > 0) {
-			plugin.getBukkitScheduler().runTaskLater(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), commandToRun);
-				}
-			}, delay);
-
-		} else {
-			plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
-
-				@Override
-				public void run() {
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), commandToRun);
-				}
-			});
-		}
+		consoleCommands.dispatch(command, delay, hasDelay);
 	}
 
 	private String stripLeadingSlash(String command) {
