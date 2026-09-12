@@ -93,11 +93,11 @@ public final class RewardAdvancedRewards {
 					for (int index = 0; index < rewards.size(); index++) {
 						String rewardName = rewards.get(index);
 						int childIndex = index;
-						sequence = sequence.thenCompose(ignored -> handler.giveRewardAsync(user,
-								section, rewardName,
-								Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders), replayState,
-										parentReplayKey, rewardName + ":" + childIndex, parentOccurrenceId)
-										.setPrefix(reward.getRewardName() + "_AdvancedRewards")));
+						sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> handler.giveRewardAsync(user, section, rewardName,
+										Reward.withReplayState(new RewardOptions().setPlaceholders(placeholders), replayState,
+												parentReplayKey, rewardName + ":" + childIndex, parentOccurrenceId)
+												.setPrefix(reward.getRewardName() + "_AdvancedRewards"))));
 					}
 					return sequence.thenApply(ignored -> (Object) null);
 				});

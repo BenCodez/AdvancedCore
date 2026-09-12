@@ -70,10 +70,11 @@ public final class RewardChoices {
 				String choice = Reward.replaySelection(placeholders,
 						() -> value ? user.getChoicePreference(reward.getName()) : null);
 				if (choice == null || choice.isEmpty() || choice.equalsIgnoreCase("none")) {
-					return Reward.persistReplayMetadataAsync(plugin, placeholders).thenApply(ignored -> {
-						user.addUnClaimedChoiceReward(reward.getName(), occurrenceId);
-						return null;
-					});
+					return Reward.persistReplayMetadataAsync(plugin, placeholders)
+							.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user, () -> {
+								user.addUnClaimedChoiceReward(reward.getName(), occurrenceId);
+								return CompletableFuture.completedFuture(null);
+							}));
 				}
 				RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(),
 						reward.getConfig().getChoicesRewardsPath(choice)).withPrefix(reward.getName())
@@ -81,7 +82,8 @@ public final class RewardChoices {
 				Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
 						Reward.currentReplayKey(), "choice:" + choice, Reward.currentReplayOccurrenceId());
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> builder.sendAsync(user)).thenApply(ignored -> choice);
+						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> builder.sendAsync(user))).thenApply(ignored -> choice);
 			}
 
             @Override

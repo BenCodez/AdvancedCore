@@ -143,7 +143,8 @@ public class RewardExecutor {
 								RewardOptions nestedOptions = options.copyForNestedDispatch(
 										stableParentReplayKey + "/" + nestedReward + ":" + nestedIndex);
 								nestedOptions.setAsyncReplayState(replayState);
-								return giveRewardAsync(user, nestedReward, nestedOptions).handle((childResult, failure) -> {
+								return Reward.continueOnServerThread(plugin, user,
+										() -> giveRewardAsync(user, nestedReward, nestedOptions)).handle((childResult, failure) -> {
 									// Child options stay isolated for normal placeholders. Replay
 									// markers are shared lazily so an earlier child remains durable
 									// when a later child fails and the list is restarted.

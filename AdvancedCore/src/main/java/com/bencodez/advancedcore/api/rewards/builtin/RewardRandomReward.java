@@ -63,7 +63,8 @@ public final class RewardRandomReward {
 						new RewardOptions().setPlaceholders(placeholders), Reward.currentReplayState(),
 						Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> handler.giveRewardAsync(user, selected, childOptions))
+						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> handler.giveRewardAsync(user, selected, childOptions)))
 						.thenApply(ignored -> selected);
             }
         }.asPlaceholder("RandomReward").priority(20).addEditButton(

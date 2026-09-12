@@ -87,7 +87,8 @@ public final class RewardAdvancedPriority {
 				if (selected == null) return CompletableFuture.failedFuture(
 						new IllegalStateException("Selected advanced priority reward could not be resolved: " + selectedKey));
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> handler.giveRewardAsync(user, selected, childOptions))
+						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> handler.giveRewardAsync(user, selected, childOptions)))
 						.thenApply(ignored -> selected.getName());
             }
 

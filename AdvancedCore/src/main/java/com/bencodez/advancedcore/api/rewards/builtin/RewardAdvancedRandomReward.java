@@ -75,7 +75,8 @@ public final class RewardAdvancedRandomReward {
                         Reward.currentReplayOccurrenceId())
                         .setPrefix(reward.getRewardName() + "_AdvancedRandomReward");
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> handler.giveRewardAsync(user, section, selected, childOptions))
+						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> handler.giveRewardAsync(user, section, selected, childOptions)))
 						.thenApply(ignored -> selected);
             }
 

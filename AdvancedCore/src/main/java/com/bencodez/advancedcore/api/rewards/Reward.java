@@ -969,6 +969,17 @@ public class Reward {
 
 	private <T> CompletionStage<T> requestOnServerThread(AdvancedCoreUser user,
 			Supplier<CompletionStage<T>> request) {
+		return requestOnServerThread(plugin, user, request, getServerThreadDispatchTimeoutMillis());
+	}
+
+	/** Continues nested reward setup on the owning Bukkit scheduler after async persistence. */
+	public static <T> CompletionStage<T> continueOnServerThread(AdvancedCorePlugin plugin, AdvancedCoreUser user,
+			Supplier<CompletionStage<T>> request) {
+		return requestOnServerThread(plugin, user, request, TimeUnit.SECONDS.toMillis(30));
+	}
+
+	private static <T> CompletionStage<T> requestOnServerThread(AdvancedCorePlugin plugin, AdvancedCoreUser user,
+			Supplier<CompletionStage<T>> request, long timeoutMillis) {
 		CompletableFuture<CompletionStage<T>> handoff = new CompletableFuture<>();
 		Runnable invocation = () -> {
 			if (!plugin.isEnabled()) {
@@ -1014,7 +1025,7 @@ public class Reward {
 		} catch (Throwable failure) {
 			handoff.completeExceptionally(failure);
 		}
-		return handoff.orTimeout(getServerThreadDispatchTimeoutMillis(), TimeUnit.MILLISECONDS)
+		return handoff.orTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
 				.thenCompose(stage -> stage);
 	}
 

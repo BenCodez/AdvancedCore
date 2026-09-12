@@ -76,10 +76,11 @@ public final class RewardAdvancedWorld {
 						String key = worlds.get(index);
 						int childIndex = index;
 						section.set(key + ".Worlds", ArrayUtils.convert(new String[] { key }));
-						sequence = sequence.thenCompose(ignored -> handler.giveRewardAsync(user, section, key,
-								Reward.withReplayState(new RewardOptions().withPlaceHolder(placeholders), replayState,
-										parentReplayKey, key + ":" + childIndex, parentOccurrenceId)
-										.setPrefix(sourceReward.getRewardName() + "_AdvancedWorld")));
+						sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> handler.giveRewardAsync(user, section, key,
+										Reward.withReplayState(new RewardOptions().withPlaceHolder(placeholders), replayState,
+												parentReplayKey, key + ":" + childIndex, parentOccurrenceId)
+												.setPrefix(sourceReward.getRewardName() + "_AdvancedWorld"))));
 					}
 					return sequence.thenApply(ignored -> (String) null);
 				});

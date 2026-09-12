@@ -99,7 +99,8 @@ public final class RewardJavascript {
                 Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
                         Reward.currentReplayKey(), "path:" + path, Reward.currentReplayOccurrenceId());
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> builder.sendAsync(user)).thenApply(ignored -> null);
+						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> builder.sendAsync(user))).thenApply(ignored -> null);
             }
 
             @Override

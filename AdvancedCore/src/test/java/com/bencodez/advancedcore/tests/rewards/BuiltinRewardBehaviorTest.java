@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
@@ -82,6 +83,7 @@ import com.bencodez.advancedcore.api.rewards.injected.RewardInjectKeys;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectString;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInjectStringList;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 public class BuiltinRewardBehaviorTest {
 
@@ -666,6 +668,13 @@ public class BuiltinRewardBehaviorTest {
 		RewardInjectBoolean choices = (RewardInjectBoolean) injects.get(0);
 		when(user.getChoicePreference("SourceReward")).thenReturn("OptionA");
 		CompletableFuture<Void> child = new CompletableFuture<>();
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.isEnabled()).thenReturn(true);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		doAnswer(invocation -> {
+			invocation.<Runnable>getArgument(1).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
 
 		try (MockedConstruction<RewardBuilder> builders = mockConstruction(RewardBuilder.class,
 				withSettings().defaultAnswer(Answers.RETURNS_SELF),
@@ -675,6 +684,7 @@ public class BuiltinRewardBehaviorTest {
 			child.complete(null);
 			assertEquals("OptionA", result.toCompletableFuture().join());
 			verify(builders.constructed().get(0)).sendAsync(user);
+			verify(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
 		}
 	}
 

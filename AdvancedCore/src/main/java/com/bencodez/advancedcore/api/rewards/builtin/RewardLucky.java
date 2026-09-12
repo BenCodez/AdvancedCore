@@ -117,13 +117,13 @@ public final class RewardLucky {
 				int luckyIndex = 0;
 				for (String path : choices.split("\\n")) {
 					final int childIndex = luckyIndex++;
-					sequence = sequence.thenCompose(ignored -> {
+					sequence = sequence.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user, () -> {
 						RewardBuilder builder = new RewardBuilder(reward.getConfig().getConfigData(), path)
 								.withPrefix(reward.getName()).withPlaceHolder(placeholders);
 						Reward.withReplayState(builder.getRewardOptions(), replayState, parentReplayKey,
 								path + ":" + childIndex, parentOccurrenceId);
 						return builder.sendAsync(user);
-					});
+					}));
                 }
                 return sequence.thenApply(ignored -> null);
             }

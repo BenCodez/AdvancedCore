@@ -83,7 +83,8 @@ public final class RewardRandom {
                             Reward.currentReplayKey(), "selected:" + selected, Reward.currentReplayOccurrenceId());
 					return selected.isEmpty() ? CompletableFuture.completedFuture(null)
 							: Reward.persistReplayMetadataAsync(plugin, placeholders)
-									.thenCompose(ignored -> handler.giveRewardAsync(user, selected, childOptions))
+									.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+											() -> handler.giveRewardAsync(user, selected, childOptions)))
 									.thenApply(ignored -> null);
                 }
                 String path = selection.equals("rewards") ? "Random.Rewards" : "Random.FallBack";
@@ -92,7 +93,8 @@ public final class RewardRandom {
                 Reward.withReplayState(builder.getRewardOptions(), Reward.currentReplayState(),
                         Reward.currentReplayKey(), "path:" + path, Reward.currentReplayOccurrenceId());
 				return Reward.persistReplayMetadataAsync(plugin, placeholders)
-						.thenCompose(ignored -> builder.sendAsync(user)).thenApply(ignored -> null);
+						.thenCompose(ignored -> Reward.continueOnServerThread(plugin, user,
+								() -> builder.sendAsync(user))).thenApply(ignored -> null);
             }
 
             @Override
