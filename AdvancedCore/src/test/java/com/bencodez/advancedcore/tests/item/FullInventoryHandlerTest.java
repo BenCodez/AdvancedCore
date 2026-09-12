@@ -190,6 +190,53 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
+	public void replayDropFailurePersistsOnlyTheUndroppedOverflow() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		World world = mock(World.class);
+		Location location = mock(Location.class);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(true);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(player.getWorld()).thenReturn(world);
+		when(player.getLocation()).thenReturn(location);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		doAnswer(invocation -> {
+			throw new IllegalStateException("world unavailable");
+		}).when(world).dropItem(location, excess);
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		CountDownLatch saveStarted = new CountDownLatch(1);
+		CountDownLatch releaseSave = new CountDownLatch(1);
+		doAnswer(invocation -> {
+			saveStarted.countDown();
+			assertTrue(releaseSave.await(2, TimeUnit.SECONDS));
+			return null;
+		}).when(fixture.serverData).saveData();
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			task.getValue().run();
+		}
+
+		assertTrue(saveStarted.await(2, TimeUnit.SECONDS));
+		assertFalse(delivery.toCompletableFuture().isDone());
+		releaseSave.countDown();
+		delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		verify(inventory, times(1)).addItem(item);
+		verify(world).dropItem(location, excess);
+		assertEquals(List.of(excess), fixture.handler.getItems().get(uuid));
+		assertEquals(excess, fixture.data.getItemStack("FullInventory." + uuid + ".Items.0"));
+	}
+
+	@Test
 	public void replayOverflowSaveFailureDropsOnlyReservedOverflowWithoutReplayingPartialInsert() throws Exception {
 		Fixture fixture = createFixture();
 		UUID uuid = UUID.randomUUID();

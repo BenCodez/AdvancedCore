@@ -522,8 +522,22 @@ public class FullInventoryHandler {
 
 			boolean dropItems = plugin.getOptions().isDropOnFullInv();
 			if (dropItems) {
-				for (ItemStack extra : excess.values()) {
-					player.getWorld().dropItem(player.getLocation(), extra);
+				if (reservationId == null) {
+					for (ItemStack extra : excess.values()) player.getWorld().dropItem(player.getLocation(), extra);
+				} else {
+					ReservedOverflow reservation = new ReservedOverflow(player.getUniqueId(), excess.values());
+					replayOverflowReservations.put(reservationId, reservation);
+					ArrayList<ItemStack> undropped = new ArrayList<>();
+					for (ItemStack extra : reservation.items) {
+						try {
+							if (player.getWorld().dropItem(player.getLocation(), extra) == null) undropped.add(extra);
+						} catch (Throwable failure) {
+							undropped.add(extra);
+						}
+					}
+					if (undropped.isEmpty()) replayOverflowReservations.remove(reservationId, reservation);
+					else replayOverflowReservations.put(reservationId,
+							new ReservedOverflow(player.getUniqueId(), undropped));
 				}
 			} else if (reservationId != null) {
 				replayOverflowReservations.put(reservationId,
@@ -536,7 +550,7 @@ public class FullInventoryHandler {
 				sendMessage(player);
 			}
 			player.updateInventory();
-			return !dropItems;
+			return reservationId != null && replayOverflowReservations.containsKey(reservationId);
 		} finally {
 			deliveryLock.readLock().unlock();
 		}
