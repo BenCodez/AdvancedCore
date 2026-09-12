@@ -891,6 +891,9 @@ public class Reward {
 		private synchronized void setCheckpointConsumer(Consumer<ReplayCheckpoint> consumer) {
 			checkpointConsumer = consumer;
 		}
+		private synchronized boolean hasCheckpointConsumer() {
+			return checkpointConsumer != null;
+		}
 		public CompletionStage<Void> persistCheckpointAsync(AdvancedCorePlugin plugin,
 				HashMap<String, String> placeholders) {
 			return persistCheckpointAsync(plugin, placeholders, 30, TimeUnit.SECONDS);
@@ -1060,9 +1063,12 @@ public class Reward {
 							inject.onRewardRequest(this, user, getConfig().getConfigData(), placeholders));
 				} catch (Exception failure) {
 					// Preserve the legacy per-injection isolation contract while allowing
-					// opted-in asynchronous injections to propagate durable failures.
+					// persisted replays to retain their queue entry when a player-bound
+					// legacy injection fails after an earlier asynchronous stage.
 					failure.printStackTrace();
-					result = CompletableFuture.completedFuture(null);
+					result = replayState.hasCheckpointConsumer()
+							? CompletableFuture.failedFuture(failure)
+							: CompletableFuture.completedFuture(null);
 				}
 			}
 			if (result == null) result = CompletableFuture.failedFuture(
