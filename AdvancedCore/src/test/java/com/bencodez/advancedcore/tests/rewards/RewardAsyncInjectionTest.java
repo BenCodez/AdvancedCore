@@ -1765,9 +1765,9 @@ class RewardAsyncInjectionTest {
 				replayState, "AsyncReward");
 
 		assertEquals(1, writes.size());
-		verify(user, never()).addUnClaimedChoiceReward("AsyncReward");
+		verify(user, never()).addUnClaimedChoiceReward(eq("AsyncReward"), any(String.class));
 		writes.get(0).run();
-		verify(user).addUnClaimedChoiceReward("AsyncReward");
+		verify(user).addUnClaimedChoiceReward(eq("AsyncReward"), any(String.class));
 		assertEquals(2, writes.size());
 		writes.get(1).run();
 		result.toCompletableFuture().join();

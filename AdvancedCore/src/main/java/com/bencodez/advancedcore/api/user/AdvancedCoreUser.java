@@ -71,6 +71,7 @@ public class AdvancedCoreUser {
 	private static final String ASYNC_PROGRESS_DELIMITER = "%asyncprogress%";
 	private static final String ASYNC_RETRY_DELIMITER = "%asyncretry%";
 	private static final String ASYNC_OCCURRENCE_DELIMITER = "%asyncoccurrence%";
+	private static final String CHOICE_OCCURRENCE_PREFIX = "\\AdvancedCoreChoice/1/";
 	private static final Object REPLAY_CLAIMS_LOCK = new Object();
 	private static final WeakHashMap<AdvancedCorePlugin, HashMap<String, ReplayClaims>> REPLAY_CLAIMS = new WeakHashMap<>();
 	private static final ThreadLocal<AsyncActionCollection> ASYNC_ACTION_COLLECTION = new ThreadLocal<>();
@@ -894,10 +895,30 @@ public class AdvancedCoreUser {
 	 *
 	 * @param name the reward name
 	 */
-	public void addUnClaimedChoiceReward(String name) {
+	public synchronized void addUnClaimedChoiceReward(String name) {
 		ArrayList<String> choices = getUnClaimedChoices();
 		choices.add(name);
 		setUnClaimedChoice(choices);
+	}
+
+	/**
+	 * Adds an unclaimed choice once for a stable reward occurrence. The encoded
+	 * occurrence remains in the same durable list as the user-facing reward name,
+	 * so a replay cannot append a duplicate after a crash.
+	 *
+	 * @param name reward name shown in the choice UI
+	 * @param occurrenceId stable logical reward occurrence
+	 */
+	public synchronized void addUnClaimedChoiceReward(String name, String occurrenceId) {
+		if (occurrenceId == null || occurrenceId.isEmpty()) {
+			addUnClaimedChoiceReward(name);
+			return;
+		}
+		ArrayList<String> stored = getStoredUnClaimedChoices();
+		String entry = encodeUnclaimedChoice(name, occurrenceId);
+		if (stored.contains(entry)) return;
+		stored.add(entry);
+		getData().setStringList("UnClaimedChoices", stored);
 	}
 
 	/**
@@ -1515,8 +1536,10 @@ public class AdvancedCoreUser {
 	 *
 	 * @return the unclaimed choices
 	 */
-	public ArrayList<String> getUnClaimedChoices() {
-		return getData().getStringList("UnClaimedChoices", userDataFetchMode);
+	public synchronized ArrayList<String> getUnClaimedChoices() {
+		ArrayList<String> choices = new ArrayList<>();
+		for (String stored : getStoredUnClaimedChoices()) choices.add(decodeUnclaimedChoice(stored));
+		return choices;
 	}
 
 	/**
@@ -2366,10 +2389,15 @@ public class AdvancedCoreUser {
 	 *
 	 * @param name the reward name
 	 */
-	public void removeUnClaimedChoiceReward(String name) {
-		ArrayList<String> choices = getUnClaimedChoices();
-		choices.remove(name);
-		setUnClaimedChoice(choices);
+	public synchronized void removeUnClaimedChoiceReward(String name) {
+		ArrayList<String> choices = getStoredUnClaimedChoices();
+		for (int index = 0; index < choices.size(); index++) {
+			if (java.util.Objects.equals(name, decodeUnclaimedChoice(choices.get(index)))) {
+				choices.remove(index);
+				break;
+			}
+		}
+		getData().setStringList("UnClaimedChoices", choices);
 	}
 
 	/**
@@ -2744,6 +2772,30 @@ public class AdvancedCoreUser {
 	 */
 	public void setUnClaimedChoice(ArrayList<String> rewards) {
 		getData().setStringList("UnClaimedChoices", rewards);
+	}
+
+	private ArrayList<String> getStoredUnClaimedChoices() {
+		return getData().getStringList("UnClaimedChoices", userDataFetchMode);
+	}
+
+	private static String encodeUnclaimedChoice(String name, String occurrenceId) {
+		Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+		return CHOICE_OCCURRENCE_PREFIX
+				+ encoder.encodeToString(occurrenceId.getBytes(StandardCharsets.UTF_8)) + "."
+				+ encoder.encodeToString((name == null ? "" : name).getBytes(StandardCharsets.UTF_8));
+	}
+
+	private static String decodeUnclaimedChoice(String stored) {
+		if (stored == null || !stored.startsWith(CHOICE_OCCURRENCE_PREFIX)) return stored;
+		String encoded = stored.substring(CHOICE_OCCURRENCE_PREFIX.length());
+		int separator = encoded.indexOf('.');
+		if (separator < 1) return stored;
+		try {
+			Base64.getUrlDecoder().decode(encoded.substring(0, separator));
+			return new String(Base64.getUrlDecoder().decode(encoded.substring(separator + 1)), StandardCharsets.UTF_8);
+		} catch (IllegalArgumentException failure) {
+			return stored;
+		}
 	}
 
 	/**
