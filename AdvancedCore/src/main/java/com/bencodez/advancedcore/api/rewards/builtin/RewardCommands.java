@@ -246,13 +246,15 @@ public final class RewardCommands {
             @Override
             public CompletionStage<String> onRewardRequestedAsync(Reward reward, AdvancedCoreUser user,
                     ConfigurationSection section, HashMap<String, String> placeholders) {
-                ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console", new ArrayList<>());
-                ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<>());
+				ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console", new ArrayList<>());
+				ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<>());
 				boolean stagger = section.getBoolean("Stagger", true);
-				CompletionStage<Void> availability = userCommands.isEmpty()
-						&& !Reward.hasReplayCommandSnapshot(placeholders, "player")
-						? CompletableFuture.completedFuture(null)
-						: user.validatePlayerCommandAvailabilityAsync();
+				boolean playerCommandsPending = Reward.hasReplayCommandSnapshot(placeholders, "player")
+						? Reward.hasPendingReplayCommandWork(placeholders, "player")
+						: !userCommands.isEmpty();
+				CompletionStage<Void> availability = playerCommandsPending
+						? user.validatePlayerCommandAvailabilityAsync()
+						: CompletableFuture.completedFuture(null);
 				// Validate the player before any mixed-section side effect, then preserve
 				// the established console-before-player command order.
 				return availability.thenCompose(ignored -> consoleCommands.isEmpty()

@@ -73,9 +73,11 @@ import com.bencodez.advancedcore.api.rewards.builtin.RewardSubRewards;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardRandomReward;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardJavascript;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardChoices;
+import com.bencodez.advancedcore.api.rewards.builtin.RewardCommands;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardSpecialChance;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject;
 import com.bencodez.advancedcore.thread.FileThread;
 
 import net.milkbowl.vault.economy.Economy;
@@ -585,6 +587,37 @@ class RewardAsyncInjectionTest {
 		legacyActions.complete(null);
 		result.toCompletableFuture().join();
 		verify(spyReward).giveRewardUserAsync(eq(user), any(HashMap.class), any(RewardOptions.class));
+	}
+
+	@Test
+	void durableReplayRetainsOccurrenceWhenRequirementEvaluationThrows() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		when(user.isOnline()).thenReturn(true);
+		when(user.getPlayer()).thenReturn(mock(Player.class));
+		AtomicBoolean injected = new AtomicBoolean();
+		handler.getInjectedRequirements().add(new RequirementInject("TransientRequirement") {
+			@Override
+			public boolean onRequirementRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, RewardOptions ignoredOptions) {
+				throw new IllegalStateException("requirement service unavailable");
+			}
+		});
+		handler.getInjectedRewards().add(
+				asyncInjection("MustNotRun", CompletableFuture.completedFuture(null), injected));
+		RewardOptions options = new RewardOptions().setCheckTimed(false);
+		options.setAsyncReplayCheckpointConsumer(ignored -> { });
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			assertThrows(CompletionException.class,
+					() -> reward.giveRewardAsync(user, options).toCompletableFuture().join());
+		}
+
+		assertFalse(injected.get());
 	}
 
 	@Test
@@ -1952,6 +1985,84 @@ class RewardAsyncInjectionTest {
 			}).toCompletableFuture().join();
 
 		assertEquals(1, dispatches.get(), "completed child must be skipped before it is resolved again");
+	}
+
+	@Test
+	void copiedNestedPlaceholdersMergeSingleChildCompletionIntoParentState() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class,
+				boolean.class);
+		constructor.setAccessible(true);
+		Reward.ReplayState replayState = (Reward.ReplayState) constructor.newInstance(
+				new HashMap<>(), new HashMap<>(), false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) ignored -> { });
+		HashMap<String, String> parentPlaceholders = new HashMap<>();
+		HashMap<String, String> childPlaceholders = new HashMap<>(parentPlaceholders);
+
+		Reward.replaySingleNestedReward(plugin, childPlaceholders, "selected", replayState, "AsyncReward/0",
+				() -> CompletableFuture.completedFuture(null)).toCompletableFuture().join();
+		replayState.mergeReplayMetadataInto(parentPlaceholders);
+
+		assertTrue(parentPlaceholders.keySet().stream()
+				.anyMatch(key -> key.startsWith("__advancedcore_replay_single_child_")));
+	}
+
+	@Test
+	void completedPlayerCommandSnapshotDoesNotRequirePlayerAgain() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class,
+				boolean.class);
+		constructor.setAccessible(true);
+		Reward.ReplayState replayState = (Reward.ReplayState) constructor.newInstance(
+				new HashMap<>(), new HashMap<>(), false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) ignored -> { });
+		HashMap<String, String> placeholders = new HashMap<>();
+		java.lang.reflect.Method commandReplay = Reward.class.getDeclaredMethod("replayCommandSequence",
+				AdvancedCorePlugin.class, HashMap.class, String.class, List.class, stateType, String.class,
+				java.util.function.BiFunction.class);
+		commandReplay.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> completedCommands = (CompletionStage<Void>) commandReplay.invoke(null, plugin,
+				placeholders, "player", List.of("already-ran"), replayState, "AsyncReward/1",
+				(java.util.function.BiFunction<String, Integer, CompletionStage<Void>>) (command, index) ->
+						CompletableFuture.completedFuture(null));
+		completedCommands.toCompletableFuture().join();
+		data.set("Commands.Player", new ArrayList<>(List.of("changed-after-checkpoint")));
+		RewardCommands.registerCommands(handler, plugin);
+		when(user.preformCommandAsync(any(ArrayList.class), eq(placeholders))).thenAnswer(invocation ->
+				Reward.replayCommandSequence(plugin, placeholders, "player",
+						invocation.getArgument(0), (command, index) -> CompletableFuture.failedFuture(
+								new AssertionError("completed player command must not run again"))));
+
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> result = (CompletionStage<Void>) replay.invoke(reward, user, placeholders, 0,
+				replayState, "AsyncReward", "occurrence");
+		result.toCompletableFuture().join();
+
+		verify(user, never()).validatePlayerCommandAvailabilityAsync();
 	}
 
 	@Test

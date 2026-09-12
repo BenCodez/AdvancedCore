@@ -812,6 +812,34 @@ public class Reward {
 		return replayMetadata(placeholders, replayState, storageKey + "_snapshot") != null;
 	}
 
+	/** Returns whether a frozen command lane still has an undispatched command. */
+	public static boolean hasPendingReplayCommandWork(HashMap<String, String> placeholders, String lane) {
+		ReplayState replayState = currentReplayState();
+		String activeKey = currentReplayKey();
+		if (replayState == null || activeKey == null) return false;
+		String storageKey = replaySequenceKey(REPLAY_COMMAND_PREFIX, activeKey,
+				lane == null ? "commands" : lane);
+		String storedSnapshot = replayMetadata(placeholders, replayState, storageKey + "_snapshot");
+		if (storedSnapshot == null) return false;
+		List<String> commands;
+		try {
+			commands = decodeCommandSnapshot(storedSnapshot);
+		} catch (IllegalArgumentException failure) {
+			throw new IllegalStateException("Malformed command replay snapshot", failure);
+		}
+		String storedProgress = replayMetadata(placeholders, replayState, storageKey);
+		int completed;
+		try {
+			completed = storedProgress == null ? 0 : Integer.parseInt(storedProgress);
+		} catch (NumberFormatException failure) {
+			throw new IllegalStateException("Malformed command replay progress", failure);
+		}
+		if (completed < 0 || completed > commands.size()) {
+			throw new IllegalStateException("Command replay progress exceeds snapshot");
+		}
+		return completed < commands.size();
+	}
+
 	/** Returns whether the active replay already froze this nested reward lane. */
 	public static boolean hasReplayNestedRewardSnapshot(HashMap<String, String> placeholders, String lane) {
 		return hasReplayNestedRewardSnapshot(placeholders, lane, currentReplayState(), currentReplayKey());
@@ -910,7 +938,7 @@ public class Reward {
 
 	private static boolean isReplayMetadataKey(String key) {
 		return key != null && (key.startsWith(REPLAY_SELECTION_PREFIX) || key.startsWith(REPLAY_COMMAND_PREFIX)
-				|| key.startsWith(REPLAY_NESTED_LIST_PREFIX)
+				|| key.startsWith(REPLAY_NESTED_LIST_PREFIX) || key.startsWith(REPLAY_SINGLE_CHILD_PREFIX)
 				|| key.startsWith(REPLAY_LEGACY_ACTION_PREFIX));
 	}
 
@@ -1459,6 +1487,10 @@ public class Reward {
 				} catch (Exception e) {
 					plugin.debug("Failed to check requirement " + inject.getPath());
 					e.printStackTrace();
+					if (isDurableReplay(rewardOptions)) {
+						return CompletableFuture.failedFuture(
+								new IllegalStateException("Failed to evaluate reward requirement " + inject.getPath(), e));
+					}
 					canGive = false;
 				}
 			}
