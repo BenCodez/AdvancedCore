@@ -33,6 +33,6 @@ class BuildInputPinningTest {
 		assertTrue(dependency >= 0);
 		String declaration = pom.substring(dependency, Math.min(pom.length(), dependency + 200));
 		assertFalse(declaration.contains("SNAPSHOT"));
-		assertTrue(declaration.contains("1.0.2-20260905.234759-10"));
+		assertTrue(declaration.contains("1.0.2-20260910.221115-20"));
 	}
 }

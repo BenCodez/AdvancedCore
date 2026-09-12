@@ -47,11 +47,13 @@ reading it. Empty/malformed non-list settings return an empty list.
 ## Dependencies and validation
 
 This source requires SimpleAPI's merged structured configuration APIs (SimpleAPI
-PR #78 and its follow-ups). The AdvancedCore dependency pin must resolve an
-artifact containing `StructuredConfigView`, `BukkitStructuredConfigView`, and
-`ConfigurateStructuredConfigView` before a normal full build can succeed. Do not
-substitute an invented timestamp, weaken the dependency-pinning regression test,
-or assume that a mutable local snapshot proves the pinned build works.
+PR #78 and its follow-ups). The dependency is pinned to the published build
+`1.0.2-20260910.221115-20`, which supplies `StructuredConfigView`,
+`BukkitStructuredConfigView`, and `ConfigurateStructuredConfigView`. The earlier
+`1.0.2-20260905.234759-10` build predates these APIs and cannot compile this source.
+Keep the POM and `BuildInputPinningTest` on the same verified timestamped version.
+Do not substitute an invented timestamp, weaken the dependency-pinning regression
+test, or assume a mutable local snapshot proves the pinned build works.
 
 Tests cover portable setting/nested-definition behavior, an isolated runtime
 that rejects Bukkit and JUnit, native Bukkit defaults and list semantics,
