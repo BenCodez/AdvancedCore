@@ -45,7 +45,8 @@ public final class RewardLucky {
 
 			@Override
 			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
-				return Reward.hasReplaySelection(placeholders);
+				return Reward.hasReplaySelection(placeholders)
+						&& !Reward.hasCompletedNestedRewardSequence(placeholders, "lucky:" + getPath());
 			}
 
             @Override

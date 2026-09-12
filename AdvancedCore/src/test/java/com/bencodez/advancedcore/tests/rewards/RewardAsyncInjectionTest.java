@@ -2158,6 +2158,54 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void missingConfigurationSectionIsAllowedAfterItsNestedListCompleted() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		java.lang.reflect.Constructor<?> constructor = stateType.getDeclaredConstructor(Map.class, Map.class,
+				boolean.class);
+		constructor.setAccessible(true);
+		Reward.ReplayState replayState = (Reward.ReplayState) constructor.newInstance(
+				new HashMap<>(), new HashMap<>(), false);
+		java.lang.reflect.Method setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer",
+				java.util.function.Consumer.class);
+		setConsumer.setAccessible(true);
+		setConsumer.invoke(replayState,
+				(java.util.function.Consumer<Reward.ReplayCheckpoint>) ignored -> { });
+		HashMap<String, String> placeholders = new HashMap<>();
+		Reward.replayNestedRewardSequence(plugin, placeholders, "nested-list:RemovedSection",
+				List.of("first", "second"), replayState, "AsyncReward/0",
+				(rewardName, index) -> CompletableFuture.completedFuture(null)).toCompletableFuture().join();
+
+		handler.getInjectedRewards().add(new com.bencodez.advancedcore.api.rewards.injected.RewardInjectConfigurationSection(
+				"RemovedSection") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public boolean requiresConfiguredDataForAsync() { return true; }
+			@Override public boolean hasPendingReplayWork(HashMap<String, String> currentPlaceholders) {
+				String lane = "nested-list:" + getPath();
+				return Reward.hasReplayNestedRewardSnapshot(currentPlaceholders, lane)
+						&& !Reward.hasCompletedNestedRewardSequence(currentPlaceholders, lane);
+			}
+			@Override public String onRewardRequested(Reward ignoredReward, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredSection, HashMap<String, String> ignoredPlaceholders) {
+				throw new AssertionError("completed missing list section must not be resolved");
+			}
+		});
+		java.lang.reflect.Method replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync",
+				AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class);
+		replay.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, user, placeholders, 0,
+				replayState, "AsyncReward", "occurrence");
+
+		resumed.toCompletableFuture().join();
+	}
+
+	@Test
 	void everyNestedRewardInjectorWaitsForItsSelectedChild() {
 		handler = org.mockito.Mockito.spy(new RewardHandler(plugin));
 		when(plugin.getRewardHandler()).thenReturn(handler);

@@ -854,6 +854,34 @@ public class Reward {
 		return replayMetadata(placeholders, replayState, storageKey + "_snapshot") != null;
 	}
 
+	/** Returns whether every child in a frozen nested-reward lane is complete. */
+	public static boolean hasCompletedNestedRewardSequence(HashMap<String, String> placeholders, String lane) {
+		ReplayState replayState = currentReplayState();
+		String activeKey = currentReplayKey();
+		if (replayState == null || activeKey == null) return false;
+		String storageKey = replaySequenceKey(REPLAY_NESTED_LIST_PREFIX, activeKey,
+				lane == null ? "nested" : lane);
+		String storedSnapshot = replayMetadata(placeholders, replayState, storageKey + "_snapshot");
+		if (storedSnapshot == null) return false;
+		List<String> rewards;
+		try {
+			rewards = decodeCommandSnapshot(storedSnapshot);
+		} catch (IllegalArgumentException failure) {
+			throw new IllegalStateException("Malformed nested reward replay snapshot", failure);
+		}
+		String storedProgress = replayMetadata(placeholders, replayState, storageKey);
+		int completed;
+		try {
+			completed = storedProgress == null ? 0 : Integer.parseInt(storedProgress);
+		} catch (NumberFormatException failure) {
+			throw new IllegalStateException("Malformed nested reward replay progress", failure);
+		}
+		if (completed < 0 || completed > rewards.size()) {
+			throw new IllegalStateException("Nested reward replay progress exceeds snapshot");
+		}
+		return completed == rewards.size();
+	}
+
 	private static String replayMetadata(HashMap<String, String> placeholders, ReplayState replayState, String key) {
 		String value = placeholders == null || (replayState != null && !replayState.acceptsPersistedMetadata())
 				? null : placeholders.get(key);

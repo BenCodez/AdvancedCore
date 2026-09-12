@@ -39,7 +39,9 @@ public final class RewardAdvancedWorld {
 
 			@Override
 			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
-				return Reward.hasReplayNestedRewardSnapshot(placeholders, "advanced-world:" + getPath());
+				String lane = "advanced-world:" + getPath();
+				return Reward.hasReplayNestedRewardSnapshot(placeholders, lane)
+						&& !Reward.hasCompletedNestedRewardSequence(placeholders, lane);
 			}
 
             @Override
