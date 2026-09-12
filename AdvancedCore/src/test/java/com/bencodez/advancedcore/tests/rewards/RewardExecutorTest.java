@@ -166,12 +166,14 @@ public class RewardExecutorTest {
 	}
 
     @Test
-    public void asyncRewardSetupStaysOnThePrimaryThreadAndRetainsCompletion() {
+    public void asyncRewardSetupLeavesThePrimaryThreadAndRetainsCompletion() {
         Reward child = mock(Reward.class);
         CompletableFuture<Void> childResult = new CompletableFuture<>();
         when(child.giveRewardAsync(eq(user), any(RewardOptions.class))).thenReturn(childResult);
         RewardOptions options = new RewardOptions();
         Reward.ReplayState replayState = Reward.replayStateFor(new RewardOptions());
+        BukkitScheduler scheduler = plugin.getBukkitScheduler();
+        ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
 
         try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
                 MockedStatic<Reward> replay = mockStatic(Reward.class)) {
@@ -182,6 +184,10 @@ public class RewardExecutorTest {
             when(child.getRewardName()).thenReturn("child");
             CompletionStage<Void> result = executor.giveRewardAsync(user, child, options);
 
+            verify(scheduler).runTaskAsynchronously(eq(plugin), task.capture());
+            verify(child, never()).giveRewardAsync(eq(user), any(RewardOptions.class));
+            assertFalse(result.toCompletableFuture().isDone());
+            task.getValue().run();
             verify(child).giveRewardAsync(eq(user), any(RewardOptions.class));
             assertSame(replayState, options.getAsyncReplayState());
             assertEquals("parent/child", options.getAsyncReplayKey());

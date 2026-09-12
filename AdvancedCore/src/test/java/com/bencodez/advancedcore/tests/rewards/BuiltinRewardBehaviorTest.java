@@ -261,10 +261,28 @@ public class BuiltinRewardBehaviorTest {
         ConfigurationSection section = section("TempPermission");
         section.set("Permission", "advancedcore.test");
         section.set("Expiration", 90);
+        when(user.getPlayer()).thenReturn(mock(Player.class));
 
         configInject(0).onRewardRequested(reward, user, section, placeholders);
 
         verify(user).addPermission("advancedcore.test", 90);
+    }
+
+    @Test
+    public void temporaryPermissionFailurePropagatesDuringAsyncReplay() {
+        RewardTempPermission.register(handler, plugin);
+        ConfigurationSection data = new YamlConfiguration();
+        ConfigurationSection section = data.createSection("TempPermission");
+        section.set("Permission", "advancedcore.test");
+        section.set("Expiration", 90);
+        when(user.getPlayer()).thenReturn(null);
+
+        RewardInject inject = injects.get(0);
+        assertTrue(inject.supportsAsyncRequest());
+        assertTrue(inject.requiresConfiguredDataForAsync());
+        assertThrows(java.util.concurrent.CompletionException.class,
+                () -> inject.onRewardRequestAsync(reward, user, data, placeholders).toCompletableFuture().join());
+        verify(user, never()).addPermission(anyString(), org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Test

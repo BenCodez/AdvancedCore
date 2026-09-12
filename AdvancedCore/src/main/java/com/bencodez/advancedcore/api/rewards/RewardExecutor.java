@@ -205,10 +205,33 @@ public class RewardExecutor {
         if (options.getAsyncReplayOccurrenceId() == null && activeOccurrenceId != null) {
             options.setAsyncReplayOccurrenceId(activeOccurrenceId);
         }
-        // Reward setup fires Bukkit events and resolves live player state. Keep that
-        // work on the caller's owner thread; individual injectors explicitly hand
-        // off only the portions that are safe to execute asynchronously.
-        return reward.giveRewardAsync(user, options);
+        // PlayerRewardEvent is explicitly asynchronous, so Bukkit rejects it when
+        // a nested reward reaches this dispatcher from an owner thread. Hand only
+        // reward setup to the async scheduler; injectors marshal their player/world
+        // work back to the appropriate owner thread and the flattened stage keeps
+        // the parent replay waiting for the complete child reward.
+        boolean primaryThread = false;
+        try {
+            primaryThread = Bukkit.isPrimaryThread();
+        } catch (IllegalStateException | NullPointerException ignored) {
+            // Unit tests and early bootstrap can call this facade before Bukkit has
+            // installed a server. There is no primary server thread to leave then.
+        }
+        if (!primaryThread) return reward.giveRewardAsync(user, options);
+
+        CompletableFuture<CompletionStage<Void>> handoff = new CompletableFuture<>();
+        try {
+            plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    handoff.complete(reward.giveRewardAsync(user, options));
+                } catch (Throwable failure) {
+                    handoff.completeExceptionally(failure);
+                }
+            });
+        } catch (Throwable failure) {
+            handoff.completeExceptionally(failure);
+        }
+        return handoff.thenCompose(stage -> stage);
     }
 
     public void giveReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
