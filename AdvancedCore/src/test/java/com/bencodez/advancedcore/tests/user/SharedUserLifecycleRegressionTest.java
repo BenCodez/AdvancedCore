@@ -152,10 +152,11 @@ class SharedUserLifecycleRegressionTest {
         fixture.first.beforeWrite = () -> {
             if (firstWrite.getAndSet(false)) { entered.countDown(); await(release); }
         };
+        var userManager = fixture.plugin.getUserManager();
         doAnswer(call -> {
             if (firstNotice.getAndSet(false)) runtime.queueChange(fixture.uuid, "Points", new DataValueInt(8));
             return null;
-        }).when(fixture.plugin.getUserManager()).onChange(any(AdvancedCoreUser.class), any(String[].class));
+        }).when(userManager).onChange(any(AdvancedCoreUser.class), any(String[].class));
         runtime.queueChange(fixture.uuid, "Points", new DataValueInt(3));
         ExecutorService workers = Executors.newFixedThreadPool(2);
         try {
