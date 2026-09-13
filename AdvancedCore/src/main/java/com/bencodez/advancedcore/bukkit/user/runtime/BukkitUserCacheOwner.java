@@ -42,9 +42,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     @Override
     public synchronized void bindFlushGate(Consumer<Runnable> gate) {
         Objects.requireNonNull(gate, "gate");
-        if (flushGate != null && flushGate != gate) {
-            throw new IllegalStateException("Cache owner already belongs to another runtime");
-        }
+        if (flushGate != null && flushGate != gate) throw new IllegalStateException("Cache owner already belongs to another runtime");
         flushGate = gate;
     }
 
@@ -52,12 +50,11 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     public synchronized void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate) {
         Objects.requireNonNull(backend, "backend");
         Objects.requireNonNull(gate, "gate");
-        if (flushGate != null && flushGate != gate) {
-            throw new IllegalStateException("Cache owner already belongs to another runtime");
-        }
+        if (flushGate != null && flushGate != gate) throw new IllegalStateException("Cache owner already belongs to another runtime");
         manager.bindSharedCacheInitializer(cacheInitializer);
         this.backend = backend;
         flushGate = gate;
+        manager.bindSharedSqlBackend(backend, gate);
     }
 
     @Override
@@ -65,6 +62,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         Objects.requireNonNull(backend, "backend");
         manager.bindSharedCacheInitializer(cacheInitializer);
         this.backend = backend;
+        if (flushGate != null) manager.bindSharedSqlBackend(backend, flushGate);
     }
 
     private void bind(UserDataCache cache, UUID uuid) {
@@ -90,17 +88,14 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     public DataValue getIfPresent(UUID uuid, String key) {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
         if (cache == null) return null;
-        synchronized (cache) {
-            return cache.getCache() == null ? null : cache.getCache().get(key);
-        }
+        synchronized (cache) { return cache.getCache() == null ? null : cache.getCache().get(key); }
     }
 
     @Override
     public void populate(UUID uuid, HashMap<String, DataValue> values) {
-        UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid,
-                ignored -> new UserDataCache(manager, uuid));
+        UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid, ignored -> new UserDataCache(manager, uuid));
         bind(cache, uuid);
-        cache.updateCache(values);
+        cache.updateCachePreservingPending(values);
     }
 
     @Override
@@ -127,9 +122,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
                 requireBlockingAllowed();
                 storage.writeValues(type, values);
             });
-            do {
-                cache.processChanges();
-            } while (cache.hasChangesToProcess());
+            do { cache.processChanges(); } while (cache.hasChangesToProcess());
         }
     }
 
@@ -144,13 +137,11 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         }
     }
 
-    @Override
-    public void clearAfterFlush() {
-        for (UUID uuid : cachedUsers()) remove(uuid);
-    }
+    @Override public void clearAfterFlush() { for (UUID uuid : cachedUsers()) remove(uuid); }
 
     @Override
     public void shutdown() {
+        manager.unbindSharedSqlBackend(backend);
         if (manager.getTimer() instanceof ScheduledThreadPoolExecutor timer) {
             timer.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
             timer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
