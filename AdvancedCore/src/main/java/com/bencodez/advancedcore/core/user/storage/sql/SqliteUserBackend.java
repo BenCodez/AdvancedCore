@@ -146,7 +146,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
             try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(createTableSql())) { statement.executeUpdate(); }
             ensureRegisteredColumns();
         } catch (IOException | ClassNotFoundException | SQLException | RuntimeException e) {
-            open.set(false;
+            open.set(false);
             throw new IllegalStateException("Failed to initialize SQLite user backend at " + databaseFile, e);
         }
     }
