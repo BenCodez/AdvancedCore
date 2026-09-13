@@ -20,11 +20,37 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueBoolean;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 import com.bencodez.simpleapi.sql.data.DataValueString;
+import com.bencodez.simpleapi.sql.mysql.DbType;
 
 final class JdbcSqlUserStorage implements SqlUserStorage {
     enum Dialect {
         SQLITE,
-        MYSQL
+        MYSQL,
+        POSTGRESQL;
+
+        static Dialect fromDbType(DbType type) {
+            return switch (Objects.requireNonNull(type, "type")) {
+                case MYSQL, MARIADB -> MYSQL;
+                case POSTGRESQL -> POSTGRESQL;
+            };
+        }
+
+        String quote(String identifier) {
+            if (identifier == null || identifier.isBlank() || identifier.indexOf('\0') >= 0) {
+                throw new IllegalArgumentException("SQL identifier cannot be blank or contain NUL");
+            }
+            String delimiter = this == POSTGRESQL ? "\"" : "`";
+            return delimiter + identifier.replace(delimiter, delimiter + delimiter) + delimiter;
+        }
+
+        void bindUuid(PreparedStatement statement, int index, UUID uuid) throws SQLException {
+            if (this == POSTGRESQL) {
+                // Match the native UUID column used by the existing PostgreSQL provider.
+                statement.setObject(index, uuid);
+            } else {
+                statement.setString(index, uuid.toString());
+            }
+        }
     }
 
     @FunctionalInterface
@@ -57,7 +83,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         String sql = "SELECT * FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=?";
         try (Connection connection = connections.open();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, uuid.toString());
+            dialect.bindUuid(statement, 1, uuid);
             try (ResultSet result = statement.executeQuery()) {
                 if (!result.next()) {
                     return new ArrayList<>();
@@ -86,7 +112,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
                 + "=? LIMIT 1";
         try (Connection connection = connections.open();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, uuid.toString());
+            dialect.bindUuid(statement, 1, uuid);
             try (ResultSet result = statement.executeQuery()) {
                 return result.next();
             }
@@ -101,7 +127,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         String sql = "DELETE FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=?";
         try (Connection connection = connections.open();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, uuid.toString());
+            dialect.bindUuid(statement, 1, uuid);
             statement.executeUpdate();
         } catch (SQLException e) {
             throw failure("delete user row", e);
@@ -151,12 +177,15 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         if (dialect == Dialect.SQLITE) {
             sql = "INSERT OR IGNORE INTO " + quote(tableName) + " (" + quote(SqlUserSchema.UUID_COLUMN)
                     + ") VALUES (?)";
+        } else if (dialect == Dialect.POSTGRESQL) {
+            sql = "INSERT INTO " + quote(tableName) + " (" + quote(SqlUserSchema.UUID_COLUMN)
+                    + ") VALUES (?) ON CONFLICT (" + quote(SqlUserSchema.UUID_COLUMN) + ") DO NOTHING";
         } else {
             sql = "INSERT IGNORE INTO " + quote(tableName) + " (" + quote(SqlUserSchema.UUID_COLUMN)
                     + ") VALUES (?)";
         }
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, uuid.toString());
+            dialect.bindUuid(statement, 1, uuid);
             statement.executeUpdate();
         }
     }
@@ -169,11 +198,11 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         if (!schema.contains(key)) {
             throw new IllegalArgumentException("Column is not registered in the SQL schema: " + key);
         }
-        String sql = "UPDATE " + quote(tableName) + " SET " + quote(key) + "=? WHERE "
+        String sql = "UPDATE " + quote(tableName) + " SET " + quote(schema.column(key).name()) + "=? WHERE "
                 + quote(SqlUserSchema.UUID_COLUMN) + "=?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             bind(statement, 1, value);
-            statement.setString(2, uuid.toString());
+            dialect.bindUuid(statement, 2, uuid);
             statement.executeUpdate();
         }
     }
@@ -190,7 +219,9 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             return new DataValueInt(result.wasNull() ? 0 : value);
         }
         if (type == DataType.BOOLEAN) {
-            return new DataValueBoolean(Boolean.valueOf(result.getString(index)));
+            String value = result.getString(index);
+            // Also read numeric values written by the old SQLite setBoolean path.
+            return new DataValueBoolean("1".equals(value) || Boolean.parseBoolean(value));
         }
         return new DataValueString(result.getString(index));
     }
@@ -203,20 +234,15 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         } else if (value.isInt()) {
             statement.setInt(index, value.getInt());
         } else if (value.isBoolean()) {
-            statement.setBoolean(index, value.getBoolean());
+            // UserDataKeyBoolean uses VARCHAR(5), not a native SQL boolean column.
+            statement.setString(index, Boolean.toString(value.getBoolean()));
         } else {
             statement.setObject(index, value.toString());
         }
     }
 
     private String quote(String identifier) {
-        if (identifier == null || identifier.isBlank()) {
-            throw new IllegalArgumentException("SQL identifier cannot be blank");
-        }
-        if (!identifier.matches("[A-Za-z0-9_]+")) {
-            throw new IllegalArgumentException("Unsafe SQL identifier: " + identifier);
-        }
-        return "`" + identifier + "`";
+        return dialect.quote(identifier);
     }
 
     private IllegalStateException failure(String operation, SQLException error) {
