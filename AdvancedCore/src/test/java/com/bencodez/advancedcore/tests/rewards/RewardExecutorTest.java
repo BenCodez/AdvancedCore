@@ -199,6 +199,28 @@ public class RewardExecutorTest {
     }
 
 	@Test
+	public void asyncRewardSetupTimesOutWhenTheAcceptedTaskNeverStarts() {
+		Reward child = mock(Reward.class);
+		BukkitScheduler scheduler = plugin.getBukkitScheduler();
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		RewardExecutor bounded = new RewardExecutor(handler, plugin) {
+			@Override
+			protected long getPrimaryThreadHandoffTimeoutMillis() {
+				return 10L;
+			}
+		};
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			CompletionStage<Void> result = bounded.giveRewardAsync(user, child, new RewardOptions());
+			verify(scheduler).runTaskAsynchronously(eq(plugin), task.capture());
+			assertThrows(CompletionException.class, () -> result.toCompletableFuture().join());
+			task.getValue().run();
+			verify(child, never()).giveRewardAsync(eq(user), any(RewardOptions.class));
+		}
+	}
+
+	@Test
 	public void asyncListLazilyClonesAndSharesReplayMetadataThroughState() {
 		YamlConfiguration data = new YamlConfiguration();
 		data.set("Rewards", new ArrayList<>(List.of("First", "Second")));

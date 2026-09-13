@@ -141,6 +141,17 @@ public class BuiltinRewardBehaviorTest {
         verify(user).giveExpLevels(8);
     }
 
+	@Test
+	public void zeroExperienceScalarsDoNotInvokePlayerCallbacks() {
+		RewardExp.register(handler, plugin);
+
+		((RewardInjectInt) injects.get(0)).onRewardRequest(reward, user, 0, placeholders);
+		((RewardInjectInt) injects.get(1)).onRewardRequest(reward, user, 0, placeholders);
+
+		verify(user, never()).giveExp(org.mockito.ArgumentMatchers.anyInt());
+		verify(user, never()).giveExpLevels(org.mockito.ArgumentMatchers.anyInt());
+	}
+
     @Test
     public void moneyActuallyGivesFixedAndRangedAmounts() {
         RewardMoney.register(handler, plugin);

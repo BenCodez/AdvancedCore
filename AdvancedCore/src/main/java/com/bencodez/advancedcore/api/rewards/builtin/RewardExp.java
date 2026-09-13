@@ -31,7 +31,7 @@ public final class RewardExp {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, int num,
                     HashMap<String, String> placeholders) {
-                user.giveExp(num);
+                if (num != 0) user.giveExp(num);
                 return null;
             }
 		}.requiresPlayerWhen((data, placeholders) -> data.getInt("EXP", 0) != 0)
@@ -55,7 +55,7 @@ public final class RewardExp {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, int num,
                     HashMap<String, String> placeholders) {
-                user.giveExpLevels(num);
+                if (num != 0) user.giveExpLevels(num);
                 return null;
             }
 		}.requiresPlayerWhen((data, placeholders) -> data.getInt("EXPLevels", 0) != 0)

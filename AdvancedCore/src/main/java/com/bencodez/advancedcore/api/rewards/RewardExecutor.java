@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
@@ -217,17 +218,33 @@ public class RewardExecutor {
         CompletableFuture<CompletionStage<Void>> handoff = new CompletableFuture<>();
         try {
             plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> {
+				CompletableFuture<Void> result = new CompletableFuture<>();
+				if (!handoff.complete(result)) return;
                 try {
-                    handoff.complete(reward.giveRewardAsync(user, options));
+					CompletionStage<Void> stage = reward.giveRewardAsync(user, options);
+					if (stage == null) {
+						result.completeExceptionally(new IllegalStateException(
+								"Reward dispatch returned no completion stage"));
+						return;
+					}
+					stage.whenComplete((ignored, failure) -> {
+						if (failure == null) result.complete(null);
+						else result.completeExceptionally(failure);
+					});
                 } catch (Throwable failure) {
-                    handoff.completeExceptionally(failure);
+					result.completeExceptionally(failure);
                 }
             });
         } catch (Throwable failure) {
             handoff.completeExceptionally(failure);
         }
-        return handoff.thenCompose(stage -> stage);
+		return handoff.orTimeout(getPrimaryThreadHandoffTimeoutMillis(), TimeUnit.MILLISECONDS)
+				.thenCompose(stage -> stage);
     }
+
+	protected long getPrimaryThreadHandoffTimeoutMillis() {
+		return TimeUnit.SECONDS.toMillis(30);
+	}
 
     public void giveReward(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
         RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);

@@ -96,7 +96,7 @@
                 <version>3.6.1</version>
                 <configuration>
                     <shadedArtifactAttached>false</shadedArtifactAttached>
-                    <minimizeJar>true</minimizeJar>
+                    <minimizeJar>false</minimizeJar>
                 </configuration>
                 <executions>
                     <execution>
