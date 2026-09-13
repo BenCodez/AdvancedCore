@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -36,8 +37,14 @@ public class UserDataManager {
 	@Getter private ConcurrentHashMap<UUID, UserDataCache> userDataCache;
 
 	private volatile Consumer<UserDataCache> sharedCacheInitializer;
-	private volatile SqlUserBackend sharedSqlBackend;
-	private volatile Consumer<Runnable> sharedSqlGate;
+	private volatile SharedSqlRoute sharedSqlRoute;
+
+	private record SharedSqlRoute(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate) {
+		SharedSqlRoute {
+			Objects.requireNonNull(backend, "backend");
+			Objects.requireNonNull(gate, "gate");
+		}
+	}
 
 	/** One shared owner for the existing map, including caches created by legacy callers. */
 	public final synchronized void bindSharedCacheInitializer(Consumer<UserDataCache> initializer) {
@@ -58,39 +65,35 @@ public class UserDataManager {
 		}
 	}
 
-	/** Publish the backend and the runtime admission gate as one legacy-facade route. */
+	/** Publish backend and per-user lifecycle admission as one volatile immutable route. */
+	public final synchronized void bindSharedSqlBackend(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate) {
+		sharedSqlRoute = new SharedSqlRoute(backend, gate);
+	}
+
+	/** Compatibility overload for adapters that only need the global lifecycle gate. */
 	public final synchronized void bindSharedSqlBackend(SqlUserBackend backend, Consumer<Runnable> gate) {
-		sharedSqlBackend = Objects.requireNonNull(backend, "backend");
-		sharedSqlGate = Objects.requireNonNull(gate, "gate");
+		Objects.requireNonNull(gate, "gate");
+		bindSharedSqlBackend(backend, (uuid, operation) -> gate.accept(operation));
 	}
 
 	public final synchronized void unbindSharedSqlBackend(SqlUserBackend expected) {
-		if (sharedSqlBackend == expected) {
-			sharedSqlBackend = null;
-			sharedSqlGate = null;
-		}
+		SharedSqlRoute route = sharedSqlRoute;
+		if (route != null && route.backend() == expected) sharedSqlRoute = null;
 	}
 
-	public final boolean hasSharedSqlBackend() {
-		return sharedSqlBackend != null && sharedSqlGate != null;
-	}
+	public final boolean hasSharedSqlBackend() { return sharedSqlRoute != null; }
 
-	/**
-	 * Route legacy UserData/BukkitSqlUserStorage access through the currently selected
-	 * shared backend while holding the same lifecycle admission used by runtime calls.
-	 */
+	/** Route one complete legacy SQL operation through one immutable backend/gate snapshot. */
 	public final <T> T withSharedSqlBackend(UUID uuid,
 			BiFunction<UserStorage, SqlUserStorage, T> operation) {
 		Objects.requireNonNull(uuid, "uuid");
 		Objects.requireNonNull(operation, "operation");
-		Consumer<Runnable> gate = sharedSqlGate;
-		if (gate == null) throw new IllegalStateException("Shared SQL backend is not bound");
+		SharedSqlRoute route = sharedSqlRoute;
+		if (route == null) throw new IllegalStateException("Shared SQL backend is not bound");
 		AtomicReference<T> result = new AtomicReference<>();
-		gate.accept(() -> {
-			SqlUserBackend selected = sharedSqlBackend;
-			if (selected == null || !selected.isOpen()) {
-				throw new IllegalStateException("Shared SQL backend is unavailable");
-			}
+		route.gate().accept(uuid, () -> {
+			SqlUserBackend selected = route.backend();
+			if (!selected.isOpen()) throw new IllegalStateException("Shared SQL backend is unavailable");
 			result.set(operation.apply(selected.storageType(), selected.user(uuid)));
 		});
 		return result.get();
