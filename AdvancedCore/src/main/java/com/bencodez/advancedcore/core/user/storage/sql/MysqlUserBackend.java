@@ -6,15 +6,20 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
+import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.mysql.AbstractSqlTable;
 import com.bencodez.simpleapi.sql.mysql.DbType;
 import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
@@ -25,6 +30,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
     private final SqlBackendLogger logger;
     private final HeadlessUserTable table;
     private final AtomicBoolean open = new AtomicBoolean(true);
+    private final ReentrantReadWriteLock operations = new ReentrantReadWriteLock(true);
+    private volatile boolean tableClosed;
 
     public MysqlUserBackend(String baseTableName, MysqlConfig config, SqlUserSchema schema, SqlBackendLogger logger) {
         this.schema = Objects.requireNonNull(schema, "schema");
@@ -33,7 +40,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
         try { ensureRegisteredColumns(); }
         catch (RuntimeException | Error failure) {
             open.set(false);
-            try { table.close(); } catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
+            try { table.close(); tableClosed = true; }
+            catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
             throw failure;
         }
     }
@@ -44,8 +52,15 @@ public final class MysqlUserBackend implements SqlUserBackend {
     public SqlUserStorage user(UUID uuid) {
         requireOpen();
         JdbcSqlUserStorage.Dialect dialect = JdbcSqlUserStorage.Dialect.fromDbType(table.getMysql().getConnectionManager().getDbType());
-        return new JdbcSqlUserStorage(UserStorage.MYSQL, uuid, table.getTableName(), schema,
+        SqlUserStorage delegate = new JdbcSqlUserStorage(UserStorage.MYSQL, uuid, table.getTableName(), schema,
                 () -> table.getMysql().getConnectionManager().getConnection(), dialect, logger);
+        return new SqlUserStorage() {
+            @Override public List<Column> readRow(UserStorage storage) { return withOperation(() -> delegate.readRow(storage)); }
+            @Override public boolean contains(UserStorage storage) { return withOperation(() -> delegate.contains(storage)); }
+            @Override public void delete(UserStorage storage) { withOperation(() -> { delegate.delete(storage); return null; }); }
+            @Override public void write(UserStorage storage, String key, DataValue value) { withOperation(() -> { delegate.write(storage, key, value); return null; }); }
+            @Override public void writeValues(UserStorage storage, HashMap<String, DataValue> values) { withOperation(() -> { delegate.writeValues(storage, values); return null; }); }
+        };
     }
 
     @Override
@@ -61,20 +76,19 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
     @Override
     public void forEachUser(Consumer<UUID> consumer) {
-        requireOpen();
         Objects.requireNonNull(consumer, "consumer");
-        String cursor = null;
-        while (true) {
-            List<UserPageEntry> page = readUserPage(cursor);
-            if (page.isEmpty()) return;
-            cursor = page.get(page.size() - 1).cursor();
-            // The page query and pooled connection are already closed here. Callback
-            // code may safely perform nested reads/writes even with a one-slot pool.
-            for (UserPageEntry entry : page) {
-                if (entry.uuid() != null) consumer.accept(entry.uuid());
+        withOperation(() -> {
+            String cursor = null;
+            while (true) {
+                List<UserPageEntry> page = readUserPage(cursor);
+                if (page.isEmpty()) return null;
+                cursor = page.get(page.size() - 1).cursor();
+                for (UserPageEntry entry : page) {
+                    if (entry.uuid() != null) consumer.accept(entry.uuid());
+                }
+                if (page.size() < USER_PAGE_SIZE) return null;
             }
-            if (page.size() < USER_PAGE_SIZE) return;
-        }
+        });
     }
 
     private List<UserPageEntry> readUserPage(String cursor) {
@@ -87,11 +101,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             int index = 1;
             if (cursor != null) {
-                if (dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL) {
-                    dialect.bindUuid(statement, index++, UUID.fromString(cursor));
-                } else {
-                    statement.setString(index++, cursor);
-                }
+                if (dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL) dialect.bindUuid(statement, index++, UUID.fromString(cursor));
+                else statement.setString(index++, cursor);
             }
             statement.setInt(index, USER_PAGE_SIZE);
             ArrayList<UserPageEntry> page = new ArrayList<>(USER_PAGE_SIZE);
@@ -101,9 +112,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     if (value == null) continue;
                     UUID parsed = null;
                     try { parsed = UUID.fromString(value); }
-                    catch (IllegalArgumentException invalid) {
-                        logger.warn("Skipping invalid UUID in " + table.getTableName() + ": " + value, invalid);
-                    }
+                    catch (IllegalArgumentException invalid) { logger.warn("Skipping invalid UUID in " + table.getTableName() + ": " + value, invalid); }
                     page.add(new UserPageEntry(value, parsed));
                 }
             }
@@ -118,7 +127,28 @@ public final class MysqlUserBackend implements SqlUserBackend {
     private record UserPageEntry(String cursor, UUID uuid) {}
 
     @Override public boolean isOpen() { return open.get(); }
-    @Override public void close() { if (open.compareAndSet(true, false)) table.close(); }
+
+    @Override
+    public void close() {
+        if (operations.getReadHoldCount() != 0) throw new IllegalStateException("Cannot close MySQL from inside an active storage operation");
+        open.set(false);
+        operations.writeLock().lock();
+        try {
+            if (!tableClosed) {
+                table.close();
+                tableClosed = true;
+            }
+        } finally {
+            operations.writeLock().unlock();
+        }
+    }
+
+    private <T> T withOperation(Supplier<T> operation) {
+        requireOpen();
+        operations.readLock().lock();
+        try { requireOpen(); return operation.get(); }
+        finally { operations.readLock().unlock(); }
+    }
 
     private void ensureRegisteredColumns() {
         table.ensureUuidType();
@@ -127,7 +157,9 @@ public final class MysqlUserBackend implements SqlUserBackend {
         }
     }
 
-    private void requireOpen() { if (!open.get()) throw new IllegalStateException("MySQL user backend is closed"); }
+    private void requireOpen() {
+        if (!open.get() && operations.getReadHoldCount() == 0) throw new IllegalStateException("MySQL user backend is closed");
+    }
 
     private static final class HeadlessUserTable extends AbstractSqlTable {
         private final SqlUserSchema schema;

@@ -93,7 +93,8 @@ public final class SqliteUserBackend implements SqlUserBackend {
     private List<UserPageEntry> readUserPage(String cursor) {
         String uuidColumn = quote(SqlUserSchema.UUID_COLUMN);
         String sql = "SELECT " + uuidColumn + " FROM " + quote(tableName)
-                + (cursor == null ? "" : " WHERE " + uuidColumn + " > ?")
+                + " WHERE " + uuidColumn + " IS NOT NULL"
+                + (cursor == null ? "" : " AND " + uuidColumn + " > ?")
                 + " ORDER BY " + uuidColumn + " ASC LIMIT ?";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             int index = 1;
@@ -106,9 +107,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
                     if (value == null) continue;
                     UUID parsed = null;
                     try { parsed = UUID.fromString(value); }
-                    catch (IllegalArgumentException invalid) {
-                        logger.warn("Skipping invalid UUID in " + tableName + ": " + value, invalid);
-                    }
+                    catch (IllegalArgumentException invalid) { logger.warn("Skipping invalid UUID in " + tableName + ": " + value, invalid); }
                     page.add(new UserPageEntry(value, parsed));
                 }
             }
@@ -154,11 +153,8 @@ public final class SqliteUserBackend implements SqlUserBackend {
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
             if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name()) || hasColumn(column.name())) continue;
             String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name()) + " " + column.sqlType();
-            try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.executeUpdate();
-            } catch (SQLException addFailure) {
-                if (!isDuplicateColumn(addFailure) || !hasColumn(column.name())) throw addFailure;
-            }
+            try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
+            catch (SQLException addFailure) { if (!isDuplicateColumn(addFailure) || !hasColumn(column.name())) throw addFailure; }
         }
     }
 
@@ -190,11 +186,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
     private Connection openConnection() throws SQLException { requireOpen(); return DriverManager.getConnection("jdbc:sqlite:" + databaseFile.toAbsolutePath()); }
 
     private void requireOpen() {
-        // A close marks the backend unavailable immediately to new callers, but an
-        // operation that already owns the read lock may finish nested JDBC work.
-        if (!open.get() && operations.getReadHoldCount() == 0) {
-            throw new IllegalStateException("SQLite user backend is closed");
-        }
+        if (!open.get() && operations.getReadHoldCount() == 0) throw new IllegalStateException("SQLite user backend is closed");
     }
 
     private static String quote(String identifier) { return JdbcSqlUserStorage.Dialect.SQLITE.quote(identifier); }

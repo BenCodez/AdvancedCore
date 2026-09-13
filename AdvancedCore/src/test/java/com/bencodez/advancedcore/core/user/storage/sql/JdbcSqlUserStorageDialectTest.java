@@ -32,7 +32,6 @@ import com.bencodez.simpleapi.sql.mysql.ConnectionManager;
 import com.bencodez.simpleapi.sql.mysql.DbType;
 import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 
-/** JDBC contract tests, not a live PostgreSQL/MySQL integration database. */
 class JdbcSqlUserStorageDialectTest {
     private static final UUID UUID_VALUE = UUID.fromString("542b75a0-5333-4f44-828c-94676443cf5d");
 
@@ -46,7 +45,6 @@ class JdbcSqlUserStorageDialectTest {
         assertFalse(user.contains(UserStorage.MYSQL));
         user.delete(UserStorage.MYSQL);
         user.write(UserStorage.MYSQL, "vote \"flag\"", new DataValueBoolean(true));
-
         assertEquals(List.of(
                 "SELECT * FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=?",
                 "SELECT 1 FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=? LIMIT 1",
@@ -67,7 +65,7 @@ class JdbcSqlUserStorageDialectTest {
     }
 
     @Test
-    void mysqlAndMariaDbUseConstraintSafeInsertAndTextUuidBindings() throws Exception {
+    void mysqlAndMariaDbLockExistingRowsAndUseConstraintSafeInsert() throws Exception {
         for (DbType type : List.of(DbType.MYSQL, DbType.MARIADB)) {
             RecordingJdbc jdbc = new RecordingJdbc();
             SqlUserSchema schema = SqlUserSchema.builder().column("Vote `Flag`", "VARCHAR(5)", DataType.BOOLEAN).build();
@@ -75,7 +73,7 @@ class JdbcSqlUserStorageDialectTest {
                     () -> jdbc.connection, JdbcSqlUserStorage.Dialect.fromDbType(type), SqlBackendLogger.NO_OP);
             user.write(UserStorage.MYSQL, "Vote `Flag`", new DataValueBoolean(false));
             assertEquals(List.of(
-                    "SELECT 1 FROM `User ``Data``` WHERE `uuid`=? LIMIT 1",
+                    "SELECT 1 FROM `User ``Data``` WHERE `uuid`=? LIMIT 1 FOR UPDATE",
                     "INSERT INTO `User ``Data``` (`uuid`, `Vote ``Flag```) VALUES (?, ?)",
                     "UPDATE `User ``Data``` SET `Vote ``Flag```=? WHERE `uuid`=?"), jdbc.sql);
             verify(jdbc.statements.get(0)).setString(1, UUID_VALUE.toString());
@@ -144,14 +142,12 @@ class JdbcSqlUserStorageDialectTest {
                         when(manager.getDbType()).thenReturn(type);
                         when(manager.getConnection()).thenReturn(jdbc.connection);
                     })) {
-                try (MysqlUserBackend backend = new MysqlUserBackend("ignored", config,
-                        SqlUserSchema.builder().build(), SqlBackendLogger.NO_OP)) {
+                try (MysqlUserBackend backend = new MysqlUserBackend("ignored", config, SqlUserSchema.builder().build(), SqlBackendLogger.NO_OP)) {
                     backend.user(UUID_VALUE).contains(UserStorage.MYSQL);
                     PreparedStatement lookup = jdbc.statements.get(jdbc.statements.size() - 1);
                     if (type == DbType.POSTGRESQL) {
                         assertTrue(jdbc.sql.contains("CREATE TABLE IF NOT EXISTS \"prefix-User Data\" (\"uuid\" UUID, PRIMARY KEY (\"uuid\"));"));
-                        assertEquals("SELECT 1 FROM \"prefix-User Data\" WHERE \"uuid\"=? LIMIT 1",
-                                jdbc.sql.get(jdbc.sql.size() - 1));
+                        assertEquals("SELECT 1 FROM \"prefix-User Data\" WHERE \"uuid\"=? LIMIT 1", jdbc.sql.get(jdbc.sql.size() - 1));
                         verify(lookup).setObject(1, UUID_VALUE);
                     } else {
                         assertTrue(jdbc.sql.contains("CREATE TABLE IF NOT EXISTS `prefix-User Data` (`uuid` VARCHAR(37), PRIMARY KEY (`uuid`));"));

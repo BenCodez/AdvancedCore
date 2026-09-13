@@ -228,7 +228,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
 
     private boolean rowExists(Connection connection) throws SQLException {
         String sql = "SELECT 1 FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=? LIMIT 1"
-                + (dialect == Dialect.POSTGRESQL ? " FOR UPDATE" : "");
+                + (dialect == Dialect.SQLITE ? "" : " FOR UPDATE");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             dialect.bindUuid(statement, 1, uuid);
             try (ResultSet result = statement.executeQuery()) { return result.next(); }
