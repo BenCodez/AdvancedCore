@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,6 +39,9 @@ public class UserDataManager {
 
 	private volatile Consumer<UserDataCache> sharedCacheInitializer;
 	private volatile SharedSqlRoute sharedSqlRoute;
+	private final Object sharedBindingAdmission = new Object();
+	private boolean sharedBindingTransition;
+	private int legacyBatches;
 
 	private record SharedSqlRoute(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate) {
 		SharedSqlRoute {
@@ -58,10 +62,49 @@ public class UserDataManager {
 	void initializeSharedCache(UserDataCache cache) {
 		Consumer<UserDataCache> initializer = sharedCacheInitializer;
 		if (initializer != null) {
-			if (Thread.holdsLock(cache)) {
-				throw new IllegalStateException("Cannot attach shared storage while holding the cache monitor");
-			}
+			if (Thread.holdsLock(cache)) throw new IllegalStateException("Cannot attach shared storage while holding the cache monitor");
 			initializer.accept(cache);
+		}
+	}
+
+	/**
+	 * Close legacy-batch admission before a shared route is published. This is a
+	 * fail-fast transition: constructors never wait for an old provider write.
+	 */
+	public final void beginSharedBindingTransition() {
+		synchronized (sharedBindingAdmission) {
+			if (sharedBindingTransition) throw new IllegalStateException("Shared user binding is already in progress");
+			if (sharedSqlRoute != null) throw new IllegalStateException("Shared SQL backend is already bound");
+			sharedBindingTransition = true;
+			if (legacyBatches != 0) {
+				sharedBindingTransition = false;
+				throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
+			}
+		}
+	}
+
+	public final void endSharedBindingTransition() {
+		synchronized (sharedBindingAdmission) {
+			sharedBindingTransition = false;
+			sharedBindingAdmission.notifyAll();
+		}
+	}
+
+	/** Admission used by UserDataCache before it selects the legacy provider. */
+	final void beginLegacyCacheBatch() {
+		synchronized (sharedBindingAdmission) {
+			if (sharedBindingTransition || sharedSqlRoute != null) {
+				throw new IllegalStateException("Legacy user storage is retired by the shared runtime");
+			}
+			legacyBatches++;
+		}
+	}
+
+	final void endLegacyCacheBatch() {
+		synchronized (sharedBindingAdmission) {
+			if (legacyBatches <= 0) throw new IllegalStateException("Legacy user batch admission is unbalanced");
+			legacyBatches--;
+			sharedBindingAdmission.notifyAll();
 		}
 	}
 
@@ -152,7 +195,24 @@ public class UserDataManager {
 
 	public void cacheUserIfNeeded(UUID uuid) { if (!userDataCache.containsKey(uuid)) cacheUser(uuid); }
 
+	/**
+	 * Shared SQL writes are worker-only. Existing synchronous Bukkit clear/remove
+	 * entry points hand the complete flush-and-remove sequence to the cache worker.
+	 */
+	boolean deferSharedStorageWork(Runnable task) {
+		Objects.requireNonNull(task, "task");
+		if (!hasSharedSqlBackend() || Bukkit.getServer() == null || !Bukkit.isPrimaryThread()) return false;
+		try { timer.execute(task); }
+		catch (RejectedExecutionException rejected) { if (plugin != null) plugin.debug(rejected); }
+		return true;
+	}
+
 	public void clearCache() {
+		if (deferSharedStorageWork(this::clearCacheNow)) return;
+		clearCacheNow();
+	}
+
+	private void clearCacheNow() {
 		plugin.debug("Clearing cache: " + userDataCache.keySet().size());
 		for (UserDataCache c : userDataCache.values()) { c.clearCache(); c.dump(); }
 		userDataCache.clear();
@@ -192,9 +252,16 @@ public class UserDataManager {
 	}
 
 	public void removeCache(UUID uuid, String playerName) {
+		UUID resolved = uuid;
 		if (playerName != null && !playerName.isEmpty() && !plugin.getOptions().isOnlineMode()) {
-			uuid = UUID.fromString(UuidLookup.getInstance().getUUID(playerName));
+			resolved = UUID.fromString(UuidLookup.getInstance().getUUID(playerName));
 		}
+		UUID target = resolved;
+		if (deferSharedStorageWork(() -> removeCacheNow(target))) return;
+		removeCacheNow(target);
+	}
+
+	private void removeCacheNow(UUID uuid) {
 		UserDataCache cache = getCache(uuid);
 		if (cache != null) cache.clearCache();
 		userDataCache.remove(uuid);

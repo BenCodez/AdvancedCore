@@ -55,4 +55,24 @@ class UserDataCachePopulationRaceTest {
         assertEquals(7, cache.getCache().get("Points").getInt());
         timer.shutdownNow();
     }
+
+    @Test
+    void directMutationAtThePopulationTokenIsStillPreserved() {
+        UserDataManager manager = mock(UserDataManager.class);
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        ScheduledThreadPoolExecutor timer = new ScheduledThreadPoolExecutor(1);
+        when(manager.getPlugin()).thenReturn(plugin);
+        when(manager.getTimer()).thenReturn(timer);
+        UserDataCache cache = new UserDataCache(manager, UUID.randomUUID());
+        HashMap<String, com.bencodez.simpleapi.sql.data.DataValue> initial = new HashMap<>();
+        initial.put("Points", new DataValueInt(1));
+        cache.updateCache(initial);
+        cache.addChange(new UserDataChangeInt("Points", 7), false);
+        long tokenAfterDirectMutation = cache.getSharedSnapshotVersion();
+        HashMap<String, com.bencodez.simpleapi.sql.data.DataValue> staleStorage = new HashMap<>();
+        staleStorage.put("Points", new DataValueInt(1));
+        cache.updateSharedSnapshot(staleStorage, tokenAfterDirectMutation);
+        assertEquals(7, cache.getCache().get("Points").getInt());
+        timer.shutdownNow();
+    }
 }

@@ -61,8 +61,6 @@ public class UserDataCache {
 		}
 		if (change == null || cache == null || cachedChanges == null) return;
 		cache.put(change.getKey(), change.toUserDataValue());
-		// Version every cache mutation, including legacy work before a shared writer
-		// is attached, so an overlapping storage refresh cannot overwrite it.
 		changedAt.put(change.getKey(), ++snapshotVersion);
 		if (queue) {
 			cachedChanges.add(change);
@@ -105,6 +103,11 @@ public class UserDataCache {
 	}
 
 	public void clearCache() {
+		if (manager != null && manager.deferSharedStorageWork(this::clearCacheNow)) return;
+		clearCacheNow();
+	}
+
+	private void clearCacheNow() {
 		initializeSharedStorage();
 		Consumer<Runnable> gate;
 		synchronized (this) {
@@ -118,7 +121,14 @@ public class UserDataCache {
 		gate.accept(() -> { processChanges(); synchronized (this) { if (cache != null) { cache.clear(); recordSnapshotReplacement(); } } });
 	}
 
-	public void clearChanges() { if (hasChangesToProcess()) processChanges(); }
+	public void clearChanges() {
+		if (!hasChangesToProcess()) return;
+		if (manager != null && manager.deferSharedStorageWork(this::clearChangesNow)) return;
+		clearChangesNow();
+	}
+
+	private void clearChangesNow() { if (hasChangesToProcess()) processChanges(); }
+
 	public void displayCache() { manager.getPlugin().devDebug(displayCacheStringList().toString()); }
 	public synchronized ArrayList<String> displayCacheStringList() {
 		ArrayList<String> list = new ArrayList<>();
@@ -133,6 +143,11 @@ public class UserDataCache {
 	}
 
 	public void dump() {
+		if (manager != null && manager.deferSharedStorageWork(this::dumpNow)) return;
+		dumpNow();
+	}
+
+	private void dumpNow() {
 		while (true) {
 			processChanges();
 			synchronized (this) {
@@ -150,11 +165,8 @@ public class UserDataCache {
 	public synchronized boolean hasChangesToProcess() { return cachedChanges != null && !cachedChanges.isEmpty(); }
 	public synchronized boolean isCached(String key) { return cache != null && cache.containsKey(key); }
 
-	/** Fail-fast preflight: constructors must never wait for an old provider batch. */
 	public synchronized void ensureNoLegacyBatchForSharedBinding() {
-		if (sharedStorageWriter == null && inFlightBatches != 0) {
-			throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
-		}
+		if (sharedStorageWriter == null && inFlightBatches != 0) throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
 	}
 
 	public synchronized void configureSharedStorage(Consumer<HashMap<String, DataValue>> writer, Consumer<Runnable> gate) {
@@ -181,6 +193,7 @@ public class UserDataCache {
 		Consumer<HashMap<String, DataValue>> writer = null;
 		Consumer<Runnable> gate;
 		ArrayList<UserDataChange> changes = new ArrayList<>();
+		boolean legacyAdmission = false;
 		synchronized (this) {
 			gate = admitted ? null : sharedFlushGate;
 			if (gate == null) {
@@ -194,6 +207,10 @@ public class UserDataCache {
 				}
 				currentUuid = uuid;
 				if (currentUuid == null || cachedChanges == null || cachedChanges.isEmpty()) return;
+				if (writer == null && manager != null) {
+					manager.beginLegacyCacheBatch();
+					legacyAdmission = true;
+				}
 				UserDataChange change;
 				while ((change = cachedChanges.poll()) != null) changes.add(change);
 				inFlightValues.clear();
@@ -202,6 +219,7 @@ public class UserDataCache {
 				} catch (RuntimeException | Error preparationFailure) {
 					inFlightValues.clear();
 					requeueChanges(changes);
+					if (legacyAdmission) manager.endLegacyCacheBatch();
 					throw preparationFailure;
 				}
 				inFlightBatches++;
@@ -223,7 +241,10 @@ public class UserDataCache {
 		} catch (RuntimeException | Error e) {
 			if (!persisted) requeueChanges(changes);
 			throw e;
-		} finally { finishInFlightBatch(); }
+		} finally {
+			finishInFlightBatch();
+			if (legacyAdmission) manager.endLegacyCacheBatch();
+		}
 	}
 
 	private synchronized void requeueChanges(ArrayList<UserDataChange> changes) {
@@ -276,9 +297,7 @@ public class UserDataCache {
 	public synchronized long getSharedSnapshotVersion() { return snapshotVersion; }
 
 	public synchronized HashMap<String, DataValue> updateSharedSnapshot(HashMap<String, DataValue> values,
-			long expectedVersion) {
-		return updateSharedSnapshot(values, expectedVersion, uuid);
-	}
+			long expectedVersion) { return updateSharedSnapshot(values, expectedVersion, uuid); }
 
 	private synchronized HashMap<String, DataValue> updateSharedSnapshot(HashMap<String, DataValue> values,
 			long expectedVersion, UUID expectedUuid) {
@@ -286,7 +305,7 @@ public class UserDataCache {
 		if (expectedVersion < 0 || expectedVersion > snapshotVersion) throw new IllegalArgumentException("Invalid cache snapshot version");
 		if (replacementVersion > expectedVersion) return new HashMap<>(cache);
 		HashMap<String, DataValue> merged = values == null ? new HashMap<>() : new HashMap<>(values);
-		changedAt.forEach((key, version) -> { if (version > expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
+		changedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
 		cache = merged;
 		recordSnapshotReplacement();
 		return new HashMap<>(cache);
