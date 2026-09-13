@@ -91,7 +91,13 @@ public class UserDataCache {
 			else manager.getPlugin().devDebug("Loading default cache value for " + key + " for " + currentUuid);
 			refreshed.put(key, dataValue);
 		}
-		HashMap<String, DataValue> published = updateSharedSnapshot(refreshed, expectedVersion, currentUuid);
+		HashMap<String, DataValue> published;
+		synchronized (this) {
+			// A concurrent cache eviction is an expected legacy lifecycle outcome.
+			// It must not turn a completed storage read into a failed cache request.
+			if (uuid == null || cache == null) return this;
+			published = updateSharedSnapshot(refreshed, expectedVersion, currentUuid);
+		}
 		ArrayList<String> changedKeys = new ArrayList<>();
 		for (Entry<String, DataValue> entry : published.entrySet()) {
 			DataValue prior = before.get(entry.getKey());

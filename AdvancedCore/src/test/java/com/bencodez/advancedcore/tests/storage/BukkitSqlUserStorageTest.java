@@ -51,7 +51,7 @@ class BukkitSqlUserStorageTest {
     }
 
     @Test
-    void sqliteBulkPreservesPerEntryCallsCumulativeListAndUuidExclusion() {
+    void sqliteBulkUsesOneUpdateWithAllNonUuidColumns() {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         UserTable table = mock(UserTable.class);
         when(plugin.getSQLiteUserTable()).thenReturn(table);
@@ -70,9 +70,9 @@ class BukkitSqlUserStorageTest {
         values.put("uuid", new DataValueString("ignored-id"));
         values.put("PlayerName", new DataValueString("Ben"));
         storage.writeValues(UserStorage.SQLITE, values);
-        assertEquals(List.of(List.of("Points"), List.of("Points"), List.of("Points", "PlayerName")), writes);
+        assertEquals(List.of(List.of("Points", "PlayerName")), writes);
         storage.writeValues(UserStorage.SQLITE, new HashMap<>());
-        assertEquals(3, writes.size());
+        assertEquals(1, writes.size());
     }
 
     @Test

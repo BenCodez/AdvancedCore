@@ -100,8 +100,8 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
                 ArrayList<Column> columns = new ArrayList<>();
                 for (Entry<String, DataValue> entry : values.entrySet()) {
                     if (!entry.getKey().equals("uuid")) columns.add(new Column(entry.getKey(), entry.getValue()));
-                    owner().getSQLiteUserTable().update(primary(), columns);
                 }
+                if (!columns.isEmpty()) owner().getSQLiteUserTable().update(primary(), columns);
             }
             return null;
         });
