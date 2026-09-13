@@ -35,6 +35,28 @@ import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 class JdbcSqlUserStorageDialectTest {
     private static final UUID UUID_VALUE = UUID.fromString("542b75a0-5333-4f44-828c-94676443cf5d");
 
+    @Test void rowReadsReturnRegisteredColumnCasing() throws Exception {
+        Connection connection = mock(Connection.class);
+        PreparedStatement statement = mock(PreparedStatement.class);
+        ResultSet result = mock(ResultSet.class);
+        ResultSetMetaData metadata = mock(ResultSetMetaData.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeQuery()).thenReturn(result);
+        when(result.next()).thenReturn(true);
+        when(result.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(1);
+        when(metadata.getColumnLabel(1)).thenReturn("points");
+        when(result.getInt(1)).thenReturn(7);
+        SqlUserSchema schema = SqlUserSchema.builder().column("Points", "INT", DataType.INTEGER).build();
+
+        List<com.bencodez.simpleapi.sql.Column> columns = new JdbcSqlUserStorage(UserStorage.MYSQL, UUID_VALUE,
+                "Users", schema, () -> connection, JdbcSqlUserStorage.Dialect.MYSQL, SqlBackendLogger.NO_OP)
+                .readRow(UserStorage.MYSQL);
+
+        assertEquals("Points", columns.get(0).getName());
+        assertEquals(7, columns.get(0).getValue().getInt());
+    }
+
     @Test void postgresqlNewRowUsesTheAtomicInsertWithoutARedundantUpdate() throws Exception {
         RecordingJdbc jdbc = new RecordingJdbc();
         SqlUserSchema schema = SqlUserSchema.builder().column("Vote \"Flag\"", "VARCHAR(5)", DataType.BOOLEAN).build();

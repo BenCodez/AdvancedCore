@@ -26,7 +26,7 @@ import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 class MysqlBackendReviewRegressionTest {
     @Test void malformedUuidDiagnosticsAreBoundedAndValueFree() throws Exception {
         Fixture fixture = new Fixture(DbType.MYSQL, "Points");
-        fixture.enumerationRows = List.of("private-one", "private-two");
+        fixture.enumerationRows = List.of("1-1-1-1-1", "private-two");
         List<String> warnings = new ArrayList<>();
         SqlBackendLogger logger = new SqlBackendLogger() {
             @Override public void info(String message) { }

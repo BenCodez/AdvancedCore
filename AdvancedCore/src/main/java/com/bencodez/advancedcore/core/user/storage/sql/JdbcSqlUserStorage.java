@@ -80,7 +80,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
                     String name = metadata.getColumnLabel(i);
                     SqlUserSchema.ColumnDefinition definition = schema.column(name);
                     DataType type = definition == null ? DataType.STRING : definition.dataType();
-                    Column column = new Column(name, type);
+                    Column column = new Column(definition == null ? name : definition.name(), type);
                     column.setValue(readValue(result, i, definition, type));
                     columns.add(column);
                 }

@@ -103,8 +103,12 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     String value = result.getString(1);
                     if (value == null) continue;
                     UUID parsed = null;
-                    try { parsed = UUID.fromString(value); }
+                    try {
+                        parsed = UUID.fromString(value);
+                        if (!parsed.toString().equalsIgnoreCase(value)) throw new IllegalArgumentException("Non-canonical UUID");
+                    }
                     catch (IllegalArgumentException invalid) {
+                        parsed = null;
                         if (invalidUuidWarningLogged.compareAndSet(false, true)) {
                             logger.warn("Skipping malformed UUID entries while enumerating SQL users; further diagnostics suppressed",
                                     new IllegalArgumentException("Malformed SQL UUID value"));

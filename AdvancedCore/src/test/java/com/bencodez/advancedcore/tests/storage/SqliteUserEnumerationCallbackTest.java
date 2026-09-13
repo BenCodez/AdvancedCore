@@ -90,6 +90,8 @@ class SqliteUserEnumerationCallbackTest {
             statement.executeUpdate();
             statement.setString(1, malformed + "another");
             statement.executeUpdate();
+            statement.setString(1, "1-1-1-1-1");
+            statement.executeUpdate();
 
             assertEquals(List.of(), backend.enumerateUsers());
         }
