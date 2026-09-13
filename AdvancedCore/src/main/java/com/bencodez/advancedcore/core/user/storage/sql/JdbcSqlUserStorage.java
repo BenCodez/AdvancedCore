@@ -27,39 +27,25 @@ import com.bencodez.simpleapi.sql.mysql.DbType;
 
 final class JdbcSqlUserStorage implements SqlUserStorage {
     enum Dialect {
-        SQLITE,
-        MYSQL,
-        POSTGRESQL;
-
+        SQLITE, MYSQL, POSTGRESQL;
         static Dialect fromDbType(DbType type) {
             return switch (Objects.requireNonNull(type, "type")) {
                 case MYSQL, MARIADB -> MYSQL;
                 case POSTGRESQL -> POSTGRESQL;
             };
         }
-
         String quote(String identifier) {
-            if (identifier == null || identifier.isBlank() || identifier.indexOf('\0') >= 0) {
-                throw new IllegalArgumentException("SQL identifier cannot be blank or contain NUL");
-            }
+            if (identifier == null || identifier.isBlank() || identifier.indexOf('\0') >= 0) throw new IllegalArgumentException("SQL identifier cannot be blank or contain NUL");
             String delimiter = this == POSTGRESQL ? "\"" : "`";
             return delimiter + identifier.replace(delimiter, delimiter + delimiter) + delimiter;
         }
-
         void bindUuid(PreparedStatement statement, int index, UUID uuid) throws SQLException {
-            if (this == POSTGRESQL) statement.setObject(index, uuid);
-            else statement.setString(index, uuid.toString());
+            if (this == POSTGRESQL) statement.setObject(index, uuid); else statement.setString(index, uuid.toString());
         }
     }
 
-    private enum BooleanStorage {
-        TEXT,
-        NATIVE,
-        NUMERIC
-    }
-
-    @FunctionalInterface
-    interface ConnectionProvider { Connection open() throws SQLException; }
+    private enum BooleanStorage { TEXT, NATIVE, NUMERIC }
+    @FunctionalInterface interface ConnectionProvider { Connection open() throws SQLException; }
 
     private final UserStorage storage;
     private final UUID uuid;
@@ -80,8 +66,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         this.logger = Objects.requireNonNull(logger, "logger");
     }
 
-    @Override
-    public List<Column> readRow(UserStorage requestedStorage) {
+    @Override public List<Column> readRow(UserStorage requestedStorage) {
         requireStorage(requestedStorage);
         String sql = "SELECT * FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=?";
         try (Connection connection = connections.open(); PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -103,8 +88,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         } catch (SQLException e) { throw failure("read user row", e); }
     }
 
-    @Override
-    public boolean contains(UserStorage requestedStorage) {
+    @Override public boolean contains(UserStorage requestedStorage) {
         requireStorage(requestedStorage);
         String sql = "SELECT 1 FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=? LIMIT 1";
         try (Connection connection = connections.open(); PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -113,27 +97,21 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         } catch (SQLException e) { throw failure("check user row", e); }
     }
 
-    @Override
-    public void delete(UserStorage requestedStorage) {
+    @Override public void delete(UserStorage requestedStorage) {
         requireStorage(requestedStorage);
         String sql = "DELETE FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=?";
         try (Connection connection = connections.open(); PreparedStatement statement = connection.prepareStatement(sql)) {
-            dialect.bindUuid(statement, 1, uuid);
-            statement.executeUpdate();
+            dialect.bindUuid(statement, 1, uuid); statement.executeUpdate();
         } catch (SQLException e) { throw failure("delete user row", e); }
     }
 
-    @Override
-    public void write(UserStorage requestedStorage, String key, DataValue value) {
+    @Override public void write(UserStorage requestedStorage, String key, DataValue value) {
         requireStorage(requestedStorage);
         if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(key)) throw new IllegalArgumentException("uuid is immutable through SqlUserStorage");
-        HashMap<String, DataValue> values = new HashMap<>();
-        values.put(key, value);
-        writeValues(requestedStorage, values);
+        HashMap<String, DataValue> values = new HashMap<>(); values.put(key, value); writeValues(requestedStorage, values);
     }
 
-    @Override
-    public void writeValues(UserStorage requestedStorage, HashMap<String, DataValue> values) {
+    @Override public void writeValues(UserStorage requestedStorage, HashMap<String, DataValue> values) {
         requireStorage(requestedStorage);
         Objects.requireNonNull(values, "values");
         Map<String, DataValue> updates = canonicalize(values);
@@ -147,31 +125,24 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             try {
                 ensureRow(connection, updates);
                 updateValues(connection, updates);
-                connection.commit();
-                committed = true;
-                transactionEnded = true;
+                connection.commit(); committed = true; transactionEnded = true;
             } catch (SQLException | RuntimeException | Error e) {
                 transactionFailure = e;
-                try {
-                    connection.rollback();
-                    transactionEnded = true;
-                } catch (SQLException | RuntimeException rollbackFailure) { suppress(e, rollbackFailure); }
+                try { connection.rollback(); transactionEnded = true; }
+                catch (SQLException | RuntimeException rollbackFailure) { suppress(e, rollbackFailure); }
                 throw e;
             } finally {
                 if (transactionEnded) {
                     try { connection.setAutoCommit(autoCommit); }
                     catch (SQLException | RuntimeException restoreFailure) {
-                        if (transactionFailure != null) suppress(transactionFailure, restoreFailure);
-                        else committedCleanupFailure("restore auto-commit", restoreFailure);
+                        if (transactionFailure != null) suppress(transactionFailure, restoreFailure); else committedCleanupFailure("restore auto-commit", restoreFailure);
                     }
                 }
             }
         } catch (SQLException e) {
-            if (committed) committedCleanupFailure("close SQL connection", e);
-            else throw failure("write user values", e);
+            if (committed) committedCleanupFailure("close SQL connection", e); else throw failure("write user values", e);
         } catch (RuntimeException e) {
-            if (committed) committedCleanupFailure("close SQL connection", e);
-            else throw e;
+            if (committed) committedCleanupFailure("close SQL connection", e); else throw e;
         }
     }
 
@@ -182,6 +153,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(key)) continue;
             SqlUserSchema.ColumnDefinition definition = schema.column(key);
             if (definition == null) throw new IllegalArgumentException("Column is not registered in the SQL schema: " + key);
+            if (updates.containsKey(definition.name())) throw new IllegalArgumentException("Duplicate SQL column in write batch: " + definition.name());
             updates.put(definition.name(), entry.getValue());
         }
         return updates;
@@ -191,19 +163,13 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         try { logger.warn("User values committed, but failed to " + operation + " for " + uuid, error); }
         catch (RuntimeException loggingFailure) { suppress(error, loggingFailure); }
     }
-
-    private static void suppress(Throwable primary, Throwable secondary) {
-        if (primary != secondary) primary.addSuppressed(secondary);
-    }
+    private static void suppress(Throwable primary, Throwable secondary) { if (primary != secondary) primary.addSuppressed(secondary); }
 
     private void ensureRow(Connection connection, Map<String, DataValue> updates) throws SQLException {
         if (dialect != Dialect.SQLITE && rowExists(connection)) return;
         StringBuilder names = new StringBuilder(quote(SqlUserSchema.UUID_COLUMN));
         StringBuilder parameters = new StringBuilder("?");
-        for (String key : updates.keySet()) {
-            names.append(", ").append(quote(key));
-            parameters.append(", ?");
-        }
+        for (String key : updates.keySet()) { names.append(", ").append(quote(key)); parameters.append(", ?"); }
         String prefix = dialect == Dialect.SQLITE ? "INSERT OR IGNORE INTO " : "INSERT INTO ";
         String sql = prefix + quote(tableName) + " (" + names + ") VALUES (" + parameters + ")";
         if (dialect == Dialect.POSTGRESQL) sql += " ON CONFLICT (" + quote(SqlUserSchema.UUID_COLUMN) + ") DO NOTHING";
@@ -211,9 +177,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             dialect.bindUuid(statement, 1, uuid);
             int index = 2;
-            for (Map.Entry<String, DataValue> entry : updates.entrySet()) {
-                bind(statement, index++, entry.getValue(), schema.column(entry.getKey()));
-            }
+            for (Map.Entry<String, DataValue> entry : updates.entrySet()) bind(statement, index++, entry.getValue(), schema.column(entry.getKey()));
             inserted = statement.executeUpdate();
         } catch (SQLException insertFailure) {
             if (dialect == Dialect.MYSQL && isDuplicateKey(insertFailure) && rowExists(connection)) return;
@@ -222,13 +186,10 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         if (inserted == 0 && !rowExists(connection)) throw new SQLException("SQL user row was not created");
     }
 
-    private boolean isDuplicateKey(SQLException failure) {
-        return failure.getErrorCode() == 1062 || "23000".equals(failure.getSQLState());
-    }
+    private boolean isDuplicateKey(SQLException failure) { return failure.getErrorCode() == 1062 || "23000".equals(failure.getSQLState()); }
 
     private boolean rowExists(Connection connection) throws SQLException {
-        String sql = "SELECT 1 FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=? LIMIT 1"
-                + (dialect == Dialect.SQLITE ? "" : " FOR UPDATE");
+        String sql = "SELECT 1 FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=? LIMIT 1" + (dialect == Dialect.SQLITE ? "" : " FOR UPDATE");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             dialect.bindUuid(statement, 1, uuid);
             try (ResultSet result = statement.executeQuery()) { return result.next(); }
@@ -238,32 +199,21 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     private void updateValues(Connection connection, Map<String, DataValue> updates) throws SQLException {
         StringBuilder sql = new StringBuilder("UPDATE ").append(quote(tableName)).append(" SET ");
         boolean first = true;
-        for (String key : updates.keySet()) {
-            if (!first) sql.append(", ");
-            first = false;
-            sql.append(quote(key)).append("=?");
-        }
+        for (String key : updates.keySet()) { if (!first) sql.append(", "); first = false; sql.append(quote(key)).append("=?"); }
         sql.append(" WHERE ").append(quote(SqlUserSchema.UUID_COLUMN)).append("=?");
         try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             int index = 1;
-            for (Map.Entry<String, DataValue> entry : updates.entrySet()) {
-                bind(statement, index++, entry.getValue(), schema.column(entry.getKey()));
-            }
-            dialect.bindUuid(statement, index, uuid);
-            statement.executeUpdate();
+            for (Map.Entry<String, DataValue> entry : updates.entrySet()) bind(statement, index++, entry.getValue(), schema.column(entry.getKey()));
+            dialect.bindUuid(statement, index, uuid); statement.executeUpdate();
         }
     }
 
-    private void requireStorage(UserStorage requestedStorage) {
-        if (requestedStorage != storage) throw new IllegalArgumentException("Storage mismatch: backend=" + storage + ", requested=" + requestedStorage);
-    }
+    private void requireStorage(UserStorage requestedStorage) { if (requestedStorage != storage) throw new IllegalArgumentException("Storage mismatch: backend=" + storage + ", requested=" + requestedStorage); }
 
     private DataValue readValue(ResultSet result, int index, SqlUserSchema.ColumnDefinition definition, DataType type) throws SQLException {
         if (type == DataType.INTEGER) {
-            try {
-                int value = result.getInt(index);
-                return new DataValueInt(result.wasNull() ? 0 : value);
-            } catch (SQLException invalidInteger) {
+            try { int value = result.getInt(index); return new DataValueInt(result.wasNull() ? 0 : value); }
+            catch (SQLException invalidInteger) {
                 String state = invalidInteger.getSQLState();
                 if (invalidInteger instanceof SQLDataException || (state != null && state.startsWith("22"))) return new DataValueInt(0);
                 throw invalidInteger;
@@ -271,23 +221,15 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         }
         if (type == DataType.BOOLEAN) {
             BooleanStorage booleanStorage = booleanStorage(definition);
-            if (booleanStorage == BooleanStorage.NATIVE) {
-                boolean value = result.getBoolean(index);
-                return new DataValueBoolean(!result.wasNull() && value);
-            }
-            if (booleanStorage == BooleanStorage.NUMERIC) {
-                int value = result.getInt(index);
-                return new DataValueBoolean(!result.wasNull() && value != 0);
-            }
+            if (booleanStorage == BooleanStorage.NATIVE) { boolean value = result.getBoolean(index); return new DataValueBoolean(!result.wasNull() && value); }
+            if (booleanStorage == BooleanStorage.NUMERIC) { int value = result.getInt(index); return new DataValueBoolean(!result.wasNull() && value != 0); }
             String value = result.getString(index);
-            return new DataValueBoolean("1".equals(value) || "t".equalsIgnoreCase(value)
-                    || "true".equalsIgnoreCase(value));
+            return new DataValueBoolean("1".equals(value) || "t".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value));
         }
         return new DataValueString(result.getString(index));
     }
 
-    private void bind(PreparedStatement statement, int index, DataValue value,
-            SqlUserSchema.ColumnDefinition definition) throws SQLException {
+    private void bind(PreparedStatement statement, int index, DataValue value, SqlUserSchema.ColumnDefinition definition) throws SQLException {
         if (value == null) statement.setObject(index, null);
         else if (value.isString()) statement.setString(index, value.getString());
         else if (value.isInt()) statement.setInt(index, value.getInt());
@@ -303,23 +245,10 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         if (definition == null || definition.dataType() != DataType.BOOLEAN) return BooleanStorage.TEXT;
         String sqlType = definition.sqlType().strip().toUpperCase(Locale.ROOT);
         if (startsType(sqlType, "BOOLEAN") || startsType(sqlType, "BOOL")) return BooleanStorage.NATIVE;
-        if (startsType(sqlType, "TINYINT") || startsType(sqlType, "SMALLINT") || startsType(sqlType, "MEDIUMINT")
-                || startsType(sqlType, "INT") || startsType(sqlType, "INTEGER") || startsType(sqlType, "BIGINT")
-                || startsType(sqlType, "BIT")) return BooleanStorage.NUMERIC;
+        if (startsType(sqlType, "TINYINT") || startsType(sqlType, "SMALLINT") || startsType(sqlType, "MEDIUMINT") || startsType(sqlType, "INT") || startsType(sqlType, "INTEGER") || startsType(sqlType, "BIGINT") || startsType(sqlType, "BIT")) return BooleanStorage.NUMERIC;
         return BooleanStorage.TEXT;
     }
-
-    private boolean startsType(String sqlType, String type) {
-        if (!sqlType.startsWith(type)) return false;
-        if (sqlType.length() == type.length()) return true;
-        char next = sqlType.charAt(type.length());
-        return Character.isWhitespace(next) || next == '(';
-    }
-
+    private boolean startsType(String sqlType, String type) { if (!sqlType.startsWith(type)) return false; if (sqlType.length() == type.length()) return true; char next = sqlType.charAt(type.length()); return Character.isWhitespace(next) || next == '('; }
     private String quote(String identifier) { return dialect.quote(identifier); }
-
-    private IllegalStateException failure(String operation, SQLException error) {
-        logger.warn("Failed to " + operation + " for " + uuid, error);
-        return new IllegalStateException("Failed to " + operation + " for " + uuid, error);
-    }
+    private IllegalStateException failure(String operation, SQLException error) { logger.warn("Failed to " + operation + " for " + uuid, error); return new IllegalStateException("Failed to " + operation + " for " + uuid, error); }
 }
