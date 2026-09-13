@@ -118,7 +118,10 @@ class MysqlConcurrentSchemaTest {
                     results.add(result);
                     if (sql.toLowerCase(Locale.ROOT).startsWith("select data_type,")) {
                         when(result.next()).thenReturn(true, false);
-                        when(result.getString(1)).thenReturn("uuid");
+                        when(result.getString(1)).thenReturn(type == DbType.POSTGRESQL ? "uuid" : "varchar");
+                        when(result.getString("DATA_TYPE")).thenReturn("varchar");
+                        when(result.getObject("CHARACTER_MAXIMUM_LENGTH")).thenReturn(37L);
+                        when(result.getString("COLUMN_DEFAULT")).thenReturn(null);
                     } else if (sql.endsWith("WHERE 1=0")) {
                         ResultSetMetaData metadata = mock(ResultSetMetaData.class);
                         when(result.getMetaData()).thenReturn(metadata);

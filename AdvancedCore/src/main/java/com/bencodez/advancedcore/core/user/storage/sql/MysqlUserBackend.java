@@ -178,12 +178,15 @@ public final class MysqlUserBackend implements SqlUserBackend {
         @Override public void debug(String message) { logger.info(message); }
 
         void ensureUuidType() {
-            if (getDbType() != DbType.POSTGRESQL) return;
             try {
                 String uuidType = bestUuidType();
                 if (!columnNeedsAlter(SqlUserSchema.UUID_COLUMN, uuidType)) return;
                 String uuidColumn = quote(SqlUserSchema.UUID_COLUMN);
-                String sql = "ALTER TABLE " + quote(tableName) + " ALTER COLUMN " + uuidColumn + " TYPE " + uuidType + " USING NULLIF(" + uuidColumn + ", '')::uuid;";
+                String sql = getDbType() == DbType.POSTGRESQL
+                        ? "ALTER TABLE " + quote(tableName) + " ALTER COLUMN " + uuidColumn + " TYPE "
+                                + uuidType + " USING NULLIF(" + uuidColumn + ", '')::uuid;"
+                        : "ALTER TABLE " + quote(tableName) + " MODIFY " + uuidColumn + " "
+                                + normaliseTypeForDb(uuidType) + ";";
                 try (Connection connection = getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
                 catch (SQLException ddlFailure) {
                     try { if (columnNeedsAlter(SqlUserSchema.UUID_COLUMN, uuidType)) throw ddlFailure; }
@@ -192,7 +195,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                         throw ddlFailure;
                     }
                 }
-            } catch (SQLException failure) { throw new IllegalStateException("Failed to initialize PostgreSQL UUID column", failure); }
+            } catch (SQLException failure) { throw new IllegalStateException("Failed to initialize SQL UUID column", failure); }
         }
 
         void ensureColumn(SqlUserSchema.ColumnDefinition column) {

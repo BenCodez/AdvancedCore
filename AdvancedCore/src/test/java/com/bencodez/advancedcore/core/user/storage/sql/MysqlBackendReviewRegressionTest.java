@@ -105,7 +105,11 @@ class MysqlBackendReviewRegressionTest {
         boolean competitorConverts;
         SQLException migrationFailure, reinspectionFailure;
 
-        Fixture(DbType type, String storedColumn) { this.type = type; this.storedColumn = storedColumn; }
+        Fixture(DbType type, String storedColumn) {
+            this.type = type;
+            this.storedColumn = storedColumn;
+            if (type != DbType.POSTGRESQL) uuidType = "varchar";
+        }
 
         MockedConstruction<ConnectionManager> managers() {
             return mockConstruction(ConnectionManager.class, (manager, context) -> {
@@ -153,6 +157,9 @@ class MysqlBackendReviewRegressionTest {
                         when(result.next()).thenReturn(true, false);
                         when(result.getString(1)).thenReturn(uuidType);
                         when(result.getObject(2)).thenReturn(37L);
+                        when(result.getString("DATA_TYPE")).thenReturn(uuidType);
+                        when(result.getObject("CHARACTER_MAXIMUM_LENGTH")).thenReturn(37L);
+                        when(result.getString("COLUMN_DEFAULT")).thenReturn(null);
                     } else if (sql.endsWith("WHERE 1=0")) {
                         ResultSetMetaData metadata = mock(ResultSetMetaData.class);
                         when(result.getMetaData()).thenReturn(metadata);
