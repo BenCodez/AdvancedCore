@@ -50,7 +50,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
 
     @Override
     public SqlUserStorage user(UUID uuid) {
-        requireOpen();
+        requireAdmissionOpen();
         SqlUserStorage delegate = new JdbcSqlUserStorage(UserStorage.SQLITE, uuid, tableName, schema,
                 this::openConnection, JdbcSqlUserStorage.Dialect.SQLITE, logger);
         return new SqlUserStorage() {
@@ -130,10 +130,16 @@ public final class SqliteUserBackend implements SqlUserBackend {
     }
 
     private <T> T withOperation(Supplier<T> operation) {
-        requireOpen();
+        requireAdmissionOpen();
         operations.readLock().lock();
-        try { requireOpen(); return operation.get(); }
-        finally { operations.readLock().unlock(); }
+        try {
+            // This is the actual admission point. A caller that passed the first
+            // check but lost the race to close must not become a new active operation.
+            requireAdmissionOpen();
+            return operation.get();
+        } finally {
+            operations.readLock().unlock();
+        }
     }
 
     private void initialize() {
@@ -183,10 +189,15 @@ public final class SqliteUserBackend implements SqlUserBackend {
         return sql.toString();
     }
 
-    private Connection openConnection() throws SQLException { requireOpen(); return DriverManager.getConnection("jdbc:sqlite:" + databaseFile.toAbsolutePath()); }
-
-    private void requireOpen() {
+    private Connection openConnection() throws SQLException {
+        // Nested JDBC work belonging to an already-admitted operation may finish
+        // while close waits on the write lock. New top-level operations cannot get here.
         if (!open.get() && operations.getReadHoldCount() == 0) throw new IllegalStateException("SQLite user backend is closed");
+        return DriverManager.getConnection("jdbc:sqlite:" + databaseFile.toAbsolutePath());
+    }
+
+    private void requireAdmissionOpen() {
+        if (!open.get()) throw new IllegalStateException("SQLite user backend is closed");
     }
 
     private static String quote(String identifier) { return JdbcSqlUserStorage.Dialect.SQLITE.quote(identifier); }
