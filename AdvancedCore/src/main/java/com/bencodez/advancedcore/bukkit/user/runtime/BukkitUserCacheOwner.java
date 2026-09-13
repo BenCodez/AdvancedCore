@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -30,13 +31,13 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     private volatile SqlUserBackend backend;
     private volatile Consumer<Runnable> flushGate;
     private volatile BiConsumer<UUID, Runnable> userGate;
+    private final ConcurrentHashMap<UUID, Consumer<Runnable>> cacheGates = new ConcurrentHashMap<>();
     private final Consumer<UserDataCache> cacheInitializer;
 
     public BukkitUserCacheOwner(UserDataManager manager) {
         this.manager = Objects.requireNonNull(manager, "manager");
         cacheInitializer = cache -> {
-            Consumer<Runnable> gate;
-            synchronized (this) { gate = cacheGate(cache.getUuid()); }
+            Consumer<Runnable> gate = cacheGate(cache.getUuid());
             if (gate == null) bind(cache, cache.getUuid());
             else gate.accept(() -> bind(cache, cache.getUuid()));
         };
@@ -57,23 +58,32 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     }
 
     @Override
-    public synchronized void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate) {
+    public synchronized void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate,
+            BiConsumer<UUID, Runnable> perUserGate) {
         Objects.requireNonNull(backend, "backend");
         Objects.requireNonNull(gate, "gate");
+        Objects.requireNonNull(perUserGate, "perUserGate");
         if (flushGate != null && flushGate != gate) throw new IllegalStateException("Cache owner already belongs to another runtime");
+        if (userGate != null && userGate != perUserGate) throw new IllegalStateException("Cache owner already belongs to another runtime");
 
-        // A batch that already selected the legacy writer must finish before any
-        // new backend is visible to cache/runtime reads.
-        for (UserDataCache cache : manager.getUserDataCache().values()) {
-            cache.awaitLegacyBatchesBeforeSharedBinding();
-        }
+        // Do not publish any replacement route until a legacy batch that already
+        // selected the old writer has completed.
+        for (UserDataCache cache : manager.getUserDataCache().values()) cache.awaitLegacyBatchesBeforeSharedBinding();
 
+        // This can fail in integration code; keep owner fields unpublished until it succeeds.
+        manager.bindSharedCacheInitializer(cacheInitializer);
         this.backend = backend;
         flushGate = gate;
-        manager.bindSharedCacheInitializer(cacheInitializer);
-        BiConsumer<UUID, Runnable> perUser = userGate;
-        if (perUser != null) manager.bindSharedSqlBackend(backend, perUser);
-        else manager.bindSharedSqlBackend(backend, gate);
+        userGate = perUserGate;
+        cacheGates.clear();
+        manager.bindSharedSqlBackend(backend, perUserGate);
+    }
+
+    @Override
+    public synchronized void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate) {
+        BiConsumer<UUID, Runnable> existing = userGate;
+        if (existing == null) existing = (uuid, operation) -> gate.accept(operation);
+        bindLifecycle(backend, gate, existing);
     }
 
     @Override
@@ -88,7 +98,13 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 
     private Consumer<Runnable> cacheGate(UUID uuid) {
         BiConsumer<UUID, Runnable> perUser = userGate;
-        if (perUser != null && uuid != null) return operation -> perUser.accept(uuid, operation);
+        if (perUser != null && uuid != null) {
+            return cacheGates.computeIfAbsent(uuid, id -> operation -> {
+                BiConsumer<UUID, Runnable> current = userGate;
+                if (current == null) throw new IllegalStateException("Shared user lifecycle is not bound");
+                current.accept(id, operation);
+            });
+        }
         return flushGate;
     }
 
@@ -143,9 +159,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         }
         AtomicReference<HashMap<String, DataValue>> populated = new AtomicReference<>();
         manager.getUserDataCache().compute(uuid, (ignored, current) -> {
-            if (current != expected.cache()) {
-                throw new IllegalStateException("User cache changed while loading its database snapshot");
-            }
+            if (current != expected.cache()) throw new IllegalStateException("User cache changed while loading its database snapshot");
             populated.set(current.updateSharedSnapshot(values, expected.version()));
             return current;
         });
@@ -189,14 +203,14 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
             cache.retireAfterSharedFlush();
             manager.getUserDataCache().remove(uuid, cache);
         }
+        cacheGates.remove(uuid);
     }
 
     @Override public void clearAfterFlush() { for (UUID uuid : cachedUsers()) remove(uuid); }
 
     @Override
     public void shutdown() {
-        // Keep the immutable shared route installed. Its runtime gate is already
-        // retiring, so late legacy calls fail instead of falling back to the old provider.
+        // Keep the rejecting shared route installed until the manager itself is disposed.
         if (manager.getTimer() instanceof ScheduledThreadPoolExecutor timer) {
             timer.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
             timer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);

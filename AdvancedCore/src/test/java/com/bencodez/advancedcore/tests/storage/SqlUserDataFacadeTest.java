@@ -27,18 +27,14 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SqlUserDataFacadeTest {
-    @Test
-    void legacyRowAndConvertOverridesRemainVirtualWithoutPluginAccess() {
+    @Test void legacyRowAndConvertOverridesRemainVirtualWithoutPluginAccess() {
         AdvancedCoreUser user = mock(AdvancedCoreUser.class);
         ArrayList<Column> row = new ArrayList<>(List.of(new Column("Points", new DataValueInt(17))));
         HashMap<String, DataValue> converted = new HashMap<>();
         UserData data = new UserData(user) {
             @Override public List<Column> getMySqlRow() { return row; }
             @Override public List<Column> getSQLiteRow() { return row; }
-            @Override public HashMap<String, DataValue> convert(List<Column> columns) {
-                assertSame(row, columns);
-                return converted;
-            }
+            @Override public HashMap<String, DataValue> convert(List<Column> columns) { assertSame(row, columns); return converted; }
         };
         for (UserStorage storage : UserStorage.values()) {
             assertEquals(17, data.getInt(storage, "Points", 0, UserDataFetchMode.NO_CACHE));
@@ -48,8 +44,7 @@ class SqlUserDataFacadeTest {
         verifyNoInteractions(user);
     }
 
-    @Test
-    void everyFetchModeRetainsTempUserCacheAndStoragePrecedence() {
+    @Test void everyFetchModeRetainsTempUserCacheAndStoragePrecedence() {
         for (UserDataFetchMode mode : UserDataFetchMode.values()) {
             Fixture f = new Fixture();
             UserDataCache cache = mock(UserDataCache.class);
@@ -71,8 +66,7 @@ class SqlUserDataFacadeTest {
         }
     }
 
-    @Test
-    void queuedCachedWriteDoesNotReachSqlOrCreateAnotherQueue() {
+    @Test void queuedCachedWriteDoesNotReachSqlOrCreateAnotherQueue() {
         Fixture f = new Fixture();
         UserDataCache cache = mock(UserDataCache.class);
         when(f.user.isCached()).thenReturn(true);
@@ -84,8 +78,7 @@ class SqlUserDataFacadeTest {
         verifyNoInteractions(f.table, f.timer);
     }
 
-    @Test
-    void asyncWriteResolvesUuidAtExecutionAndNotifiesOnlyAfterSql() {
+    @Test void asyncWriteResolvesUuidAtExecutionAndNotifiesOnlyAfterSql() {
         Fixture f = new Fixture();
         f.data.setInt("Points", 19, false, true);
         ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
@@ -98,14 +91,13 @@ class SqlUserDataFacadeTest {
         order.verify(f.manager).onChange(f.user, "Points");
     }
 
-    @Test
-    void storageFailureDoesNotClearCacheAndSchedulerRejectionDoesNotWrite() {
+    @Test void storageFailureDoesNotClearCacheAndSchedulerRejectionDoesNotWrite() {
         Fixture f = new Fixture();
         IllegalStateException failure = new IllegalStateException("delete failed");
         doThrow(failure).when(f.table).deletePlayer("initial-id");
         assertSame(failure, assertThrows(IllegalStateException.class, f.data::remove));
         verify(f.user, never()).clearCache();
-        clearInvocations(f.table);
+        clearInvocations(f.table, f.manager);
         RejectedExecutionException rejected = new RejectedExecutionException("stopped");
         doThrow(rejected).when(f.timer).execute(any(Runnable.class));
         assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> f.data.setInt("Points", 1, false, true)));

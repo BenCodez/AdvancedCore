@@ -68,7 +68,6 @@ public class UserDataCache {
 		}
 	}
 
-	/** Storage work happens outside this monitor; publish only after the full refresh succeeds. */
 	public UserDataCache cache() {
 		initializeSharedStorage();
 		UUID currentUuid;
@@ -80,7 +79,6 @@ public class UserDataCache {
 			expectedVersion = snapshotVersion;
 			before = new HashMap<>(cache);
 		}
-
 		AdvancedCoreUser user = manager.getPlugin().getUserManager().getUser(currentUuid, false);
 		ArrayList<String> keys = user.getUserData().getKeys();
 		HashMap<String, DataValue> data = user.getUserData().getValues();
@@ -89,21 +87,15 @@ public class UserDataCache {
 			String key = dataKey.getKey();
 			keys.remove(key);
 			DataValue dataValue = data.containsKey(key) ? data.get(key) : dataKey.getDefault();
-			if (data.containsKey(key)) {
-				manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for "
-						+ currentUuid + ", value: " + dataValue);
-			} else {
-				manager.getPlugin().devDebug("Loading default cache value for " + key + " for " + currentUuid);
-			}
+			if (data.containsKey(key)) manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for " + currentUuid + ", value: " + dataValue);
+			else manager.getPlugin().devDebug("Loading default cache value for " + key + " for " + currentUuid);
 			refreshed.put(key, dataValue);
 		}
 		HashMap<String, DataValue> published = updateSharedSnapshot(refreshed, expectedVersion, currentUuid);
 		ArrayList<String> changedKeys = new ArrayList<>();
 		for (Entry<String, DataValue> entry : published.entrySet()) {
 			DataValue prior = before.get(entry.getKey());
-			if (prior != null && entry.getValue() != null && !prior.toString().equals(entry.getValue().toString())) {
-				changedKeys.add(entry.getKey());
-			}
+			if (prior != null && entry.getValue() != null && !prior.toString().equals(entry.getValue().toString())) changedKeys.add(entry.getKey());
 		}
 		if (!changedKeys.isEmpty()) manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys));
 		if (!keys.isEmpty()) manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.makeStringList(keys));
@@ -156,7 +148,6 @@ public class UserDataCache {
 	public synchronized boolean hasChangesToProcess() { return cachedChanges != null && !cachedChanges.isEmpty(); }
 	public synchronized boolean isCached(String key) { return cache != null && cache.containsKey(key); }
 
-	/** Wait only for a batch that already selected the legacy writer before shared routing is published. */
 	public synchronized void awaitLegacyBatchesBeforeSharedBinding() {
 		if (sharedStorageWriter != null) return;
 		while (inFlightBatches > 0) {
@@ -208,8 +199,12 @@ public class UserDataCache {
 				UserDataChange change;
 				while ((change = cachedChanges.poll()) != null) changes.add(change);
 				inFlightValues.clear();
-				for (UserDataChange changeEntry : changes) {
-					inFlightValues.put(changeEntry.getKey(), changeEntry.toUserDataValue());
+				try {
+					for (UserDataChange changeEntry : changes) inFlightValues.put(changeEntry.getKey(), changeEntry.toUserDataValue());
+				} catch (RuntimeException | Error preparationFailure) {
+					inFlightValues.clear();
+					requeueChanges(changes);
+					throw preparationFailure;
 				}
 				inFlightBatches++;
 				if (writer != null) sharedBatchThread = Thread.currentThread();
@@ -272,13 +267,10 @@ public class UserDataCache {
 		recordSnapshotReplacement();
 	}
 
-	/** Merge a storage refresh with only values actually queued or in the active batch. */
 	public synchronized void updateCachePreservingPending(HashMap<String, DataValue> storageValues) {
 		HashMap<String, DataValue> refreshed = storageValues == null ? new HashMap<>() : new HashMap<>(storageValues);
 		refreshed.putAll(inFlightValues);
-		if (cachedChanges != null) {
-			for (UserDataChange change : cachedChanges) refreshed.put(change.getKey(), change.toUserDataValue());
-		}
+		if (cachedChanges != null) for (UserDataChange change : cachedChanges) refreshed.put(change.getKey(), change.toUserDataValue());
 		cache = refreshed;
 		recordSnapshotReplacement();
 	}
@@ -296,9 +288,7 @@ public class UserDataCache {
 		if (expectedVersion < 0 || expectedVersion > snapshotVersion) throw new IllegalArgumentException("Invalid cache snapshot version");
 		if (replacementVersion > expectedVersion) return new HashMap<>(cache);
 		HashMap<String, DataValue> merged = values == null ? new HashMap<>() : new HashMap<>(values);
-		changedAt.forEach((key, version) -> {
-			if (version > expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key));
-		});
+		changedAt.forEach((key, version) -> { if (version > expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
 		cache = merged;
 		recordSnapshotReplacement();
 		return new HashMap<>(cache);

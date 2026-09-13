@@ -33,15 +33,19 @@ public interface UserCacheOwner {
     default void flush(UUID uuid, UserStorage type, SqlUserStorage storage) { flush(uuid, storage); }
 
     default void bindFlushGate(Consumer<Runnable> gate) {}
-
-    /** Bind cache/legacy operations to the runtime's per-user shared barrier. */
     default void bindUserGate(BiConsumer<UUID, Runnable> gate) {}
-
     default void bindBackend(SqlUserBackend backend) {}
 
     default void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate) {
         bindFlushGate(gate);
         bindBackend(backend);
+    }
+
+    /** Publish the global and per-user lifecycle routes as one logical binding. */
+    default void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate,
+            BiConsumer<UUID, Runnable> userGate) {
+        bindUserGate(userGate);
+        bindLifecycle(backend, gate);
     }
 
     default void requireBlockingAllowed() {}

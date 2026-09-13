@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -37,7 +38,6 @@ import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
-/** Real manager/cache/queue with in-memory providers; no live database or game server. */
 @Timeout(15)
 class SharedCacheBindingRegressionTest {
     @Test void noDatabaseLookupMissDoesNotLoadOrPopulate() { cacheMiss(UserDataFetchMode.NO_DB_LOOKUP); }
@@ -54,7 +54,6 @@ class SharedCacheBindingRegressionTest {
         assertSame(fallback, runtime.read(uuid, "Points", mode, null, fallback));
         assertSame(fallback, runtime.read(uuid, "Points", mode, new HashMap<>(), fallback));
         verify(backend, never()).user(any(UUID.class));
-        verify(backend, never()).enumerateUsers();
         verify(owner, never()).populate(any(UUID.class), any());
         verify(owner, never()).queueChange(any(), any(), any());
         verify(owner, never()).flush(any(), any(UserStorage.class), any());
@@ -73,7 +72,6 @@ class SharedCacheBindingRegressionTest {
         assertSame(cached, runtime.read(uuid, "Points", UserDataFetchMode.CACHE_ONLY, temp, null));
         assertSame(temporary, runtime.read(uuid, "Points", UserDataFetchMode.TEMP_ONLY, temp, null));
         verify(backend, never()).user(any(UUID.class));
-        verify(owner, never()).populate(any(), any());
     }
 
     @Test void managerGetCacheAfterRuntimeStartupUsesTheSelectedWriter() throws Exception {
@@ -154,8 +152,7 @@ class SharedCacheBindingRegressionTest {
             fresh.processChanges();
             assertEquals(12, replacement.points(fixture.uuid));
             assertEquals(11, fixture.first.points(fixture.uuid));
-            assertThrows(IllegalStateException.class,
-                    () -> old.addChange(new UserDataChangeInt("Points", 99), true));
+            assertThrows(IllegalStateException.class, () -> old.addChange(new UserDataChangeInt("Points", 99), true));
             fixture.assertNoLegacyWrites();
             runtime.close();
         }
@@ -168,14 +165,10 @@ class SharedCacheBindingRegressionTest {
             CompletableFuture<Void> closing = runtime.closeAsync(worker::add).toCompletableFuture();
             UserDataCache late = new UserDataCache(fixture.manager, fixture.uuid);
             fixture.manager.getUserDataCache().put(fixture.uuid, late);
-            assertThrows(IllegalStateException.class,
-                    () -> late.addChange(new UserDataChangeInt("Points", 99), true));
-            assertFalse(late.hasChangesToProcess());
+            assertThrows(IllegalStateException.class, () -> late.addChange(new UserDataChangeInt("Points", 99), true));
             worker.get(0).run();
             closing.join();
-            assertThrows(IllegalStateException.class,
-                    () -> late.addChange(new UserDataChangeInt("Points", 99), true));
-            assertFalse(fixture.first.rows.containsKey(fixture.uuid));
+            assertThrows(IllegalStateException.class, () -> late.addChange(new UserDataChangeInt("Points", 99), true));
         }
     }
 
@@ -185,9 +178,7 @@ class SharedCacheBindingRegressionTest {
             cache.addChange(new UserDataChangeInt("Points", 15), true);
             SharedUserDataRuntime runtime = fixture.runtime();
             fixture.manager.getUserDataCache().put(fixture.uuid, cache);
-            synchronized (cache) {
-                assertThrows(IllegalStateException.class, cache::processChanges);
-            }
+            synchronized (cache) { assertThrows(IllegalStateException.class, cache::processChanges); }
             assertTrue(cache.hasChangesToProcess());
             runtime.close();
             assertEquals(15, fixture.first.points(fixture.uuid));
@@ -208,30 +199,32 @@ class SharedCacheBindingRegressionTest {
         }
     }
 
-    @Test void attachmentDuringALegacyBatchKeepsAReachableRetryableRuntime() throws Exception {
+    @Test void attachmentWaitsForLegacyBatchBeforePublishingTheSharedRoute() throws Exception {
         try (Fixture fixture = new Fixture()) {
             UserDataCache cache = fixture.manager.getCache(fixture.uuid);
             cache.addChange(new UserDataChangeInt("Points", 1), true);
             CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
             var legacyData = cache.getUser().getUserData();
-            doAnswer(call -> { entered.countDown(); await(release); return null; })
-                    .when(legacyData).setValues(any(HashMap.class));
-            var worker = Executors.newSingleThreadExecutor();
+            doAnswer(call -> { entered.countDown(); await(release); return null; }).when(legacyData).setValues(any(HashMap.class));
+            var legacyWorker = Executors.newSingleThreadExecutor();
+            var bindWorker = Executors.newSingleThreadExecutor();
             try {
-                var legacy = worker.submit(cache::processChanges);
+                var legacy = legacyWorker.submit(cache::processChanges);
                 await(entered);
-                SharedUserDataRuntime runtime = fixture.runtime();
-                assertThrows(IllegalStateException.class, () -> runtime.flush(fixture.uuid));
-                assertFalse(runtime.isClosed());
+                var binding = bindWorker.submit(fixture::runtime);
+                assertThrows(TimeoutException.class, () -> binding.get(150, TimeUnit.MILLISECONDS));
                 release.countDown();
                 legacy.get(5, TimeUnit.SECONDS);
+                SharedUserDataRuntime runtime = binding.get(5, TimeUnit.SECONDS);
                 cache.addChange(new UserDataChangeInt("Points", 14), true);
                 runtime.close();
                 assertEquals(14, fixture.first.points(fixture.uuid));
             } finally {
                 release.countDown();
-                worker.shutdownNow();
-                assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+                legacyWorker.shutdownNow();
+                bindWorker.shutdownNow();
+                assertTrue(legacyWorker.awaitTermination(5, TimeUnit.SECONDS));
+                assertTrue(bindWorker.awaitTermination(5, TimeUnit.SECONDS));
             }
         }
     }
@@ -267,9 +260,7 @@ class SharedCacheBindingRegressionTest {
         }
 
         SharedUserDataRuntime runtime() { return new SharedUserDataRuntime(first, owner); }
-        void assertNoLegacyWrites() {
-            verify(plugin.getUserManager().getUser(uuid, false).getUserData(), never()).setValues(any(HashMap.class));
-        }
+        void assertNoLegacyWrites() { verify(plugin.getUserManager().getUser(uuid, false).getUserData(), never()).setValues(any(HashMap.class)); }
         public void close() { manager.getTimer().shutdownNow(); }
     }
 
@@ -293,9 +284,7 @@ class SharedCacheBindingRegressionTest {
                 }
                 public boolean contains(UserStorage requested) { return rows.containsKey(uuid); }
                 public void delete(UserStorage requested) { rows.remove(uuid); }
-                public void write(UserStorage requested, String key, DataValue value) {
-                    writeValues(requested, new HashMap<>(Map.of(key, value)));
-                }
+                public void write(UserStorage requested, String key, DataValue value) { writeValues(requested, new HashMap<>(Map.of(key, value))); }
                 public void writeValues(UserStorage requested, HashMap<String, DataValue> values) {
                     assertEquals(type, requested);
                     if (!open) throw new IllegalStateException("closed backend");

@@ -12,6 +12,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
@@ -35,8 +36,9 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public SharedUserDataRuntime(SqlUserBackend backend, UserCacheOwner cacheOwner) {
         this.backend = Objects.requireNonNull(backend, "backend");
         this.cacheOwner = Objects.requireNonNull(cacheOwner, "cacheOwner");
-        cacheOwner.bindUserGate((uuid, batch) -> userAccess(uuid, () -> { batch.run(); return null; }));
-        cacheOwner.bindLifecycle(backend, batch -> access(() -> { batch.run(); return null; }));
+        Consumer<Runnable> lifecycleGate = batch -> access(() -> { batch.run(); return null; });
+        BiConsumer<UUID, Runnable> perUserGate = (uuid, batch) -> userAccess(uuid, () -> { batch.run(); return null; });
+        cacheOwner.bindLifecycle(backend, lifecycleGate, perUserGate);
     }
 
     public DataValue read(UUID uuid, String key, UserDataFetchMode mode,
@@ -60,9 +62,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                     if (cached != null) return cached;
                 }
                 if (!mode.allowStorageLookup()) return defaultValue;
-            } else if (!mode.allowStorageLookup()) {
-                return defaultValue;
-            }
+            } else if (!mode.allowStorageLookup()) return defaultValue;
             cacheOwner.requireBlockingAllowed();
             return find(readStorageRow(uuid), key, defaultValue);
         });
@@ -85,8 +85,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             Objects.requireNonNull(consumer, "consumer");
             int[] count = { 0 };
             backend.forEachUser(uuid -> userAccess(uuid, () -> {
-                HashMap<String, DataValue> values = populateCache ? populateInternal(uuid)
-                        : SqlUserDataAccess.convert(readStorageRow(uuid));
+                HashMap<String, DataValue> values = populateCache ? populateInternal(uuid) : SqlUserDataAccess.convert(readStorageRow(uuid));
                 consumer.accept(uuid, values);
                 count[0]++;
                 return null;
@@ -114,22 +113,16 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         storageUserAccess(uuid, () -> { flushInternal(uuid); return null; });
     }
 
-    private void flushInternal(UUID uuid) {
-        cacheOwner.flush(uuid, backend.storageType(), backend.user(uuid));
-    }
+    private void flushInternal(UUID uuid) { cacheOwner.flush(uuid, backend.storageType(), backend.user(uuid)); }
 
     public void flushAll() {
         storageAccess(() -> {
-            for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) {
-                userAccess(uuid, () -> { flushInternal(uuid); return null; });
-            }
+            for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) userAccess(uuid, () -> { flushInternal(uuid); return null; });
             return null;
         });
     }
 
-    private void flushAllInternal() {
-        for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) flushInternal(uuid);
-    }
+    private void flushAllInternal() { for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) flushInternal(uuid); }
 
     public void replaceBackend(SqlUserBackend replacement) {
         rejectReentrantTransition();
@@ -146,9 +139,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             cacheOwner.bindBackend(replacement);
             backend = replacement;
             previous.close();
-        } finally {
-            lifecycle.writeLock().unlock();
-        }
+        } finally { lifecycle.writeLock().unlock(); }
     }
 
     public void remove(UUID uuid) {
@@ -171,9 +162,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         rejectReentrantTransition();
         CompletableFuture<Void> result;
         synchronized (closeLock) {
-            if (closeAttempt != null && !closeAttempt.isCompletedExceptionally()) {
-                return closeAttempt.minimalCompletionStage();
-            }
+            if (closeAttempt != null && !closeAttempt.isCompletedExceptionally()) return closeAttempt.minimalCompletionStage();
             retiring.set(true);
             result = new CompletableFuture<>();
             closeAttempt = result;
@@ -191,17 +180,11 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                             backend.close();
                             closed = true;
                         }
-                    } finally {
-                        lifecycle.writeLock().unlock();
-                    }
+                    } finally { lifecycle.writeLock().unlock(); }
                     result.complete(null);
-                } catch (Throwable failure) {
-                    result.completeExceptionally(failure);
-                }
+                } catch (Throwable failure) { result.completeExceptionally(failure); }
             });
-        } catch (RuntimeException | Error failure) {
-            result.completeExceptionally(failure);
-        }
+        } catch (RuntimeException | Error failure) { result.completeExceptionally(failure); }
         return result.minimalCompletionStage();
     }
 
@@ -209,9 +192,8 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public void close() {
         if (closed) return;
         cacheOwner.requireBlockingAllowed();
-        try {
-            closeAsync(Runnable::run).toCompletableFuture().join();
-        } catch (CompletionException failure) {
+        try { closeAsync(Runnable::run).toCompletableFuture().join(); }
+        catch (CompletionException failure) {
             if (failure.getCause() instanceof RuntimeException runtime) throw runtime;
             if (failure.getCause() instanceof Error error) throw error;
             throw failure;
@@ -225,36 +207,26 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         try {
             if (!admitted) requireOpen();
             return operation.get();
-        } finally {
-            lifecycle.readLock().unlock();
-        }
+        } finally { lifecycle.readLock().unlock(); }
     }
 
-    private <T> T storageAccess(Supplier<T> operation) {
-        cacheOwner.requireBlockingAllowed();
-        return access(operation);
-    }
+    private <T> T storageAccess(Supplier<T> operation) { cacheOwner.requireBlockingAllowed(); return access(operation); }
 
     private <T> T userAccess(UUID uuid, Supplier<T> operation) {
         return access(() -> {
             ReentrantReadWriteLock.ReadLock lock = userLock(uuid).readLock();
             lock.lock();
-            try { return operation.get(); }
-            finally { lock.unlock(); }
+            try { return operation.get(); } finally { lock.unlock(); }
         });
     }
 
-    private <T> T storageUserAccess(UUID uuid, Supplier<T> operation) {
-        cacheOwner.requireBlockingAllowed();
-        return userAccess(uuid, operation);
-    }
+    private <T> T storageUserAccess(UUID uuid, Supplier<T> operation) { cacheOwner.requireBlockingAllowed(); return userAccess(uuid, operation); }
 
     private <T> T userExclusiveAccess(UUID uuid, Supplier<T> operation) {
         return access(() -> {
             ReentrantReadWriteLock.WriteLock lock = userLock(uuid).writeLock();
             lock.lock();
-            try { return operation.get(); }
-            finally { lock.unlock(); }
+            try { return operation.get(); } finally { lock.unlock(); }
         });
     }
 
@@ -270,21 +242,13 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     private void rejectReentrantTransition() {
-        if (lifecycle.getReadHoldCount() > 0 || lifecycle.isWriteLockedByCurrentThread()) {
-            throw new IllegalStateException("Cannot replace or close the user runtime from an active user callback");
-        }
+        if (lifecycle.getReadHoldCount() > 0 || lifecycle.isWriteLockedByCurrentThread()) throw new IllegalStateException("Cannot replace or close the user runtime from an active user callback");
     }
 
-    private List<Column> readStorageRow(UUID uuid) {
-        return backend.user(uuid).readRow(backend.storageType());
-    }
+    private List<Column> readStorageRow(UUID uuid) { return backend.user(uuid).readRow(backend.storageType()); }
 
     private DataValue find(List<Column> row, String key, DataValue defaultValue) {
-        if (row != null) {
-            for (Column column : row) {
-                if (column.getName().equals(key)) return column.getValue() == null ? defaultValue : column.getValue();
-            }
-        }
+        if (row != null) for (Column column : row) if (column.getName().equals(key)) return column.getValue() == null ? defaultValue : column.getValue();
         return defaultValue;
     }
 
