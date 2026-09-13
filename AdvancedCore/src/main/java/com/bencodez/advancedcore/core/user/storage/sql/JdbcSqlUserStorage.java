@@ -7,6 +7,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -136,6 +137,10 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
 
     @Override
     public void write(UserStorage requestedStorage, String key, DataValue value) {
+        requireStorage(requestedStorage);
+        if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(key)) {
+            throw new IllegalArgumentException("uuid is immutable through SqlUserStorage");
+        }
         HashMap<String, DataValue> values = new HashMap<>();
         values.put(key, value);
         writeValues(requestedStorage, values);
@@ -145,30 +150,75 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     public void writeValues(UserStorage requestedStorage, HashMap<String, DataValue> values) {
         requireStorage(requestedStorage);
         Objects.requireNonNull(values, "values");
-        if (values.isEmpty()) {
+        // SELECT * copies include identity metadata. Do not mutate the caller's map
+        // or let its UUID replace this storage object's bound identity.
+        Map<String, DataValue> updates = new LinkedHashMap<>(values);
+        updates.keySet().removeIf(SqlUserSchema.UUID_COLUMN::equalsIgnoreCase);
+        if (updates.isEmpty()) {
             return;
         }
+        boolean committed = false;
         try (Connection connection = connections.open()) {
             boolean autoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
+            boolean transactionEnded = false;
+            Throwable transactionFailure = null;
             try {
                 ensureRow(connection);
-                for (Map.Entry<String, DataValue> entry : values.entrySet()) {
+                for (Map.Entry<String, DataValue> entry : updates.entrySet()) {
                     updateValue(connection, entry.getKey(), entry.getValue());
                 }
                 connection.commit();
-            } catch (SQLException | RuntimeException e) {
+                committed = true;
+                transactionEnded = true;
+            } catch (SQLException | RuntimeException | Error e) {
+                transactionFailure = e;
                 try {
                     connection.rollback();
-                } catch (SQLException rollbackFailure) {
-                    e.addSuppressed(rollbackFailure);
+                    transactionEnded = true;
+                } catch (SQLException | RuntimeException rollbackFailure) {
+                    suppress(e, rollbackFailure);
                 }
                 throw e;
             } finally {
-                connection.setAutoCommit(autoCommit);
+                // Switching to auto-commit after a failed rollback can commit a
+                // partial batch. Close that connection without restoring its mode.
+                if (transactionEnded) {
+                    try {
+                        connection.setAutoCommit(autoCommit);
+                    } catch (SQLException | RuntimeException restoreFailure) {
+                        if (transactionFailure != null) {
+                            suppress(transactionFailure, restoreFailure);
+                        } else {
+                            committedCleanupFailure("restore auto-commit", restoreFailure);
+                        }
+                    }
+                }
             }
-        } catch (SQLException e) {
-            throw failure("write user values", e);
+        } catch (SQLException | RuntimeException e) {
+            if (committed) {
+                // The resource-close path must not make a durable batch retryable.
+                committedCleanupFailure("close SQL connection", e);
+            } else if (e instanceof SQLException sqlFailure) {
+                throw failure("write user values", sqlFailure);
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    private void committedCleanupFailure(String operation, Exception error) {
+        try {
+            logger.warn("User values committed, but failed to " + operation + " for " + uuid, error);
+        } catch (RuntimeException loggingFailure) {
+            // An injected logger must not turn post-commit cleanup into a retry.
+            suppress(error, loggingFailure);
+        }
+    }
+
+    private static void suppress(Throwable primary, Throwable secondary) {
+        if (primary != secondary) {
+            primary.addSuppressed(secondary);
         }
     }
 
