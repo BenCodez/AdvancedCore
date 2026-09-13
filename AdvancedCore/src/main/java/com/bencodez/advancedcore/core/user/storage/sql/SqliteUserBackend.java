@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,6 +25,7 @@ import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.data.DataValue;
 
 public final class SqliteUserBackend implements SqlUserBackend {
+    private static final int USER_PAGE_SIZE = 512;
     private final Path databaseFile;
     private final String tableName;
     private final SqlUserSchema schema;
@@ -74,26 +76,50 @@ public final class SqliteUserBackend implements SqlUserBackend {
     @Override
     public void forEachUser(Consumer<UUID> consumer) {
         Objects.requireNonNull(consumer, "consumer");
-        withOperation(() -> { readUserIds(consumer); return null; });
+        withOperation(() -> {
+            String cursor = null;
+            while (true) {
+                List<UserPageEntry> page = readUserPage(cursor);
+                if (page.isEmpty()) return null;
+                cursor = page.get(page.size() - 1).cursor();
+                // No SQLite result set/read transaction is open while callbacks run.
+                for (UserPageEntry entry : page) {
+                    if (entry.uuid() != null) consumer.accept(entry.uuid());
+                }
+                if (page.size() < USER_PAGE_SIZE) return null;
+            }
+        });
     }
 
-    private void readUserIds(Consumer<UUID> consumer) {
-        String sql = "SELECT " + quote(SqlUserSchema.UUID_COLUMN) + " FROM " + quote(tableName);
-        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql);
-                ResultSet result = statement.executeQuery()) {
-            while (result.next()) {
-                String value = result.getString(1);
-                if (value == null || value.isBlank()) continue;
-                UUID parsed;
-                try { parsed = UUID.fromString(value); }
-                catch (IllegalArgumentException invalid) {
-                    logger.warn("Skipping invalid UUID in " + tableName + ": " + value, invalid);
-                    continue;
+    private List<UserPageEntry> readUserPage(String cursor) {
+        String uuidColumn = quote(SqlUserSchema.UUID_COLUMN);
+        String sql = "SELECT " + uuidColumn + " FROM " + quote(tableName)
+                + (cursor == null ? "" : " WHERE " + uuidColumn + " > ?")
+                + " ORDER BY " + uuidColumn + " ASC LIMIT ?";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            int index = 1;
+            if (cursor != null) statement.setString(index++, cursor);
+            statement.setInt(index, USER_PAGE_SIZE);
+            ArrayList<UserPageEntry> page = new ArrayList<>(USER_PAGE_SIZE);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    String value = result.getString(1);
+                    if (value == null) continue;
+                    UUID parsed = null;
+                    try { parsed = UUID.fromString(value); }
+                    catch (IllegalArgumentException invalid) {
+                        logger.warn("Skipping invalid UUID in " + tableName + ": " + value, invalid);
+                    }
+                    page.add(new UserPageEntry(value, parsed));
                 }
-                consumer.accept(parsed);
             }
-        } catch (SQLException e) { throw new IllegalStateException("Failed to enumerate SQLite users", e); }
+            return page;
+        } catch (SQLException failure) {
+            throw new IllegalStateException("Failed to enumerate SQLite users", failure);
+        }
     }
+
+    private record UserPageEntry(String cursor, UUID uuid) {}
 
     @Override public boolean isOpen() { return open.get(); }
 
@@ -120,19 +146,28 @@ public final class SqliteUserBackend implements SqlUserBackend {
             try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(createTableSql())) { statement.executeUpdate(); }
             ensureRegisteredColumns();
         } catch (IOException | ClassNotFoundException | SQLException | RuntimeException e) {
-            open.set(false);
+            open.set(false;
             throw new IllegalStateException("Failed to initialize SQLite user backend at " + databaseFile, e);
         }
     }
 
     private void ensureRegisteredColumns() throws SQLException {
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
-            if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name())) continue;
-            if (!hasColumn(column.name())) {
-                String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name()) + " " + column.sqlType();
-                try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
+            if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name()) || hasColumn(column.name())) continue;
+            String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name()) + " " + column.sqlType();
+            try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.executeUpdate();
+            } catch (SQLException addFailure) {
+                // A second backend can win the same schema expansion race. Accept
+                // only the duplicate-column case after a fresh schema inspection.
+                if (!isDuplicateColumn(addFailure) || !hasColumn(column.name())) throw addFailure;
             }
         }
+    }
+
+    private boolean isDuplicateColumn(SQLException failure) {
+        String message = failure.getMessage();
+        return message != null && message.toLowerCase(Locale.ROOT).contains("duplicate column name");
     }
 
     private boolean hasColumn(String name) throws SQLException {

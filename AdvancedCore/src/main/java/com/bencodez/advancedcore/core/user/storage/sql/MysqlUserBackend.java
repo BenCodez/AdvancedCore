@@ -20,6 +20,7 @@ import com.bencodez.simpleapi.sql.mysql.DbType;
 import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 
 public final class MysqlUserBackend implements SqlUserBackend {
+    private static final int USER_PAGE_SIZE = 512;
     private final SqlUserSchema schema;
     private final SqlBackendLogger logger;
     private final HeadlessUserTable table;
@@ -62,35 +63,53 @@ public final class MysqlUserBackend implements SqlUserBackend {
     public void forEachUser(Consumer<UUID> consumer) {
         requireOpen();
         Objects.requireNonNull(consumer, "consumer");
-        String sql = "SELECT " + table.quote(SqlUserSchema.UUID_COLUMN) + " FROM " + table.quote(table.getTableName());
-        try (Connection connection = table.getMysql().getConnectionManager().getConnection()) {
-            boolean postgresCursor = table.getDbType() == DbType.POSTGRESQL && connection.getAutoCommit();
-            if (postgresCursor) connection.setAutoCommit(false);
-            try {
-                try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                    statement.setFetchSize(512);
-                    try (ResultSet result = statement.executeQuery()) {
-                        while (result.next()) {
-                            String value = result.getString(1);
-                            if (value == null || value.isBlank()) continue;
-                            UUID parsed;
-                            try { parsed = UUID.fromString(value); }
-                            catch (IllegalArgumentException invalid) {
-                                logger.warn("Skipping invalid UUID in " + table.getTableName() + ": " + value, invalid);
-                                continue;
-                            }
-                            consumer.accept(parsed);
-                        }
+        String cursor = null;
+        while (true) {
+            List<UserPageEntry> page = readUserPage(cursor);
+            if (page.isEmpty()) return;
+            cursor = page.get(page.size() - 1).cursor();
+            // The page query and pooled connection are already closed here. Callback
+            // code may safely perform nested reads/writes even with a one-slot pool.
+            for (UserPageEntry entry : page) {
+                if (entry.uuid() != null) consumer.accept(entry.uuid());
+            }
+            if (page.size() < USER_PAGE_SIZE) return;
+        }
+    }
+
+    private List<UserPageEntry> readUserPage(String cursor) {
+        String uuidColumn = table.quote(SqlUserSchema.UUID_COLUMN);
+        String sql = "SELECT " + uuidColumn + " FROM " + table.quote(table.getTableName())
+                + (cursor == null ? "" : " WHERE " + uuidColumn + " > ?")
+                + " ORDER BY " + uuidColumn + " ASC LIMIT ?";
+        JdbcSqlUserStorage.Dialect dialect = JdbcSqlUserStorage.Dialect.fromDbType(table.getDbType());
+        try (Connection connection = table.getMysql().getConnectionManager().getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            int index = 1;
+            if (cursor != null) dialect.bindUuid(statement, index++, UUID.fromString(cursor));
+            statement.setInt(index, USER_PAGE_SIZE);
+            ArrayList<UserPageEntry> page = new ArrayList<>(USER_PAGE_SIZE);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    String value = result.getString(1);
+                    if (value == null) continue;
+                    UUID parsed = null;
+                    try { parsed = UUID.fromString(value); }
+                    catch (IllegalArgumentException invalid) {
+                        logger.warn("Skipping invalid UUID in " + table.getTableName() + ": " + value, invalid);
                     }
-                }
-            } finally {
-                if (postgresCursor) {
-                    try { connection.rollback(); }
-                    finally { connection.setAutoCommit(true); }
+                    page.add(new UserPageEntry(value, parsed));
                 }
             }
-        } catch (SQLException e) { throw new IllegalStateException("Failed to enumerate MySQL users", e); }
+            return page;
+        } catch (IllegalArgumentException invalidCursor) {
+            throw new IllegalStateException("Failed to advance SQL user enumeration cursor", invalidCursor);
+        } catch (SQLException failure) {
+            throw new IllegalStateException("Failed to enumerate MySQL users", failure);
+        }
     }
+
+    private record UserPageEntry(String cursor, UUID uuid) {}
 
     @Override public boolean isOpen() { return open.get(); }
     @Override public void close() { if (open.compareAndSet(true, false)) table.close(); }
