@@ -22,8 +22,10 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 
 /** Coordinates one existing cache/queue and its SQL provider; storage work runs on a worker. */
 public final class SharedUserDataRuntime implements AutoCloseable {
+    private static final int USER_LOCK_STRIPES = 64;
     private final UserCacheOwner cacheOwner;
     private final ReentrantReadWriteLock lifecycle = new ReentrantReadWriteLock(true);
+    private final ReentrantReadWriteLock[] userLocks = createUserLocks();
     private final AtomicBoolean retiring = new AtomicBoolean();
     private final Object closeLock = new Object();
     private volatile SqlUserBackend backend;
@@ -33,13 +35,14 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public SharedUserDataRuntime(SqlUserBackend backend, UserCacheOwner cacheOwner) {
         this.backend = Objects.requireNonNull(backend, "backend");
         this.cacheOwner = Objects.requireNonNull(cacheOwner, "cacheOwner");
+        cacheOwner.bindUserGate((uuid, batch) -> userAccess(uuid, () -> { batch.run(); return null; }));
         cacheOwner.bindLifecycle(backend, batch -> access(() -> { batch.run(); return null; }));
     }
 
     public DataValue read(UUID uuid, String key, UserDataFetchMode mode,
             HashMap<String, DataValue> temporaryCache, DataValue defaultValue) {
-        return access(() -> {
-            Objects.requireNonNull(uuid, "uuid");
+        Objects.requireNonNull(uuid, "uuid");
+        return userAccess(uuid, () -> {
             Objects.requireNonNull(mode, "mode");
             if (key == null || key.isEmpty()) return defaultValue;
             if (mode.allowTempCache() && temporaryCache != null) {
@@ -66,7 +69,8 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     public HashMap<String, DataValue> populate(UUID uuid) {
-        return storageAccess(() -> populateInternal(Objects.requireNonNull(uuid, "uuid")));
+        Objects.requireNonNull(uuid, "uuid");
+        return storageUserAccess(uuid, () -> populateInternal(uuid));
     }
 
     private HashMap<String, DataValue> populateInternal(UUID uuid) {
@@ -80,19 +84,20 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         return storageAccess(() -> {
             Objects.requireNonNull(consumer, "consumer");
             int[] count = { 0 };
-            backend.forEachUser(uuid -> {
+            backend.forEachUser(uuid -> userAccess(uuid, () -> {
                 HashMap<String, DataValue> values = populateCache ? populateInternal(uuid)
                         : SqlUserDataAccess.convert(readStorageRow(uuid));
                 consumer.accept(uuid, values);
                 count[0]++;
-            });
+                return null;
+            }));
             return count[0];
         });
     }
 
     public void queueChange(UUID uuid, String key, DataValue value) {
-        access(() -> {
-            Objects.requireNonNull(uuid, "uuid");
+        Objects.requireNonNull(uuid, "uuid");
+        userAccess(uuid, () -> {
             Objects.requireNonNull(key, "key");
             Objects.requireNonNull(value, "value");
             if (!cacheOwner.isCached(uuid)) {
@@ -105,7 +110,8 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     public void flush(UUID uuid) {
-        storageAccess(() -> { flushInternal(Objects.requireNonNull(uuid, "uuid")); return null; });
+        Objects.requireNonNull(uuid, "uuid");
+        storageUserAccess(uuid, () -> { flushInternal(uuid); return null; });
     }
 
     private void flushInternal(UUID uuid) {
@@ -113,7 +119,12 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     public void flushAll() {
-        storageAccess(() -> { flushAllInternal(); return null; });
+        storageAccess(() -> {
+            for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) {
+                userAccess(uuid, () -> { flushInternal(uuid); return null; });
+            }
+            return null;
+        });
     }
 
     private void flushAllInternal() {
@@ -141,8 +152,9 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     public void remove(UUID uuid) {
-        storageAccess(() -> {
-            Objects.requireNonNull(uuid, "uuid");
+        Objects.requireNonNull(uuid, "uuid");
+        cacheOwner.requireBlockingAllowed();
+        userExclusiveAccess(uuid, () -> {
             flushInternal(uuid);
             backend.user(uuid).delete(backend.storageType());
             cacheOwner.remove(uuid);
@@ -154,11 +166,6 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public boolean isClosed() { return closed; }
     public boolean isRetiring() { return retiring.get(); }
 
-    /**
-     * Stop admission now and drain on the supplied worker. Completion represents
-     * actual flush/cleanup, not task submission. A failed attempt retains the
-     * unflushed queue/provider and can be retried; it never reopens admission.
-     */
     public CompletionStage<Void> closeAsync(Executor executor) {
         Objects.requireNonNull(executor, "executor");
         rejectReentrantTransition();
@@ -198,7 +205,6 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         return result.minimalCompletionStage();
     }
 
-    /** Blocking worker-only form. Server callbacks must use closeAsync and observe its stage. */
     @Override
     public void close() {
         if (closed) return;
@@ -212,13 +218,11 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         }
     }
 
-    /** Lifecycle admission for memory-only cache work; never performs a platform blocking check itself. */
     private <T> T access(Supplier<T> operation) {
         boolean admitted = lifecycle.getReadHoldCount() > 0 || lifecycle.isWriteLockedByCurrentThread();
         if (!admitted) requireOpen();
         lifecycle.readLock().lock();
         try {
-            // Nested notification work belongs to the already-admitted batch.
             if (!admitted) requireOpen();
             return operation.get();
         } finally {
@@ -229,6 +233,40 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     private <T> T storageAccess(Supplier<T> operation) {
         cacheOwner.requireBlockingAllowed();
         return access(operation);
+    }
+
+    private <T> T userAccess(UUID uuid, Supplier<T> operation) {
+        return access(() -> {
+            ReentrantReadWriteLock.ReadLock lock = userLock(uuid).readLock();
+            lock.lock();
+            try { return operation.get(); }
+            finally { lock.unlock(); }
+        });
+    }
+
+    private <T> T storageUserAccess(UUID uuid, Supplier<T> operation) {
+        cacheOwner.requireBlockingAllowed();
+        return userAccess(uuid, operation);
+    }
+
+    private <T> T userExclusiveAccess(UUID uuid, Supplier<T> operation) {
+        return access(() -> {
+            ReentrantReadWriteLock.WriteLock lock = userLock(uuid).writeLock();
+            lock.lock();
+            try { return operation.get(); }
+            finally { lock.unlock(); }
+        });
+    }
+
+    private ReentrantReadWriteLock userLock(UUID uuid) {
+        int index = (uuid.hashCode() & Integer.MAX_VALUE) % USER_LOCK_STRIPES;
+        return userLocks[index];
+    }
+
+    private static ReentrantReadWriteLock[] createUserLocks() {
+        ReentrantReadWriteLock[] locks = new ReentrantReadWriteLock[USER_LOCK_STRIPES];
+        for (int i = 0; i < locks.length; i++) locks[i] = new ReentrantReadWriteLock(true);
+        return locks;
     }
 
     private void rejectReentrantTransition() {
@@ -244,9 +282,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     private DataValue find(List<Column> row, String key, DataValue defaultValue) {
         if (row != null) {
             for (Column column : row) {
-                if (column.getName().equals(key)) {
-                    return column.getValue() == null ? defaultValue : column.getValue();
-                }
+                if (column.getName().equals(key)) return column.getValue() == null ? defaultValue : column.getValue();
             }
         }
         return defaultValue;
