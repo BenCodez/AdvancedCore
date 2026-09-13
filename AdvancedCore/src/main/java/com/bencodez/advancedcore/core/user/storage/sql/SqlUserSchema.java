@@ -74,10 +74,16 @@ public final class SqlUserSchema {
         private final Map<String, ColumnDefinition> columns = new LinkedHashMap<>();
 
         private Builder() {
-            column(UUID_COLUMN, "VARCHAR(37)", DataType.STRING);
+            // Identity spelling/type is invariant. PostgreSQL quotes identifiers and
+            // therefore cannot tolerate a custom "UUID" replacing canonical "uuid".
+            columns.put(UUID_COLUMN, new ColumnDefinition(UUID_COLUMN, "VARCHAR(37)", DataType.STRING));
         }
 
         public Builder column(String name, String sqlType, DataType dataType) {
+            Objects.requireNonNull(name, "name");
+            if (UUID_COLUMN.equalsIgnoreCase(name)) {
+                throw new IllegalArgumentException("Column name 'uuid' is reserved for user identity");
+            }
             ColumnDefinition definition = new ColumnDefinition(name, sqlType, dataType);
             columns.put(name.toLowerCase(Locale.ROOT), definition);
             return this;

@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
@@ -34,7 +35,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
             SqlUserSchema schema, SqlBackendLogger logger) {
         Objects.requireNonNull(dataDirectory, "dataDirectory");
         Objects.requireNonNull(databaseName, "databaseName");
-        quote(tableName); // Validate before opening the database; retain the original name.
+        quote(tableName);
         this.tableName = tableName;
         this.schema = Objects.requireNonNull(schema, "schema");
         this.logger = logger == null ? SqlBackendLogger.NO_OP : logger;
@@ -45,14 +46,8 @@ public final class SqliteUserBackend implements SqlUserBackend {
         initialize();
     }
 
-    public Path databaseFile() {
-        return databaseFile;
-    }
-
-    @Override
-    public UserStorage storageType() {
-        return UserStorage.SQLITE;
-    }
+    public Path databaseFile() { return databaseFile; }
+    @Override public UserStorage storageType() { return UserStorage.SQLITE; }
 
     @Override
     public SqlUserStorage user(UUID uuid) {
@@ -60,95 +55,67 @@ public final class SqliteUserBackend implements SqlUserBackend {
         SqlUserStorage delegate = new JdbcSqlUserStorage(UserStorage.SQLITE, uuid, tableName, schema,
                 this::openConnection, JdbcSqlUserStorage.Dialect.SQLITE, logger);
         return new SqlUserStorage() {
-            @Override
-            public List<Column> readRow(UserStorage storage) {
-                return withOperation(() -> delegate.readRow(storage));
+            @Override public List<Column> readRow(UserStorage storage) { return withOperation(() -> delegate.readRow(storage)); }
+            @Override public boolean contains(UserStorage storage) { return withOperation(() -> delegate.contains(storage)); }
+            @Override public void delete(UserStorage storage) { withOperation(() -> { delegate.delete(storage); return null; }); }
+            @Override public void write(UserStorage storage, String key, DataValue value) {
+                withOperation(() -> { delegate.write(storage, key, value); return null; });
             }
-
-            @Override
-            public boolean contains(UserStorage storage) {
-                return withOperation(() -> delegate.contains(storage));
-            }
-
-            @Override
-            public void delete(UserStorage storage) {
-                withOperation(() -> {
-                    delegate.delete(storage);
-                    return null;
-                });
-            }
-
-            @Override
-            public void write(UserStorage storage, String key, DataValue value) {
-                withOperation(() -> {
-                    delegate.write(storage, key, value);
-                    return null;
-                });
-            }
-
-            @Override
-            public void writeValues(UserStorage storage, HashMap<String, DataValue> values) {
-                withOperation(() -> {
-                    delegate.writeValues(storage, values);
-                    return null;
-                });
+            @Override public void writeValues(UserStorage storage, HashMap<String, DataValue> values) {
+                withOperation(() -> { delegate.writeValues(storage, values); return null; });
             }
         };
     }
 
     @Override
     public List<UUID> enumerateUsers() {
-        return withOperation(this::readUserIds);
+        ArrayList<UUID> users = new ArrayList<>();
+        forEachUser(uuid -> {
+            if (users.size() >= MAX_MATERIALIZED_USERS) {
+                throw new IllegalStateException("User enumeration exceeds " + MAX_MATERIALIZED_USERS
+                        + " entries; use forEachUser for streaming access");
+            }
+            users.add(uuid);
+        });
+        return users;
     }
 
-    private List<UUID> readUserIds() {
+    @Override
+    public void forEachUser(Consumer<UUID> consumer) {
+        Objects.requireNonNull(consumer, "consumer");
+        withOperation(() -> { readUserIds(consumer); return null; });
+    }
+
+    private void readUserIds(Consumer<UUID> consumer) {
         String sql = "SELECT " + quote(SqlUserSchema.UUID_COLUMN) + " FROM " + quote(tableName);
-        ArrayList<UUID> users = new ArrayList<>();
         try (Connection connection = openConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
                 ResultSet result = statement.executeQuery()) {
             while (result.next()) {
                 String value = result.getString(1);
-                if (value == null || value.isBlank()) {
-                    continue;
-                }
+                if (value == null || value.isBlank()) continue;
                 try {
-                    users.add(UUID.fromString(value));
+                    consumer.accept(UUID.fromString(value));
                 } catch (IllegalArgumentException invalid) {
                     logger.warn("Skipping invalid UUID in " + tableName + ": " + value, invalid);
                 }
             }
-            return users;
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to enumerate SQLite users", e);
         }
     }
 
-    @Override
-    public boolean isOpen() {
-        return open.get();
-    }
+    @Override public boolean isOpen() { return open.get(); }
 
-    /**
-     * Stops accepting operations, then waits for every active operation (including
-     * commit/rollback and JDBC resource cleanup). Call from the storage lifecycle,
-     * not a game/region thread. Concurrent close calls all wait for the same drain.
-     *
-     * @throws IllegalStateException if called from inside an active operation
-     */
     @Override
     public void close() {
         if (operations.getReadHoldCount() != 0) {
             throw new IllegalStateException("Cannot close SQLite from inside an active storage operation");
         }
         open.set(false);
-        // Do not return early when another closer has already set open=false.
-        // Uninterruptible acquisition preserves the caller's interrupt status
-        // without allowing it to start a replacement while a transaction is alive.
         operations.writeLock().lock();
         try {
-            // Taking the exclusive lock is the drain barrier. Connections are
-            // operation-owned and have been closed before their read lock releases.
+            // Exclusive acquisition is the drain barrier.
         } finally {
             operations.writeLock().unlock();
         }
@@ -183,9 +150,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
 
     private void ensureRegisteredColumns() throws SQLException {
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
-            if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name())) {
-                continue;
-            }
+            if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name())) continue;
             if (!hasColumn(column.name())) {
                 String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name())
                         + " " + column.sqlType();
@@ -203,9 +168,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
                 PreparedStatement statement = connection.prepareStatement(sql);
                 ResultSet result = statement.executeQuery()) {
             while (result.next()) {
-                if (name.equalsIgnoreCase(result.getString("name"))) {
-                    return true;
-                }
+                if (name.equalsIgnoreCase(result.getString("name"))) return true;
             }
             return false;
         }
@@ -215,9 +178,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
         StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(quote(tableName)).append(" (");
         boolean first = true;
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
-            if (!first) {
-                sql.append(", ");
-            }
+            if (!first) sql.append(", ");
             first = false;
             sql.append(quote(column.name())).append(' ').append(column.sqlType());
         }
@@ -231,12 +192,8 @@ public final class SqliteUserBackend implements SqlUserBackend {
     }
 
     private void requireOpen() {
-        if (!open.get()) {
-            throw new IllegalStateException("SQLite user backend is closed");
-        }
+        if (!open.get()) throw new IllegalStateException("SQLite user backend is closed");
     }
 
-    private static String quote(String identifier) {
-        return JdbcSqlUserStorage.Dialect.SQLITE.quote(identifier);
-    }
+    private static String quote(String identifier) { return JdbcSqlUserStorage.Dialect.SQLITE.quote(identifier); }
 }
