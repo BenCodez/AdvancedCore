@@ -128,7 +128,8 @@ public final class SharedRewardOrchestrator {
                 }
             });
         }
-        return chain;
+        // A null Boolean is a failed requirement, including in the final slot.
+        return chain.thenApply(Boolean.TRUE::equals);
     }
 
     /**
@@ -146,7 +147,11 @@ public final class SharedRewardOrchestrator {
                     : executeStep(plan.steps().get(stepIndex), context, durability,
                             executionPath, fingerprint, stepIndex));
         }
-        return chain;
+        // Preserve the old terminal shutdown check after the final checkpoint,
+        // including empty plans and fully checkpointed resumes. Deferrals stay deferred.
+        return chain.thenCompose(result -> result != SharedRewardResult.DEFERRED && platform.isShuttingDown()
+                ? failed("Reward platform shut down before execution completed")
+                : CompletableFuture.completedFuture(result));
     }
 
     private CompletionStage<SharedRewardResult> executeStep(SharedRewardStep step, SharedRewardContext context,
