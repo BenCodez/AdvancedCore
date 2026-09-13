@@ -235,6 +235,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             if (booleanStorage == BooleanStorage.NATIVE) { boolean value = result.getBoolean(index); return new DataValueBoolean(!result.wasNull() && value); }
             if (booleanStorage == BooleanStorage.NUMERIC) { int value = result.getInt(index); return new DataValueBoolean(!result.wasNull() && value != 0); }
             String value = result.getString(index);
+            if (booleanStorage == BooleanStorage.POSTGRES_BIT) return new DataValueBoolean(value != null && value.indexOf('1') >= 0);
             return new DataValueBoolean("1".equals(value) || "t".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value));
         }
         return new DataValueString(result.getString(index));
@@ -278,5 +279,9 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     }
     private boolean startsType(String sqlType, String type) { if (!sqlType.startsWith(type)) return false; if (sqlType.length() == type.length()) return true; char next = sqlType.charAt(type.length()); return Character.isWhitespace(next) || next == '('; }
     private String quote(String identifier) { return dialect.quote(identifier); }
-    private IllegalStateException failure(String operation, SQLException error) { logger.warn("Failed to " + operation + " for " + uuid, error); return new IllegalStateException("Failed to " + operation + " for " + uuid, error); }
+    private IllegalStateException failure(String operation, SQLException error) {
+        try { logger.warn("Failed to " + operation + " for " + uuid, error); }
+        catch (RuntimeException loggingFailure) { suppress(error, loggingFailure); }
+        return new IllegalStateException("Failed to " + operation + " for " + uuid, error);
+    }
 }

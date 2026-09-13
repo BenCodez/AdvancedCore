@@ -74,4 +74,24 @@ class JdbcPostgresBitBooleanTest {
         verify(result, never()).getInt(1);
         verify(result, never()).getBoolean(1);
     }
+
+    @Test
+    void postgresFixedWidthBitReadsAnyNonzeroValueAsTrue() throws Exception {
+        Connection connection = mock(Connection.class);
+        PreparedStatement statement = mock(PreparedStatement.class);
+        ResultSet result = mock(ResultSet.class);
+        ResultSetMetaData metadata = mock(ResultSetMetaData.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeQuery()).thenReturn(result);
+        when(result.next()).thenReturn(true);
+        when(result.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(1);
+        when(metadata.getColumnLabel(1)).thenReturn("Flag");
+        when(result.getString(1)).thenReturn("10");
+        SqlUserSchema schema = SqlUserSchema.builder().column("Flag", "BIT(2)", DataType.BOOLEAN).build();
+        JdbcSqlUserStorage storage = new JdbcSqlUserStorage(UserStorage.MYSQL, USER, "Users", schema,
+                () -> connection, JdbcSqlUserStorage.Dialect.POSTGRESQL, SqlBackendLogger.NO_OP);
+
+        assertTrue(storage.readRow(UserStorage.MYSQL).get(0).getValue().getBoolean());
+    }
 }

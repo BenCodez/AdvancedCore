@@ -102,6 +102,25 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         assertDoesNotThrow(() -> jdbc.write()); assertEquals(List.of(logging), Arrays.asList(restore.getSuppressed())); verify(jdbc.connection).commit();
     }
 
+    @Test void throwingLoggerCannotReplaceSqlOperationFailure() throws Exception {
+        Connection connection = mock(Connection.class);
+        PreparedStatement statement = mock(PreparedStatement.class);
+        SQLException sqlFailure = new SQLException("query failed");
+        IllegalStateException loggingFailure = new IllegalStateException("logger failed");
+        SqlBackendLogger logger = mock(SqlBackendLogger.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeQuery()).thenThrow(sqlFailure);
+        doThrow(loggingFailure).when(logger).warn(anyString(), same(sqlFailure));
+        JdbcSqlUserStorage storage = new JdbcSqlUserStorage(UserStorage.SQLITE, USER, "Users",
+                SqlUserSchema.builder().build(), () -> connection, JdbcSqlUserStorage.Dialect.SQLITE, logger);
+
+        IllegalStateException result = assertThrows(IllegalStateException.class,
+                () -> storage.contains(UserStorage.SQLITE));
+
+        assertSame(sqlFailure, result.getCause());
+        assertEquals(List.of(loggingFailure), Arrays.asList(sqlFailure.getSuppressed()));
+    }
+
     @Test void uuidMetadataCannotChangeBoundIdentityInAnyDialect() throws Exception {
         for (JdbcSqlUserStorage.Dialect dialect : JdbcSqlUserStorage.Dialect.values()) {
             Jdbc jdbc = new Jdbc(); UserStorage type = dialect == JdbcSqlUserStorage.Dialect.SQLITE ? UserStorage.SQLITE : UserStorage.MYSQL;

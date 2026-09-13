@@ -31,6 +31,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
     private final SqlUserSchema schema;
     private final SqlBackendLogger logger;
     private final AtomicBoolean open = new AtomicBoolean();
+    private final AtomicBoolean invalidUuidWarningLogged = new AtomicBoolean();
     private final ReentrantReadWriteLock operations = new ReentrantReadWriteLock(true);
 
     public SqliteUserBackend(Path dataDirectory, String databaseName, String tableName, SqlUserSchema schema, SqlBackendLogger logger) {
@@ -107,7 +108,12 @@ public final class SqliteUserBackend implements SqlUserBackend {
                     if (value == null) continue;
                     UUID parsed = null;
                     try { parsed = UUID.fromString(value); }
-                    catch (IllegalArgumentException invalid) { logger.warn("Skipping invalid UUID in " + tableName + ": " + value, invalid); }
+                    catch (IllegalArgumentException invalid) {
+                        if (invalidUuidWarningLogged.compareAndSet(false, true)) {
+                            logger.warn("Skipping malformed UUID entries while enumerating SQLite users; further diagnostics suppressed",
+                                    new IllegalArgumentException("Malformed SQLite UUID value"));
+                        }
+                    }
                     page.add(new UserPageEntry(value, parsed));
                 }
             }

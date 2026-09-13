@@ -70,4 +70,29 @@ class SqliteUserEnumerationCallbackTest {
             assertEquals(expected.stream().sorted().toList(), actual);
         }
     }
+
+    @Test
+    void malformedUuidWarningIsBoundedAndOmitsStoredValue() throws Exception {
+        String malformed = "private-value-".repeat(1_000);
+        List<String> warnings = new ArrayList<>();
+        SqlBackendLogger logger = new SqlBackendLogger() {
+            @Override public void info(String message) {}
+            @Override public void warn(String message, Throwable error) {
+				assertEquals("Malformed SQLite UUID value", error.getMessage());
+                warnings.add(message);
+            }
+        };
+        try (SqliteUserBackend backend = new SqliteUserBackend(directory, "Users", "Users",
+                SqlUserSchema.builder().build(), logger);
+                Connection connection = DriverManager.getConnection("jdbc:sqlite:" + backend.databaseFile().toAbsolutePath());
+                PreparedStatement statement = connection.prepareStatement("INSERT INTO `Users` (`uuid`) VALUES (?)")) {
+            statement.setString(1, malformed);
+            statement.executeUpdate();
+            statement.setString(1, malformed + "another");
+            statement.executeUpdate();
+
+            assertEquals(List.of(), backend.enumerateUsers());
+        }
+        assertEquals(List.of("Skipping malformed UUID entries while enumerating SQLite users; further diagnostics suppressed"), warnings);
+    }
 }
