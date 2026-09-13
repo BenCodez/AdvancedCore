@@ -44,7 +44,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         }
     }
 
-    private enum BooleanStorage { TEXT, NATIVE, NUMERIC }
+    private enum BooleanStorage { TEXT, NATIVE, NUMERIC, POSTGRES_BIT }
     @FunctionalInterface interface ConnectionProvider { Connection open() throws SQLException; }
 
     private final UserStorage storage;
@@ -170,7 +170,10 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         if (dialect != Dialect.SQLITE && rowExists(connection)) return true;
         StringBuilder names = new StringBuilder(quote(SqlUserSchema.UUID_COLUMN));
         StringBuilder parameters = new StringBuilder("?");
-        for (String key : updates.keySet()) { names.append(", ").append(quote(key)); parameters.append(", ?"); }
+        for (String key : updates.keySet()) {
+            names.append(", ").append(quote(key));
+            parameters.append(", ").append(parameterExpression(schema.column(key)));
+        }
         String prefix = dialect == Dialect.SQLITE ? "INSERT OR IGNORE INTO " : "INSERT INTO ";
         String sql = prefix + quote(tableName) + " (" + names + ") VALUES (" + parameters + ")";
         if (dialect == Dialect.POSTGRESQL) sql += " ON CONFLICT (" + quote(SqlUserSchema.UUID_COLUMN) + ") DO NOTHING";
@@ -202,7 +205,12 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     private void updateValues(Connection connection, Map<String, DataValue> updates) throws SQLException {
         StringBuilder sql = new StringBuilder("UPDATE ").append(quote(tableName)).append(" SET ");
         boolean first = true;
-        for (String key : updates.keySet()) { if (!first) sql.append(", "); first = false; sql.append(quote(key)).append("=?"); }
+        for (String key : updates.keySet()) {
+            if (!first) sql.append(", ");
+            first = false;
+            SqlUserSchema.ColumnDefinition definition = schema.column(key);
+            sql.append(quote(key)).append('=').append(parameterExpression(definition));
+        }
         sql.append(" WHERE ").append(quote(SqlUserSchema.UUID_COLUMN)).append("=?");
         try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             int index = 1;
@@ -240,15 +248,32 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             BooleanStorage booleanStorage = booleanStorage(definition);
             if (booleanStorage == BooleanStorage.NATIVE) statement.setBoolean(index, value.getBoolean());
             else if (booleanStorage == BooleanStorage.NUMERIC) statement.setInt(index, value.getBoolean() ? 1 : 0);
+            else if (booleanStorage == BooleanStorage.POSTGRES_BIT) statement.setString(index, value.getBoolean() ? "1" : "0");
             else statement.setString(index, Boolean.toString(value.getBoolean()));
         } else statement.setObject(index, value.toString());
+    }
+
+    private String parameterExpression(SqlUserSchema.ColumnDefinition definition) {
+        if (booleanStorage(definition) != BooleanStorage.POSTGRES_BIT) return "?";
+        return "CAST(? AS " + postgresBitType(definition) + ")";
+    }
+
+    private String postgresBitType(SqlUserSchema.ColumnDefinition definition) {
+        String sqlType = definition.sqlType().strip();
+        int separator = sqlType.indexOf(' ');
+        String token = separator < 0 ? sqlType : sqlType.substring(0, separator);
+        if (!token.matches("(?i)BIT(?:\\(\\d+\\))?")) {
+            throw new IllegalArgumentException("Unsupported PostgreSQL bit type: " + definition.sqlType());
+        }
+        return token.toUpperCase(Locale.ROOT);
     }
 
     private BooleanStorage booleanStorage(SqlUserSchema.ColumnDefinition definition) {
         if (definition == null || definition.dataType() != DataType.BOOLEAN) return BooleanStorage.TEXT;
         String sqlType = definition.sqlType().strip().toUpperCase(Locale.ROOT);
         if (startsType(sqlType, "BOOLEAN") || startsType(sqlType, "BOOL")) return BooleanStorage.NATIVE;
-        if (startsType(sqlType, "TINYINT") || startsType(sqlType, "SMALLINT") || startsType(sqlType, "MEDIUMINT") || startsType(sqlType, "INT") || startsType(sqlType, "INTEGER") || startsType(sqlType, "BIGINT") || startsType(sqlType, "BIT")) return BooleanStorage.NUMERIC;
+        if (startsType(sqlType, "BIT")) return dialect == Dialect.POSTGRESQL ? BooleanStorage.POSTGRES_BIT : BooleanStorage.NUMERIC;
+        if (startsType(sqlType, "TINYINT") || startsType(sqlType, "SMALLINT") || startsType(sqlType, "MEDIUMINT") || startsType(sqlType, "INT") || startsType(sqlType, "INTEGER") || startsType(sqlType, "BIGINT")) return BooleanStorage.NUMERIC;
         return BooleanStorage.TEXT;
     }
     private boolean startsType(String sqlType, String type) { if (!sqlType.startsWith(type)) return false; if (sqlType.length() == type.length()) return true; char next = sqlType.charAt(type.length()); return Character.isWhitespace(next) || next == '('; }
