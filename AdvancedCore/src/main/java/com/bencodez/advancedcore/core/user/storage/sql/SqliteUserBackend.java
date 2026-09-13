@@ -82,7 +82,6 @@ public final class SqliteUserBackend implements SqlUserBackend {
                 List<UserPageEntry> page = readUserPage(cursor);
                 if (page.isEmpty()) return null;
                 cursor = page.get(page.size() - 1).cursor();
-                // No SQLite result set/read transaction is open while callbacks run.
                 for (UserPageEntry entry : page) {
                     if (entry.uuid() != null) consumer.accept(entry.uuid());
                 }
@@ -126,9 +125,12 @@ public final class SqliteUserBackend implements SqlUserBackend {
     @Override
     public void close() {
         if (operations.getReadHoldCount() != 0) throw new IllegalStateException("Cannot close SQLite from inside an active storage operation");
-        open.set(false);
         operations.writeLock().lock();
-        try { } finally { operations.writeLock().unlock(); }
+        try {
+            open.set(false);
+        } finally {
+            operations.writeLock().unlock();
+        }
     }
 
     private <T> T withOperation(Supplier<T> operation) {
@@ -158,8 +160,6 @@ public final class SqliteUserBackend implements SqlUserBackend {
             try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.executeUpdate();
             } catch (SQLException addFailure) {
-                // A second backend can win the same schema expansion race. Accept
-                // only the duplicate-column case after a fresh schema inspection.
                 if (!isDuplicateColumn(addFailure) || !hasColumn(column.name())) throw addFailure;
             }
         }
