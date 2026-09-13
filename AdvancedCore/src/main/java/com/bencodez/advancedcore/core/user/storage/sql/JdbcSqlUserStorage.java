@@ -1,0 +1,226 @@
+package com.bencodez.advancedcore.core.user.storage.sql;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
+import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.DataType;
+import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.sql.data.DataValueBoolean;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
+import com.bencodez.simpleapi.sql.data.DataValueString;
+
+final class JdbcSqlUserStorage implements SqlUserStorage {
+    enum Dialect {
+        SQLITE,
+        MYSQL
+    }
+
+    @FunctionalInterface
+    interface ConnectionProvider {
+        Connection open() throws SQLException;
+    }
+
+    private final UserStorage storage;
+    private final UUID uuid;
+    private final String tableName;
+    private final SqlUserSchema schema;
+    private final ConnectionProvider connections;
+    private final Dialect dialect;
+    private final SqlBackendLogger logger;
+
+    JdbcSqlUserStorage(UserStorage storage, UUID uuid, String tableName, SqlUserSchema schema,
+            ConnectionProvider connections, Dialect dialect, SqlBackendLogger logger) {
+        this.storage = Objects.requireNonNull(storage, "storage");
+        this.uuid = Objects.requireNonNull(uuid, "uuid");
+        this.tableName = Objects.requireNonNull(tableName, "tableName");
+        this.schema = Objects.requireNonNull(schema, "schema");
+        this.connections = Objects.requireNonNull(connections, "connections");
+        this.dialect = Objects.requireNonNull(dialect, "dialect");
+        this.logger = Objects.requireNonNull(logger, "logger");
+    }
+
+    @Override
+    public List<Column> readRow(UserStorage requestedStorage) {
+        requireStorage(requestedStorage);
+        String sql = "SELECT * FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=?";
+        try (Connection connection = connections.open();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, uuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    return new ArrayList<>();
+                }
+                ResultSetMetaData metadata = result.getMetaData();
+                ArrayList<Column> columns = new ArrayList<>(metadata.getColumnCount());
+                for (int i = 1; i <= metadata.getColumnCount(); i++) {
+                    String name = metadata.getColumnLabel(i);
+                    SqlUserSchema.ColumnDefinition definition = schema.column(name);
+                    DataType type = definition == null ? DataType.STRING : definition.dataType();
+                    Column column = new Column(name, type);
+                    column.setValue(readValue(result, i, type));
+                    columns.add(column);
+                }
+                return columns;
+            }
+        } catch (SQLException e) {
+            throw failure("read user row", e);
+        }
+    }
+
+    @Override
+    public boolean contains(UserStorage requestedStorage) {
+        requireStorage(requestedStorage);
+        String sql = "SELECT 1 FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN)
+                + "=? LIMIT 1";
+        try (Connection connection = connections.open();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, uuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next();
+            }
+        } catch (SQLException e) {
+            throw failure("check user row", e);
+        }
+    }
+
+    @Override
+    public void delete(UserStorage requestedStorage) {
+        requireStorage(requestedStorage);
+        String sql = "DELETE FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=?";
+        try (Connection connection = connections.open();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, uuid.toString());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw failure("delete user row", e);
+        }
+    }
+
+    @Override
+    public void write(UserStorage requestedStorage, String key, DataValue value) {
+        HashMap<String, DataValue> values = new HashMap<>();
+        values.put(key, value);
+        writeValues(requestedStorage, values);
+    }
+
+    @Override
+    public void writeValues(UserStorage requestedStorage, HashMap<String, DataValue> values) {
+        requireStorage(requestedStorage);
+        Objects.requireNonNull(values, "values");
+        if (values.isEmpty()) {
+            return;
+        }
+        try (Connection connection = connections.open()) {
+            boolean autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try {
+                ensureRow(connection);
+                for (Map.Entry<String, DataValue> entry : values.entrySet()) {
+                    updateValue(connection, entry.getKey(), entry.getValue());
+                }
+                connection.commit();
+            } catch (SQLException | RuntimeException e) {
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackFailure) {
+                    e.addSuppressed(rollbackFailure);
+                }
+                throw e;
+            } finally {
+                connection.setAutoCommit(autoCommit);
+            }
+        } catch (SQLException e) {
+            throw failure("write user values", e);
+        }
+    }
+
+    private void ensureRow(Connection connection) throws SQLException {
+        String sql;
+        if (dialect == Dialect.SQLITE) {
+            sql = "INSERT OR IGNORE INTO " + quote(tableName) + " (" + quote(SqlUserSchema.UUID_COLUMN)
+                    + ") VALUES (?)";
+        } else {
+            sql = "INSERT IGNORE INTO " + quote(tableName) + " (" + quote(SqlUserSchema.UUID_COLUMN)
+                    + ") VALUES (?)";
+        }
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, uuid.toString());
+            statement.executeUpdate();
+        }
+    }
+
+    private void updateValue(Connection connection, String key, DataValue value) throws SQLException {
+        Objects.requireNonNull(key, "key");
+        if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(key)) {
+            throw new IllegalArgumentException("uuid is immutable through SqlUserStorage");
+        }
+        if (!schema.contains(key)) {
+            throw new IllegalArgumentException("Column is not registered in the SQL schema: " + key);
+        }
+        String sql = "UPDATE " + quote(tableName) + " SET " + quote(key) + "=? WHERE "
+                + quote(SqlUserSchema.UUID_COLUMN) + "=?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            bind(statement, 1, value);
+            statement.setString(2, uuid.toString());
+            statement.executeUpdate();
+        }
+    }
+
+    private void requireStorage(UserStorage requestedStorage) {
+        if (requestedStorage != storage) {
+            throw new IllegalArgumentException("Storage mismatch: backend=" + storage + ", requested=" + requestedStorage);
+        }
+    }
+
+    private DataValue readValue(ResultSet result, int index, DataType type) throws SQLException {
+        if (type == DataType.INTEGER) {
+            int value = result.getInt(index);
+            return new DataValueInt(result.wasNull() ? 0 : value);
+        }
+        if (type == DataType.BOOLEAN) {
+            return new DataValueBoolean(Boolean.valueOf(result.getString(index)));
+        }
+        return new DataValueString(result.getString(index));
+    }
+
+    private void bind(PreparedStatement statement, int index, DataValue value) throws SQLException {
+        if (value == null) {
+            statement.setObject(index, null);
+        } else if (value.isString()) {
+            statement.setString(index, value.getString());
+        } else if (value.isInt()) {
+            statement.setInt(index, value.getInt());
+        } else if (value.isBoolean()) {
+            statement.setBoolean(index, value.getBoolean());
+        } else {
+            statement.setObject(index, value.toString());
+        }
+    }
+
+    private String quote(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            throw new IllegalArgumentException("SQL identifier cannot be blank");
+        }
+        if (!identifier.matches("[A-Za-z0-9_]+")) {
+            throw new IllegalArgumentException("Unsafe SQL identifier: " + identifier);
+        }
+        return "`" + identifier + "`";
+    }
+
+    private IllegalStateException failure(String operation, SQLException error) {
+        logger.warn("Failed to " + operation + " for " + uuid, error);
+        return new IllegalStateException("Failed to " + operation + " for " + uuid, error);
+    }
+}
