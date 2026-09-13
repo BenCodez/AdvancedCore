@@ -21,6 +21,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,7 +42,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         Jdbc jdbc = new Jdbc();
         SQLException restore = new SQLException("restore failed");
         doThrow(restore).when(jdbc.connection).setAutoCommit(true);
-
         assertDoesNotThrow(() -> jdbc.write());
         verify(jdbc.connection).commit();
         verify(jdbc.connection, never()).rollback();
@@ -54,7 +54,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         Jdbc jdbc = new Jdbc();
         SQLException close = new SQLException("close failed");
         doThrow(close).when(jdbc.connection).close();
-
         assertDoesNotThrow(() -> jdbc.write());
         verify(jdbc.connection).commit();
         verify(jdbc.connection, never()).rollback();
@@ -69,7 +68,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         IllegalStateException close = new IllegalStateException("driver close failed");
         doThrow(restore).when(jdbc.connection).setAutoCommit(true);
         doThrow(close).when(jdbc.connection).close();
-
         assertDoesNotThrow(() -> jdbc.write());
         verify(jdbc.connection).commit();
         verify(jdbc.connection).close();
@@ -86,7 +84,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         when(jdbc.update.executeUpdate()).thenThrow(write);
         doThrow(restore).when(jdbc.connection).setAutoCommit(true);
         doThrow(close).when(jdbc.connection).close();
-
         IllegalStateException result = assertThrows(IllegalStateException.class, () -> jdbc.write());
         assertSame(write, result.getCause());
         assertEquals(List.of(restore, close), Arrays.asList(write.getSuppressed()));
@@ -102,7 +99,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         SQLException restore = new SQLException("restore failed");
         when(jdbc.update.executeUpdate()).thenThrow(write);
         doThrow(restore).when(jdbc.connection).setAutoCommit(true);
-
         assertSame(write, assertThrows(IllegalArgumentException.class, () -> jdbc.write()));
         assertEquals(List.of(restore), Arrays.asList(write.getSuppressed()));
         verify(jdbc.connection).rollback();
@@ -117,7 +113,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         SQLException rollback = new SQLException("rollback failed");
         when(jdbc.update.executeUpdate()).thenThrow(write);
         doThrow(rollback).when(jdbc.connection).rollback();
-
         IllegalStateException result = assertThrows(IllegalStateException.class, () -> jdbc.write());
         assertSame(write, result.getCause());
         assertEquals(List.of(rollback), Arrays.asList(write.getSuppressed()));
@@ -133,7 +128,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         SQLException restore = new SQLException("restore failed");
         doThrow(commit).when(jdbc.connection).commit();
         doThrow(restore).when(jdbc.connection).setAutoCommit(true);
-
         IllegalStateException result = assertThrows(IllegalStateException.class, () -> jdbc.write());
         assertSame(commit, result.getCause());
         assertEquals(List.of(restore), Arrays.asList(commit.getSuppressed()));
@@ -148,7 +142,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         SQLException close = new SQLException("close failed");
         when(jdbc.connection.getAutoCommit()).thenThrow(setup);
         doThrow(close).when(jdbc.connection).close();
-
         IllegalStateException result = assertThrows(IllegalStateException.class, () -> jdbc.write());
         assertSame(setup, result.getCause());
         assertEquals(List.of(close), Arrays.asList(setup.getSuppressed()));
@@ -164,7 +157,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         IllegalStateException logging = new IllegalStateException("logger failed");
         doThrow(restore).when(jdbc.connection).setAutoCommit(true);
         doThrow(logging).when(jdbc.logger).warn(anyString(), same(restore));
-
         assertDoesNotThrow(() -> jdbc.write());
         assertEquals(List.of(logging), Arrays.asList(restore.getSuppressed()));
         verify(jdbc.connection).commit();
@@ -184,7 +176,7 @@ class JdbcSqlUserStorageWriteOutcomeTest {
             HashMap<String, DataValue> before = new HashMap<>(values);
             user.writeValues(type, values);
             assertEquals(before, values);
-            assertEquals(dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL ? 3 : 2, jdbc.sql.size());
+            assertEquals(dialect == JdbcSqlUserStorage.Dialect.SQLITE ? 2 : 3, jdbc.sql.size());
             assertTrue(jdbc.sql.stream().noneMatch(sql -> sql.contains("SET " + dialect.quote("uuid"))));
             if (dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL) {
                 verify(jdbc.insert).setObject(1, USER);
@@ -197,6 +189,35 @@ class JdbcSqlUserStorageWriteOutcomeTest {
             verify(jdbc.update).setInt(1, 17);
             verify(jdbc.connection).commit();
         }
+    }
+
+    @Test
+    void bulkValuesUseOneAtomicUpdateStatement() throws Exception {
+        Connection connection = mock(Connection.class);
+        when(connection.getAutoCommit()).thenReturn(true);
+        PreparedStatement insert = mock(PreparedStatement.class);
+        PreparedStatement update = mock(PreparedStatement.class);
+        when(insert.executeUpdate()).thenReturn(1);
+        List<String> sql = new ArrayList<>();
+        when(connection.prepareStatement(anyString())).thenAnswer(call -> {
+            String query = call.getArgument(0, String.class);
+            sql.add(query);
+            return query.startsWith("INSERT") ? insert : update;
+        });
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("A", "INTEGER", DataType.INTEGER)
+                .column("B", "INTEGER", DataType.INTEGER).build();
+        JdbcSqlUserStorage user = new JdbcSqlUserStorage(UserStorage.SQLITE, USER, "Users", schema,
+                () -> connection, JdbcSqlUserStorage.Dialect.SQLITE, SqlBackendLogger.NO_OP);
+        HashMap<String, DataValue> values = new LinkedHashMap<>();
+        values.put("A", new DataValueInt(2));
+        values.put("B", new DataValueInt(2));
+        user.writeValues(UserStorage.SQLITE, values);
+        assertEquals(2, sql.size());
+        assertEquals("UPDATE `Users` SET `A`=?, `B`=? WHERE `uuid`=?", sql.get(1));
+        verify(update).setInt(1, 2);
+        verify(update).setInt(2, 2);
+        verify(update).setString(3, USER.toString());
     }
 
     @Test

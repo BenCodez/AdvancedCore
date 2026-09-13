@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +67,7 @@ class JdbcSqlUserStorageDialectTest {
     }
 
     @Test
-    void mysqlAndMariaDbRetainInsertIgnoreAndTextUuidBindings() throws Exception {
+    void mysqlAndMariaDbUseConstraintSafeInsertAndTextUuidBindings() throws Exception {
         for (DbType type : List.of(DbType.MYSQL, DbType.MARIADB)) {
             RecordingJdbc jdbc = new RecordingJdbc();
             SqlUserSchema schema = SqlUserSchema.builder().column("Vote `Flag`", "VARCHAR(5)", DataType.BOOLEAN).build();
@@ -74,15 +75,57 @@ class JdbcSqlUserStorageDialectTest {
                     () -> jdbc.connection, JdbcSqlUserStorage.Dialect.fromDbType(type), SqlBackendLogger.NO_OP);
             user.write(UserStorage.MYSQL, "Vote `Flag`", new DataValueBoolean(false));
             assertEquals(List.of(
-                    "INSERT IGNORE INTO `User ``Data``` (`uuid`, `Vote ``Flag```) VALUES (?, ?)",
+                    "SELECT 1 FROM `User ``Data``` WHERE `uuid`=? LIMIT 1",
+                    "INSERT INTO `User ``Data``` (`uuid`, `Vote ``Flag```) VALUES (?, ?)",
                     "UPDATE `User ``Data``` SET `Vote ``Flag```=? WHERE `uuid`=?"), jdbc.sql);
             verify(jdbc.statements.get(0)).setString(1, UUID_VALUE.toString());
-            verify(jdbc.statements.get(0)).setString(2, "false");
-            verify(jdbc.statements.get(1)).setString(1, "false");
-            verify(jdbc.statements.get(1)).setString(2, UUID_VALUE.toString());
+            verify(jdbc.statements.get(1)).setString(1, UUID_VALUE.toString());
+            verify(jdbc.statements.get(1)).setString(2, "false");
+            verify(jdbc.statements.get(2)).setString(1, "false");
+            verify(jdbc.statements.get(2)).setString(2, UUID_VALUE.toString());
             verify(jdbc.connection).commit();
             verify(jdbc.connection).close();
         }
+    }
+
+    @Test
+    void numericBooleanDefinitionsUseNumericJdbcBindingsAndReads() throws Exception {
+        Connection writeConnection = mock(Connection.class);
+        when(writeConnection.getAutoCommit()).thenReturn(true);
+        PreparedStatement exists = mock(PreparedStatement.class);
+        PreparedStatement insert = mock(PreparedStatement.class);
+        PreparedStatement update = mock(PreparedStatement.class);
+        ResultSet missing = mock(ResultSet.class);
+        when(exists.executeQuery()).thenReturn(missing);
+        when(insert.executeUpdate()).thenReturn(1);
+        when(update.executeUpdate()).thenReturn(1);
+        when(writeConnection.prepareStatement(anyString())).thenAnswer(call -> {
+            String sql = call.getArgument(0, String.class);
+            if (sql.startsWith("SELECT 1")) return exists;
+            if (sql.startsWith("INSERT")) return insert;
+            return update;
+        });
+        SqlUserSchema schema = SqlUserSchema.builder().column("Flag", "TINYINT(1)", DataType.BOOLEAN).build();
+        SqlUserStorage writer = new JdbcSqlUserStorage(UserStorage.MYSQL, UUID_VALUE, "Users", schema,
+                () -> writeConnection, JdbcSqlUserStorage.Dialect.MYSQL, SqlBackendLogger.NO_OP);
+        writer.write(UserStorage.MYSQL, "Flag", new DataValueBoolean(true));
+        verify(insert).setInt(2, 1);
+        verify(update).setInt(1, 1);
+
+        Connection readConnection = mock(Connection.class);
+        PreparedStatement read = mock(PreparedStatement.class);
+        ResultSet result = mock(ResultSet.class);
+        ResultSetMetaData metadata = mock(ResultSetMetaData.class);
+        when(readConnection.prepareStatement(anyString())).thenReturn(read);
+        when(read.executeQuery()).thenReturn(result);
+        when(result.next()).thenReturn(true);
+        when(result.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(1);
+        when(metadata.getColumnLabel(1)).thenReturn("Flag");
+        when(result.getInt(1)).thenReturn(1);
+        SqlUserStorage reader = new JdbcSqlUserStorage(UserStorage.MYSQL, UUID_VALUE, "Users", schema,
+                () -> readConnection, JdbcSqlUserStorage.Dialect.MYSQL, SqlBackendLogger.NO_OP);
+        assertTrue(reader.readRow(UserStorage.MYSQL).get(0).getValue().getBoolean());
     }
 
     @Test
