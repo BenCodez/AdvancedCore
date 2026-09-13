@@ -125,12 +125,9 @@ public final class SqliteUserBackend implements SqlUserBackend {
     @Override
     public void close() {
         if (operations.getReadHoldCount() != 0) throw new IllegalStateException("Cannot close SQLite from inside an active storage operation");
+        open.set(false);
         operations.writeLock().lock();
-        try {
-            open.set(false);
-        } finally {
-            operations.writeLock().unlock();
-        }
+        try { } finally { operations.writeLock().unlock(); }
     }
 
     private <T> T withOperation(Supplier<T> operation) {
@@ -191,6 +188,14 @@ public final class SqliteUserBackend implements SqlUserBackend {
     }
 
     private Connection openConnection() throws SQLException { requireOpen(); return DriverManager.getConnection("jdbc:sqlite:" + databaseFile.toAbsolutePath()); }
-    private void requireOpen() { if (!open.get()) throw new IllegalStateException("SQLite user backend is closed"); }
+
+    private void requireOpen() {
+        // A close marks the backend unavailable immediately to new callers, but an
+        // operation that already owns the read lock may finish nested JDBC work.
+        if (!open.get() && operations.getReadHoldCount() == 0) {
+            throw new IllegalStateException("SQLite user backend is closed");
+        }
+    }
+
     private static String quote(String identifier) { return JdbcSqlUserStorage.Dialect.SQLITE.quote(identifier); }
 }
