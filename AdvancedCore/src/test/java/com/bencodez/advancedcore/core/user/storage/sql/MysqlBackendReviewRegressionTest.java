@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
@@ -23,6 +24,22 @@ import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 
 /** Exercises real backend/SimpleAPI construction with mocked JDBC, not a live database. */
 class MysqlBackendReviewRegressionTest {
+    @Test void malformedUuidDiagnosticsAreBoundedAndValueFree() throws Exception {
+        Fixture fixture = new Fixture(DbType.MYSQL, "Points");
+        fixture.enumerationRows = List.of("private-one", "private-two");
+        List<String> warnings = new ArrayList<>();
+        SqlBackendLogger logger = new SqlBackendLogger() {
+            @Override public void info(String message) { }
+            @Override public void warn(String message, Throwable error) {
+                warnings.add(message + ":" + error.getMessage());
+            }
+        };
+        try (var managers = fixture.managers(); var backend = fixture.open(logger)) {
+            assertTrue(backend.enumerateUsers().isEmpty());
+        }
+        assertEquals(List.of("Skipping malformed UUID entries while enumerating SQL users; further diagnostics suppressed:Malformed SQL UUID value"), warnings);
+    }
+
     @Test void postgresRenamesCaseOnlyHistoricalColumnInsteadOfCreatingAParallelColumn() throws Exception {
         Fixture fixture = new Fixture(DbType.POSTGRESQL, "points");
         try (var managers = fixture.managers()) {
@@ -104,6 +121,7 @@ class MysqlBackendReviewRegressionTest {
         int uuidInspections, migrations;
         boolean competitorConverts;
         SQLException migrationFailure, reinspectionFailure;
+        List<String> enumerationRows = List.of();
 
         Fixture(DbType type, String storedColumn) {
             this.type = type;
@@ -120,6 +138,10 @@ class MysqlBackendReviewRegressionTest {
         }
 
         MysqlUserBackend open() {
+            return open(SqlBackendLogger.NO_OP);
+        }
+
+        MysqlUserBackend open(SqlBackendLogger logger) {
             MysqlConfig config = new MysqlConfig();
             config.setDbType(type);
             config.setDatabase("test_database");
@@ -127,7 +149,7 @@ class MysqlBackendReviewRegressionTest {
             config.setTableName("Users");
             config.setMaxThreads(1);
             return new MysqlUserBackend("Users", config, SqlUserSchema.builder()
-                    .column("Points", "INT DEFAULT '0'", DataType.INTEGER).build(), SqlBackendLogger.NO_OP);
+                    .column("Points", "INT DEFAULT '0'", DataType.INTEGER).build(), logger);
         }
 
         Connection connection() throws SQLException {
@@ -166,6 +188,10 @@ class MysqlBackendReviewRegressionTest {
                         when(metadata.getColumnCount()).thenReturn(2);
                         when(metadata.getColumnName(1)).thenReturn("uuid");
                         when(metadata.getColumnName(2)).thenReturn(storedColumn);
+                    } else if (sql.startsWith("SELECT `uuid` FROM")) {
+                        AtomicInteger row = new AtomicInteger();
+                        when(result.next()).thenAnswer(invocation -> row.get() < enumerationRows.size());
+                        when(result.getString(1)).thenAnswer(invocation -> enumerationRows.get(row.getAndIncrement()));
                     }
                     return result;
                 });

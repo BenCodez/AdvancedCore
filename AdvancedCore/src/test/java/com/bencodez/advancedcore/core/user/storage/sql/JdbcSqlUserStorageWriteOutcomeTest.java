@@ -17,6 +17,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -132,7 +133,9 @@ class JdbcSqlUserStorageWriteOutcomeTest {
             assertEquals(dialect == JdbcSqlUserStorage.Dialect.SQLITE ? 1 : 2, jdbc.sql.size());
             assertTrue(jdbc.sql.stream().noneMatch(sql -> sql.startsWith("UPDATE") || sql.contains("SET " + dialect.quote("uuid"))));
             if (dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL) verify(jdbc.insert).setObject(1, USER); else verify(jdbc.insert).setString(1, USER.toString());
-            verify(jdbc.insert).setInt(2, 17); verify(jdbc.connection).commit();
+            if (dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL) verify(jdbc.insert).setObject(2, "17", Types.OTHER);
+            else verify(jdbc.insert).setInt(2, 17);
+            verify(jdbc.connection).commit();
         }
     }
 
@@ -145,7 +148,7 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         HashMap<String, DataValue> values = new LinkedHashMap<>(); values.put("A", new DataValueInt(2)); values.put("B", new DataValueInt(2));
         user.writeValues(UserStorage.MYSQL, values);
         assertEquals(List.of("SELECT 1 FROM \"Users\" WHERE \"uuid\"=? LIMIT 1 FOR UPDATE", "UPDATE \"Users\" SET \"A\"=?, \"B\"=? WHERE \"uuid\"=?"), sql);
-        verify(statement).setInt(1, 2); verify(statement).setInt(2, 2); verify(statement).setObject(3, USER);
+        verify(statement).setObject(1, "2", Types.OTHER); verify(statement).setObject(2, "2", Types.OTHER); verify(statement).setObject(3, USER);
     }
 
     @Test void uuidOnlyBulkIsNoOpButExplicitIdentityMutationIsRejected() throws Exception {
@@ -160,7 +163,7 @@ class JdbcSqlUserStorageWriteOutcomeTest {
     @Test void postgresPartialUpdateDoesNotReinsertAnExistingRequiredColumnRow() throws Exception {
         Jdbc jdbc = new Jdbc(); ResultSet row = mock(ResultSet.class); when(row.next()).thenReturn(true); when(jdbc.update.executeQuery()).thenReturn(row);
         jdbc.user(UserStorage.MYSQL, JdbcSqlUserStorage.Dialect.POSTGRESQL).write(UserStorage.MYSQL, "Points", new DataValueInt(23));
-        assertTrue(jdbc.sql.stream().noneMatch(sql -> sql.startsWith("INSERT"))); verify(jdbc.update).setInt(1, 23); verify(jdbc.connection).commit(); verify(row).close();
+        assertTrue(jdbc.sql.stream().noneMatch(sql -> sql.startsWith("INSERT"))); verify(jdbc.update).setObject(1, "23", Types.OTHER); verify(jdbc.connection).commit(); verify(row).close();
     }
 
     private static final class Jdbc {

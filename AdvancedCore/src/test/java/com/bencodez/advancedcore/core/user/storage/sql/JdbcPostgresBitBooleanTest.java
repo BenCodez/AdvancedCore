@@ -12,6 +12,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -21,9 +22,30 @@ import org.junit.jupiter.api.Test;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.simpleapi.sql.DataType;
 import com.bencodez.simpleapi.sql.data.DataValueBoolean;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class JdbcPostgresBitBooleanTest {
     private static final UUID USER = UUID.fromString("51829cd0-c37c-45bf-9910-57914800e0a1");
+
+    @Test
+    void postgresIntegerBindingIsTargetTypedForLegacyTextColumns() throws Exception {
+        Connection connection = mock(Connection.class);
+        when(connection.getAutoCommit()).thenReturn(true);
+        PreparedStatement exists = mock(PreparedStatement.class);
+        PreparedStatement insert = mock(PreparedStatement.class);
+        ResultSet missing = mock(ResultSet.class);
+        when(exists.executeQuery()).thenReturn(missing);
+        when(connection.prepareStatement(anyString())).thenReturn(exists, insert);
+        when(insert.executeUpdate()).thenReturn(1);
+        SqlUserSchema schema = SqlUserSchema.builder().column("Points", "INT DEFAULT '0'", DataType.INTEGER).build();
+        JdbcSqlUserStorage storage = new JdbcSqlUserStorage(UserStorage.MYSQL, USER, "Users", schema,
+                () -> connection, JdbcSqlUserStorage.Dialect.POSTGRESQL, SqlBackendLogger.NO_OP);
+
+        storage.write(UserStorage.MYSQL, "Points", new DataValueInt(17));
+
+        verify(insert).setObject(2, "17", Types.OTHER);
+        verify(insert, never()).setInt(2, 17);
+    }
 
     @Test
     void postgresBitUsesExplicitBitCastAndStringBindingOnInsert() throws Exception {

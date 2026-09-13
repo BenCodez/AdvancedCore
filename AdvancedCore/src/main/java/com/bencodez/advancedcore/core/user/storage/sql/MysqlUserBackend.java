@@ -30,6 +30,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
     private final SqlBackendLogger logger;
     private final HeadlessUserTable table;
     private final AtomicBoolean open = new AtomicBoolean(true);
+    private final AtomicBoolean invalidUuidWarningLogged = new AtomicBoolean();
     private final ReentrantReadWriteLock operations = new ReentrantReadWriteLock(true);
     private volatile boolean tableClosed;
 
@@ -103,7 +104,12 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     if (value == null) continue;
                     UUID parsed = null;
                     try { parsed = UUID.fromString(value); }
-                    catch (IllegalArgumentException invalid) { logger.warn("Skipping invalid UUID in " + table.getTableName() + ": " + value, invalid); }
+                    catch (IllegalArgumentException invalid) {
+                        if (invalidUuidWarningLogged.compareAndSet(false, true)) {
+                            logger.warn("Skipping malformed UUID entries while enumerating SQL users; further diagnostics suppressed",
+                                    new IllegalArgumentException("Malformed SQL UUID value"));
+                        }
+                    }
                     page.add(new UserPageEntry(value, parsed));
                 }
             }
