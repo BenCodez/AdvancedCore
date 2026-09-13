@@ -195,12 +195,16 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
                     }
                 }
             }
-        } catch (SQLException | RuntimeException e) {
+        } catch (SQLException e) {
             if (committed) {
                 // The resource-close path must not make a durable batch retryable.
                 committedCleanupFailure("close SQL connection", e);
-            } else if (e instanceof SQLException sqlFailure) {
-                throw failure("write user values", sqlFailure);
+            } else {
+                throw failure("write user values", e);
+            }
+        } catch (RuntimeException e) {
+            if (committed) {
+                committedCleanupFailure("close SQL connection", e);
             } else {
                 throw e;
             }
