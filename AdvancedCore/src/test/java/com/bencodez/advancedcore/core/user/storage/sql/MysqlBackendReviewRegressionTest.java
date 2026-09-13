@@ -23,37 +23,29 @@ import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 
 /** Exercises real backend/SimpleAPI construction with mocked JDBC, not a live database. */
 class MysqlBackendReviewRegressionTest {
-    @Test void postgresAddsTheExactQuotedSpelling() throws Exception {
+    @Test void postgresRenamesCaseOnlyHistoricalColumnInsteadOfCreatingAParallelColumn() throws Exception {
         Fixture fixture = new Fixture(DbType.POSTGRESQL, "points");
         try (var managers = fixture.managers()) {
             try (var backend = fixture.open()) {
                 assertTrue(backend.isOpen());
-                assertEquals(1, fixture.adds.size());
-                assertTrue(fixture.adds.get(0).startsWith("ALTER TABLE \"Users\" ADD COLUMN \"Points\" "));
-                assertTrue(fixture.adds.get(0).contains("DEFAULT '0'"));
+                assertTrue(fixture.adds.isEmpty());
+                assertEquals(List.of("ALTER TABLE \"Users\" RENAME COLUMN \"points\" TO \"Points\";"), fixture.renames);
             }
             verify(managers.constructed().get(0)).close();
         }
         fixture.assertClosed();
     }
 
-    @Test void postgresDoesNotRecreateTheExactColumn() throws Exception {
-        existingSpelling(DbType.POSTGRESQL, "Points");
-    }
-
-    @Test void mysqlRetainsCaseInsensitiveColumnLookup() throws Exception {
-        existingSpelling(DbType.MYSQL, "points");
-    }
-
-    @Test void mariaDbRetainsCaseInsensitiveColumnLookup() throws Exception {
-        existingSpelling(DbType.MARIADB, "points");
-    }
+    @Test void postgresDoesNotRecreateTheExactColumn() throws Exception { existingSpelling(DbType.POSTGRESQL, "Points"); }
+    @Test void mysqlRetainsCaseInsensitiveColumnLookup() throws Exception { existingSpelling(DbType.MYSQL, "points"); }
+    @Test void mariaDbRetainsCaseInsensitiveColumnLookup() throws Exception { existingSpelling(DbType.MARIADB, "points"); }
 
     private void existingSpelling(DbType type, String name) throws Exception {
         Fixture fixture = new Fixture(type, name);
         try (var managers = fixture.managers(); var backend = fixture.open()) {
             assertTrue(backend.isOpen());
             assertTrue(fixture.adds.isEmpty());
+            assertTrue(fixture.renames.isEmpty());
         }
         fixture.assertClosed();
     }
@@ -104,6 +96,7 @@ class MysqlBackendReviewRegressionTest {
         final DbType type;
         final String storedColumn;
         final List<String> adds = new ArrayList<>();
+        final List<String> renames = new ArrayList<>();
         final List<Connection> connections = new ArrayList<>();
         final List<PreparedStatement> statements = new ArrayList<>();
         final List<ResultSet> results = new ArrayList<>();
@@ -112,10 +105,7 @@ class MysqlBackendReviewRegressionTest {
         boolean competitorConverts;
         SQLException migrationFailure, reinspectionFailure;
 
-        Fixture(DbType type, String storedColumn) {
-            this.type = type;
-            this.storedColumn = storedColumn;
-        }
+        Fixture(DbType type, String storedColumn) { this.type = type; this.storedColumn = storedColumn; }
 
         MockedConstruction<ConnectionManager> managers() {
             return mockConstruction(ConnectionManager.class, (manager, context) -> {
@@ -145,6 +135,7 @@ class MysqlBackendReviewRegressionTest {
                 statements.add(statement);
                 when(statement.executeUpdate()).thenAnswer(ignored -> {
                     if (sql.contains(" ADD COLUMN ")) adds.add(sql);
+                    if (sql.contains(" RENAME COLUMN ")) renames.add(sql);
                     if (sql.contains(" ALTER COLUMN ")) {
                         migrations++;
                         if (competitorConverts) uuidType = "uuid";
@@ -155,9 +146,7 @@ class MysqlBackendReviewRegressionTest {
                 });
                 when(statement.executeQuery()).thenAnswer(ignored -> {
                     boolean inspectUuid = sql.toLowerCase(Locale.ROOT).startsWith("select data_type,");
-                    if (inspectUuid && ++uuidInspections > 1 && reinspectionFailure != null) {
-                        throw reinspectionFailure;
-                    }
+                    if (inspectUuid && ++uuidInspections > 1 && reinspectionFailure != null) throw reinspectionFailure;
                     ResultSet result = mock(ResultSet.class);
                     results.add(result);
                     if (inspectUuid) {
@@ -180,7 +169,6 @@ class MysqlBackendReviewRegressionTest {
 
         void assertClosed() throws SQLException {
             for (Connection connection : connections) verify(connection).close();
-            // Existing SimpleAPI CREATE owns an idempotent, repeated statement close.
             for (PreparedStatement statement : statements) verify(statement, atLeastOnce()).close();
             for (ResultSet result : results) verify(result).close();
         }
