@@ -67,7 +67,6 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         manager.beginSharedBindingTransition();
         try {
             manager.bindSharedCacheInitializer(cacheInitializer);
-            // Publish the immutable legacy facade while legacy admission is closed.
             manager.bindSharedSqlBackend(backend, perUserGate);
             this.backend = backend;
             flushGate = gate;
@@ -106,13 +105,19 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     }
 
     private void bind(UserDataCache cache, UUID uuid) {
-        SqlUserBackend selected = backend;
-        if (selected != null) {
-            cache.configureSharedStorage(values -> {
-                requireBlockingAllowed();
-                selected.user(uuid).writeValues(selected.storageType(), values);
-            }, cacheGate(uuid));
-        }
+        if (backend == null) return;
+        // Do not capture the provider. Detached caches can outlive a replacement
+        // boundary before they are inserted into the manager map. Their writer is
+        // always invoked under the stable per-user lifecycle gate, then resolves
+        // whichever backend is current after that admission.
+        cache.configureSharedStorage(values -> {
+            requireBlockingAllowed();
+            SqlUserBackend selected = backend;
+            if (selected == null || !selected.isOpen()) {
+                throw new IllegalStateException("Shared SQL backend is unavailable");
+            }
+            selected.user(uuid).writeValues(selected.storageType(), values);
+        }, cacheGate(uuid));
     }
 
     @Override public void requireBlockingAllowed() {

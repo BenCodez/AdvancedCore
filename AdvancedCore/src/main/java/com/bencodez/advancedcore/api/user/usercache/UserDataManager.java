@@ -126,16 +126,26 @@ public class UserDataManager {
 
 	public final boolean hasSharedSqlBackend() { return sharedSqlRoute != null; }
 
-	/** Route one complete legacy SQL operation through one immutable backend/gate snapshot. */
+	/**
+	 * Route one complete legacy SQL operation through lifecycle admission. The gate
+	 * is captured only to enter the current runtime; the backend is resolved after
+	 * admission so a concurrent replacement cannot leave this call using the closed
+	 * provider that was current before it waited.
+	 */
 	public final <T> T withSharedSqlBackend(UUID uuid,
 			BiFunction<UserStorage, SqlUserStorage, T> operation) {
 		Objects.requireNonNull(uuid, "uuid");
 		Objects.requireNonNull(operation, "operation");
-		SharedSqlRoute route = sharedSqlRoute;
-		if (route == null) throw new IllegalStateException("Shared SQL backend is not bound");
+		SharedSqlRoute admission = sharedSqlRoute;
+		if (admission == null) throw new IllegalStateException("Shared SQL backend is not bound");
 		AtomicReference<T> result = new AtomicReference<>();
-		route.gate().accept(uuid, () -> {
-			SqlUserBackend selected = route.backend();
+		admission.gate().accept(uuid, () -> {
+			SharedSqlRoute current = sharedSqlRoute;
+			if (current == null) throw new IllegalStateException("Shared SQL backend is not bound");
+			if (current.gate() != admission.gate()) {
+				throw new IllegalStateException("Shared SQL lifecycle changed while waiting for admission");
+			}
+			SqlUserBackend selected = current.backend();
 			if (!selected.isOpen()) throw new IllegalStateException("Shared SQL backend is unavailable");
 			result.set(operation.apply(selected.storageType(), selected.user(uuid)));
 		});
