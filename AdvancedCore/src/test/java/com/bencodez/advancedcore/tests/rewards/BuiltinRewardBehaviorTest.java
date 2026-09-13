@@ -540,10 +540,10 @@ public class BuiltinRewardBehaviorTest {
             String selected = ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
                     random.getKeys(false), random, placeholders);
             assertEquals("OnlyItem", selected);
+            random.set("OnlyItem", null);
             random.createSection("OtherItem");
-            String replayed = ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
-                    java.util.Set.of("OtherItem"), random, placeholders);
-            assertEquals("OnlyItem", replayed);
+            assertThrows(IllegalStateException.class, () -> ((RewardInjectKeys) injects.get(0))
+                    .onRewardRequested(reward, user, java.util.Set.of("OtherItem"), random, placeholders));
             verify(user, atLeastOnce()).giveItem(any(ItemBuilder.class));
 
             injects.clear();

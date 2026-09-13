@@ -59,7 +59,11 @@ public final class RewardItems {
                 if (!section.isEmpty()) {
                     String item = Reward.replaySelection(placeholders,
                             () -> ArrayUtils.pickRandom(ArrayUtils.convert(section)));
-                    ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
+                    ConfigurationSection selected = data.getConfigurationSection(item);
+                    if (selected == null) {
+                        throw new IllegalStateException("Selected random item is no longer configured: " + item);
+                    }
+                    ItemBuilder builder = new ItemBuilder(selected);
                     builder.setCheckLoreLength(false);
                     user.giveItem(builder);
                     return item;
