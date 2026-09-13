@@ -123,8 +123,8 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             boolean transactionEnded = false;
             Throwable transactionFailure = null;
             try {
-                ensureRow(connection, updates);
-                updateValues(connection, updates);
+                boolean updateExistingRow = ensureRow(connection, updates);
+                if (updateExistingRow) updateValues(connection, updates);
                 connection.commit(); committed = true; transactionEnded = true;
             } catch (SQLException | RuntimeException | Error e) {
                 transactionFailure = e;
@@ -165,8 +165,9 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     }
     private static void suppress(Throwable primary, Throwable secondary) { if (primary != secondary) primary.addSuppressed(secondary); }
 
-    private void ensureRow(Connection connection, Map<String, DataValue> updates) throws SQLException {
-        if (dialect != Dialect.SQLITE && rowExists(connection)) return;
+    /** @return true when the row already existed and still needs the batch UPDATE. */
+    private boolean ensureRow(Connection connection, Map<String, DataValue> updates) throws SQLException {
+        if (dialect != Dialect.SQLITE && rowExists(connection)) return true;
         StringBuilder names = new StringBuilder(quote(SqlUserSchema.UUID_COLUMN));
         StringBuilder parameters = new StringBuilder("?");
         for (String key : updates.keySet()) { names.append(", ").append(quote(key)); parameters.append(", ?"); }
@@ -180,10 +181,12 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             for (Map.Entry<String, DataValue> entry : updates.entrySet()) bind(statement, index++, entry.getValue(), schema.column(entry.getKey()));
             inserted = statement.executeUpdate();
         } catch (SQLException insertFailure) {
-            if (dialect == Dialect.MYSQL && isDuplicateKey(insertFailure) && rowExists(connection)) return;
+            if (dialect == Dialect.MYSQL && isDuplicateKey(insertFailure) && rowExists(connection)) return true;
             throw insertFailure;
         }
-        if (inserted == 0 && !rowExists(connection)) throw new SQLException("SQL user row was not created");
+        if (inserted > 0) return false;
+        if (!rowExists(connection)) throw new SQLException("SQL user row was not created");
+        return true;
     }
 
     private boolean isDuplicateKey(SQLException failure) { return failure.getErrorCode() == 1062 || "23000".equals(failure.getSQLState()); }

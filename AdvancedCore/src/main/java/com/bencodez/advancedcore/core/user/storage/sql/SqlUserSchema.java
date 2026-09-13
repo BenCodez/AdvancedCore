@@ -22,12 +22,8 @@ public final class SqlUserSchema {
             Objects.requireNonNull(name, "name");
             Objects.requireNonNull(sqlType, "sqlType");
             Objects.requireNonNull(dataType, "dataType");
-            if (name.isBlank()) {
-                throw new IllegalArgumentException("Column name cannot be blank");
-            }
-            if (sqlType.isBlank()) {
-                throw new IllegalArgumentException("SQL type cannot be blank");
-            }
+            if (name.isBlank()) throw new IllegalArgumentException("Column name cannot be blank");
+            if (sqlType.isBlank()) throw new IllegalArgumentException("SQL type cannot be blank");
         }
     }
 
@@ -37,45 +33,32 @@ public final class SqlUserSchema {
         this.columnsByLowerName = Collections.unmodifiableMap(new LinkedHashMap<>(columnsByLowerName));
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
+    public static Builder builder() { return new Builder(); }
 
     public static SqlUserSchema fromKeys(Collection<? extends UserDataKey> keys) {
         Builder builder = builder();
         for (UserDataKey key : Objects.requireNonNull(keys, "keys")) {
             DataType type = DataType.STRING;
-            if (key instanceof UserDataKeyInt) {
-                type = DataType.INTEGER;
-            } else if (key instanceof UserDataKeyBoolean) {
-                type = DataType.BOOLEAN;
-            }
+            if (key instanceof UserDataKeyInt) type = DataType.INTEGER;
+            else if (key instanceof UserDataKeyBoolean) type = DataType.BOOLEAN;
             builder.column(key.getKey(), key.getColumnType(), type);
         }
         return builder.build();
     }
 
-    public List<ColumnDefinition> columns() {
-        return new ArrayList<>(columnsByLowerName.values());
-    }
+    public List<ColumnDefinition> columns() { return new ArrayList<>(columnsByLowerName.values()); }
 
     public ColumnDefinition column(String name) {
-        if (name == null) {
-            return null;
-        }
+        if (name == null) return null;
         return columnsByLowerName.get(name.toLowerCase(Locale.ROOT));
     }
 
-    public boolean contains(String name) {
-        return column(name) != null;
-    }
+    public boolean contains(String name) { return column(name) != null; }
 
     public static final class Builder {
         private final Map<String, ColumnDefinition> columns = new LinkedHashMap<>();
 
         private Builder() {
-            // Identity spelling/type is invariant. PostgreSQL quotes identifiers and
-            // therefore cannot tolerate a custom "UUID" replacing canonical "uuid".
             columns.put(UUID_COLUMN, new ColumnDefinition(UUID_COLUMN, "VARCHAR(37)", DataType.STRING));
         }
 
@@ -84,13 +67,15 @@ public final class SqlUserSchema {
             if (UUID_COLUMN.equalsIgnoreCase(name)) {
                 throw new IllegalArgumentException("Column name 'uuid' is reserved for user identity");
             }
-            ColumnDefinition definition = new ColumnDefinition(name, sqlType, dataType);
-            columns.put(name.toLowerCase(Locale.ROOT), definition);
+            String canonical = name.toLowerCase(Locale.ROOT);
+            ColumnDefinition existing = columns.get(canonical);
+            if (existing != null) {
+                throw new IllegalArgumentException("Duplicate SQL column name: " + name + " conflicts with " + existing.name());
+            }
+            columns.put(canonical, new ColumnDefinition(name, sqlType, dataType));
             return this;
         }
 
-        public SqlUserSchema build() {
-            return new SqlUserSchema(columns);
-        }
+        public SqlUserSchema build() { return new SqlUserSchema(columns); }
     }
 }

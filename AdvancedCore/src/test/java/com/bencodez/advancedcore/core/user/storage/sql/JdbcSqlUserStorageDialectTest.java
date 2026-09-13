@@ -35,8 +35,7 @@ import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 class JdbcSqlUserStorageDialectTest {
     private static final UUID UUID_VALUE = UUID.fromString("542b75a0-5333-4f44-828c-94676443cf5d");
 
-    @Test
-    void postgresqlQuotesIdentifiersAndBindsNativeUuidForEveryCrudOperation() throws Exception {
+    @Test void postgresqlNewRowUsesTheAtomicInsertWithoutARedundantUpdate() throws Exception {
         RecordingJdbc jdbc = new RecordingJdbc();
         SqlUserSchema schema = SqlUserSchema.builder().column("Vote \"Flag\"", "VARCHAR(5)", DataType.BOOLEAN).build();
         SqlUserStorage user = new JdbcSqlUserStorage(UserStorage.MYSQL, UUID_VALUE, "User \"Data\"", schema,
@@ -50,22 +49,18 @@ class JdbcSqlUserStorageDialectTest {
                 "SELECT 1 FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=? LIMIT 1",
                 "DELETE FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=?",
                 "SELECT 1 FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=? LIMIT 1 FOR UPDATE",
-                "INSERT INTO \"User \"\"Data\"\"\" (\"uuid\", \"Vote \"\"Flag\"\"\") VALUES (?, ?) ON CONFLICT (\"uuid\") DO NOTHING",
-                "UPDATE \"User \"\"Data\"\"\" SET \"Vote \"\"Flag\"\"\"=? WHERE \"uuid\"=?"), jdbc.sql);
+                "INSERT INTO \"User \"\"Data\"\"\" (\"uuid\", \"Vote \"\"Flag\"\"\") VALUES (?, ?) ON CONFLICT (\"uuid\") DO NOTHING"), jdbc.sql);
         for (int i = 0; i < 5; i++) {
             verify(jdbc.statements.get(i)).setObject(1, UUID_VALUE);
             verify(jdbc.statements.get(i), never()).setString(1, UUID_VALUE.toString());
         }
         verify(jdbc.statements.get(4)).setString(2, "true");
-        verify(jdbc.statements.get(5)).setString(1, "true");
-        verify(jdbc.statements.get(5)).setObject(2, UUID_VALUE);
         verify(jdbc.connection).commit();
         verify(jdbc.connection, times(4)).close();
         for (PreparedStatement statement : jdbc.statements) verify(statement).close();
     }
 
-    @Test
-    void mysqlAndMariaDbLockExistingRowsAndUseConstraintSafeInsert() throws Exception {
+    @Test void mysqlAndMariaDbNewRowsUseConstraintSafeInsertWithoutARedundantUpdate() throws Exception {
         for (DbType type : List.of(DbType.MYSQL, DbType.MARIADB)) {
             RecordingJdbc jdbc = new RecordingJdbc();
             SqlUserSchema schema = SqlUserSchema.builder().column("Vote `Flag`", "VARCHAR(5)", DataType.BOOLEAN).build();
@@ -74,41 +69,29 @@ class JdbcSqlUserStorageDialectTest {
             user.write(UserStorage.MYSQL, "Vote `Flag`", new DataValueBoolean(false));
             assertEquals(List.of(
                     "SELECT 1 FROM `User ``Data``` WHERE `uuid`=? LIMIT 1 FOR UPDATE",
-                    "INSERT INTO `User ``Data``` (`uuid`, `Vote ``Flag```) VALUES (?, ?)",
-                    "UPDATE `User ``Data``` SET `Vote ``Flag```=? WHERE `uuid`=?"), jdbc.sql);
+                    "INSERT INTO `User ``Data``` (`uuid`, `Vote ``Flag```) VALUES (?, ?)"), jdbc.sql);
             verify(jdbc.statements.get(0)).setString(1, UUID_VALUE.toString());
             verify(jdbc.statements.get(1)).setString(1, UUID_VALUE.toString());
             verify(jdbc.statements.get(1)).setString(2, "false");
-            verify(jdbc.statements.get(2)).setString(1, "false");
-            verify(jdbc.statements.get(2)).setString(2, UUID_VALUE.toString());
             verify(jdbc.connection).commit();
             verify(jdbc.connection).close();
         }
     }
 
-    @Test
-    void numericBooleanDefinitionsUseNumericJdbcBindingsAndReads() throws Exception {
+    @Test void numericBooleanDefinitionsUseNumericJdbcBindingsAndReads() throws Exception {
         Connection writeConnection = mock(Connection.class);
         when(writeConnection.getAutoCommit()).thenReturn(true);
         PreparedStatement exists = mock(PreparedStatement.class);
         PreparedStatement insert = mock(PreparedStatement.class);
-        PreparedStatement update = mock(PreparedStatement.class);
         ResultSet missing = mock(ResultSet.class);
         when(exists.executeQuery()).thenReturn(missing);
         when(insert.executeUpdate()).thenReturn(1);
-        when(update.executeUpdate()).thenReturn(1);
-        when(writeConnection.prepareStatement(anyString())).thenAnswer(call -> {
-            String sql = call.getArgument(0, String.class);
-            if (sql.startsWith("SELECT 1")) return exists;
-            if (sql.startsWith("INSERT")) return insert;
-            return update;
-        });
+        when(writeConnection.prepareStatement(anyString())).thenAnswer(call -> call.getArgument(0, String.class).startsWith("SELECT 1") ? exists : insert);
         SqlUserSchema schema = SqlUserSchema.builder().column("Flag", "TINYINT(1)", DataType.BOOLEAN).build();
         SqlUserStorage writer = new JdbcSqlUserStorage(UserStorage.MYSQL, UUID_VALUE, "Users", schema,
                 () -> writeConnection, JdbcSqlUserStorage.Dialect.MYSQL, SqlBackendLogger.NO_OP);
         writer.write(UserStorage.MYSQL, "Flag", new DataValueBoolean(true));
         verify(insert).setInt(2, 1);
-        verify(update).setInt(1, 1);
 
         Connection readConnection = mock(Connection.class);
         PreparedStatement read = mock(PreparedStatement.class);
@@ -126,20 +109,15 @@ class JdbcSqlUserStorageDialectTest {
         assertTrue(reader.readRow(UserStorage.MYSQL).get(0).getValue().getBoolean());
     }
 
-    @Test
-    void backendUsesConnectionManagerDialectAndExistingUuidSchemaType() throws Exception {
+    @Test void backendUsesConnectionManagerDialectAndExistingUuidSchemaType() throws Exception {
         for (DbType type : List.of(DbType.POSTGRESQL, DbType.MYSQL, DbType.MARIADB)) {
             RecordingJdbc jdbc = new RecordingJdbc();
             MysqlConfig config = new MysqlConfig();
-            config.setDbType(type);
-            config.setDatabase("test_database");
-            config.setMaxThreads(1);
-            config.setTablePrefix("prefix-");
-            config.setTableName("User Data");
+            config.setDbType(type); config.setDatabase("test_database"); config.setMaxThreads(1);
+            config.setTablePrefix("prefix-"); config.setTableName("User Data");
             try (MockedConstruction<ConnectionManager> managers = mockConstruction(ConnectionManager.class,
                     (manager, context) -> {
-                        when(manager.open()).thenReturn(true);
-                        when(manager.getDbType()).thenReturn(type);
+                        when(manager.open()).thenReturn(true); when(manager.getDbType()).thenReturn(type);
                         when(manager.getConnection()).thenReturn(jdbc.connection);
                     })) {
                 try (MysqlUserBackend backend = new MysqlUserBackend("ignored", config, SqlUserSchema.builder().build(), SqlBackendLogger.NO_OP)) {
@@ -154,14 +132,12 @@ class JdbcSqlUserStorageDialectTest {
                         verify(lookup).setString(1, UUID_VALUE.toString());
                     }
                 }
-                assertEquals(1, managers.constructed().size());
-                verify(managers.constructed().get(0)).close();
+                assertEquals(1, managers.constructed().size()); verify(managers.constructed().get(0)).close();
             }
         }
     }
 
-    @Test
-    void dialectRejectsInvalidIdentifiersWithoutRejectingQuotedNames() {
+    @Test void dialectRejectsInvalidIdentifiersWithoutRejectingQuotedNames() {
         for (JdbcSqlUserStorage.Dialect dialect : JdbcSqlUserStorage.Dialect.values()) {
             assertThrows(IllegalArgumentException.class, () -> dialect.quote(null));
             assertThrows(IllegalArgumentException.class, () -> dialect.quote(""));
@@ -175,15 +151,12 @@ class JdbcSqlUserStorageDialectTest {
         final Connection connection = mock(Connection.class);
         final List<String> sql = new ArrayList<>();
         final List<PreparedStatement> statements = new ArrayList<>();
-
         RecordingJdbc() throws SQLException {
             when(connection.getAutoCommit()).thenReturn(true);
             when(connection.prepareStatement(anyString())).thenAnswer(invocation -> {
                 sql.add(invocation.getArgument(0, String.class));
-                PreparedStatement statement = mock(PreparedStatement.class);
-                statements.add(statement);
-                when(statement.executeQuery()).thenReturn(mock(ResultSet.class));
-                when(statement.executeUpdate()).thenReturn(1);
+                PreparedStatement statement = mock(PreparedStatement.class); statements.add(statement);
+                when(statement.executeQuery()).thenReturn(mock(ResultSet.class)); when(statement.executeUpdate()).thenReturn(1);
                 return statement;
             });
         }
