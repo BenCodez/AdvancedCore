@@ -71,7 +71,7 @@ class MysqlConcurrentSchemaTest {
         final DbType type;
         final List<Connection> connections = new ArrayList<>();
         final List<PreparedStatement> statements = new ArrayList<>();
-        final List<PreparedStatement> legacyCreateStatements = new ArrayList<>();
+        final List<PreparedStatement> legacyStatements = new ArrayList<>();
         final List<ResultSet> results = new ArrayList<>();
         SQLException ddl;
         SQLException recheckFailure;
@@ -103,8 +103,8 @@ class MysqlConcurrentSchemaTest {
             when(connection.prepareStatement(anyString())).thenAnswer(call -> {
                 String sql = call.getArgument(0, String.class);
                 PreparedStatement statement = mock(PreparedStatement.class);
-                if (sql.startsWith("CREATE TABLE")) legacyCreateStatements.add(statement);
-                else statements.add(statement);
+                if (sql.contains(" ADD COLUMN ") || sql.endsWith("WHERE 1=0")) statements.add(statement);
+                else legacyStatements.add(statement);
                 when(statement.executeUpdate()).thenAnswer(ignored -> {
                     if (sql.contains(" ADD COLUMN ")) { adds++; throw ddl; }
                     return 0;
@@ -135,8 +135,9 @@ class MysqlConcurrentSchemaTest {
         void assertClosed() throws SQLException {
             for (Connection connection : connections) verify(connection).close();
             for (PreparedStatement statement : statements) verify(statement).close();
-            // Existing SimpleAPI Query closes CREATE explicitly and in its resource scope.
-            for (PreparedStatement statement : legacyCreateStatements) verify(statement, atLeastOnce()).close();
+            // SimpleAPI-owned statements (including connection setup) may close twice.
+            // Keep exactly-once assertions for this backend's inspection and ADD statements.
+            for (PreparedStatement statement : legacyStatements) verify(statement, atLeastOnce()).close();
             for (ResultSet result : results) verify(result).close();
         }
     }

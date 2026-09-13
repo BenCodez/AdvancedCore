@@ -50,7 +50,7 @@ class JdbcSqlUserStorageDialectTest {
                 "SELECT * FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=?",
                 "SELECT 1 FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=? LIMIT 1",
                 "DELETE FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=?",
-                "SELECT 1 FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=? LIMIT 1",
+                "SELECT 1 FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=? LIMIT 1 FOR UPDATE",
                 "INSERT INTO \"User \"\"Data\"\"\" (\"uuid\", \"Vote \"\"Flag\"\"\") VALUES (?, ?) ON CONFLICT (\"uuid\") DO NOTHING",
                 "UPDATE \"User \"\"Data\"\"\" SET \"Vote \"\"Flag\"\"\"=? WHERE \"uuid\"=?"), jdbc.sql);
         for (int i = 0; i < 5; i++) {
