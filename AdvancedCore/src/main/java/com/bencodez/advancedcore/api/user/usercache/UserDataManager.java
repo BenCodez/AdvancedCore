@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.api.user.usercache;
 
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,6 +41,29 @@ public class UserDataManager {
 
 	@Getter
 	private ConcurrentHashMap<UUID, UserDataCache> userDataCache;
+
+	private volatile Consumer<UserDataCache> sharedCacheInitializer;
+
+	/** One shared owner for the existing map, including caches created by legacy callers. */
+	public final synchronized void bindSharedCacheInitializer(Consumer<UserDataCache> initializer) {
+		Objects.requireNonNull(initializer, "initializer");
+		if (sharedCacheInitializer != null && sharedCacheInitializer != initializer) {
+			throw new IllegalStateException("User data manager already belongs to another shared runtime");
+		}
+		sharedCacheInitializer = initializer;
+	}
+
+	void initializeSharedCache(UserDataCache cache) {
+		Consumer<UserDataCache> initializer = sharedCacheInitializer;
+		if (initializer != null) {
+			// An old synchronized caller can race the initial attachment. Refuse
+			// that takeover rather than invert the runtime -> cache lock order.
+			if (Thread.holdsLock(cache)) {
+				throw new IllegalStateException("Cannot attach shared storage while holding the cache monitor");
+			}
+			initializer.accept(cache);
+		}
+	}
 
 	public UserDataManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;

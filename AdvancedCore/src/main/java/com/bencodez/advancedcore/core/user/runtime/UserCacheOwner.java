@@ -27,6 +27,12 @@ public interface UserCacheOwner {
     /** Bind scheduled writes to this provider; invoked before access and after a drained replacement. */
     default void bindBackend(SqlUserBackend backend) {}
 
+    /** Bind initial lifecycle state together. Stateful adapters override for atomic publication. */
+    default void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate) {
+        bindFlushGate(gate);
+        bindBackend(backend);
+    }
+
     /** Platform adapters reject blocking work on server/entity threads before acquiring any barrier. */
     default void requireBlockingAllowed() {}
 

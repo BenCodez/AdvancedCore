@@ -33,8 +33,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public SharedUserDataRuntime(SqlUserBackend backend, UserCacheOwner cacheOwner) {
         this.backend = Objects.requireNonNull(backend, "backend");
         this.cacheOwner = Objects.requireNonNull(cacheOwner, "cacheOwner");
-        cacheOwner.bindFlushGate(batch -> access(() -> { batch.run(); return null; }));
-        cacheOwner.bindBackend(backend);
+        cacheOwner.bindLifecycle(backend, batch -> access(() -> { batch.run(); return null; }));
     }
 
     public DataValue read(UUID uuid, String key, UserDataFetchMode mode,
@@ -51,7 +50,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             if (mode.allowUserCache()) {
                 DataValue cached = cacheOwner.getIfPresent(uuid, key);
                 if (cached != null) return cached;
-                if (mode.waitForCache() && !cacheOwner.isCached(uuid)) {
+                if (mode.allowStorageLookup() && mode.waitForCache() && !cacheOwner.isCached(uuid)) {
                     populateInternal(uuid);
                     cached = cacheOwner.getIfPresent(uuid, key);
                     if (cached != null) return cached;

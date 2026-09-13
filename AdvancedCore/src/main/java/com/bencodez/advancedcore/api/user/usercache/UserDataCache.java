@@ -40,7 +40,17 @@ public class UserDataCache {
 		cache = new HashMap<>();
 	}
 
+	private void initializeSharedStorage() {
+		synchronized (this) {
+			// Do not rebind a retired generation or replace an established owner.
+			if (sharedFlushGate != null || uuid == null || cachedChanges == null) return;
+		}
+		// The initializer may take the runtime gate: never call it under this monitor.
+		if (manager != null) manager.initializeSharedCache(this);
+	}
+
 	public void addChange(UserDataChange change, boolean queue) {
+		initializeSharedStorage();
 		Consumer<Runnable> gate;
 		synchronized (this) {
 			gate = sharedFlushGate;
@@ -105,6 +115,7 @@ public class UserDataCache {
 	}
 
 	public void clearCache() {
+		initializeSharedStorage();
 		Consumer<Runnable> gate;
 		synchronized (this) {
 			gate = sharedFlushGate;
@@ -218,6 +229,7 @@ public class UserDataCache {
 	}
 
 	public void processChanges() {
+		initializeSharedStorage();
 		processChangesInternal(false);
 	}
 

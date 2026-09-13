@@ -26,10 +26,17 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 public final class BukkitUserCacheOwner implements UserCacheOwner {
     private final UserDataManager manager;
     private volatile SqlUserBackend backend;
-    private Consumer<Runnable> flushGate;
+    private volatile Consumer<Runnable> flushGate;
+    private final Consumer<UserDataCache> cacheInitializer;
 
     public BukkitUserCacheOwner(UserDataManager manager) {
         this.manager = Objects.requireNonNull(manager, "manager");
+        cacheInitializer = cache -> {
+            Consumer<Runnable> gate;
+            synchronized (this) { gate = flushGate; }
+            if (gate == null) bind(cache, cache.getUuid());
+            else gate.accept(() -> bind(cache, cache.getUuid()));
+        };
     }
 
     @Override
@@ -42,9 +49,28 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     }
 
     @Override
-    public void bindBackend(SqlUserBackend backend) {
-        this.backend = Objects.requireNonNull(backend, "backend");
-        manager.getUserDataCache().forEach((uuid, cache) -> bind(cache, uuid));
+    public synchronized void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate) {
+        Objects.requireNonNull(backend, "backend");
+        Objects.requireNonNull(gate, "gate");
+        if (flushGate != null && flushGate != gate) {
+            throw new IllegalStateException("Cache owner already belongs to another runtime");
+        }
+        // Installation publishes no cache changes and runs no callbacks. A failed
+        // registration leaves this owner reusable; the callback takes this monitor
+        // before using the gate, so it cannot observe a half-published binding.
+        manager.bindSharedCacheInitializer(cacheInitializer);
+        this.backend = backend;
+        flushGate = gate;
+    }
+
+    @Override
+    public synchronized void bindBackend(SqlUserBackend backend) {
+        Objects.requireNonNull(backend, "backend");
+        manager.bindSharedCacheInitializer(cacheInitializer);
+        this.backend = backend;
+        // Existing legacy batches finish with their original writer. Binding is
+        // lazy and refuses an active legacy batch, leaving a reachable runtime
+        // whose flush/close can be retried instead of orphaning half-bound caches.
     }
 
     private void bind(UserDataCache cache, UUID uuid) {
@@ -102,6 +128,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     public void flush(UUID uuid, UserStorage type, SqlUserStorage storage) {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
         if (cache != null) {
+            bind(cache, uuid);
             cache.setSharedStorageWriter(values -> storage.writeValues(type, values));
             do {
                 // Includes the existing in-flight batch and its notifications before returning.
