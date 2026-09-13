@@ -78,6 +78,35 @@ class SharedCacheBindingRegressionTest {
         }
     }
 
+    @Test void preBindingCachePopulationBlocksSharedTransitionAdmission() throws Exception {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        UserDataManager manager = new UserDataManager(plugin);
+        manager.getTimer().shutdownNow();
+        UUID uuid = UUID.randomUUID();
+        CountDownLatch loading = new CountDownLatch(1), release = new CountDownLatch(1);
+        var data = plugin.getUserManager().getUser(uuid, false).getUserData();
+        when(data.getKeys()).thenReturn(new ArrayList<>());
+        when(data.getValues()).thenAnswer(call -> {
+            loading.countDown();
+            await(release);
+            return new HashMap<String, DataValue>();
+        });
+        var worker = Executors.newSingleThreadExecutor();
+        try {
+            var population = worker.submit(() -> manager.cacheUser(uuid, null));
+            await(loading);
+            assertThrows(IllegalStateException.class, manager::beginSharedBindingTransition);
+            release.countDown();
+            population.get(5, TimeUnit.SECONDS);
+            assertDoesNotThrow(manager::beginSharedBindingTransition);
+            manager.endSharedBindingTransition();
+        } finally {
+            release.countDown();
+            worker.shutdownNow();
+            assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+        }
+    }
+
     @Test void cachePopulationCannotPublishAfterBackendReplacementStarts() throws Exception {
         try (Fixture fixture = new Fixture()) {
             SharedUserDataRuntime runtime = fixture.runtime();
@@ -326,6 +355,23 @@ class SharedCacheBindingRegressionTest {
             assertFalse(fixture.manager.containsKey(fixture.uuid));
             assertThrows(IllegalStateException.class,
                     () -> cache.addChange(new UserDataChangeInt("Points", 2), true));
+            runtime.close();
+        }
+    }
+
+    @Test void managerDrivenRemovalEvictsTheOwnersPerUserGate() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            fixture.manager.getCache(fixture.uuid);
+            Field gatesField = BukkitUserCacheOwner.class.getDeclaredField("cacheGates");
+            gatesField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<UUID, ?> gates = (Map<UUID, ?>) gatesField.get(fixture.owner);
+            assertTrue(gates.containsKey(fixture.uuid));
+
+            fixture.manager.removeCache(fixture.uuid, null);
+
+            assertFalse(gates.containsKey(fixture.uuid));
             runtime.close();
         }
     }

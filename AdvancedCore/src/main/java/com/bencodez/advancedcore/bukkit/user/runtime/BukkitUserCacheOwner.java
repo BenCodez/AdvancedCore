@@ -33,6 +33,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     private volatile BiConsumer<UUID, Runnable> userGate;
     private volatile BiConsumer<UUID, Runnable> exclusiveUserGate;
     private final ConcurrentHashMap<UUID, Consumer<Runnable>> cacheGates = new ConcurrentHashMap<>();
+    private final Consumer<UUID> cacheRemovalListener = cacheGates::remove;
     private final Consumer<UserDataCache> cacheInitializer;
 
     public BukkitUserCacheOwner(UserDataManager manager) {
@@ -76,6 +77,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         manager.beginSharedBindingTransition();
         try {
             manager.bindSharedCacheInitializer(cacheInitializer);
+            manager.bindSharedCacheRemovalListener(cacheRemovalListener);
             manager.bindSharedSqlBackend(backend, perUserGate, perUserExclusiveGate);
             this.backend = backend;
             flushGate = gate;
@@ -98,6 +100,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     @Override public synchronized void bindBackend(SqlUserBackend backend) {
         Objects.requireNonNull(backend, "backend");
         manager.bindSharedCacheInitializer(cacheInitializer);
+        manager.bindSharedCacheRemovalListener(cacheRemovalListener);
         this.backend = backend;
         BiConsumer<UUID, Runnable> perUser = userGate;
         if (perUser != null) manager.bindSharedSqlBackend(backend, perUser,

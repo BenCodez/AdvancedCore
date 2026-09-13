@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.user.usercache;
 
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -39,6 +40,7 @@ public class UserDataManager {
 	@Getter private ConcurrentHashMap<UUID, UserDataCache> userDataCache;
 
 	private volatile Consumer<UserDataCache> sharedCacheInitializer;
+	private volatile Consumer<UUID> sharedCacheRemovalListener;
 	private volatile SharedSqlRoute sharedSqlRoute;
 	private final AtomicReference<Throwable> lastDeferredStorageFailure = new AtomicReference<>();
 	private final Object sharedBindingAdmission = new Object();
@@ -61,6 +63,15 @@ public class UserDataManager {
 			throw new IllegalStateException("User data manager already belongs to another shared runtime");
 		}
 		sharedCacheInitializer = initializer;
+	}
+
+	/** Register lifecycle cleanup for manager-driven cache eviction. */
+	public final synchronized void bindSharedCacheRemovalListener(Consumer<UUID> listener) {
+		Objects.requireNonNull(listener, "listener");
+		if (sharedCacheRemovalListener != null && sharedCacheRemovalListener != listener) {
+			throw new IllegalStateException("User data manager already belongs to another shared runtime");
+		}
+		sharedCacheRemovalListener = listener;
 	}
 
 	void initializeSharedCache(UserDataCache cache) {
@@ -187,7 +198,9 @@ public class UserDataManager {
 	private void withSharedCacheAdmission(UUID uuid, Runnable operation) {
 		SharedSqlRoute admission = sharedSqlRoute;
 		if (admission == null) {
-			operation.run();
+			beginLegacyCacheBatch();
+			try { operation.run(); }
+			finally { endLegacyCacheBatch(); }
 			return;
 		}
 		admission.gate().accept(uuid, () -> {
@@ -330,8 +343,11 @@ public class UserDataManager {
 
 	private void clearCacheNow() {
 		plugin.debug("Clearing cache: " + userDataCache.keySet().size());
+		Set<UUID> removed = new java.util.HashSet<>(userDataCache.keySet());
 		for (UserDataCache c : userDataCache.values()) { c.clearCache(); c.dump(); }
 		userDataCache.clear();
+		Consumer<UUID> listener = sharedCacheRemovalListener;
+		if (listener != null) removed.forEach(listener);
 	}
 
 	public void clearCacheBasic() {
@@ -388,8 +404,9 @@ public class UserDataManager {
 			cache.clearCache();
 			if (shared) cache.retireAfterSharedFlush();
 		}
-		if (cache == null) userDataCache.remove(uuid);
-		else userDataCache.remove(uuid, cache);
+		boolean removed = cache == null ? userDataCache.remove(uuid) != null : userDataCache.remove(uuid, cache);
+		Consumer<UUID> listener = sharedCacheRemovalListener;
+		if (removed && listener != null) listener.accept(uuid);
 	}
 
 	public void updateCacheOnline() {

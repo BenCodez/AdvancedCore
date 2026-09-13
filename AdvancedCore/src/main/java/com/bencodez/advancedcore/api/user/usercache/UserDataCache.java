@@ -186,9 +186,13 @@ public class UserDataCache {
 		recordSnapshotReplacement(); cache = null; cachedChanges = null; uuid = null; scheduled = false;
 	}
 
-	public void processChanges() { initializeSharedStorage(); processChangesInternal(false); }
+	public void processChanges() {
+		initializeSharedStorage();
+		Runnable notification = processChangesInternal(false);
+		if (notification != null) notification.run();
+	}
 
-	private void processChangesInternal(boolean admitted) {
+	private Runnable processChangesInternal(boolean admitted) {
 		UUID currentUuid = null;
 		Consumer<HashMap<String, DataValue>> writer = null;
 		Consumer<Runnable> gate;
@@ -206,7 +210,7 @@ public class UserDataCache {
 					}
 				}
 				currentUuid = uuid;
-				if (currentUuid == null || cachedChanges == null || cachedChanges.isEmpty()) return;
+				if (currentUuid == null || cachedChanges == null || cachedChanges.isEmpty()) return null;
 				if (writer == null && manager != null) {
 					manager.beginLegacyCacheBatch();
 					legacyAdmission = true;
@@ -226,7 +230,11 @@ public class UserDataCache {
 				if (writer != null) sharedBatchThread = Thread.currentThread();
 			}
 		}
-		if (gate != null) { gate.accept(() -> processChangesInternal(true)); return; }
+		if (gate != null) {
+			java.util.concurrent.atomic.AtomicReference<Runnable> notification = new java.util.concurrent.atomic.AtomicReference<>();
+			gate.accept(() -> notification.set(processChangesInternal(true)));
+			return notification.get();
+		}
 		boolean persisted = false;
 		AdvancedCoreUser changedUser = null;
 		String[] changedKeys = null;
@@ -249,10 +257,13 @@ public class UserDataCache {
 		}
 		// UserDataChanged callbacks may clear this cache. Do not expose the cache
 		// while its active shared batch marker is still set.
-		if (persisted) {
-			manager.getPlugin().getUserManager().onChange(changedUser, changedKeys);
+		if (!persisted) return null;
+		AdvancedCoreUser notifyUser = changedUser;
+		String[] notifyKeys = changedKeys;
+		return () -> {
+			manager.getPlugin().getUserManager().onChange(notifyUser, notifyKeys);
 			for (UserDataChange change : changes) change.dump();
-		}
+		};
 	}
 
 	private synchronized void requeueChanges(ArrayList<UserDataChange> changes) {

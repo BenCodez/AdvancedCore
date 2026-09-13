@@ -144,19 +144,18 @@ class SharedUserLifecycleRegressionTest {
     }
 
     @Test
-    void scheduledBatchAndNotificationAreInsideTheShutdownBarrier() throws Exception {
+    void scheduledBatchCompletesWithoutKeepingNotificationInsideTheShutdownBarrier() throws Exception {
         Fixture fixture = new Fixture();
         SharedUserDataRuntime runtime = fixture.runtime();
         CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
-        AtomicBoolean firstWrite = new AtomicBoolean(true), firstNotice = new AtomicBoolean(true);
+        AtomicBoolean firstWrite = new AtomicBoolean(true);
         fixture.first.beforeWrite = () -> {
             if (firstWrite.getAndSet(false)) { entered.countDown(); await(release); }
         };
         var userManager = fixture.plugin.getUserManager();
-        doAnswer(call -> {
-            if (firstNotice.getAndSet(false)) runtime.queueChange(fixture.uuid, "Points", new DataValueInt(8));
-            return null;
-        }).when(userManager).onChange(any(AdvancedCoreUser.class), any(String[].class));
+        CountDownLatch notified = new CountDownLatch(1);
+        doAnswer(call -> { notified.countDown(); return null; })
+                .when(userManager).onChange(any(AdvancedCoreUser.class), any(String[].class));
         runtime.queueChange(fixture.uuid, "Points", new DataValueInt(3));
         ExecutorService workers = Executors.newFixedThreadPool(2);
         try {
@@ -167,13 +166,29 @@ class SharedUserLifecycleRegressionTest {
             release.countDown();
             scheduled.get(5, TimeUnit.SECONDS);
             closed.get(5, TimeUnit.SECONDS);
-            assertEquals(8, fixture.first.points(fixture.uuid));
+            await(notified);
+            assertEquals(3, fixture.first.points(fixture.uuid));
             assertTrue(runtime.isClosed());
         } finally {
             release.countDown();
             workers.shutdownNow();
             assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
         }
+    }
+
+    @Test
+    void changeCallbackCanTakeExclusiveUserAdmissionForTheSameUuid() {
+        Fixture fixture = new Fixture();
+        SharedUserDataRuntime runtime = fixture.runtime();
+        runtime.queueChange(fixture.uuid, "Points", new DataValueInt(3));
+        UserDataCache cache = fixture.caches.get(fixture.uuid);
+        var userManager = fixture.plugin.getUserManager();
+        doAnswer(call -> { runtime.remove(fixture.uuid); return null; })
+                .when(userManager).onChange(any(AdvancedCoreUser.class), any(String[].class));
+
+        assertDoesNotThrow(cache::processChanges);
+        assertFalse(fixture.caches.containsKey(fixture.uuid));
+        runtime.close();
     }
 
     @Test
