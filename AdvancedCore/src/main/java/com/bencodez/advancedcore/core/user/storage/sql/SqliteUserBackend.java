@@ -28,7 +28,8 @@ public final class SqliteUserBackend implements SqlUserBackend {
             SqlUserSchema schema, SqlBackendLogger logger) {
         Objects.requireNonNull(dataDirectory, "dataDirectory");
         Objects.requireNonNull(databaseName, "databaseName");
-        this.tableName = requireIdentifier(tableName, "tableName");
+        quote(tableName); // Validate before opening the database; retain the original name.
+        this.tableName = tableName;
         this.schema = Objects.requireNonNull(schema, "schema");
         this.logger = logger == null ? SqlBackendLogger.NO_OP : logger;
         if (databaseName.isBlank() || databaseName.contains("/") || databaseName.contains("\\")) {
@@ -57,7 +58,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
     @Override
     public List<UUID> enumerateUsers() {
         requireOpen();
-        String sql = "SELECT `uuid` FROM `" + tableName + "`";
+        String sql = "SELECT " + quote(SqlUserSchema.UUID_COLUMN) + " FROM " + quote(tableName);
         ArrayList<UUID> users = new ArrayList<>();
         try (Connection connection = openConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
@@ -111,7 +112,8 @@ public final class SqliteUserBackend implements SqlUserBackend {
                 continue;
             }
             if (!hasColumn(column.name())) {
-                String sql = "ALTER TABLE `" + tableName + "` ADD COLUMN `" + column.name() + "` " + column.sqlType();
+                String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name())
+                        + " " + column.sqlType();
                 try (Connection connection = openConnection();
                         PreparedStatement statement = connection.prepareStatement(sql)) {
                     statement.executeUpdate();
@@ -121,7 +123,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
     }
 
     private boolean hasColumn(String name) throws SQLException {
-        String sql = "PRAGMA table_info(`" + tableName + "`)";
+        String sql = "PRAGMA table_info(" + quote(tableName) + ")";
         try (Connection connection = openConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
                 ResultSet result = statement.executeQuery()) {
@@ -135,16 +137,16 @@ public final class SqliteUserBackend implements SqlUserBackend {
     }
 
     private String createTableSql() {
-        StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS `").append(tableName).append("` (");
+        StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(quote(tableName)).append(" (");
         boolean first = true;
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
             if (!first) {
                 sql.append(", ");
             }
             first = false;
-            sql.append('`').append(column.name()).append("` ").append(column.sqlType());
+            sql.append(quote(column.name())).append(' ').append(column.sqlType());
         }
-        sql.append(", PRIMARY KEY (`uuid`))");
+        sql.append(", PRIMARY KEY (").append(quote(SqlUserSchema.UUID_COLUMN)).append("))");
         return sql.toString();
     }
 
@@ -159,11 +161,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
         }
     }
 
-    private static String requireIdentifier(String value, String label) {
-        Objects.requireNonNull(value, label);
-        if (!value.matches("[A-Za-z0-9_]+")) {
-            throw new IllegalArgumentException(label + " is not a safe SQL identifier: " + value);
-        }
-        return value;
+    private static String quote(String identifier) {
+        return JdbcSqlUserStorage.Dialect.SQLITE.quote(identifier);
     }
 }
