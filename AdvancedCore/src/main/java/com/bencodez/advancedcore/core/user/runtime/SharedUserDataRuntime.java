@@ -41,8 +41,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         cacheOwner.bindLifecycle(backend, lifecycleGate, perUserGate);
     }
 
-    public DataValue read(UUID uuid, String key, UserDataFetchMode mode,
-            HashMap<String, DataValue> temporaryCache, DataValue defaultValue) {
+    public DataValue read(UUID uuid, String key, UserDataFetchMode mode, HashMap<String, DataValue> temporaryCache, DataValue defaultValue) {
         Objects.requireNonNull(uuid, "uuid");
         return userAccess(uuid, () -> {
             Objects.requireNonNull(mode, "mode");
@@ -84,12 +83,13 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         return storageAccess(() -> {
             Objects.requireNonNull(consumer, "consumer");
             int[] count = { 0 };
-            backend.forEachUser(uuid -> userAccess(uuid, () -> {
-                HashMap<String, DataValue> values = populateCache ? populateInternal(uuid) : SqlUserDataAccess.convert(readStorageRow(uuid));
+            backend.forEachUser(uuid -> {
+                HashMap<String, DataValue> values = userAccess(uuid, () -> populateCache ? populateInternal(uuid) : SqlUserDataAccess.convert(readStorageRow(uuid)));
+                // External callbacks run after releasing the per-user read lock so they
+                // may safely remove or otherwise exclusively mutate this user.
                 consumer.accept(uuid, values);
                 count[0]++;
-                return null;
-            }));
+            });
             return count[0];
         });
     }

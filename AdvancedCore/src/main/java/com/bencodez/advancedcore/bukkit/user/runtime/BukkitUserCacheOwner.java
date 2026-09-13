@@ -66,11 +66,10 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         if (flushGate != null && flushGate != gate) throw new IllegalStateException("Cache owner already belongs to another runtime");
         if (userGate != null && userGate != perUserGate) throw new IllegalStateException("Cache owner already belongs to another runtime");
 
-        // Do not publish any replacement route until a legacy batch that already
-        // selected the old writer has completed.
-        for (UserDataCache cache : manager.getUserDataCache().values()) cache.awaitLegacyBatchesBeforeSharedBinding();
+        // Preflight before publishing anything. Active legacy batches are rejected
+        // immediately so runtime construction never blocks a lifecycle thread.
+        for (UserDataCache cache : manager.getUserDataCache().values()) cache.ensureNoLegacyBatchForSharedBinding();
 
-        // This can fail in integration code; keep owner fields unpublished until it succeeds.
         manager.bindSharedCacheInitializer(cacheInitializer);
         this.backend = backend;
         flushGate = gate;
@@ -145,18 +144,14 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 
     @Override
     public PopulationToken beginPopulation(UUID uuid) {
-        UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid,
-                ignored -> new UserDataCache(manager, uuid));
+        UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid, ignored -> new UserDataCache(manager, uuid));
         bind(cache, uuid);
         return new CachePopulation(uuid, cache, cache.getSharedSnapshotVersion());
     }
 
     @Override
-    public HashMap<String, DataValue> completePopulation(UUID uuid, HashMap<String, DataValue> values,
-            PopulationToken token) {
-        if (!(token instanceof CachePopulation expected) || !uuid.equals(expected.uuid())) {
-            throw new IllegalArgumentException("Population token does not belong to this user");
-        }
+    public HashMap<String, DataValue> completePopulation(UUID uuid, HashMap<String, DataValue> values, PopulationToken token) {
+        if (!(token instanceof CachePopulation expected) || !uuid.equals(expected.uuid())) throw new IllegalArgumentException("Population token does not belong to this user");
         AtomicReference<HashMap<String, DataValue>> populated = new AtomicReference<>();
         manager.getUserDataCache().compute(uuid, (ignored, current) -> {
             if (current != expected.cache()) throw new IllegalStateException("User cache changed while loading its database snapshot");
@@ -210,7 +205,6 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 
     @Override
     public void shutdown() {
-        // Keep the rejecting shared route installed until the manager itself is disposed.
         if (manager.getTimer() instanceof ScheduledThreadPoolExecutor timer) {
             timer.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
             timer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);

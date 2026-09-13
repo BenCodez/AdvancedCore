@@ -18,7 +18,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -199,7 +198,7 @@ class SharedCacheBindingRegressionTest {
         }
     }
 
-    @Test void attachmentWaitsForLegacyBatchBeforePublishingTheSharedRoute() throws Exception {
+    @Test void activeLegacyBatchRejectsAttachmentWithoutPublishingAndRetrySucceeds() throws Exception {
         try (Fixture fixture = new Fixture()) {
             UserDataCache cache = fixture.manager.getCache(fixture.uuid);
             cache.addChange(new UserDataChangeInt("Points", 1), true);
@@ -207,31 +206,25 @@ class SharedCacheBindingRegressionTest {
             var legacyData = cache.getUser().getUserData();
             doAnswer(call -> { entered.countDown(); await(release); return null; }).when(legacyData).setValues(any(HashMap.class));
             var legacyWorker = Executors.newSingleThreadExecutor();
-            var bindWorker = Executors.newSingleThreadExecutor();
             try {
                 var legacy = legacyWorker.submit(cache::processChanges);
                 await(entered);
-                var binding = bindWorker.submit(fixture::runtime);
-                assertThrows(TimeoutException.class, () -> binding.get(150, TimeUnit.MILLISECONDS));
+                assertThrows(IllegalStateException.class, fixture::runtime);
                 release.countDown();
                 legacy.get(5, TimeUnit.SECONDS);
-                SharedUserDataRuntime runtime = binding.get(5, TimeUnit.SECONDS);
+                SharedUserDataRuntime runtime = fixture.runtime();
                 cache.addChange(new UserDataChangeInt("Points", 14), true);
                 runtime.close();
                 assertEquals(14, fixture.first.points(fixture.uuid));
             } finally {
                 release.countDown();
                 legacyWorker.shutdownNow();
-                bindWorker.shutdownNow();
                 assertTrue(legacyWorker.awaitTermination(5, TimeUnit.SECONDS));
-                assertTrue(bindWorker.awaitTermination(5, TimeUnit.SECONDS));
             }
         }
     }
 
-    private static void await(CountDownLatch latch) throws InterruptedException {
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "batch did not reach the expected boundary");
-    }
+    private static void await(CountDownLatch latch) throws InterruptedException { assertTrue(latch.await(5, TimeUnit.SECONDS)); }
 
     private static final class Fixture implements AutoCloseable {
         final UUID uuid = UUID.randomUUID();

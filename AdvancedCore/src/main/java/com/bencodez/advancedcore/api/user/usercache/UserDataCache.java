@@ -61,7 +61,9 @@ public class UserDataCache {
 		}
 		if (change == null || cache == null || cachedChanges == null) return;
 		cache.put(change.getKey(), change.toUserDataValue());
-		if (sharedStorageWriter != null) changedAt.put(change.getKey(), ++snapshotVersion);
+		// Version every cache mutation, including legacy work before a shared writer
+		// is attached, so an overlapping storage refresh cannot overwrite it.
+		changedAt.put(change.getKey(), ++snapshotVersion);
 		if (queue) {
 			cachedChanges.add(change);
 			if (!scheduled) scheduleChanges();
@@ -148,14 +150,10 @@ public class UserDataCache {
 	public synchronized boolean hasChangesToProcess() { return cachedChanges != null && !cachedChanges.isEmpty(); }
 	public synchronized boolean isCached(String key) { return cache != null && cache.containsKey(key); }
 
-	public synchronized void awaitLegacyBatchesBeforeSharedBinding() {
-		if (sharedStorageWriter != null) return;
-		while (inFlightBatches > 0) {
-			try { wait(); }
-			catch (InterruptedException interrupted) {
-				Thread.currentThread().interrupt();
-				throw new IllegalStateException("Interrupted while draining legacy user batch", interrupted);
-			}
+	/** Fail-fast preflight: constructors must never wait for an old provider batch. */
+	public synchronized void ensureNoLegacyBatchForSharedBinding() {
+		if (sharedStorageWriter == null && inFlightBatches != 0) {
+			throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
 		}
 	}
 
