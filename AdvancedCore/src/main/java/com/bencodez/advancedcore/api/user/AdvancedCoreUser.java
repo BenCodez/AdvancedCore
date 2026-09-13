@@ -649,7 +649,11 @@ public class AdvancedCoreUser {
 	 * @param delay      the delay in milliseconds
 	 */
 	public void addPermission(String permission, long delay) {
-		plugin.getPermissionHandler().addPermission(getPlayer(), permission, delay);
+		Player player = getPlayer();
+		if (scheduleOwnedPlayerAction(player,
+				() -> plugin.getPermissionHandler().addPermission(player, permission, delay),
+				"temporary-permission:" + permission + ":" + delay)) return;
+		plugin.getPermissionHandler().addPermission(player, permission, delay);
 	}
 
 	/**

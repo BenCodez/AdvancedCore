@@ -1141,6 +1141,48 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void temporaryPermissionIsGrantedOnceAcrossReplayOfItsInjection() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isOnlineMode()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(config);
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		when(plugin.isEnabled()).thenReturn(true);
+		com.bencodez.advancedcore.api.permissions.PermissionHandler permissions =
+				mock(com.bencodez.advancedcore.api.permissions.PermissionHandler.class);
+		when(plugin.getPermissionHandler()).thenReturn(permissions);
+		UUID uuid = UUID.randomUUID();
+		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, uuid, false, false);
+		Player player = mock(Player.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class), eq(player));
+		RewardOptions options = new RewardOptions();
+		options.setAsyncReplayCheckpointConsumer(ignored -> { });
+		Reward.ReplayState replayState = Reward.replayStateFor(options);
+		HashMap<String, String> placeholders = new HashMap<>();
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			for (int attempt = 0; attempt < 2; attempt++) {
+				AdvancedCoreUser.AsyncActionCollection collection = realUser.beginAsyncActionCollection(
+						replayState, placeholders, "AsyncReward/TempPermission");
+				realUser.addPermission("advancedcore.replay", 90);
+				realUser.endAsyncActionCollection(collection).toCompletableFuture().join();
+			}
+		}
+
+		verify(permissions).addPermission(player, "advancedcore.replay", 90);
+	}
+
+	@Test
 	void serializedPersistedReplaysDoNotClaimUnscopedContinuationActions() throws Exception {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isOnlineMode()).thenReturn(true);
