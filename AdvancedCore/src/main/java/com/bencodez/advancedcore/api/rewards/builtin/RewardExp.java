@@ -34,7 +34,8 @@ public final class RewardExp {
                 user.giveExp(num);
                 return null;
             }
-		}.requiresPlayer().asPlaceholder("EXP").priority(100).addEditButton(
+		}.requiresPlayerWhen((data, placeholders) -> data.getInt("EXP", 0) != 0)
+				.asPlaceholder("EXP").priority(100).addEditButton(
                 new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueInventory("EXP") {
                     @Override
                     public void openInventory(ClickEvent clickEvent) {
@@ -57,7 +58,8 @@ public final class RewardExp {
                 user.giveExpLevels(num);
                 return null;
             }
-		}.requiresPlayer().asPlaceholder("EXP").priority(100).addEditButton(
+		}.requiresPlayerWhen((data, placeholders) -> data.getInt("EXPLevels", 0) != 0)
+				.asPlaceholder("EXP").priority(100).addEditButton(
                 new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueInventory("EXPLevels") {
                     @Override
                     public void openInventory(ClickEvent clickEvent) {

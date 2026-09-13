@@ -188,6 +188,15 @@ public class BuiltinRewardBehaviorTest {
 		assertTrue(inject.isPlayerRequiredFor(data, placeholders));
 	}
 
+	@Test
+	public void expScalarsRequireAnOnlinePlayerOnlyWhenNonZero() {
+		RewardExp.register(handler, plugin);
+		YamlConfiguration data = new YamlConfiguration();
+
+		assertScalarPlayerRequirement(injects.get(0), data, "EXP");
+		assertScalarPlayerRequirement(injects.get(1), data, "EXPLevels");
+	}
+
     @Test
     public void bossBarActuallySendsConfiguredBossBar() {
         RewardBossBar.register(handler, plugin);
@@ -773,6 +782,16 @@ public class BuiltinRewardBehaviorTest {
     private ConfigurationSection section(String name) {
         return new YamlConfiguration().createSection(name);
     }
+
+	private void assertScalarPlayerRequirement(RewardInject inject, YamlConfiguration data, String path) {
+		assertFalse(inject.isPlayerRequiredFor(data, placeholders), path + " is absent");
+		data.set(path, 0);
+		assertFalse(inject.isPlayerRequiredFor(data, placeholders), path + " is zero");
+		data.set(path, 1);
+		assertTrue(inject.isPlayerRequiredFor(data, placeholders), path + " is positive");
+		data.set(path, -1);
+		assertTrue(inject.isPlayerRequiredFor(data, placeholders), path + " is negative");
+	}
 
     @SuppressWarnings("unused")
     private RewardInject register(BiConsumer<RewardHandler, AdvancedCorePlugin> registrar) {
