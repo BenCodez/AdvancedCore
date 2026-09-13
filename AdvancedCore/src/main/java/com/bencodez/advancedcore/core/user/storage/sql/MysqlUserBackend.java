@@ -188,26 +188,23 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
         void ensureColumn(SqlUserSchema.ColumnDefinition column) {
             synchronized (checkColumnLock) {
-                // Inspect the actual table without reading user data. Unlike the legacy
-                // cache helper, inspection errors must abort initialization, not look
-                // like missing columns. Keep the same connection manager and quoting.
-                try (Connection connection = getMysql().getConnectionManager().getConnection()) {
-                    try (PreparedStatement statement = connection.prepareStatement(
-                            "SELECT * FROM " + quote(tableName) + " WHERE 1=0");
-                            ResultSet result = statement.executeQuery()) {
-                        ResultSetMetaData metadata = result.getMetaData();
-                        for (int i = 1; i <= metadata.getColumnCount(); i++) {
-                            if (column.name().equalsIgnoreCase(metadata.getColumnName(i))) {
-                                return;
-                            }
-                        }
-                    }
-                    // Preserve length, nullability and defaults exactly as CREATE does.
-                    // checkColumn(DataType) would replace these with TEXT or BIGINT.
+                try {
+                    if (hasRegisteredColumn(column.name())) return;
                     String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name())
                             + " " + normaliseTypeForDb(column.sqlType()) + ";";
-                    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    try (Connection connection = getMysql().getConnectionManager().getConnection();
+                            PreparedStatement statement = connection.prepareStatement(sql)) {
                         statement.executeUpdate();
+                    } catch (SQLException ddlFailure) {
+                        if (!isDuplicateColumn(ddlFailure)) throw ddlFailure;
+                        // Another server may have won the ADD race. Recheck once on
+                        // a new borrowed connection, after the failed DDL is cleaned up.
+                        try {
+                            if (!hasRegisteredColumn(column.name())) throw ddlFailure;
+                        } catch (SQLException inspectionFailure) {
+                            if (inspectionFailure != ddlFailure) ddlFailure.addSuppressed(inspectionFailure);
+                            throw ddlFailure;
+                        }
                     }
                     columns.add(column.name());
                     if (column.dataType() == DataType.INTEGER && !intColumns.contains(column.name())) {
@@ -217,6 +214,25 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     throw new IllegalStateException("Failed to initialize registered SQL column: " + column.name(), failure);
                 }
             }
+        }
+
+        private boolean hasRegisteredColumn(String name) throws SQLException {
+            // Never turn an unavailable schema inspection into a missing-column result.
+            try (Connection connection = getMysql().getConnectionManager().getConnection();
+                    PreparedStatement statement = connection.prepareStatement(
+                            "SELECT * FROM " + quote(tableName) + " WHERE 1=0");
+                    ResultSet result = statement.executeQuery()) {
+                ResultSetMetaData metadata = result.getMetaData();
+                for (int i = 1; i <= metadata.getColumnCount(); i++) {
+                    if (name.equalsIgnoreCase(metadata.getColumnName(i))) return true;
+                }
+                return false;
+            }
+        }
+
+        private boolean isDuplicateColumn(SQLException failure) {
+            return getDbType() == DbType.POSTGRESQL ? "42701".equals(failure.getSQLState())
+                    : failure.getErrorCode() == 1060 && "42S21".equals(failure.getSQLState());
         }
 
         String quote(String identifier) {

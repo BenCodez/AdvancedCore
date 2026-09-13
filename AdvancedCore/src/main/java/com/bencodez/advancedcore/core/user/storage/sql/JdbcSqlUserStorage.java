@@ -164,7 +164,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             boolean transactionEnded = false;
             Throwable transactionFailure = null;
             try {
-                ensureRow(connection);
+                ensureRow(connection, updates);
                 for (Map.Entry<String, DataValue> entry : updates.entrySet()) {
                     updateValue(connection, entry.getKey(), entry.getValue());
                 }
@@ -226,21 +226,52 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         }
     }
 
-    private void ensureRow(Connection connection) throws SQLException {
-        String sql;
-        if (dialect == Dialect.SQLITE) {
-            sql = "INSERT OR IGNORE INTO " + quote(tableName) + " (" + quote(SqlUserSchema.UUID_COLUMN)
-                    + ") VALUES (?)";
-        } else if (dialect == Dialect.POSTGRESQL) {
-            sql = "INSERT INTO " + quote(tableName) + " (" + quote(SqlUserSchema.UUID_COLUMN)
-                    + ") VALUES (?) ON CONFLICT (" + quote(SqlUserSchema.UUID_COLUMN) + ") DO NOTHING";
-        } else {
-            sql = "INSERT IGNORE INTO " + quote(tableName) + " (" + quote(SqlUserSchema.UUID_COLUMN)
-                    + ") VALUES (?)";
+    private void ensureRow(Connection connection, Map<String, DataValue> updates) throws SQLException {
+        Map<String, DataValue> initial = new LinkedHashMap<>();
+        for (Map.Entry<String, DataValue> entry : updates.entrySet()) {
+            String key = Objects.requireNonNull(entry.getKey(), "key");
+            SqlUserSchema.ColumnDefinition definition = schema.column(key);
+            if (definition == null) {
+                throw new IllegalArgumentException("Column is not registered in the SQL schema: " + key);
+            }
+            // Case aliases refer to one physical column, with the same last-wins
+            // order used by the following updates. Never add UUID metadata here.
+            initial.put(definition.name(), entry.getValue());
         }
+        // PostgreSQL checks NOT NULL before ON CONFLICT. An existing row can be
+        // updated without re-supplying all of its required columns.
+        if (dialect == Dialect.POSTGRESQL && rowExists(connection)) return;
+        StringBuilder names = new StringBuilder(quote(SqlUserSchema.UUID_COLUMN));
+        StringBuilder parameters = new StringBuilder("?");
+        for (String key : initial.keySet()) {
+            names.append(", ").append(quote(key));
+            parameters.append(", ?");
+        }
+        String prefix = dialect == Dialect.SQLITE ? "INSERT OR IGNORE INTO "
+                : dialect == Dialect.POSTGRESQL ? "INSERT INTO " : "INSERT IGNORE INTO ";
+        String sql = prefix + quote(tableName) + " (" + names + ") VALUES (" + parameters + ")";
+        if (dialect == Dialect.POSTGRESQL) {
+            sql += " ON CONFLICT (" + quote(SqlUserSchema.UUID_COLUMN) + ") DO NOTHING";
+        }
+        int inserted;
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             dialect.bindUuid(statement, 1, uuid);
-            statement.executeUpdate();
+            int index = 2;
+            for (DataValue value : initial.values()) bind(statement, index++, value);
+            inserted = statement.executeUpdate();
+        }
+        // OR IGNORE may reject a missing required field, not just a duplicate UUID.
+        // Do not acknowledge a batch when no row exists for its bound identity.
+        if (inserted == 0 && !rowExists(connection)) {
+            throw new SQLException("SQL user row was not created");
+        }
+    }
+
+    private boolean rowExists(Connection connection) throws SQLException {
+        String sql = "SELECT 1 FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=? LIMIT 1";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            dialect.bindUuid(statement, 1, uuid);
+            try (ResultSet result = statement.executeQuery()) { return result.next(); }
         }
     }
 

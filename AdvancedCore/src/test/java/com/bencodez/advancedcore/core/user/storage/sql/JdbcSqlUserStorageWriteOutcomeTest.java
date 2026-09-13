@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -167,7 +168,6 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         assertDoesNotThrow(() -> jdbc.write());
         assertEquals(List.of(logging), Arrays.asList(restore.getSuppressed()));
         verify(jdbc.connection).commit();
-        verify(jdbc.connection).close();
     }
 
     @Test
@@ -184,8 +184,8 @@ class JdbcSqlUserStorageWriteOutcomeTest {
             HashMap<String, DataValue> before = new HashMap<>(values);
             user.writeValues(type, values);
             assertEquals(before, values);
-            assertEquals(2, jdbc.sql.size());
-            assertFalse(jdbc.sql.get(1).contains("SET " + dialect.quote("uuid")));
+            assertEquals(dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL ? 3 : 2, jdbc.sql.size());
+            assertTrue(jdbc.sql.stream().noneMatch(sql -> sql.contains("SET " + dialect.quote("uuid"))));
             if (dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL) {
                 verify(jdbc.insert).setObject(1, USER);
                 verify(jdbc.update).setObject(2, USER);
@@ -193,6 +193,7 @@ class JdbcSqlUserStorageWriteOutcomeTest {
                 verify(jdbc.insert).setString(1, USER.toString());
                 verify(jdbc.update).setString(2, USER.toString());
             }
+            verify(jdbc.insert).setInt(2, 17);
             verify(jdbc.update).setInt(1, 17);
             verify(jdbc.connection).commit();
         }
@@ -214,6 +215,20 @@ class JdbcSqlUserStorageWriteOutcomeTest {
         verify(jdbc.connection, never()).commit();
     }
 
+    @Test
+    void postgresPartialUpdateDoesNotReinsertAnExistingRequiredColumnRow() throws Exception {
+        Jdbc jdbc = new Jdbc();
+        ResultSet row = mock(ResultSet.class);
+        when(row.next()).thenReturn(true);
+        when(jdbc.update.executeQuery()).thenReturn(row);
+        jdbc.user(UserStorage.MYSQL, JdbcSqlUserStorage.Dialect.POSTGRESQL)
+                .write(UserStorage.MYSQL, "Points", new DataValueInt(23));
+        assertTrue(jdbc.sql.stream().noneMatch(sql -> sql.startsWith("INSERT")));
+        verify(jdbc.update).setInt(1, 23);
+        verify(jdbc.connection).commit();
+        verify(row).close();
+    }
+
     private static final class Jdbc {
         final Connection connection = mock(Connection.class);
         final PreparedStatement insert = mock(PreparedStatement.class);
@@ -223,6 +238,8 @@ class JdbcSqlUserStorageWriteOutcomeTest {
 
         Jdbc() throws SQLException {
             when(connection.getAutoCommit()).thenReturn(true);
+            when(insert.executeUpdate()).thenReturn(1);
+            when(update.executeQuery()).thenReturn(mock(ResultSet.class));
             when(connection.prepareStatement(anyString())).thenAnswer(invocation -> {
                 String query = invocation.getArgument(0, String.class);
                 sql.add(query);

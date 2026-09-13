@@ -50,14 +50,16 @@ class JdbcSqlUserStorageDialectTest {
                 "SELECT * FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=?",
                 "SELECT 1 FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=? LIMIT 1",
                 "DELETE FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=?",
-                "INSERT INTO \"User \"\"Data\"\"\" (\"uuid\") VALUES (?) ON CONFLICT (\"uuid\") DO NOTHING",
+                "SELECT 1 FROM \"User \"\"Data\"\"\" WHERE \"uuid\"=? LIMIT 1",
+                "INSERT INTO \"User \"\"Data\"\"\" (\"uuid\", \"Vote \"\"Flag\"\"\") VALUES (?, ?) ON CONFLICT (\"uuid\") DO NOTHING",
                 "UPDATE \"User \"\"Data\"\"\" SET \"Vote \"\"Flag\"\"\"=? WHERE \"uuid\"=?"), jdbc.sql);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             verify(jdbc.statements.get(i)).setObject(1, UUID_VALUE);
             verify(jdbc.statements.get(i), never()).setString(1, UUID_VALUE.toString());
         }
-        verify(jdbc.statements.get(4)).setString(1, "true");
-        verify(jdbc.statements.get(4)).setObject(2, UUID_VALUE);
+        verify(jdbc.statements.get(4)).setString(2, "true");
+        verify(jdbc.statements.get(5)).setString(1, "true");
+        verify(jdbc.statements.get(5)).setObject(2, UUID_VALUE);
         verify(jdbc.connection).commit();
         verify(jdbc.connection, times(4)).close();
         for (PreparedStatement statement : jdbc.statements) verify(statement).close();
@@ -72,9 +74,10 @@ class JdbcSqlUserStorageDialectTest {
                     () -> jdbc.connection, JdbcSqlUserStorage.Dialect.fromDbType(type), SqlBackendLogger.NO_OP);
             user.write(UserStorage.MYSQL, "Vote `Flag`", new DataValueBoolean(false));
             assertEquals(List.of(
-                    "INSERT IGNORE INTO `User ``Data``` (`uuid`) VALUES (?)",
+                    "INSERT IGNORE INTO `User ``Data``` (`uuid`, `Vote ``Flag```) VALUES (?, ?)",
                     "UPDATE `User ``Data``` SET `Vote ``Flag```=? WHERE `uuid`=?"), jdbc.sql);
             verify(jdbc.statements.get(0)).setString(1, UUID_VALUE.toString());
+            verify(jdbc.statements.get(0)).setString(2, "false");
             verify(jdbc.statements.get(1)).setString(1, "false");
             verify(jdbc.statements.get(1)).setString(2, UUID_VALUE.toString());
             verify(jdbc.connection).commit();
@@ -141,6 +144,7 @@ class JdbcSqlUserStorageDialectTest {
                 PreparedStatement statement = mock(PreparedStatement.class);
                 statements.add(statement);
                 when(statement.executeQuery()).thenReturn(mock(ResultSet.class));
+                when(statement.executeUpdate()).thenReturn(1);
                 return statement;
             });
         }
