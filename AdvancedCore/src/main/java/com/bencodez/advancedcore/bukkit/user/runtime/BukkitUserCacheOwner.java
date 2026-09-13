@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.bukkit.Bukkit;
 
@@ -96,6 +97,35 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid, ignored -> new UserDataCache(manager, uuid));
         bind(cache, uuid);
         cache.updateCachePreservingPending(values);
+    }
+
+    private record CachePopulation(UUID uuid, UserDataCache cache, long version) implements PopulationToken {}
+
+    @Override
+    public PopulationToken beginPopulation(UUID uuid) {
+        UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid,
+                ignored -> new UserDataCache(manager, uuid));
+        bind(cache, uuid);
+        return new CachePopulation(uuid, cache, cache.getSharedSnapshotVersion());
+    }
+
+    @Override
+    public HashMap<String, DataValue> completePopulation(UUID uuid, HashMap<String, DataValue> values,
+            PopulationToken token) {
+        if (!(token instanceof CachePopulation expected) || !uuid.equals(expected.uuid())) {
+            throw new IllegalArgumentException("Population token does not belong to this user");
+        }
+        AtomicReference<HashMap<String, DataValue>> populated = new AtomicReference<>();
+        // This map/cache critical section contains no storage work. A replacement
+        // cache cannot accidentally receive a snapshot loaded for an older instance.
+        manager.getUserDataCache().compute(uuid, (ignored, current) -> {
+            if (current != expected.cache()) {
+                throw new IllegalStateException("User cache changed while loading its database snapshot");
+            }
+            populated.set(current.updateSharedSnapshot(values, expected.version()));
+            return current;
+        });
+        return populated.get();
     }
 
     @Override

@@ -15,6 +15,19 @@ public interface UserCacheOwner {
     boolean isCached(UUID uuid);
     DataValue getIfPresent(UUID uuid, String key);
     void populate(UUID uuid, HashMap<String, DataValue> values);
+
+    /** Opaque, operation-local snapshot token owned by the existing cache adapter. */
+    interface PopulationToken {}
+
+    /** Capture before flushing/loading so concurrent queued mutations can be retained. */
+    default PopulationToken beginPopulation(UUID uuid) { return null; }
+
+    /** Publish a database snapshot without overwriting mutations made since its token. */
+    default HashMap<String, DataValue> completePopulation(UUID uuid, HashMap<String, DataValue> values,
+            PopulationToken token) {
+        populate(uuid, values);
+        return values;
+    }
     void queueChange(UUID uuid, String key, DataValue value);
     void flush(UUID uuid, SqlUserStorage storage);
 

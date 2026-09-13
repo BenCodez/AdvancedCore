@@ -70,10 +70,10 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     private HashMap<String, DataValue> populateInternal(UUID uuid) {
+        UserCacheOwner.PopulationToken token = cacheOwner.beginPopulation(uuid);
         if (cacheOwner.isCached(uuid)) flushInternal(uuid);
         HashMap<String, DataValue> values = SqlUserDataAccess.convert(readStorageRow(uuid));
-        cacheOwner.populate(uuid, values);
-        return values;
+        return cacheOwner.completePopulation(uuid, values, token);
     }
 
     public int startupForEach(BiConsumer<UUID, HashMap<String, DataValue>> consumer, boolean populateCache) {

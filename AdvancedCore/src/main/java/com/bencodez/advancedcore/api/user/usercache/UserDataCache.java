@@ -22,6 +22,10 @@ public class UserDataCache {
 	@Getter private HashMap<String, DataValue> cache;
 	private Queue<UserDataChange> cachedChanges;
 	private final UserDataManager manager;
+	// Version metadata only; all user values stay in the existing cache.
+	private long snapshotVersion;
+	private long replacementVersion;
+	private final HashMap<String, Long> changedAt = new HashMap<>();
 	private boolean scheduled = false;
 	private int inFlightBatches = 0;
 	private volatile Consumer<HashMap<String, DataValue>> sharedStorageWriter;
@@ -57,6 +61,7 @@ public class UserDataCache {
 		}
 		if (change == null || cache == null || cachedChanges == null) return;
 		cache.put(change.getKey(), change.toUserDataValue());
+		if (sharedStorageWriter != null) changedAt.put(change.getKey(), ++snapshotVersion);
 		if (queue) {
 			cachedChanges.add(change);
 			if (!scheduled) scheduleChanges();
@@ -65,6 +70,7 @@ public class UserDataCache {
 
 	public synchronized UserDataCache cache() {
 		if (uuid != null && cache != null) {
+			recordSnapshotReplacement();
 			AdvancedCoreUser user = getUser();
 			ArrayList<String> keys = user.getUserData().getKeys();
 			HashMap<String, DataValue> data = user.getUserData().getValues();
@@ -96,11 +102,11 @@ public class UserDataCache {
 			gate = sharedFlushGate;
 			if (gate == null) {
 				if (hasChangesToProcess()) processChanges();
-				if (cache != null) cache.clear();
+				if (cache != null) { cache.clear(); recordSnapshotReplacement(); }
 				return;
 			}
 		}
-		gate.accept(() -> { processChanges(); synchronized (this) { if (cache != null) cache.clear(); } });
+		gate.accept(() -> { processChanges(); synchronized (this) { if (cache != null) { cache.clear(); recordSnapshotReplacement(); } } });
 	}
 
 	public void clearChanges() { if (hasChangesToProcess()) processChanges(); }
@@ -125,7 +131,7 @@ public class UserDataCache {
 					try { wait(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
 				}
 				if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
-				cache = null; cachedChanges = null; uuid = null; scheduled = false; return;
+				recordSnapshotReplacement(); cache = null; cachedChanges = null; uuid = null; scheduled = false; return;
 			}
 		}
 	}
@@ -149,7 +155,7 @@ public class UserDataCache {
 
 	public synchronized void retireAfterSharedFlush() {
 		if (inFlightBatches != 0 || (cachedChanges != null && !cachedChanges.isEmpty())) throw new IllegalStateException("Shared user cache has unflushed work");
-		cache = null; cachedChanges = null; uuid = null; scheduled = false;
+		recordSnapshotReplacement(); cache = null; cachedChanges = null; uuid = null; scheduled = false;
 	}
 
 	public void processChanges() { initializeSharedStorage(); processChangesInternal(false); }
@@ -228,6 +234,7 @@ public class UserDataCache {
 
 	public synchronized void updateCache(HashMap<String, DataValue> tempCache) {
 		cache = tempCache == null ? new HashMap<>() : new HashMap<>(tempCache);
+		recordSnapshotReplacement();
 	}
 
 	/** Merge a storage refresh without overwriting values that are queued or currently being persisted. */
@@ -238,5 +245,31 @@ public class UserDataCache {
 			for (UserDataChange change : cachedChanges) refreshed.put(change.getKey(), change.toUserDataValue());
 		}
 		cache = refreshed;
+		recordSnapshotReplacement();
+	}
+
+	public synchronized long getSharedSnapshotVersion() { return snapshotVersion; }
+
+	/** Merge only mutations newer than the load token, including already-flushed ones. */
+	public synchronized HashMap<String, DataValue> updateSharedSnapshot(HashMap<String, DataValue> values,
+			long expectedVersion) {
+		if (cache == null || uuid == null) throw new IllegalStateException("Shared user cache is retired");
+		if (expectedVersion < 0 || expectedVersion > snapshotVersion) {
+			throw new IllegalArgumentException("Invalid cache snapshot version");
+		}
+		// A later completed population or explicit full-cache refresh already won.
+		if (replacementVersion > expectedVersion) return new HashMap<>(cache);
+		HashMap<String, DataValue> merged = values == null ? new HashMap<>() : new HashMap<>(values);
+		changedAt.forEach((key, version) -> {
+			if (version > expectedVersion) merged.put(key, cache.get(key));
+		});
+		cache = merged;
+		recordSnapshotReplacement();
+		return new HashMap<>(cache);
+	}
+
+	private void recordSnapshotReplacement() {
+		replacementVersion = ++snapshotVersion;
+		changedAt.clear();
 	}
 }
