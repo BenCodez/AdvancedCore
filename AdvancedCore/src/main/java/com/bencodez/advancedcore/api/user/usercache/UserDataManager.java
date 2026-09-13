@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -39,6 +40,7 @@ public class UserDataManager {
 
 	private volatile Consumer<UserDataCache> sharedCacheInitializer;
 	private volatile SharedSqlRoute sharedSqlRoute;
+	private final AtomicReference<Throwable> lastDeferredStorageFailure = new AtomicReference<>();
 	private final Object sharedBindingAdmission = new Object();
 	private boolean sharedBindingTransition;
 	private int legacyBatches;
@@ -152,6 +154,44 @@ public class UserDataManager {
 		return result.get();
 	}
 
+	/**
+	 * Atomically chooses the shared route or admits one complete legacy provider
+	 * call. A binding transition cannot publish a replacement while the legacy
+	 * call is active.
+	 */
+	public final <T> T withSharedSqlBackendOrLegacy(UUID uuid,
+			BiFunction<UserStorage, SqlUserStorage, T> sharedOperation, Supplier<T> legacyOperation) {
+		Objects.requireNonNull(uuid, "uuid");
+		return withSharedSqlBackendOrLegacy(() -> uuid, sharedOperation, legacyOperation);
+	}
+
+	/**
+	 * Supplier overload keeps legacy string identifiers opaque until a shared route
+	 * is actually selected.
+	 */
+	public final <T> T withSharedSqlBackendOrLegacy(Supplier<UUID> uuid,
+			BiFunction<UserStorage, SqlUserStorage, T> sharedOperation, Supplier<T> legacyOperation) {
+		Objects.requireNonNull(uuid, "uuid");
+		Objects.requireNonNull(sharedOperation, "sharedOperation");
+		Objects.requireNonNull(legacyOperation, "legacyOperation");
+		boolean legacy;
+		synchronized (sharedBindingAdmission) {
+			legacy = sharedSqlRoute == null;
+			if (legacy) {
+				if (sharedBindingTransition) {
+					throw new IllegalStateException("Legacy user storage is retired by the shared runtime");
+				}
+				legacyBatches++;
+			}
+		}
+		if (!legacy) return withSharedSqlBackend(Objects.requireNonNull(uuid.get(), "uuid"), sharedOperation);
+		try {
+			return legacyOperation.get();
+		} finally {
+			endLegacyCacheBatch();
+		}
+	}
+
 	public UserDataManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
 		userDataCache = new ConcurrentHashMap<>();
@@ -212,10 +252,33 @@ public class UserDataManager {
 	boolean deferSharedStorageWork(Runnable task) {
 		Objects.requireNonNull(task, "task");
 		if (!hasSharedSqlBackend() || Bukkit.getServer() == null || !Bukkit.isPrimaryThread()) return false;
-		try { timer.execute(task); }
-		catch (RejectedExecutionException rejected) { if (plugin != null) plugin.debug(rejected); }
+		try {
+			timer.execute(() -> {
+				lastDeferredStorageFailure.set(null);
+				try {
+					task.run();
+				} catch (RuntimeException | Error failure) {
+					reportDeferredStorageFailure(failure);
+					throw failure;
+				}
+			});
+		}
+		catch (RejectedExecutionException rejected) {
+			reportDeferredStorageFailure(rejected);
+			throw rejected;
+		}
 		return true;
 	}
+
+	private void reportDeferredStorageFailure(Throwable failure) {
+		lastDeferredStorageFailure.set(failure);
+		if (plugin != null && plugin.getLogger() != null) {
+			plugin.getLogger().log(java.util.logging.Level.SEVERE, "Deferred user-cache cleanup failed", failure);
+		}
+	}
+
+	/** Last asynchronous cache-cleanup failure, retained for diagnosis and recovery. */
+	public Throwable getLastDeferredStorageFailure() { return lastDeferredStorageFailure.get(); }
 
 	public void clearCache() {
 		if (deferSharedStorageWork(this::clearCacheNow)) return;

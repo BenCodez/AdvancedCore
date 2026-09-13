@@ -2,12 +2,22 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
@@ -18,10 +28,87 @@ import com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserStorage;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SharedLegacyBackendRoutingTest {
+    @Test
+    void directLegacyCallCannotSlipIntoAnActiveBindingTransition() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserManager users = mock(UserManager.class);
+        UserDataManager manager = new UserDataManager(plugin);
+        MySQL legacy = mock(MySQL.class);
+        when(plugin.getUserManager()).thenReturn(users);
+        when(users.getDataManager()).thenReturn(manager);
+        when(plugin.getMysql()).thenReturn(legacy);
+        UUID uuid = UUID.randomUUID();
+        BukkitSqlUserStorage adapter = new BukkitSqlUserStorage(() -> plugin, uuid::toString);
+        manager.beginSharedBindingTransition();
+        try {
+            assertThrows(IllegalStateException.class, () -> adapter.contains(UserStorage.MYSQL));
+            verifyNoInteractions(legacy);
+        } finally {
+            manager.endSharedBindingTransition();
+            manager.getTimer().shutdownNow();
+        }
+    }
+
+	@Test
+	void managerPresentLegacyRoutePreservesOpaqueStringIdentifiers() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		MySQL legacy = mock(MySQL.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager);
+		when(plugin.getMysql()).thenReturn(legacy);
+		when(legacy.containsKey("legacy-user-key")).thenReturn(true);
+		try {
+			BukkitSqlUserStorage adapter = new BukkitSqlUserStorage(() -> plugin, () -> "legacy-user-key");
+			assertTrue(adapter.contains(UserStorage.MYSQL));
+			verify(legacy).containsKey("legacy-user-key");
+		} finally {
+			manager.getTimer().shutdownNow();
+		}
+	}
+
+    @Test
+    void directLegacyWriteIsAdmittedBeforeAReplacementCanBePublished() throws Exception {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserManager users = mock(UserManager.class);
+        UserDataManager manager = new UserDataManager(plugin);
+        MySQL legacy = mock(MySQL.class);
+        when(plugin.getUserManager()).thenReturn(users);
+        when(users.getDataManager()).thenReturn(manager);
+        when(plugin.getMysql()).thenReturn(legacy);
+        UUID uuid = UUID.randomUUID();
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            entered.countDown();
+            assertTrue(release.await(5, TimeUnit.SECONDS));
+            return null;
+        }).when(legacy).update(eq(uuid.toString()), eq("Points"), any(DataValue.class));
+        BukkitSqlUserStorage adapter = new BukkitSqlUserStorage(() -> plugin, uuid::toString);
+        var worker = Executors.newSingleThreadExecutor();
+        try {
+            var write = worker.submit(() -> adapter.write(UserStorage.MYSQL, "Points", new DataValueInt(1)));
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            assertThrows(IllegalStateException.class, manager::beginSharedBindingTransition);
+            release.countDown();
+            write.get(5, TimeUnit.SECONDS);
+            manager.beginSharedBindingTransition();
+            manager.endSharedBindingTransition();
+            verify(legacy).update(eq(uuid.toString()), eq("Points"), any(DataValue.class));
+        } finally {
+            release.countDown();
+            worker.shutdownNow();
+            manager.getTimer().shutdownNow();
+        }
+    }
+
     @Test
     void legacyAdapterUsesBoundReplacementBackendRegardlessOfPluginStorageType() {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
