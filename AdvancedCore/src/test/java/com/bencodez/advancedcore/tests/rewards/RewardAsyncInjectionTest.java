@@ -654,6 +654,33 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void timedOutPrimaryThreadHandoffCannotRunLateRewardSideEffects() throws Exception {
+		Reward shortTimeoutReward = new Reward("AsyncReward", data) {
+			@Override
+			protected long getServerThreadDispatchTimeoutMillis() {
+				return 25;
+			}
+		};
+		java.lang.reflect.Field pluginField = Reward.class.getDeclaredField("plugin");
+		pluginField.setAccessible(true);
+		pluginField.set(shortTimeoutReward, plugin);
+		ArgumentCaptor<Runnable> delayedTask = ArgumentCaptor.forClass(Runnable.class);
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			CompletionStage<Void> result = shortTimeoutReward.giveRewardAsync(user,
+					new RewardOptions().setCheckTimed(false).setIgnoreRequirements(true));
+
+			verify(scheduler).runTaskAsynchronously(eq(plugin), delayedTask.capture());
+			assertThrows(CompletionException.class, () -> result.toCompletableFuture().join());
+			delayedTask.getValue().run();
+			verify(pluginManager, never()).callEvent(any());
+		}
+	}
+
+	@Test
 	void durableReplayRetainsOccurrenceWhenRequirementEvaluationThrows() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isProcessRewards()).thenReturn(true);

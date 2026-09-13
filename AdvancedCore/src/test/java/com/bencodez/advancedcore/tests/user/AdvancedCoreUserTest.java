@@ -555,6 +555,35 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void failedTimedReplayReconcilesCachedSameOccurrenceBeforeRestoring() {
+		long due = System.currentTimeMillis() - 1_000;
+		String occurrence = UUID.randomUUID().toString();
+		String replaying = "VoteReward%asyncoccurrence%" + occurrence + "%placeholders%Server%pair%old";
+		String cached = "VoteReward%asyncoccurrence%" + occurrence
+				+ "%asyncprogress%2%asyncretry%3%placeholders%Server%pair%cached";
+		ArrayList<String> timed = new ArrayList<>(List.of(
+				replaying + "%ExecutionTime/%" + due,
+				cached + "%ExecutionTime/%" + (System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1))));
+		when(data.getStringList("TimedRewards", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(timed));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			timed.clear();
+			timed.addAll(invocation.getArgument(1));
+			return null;
+		}).when(data).setStringList(eq("TimedRewards"), any());
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(CompletableFuture.failedFuture(new IllegalStateException("temporary")));
+
+		user.checkDelayedTimedRewards();
+
+		assertEquals(1, timed.size());
+		assertTrue(timed.get(0).contains("%asyncoccurrence%" + occurrence));
+		assertTrue(timed.get(0).contains("%asyncprogress%2%"));
+		assertTrue(timed.get(0).contains("%asyncretry%4%"));
+		assertTrue(timed.get(0).contains("Server%pair%cached"));
+	}
+
+	@Test
 	void pendingAsyncOfflineReplayRemainsDurableAndIsNotDispatchedTwice() {
 		ArrayList<String> rewards = new ArrayList<>();
 		rewards.add("VoteReward%placeholders%Server%pair%server-a");

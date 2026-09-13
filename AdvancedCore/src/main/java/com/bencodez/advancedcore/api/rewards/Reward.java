@@ -1481,16 +1481,30 @@ public class Reward {
 		try {
 			RewardOptions requestedOptions = rewardOptions;
 			plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> {
+				CompletableFuture<Void> result = new CompletableFuture<>();
+				// Claim before invoking reward code. A timed-out task that Bukkit later
+				// runs must not produce side effects for a caller that already retries.
+				if (!handoff.complete(result)) return;
 				try {
-					handoff.complete(giveRewardAsyncOffPrimary(user, requestedOptions));
+					CompletionStage<Void> stage = giveRewardAsyncOffPrimary(user, requestedOptions);
+					if (stage == null) {
+						result.completeExceptionally(new IllegalStateException(
+								"Reward dispatch returned no completion stage"));
+						return;
+					}
+					stage.whenComplete((ignored, failure) -> {
+						if (failure == null) result.complete(null);
+						else result.completeExceptionally(failure);
+					});
 				} catch (Throwable failure) {
-					handoff.completeExceptionally(failure);
+					result.completeExceptionally(failure);
 				}
 			});
 		} catch (Throwable failure) {
 			handoff.completeExceptionally(failure);
 		}
-		return handoff.thenCompose(stage -> stage);
+		return handoff.orTimeout(getServerThreadDispatchTimeoutMillis(), TimeUnit.MILLISECONDS)
+				.thenCompose(stage -> stage);
 	}
 
 	private CompletionStage<Void> giveRewardAsyncOffPrimary(AdvancedCoreUser user, RewardOptions rewardOptions) {

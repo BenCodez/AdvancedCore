@@ -1330,13 +1330,28 @@ public class AdvancedCoreUser {
 		synchronized (plugin) {
 			ReplayClaims claims = replayClaims();
 			HashMap<String, Long> pending = getTimedRewards();
-			int retry = Math.min(8, asyncRetryCount(rewardEntry) + 1);
+			String occurrence = occurrenceId(stripTimedExecutionMarker(rewardEntry));
+			String restoredEntry = rewardEntry;
+			if (occurrence != null) {
+				for (String candidate : pending.keySet()) {
+					if (occurrence.equals(occurrenceId(stripTimedExecutionMarker(candidate)))) {
+						restoredEntry = candidate;
+						if (!candidate.equals(rewardEntry)) break;
+					}
+				}
+				pending.keySet().removeIf(candidate -> occurrence.equals(
+						occurrenceId(stripTimedExecutionMarker(candidate))));
+				claims.timed.removeIf(candidate -> occurrence.equals(
+						occurrenceId(stripTimedExecutionMarker(candidate))));
+			} else {
+				pending.remove(rewardEntry);
+				claims.timed.remove(rewardEntry);
+			}
+			int retry = Math.min(8, asyncRetryCount(restoredEntry) + 1);
 			long retryDelay = Math.min(TimeUnit.MINUTES.toMillis(5), TimeUnit.SECONDS.toMillis(1L << retry));
 			retryTime = System.currentTimeMillis() + retryDelay;
-			pending.remove(rewardEntry);
-			pending.put(withAsyncRetryCount(withAsyncReplayProgress(rewardEntry, failure), retry), retryTime);
+			pending.put(withAsyncRetryCount(withAsyncReplayProgress(restoredEntry, failure), retry), retryTime);
 			setTimedRewards(pending);
-			claims.timed.remove(rewardEntry);
 			releaseReplayClaimsIfEmpty(claims);
 		}
 		// A due entry restored after its original timer fired needs its own retry
