@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChange;
@@ -26,6 +27,9 @@ public class UserDataCache {
 	private final UserDataManager manager;
 	private boolean scheduled = false;
 	private int inFlightBatches = 0;
+	private volatile Consumer<HashMap<String, DataValue>> sharedStorageWriter;
+	private Thread sharedBatchThread;
+	private volatile Consumer<Runnable> sharedFlushGate;
 	@Getter
 	private UUID uuid;
 
@@ -36,7 +40,22 @@ public class UserDataCache {
 		cache = new HashMap<>();
 	}
 
-	public synchronized void addChange(UserDataChange change, boolean queue) {
+	public void addChange(UserDataChange change, boolean queue) {
+		Consumer<Runnable> gate;
+		synchronized (this) {
+			gate = sharedFlushGate;
+			if (gate == null) {
+				addChangeInternal(change, queue);
+				return;
+			}
+		}
+		gate.accept(() -> addChangeInternal(change, queue));
+	}
+
+	private synchronized void addChangeInternal(UserDataChange change, boolean queue) {
+		if (change != null && sharedStorageWriter != null && (cache == null || cachedChanges == null)) {
+			throw new IllegalStateException("Shared user cache is retired");
+		}
 		if (change == null || cache == null || cachedChanges == null) {
 			return;
 		}
@@ -85,19 +104,25 @@ public class UserDataCache {
 		return this;
 	}
 
-	public synchronized void clearCache() {
-		if (hasChangesToProcess()) {
+	public void clearCache() {
+		Consumer<Runnable> gate;
+		synchronized (this) {
+			gate = sharedFlushGate;
+			if (gate == null) {
+				if (hasChangesToProcess()) processChanges();
+				if (cache != null) cache.clear();
+				return;
+			}
+		}
+		// Acquire the runtime gate BEFORE the cache monitor, including legacy cleanup callers.
+		gate.accept(() -> {
 			processChanges();
-		}
-		if (cache != null) {
-			cache.clear();
-		}
+			synchronized (this) { if (cache != null) cache.clear(); }
+		});
 	}
 
-	public synchronized void clearChanges() {
-		if (hasChangesToProcess()) {
-			processChanges();
-		}
+	public void clearChanges() {
+		if (hasChangesToProcess()) processChanges();
 	}
 
 	public void displayCache() {
@@ -162,19 +187,78 @@ public class UserDataCache {
 		return cache != null && cache.containsKey(key);
 	}
 
+	/** Install the gate and destination together; never take over an active legacy batch. */
+	public synchronized void configureSharedStorage(Consumer<HashMap<String, DataValue>> writer,
+			Consumer<Runnable> gate) {
+		if (sharedFlushGate != null && sharedFlushGate != gate) {
+			throw new IllegalStateException("Shared user cache already belongs to another runtime");
+		}
+		if (sharedFlushGate == null && gate != null && inFlightBatches != 0) {
+			throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
+		}
+		setSharedStorageWriter(writer);
+		sharedFlushGate = gate;
+	}
+
+	/** Bind shared storage without replacing the queue or legacy notification hooks. */
+	public synchronized void setSharedStorageWriter(Consumer<HashMap<String, DataValue>> writer) {
+		if (uuid == null || cachedChanges == null) throw new IllegalStateException("Shared user cache is retired");
+		sharedStorageWriter = java.util.Objects.requireNonNull(writer, "writer");
+	}
+
+	/** Retire only after a successful drain; a racing write fails rather than disappearing. */
+	public synchronized void retireAfterSharedFlush() {
+		if (inFlightBatches != 0 || (cachedChanges != null && !cachedChanges.isEmpty())) {
+			throw new IllegalStateException("Shared user cache has unflushed work");
+		}
+		cache = null;
+		cachedChanges = null;
+		uuid = null;
+		scheduled = false;
+	}
+
 	public void processChanges() {
-		UUID currentUuid;
+		processChangesInternal(false);
+	}
+
+	private void processChangesInternal(boolean admitted) {
+		UUID currentUuid = null;
+		Consumer<HashMap<String, DataValue>> writer = null;
+		Consumer<Runnable> gate;
 		ArrayList<UserDataChange> changes = new ArrayList<>();
 		synchronized (this) {
-			currentUuid = uuid;
-			if (currentUuid == null || cachedChanges == null || cachedChanges.isEmpty()) {
-				return;
+			gate = admitted ? null : sharedFlushGate;
+			if (gate == null) {
+				writer = sharedStorageWriter;
+				if (writer != null) {
+					// Scheduled and explicit shared flushes serialize the SAME queue, including
+					// an earlier batch whose values have already been drained from it.
+					if (sharedBatchThread == Thread.currentThread()) {
+						throw new IllegalStateException("Cannot flush a shared cache from its own change notification");
+					}
+					while (inFlightBatches > 0) {
+						try { wait(); }
+						catch (InterruptedException interrupted) {
+							Thread.currentThread().interrupt();
+							throw new IllegalStateException("Interrupted while draining user changes", interrupted);
+						}
+					}
+				}
+				currentUuid = uuid;
+				if (currentUuid == null || cachedChanges == null || cachedChanges.isEmpty()) {
+					return;
+				}
+				UserDataChange change;
+				while ((change = cachedChanges.poll()) != null) {
+					changes.add(change);
+				}
+				inFlightBatches++;
+				if (writer != null) sharedBatchThread = Thread.currentThread();
 			}
-			UserDataChange change;
-			while ((change = cachedChanges.poll()) != null) {
-				changes.add(change);
-			}
-			inFlightBatches++;
+		}
+		if (gate != null) {
+			gate.accept(() -> processChangesInternal(true));
+			return;
 		}
 
 		boolean persisted = false;
@@ -188,7 +272,8 @@ public class UserDataCache {
 				keys.add(change.getKey());
 			}
 			if (!values.isEmpty()) {
-				user.getUserData().setValues(values);
+				if (writer == null) user.getUserData().setValues(values);
+				else writer.accept(values);
 			}
 			persisted = true;
 			manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(keys));
@@ -218,6 +303,7 @@ public class UserDataCache {
 	private synchronized void finishInFlightBatch() {
 		if (inFlightBatches > 0) {
 			inFlightBatches--;
+			if (sharedBatchThread == Thread.currentThread()) sharedBatchThread = null;
 		}
 		notifyAll();
 	}
