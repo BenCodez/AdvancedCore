@@ -31,6 +31,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     private volatile SqlUserBackend backend;
     private volatile Consumer<Runnable> flushGate;
     private volatile BiConsumer<UUID, Runnable> userGate;
+    private volatile BiConsumer<UUID, Runnable> exclusiveUserGate;
     private final ConcurrentHashMap<UUID, Consumer<Runnable>> cacheGates = new ConcurrentHashMap<>();
     private final Consumer<UserDataCache> cacheInitializer;
 
@@ -58,19 +59,28 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     @Override
     public synchronized void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate,
             BiConsumer<UUID, Runnable> perUserGate) {
+        bindLifecycle(backend, gate, perUserGate, perUserGate);
+    }
+
+    @Override
+    public synchronized void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate,
+            BiConsumer<UUID, Runnable> perUserGate, BiConsumer<UUID, Runnable> perUserExclusiveGate) {
         Objects.requireNonNull(backend, "backend");
         Objects.requireNonNull(gate, "gate");
         Objects.requireNonNull(perUserGate, "perUserGate");
+        Objects.requireNonNull(perUserExclusiveGate, "perUserExclusiveGate");
         if (flushGate != null && flushGate != gate) throw new IllegalStateException("Cache owner already belongs to another runtime");
         if (userGate != null && userGate != perUserGate) throw new IllegalStateException("Cache owner already belongs to another runtime");
+        if (exclusiveUserGate != null && exclusiveUserGate != perUserExclusiveGate) throw new IllegalStateException("Cache owner already belongs to another runtime");
 
         manager.beginSharedBindingTransition();
         try {
             manager.bindSharedCacheInitializer(cacheInitializer);
-            manager.bindSharedSqlBackend(backend, perUserGate);
+            manager.bindSharedSqlBackend(backend, perUserGate, perUserExclusiveGate);
             this.backend = backend;
             flushGate = gate;
             userGate = perUserGate;
+            exclusiveUserGate = perUserExclusiveGate;
             cacheGates.clear();
         } finally {
             manager.endSharedBindingTransition();
@@ -80,7 +90,9 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     @Override public synchronized void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate) {
         BiConsumer<UUID, Runnable> existing = userGate;
         if (existing == null) existing = (uuid, operation) -> gate.accept(operation);
-        bindLifecycle(backend, gate, existing);
+        BiConsumer<UUID, Runnable> exclusive = exclusiveUserGate;
+        if (exclusive == null) exclusive = existing;
+        bindLifecycle(backend, gate, existing, exclusive);
     }
 
     @Override public synchronized void bindBackend(SqlUserBackend backend) {
@@ -88,7 +100,8 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         manager.bindSharedCacheInitializer(cacheInitializer);
         this.backend = backend;
         BiConsumer<UUID, Runnable> perUser = userGate;
-        if (perUser != null) manager.bindSharedSqlBackend(backend, perUser);
+        if (perUser != null) manager.bindSharedSqlBackend(backend, perUser,
+                exclusiveUserGate == null ? perUser : exclusiveUserGate);
         else if (flushGate != null) manager.bindSharedSqlBackend(backend, flushGate);
     }
 

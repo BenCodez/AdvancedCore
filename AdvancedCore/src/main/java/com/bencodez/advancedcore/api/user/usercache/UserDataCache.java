@@ -228,6 +228,8 @@ public class UserDataCache {
 		}
 		if (gate != null) { gate.accept(() -> processChangesInternal(true)); return; }
 		boolean persisted = false;
+		AdvancedCoreUser changedUser = null;
+		String[] changedKeys = null;
 		try {
 			manager.getPlugin().extraDebug("Processing changes for " + currentUuid + ", Changes: " + changes.size());
 			AdvancedCoreUser user = manager.getPlugin().getUserManager().getUser(currentUuid, false);
@@ -236,14 +238,20 @@ public class UserDataCache {
 			for (UserDataChange change : changes) { values.put(change.getKey(), change.toUserDataValue()); keys.add(change.getKey()); }
 			if (!values.isEmpty()) { if (writer == null) user.getUserData().setValues(values); else writer.accept(values); }
 			persisted = true;
-			manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(keys));
-			for (UserDataChange change : changes) change.dump();
+			changedUser = user;
+			changedKeys = ArrayUtils.convert(keys);
 		} catch (RuntimeException | Error e) {
 			if (!persisted) requeueChanges(changes);
 			throw e;
 		} finally {
 			finishInFlightBatch();
 			if (legacyAdmission) manager.endLegacyCacheBatch();
+		}
+		// UserDataChanged callbacks may clear this cache. Do not expose the cache
+		// while its active shared batch marker is still set.
+		if (persisted) {
+			manager.getPlugin().getUserManager().onChange(changedUser, changedKeys);
+			for (UserDataChange change : changes) change.dump();
 		}
 	}
 

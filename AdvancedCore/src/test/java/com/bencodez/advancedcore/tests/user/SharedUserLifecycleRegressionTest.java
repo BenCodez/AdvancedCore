@@ -177,6 +177,24 @@ class SharedUserLifecycleRegressionTest {
     }
 
     @Test
+    void callbackCanClearTheCacheAfterItsSharedBatchCompletes() {
+        Fixture fixture = new Fixture();
+        SharedUserDataRuntime runtime = fixture.runtime();
+        runtime.queueChange(fixture.uuid, "Points", new DataValueInt(3));
+        UserDataCache cache = fixture.caches.get(fixture.uuid);
+        var userManager = fixture.plugin.getUserManager();
+        doAnswer(call -> {
+            cache.clearCache();
+            return null;
+        }).when(userManager).onChange(any(AdvancedCoreUser.class), any(String[].class));
+
+        assertDoesNotThrow(cache::processChanges);
+        assertTrue(cache.getCache().isEmpty());
+
+        runtime.close();
+    }
+
+    @Test
     void blockingCloseIsRejectedOnServerThreadButAsyncCloseDoesNotWaitThere() {
         Fixture fixture = new Fixture();
         SharedUserDataRuntime runtime = fixture.runtime();

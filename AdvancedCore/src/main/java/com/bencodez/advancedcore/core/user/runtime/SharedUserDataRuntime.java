@@ -38,7 +38,8 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         this.cacheOwner = Objects.requireNonNull(cacheOwner, "cacheOwner");
         Consumer<Runnable> lifecycleGate = batch -> access(() -> { batch.run(); return null; });
         BiConsumer<UUID, Runnable> perUserGate = (uuid, batch) -> userAccess(uuid, () -> { batch.run(); return null; });
-        cacheOwner.bindLifecycle(backend, lifecycleGate, perUserGate);
+        BiConsumer<UUID, Runnable> exclusiveUserGate = (uuid, batch) -> userExclusiveAccess(uuid, () -> { batch.run(); return null; });
+        cacheOwner.bindLifecycle(backend, lifecycleGate, perUserGate, exclusiveUserGate);
     }
 
     public DataValue read(UUID uuid, String key, UserDataFetchMode mode, HashMap<String, DataValue> temporaryCache, DataValue defaultValue) {

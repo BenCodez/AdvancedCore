@@ -48,6 +48,12 @@ public interface UserCacheOwner {
         bindLifecycle(backend, gate);
     }
 
+    /** Also supplies exclusive per-user admission for legacy cache removal. */
+    default void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate,
+            BiConsumer<UUID, Runnable> userGate, BiConsumer<UUID, Runnable> exclusiveUserGate) {
+        bindLifecycle(backend, gate, userGate);
+    }
+
     default void requireBlockingAllowed() {}
 
     Set<UUID> cachedUsers();

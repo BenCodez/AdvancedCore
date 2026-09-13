@@ -43,6 +43,78 @@ class SharedCacheBindingRegressionTest {
     @Test void cacheOnlyMissDoesNotLoadOrPopulate() { cacheMiss(UserDataFetchMode.CACHE_ONLY); }
     @Test void temporaryOnlyMissDoesNotLoadOrPopulate() { cacheMiss(UserDataFetchMode.TEMP_ONLY); }
 
+    @Test void legacyCachePopulationPublishesOnlyAfterSharedAdmission() throws Exception {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        UserDataManager manager = new UserDataManager(plugin);
+        manager.getTimer().shutdownNow();
+        UUID uuid = UUID.randomUUID();
+        var data = plugin.getUserManager().getUser(uuid, false).getUserData();
+        when(data.getKeys()).thenReturn(new ArrayList<>());
+        when(data.getValues()).thenReturn(new HashMap<>());
+        SqlUserBackend backend = mock(SqlUserBackend.class);
+        CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
+        manager.bindSharedSqlBackend(backend, (id, operation) -> {
+            entered.countDown();
+            try {
+                await(release);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(interrupted);
+            }
+            operation.run();
+        });
+        var worker = Executors.newSingleThreadExecutor();
+        try {
+            var population = worker.submit(() -> manager.cacheUser(uuid, null));
+            await(entered);
+            assertFalse(manager.containsKey(uuid), "a detached snapshot must not be published before admission");
+            release.countDown();
+            population.get(5, TimeUnit.SECONDS);
+            assertTrue(manager.containsKey(uuid));
+        } finally {
+            release.countDown();
+            worker.shutdownNow();
+            assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test void cachePopulationCannotPublishAfterBackendReplacementStarts() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            CountDownLatch loading = new CountDownLatch(1), release = new CountDownLatch(1);
+            var data = fixture.plugin.getUserManager().getUser(fixture.uuid, false).getUserData();
+            doAnswer(call -> {
+                loading.countDown();
+                try {
+                    await(release);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(interrupted);
+                }
+                return new HashMap<String, DataValue>();
+            }).when(data).getValues();
+            MemoryBackend replacement = new MemoryBackend(UserStorage.SQLITE);
+            var workers = Executors.newFixedThreadPool(2);
+            try {
+                var population = workers.submit(() -> fixture.manager.cacheUser(fixture.uuid, null));
+                await(loading);
+                var replacementTask = workers.submit(() -> runtime.replaceBackend(replacement));
+                assertThrows(java.util.concurrent.TimeoutException.class,
+                        () -> replacementTask.get(200, TimeUnit.MILLISECONDS));
+                release.countDown();
+                population.get(5, TimeUnit.SECONDS);
+                replacementTask.get(5, TimeUnit.SECONDS);
+                assertFalse(fixture.manager.containsKey(fixture.uuid));
+                assertFalse(fixture.first.isOpen());
+            } finally {
+                release.countDown();
+                workers.shutdownNow();
+                assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
+            }
+            runtime.close();
+        }
+    }
+
     private void cacheMiss(UserDataFetchMode mode) {
         SqlUserBackend backend = mock(SqlUserBackend.class);
         UserCacheOwner owner = mock(UserCacheOwner.class);
@@ -221,6 +293,40 @@ class SharedCacheBindingRegressionTest {
                 legacyWorker.shutdownNow();
                 assertTrue(legacyWorker.awaitTermination(5, TimeUnit.SECONDS));
             }
+        }
+    }
+
+    @Test void legacyRemovalUsesTheExclusiveSharedAdmission() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserDataManager manager = new UserDataManager(plugin);
+        manager.getTimer().shutdownNow();
+        UUID uuid = UUID.randomUUID();
+        UserDataCache cache = new UserDataCache(manager, uuid);
+        cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(1))));
+        manager.getUserDataCache().put(uuid, cache);
+        SqlUserBackend backend = mock(SqlUserBackend.class);
+        int[] exclusiveCalls = { 0 };
+        manager.bindSharedSqlBackend(backend,
+                (id, operation) -> fail("legacy removal must not use shared read admission"),
+                (id, operation) -> { exclusiveCalls[0]++; operation.run(); });
+
+        manager.removeCache(uuid, null);
+
+        assertEquals(1, exclusiveCalls[0]);
+        assertFalse(manager.containsKey(uuid));
+    }
+
+    @Test void legacyRemovalRetiresTheSharedCacheBeforeDetachingIt() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+
+            fixture.manager.removeCache(fixture.uuid, null);
+
+            assertFalse(fixture.manager.containsKey(fixture.uuid));
+            assertThrows(IllegalStateException.class,
+                    () -> cache.addChange(new UserDataChangeInt("Points", 2), true));
+            runtime.close();
         }
     }
 

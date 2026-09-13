@@ -45,10 +45,12 @@ public class UserDataManager {
 	private boolean sharedBindingTransition;
 	private int legacyBatches;
 
-	private record SharedSqlRoute(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate) {
+	private record SharedSqlRoute(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate,
+			BiConsumer<UUID, Runnable> exclusiveGate) {
 		SharedSqlRoute {
 			Objects.requireNonNull(backend, "backend");
 			Objects.requireNonNull(gate, "gate");
+			Objects.requireNonNull(exclusiveGate, "exclusiveGate");
 		}
 	}
 
@@ -112,7 +114,13 @@ public class UserDataManager {
 
 	/** Publish backend and per-user lifecycle admission as one volatile immutable route. */
 	public final synchronized void bindSharedSqlBackend(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate) {
-		sharedSqlRoute = new SharedSqlRoute(backend, gate);
+		bindSharedSqlBackend(backend, gate, gate);
+	}
+
+	/** Publish the shared read and exclusive per-user lifecycle admissions together. */
+	public final synchronized void bindSharedSqlBackend(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate,
+			BiConsumer<UUID, Runnable> exclusiveGate) {
+		sharedSqlRoute = new SharedSqlRoute(backend, gate, exclusiveGate);
 	}
 
 	/** Compatibility overload for adapters that only need the global lifecycle gate. */
@@ -152,6 +160,44 @@ public class UserDataManager {
 			result.set(operation.apply(selected.storageType(), selected.user(uuid)));
 		});
 		return result.get();
+	}
+
+	/**
+	 * Execute one complete legacy cache transition with exclusive per-user lifecycle
+	 * admission. This prevents a writer that observed the old map entry from
+	 * queuing work between its flush and removal.
+	 */
+	private void withSharedSqlBackendExclusive(UUID uuid, Runnable operation) {
+		SharedSqlRoute admission = sharedSqlRoute;
+		if (admission == null) {
+			operation.run();
+			return;
+		}
+		admission.exclusiveGate().accept(uuid, () -> {
+			SharedSqlRoute current = sharedSqlRoute;
+			if (current == null) throw new IllegalStateException("Shared SQL backend is not bound");
+			if (current.exclusiveGate() != admission.exclusiveGate()) {
+				throw new IllegalStateException("Shared SQL lifecycle changed while waiting for exclusive admission");
+			}
+			operation.run();
+		});
+	}
+
+	/** Admit cache population through the same route that guards backend replacement and close. */
+	private void withSharedCacheAdmission(UUID uuid, Runnable operation) {
+		SharedSqlRoute admission = sharedSqlRoute;
+		if (admission == null) {
+			operation.run();
+			return;
+		}
+		admission.gate().accept(uuid, () -> {
+			SharedSqlRoute current = sharedSqlRoute;
+			if (current == null) throw new IllegalStateException("Shared SQL backend is not bound");
+			if (current.gate() != admission.gate()) {
+				throw new IllegalStateException("Shared SQL lifecycle changed while waiting for cache admission");
+			}
+			operation.run();
+		});
 	}
 
 	/**
@@ -213,8 +259,12 @@ public class UserDataManager {
 
 	@Deprecated
 	public void cacheUser(UUID uuid) {
+		withSharedCacheAdmission(uuid, () -> cacheUserNow(uuid, true));
+	}
+
+	private void cacheUserNow(UUID uuid, boolean traceDevelopmentCall) {
 		plugin.devDebug("Caching " + uuid.toString());
-		if (plugin.getOptions().getDebug().isDebug(DebugLevel.DEV)) {
+		if (traceDevelopmentCall && plugin.getOptions().getDebug().isDebug(DebugLevel.DEV)) {
 			try { throw new Exception("caching here: " + uuid.toString()); }
 			catch (Exception e) { e.printStackTrace(); }
 		}
@@ -232,15 +282,8 @@ public class UserDataManager {
 		if (playerName != null && !playerName.isEmpty() && !plugin.getOptions().isOnlineMode()) {
 			uuid = UUID.fromString(UuidLookup.getInstance().getUUID(playerName));
 		}
-		plugin.devDebug("Caching " + uuid.toString());
-		if (userDataCache.containsKey(uuid)) {
-			UserDataCache data = userDataCache.get(uuid);
-			data.clearChanges();
-			data.cache();
-		} else {
-			UserDataCache data = new UserDataCache(this, uuid).cache();
-			if (data.hasCache()) userDataCache.put(uuid, data);
-		}
+		UUID target = uuid;
+		withSharedCacheAdmission(target, () -> cacheUserNow(target, false));
 	}
 
 	public void cacheUserIfNeeded(UUID uuid) { if (!userDataCache.containsKey(uuid)) cacheUser(uuid); }
@@ -335,9 +378,18 @@ public class UserDataManager {
 	}
 
 	private void removeCacheNow(UUID uuid) {
+		boolean shared = sharedSqlRoute != null;
+		withSharedSqlBackendExclusive(uuid, () -> removeCacheExclusively(uuid, shared));
+	}
+
+	private void removeCacheExclusively(UUID uuid, boolean shared) {
 		UserDataCache cache = getCache(uuid);
-		if (cache != null) cache.clearCache();
-		userDataCache.remove(uuid);
+		if (cache != null) {
+			cache.clearCache();
+			if (shared) cache.retireAfterSharedFlush();
+		}
+		if (cache == null) userDataCache.remove(uuid);
+		else userDataCache.remove(uuid, cache);
 	}
 
 	public void updateCacheOnline() {
