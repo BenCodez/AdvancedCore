@@ -536,9 +536,16 @@ public class Reward {
 	 * child has already performed a side effect.
 	 */
 	public static String replaySelection(HashMap<String, String> placeholders, Supplier<String> selector) {
+		return replaySelection(placeholders, null, selector);
+	}
+
+	/** Records an independent nondeterministic decision within the active injection. */
+	public static String replaySelection(HashMap<String, String> placeholders, String lane, Supplier<String> selector) {
 		String activeKey = ACTIVE_REPLAY_KEY.get();
+		String scopedKey = activeKey == null ? "root" : activeKey;
+		if (lane != null && !lane.isEmpty()) scopedKey += "\u0000" + lane;
 		String storageKey = REPLAY_SELECTION_PREFIX + Base64.getUrlEncoder().withoutPadding()
-				.encodeToString((activeKey == null ? "root" : activeKey).getBytes(StandardCharsets.UTF_8));
+				.encodeToString(scopedKey.getBytes(StandardCharsets.UTF_8));
 		ReplayState replayState = ACTIVE_REPLAY_STATE.get();
 		String stored = replayMetadata(placeholders, replayState, storageKey);
 		if (stored != null) {
@@ -1510,6 +1517,10 @@ public class Reward {
 	private CompletionStage<Void> giveRewardAsyncOffPrimary(AdvancedCoreUser user, RewardOptions rewardOptions) {
 		if (!plugin.getOptions().isProcessRewards()) {
 			plugin.debug("Processing rewards is disabled");
+			if (isDurableReplay(rewardOptions)) {
+				return CompletableFuture.failedFuture(
+						new IllegalStateException("Reward processing was disabled before queued delivery"));
+			}
 			return CompletableFuture.completedFuture(null);
 		}
 

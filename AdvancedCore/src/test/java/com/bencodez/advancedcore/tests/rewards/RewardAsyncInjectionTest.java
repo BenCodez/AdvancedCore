@@ -310,12 +310,19 @@ class RewardAsyncInjectionTest {
 		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
 		data.createSection("Items").createSection("Stone").set("Material", "STONE");
 		RewardItems.registerItems(handler, plugin);
+		org.bukkit.UnsafeValues unsafe = mock(org.bukkit.UnsafeValues.class);
+		when(unsafe.getMaterial(any(String.class), eq(0)))
+				.thenAnswer(invocation -> Material.matchMaterial(invocation.getArgument(0, String.class)));
+		org.bukkit.inventory.ItemFactory itemFactory = mock(org.bukkit.inventory.ItemFactory.class);
+		when(itemFactory.equals(any(), any())).thenReturn(true);
 
 		try (MockedConstruction<ItemBuilder> builders = mockConstruction(ItemBuilder.class, (builder, context) -> {
 			when(builder.setPlaceholders(any(HashMap.class))).thenReturn(builder);
 			when(builder.toItemStack(any(Player.class))).thenAnswer(ignored -> new ItemStack(itemType.get()));
 		}); org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenAnswer(ignored -> availablePlayer.get());
+			bukkit.when(Bukkit::getUnsafe).thenReturn(unsafe);
+			bukkit.when(Bukkit::getItemFactory).thenReturn(itemFactory);
 			CompletionStage<Void> delivery = reward.giveRewardUserAsync(realUser, new HashMap<>(), new RewardOptions());
 			assertFalse(delivery.toCompletableFuture().isDone(), "the initial online check only queues injection dispatch");
 			assertNotNull(queuedInjection.get());
@@ -327,7 +334,7 @@ class RewardAsyncInjectionTest {
 						delivery.toCompletableFuture().join();
 					});
 			Reward.RewardReplayFailure checkpoint = findCheckpoint(failure);
-			assertEquals(0, checkpoint.getCompletedInjectionCount());
+			assertEquals(0, checkpoint.getCompletedInjectionCount(), checkpoint.getReplayProgress().toString());
 			assertEquals(0, checkpoint.getReplayProgress().getOrDefault("AsyncReward", 0));
 			assertTrue(checkpoint.getReplayPlaceholders().entrySet().stream().noneMatch(entry ->
 					entry.getKey().startsWith("__advancedcore_replay_legacy_actions_")
@@ -552,6 +559,18 @@ class RewardAsyncInjectionTest {
 		assertEquals("registry-fingerprint", queuedOptions.getValue().getAsyncReplayRegistryFingerprints().get("AsyncReward"));
 		assertEquals("v2:completed", queuedOptions.getValue().getPlaceholders()
 				.get("__advancedcore_replay_legacy_actions_marker"));
+	}
+
+	@Test
+	void durableReplayFailsWhenProcessingIsDisabledBeforeDispatch() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(false);
+		when(plugin.getOptions()).thenReturn(config);
+		RewardOptions options = new RewardOptions();
+		options.setAsyncReplayCheckpointConsumer(ignored -> { });
+
+		assertThrows(java.util.concurrent.CompletionException.class,
+				() -> reward.giveRewardAsync(user, options).toCompletableFuture().join());
 	}
 
 	@Test

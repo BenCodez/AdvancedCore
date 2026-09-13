@@ -29,9 +29,12 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
@@ -527,11 +530,26 @@ public class BuiltinRewardBehaviorTest {
 
     @Test
     public void itemRewardsActuallyGiveBuiltItems() {
-        try (MockedConstruction<ItemBuilder> builders = mockConstruction(ItemBuilder.class,
-                withSettings().defaultAnswer(Answers.RETURNS_SELF))) {
+		when(user.getPlayer()).thenReturn(mock(Player.class));
+        ItemStack frozenStack = mock(ItemStack.class);
+        when(frozenStack.serialize()).thenReturn(java.util.Map.of("v", 0, "type", "STONE", "amount", 2));
+        org.bukkit.UnsafeValues unsafe = mock(org.bukkit.UnsafeValues.class);
+        when(unsafe.getMaterial("STONE", 0)).thenReturn(Material.STONE);
+        org.bukkit.inventory.ItemFactory itemFactory = mock(org.bukkit.inventory.ItemFactory.class);
+        when(itemFactory.equals(any(), any())).thenReturn(true);
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+                MockedConstruction<ItemBuilder> builders = mockConstruction(ItemBuilder.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+				(builder, context) -> when(builder.toItemStack(any(Player.class)))
+						.thenReturn(frozenStack))) {
+            bukkit.when(Bukkit::getUnsafe).thenReturn(unsafe);
+            bukkit.when(Bukkit::getItemFactory).thenReturn(itemFactory);
             RewardItems.registerItem(handler, plugin);
             configInject(0).onRewardRequested(reward, user, section("Item"), placeholders);
-            verify(user).giveItem(any(ItemBuilder.class));
+			int buildersAfterItem = builders.constructed().size();
+			configInject(0).onRewardRequested(reward, user, section("Item"), placeholders);
+			assertEquals(buildersAfterItem, builders.constructed().size());
+			verify(user, org.mockito.Mockito.times(2)).giveItem(any(ItemStack.class));
 
             injects.clear();
             RewardItems.registerRandomItem(handler, plugin);
@@ -540,18 +558,23 @@ public class BuiltinRewardBehaviorTest {
             String selected = ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
                     random.getKeys(false), random, placeholders);
             assertEquals("OnlyItem", selected);
+			int buildersBeforeReplay = builders.constructed().size();
             random.set("OnlyItem", null);
             random.createSection("OtherItem");
-            assertThrows(IllegalStateException.class, () -> ((RewardInjectKeys) injects.get(0))
-                    .onRewardRequested(reward, user, java.util.Set.of("OtherItem"), random, placeholders));
-            verify(user, atLeastOnce()).giveItem(any(ItemBuilder.class));
+			assertEquals("OnlyItem", ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
+					java.util.Set.of("OtherItem"), random, placeholders));
+			assertEquals(buildersBeforeReplay, builders.constructed().size());
+			verify(user, atLeastOnce()).giveItem(any(ItemStack.class));
 
             injects.clear();
             RewardItems.registerItems(handler, plugin);
             ConfigurationSection items = section("Items");
             items.createSection("FirstItem");
             ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user, items.getKeys(false), items, placeholders);
-            verify(user, atLeastOnce()).giveItem(any(ItemBuilder.class));
+			int buildersAfterItems = builders.constructed().size();
+			((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user, items.getKeys(false), items, placeholders);
+			assertEquals(buildersAfterItems, builders.constructed().size());
+			verify(user, atLeastOnce()).giveItem(any(ItemStack.class));
             assertTrue(builders.constructed().size() >= 3);
         }
     }
