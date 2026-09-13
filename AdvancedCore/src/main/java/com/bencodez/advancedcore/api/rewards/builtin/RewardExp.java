@@ -81,7 +81,8 @@ public final class RewardExp {
                     HashMap<String, String> placeholders) {
                 int minExp = section.getInt("Min", 0);
                 int maxExp = section.getInt("Max", 0);
-                int value = ThreadLocalRandom.current().nextInt(minExp, maxExp);
+                int value = Integer.parseInt(Reward.replaySelection(placeholders,
+                        () -> Integer.toString(ThreadLocalRandom.current().nextInt(minExp, maxExp))));
                 user.giveExp(value);
                 return "" + value;
             }
@@ -93,7 +94,8 @@ public final class RewardExp {
                     HashMap<String, String> placeholders) {
                 int minExp = section.getInt("Min", 0);
                 int maxExp = section.getInt("Max", 0);
-                int value = ThreadLocalRandom.current().nextInt(minExp, maxExp);
+                int value = Integer.parseInt(Reward.replaySelection(placeholders,
+                        () -> Integer.toString(ThreadLocalRandom.current().nextInt(minExp, maxExp))));
                 user.giveExpLevels(value);
                 return "" + value;
             }

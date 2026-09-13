@@ -57,7 +57,8 @@ public final class RewardItems {
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section,
                     ConfigurationSection data, HashMap<String, String> placeholders) {
                 if (!section.isEmpty()) {
-                    String item = ArrayUtils.pickRandom(ArrayUtils.convert(section));
+                    String item = Reward.replaySelection(placeholders,
+                            () -> ArrayUtils.pickRandom(ArrayUtils.convert(section)));
                     ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
                     builder.setCheckLoreLength(false);
                     user.giveItem(builder);

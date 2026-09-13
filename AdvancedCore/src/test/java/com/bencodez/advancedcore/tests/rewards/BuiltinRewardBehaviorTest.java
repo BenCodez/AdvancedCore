@@ -136,9 +136,26 @@ public class BuiltinRewardBehaviorTest {
         levels.set("Min", 8);
         levels.set("Max", 9);
         String levelResult = ((RewardInjectConfigurationSection) injects.get(3))
-                .onRewardRequested(reward, user, levels, placeholders);
+                .onRewardRequested(reward, user, levels, new HashMap<>());
         assertEquals("8", levelResult);
         verify(user).giveExpLevels(8);
+    }
+
+    @Test
+    public void rangedExperienceReusesItsDurableSelectionOnRetry() {
+        RewardExp.register(handler, plugin);
+        RewardInjectConfigurationSection expInject = (RewardInjectConfigurationSection) injects.get(2);
+        ConfigurationSection exp = section("EXP");
+        exp.set("Min", 5);
+        exp.set("Max", 6);
+
+        assertEquals("5", expInject.onRewardRequested(reward, user, exp, placeholders));
+        exp.set("Min", 8);
+        exp.set("Max", 9);
+        assertEquals("5", expInject.onRewardRequested(reward, user, exp, placeholders));
+
+        verify(user, org.mockito.Mockito.times(2)).giveExp(5);
+        verify(user, never()).giveExp(8);
     }
 
 	@Test
@@ -172,6 +189,26 @@ public class BuiltinRewardBehaviorTest {
         double ranged = amount.getAllValues().get(amount.getAllValues().size() - 1);
         assertTrue(ranged >= 5.0 && ranged < 6.0);
         assertNotNull(result);
+    }
+
+    @Test
+    public void rangedMoneyReusesItsDurableSelectionOnRetry() {
+        RewardMoney.register(handler, plugin);
+        RewardInjectConfigurationSection moneyInject = (RewardInjectConfigurationSection) injects.get(1);
+        ConfigurationSection money = section("Money");
+        money.set("Min", 5.0);
+        money.set("Max", 6.0);
+        money.set("Round", false);
+
+        String first = moneyInject.onRewardRequested(reward, user, money, placeholders);
+        money.set("Min", 8.0);
+        money.set("Max", 9.0);
+        String second = moneyInject.onRewardRequested(reward, user, money, placeholders);
+
+        assertEquals(first, second);
+        ArgumentCaptor<Double> amount = ArgumentCaptor.forClass(Double.class);
+        verify(user, org.mockito.Mockito.times(2)).giveMoney(amount.capture());
+        assertEquals(amount.getAllValues().get(0), amount.getAllValues().get(1));
     }
 
     @Test
@@ -503,6 +540,10 @@ public class BuiltinRewardBehaviorTest {
             String selected = ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
                     random.getKeys(false), random, placeholders);
             assertEquals("OnlyItem", selected);
+            random.createSection("OtherItem");
+            String replayed = ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
+                    java.util.Set.of("OtherItem"), random, placeholders);
+            assertEquals("OnlyItem", replayed);
             verify(user, atLeastOnce()).giveItem(any(ItemBuilder.class));
 
             injects.clear();

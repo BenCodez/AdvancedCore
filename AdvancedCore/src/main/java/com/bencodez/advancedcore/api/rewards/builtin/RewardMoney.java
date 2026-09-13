@@ -65,7 +65,8 @@ public final class RewardMoney {
                     HashMap<String, String> placeholders) {
                 double minMoney = section.getDouble("Min", 0);
                 double maxMoney = section.getDouble("Max", 0);
-                double value = ThreadLocalRandom.current().nextDouble(minMoney, maxMoney);
+                double value = Double.parseDouble(Reward.replaySelection(placeholders,
+                        () -> Double.toString(ThreadLocalRandom.current().nextDouble(minMoney, maxMoney))));
                 if (section.getBoolean("Round")) {
                     value = Math.round(value);
                     user.giveMoney(value);
