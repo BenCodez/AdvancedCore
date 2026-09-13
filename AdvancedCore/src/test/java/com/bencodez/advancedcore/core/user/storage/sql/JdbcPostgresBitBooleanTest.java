@@ -48,6 +48,26 @@ class JdbcPostgresBitBooleanTest {
     }
 
     @Test
+    void postgresBooleanBindingIsTargetTypedForRetainedLegacyTextColumns() throws Exception {
+        Connection connection = mock(Connection.class);
+        when(connection.getAutoCommit()).thenReturn(true);
+        PreparedStatement exists = mock(PreparedStatement.class);
+        PreparedStatement insert = mock(PreparedStatement.class);
+        ResultSet missing = mock(ResultSet.class);
+        when(exists.executeQuery()).thenReturn(missing);
+        when(connection.prepareStatement(anyString())).thenReturn(exists, insert);
+        when(insert.executeUpdate()).thenReturn(1);
+        SqlUserSchema schema = SqlUserSchema.builder().column("Enabled", "BOOLEAN", DataType.BOOLEAN).build();
+        JdbcSqlUserStorage storage = new JdbcSqlUserStorage(UserStorage.MYSQL, USER, "Users", schema,
+                () -> connection, JdbcSqlUserStorage.Dialect.POSTGRESQL, SqlBackendLogger.NO_OP);
+
+        storage.write(UserStorage.MYSQL, "Enabled", new DataValueBoolean(true));
+
+        verify(insert).setObject(2, "true", Types.OTHER);
+        verify(insert, never()).setBoolean(2, true);
+    }
+
+    @Test
     void postgresBitUsesExplicitBitCastAndStringBindingOnInsert() throws Exception {
         Connection connection = mock(Connection.class);
         when(connection.getAutoCommit()).thenReturn(true);

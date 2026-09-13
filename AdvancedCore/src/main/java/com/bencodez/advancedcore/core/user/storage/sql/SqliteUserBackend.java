@@ -166,6 +166,17 @@ public final class SqliteUserBackend implements SqlUserBackend {
     }
 
     private void ensureRegisteredColumns() throws SQLException {
+        // CREATE TABLE IF NOT EXISTS deliberately leaves a pre-existing table
+        // untouched.  Do not report a usable backend when that table cannot
+        // support the immutable user identity used by every operation.  Adding
+        // an identity column here would be an unsafe migration because existing
+        // rows have no unambiguous UUID to populate.
+        if (!hasColumn(SqlUserSchema.UUID_COLUMN)) {
+            throw new SQLException("SQLite user table is missing required UUID column");
+        }
+        if (!hasUniqueUuidConstraint()) {
+            throw new SQLException("SQLite user table UUID column must be PRIMARY KEY or UNIQUE");
+        }
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
             if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name()) || hasColumn(column.name())) continue;
             String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name()) + " " + column.sqlType();
@@ -184,6 +195,65 @@ public final class SqliteUserBackend implements SqlUserBackend {
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet result = statement.executeQuery()) {
             while (result.next()) if (name.equalsIgnoreCase(result.getString("name"))) return true;
             return false;
+        }
+    }
+
+    private boolean hasUniqueUuidConstraint() throws SQLException {
+        String uuid = SqlUserSchema.UUID_COLUMN;
+        String tableInfo = "PRAGMA table_info(" + quote(tableName) + ")";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(tableInfo);
+                ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                if (uuid.equalsIgnoreCase(result.getString("name")) && result.getInt("pk") > 0) {
+                    // A composite primary key is not sufficient: another row
+                    // could still share the same UUID. Require UUID to be the
+                    // sole primary-key column.
+                    int primaryKeyPosition = result.getInt("pk");
+                    if (primaryKeyPosition == 1 && !hasOtherPrimaryKeyColumn(connection)) return true;
+                }
+            }
+        }
+
+        String indexes = "PRAGMA index_list(" + quote(tableName) + ")";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(indexes);
+                ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                if (result.getInt("unique") == 0 || hasPartialIndex(result)) continue;
+                String indexName = result.getString("name");
+                String indexInfo = "PRAGMA index_info(" + quote(indexName) + ")";
+                try (PreparedStatement indexStatement = connection.prepareStatement(indexInfo);
+                        ResultSet columns = indexStatement.executeQuery()) {
+                    int count = 0;
+                    boolean uuidColumn = false;
+                    while (columns.next()) {
+                        count++;
+                        uuidColumn |= uuid.equalsIgnoreCase(columns.getString("name"));
+                    }
+                    if (count == 1 && uuidColumn) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean hasOtherPrimaryKeyColumn(Connection connection) throws SQLException {
+        String tableInfo = "PRAGMA table_info(" + quote(tableName) + ")";
+        try (PreparedStatement statement = connection.prepareStatement(tableInfo); ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                if (!SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(result.getString("name")) && result.getInt("pk") > 0) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasPartialIndex(ResultSet index) throws SQLException {
+        try {
+            return index.getInt("partial") != 0;
+        } catch (SQLException missingColumn) {
+            // Older SQLite drivers may omit the optional PRAGMA column.  A
+            // unique partial index is not a substitute for identity
+            // uniqueness, so fail closed when its presence cannot be proven.
+            return true;
         }
     }
 

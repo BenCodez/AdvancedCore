@@ -254,7 +254,16 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         }
         else if (value.isBoolean()) {
             BooleanStorage booleanStorage = booleanStorage(definition);
-            if (booleanStorage == BooleanStorage.NATIVE) statement.setBoolean(index, value.getBoolean());
+            // PostgreSQL accepts an unspecified parameter using the retained
+            // target column's input function.  This matters when an existing
+            // installation still has a legacy VARCHAR boolean column even
+            // though the current schema declaration is BOOLEAN: setBoolean
+            // sends a typed boolean parameter which PostgreSQL will not assign
+            // to VARCHAR.  Keep BIT explicit below because its width is part of
+            // the value contract.
+            if (booleanStorage == BooleanStorage.NATIVE && dialect == Dialect.POSTGRESQL)
+                statement.setObject(index, Boolean.toString(value.getBoolean()), Types.OTHER);
+            else if (booleanStorage == BooleanStorage.NATIVE) statement.setBoolean(index, value.getBoolean());
             else if (booleanStorage == BooleanStorage.NUMERIC) statement.setInt(index, value.getBoolean() ? 1 : 0);
             else if (booleanStorage == BooleanStorage.POSTGRES_BIT) statement.setString(index, value.getBoolean() ? "1" : "0");
             else statement.setString(index, Boolean.toString(value.getBoolean()));

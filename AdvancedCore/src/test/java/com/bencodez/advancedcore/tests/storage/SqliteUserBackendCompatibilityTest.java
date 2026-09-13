@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -103,6 +104,59 @@ class SqliteUserBackendCompatibilityTest {
                 assertEquals(expected.get(i).booleanValue(), flag.getBoolean(), "encoding " + encoded.get(i));
             }
         }
+    }
+
+    @Test
+    void rejectsPreexistingTableWithoutRequiredUuidColumn() throws Exception {
+        try (Connection connection = connect();
+                PreparedStatement statement = connection.prepareStatement("CREATE TABLE Users (Name TEXT)")) {
+            statement.executeUpdate();
+        }
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> open("Users", SqlUserSchema.fromKeys(List.of(new UserDataKeyString("Name")))));
+
+        assertTrue(failure.getCause().getMessage().contains("missing required UUID column"));
+    }
+
+    @Test
+    void rejectsPreexistingUuidColumnWithoutUniqueConstraint() throws Exception {
+        try (Connection connection = connect();
+                PreparedStatement statement = connection.prepareStatement("CREATE TABLE Users (uuid TEXT, Name TEXT)")) {
+            statement.executeUpdate();
+        }
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> open("Users", SqlUserSchema.fromKeys(List.of(new UserDataKeyString("Name")))));
+
+        assertTrue(failure.getCause().getMessage().contains("must be PRIMARY KEY or UNIQUE"));
+    }
+
+    @Test
+    void acceptsPreexistingUuidUniqueIndex() throws Exception {
+        try (Connection connection = connect(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE Users (uuid TEXT, Name TEXT)");
+            statement.executeUpdate("CREATE UNIQUE INDEX users_uuid ON Users(uuid)");
+        }
+
+        try (SqliteUserBackend backend = open("Users", SqlUserSchema.fromKeys(List.of(new UserDataKeyString("Name"))))) {
+            UUID uuid = UUID.randomUUID();
+            backend.user(uuid).write(UserStorage.SQLITE, "Name", new DataValueString("valid"));
+            assertEquals(List.of(uuid), backend.enumerateUsers());
+        }
+    }
+
+    @Test
+    void rejectsPartialUuidUniqueIndex() throws Exception {
+        try (Connection connection = connect(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE Users (uuid TEXT, Name TEXT)");
+            statement.executeUpdate("CREATE UNIQUE INDEX users_uuid_active ON Users(uuid) WHERE Name IS NOT NULL");
+        }
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> open("Users", SqlUserSchema.fromKeys(List.of(new UserDataKeyString("Name")))));
+
+        assertTrue(failure.getCause().getMessage().contains("must be PRIMARY KEY or UNIQUE"));
     }
 
     @Test
