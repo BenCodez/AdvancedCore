@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.core.user.runtime;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
@@ -16,37 +17,33 @@ public interface UserCacheOwner {
     DataValue getIfPresent(UUID uuid, String key);
     void populate(UUID uuid, HashMap<String, DataValue> values);
 
-    /** Opaque, operation-local snapshot token owned by the existing cache adapter. */
     interface PopulationToken {}
 
-    /** Capture before flushing/loading so concurrent queued mutations can be retained. */
     default PopulationToken beginPopulation(UUID uuid) { return null; }
 
-    /** Publish a database snapshot without overwriting mutations made since its token. */
     default HashMap<String, DataValue> completePopulation(UUID uuid, HashMap<String, DataValue> values,
             PopulationToken token) {
         populate(uuid, values);
         return values;
     }
+
     void queueChange(UUID uuid, String key, DataValue value);
     void flush(UUID uuid, SqlUserStorage storage);
 
-    /** Explicit type avoids inferring the destination from a platform plugin's current settings. */
     default void flush(UUID uuid, UserStorage type, SqlUserStorage storage) { flush(uuid, storage); }
 
-    /** Include scheduled cache batches in the runtime admission/drain barrier. */
     default void bindFlushGate(Consumer<Runnable> gate) {}
 
-    /** Bind scheduled writes to this provider; invoked before access and after a drained replacement. */
+    /** Bind cache/legacy operations to the runtime's per-user shared barrier. */
+    default void bindUserGate(BiConsumer<UUID, Runnable> gate) {}
+
     default void bindBackend(SqlUserBackend backend) {}
 
-    /** Bind initial lifecycle state together. Stateful adapters override for atomic publication. */
     default void bindLifecycle(SqlUserBackend backend, Consumer<Runnable> gate) {
         bindFlushGate(gate);
         bindBackend(backend);
     }
 
-    /** Platform adapters reject blocking work on server/entity threads before acquiring any barrier. */
     default void requireBlockingAllowed() {}
 
     Set<UUID> cachedUsers();
