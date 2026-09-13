@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -170,6 +171,9 @@ class SharedRewardOrchestratorTest {
         private boolean shuttingDown;
         private boolean shutdownBeforeDelayedCallback;
         private double chanceRoll;
+        private Instant time = Instant.EPOCH;
+
+        @Override public Instant now() { return time; }
 
         private FakePlatform(List<String> events) {
             this.events = events;
@@ -189,6 +193,7 @@ class SharedRewardOrchestratorTest {
         public CompletionStage<SharedRewardResult> delay(Duration delay,
                 Supplier<CompletionStage<SharedRewardResult>> operation) {
             events.add("delay:" + delay.toSeconds());
+            time = time.plus(delay);
             if (shutdownBeforeDelayedCallback) shuttingDown = true;
             return operation.get();
         }

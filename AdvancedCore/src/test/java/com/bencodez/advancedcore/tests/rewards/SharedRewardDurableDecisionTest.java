@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -235,6 +236,69 @@ class SharedRewardDurableDecisionTest {
         assertEquals(0, actions.get());
     }
 
+    @Test
+    void firstStepFailureAfterItsDeadlineDoesNotRestartTheDelay() {
+        Platform platform = new Platform();
+        Replay replay = new Replay();
+        AtomicInteger attempts = new AtomicInteger();
+        SharedRewardPlan plan = new SharedRewardPlan("vote", 1, Duration.ofHours(12), List.of(),
+                List.of(new SharedRewardStep("command", false, (ctx, path) -> {
+                    if (attempts.incrementAndGet() == 1) return CompletableFuture.failedFuture(new IllegalStateException("temporary"));
+                    return done();
+                })), "config-v1");
+        assertThrows(CompletionException.class, () -> execute(platform, plan, replay).join());
+        assertEquals(0, replay.loadProgress("vote").completedSteps());
+        assertEquals(Instant.EPOCH.plus(Duration.ofHours(12)), replay.loadProgress("vote").notBefore());
+        assertEquals(SharedRewardResult.COMPLETED, execute(platform, plan, replay).join());
+        assertEquals(List.of(Duration.ofHours(12)), platform.waited);
+    }
+
+    @Test
+    void offlineAfterDelayDefersWithoutChargingTheDelayAgainOnReconnect() {
+        Platform platform = new Platform();
+        platform.online = false;
+        Replay replay = new Replay();
+        SharedRewardPlan plan = new SharedRewardPlan("vote", 1, Duration.ofDays(1), List.of(),
+                List.of(new SharedRewardStep("message", true, (ctx, path) -> done())), "config-v1");
+        assertEquals(SharedRewardResult.DEFERRED, execute(platform, plan, replay).join());
+        platform.online = true;
+        assertEquals(SharedRewardResult.COMPLETED, execute(platform, plan, replay).join());
+        assertEquals(List.of(Duration.ofDays(1)), platform.waited);
+    }
+
+    @Test
+    void reconstructedReplayWaitsOnlyUntilTheOriginalDeadline() throws Exception {
+        Platform firstPlatform = new Platform();
+        Path file = directory.resolve("deadline.properties");
+        DiskReplay first = new DiskReplay(file);
+        first.beginAck = CompletableFuture.failedFuture(new IllegalStateException("lost acknowledgement"));
+        SharedRewardPlan plan = new SharedRewardPlan("vote", 1, Duration.ofHours(12), List.of(),
+                List.of(action("command", new AtomicInteger())), "config-v1");
+        assertThrows(CompletionException.class, () -> execute(firstPlatform, plan, first).join());
+        assertTrue(firstPlatform.waited.isEmpty());
+        Platform restarted = new Platform();
+        restarted.time = Instant.EPOCH.plus(Duration.ofHours(10));
+        DiskReplay reopened = new DiskReplay(file);
+        assertEquals(SharedRewardResult.COMPLETED, execute(restarted, plan, reopened).join());
+        assertEquals(List.of(Duration.ofHours(2)), restarted.waited);
+        assertEquals(Instant.EPOCH.plus(Duration.ofHours(12)), new DiskReplay(file).loadProgress("vote").notBefore());
+    }
+
+    @Test
+    void legacyCursorZeroWithoutTimingProofCannotRestartOrBypassTheDelay() {
+        Platform platform = new Platform();
+        Replay replay = new Replay();
+        AtomicInteger actions = new AtomicInteger();
+        SharedRewardPlan plan = new SharedRewardPlan("vote", 1, Duration.ofDays(1), List.of(),
+                List.of(action("command", actions)), "config-v1");
+        SharedRewardProgress legacy = new SharedRewardProgress(plan.fingerprint(), true, 0, Map.of());
+        replay.progress.put("vote", legacy);
+        assertThrows(CompletionException.class, () -> execute(platform, plan, replay).join());
+        assertSame(legacy, replay.loadProgress("vote"));
+        assertTrue(platform.waited.isEmpty());
+        assertEquals(0, actions.get());
+    }
+
     private static SharedRewardPlan plan(double chance, List<SharedRewardRequirement> requirements, List<SharedRewardStep> steps) {
         return new SharedRewardPlan("vote", chance, Duration.ZERO, requirements, steps).withDefinitionFingerprint("config-v1");
     }
@@ -253,11 +317,16 @@ class SharedRewardDurableDecisionTest {
         boolean online = true;
         double roll;
         int rolls, delays;
+        Instant time = Instant.EPOCH;
+        final List<Duration> waited = new ArrayList<>();
+        public Instant now() { return time; }
         public boolean isOnline(UUID uuid) { return online; }
         public boolean isShuttingDown() { return false; }
         public double nextChanceRoll() { rolls++; return roll; }
         public CompletionStage<SharedRewardResult> delay(Duration d, Supplier<CompletionStage<SharedRewardResult>> work) {
             delays++;
+            waited.add(d);
+            time = time.plus(d);
             return work.get();
         }
     }
@@ -296,7 +365,8 @@ class SharedRewardDurableDecisionTest {
                 try (InputStream in = Files.newInputStream(file)) { p.load(in); }
                 progress.put("vote", new SharedRewardProgress(p.getProperty("fingerprint"),
                         Boolean.parseBoolean(p.getProperty("eligible")), Integer.parseInt(p.getProperty("cursor")),
-                        Map.of("token", p.getProperty("token", ""))));
+                        Map.of("token", p.getProperty("token", "")),
+                        p.getProperty("notBefore") == null ? null : Instant.parse(p.getProperty("notBefore"))));
             }
         }
         @Override void persist() {
@@ -306,6 +376,7 @@ class SharedRewardDurableDecisionTest {
             p.setProperty("eligible", Boolean.toString(state.eligible()));
             p.setProperty("cursor", Integer.toString(state.completedSteps()));
             p.setProperty("token", state.placeholders().getOrDefault("token", ""));
+            if (state.notBefore() != null) p.setProperty("notBefore", state.notBefore().toString());
             Path pending = file.resolveSibling(file.getFileName() + ".tmp");
             try {
                 try (OutputStream out = Files.newOutputStream(pending)) { p.store(out, "test replay"); }

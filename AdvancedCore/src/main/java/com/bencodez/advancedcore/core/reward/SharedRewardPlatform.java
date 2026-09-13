@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.core.reward;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
@@ -8,6 +9,9 @@ import java.util.function.Supplier;
 /** Native operations needed by the platform-neutral reward orchestrator. */
 public interface SharedRewardPlatform {
     boolean isOnline(UUID userId);
+
+    /** Wall-clock time for durable absolute deadlines; adapters/tests may supply their clock. */
+    default Instant now() { return Instant.now(); }
 
     /** Returns a value in the range [0, 1). */
     double nextChanceRoll();
