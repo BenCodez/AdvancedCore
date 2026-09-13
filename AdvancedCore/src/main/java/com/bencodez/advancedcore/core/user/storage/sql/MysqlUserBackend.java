@@ -37,8 +37,10 @@ public final class MysqlUserBackend implements SqlUserBackend {
     @Override
     public SqlUserStorage user(UUID uuid) {
         requireOpen();
+        JdbcSqlUserStorage.Dialect dialect = JdbcSqlUserStorage.Dialect.fromDbType(
+                table.getMysql().getConnectionManager().getDbType());
         return new JdbcSqlUserStorage(UserStorage.MYSQL, uuid, table.getTableName(), schema,
-                () -> table.getMysql().getConnectionManager().getConnection(), JdbcSqlUserStorage.Dialect.MYSQL, logger);
+                () -> table.getMysql().getConnectionManager().getConnection(), dialect, logger);
     }
 
     @Override
@@ -117,7 +119,9 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     sql.append(", ");
                 }
                 first = false;
-                sql.append(quote(column.name())).append(' ').append(normaliseTypeForDb(column.sqlType()));
+                String type = SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name())
+                        ? bestUuidType() : normaliseTypeForDb(column.sqlType());
+                sql.append(quote(column.name())).append(' ').append(type);
             }
             sql.append(", PRIMARY KEY (").append(quote(SqlUserSchema.UUID_COLUMN)).append("));");
             return sql.toString();
