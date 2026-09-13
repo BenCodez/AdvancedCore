@@ -195,4 +195,35 @@ public class UserDataCacheSchedulingTest {
 
 		assertTrue(cache.isCached("PlayerName"));
 	}
+
+	@Test
+	public void flushChangesAndRunPersistsQueuedWritesBeforeTheSynchronousAction() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager userManager = mock(UserManager.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserData userData = mock(UserData.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledFuture future = mock(ScheduledFuture.class);
+		UUID uuid = UUID.randomUUID();
+
+		when(manager.getPlugin()).thenReturn(plugin);
+		when(manager.getTimer()).thenReturn(timer);
+		when(plugin.getUserManager()).thenReturn(userManager);
+		when(userManager.getUser(uuid, false)).thenReturn(user);
+		when(user.getUserData()).thenReturn(userData);
+		doReturn(future).when(timer).schedule(any(Runnable.class), eq(3L), eq(TimeUnit.SECONDS));
+
+		java.util.concurrent.atomic.AtomicBoolean flushed = new java.util.concurrent.atomic.AtomicBoolean();
+		doAnswer(ignored -> {
+			flushed.set(true);
+			return null;
+		}).when(userData).setValues(any(HashMap.class));
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		cache.addChange(new UserDataChangeString("TimedRewards", "old-value"), true);
+
+		cache.flushChangesAndRun(() -> assertTrue(flushed.get(),
+				"the durable replay checkpoint must follow the queued cache flush"));
+		assertFalse(cache.hasChangesToProcess());
+	}
 }

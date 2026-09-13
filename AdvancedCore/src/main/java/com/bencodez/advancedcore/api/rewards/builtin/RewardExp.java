@@ -31,10 +31,11 @@ public final class RewardExp {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, int num,
                     HashMap<String, String> placeholders) {
-                user.giveExp(num);
+                if (num != 0) user.giveExp(num);
                 return null;
             }
-        }.asPlaceholder("EXP").priority(100).addEditButton(
+		}.requiresPlayerWhen((data, placeholders) -> data.getInt("EXP", 0) != 0)
+				.asPlaceholder("EXP").priority(100).addEditButton(
                 new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueInventory("EXP") {
                     @Override
                     public void openInventory(ClickEvent clickEvent) {
@@ -54,10 +55,11 @@ public final class RewardExp {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, int num,
                     HashMap<String, String> placeholders) {
-                user.giveExpLevels(num);
+                if (num != 0) user.giveExpLevels(num);
                 return null;
             }
-        }.asPlaceholder("EXP").priority(100).addEditButton(
+		}.requiresPlayerWhen((data, placeholders) -> data.getInt("EXPLevels", 0) != 0)
+				.asPlaceholder("EXP").priority(100).addEditButton(
                 new EditGUIButton(new ItemBuilder("EXPERIENCE_BOTTLE"), new EditGUIValueInventory("EXPLevels") {
                     @Override
                     public void openInventory(ClickEvent clickEvent) {
@@ -79,11 +81,12 @@ public final class RewardExp {
                     HashMap<String, String> placeholders) {
                 int minExp = section.getInt("Min", 0);
                 int maxExp = section.getInt("Max", 0);
-                int value = ThreadLocalRandom.current().nextInt(minExp, maxExp);
+                int value = Integer.parseInt(Reward.replaySelection(placeholders,
+                        () -> Integer.toString(ThreadLocalRandom.current().nextInt(minExp, maxExp))));
                 user.giveExp(value);
                 return "" + value;
             }
-        }.asPlaceholder("EXP").priority(100).validator(rangeValidator("EXP")));
+		}.requiresPlayer().asPlaceholder("EXP").priority(100).validator(rangeValidator("EXP")));
 
         handler.getInjectedRewards().add(new RewardInjectConfigurationSection("EXPLevels") {
             @Override
@@ -91,11 +94,12 @@ public final class RewardExp {
                     HashMap<String, String> placeholders) {
                 int minExp = section.getInt("Min", 0);
                 int maxExp = section.getInt("Max", 0);
-                int value = ThreadLocalRandom.current().nextInt(minExp, maxExp);
+                int value = Integer.parseInt(Reward.replaySelection(placeholders,
+                        () -> Integer.toString(ThreadLocalRandom.current().nextInt(minExp, maxExp))));
                 user.giveExpLevels(value);
                 return "" + value;
             }
-        }.asPlaceholder("EXP").priority(100).validator(rangeValidator("EXPLevels")));
+		}.requiresPlayer().asPlaceholder("EXP").priority(100).validator(rangeValidator("EXPLevels")));
     }
 
     private static RewardInjectValidator zeroValidator(String message) {

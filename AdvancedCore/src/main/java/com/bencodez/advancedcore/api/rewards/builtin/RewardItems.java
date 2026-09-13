@@ -2,9 +2,12 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.HashMap;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.inventory.BInventory.ClickEvent;
@@ -43,12 +46,14 @@ public final class RewardItems {
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
-                ItemBuilder builder = new ItemBuilder(section);
-                builder.setCheckLoreLength(false);
-                user.giveItem(builder);
+                replayItem(user, placeholders, "payload", () -> {
+                    ItemBuilder builder = new ItemBuilder(section);
+                    builder.setCheckLoreLength(false);
+                    return builder;
+                });
                 return null;
             }
-        }.validator(itemValidator()));
+		}.requiresPlayer().validator(itemValidator()));
     }
 
     public static void registerRandomItem(RewardHandler handler, AdvancedCorePlugin plugin) {
@@ -57,15 +62,24 @@ public final class RewardItems {
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, Set<String> section,
                     ConfigurationSection data, HashMap<String, String> placeholders) {
                 if (!section.isEmpty()) {
-                    String item = ArrayUtils.pickRandom(ArrayUtils.convert(section));
-                    ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
-                    builder.setCheckLoreLength(false);
-                    user.giveItem(builder);
+                    String item = Reward.replaySelection(placeholders,
+                            () -> ArrayUtils.pickRandom(ArrayUtils.convert(section)));
+                    replayItem(user, placeholders, "payload:" + item, () -> {
+                        ConfigurationSection selected = data.getConfigurationSection(item);
+                        if (selected == null) {
+                            throw new IllegalStateException("Selected random item is no longer configured: " + item);
+                        }
+                        ItemBuilder builder = new ItemBuilder(selected);
+                        builder.setCheckLoreLength(false);
+                        return builder;
+                    });
                     return item;
                 }
                 return null;
             }
-        }.asPlaceholder("RandomItem").priority(90).validator(randomItemValidator()));
+		}.requiresPlayerWhen((data, placeholders) -> data.isConfigurationSection("RandomItem")
+				&& !data.getConfigurationSection("RandomItem").getKeys(false).isEmpty())
+				.asPlaceholder("RandomItem").priority(90).validator(randomItemValidator()));
     }
 
     public static void registerItems(RewardHandler handler, AdvancedCorePlugin plugin) {
@@ -76,18 +90,22 @@ public final class RewardItems {
                 boolean oneChance = reward.getConfig().getConfigData().getBoolean("OnlyOneItemChance", false);
                 if (!section.isEmpty()) {
                     for (String item : section) {
-                        ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
-                        builder.setCheckLoreLength(false);
-                        user.giveItem(builder.setPlaceholders(placeholders));
-                        debug("Giving item " + item + ":" + builder);
-                        if (builder.isChancePass() && oneChance) {
+                        ReplayedItem selected = replayItem(user, placeholders, "payload:" + item, () -> {
+                            ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
+                            builder.setCheckLoreLength(false);
+                            return builder.setPlaceholders(placeholders);
+                        });
+                        debug("Giving item " + item + ":" + selected.item());
+                        if (selected.chancePassed() && oneChance) {
                             return item;
                         }
                     }
                 }
                 return "";
             }
-        }.priority(90).asPlaceholder("Item").validator(itemsValidator().addPath("OnlyOneItemChance"))
+		}.requiresPlayerWhen((data, placeholders) -> data.isConfigurationSection("Items")
+				&& !data.getConfigurationSection("Items").getKeys(false).isEmpty())
+				.priority(90).asPlaceholder("Item").validator(itemsValidator().addPath("OnlyOneItemChance"))
                 .addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueInventory("Items") {
                     @Override
                     public void openInventory(ClickEvent clickEvent) {
@@ -101,8 +119,50 @@ public final class RewardItems {
                             }
                         }.open(clickEvent.getPlayer(), reward);
                     }
-                }.addLore("Edit items"))));
+				}.addLore("Edit items"))));
     }
+
+    private static ReplayedItem replayItem(AdvancedCoreUser user, HashMap<String, String> placeholders, String lane,
+            Supplier<ItemBuilder> builder) {
+		org.bukkit.entity.Player player = user.getPlayer();
+		if (player == null) {
+			// Preserve the legacy deferred-delivery path. Durable replay records this
+			// action as not started if the player remains unavailable, so a later retry
+			// may safely build and freeze the payload before its first side effect.
+			ItemBuilder deferred = builder.get();
+			user.giveItem(deferred);
+			return new ReplayedItem(null, deferred.isChancePass());
+		}
+        String serialized = Reward.replaySelection(placeholders, lane,
+				() -> {
+					ItemBuilder selected = builder.get();
+					return serializeItem(selected.toItemStack(player), selected.isChancePass());
+				});
+        if (serialized == null) return new ReplayedItem(null, false);
+        if (!serialized.startsWith("v1:")) {
+            throw new IllegalStateException("Persisted item reward payload has an unsupported format");
+        }
+        YamlConfiguration frozen = new YamlConfiguration();
+        try {
+            frozen.loadFromString(serialized.substring(3));
+        } catch (Exception failure) {
+            throw new IllegalStateException("Persisted item reward payload is invalid", failure);
+        }
+        ItemStack item = frozen.getItemStack("Item");
+        if (item == null) throw new IllegalStateException("Persisted item reward payload is missing");
+		user.giveItem(item);
+		return new ReplayedItem(item, frozen.getBoolean("ChancePassed", item.getAmount() > 0));
+    }
+
+    private static String serializeItem(ItemStack item, boolean chancePassed) {
+        if (item == null) return null;
+        YamlConfiguration frozen = new YamlConfiguration();
+        frozen.set("Item", item);
+		frozen.set("ChancePassed", chancePassed);
+        return "v1:" + frozen.saveToString();
+    }
+
+	private record ReplayedItem(ItemStack item, boolean chancePassed) { }
 
     private static RewardInjectValidator itemValidator() {
         return new RewardInjectValidator() {

@@ -61,6 +61,10 @@ public final class AdvancedCoreRuntime {
         shutdownNow(platform.getTimer());
         shutdownNow(timeTimer);
         shutdownNow(platform.getInventoryTimer());
+        await(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
+        await(platform.getTimer(), 1, TimeUnit.SECONDS);
+        await(timeTimer, 1, TimeUnit.SECONDS);
+        await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
         clean(platform.afterExecutorShutdown());
     }
 

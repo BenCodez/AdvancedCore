@@ -100,6 +100,31 @@ public class UserDataCache {
 		}
 	}
 
+	/**
+	 * Drains every queued or in-flight cache batch before running a synchronous
+	 * write. The action runs while holding the cache monitor, preventing an old
+	 * queued value from being persisted after a durable replacement.
+	 */
+	public void flushChangesAndRun(Runnable action) {
+		if (action == null) return;
+		while (true) {
+			processChanges();
+			synchronized (this) {
+				while (inFlightBatches > 0) {
+					try {
+						wait();
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						throw new IllegalStateException("Interrupted while flushing cached user changes", e);
+					}
+				}
+				if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
+				action.run();
+				return;
+			}
+		}
+	}
+
 	public void displayCache() {
 		manager.getPlugin().devDebug(displayCacheStringList().toString());
 	}

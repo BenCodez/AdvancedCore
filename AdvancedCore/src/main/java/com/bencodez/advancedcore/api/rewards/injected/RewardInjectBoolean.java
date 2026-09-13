@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.api.rewards.injected;
 
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -29,6 +31,16 @@ public abstract class RewardInjectBoolean extends RewardInject {
 	public abstract String onRewardRequest(Reward reward, AdvancedCoreUser user, boolean num,
 			HashMap<String, String> placeholders);
 
+	/** Completion-aware counterpart for boolean injections. */
+	public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user, boolean value,
+			HashMap<String, String> placeholders) {
+		try {
+			return CompletableFuture.completedFuture(onRewardRequest(reward, user, value, placeholders));
+		} catch (Throwable failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
+	}
+
 	@Override
 	public String onRewardRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			HashMap<String, String> placeholders) {
@@ -43,6 +55,20 @@ public abstract class RewardInjectBoolean extends RewardInject {
 			return re;
 		}
 		return null;
+	}
+
+	@Override
+	public CompletionStage<Object> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+			ConfigurationSection data, HashMap<String, String> placeholders) {
+		if (!(data.isBoolean(getPath()) || (isAlwaysForce() && data.contains(getPath(), true))
+				|| isAlwaysForceNoData())) {
+			if (!hasPendingReplayWork(placeholders)) return CompletableFuture.completedFuture(null);
+		}
+		boolean value = data.getBoolean(getPath(), isDefaultValue());
+		CompletionStage<String> result = onRewardRequestAsync(reward, user, value, placeholders);
+		if (result == null) return CompletableFuture.failedFuture(new IllegalStateException(
+				"Reward injection returned a null asynchronous result: " + getPath()));
+		return result.thenApply(valueResult -> (Object) (valueResult == null ? String.valueOf(value) : valueResult));
 	}
 
 }

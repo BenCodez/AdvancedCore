@@ -10,7 +10,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.item.FullInventoryHandler;
+import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.bukkit.runtime.BukkitRuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -51,11 +55,12 @@ class CoreRuntimeTest {
         new AdvancedCoreRuntime(platform).shutdown();
         assertEquals(List.of("pre", "login-stop", "timer-stop", "time-stop", "inventory-stop", "wait-log",
                 "login-wait", "timer-wait", "time-wait", "inventory-wait", "rewards",
-                "login-force", "timer-force", "time-force", "inventory-force", "post"), events);
+				"login-force", "timer-force", "time-force", "inventory-force",
+				"login-wait", "timer-wait", "time-wait", "inventory-wait", "post"), events);
         verify(login).awaitTermination(2, TimeUnit.SECONDS);
         verify(timer).awaitTermination(2, TimeUnit.SECONDS);
         verify(time).awaitTermination(2, TimeUnit.SECONDS);
-        verify(inventory).awaitTermination(1, TimeUnit.SECONDS);
+        verify(inventory, times(2)).awaitTermination(1, TimeUnit.SECONDS);
         verify(platform, times(1)).getTimeTimer();
     }
 
@@ -107,4 +112,52 @@ class CoreRuntimeTest {
         assertNull(platform.getTimeTimer());
         assertDoesNotThrow(() -> new AdvancedCoreLifecycle(null).shutdown());
     }
+
+	@Test void bukkitAdapterFlushesFullInventoryBeforeExecutorShutdown() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		FullInventoryHandler handler = mock(FullInventoryHandler.class);
+		MySQL mysql = mock(MySQL.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getFullInventoryHandler()).thenReturn(handler);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(plugin.getMysql()).thenReturn(mysql);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("full inventory handler"))
+				.findFirst().orElseThrow().action().run();
+
+		verify(handler).shutdown();
+		assertTrue(platform.beforeExecutorShutdown().stream()
+				.noneMatch(cleanup -> cleanup.name().equals("MySQL")));
+		platform.afterExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("MySQL"))
+				.findFirst().orElseThrow().action().run();
+		verify(mysql).close();
+		assertTrue(platform.afterExecutorShutdown().stream()
+				.noneMatch(cleanup -> cleanup.name().equals("full inventory handler")));
+	}
+
+	@Test void bukkitAdapterDoesNotCloseMysqlWhileCheckpointTasksRemainActive() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		MySQL mysql = mock(MySQL.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(plugin.getMysql()).thenReturn(mysql);
+		when(plugin.getLogger()).thenReturn(mock(java.util.logging.Logger.class));
+		when(plugin.getTimer()).thenReturn(timer);
+		when(timer.isTerminated()).thenReturn(false);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.afterExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("MySQL"))
+				.findFirst().orElseThrow().action().run();
+
+		verify(mysql, never()).close();
+	}
 }

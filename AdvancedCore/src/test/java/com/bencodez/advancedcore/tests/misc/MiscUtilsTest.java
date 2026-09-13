@@ -1,10 +1,16 @@
 package com.bencodez.advancedcore.tests.misc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -81,6 +87,117 @@ public class MiscUtilsTest {
 			verify(scheduler).executeOrScheduleSync(eq(plugin), task.capture());
 			task.getValue().run();
 			verify(server).dispatchCommand(console, "say hi");
+		}
+	}
+
+	@Test
+	public void asyncConsoleCommandCompletesOnlyAfterItsScheduledDispatch() {
+		Server server = mock(Server.class);
+		ConsoleCommandSender console = mock(ConsoleCommandSender.class);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+			bukkit.when(() -> Bukkit.getOfflinePlayer("Ben")).thenReturn(null);
+
+			java.util.concurrent.CompletionStage<Void> completion = miscUtils.executeConsoleCommandsAsync("Ben", "/say hi",
+					new HashMap<>());
+			verify(scheduler).executeOrScheduleSync(eq(plugin), task.capture());
+			assertFalse(completion.toCompletableFuture().isDone());
+
+			task.getValue().run();
+			completion.toCompletableFuture().join();
+			assertTrue(completion.toCompletableFuture().isDone());
+			verify(server).dispatchCommand(console, "say hi");
+		}
+	}
+
+	@Test
+	public void asyncConsoleCommandPreservesAnEmptyPlaceholderExpansion() {
+		Server server = mock(Server.class);
+		ConsoleCommandSender console = mock(ConsoleCommandSender.class);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		HashMap<String, String> placeholders = new HashMap<>();
+		placeholders.put("command", "");
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+			bukkit.when(() -> Bukkit.getOfflinePlayer("Ben")).thenReturn(null);
+
+			java.util.concurrent.CompletionStage<Void> completion = miscUtils.executeConsoleCommandsAsync("Ben",
+					"%command%", placeholders);
+			verify(scheduler).executeOrScheduleSync(eq(plugin), task.capture());
+			task.getValue().run();
+			completion.toCompletableFuture().join();
+			verify(server).dispatchCommand(console, "");
+		}
+	}
+
+	@Test
+	public void asyncStaggeredCommandsCompleteOnlyAfterEveryScheduledDispatch() {
+		Server server = mock(Server.class);
+		ConsoleCommandSender console = mock(ConsoleCommandSender.class);
+		ArgumentCaptor<Runnable> immediate = ArgumentCaptor.forClass(Runnable.class);
+		ArgumentCaptor<Runnable> firstDelayed = ArgumentCaptor.forClass(Runnable.class);
+		ArgumentCaptor<Runnable> secondDelayed = ArgumentCaptor.forClass(Runnable.class);
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+			bukkit.when(() -> Bukkit.getOfflinePlayer("Ben")).thenReturn(null);
+
+			java.util.concurrent.CompletionStage<Void> completion = miscUtils.executeConsoleCommandsAsync("Ben",
+					new ArrayList<>(List.of("say one", "say two", "say three")), new HashMap<>(), true);
+			verify(scheduler).runTask(eq(plugin), immediate.capture());
+			verify(scheduler, never()).runTaskLater(eq(plugin), any(Runnable.class), anyLong());
+			assertFalse(completion.toCompletableFuture().isDone());
+
+			immediate.getValue().run();
+			assertFalse(completion.toCompletableFuture().isDone());
+			verify(scheduler).runTaskLater(eq(plugin), firstDelayed.capture(), eq(1L));
+			firstDelayed.getValue().run();
+			assertFalse(completion.toCompletableFuture().isDone());
+			verify(scheduler, times(2)).runTaskLater(eq(plugin), secondDelayed.capture(), eq(1L));
+			secondDelayed.getAllValues().get(1).run();
+			completion.toCompletableFuture().join();
+
+			verify(server).dispatchCommand(console, "say one");
+			verify(server).dispatchCommand(console, "say two");
+			verify(server).dispatchCommand(console, "say three");
+		}
+	}
+
+	@Test
+	public void asyncNonStaggeredCommandsStayOnTheInitialServerTick() {
+		Server server = mock(Server.class);
+		ConsoleCommandSender console = mock(ConsoleCommandSender.class);
+		ArgumentCaptor<Runnable> initial = ArgumentCaptor.forClass(Runnable.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+			bukkit.when(() -> Bukkit.getOfflinePlayer("Ben")).thenReturn(null);
+
+			java.util.concurrent.CompletionStage<Void> completion = miscUtils.executeConsoleCommandsAsync("Ben",
+					new ArrayList<>(List.of("say one", "say two", "say three")), new HashMap<>(), false);
+			verify(scheduler).runTask(eq(plugin), initial.capture());
+			assertFalse(completion.toCompletableFuture().isDone());
+
+			initial.getValue().run();
+			completion.toCompletableFuture().join();
+
+			verify(scheduler).runTask(eq(plugin), any(Runnable.class));
+			verify(scheduler, times(2)).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+			verify(scheduler, never()).runTaskLater(eq(plugin), any(Runnable.class), anyLong());
+			verify(server).dispatchCommand(console, "say one");
+			verify(server).dispatchCommand(console, "say two");
+			verify(server).dispatchCommand(console, "say three");
 		}
 	}
 }
