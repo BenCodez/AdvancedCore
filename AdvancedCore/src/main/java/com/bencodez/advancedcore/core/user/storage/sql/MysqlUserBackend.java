@@ -86,7 +86,13 @@ public final class MysqlUserBackend implements SqlUserBackend {
         try (Connection connection = table.getMysql().getConnectionManager().getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             int index = 1;
-            if (cursor != null) dialect.bindUuid(statement, index++, UUID.fromString(cursor));
+            if (cursor != null) {
+                if (dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL) {
+                    dialect.bindUuid(statement, index++, UUID.fromString(cursor));
+                } else {
+                    statement.setString(index++, cursor);
+                }
+            }
             statement.setInt(index, USER_PAGE_SIZE);
             ArrayList<UserPageEntry> page = new ArrayList<>(USER_PAGE_SIZE);
             try (ResultSet result = statement.executeQuery()) {
