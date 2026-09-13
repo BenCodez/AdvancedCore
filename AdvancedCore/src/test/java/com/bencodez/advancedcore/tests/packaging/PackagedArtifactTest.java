@@ -1,6 +1,5 @@
 package com.bencodez.advancedcore.tests.packaging;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,7 +14,7 @@ import org.junit.jupiter.api.Test;
 public class PackagedArtifactTest {
 
     @Test
-    void keepsRequiredRelocatedLibrariesWithoutOptionalTransports() throws Exception {
+    void keepsRequiredClassesAndRelocations() throws Exception {
         Path artifactPath = packagedJar();
         try (JarFile artifact = new JarFile(artifactPath.toFile())) {
             assertNotNull(artifact.getEntry("com/bencodez/advancedcore/AdvancedCorePlugin.class"));
@@ -27,14 +26,8 @@ public class PackagedArtifactTest {
             assertNull(artifact.getEntry("com/tcoded/folialib/FoliaLib.class"));
             assertNull(artifact.getEntry("com/zaxxer/hikari/HikariDataSource.class"));
             assertNull(artifact.getEntry("org/mozilla/javascript/Context.class"));
-            assertFalse(artifact.stream().anyMatch(entry -> entry.getName().startsWith("org/bouncycastle/")));
-            assertFalse(artifact.stream().anyMatch(entry -> entry.getName()
-                    .startsWith("com/bencodez/simpleapi/servercomm/http/")));
-            assertFalse(artifact.stream().anyMatch(entry -> entry.getName().startsWith("redis/clients/")));
-            assertFalse(artifact.stream().anyMatch(entry -> entry.getName().startsWith("org/eclipse/paho/")));
-            assertFalse(artifact.stream().anyMatch(entry -> entry.getName().startsWith("META-INF/versions/25/")));
         }
-        System.out.printf("AdvancedCore packaged artifact: %,d bytes; optional HTTP/Redis/MQTT payload absent%n",
+        System.out.printf("AdvancedCore packaged artifact: %,d bytes; required classes and relocations retained%n",
                 Files.size(artifactPath));
     }
 

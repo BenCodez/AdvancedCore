@@ -239,7 +239,6 @@
             <groupId>com.bencodez</groupId>
             <artifactId>simpleapi</artifactId>
             <version>1.0.2-SNAPSHOT</version>
-            <classifier>thin</classifier>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>

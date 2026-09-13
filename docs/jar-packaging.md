@@ -1,8 +1,9 @@
 # JAR packaging contract
 
-AdvancedCore consumes SimpleAPI's `thin` classifier so Maven Shade sees the
-project classes and each dependency exactly once. The normal SimpleAPI artifact
-remains a self-contained compatibility artifact for other consumers.
+AdvancedCore consumes SimpleAPI's normal self-contained artifact for SNAPSHOT
+compatibility and preserves the established transitive dependency contract.
+It does not add an AdvancedCore-specific payload filter or change dependency
+publication semantics for existing consumers.
 
 AdvancedCore does not use SimpleAPI's HTTP, Redis, or MQTT implementations.
 Its SimpleAPI dependency therefore excludes Bouncy Castle, Jedis, and Paho.
@@ -15,6 +16,8 @@ that contain Gson types, while the supported server/proxy platforms supply it.
 Rhino remains bundled and relocated for the JavaScript feature.
 
 The package phase runs `PackagedArtifactTest` after shading. It verifies the
-actual minimized JAR contains required relocated classes and no HTTP crypto,
-Redis, MQTT, or Java 25 Bouncy Castle payload. Deployment profiles use the same
-Shade configuration; only publication/final-name behavior differs.
+actual minimized JAR contains its required classes and relocations. VotingPlugin
+applies its own narrow artifact filters when producing its smaller user-facing
+distribution.
+Deployment profiles use the same Shade configuration; only
+publication/final-name behavior differs.
