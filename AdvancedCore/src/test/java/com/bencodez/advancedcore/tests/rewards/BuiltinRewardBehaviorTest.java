@@ -579,6 +579,43 @@ public class BuiltinRewardBehaviorTest {
         }
     }
 
+	@Test
+	public void onlyOneItemChanceReplaysFailedRollBeforeSuccessfulRoll() {
+		when(user.getPlayer()).thenReturn(mock(Player.class));
+		when(reward.getConfig().getConfigData().getBoolean("OnlyOneItemChance", false)).thenReturn(true);
+		ItemStack frozenStack = mock(ItemStack.class);
+		when(frozenStack.serialize()).thenReturn(java.util.Map.of("v", 0, "type", "STONE", "amount", 1));
+		org.bukkit.UnsafeValues unsafe = mock(org.bukkit.UnsafeValues.class);
+		when(unsafe.getMaterial("STONE", 0)).thenReturn(Material.STONE);
+		org.bukkit.inventory.ItemFactory itemFactory = mock(org.bukkit.inventory.ItemFactory.class);
+		when(itemFactory.equals(any(), any())).thenReturn(true);
+		java.util.concurrent.atomic.AtomicInteger construction = new java.util.concurrent.atomic.AtomicInteger();
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+				MockedConstruction<ItemBuilder> builders = mockConstruction(ItemBuilder.class,
+						withSettings().defaultAnswer(Answers.RETURNS_SELF), (builder, context) -> {
+							when(builder.toItemStack(any(Player.class))).thenReturn(frozenStack);
+							if (!context.arguments().isEmpty()
+									&& context.arguments().get(0) instanceof ConfigurationSection) {
+								when(builder.isChancePass()).thenReturn(construction.getAndIncrement() == 1);
+							}
+						})) {
+			bukkit.when(Bukkit::getUnsafe).thenReturn(unsafe);
+			bukkit.when(Bukkit::getItemFactory).thenReturn(itemFactory);
+			RewardItems.registerItems(handler, plugin);
+			ConfigurationSection items = section("Items");
+			items.createSection("First");
+			items.createSection("Second");
+			java.util.Set<String> ordered = new java.util.LinkedHashSet<>(java.util.List.of("First", "Second"));
+
+			assertEquals("Second", ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
+					ordered, items, placeholders));
+			assertEquals(2, construction.get());
+			assertEquals("Second", ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
+					ordered, items, placeholders));
+			assertEquals(2, construction.get(), "replay must reuse both frozen chance decisions");
+		}
+	}
+
     @Test
     public void fireworkActuallyLaunchesConfiguredFirework() {
         RewardFirework.register(handler, plugin);

@@ -90,13 +90,13 @@ public final class RewardItems {
                 boolean oneChance = reward.getConfig().getConfigData().getBoolean("OnlyOneItemChance", false);
                 if (!section.isEmpty()) {
                     for (String item : section) {
-                        ItemStack selected = replayItem(user, placeholders, "payload:" + item, () -> {
+                        ReplayedItem selected = replayItem(user, placeholders, "payload:" + item, () -> {
                             ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
                             builder.setCheckLoreLength(false);
                             return builder.setPlaceholders(placeholders);
                         });
-                        debug("Giving item " + item + ":" + selected);
-                        if (selected != null && oneChance) {
+                        debug("Giving item " + item + ":" + selected.item());
+                        if (selected.chancePassed() && oneChance) {
                             return item;
                         }
                     }
@@ -122,19 +122,23 @@ public final class RewardItems {
 				}.addLore("Edit items"))));
     }
 
-    private static ItemStack replayItem(AdvancedCoreUser user, HashMap<String, String> placeholders, String lane,
+    private static ReplayedItem replayItem(AdvancedCoreUser user, HashMap<String, String> placeholders, String lane,
             Supplier<ItemBuilder> builder) {
 		org.bukkit.entity.Player player = user.getPlayer();
 		if (player == null) {
 			// Preserve the legacy deferred-delivery path. Durable replay records this
 			// action as not started if the player remains unavailable, so a later retry
 			// may safely build and freeze the payload before its first side effect.
-			user.giveItem(builder.get());
-			return null;
+			ItemBuilder deferred = builder.get();
+			user.giveItem(deferred);
+			return new ReplayedItem(null, deferred.isChancePass());
 		}
         String serialized = Reward.replaySelection(placeholders, lane,
-				() -> serializeItem(builder.get().toItemStack(player)));
-        if (serialized == null) return null;
+				() -> {
+					ItemBuilder selected = builder.get();
+					return serializeItem(selected.toItemStack(player), selected.isChancePass());
+				});
+        if (serialized == null) return new ReplayedItem(null, false);
         if (!serialized.startsWith("v1:")) {
             throw new IllegalStateException("Persisted item reward payload has an unsupported format");
         }
@@ -147,15 +151,18 @@ public final class RewardItems {
         ItemStack item = frozen.getItemStack("Item");
         if (item == null) throw new IllegalStateException("Persisted item reward payload is missing");
 		user.giveItem(item);
-        return item;
+		return new ReplayedItem(item, frozen.getBoolean("ChancePassed", item.getAmount() > 0));
     }
 
-    private static String serializeItem(ItemStack item) {
+    private static String serializeItem(ItemStack item, boolean chancePassed) {
         if (item == null) return null;
         YamlConfiguration frozen = new YamlConfiguration();
         frozen.set("Item", item);
+		frozen.set("ChancePassed", chancePassed);
         return "v1:" + frozen.saveToString();
     }
+
+	private record ReplayedItem(ItemStack item, boolean chancePassed) { }
 
     private static RewardInjectValidator itemValidator() {
         return new RewardInjectValidator() {
