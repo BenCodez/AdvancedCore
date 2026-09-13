@@ -9,13 +9,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
+import com.bencodez.simpleapi.sql.Column;
+import com.bencodez.simpleapi.sql.data.DataValue;
 
 public final class SqliteUserBackend implements SqlUserBackend {
     private final Path databaseFile;
@@ -23,6 +28,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
     private final SqlUserSchema schema;
     private final SqlBackendLogger logger;
     private final AtomicBoolean open = new AtomicBoolean();
+    private final ReentrantReadWriteLock operations = new ReentrantReadWriteLock(true);
 
     public SqliteUserBackend(Path dataDirectory, String databaseName, String tableName,
             SqlUserSchema schema, SqlBackendLogger logger) {
@@ -51,13 +57,51 @@ public final class SqliteUserBackend implements SqlUserBackend {
     @Override
     public SqlUserStorage user(UUID uuid) {
         requireOpen();
-        return new JdbcSqlUserStorage(UserStorage.SQLITE, uuid, tableName, schema, this::openConnection,
-                JdbcSqlUserStorage.Dialect.SQLITE, logger);
+        SqlUserStorage delegate = new JdbcSqlUserStorage(UserStorage.SQLITE, uuid, tableName, schema,
+                this::openConnection, JdbcSqlUserStorage.Dialect.SQLITE, logger);
+        return new SqlUserStorage() {
+            @Override
+            public List<Column> readRow(UserStorage storage) {
+                return withOperation(() -> delegate.readRow(storage));
+            }
+
+            @Override
+            public boolean contains(UserStorage storage) {
+                return withOperation(() -> delegate.contains(storage));
+            }
+
+            @Override
+            public void delete(UserStorage storage) {
+                withOperation(() -> {
+                    delegate.delete(storage);
+                    return null;
+                });
+            }
+
+            @Override
+            public void write(UserStorage storage, String key, DataValue value) {
+                withOperation(() -> {
+                    delegate.write(storage, key, value);
+                    return null;
+                });
+            }
+
+            @Override
+            public void writeValues(UserStorage storage, HashMap<String, DataValue> values) {
+                withOperation(() -> {
+                    delegate.writeValues(storage, values);
+                    return null;
+                });
+            }
+        };
     }
 
     @Override
     public List<UUID> enumerateUsers() {
-        requireOpen();
+        return withOperation(this::readUserIds);
+    }
+
+    private List<UUID> readUserIds() {
         String sql = "SELECT " + quote(SqlUserSchema.UUID_COLUMN) + " FROM " + quote(tableName);
         ArrayList<UUID> users = new ArrayList<>();
         try (Connection connection = openConnection();
@@ -85,9 +129,40 @@ public final class SqliteUserBackend implements SqlUserBackend {
         return open.get();
     }
 
+    /**
+     * Stops accepting operations, then waits for every active operation (including
+     * commit/rollback and JDBC resource cleanup). Call from the storage lifecycle,
+     * not a game/region thread. Concurrent close calls all wait for the same drain.
+     *
+     * @throws IllegalStateException if called from inside an active operation
+     */
     @Override
     public void close() {
+        if (operations.getReadHoldCount() != 0) {
+            throw new IllegalStateException("Cannot close SQLite from inside an active storage operation");
+        }
         open.set(false);
+        // Do not return early when another closer has already set open=false.
+        // Uninterruptible acquisition preserves the caller's interrupt status
+        // without allowing it to start a replacement while a transaction is alive.
+        operations.writeLock().lock();
+        try {
+            // Taking the exclusive lock is the drain barrier. Connections are
+            // operation-owned and have been closed before their read lock releases.
+        } finally {
+            operations.writeLock().unlock();
+        }
+    }
+
+    private <T> T withOperation(Supplier<T> operation) {
+        requireOpen();
+        operations.readLock().lock();
+        try {
+            requireOpen();
+            return operation.get();
+        } finally {
+            operations.readLock().unlock();
+        }
     }
 
     private void initialize() {

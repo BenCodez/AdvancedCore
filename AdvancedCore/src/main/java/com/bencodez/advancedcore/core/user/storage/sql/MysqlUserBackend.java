@@ -26,7 +26,19 @@ public final class MysqlUserBackend implements SqlUserBackend {
         this.schema = Objects.requireNonNull(schema, "schema");
         this.logger = logger == null ? SqlBackendLogger.NO_OP : logger;
         this.table = new HeadlessUserTable(baseTableName, Objects.requireNonNull(config, "config"), schema, this.logger);
-        ensureRegisteredColumns();
+        try {
+            ensureRegisteredColumns();
+        } catch (RuntimeException | Error failure) {
+            // A failed UUID conversion must neither expose an incompatible backend
+            // nor leave the newly owned connection manager running.
+            open.set(false);
+            try {
+                table.close();
+            } catch (RuntimeException | Error cleanupFailure) {
+                failure.addSuppressed(cleanupFailure);
+            }
+            throw failure;
+        }
     }
 
     @Override
@@ -81,6 +93,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
     }
 
     private void ensureRegisteredColumns() {
+        table.ensureUuidType();
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
             if (!SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name())) {
                 table.ensureColumn(column.name(), column.dataType());
@@ -145,6 +158,30 @@ public final class MysqlUserBackend implements SqlUserBackend {
         @Override
         public void debug(String message) {
             logger.info(message);
+        }
+
+        void ensureUuidType() {
+            if (getDbType() != DbType.POSTGRESQL) {
+                return;
+            }
+            try {
+                String uuidType = bestUuidType();
+                if (!columnNeedsAlter(SqlUserSchema.UUID_COLUMN, uuidType)) {
+                    return;
+                }
+                // Match AbstractSqlTable's established VARCHAR -> UUID conversion,
+                // but await it here: alterColumnType() only submits background DDL.
+                // Use the same connection manager; do not create another JDBC pool.
+                String uuidColumn = quote(SqlUserSchema.UUID_COLUMN);
+                String sql = "ALTER TABLE " + quote(tableName) + " ALTER COLUMN " + uuidColumn
+                        + " TYPE " + uuidType + " USING NULLIF(" + uuidColumn + ", '')::uuid;";
+                try (Connection connection = getMysql().getConnectionManager().getConnection();
+                        PreparedStatement statement = connection.prepareStatement(sql)) {
+                    statement.executeUpdate();
+                }
+            } catch (SQLException failure) {
+                throw new IllegalStateException("Failed to initialize PostgreSQL UUID column", failure);
+            }
         }
 
         void ensureColumn(String name, com.bencodez.simpleapi.sql.DataType type) {
