@@ -28,6 +28,8 @@ public final class SharedRewardOrchestrator {
 
     public CompletionStage<SharedRewardResult> executeNested(SharedRewardPlan plan, SharedRewardContext context,
             SharedRewardDurability durability, String parentPath) {
+        Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(context, "context");
         Objects.requireNonNull(parentPath, "parentPath");
         String path = parentPath.isBlank() ? plan.id() : parentPath + "/" + plan.id();
         return execute(plan, context, durability == null ? SharedRewardDurability.NONE : durability, path);
@@ -35,44 +37,69 @@ public final class SharedRewardOrchestrator {
 
     private CompletionStage<SharedRewardResult> execute(SharedRewardPlan plan, SharedRewardContext context,
             SharedRewardDurability durability, String executionPath) {
-        if (platform.isShuttingDown()) {
-            return failed("Reward platform is shutting down");
-        }
-
-        int resume = durability.completedSteps(executionPath);
-        if (resume < 0 || resume > plan.steps().size()) {
-            return CompletableFuture.failedFuture(new IllegalStateException(
-                    "Invalid durable reward cursor " + resume + " for " + executionPath));
-        }
-
-        CompletionStage<Boolean> eligible = resume > 0
-                ? CompletableFuture.completedFuture(Boolean.TRUE)
-                : evaluateRequirements(plan.requirements(), context, 0);
-        return eligible.thenCompose(requirementsPassed -> {
-            if (!requirementsPassed.booleanValue()) {
-                return CompletableFuture.completedFuture(SharedRewardResult.NOT_ELIGIBLE);
-            }
-            if (resume == 0 && plan.chance() < 1.0 && platform.nextChanceRoll() >= plan.chance()) {
-                return CompletableFuture.completedFuture(SharedRewardResult.NOT_ELIGIBLE);
-            }
-
-            java.util.function.Supplier<CompletionStage<SharedRewardResult>> work =
-                    () -> executeSteps(plan, context, durability, executionPath, resume);
-            Duration delay = resume == 0 ? plan.delay() : Duration.ZERO;
-            if (delay.isZero()) {
-                return work.get();
-            }
-            try {
-                CompletionStage<SharedRewardResult> delayed = platform.delay(delay, work);
-                if (delayed == null) {
-                    return CompletableFuture.failedFuture(
-                            new IllegalStateException("Reward platform returned null delay stage"));
+        try {
+            if (platform.isShuttingDown()) return failed("Reward platform is shutting down");
+            String fingerprint = durability.durable() ? plan.fingerprint() : "non-durable";
+            SharedRewardProgress saved = durability.durable() ? durability.loadProgress(executionPath) : null;
+            CompletionStage<SharedRewardProgress> started;
+            if (saved != null) {
+                validateProgress(plan, fingerprint, saved, executionPath);
+                started = CompletableFuture.completedFuture(saved);
+            } else {
+                int legacyCursor = durability.completedSteps(executionPath);
+                if (legacyCursor < 0 || legacyCursor > plan.steps().size()) {
+                    return failed("Invalid durable reward cursor " + legacyCursor + " for " + executionPath);
                 }
-                return delayed;
-            } catch (Throwable failure) {
-                return CompletableFuture.failedFuture(failure);
+                if (durability.durable() && legacyCursor != 0) {
+                    return failed("Cannot resume an unversioned reward cursor: " + executionPath);
+                }
+                CompletionStage<Boolean> eligible = legacyCursor > 0
+                        ? CompletableFuture.completedFuture(Boolean.TRUE)
+                        : evaluateRequirements(plan.requirements(), context, 0).thenApply(passed ->
+                                passed.booleanValue() && (plan.chance() >= 1.0
+                                        || platform.nextChanceRoll() < plan.chance()));
+                started = eligible.thenCompose(passed -> {
+                    SharedRewardProgress decision = new SharedRewardProgress(fingerprint, passed.booleanValue(),
+                            legacyCursor, context.placeholders());
+                    CompletionStage<SharedRewardProgress> persisted = durability.begin(executionPath, decision);
+                    return persisted == null ? CompletableFuture.failedFuture(
+                            new IllegalStateException("Reward durability adapter returned null begin stage")) : persisted;
+                });
             }
-        });
+            return started.thenCompose(progress -> {
+                validateProgress(plan, fingerprint, progress, executionPath);
+                context.placeholders().clear();
+                context.placeholders().putAll(progress.placeholders());
+                if (!progress.eligible()) return CompletableFuture.completedFuture(SharedRewardResult.NOT_ELIGIBLE);
+                return executeEligible(plan, context, durability, executionPath, fingerprint, progress.completedSteps());
+            });
+        } catch (Throwable failure) {
+            return CompletableFuture.failedFuture(failure);
+        }
+    }
+
+    private void validateProgress(SharedRewardPlan plan, String fingerprint, SharedRewardProgress progress,
+            String executionPath) {
+        if (progress == null || !fingerprint.equals(progress.planFingerprint())) {
+            throw new IllegalStateException("Reward plan changed or has no durable binding: " + executionPath);
+        }
+        if (progress.completedSteps() > plan.steps().size()) {
+            throw new IllegalStateException("Invalid durable reward cursor for " + executionPath);
+        }
+    }
+
+    private CompletionStage<SharedRewardResult> executeEligible(SharedRewardPlan plan, SharedRewardContext context,
+            SharedRewardDurability durability, String executionPath, String fingerprint, int resume) {
+        java.util.function.Supplier<CompletionStage<SharedRewardResult>> work =
+                () -> executeSteps(plan, context, durability, executionPath, fingerprint, resume);
+        Duration delay = resume == 0 ? plan.delay() : Duration.ZERO;
+        if (delay.isZero()) return work.get();
+        try {
+            CompletionStage<SharedRewardResult> delayed = platform.delay(delay, work);
+            return delayed == null ? failed("Reward platform returned null delay stage") : delayed;
+        } catch (Throwable failure) {
+            return CompletableFuture.failedFuture(failure);
+        }
     }
 
     private CompletionStage<Boolean> evaluateRequirements(List<SharedRewardRequirement> requirements,
@@ -96,7 +123,7 @@ public final class SharedRewardOrchestrator {
     }
 
     private CompletionStage<SharedRewardResult> executeSteps(SharedRewardPlan plan, SharedRewardContext context,
-            SharedRewardDurability durability, String executionPath, int index) {
+            SharedRewardDurability durability, String executionPath, String fingerprint, int index) {
         if (platform.isShuttingDown()) {
             return failed("Reward platform shut down before execution completed");
         }
@@ -111,7 +138,7 @@ public final class SharedRewardOrchestrator {
             }
             CompletionStage<Void> deferred;
             try {
-                deferred = durability.defer(executionPath, index, context);
+                deferred = durability.defer(executionPath, fingerprint, index, context);
                 if (deferred == null) {
                     return CompletableFuture.failedFuture(
                             new IllegalStateException("Reward durability adapter returned null deferral stage"));
@@ -144,7 +171,7 @@ public final class SharedRewardOrchestrator {
             }
             CompletionStage<Void> checkpoint;
             try {
-                checkpoint = durability.checkpoint(executionPath, index + 1, context);
+                checkpoint = durability.checkpoint(executionPath, fingerprint, index + 1, context);
                 if (checkpoint == null) {
                     return CompletableFuture.failedFuture(
                             new IllegalStateException("Reward durability adapter returned null checkpoint stage"));
@@ -152,7 +179,8 @@ public final class SharedRewardOrchestrator {
             } catch (Throwable failure) {
                 return CompletableFuture.failedFuture(failure);
             }
-            return checkpoint.thenCompose(ignored -> executeSteps(plan, context, durability, executionPath, index + 1));
+            return checkpoint.thenCompose(ignored -> executeSteps(plan, context, durability,
+                    executionPath, fingerprint, index + 1));
         });
     }
 

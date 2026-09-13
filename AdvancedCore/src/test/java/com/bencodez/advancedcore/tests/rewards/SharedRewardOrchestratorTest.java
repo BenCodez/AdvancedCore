@@ -21,6 +21,7 @@ import com.bencodez.advancedcore.core.reward.SharedRewardDurability;
 import com.bencodez.advancedcore.core.reward.SharedRewardOrchestrator;
 import com.bencodez.advancedcore.core.reward.SharedRewardPlan;
 import com.bencodez.advancedcore.core.reward.SharedRewardPlatform;
+import com.bencodez.advancedcore.core.reward.SharedRewardProgress;
 import com.bencodez.advancedcore.core.reward.SharedRewardResult;
 import com.bencodez.advancedcore.core.reward.SharedRewardStep;
 
@@ -37,7 +38,7 @@ class SharedRewardOrchestratorTest {
                     events.add("requirement");
                     return CompletableFuture.completedFuture(Boolean.TRUE);
                 }),
-                List.of(step("command", true, events), step("message", true, events)));
+                List.of(step("command", true, events), step("message", true, events))).withDefinitionFingerprint("fixture-v1");
 
         SharedRewardResult result = orchestrator.execute(plan, context, durability).toCompletableFuture().join();
 
@@ -53,7 +54,7 @@ class SharedRewardOrchestratorTest {
         platform.online = false;
         FakeDurability durability = new FakeDurability(events, true);
         SharedRewardOrchestrator orchestrator = new SharedRewardOrchestrator(platform);
-        SharedRewardPlan plan = SharedRewardPlan.immediate("offline", List.of(step("player-command", true, events)));
+        SharedRewardPlan plan = SharedRewardPlan.immediate("offline", List.of(step("player-command", true, events))).withDefinitionFingerprint("fixture-v1");
 
         SharedRewardResult result = orchestrator.execute(plan, context(), durability).toCompletableFuture().join();
 
@@ -73,7 +74,7 @@ class SharedRewardOrchestratorTest {
             return CompletableFuture.completedFuture(SharedRewardResult.COMPLETED);
         });
         SharedRewardPlan plan = SharedRewardPlan.immediate("disconnect",
-                List.of(first, step("second", true, events)));
+                List.of(first, step("second", true, events))).withDefinitionFingerprint("fixture-v1");
 
         SharedRewardResult result = orchestrator.execute(plan, context(), durability).toCompletableFuture().join();
 
@@ -92,7 +93,7 @@ class SharedRewardOrchestratorTest {
             return CompletableFuture.failedFuture(new IllegalStateException("boom"));
         });
         SharedRewardPlan plan = SharedRewardPlan.immediate("partial",
-                List.of(step("first", false, events), failure, step("third", false, events)));
+                List.of(step("first", false, events), failure, step("third", false, events))).withDefinitionFingerprint("fixture-v1");
 
         assertThrows(CompletionException.class,
                 () -> orchestrator.execute(plan, context(), durability).toCompletableFuture().join());
@@ -107,7 +108,7 @@ class SharedRewardOrchestratorTest {
         FakeDurability durability = new FakeDurability(events, true);
         SharedRewardOrchestrator orchestrator = new SharedRewardOrchestrator(platform);
         SharedRewardPlan plan = new SharedRewardPlan("shutdown", 1.0, Duration.ofSeconds(1), List.of(),
-                List.of(step("never", false, events)));
+                List.of(step("never", false, events))).withDefinitionFingerprint("fixture-v1");
 
         assertThrows(CompletionException.class,
                 () -> orchestrator.execute(plan, context(), durability).toCompletableFuture().join());
@@ -120,10 +121,10 @@ class SharedRewardOrchestratorTest {
         FakePlatform platform = new FakePlatform(events);
         FakeDurability durability = new FakeDurability(events, true);
         SharedRewardOrchestrator orchestrator = new SharedRewardOrchestrator(platform);
-        SharedRewardPlan child = SharedRewardPlan.immediate("child", List.of(step("child-command", false, events)));
+        SharedRewardPlan child = SharedRewardPlan.immediate("child", List.of(step("child-command", false, events))).withDefinitionFingerprint("fixture-v1");
         SharedRewardStep nested = new SharedRewardStep("nested", false,
                 (ctx, path) -> orchestrator.executeNested(child, ctx, durability, path));
-        SharedRewardPlan parent = SharedRewardPlan.immediate("parent", List.of(nested, step("after", false, events)));
+        SharedRewardPlan parent = SharedRewardPlan.immediate("parent", List.of(nested, step("after", false, events))).withDefinitionFingerprint("fixture-v1");
 
         orchestrator.execute(parent, context(), durability).toCompletableFuture().join();
 
@@ -137,14 +138,15 @@ class SharedRewardOrchestratorTest {
         FakePlatform platform = new FakePlatform(events);
         platform.chanceRoll = 0.99;
         FakeDurability durability = new FakeDurability(events, true);
-        durability.completed.put("resume", 1);
         SharedRewardOrchestrator orchestrator = new SharedRewardOrchestrator(platform);
         SharedRewardPlan plan = new SharedRewardPlan("resume", 0.1, Duration.ofSeconds(4),
                 List.of(ctx -> {
                     events.add("requirement");
                     return CompletableFuture.completedFuture(Boolean.FALSE);
-                }), List.of(step("already-done", false, events), step("remaining", false, events)));
+                }), List.of(step("already-done", false, events), step("remaining", false, events))).withDefinitionFingerprint("fixture-v1");
 
+        durability.completed.put("resume", 1);
+        durability.progress.put("resume", new SharedRewardProgress(plan.fingerprint(), true, 1, Map.of()));
         SharedRewardResult result = orchestrator.execute(plan, context(), durability).toCompletableFuture().join();
 
         assertEquals(SharedRewardResult.COMPLETED, result);
@@ -201,10 +203,20 @@ class SharedRewardOrchestratorTest {
         private final List<String> events;
         private final boolean durable;
         private final HashMap<String, Integer> completed = new HashMap<>();
+        private final HashMap<String, SharedRewardProgress> progress = new HashMap<>();
 
         private FakeDurability(List<String> events, boolean durable) {
             this.events = events;
             this.durable = durable;
+        }
+
+        @Override
+        public SharedRewardProgress loadProgress(String path) { return progress.get(path); }
+
+        @Override
+        public CompletionStage<SharedRewardProgress> begin(String path, SharedRewardProgress state) {
+            progress.putIfAbsent(path, state);
+            return CompletableFuture.completedFuture(progress.get(path));
         }
 
         @Override
@@ -217,6 +229,7 @@ class SharedRewardOrchestratorTest {
                 SharedRewardContext context) {
             events.add("checkpoint:" + executionPath + ":" + completedSteps);
             completed.put(executionPath, completedSteps);
+            progress.put(executionPath, progress.get(executionPath).advance(completedSteps, context));
             return CompletableFuture.completedFuture(null);
         }
 
