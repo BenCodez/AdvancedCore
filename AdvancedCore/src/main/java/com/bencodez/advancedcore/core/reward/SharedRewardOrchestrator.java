@@ -55,7 +55,7 @@ public final class SharedRewardOrchestrator {
                 }
                 CompletionStage<Boolean> eligible = legacyCursor > 0
                         ? CompletableFuture.completedFuture(Boolean.TRUE)
-                        : evaluateRequirements(plan.requirements(), context, 0).thenApply(passed ->
+                        : evaluateRequirements(plan.requirements(), context).thenApply(passed ->
                                 passed.booleanValue() && (plan.chance() >= 1.0
                                         || platform.nextChanceRoll() < plan.chance()));
                 started = eligible.thenCompose(passed -> {
@@ -112,36 +112,48 @@ public final class SharedRewardOrchestrator {
         }
     }
 
+    /** Build requirement sequencing iteratively so completed stages cannot recurse through the JVM stack. */
     private CompletionStage<Boolean> evaluateRequirements(List<SharedRewardRequirement> requirements,
-            SharedRewardContext context, int index) {
-        if (index >= requirements.size()) {
-            return CompletableFuture.completedFuture(Boolean.TRUE);
+            SharedRewardContext context) {
+        CompletionStage<Boolean> chain = CompletableFuture.completedFuture(Boolean.TRUE);
+        for (SharedRewardRequirement requirement : requirements) {
+            chain = chain.thenCompose(passed -> {
+                if (!Boolean.TRUE.equals(passed)) return CompletableFuture.completedFuture(Boolean.FALSE);
+                try {
+                    CompletionStage<Boolean> stage = requirement.test(context);
+                    return stage == null ? CompletableFuture.failedFuture(
+                            new IllegalStateException("Reward requirement returned null completion stage")) : stage;
+                } catch (Throwable failure) {
+                    return CompletableFuture.failedFuture(failure);
+                }
+            });
         }
-        CompletionStage<Boolean> stage;
-        try {
-            stage = requirements.get(index).test(context);
-            if (stage == null) {
-                return CompletableFuture.failedFuture(
-                        new IllegalStateException("Reward requirement returned null completion stage"));
-            }
-        } catch (Throwable failure) {
-            return CompletableFuture.failedFuture(failure);
-        }
-        return stage.thenCompose(passed -> Boolean.TRUE.equals(passed)
-                ? evaluateRequirements(requirements, context, index + 1)
-                : CompletableFuture.completedFuture(Boolean.FALSE));
+        return chain;
     }
 
+    /**
+     * Build the step chain iteratively. Already-completed action/checkpoint stages may
+     * run inline, but no step invokes the next step recursively, so large synchronous
+     * plans remain stack-safe.
+     */
     private CompletionStage<SharedRewardResult> executeSteps(SharedRewardPlan plan, SharedRewardContext context,
+            SharedRewardDurability durability, String executionPath, String fingerprint, int index) {
+        CompletionStage<SharedRewardResult> chain = CompletableFuture.completedFuture(SharedRewardResult.COMPLETED);
+        for (int current = index; current < plan.steps().size(); current++) {
+            final int stepIndex = current;
+            chain = chain.thenCompose(previous -> previous == SharedRewardResult.DEFERRED
+                    ? CompletableFuture.completedFuture(SharedRewardResult.DEFERRED)
+                    : executeStep(plan.steps().get(stepIndex), context, durability,
+                            executionPath, fingerprint, stepIndex));
+        }
+        return chain;
+    }
+
+    private CompletionStage<SharedRewardResult> executeStep(SharedRewardStep step, SharedRewardContext context,
             SharedRewardDurability durability, String executionPath, String fingerprint, int index) {
         if (platform.isShuttingDown()) {
             return failed("Reward platform shut down before execution completed");
         }
-        if (index >= plan.steps().size()) {
-            return CompletableFuture.completedFuture(SharedRewardResult.COMPLETED);
-        }
-
-        SharedRewardStep step = plan.steps().get(index);
         if (step.requiresOnlinePlayer() && !platform.isOnline(context.userId())) {
             if (!durability.durable()) {
                 return failed("Player became unavailable during non-durable reward step " + step.id());
@@ -189,8 +201,7 @@ public final class SharedRewardOrchestrator {
             } catch (Throwable failure) {
                 return CompletableFuture.failedFuture(failure);
             }
-            return checkpoint.thenCompose(ignored -> executeSteps(plan, context, durability,
-                    executionPath, fingerprint, index + 1));
+            return checkpoint.thenApply(ignored -> SharedRewardResult.COMPLETED);
         });
     }
 
