@@ -1039,7 +1039,18 @@ public class Reward {
 	public static RewardOptions withReplayState(RewardOptions options, ReplayState replayState,
 			String parentKey, String childOccurrence, String occurrenceId) {
 		if (replayState != null) options.setAsyncReplayState(replayState);
-		if (occurrenceId != null) options.setAsyncReplayOccurrenceId(occurrenceId);
+		if (occurrenceId != null) {
+			String effectiveOccurrence = occurrenceId;
+			// Fresh nested children can each be deferred as independent offline queue
+			// entries. Give those siblings stable distinct identities so adding the next
+			// child cannot replace the previous one. A durable parent keeps its shared
+			// occurrence because its checkpoint owns and resumes the complete sequence.
+			if (childOccurrence != null && (replayState == null || !replayState.hasCheckpointConsumer())) {
+				String childKey = parentKey == null ? childOccurrence : parentKey + "/" + childOccurrence;
+				effectiveOccurrence = replaySideEffectOccurrenceId(occurrenceId, childKey);
+			}
+			options.setAsyncReplayOccurrenceId(effectiveOccurrence);
+		}
 		if (parentKey != null && childOccurrence != null) {
 			options.setAsyncReplayKey(parentKey + "/" + childOccurrence);
 		}

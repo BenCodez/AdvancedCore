@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -332,6 +333,39 @@ public class AdvancedCoreUserTest {
 		assertEquals(1, persisted.size());
 		assertTrue(persisted.get(0).contains("%asyncoccurrence%" + occurrence));
 		assertTrue(persisted.get(0).contains("Server%pair%server-a"));
+	}
+
+	@Test
+	void independentlyDeferredNestedChildrenKeepDistinctQueueEntries() {
+		ArrayList<String> persisted = new ArrayList<>();
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> {
+			persisted.clear();
+			persisted.addAll(invocation.getArgument(1));
+			return null;
+		}).when(data).setStringList(eq("offlineRewardsPath"), any());
+		Reward reward = mock(Reward.class);
+		when(reward.getRewardName()).thenReturn("ChildReward");
+		Reward.ReplayState replayState = Reward.replayStateFor(new RewardOptions());
+		RewardOptions first = Reward.withReplayState(new RewardOptions(), replayState,
+				"Parent/AdvancedRewards", "First:0", "parent-occurrence");
+		RewardOptions second = Reward.withReplayState(new RewardOptions(), replayState,
+				"Parent/AdvancedRewards", "Second:1", "parent-occurrence");
+
+		user.addOfflineRewards(reward, first.getPlaceholders(), first);
+		user.addOfflineRewards(reward, second.getPlaceholders(), second);
+
+		assertEquals(2, persisted.size());
+		assertNotEquals(first.getAsyncReplayOccurrenceId(), second.getAsyncReplayOccurrenceId());
+		assertTrue(persisted.get(0).contains("%asyncoccurrence%" + first.getAsyncReplayOccurrenceId()));
+		assertTrue(persisted.get(1).contains("%asyncoccurrence%" + second.getAsyncReplayOccurrenceId()));
+
+		RewardOptions durableRoot = new RewardOptions();
+		durableRoot.setAsyncReplayCheckpointConsumer(ignored -> { });
+		Reward.ReplayState durableState = Reward.replayStateFor(durableRoot);
+		assertEquals("parent-occurrence", Reward.withReplayState(new RewardOptions(), durableState,
+				"Parent/AdvancedRewards", "First:0", "parent-occurrence").getAsyncReplayOccurrenceId());
 	}
 
 	@Test
