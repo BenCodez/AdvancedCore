@@ -7,6 +7,9 @@ dependency exclusions alone cannot affect.
 
 AdvancedCore does not use SimpleAPI's HTTP, Redis, or MQTT implementations.
 Its SimpleAPI dependency therefore excludes Bouncy Castle, Jedis, and Paho.
+The dependency is published as optional because the required SimpleAPI classes
+are embedded in AdvancedCore's JAR; this prevents downstream shading builds from
+pulling the original unfiltered SimpleAPI JAR back into their distributions.
 Hikari, FoliaLib, Configurate, and UniDialog remain available because the
 AdvancedCore API and implementation use them. Hikari and FoliaLib retain their
 existing `com.bencodez.simpleapi.*` relocated package names.

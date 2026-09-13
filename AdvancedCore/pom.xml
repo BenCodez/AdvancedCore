@@ -252,6 +252,9 @@
             <artifactId>simpleapi</artifactId>
             <version>1.0.2-SNAPSHOT</version>
             <scope>compile</scope>
+            <!-- SimpleAPI is embedded into the published AdvancedCore JAR. Do not
+                 expose its unfiltered self-contained artifact to downstream shaders. -->
+            <optional>true</optional>
             <exclusions>
                 <exclusion>
                     <groupId>org.bouncycastle</groupId>
