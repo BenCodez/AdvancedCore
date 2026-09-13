@@ -55,9 +55,6 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         if (flushGate != null && flushGate != gate) {
             throw new IllegalStateException("Cache owner already belongs to another runtime");
         }
-        // Installation publishes no cache changes and runs no callbacks. A failed
-        // registration leaves this owner reusable; the callback takes this monitor
-        // before using the gate, so it cannot observe a half-published binding.
         manager.bindSharedCacheInitializer(cacheInitializer);
         this.backend = backend;
         flushGate = gate;
@@ -68,17 +65,15 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         Objects.requireNonNull(backend, "backend");
         manager.bindSharedCacheInitializer(cacheInitializer);
         this.backend = backend;
-        // Existing legacy batches finish with their original writer. Binding is
-        // lazy and refuses an active legacy batch, leaving a reachable runtime
-        // whose flush/close can be retried instead of orphaning half-bound caches.
     }
 
     private void bind(UserDataCache cache, UUID uuid) {
         SqlUserBackend selected = backend;
         if (selected != null) {
-            // Capture this lifecycle, not plugin.getStorageType() or a later provider.
-            cache.configureSharedStorage(values ->
-                    selected.user(uuid).writeValues(selected.storageType(), values), flushGate);
+            cache.configureSharedStorage(values -> {
+                requireBlockingAllowed();
+                selected.user(uuid).writeValues(selected.storageType(), values);
+            }, flushGate);
         }
     }
 
@@ -89,8 +84,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         }
     }
 
-    @Override
-    public boolean isCached(UUID uuid) { return manager.isCached(uuid); }
+    @Override public boolean isCached(UUID uuid) { return manager.isCached(uuid); }
 
     @Override
     public DataValue getIfPresent(UUID uuid, String key) {
@@ -129,22 +123,22 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
         if (cache != null) {
             bind(cache, uuid);
-            cache.setSharedStorageWriter(values -> storage.writeValues(type, values));
+            cache.setSharedStorageWriter(values -> {
+                requireBlockingAllowed();
+                storage.writeValues(type, values);
+            });
             do {
-                // Includes the existing in-flight batch and its notifications before returning.
                 cache.processChanges();
             } while (cache.hasChangesToProcess());
         }
     }
 
-    @Override
-    public Set<UUID> cachedUsers() { return new HashSet<>(manager.getUserDataCache().keySet()); }
+    @Override public Set<UUID> cachedUsers() { return new HashSet<>(manager.getUserDataCache().keySet()); }
 
     @Override
     public void remove(UUID uuid) {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
         if (cache != null) {
-            // Never call the legacy clear/dump path, which can resolve the plugin's provider.
             cache.retireAfterSharedFlush();
             manager.getUserDataCache().remove(uuid, cache);
         }
@@ -157,8 +151,6 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 
     @Override
     public void shutdown() {
-        // User data has already drained. Cancel redundant delayed/periodic tasks
-        // without awaiting the timer on a server thread or interrupting active JDBC.
         if (manager.getTimer() instanceof ScheduledThreadPoolExecutor timer) {
             timer.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
             timer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);

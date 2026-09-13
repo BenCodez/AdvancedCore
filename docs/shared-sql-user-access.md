@@ -11,6 +11,13 @@ constructs connections nor owns a cache, executor, identity resolver, schema, or
 shutdown lifecycle. Shared access performs no game-thread dispatch. SQL calls
 may block and must remain on the caller's appropriate storage execution context.
 
+The headless `SqliteUserBackend` deliberately does not shade another SQLite driver
+into AdvancedCore. Bukkit/Paper/Folia deployments use the server runtime's
+`org.sqlite.JDBC`; a future Fabric/Forge/NeoForge host must provide `sqlite-jdbc`
+as a loader/runtime dependency (or download it in that loader's dependency phase)
+before constructing the backend. The test-scoped Maven dependency exists only so
+headless persistence tests can run and must not be interpreted as runtime bundling.
+
 The existing `UserData` facade delegates its SQL operations to this access layer.
 Its temporary-cache field and accessors, six fetch modes, user-cache precedence,
 cache updates, notifications, list encoding, and synchronous/asynchronous write

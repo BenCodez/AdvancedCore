@@ -10,7 +10,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -23,7 +23,7 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 /** Coordinates one existing cache/queue and its SQL provider; storage work runs on a worker. */
 public final class SharedUserDataRuntime implements AutoCloseable {
     private final UserCacheOwner cacheOwner;
-    private final ReentrantLock lifecycle = new ReentrantLock(true);
+    private final ReentrantReadWriteLock lifecycle = new ReentrantReadWriteLock(true);
     private final AtomicBoolean retiring = new AtomicBoolean();
     private final Object closeLock = new Object();
     private volatile SqlUserBackend backend;
@@ -51,6 +51,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                 DataValue cached = cacheOwner.getIfPresent(uuid, key);
                 if (cached != null) return cached;
                 if (mode.allowStorageLookup() && mode.waitForCache() && !cacheOwner.isCached(uuid)) {
+                    cacheOwner.requireBlockingAllowed();
                     populateInternal(uuid);
                     cached = cacheOwner.getIfPresent(uuid, key);
                     if (cached != null) return cached;
@@ -59,12 +60,13 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             } else if (!mode.allowStorageLookup()) {
                 return defaultValue;
             }
+            cacheOwner.requireBlockingAllowed();
             return find(readStorageRow(uuid), key, defaultValue);
         });
     }
 
     public HashMap<String, DataValue> populate(UUID uuid) {
-        return access(() -> populateInternal(Objects.requireNonNull(uuid, "uuid")));
+        return storageAccess(() -> populateInternal(Objects.requireNonNull(uuid, "uuid")));
     }
 
     private HashMap<String, DataValue> populateInternal(UUID uuid) {
@@ -75,16 +77,16 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     public int startupForEach(BiConsumer<UUID, HashMap<String, DataValue>> consumer, boolean populateCache) {
-        return access(() -> {
+        return storageAccess(() -> {
             Objects.requireNonNull(consumer, "consumer");
-            int count = 0;
-            for (UUID uuid : backend.enumerateUsers()) {
+            int[] count = { 0 };
+            backend.forEachUser(uuid -> {
                 HashMap<String, DataValue> values = populateCache ? populateInternal(uuid)
                         : SqlUserDataAccess.convert(readStorageRow(uuid));
                 consumer.accept(uuid, values);
-                count++;
-            }
-            return count;
+                count[0]++;
+            });
+            return count[0];
         });
     }
 
@@ -93,14 +95,17 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             Objects.requireNonNull(uuid, "uuid");
             Objects.requireNonNull(key, "key");
             Objects.requireNonNull(value, "value");
-            if (!cacheOwner.isCached(uuid)) populateInternal(uuid);
+            if (!cacheOwner.isCached(uuid)) {
+                cacheOwner.requireBlockingAllowed();
+                populateInternal(uuid);
+            }
             cacheOwner.queueChange(uuid, key, value);
             return null;
         });
     }
 
     public void flush(UUID uuid) {
-        access(() -> { flushInternal(Objects.requireNonNull(uuid, "uuid")); return null; });
+        storageAccess(() -> { flushInternal(Objects.requireNonNull(uuid, "uuid")); return null; });
     }
 
     private void flushInternal(UUID uuid) {
@@ -108,7 +113,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     public void flushAll() {
-        access(() -> { flushAllInternal(); return null; });
+        storageAccess(() -> { flushAllInternal(); return null; });
     }
 
     private void flushAllInternal() {
@@ -117,9 +122,12 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 
     public void replaceBackend(SqlUserBackend replacement) {
         rejectReentrantTransition();
-        access(() -> {
-            Objects.requireNonNull(replacement, "replacement");
-            if (replacement == backend) return null;
+        cacheOwner.requireBlockingAllowed();
+        Objects.requireNonNull(replacement, "replacement");
+        lifecycle.writeLock().lock();
+        try {
+            requireOpen();
+            if (replacement == backend) return;
             if (!replacement.isOpen()) throw new IllegalArgumentException("replacement backend is closed");
             flushAllInternal();
             cacheOwner.clearAfterFlush();
@@ -127,12 +135,13 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             cacheOwner.bindBackend(replacement);
             backend = replacement;
             previous.close();
-            return null;
-        });
+        } finally {
+            lifecycle.writeLock().unlock();
+        }
     }
 
     public void remove(UUID uuid) {
-        access(() -> {
+        storageAccess(() -> {
             Objects.requireNonNull(uuid, "uuid");
             flushInternal(uuid);
             backend.user(uuid).delete(backend.storageType());
@@ -166,7 +175,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             executor.execute(() -> {
                 try {
                     cacheOwner.requireBlockingAllowed();
-                    lifecycle.lock();
+                    lifecycle.writeLock().lock();
                     try {
                         if (!closed) {
                             flushAllInternal();
@@ -176,7 +185,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                             closed = true;
                         }
                     } finally {
-                        lifecycle.unlock();
+                        lifecycle.writeLock().unlock();
                     }
                     result.complete(null);
                 } catch (Throwable failure) {
@@ -203,22 +212,27 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         }
     }
 
+    /** Lifecycle admission for memory-only cache work; never performs a platform blocking check itself. */
     private <T> T access(Supplier<T> operation) {
-        cacheOwner.requireBlockingAllowed();
-        boolean admitted = lifecycle.isHeldByCurrentThread();
+        boolean admitted = lifecycle.getReadHoldCount() > 0 || lifecycle.isWriteLockedByCurrentThread();
         if (!admitted) requireOpen();
-        lifecycle.lock();
+        lifecycle.readLock().lock();
         try {
             // Nested notification work belongs to the already-admitted batch.
             if (!admitted) requireOpen();
             return operation.get();
         } finally {
-            lifecycle.unlock();
+            lifecycle.readLock().unlock();
         }
     }
 
+    private <T> T storageAccess(Supplier<T> operation) {
+        cacheOwner.requireBlockingAllowed();
+        return access(operation);
+    }
+
     private void rejectReentrantTransition() {
-        if (lifecycle.isHeldByCurrentThread()) {
+        if (lifecycle.getReadHoldCount() > 0 || lifecycle.isWriteLockedByCurrentThread()) {
             throw new IllegalStateException("Cannot replace or close the user runtime from an active user callback");
         }
     }
