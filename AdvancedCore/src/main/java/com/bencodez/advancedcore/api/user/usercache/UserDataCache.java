@@ -22,10 +22,10 @@ public class UserDataCache {
 	@Getter private HashMap<String, DataValue> cache;
 	private Queue<UserDataChange> cachedChanges;
 	private final UserDataManager manager;
-	// Version metadata only; all user values stay in the existing cache.
 	private long snapshotVersion;
 	private long replacementVersion;
 	private final HashMap<String, Long> changedAt = new HashMap<>();
+	private final HashMap<String, DataValue> inFlightValues = new HashMap<>();
 	private boolean scheduled = false;
 	private int inFlightBatches = 0;
 	private volatile Consumer<HashMap<String, DataValue>> sharedStorageWriter;
@@ -68,30 +68,45 @@ public class UserDataCache {
 		}
 	}
 
-	public synchronized UserDataCache cache() {
-		if (uuid != null && cache != null) {
-			recordSnapshotReplacement();
-			AdvancedCoreUser user = getUser();
-			ArrayList<String> keys = user.getUserData().getKeys();
-			HashMap<String, DataValue> data = user.getUserData().getValues();
-			ArrayList<String> changedKeys = new ArrayList<>();
-			for (UserDataKey dataKey : manager.getKeys()) {
-				String key = dataKey.getKey();
-				keys.remove(key);
-				if (data.containsKey(key)) {
-					DataValue dataValue = data.get(key);
-					manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for " + uuid + ", value: " + dataValue);
-					try { if (cache.containsKey(key) && !cache.get(key).toString().equals(dataValue.toString())) changedKeys.add(key); }
-					catch (Exception e) { manager.getPlugin().debug(e); }
-					cache.put(key, dataValue);
-				} else {
-					manager.getPlugin().devDebug("Loading default cache value for " + key + " for " + uuid);
-					cache.put(key, dataKey.getDefault());
-				}
-			}
-			if (!changedKeys.isEmpty()) manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys));
-			if (!keys.isEmpty()) manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.makeStringList(keys));
+	/** Storage work happens outside this monitor; publish only after the full refresh succeeds. */
+	public UserDataCache cache() {
+		initializeSharedStorage();
+		UUID currentUuid;
+		long expectedVersion;
+		HashMap<String, DataValue> before;
+		synchronized (this) {
+			if (uuid == null || cache == null) return this;
+			currentUuid = uuid;
+			expectedVersion = snapshotVersion;
+			before = new HashMap<>(cache);
 		}
+
+		AdvancedCoreUser user = manager.getPlugin().getUserManager().getUser(currentUuid, false);
+		ArrayList<String> keys = user.getUserData().getKeys();
+		HashMap<String, DataValue> data = user.getUserData().getValues();
+		HashMap<String, DataValue> refreshed = new HashMap<>();
+		for (UserDataKey dataKey : manager.getKeys()) {
+			String key = dataKey.getKey();
+			keys.remove(key);
+			DataValue dataValue = data.containsKey(key) ? data.get(key) : dataKey.getDefault();
+			if (data.containsKey(key)) {
+				manager.getPlugin().devDebug("Caching " + dataValue.getTypeName() + " " + key + " for "
+						+ currentUuid + ", value: " + dataValue);
+			} else {
+				manager.getPlugin().devDebug("Loading default cache value for " + key + " for " + currentUuid);
+			}
+			refreshed.put(key, dataValue);
+		}
+		HashMap<String, DataValue> published = updateSharedSnapshot(refreshed, expectedVersion, currentUuid);
+		ArrayList<String> changedKeys = new ArrayList<>();
+		for (Entry<String, DataValue> entry : published.entrySet()) {
+			DataValue prior = before.get(entry.getKey());
+			if (prior != null && entry.getValue() != null && !prior.toString().equals(entry.getValue().toString())) {
+				changedKeys.add(entry.getKey());
+			}
+		}
+		if (!changedKeys.isEmpty()) manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys));
+		if (!keys.isEmpty()) manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.makeStringList(keys));
 		return this;
 	}
 
@@ -141,6 +156,18 @@ public class UserDataCache {
 	public synchronized boolean hasChangesToProcess() { return cachedChanges != null && !cachedChanges.isEmpty(); }
 	public synchronized boolean isCached(String key) { return cache != null && cache.containsKey(key); }
 
+	/** Wait only for a batch that already selected the legacy writer before shared routing is published. */
+	public synchronized void awaitLegacyBatchesBeforeSharedBinding() {
+		if (sharedStorageWriter != null) return;
+		while (inFlightBatches > 0) {
+			try { wait(); }
+			catch (InterruptedException interrupted) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException("Interrupted while draining legacy user batch", interrupted);
+			}
+		}
+	}
+
 	public synchronized void configureSharedStorage(Consumer<HashMap<String, DataValue>> writer, Consumer<Runnable> gate) {
 		if (sharedFlushGate != null && sharedFlushGate != gate) throw new IllegalStateException("Shared user cache already belongs to another runtime");
 		if (sharedFlushGate == null && gate != null && inFlightBatches != 0) throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
@@ -180,6 +207,10 @@ public class UserDataCache {
 				if (currentUuid == null || cachedChanges == null || cachedChanges.isEmpty()) return;
 				UserDataChange change;
 				while ((change = cachedChanges.poll()) != null) changes.add(change);
+				inFlightValues.clear();
+				for (UserDataChange changeEntry : changes) {
+					inFlightValues.put(changeEntry.getKey(), changeEntry.toUserDataValue());
+				}
 				inFlightBatches++;
 				if (writer != null) sharedBatchThread = Thread.currentThread();
 			}
@@ -209,7 +240,11 @@ public class UserDataCache {
 	}
 
 	private synchronized void finishInFlightBatch() {
-		if (inFlightBatches > 0) { inFlightBatches--; if (sharedBatchThread == Thread.currentThread()) sharedBatchThread = null; }
+		if (inFlightBatches > 0) {
+			inFlightBatches--;
+			if (inFlightBatches == 0) inFlightValues.clear();
+			if (sharedBatchThread == Thread.currentThread()) sharedBatchThread = null;
+		}
 		notifyAll();
 	}
 
@@ -237,10 +272,10 @@ public class UserDataCache {
 		recordSnapshotReplacement();
 	}
 
-	/** Merge a storage refresh without overwriting values that are queued or currently being persisted. */
+	/** Merge a storage refresh with only values actually queued or in the active batch. */
 	public synchronized void updateCachePreservingPending(HashMap<String, DataValue> storageValues) {
 		HashMap<String, DataValue> refreshed = storageValues == null ? new HashMap<>() : new HashMap<>(storageValues);
-		if (inFlightBatches > 0 && cache != null) refreshed.putAll(cache);
+		refreshed.putAll(inFlightValues);
 		if (cachedChanges != null) {
 			for (UserDataChange change : cachedChanges) refreshed.put(change.getKey(), change.toUserDataValue());
 		}
@@ -250,18 +285,19 @@ public class UserDataCache {
 
 	public synchronized long getSharedSnapshotVersion() { return snapshotVersion; }
 
-	/** Merge only mutations newer than the load token, including already-flushed ones. */
 	public synchronized HashMap<String, DataValue> updateSharedSnapshot(HashMap<String, DataValue> values,
 			long expectedVersion) {
-		if (cache == null || uuid == null) throw new IllegalStateException("Shared user cache is retired");
-		if (expectedVersion < 0 || expectedVersion > snapshotVersion) {
-			throw new IllegalArgumentException("Invalid cache snapshot version");
-		}
-		// A later completed population or explicit full-cache refresh already won.
+		return updateSharedSnapshot(values, expectedVersion, uuid);
+	}
+
+	private synchronized HashMap<String, DataValue> updateSharedSnapshot(HashMap<String, DataValue> values,
+			long expectedVersion, UUID expectedUuid) {
+		if (cache == null || uuid == null || !uuid.equals(expectedUuid)) throw new IllegalStateException("Shared user cache changed while loading");
+		if (expectedVersion < 0 || expectedVersion > snapshotVersion) throw new IllegalArgumentException("Invalid cache snapshot version");
 		if (replacementVersion > expectedVersion) return new HashMap<>(cache);
 		HashMap<String, DataValue> merged = values == null ? new HashMap<>() : new HashMap<>(values);
 		changedAt.forEach((key, version) -> {
-			if (version > expectedVersion) merged.put(key, cache.get(key));
+			if (version > expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key));
 		});
 		cache = merged;
 		recordSnapshotReplacement();
