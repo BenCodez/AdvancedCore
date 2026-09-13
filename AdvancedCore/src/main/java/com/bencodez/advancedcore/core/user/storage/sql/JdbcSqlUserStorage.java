@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLDataException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -268,7 +269,11 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     }
 
     private boolean rowExists(Connection connection) throws SQLException {
-        String sql = "SELECT 1 FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=? LIMIT 1";
+        // Only write transactions call this helper. Keep PostgreSQL's existing
+        // row locked through UPDATE/commit so a concurrent delete cannot make a
+        // successful batch silently update zero rows. contains() stays read-only.
+        String sql = "SELECT 1 FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=? LIMIT 1"
+                + (dialect == Dialect.POSTGRESQL ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             dialect.bindUuid(statement, 1, uuid);
             try (ResultSet result = statement.executeQuery()) { return result.next(); }
@@ -300,8 +305,18 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
 
     private DataValue readValue(ResultSet result, int index, DataType type) throws SQLException {
         if (type == DataType.INTEGER) {
-            int value = result.getInt(index);
-            return new DataValueInt(result.wasNull() ? 0 : value);
+            try {
+                int value = result.getInt(index);
+                return new DataValueInt(result.wasNull() ? 0 : value);
+            } catch (SQLException invalidInteger) {
+                // Legacy string columns can contain invalid/out-of-range integer
+                // text. Preserve the zero fallback, but never hide an I/O failure.
+                String state = invalidInteger.getSQLState();
+                if (invalidInteger instanceof SQLDataException || (state != null && state.startsWith("22"))) {
+                    return new DataValueInt(0);
+                }
+                throw invalidInteger;
+            }
         }
         if (type == DataType.BOOLEAN) {
             String value = result.getString(index);

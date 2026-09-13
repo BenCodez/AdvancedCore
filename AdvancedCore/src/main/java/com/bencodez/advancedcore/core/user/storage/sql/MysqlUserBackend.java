@@ -180,6 +180,16 @@ public final class MysqlUserBackend implements SqlUserBackend {
                 try (Connection connection = getMysql().getConnectionManager().getConnection();
                         PreparedStatement statement = connection.prepareStatement(sql)) {
                     statement.executeUpdate();
+                } catch (SQLException ddlFailure) {
+                    // A competing node may have converted VARCHAR to UUID after
+                    // our inspection. Only accept the failure if a fresh inspection
+                    // confirms the required type; retain every genuine failure.
+                    try {
+                        if (columnNeedsAlter(SqlUserSchema.UUID_COLUMN, uuidType)) throw ddlFailure;
+                    } catch (SQLException inspectionFailure) {
+                        if (inspectionFailure != ddlFailure) ddlFailure.addSuppressed(inspectionFailure);
+                        throw ddlFailure;
+                    }
                 }
             } catch (SQLException failure) {
                 throw new IllegalStateException("Failed to initialize PostgreSQL UUID column", failure);
@@ -224,7 +234,11 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     ResultSet result = statement.executeQuery()) {
                 ResultSetMetaData metadata = result.getMetaData();
                 for (int i = 1; i <= metadata.getColumnCount(); i++) {
-                    if (name.equalsIgnoreCase(metadata.getColumnName(i))) return true;
+                    String storedName = metadata.getColumnName(i);
+                    // PostgreSQL's quoted names are case-sensitive. Other supported
+                    // backends keep their established case-insensitive lookup.
+                    if (getDbType() == DbType.POSTGRESQL ? name.equals(storedName)
+                            : name.equalsIgnoreCase(storedName)) return true;
                 }
                 return false;
             }
