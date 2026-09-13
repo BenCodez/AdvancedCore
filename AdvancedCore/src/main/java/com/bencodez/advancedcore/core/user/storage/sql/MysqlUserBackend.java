@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.core.user.storage.sql;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
+import com.bencodez.simpleapi.sql.DataType;
 import com.bencodez.simpleapi.sql.mysql.AbstractSqlTable;
 import com.bencodez.simpleapi.sql.mysql.DbType;
 import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
@@ -96,7 +98,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
         table.ensureUuidType();
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
             if (!SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name())) {
-                table.ensureColumn(column.name(), column.dataType());
+                table.ensureColumn(column);
             }
         }
     }
@@ -184,8 +186,37 @@ public final class MysqlUserBackend implements SqlUserBackend {
             }
         }
 
-        void ensureColumn(String name, com.bencodez.simpleapi.sql.DataType type) {
-            checkColumn(name, type);
+        void ensureColumn(SqlUserSchema.ColumnDefinition column) {
+            synchronized (checkColumnLock) {
+                // Inspect the actual table without reading user data. Unlike the legacy
+                // cache helper, inspection errors must abort initialization, not look
+                // like missing columns. Keep the same connection manager and quoting.
+                try (Connection connection = getMysql().getConnectionManager().getConnection()) {
+                    try (PreparedStatement statement = connection.prepareStatement(
+                            "SELECT * FROM " + quote(tableName) + " WHERE 1=0");
+                            ResultSet result = statement.executeQuery()) {
+                        ResultSetMetaData metadata = result.getMetaData();
+                        for (int i = 1; i <= metadata.getColumnCount(); i++) {
+                            if (column.name().equalsIgnoreCase(metadata.getColumnName(i))) {
+                                return;
+                            }
+                        }
+                    }
+                    // Preserve length, nullability and defaults exactly as CREATE does.
+                    // checkColumn(DataType) would replace these with TEXT or BIGINT.
+                    String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name())
+                            + " " + normaliseTypeForDb(column.sqlType()) + ";";
+                    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                        statement.executeUpdate();
+                    }
+                    columns.add(column.name());
+                    if (column.dataType() == DataType.INTEGER && !intColumns.contains(column.name())) {
+                        intColumns.add(column.name());
+                    }
+                } catch (SQLException failure) {
+                    throw new IllegalStateException("Failed to initialize registered SQL column: " + column.name(), failure);
+                }
+            }
         }
 
         String quote(String identifier) {
