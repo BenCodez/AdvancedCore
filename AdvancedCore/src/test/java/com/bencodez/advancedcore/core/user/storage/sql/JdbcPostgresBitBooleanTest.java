@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -93,6 +94,44 @@ class JdbcPostgresBitBooleanTest {
                 "INSERT INTO \"Users\" (\"uuid\", \"Flag\") VALUES (?, CAST(? AS BIT(1))) ON CONFLICT (\"uuid\") DO NOTHING"), sql);
         verify(statements.get(1)).setString(2, "1");
         verify(statements.get(1), never()).setInt(2, 1);
+    }
+
+    @Test
+    void postgresRetainsResolvedSchemaVarbitWidthForBooleanWrites() throws Exception {
+        Connection connection = mock(Connection.class);
+        DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        PreparedStatement exists = mock(PreparedStatement.class);
+        PreparedStatement schemaLookup = mock(PreparedStatement.class);
+        PreparedStatement insert = mock(PreparedStatement.class);
+        ResultSet missing = mock(ResultSet.class);
+        ResultSet resolvedSchema = mock(ResultSet.class);
+        ResultSet retainedColumn = mock(ResultSet.class);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getMetaData()).thenReturn(metadata);
+        when(exists.executeQuery()).thenReturn(missing);
+        when(schemaLookup.executeQuery()).thenReturn(resolvedSchema);
+        when(resolvedSchema.next()).thenReturn(true);
+        when(resolvedSchema.getString(1)).thenReturn("tenant");
+        when(retainedColumn.next()).thenReturn(true);
+        when(retainedColumn.getString("TYPE_NAME")).thenReturn("bit varying");
+        when(retainedColumn.getInt("COLUMN_SIZE")).thenReturn(5);
+        when(retainedColumn.wasNull()).thenReturn(false);
+        when(metadata.getColumns(null, "tenant", "Users", "Flag")).thenReturn(retainedColumn);
+        when(connection.prepareStatement("SELECT 1 FROM \"Users\" WHERE \"uuid\"=? LIMIT 1 FOR UPDATE"))
+                .thenReturn(exists);
+        when(connection.prepareStatement("SELECT n.nspname FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
+                + "ON n.oid=c.relnamespace WHERE c.oid=pg_catalog.to_regclass(?)")).thenReturn(schemaLookup);
+        when(connection.prepareStatement("INSERT INTO \"Users\" (\"uuid\", \"Flag\") VALUES (?, CAST(? AS BIT VARYING(5))) ON CONFLICT (\"uuid\") DO NOTHING"))
+                .thenReturn(insert);
+        when(insert.executeUpdate()).thenReturn(1);
+        SqlUserSchema schema = SqlUserSchema.builder().column("Flag", "BOOLEAN", DataType.BOOLEAN).build();
+        JdbcSqlUserStorage storage = new JdbcSqlUserStorage(UserStorage.MYSQL, USER, "Users", schema,
+                () -> connection, JdbcSqlUserStorage.Dialect.POSTGRESQL, SqlBackendLogger.NO_OP);
+
+        storage.write(UserStorage.MYSQL, "Flag", new DataValueBoolean(true));
+
+        verify(metadata).getColumns(null, "tenant", "Users", "Flag");
+        verify(insert).setString(2, "1");
     }
 
     @Test

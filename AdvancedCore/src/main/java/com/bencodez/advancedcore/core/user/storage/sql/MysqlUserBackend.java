@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -146,6 +147,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
     private void ensureRegisteredColumns() {
         table.ensureUuidType();
+        table.ensureUuidUnique();
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) if (!SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name())) table.ensureColumn(column);
     }
 
@@ -206,6 +208,71 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     }
                 }
             } catch (SQLException failure) { throw new IllegalStateException("Failed to initialize SQL UUID column", failure); }
+        }
+
+        void ensureUuidUnique() {
+            try (Connection connection = getMysql().getConnectionManager().getConnection()) {
+                java.sql.DatabaseMetaData metadata = connection.getMetaData();
+                if (metadata == null || hasUniqueUuidConstraint(connection, metadata)) return;
+                String indexName = tableName + "_uuid_unique";
+                String sql = "ALTER TABLE " + quote(tableName) + " ADD CONSTRAINT " + quote(indexName)
+                        + " UNIQUE (" + quote(SqlUserSchema.UUID_COLUMN) + ")";
+                try (PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
+                catch (SQLException ddlFailure) {
+                    // Another opener may have created the constraint after our metadata
+                    // check.  Re-inspect the database before treating that race as fatal.
+                    if (!hasUniqueUuidConstraint(connection, connection.getMetaData())) throw ddlFailure;
+                }
+            } catch (SQLException failure) {
+                throw new IllegalStateException("Failed to initialize SQL UUID uniqueness", failure);
+            }
+        }
+
+        private boolean hasUniqueUuidConstraint(Connection connection, java.sql.DatabaseMetaData metadata) throws SQLException {
+            String catalog = metadata.getConnection() == null ? null : metadata.getConnection().getCatalog();
+            String schema = resolvedMetadataSchema(connection, metadata);
+            try (ResultSet keys = metadata.getPrimaryKeys(catalog, schema, tableName)) {
+                String keyName = null; int count = 0; boolean uuid = false;
+                while (keys.next()) { keyName = keys.getString("PK_NAME"); count++; uuid |= SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(keys.getString("COLUMN_NAME")); }
+                if (count == 1 && uuid) return true;
+            }
+            try (ResultSet indexes = metadata.getIndexInfo(catalog, schema, tableName, true, false)) {
+                Map<String, Integer> counts = new HashMap<>(); Map<String, Boolean> uuids = new HashMap<>();
+                while (indexes.next()) {
+                    String name = indexes.getString("INDEX_NAME");
+                    if (name == null) continue;
+                    // PostgreSQL exposes partial indexes through FILTER_CONDITION. They
+                    // only constrain a subset of rows and cannot protect user identity.
+                    if (indexes.getString("FILTER_CONDITION") != null) continue;
+                    String column = indexes.getString("COLUMN_NAME");
+                    counts.merge(name, 1, Integer::sum);
+                    uuids.merge(name, column != null && SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column), Boolean::logicalOr);
+                }
+                for (String name : counts.keySet()) if (counts.get(name) == 1 && uuids.getOrDefault(name, false)) return true;
+            }
+            return false;
+        }
+
+        /**
+         * PostgreSQL treats a null schema in DatabaseMetaData calls as a wildcard.
+         * Resolve the table selected by search_path first, otherwise a same-named
+         * table in another schema can make us accept the wrong uniqueness metadata.
+         */
+        private String resolvedMetadataSchema(Connection connection, java.sql.DatabaseMetaData metadata) throws SQLException {
+            if (getDbType() != DbType.POSTGRESQL) return null;
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "SELECT table_schema FROM information_schema.tables "
+                            + "WHERE table_name=? AND table_schema=ANY(current_schemas(false)) "
+                            + "ORDER BY array_position(current_schemas(false), table_schema) LIMIT 1")) {
+                statement.setString(1, tableName);
+                try (ResultSet result = statement.executeQuery()) {
+                    if (result.next()) return result.getString(1);
+                }
+            }
+            // Views and unusual metadata implementations may not appear in
+            // information_schema.tables; getSchema is still narrower than null.
+            String current = connection.getSchema();
+            return current == null || current.isBlank() ? metadata.getUserName() : current;
         }
 
         void ensureColumn(SqlUserSchema.ColumnDefinition column) {

@@ -169,11 +169,12 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     /** @return true when the row already existed and still needs the batch UPDATE. */
     private boolean ensureRow(Connection connection, Map<String, DataValue> updates) throws SQLException {
         if (dialect != Dialect.SQLITE && rowExists(connection)) return true;
+        Map<String, SqlUserSchema.ColumnDefinition> definitions = retainedDefinitions(connection, updates);
         StringBuilder names = new StringBuilder(quote(SqlUserSchema.UUID_COLUMN));
         StringBuilder parameters = new StringBuilder("?");
         for (String key : updates.keySet()) {
             names.append(", ").append(quote(key));
-            parameters.append(", ").append(parameterExpression(schema.column(key)));
+            parameters.append(", ").append(parameterExpression(definitions.get(key)));
         }
         String prefix = dialect == Dialect.SQLITE ? "INSERT OR IGNORE INTO " : "INSERT INTO ";
         String sql = prefix + quote(tableName) + " (" + names + ") VALUES (" + parameters + ")";
@@ -182,7 +183,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             dialect.bindUuid(statement, 1, uuid);
             int index = 2;
-            for (Map.Entry<String, DataValue> entry : updates.entrySet()) bind(statement, index++, entry.getValue(), schema.column(entry.getKey()));
+            for (Map.Entry<String, DataValue> entry : updates.entrySet()) bind(statement, index++, entry.getValue(), definitions.get(entry.getKey()));
             inserted = statement.executeUpdate();
         } catch (SQLException insertFailure) {
             if (dialect == Dialect.MYSQL && isDuplicateKey(insertFailure) && rowExists(connection)) return true;
@@ -204,18 +205,18 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     }
 
     private void updateValues(Connection connection, Map<String, DataValue> updates) throws SQLException {
+        Map<String, SqlUserSchema.ColumnDefinition> definitions = retainedDefinitions(connection, updates);
         StringBuilder sql = new StringBuilder("UPDATE ").append(quote(tableName)).append(" SET ");
         boolean first = true;
         for (String key : updates.keySet()) {
             if (!first) sql.append(", ");
             first = false;
-            SqlUserSchema.ColumnDefinition definition = schema.column(key);
-            sql.append(quote(key)).append('=').append(parameterExpression(definition));
+            sql.append(quote(key)).append('=').append(parameterExpression(definitions.get(key)));
         }
         sql.append(" WHERE ").append(quote(SqlUserSchema.UUID_COLUMN)).append("=?");
         try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             int index = 1;
-            for (Map.Entry<String, DataValue> entry : updates.entrySet()) bind(statement, index++, entry.getValue(), schema.column(entry.getKey()));
+            for (Map.Entry<String, DataValue> entry : updates.entrySet()) bind(statement, index++, entry.getValue(), definitions.get(entry.getKey()));
             dialect.bindUuid(statement, index, uuid); statement.executeUpdate();
         }
     }
@@ -270,26 +271,92 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         } else statement.setObject(index, value.toString());
     }
 
+    private BooleanStorage booleanStorage(String sqlType) {
+        String normalized = sqlType.strip().toUpperCase(Locale.ROOT);
+        if (startsType(normalized, "BOOLEAN") || startsType(normalized, "BOOL")) return BooleanStorage.NATIVE;
+        if (startsType(normalized, "BIT") || startsType(normalized, "VARBIT")) return dialect == Dialect.POSTGRESQL ? BooleanStorage.POSTGRES_BIT : BooleanStorage.NUMERIC;
+        if (startsType(normalized, "TINYINT") || startsType(normalized, "SMALLINT") || startsType(normalized, "MEDIUMINT") || startsType(normalized, "INT") || startsType(normalized, "INTEGER") || startsType(normalized, "BIGINT")) return BooleanStorage.NUMERIC;
+        return BooleanStorage.TEXT;
+    }
+
     private String parameterExpression(SqlUserSchema.ColumnDefinition definition) {
-        if (booleanStorage(definition) != BooleanStorage.POSTGRES_BIT) return "?";
+        BooleanStorage storage = booleanStorage(definition);
+        if (storage != BooleanStorage.POSTGRES_BIT) return "?";
         return "CAST(? AS " + postgresBitType(definition) + ")";
+    }
+
+    private Map<String, SqlUserSchema.ColumnDefinition> retainedDefinitions(Connection connection, Map<String, DataValue> updates) throws SQLException {
+        Map<String, SqlUserSchema.ColumnDefinition> definitions = new HashMap<>();
+        for (String key : updates.keySet()) {
+            SqlUserSchema.ColumnDefinition definition = schema.column(key);
+            definitions.put(key, retainedDefinition(connection, definition));
+        }
+        return definitions;
+    }
+
+    private SqlUserSchema.ColumnDefinition retainedDefinition(Connection connection, SqlUserSchema.ColumnDefinition definition) throws SQLException {
+        if (definition == null || definition.dataType() != DataType.BOOLEAN || dialect != Dialect.POSTGRESQL) return definition;
+        java.sql.DatabaseMetaData metadata = connection.getMetaData();
+        if (metadata == null) return definition;
+        try (ResultSet columns = metadata.getColumns(null, metadataSchema(connection), tableName, definition.name())) {
+            if (columns.next()) {
+                String type = columns.getString("TYPE_NAME");
+                if (type != null && !type.isBlank()) {
+                    String normalized = type.strip().toUpperCase(Locale.ROOT);
+                    if (startsType(normalized, "BIT") || startsType(normalized, "VARBIT")) {
+                        int width = columns.getInt("COLUMN_SIZE");
+                        if (columns.wasNull() || width <= 0) width = 1;
+                        // PgJDBC exposes this as VARBIT on supported versions, but
+                        // accept the SQL spelling too so preserving a legacy column
+                        // does not accidentally turn BIT VARYING(n) into BIT(n).
+                        String retainedType = postgresVaryingBit(normalized)
+                                ? "BIT VARYING(" + width + ")" : "BIT(" + width + ")";
+                        return new SqlUserSchema.ColumnDefinition(definition.name(), retainedType, DataType.BOOLEAN);
+                    }
+                    // The current logical schema may say BOOLEAN while an existing
+                    // server still has a VARCHAR or numeric column. Bind according
+                    // to the retained physical type instead of sending a typed
+                    // boolean that PostgreSQL cannot assign to that column.
+                    return new SqlUserSchema.ColumnDefinition(definition.name(), type, DataType.BOOLEAN);
+                }
+            }
+        }
+        return definition;
+    }
+
+    private boolean postgresVaryingBit(String normalizedType) {
+        return startsType(normalizedType, "VARBIT") || normalizedType.matches("^BIT\\s+VARYING(?:\\(\\d+\\))?(?:\\s+.*)?$");
+    }
+
+    private String metadataSchema(Connection connection) throws SQLException {
+        if (dialect != Dialect.POSTGRESQL) return null;
+        String regclass = '"' + tableName.replace("\"", "\"\"") + '"';
+        String sql = "SELECT n.nspname FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
+                + "ON n.oid=c.relnamespace WHERE c.oid=pg_catalog.to_regclass(?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, regclass);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? result.getString(1) : null;
+            }
+        }
     }
 
     private String postgresBitType(SqlUserSchema.ColumnDefinition definition) {
         String sqlType = definition.sqlType().strip();
-        int separator = sqlType.indexOf(' ');
-        String token = separator < 0 ? sqlType : sqlType.substring(0, separator);
-        if (!token.matches("(?i)BIT(?:\\(\\d+\\))?")) {
+        java.util.regex.Matcher type = java.util.regex.Pattern
+                .compile("(?i)^(BIT(?:\\(\\d+\\)|\\s+VARYING(?:\\(\\d+\\))?)?)(?:\\s+.*)?$")
+                .matcher(sqlType);
+        if (!type.matches()) {
             throw new IllegalArgumentException("Unsupported PostgreSQL bit type: " + definition.sqlType());
         }
-        return token.toUpperCase(Locale.ROOT);
+        return type.group(1).toUpperCase(Locale.ROOT);
     }
 
     private BooleanStorage booleanStorage(SqlUserSchema.ColumnDefinition definition) {
         if (definition == null || definition.dataType() != DataType.BOOLEAN) return BooleanStorage.TEXT;
         String sqlType = definition.sqlType().strip().toUpperCase(Locale.ROOT);
         if (startsType(sqlType, "BOOLEAN") || startsType(sqlType, "BOOL")) return BooleanStorage.NATIVE;
-        if (startsType(sqlType, "BIT")) return dialect == Dialect.POSTGRESQL ? BooleanStorage.POSTGRES_BIT : BooleanStorage.NUMERIC;
+        if (startsType(sqlType, "BIT") || startsType(sqlType, "VARBIT")) return dialect == Dialect.POSTGRESQL ? BooleanStorage.POSTGRES_BIT : BooleanStorage.NUMERIC;
         if (startsType(sqlType, "TINYINT") || startsType(sqlType, "SMALLINT") || startsType(sqlType, "MEDIUMINT") || startsType(sqlType, "INT") || startsType(sqlType, "INTEGER") || startsType(sqlType, "BIGINT")) return BooleanStorage.NUMERIC;
         return BooleanStorage.TEXT;
     }

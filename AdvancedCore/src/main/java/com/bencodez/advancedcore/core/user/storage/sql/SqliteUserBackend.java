@@ -174,6 +174,9 @@ public final class SqliteUserBackend implements SqlUserBackend {
         if (!hasColumn(SqlUserSchema.UUID_COLUMN)) {
             throw new SQLException("SQLite user table is missing required UUID column");
         }
+        if (!hasCompatibleUuidType()) {
+            throw new SQLException("SQLite user table UUID column must use a text-compatible type");
+        }
         if (!hasUniqueUuidConstraint()) {
             throw new SQLException("SQLite user table UUID column must be PRIMARY KEY or UNIQUE");
         }
@@ -194,6 +197,21 @@ public final class SqliteUserBackend implements SqlUserBackend {
         String sql = "PRAGMA table_info(" + quote(tableName) + ")";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet result = statement.executeQuery()) {
             while (result.next()) if (name.equalsIgnoreCase(result.getString("name"))) return true;
+            return false;
+        }
+    }
+
+    private boolean hasCompatibleUuidType() throws SQLException {
+        String sql = "PRAGMA table_info(" + quote(tableName) + ")";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                if (!SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(result.getString("name"))) continue;
+                String type = result.getString("type");
+                if (type == null || type.isBlank()) return true;
+                String normalized = type.strip().toUpperCase(Locale.ROOT);
+                return normalized.contains("CHAR") || normalized.contains("CLOB")
+                        || normalized.contains("TEXT") || normalized.contains("STRING");
+            }
             return false;
         }
     }

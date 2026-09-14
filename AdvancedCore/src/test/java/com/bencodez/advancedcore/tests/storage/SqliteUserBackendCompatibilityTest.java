@@ -147,6 +147,30 @@ class SqliteUserBackendCompatibilityTest {
     }
 
     @Test
+    void acceptsAllTextAffinityUuidDeclarations() throws Exception {
+        try (Connection connection = connect(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE Users (uuid NVARCHAR(37), Name TEXT)");
+            statement.executeUpdate("CREATE UNIQUE INDEX users_uuid ON Users(uuid)");
+        }
+        try (SqliteUserBackend backend = open("Users", SqlUserSchema.fromKeys(List.of(new UserDataKeyString("Name"))))) {
+            UUID uuid = UUID.randomUUID();
+            backend.user(uuid).write(UserStorage.SQLITE, "Name", new DataValueString("valid"));
+            assertEquals(List.of(uuid), backend.enumerateUsers());
+        }
+    }
+
+    @Test
+    void rejectsUuidDeclarationWithNonTextAffinity() throws Exception {
+        try (Connection connection = connect(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE Users (uuid INTEGER, Name TEXT)");
+            statement.executeUpdate("CREATE UNIQUE INDEX users_uuid ON Users(uuid)");
+        }
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> open("Users", SqlUserSchema.fromKeys(List.of(new UserDataKeyString("Name")))));
+        assertTrue(failure.getCause().getMessage().contains("text-compatible type"));
+    }
+
+    @Test
     void rejectsPartialUuidUniqueIndex() throws Exception {
         try (Connection connection = connect(); Statement statement = connection.createStatement()) {
             statement.executeUpdate("CREATE TABLE Users (uuid TEXT, Name TEXT)");
