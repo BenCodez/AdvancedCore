@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -134,6 +136,35 @@ class JdbcSqlUserStorageDialectTest {
         assertTrue(reader.readRow(UserStorage.MYSQL).get(0).getValue().getBoolean());
         verify(result, never()).getInt(1);
         verify(result, never()).getBoolean(1);
+    }
+
+    @Test void mysqlBooleanWritesUseTheRetainedPhysicalColumnType() throws Exception {
+        Connection connection = mock(Connection.class);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getCatalog()).thenReturn("votes");
+        DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        when(connection.getMetaData()).thenReturn(metadata);
+        ResultSet columns = mock(ResultSet.class);
+        when(columns.next()).thenReturn(true, false);
+        when(columns.getString("TYPE_NAME")).thenReturn("TINYINT");
+        when(metadata.getColumns(any(), any(), anyString(), anyString())).thenReturn(columns);
+        PreparedStatement exists = mock(PreparedStatement.class);
+        ResultSet existing = mock(ResultSet.class);
+        when(existing.next()).thenReturn(true);
+        when(exists.executeQuery()).thenReturn(existing);
+        PreparedStatement update = mock(PreparedStatement.class);
+        when(update.executeUpdate()).thenReturn(1);
+        when(connection.prepareStatement(anyString())).thenAnswer(call ->
+                call.getArgument(0, String.class).startsWith("SELECT 1") ? exists : update);
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("Flag", "VARCHAR(5)", DataType.BOOLEAN).build();
+
+        new JdbcSqlUserStorage(UserStorage.MYSQL, UUID_VALUE, "Users", schema,
+                () -> connection, JdbcSqlUserStorage.Dialect.MYSQL, SqlBackendLogger.NO_OP)
+                .write(UserStorage.MYSQL, "Flag", new DataValueBoolean(true));
+
+        verify(update).setInt(1, 1);
+        verify(update, never()).setString(1, "true");
     }
 
     @Test void backendUsesConnectionManagerDialectAndExistingUuidSchemaType() throws Exception {

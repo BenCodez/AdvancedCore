@@ -292,16 +292,18 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
     }
 
     private SqlUserSchema.ColumnDefinition retainedDefinition(Connection connection, SqlUserSchema.ColumnDefinition definition) throws SQLException {
-        if (definition == null || definition.dataType() != DataType.BOOLEAN || dialect != Dialect.POSTGRESQL) return definition;
+        if (definition == null || definition.dataType() != DataType.BOOLEAN) return definition;
         java.sql.DatabaseMetaData metadata = connection.getMetaData();
         if (metadata == null) return definition;
-        try (ResultSet columns = metadata.getColumns(null, metadataPattern(metadata, metadataSchema(connection)),
+        String catalog = dialect == Dialect.POSTGRESQL ? null : connection.getCatalog();
+        try (ResultSet columns = metadata.getColumns(catalog, metadataPattern(metadata, metadataSchema(connection)),
                 metadataPattern(metadata, tableName), metadataPattern(metadata, definition.name()))) {
             if (columns.next()) {
                 String type = columns.getString("TYPE_NAME");
                 if (type != null && !type.isBlank()) {
                     String normalized = type.strip().toUpperCase(Locale.ROOT);
-                    if (startsType(normalized, "BIT") || startsType(normalized, "VARBIT")) {
+                    if (dialect == Dialect.POSTGRESQL
+                            && (startsType(normalized, "BIT") || startsType(normalized, "VARBIT"))) {
                         int width = columns.getInt("COLUMN_SIZE");
                         if (columns.wasNull() || width <= 0) width = 1;
                         // PgJDBC exposes this as VARBIT on supported versions, but

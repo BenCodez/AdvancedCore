@@ -90,7 +90,10 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
     private List<UserPageEntry> readUserPage(String cursor) {
         String uuidColumn = table.quote(SqlUserSchema.UUID_COLUMN);
-        String sql = "SELECT " + uuidColumn + " FROM " + table.quote(table.getTableName()) + (cursor == null ? "" : " WHERE " + uuidColumn + " > ?") + " ORDER BY " + uuidColumn + " ASC LIMIT ?";
+        String sql = "SELECT " + uuidColumn + " FROM " + table.quote(table.getTableName())
+                + " WHERE " + uuidColumn + " IS NOT NULL"
+                + (cursor == null ? "" : " AND " + uuidColumn + " > ?")
+                + " ORDER BY " + uuidColumn + " ASC LIMIT ?";
         JdbcSqlUserStorage.Dialect dialect = JdbcSqlUserStorage.Dialect.fromDbType(table.getDbType());
         try (Connection connection = table.getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             int index = 1;

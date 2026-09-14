@@ -83,6 +83,8 @@ class MysqlUserBackendLifecycleReviewTest {
                 release.countDown();
                 enumeration.get(5, TimeUnit.SECONDS);
                 closing.get(5, TimeUnit.SECONDS);
+                verify(connection).prepareStatement(org.mockito.ArgumentMatchers.contains(
+                        "WHERE `uuid` IS NOT NULL"));
                 verify(managers.constructed().get(0)).close();
             } finally {
                 release.countDown();
