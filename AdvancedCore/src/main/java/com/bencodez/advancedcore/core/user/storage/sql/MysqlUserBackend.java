@@ -109,7 +109,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     UUID parsed = null;
                     try {
                         parsed = UUID.fromString(value);
-                        if (!parsed.toString().equalsIgnoreCase(value)) throw new IllegalArgumentException("Non-canonical UUID");
+                        if (!parsed.toString().equals(value)) throw new IllegalArgumentException("Non-canonical UUID");
                     }
                     catch (IllegalArgumentException invalid) {
                         parsed = null;
@@ -283,8 +283,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
                 try {
                     String storedName = findRegisteredColumn(column.name());
                     if (storedName != null) {
-                        if (getDbType() == DbType.POSTGRESQL && column.dataType() == DataType.STRING)
-                            migratePostgresNumericColumnToString(storedName, column);
+                        if (column.dataType() == DataType.STRING)
+                            migrateRetainedColumnToString(storedName, column);
                         if (getDbType() == DbType.POSTGRESQL && !storedName.equals(column.name())) renamePostgresColumn(storedName, column.name());
                         rememberColumn(column); return;
                     }
@@ -295,6 +295,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
                         try {
                             String raced = findRegisteredColumn(column.name());
                             if (raced == null) throw ddlFailure;
+                            if (column.dataType() == DataType.STRING)
+                                migrateRetainedColumnToString(raced, column);
                             if (getDbType() == DbType.POSTGRESQL && !raced.equals(column.name())) renamePostgresColumn(raced, column.name());
                         } catch (SQLException inspectionFailure) {
                             if (inspectionFailure != ddlFailure) ddlFailure.addSuppressed(inspectionFailure);
@@ -312,15 +314,36 @@ public final class MysqlUserBackend implements SqlUserBackend {
             catch (SQLException renameFailure) { String current = findRegisteredColumn(requestedName); if (!requestedName.equals(current)) throw renameFailure; }
         }
 
-        private void migratePostgresNumericColumnToString(String storedName,
+        private void migrateRetainedColumnToString(String storedName,
                 SqlUserSchema.ColumnDefinition definition) throws SQLException {
             int jdbcType = registeredColumnType(storedName);
             if (jdbcType != java.sql.Types.TINYINT && jdbcType != java.sql.Types.SMALLINT
                     && jdbcType != java.sql.Types.INTEGER && jdbcType != java.sql.Types.BIGINT
                     && jdbcType != java.sql.Types.REAL && jdbcType != java.sql.Types.FLOAT
                     && jdbcType != java.sql.Types.DOUBLE && jdbcType != java.sql.Types.NUMERIC
-                    && jdbcType != java.sql.Types.DECIMAL) return;
+                    && jdbcType != java.sql.Types.DECIMAL && jdbcType != java.sql.Types.BOOLEAN
+                    && jdbcType != java.sql.Types.BIT) return;
             String column = quote(storedName);
+            if (getDbType() != DbType.POSTGRESQL) {
+                MysqlColumnAttributes attributes = mysqlColumnAttributes(storedName);
+                if (attributes.extra() != null && !attributes.extra().isBlank()) {
+                    throw new SQLException("Cannot safely migrate SQL column with generated or automatic attributes: "
+                            + storedName);
+                }
+                String sql = "ALTER TABLE " + quote(tableName) + " MODIFY COLUMN " + column + " "
+                        + normaliseTypeForDb(definition.sqlType())
+                        + (attributes.nullable() ? " NULL" : " NOT NULL")
+                        + (attributes.defaultValue() == null ? ""
+                                : " DEFAULT '" + quoteMysqlLiteral(attributes.defaultValue()) + "'")
+                        + (attributes.comment() == null || attributes.comment().isEmpty() ? ""
+                                : " COMMENT '" + quoteMysqlLiteral(attributes.comment()) + "'")
+                        + ";";
+                try (Connection connection = getMysql().getConnectionManager().getConnection();
+                        PreparedStatement statement = connection.prepareStatement(sql)) {
+                    statement.executeUpdate();
+                }
+                return;
+            }
             String defaultExpression = postgresColumnDefault(storedName);
             StringBuilder sql = new StringBuilder("ALTER TABLE ").append(quote(tableName));
             // PostgreSQL does not apply TYPE ... USING to a column default. Drop and
@@ -337,6 +360,41 @@ public final class MysqlUserBackend implements SqlUserBackend {
                 statement.executeUpdate();
             }
         }
+
+        private MysqlColumnAttributes mysqlColumnAttributes(String name) throws SQLException {
+            String sql = "SELECT IS_NULLABLE, COLUMN_DEFAULT, EXTRA, COLUMN_COMMENT "
+                    + "FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?";
+            try (Connection connection = getMysql().getConnectionManager().getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, tableName);
+                statement.setString(2, name);
+                try (ResultSet result = statement.executeQuery()) {
+                    if (!result.next()) throw new SQLException(
+                            "Registered SQL column disappeared during attribute inspection: " + name);
+                    String nullable = result.getString(1);
+                    if (!"YES".equalsIgnoreCase(nullable) && !"NO".equalsIgnoreCase(nullable)) {
+                        throw new SQLException("Cannot determine SQL column nullability during migration: " + name);
+                    }
+                    String defaultValue = result.getString(2);
+                    if (defaultValue != null && !defaultValue.matches(
+                            "(?i)(?:true|false|[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[-+]?\\d+)?)")) {
+                        throw new SQLException("Cannot safely preserve SQL column default during migration: " + name);
+                    }
+                    String comment = result.getString(4);
+                    if (comment != null && comment.indexOf('\\') >= 0) {
+                        throw new SQLException("Cannot safely preserve SQL column comment during migration: " + name);
+                    }
+                    return new MysqlColumnAttributes("YES".equalsIgnoreCase(nullable),
+                            defaultValue, result.getString(3), comment);
+                }
+            }
+        }
+
+        private static String quoteMysqlLiteral(String value) {
+            return value.replace("'", "''");
+        }
+
+        private record MysqlColumnAttributes(boolean nullable, String defaultValue, String extra, String comment) { }
 
         private String postgresColumnDefault(String name) throws SQLException {
             String regclass = '"' + tableName.replace("\"", "\"\"") + '"';

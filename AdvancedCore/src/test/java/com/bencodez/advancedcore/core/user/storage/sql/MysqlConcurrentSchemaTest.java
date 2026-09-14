@@ -28,7 +28,8 @@ class MysqlConcurrentSchemaTest {
         fixture.columnAppears = true;
         try (var managers = fixture.managers(); var backend = fixture.open()) {
             assertTrue(backend.isOpen());
-            assertEquals(2, fixture.inspections);
+            assertEquals(3, fixture.inspections,
+                    "the raced column is re-read once more to verify whether its physical type needs migration");
             assertEquals(1, fixture.adds);
             verify(managers.constructed().get(0), never()).close();
         }

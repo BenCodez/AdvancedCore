@@ -40,6 +40,16 @@ class MysqlBackendReviewRegressionTest {
         assertEquals(List.of("Skipping malformed UUID entries while enumerating SQL users; further diagnostics suppressed:Malformed SQL UUID value"), warnings);
     }
 
+    @Test void uppercaseUuidRowsAreNotExposedAsUnaddressableLowercaseUsers() throws Exception {
+        Fixture fixture = new Fixture(DbType.MYSQL, "Points");
+        fixture.enumerationRows = List.of("AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE");
+
+        try (var managers = fixture.managers(); var backend = fixture.open()) {
+            assertTrue(backend.enumerateUsers().isEmpty());
+        }
+        fixture.assertClosed();
+    }
+
     @Test void postgresRenamesCaseOnlyHistoricalColumnInsteadOfCreatingAParallelColumn() throws Exception {
         Fixture fixture = new Fixture(DbType.POSTGRESQL, "points");
         try (var managers = fixture.managers()) {
