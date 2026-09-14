@@ -30,6 +30,8 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     private final AtomicBoolean retiring = new AtomicBoolean();
     private final Object closeLock = new Object();
     private volatile SqlUserBackend backend;
+    /** A replacement whose close failed remains here for a later safe retry. */
+    private volatile SqlUserBackend pendingBackendClose;
     private volatile boolean closed;
     private CompletableFuture<Void> closeAttempt;
 
@@ -123,6 +125,26 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         });
     }
 
+    /**
+     * Run an explicitly requested native-storage maintenance operation while no
+     * shared cache read, write, replacement, or shutdown operation can overlap
+     * it. The caller supplies the storage-specific work; this runtime first
+     * durably flushes and retires its cache generation so a provider change
+     * cannot split queued updates across the old and replacement owners.
+     */
+    public void runStorageMaintenance(Runnable operation) {
+        Objects.requireNonNull(operation, "operation");
+        rejectReentrantTransition();
+        cacheOwner.requireBlockingAllowed();
+        lifecycle.writeLock().lock();
+        try {
+            requireOpen();
+            flushAllInternal();
+            cacheOwner.clearAfterFlush();
+            operation.run();
+        } finally { lifecycle.writeLock().unlock(); }
+    }
+
     private void flushAllInternal() { for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) flushInternal(uuid); }
 
     public void replaceBackend(SqlUserBackend replacement) {
@@ -132,6 +154,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         lifecycle.writeLock().lock();
         try {
             requireOpen();
+            retryPendingBackendClose();
             if (replacement == backend) return;
             if (!replacement.isOpen()) throw new IllegalArgumentException("replacement backend is closed");
             flushAllInternal();
@@ -139,8 +162,19 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             SqlUserBackend previous = backend;
             cacheOwner.bindBackend(replacement);
             backend = replacement;
-            previous.close();
+            try { previous.close(); }
+            catch (RuntimeException | Error failure) {
+                pendingBackendClose = previous;
+                throw failure;
+            }
         } finally { lifecycle.writeLock().unlock(); }
+    }
+
+    private void retryPendingBackendClose() {
+        SqlUserBackend pending = pendingBackendClose;
+        if (pending == null) return;
+        pending.close();
+        pendingBackendClose = null;
     }
 
     public void remove(UUID uuid) {
@@ -176,9 +210,10 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                     try {
                         if (!closed) {
                             flushAllInternal();
-                            cacheOwner.clearAfterFlush();
-                            cacheOwner.shutdown();
-                            backend.close();
+							cacheOwner.clearAfterFlush();
+							cacheOwner.shutdown();
+							retryPendingBackendClose();
+							backend.close();
                             closed = true;
                         }
                     } finally { lifecycle.writeLock().unlock(); }

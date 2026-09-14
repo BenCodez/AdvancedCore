@@ -12,6 +12,8 @@ import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +49,8 @@ import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.bukkit.user.runtime.BukkitUserRuntimeBootstrap;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.command.CommandLoader;
@@ -509,6 +513,31 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * @param to   the target storage type
 	 */
 	public void convertDataStorage(UserStorage from, UserStorage to) {
+		if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+			throw new IllegalStateException("User storage conversion must run asynchronously; use convertDataStorageAsync");
+		}
+		getUserManager().getDataManager().runStorageMaintenance(() -> convertDataStorageNow(from, to));
+	}
+
+	/**
+	 * Start an explicit SQL-to-SQL conversion without blocking the server thread.
+	 * The result completes after the shared cache generation was flushed and the
+	 * converter has finished; callers must not report success before then.
+	 */
+	public CompletionStage<Void> convertDataStorageAsync(UserStorage from, UserStorage to) {
+		CompletableFuture<Void> result = new CompletableFuture<>();
+		try {
+			getBukkitScheduler().runTaskAsynchronously(this, () -> {
+				try {
+					convertDataStorage(from, to);
+					result.complete(null);
+				} catch (Throwable failure) { result.completeExceptionally(failure); }
+			});
+		} catch (RuntimeException | Error failure) { result.completeExceptionally(failure); }
+		return result;
+	}
+
+	private void convertDataStorageNow(UserStorage from, UserStorage to) {
 		debug("Starting convert process");
 		if (to == null) {
 			throw new RuntimeException("Invalid Storage Method");
@@ -637,6 +666,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		return userManager;
 	}
 
+	/** Existing manager only; shutdown must not allocate a new user subsystem. */
+	public UserManager getLoadedUserManager() { return userManager; }
+
 	private YamlConfiguration getVersionFile() {
 		try {
 			CodeSource src = this.getClass().getProtectionDomain().getCodeSource();
@@ -694,7 +726,14 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		getOptions().load(this);
 		if (loadUserData && userStorage) {
 			loadUserAPI(getOptions().getStorageType());
+			bindSharedUserRuntime();
 		}
+	}
+
+	/** Bind only after the native Bukkit storage owner has initialized successfully. */
+	private void bindSharedUserRuntime() {
+		UserDataManager manager = getUserManager().getDataManager();
+		BukkitUserRuntimeBootstrap.bindAfterStorageInitialization(this, manager);
 	}
 
 	private void loadHandle() {
@@ -1027,6 +1066,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (storageType == null) {
 			throw new IllegalArgumentException("User storage must be SQLITE or MYSQL");
 		}
+		requireUserStorageMaintenanceWindow();
 		if (storageType.equals(UserStorage.SQLITE)) {
 			ArrayList<Column> columns = new ArrayList<>();
 			Column key = new Column("uuid", DataType.STRING);
@@ -1045,6 +1085,21 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 						getOptions().getYmlConfig().getData().getConfigurationSection("MySQL")));
 			}
 
+		}
+	}
+
+	/**
+	 * The shared runtime owns cache flushing and the lifecycle admission for the
+	 * native SQL provider. Replacing that provider in-place would let an in-flight
+	 * flush target a connection that reload has already replaced or closed. There
+	 * is no safe synchronous Bukkit hot-reload boundary for this today, so require
+	 * a full plugin restart before mutating either native storage owner.
+	 */
+	private void requireUserStorageMaintenanceWindow() {
+		UserManager loadedUsers = getLoadedUserManager();
+		if (loadedUsers != null && loadedUsers.getDataManager().hasSharedRuntimeLifecycle()
+				&& !loadedUsers.getDataManager().isStorageMaintenanceActive()) {
+			throw new IllegalStateException("User storage reload requires a full plugin restart while shared user storage is active or retiring");
 		}
 	}
 
@@ -1207,6 +1262,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * @param userStorage whether to reload user storage
 	 */
 	public void reloadAdvancedCore(boolean userStorage) {
+		if (userStorage) requireUserStorageMaintenanceWindow();
 		getServerDataFile().reloadData();
 		rewardHandler.loadRewards();
 		loadConfig(userStorage);

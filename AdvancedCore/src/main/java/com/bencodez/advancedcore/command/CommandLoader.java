@@ -636,10 +636,7 @@ public class CommandLoader {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					sendMessage(sender,
-							"&cStarting convert from " + plugin.getStorageType().toString() + " to " + args[1]);
-					plugin.convertDataStorage(plugin.getStorageType(), UserStorage.value(args[1]));
-					sendMessage(sender, "&cFinished converting");
+					startStorageConversion(sender, plugin.getStorageType(), UserStorage.value(args[1]));
 				}
 			});
 
@@ -649,10 +646,7 @@ public class CommandLoader {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					sendMessage(sender,
-							"&cStarting convert from " + args[1] + " to " + plugin.getStorageType().toString());
-					plugin.convertDataStorage(UserStorage.value(args[1]), plugin.getStorageType());
-					sendMessage(sender, "&cFinished converting");
+					startStorageConversion(sender, UserStorage.value(args[1]), plugin.getStorageType());
 				}
 			});
 		}
@@ -690,6 +684,22 @@ public class CommandLoader {
 		}
 
 		return cmds;
+	}
+
+	private void startStorageConversion(CommandSender sender, UserStorage from, UserStorage to) {
+		sender.sendMessage(MessageAPI.colorize("&cStarting convert from " + from + " to " + to));
+		plugin.convertDataStorageAsync(from, to).whenComplete((ignored, failure) ->
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				if (failure == null) {
+					sender.sendMessage(MessageAPI.colorize("&cFinished converting"));
+					return;
+				}
+				// JDBC/provider exceptions can embed connection details. The storage
+				// layer records safe diagnostics; do not expose the raw exception here.
+				plugin.getLogger().severe("User storage conversion failed ("
+						+ failure.getClass().getSimpleName() + ")");
+				sender.sendMessage(MessageAPI.colorize("&cUser storage conversion failed; see the server log"));
+			}));
 	}
 
 	/**

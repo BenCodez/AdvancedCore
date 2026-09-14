@@ -1,7 +1,6 @@
 package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,8 +29,10 @@ import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
+import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
+import com.bencodez.advancedcore.core.user.runtime.SharedUserDataRuntime;
 
 class SharedLegacyBackendRoutingTest {
     @Test
@@ -110,7 +111,7 @@ class SharedLegacyBackendRoutingTest {
     }
 
     @Test
-    void legacyAdapterUsesBoundReplacementBackendRegardlessOfPluginStorageType() {
+    void legacyAdapterRejectsCrossStoreWriteInsteadOfSilentlyWritingTheSharedStore() {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         UserDataManager manager = new UserDataManager(plugin);
         when(plugin.getUserManager()).thenReturn(mock(com.bencodez.advancedcore.api.user.UserManager.class));
@@ -127,10 +128,74 @@ class SharedLegacyBackendRoutingTest {
         when(plugin.getUserManager().getDataManager()).thenReturn(manager);
         BukkitSqlUserStorage adapter = new BukkitSqlUserStorage(() -> plugin, () -> uuid.toString());
         DataValueInt value = new DataValueInt(9);
-        adapter.write(UserStorage.MYSQL, "Points", value);
-        assertEquals(UserStorage.SQLITE, target.lastStorage);
-        assertSame(value, target.lastValue);
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> adapter.write(UserStorage.MYSQL, "Points", value));
+        assertTrue(failure.getMessage().contains("MYSQL"));
+        assertTrue(failure.getMessage().contains("SQLITE"));
+        assertEquals(null, target.lastStorage);
+        assertEquals(null, target.lastValue);
         manager.getTimer().shutdownNow();
+    }
+
+    @Test
+    void legacyAdapterPreservesTheExplicitTargetWhenItMatchesTheSharedStore() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserDataManager manager = new UserDataManager(plugin);
+        when(plugin.getUserManager()).thenReturn(mock(com.bencodez.advancedcore.api.user.UserManager.class));
+        UUID uuid = UUID.randomUUID();
+        RecordingStorage target = new RecordingStorage();
+        SqlUserBackend backend = new SqlUserBackend() {
+            public UserStorage storageType() { return UserStorage.SQLITE; }
+            public SqlUserStorage user(UUID requested) { assertEquals(uuid, requested); return target; }
+            public List<UUID> enumerateUsers() { return List.of(uuid); }
+            public boolean isOpen() { return true; }
+            public void close() {}
+        };
+        manager.bindSharedSqlBackend(backend, Runnable::run);
+        when(plugin.getUserManager().getDataManager()).thenReturn(manager);
+        try {
+            new BukkitSqlUserStorage(() -> plugin, uuid::toString)
+                    .write(UserStorage.SQLITE, "Points", new DataValueInt(9));
+            assertEquals(UserStorage.SQLITE, target.lastStorage);
+            assertEquals(9, target.lastValue.getInt());
+        } finally {
+            manager.getTimer().shutdownNow();
+        }
+    }
+
+    @Test
+    void explicitRuntimeMaintenanceCanUseTheConverterTargetWithoutWeakeningNormalCrossStoreProtection() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserManager users = mock(UserManager.class);
+        UserDataManager manager = new UserDataManager(plugin);
+        UserTable sqlite = mock(UserTable.class);
+        UUID uuid = UUID.randomUUID();
+        SqlUserBackend backend = mock(SqlUserBackend.class);
+        SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
+        when(plugin.getUserManager()).thenReturn(users);
+        when(users.getDataManager()).thenReturn(manager);
+        when(plugin.getSQLiteUserTable()).thenReturn(sqlite);
+        when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+        when(backend.isOpen()).thenReturn(true);
+        manager.bindSharedSqlBackend(backend, Runnable::run);
+        manager.bindSharedRuntime(runtime);
+        doAnswer(call -> {
+            call.getArgument(0, Runnable.class).run();
+            return null;
+        }).when(runtime).runStorageMaintenance(any(Runnable.class));
+        BukkitSqlUserStorage adapter = new BukkitSqlUserStorage(() -> plugin, uuid::toString);
+        try {
+            assertThrows(IllegalStateException.class,
+                    () -> adapter.write(UserStorage.SQLITE, "Points", new DataValueInt(1)));
+
+            manager.runStorageMaintenance(() ->
+                    adapter.write(UserStorage.SQLITE, "Points", new DataValueInt(2)));
+
+            verify(runtime).runStorageMaintenance(any(Runnable.class));
+            verify(sqlite).update(any(Column.class), any());
+        } finally {
+            manager.getTimer().shutdownNow();
+        }
     }
 
     private static final class RecordingStorage implements SqlUserStorage {

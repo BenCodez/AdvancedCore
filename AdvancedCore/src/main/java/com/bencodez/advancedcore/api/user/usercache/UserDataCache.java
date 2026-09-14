@@ -25,8 +25,10 @@ public class UserDataCache {
 	private long snapshotVersion;
 	private long replacementVersion;
 	private final HashMap<String, Long> changedAt = new HashMap<>();
+	private final HashMap<String, Long> persistedAt = new HashMap<>();
 	private final HashMap<String, DataValue> inFlightValues = new HashMap<>();
 	private boolean scheduled = false;
+	private boolean removing;
 	private int inFlightBatches = 0;
 	private volatile Consumer<HashMap<String, DataValue>> sharedStorageWriter;
 	private Thread sharedBatchThread;
@@ -59,6 +61,11 @@ public class UserDataCache {
 		if (change != null && sharedStorageWriter != null && (cache == null || cachedChanges == null)) {
 			throw new IllegalStateException("Shared user cache is retired");
 		}
+		// A manager-wide retirement must never make a caller believe that its
+		// queued mutation was accepted when it was not.  The manager normally
+		// admits writers before this point; this guard also covers a re-entrant
+		// listener running as the cache is being retired.
+		if (removing) throw new IllegalStateException("Shared user cache is retiring");
 		if (change == null || cache == null || cachedChanges == null) return;
 		cache.put(change.getKey(), change.toUserDataValue());
 		changedAt.put(change.getKey(), ++snapshotVersion);
@@ -69,12 +76,22 @@ public class UserDataCache {
 	}
 
 	public UserDataCache cache() {
+		cacheInternal(true);
+		return this;
+	}
+
+	UserDataCache cacheInternal(boolean notify) {
+		refreshInternal(notify);
+		return this;
+	}
+
+	ArrayList<String> refreshInternal(boolean notify) {
 		initializeSharedStorage();
 		UUID currentUuid;
 		long expectedVersion;
 		HashMap<String, DataValue> before;
 		synchronized (this) {
-			if (uuid == null || cache == null) return this;
+			if (uuid == null || cache == null) return new ArrayList<>();
 			currentUuid = uuid;
 			expectedVersion = snapshotVersion;
 			before = new HashMap<>(cache);
@@ -95,7 +112,7 @@ public class UserDataCache {
 		synchronized (this) {
 			// A concurrent cache eviction is an expected legacy lifecycle outcome.
 			// It must not turn a completed storage read into a failed cache request.
-			if (uuid == null || cache == null) return this;
+			if (uuid == null || cache == null) return new ArrayList<>();
 			published = updateSharedSnapshot(refreshed, expectedVersion, currentUuid);
 		}
 		ArrayList<String> changedKeys = new ArrayList<>();
@@ -103,9 +120,9 @@ public class UserDataCache {
 			DataValue prior = before.get(entry.getKey());
 			if (prior != null && entry.getValue() != null && !prior.toString().equals(entry.getValue().toString())) changedKeys.add(entry.getKey());
 		}
-		if (!changedKeys.isEmpty()) manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys));
+		if (notify && !changedKeys.isEmpty()) manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys));
 		if (!keys.isEmpty()) manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.makeStringList(keys));
-		return this;
+		return changedKeys;
 	}
 
 	public void clearCache() {
@@ -124,16 +141,46 @@ public class UserDataCache {
 				return;
 			}
 		}
-		gate.accept(() -> { processChanges(); synchronized (this) { if (cache != null) { cache.clear(); recordSnapshotReplacement(); } } });
+		java.util.concurrent.atomic.AtomicReference<Runnable> notification = new java.util.concurrent.atomic.AtomicReference<>();
+		gate.accept(() -> {
+			notification.set(processChangesInternal(true));
+			synchronized (this) { if (cache != null) { cache.clear(); recordSnapshotReplacement(); } }
+		});
+		Runnable callback = notification.get();
+		if (callback != null) callback.run();
 	}
 
 	public void clearChanges() {
-		if (!hasChangesToProcess()) return;
-		if (manager != null && manager.deferSharedStorageWork(this::clearChangesNow)) return;
-		clearChangesNow();
+		Runnable callback = clearChangesForRefresh();
+		if (callback != null) callback.run();
 	}
 
-	private void clearChangesNow() { if (hasChangesToProcess()) processChanges(); }
+	/**
+	 * Flush queued changes for a cache refresh, but leave the user-data callback to
+	 * the caller. Cache refreshes run under shared per-user admission, while a
+	 * callback is permitted to remove that user and therefore needs exclusive
+	 * admission. Running it here would attempt an unsupported lock upgrade.
+	 */
+	Runnable clearChangesForRefresh() {
+		if (!hasChangesToProcess()) return null;
+		if (manager != null && manager.deferSharedStorageWork(this::clearChangesAndNotify)) return null;
+		return clearChangesNow();
+	}
+
+	private void clearChangesAndNotify() {
+		Runnable callback = clearChangesNow();
+		if (callback != null) callback.run();
+	}
+
+	private Runnable clearChangesNow() {
+		if (!hasChangesToProcess()) return null;
+		Consumer<Runnable> gate;
+		synchronized (this) { gate = sharedFlushGate; }
+		if (gate == null) return processChangesInternal(false);
+		java.util.concurrent.atomic.AtomicReference<Runnable> notification = new java.util.concurrent.atomic.AtomicReference<>();
+		gate.accept(() -> notification.set(processChangesInternal(true)));
+		return notification.get();
+	}
 
 	public void displayCache() { manager.getPlugin().devDebug(displayCacheStringList().toString()); }
 	public synchronized ArrayList<String> displayCacheStringList() {
@@ -192,6 +239,14 @@ public class UserDataCache {
 		recordSnapshotReplacement(); cache = null; cachedChanges = null; uuid = null; scheduled = false;
 	}
 
+	/** Prevent reentrant change listeners from resurrecting a cache being removed. */
+	public synchronized void beginRemoval() { removing = true; }
+
+	/** Reopen a cache when a manager-wide removal could not flush this cache. */
+	public synchronized void cancelRemoval() {
+		if (cache != null && cachedChanges != null) removing = false;
+	}
+
 	public void processChanges() {
 		initializeSharedStorage();
 		Runnable notification = processChangesInternal(false);
@@ -203,6 +258,7 @@ public class UserDataCache {
 		Consumer<HashMap<String, DataValue>> writer = null;
 		Consumer<Runnable> gate;
 		ArrayList<UserDataChange> changes = new ArrayList<>();
+		HashMap<String, Long> persistedMutationVersions = new HashMap<>();
 		boolean legacyAdmission = false;
 		synchronized (this) {
 			gate = admitted ? null : sharedFlushGate;
@@ -223,6 +279,10 @@ public class UserDataCache {
 				}
 				UserDataChange change;
 				while ((change = cachedChanges.poll()) != null) changes.add(change);
+				for (UserDataChange queuedChange : changes) {
+					Long version = changedAt.get(queuedChange.getKey());
+					if (version != null) persistedMutationVersions.put(queuedChange.getKey(), version);
+				}
 				inFlightValues.clear();
 				try {
 					for (UserDataChange changeEntry : changes) inFlightValues.put(changeEntry.getKey(), changeEntry.toUserDataValue());
@@ -252,6 +312,19 @@ public class UserDataCache {
 			for (UserDataChange change : changes) { values.put(change.getKey(), change.toUserDataValue()); keys.add(change.getKey()); }
 			if (!values.isEmpty()) { if (writer == null) user.getUserData().setValues(values); else writer.accept(values); }
 			persisted = true;
+			synchronized (this) {
+				if (cache != null) {
+					for (UserDataChange persistedChange : changes) {
+						cache.put(persistedChange.getKey(), persistedChange.toUserDataValue());
+					}
+				}
+				// The in-memory values now represent the successful write. Mark that
+				// replacement so an older in-flight read cannot overwrite them.
+				persistedMutationVersions.forEach((key, version) -> persistedAt.put(key, version));
+				persistedMutationVersions.forEach((key, version) -> {
+					if (version.equals(changedAt.get(key))) changedAt.remove(key);
+				});
+			}
 			changedUser = user;
 			changedKeys = ArrayUtils.convert(keys);
 		} catch (RuntimeException | Error e) {
@@ -331,8 +404,10 @@ public class UserDataCache {
 		if (replacementVersion > expectedVersion) return new HashMap<>(cache);
 		HashMap<String, DataValue> merged = values == null ? new HashMap<>() : new HashMap<>(values);
 		changedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
+		persistedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
 		cache = merged;
 		recordSnapshotReplacement();
+		persistedAt.clear();
 		return new HashMap<>(cache);
 	}
 

@@ -38,31 +38,40 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
         return manager;
     }
 
-    private <T> T routed(BiFunction<UserStorage, SqlUserStorage, T> sharedOperation,
-            Supplier<T> legacyOperation) {
-        UserDataManager manager = dataManager();
-        return manager == null ? legacyOperation.get()
-                : manager.withSharedSqlBackendOrLegacy(this::userId, sharedOperation, legacyOperation);
-    }
+	private <T> T routed(UserStorage requestedStorage, BiFunction<UserStorage, SqlUserStorage, T> sharedOperation,
+			Supplier<T> legacyOperation) {
+		UserDataManager manager = dataManager();
+		// Cross-store access is valid only for the converter's runtime-exclusive
+		// maintenance action. Outside that narrow scope, route every operation
+		// through the shared backend so a request cannot silently hit another store.
+		return manager == null || manager.isStorageMaintenanceActive() ? legacyOperation.get()
+				: manager.withSharedSqlBackendOrLegacy(this::userId, (sharedStorage, target) -> {
+					if (sharedStorage != requestedStorage) {
+						throw new IllegalStateException("Cannot access " + requestedStorage
+								+ " user storage while the shared runtime owns " + sharedStorage);
+					}
+					return sharedOperation.apply(requestedStorage, target);
+				}, legacyOperation);
+	}
 
     @Override
     public List<Column> readRow(UserStorage storage) {
         Objects.requireNonNull(storage, "storage");
-        return routed((type, target) -> target.readRow(type), () -> storage == UserStorage.MYSQL
+		return routed(storage, (type, target) -> target.readRow(type), () -> storage == UserStorage.MYSQL
                 ? owner().getMysql().getExact(uuid.get()) : owner().getSQLiteUserTable().getExact(primary()));
     }
 
     @Override
     public boolean contains(UserStorage storage) {
         Objects.requireNonNull(storage, "storage");
-        return routed((type, target) -> target.contains(type), () -> storage == UserStorage.MYSQL
+		return routed(storage, (type, target) -> target.contains(type), () -> storage == UserStorage.MYSQL
                 ? owner().getMysql().containsKey(uuid.get()) : owner().getSQLiteUserTable().containsKey(uuid.get()));
     }
 
     @Override
     public void delete(UserStorage storage) {
         Objects.requireNonNull(storage, "storage");
-        routed((type, target) -> { target.delete(type); return null; }, () -> {
+		routed(storage, (type, target) -> { target.delete(type); return null; }, () -> {
             if (storage == UserStorage.MYSQL) owner().getMysql().deletePlayer(uuid.get());
             else owner().getSQLiteUserTable().delete(primary());
             return null;
@@ -72,7 +81,7 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
     @Override
     public void write(UserStorage storage, String key, DataValue value) {
         Objects.requireNonNull(storage, "storage");
-        routed((type, target) -> { target.write(type, key, value); return null; }, () -> {
+		routed(storage, (type, target) -> { target.write(type, key, value); return null; }, () -> {
             if (storage == UserStorage.SQLITE) {
                 ArrayList<Column> columns = new ArrayList<>();
                 Column primary = primary();
@@ -87,7 +96,7 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
     @Override
     public void writeValues(UserStorage storage, HashMap<String, DataValue> values) {
         Objects.requireNonNull(storage, "storage");
-        routed((type, target) -> { target.writeValues(type, values); return null; }, () -> {
+		routed(storage, (type, target) -> { target.writeValues(type, values); return null; }, () -> {
             if (storage == UserStorage.MYSQL) {
                 if (owner().getMysql() != null) {
                     ArrayList<Column> columns = new ArrayList<>();

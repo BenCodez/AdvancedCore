@@ -8,6 +8,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngineHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
+import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 
@@ -35,12 +36,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                         JavascriptEngineHandler.getInstance().clearCachedEngine();
                     }
                 }),
-                new Cleanup("MySQL", () -> {
-                    if (plugin.isLoadUserData() && plugin.getOptions() != null
-                            && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType()) && plugin.getMysql() != null) {
-                        plugin.getMysql().close();
-                    }
-                }),
+                new Cleanup("user storage", this::closeUserStorageAfterSharedRetirement),
                 new Cleanup("server data timestamp", () -> {
                     if (plugin.getServerDataFile() != null) plugin.getServerDataFile().setLastUpdated();
                 }));
@@ -80,5 +76,15 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     @Override public void cleanupFailed(String component, Throwable failure) {
         plugin.getLogger().warning("Failed to shut down " + component + ": " + failure.getMessage());
         plugin.debug(failure);
+    }
+
+    private void closeUserStorageAfterSharedRetirement() {
+        if (!plugin.isLoadUserData()) return;
+        Runnable closeMysql = () -> {
+            if (plugin.getOptions() != null && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType())
+                    && plugin.getMysql() != null) plugin.getMysql().close();
+        };
+        UserManager users = plugin.getLoadedUserManager();
+        if (users == null || !users.getDataManager().closeSharedRuntimeAsync(closeMysql)) closeMysql.run();
     }
 }

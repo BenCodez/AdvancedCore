@@ -149,6 +149,17 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     }
 
     @Override public void populate(UUID uuid, HashMap<String, DataValue> values) {
+        Boolean admitted = manager.withCacheMapReadAdmission(() -> {
+            UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid, ignored -> new UserDataCache(manager, uuid));
+            bind(cache, uuid);
+            cache.updateCachePreservingPending(values);
+            return Boolean.TRUE;
+        });
+        // Test doubles and legacy adapters may not implement the optional admission hook.
+        if (admitted == null) populateWithoutMapAdmission(uuid, values);
+    }
+
+    private void populateWithoutMapAdmission(UUID uuid, HashMap<String, DataValue> values) {
         UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid, ignored -> new UserDataCache(manager, uuid));
         bind(cache, uuid);
         cache.updateCachePreservingPending(values);
@@ -157,6 +168,12 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     private record CachePopulation(UUID uuid, UserDataCache cache, long version) implements PopulationToken {}
 
     @Override public PopulationToken beginPopulation(UUID uuid) {
+        CachePopulation admitted = manager.withCacheMapReadAdmission(() -> {
+            UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid, ignored -> new UserDataCache(manager, uuid));
+            bind(cache, uuid);
+            return new CachePopulation(uuid, cache, cache.getSharedSnapshotVersion());
+        });
+        if (admitted != null) return admitted;
         UserDataCache cache = manager.getUserDataCache().computeIfAbsent(uuid, ignored -> new UserDataCache(manager, uuid));
         bind(cache, uuid);
         return new CachePopulation(uuid, cache, cache.getSharedSnapshotVersion());
@@ -165,11 +182,21 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     @Override public HashMap<String, DataValue> completePopulation(UUID uuid, HashMap<String, DataValue> values, PopulationToken token) {
         if (!(token instanceof CachePopulation expected) || !uuid.equals(expected.uuid())) throw new IllegalArgumentException("Population token does not belong to this user");
         AtomicReference<HashMap<String, DataValue>> populated = new AtomicReference<>();
-        manager.getUserDataCache().compute(uuid, (ignored, current) -> {
-            if (current != expected.cache()) throw new IllegalStateException("User cache changed while loading its database snapshot");
-            populated.set(current.updateSharedSnapshot(values, expected.version()));
-            return current;
+        HashMap<String, DataValue> admitted = manager.withCacheMapReadAdmission(() -> {
+            manager.getUserDataCache().compute(uuid, (ignored, current) -> {
+                if (current != expected.cache()) throw new IllegalStateException("User cache changed while loading its database snapshot");
+                populated.set(current.updateSharedSnapshot(values, expected.version()));
+                return current;
+            });
+            return populated.get();
         });
+        if (admitted == null) {
+            manager.getUserDataCache().compute(uuid, (ignored, current) -> {
+                if (current != expected.cache()) throw new IllegalStateException("User cache changed while loading its database snapshot");
+                populated.set(current.updateSharedSnapshot(values, expected.version()));
+                return current;
+            });
+        }
         return populated.get();
     }
 

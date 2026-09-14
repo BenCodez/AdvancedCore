@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
@@ -376,6 +377,133 @@ class SharedCacheBindingRegressionTest {
         }
     }
 
+    @Test void managerWideClearDoesNotHoldMapAdmissionWhileSharedFlushWaits() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            CountDownLatch writeStarted = new CountDownLatch(1), releaseWrite = new CountDownLatch(1);
+            fixture.first.blockWrites(writeStarted, releaseWrite);
+            cache.addChange(new UserDataChangeInt("Points", 18), true);
+            var workers = Executors.newFixedThreadPool(2);
+            try {
+                var clearing = workers.submit(fixture.manager::clearCache);
+                await(writeStarted);
+                // A shared cache flush is in progress. A population already admitted by
+                // the runtime must still be able to take the cache-map read admission.
+                assertTrue(workers.submit(() -> fixture.manager.withCacheMapReadAdmission(() -> Boolean.TRUE))
+                        .get(200, TimeUnit.MILLISECONDS));
+                releaseWrite.countDown();
+                clearing.get(5, TimeUnit.SECONDS);
+            } finally {
+                releaseWrite.countDown();
+                workers.shutdownNow();
+                assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
+            }
+            runtime.close();
+        }
+    }
+
+    @Test void managerWideClearExcludesQueuedWritesUntilTheCacheIsDetached() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            CountDownLatch writeStarted = new CountDownLatch(1), releaseWrite = new CountDownLatch(1);
+            fixture.first.blockWrites(writeStarted, releaseWrite);
+            cache.addChange(new UserDataChangeInt("Points", 18), true);
+            var workers = Executors.newFixedThreadPool(2);
+            try {
+                var clearing = workers.submit(fixture.manager::clearCache);
+                await(writeStarted);
+                var concurrentWrite = workers.submit(() ->
+                        cache.addChange(new UserDataChangeInt("Points", 19), true));
+                assertThrows(java.util.concurrent.TimeoutException.class,
+                        () -> concurrentWrite.get(200, TimeUnit.MILLISECONDS),
+                        "a write must wait for the exclusive retirement instead of being silently dropped");
+                releaseWrite.countDown();
+                clearing.get(5, TimeUnit.SECONDS);
+                assertThrows(java.util.concurrent.ExecutionException.class,
+                        () -> concurrentWrite.get(5, TimeUnit.SECONDS));
+                assertFalse(fixture.manager.containsKey(fixture.uuid));
+                assertEquals(18, fixture.first.points(fixture.uuid));
+            } finally {
+                releaseWrite.countDown();
+                workers.shutdownNow();
+                assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
+            }
+            runtime.close();
+        }
+    }
+
+    @Test void failedManagerWideClearReopensEveryStillMappedCache() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        UserDataManager manager = new UserDataManager(plugin);
+        manager.getTimer().shutdownNow();
+        try {
+            UserDataCache first = failingCache(manager, UUID.randomUUID());
+            UserDataCache second = failingCache(manager, UUID.randomUUID());
+            manager.getUserDataCache().put(first.getUuid(), first);
+            manager.getUserDataCache().put(second.getUuid(), second);
+            manager.bindSharedSqlBackend(mock(SqlUserBackend.class), (uuid, operation) -> operation.run());
+
+            assertThrows(IllegalStateException.class, manager::clearCache);
+
+            first.setSharedStorageWriter(values -> {});
+            second.setSharedStorageWriter(values -> {});
+            first.addChange(new UserDataChangeInt("Retry", 1), true);
+            second.addChange(new UserDataChangeInt("Retry", 1), true);
+            assertTrue(first.getCache().containsKey("Retry"));
+            assertTrue(second.getCache().containsKey("Retry"));
+        } finally {
+            manager.getTimer().shutdownNow();
+        }
+    }
+
+    @Test void failedPerUserRemovalReopensTheMappedCache() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        UserDataManager manager = new UserDataManager(plugin);
+        manager.getTimer().shutdownNow();
+        try {
+            UserDataCache cache = failingCache(manager, UUID.randomUUID());
+            manager.getUserDataCache().put(cache.getUuid(), cache);
+            manager.bindSharedSqlBackend(mock(SqlUserBackend.class), (uuid, operation) -> operation.run());
+
+            assertThrows(IllegalStateException.class, () -> manager.removeCache(cache.getUuid(), null));
+
+            cache.setSharedStorageWriter(values -> {});
+            cache.addChange(new UserDataChangeInt("Retry", 1), true);
+            assertTrue(cache.getCache().containsKey("Retry"));
+        } finally {
+            manager.getTimer().shutdownNow();
+        }
+    }
+
+    @Test void refreshFlushCallbackCanRemoveTheSameUserAfterSharedAdmission() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            cache.addChange(new UserDataChangeInt("Points", 21), true);
+            var userManager = fixture.plugin.getUserManager();
+            doAnswer(call -> {
+                fixture.manager.removeCache(fixture.uuid, null);
+                return null;
+            }).when(userManager).onChange(any(AdvancedCoreUser.class), any(String[].class));
+
+            assertDoesNotThrow(() -> fixture.manager.cacheUser(fixture.uuid, null));
+
+            assertEquals(21, fixture.first.points(fixture.uuid));
+            assertFalse(fixture.manager.containsKey(fixture.uuid));
+            runtime.close();
+        }
+    }
+
+    private UserDataCache failingCache(UserDataManager manager, UUID uuid) {
+        UserDataCache cache = new UserDataCache(manager, uuid);
+        cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(1))));
+        cache.setSharedStorageWriter(values -> { throw new IllegalStateException("write failed"); });
+        cache.addChange(new UserDataChangeInt("Points", 2), true);
+        return cache;
+    }
+
     private static void await(CountDownLatch latch) throws InterruptedException { assertTrue(latch.await(5, TimeUnit.SECONDS)); }
 
     private static final class Fixture implements AutoCloseable {
@@ -412,8 +540,14 @@ class SharedCacheBindingRegressionTest {
     private static final class MemoryBackend implements SqlUserBackend {
         final UserStorage type;
         final Map<UUID, HashMap<String, DataValue>> rows = new ConcurrentHashMap<>();
+        volatile CountDownLatch writeStarted;
+        volatile CountDownLatch releaseWrite;
         boolean open = true;
         MemoryBackend(UserStorage type) { this.type = type; }
+        void blockWrites(CountDownLatch started, CountDownLatch release) {
+            writeStarted = started;
+            releaseWrite = release;
+        }
         int points(UUID uuid) { return rows.get(uuid).get("Points").getInt(); }
         public UserStorage storageType() { return type; }
         public boolean isOpen() { return open; }
@@ -433,6 +567,16 @@ class SharedCacheBindingRegressionTest {
                 public void writeValues(UserStorage requested, HashMap<String, DataValue> values) {
                     assertEquals(type, requested);
                     if (!open) throw new IllegalStateException("closed backend");
+                    CountDownLatch started = writeStarted;
+                    CountDownLatch release = releaseWrite;
+                    if (started != null && release != null) {
+                        started.countDown();
+                        try { await(release); }
+                        catch (InterruptedException interrupted) {
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException(interrupted);
+                        }
+                    }
                     rows.computeIfAbsent(uuid, ignored -> new HashMap<>()).putAll(values);
                 }
             };

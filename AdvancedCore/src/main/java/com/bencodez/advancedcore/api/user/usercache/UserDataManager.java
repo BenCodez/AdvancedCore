@@ -2,7 +2,7 @@ package com.bencodez.advancedcore.api.user.usercache;
 
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.Set;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -10,6 +10,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -19,6 +20,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
@@ -27,7 +29,9 @@ import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyString;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
+import com.bencodez.advancedcore.core.user.runtime.SharedUserDataRuntime;
 import com.bencodez.simpleapi.debug.DebugLevel;
+import com.bencodez.simpleapi.array.ArrayUtils;
 
 import lombok.Getter;
 
@@ -42,10 +46,24 @@ public class UserDataManager {
 	private volatile Consumer<UserDataCache> sharedCacheInitializer;
 	private volatile Consumer<UUID> sharedCacheRemovalListener;
 	private volatile SharedSqlRoute sharedSqlRoute;
+	private volatile SharedUserDataRuntime sharedRuntime;
+	/** True from retirement admission until its native-owner callback has finished. */
+	private volatile boolean sharedRuntimeRetiring;
 	private final AtomicReference<Throwable> lastDeferredStorageFailure = new AtomicReference<>();
 	private final Object sharedBindingAdmission = new Object();
+	/** Explicit converter-only bypass for the legacy storage adapter. */
+	private final ThreadLocal<Integer> storageMaintenanceDepth = ThreadLocal.withInitial(() -> 0);
 	private boolean sharedBindingTransition;
 	private int legacyBatches;
+	private final ReentrantReadWriteLock cacheMapLifecycle = new ReentrantReadWriteLock(true);
+
+	/** Admit shared cache-map population while excluding whole-map clear/replace. */
+	public final <T> T withCacheMapReadAdmission(Supplier<T> operation) {
+		Objects.requireNonNull(operation, "operation");
+		cacheMapLifecycle.readLock().lock();
+		try { return operation.get(); }
+		finally { cacheMapLifecycle.readLock().unlock(); }
+	}
 
 	private record SharedSqlRoute(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate,
 			BiConsumer<UUID, Runnable> exclusiveGate) {
@@ -146,6 +164,92 @@ public class UserDataManager {
 	}
 
 	public final boolean hasSharedSqlBackend() { return sharedSqlRoute != null; }
+
+	/**
+	 * Run an explicit storage-maintenance operation behind the shared runtime's
+	 * write barrier. Calls made by the operation may target a non-current store
+	 * only while this scoped flag is active; ordinary adapters remain protected
+	 * from cross-store writes.
+	 */
+	public final void runStorageMaintenance(Runnable operation) {
+		Objects.requireNonNull(operation, "operation");
+		SharedUserDataRuntime runtime = sharedRuntime;
+		if (runtime == null && sharedRuntimeRetiring) {
+			throw new IllegalStateException("Shared user runtime retirement is still in progress");
+		}
+		Runnable guarded = () -> {
+			int previous = storageMaintenanceDepth.get();
+			storageMaintenanceDepth.set(previous + 1);
+			try { operation.run(); }
+			finally {
+				if (previous == 0) storageMaintenanceDepth.remove();
+				else storageMaintenanceDepth.set(previous);
+			}
+		};
+		if (runtime == null) guarded.run();
+		else runtime.runStorageMaintenance(guarded);
+	}
+
+	/** True only inside a runtime-exclusive explicit storage maintenance action. */
+	public final boolean isStorageMaintenanceActive() { return storageMaintenanceDepth.get() > 0; }
+
+	/** Register the one runtime that owns the shared route for this manager. */
+	public final synchronized void bindSharedRuntime(SharedUserDataRuntime runtime) {
+		Objects.requireNonNull(runtime, "runtime");
+		if (sharedRuntimeRetiring) {
+			throw new IllegalStateException("Shared user runtime retirement is still in progress");
+		}
+		if (sharedRuntime != null && !sharedRuntime.isClosed()) {
+			throw new IllegalStateException("Shared user runtime is already bound");
+		}
+		sharedRuntime = runtime;
+	}
+
+	public final boolean hasSharedRuntime() {
+		SharedUserDataRuntime runtime = sharedRuntime;
+		return runtime != null && !runtime.isClosed();
+	}
+
+	/**
+	 * A native storage replacement must not race the shared runtime's final flush
+	 * and owner cleanup. This remains true while asynchronous retirement is in
+	 * progress even though the runtime is no longer available for new work.
+	 */
+	public final synchronized boolean hasSharedRuntimeLifecycle() {
+		return sharedRuntimeRetiring || hasSharedRuntime();
+	}
+
+	/**
+	 * Start shared cache retirement on the manager worker. The callback runs only
+	 * after a successful flush/retirement, so the native owner never closes a
+	 * database while a failed shared write remains queued for recovery.
+	 */
+	public final boolean closeSharedRuntimeAsync(Runnable afterRetirement) {
+		Objects.requireNonNull(afterRetirement, "afterRetirement");
+		SharedUserDataRuntime runtime;
+		synchronized (this) {
+			runtime = sharedRuntime;
+			// A second shutdown caller must not interpret an in-flight retirement as
+			// "no runtime" and close the native provider underneath its final flush.
+			if (runtime == null) return sharedRuntimeRetiring;
+			sharedRuntime = null;
+			sharedRuntimeRetiring = true;
+		}
+		runtime.closeAsync(timer).whenComplete((ignored, failure) -> {
+			if (failure != null) {
+				synchronized (this) {
+					if (sharedRuntime == null) sharedRuntime = runtime;
+					sharedRuntimeRetiring = false;
+				}
+				reportDeferredStorageFailure(failure);
+				return;
+			}
+			try { afterRetirement.run(); }
+			catch (RuntimeException | Error cleanupFailure) { reportDeferredStorageFailure(cleanupFailure); }
+			finally { synchronized (this) { sharedRuntimeRetiring = false; } }
+		});
+		return true;
+	}
 
 	/**
 	 * Route one complete legacy SQL operation through lifecycle admission. The gate
@@ -272,10 +376,26 @@ public class UserDataManager {
 
 	@Deprecated
 	public void cacheUser(UUID uuid) {
-		withSharedCacheAdmission(uuid, () -> cacheUserNow(uuid, true));
+		CacheRefresh refreshed = new CacheRefresh(uuid);
+		RuntimeException runtimeFailure = null;
+		Error errorFailure = null;
+		cacheMapLifecycle.readLock().lock();
+		try { withSharedCacheAdmission(uuid, () -> cacheUserNow(uuid, true, refreshed)); }
+		catch (RuntimeException failure) { runtimeFailure = failure; }
+		catch (Error failure) { errorFailure = failure; }
+		finally { cacheMapLifecycle.readLock().unlock(); }
+		if (runtimeFailure != null) {
+			notifyCacheChangesAfterFailure(refreshed, runtimeFailure);
+			throw runtimeFailure;
+		}
+		if (errorFailure != null) {
+			notifyCacheChangesAfterFailure(refreshed, errorFailure);
+			throw errorFailure;
+		}
+		notifyCacheChanges(refreshed);
 	}
 
-	private void cacheUserNow(UUID uuid, boolean traceDevelopmentCall) {
+	private void cacheUserNow(UUID uuid, boolean traceDevelopmentCall, CacheRefresh refresh) {
 		plugin.devDebug("Caching " + uuid.toString());
 		if (traceDevelopmentCall && plugin.getOptions().getDebug().isDebug(DebugLevel.DEV)) {
 			try { throw new Exception("caching here: " + uuid.toString()); }
@@ -283,10 +403,11 @@ public class UserDataManager {
 		}
 		if (userDataCache.containsKey(uuid)) {
 			UserDataCache data = userDataCache.get(uuid);
-			data.clearChanges();
-			data.cache();
+			refresh.flushNotification = data.clearChangesForRefresh();
+			refresh.changed = data.refreshInternal(false);
 		} else {
-			UserDataCache data = new UserDataCache(this, uuid).cache();
+			UserDataCache data = new UserDataCache(this, uuid);
+			refresh.changed = data.refreshInternal(false);
 			if (data.hasCache()) userDataCache.put(uuid, data);
 		}
 	}
@@ -296,7 +417,48 @@ public class UserDataManager {
 			uuid = UUID.fromString(UuidLookup.getInstance().getUUID(playerName));
 		}
 		UUID target = uuid;
-		withSharedCacheAdmission(target, () -> cacheUserNow(target, false));
+		CacheRefresh refreshed = new CacheRefresh(target);
+		RuntimeException runtimeFailure = null;
+		Error errorFailure = null;
+		cacheMapLifecycle.readLock().lock();
+		try { withSharedCacheAdmission(target, () -> cacheUserNow(target, false, refreshed)); }
+		catch (RuntimeException failure) { runtimeFailure = failure; }
+		catch (Error failure) { errorFailure = failure; }
+		finally { cacheMapLifecycle.readLock().unlock(); }
+		if (runtimeFailure != null) {
+			notifyCacheChangesAfterFailure(refreshed, runtimeFailure);
+			throw runtimeFailure;
+		}
+		if (errorFailure != null) {
+			notifyCacheChangesAfterFailure(refreshed, errorFailure);
+			throw errorFailure;
+		}
+		notifyCacheChanges(refreshed);
+	}
+
+	private void notifyCacheChangesAfterFailure(CacheRefresh refresh, Throwable originalFailure) {
+		try { notifyCacheChanges(refresh); }
+		catch (RuntimeException | Error notificationFailure) { originalFailure.addSuppressed(notificationFailure); }
+	}
+
+	private void notifyCacheChanges(CacheRefresh refresh) {
+		if (refresh == null) return;
+		if (refresh.flushNotification != null) refresh.flushNotification.run();
+		ArrayList<String> changed = refresh.changed;
+		if (!changed.isEmpty()) {
+			// The notification intentionally runs after lifecycle admission so listeners
+			// can remove or replace this user's cache. Capture the identity with the
+			// refresh result; the old cache may already have been retired here.
+			AdvancedCoreUser user = plugin.getUserManager().getUser(refresh.uuid, false);
+			plugin.getUserManager().onChange(user, ArrayUtils.convert(changed));
+		}
+	}
+
+	private static final class CacheRefresh {
+		private final UUID uuid;
+		private ArrayList<String> changed = new ArrayList<>();
+		private Runnable flushNotification;
+		private CacheRefresh(UUID uuid) { this.uuid = uuid; }
 	}
 
 	public void cacheUserIfNeeded(UUID uuid) { if (!userDataCache.containsKey(uuid)) cacheUser(uuid); }
@@ -342,12 +504,46 @@ public class UserDataManager {
 	}
 
 	private void clearCacheNow() {
-		plugin.debug("Clearing cache: " + userDataCache.keySet().size());
-		Set<UUID> removed = new java.util.HashSet<>(userDataCache.keySet());
-		for (UserDataCache c : userDataCache.values()) { c.clearCache(); c.dump(); }
-		userDataCache.clear();
+		// Do not retain this map lock while flushing through a shared runtime gate.
+		// A population already admitted by that runtime needs the map read lock to
+		// publish, while a queued lifecycle writer would otherwise block this flush.
+		// Mark the current generation as retiring under the map lock, then perform
+		// its storage work without that lock and finally detach only those instances.
+		java.util.HashMap<UUID, UserDataCache> retiring = new java.util.HashMap<>();
+		cacheMapLifecycle.writeLock().lock();
+		try {
+			plugin.debug("Clearing cache: " + userDataCache.keySet().size());
+			retiring.putAll(userDataCache);
+			for (UserDataCache cache : retiring.values()) cache.beginRemoval();
+		} finally { cacheMapLifecycle.writeLock().unlock(); }
+		try {
+			for (Entry<UUID, UserDataCache> entry : retiring.entrySet()) {
+				UUID uuid = entry.getKey();
+				UserDataCache cache = entry.getValue();
+				// The map write lock only protects publication.  Retiring each cache
+				// must also exclude the normal per-user read admission used by
+				// addChange(), otherwise a queued setter can observe this mapped cache
+				// after beginRemoval() and have its mutation silently discarded.
+				withSharedSqlBackendExclusive(uuid, () -> clearCacheExclusively(uuid, cache));
+			}
+		} catch (RuntimeException | Error failure) {
+			// All not-yet-detached caches were marked before flushing began. Reopen
+			// each surviving cache so one user's failed write cannot discard later
+			// updates for another cache that has not been flushed yet.
+			for (UserDataCache cache : retiring.values()) cache.cancelRemoval();
+			throw failure;
+		}
+	}
+
+	private void clearCacheExclusively(UUID uuid, UserDataCache cache) {
+		cache.clearCache();
+		cache.dump();
+		boolean removed;
+		cacheMapLifecycle.writeLock().lock();
+		try { removed = userDataCache.remove(uuid, cache); }
+		finally { cacheMapLifecycle.writeLock().unlock(); }
 		Consumer<UUID> listener = sharedCacheRemovalListener;
-		if (listener != null) removed.forEach(listener);
+		if (removed && listener != null) listener.accept(uuid);
 	}
 
 	public void clearCacheBasic() {
@@ -394,15 +590,22 @@ public class UserDataManager {
 	}
 
 	private void removeCacheNow(UUID uuid) {
-		boolean shared = sharedSqlRoute != null;
-		withSharedSqlBackendExclusive(uuid, () -> removeCacheExclusively(uuid, shared));
+		withSharedSqlBackendExclusive(uuid, () -> removeCacheExclusively(uuid, sharedSqlRoute != null));
 	}
 
 	private void removeCacheExclusively(UUID uuid, boolean shared) {
 		UserDataCache cache = getCache(uuid);
 		if (cache != null) {
-			cache.clearCache();
-			if (shared) cache.retireAfterSharedFlush();
+			cache.beginRemoval();
+			try {
+				cache.clearCache();
+				if (shared) cache.retireAfterSharedFlush();
+			} catch (RuntimeException | Error failure) {
+				// The failed cache is still mapped with its queued write retained. It
+				// must resume accepting mutations so a later cleanup can retry safely.
+				cache.cancelRemoval();
+				throw failure;
+			}
 		}
 		boolean removed = cache == null ? userDataCache.remove(uuid) != null : userDataCache.remove(uuid, cache);
 		Consumer<UUID> listener = sharedCacheRemovalListener;
