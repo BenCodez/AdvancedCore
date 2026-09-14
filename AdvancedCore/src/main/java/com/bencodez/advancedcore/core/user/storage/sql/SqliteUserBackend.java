@@ -109,7 +109,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
                     UUID parsed = null;
                     try {
                         parsed = UUID.fromString(value);
-                        if (!parsed.toString().equalsIgnoreCase(value)) throw new IllegalArgumentException("Non-canonical UUID");
+                        if (!parsed.toString().equals(value)) throw new IllegalArgumentException("Non-canonical UUID");
                     }
                     catch (IllegalArgumentException invalid) {
                         parsed = null;

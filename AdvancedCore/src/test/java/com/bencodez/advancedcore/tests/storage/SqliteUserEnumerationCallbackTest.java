@@ -97,4 +97,20 @@ class SqliteUserEnumerationCallbackTest {
         }
         assertEquals(List.of("Skipping malformed UUID entries while enumerating SQLite users; further diagnostics suppressed"), warnings);
     }
+
+    @Test
+    void uppercaseUuidRowsAreNotExposedAsUnaddressableLowercaseUsers() throws Exception {
+        UUID uuid = UUID.fromString("abcdefab-cdef-abcd-efab-cdefabcdefab");
+        try (SqliteUserBackend backend = new SqliteUserBackend(directory, "UppercaseUsers", "Users",
+                SqlUserSchema.builder().build(), SqlBackendLogger.NO_OP);
+                Connection connection = DriverManager.getConnection(
+                        "jdbc:sqlite:" + backend.databaseFile().toAbsolutePath());
+                PreparedStatement statement = connection.prepareStatement(
+                        "INSERT INTO `Users` (`uuid`) VALUES (?)")) {
+            statement.setString(1, uuid.toString().toUpperCase(java.util.Locale.ROOT));
+            statement.executeUpdate();
+
+            assertEquals(List.of(), backend.enumerateUsers());
+        }
+    }
 }

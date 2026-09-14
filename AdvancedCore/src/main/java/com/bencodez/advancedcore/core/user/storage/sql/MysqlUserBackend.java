@@ -283,6 +283,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
                 try {
                     String storedName = findRegisteredColumn(column.name());
                     if (storedName != null) {
+                        if (getDbType() == DbType.POSTGRESQL && column.dataType() == DataType.STRING)
+                            migratePostgresNumericColumnToString(storedName, column);
                         if (getDbType() == DbType.POSTGRESQL && !storedName.equals(column.name())) renamePostgresColumn(storedName, column.name());
                         rememberColumn(column); return;
                     }
@@ -308,6 +310,63 @@ public final class MysqlUserBackend implements SqlUserBackend {
             String sql = "ALTER TABLE " + quote(tableName) + " RENAME COLUMN " + quote(storedName) + " TO " + quote(requestedName) + ";";
             try (Connection connection = getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
             catch (SQLException renameFailure) { String current = findRegisteredColumn(requestedName); if (!requestedName.equals(current)) throw renameFailure; }
+        }
+
+        private void migratePostgresNumericColumnToString(String storedName,
+                SqlUserSchema.ColumnDefinition definition) throws SQLException {
+            int jdbcType = registeredColumnType(storedName);
+            if (jdbcType != java.sql.Types.TINYINT && jdbcType != java.sql.Types.SMALLINT
+                    && jdbcType != java.sql.Types.INTEGER && jdbcType != java.sql.Types.BIGINT
+                    && jdbcType != java.sql.Types.REAL && jdbcType != java.sql.Types.FLOAT
+                    && jdbcType != java.sql.Types.DOUBLE && jdbcType != java.sql.Types.NUMERIC
+                    && jdbcType != java.sql.Types.DECIMAL) return;
+            String column = quote(storedName);
+            String defaultExpression = postgresColumnDefault(storedName);
+            StringBuilder sql = new StringBuilder("ALTER TABLE ").append(quote(tableName));
+            // PostgreSQL does not apply TYPE ... USING to a column default. Drop and
+            // recreate it in the same transactional ALTER TABLE so a legacy numeric
+            // DEFAULT does not make an otherwise-safe value conversion fail.
+            if (defaultExpression != null) sql.append(" ALTER COLUMN ").append(column).append(" DROP DEFAULT,");
+            sql.append(" ALTER COLUMN ").append(column).append(" TYPE ")
+                    .append(normaliseTypeForDb(definition.sqlType())).append(" USING ").append(column).append("::text");
+            if (defaultExpression != null) sql.append(", ALTER COLUMN ").append(column)
+                    .append(" SET DEFAULT (").append(defaultExpression).append(")::text");
+            sql.append(';');
+            try (Connection connection = getMysql().getConnectionManager().getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+                statement.executeUpdate();
+            }
+        }
+
+        private String postgresColumnDefault(String name) throws SQLException {
+            String regclass = '"' + tableName.replace("\"", "\"\"") + '"';
+            String sql = "SELECT pg_catalog.pg_get_expr(default_value.adbin, default_value.adrelid) "
+                    + "FROM pg_catalog.pg_attribute attribute "
+                    + "LEFT JOIN pg_catalog.pg_attrdef default_value ON default_value.adrelid=attribute.attrelid "
+                    + "AND default_value.adnum=attribute.attnum "
+                    + "WHERE attribute.attrelid=pg_catalog.to_regclass(?) AND attribute.attname=? "
+                    + "AND attribute.attnum>0 AND NOT attribute.attisdropped";
+            try (Connection connection = getMysql().getConnectionManager().getConnection();
+                    PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, regclass);
+                statement.setString(2, name);
+                try (ResultSet result = statement.executeQuery()) {
+                    return result.next() ? result.getString(1) : null;
+                }
+            }
+        }
+
+        private int registeredColumnType(String name) throws SQLException {
+            try (Connection connection = getMysql().getConnectionManager().getConnection();
+                    PreparedStatement statement = connection.prepareStatement(
+                            "SELECT * FROM " + quote(tableName) + " WHERE 1=0");
+                    ResultSet result = statement.executeQuery()) {
+                ResultSetMetaData metadata = result.getMetaData();
+                for (int i = 1; i <= metadata.getColumnCount(); i++) {
+                    if (name.equals(metadata.getColumnName(i))) return metadata.getColumnType(i);
+                }
+                throw new SQLException("Registered SQL column disappeared during type inspection: " + name);
+            }
         }
 
         private void rememberColumn(SqlUserSchema.ColumnDefinition column) {
