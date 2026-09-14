@@ -81,7 +81,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
                     SqlUserSchema.ColumnDefinition definition = schema.column(name);
                     DataType type = definition == null ? DataType.STRING : definition.dataType();
                     Column column = new Column(definition == null ? name : definition.name(), type);
-                    column.setValue(readValue(result, i, definition, type));
+                    column.setValue(readValue(result, i, type));
                     columns.add(column);
                 }
                 return columns;
@@ -223,7 +223,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
 
     private void requireStorage(UserStorage requestedStorage) { if (requestedStorage != storage) throw new IllegalArgumentException("Storage mismatch: backend=" + storage + ", requested=" + requestedStorage); }
 
-    private DataValue readValue(ResultSet result, int index, SqlUserSchema.ColumnDefinition definition, DataType type) throws SQLException {
+    private DataValue readValue(ResultSet result, int index, DataType type) throws SQLException {
         if (type == DataType.INTEGER) {
             try { int value = result.getInt(index); return new DataValueInt(result.wasNull() ? 0 : value); }
             catch (SQLException invalidInteger) {
@@ -233,12 +233,17 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
             }
         }
         if (type == DataType.BOOLEAN) {
-            BooleanStorage booleanStorage = booleanStorage(definition);
-            if (booleanStorage == BooleanStorage.NATIVE) { boolean value = result.getBoolean(index); return new DataValueBoolean(!result.wasNull() && value); }
-            if (booleanStorage == BooleanStorage.NUMERIC) { int value = result.getInt(index); return new DataValueBoolean(!result.wasNull() && value != 0); }
             String value = result.getString(index);
-            if (booleanStorage == BooleanStorage.POSTGRES_BIT) return new DataValueBoolean(value != null && value.indexOf('1') >= 0);
-            return new DataValueBoolean("1".equals(value) || "t".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value));
+            if (value == null) return new DataValueBoolean(false);
+            String normalized = value.strip();
+            if ("true".equalsIgnoreCase(normalized) || "t".equalsIgnoreCase(normalized)
+                    || "yes".equalsIgnoreCase(normalized) || "y".equalsIgnoreCase(normalized)
+                    || "on".equalsIgnoreCase(normalized)) return new DataValueBoolean(true);
+            if ("false".equalsIgnoreCase(normalized) || "f".equalsIgnoreCase(normalized)
+                    || "no".equalsIgnoreCase(normalized) || "n".equalsIgnoreCase(normalized)
+                    || "off".equalsIgnoreCase(normalized) || normalized.isEmpty()) return new DataValueBoolean(false);
+            try { return new DataValueBoolean(new java.math.BigDecimal(normalized).signum() != 0); }
+            catch (NumberFormatException ignored) { return new DataValueBoolean(false); }
         }
         return new DataValueString(result.getString(index));
     }
@@ -271,14 +276,6 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         } else statement.setObject(index, value.toString());
     }
 
-    private BooleanStorage booleanStorage(String sqlType) {
-        String normalized = sqlType.strip().toUpperCase(Locale.ROOT);
-        if (startsType(normalized, "BOOLEAN") || startsType(normalized, "BOOL")) return BooleanStorage.NATIVE;
-        if (startsType(normalized, "BIT") || startsType(normalized, "VARBIT")) return dialect == Dialect.POSTGRESQL ? BooleanStorage.POSTGRES_BIT : BooleanStorage.NUMERIC;
-        if (startsType(normalized, "TINYINT") || startsType(normalized, "SMALLINT") || startsType(normalized, "MEDIUMINT") || startsType(normalized, "INT") || startsType(normalized, "INTEGER") || startsType(normalized, "BIGINT")) return BooleanStorage.NUMERIC;
-        return BooleanStorage.TEXT;
-    }
-
     private String parameterExpression(SqlUserSchema.ColumnDefinition definition) {
         BooleanStorage storage = booleanStorage(definition);
         if (storage != BooleanStorage.POSTGRES_BIT) return "?";
@@ -298,7 +295,8 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         if (definition == null || definition.dataType() != DataType.BOOLEAN || dialect != Dialect.POSTGRESQL) return definition;
         java.sql.DatabaseMetaData metadata = connection.getMetaData();
         if (metadata == null) return definition;
-        try (ResultSet columns = metadata.getColumns(null, metadataSchema(connection), tableName, definition.name())) {
+        try (ResultSet columns = metadata.getColumns(null, metadataPattern(metadata, metadataSchema(connection)),
+                metadataPattern(metadata, tableName), metadataPattern(metadata, definition.name()))) {
             if (columns.next()) {
                 String type = columns.getString("TYPE_NAME");
                 if (type != null && !type.isBlank()) {
@@ -324,8 +322,22 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         return definition;
     }
 
+    /**
+     * JDBC metadata accepts SQL LIKE patterns rather than exact identifiers.
+     * Treat these user-table identifiers literally so an underscore or percent
+     * sign cannot select a similarly named table/column's physical type.
+     */
+    private String metadataPattern(java.sql.DatabaseMetaData metadata, String identifier) throws SQLException {
+        if (identifier == null) return null;
+        String escape = metadata.getSearchStringEscape();
+        if (escape == null || escape.isEmpty()) return identifier;
+        return identifier.replace(escape, escape + escape)
+                .replace("_", escape + "_")
+                .replace("%", escape + "%");
+    }
+
     private boolean postgresVaryingBit(String normalizedType) {
-        return startsType(normalizedType, "VARBIT") || normalizedType.matches("^BIT\\s+VARYING(?:\\(\\d+\\))?(?:\\s+.*)?$");
+        return startsType(normalizedType, "VARBIT") || normalizedType.matches("^BIT\\s+VARYING(?:\\s*\\(\\s*\\d+\\s*\\))?(?:\\s+.*)?$");
     }
 
     private String metadataSchema(Connection connection) throws SQLException {
@@ -343,13 +355,17 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
 
     private String postgresBitType(SqlUserSchema.ColumnDefinition definition) {
         String sqlType = definition.sqlType().strip();
+        java.util.regex.Matcher varbit = java.util.regex.Pattern
+                .compile("(?i)^VARBIT(?:\\s*\\(\\s*(\\d+)\\s*\\))?(?:\\s+.*)?$").matcher(sqlType);
+        if (varbit.matches()) return "BIT VARYING" + (varbit.group(1) == null ? "" : "(" + varbit.group(1) + ")");
         java.util.regex.Matcher type = java.util.regex.Pattern
-                .compile("(?i)^(BIT(?:\\(\\d+\\)|\\s+VARYING(?:\\(\\d+\\))?)?)(?:\\s+.*)?$")
+                .compile("(?i)^BIT(\\s+VARYING)?(?:\\s*\\(\\s*(\\d+)\\s*\\))?(?:\\s+.*)?$")
                 .matcher(sqlType);
         if (!type.matches()) {
             throw new IllegalArgumentException("Unsupported PostgreSQL bit type: " + definition.sqlType());
         }
-        return type.group(1).toUpperCase(Locale.ROOT);
+        return (type.group(1) == null ? "BIT" : "BIT VARYING")
+                + (type.group(2) == null ? "" : "(" + type.group(2) + ")");
     }
 
     private BooleanStorage booleanStorage(SqlUserSchema.ColumnDefinition definition) {

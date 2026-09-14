@@ -100,7 +100,7 @@ class JdbcSqlUserStorageDialectTest {
         }
     }
 
-    @Test void numericBooleanDefinitionsUseNumericJdbcBindingsAndReads() throws Exception {
+    @Test void booleanReadsUseARepresentationIndependentParser() throws Exception {
         Connection writeConnection = mock(Connection.class);
         when(writeConnection.getAutoCommit()).thenReturn(true);
         PreparedStatement exists = mock(PreparedStatement.class);
@@ -125,10 +125,15 @@ class JdbcSqlUserStorageDialectTest {
         when(result.getMetaData()).thenReturn(metadata);
         when(metadata.getColumnCount()).thenReturn(1);
         when(metadata.getColumnLabel(1)).thenReturn("Flag");
-        when(result.getInt(1)).thenReturn(1);
+        // An existing SQLite/PostgreSQL text column can outlive a newer numeric
+        // declaration.  Decoding the returned representation keeps its true
+        // value instead of asking the driver to coerce it to an integer.
+        when(result.getString(1)).thenReturn("true");
         SqlUserStorage reader = new JdbcSqlUserStorage(UserStorage.MYSQL, UUID_VALUE, "Users", schema,
                 () -> readConnection, JdbcSqlUserStorage.Dialect.MYSQL, SqlBackendLogger.NO_OP);
         assertTrue(reader.readRow(UserStorage.MYSQL).get(0).getValue().getBoolean());
+        verify(result, never()).getInt(1);
+        verify(result, never()).getBoolean(1);
     }
 
     @Test void backendUsesConnectionManagerDialectAndExistingUuidSchemaType() throws Exception {

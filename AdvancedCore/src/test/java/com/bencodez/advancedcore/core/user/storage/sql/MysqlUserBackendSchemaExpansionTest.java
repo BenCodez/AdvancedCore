@@ -51,6 +51,19 @@ class MysqlUserBackendSchemaExpansionTest {
         fixture.assertClosed();
     }
 
+    @Test void postgresRejectsAmbiguousCaseFoldedColumns() throws Exception {
+        Fixture fixture = new Fixture(DbType.POSTGRESQL);
+        fixture.existing.addAll(List.of("Points", "points"));
+        SqlUserSchema schema = SqlUserSchema.builder().column("Points", "INT DEFAULT '0'", DataType.INTEGER).build();
+        try (var managers = fixture.managers()) {
+            IllegalStateException failure = assertThrows(IllegalStateException.class, () -> fixture.open(schema));
+            assertInstanceOf(SQLException.class, failure.getCause());
+            assertTrue(failure.getCause().getMessage().contains("Ambiguous case-folded SQL columns"));
+            verify(managers.constructed().get(0)).close();
+        }
+        fixture.assertClosed();
+    }
+
     @Test void failedAddRejectsInitializationAndClosesThePool() throws Exception {
         Fixture fixture = new Fixture(DbType.POSTGRESQL);
         fixture.addFailure = new SQLException("DDL denied");
@@ -94,14 +107,17 @@ class MysqlUserBackendSchemaExpansionTest {
         }
 
         MysqlUserBackend open() {
+            return open(SqlUserSchema.builder()
+                    .column("Player Name", "VARCHAR(30)", DataType.STRING)
+                    .column("History", "MEDIUMTEXT", DataType.STRING)
+                    .column("Votes", "INT DEFAULT '0'", DataType.INTEGER).build());
+        }
+
+        MysqlUserBackend open(SqlUserSchema schema) {
             MysqlConfig config = new MysqlConfig();
             config.setDbType(type);
             config.setDatabase("test_database");
             config.setMaxThreads(1);
-            SqlUserSchema schema = SqlUserSchema.builder()
-                    .column("Player Name", "VARCHAR(30)", DataType.STRING)
-                    .column("History", "MEDIUMTEXT", DataType.STRING)
-                    .column("Votes", "INT DEFAULT '0'", DataType.INTEGER).build();
             return new MysqlUserBackend("Users", config, schema, SqlBackendLogger.NO_OP);
         }
 

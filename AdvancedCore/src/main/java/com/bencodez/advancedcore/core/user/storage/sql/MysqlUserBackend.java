@@ -314,13 +314,15 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
         private String findRegisteredColumn(String name) throws SQLException {
             try (Connection connection = getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement("SELECT * FROM " + quote(tableName) + " WHERE 1=0"); ResultSet result = statement.executeQuery()) {
-                ResultSetMetaData metadata = result.getMetaData(); String foldedMatch = null;
+                ResultSetMetaData metadata = result.getMetaData(); String exactMatch = null; String foldedMatch = null; int foldedMatches = 0;
                 for (int i = 1; i <= metadata.getColumnCount(); i++) {
                     String storedName = metadata.getColumnName(i);
-                    if (name.equals(storedName)) return storedName;
-                    if (foldedMatch == null && name.equalsIgnoreCase(storedName)) foldedMatch = storedName;
+                    if (name.equals(storedName)) exactMatch = storedName;
+                    if (name.equalsIgnoreCase(storedName)) { foldedMatches++; if (foldedMatch == null) foldedMatch = storedName; }
                 }
-                return foldedMatch;
+                if (getDbType() == DbType.POSTGRESQL && foldedMatches > 1)
+                    throw new SQLException("Ambiguous case-folded SQL columns for registered name: " + name);
+                return exactMatch == null ? foldedMatch : exactMatch;
             }
         }
 

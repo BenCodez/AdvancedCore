@@ -97,6 +97,54 @@ class JdbcPostgresBitBooleanTest {
     }
 
     @Test
+    void postgresVarbitDeclarationUsesTheEquivalentVaryingBitCast() throws Exception {
+        Connection connection = mock(Connection.class);
+        when(connection.getAutoCommit()).thenReturn(true);
+        PreparedStatement exists = mock(PreparedStatement.class);
+        PreparedStatement insert = mock(PreparedStatement.class);
+        ResultSet missing = mock(ResultSet.class);
+        when(exists.executeQuery()).thenReturn(missing);
+        when(insert.executeUpdate()).thenReturn(1);
+        when(connection.prepareStatement("SELECT 1 FROM \"Users\" WHERE \"uuid\"=? LIMIT 1 FOR UPDATE"))
+                .thenReturn(exists);
+        when(connection.prepareStatement("INSERT INTO \"Users\" (\"uuid\", \"Flag\") VALUES (?, CAST(? AS BIT VARYING(5))) ON CONFLICT (\"uuid\") DO NOTHING"))
+                .thenReturn(insert);
+        SqlUserSchema schema = SqlUserSchema.builder().column("Flag", "VARBIT(5)", DataType.BOOLEAN).build();
+        JdbcSqlUserStorage storage = new JdbcSqlUserStorage(UserStorage.MYSQL, USER, "Users", schema,
+                () -> connection, JdbcSqlUserStorage.Dialect.POSTGRESQL, SqlBackendLogger.NO_OP);
+
+        storage.write(UserStorage.MYSQL, "Flag", new DataValueBoolean(true));
+
+        verify(insert).setString(2, "1");
+    }
+
+    @Test
+    void postgresBitDeclarationsAllowWhitespaceBeforeWidthModifiers() throws Exception {
+        for (String declaration : List.of("BIT (5)", "VARBIT (5)", "BIT VARYING (5)")) {
+            Connection connection = mock(Connection.class);
+            when(connection.getAutoCommit()).thenReturn(true);
+            PreparedStatement exists = mock(PreparedStatement.class);
+            PreparedStatement insert = mock(PreparedStatement.class);
+            ResultSet missing = mock(ResultSet.class);
+            when(exists.executeQuery()).thenReturn(missing);
+            when(insert.executeUpdate()).thenReturn(1);
+            when(connection.prepareStatement("SELECT 1 FROM \"Users\" WHERE \"uuid\"=? LIMIT 1 FOR UPDATE"))
+                    .thenReturn(exists);
+            String castType = declaration.startsWith("BIT ") && !declaration.startsWith("BIT VARYING")
+                    ? "BIT(5)" : "BIT VARYING(5)";
+            when(connection.prepareStatement("INSERT INTO \"Users\" (\"uuid\", \"Flag\") VALUES (?, CAST(? AS "
+                    + castType + ")) ON CONFLICT (\"uuid\") DO NOTHING")).thenReturn(insert);
+            SqlUserSchema schema = SqlUserSchema.builder().column("Flag", declaration, DataType.BOOLEAN).build();
+            JdbcSqlUserStorage storage = new JdbcSqlUserStorage(UserStorage.MYSQL, USER, "Users", schema,
+                    () -> connection, JdbcSqlUserStorage.Dialect.POSTGRESQL, SqlBackendLogger.NO_OP);
+
+            storage.write(UserStorage.MYSQL, "Flag", new DataValueBoolean(true));
+
+            verify(insert).setString(2, "1");
+        }
+    }
+
+    @Test
     void postgresRetainsResolvedSchemaVarbitWidthForBooleanWrites() throws Exception {
         Connection connection = mock(Connection.class);
         DatabaseMetaData metadata = mock(DatabaseMetaData.class);
@@ -132,6 +180,44 @@ class JdbcPostgresBitBooleanTest {
 
         verify(metadata).getColumns(null, "tenant", "Users", "Flag");
         verify(insert).setString(2, "1");
+    }
+
+    @Test
+    void postgresRetainedMetadataTreatsWildcardCharactersAsLiteralIdentifiers() throws Exception {
+        Connection connection = mock(Connection.class);
+        DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        PreparedStatement exists = mock(PreparedStatement.class);
+        PreparedStatement schemaLookup = mock(PreparedStatement.class);
+        PreparedStatement insert = mock(PreparedStatement.class);
+        ResultSet missing = mock(ResultSet.class);
+        ResultSet resolvedSchema = mock(ResultSet.class);
+        ResultSet retainedColumn = mock(ResultSet.class);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getMetaData()).thenReturn(metadata);
+        when(metadata.getSearchStringEscape()).thenReturn("\\");
+        when(exists.executeQuery()).thenReturn(missing);
+        when(schemaLookup.executeQuery()).thenReturn(resolvedSchema);
+        when(resolvedSchema.next()).thenReturn(true);
+        when(resolvedSchema.getString(1)).thenReturn("tenant_%");
+        when(retainedColumn.next()).thenReturn(true);
+        when(retainedColumn.getString("TYPE_NAME")).thenReturn("boolean");
+        when(metadata.getColumns(null, "tenant\\_\\%", "Users\\_\\%", "Flag\\_\\%"))
+                .thenReturn(retainedColumn);
+        when(connection.prepareStatement("SELECT 1 FROM \"Users_%\" WHERE \"uuid\"=? LIMIT 1 FOR UPDATE"))
+                .thenReturn(exists);
+        when(connection.prepareStatement("SELECT n.nspname FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
+                + "ON n.oid=c.relnamespace WHERE c.oid=pg_catalog.to_regclass(?)")).thenReturn(schemaLookup);
+        when(connection.prepareStatement("INSERT INTO \"Users_%\" (\"uuid\", \"Flag_%\") VALUES (?, ?) ON CONFLICT (\"uuid\") DO NOTHING"))
+                .thenReturn(insert);
+        when(insert.executeUpdate()).thenReturn(1);
+        SqlUserSchema schema = SqlUserSchema.builder().column("Flag_%", "BOOLEAN", DataType.BOOLEAN).build();
+        JdbcSqlUserStorage storage = new JdbcSqlUserStorage(UserStorage.MYSQL, USER, "Users_%", schema,
+                () -> connection, JdbcSqlUserStorage.Dialect.POSTGRESQL, SqlBackendLogger.NO_OP);
+
+        storage.write(UserStorage.MYSQL, "Flag_%", new DataValueBoolean(true));
+
+        verify(metadata).getColumns(null, "tenant\\_\\%", "Users\\_\\%", "Flag\\_\\%");
+        verify(insert).setObject(2, "true", Types.OTHER);
     }
 
     @Test
