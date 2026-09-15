@@ -205,6 +205,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 	}
 	private volatile UserStorageOwner nativeUserStorageOwner;
+	/** Native owners that could not be closed after an otherwise successful replacement. */
+	private final Object pendingNativeUserStorageCloseLock = new Object();
+	private final ArrayList<NativeUserStorageClose> pendingNativeUserStorageCloses = new ArrayList<>();
 	/** Coalesces public storage reload requests while a replacement is being prepared. */
 	private Object userStorageReloadLock = new Object();
 	private CompletionStage<Void> userStorageReload;
@@ -566,14 +569,21 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		if (to == null) {
 			throw new RuntimeException("Invalid Storage Method");
 		}
-		loadUserAPI(from);
-		loadUserAPI(to);
+		if (from == null) throw new RuntimeException("Invalid Storage Method");
+		// Do not recreate an already active source before reading it. In particular,
+		// setMysql closes the old connection, which made MYSQL-to-SQLITE conversion
+		// enumerate a closed shared-route owner (and sometimes copy no users).
+		UserStorageOwner activeSource = getNativeUserStorageOwner();
+		if (activeSource == null || activeSource.storageType() != from) loadUserAPI(from);
 
 		if (getMysql() != null) {
 			getMysql().clearCacheBasic();
 		}
 
 		HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys(from);
+		// The source is no longer needed after enumeration. Only now may opening the
+		// target replace mutable native-owner fields.
+		loadUserAPI(to);
 		Queue<Entry<UUID, ArrayList<Column>>> players = new LinkedList<>(cols.entrySet());
 
 		while (players.size() > 0) {
@@ -1468,9 +1478,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 					// SharedUserDataRuntime reports an exception here only before it
 					// publishes the replacement route. A post-publication old-owner close
 					// is retained there for retry and deliberately completes successfully.
-					prepared.closeUnpublished();
-					completion.completeExceptionally(failure);
-					clearSharedUserStorageReload(completion);
+					failSharedUserStorageReplacement(completion, prepared, failure);
 					return;
 				}
 				try {
@@ -1481,9 +1489,24 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				}
 			});
 		} catch (Throwable failure) {
+			failSharedUserStorageReplacement(completion, replacement, failure);
+		}
+	}
+
+	/**
+	 * Cleanup must never strand the public reload stage. Keep the replacement
+	 * failure as the primary cause and attach every cleanup failure to it.
+	 */
+	private void failSharedUserStorageReplacement(CompletableFuture<Void> completion,
+			UserStorageReplacement replacement, Throwable failure) {
+		Throwable reported = failure;
+		try {
 			if (replacement != null) replacement.closeUnpublished();
-			completion.completeExceptionally(failure);
-			clearSharedUserStorageReload(completion);
+		} catch (Throwable closeFailure) {
+			reported = preserveFailure(reported, closeFailure);
+		} finally {
+			try { completion.completeExceptionally(reported); }
+			finally { clearSharedUserStorageReload(completion); }
 		}
 	}
 
@@ -1531,6 +1554,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void installUserStorageReplacement(UserStorageReplacement replacement) {
+		retryPendingNativeUserStorageCloses();
 		MySQL previousMysql = mysql;
 		Database previousDatabase = database;
 		mysql = replacement.mysql();
@@ -1538,14 +1562,41 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		// Publish only after both legacy fields have been assigned. The shared route
 		// picks this exact snapshot up in the same lifecycle write admission.
 		nativeUserStorageOwner = replacement.owner();
-		if (previousMysql != null && previousMysql != mysql) {
-			try { previousMysql.close(); }
-			catch (RuntimeException | Error closeFailure) { debug(closeFailure); }
+		retireNativeUserStorageOwner(previousMysql != mysql ? previousMysql : null,
+				previousDatabase != database ? previousDatabase : null);
+	}
+
+	private void retireNativeUserStorageOwner(MySQL previousMysql, Database previousDatabase) {
+		if (previousMysql == null && previousDatabase == null) return;
+		NativeUserStorageClose retired = new NativeUserStorageClose(previousMysql, previousDatabase);
+		Throwable closeFailure = retired.close();
+		if (closeFailure == null) return;
+		debug(closeFailure);
+		synchronized (pendingNativeUserStorageCloseLock) { pendingNativeUserStorageCloses.add(retired); }
+	}
+
+	private void retryPendingNativeUserStorageCloses() {
+		ArrayList<NativeUserStorageClose> pending;
+		synchronized (pendingNativeUserStorageCloseLock) {
+			if (pendingNativeUserStorageCloses.isEmpty()) return;
+			pending = new ArrayList<>(pendingNativeUserStorageCloses);
+			pendingNativeUserStorageCloses.clear();
 		}
-		if (previousDatabase != null && previousDatabase != database) {
-			try { previousDatabase.getDB().closeConnection(); }
-			catch (RuntimeException | Error closeFailure) { debug(closeFailure); }
+		for (NativeUserStorageClose retired : pending) {
+			Throwable closeFailure = retired.close();
+			if (closeFailure == null) continue;
+			debug(closeFailure);
+			synchronized (pendingNativeUserStorageCloseLock) { pendingNativeUserStorageCloses.add(retired); }
 		}
+	}
+
+	/** Retry retired native storage owners during plugin shutdown as well. */
+	public void closePendingNativeUserStorageOwners() { retryPendingNativeUserStorageCloses(); }
+
+	private static Throwable preserveFailure(Throwable primary, Throwable additional) {
+		if (primary == null) return additional;
+		if (primary != additional) primary.addSuppressed(additional);
+		return primary;
 	}
 
 	private void reloadAdvancedCoreNow(boolean userStorage) {
@@ -1585,9 +1636,35 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			throw new IllegalStateException("Replacement SQLite user table is unavailable");
 		}
 		private void closeUnpublished() {
-			backend.close();
-			if (mysql != null) mysql.close();
-			if (database != null) database.getDB().closeConnection();
+			Throwable failure = null;
+			try { backend.close(); }
+			catch (Throwable closeFailure) { failure = preserveFailure(failure, closeFailure); }
+			if (mysql != null) {
+				try { mysql.close(); }
+				catch (Throwable closeFailure) { failure = preserveFailure(failure, closeFailure); }
+			}
+			if (database != null) {
+				try { database.getDB().closeConnection(); }
+				catch (Throwable closeFailure) { failure = preserveFailure(failure, closeFailure); }
+			}
+			if (failure instanceof RuntimeException runtime) throw runtime;
+			if (failure instanceof Error error) throw error;
+			if (failure != null) throw new IllegalStateException("Failed to close unpublished user storage", failure);
+		}
+	}
+
+	private record NativeUserStorageClose(MySQL mysql, Database database) {
+		private Throwable close() {
+			Throwable failure = null;
+			if (mysql != null) {
+				try { mysql.close(); }
+				catch (Throwable closeFailure) { failure = preserveFailure(failure, closeFailure); }
+			}
+			if (database != null) {
+				try { database.getDB().closeConnection(); }
+				catch (Throwable closeFailure) { failure = preserveFailure(failure, closeFailure); }
+			}
+			return failure;
 		}
 	}
 

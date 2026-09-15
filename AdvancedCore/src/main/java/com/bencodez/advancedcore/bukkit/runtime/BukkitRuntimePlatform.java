@@ -99,7 +99,10 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 			ownsMysql = plugin.getOptions() != null
 					&& UserStorage.MYSQL.equals(plugin.getOptions().getStorageType());
 		}
-		Runnable closeMysql = () -> { if (ownsMysql && mysql != null) mysql.close(); };
+		Runnable closeMysql = () -> {
+			try { if (ownsMysql && mysql != null) mysql.close(); }
+			finally { plugin.closePendingNativeUserStorageOwners(); }
+		};
         if (users == null) {
             closeMysql.run();
             userStorageRetirement = CompletableFuture.completedFuture(null);

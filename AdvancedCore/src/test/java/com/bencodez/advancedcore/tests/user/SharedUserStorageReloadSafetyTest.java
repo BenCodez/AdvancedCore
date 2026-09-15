@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,6 +11,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -16,10 +20,14 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -38,6 +46,7 @@ import com.bencodez.advancedcore.core.user.runtime.SharedUserDataRuntime;
 import com.bencodez.advancedcore.core.user.runtime.UserCacheOwner;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
+import com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserBackend;
 import com.bencodez.simpleapi.sql.data.DataValue;
 
 class SharedUserStorageReloadSafetyTest {
@@ -260,6 +269,7 @@ class SharedUserStorageReloadSafetyTest {
         UserDataManager manager = new UserDataManager(plugin);
         SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
         when(plugin.getUserManager()).thenReturn(users);
+		doReturn(null).when(plugin).getNativeUserStorageOwner();
         when(users.getDataManager()).thenReturn(manager);
         when(users.getAllKeys(UserStorage.SQLITE)).thenReturn(new HashMap<>());
         doNothing().when(plugin).loadUserAPI(any(UserStorage.class));
@@ -279,6 +289,110 @@ class SharedUserStorageReloadSafetyTest {
             manager.getTimer().shutdownNow();
         }
     }
+
+	@Test
+	void conversionEnumeratesTheActiveMysqlSourceBeforeOpeningSqlite() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
+		MySQL activeMysql = mock(MySQL.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager);
+		doReturn(new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, activeMysql, null))
+				.when(plugin).getNativeUserStorageOwner();
+		when(users.getAllKeys(UserStorage.MYSQL)).thenReturn(new HashMap<>());
+		doNothing().when(plugin).loadUserAPI(UserStorage.SQLITE);
+		doNothing().when(plugin).debug(any(String.class));
+		doAnswer(call -> {
+			call.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(runtime).runStorageMaintenance(any(Runnable.class));
+		manager.bindSharedRuntime(runtime);
+		try {
+			plugin.convertDataStorage(UserStorage.MYSQL, UserStorage.SQLITE);
+
+			verify(plugin, never()).loadUserAPI(UserStorage.MYSQL);
+			verify(users).getAllKeys(UserStorage.MYSQL);
+			verify(plugin).loadUserAPI(UserStorage.SQLITE);
+		} finally {
+			manager.getTimer().shutdownNow();
+		}
+	}
+
+	@Test
+	void failedReplacementStillCompletesAndClearsReloadWhenUnpublishedCloseFails() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+		BukkitSqlUserBackend backend = mock(BukkitSqlUserBackend.class);
+		MySQL mysql = mock(MySQL.class);
+		IllegalStateException replacementFailure = new IllegalStateException("replacement");
+		IllegalStateException backendCloseFailure = new IllegalStateException("backend close");
+		IllegalStateException mysqlCloseFailure = new IllegalStateException("mysql close");
+		doThrow(backendCloseFailure).when(backend).close();
+		doThrow(mysqlCloseFailure).when(mysql).close();
+		Object replacement = newUserStorageReplacement(UserStorage.MYSQL, null, mysql, backend);
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		setPrivateField(plugin, "userStorageReload", completion);
+
+		invokePrivate(plugin, "failSharedUserStorageReplacement",
+				new Class<?>[] { CompletableFuture.class, replacement.getClass(), Throwable.class },
+				completion, replacement, replacementFailure);
+
+		java.util.concurrent.CompletionException observed = assertThrows(java.util.concurrent.CompletionException.class,
+				() -> completion.join());
+		assertSame(replacementFailure, observed.getCause());
+		assertSame(backendCloseFailure, replacementFailure.getSuppressed()[0]);
+		assertSame(mysqlCloseFailure, backendCloseFailure.getSuppressed()[0]);
+		assertNull(getPrivateField(plugin, "userStorageReload"));
+		verify(mysql).close();
+	}
+
+	@Test
+	void failedNativeMysqlCloseIsRetriedDuringShutdown() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+		MySQL previousMysql = mock(MySQL.class);
+		MySQL replacementMysql = mock(MySQL.class);
+		BukkitSqlUserBackend backend = mock(BukkitSqlUserBackend.class);
+		doThrow(new IllegalStateException("first close")).doNothing().when(previousMysql).close();
+		doNothing().when(plugin).debug(any(Throwable.class));
+		setPrivateField(plugin, "pendingNativeUserStorageCloseLock", new Object());
+		setPrivateField(plugin, "pendingNativeUserStorageCloses", new ArrayList<>());
+		setPrivateField(plugin, "mysql", previousMysql);
+		Object replacement = newUserStorageReplacement(UserStorage.MYSQL, null, replacementMysql, backend);
+
+		invokePrivate(plugin, "installUserStorageReplacement", new Class<?>[] { replacement.getClass() }, replacement);
+		plugin.closePendingNativeUserStorageOwners();
+
+		verify(previousMysql, org.mockito.Mockito.times(2)).close();
+	}
+
+	private static Object newUserStorageReplacement(UserStorage storageType, Object database, MySQL mysql,
+			BukkitSqlUserBackend backend) throws Exception {
+		Class<?> replacement = Class.forName(AdvancedCorePlugin.class.getName() + "$UserStorageReplacement");
+		Constructor<?> constructor = replacement.getDeclaredConstructor(UserStorage.class,
+				Class.forName("com.bencodez.simpleapi.sql.sqlite.Database"), MySQL.class, BukkitSqlUserBackend.class);
+		constructor.setAccessible(true);
+		return constructor.newInstance(storageType, database, mysql, backend);
+	}
+
+	private static void invokePrivate(Object target, String name, Class<?>[] parameterTypes, Object... arguments)
+			throws Exception {
+		Method method = target.getClass().getSuperclass().getDeclaredMethod(name, parameterTypes);
+		method.setAccessible(true);
+		method.invoke(target, arguments);
+	}
+
+	private static void setPrivateField(Object target, String name, Object value) throws Exception {
+		Field field = target.getClass().getSuperclass().getDeclaredField(name);
+		field.setAccessible(true);
+		field.set(target, value);
+	}
+
+	private static Object getPrivateField(Object target, String name) throws Exception {
+		Field field = target.getClass().getSuperclass().getDeclaredField(name);
+		field.setAccessible(true);
+		return field.get(target);
+	}
 
 	private static final class RoutingCacheOwner implements UserCacheOwner {
 		private final UserDataManager manager;
