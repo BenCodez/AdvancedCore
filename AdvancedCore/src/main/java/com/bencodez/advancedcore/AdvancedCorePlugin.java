@@ -573,17 +573,19 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		// Do not recreate an already active source before reading it. In particular,
 		// setMysql closes the old connection, which made MYSQL-to-SQLITE conversion
 		// enumerate a closed shared-route owner (and sometimes copy no users).
-		UserStorageOwner activeSource = getNativeUserStorageOwner();
-		if (activeSource == null || activeSource.storageType() != from) loadUserAPI(from);
+		UserStorageOwner activeOwner = getNativeUserStorageOwner();
+		if (activeOwner == null || activeOwner.storageType() != from) loadUserAPI(from);
 
 		if (getMysql() != null) {
 			getMysql().clearCacheBasic();
 		}
 
 		HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys(from);
-		// The source is no longer needed after enumeration. Only now may opening the
-		// target replace mutable native-owner fields.
-		loadUserAPI(to);
+		// The source is no longer needed after enumeration. If the target was
+		// already active, restore that exact owner instead of recreating it: opening
+		// MYSQL would otherwise close the shared-route target via setMysql.
+		if (activeOwner != null && activeOwner.storageType() == to) nativeUserStorageOwner = activeOwner;
+		else loadUserAPI(to);
 		Queue<Entry<UUID, ArrayList<Column>>> players = new LinkedList<>(cols.entrySet());
 
 		while (players.size() > 0) {
