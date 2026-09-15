@@ -41,7 +41,8 @@ class SqlUserDataFacadeTest {
             assertEquals(List.of("Points"), data.getKeys(storage));
             assertSame(converted, data.getValues(storage));
         }
-        verifyNoInteractions(user);
+        verify(user, atLeastOnce()).getPlugin();
+        verifyNoMoreInteractions(user);
     }
 
     @Test void everyFetchModeRetainsTempUserCacheAndStoragePrecedence() {
@@ -81,9 +82,10 @@ class SqlUserDataFacadeTest {
     @Test void asyncWriteResolvesUuidAtExecutionAndNotifiesOnlyAfterSql() {
         Fixture f = new Fixture();
         f.data.setInt("Points", 19, false, true);
-        ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
-        verify(f.timer).execute(task.capture());
-        verifyNoInteractions(f.table, f.manager);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(f.timer).execute(task.capture());
+		verifyNoInteractions(f.table);
+		verify(f.manager, never()).onChange(any(), anyString());
         when(f.user.getUUID()).thenReturn("current-id");
         task.getValue().run();
         var order = inOrder(f.table, f.manager);
@@ -99,9 +101,10 @@ class SqlUserDataFacadeTest {
         verify(f.user, never()).clearCache();
         clearInvocations(f.table, f.manager);
         RejectedExecutionException rejected = new RejectedExecutionException("stopped");
-        doThrow(rejected).when(f.timer).execute(any(Runnable.class));
-        assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> f.data.setInt("Points", 1, false, true)));
-        verifyNoInteractions(f.table, f.manager);
+		doThrow(rejected).when(f.timer).execute(any(Runnable.class));
+		assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> f.data.setInt("Points", 1, false, true)));
+		verifyNoInteractions(f.table);
+		verify(f.manager, never()).onChange(any(), anyString());
     }
 
     private static final class Fixture {

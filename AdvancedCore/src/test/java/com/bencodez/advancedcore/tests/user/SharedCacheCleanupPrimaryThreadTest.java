@@ -1,20 +1,31 @@
 package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,12 +35,141 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserData;
+import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.bukkit.user.runtime.BukkitUserCacheOwner;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SharedCacheCleanupPrimaryThreadTest {
+	@Test
+	void primaryThreadBulkReadsUseTheCompletedSharedCacheSnapshot() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
+		UserDataManager manager = new UserDataManager(plugin);
+		when(users.getDataManager()).thenReturn(manager);
+		UUID uuid = UUID.randomUUID();
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		cache.updateCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(7))));
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getUUID()).thenReturn(uuid.toString());
+		when(user.getCache()).thenReturn(cache);
+		UserData data = new UserData(user);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			assertEquals(Set.of("Points"), Set.copyOf(data.getKeys()));
+			assertEquals(7, data.getValues().get("Points").getInt());
+			assertTrue(data.hasData());
+			IllegalStateException intFailure = assertThrows(IllegalStateException.class,
+					() -> data.getInt(UserStorage.MYSQL, "Points", -1,
+							com.bencodez.advancedcore.api.user.UserDataFetchMode.NO_CACHE));
+			IllegalStateException stringFailure = assertThrows(IllegalStateException.class,
+					() -> data.getString(UserStorage.MYSQL, "PlayerName",
+							com.bencodez.advancedcore.api.user.UserDataFetchMode.NO_CACHE));
+			assertTrue(intFailure.getMessage().contains("defer"));
+			assertTrue(stringFailure.getMessage().contains("defer"));
+			verify(backend, never()).user(any(UUID.class));
+		}
+		manager.getTimer().shutdownNow();
+	}
+
+	@Test
+	void primaryThreadNameUpdateDefersExistenceCheckBeforeReadingOrWriting() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		UserDataManager manager = new UserDataManager(plugin);
+		when(users.getDataManager()).thenReturn(manager);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		when(plugin.getBukkitScheduler()).thenReturn(mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class));
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserData data = mock(UserData.class);
+		Field pluginField = AdvancedCoreUser.class.getDeclaredField("plugin");
+		pluginField.setAccessible(true);
+		pluginField.set(user, plugin);
+		Field fetchMode = AdvancedCoreUser.class.getDeclaredField("userDataFetchMode");
+		fetchMode.setAccessible(true);
+		fetchMode.set(user, com.bencodez.advancedcore.api.user.UserDataFetchMode.DEFAULT);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getData()).thenReturn(data);
+		when(user.getPlayerName()).thenReturn("CurrentName");
+		when(data.hasData()).thenReturn(true);
+		when(data.getString(eq("PlayerName"), any())).thenReturn("OldName");
+		doCallRealMethod().when(user).updateName(false);
+		Server server = mock(Server.class);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false);
+			ArgumentCaptor<Runnable> storageTask = ArgumentCaptor.forClass(Runnable.class);
+			assertDoesNotThrow(() -> user.updateName(false));
+			verify(worker).execute(storageTask.capture());
+			verify(data, never()).hasData();
+			verify(data, never()).getString(any(), any());
+			storageTask.getValue().run();
+			verify(data).hasData();
+			ArgumentCaptor<Runnable> callback = ArgumentCaptor.forClass(Runnable.class);
+			verify(plugin.getBukkitScheduler()).runTask(eq(plugin), callback.capture());
+			callback.getValue().run();
+			verify(data).getString("PlayerName", com.bencodez.advancedcore.api.user.UserDataFetchMode.DEFAULT);
+			verify(data).setString("PlayerName", "CurrentName", true);
+		}
+	}
+
+	@Test
+	void primaryThreadStorageResultIsReadOnTheWorkerAndDeliveredBackToBukkit() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		when(plugin.getBukkitScheduler()).thenReturn(mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class));
+		AtomicBoolean read = new AtomicBoolean();
+		AtomicBoolean delivered = new AtomicBoolean();
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false);
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+			assertTrue(manager.deferSharedStorageResult(() -> {
+				read.set(true);
+				return "row";
+			}, value -> {
+				assertEquals("row", value);
+				delivered.set(true);
+			}, failure -> { throw new AssertionError(failure); }));
+			verify(worker).execute(task.capture());
+			assertFalse(read.get());
+			task.getValue().run();
+			assertTrue(read.get());
+			assertFalse(delivered.get());
+			ArgumentCaptor<Runnable> callback = ArgumentCaptor.forClass(Runnable.class);
+			verify(plugin.getBukkitScheduler()).runTask(eq(plugin), callback.capture());
+			callback.getValue().run();
+			assertTrue(delivered.get());
+		}
+		manager.getTimer().shutdownNow();
+	}
+
 	@Test
 	void acceptedPrimaryThreadCleanupFailureIsLoggedAndRetained() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
@@ -60,6 +200,112 @@ class SharedCacheCleanupPrimaryThreadTest {
 			assertSame(failure, manager.getLastDeferredStorageFailure());
 			verify(logger).log(Level.SEVERE, "Deferred user-cache cleanup failed", failure);
 			assertTrue(manager.getUserDataCache().containsKey(uuid));
+		}
+	}
+
+	@Test
+	void primaryThreadCachePopulationIsQueuedAndGetCacheReturnsAPopulationPlaceholder() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> {
+			throw new AssertionError("primary thread must not admit cache storage work");
+		});
+		Server server = mock(Server.class);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			assertDoesNotThrow(() -> manager.cacheUser(uuid, null));
+			verify(worker).execute(any(Runnable.class));
+			assertNotNull(manager.getCache(uuid));
+			verify(worker, times(1)).execute(any(Runnable.class));
+		}
+	}
+
+	@Test
+	void removingCompletedPlaceholderAllowsAReplacementPopulation() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		UserDataCache cache = mock(UserDataCache.class);
+		manager.getUserDataCache().put(uuid, cache);
+		Field completed = UserDataManager.class.getDeclaredField("completedSharedCachePopulations");
+		completed.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		Set<UUID> completedPopulations = (Set<UUID>) completed.get(manager);
+		completedPopulations.add(uuid);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		Server server = mock(Server.class);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+			manager.removeCache(uuid, null);
+			verify(worker).execute(task.capture());
+			task.getValue().run();
+			assertFalse(completedPopulations.contains(uuid));
+			assertNotNull(manager.getCache(uuid));
+			verify(worker, times(2)).execute(any(Runnable.class));
+		}
+	}
+
+	@Test
+	void runtimeOwnerRetirementClearsPopulationMarkersAndFencesAnOldWorker() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		UserDataCache cache = mock(UserDataCache.class);
+		manager.getUserDataCache().put(uuid, cache);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		Field populations = UserDataManager.class.getDeclaredField("sharedCachePopulations");
+		populations.setAccessible(true);
+		Field completed = UserDataManager.class.getDeclaredField("completedSharedCachePopulations");
+		completed.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		Set<UUID> inFlight = (Set<UUID>) populations.get(manager);
+		@SuppressWarnings("unchecked")
+		Set<UUID> completedPopulations = (Set<UUID>) completed.get(manager);
+		Server server = mock(Server.class);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+			manager.cacheUser(uuid, null);
+			verify(worker).execute(task.capture());
+			assertTrue(inFlight.contains(uuid));
+
+			new BukkitUserCacheOwner(manager).clearAfterFlush();
+			assertFalse(manager.getUserDataCache().containsKey(uuid));
+			assertFalse(inFlight.contains(uuid));
+			assertFalse(completedPopulations.contains(uuid));
+
+			task.getValue().run();
+			assertFalse(manager.getUserDataCache().containsKey(uuid));
+			assertFalse(completedPopulations.contains(uuid),
+					"a retired population must not republish completion for a replacement cache");
+			verify(cache).retireAfterSharedFlush();
+			verifyNoMoreInteractions(cache);
 		}
 	}
 

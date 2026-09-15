@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.command.gui;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -21,6 +22,7 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.player.PlayerUtils;
+import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.valuerequest.StringListener;
 import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
@@ -113,25 +115,11 @@ public class UserGUI {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				Player player = clickEvent.getPlayer();
-				EditGUI inv = new EditGUI("Edit Data, click to change");
 				final AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
-				for (final String key : user.getData().getKeys()) {
-					String value = user.getData().getValue(key);
-					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
-							new EditGUIValueString(key, value) {
-
-								@Override
-								public void setValue(Player player, String value) {
-									if (value.equals("\"\"")) {
-										value = "";
-									}
-									user.getData().setString(key, value);
-									openUserGUI(player, playerName);
-								}
-							}));
-				}
-
-				inv.openInventory(player);
+				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
+						values -> openEditData(player, playerName, user, values),
+						failure -> player.sendMessage("Unable to read user data; check the server log."))) return;
+				openEditData(player, playerName, user, user.getData().getValues());
 			}
 		});
 
@@ -140,10 +128,10 @@ public class UserGUI {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
-				for (String key : user.getData().getKeys()) {
-					String str = user.getData().getValue(key);
-					user.sendMessage("&c&l" + key + " &c" + str);
-				}
+				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
+						values -> sendUserData(user, values),
+						failure -> clickEvent.getPlayer().sendMessage("Unable to read user data; check the server log."))) return;
+				sendUserData(user, user.getData().getValues());
 			}
 		});
 
@@ -152,6 +140,40 @@ public class UserGUI {
 		}
 
 		inv.openInventory(player);
+	}
+
+	/** Build inventories only after a deferred shared-store read returns to Bukkit's thread. */
+	private void openEditData(Player player, String playerName, AdvancedCoreUser user,
+			HashMap<String, DataValue> values) {
+		EditGUI edit = new EditGUI("Edit Data, click to change");
+		for (Entry<String, DataValue> entry : values.entrySet()) {
+			final String key = entry.getKey();
+			String value = displayValue(entry.getValue());
+			edit.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
+					new EditGUIValueString(key, value) {
+
+						@Override
+						public void setValue(Player player, String value) {
+							if (value.equals("\"\"")) value = "";
+							user.getData().setString(key, value);
+							openUserGUI(player, playerName);
+						}
+					}));
+		}
+		edit.openInventory(player);
+	}
+
+	private void sendUserData(AdvancedCoreUser user, HashMap<String, DataValue> values) {
+		for (Entry<String, DataValue> entry : values.entrySet()) {
+			user.sendMessage("&c&l" + entry.getKey() + " &c" + displayValue(entry.getValue()));
+		}
+	}
+
+	private String displayValue(DataValue value) {
+		if (value == null) return "";
+		if (value.isInt()) return String.valueOf(value.getInt());
+		String string = value.getString();
+		return string == null ? "" : string;
 	}
 
 	/**

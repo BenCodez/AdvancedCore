@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.user.usercache;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -24,6 +25,7 @@ public class UserDataCache {
 	private final UserDataManager manager;
 	private long snapshotVersion;
 	private long replacementVersion;
+	private boolean storedDataPresent;
 	private final HashMap<String, Long> changedAt = new HashMap<>();
 	private final HashMap<String, Long> persistedAt = new HashMap<>();
 	private final HashMap<String, DataValue> inFlightValues = new HashMap<>();
@@ -99,7 +101,12 @@ public class UserDataCache {
 		AdvancedCoreUser user = manager.getPlugin().getUserManager().getUser(currentUuid, false);
 		ArrayList<String> keys = user.getUserData().getKeys();
 		HashMap<String, DataValue> data = user.getUserData().getValues();
-		HashMap<String, DataValue> refreshed = new HashMap<>();
+		boolean refreshedStoredDataPresent = !keys.isEmpty() || !data.isEmpty();
+		// Primary-thread public reads cannot fall back to SQL once the shared
+		// runtime is bound. Retain arbitrary persisted columns (for example
+		// VotingPlugin's dynamic VoteShopLimit keys) and layer registered defaults
+		// only where storage omitted a known key.
+		HashMap<String, DataValue> refreshed = new HashMap<>(data);
 		for (UserDataKey dataKey : manager.getKeys()) {
 			String key = dataKey.getKey();
 			keys.remove(key);
@@ -113,7 +120,8 @@ public class UserDataCache {
 			// A concurrent cache eviction is an expected legacy lifecycle outcome.
 			// It must not turn a completed storage read into a failed cache request.
 			if (uuid == null || cache == null) return new ArrayList<>();
-			published = updateSharedSnapshot(refreshed, expectedVersion, currentUuid);
+			published = updateSharedSnapshot(refreshed, expectedVersion, currentUuid,
+					refreshedStoredDataPresent);
 		}
 		ArrayList<String> changedKeys = new ArrayList<>();
 		for (Entry<String, DataValue> entry : published.entrySet()) {
@@ -121,7 +129,7 @@ public class UserDataCache {
 			if (prior != null && entry.getValue() != null && !prior.toString().equals(entry.getValue().toString())) changedKeys.add(entry.getKey());
 		}
 		if (notify && !changedKeys.isEmpty()) manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys));
-		if (!keys.isEmpty()) manager.getPlugin().devDebug("Keys not cached: " + ArrayUtils.makeStringList(keys));
+		if (!keys.isEmpty()) manager.getPlugin().devDebug("Caching additional keys: " + ArrayUtils.makeStringList(keys));
 		return changedKeys;
 	}
 
@@ -215,6 +223,10 @@ public class UserDataCache {
 
 	public AdvancedCoreUser getUser() { return manager.getPlugin().getUserManager().getUser(uuid, false); }
 	public synchronized boolean hasCache() { return cache != null && !cache.isEmpty(); }
+	public synchronized boolean hasStoredData() { return storedDataPresent; }
+	public synchronized HashMap<String, DataValue> snapshot() {
+		return cache == null ? new HashMap<>() : new HashMap<>(cache);
+	}
 	public synchronized boolean hasChangesToProcess() { return cachedChanges != null && !cachedChanges.isEmpty(); }
 	public synchronized boolean isCached(String key) { return cache != null && cache.containsKey(key); }
 
@@ -251,6 +263,22 @@ public class UserDataCache {
 		initializeSharedStorage();
 		Runnable notification = processChangesInternal(false);
 		if (notification != null) notification.run();
+	}
+
+	/** Flush now when blocking is allowed, otherwise preserve ordering on the cache worker. */
+	public void processChangesImmediately(boolean async) {
+		if (async) {
+			processChangesAsync();
+			return;
+		}
+		if (manager != null && manager.hasSharedSqlBackend()) {
+			if (manager.deferSharedStorageWork(() -> processChangesImmediately(false))) return;
+			initializeSharedStorage();
+			Runnable notification = processChangesInternal(false);
+			if (notification != null) manager.dispatchSharedStorageNotification(notification);
+			return;
+		}
+		processChanges();
 	}
 
 	private Runnable processChangesInternal(boolean admitted) {
@@ -313,9 +341,20 @@ public class UserDataCache {
 			if (!values.isEmpty()) { if (writer == null) user.getUserData().setValues(values); else writer.accept(values); }
 			persisted = true;
 			synchronized (this) {
+				if (!values.isEmpty()) storedDataPresent = true;
 				if (cache != null) {
 					for (UserDataChange persistedChange : changes) {
-						cache.put(persistedChange.getKey(), persistedChange.toUserDataValue());
+						Long persistedVersion = persistedMutationVersions.get(persistedChange.getKey());
+						Long queuedVersion = changedAt.get(persistedChange.getKey());
+						// A setter may have queued a newer value while this batch was in
+						// storage. Keep that visible value until its own batch succeeds.
+						// A public updateCache() replacement, however, is a storage snapshot
+						// rather than another mutation. It clears changedAt(), so reconcile
+						// that stale snapshot with this completed write instead of leaving a
+						// value visible which will never be persisted.
+						if (queuedVersion == null || Objects.equals(persistedVersion, queuedVersion)) {
+							cache.put(persistedChange.getKey(), persistedChange.toUserDataValue());
+						}
 					}
 				}
 				// The in-memory values now represent the successful write. Mark that
@@ -386,6 +425,7 @@ public class UserDataCache {
 
 	public synchronized void updateCachePreservingPending(HashMap<String, DataValue> storageValues) {
 		HashMap<String, DataValue> refreshed = storageValues == null ? new HashMap<>() : new HashMap<>(storageValues);
+		storedDataPresent = !refreshed.isEmpty();
 		refreshed.putAll(inFlightValues);
 		if (cachedChanges != null) for (UserDataChange change : cachedChanges) refreshed.put(change.getKey(), change.toUserDataValue());
 		cache = refreshed;
@@ -395,13 +435,16 @@ public class UserDataCache {
 	public synchronized long getSharedSnapshotVersion() { return snapshotVersion; }
 
 	public synchronized HashMap<String, DataValue> updateSharedSnapshot(HashMap<String, DataValue> values,
-			long expectedVersion) { return updateSharedSnapshot(values, expectedVersion, uuid); }
+			long expectedVersion) {
+		return updateSharedSnapshot(values, expectedVersion, uuid, values != null && !values.isEmpty());
+	}
 
 	private synchronized HashMap<String, DataValue> updateSharedSnapshot(HashMap<String, DataValue> values,
-			long expectedVersion, UUID expectedUuid) {
+			long expectedVersion, UUID expectedUuid, boolean snapshotStoredDataPresent) {
 		if (cache == null || uuid == null || !uuid.equals(expectedUuid)) throw new IllegalStateException("Shared user cache changed while loading");
 		if (expectedVersion < 0 || expectedVersion > snapshotVersion) throw new IllegalArgumentException("Invalid cache snapshot version");
 		if (replacementVersion > expectedVersion) return new HashMap<>(cache);
+		storedDataPresent = snapshotStoredDataPresent;
 		HashMap<String, DataValue> merged = values == null ? new HashMap<>() : new HashMap<>(values);
 		changedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
 		persistedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
@@ -413,6 +456,16 @@ public class UserDataCache {
 
 	private void recordSnapshotReplacement() {
 		replacementVersion = ++snapshotVersion;
-		changedAt.clear();
+		// A storage/read snapshot replaces unqueued local observations, but it must
+		// not erase the version fence for a mutation that is still waiting in the
+		// write queue. Otherwise an older in-flight batch can overwrite that newer
+		// visible value when it completes.
+		changedAt.keySet().removeIf(key -> cachedChanges == null
+				|| cachedChanges.stream().noneMatch(change -> key.equals(change.getKey())));
+		if (cache != null && cachedChanges != null) {
+			for (UserDataChange change : cachedChanges) {
+				cache.put(change.getKey(), change.toUserDataValue());
+			}
+		}
 	}
 }

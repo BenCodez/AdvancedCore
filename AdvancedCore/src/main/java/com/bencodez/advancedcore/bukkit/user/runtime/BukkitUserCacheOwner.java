@@ -231,9 +231,8 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
         if (cache != null) {
             cache.retireAfterSharedFlush();
-            manager.getUserDataCache().remove(uuid, cache);
         }
-        cacheGates.remove(uuid);
+        if (manager.retireSharedCache(uuid, cache)) cacheGates.remove(uuid);
     }
 
     @Override public void clearAfterFlush() { for (UUID uuid : cachedUsers()) remove(uuid); }

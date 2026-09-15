@@ -6,7 +6,9 @@ import static org.mockito.Mockito.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +25,7 @@ class CoreRuntimeTest {
         when(platform.beforeExecutorShutdown()).thenReturn(List.of());
         when(platform.afterExecutorGrace()).thenReturn(List.of());
         when(platform.afterExecutorShutdown()).thenReturn(List.of());
+        when(platform.canBlockForPreExecutorShutdown()).thenReturn(true);
         return platform;
     }
 
@@ -67,7 +70,7 @@ class CoreRuntimeTest {
         return executor;
     }
 
-    @Test void cleanupFailureIsReportedWithoutSkippingLaterComponents() {
+	@Test void cleanupFailureIsReportedWithoutSkippingLaterComponents() {
         RuntimePlatform platform = platform();
         var events = new ArrayList<String>();
         var failure = new IllegalStateException("fixture");
@@ -78,7 +81,60 @@ class CoreRuntimeTest {
         new AdvancedCoreRuntime(platform).shutdown();
         assertEquals(List.of("next", "last"), events);
         verify(platform).cleanupFailed("failed", failure);
-    }
+	}
+
+	@Test void waitsForAsyncPreShutdownWorkBeforeRetiringExecutors() throws Exception {
+		RuntimePlatform platform = platform();
+		var events = new ArrayList<String>();
+		ScheduledExecutorService timer = executor("timer", events);
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		when(platform.beforeExecutorShutdown()).thenReturn(List.of(new Cleanup("pre", () -> events.add("pre"))));
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.getTimer()).thenReturn(timer);
+		var worker = java.util.concurrent.Executors.newSingleThreadExecutor();
+		try {
+			var shutdown = worker.submit(() -> new AdvancedCoreRuntime(platform).shutdown());
+			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+			while (!events.contains("pre") && System.nanoTime() < deadline) Thread.yield();
+			assertEquals(List.of("pre"), events, "executor shutdown must wait for storage retirement");
+			retiring.complete(null);
+			shutdown.get(5, TimeUnit.SECONDS);
+			assertTrue(events.indexOf("timer-stop") > events.indexOf("pre"));
+		} finally {
+			retiring.complete(null);
+			worker.shutdownNow();
+			assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+		}
+	}
+
+	@Test void nonBlockingPlatformLeavesStorageWorkerAliveUntilRetirementCompletes() throws Exception {
+		RuntimePlatform platform = platform();
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.getTimer()).thenReturn(timer);
+
+		assertDoesNotThrow(() -> new AdvancedCoreRuntime(platform).shutdown());
+		verify(timer, never()).shutdown();
+		verify(timer, never()).shutdownNow();
+		retiring.complete(null);
+		verify(timer).shutdown();
+	}
+
+	@Test void failedRetirementLeavesStorageWorkerAvailableForRecovery() {
+		RuntimePlatform platform = platform();
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		retiring.completeExceptionally(new IllegalStateException("write failed"));
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.getTimer()).thenReturn(timer);
+
+		new AdvancedCoreRuntime(platform).shutdown();
+		verify(timer, never()).shutdown();
+		verify(timer, never()).shutdownNow();
+		verify(platform).cleanupFailed(eq("pre-executor shutdown"), any(IllegalStateException.class));
+	}
 
     @Test void preservesInterruptAndSkipsAlreadyFinishedExecutors() throws Exception {
         ScheduledExecutorService executor = mock(ScheduledExecutorService.class);

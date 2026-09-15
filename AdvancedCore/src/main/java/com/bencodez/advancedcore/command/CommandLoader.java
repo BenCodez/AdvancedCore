@@ -424,20 +424,11 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
 
-				// Remove user data (DB/flatfile/etc)
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				user.getData().remove();
-
-				// Remove any cached mappings (UuidLookup maintains the name<->uuid cache now)
-				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-				if (!isBlank(uuidStr)) {
-					UuidLookup.getInstance().invalidate(uuidStr);
-				} else {
-					// still invalidate by name key in case it exists
-					UuidLookup.getInstance().invalidate(args[1]);
-				}
-
-				sendMessage(sender, "&cRemoved " + args[1]);
+				removeUserData(sender, args[1], user, () -> {
+					String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
+					UuidLookup.getInstance().invalidate(isBlank(uuidStr) ? args[1] : uuidStr);
+				});
 			}
 		});
 
@@ -449,12 +440,7 @@ public class CommandLoader {
 				sendMessage(sender, "&cRemoving " + args[1]);
 
 				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(args[1]));
-				user.getData().remove();
-
-				// Clear mapping from UuidLookup (no plugin uuidNameCache anymore)
-				UuidLookup.getInstance().invalidate(args[1]);
-
-				sendMessage(sender, "&cRemoved " + args[1]);
+				removeUserData(sender, args[1], user, () -> UuidLookup.getInstance().invalidate(args[1]));
 			}
 		});
 
@@ -576,6 +562,10 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
+				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
+						values -> values.forEach((key, value) ->
+								sendMessage(sender, "&c&l" + key + " &c" + value.toString())),
+						failure -> sendMessage(sender, "&cUnable to read user data; check the server log."))) return;
 				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
 					sendMessage(sender, "&c&l" + entry.getKey() + " &c" + entry.getValue().toString());
 				}
@@ -700,6 +690,27 @@ public class CommandLoader {
 						+ failure.getClass().getSimpleName() + ")");
 				sender.sendMessage(MessageAPI.colorize("&cUser storage conversion failed; see the server log"));
 			}));
+	}
+
+	/** Complete destructive user removal before reporting success or clearing identity mappings. */
+	private void removeUserData(CommandSender sender, String identifier, AdvancedCoreUser user,
+			Runnable afterRemoval) {
+		java.util.function.Supplier<Boolean> remove = () -> {
+			user.getData().remove();
+			return Boolean.TRUE;
+		};
+		java.util.function.Consumer<Boolean> succeeded = ignored -> {
+			afterRemoval.run();
+			sender.sendMessage(MessageAPI.colorize("&cRemoved " + identifier));
+		};
+		java.util.function.Consumer<Throwable> failed = ignored ->
+			sender.sendMessage(MessageAPI.colorize("&cUnable to remove " + identifier + "; check the server log."));
+		if (plugin.getUserManager().getDataManager().deferSharedStorageResult(remove, succeeded, failed)) return;
+		try { succeeded.accept(remove.get()); }
+		catch (RuntimeException failure) {
+			plugin.getLogger().severe("User removal failed (" + failure.getClass().getSimpleName() + ")");
+			failed.accept(failure);
+		}
 	}
 
 	/**

@@ -2,7 +2,11 @@ package com.bencodez.advancedcore.bukkit.runtime;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
+
+import org.bukkit.Bukkit;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
@@ -15,6 +19,7 @@ import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 /** Bukkit services for the shared executor lifecycle; no duplicate owners are created. */
 public final class BukkitRuntimePlatform implements RuntimePlatform {
     private final AdvancedCorePlugin plugin;
+    private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
 
     public BukkitRuntimePlatform(AdvancedCorePlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -41,6 +46,11 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                     if (plugin.getServerDataFile() != null) plugin.getServerDataFile().setLastUpdated();
                 }));
     }
+
+	@Override public CompletionStage<Void> beforeExecutorShutdownCompletion() { return userStorageRetirement; }
+	@Override public boolean canBlockForPreExecutorShutdown() {
+		return Bukkit.getServer() == null || !Bukkit.isPrimaryThread();
+	}
 
     @Override public List<Cleanup> afterExecutorGrace() {
         return List.of(new Cleanup("reward handler", () -> {
@@ -79,12 +89,24 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     }
 
     private void closeUserStorageAfterSharedRetirement() {
-        if (!plugin.isLoadUserData()) return;
+        if (!plugin.isLoadUserData()) {
+            userStorageRetirement = CompletableFuture.completedFuture(null);
+            return;
+        }
         Runnable closeMysql = () -> {
             if (plugin.getOptions() != null && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType())
                     && plugin.getMysql() != null) plugin.getMysql().close();
         };
         UserManager users = plugin.getLoadedUserManager();
-        if (users == null || !users.getDataManager().closeSharedRuntimeAsync(closeMysql)) closeMysql.run();
+        if (users == null) {
+            closeMysql.run();
+            userStorageRetirement = CompletableFuture.completedFuture(null);
+            return;
+        }
+        CompletionStage<Void> retirement = users.getDataManager().closeSharedRuntimeAsyncCompletion(closeMysql);
+        if (retirement == null) {
+            closeMysql.run();
+            userStorageRetirement = CompletableFuture.completedFuture(null);
+        } else userStorageRetirement = retirement;
     }
 }

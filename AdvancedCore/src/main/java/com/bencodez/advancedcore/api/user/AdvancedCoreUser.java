@@ -1652,11 +1652,18 @@ public class AdvancedCoreUser {
 	 * @param force whether to force the update
 	 */
 	public void updateName(boolean force) {
-		if (getData().hasData() || force) {
-			String playerName = getData().getString("PlayerName", userDataFetchMode);
-			if (playerName == null || !playerName.equals(getPlayerName())) {
-				getData().setString("PlayerName", getPlayerName(), true);
-			}
+		UserData currentData = getData();
+		if (!force && plugin != null && plugin.getUserManager() != null
+				&& plugin.getUserManager().getDataManager().deferSharedStorageResult(currentData::hasData,
+					hasData -> updateName(currentData, false, hasData), ignored -> {})) return;
+		updateName(currentData, force, force || currentData.hasData());
+	}
+
+	private void updateName(UserData currentData, boolean force, boolean hasData) {
+		if (!hasData && !force) return;
+		String storedName = currentData.getString("PlayerName", userDataFetchMode);
+		if (storedName == null || !storedName.equals(getPlayerName())) {
+			currentData.setString("PlayerName", getPlayerName(), true);
 		}
 	}
 

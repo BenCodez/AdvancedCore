@@ -25,16 +25,18 @@ import com.bencodez.simpleapi.sql.data.DataValueString;
  */
 public final class BukkitSqlUserBackend implements SqlUserBackend {
     private final AdvancedCorePlugin plugin;
+    private final UserStorage storageType;
     private final Object sqliteOperations = new Object();
     private final AtomicBoolean open = new AtomicBoolean(true);
 
     public BukkitSqlUserBackend(AdvancedCorePlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.storageType = Objects.requireNonNull(plugin.getStorageType(), "storageType");
         if (storageType() == UserStorage.MYSQL) requireMysql();
         else requireTable();
     }
 
-    @Override public UserStorage storageType() { return plugin.getStorageType(); }
+    @Override public UserStorage storageType() { return storageType; }
 
     @Override
     public SqlUserStorage user(UUID uuid) {

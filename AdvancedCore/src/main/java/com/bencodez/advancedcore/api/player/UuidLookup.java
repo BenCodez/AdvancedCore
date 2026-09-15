@@ -179,12 +179,8 @@ public class UuidLookup {
 			cacheMapping(uuid, liveName);
 
 			// Update stored PlayerName if it changed / missing
-			if (user != null && user.getUserData().hasData()) {
-				if (storedName.isEmpty() || storedName.equalsIgnoreCase("Error getting name")
-						|| !liveName.equals(storedName)) {
-					user.getData().setString("PlayerName", liveName);
-				}
-			}
+			if (user != null && (storedName.isEmpty() || storedName.equalsIgnoreCase("Error getting name")
+					|| !liveName.equals(storedName))) user.updateName(false);
 			return liveName;
 		}
 

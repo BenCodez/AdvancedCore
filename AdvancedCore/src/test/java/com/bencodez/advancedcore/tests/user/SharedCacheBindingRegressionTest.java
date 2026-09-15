@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,9 +22,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.bukkit.Bukkit;
+import org.bukkit.Server;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserData;
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
@@ -40,9 +44,68 @@ import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 @Timeout(15)
 class SharedCacheBindingRegressionTest {
+	@Test void sharedPopulationRetainsPersistedDynamicColumns() throws Exception {
+		try (Fixture fixture = new Fixture()) {
+			var data = fixture.plugin.getUserManager().getUser(fixture.uuid, false).getUserData();
+			when(data.getKeys()).thenReturn(new ArrayList<>(List.of("VoteShopLimitDaily")));
+			when(data.getValues()).thenReturn(new HashMap<>(Map.of("VoteShopLimitDaily", new DataValueInt(4))));
+			SharedUserDataRuntime runtime = fixture.runtime();
+
+			UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+
+			assertEquals(4, cache.snapshot().get("VoteShopLimitDaily").getInt());
+			runtime.close();
+		}
+	}
+
     @Test void noDatabaseLookupMissDoesNotLoadOrPopulate() { cacheMiss(UserDataFetchMode.NO_DB_LOOKUP); }
     @Test void cacheOnlyMissDoesNotLoadOrPopulate() { cacheMiss(UserDataFetchMode.CACHE_ONLY); }
     @Test void temporaryOnlyMissDoesNotLoadOrPopulate() { cacheMiss(UserDataFetchMode.TEMP_ONLY); }
+
+	@Test void userDataRemovalUsesTheSharedRuntimeExclusiveDeletePath() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		var users = mock(com.bencodez.advancedcore.api.user.UserManager.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		UUID uuid = UUID.randomUUID();
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(users.getDataManager()).thenReturn(manager);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getUUID()).thenReturn(uuid.toString());
+		when(runtime.isClosed()).thenReturn(false);
+		when(runtime.backend()).thenReturn(backend);
+		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+		manager.bindSharedRuntime(runtime);
+		try {
+			new UserData(user).remove();
+			verify(runtime).remove(uuid);
+			verify(user, never()).clearCache();
+		} finally {
+			manager.getTimer().shutdownNow();
+		}
+	}
+
+	@Test void explicitAlternateStoreReadsCannotUseTheSharedCache() throws Exception {
+		try (Fixture fixture = new Fixture()) {
+			SharedUserDataRuntime runtime = fixture.runtime();
+			fixture.manager.bindSharedRuntime(runtime);
+			AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+			when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+			when(user.getPlugin()).thenReturn(fixture.plugin);
+			when(user.getUUID()).thenReturn(fixture.uuid.toString());
+			UserData data = new UserData(user);
+
+			assertThrows(IllegalStateException.class,
+					() -> data.getInt(UserStorage.SQLITE, "Points", 0, UserDataFetchMode.CACHE_ONLY));
+			assertThrows(IllegalStateException.class,
+					() -> data.getString(UserStorage.SQLITE, "PlayerName", UserDataFetchMode.CACHE_ONLY));
+			verify(user, never()).getCache();
+			runtime.close();
+		}
+	}
 
     @Test void legacyCachePopulationPublishesOnlyAfterSharedAdmission() throws Exception {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
@@ -145,6 +208,39 @@ class SharedCacheBindingRegressionTest {
         }
     }
 
+    @Test void managerClearDoesNotDeadlockWithSameUserPopulation() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            CountDownLatch writing = new CountDownLatch(1), releaseWrite = new CountDownLatch(1);
+            cache.setSharedStorageWriter(values -> {
+                writing.countDown();
+                try {
+                    await(releaseWrite);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(interrupted);
+                }
+            });
+            cache.addChange(new UserDataChangeInt("Points", 1), true);
+            var workers = Executors.newFixedThreadPool(2);
+            try {
+                var clear = workers.submit(fixture.manager::clearCache);
+                await(writing);
+                var population = workers.submit(() -> fixture.manager.cacheUser(fixture.uuid, null));
+                releaseWrite.countDown();
+                clear.get(5, TimeUnit.SECONDS);
+                population.get(5, TimeUnit.SECONDS);
+                assertTrue(fixture.manager.containsKey(fixture.uuid));
+            } finally {
+                releaseWrite.countDown();
+                workers.shutdownNow();
+                assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
+            }
+            runtime.close();
+        }
+    }
+
     private void cacheMiss(UserDataFetchMode mode) {
         SqlUserBackend backend = mock(SqlUserBackend.class);
         UserCacheOwner owner = mock(UserCacheOwner.class);
@@ -184,6 +280,273 @@ class SharedCacheBindingRegressionTest {
             assertEquals(7, fixture.first.points(fixture.uuid));
             assertFalse(cache.hasChangesToProcess());
             fixture.assertNoLegacyWrites();
+            runtime.close();
+        }
+    }
+
+    @Test void completedBatchDoesNotOverwriteANewerQueuedCacheValue() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            CountDownLatch writeStarted = new CountDownLatch(1), releaseWrite = new CountDownLatch(1);
+            fixture.first.blockWrites(writeStarted, releaseWrite);
+            cache.addChange(new UserDataChangeInt("Points", 7), true);
+            var worker = Executors.newSingleThreadExecutor();
+            try {
+                var firstBatch = worker.submit(fixture.tasks.get(0));
+                await(writeStarted);
+                cache.addChange(new UserDataChangeInt("Points", 9), true);
+                assertEquals(9, cache.getCache().get("Points").getInt());
+                releaseWrite.countDown();
+                firstBatch.get(5, TimeUnit.SECONDS);
+                assertEquals(9, cache.getCache().get("Points").getInt(),
+                        "the older completed batch must not replace the newer queued value");
+                fixture.first.blockWrites(null, null);
+                fixture.tasks.get(1).run();
+                assertEquals(9, fixture.first.points(fixture.uuid));
+            } finally {
+                releaseWrite.countDown();
+                worker.shutdownNow();
+                assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+            }
+            runtime.close();
+        }
+    }
+
+    @Test void immediateWriteIsPersistedAfterAnOlderQueuedBatch() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+            when(user.getPlugin()).thenReturn(fixture.plugin);
+            when(user.getUUID()).thenReturn(fixture.uuid.toString());
+            when(user.isCached()).thenReturn(true);
+            when(user.getCache()).thenReturn(cache);
+            UserData data = new UserData(user);
+            CountDownLatch writeStarted = new CountDownLatch(1), releaseWrite = new CountDownLatch(1);
+            fixture.first.blockWrites(writeStarted, releaseWrite);
+            cache.addChange(new UserDataChangeInt("Points", 7), true);
+            var workers = Executors.newFixedThreadPool(2);
+            try {
+                var queued = workers.submit(fixture.tasks.get(0));
+                await(writeStarted);
+                var immediate = workers.submit(() -> data.setInt(UserStorage.MYSQL, "Points", 9, false, false));
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (cache.getCache().get("Points").getInt() != 9 && System.nanoTime() < deadline) {
+                    Thread.yield();
+                }
+                assertEquals(9, cache.getCache().get("Points").getInt());
+                releaseWrite.countDown();
+                queued.get(5, TimeUnit.SECONDS);
+                immediate.get(5, TimeUnit.SECONDS);
+                assertEquals(9, fixture.first.points(fixture.uuid),
+                        "the immediate write must reach storage after the older queued batch");
+            } finally {
+                releaseWrite.countDown();
+                workers.shutdownNow();
+                assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
+            }
+            runtime.close();
+        }
+    }
+
+    @Test void immediateSharedWriteReportsOneChangeAfterPersistence() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+            when(user.getPlugin()).thenReturn(fixture.plugin);
+            when(user.getUUID()).thenReturn(fixture.uuid.toString());
+            when(user.isCached()).thenReturn(true);
+            when(user.getCache()).thenReturn(cache);
+            var userManager = fixture.plugin.getUserManager();
+            clearInvocations(userManager);
+
+            new UserData(user).setInt(UserStorage.MYSQL, "Points", 9, false, false);
+
+            assertEquals(9, fixture.first.points(fixture.uuid));
+            verify(userManager, times(1)).onChange(eq(user), any(String[].class));
+            runtime.close();
+        }
+    }
+
+    @Test void primaryThreadImmediateSharedWriteDefersWithoutLosingOrdering() throws Exception {
+        try (Fixture fixture = new Fixture(); var bukkit = mockStatic(Bukkit.class)) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+            when(user.getPlugin()).thenReturn(fixture.plugin);
+            when(user.getUUID()).thenReturn(fixture.uuid.toString());
+            when(user.isCached()).thenReturn(true);
+            when(user.getCache()).thenReturn(cache);
+            var userManager = fixture.plugin.getUserManager();
+            clearInvocations(userManager);
+            bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, false);
+
+            assertDoesNotThrow(() -> new UserData(user).setInt(UserStorage.MYSQL, "Points", 9, false, false));
+            assertFalse(fixture.first.rows.containsKey(fixture.uuid));
+            fixture.tasks.get(fixture.tasks.size() - 1).run();
+            assertEquals(9, fixture.first.points(fixture.uuid));
+            var callback = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+            verify(fixture.plugin.getBukkitScheduler()).runTask(eq(fixture.plugin), callback.capture());
+            verify(userManager, never()).onChange(any(), any(String[].class));
+            callback.getValue().run();
+            verify(userManager, times(1)).onChange(eq(user), any(String[].class));
+            runtime.close();
+        }
+    }
+
+    @Test void immediateWriteToAnotherStoreDoesNotUseTheSharedWriter() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+            when(user.getPlugin()).thenReturn(fixture.plugin);
+            when(user.getUUID()).thenReturn(fixture.uuid.toString());
+            when(user.isCached()).thenReturn(true);
+            when(user.getCache()).thenReturn(cache);
+
+            assertThrows(IllegalStateException.class,
+                    () -> new UserData(user).setInt(UserStorage.SQLITE, "Points", 9, false, false));
+            assertFalse(fixture.first.rows.containsKey(fixture.uuid),
+                    "an explicit alternate-store write must not be redirected to the shared backend");
+            assertFalse(cache.getCache().containsKey("Points"),
+                    "a rejected cross-store write must not leave an unpersisted shared-cache value behind");
+
+            assertThrows(IllegalStateException.class,
+                    () -> new UserData(user).setInt(UserStorage.SQLITE, "Queued", 11, true, false));
+            assertFalse(cache.hasChangesToProcess(),
+                    "a queued cross-store write must be rejected before it reaches the active shared writer");
+            runtime.close();
+        }
+    }
+
+	@Test void primaryThreadPendingPopulationQueuesMutationBeforePublishingTheReadSnapshot() throws Exception {
+        try (Fixture fixture = new Fixture(); var bukkit = mockStatic(Bukkit.class)) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+            when(user.getPlugin()).thenReturn(fixture.plugin);
+            when(user.getUUID()).thenReturn(fixture.uuid.toString());
+            when(user.isCached()).thenAnswer(ignored -> fixture.manager.isCached(fixture.uuid));
+            when(user.getCache()).thenAnswer(ignored -> fixture.manager.getCache(fixture.uuid));
+            bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, true, true, false);
+
+			assertDoesNotThrow(() -> new UserData(user).setInt(UserStorage.MYSQL, "Points", 9, true, false));
+			assertFalse(fixture.first.rows.containsKey(fixture.uuid), "the primary thread must not write SQL");
+			assertEquals(2, fixture.tasks.size(), "population must be queued before mutation admission");
+			assertFalse(fixture.manager.getUserDataCache().get(fixture.uuid).getCache().containsKey("Points"),
+					"the primary thread must not enter the shared cache mutation gate");
+
+			fixture.tasks.get(0).run();
+			assertFalse(fixture.manager.getUserDataCache().get(fixture.uuid).getCache().containsKey("Points"));
+			fixture.tasks.get(1).run();
+			assertEquals(9, fixture.manager.getUserDataCache().get(fixture.uuid).getCache().get("Points").getInt(),
+					"read publication must retain the queued mutation");
+			assertEquals(3, fixture.tasks.size());
+			fixture.tasks.get(2).run();
+			assertEquals(9, fixture.first.points(fixture.uuid));
+			runtime.close();
+		}
+	}
+
+	@Test void workerMutationCannotBypassAPendingPrimaryThreadPopulation() throws Exception {
+		try (Fixture fixture = new Fixture(); var bukkit = mockStatic(Bukkit.class)) {
+			SharedUserDataRuntime runtime = fixture.runtime();
+			AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+			when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+			when(user.getPlugin()).thenReturn(fixture.plugin);
+			when(user.getUUID()).thenReturn(fixture.uuid.toString());
+			when(user.getCache()).thenAnswer(ignored -> fixture.manager.getCache(fixture.uuid));
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, false);
+
+			fixture.manager.getCache(fixture.uuid);
+			new UserData(user).setInt(UserStorage.MYSQL, "Points", 12, true, false);
+
+			assertFalse(fixture.first.rows.containsKey(fixture.uuid));
+			fixture.tasks.get(0).run();
+			assertEquals(12, fixture.first.points(fixture.uuid));
+			assertEquals(12, fixture.manager.getUserDataCache().get(fixture.uuid).snapshot().get("Points").getInt());
+			runtime.close();
+		}
+	}
+
+    @Test void completedBatchReconcilesATemporaryCacheSnapshotWithoutPersistingTheSnapshot() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            CountDownLatch writeStarted = new CountDownLatch(1), releaseWrite = new CountDownLatch(1);
+            fixture.first.blockWrites(writeStarted, releaseWrite);
+            cache.addChange(new UserDataChangeInt("Points", 7), true);
+            AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            when(user.isCached()).thenReturn(true);
+            when(user.getCache()).thenReturn(cache);
+            UserData data = new UserData(user);
+            data.updateTempCacheWithColumns(new ArrayList<>(List.of(new Column("Points", new DataValueInt(3)))));
+            var worker = Executors.newSingleThreadExecutor();
+            try {
+                var firstBatch = worker.submit(fixture.tasks.get(0));
+                await(writeStarted);
+
+                data.updateCacheWithTemp();
+                assertEquals(3, cache.getCache().get("Points").getInt(),
+                        "the temporary storage snapshot is visible while the earlier write is in flight");
+
+                releaseWrite.countDown();
+                firstBatch.get(5, TimeUnit.SECONDS);
+
+                assertEquals(7, fixture.first.points(fixture.uuid));
+                assertEquals(7, cache.getCache().get("Points").getInt(),
+                        "the completed queued write must reconcile the stale temporary snapshot");
+                assertFalse(cache.hasChangesToProcess(),
+                        "a read snapshot must not become an automatic persistence request");
+            } finally {
+                releaseWrite.countDown();
+                worker.shutdownNow();
+                assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+            }
+            runtime.close();
+        }
+    }
+
+    @Test void temporarySnapshotCannotEraseANewerQueuedMutationFence() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            CountDownLatch writeStarted = new CountDownLatch(1), releaseWrite = new CountDownLatch(1);
+            fixture.first.blockWrites(writeStarted, releaseWrite);
+            cache.addChange(new UserDataChangeInt("Points", 7), true);
+            AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            when(user.isCached()).thenReturn(true);
+            when(user.getCache()).thenReturn(cache);
+            UserData data = new UserData(user);
+            data.updateTempCacheWithColumns(new ArrayList<>(List.of(new Column("Points", new DataValueInt(3)))));
+            var worker = Executors.newSingleThreadExecutor();
+            try {
+                var firstBatch = worker.submit(fixture.tasks.get(0));
+                await(writeStarted);
+                cache.addChange(new UserDataChangeInt("Points", 9), true);
+                data.updateCacheWithTemp();
+                releaseWrite.countDown();
+                firstBatch.get(5, TimeUnit.SECONDS);
+
+                assertEquals(9, cache.getCache().get("Points").getInt(),
+                        "the queued mutation must remain visible after the older batch completes");
+                fixture.first.blockWrites(null, null);
+                fixture.tasks.get(1).run();
+                assertEquals(9, fixture.first.points(fixture.uuid));
+            } finally {
+                releaseWrite.countDown();
+                worker.shutdownNow();
+                assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+            }
             runtime.close();
         }
     }
@@ -492,6 +855,12 @@ class SharedCacheBindingRegressionTest {
 
             assertEquals(21, fixture.first.points(fixture.uuid));
             assertFalse(fixture.manager.containsKey(fixture.uuid));
+            Field completedField = UserDataManager.class.getDeclaredField("completedSharedCachePopulations");
+            completedField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Set<UUID> completed = (Set<UUID>) completedField.get(fixture.manager);
+            assertFalse(completed.contains(fixture.uuid),
+                    "a callback-driven removal must not be followed by a stale completed-population marker");
             runtime.close();
         }
     }
@@ -513,12 +882,12 @@ class SharedCacheBindingRegressionTest {
         final BukkitUserCacheOwner owner;
         final MemoryBackend first = new MemoryBackend(UserStorage.MYSQL);
         final List<Runnable> tasks = new CopyOnWriteArrayList<>();
+        final ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
 
         Fixture() throws Exception {
             when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
             manager = spy(new UserDataManager(plugin));
             manager.getTimer().shutdownNow();
-            ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
             Field field = UserDataManager.class.getDeclaredField("timer");
             field.setAccessible(true);
             field.set(manager, timer);
@@ -526,6 +895,11 @@ class SharedCacheBindingRegressionTest {
                 tasks.add(call.getArgument(0, Runnable.class));
                 return mock(ScheduledFuture.class);
             });
+            doAnswer(call -> {
+                tasks.add(call.getArgument(0, Runnable.class));
+                return null;
+            }).when(timer).execute(any(Runnable.class));
+            when(plugin.getTimer()).thenReturn(timer);
             var data = plugin.getUserManager().getUser(uuid, false).getUserData();
             when(data.getKeys()).thenAnswer(ignored -> new ArrayList<String>());
             when(data.getValues()).thenAnswer(ignored -> new HashMap<String, DataValue>());

@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.usercache.change.UserDataChange;
+import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeBoolean;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt;
 import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeString;
 import com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserStorage;
@@ -128,6 +131,10 @@ public class UserData {
 		if (key == null || key.isEmpty()) {
 			return def;
 		}
+		// The shared cache belongs to exactly one physical store.  Check this
+		// before consulting any cache layer so an explicit alternate-store read
+		// cannot be answered with a value from the active shared backend.
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
 
 		// 1) Temp cache
 		if (mode.allowTempCache() && tempCache != null) {
@@ -187,6 +194,10 @@ public class UserData {
 		}
 
 		// 3) Storage lookup
+		if (mustDeferSharedStorageAccess()) {
+			rejectUnavailableFreshRead(mode);
+			return def;
+		}
 		return sqlData.getInt(storage, key, def);
 	}
 
@@ -203,6 +214,9 @@ public class UserData {
 	}
 
 	public ArrayList<String> getKeys(UserStorage storage) {
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+		UserDataCache sharedCache = primaryThreadSharedCache(storage);
+		if (sharedCache != null) return new ArrayList<>(sharedCache.snapshot().keySet());
 		return sqlData.getKeys(storage);
 	}
 
@@ -242,6 +256,9 @@ public class UserData {
 		if (key == null || key.isEmpty()) {
 			return "";
 		}
+		// See getInt(UserStorage,...): cache contents are only valid for the
+		// runtime-owned store.
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
 
 		// 1) Temp cache
 		if (mode.allowTempCache() && tempCache != null) {
@@ -284,7 +301,23 @@ public class UserData {
 		}
 
 		// 3) Storage lookup
+		if (mustDeferSharedStorageAccess()) {
+			rejectUnavailableFreshRead(mode);
+			return "";
+		}
 		return sqlData.getString(storage, key);
+	}
+
+	private void rejectUnavailableFreshRead(UserDataFetchMode mode) {
+		if (mode == UserDataFetchMode.NO_CACHE) {
+			throw new IllegalStateException(
+					"A fresh shared user-data read cannot run on the primary thread; defer it to the user-data worker");
+		}
+	}
+
+	private boolean mustDeferSharedStorageAccess() {
+		UserDataManager dataManager = sharedDataManager();
+		return dataManager != null && dataManager.mustDeferSharedStorageAccess();
 	}
 
 	/**
@@ -344,15 +377,31 @@ public class UserData {
 	}
 
 	public HashMap<String, DataValue> getValues(UserStorage storage) {
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+		UserDataCache sharedCache = primaryThreadSharedCache(storage);
+		if (sharedCache != null) return sharedCache.snapshot();
 		return convert(sqlData.readRow(storage));
 	}
 
 	public boolean hasData() {
-		return sqlData.hasData(user.getPlugin().getStorageType());
+		UserStorage storage = user.getPlugin().getStorageType();
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+		UserDataCache sharedCache = primaryThreadSharedCache(storage);
+		return sharedCache == null ? sqlData.hasData(storage) : sharedCache.hasStoredData();
 	}
 
 	public void remove() {
-		sqlData.remove(user.getPlugin().getStorageType());
+		UserStorage storage = user.getPlugin().getStorageType();
+		UserDataManager manager = sharedDataManager();
+		if (manager != null && manager.hasSharedRuntime()) {
+			// The runtime serializes flush, delete, and cache retirement under its
+			// exclusive per-user gate.  Deleting through the adapter and then
+			// clearing the cache separately can otherwise let queued work recreate
+			// the row after its deletion.
+			manager.removeUserData(java.util.UUID.fromString(user.getUUID()), storage);
+			return;
+		}
+		sqlData.remove(storage);
 		user.clearCache();
 	}
 
@@ -392,10 +441,22 @@ public class UserData {
 		user.getPlugin().extraDebug("PlayerData " + storage.toString() + ": Setting " + key + " to '" + value
 				+ "' for '" + user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
+		UserDataChangeInt change = new UserDataChangeInt(key, value);
+		if (queueSharedMutation(storage, change, queue, async)) return;
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+
 		if (user.isCached()) {
-			user.getCache().addChange(new UserDataChangeInt(key, value), queue);
-			user.getPlugin().getUserManager().onChange(user, key);
-			if (queue) {
+			boolean flushImmediately = !queue && user.getPlugin().getUserManager().getDataManager()
+					.usesSharedSqlStorage(storage);
+			user.getCache().addChange(change, queue || flushImmediately);
+			// An immediate shared flush reports the change from its persistence
+			// completion callback. Keep the legacy eager callback for ordinary
+			// queued/cache-only changes, but do not report this direct write twice.
+			if (!flushImmediately) user.getPlugin().getUserManager().onChange(user, key);
+			if (queue || flushImmediately) {
+				if (flushImmediately) {
+					user.getCache().processChangesImmediately(async);
+				}
 				return;
 			}
 		}
@@ -451,10 +512,19 @@ public class UserData {
 		user.getPlugin().extraDebug("PlayerData " + storage.toString() + ": Setting " + key + " to '" + value
 				+ "' for '" + user.getPlayerName() + "/" + user.getUUID() + "' Queue: " + queue);
 
+		UserDataChangeString change = new UserDataChangeString(key, value);
+		if (queueSharedMutation(storage, change, queue, async)) return;
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+
 		if (user.isCached()) {
-			user.getCache().addChange(new UserDataChangeString(key, value), queue);
-			user.getPlugin().getUserManager().onChange(user, key);
-			if (queue) {
+			boolean flushImmediately = !queue && user.getPlugin().getUserManager().getDataManager()
+					.usesSharedSqlStorage(storage);
+			user.getCache().addChange(change, queue || flushImmediately);
+			if (!flushImmediately) user.getPlugin().getUserManager().onChange(user, key);
+			if (queue || flushImmediately) {
+				if (flushImmediately) {
+					user.getCache().processChangesImmediately(async);
+				}
 				return;
 			}
 		}
@@ -477,6 +547,95 @@ public class UserData {
 			}
 		}
 
+	}
+
+	/**
+	 * A primary-thread cache miss is represented by a placeholder whose database
+	 * snapshot is already queued on the manager worker.  Mutations must join that
+	 * generation instead of falling through to synchronous SQL.  The cache's
+	 * version fences retain this value when the delayed read publishes.
+	 */
+	private boolean queueSharedMutation(UserStorage storage, UserDataChange change, boolean queue, boolean async) {
+		UserDataManager manager = sharedDataManager();
+		if (manager == null || !manager.usesSharedSqlStorage(storage) || manager.isStorageMaintenanceActive()) {
+			return false;
+		}
+		java.util.UUID uuid = java.util.UUID.fromString(user.getUUID());
+		Runnable mutation = () -> manager.withSharedSqlStorage(uuid, storage,
+				() -> applySharedMutation(manager, user.getCache(), change, queue, false));
+		if (manager.mustDeferSharedStorageAccess()) {
+			// Create/schedule the placeholder before the mutation task so the manager's
+			// single worker preserves population-before-write ordering.
+			user.getCache();
+			return manager.deferSharedStorageWork(mutation);
+		}
+		manager.withSharedSqlStorage(uuid, storage,
+				() -> applySharedMutation(manager, user.getCache(), change, queue, async));
+		return true;
+	}
+
+	private void applySharedMutation(UserDataManager manager, UserDataCache cache, UserDataChange change,
+			boolean queue, boolean async) {
+		cache.addChange(change, true);
+		if (queue) {
+			manager.dispatchSharedStorageNotification(() ->
+					user.getPlugin().getUserManager().onChange(user, change.getKey()));
+		} else cache.processChangesImmediately(async);
+	}
+
+	/** Preserve batched setter semantics through the same cache/storage generation. */
+	private boolean queueSharedValues(UserStorage storage, HashMap<String, DataValue> values) {
+		UserDataManager manager = sharedDataManager();
+		if (manager == null || !manager.usesSharedSqlStorage(storage) || manager.isStorageMaintenanceActive()) {
+			return false;
+		}
+		if (values == null) return false;
+		if (values.isEmpty()) return true;
+		java.util.UUID uuid = java.util.UUID.fromString(user.getUUID());
+		Runnable mutation = () -> manager.withSharedSqlStorage(uuid, storage, () -> {
+			UserDataCache cache = user.getCache();
+			for (java.util.Map.Entry<String, DataValue> entry : values.entrySet()) {
+				if (entry.getKey() == null || "uuid".equalsIgnoreCase(entry.getKey()) || entry.getValue() == null) continue;
+				cache.addChange(change(entry.getKey(), entry.getValue()), true);
+			}
+			cache.processChangesImmediately(false);
+		});
+		if (manager.mustDeferSharedStorageAccess()) {
+			user.getCache();
+			return manager.deferSharedStorageWork(mutation);
+		}
+		mutation.run();
+		return true;
+	}
+
+	private UserDataChange change(String key, DataValue value) {
+		if (value.isInt()) return new UserDataChangeInt(key, value.getInt());
+		if (value.isBoolean()) return new UserDataChangeBoolean(key, value.getBoolean());
+		return new UserDataChangeString(key, value.getString());
+	}
+
+	/** Reject a cross-store request before it can alter the shared cache generation. */
+	private void ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(UserStorage storage) {
+		UserDataManager manager = sharedDataManager();
+		if (manager != null && manager.hasSharedSqlBackend() && !manager.usesSharedSqlStorage(storage)
+				&& !manager.isStorageMaintenanceActive()) {
+			throw new IllegalStateException("Cannot access " + storage
+					+ " user storage while the shared runtime owns another store");
+		}
+	}
+
+	private UserDataManager sharedDataManager() {
+		if (user.getPlugin() == null) return null;
+		UserManager userManager = user.getPlugin().getUserManager();
+		return userManager == null ? null : userManager.getDataManager();
+	}
+
+	private UserDataCache primaryThreadSharedCache(UserStorage storage) {
+		UserDataManager manager = sharedDataManager();
+		if (manager == null || !manager.usesSharedSqlStorage(storage) || !manager.mustDeferSharedStorageAccess()) {
+			return null;
+		}
+		return user.getCache();
 	}
 
 	public void setStringList(final String key, final ArrayList<String> value) {
@@ -505,6 +664,8 @@ public class UserData {
 	}
 
 	public void setValues(UserStorage storage, HashMap<String, DataValue> values) {
+		if (queueSharedValues(storage, values)) return;
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
 		sqlData.setValues(storage, values);
 	}
 

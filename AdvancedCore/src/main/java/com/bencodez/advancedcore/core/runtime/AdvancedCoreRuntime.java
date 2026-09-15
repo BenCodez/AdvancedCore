@@ -2,9 +2,12 @@ package com.bencodez.advancedcore.core.runtime;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -16,6 +19,7 @@ import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
  * calls; cleanup hooks are synchronous and retain their existing failure policy.
  */
 public final class AdvancedCoreRuntime {
+	private static final long PRE_SHUTDOWN_WAIT_SECONDS = 5;
     private final RuntimePlatform platform;
 
     public AdvancedCoreRuntime(RuntimePlatform platform) {
@@ -39,27 +43,28 @@ public final class AdvancedCoreRuntime {
         }
     }
 
-    public void shutdown() {
-        clean(platform.beforeExecutorShutdown());
+	public void shutdown() {
+		clean(platform.beforeExecutorShutdown());
+		boolean sharedRetirementFinished = awaitCleanup(platform.beforeExecutorShutdownCompletion(), "pre-executor shutdown");
 
         // Resolve the time-checker timer once, after the pre-shutdown actions,
         // just as the old lifecycle did. Other getters retain their lookup order.
-        ScheduledExecutorService timeTimer = platform.getTimeTimer();
-        shutdown(platform.getLoginTimer());
-        shutdown(platform.getTimer());
-        shutdown(timeTimer);
+		ScheduledExecutorService timeTimer = platform.getTimeTimer();
+		shutdown(platform.getLoginTimer());
+		if (sharedRetirementFinished) shutdown(platform.getTimer());
+		shutdown(timeTimer);
         shutdown(platform.getInventoryTimer());
 
-        platform.info("Allowing background tasks to finish before shutdown");
-        await(platform.getLoginTimer(), 2, TimeUnit.SECONDS);
-        await(platform.getTimer(), 2, TimeUnit.SECONDS);
-        await(timeTimer, 2, TimeUnit.SECONDS);
+		platform.info("Allowing background tasks to finish before shutdown");
+		await(platform.getLoginTimer(), 2, TimeUnit.SECONDS);
+		if (sharedRetirementFinished) await(platform.getTimer(), 2, TimeUnit.SECONDS);
+		await(timeTimer, 2, TimeUnit.SECONDS);
         await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
 
-        clean(platform.afterExecutorGrace());
-        shutdownNow(platform.getLoginTimer());
-        shutdownNow(platform.getTimer());
-        shutdownNow(timeTimer);
+		clean(platform.afterExecutorGrace());
+		shutdownNow(platform.getLoginTimer());
+		if (sharedRetirementFinished) shutdownNow(platform.getTimer());
+		shutdownNow(timeTimer);
         shutdownNow(platform.getInventoryTimer());
         clean(platform.afterExecutorShutdown());
     }
@@ -73,6 +78,55 @@ public final class AdvancedCoreRuntime {
             }
         }
     }
+
+	/**
+	 * Wait only where the platform permits it and never indefinitely.  A failed or
+	 * still-running storage retirement retains its worker: it owns the queued data
+	 * and native provider until it has either flushed successfully or reported its
+	 * own failure/retry outcome.
+	 */
+	private boolean awaitCleanup(CompletionStage<Void> completion, String component) {
+		if (completion == null) return true;
+		var future = completion.toCompletableFuture();
+		if (!platform.canBlockForPreExecutorShutdown() && !future.isDone()) {
+			finishDeferredCleanup(completion, component);
+			return false;
+		}
+		try {
+			if (future.isDone()) future.join();
+			else future.get(PRE_SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS);
+			return true;
+		} catch (TimeoutException timeout) {
+			platform.cleanupFailed(component, timeout);
+			finishDeferredCleanup(completion, component);
+			return false;
+		} catch (CompletionException failure) {
+			Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+			platform.cleanupFailed(component, cause);
+			return false;
+		} catch (InterruptedException interrupted) {
+			Thread.currentThread().interrupt();
+			platform.cleanupFailed(component, interrupted);
+			return false;
+		} catch (Exception failure) {
+			Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+			platform.cleanupFailed(component, cause);
+			return false;
+		}
+	}
+
+	/** Retire the platform timer only after deferred storage work has actually completed. */
+	private void finishDeferredCleanup(CompletionStage<Void> completion, String component) {
+		completion.whenComplete((ignored, failure) -> {
+			if (failure == null) {
+				shutdown(platform.getTimer());
+				return;
+			}
+			Throwable cause = failure instanceof CompletionException && failure.getCause() != null
+					? failure.getCause() : failure;
+			platform.cleanupFailed(component, cause);
+		});
+	}
 
     public static void shutdown(ScheduledExecutorService executor) {
         if (executor != null && !executor.isShutdown()) executor.shutdown();
