@@ -118,16 +118,25 @@ class CoreRuntimeTest {
 		RuntimePlatform platform = platform();
 		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
 		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
 		when(platform.getTimer()).thenReturn(timer);
+		when(platform.afterExecutorGrace()).thenReturn(List.of(
+				new Cleanup("reward", () -> events.add("reward"))));
+		when(platform.afterExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("unload", () -> events.add("unload"))));
 
 		assertDoesNotThrow(() -> new AdvancedCoreRuntime(platform).shutdown());
 		verify(timer, never()).shutdown();
 		verify(timer, never()).shutdownNow();
 		verify(timer, never()).awaitTermination(anyLong(), any());
+		assertTrue(events.isEmpty(), "unload hooks must wait for storage retirement");
 		retiring.complete(null);
+		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+		while (!events.contains("unload") && System.nanoTime() < deadline) Thread.yield();
 		verify(timer).shutdown();
+		assertEquals(List.of("reward", "unload"), events);
 	}
 
 	@Test void deferredRetirementFailureTerminatesItsWorkerAfterReportingTheFailure() {
@@ -143,6 +152,10 @@ class CoreRuntimeTest {
 		verify(timer, never()).shutdownNow();
 		IllegalStateException failure = new IllegalStateException("write failed");
 		retiring.completeExceptionally(failure);
+		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+		while (mockingDetails(timer).getInvocations().stream()
+				.noneMatch(invocation -> invocation.getMethod().getName().equals("shutdownNow"))
+				&& System.nanoTime() < deadline) Thread.yield();
 		verify(platform).cleanupFailed("pre-executor shutdown", failure);
 		verify(timer).shutdownNow();
 	}
@@ -245,6 +258,33 @@ class CoreRuntimeTest {
 		assertNotNull(afterRetirement[0]);
 		afterRetirement[0].run();
 		retired.complete(null);
+		verify(mysql).close();
+	}
+
+	@Test void bukkitAdapterClosesTheCapturedMysqlOwnerAfterConfigurationChanges() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		MySQL mysql = mock(MySQL.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.getStorageType()).thenReturn(UserStorage.SQLITE);
+		when(plugin.getMysql()).thenReturn(mysql);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(dataManager.hasSharedSqlBackend()).thenReturn(true);
+		when(dataManager.usesSharedSqlStorage(UserStorage.MYSQL)).thenReturn(true);
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenAnswer(call -> {
+			call.getArgument(0, Runnable.class).run();
+			return CompletableFuture.completedFuture(null);
+		});
+
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+
 		verify(mysql).close();
 	}
 }

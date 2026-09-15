@@ -85,16 +85,21 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
         plugin.debug(failure);
     }
 
-    private void closeUserStorageAfterSharedRetirement() {
+	private void closeUserStorageAfterSharedRetirement() {
         if (!plugin.isLoadUserData()) {
             userStorageRetirement = CompletableFuture.completedFuture(null);
             return;
         }
-        Runnable closeMysql = () -> {
-            if (plugin.getOptions() != null && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType())
-                    && plugin.getMysql() != null) plugin.getMysql().close();
-        };
-        UserManager users = plugin.getLoadedUserManager();
+		UserManager users = plugin.getLoadedUserManager();
+		var mysql = plugin.getMysql();
+		boolean ownsMysql;
+		if (users != null && users.getDataManager().hasSharedSqlBackend()) {
+			ownsMysql = users.getDataManager().usesSharedSqlStorage(UserStorage.MYSQL);
+		} else {
+			ownsMysql = plugin.getOptions() != null
+					&& UserStorage.MYSQL.equals(plugin.getOptions().getStorageType());
+		}
+		Runnable closeMysql = () -> { if (ownsMysql && mysql != null) mysql.close(); };
         if (users == null) {
             closeMysql.run();
             userStorageRetirement = CompletableFuture.completedFuture(null);

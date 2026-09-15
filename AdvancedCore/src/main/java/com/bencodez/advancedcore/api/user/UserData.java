@@ -159,8 +159,10 @@ public class UserData {
 		}
 
 		// 2) UserDataCache
+		UserDataCache sharedReadCache = null;
 		if (mode.allowUserCache()) {
 			UserDataCache cache = user.getCache();
+			sharedReadCache = cache;
 			if (cache != null) {
 				// preserve previous behavior
 				user.cacheIfNeeded();
@@ -195,7 +197,7 @@ public class UserData {
 
 		// 3) Storage lookup
 		if (mustDeferSharedStorageAccess()) {
-			rejectUnavailableFreshRead(mode);
+			rejectUnavailableFreshRead(mode, sharedReadCache);
 			return def;
 		}
 		return sqlData.getInt(storage, key, def);
@@ -276,8 +278,10 @@ public class UserData {
 		}
 
 		// 2) UserDataCache
+		UserDataCache sharedReadCache = null;
 		if (mode.allowUserCache()) {
 			UserDataCache cache = user.getCache();
+			sharedReadCache = cache;
 			if (cache != null) {
 				if (cache.isCached(key)) {
 					DataValue cv = cache.getCache().get(key);
@@ -302,17 +306,16 @@ public class UserData {
 
 		// 3) Storage lookup
 		if (mustDeferSharedStorageAccess()) {
-			rejectUnavailableFreshRead(mode);
+			rejectUnavailableFreshRead(mode, sharedReadCache);
 			return "";
 		}
 		return sqlData.getString(storage, key);
 	}
 
-	private void rejectUnavailableFreshRead(UserDataFetchMode mode) {
-		if (mode == UserDataFetchMode.NO_CACHE) {
-			throw new IllegalStateException(
-					"A fresh shared user-data read cannot run on the primary thread; defer it to the user-data worker");
-		}
+	private void rejectUnavailableFreshRead(UserDataFetchMode mode, UserDataCache cache) {
+		if (mode.allowUserCache() && cache != null && cache.hasPublishedStorageSnapshot()) return;
+		throw new IllegalStateException(
+				"Shared user data is still loading; defer this read until cache population completes");
 	}
 
 	private boolean mustDeferSharedStorageAccess() {
@@ -635,7 +638,12 @@ public class UserData {
 		if (manager == null || !manager.usesSharedSqlStorage(storage) || !manager.mustDeferSharedStorageAccess()) {
 			return null;
 		}
-		return user.getCache();
+		UserDataCache cache = user.getCache();
+		if (!cache.hasPublishedStorageSnapshot()) {
+			throw new IllegalStateException(
+					"Shared user data is still loading; defer this read until cache population completes");
+		}
+		return cache;
 	}
 
 	public void setStringList(final String key, final ArrayList<String> value) {

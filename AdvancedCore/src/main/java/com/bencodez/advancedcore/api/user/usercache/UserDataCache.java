@@ -26,6 +26,7 @@ public class UserDataCache {
 	private long snapshotVersion;
 	private long replacementVersion;
 	private boolean storedDataPresent;
+	private boolean storageSnapshotPublished;
 	private final HashMap<String, Long> changedAt = new HashMap<>();
 	private final HashMap<String, Long> persistedAt = new HashMap<>();
 	private final HashMap<String, DataValue> inFlightValues = new HashMap<>();
@@ -271,6 +272,7 @@ public class UserDataCache {
 	public AdvancedCoreUser getUser() { return manager.getPlugin().getUserManager().getUser(uuid, false); }
 	public synchronized boolean hasCache() { return cache != null && !cache.isEmpty(); }
 	public synchronized boolean hasStoredData() { return storedDataPresent; }
+	public synchronized boolean hasPublishedStorageSnapshot() { return storageSnapshotPublished; }
 	public synchronized HashMap<String, DataValue> snapshot() {
 		return cache == null ? new HashMap<>() : new HashMap<>(cache);
 	}
@@ -477,6 +479,7 @@ public class UserDataCache {
 
 	public synchronized void updateCache(HashMap<String, DataValue> tempCache) {
 		cache = tempCache == null ? new HashMap<>() : new HashMap<>(tempCache);
+		storageSnapshotPublished = true;
 		recordSnapshotReplacement();
 	}
 
@@ -486,6 +489,7 @@ public class UserDataCache {
 		refreshed.putAll(inFlightValues);
 		if (cachedChanges != null) for (UserDataChange change : cachedChanges) refreshed.put(change.getKey(), change.toUserDataValue());
 		cache = refreshed;
+		storageSnapshotPublished = true;
 		recordSnapshotReplacement();
 	}
 
@@ -506,6 +510,7 @@ public class UserDataCache {
 		changedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
 		persistedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
 		cache = merged;
+		storageSnapshotPublished = true;
 		recordSnapshotReplacement();
 		persistedAt.clear();
 		return new HashMap<>(cache);
