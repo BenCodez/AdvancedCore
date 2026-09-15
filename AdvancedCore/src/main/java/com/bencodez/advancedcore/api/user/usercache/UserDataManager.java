@@ -575,16 +575,27 @@ public class UserDataManager {
 				finally { cacheMapLifecycle.readLock().unlock(); }
 				Throwable deferredFailure = failure;
 				boolean current = finishSharedCachePopulation(population, deferredFailure == null);
-				if (!current || !populated[0]) return;
-				dispatchSharedStorageNotification(() -> {
-					try {
-						if (deferredFailure == null) notifyCacheChanges(refreshed);
-						else notifyCacheChangesAfterFailure(refreshed, deferredFailure);
-					} catch (RuntimeException | Error notificationFailure) {
-						if (deferredFailure != null) deferredFailure.addSuppressed(notificationFailure);
-						else reportDeferredStorageFailure(notificationFailure);
-					}
+				if (!current) {
 					if (deferredFailure != null) reportDeferredStorageFailure(deferredFailure);
+					return;
+				}
+				if (deferredFailure != null) {
+					reportDeferredStorageFailure(deferredFailure);
+					dispatchSharedStorageNotification(() -> {
+						try { notifyCacheChangesAfterFailure(refreshed, deferredFailure); }
+						catch (RuntimeException | Error notificationFailure) {
+							deferredFailure.addSuppressed(notificationFailure);
+							reportDeferredStorageFailure(deferredFailure);
+						}
+					});
+					return;
+				}
+				if (!populated[0]) return;
+				dispatchSharedStorageNotification(() -> {
+					try { notifyCacheChanges(refreshed); }
+					catch (RuntimeException | Error notificationFailure) {
+						reportDeferredStorageFailure(notificationFailure);
+					}
 				});
 			});
 		} catch (RejectedExecutionException rejected) {

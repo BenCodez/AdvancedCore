@@ -597,18 +597,22 @@ public class UserData {
 		}
 		if (values == null) return false;
 		if (values.isEmpty()) return true;
+		ArrayList<UserDataChange> changes = new ArrayList<>();
+		for (java.util.Map.Entry<String, DataValue> entry : values.entrySet()) {
+			if (entry.getKey() == null || "uuid".equalsIgnoreCase(entry.getKey()) || entry.getValue() == null) continue;
+			changes.add(change(entry.getKey(), entry.getValue()));
+		}
+		if (changes.isEmpty()) return true;
 		java.util.UUID uuid = java.util.UUID.fromString(user.getUUID());
 		Runnable mutation = () -> manager.withSharedSqlStorage(uuid, storage, () -> {
 			UserDataCache cache = user.getCache();
-			for (java.util.Map.Entry<String, DataValue> entry : values.entrySet()) {
-				if (entry.getKey() == null || "uuid".equalsIgnoreCase(entry.getKey()) || entry.getValue() == null) continue;
-				cache.addChange(change(entry.getKey(), entry.getValue()), true);
-			}
+			for (UserDataChange change : changes) cache.addChange(change, true);
 			cache.processChangesImmediately(false);
 		});
 		if (manager.mustDeferSharedStorageAccess()) {
-			user.getCache();
-			return manager.deferSharedStorageWork(mutation);
+			UserDataCache cache = user.getCache();
+			for (UserDataChange change : changes) cache.addChangeBeforeDeferredSharedFlush(change);
+			return manager.deferSharedStorageWork(() -> cache.processChangesImmediately(false));
 		}
 		mutation.run();
 		return true;

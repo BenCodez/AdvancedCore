@@ -484,6 +484,29 @@ class SharedCacheBindingRegressionTest {
 		}
 	}
 
+	@Test void primaryThreadBulkSetterSnapshotsAndPublishesBeforeReturning() throws Exception {
+		try (Fixture fixture = new Fixture(); var bukkit = mockStatic(Bukkit.class)) {
+			SharedUserDataRuntime runtime = fixture.runtime();
+			UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+			AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+			when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+			when(user.getPlugin()).thenReturn(fixture.plugin);
+			when(user.getUUID()).thenReturn(fixture.uuid.toString());
+			when(user.getCache()).thenReturn(cache);
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false);
+			HashMap<String, DataValue> submitted = new HashMap<>(Map.of("Points", new DataValueInt(18)));
+
+			new UserData(user).setValues(submitted);
+
+			assertEquals(18, cache.snapshot().get("Points").getInt());
+			submitted.clear();
+			fixture.tasks.get(fixture.tasks.size() - 1).run();
+			assertEquals(18, fixture.first.points(fixture.uuid));
+			runtime.close();
+		}
+	}
+
 	@Test void workerMutationCannotBypassAPendingPrimaryThreadPopulation() throws Exception {
 		try (Fixture fixture = new Fixture(); var bukkit = mockStatic(Bukkit.class)) {
 			SharedUserDataRuntime runtime = fixture.runtime();

@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -217,6 +218,35 @@ class SharedCacheCleanupPrimaryThreadTest {
 			assertSame(failure, manager.getLastDeferredStorageFailure());
 			verify(logger).log(Level.SEVERE, "Deferred user-cache cleanup failed", failure);
 			assertTrue(manager.getUserDataCache().containsKey(uuid));
+		}
+	}
+
+	@Test
+	void failedPrimaryThreadPopulationIsRetainedBeforeNotificationDelivery() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		IllegalStateException failure = new IllegalStateException("storage unavailable");
+		when(plugin.getUserManager().getDataManager()).thenReturn(manager);
+		when(plugin.getUserManager().getUser(uuid, false).getUserData().getKeys()).thenThrow(failure);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false);
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+
+			manager.cacheUser(uuid, null);
+			verify(worker).execute(task.capture());
+			task.getValue().run();
+
+			assertSame(failure, manager.getLastDeferredStorageFailure());
 		}
 	}
 
