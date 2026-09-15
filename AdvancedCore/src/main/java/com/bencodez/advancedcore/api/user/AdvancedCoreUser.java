@@ -514,7 +514,11 @@ public class AdvancedCoreUser {
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, String playerName) {
 		this.plugin = plugin;
 		loadData();
-		uuid = PlayerManager.getInstance().getUUID(playerName);
+		UserManager users = plugin.getUserManager();
+		UserDataManager manager = users == null ? null : users.getDataManager();
+		uuid = manager != null && manager.mustDeferSharedStorageAccess()
+				? com.bencodez.advancedcore.api.player.UuidLookup.getInstance().getUUIDWithoutStorage(playerName)
+				: PlayerManager.getInstance().getUUID(playerName);
 		setPlayerName(playerName);
 	}
 
@@ -3082,9 +3086,34 @@ public class AdvancedCoreUser {
 	public void updateName(boolean force) {
 		UserData currentData = getData();
 		if (!force && plugin != null && plugin.getUserManager() != null
-				&& plugin.getUserManager().getDataManager().deferSharedStorageResult(currentData::hasData,
-					hasData -> updateName(currentData, false, hasData), ignored -> {})) return;
+				&& plugin.getUserManager().getDataManager().deferSharedStorageResult(
+						() -> readStoredName(currentData), storedName -> updateName(currentData, storedName), ignored -> {})) return;
 		updateName(currentData, force, force || currentData.hasData());
+	}
+
+	/** Read all persisted state needed by a deferred name update before returning to Bukkit. */
+	private StoredName readStoredName(UserData currentData) {
+		boolean hasData = currentData.hasData();
+		return new StoredName(hasData, hasData ? currentData.getString("PlayerName", userDataFetchMode) : null);
+	}
+
+	private void updateName(UserData currentData, StoredName storedName) {
+		if (!storedName.hasData) return;
+		String resolvedName = getPlayerName();
+		if (resolvedName == null || resolvedName.isBlank()) return;
+		if (storedName.value == null || !storedName.value.equals(resolvedName)) {
+			currentData.setString("PlayerName", resolvedName, true);
+		}
+	}
+
+	private static final class StoredName {
+		private final boolean hasData;
+		private final String value;
+
+		private StoredName(boolean hasData, String value) {
+			this.hasData = hasData;
+			this.value = value;
+		}
 	}
 
 	private void updateName(UserData currentData, boolean force, boolean hasData) {

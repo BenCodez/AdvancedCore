@@ -63,6 +63,23 @@ public class UuidLookup {
 	 * @return UUID string, or "" if not found / invalid input
 	 */
 	public String getUUID(String playerName) {
+		return resolveUUID(playerName, true);
+	}
+
+	/**
+	 * Resolve a UUID using only an already-known UUID, offline-mode derivation,
+	 * an online player, the local cache, or Bukkit's OfflinePlayer fallback.
+	 * Shared-storage callers use this while running on Bukkit's primary thread so
+	 * creating a user cannot start an unadmitted native SQL lookup.
+	 *
+	 * @param playerName player name or UUID string
+	 * @return UUID string, or "" if no non-storage lookup succeeds
+	 */
+	public String getUUIDWithoutStorage(String playerName) {
+		return resolveUUID(playerName, false);
+	}
+
+	private String resolveUUID(String playerName, boolean allowStorageLookup) {
 		if (playerName == null) {
 			return "";
 		}
@@ -109,11 +126,13 @@ public class UuidLookup {
 			return cachedUuid;
 		}
 
-		// Storage lookup (mysql/sqlite) OR flatfile fallback
-		String storageUuid = lookupUuidFromStorageOrFlatfile(playerName);
-		if (isUuidString(storageUuid)) {
-			cacheMapping(storageUuid, playerName);
-			return storageUuid;
+		if (allowStorageLookup) {
+			// Storage lookup (mysql/sqlite) OR flatfile fallback
+			String storageUuid = lookupUuidFromStorageOrFlatfile(playerName);
+			if (isUuidString(storageUuid)) {
+				cacheMapping(storageUuid, playerName);
+				return storageUuid;
+			}
 		}
 
 		// Bukkit OfflinePlayer fallback (best-effort)

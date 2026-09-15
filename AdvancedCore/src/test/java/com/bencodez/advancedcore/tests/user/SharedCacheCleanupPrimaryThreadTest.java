@@ -16,6 +16,7 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -40,6 +41,7 @@ import org.mockito.ArgumentCaptor;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserData;
 import com.bencodez.advancedcore.api.user.UserManager;
@@ -51,6 +53,41 @@ import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SharedCacheCleanupPrimaryThreadTest {
+	@Test
+	void primaryThreadStringUserConstructionSkipsNativeIdentityScans() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		UserManager users = spy(new UserManager(plugin));
+		when(plugin.getUserManager()).thenReturn(users);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		users.getDataManager().bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		String name = "Uncached" + UUID.randomUUID().toString().replace("-", "");
+		UUID uuid = UUID.randomUUID();
+		try (var bukkit = mockStatic(Bukkit.class); var players = mockStatic(PlayerManager.class);
+				var lookups = mockStatic(UuidLookup.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			PlayerManager playerManager = mock(PlayerManager.class);
+			players.when(PlayerManager::getInstance).thenReturn(playerManager);
+			UuidLookup lookup = mock(UuidLookup.class);
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			when(lookup.getCachedName(name)).thenReturn("");
+			when(lookup.getCachedUUID(name)).thenReturn("");
+			when(lookup.getUUIDWithoutStorage(name)).thenReturn(uuid.toString());
+
+			AdvancedCoreUser user = assertDoesNotThrow(() -> users.getUser(name));
+
+			assertEquals(name, user.getPlayerName());
+			assertEquals(uuid.toString(), user.getUUID());
+			verify(users, never()).getAllPlayerNames();
+			verify(lookup).getUUIDWithoutStorage(name);
+			verify(lookup, never()).getUUID(name);
+			verify(playerManager, never()).getUUID(name);
+		} finally {
+			users.getDataManager().getTimer().shutdownNow();
+		}
+	}
+
 	@Test
 	void uuidUserConstructionDefersNameLookupOnPrimaryThread() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
@@ -169,10 +206,11 @@ class SharedCacheCleanupPrimaryThreadTest {
 			verify(data, never()).getString(any(), any());
 			storageTask.getValue().run();
 			verify(data).hasData();
+			verify(data).getString("PlayerName", com.bencodez.advancedcore.api.user.UserDataFetchMode.DEFAULT);
 			ArgumentCaptor<Runnable> callback = ArgumentCaptor.forClass(Runnable.class);
 			verify(plugin.getBukkitScheduler()).runTask(eq(plugin), callback.capture());
 			callback.getValue().run();
-			verify(data).getString("PlayerName", com.bencodez.advancedcore.api.user.UserDataFetchMode.DEFAULT);
+			verify(data, times(1)).getString("PlayerName", com.bencodez.advancedcore.api.user.UserDataFetchMode.DEFAULT);
 			verify(data).setString("PlayerName", "CurrentName", true);
 		}
 	}

@@ -259,7 +259,17 @@ public class UserManager {
 			}
 		}
 
-		// Fall back to storage-derived player-name lists
+		// A String-based user lookup is frequently constructed by a synchronous
+		// command before that command can defer its storage work.  Do not turn that
+		// construction into a native shared-store scan; the supplied spelling still
+		// identifies the same player and cache-backed lookups above preserve known
+		// casing.  A worker (or a non-shared runtime) may retain the historical
+		// storage fallback below.
+		if (dataManager != null && dataManager.mustDeferSharedStorageAccess()) {
+			return name;
+		}
+
+		// Fall back to storage-derived player-name lists.
 		for (String s : getAllPlayerNames()) {
 			if (s.equalsIgnoreCase(name)) {
 				return s;
