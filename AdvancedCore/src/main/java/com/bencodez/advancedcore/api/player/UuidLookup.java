@@ -180,7 +180,10 @@ public class UuidLookup {
 
 			// Update stored PlayerName if it changed / missing
 			if (user != null && (storedName.isEmpty() || storedName.equalsIgnoreCase("Error getting name")
-					|| !liveName.equals(storedName))) user.updateName(false);
+					|| !liveName.equals(storedName))) {
+				user.setPlayerName(liveName);
+				user.updateName(false);
+			}
 			return liveName;
 		}
 

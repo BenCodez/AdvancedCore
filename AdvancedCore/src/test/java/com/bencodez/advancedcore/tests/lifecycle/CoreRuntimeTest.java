@@ -92,7 +92,7 @@ class CoreRuntimeTest {
 
 	@Test void waitsForAsyncPreShutdownWorkBeforeRetiringExecutors() throws Exception {
 		RuntimePlatform platform = platform();
-		var events = new ArrayList<String>();
+		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
 		ScheduledExecutorService timer = executor("timer", events);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		when(platform.beforeExecutorShutdown()).thenReturn(List.of(new Cleanup("pre", () -> events.add("pre"))));
@@ -125,6 +125,7 @@ class CoreRuntimeTest {
 		assertDoesNotThrow(() -> new AdvancedCoreRuntime(platform).shutdown());
 		verify(timer, never()).shutdown();
 		verify(timer, never()).shutdownNow();
+		verify(timer, never()).awaitTermination(anyLong(), any());
 		retiring.complete(null);
 		verify(timer).shutdown();
 	}

@@ -87,14 +87,32 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void updateNameDoesNotPersistABlankResolvedName() {
+		AdvancedCoreUser unnamed = new AdvancedCoreUser(plugin, UUID.randomUUID(), null);
+		unnamed.setData(data);
+		when(data.hasData()).thenReturn(true);
+		when(data.getString("PlayerName", UserDataFetchMode.TEMP_ONLY)).thenReturn("");
+		when(data.getString("PlayerName", UserDataFetchMode.DEFAULT)).thenReturn("StoredName");
+
+		unnamed.updateName(false);
+
+		verify(data, never()).getString("PlayerName", UserDataFetchMode.DEFAULT);
+		verify(data, never()).setString(eq("PlayerName"), any(String.class), eq(true));
+	}
+
+	@Test
 	void replayEntryPointsDeferCompleteSharedStorageWork() {
+		AdvancedCoreUser replayUser = org.mockito.Mockito.spy(user);
+		org.mockito.Mockito.doReturn(true).when(replayUser).isOnline();
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
 		when(dataManager.deferSharedStorageWork(any(Runnable.class))).thenReturn(true);
 
-		user.checkOfflineRewards();
-		user.checkDelayedTimedRewards();
-		user.forceRunOfflineRewards();
+		replayUser.checkOfflineRewards();
+		replayUser.checkDelayedTimedRewards();
+		replayUser.forceRunOfflineRewards();
 
 		verify(dataManager, org.mockito.Mockito.times(3)).deferSharedStorageWork(any(Runnable.class));
+		verify(replayUser, org.mockito.Mockito.times(3)).isOnline();
 		verify(data, never()).getStringList(any(String.class), any(UserDataFetchMode.class));
 	}
 

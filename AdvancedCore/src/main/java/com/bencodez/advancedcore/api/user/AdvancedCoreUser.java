@@ -51,6 +51,7 @@ import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.actionbar.ActionBar;
 import com.bencodez.simpleapi.player.PlayerUtils;
@@ -1033,8 +1034,16 @@ public class AdvancedCoreUser {
 	 * Checks and processes delayed/timed rewards.
 	 */
 	public void checkDelayedTimedRewards() {
+		checkDelayedTimedRewards(null);
+	}
+
+	private void checkDelayedTimedRewards(ReplayPlayerState capturedState) {
+		UserDataManager manager = sharedReplayDataManager();
+		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+			ReplayPlayerState state = captureReplayPlayerState();
+			if (manager.deferSharedStorageWork(() -> checkDelayedTimedRewards(state))) return;
+		}
 		plugin.debug("Checking timed/delayed for " + getPlayerName());
-		if (deferSharedReplayWork(this::checkDelayedTimedRewards)) return;
 		HashMap<String, Long> timed = getTimedRewards();
 		for (Entry<String, Long> entry : timed.entrySet()) {
 			long time = entry.getValue();
@@ -1058,6 +1067,8 @@ public class AdvancedCoreUser {
 					}
 					RewardOptions replayOptions = new RewardOptions().setCheckTimed(false)
 							.withPlaceHolder(ArrayUtils.fromString(placeholders));
+					if (capturedState != null) replayOptions.captureLivePlayerState(
+							capturedState.online(), capturedState.vanished());
 					replayOptions.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
 					replayOptions.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
 					replayOptions.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
@@ -1102,18 +1113,26 @@ public class AdvancedCoreUser {
 	 * Check offline rewards.
 	 */
 	public void checkOfflineRewards() {
+		checkOfflineRewards(null);
+	}
+
+	private void checkOfflineRewards(ReplayPlayerState capturedState) {
 		if (!plugin.getOptions().isProcessRewards()) {
 			plugin.debug("Processing rewards is disabled");
 			return;
 		}
-		if (deferSharedReplayWork(this::checkOfflineRewards)) return;
+		UserDataManager manager = sharedReplayDataManager();
+		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+			ReplayPlayerState state = captureReplayPlayerState();
+			if (manager.deferSharedStorageWork(() -> checkOfflineRewards(state))) return;
+		}
 		if (isCheckWorld()) {
 			setCheckWorld(false);
 		}
-		dispatchOfflineRewards(false);
+		dispatchOfflineRewards(false, capturedState);
 	}
 
-	private void dispatchOfflineRewards(boolean force) {
+	private void dispatchOfflineRewards(boolean force, ReplayPlayerState capturedState) {
 		ArrayList<String> rewards = new ArrayList<>(getOfflineRewards());
 		for (String rewardEntry : rewards) {
 			if (rewardEntry == null || rewardEntry.equals("null")) {
@@ -1134,6 +1153,8 @@ public class AdvancedCoreUser {
 
 			RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false)
 					.withPlaceHolder(ArrayUtils.fromString(placeholderStr));
+			if (capturedState != null) options.captureLivePlayerState(
+					capturedState.online(), capturedState.vanished());
 			if (force) options.setGiveOffline(false).forceOffline();
 			options.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
 			options.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
@@ -1440,22 +1461,35 @@ public class AdvancedCoreUser {
 	 * Forces running of offline rewards without processing checks.
 	 */
 	public void forceRunOfflineRewards() {
+		forceRunOfflineRewards(null);
+	}
+
+	private void forceRunOfflineRewards(ReplayPlayerState capturedState) {
 		if (!plugin.getOptions().isProcessRewards()) {
 			plugin.debug("Processing rewards is disabled");
 			return;
 		}
-		if (deferSharedReplayWork(this::forceRunOfflineRewards)) return;
+		UserDataManager manager = sharedReplayDataManager();
+		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+			ReplayPlayerState state = captureReplayPlayerState();
+			if (manager.deferSharedStorageWork(() -> forceRunOfflineRewards(state))) return;
+		}
 
 		setCheckWorld(false);
-		dispatchOfflineRewards(true);
+		dispatchOfflineRewards(true, capturedState);
 	}
 
-	/** Keep shared-SQL replay reads and durable migrations off Bukkit's primary thread. */
-	private boolean deferSharedReplayWork(Runnable replayWork) {
-		UserManager users = plugin.getUserManager();
-		return users != null && users.getDataManager() != null
-				&& users.getDataManager().deferSharedStorageWork(replayWork);
+	private ReplayPlayerState captureReplayPlayerState() {
+		boolean vanished = plugin.getOptions().isTreatVanishAsOffline() && isVanished();
+		return new ReplayPlayerState(isOnline(), vanished);
 	}
+
+	private UserDataManager sharedReplayDataManager() {
+		UserManager users = plugin.getUserManager();
+		return users == null ? null : users.getDataManager();
+	}
+
+	private record ReplayPlayerState(boolean online, boolean vanished) { }
 
 	/**
 	 * Gets the user data cache.
@@ -3041,9 +3075,11 @@ public class AdvancedCoreUser {
 
 	private void updateName(UserData currentData, boolean force, boolean hasData) {
 		if (!hasData && !force) return;
+		String resolvedName = getPlayerName();
+		if (resolvedName == null || resolvedName.isBlank()) return;
 		String storedName = currentData.getString("PlayerName", userDataFetchMode);
-		if (storedName == null || !storedName.equals(getPlayerName())) {
-			currentData.setString("PlayerName", getPlayerName(), true);
+		if (storedName == null || !storedName.equals(resolvedName)) {
+			currentData.setString("PlayerName", resolvedName, true);
 		}
 	}
 
