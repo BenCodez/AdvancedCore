@@ -28,16 +28,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.profile.PlayerProfile;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -123,6 +127,95 @@ class SharedCacheCleanupPrimaryThreadTest {
 			assertEquals("PersistedName",
 					lookup.getPlayerNameFromStorage(storedUser, storedNameUuid.toString(), true));
 			bukkit.verify(() -> Bukkit.getPlayer(storedNameUuid), never());
+		}
+	}
+
+	@Test
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	void persistedUuidLookupUsesLifecycleAdmittedNativeOwner() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.isOnlineMode()).thenReturn(true);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager);
+		MySQL activeMysql = mock(MySQL.class);
+		var staleTable = mock(com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class);
+		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		when(plugin.getSQLiteUserTable()).thenReturn(staleTable);
+		UUID uuid = UUID.randomUUID();
+		when(activeMysql.getUUID("PinnedUser")).thenReturn(uuid.toString());
+		when(manager.withSharedNativeUserStorage(any())).thenAnswer(invocation ->
+				invocation.getArgument(0, Function.class).apply(
+						new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, activeMysql, null)));
+		Constructor<UuidLookup> constructor = UuidLookup.class.getDeclaredConstructor(AdvancedCorePlugin.class);
+		constructor.setAccessible(true);
+		UuidLookup lookup = constructor.newInstance(plugin);
+
+		assertEquals(uuid.toString(), lookup.getUUIDFromStorage("PinnedUser"));
+		verify(activeMysql).getUUID("PinnedUser");
+		verify(staleTable, never()).getUUID(any(String.class));
+	}
+
+	@Test
+	void unseenOnlineNameUsesNonblockingProfileFallback() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.isOnlineMode()).thenReturn(true);
+		UserManager users = new UserManager(plugin);
+		when(plugin.getUserManager()).thenReturn(users);
+		UserDataManager manager = users.getDataManager();
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		PlayerProfile pendingProfile = mock(PlayerProfile.class);
+		PlayerProfile resolvedProfile = mock(PlayerProfile.class);
+		CompletableFuture<PlayerProfile> profileResult = new CompletableFuture<>();
+		when(pendingProfile.update()).thenReturn(profileResult);
+		UUID profileUuid = UUID.randomUUID();
+		when(resolvedProfile.getUniqueId()).thenReturn(profileUuid);
+		AtomicReference<AdvancedCoreUser> delivered = new AtomicReference<>();
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+		String playerName = "PreviouslyUnseen";
+		try (var bukkit = mockStatic(Bukkit.class); var lookups = mockStatic(UuidLookup.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, false, false);
+			bukkit.when(() -> Bukkit.createPlayerProfile(playerName)).thenReturn(pendingProfile);
+			UuidLookup lookup = mock(UuidLookup.class);
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			when(lookup.getUUIDWithoutStorage(playerName)).thenReturn("");
+			when(lookup.getUUIDFromStorage(playerName)).thenReturn("");
+
+			users.getUserAsync(playerName, delivered::set, failed::set);
+			bukkit.verify(() -> Bukkit.createPlayerProfile(playerName), never());
+			ArgumentCaptor<Runnable> storageTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(storageTask.capture());
+			storageTask.getValue().run();
+			ArgumentCaptor<Runnable> callbacks = ArgumentCaptor.forClass(Runnable.class);
+			verify(scheduler).runTask(eq(plugin), callbacks.capture());
+			callbacks.getValue().run();
+			bukkit.verify(() -> Bukkit.createPlayerProfile(playerName));
+			assertFalse(profileResult.isDone());
+			assertTrue(delivered.get() == null);
+
+			profileResult.complete(resolvedProfile);
+			verify(scheduler, times(2)).runTask(eq(plugin), callbacks.capture());
+			callbacks.getAllValues().get(2).run();
+
+			assertTrue(failed.get() == null);
+			assertNotNull(delivered.get());
+			assertEquals(profileUuid.toString(), delivered.get().getUUID());
+			verify(lookup).cacheMapping(profileUuid.toString(), playerName);
+			bukkit.verify(() -> Bukkit.getOfflinePlayer(playerName), never());
 		}
 	}
 

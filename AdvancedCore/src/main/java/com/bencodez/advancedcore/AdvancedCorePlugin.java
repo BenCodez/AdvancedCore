@@ -574,34 +574,58 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		// setMysql closes the old connection, which made MYSQL-to-SQLITE conversion
 		// enumerate a closed shared-route owner (and sometimes copy no users).
 		UserStorageOwner activeOwner = getNativeUserStorageOwner();
-		if (activeOwner == null || activeOwner.storageType() != from) loadUserAPI(from);
+		MySQL activeMysql = mysql;
+		Database activeDatabase = database;
+		boolean restoreActiveTarget = activeOwner != null && activeOwner.storageType() == to;
+		NativeUserStorageClose temporarySource = null;
+		try {
+			if (activeOwner == null || activeOwner.storageType() != from) loadUserAPI(from);
 
-		if (getMysql() != null) {
-			getMysql().clearCacheBasic();
-		}
+			if (getMysql() != null) getMysql().clearCacheBasic();
 
-		HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys(from);
-		// The source is no longer needed after enumeration. If the target was
-		// already active, restore that exact owner instead of recreating it: opening
-		// MYSQL would otherwise close the shared-route target via setMysql.
-		if (activeOwner != null && activeOwner.storageType() == to) nativeUserStorageOwner = activeOwner;
-		else loadUserAPI(to);
-		Queue<Entry<UUID, ArrayList<Column>>> players = new LinkedList<>(cols.entrySet());
+			HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys(from);
+			// The source is fully materialized now. Restore every legacy provider field,
+			// not only the owner snapshot, before writes target the already-active store.
+			if (restoreActiveTarget) {
+				temporarySource = restoreConversionTarget(activeOwner, activeMysql, activeDatabase);
+			} else {
+				loadUserAPI(to);
+			}
+			Queue<Entry<UUID, ArrayList<Column>>> players = new LinkedList<>(cols.entrySet());
 
-		while (players.size() > 0) {
-			Entry<UUID, ArrayList<Column>> entry = players.poll();
-			AdvancedCoreUser user = getUserManager().getUser(entry.getKey(), false);
-			user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
+			while (players.size() > 0) {
+				Entry<UUID, ArrayList<Column>> entry = players.poll();
+				AdvancedCoreUser user = getUserManager().getUser(entry.getKey(), false);
+				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 
-			user.getData().setValues(to, user.getData().convert(entry.getValue()));
-			debug("Finished convert for " + user.getUUID() + ", " + players.size() + " more left to go!");
+				user.getData().setValues(to, user.getData().convert(entry.getValue()));
+				debug("Finished convert for " + user.getUUID() + ", " + players.size() + " more left to go!");
 
-			if (players.size() % 50 == 0) {
-				getLogger().info("Working on converting data, about " + players.size() + " left to go!");
+				if (players.size() % 50 == 0) {
+					getLogger().info("Working on converting data, about " + players.size() + " left to go!");
+				}
+			}
+			debug("Convert finished!");
+		} finally {
+			if (restoreActiveTarget) {
+				if (temporarySource == null) {
+					temporarySource = restoreConversionTarget(activeOwner, activeMysql, activeDatabase);
+				}
+				retireNativeUserStorageOwner(temporarySource.mysql(), temporarySource.database());
 			}
 		}
-		debug("Convert finished!");
 
+	}
+
+	private NativeUserStorageClose restoreConversionTarget(UserStorageOwner activeOwner, MySQL activeMysql,
+			Database activeDatabase) {
+		NativeUserStorageClose temporary = new NativeUserStorageClose(
+				mysql != activeMysql ? mysql : null, database != activeDatabase ? database : null);
+		mysql = activeMysql;
+		database = activeDatabase;
+		// Publish the coherent owner only after both legacy provider fields match it.
+		nativeUserStorageOwner = activeOwner;
+		return temporary;
 	}
 
 	/**

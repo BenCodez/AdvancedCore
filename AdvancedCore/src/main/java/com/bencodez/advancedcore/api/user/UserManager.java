@@ -9,6 +9,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
@@ -354,7 +355,7 @@ public class UserManager {
 		}
 		try {
 			if (!dataManager.deferSharedStorageResult(() -> UuidLookup.getInstance().getUUIDFromStorage(playerName),
-					uuid -> deliverResolvedUser(uuid, playerName, success, failure), failure)) {
+					uuid -> deliverStoredOrProfileUser(uuid, playerName, success, failure), failure)) {
 				// The shared backend was retired between the eligibility check and
 				// admission. Do not fall back to a synchronous profile/storage lookup on
 				// the primary thread during that shutdown race.
@@ -363,6 +364,35 @@ public class UserManager {
 		} catch (RuntimeException failureReason) {
 			// Rejection during disable is an asynchronous resolution failure, not an
 			// exception that should escape this callback-based API.
+			failure.accept(failureReason);
+		}
+	}
+
+	private void deliverStoredOrProfileUser(String uuid, String playerName, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		if (uuid != null && !uuid.isBlank()) {
+			deliverResolvedUser(uuid, playerName, success, failure);
+			return;
+		}
+		// This callback is back on the platform scheduler. Creating the profile is a
+		// Bukkit operation, while update performs the remote profile lookup
+		// asynchronously and therefore never blocks the server thread.
+		try {
+			Bukkit.createPlayerProfile(playerName).update().whenComplete((profile, problem) ->
+					dataManager.dispatchSharedStorageNotification(() -> {
+						if (problem != null) {
+							failure.accept(problem);
+							return;
+						}
+						UUID profileUuid = profile == null ? null : profile.getUniqueId();
+						if (profileUuid == null) {
+							failure.accept(new IllegalArgumentException("Unable to resolve UUID for " + playerName));
+							return;
+						}
+						UuidLookup.getInstance().cacheMapping(profileUuid.toString(), playerName);
+						deliverResolvedUser(profileUuid.toString(), playerName, success, failure);
+					}));
+		} catch (RuntimeException failureReason) {
 			failure.accept(failureReason);
 		}
 	}

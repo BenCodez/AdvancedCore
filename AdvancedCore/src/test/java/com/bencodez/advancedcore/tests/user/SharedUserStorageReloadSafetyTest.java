@@ -50,6 +50,8 @@ import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserBackend;
 import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.sql.sqlite.Database;
+import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
 
 class SharedUserStorageReloadSafetyTest {
 	@Test
@@ -329,6 +331,9 @@ class SharedUserStorageReloadSafetyTest {
 		UserDataManager manager = new UserDataManager(plugin);
 		SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
 		MySQL activeMysql = mock(MySQL.class);
+		Database temporaryDatabase = mock(Database.class);
+		SQLite temporarySqlite = mock(SQLite.class);
+		when(temporaryDatabase.getDB()).thenReturn(temporarySqlite);
 		AdvancedCorePlugin.UserStorageOwner activeOwner =
 				new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, activeMysql, null);
 		UUID uuid = UUID.randomUUID();
@@ -346,6 +351,7 @@ class SharedUserStorageReloadSafetyTest {
 		setPrivateField(plugin, "nativeUserStorageOwner", activeOwner);
 		setPrivateField(plugin, "mysql", activeMysql);
 		doAnswer(ignored -> {
+			setPrivateField(plugin, "database", temporaryDatabase);
 			setPrivateField(plugin, "nativeUserStorageOwner",
 					new AdvancedCorePlugin.UserStorageOwner(UserStorage.SQLITE, null,
 							mock(com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class)));
@@ -362,8 +368,55 @@ class SharedUserStorageReloadSafetyTest {
 
 			verify(plugin, never()).loadUserAPI(UserStorage.MYSQL);
 			assertSame(activeOwner, plugin.getNativeUserStorageOwner());
+			assertNull(getPrivateField(plugin, "database"));
 			verify(data).setValues(eq(UserStorage.MYSQL), any(HashMap.class));
 			verify(activeMysql, never()).close();
+			verify(temporarySqlite).closeConnection();
+		} finally {
+			manager.getTimer().shutdownNow();
+		}
+	}
+
+	@Test
+	void failedConversionRestoresTargetAndClosesTemporarySource() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
+		MySQL activeMysql = mock(MySQL.class);
+		Database temporaryDatabase = mock(Database.class);
+		SQLite temporarySqlite = mock(SQLite.class);
+		when(temporaryDatabase.getDB()).thenReturn(temporarySqlite);
+		AdvancedCorePlugin.UserStorageOwner activeOwner =
+				new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, activeMysql, null);
+		IllegalStateException conversionFailure = new IllegalStateException("source read failed");
+		when(plugin.getUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager);
+		when(users.getAllKeys(UserStorage.SQLITE)).thenThrow(conversionFailure);
+		doNothing().when(plugin).debug(any(String.class));
+		setPrivateField(plugin, "nativeUserStorageOwner", activeOwner);
+		setPrivateField(plugin, "mysql", activeMysql);
+		doAnswer(ignored -> {
+			setPrivateField(plugin, "database", temporaryDatabase);
+			setPrivateField(plugin, "nativeUserStorageOwner",
+					new AdvancedCorePlugin.UserStorageOwner(UserStorage.SQLITE, null,
+							mock(com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class)));
+			return null;
+		}).when(plugin).loadUserAPI(UserStorage.SQLITE);
+		doAnswer(call -> {
+			call.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(runtime).runStorageMaintenance(any(Runnable.class));
+		manager.bindSharedRuntime(runtime);
+		try {
+			assertSame(conversionFailure,
+					assertThrows(IllegalStateException.class,
+							() -> plugin.convertDataStorage(UserStorage.SQLITE, UserStorage.MYSQL)));
+			assertSame(activeOwner, plugin.getNativeUserStorageOwner());
+			assertSame(activeMysql, getPrivateField(plugin, "mysql"));
+			assertNull(getPrivateField(plugin, "database"));
+			verify(activeMysql, never()).close();
+			verify(temporarySqlite).closeConnection();
 		} finally {
 			manager.getTimer().shutdownNow();
 		}

@@ -366,12 +366,25 @@ public class UuidLookup {
 	 */
 
 	private String lookupUuidFromStorageOrFlatfile(String playerName) {
+		var users = plugin.getUserManager();
+		var manager = users == null ? null : users.getDataManager();
+		// Lifecycle-admission failures must propagate to the async failure callback;
+		// treating them as "not found" could incorrectly start profile resolution
+		// while a replacement is changing the authoritative store.
+		return manager == null ? lookupUuidFromNativeOwnerOrFlatfile(playerName, null)
+				: manager.withSharedNativeUserStorage(
+						owner -> lookupUuidFromNativeOwnerOrFlatfile(playerName, owner));
+	}
+
+	private String lookupUuidFromNativeOwnerOrFlatfile(String playerName,
+			AdvancedCorePlugin.UserStorageOwner owner) {
 		try {
-			if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-				String uuid = plugin.getMysql().getUUID(playerName);
+			UserStorage storage = owner == null ? plugin.getStorageType() : owner.storageType();
+			if (storage.equals(UserStorage.MYSQL)) {
+				String uuid = (owner == null ? plugin.getMysql() : owner.mysql()).getUUID(playerName);
 				return safeString(uuid);
-			} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-				String uuid = plugin.getSQLiteUserTable().getUUID(playerName);
+			} else if (storage.equals(UserStorage.SQLITE)) {
+				String uuid = (owner == null ? plugin.getSQLiteUserTable() : owner.table()).getUUID(playerName);
 				return safeString(uuid);
 			} else {
 				// Flatfile / other: scan all UUIDs (expensive but consistent with prior
