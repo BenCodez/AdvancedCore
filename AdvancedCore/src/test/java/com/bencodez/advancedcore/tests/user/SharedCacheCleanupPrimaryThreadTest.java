@@ -61,11 +61,10 @@ class SharedCacheCleanupPrimaryThreadTest {
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		when(plugin.getOptions()).thenReturn(options);
 		when(options.isOnlineMode()).thenReturn(true);
-		try (var plugins = mockStatic(AdvancedCorePlugin.class); var bukkit = mockStatic(Bukkit.class)) {
-			plugins.when(AdvancedCorePlugin::getInstance).thenReturn(plugin);
-			Constructor<UuidLookup> constructor = UuidLookup.class.getDeclaredConstructor();
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			Constructor<UuidLookup> constructor = UuidLookup.class.getDeclaredConstructor(AdvancedCorePlugin.class);
 			constructor.setAccessible(true);
-			UuidLookup lookup = constructor.newInstance();
+			UuidLookup lookup = constructor.newInstance(plugin);
 			String unknown = "Unknown" + UUID.randomUUID().toString().replace("-", "");
 
 			assertEquals("", lookup.getUUIDWithoutStorage(unknown));

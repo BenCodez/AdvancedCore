@@ -18,19 +18,20 @@ import com.bencodez.advancedcore.api.user.UserStorage;
 
 public class UuidLookup {
 
-	private static final UuidLookup instance = new UuidLookup();
+	private static final UuidLookup instance = new UuidLookup(AdvancedCorePlugin.getInstance());
 
 	public static UuidLookup getInstance() {
 		return instance;
 	}
 
-	private final AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+	private final AdvancedCorePlugin plugin;
 
 	// Fast local caches
 	private final ConcurrentHashMap<String, String> uuidToName = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<String, String> nameToUuid = new ConcurrentHashMap<>();
 
-	private UuidLookup() {
+	private UuidLookup(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 		// Cache is owned here.
 	}
 	
