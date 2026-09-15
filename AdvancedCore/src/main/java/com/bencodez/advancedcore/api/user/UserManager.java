@@ -336,7 +336,7 @@ public class UserManager {
 	}
 
 	public void load() {
-		dataManager = new UserDataManager(AdvancedCorePlugin.getInstance());
+		dataManager = new UserDataManager(plugin);
 		validationService = UserValidationFactory.create(plugin);
 	}
 

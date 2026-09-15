@@ -90,7 +90,6 @@ class SharedUserStorageReloadSafetyTest {
 		// otherwise observe a new route type and an unrelated legacy field.
 		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
 		when(replacementOwner.getColumns()).thenReturn(List.of("uuid", "PlayerName"));
-		AdvancedCorePlugin.setInstance(plugin);
 		UserManager users = new UserManager(plugin);
 		try {
 			users.getDataManager().bindSharedSqlBackend(replacement, (uuid, operation) -> operation.run());
@@ -99,7 +98,6 @@ class SharedUserStorageReloadSafetyTest {
 			verify(plugin, never()).getSQLiteUserTable();
 		} finally {
 			users.getDataManager().getTimer().shutdownNow();
-			AdvancedCorePlugin.setInstance(null);
 		}
 	}
 
@@ -127,7 +125,6 @@ class SharedUserStorageReloadSafetyTest {
 		});
 		doAnswer(ignored -> { oldClosed.countDown(); return null; }).when(oldBackend).close();
 
-		AdvancedCorePlugin.setInstance(plugin);
 		UserManager users = new UserManager(plugin);
 		RoutingCacheOwner cacheOwner = new RoutingCacheOwner(users.getDataManager());
 		SharedUserDataRuntime runtime = new SharedUserDataRuntime(oldBackend, cacheOwner);
@@ -157,7 +154,6 @@ class SharedUserStorageReloadSafetyTest {
 		} finally {
 			releaseBulk.countDown();
 			users.getDataManager().getTimer().shutdownNow();
-			AdvancedCorePlugin.setInstance(null);
 		}
 	}
 
