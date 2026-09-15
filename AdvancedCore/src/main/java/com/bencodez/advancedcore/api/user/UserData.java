@@ -87,11 +87,11 @@ public class UserData {
 	}
 
 	public int getInt(String key, int def) {
-		return getInt(user.getPlugin().getStorageType(), key, def, user.getUserDataFetchMode());
+		return getInt(effectiveStorageType(), key, def, user.getUserDataFetchMode());
 	}
 
 	public int getInt(String key, int def, UserDataFetchMode mode) {
-		return getInt(user.getPlugin().getStorageType(), key, def, mode);
+		return getInt(effectiveStorageType(), key, def, mode);
 	}
 
 	/**
@@ -115,7 +115,7 @@ public class UserData {
 	 */
 	@Deprecated
 	public int getInt(String key, int def, boolean waitForCache) {
-		return getInt(user.getPlugin().getStorageType(), key, def, UserDataFetchMode.fromBooleans(true, waitForCache));
+		return getInt(effectiveStorageType(), key, def, UserDataFetchMode.fromBooleans(true, waitForCache));
 	}
 
 	/**
@@ -123,7 +123,7 @@ public class UserData {
 	 */
 	@Deprecated
 	public int getInt(String key, int def, boolean useCache, boolean waitForCache) {
-		return getInt(user.getPlugin().getStorageType(), key, def,
+		return getInt(effectiveStorageType(), key, def,
 				UserDataFetchMode.fromBooleans(useCache, waitForCache));
 	}
 
@@ -212,7 +212,7 @@ public class UserData {
 	}
 
 	public ArrayList<String> getKeys() {
-		return getKeys(user.getPlugin().getStorageType());
+		return getKeys(effectiveStorageType());
 	}
 
 	public ArrayList<String> getKeys(UserStorage storage) {
@@ -227,7 +227,7 @@ public class UserData {
 	 */
 	@Deprecated
 	public ArrayList<String> getKeys(boolean waitForCache) {
-		return getKeys(user.getPlugin().getStorageType());
+		return getKeys(effectiveStorageType());
 	}
 
 	/**
@@ -251,7 +251,7 @@ public class UserData {
 	}
 
 	public String getString(String key, UserDataFetchMode mode) {
-		return getString(user.getPlugin().getStorageType(), key, mode);
+		return getString(effectiveStorageType(), key, mode);
 	}
 
 	public String getString(UserStorage storage, String key, UserDataFetchMode mode) {
@@ -376,7 +376,7 @@ public class UserData {
 	}
 
 	public HashMap<String, DataValue> getValues() {
-		return getValues(user.getPlugin().getStorageType());
+		return getValues(effectiveStorageType());
 	}
 
 	public HashMap<String, DataValue> getValues(UserStorage storage) {
@@ -387,14 +387,14 @@ public class UserData {
 	}
 
 	public boolean hasData() {
-		UserStorage storage = user.getPlugin().getStorageType();
+		UserStorage storage = effectiveStorageType();
 		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
 		UserDataCache sharedCache = primaryThreadSharedCache(storage);
 		return sharedCache == null ? sqlData.hasData(storage) : sharedCache.hasStoredData();
 	}
 
 	public void remove() {
-		UserStorage storage = user.getPlugin().getStorageType();
+		UserStorage storage = effectiveStorageType();
 		UserDataManager manager = sharedDataManager();
 		if (manager != null && manager.hasSharedRuntime()) {
 			// The runtime serializes flush, delete, and cache retirement under its
@@ -421,11 +421,11 @@ public class UserData {
 	}
 
 	public void setInt(final String key, final int value, boolean queue) {
-		setInt(user.getPlugin().getStorageType(), key, value, queue);
+		setInt(effectiveStorageType(), key, value, queue);
 	}
 
 	public void setInt(final String key, final int value, boolean queue, boolean async) {
-		setInt(user.getPlugin().getStorageType(), key, value, queue, async);
+		setInt(effectiveStorageType(), key, value, queue, async);
 	}
 
 	public void setInt(UserStorage storage, final String key, final int value, boolean queue) {
@@ -491,11 +491,11 @@ public class UserData {
 	}
 
 	public void setString(final String key, final String value, boolean queue) {
-		setString(user.getPlugin().getStorageType(), key, value, queue);
+		setString(effectiveStorageType(), key, value, queue);
 	}
 
 	public void setString(final String key, final String value, boolean queue, boolean async) {
-		setString(user.getPlugin().getStorageType(), key, value, queue, async);
+		setString(effectiveStorageType(), key, value, queue, async);
 	}
 
 	public void setString(UserStorage storage, final String key, final String value, boolean queue) {
@@ -564,13 +564,16 @@ public class UserData {
 			return false;
 		}
 		java.util.UUID uuid = java.util.UUID.fromString(user.getUUID());
-		Runnable mutation = () -> manager.withSharedSqlStorage(uuid, storage,
-				() -> applySharedMutation(manager, user.getCache(), change, queue, false));
 		if (manager.mustDeferSharedStorageAccess()) {
-			// Create/schedule the placeholder before the mutation task so the manager's
-			// single worker preserves population-before-write ordering.
-			user.getCache();
-			return manager.deferSharedStorageWork(mutation);
+			// Publish read-after-write state synchronously, then defer only persistence.
+			// Population was queued by getCache() first and its version fences preserve
+			// this pending value when the older storage snapshot arrives.
+			UserDataCache cache = user.getCache();
+			cache.addChangeBeforeDeferredSharedFlush(change);
+			if (queue) manager.dispatchSharedStorageNotification(() ->
+					user.getPlugin().getUserManager().onChange(user, change.getKey()));
+			else manager.deferSharedStorageWork(() -> cache.processChangesImmediately(false));
+			return true;
 		}
 		manager.withSharedSqlStorage(uuid, storage,
 				() -> applySharedMutation(manager, user.getCache(), change, queue, async));
@@ -633,6 +636,12 @@ public class UserData {
 		return userManager == null ? null : userManager.getDataManager();
 	}
 
+	private UserStorage effectiveStorageType() {
+		UserStorage configured = user.getPlugin().getStorageType();
+		UserDataManager manager = sharedDataManager();
+		return manager == null ? configured : manager.effectiveStorageType(configured);
+	}
+
 	private UserDataCache primaryThreadSharedCache(UserStorage storage) {
 		UserDataManager manager = sharedDataManager();
 		if (manager == null || !manager.usesSharedSqlStorage(storage) || !manager.mustDeferSharedStorageAccess()) {
@@ -662,13 +671,13 @@ public class UserData {
 	}
 
 	public void setValues(HashMap<String, DataValue> values) {
-		setValues(user.getPlugin().getStorageType(), values);
+		setValues(effectiveStorageType(), values);
 	}
 
 	public void setValues(String key, DataValue value) {
 		HashMap<String, DataValue> values = new HashMap<>();
 		values.put(key, value);
-		setValues(user.getPlugin().getStorageType(), values);
+		setValues(effectiveStorageType(), values);
 	}
 
 	public void setValues(UserStorage storage, HashMap<String, DataValue> values) {

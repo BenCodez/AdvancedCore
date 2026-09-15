@@ -186,6 +186,12 @@ public class UserDataManager {
 		return route != null && route.backend().storageType() == storage;
 	}
 
+	/** Prefer the immutable active shared route over a newly reloaded option. */
+	public final UserStorage effectiveStorageType(UserStorage configured) {
+		SharedSqlRoute route = sharedSqlRoute;
+		return route == null ? Objects.requireNonNull(configured, "configured") : route.backend().storageType();
+	}
+
 	/**
 	 * Run an explicit storage-maintenance operation behind the shared runtime's
 	 * write barrier. Calls made by the operation may target a non-current store
@@ -716,6 +722,12 @@ public class UserDataManager {
 	 */
 	public final <T> boolean deferSharedStorageResult(Supplier<T> storageWork, Consumer<T> success,
 			Consumer<Throwable> failure) {
+		return deferSharedStorageResult(storageWork, success, failure, null);
+	}
+
+	/** Return player-facing completions through that entity's owning scheduler. */
+	public final <T> boolean deferSharedStorageResult(Supplier<T> storageWork, Consumer<T> success,
+			Consumer<Throwable> failure, org.bukkit.entity.Entity callbackOwner) {
 		Objects.requireNonNull(storageWork, "storageWork");
 		Objects.requireNonNull(success, "success");
 		Objects.requireNonNull(failure, "failure");
@@ -734,7 +746,7 @@ public class UserDataManager {
 				dispatchSharedStorageNotification(() -> {
 					if (completedFailure == null) success.accept(completed);
 					else failure.accept(completedFailure);
-				});
+				}, callbackOwner);
 			});
 		} catch (RejectedExecutionException rejected) {
 			reportDeferredStorageFailure(rejected);
@@ -745,8 +757,13 @@ public class UserDataManager {
 
 	/** Return a deferred storage completion to Bukkit/Folia's safe scheduler. */
 	public final void dispatchSharedStorageNotification(Runnable notification) {
+		dispatchSharedStorageNotification(notification, null);
+	}
+
+	private void dispatchSharedStorageNotification(Runnable notification, org.bukkit.entity.Entity callbackOwner) {
 		Objects.requireNonNull(notification, "notification");
 		if (Bukkit.getServer() == null || Bukkit.isPrimaryThread()) notification.run();
+		else if (callbackOwner != null) plugin.getBukkitScheduler().runTask(plugin, notification, callbackOwner);
 		else plugin.getBukkitScheduler().runTask(plugin, notification);
 	}
 

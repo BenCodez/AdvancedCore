@@ -387,10 +387,17 @@ class SharedCacheBindingRegressionTest {
             bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, false);
 
-            assertDoesNotThrow(() -> new UserData(user).setInt(UserStorage.MYSQL, "Points", 9, false, false));
-            assertFalse(fixture.first.rows.containsKey(fixture.uuid));
-            fixture.tasks.get(fixture.tasks.size() - 1).run();
-            assertEquals(9, fixture.first.points(fixture.uuid));
+			UserData data = new UserData(user);
+			assertDoesNotThrow(() -> data.setInt(UserStorage.MYSQL, "Points", 9, false, false));
+			assertFalse(fixture.first.rows.containsKey(fixture.uuid));
+			assertEquals(9, cache.snapshot().get("Points").getInt(),
+					"the setter must publish read-after-write state before returning");
+			data.setInt(UserStorage.MYSQL, "Points",
+					data.getInt(UserStorage.MYSQL, "Points", 0, UserDataFetchMode.DEFAULT) + 1, false, false);
+			assertEquals(10, cache.snapshot().get("Points").getInt(),
+					"same-tick read-modify-write must observe the preceding setter");
+			fixture.tasks.get(fixture.tasks.size() - 1).run();
+			assertEquals(10, fixture.first.points(fixture.uuid));
             var callback = org.mockito.ArgumentCaptor.forClass(Runnable.class);
             verify(fixture.plugin.getBukkitScheduler()).runTask(eq(fixture.plugin), callback.capture());
             verify(userManager, never()).onChange(any(), any(String[].class));
@@ -440,18 +447,39 @@ class SharedCacheBindingRegressionTest {
 
 			assertDoesNotThrow(() -> new UserData(user).setInt(UserStorage.MYSQL, "Points", 9, true, false));
 			assertFalse(fixture.first.rows.containsKey(fixture.uuid), "the primary thread must not write SQL");
-			assertEquals(2, fixture.tasks.size(), "population must be queued before mutation admission");
-			assertFalse(fixture.manager.getUserDataCache().get(fixture.uuid).getCache().containsKey("Points"),
-					"the primary thread must not enter the shared cache mutation gate");
+			assertEquals(2, fixture.tasks.size(), "population must be queued before the delayed flush");
+			assertEquals(9, fixture.manager.getUserDataCache().get(fixture.uuid).getCache().get("Points").getInt(),
+					"the primary-thread setter must be immediately visible");
 
 			fixture.tasks.get(0).run();
-			assertFalse(fixture.manager.getUserDataCache().get(fixture.uuid).getCache().containsKey("Points"));
+			assertEquals(9, fixture.manager.getUserDataCache().get(fixture.uuid).getCache().get("Points").getInt(),
+					"the older read publication must retain the immediate mutation");
 			fixture.tasks.get(1).run();
 			assertEquals(9, fixture.manager.getUserDataCache().get(fixture.uuid).getCache().get("Points").getInt(),
 					"read publication must retain the queued mutation");
-			assertEquals(3, fixture.tasks.size());
-			fixture.tasks.get(2).run();
 			assertEquals(9, fixture.first.points(fixture.uuid));
+			runtime.close();
+		}
+	}
+
+	@Test void implicitFacadeUsesTheRuntimeStorageAfterOptionsReload() throws Exception {
+		try (Fixture fixture = new Fixture()) {
+			SharedUserDataRuntime runtime = fixture.runtime();
+			UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+			AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+			when(fixture.plugin.getUserManager().getDataManager()).thenReturn(fixture.manager);
+			when(user.getPlugin()).thenReturn(fixture.plugin);
+			when(user.getUUID()).thenReturn(fixture.uuid.toString());
+			when(user.getCache()).thenReturn(cache);
+
+			UserData data = new UserData(user);
+			data.setInt("Points", 14, false);
+
+			assertEquals(UserStorage.MYSQL,
+					fixture.manager.effectiveStorageType(fixture.plugin.getStorageType()));
+			assertEquals(14, fixture.first.points(fixture.uuid));
+			assertEquals(14, data.getInt("Points", UserDataFetchMode.DEFAULT));
+			assertEquals(14, data.getValues().get("Points").getInt());
 			runtime.close();
 		}
 	}

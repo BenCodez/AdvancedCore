@@ -118,7 +118,7 @@ public class UserGUI {
 				final AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
 				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
 						values -> openEditData(player, playerName, user, values),
-						failure -> player.sendMessage("Unable to read user data; check the server log."))) return;
+						failure -> player.sendMessage("Unable to read user data; check the server log."), player)) return;
 				openEditData(player, playerName, user, user.getData().getValues());
 			}
 		});
@@ -130,7 +130,8 @@ public class UserGUI {
 				AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
 				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
 						values -> sendUserData(user, values),
-						failure -> clickEvent.getPlayer().sendMessage("Unable to read user data; check the server log."))) return;
+						failure -> clickEvent.getPlayer().sendMessage("Unable to read user data; check the server log."),
+						clickEvent.getPlayer())) return;
 				sendUserData(user, user.getData().getValues());
 			}
 		});

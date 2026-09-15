@@ -60,6 +60,11 @@ public class UserDataCache {
 		gate.accept(() -> addChangeInternal(change, queue));
 	}
 
+	/** Publish a primary-thread value before only its shared-store flush is deferred. */
+	public synchronized void addChangeBeforeDeferredSharedFlush(UserDataChange change) {
+		addChangeInternal(change, true);
+	}
+
 	private synchronized void addChangeInternal(UserDataChange change, boolean queue) {
 		if (change != null && sharedStorageWriter != null && (cache == null || cachedChanges == null)) {
 			throw new IllegalStateException("Shared user cache is retired");

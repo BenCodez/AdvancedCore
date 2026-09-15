@@ -3,12 +3,14 @@ package com.bencodez.advancedcore.tests.user;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -31,6 +33,7 @@ import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -143,12 +146,14 @@ class SharedCacheCleanupPrimaryThreadTest {
 		timer.set(manager, worker);
 		SqlUserBackend backend = mock(SqlUserBackend.class);
 		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
-		when(plugin.getBukkitScheduler()).thenReturn(mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class));
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		Player callbackOwner = mock(Player.class);
 		AtomicBoolean read = new AtomicBoolean();
 		AtomicBoolean delivered = new AtomicBoolean();
 		try (var bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
-			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false, true, false);
 			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
 			assertTrue(manager.deferSharedStorageResult(() -> {
 				read.set(true);
@@ -156,16 +161,28 @@ class SharedCacheCleanupPrimaryThreadTest {
 			}, value -> {
 				assertEquals("row", value);
 				delivered.set(true);
-			}, failure -> { throw new AssertionError(failure); }));
+			}, failure -> { throw new AssertionError(failure); }, callbackOwner));
 			verify(worker).execute(task.capture());
 			assertFalse(read.get());
 			task.getValue().run();
 			assertTrue(read.get());
 			assertFalse(delivered.get());
 			ArgumentCaptor<Runnable> callback = ArgumentCaptor.forClass(Runnable.class);
-			verify(plugin.getBukkitScheduler()).runTask(eq(plugin), callback.capture());
+			verify(scheduler).runTask(eq(plugin), callback.capture(), same(callbackOwner));
 			callback.getValue().run();
 			assertTrue(delivered.get());
+
+			AtomicBoolean failed = new AtomicBoolean();
+			assertTrue(manager.deferSharedStorageResult(() -> {
+				throw new IllegalStateException("read failed");
+			}, value -> fail("unexpected success"), failure -> failed.set(true), callbackOwner));
+			ArgumentCaptor<Runnable> failedTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker, times(2)).execute(failedTask.capture());
+			failedTask.getAllValues().get(1).run();
+			ArgumentCaptor<Runnable> failedCallback = ArgumentCaptor.forClass(Runnable.class);
+			verify(scheduler, times(2)).runTask(eq(plugin), failedCallback.capture(), same(callbackOwner));
+			failedCallback.getAllValues().get(1).run();
+			assertTrue(failed.get());
 		}
 		manager.getTimer().shutdownNow();
 	}

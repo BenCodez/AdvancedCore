@@ -104,6 +104,7 @@ public class UserDataTest {
 		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
 		when(users.getDataManager()).thenReturn(manager);
 		when(manager.usesSharedSqlStorage(UserStorage.SQLITE)).thenReturn(true);
+		when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
 		when(manager.mustDeferSharedStorageAccess()).thenReturn(true);
 		when(placeholder.hasPublishedStorageSnapshot()).thenReturn(false);
 
