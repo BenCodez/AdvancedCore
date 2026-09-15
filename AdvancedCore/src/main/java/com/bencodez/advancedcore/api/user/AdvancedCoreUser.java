@@ -516,9 +516,14 @@ public class AdvancedCoreUser {
 		loadData();
 		UserManager users = plugin.getUserManager();
 		UserDataManager manager = users == null ? null : users.getDataManager();
-		uuid = manager != null && manager.mustDeferSharedStorageAccess()
+		boolean deferredPrimaryLookup = manager != null && manager.mustDeferSharedStorageAccess();
+		uuid = deferredPrimaryLookup
 				? com.bencodez.advancedcore.api.player.UuidLookup.getInstance().getUUIDWithoutStorage(playerName)
 				: PlayerManager.getInstance().getUUID(playerName);
+		if (deferredPrimaryLookup && (uuid == null || uuid.isBlank())) {
+			throw new IllegalStateException("Cannot synchronously construct an unresolved user on the primary thread; "
+					+ "use UserManager.getUserAsync");
+		}
 		setPlayerName(playerName);
 	}
 

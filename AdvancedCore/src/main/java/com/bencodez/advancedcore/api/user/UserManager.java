@@ -325,6 +325,62 @@ public class UserManager {
 	}
 
 	/**
+	 * Resolve a name and deliver a UUID-backed user without blocking Bukkit's
+	 * primary thread.  The fast identity sources remain synchronous; an unknown
+	 * online-mode name is resolved on the shared-storage worker and delivered on
+	 * the platform scheduler.
+	 *
+	 * <p>Callers that may run on the primary thread should use this instead of
+	 * {@link #getUser(String)} when they need to act on an uncached name.</p>
+	 */
+	public void getUserAsync(String playerName, Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
+		if (playerName == null || playerName.trim().isEmpty()) {
+			failure.accept(new IllegalArgumentException("Player name cannot be blank"));
+			return;
+		}
+		if (dataManager == null || !dataManager.mustDeferSharedStorageAccess()) {
+			try {
+				success.accept(getUser(playerName));
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+			}
+			return;
+		}
+
+		String resolved = UuidLookup.getInstance().getUUIDWithoutStorage(playerName);
+		if (resolved != null && !resolved.isEmpty()) {
+			deliverResolvedUser(resolved, getProperName(playerName), success, failure);
+			return;
+		}
+		try {
+			if (!dataManager.deferSharedStorageResult(() -> UuidLookup.getInstance().getUUID(playerName),
+					uuid -> deliverResolvedUser(uuid, playerName, success, failure), failure)) {
+				// The shared backend was retired between the eligibility check and
+				// admission. Do not fall back to a synchronous profile/storage lookup on
+				// the primary thread during that shutdown race.
+				failure.accept(new IllegalStateException("User storage is no longer available"));
+			}
+		} catch (RuntimeException failureReason) {
+			// Rejection during disable is an asynchronous resolution failure, not an
+			// exception that should escape this callback-based API.
+			failure.accept(failureReason);
+		}
+	}
+
+	private void deliverResolvedUser(String uuid, String playerName, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		try {
+			if (uuid == null || uuid.isBlank()) {
+				failure.accept(new IllegalArgumentException("Unable to resolve UUID for " + playerName));
+				return;
+			}
+			success.accept(getUser(UUID.fromString(uuid), playerName));
+		} catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+		}
+	}
+
+	/**
 	 * Gets the user.
 	 *
 	 * @param uuid the uuid

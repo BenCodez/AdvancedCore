@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.command;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -53,6 +54,13 @@ public class CommandLoader {
 
 	private static boolean isBlank(String s) {
 		return s == null || s.trim().isEmpty() || "null".equalsIgnoreCase(s.trim());
+	}
+
+	private void withResolvedUser(CommandSender sender, String playerName, Consumer<AdvancedCoreUser> action) {
+		plugin.getUserManager().getUserAsync(playerName,
+				user -> runRecipientCallback(UUID.fromString(user.getUUID()), () -> action.accept(user)),
+				failure -> runCommandCallback(sender,
+						() -> sender.sendMessage(MessageAPI.colorize("&cUnable to resolve UUID for " + playerName))));
 	}
 
 	private ArrayList<String> perms = new ArrayList<>();
@@ -208,9 +216,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				plugin.getRewardHandler().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
-				sendMessage(sender, "&cGave " + args[1] + " the reward file " + args[2]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getRewardHandler().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
+					runCommandCallback(sender,
+							() -> sendMessage(sender, "&cGave " + args[1] + " the reward file " + args[2]));
+				});
 			}
 		});
 
@@ -231,9 +241,10 @@ public class CommandLoader {
 
 			@Override
 			public void executeSinglePlayer(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
-				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
+					runCommandCallback(sender, () -> sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]));
+				});
 			}
 		});
 
@@ -242,10 +253,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				plugin.getRewardHandler().giveReward(user, args[2],
-						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
-				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getRewardHandler().giveReward(user, args[2],
+							new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
+					runCommandCallback(sender, () -> sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]));
+				});
 			}
 		});
 
@@ -298,12 +310,12 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cStarting to run offline rewards for " + args[1]);
 
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-
-				user.forceRunOfflineRewards();
-
-				sendMessage(sender, "&cFinished running offline rewards for " + args[1]);
+				withResolvedUser(sender, args[1], user -> {
+					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
+					user.forceRunOfflineRewards();
+					runCommandCallback(sender,
+							() -> sendMessage(sender, "&cFinished running offline rewards for " + args[1]));
+				});
 			}
 		});
 
@@ -407,11 +419,8 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
 
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				removeUserData(sender, args[1], user, () -> {
-					String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-					UuidLookup.getInstance().invalidate(isBlank(uuidStr) ? args[1] : uuidStr);
-				});
+				withResolvedUser(sender, args[1], user -> removeUserData(sender, args[1], user,
+						() -> UuidLookup.getInstance().invalidate(user.getUUID())));
 			}
 		});
 
@@ -527,13 +536,14 @@ public class CommandLoader {
 
 			@Override
 			public void executeSinglePlayer(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				String data = args[4];
-				if (data.equalsIgnoreCase("\"\"")) {
-					data = "";
-				}
-				user.getData().setString(args[3], data);
-				sender.sendMessage(MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
+				if (data.equalsIgnoreCase("\"\"")) data = "";
+				final String value = data;
+				withResolvedUser(sender, args[1], user -> {
+					user.getData().setString(args[3], value);
+					runCommandCallback(sender, () -> sender.sendMessage(
+							MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4])));
+				});
 			}
 		}.withLegacyAllPermissionAliases(permPrefix + ".SetAllData"));
 
@@ -542,15 +552,16 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
-						values -> values.forEach((key, value) ->
-								sendMessage(sender, "&c&l" + key + " &c" + value.toString())),
-						failure -> sendMessage(sender, "&cUnable to read user data; check the server log."),
-						callbackOwner(sender))) return;
-				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
-					sendMessage(sender, "&c&l" + entry.getKey() + " &c" + entry.getValue().toString());
-				}
+				withResolvedUser(sender, args[1], user -> {
+					if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
+							values -> values.forEach((key, value) ->
+									sendMessage(sender, "&c&l" + key + " &c" + value.toString())),
+							failure -> sendMessage(sender, "&cUnable to read user data; check the server log."),
+							callbackOwner(sender))) return;
+					for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
+						sendMessage(sender, "&c&l" + entry.getKey() + " &c" + entry.getValue().toString());
+					}
+				});
 			}
 		});
 
@@ -559,10 +570,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				for (String str : user.getCache().displayCacheStringList()) {
-					sender.sendMessage(str);
-				}
+				withResolvedUser(sender, args[1], user -> {
+					java.util.List<String> entries = user.getCache().displayCacheStringList();
+					runCommandCallback(sender, () -> entries.forEach(sender::sendMessage));
+				});
 
 			}
 		});
@@ -572,9 +583,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				user.cache();
-				sendMessage(sender, "&aForced cached " + args[1]);
+				withResolvedUser(sender, args[1], user -> {
+					user.cache();
+					runCommandCallback(sender, () -> sendMessage(sender, "&aForced cached " + args[1]));
+				});
 			}
 		});
 
@@ -583,8 +595,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				sendMessage(sender, "User " + args[1] + " permission " + args[3] + ":" + user.hasPermission(args[3]));
+				withResolvedUser(sender, args[1], user -> {
+					boolean hasPermission = user.hasPermission(args[3]);
+					runCommandCallback(sender, () -> sendMessage(sender,
+							"User " + args[1] + " permission " + args[3] + ":" + hasPermission));
+				});
 			}
 		});
 
@@ -594,10 +609,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[4]);
-				user.setChoicePreference(args[2], args[3]);
-
-				user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
+				withResolvedUser(sender, args[4], user -> {
+					user.setChoicePreference(args[2], args[3]);
+					user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
+				});
 			}
 		});
 

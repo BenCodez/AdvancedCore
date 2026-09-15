@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -53,6 +55,45 @@ import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SharedCacheCleanupPrimaryThreadTest {
+	@Test
+	void primaryThreadIdentityLookupUsesOnlyKnownOnlineOfflineOrCachedIdentity() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.isOnlineMode()).thenReturn(true);
+		try (var plugins = mockStatic(AdvancedCorePlugin.class); var bukkit = mockStatic(Bukkit.class)) {
+			plugins.when(AdvancedCorePlugin::getInstance).thenReturn(plugin);
+			Constructor<UuidLookup> constructor = UuidLookup.class.getDeclaredConstructor();
+			constructor.setAccessible(true);
+			UuidLookup lookup = constructor.newInstance();
+			String unknown = "Unknown" + UUID.randomUUID().toString().replace("-", "");
+
+			assertEquals("", lookup.getUUIDWithoutStorage(unknown));
+			bukkit.verify(() -> Bukkit.getOfflinePlayer(unknown), never());
+			verify(plugin, never()).getMysql();
+			verify(plugin, never()).getSQLiteUserTable();
+
+			UUID cached = UUID.randomUUID();
+			lookup.cacheMapping(cached.toString(), "CachedName");
+			assertEquals(cached.toString(), lookup.getUUIDWithoutStorage("cachedname"));
+			bukkit.verify(() -> Bukkit.getOfflinePlayer("cachedname"), never());
+
+			Player online = mock(Player.class);
+			UUID onlineUuid = UUID.randomUUID();
+			when(online.getUniqueId()).thenReturn(onlineUuid);
+			when(online.getName()).thenReturn("OnlineName");
+			bukkit.when(() -> Bukkit.getPlayerExact("OnlineName")).thenReturn(online);
+			assertEquals(onlineUuid.toString(), lookup.getUUIDWithoutStorage("OnlineName"));
+			bukkit.verify(() -> Bukkit.getOfflinePlayer("OnlineName"), never());
+
+			when(options.isOnlineMode()).thenReturn(false);
+			String offline = lookup.getUUIDWithoutStorage("OfflineName");
+			assertEquals(UUID.nameUUIDFromBytes("OfflinePlayer:offlinename".getBytes(java.nio.charset.StandardCharsets.UTF_8))
+					.toString(), offline);
+			bukkit.verify(() -> Bukkit.getOfflinePlayer("OfflineName"), never());
+		}
+	}
+
 	@Test
 	void primaryThreadStringUserConstructionSkipsNativeIdentityScans() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);

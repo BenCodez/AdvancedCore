@@ -7,8 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +44,36 @@ class CoreRuntimeTest {
         new AdvancedCoreRuntime(platform);
         verifyNoInteractions(platform);
     }
+
+	@Test void sharedStorageExecutorIsDaemonWhenAnInterruptIgnoringTaskOutlivesShutdown() throws Exception {
+		AdvancedCoreRuntime.ExecutorGroup group = AdvancedCoreRuntime.createExecutors();
+		CountDownLatch started = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		AtomicReference<Thread> worker = new AtomicReference<>();
+		try {
+			group.timer().execute(() -> {
+				worker.set(Thread.currentThread());
+				started.countDown();
+				while (true) {
+					try {
+						if (release.await(5, TimeUnit.SECONDS)) return;
+					} catch (InterruptedException ignored) {
+						// JDBC drivers may ignore an interrupt while a query is in progress.
+					}
+				}
+			});
+			assertTrue(started.await(2, TimeUnit.SECONDS));
+			group.timer().shutdownNow();
+			assertTrue(worker.get().isAlive());
+			assertTrue(worker.get().isDaemon(), "an uninterruptible storage operation must not hold the JVM open");
+		} finally {
+			release.countDown();
+			group.timer().shutdownNow();
+			group.loginTimer().shutdownNow();
+			group.inventoryTimer().shutdownNow();
+			assertTrue(group.timer().awaitTermination(2, TimeUnit.SECONDS));
+		}
+	}
 
     @Test void preservesExecutorShutdownGraceAndRewardOrdering() throws Exception {
         RuntimePlatform platform = platform();
@@ -318,5 +350,36 @@ class CoreRuntimeTest {
 				.findFirst().orElseThrow().action().run();
 
 		verify(mysql).close();
+	}
+
+	@Test void bukkitAdapterClosesMysqlOwnerInstalledWhileSharedReplacementCompletes() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		MySQL oldMysql = mock(MySQL.class);
+		MySQL replacementMysql = mock(MySQL.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		AtomicReference<AdvancedCorePlugin.UserStorageOwner> owner = new AtomicReference<>(
+				new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, oldMysql, null));
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getNativeUserStorageOwner()).thenAnswer(ignored -> owner.get());
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		Runnable[] afterRetirement = new Runnable[1];
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenAnswer(call -> {
+			afterRetirement[0] = call.getArgument(0, Runnable.class);
+			return retirement;
+		});
+
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+		owner.set(new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, replacementMysql, null));
+		afterRetirement[0].run();
+		retirement.complete(null);
+
+		verify(replacementMysql).close();
+		verify(oldMysql, never()).close();
 	}
 }

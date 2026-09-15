@@ -91,18 +91,10 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
             return;
         }
 		UserManager users = plugin.getLoadedUserManager();
-		var mysql = plugin.getMysql();
-		boolean ownsMysql;
-		if (users != null && users.getDataManager().hasSharedSqlBackend()) {
-			ownsMysql = users.getDataManager().usesSharedSqlStorage(UserStorage.MYSQL);
-		} else {
-			ownsMysql = plugin.getOptions() != null
-					&& UserStorage.MYSQL.equals(plugin.getOptions().getStorageType());
-		}
-		Runnable closeMysql = () -> {
-			try { if (ownsMysql && mysql != null) mysql.close(); }
-			finally { plugin.closePendingNativeUserStorageOwners(); }
-		};
+		// Resolve this only after shared retirement. A successful replacement may
+		// install a new owner while shutdown is waiting for its worker, and closing
+		// the owner observed before that wait leaks the installed MySQL provider.
+		Runnable closeMysql = () -> closeCurrentUserStorageOwner(users);
         if (users == null) {
             closeMysql.run();
             userStorageRetirement = CompletableFuture.completedFuture(null);
@@ -114,4 +106,18 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
             userStorageRetirement = CompletableFuture.completedFuture(null);
         } else userStorageRetirement = retirement;
     }
+
+	private void closeCurrentUserStorageOwner(UserManager users) {
+		try {
+			AdvancedCorePlugin.UserStorageOwner owner = plugin.getNativeUserStorageOwner();
+			if (owner != null) {
+				if (owner.storageType() == UserStorage.MYSQL && owner.mysql() != null) owner.mysql().close();
+				return;
+			}
+			boolean ownsMysql = users != null && users.getDataManager().hasSharedSqlBackend()
+					? users.getDataManager().usesSharedSqlStorage(UserStorage.MYSQL)
+					: plugin.getOptions() != null && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType());
+			if (ownsMysql && plugin.getMysql() != null) plugin.getMysql().close();
+		} finally { plugin.closePendingNativeUserStorageOwners(); }
+	}
 }

@@ -179,6 +179,24 @@ class SharedUserDataRuntimeTest {
 	}
 
 	@Test
+	void failedFinalShutdownDiscardsQueuedNotifications() {
+		UUID uuid = UUID.randomUUID();
+		FakeBackend backend = new FakeBackend();
+		backend.put(uuid, "Points", new DataValueInt(1));
+		FakeCacheOwner cache = new FakeCacheOwner();
+		SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, cache);
+		runtime.queueChange(uuid, "Points", new DataValueInt(3));
+		boolean[] notified = { false };
+		cache.notifyAfterFlush(uuid, () -> notified[0] = true);
+		backend.failWrites = true;
+
+		assertThrows(IllegalStateException.class, runtime::close);
+
+		assertFalse(notified[0]);
+		assertTrue(cache.notifications.isEmpty());
+	}
+
+	@Test
 	void changeNotificationCanRequestExclusiveUserWorkAfterFlushAdmissionIsReleased() throws Exception {
 		UUID uuid = UUID.randomUUID();
 		FakeBackend backend = new FakeBackend();

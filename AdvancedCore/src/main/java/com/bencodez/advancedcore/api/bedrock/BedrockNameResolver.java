@@ -161,6 +161,12 @@ public final class BedrockNameResolver {
 	public Result resolve(String incomingName) {
 		if (incomingName == null || incomingName.isEmpty())
 			return new Result(incomingName, false, "empty-name");
+		// This synchronous compatibility API cannot wait for the shared storage
+		// worker. On Bukkit's primary thread it therefore uses only online/cache
+		// evidence; callers that need persisted identity must resolve off-thread.
+		if (userManager.getDataManager() != null && userManager.getDataManager().mustDeferSharedStorageAccess()) {
+			return resolveWithoutDb(incomingName);
+		}
 
 		// An exact online identity is authoritative.
 		Player match = findOnlineExact(incomingName);

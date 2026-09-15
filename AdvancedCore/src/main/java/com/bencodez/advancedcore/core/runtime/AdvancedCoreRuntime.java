@@ -10,6 +10,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -35,7 +36,7 @@ public final class AdvancedCoreRuntime {
             ScheduledExecutorService inventoryTimer) { }
 
     public static ExecutorGroup createExecutors() {
-        ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
+        ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(daemonThreads("AdvancedCore-Storage"));
         ScheduledExecutorService loginTimer = null;
         try {
             loginTimer = Executors.newSingleThreadScheduledExecutor();
@@ -46,6 +47,19 @@ public final class AdvancedCoreRuntime {
             throw failure;
         }
     }
+
+	private static java.util.concurrent.ThreadFactory daemonThreads(String name) {
+		AtomicInteger sequence = new AtomicInteger();
+		return task -> {
+			Thread thread = new Thread(task, name + "-" + sequence.incrementAndGet());
+			// shutdownNow only interrupts JDBC; a driver may legally ignore it. The
+			// bounded watchdog therefore cannot leave a plugin-owned worker keeping
+			// the JVM alive after disable. The watchdog records its timeout while the
+			// retirement stage remains intact to report the eventual flush outcome.
+			thread.setDaemon(true);
+			return thread;
+		};
+	}
 
 	public void shutdown() {
 		clean(platform.beforeExecutorShutdown());

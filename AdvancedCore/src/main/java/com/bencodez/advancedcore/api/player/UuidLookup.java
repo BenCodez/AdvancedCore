@@ -68,9 +68,10 @@ public class UuidLookup {
 
 	/**
 	 * Resolve a UUID using only an already-known UUID, offline-mode derivation,
-	 * an online player, the local cache, or Bukkit's OfflinePlayer fallback.
-	 * Shared-storage callers use this while running on Bukkit's primary thread so
-	 * creating a user cannot start an unadmitted native SQL lookup.
+	 * an online player, or the local cache. Shared-storage callers use this while
+	 * running on Bukkit's primary thread. In particular, this intentionally does
+	 * not use Bukkit's OfflinePlayer fallback: a name lookup there can block on a
+	 * profile/UUID lookup.
 	 *
 	 * @param playerName player name or UUID string
 	 * @return UUID string, or "" if no non-storage lookup succeeds
@@ -134,6 +135,11 @@ public class UuidLookup {
 				return storageUuid;
 			}
 		}
+
+		// This fallback can perform a blocking native/profile lookup. It is retained
+		// for the established public getUUID API, but is never available to the
+		// primary-thread-safe lookup above.
+		if (!allowStorageLookup) return "";
 
 		// Bukkit OfflinePlayer fallback (best-effort)
 		try {
