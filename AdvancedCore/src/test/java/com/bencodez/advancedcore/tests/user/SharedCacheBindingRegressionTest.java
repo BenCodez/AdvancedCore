@@ -433,7 +433,7 @@ class SharedCacheBindingRegressionTest {
         }
     }
 
-	@Test void primaryThreadPendingPopulationQueuesMutationBeforePublishingTheReadSnapshot() throws Exception {
+	@Test void primaryThreadPendingPopulationDefersMutationIntoTheBoundGeneration() throws Exception {
         try (Fixture fixture = new Fixture(); var bukkit = mockStatic(Bukkit.class)) {
             SharedUserDataRuntime runtime = fixture.runtime();
             AdvancedCoreUser user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
@@ -447,17 +447,19 @@ class SharedCacheBindingRegressionTest {
 
 			assertDoesNotThrow(() -> new UserData(user).setInt(UserStorage.MYSQL, "Points", 9, true, false));
 			assertFalse(fixture.first.rows.containsKey(fixture.uuid), "the primary thread must not write SQL");
-			assertEquals(2, fixture.tasks.size(), "population must be queued before the delayed flush");
-			assertEquals(9, fixture.manager.getUserDataCache().get(fixture.uuid).getCache().get("Points").getInt(),
-					"the primary-thread setter must be immediately visible");
+			assertEquals(2, fixture.tasks.size(), "population must be queued before the mutation");
+			assertFalse(fixture.manager.getUserDataCache().get(fixture.uuid).snapshot().containsKey("Points"),
+					"an unbound placeholder must not accept a gate-bypassing mutation");
 
 			fixture.tasks.get(0).run();
-			assertEquals(9, fixture.manager.getUserDataCache().get(fixture.uuid).getCache().get("Points").getInt(),
-					"the older read publication must retain the immediate mutation");
+			assertFalse(fixture.manager.getUserDataCache().get(fixture.uuid).snapshot().containsKey("Points"));
 			fixture.tasks.get(1).run();
 			assertEquals(9, fixture.manager.getUserDataCache().get(fixture.uuid).getCache().get("Points").getInt(),
-					"read publication must retain the queued mutation");
+					"the admitted worker mutation must publish into the populated cache");
+			assertEquals(3, fixture.tasks.size(), "the queued mutation must schedule its shared flush");
+			fixture.tasks.get(2).run();
 			assertEquals(9, fixture.first.points(fixture.uuid));
+			fixture.assertNoLegacyWrites();
 			runtime.close();
 		}
 	}

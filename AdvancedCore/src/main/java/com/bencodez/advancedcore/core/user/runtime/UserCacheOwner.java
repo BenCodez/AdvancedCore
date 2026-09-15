@@ -63,6 +63,14 @@ public interface UserCacheOwner {
 	default void dispatchAllNotifications() {}
 
     Set<UUID> cachedUsers();
+	/** Fence direct cache publishers before an exclusive delete begins. */
+	default void beginRemoval(UUID uuid) {}
+	/** Reopen a cache when its exclusive delete did not complete. */
+	default void cancelRemoval(UUID uuid) {}
+	/** Fence direct publishers across a runtime-wide flush and retirement. */
+	default void beginRetirement() {}
+	/** Reopen caches when a runtime-wide transition aborts before retirement. */
+	default void cancelRetirement() {}
     void remove(UUID uuid);
     void clearAfterFlush();
     void shutdown();

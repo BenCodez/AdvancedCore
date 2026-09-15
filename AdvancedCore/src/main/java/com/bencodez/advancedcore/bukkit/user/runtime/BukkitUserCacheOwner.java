@@ -255,6 +255,24 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 
     @Override public Set<UUID> cachedUsers() { return new HashSet<>(manager.getUserDataCache().keySet()); }
 
+	@Override public void beginRemoval(UUID uuid) {
+		UserDataCache cache = manager.getUserDataCache().get(uuid);
+		if (cache != null) cache.beginRemoval();
+	}
+
+	@Override public void cancelRemoval(UUID uuid) {
+		UserDataCache cache = manager.getUserDataCache().get(uuid);
+		if (cache != null) cache.cancelRemoval();
+	}
+
+	@Override public void beginRetirement() {
+		for (UserDataCache cache : manager.getUserDataCache().values()) cache.beginRemoval();
+	}
+
+	@Override public void cancelRetirement() {
+		for (UserDataCache cache : manager.getUserDataCache().values()) cache.cancelRemoval();
+	}
+
     @Override public void remove(UUID uuid) {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
         if (cache != null) {

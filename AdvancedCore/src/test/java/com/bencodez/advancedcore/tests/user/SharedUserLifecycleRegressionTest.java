@@ -244,6 +244,63 @@ class SharedUserLifecycleRegressionTest {
         assertEquals(3, fixture.first.points(fixture.uuid));
     }
 
+	@Test
+	void directPrimaryThreadPublicationCannotRaceAnExclusiveDelete() throws Exception {
+		Fixture fixture = new Fixture();
+		SharedUserDataRuntime runtime = fixture.runtime();
+		runtime.populate(fixture.uuid);
+		UserDataCache cache = fixture.caches.get(fixture.uuid);
+		CountDownLatch deleteStarted = new CountDownLatch(1), releaseDelete = new CountDownLatch(1);
+		fixture.first.beforeDelete = () -> {
+			deleteStarted.countDown();
+			await(releaseDelete);
+		};
+		ExecutorService worker = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> removal = worker.submit(() -> runtime.remove(fixture.uuid));
+			await(deleteStarted);
+			assertFalse(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 9)));
+			releaseDelete.countDown();
+			removal.get(5, TimeUnit.SECONDS);
+			assertFalse(fixture.first.rows.containsKey(fixture.uuid));
+			assertFalse(fixture.caches.containsKey(fixture.uuid));
+		} finally {
+			releaseDelete.countDown();
+			worker.shutdownNow();
+			assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+			runtime.close();
+		}
+	}
+
+	@Test
+	void directPrimaryThreadPublicationCannotRaceBackendReplacement() throws Exception {
+		Fixture fixture = new Fixture();
+		SharedUserDataRuntime runtime = fixture.runtime();
+		runtime.queueChange(fixture.uuid, "Points", new DataValueInt(7));
+		UserDataCache cache = fixture.caches.get(fixture.uuid);
+		CountDownLatch writeStarted = new CountDownLatch(1), releaseWrite = new CountDownLatch(1);
+		fixture.first.beforeWrite = () -> {
+			writeStarted.countDown();
+			await(releaseWrite);
+		};
+		MemoryBackend replacement = new MemoryBackend(UserStorage.MYSQL);
+		ExecutorService worker = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> replacing = worker.submit(() -> runtime.replaceBackend(replacement));
+			await(writeStarted);
+			assertFalse(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 9)));
+			releaseWrite.countDown();
+			replacing.get(5, TimeUnit.SECONDS);
+			assertEquals(7, fixture.first.points(fixture.uuid));
+			assertFalse(fixture.caches.containsKey(fixture.uuid));
+		} finally {
+			releaseWrite.countDown();
+			worker.shutdownNow();
+			assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+			runtime.close();
+		}
+	}
+
     @Test
     void shutdownCancelsDelayedTimerWorkWithoutAwaitingIt() throws Exception {
         Fixture fixture = new Fixture();
@@ -303,6 +360,7 @@ class SharedUserLifecycleRegressionTest {
         final Map<UUID, HashMap<String, DataValue>> rows = new ConcurrentHashMap<>();
         volatile boolean open = true;
         volatile Runnable beforeWrite = () -> {};
+		volatile Runnable beforeDelete = () -> {};
         MemoryBackend(UserStorage type) { this.type = type; }
         int points(UUID uuid) { return rows.get(uuid).get("Points").getInt(); }
         public UserStorage storageType() { return type; }
@@ -318,7 +376,7 @@ class SharedUserLifecycleRegressionTest {
                     return result;
                 }
                 public boolean contains(UserStorage requested) { return rows.containsKey(uuid); }
-                public void delete(UserStorage requested) { rows.remove(uuid); }
+				public void delete(UserStorage requested) { beforeDelete.run(); rows.remove(uuid); }
                 public void write(UserStorage requested, String key, DataValue value) {
                     writeValues(requested, new HashMap<>(Map.of(key, value)));
                 }

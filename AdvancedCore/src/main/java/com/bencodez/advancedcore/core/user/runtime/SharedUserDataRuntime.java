@@ -140,9 +140,15 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         lifecycle.writeLock().lock();
         try {
             requireOpen();
-            flushAllInternal();
-            cacheOwner.clearAfterFlush();
-            operation.run();
+			cacheOwner.beginRetirement();
+			try {
+				flushAllInternal();
+				cacheOwner.clearAfterFlush();
+				operation.run();
+			} catch (RuntimeException | Error failure) {
+				cacheOwner.cancelRetirement();
+				throw failure;
+			}
 		} finally {
 			lifecycle.writeLock().unlock();
 			cacheOwner.dispatchAllNotifications();
@@ -161,16 +167,22 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             retryPendingBackendClose();
             if (replacement == backend) return;
             if (!replacement.isOpen()) throw new IllegalArgumentException("replacement backend is closed");
-            flushAllInternal();
-            cacheOwner.clearAfterFlush();
-            SqlUserBackend previous = backend;
-            cacheOwner.bindBackend(replacement);
-            backend = replacement;
-            try { previous.close(); }
-            catch (RuntimeException | Error failure) {
-                pendingBackendClose = previous;
-                throw failure;
-            }
+			cacheOwner.beginRetirement();
+			try {
+				flushAllInternal();
+				cacheOwner.clearAfterFlush();
+				SqlUserBackend previous = backend;
+				cacheOwner.bindBackend(replacement);
+				backend = replacement;
+				try { previous.close(); }
+				catch (RuntimeException | Error failure) {
+					pendingBackendClose = previous;
+					throw failure;
+				}
+			} catch (RuntimeException | Error failure) {
+				cacheOwner.cancelRetirement();
+				throw failure;
+			}
 		} finally {
 			lifecycle.writeLock().unlock();
 			cacheOwner.dispatchAllNotifications();
@@ -189,9 +201,15 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         cacheOwner.requireBlockingAllowed();
 		try {
 			userExclusiveAccess(uuid, () -> {
-				flushInternal(uuid);
-				backend.user(uuid).delete(backend.storageType());
-				cacheOwner.remove(uuid);
+				cacheOwner.beginRemoval(uuid);
+				try {
+					flushInternal(uuid);
+					backend.user(uuid).delete(backend.storageType());
+					cacheOwner.remove(uuid);
+				} catch (RuntimeException | Error failure) {
+					cacheOwner.cancelRemoval(uuid);
+					throw failure;
+				}
 				return null;
 			});
 		} finally { cacheOwner.dispatchNotifications(uuid); }
@@ -218,6 +236,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                     lifecycle.writeLock().lock();
                     try {
                         if (!closed) {
+							cacheOwner.beginRetirement();
                             flushAllInternal();
 							cacheOwner.clearAfterFlush();
 							cacheOwner.shutdown();

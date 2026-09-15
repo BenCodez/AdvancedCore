@@ -60,9 +60,21 @@ public class UserDataCache {
 		gate.accept(() -> addChangeInternal(change, queue));
 	}
 
-	/** Publish a primary-thread value before only its shared-store flush is deferred. */
-	public synchronized void addChangeBeforeDeferredSharedFlush(UserDataChange change) {
-		addChangeInternal(change, true);
+	/**
+	 * Publish into an already bound cache without waiting for its user gate. The
+	 * cache monitor serializes this with retirement markers: a change accepted
+	 * first is included in the following flush, while a transition that marks the
+	 * cache first makes the caller defer the complete mutation instead.
+	 */
+	public synchronized boolean tryAddChangeBeforeDeferredSharedFlush(UserDataChange change) {
+		return tryAddChangesBeforeDeferredSharedFlush(java.util.List.of(change));
+	}
+
+	/** Atomically publish one complete caller batch against cache retirement. */
+	public synchronized boolean tryAddChangesBeforeDeferredSharedFlush(Iterable<UserDataChange> changes) {
+		if (sharedFlushGate == null || removing || uuid == null || cache == null || cachedChanges == null) return false;
+		for (UserDataChange change : changes) addChangeInternal(change, true);
+		return true;
 	}
 
 	private synchronized void addChangeInternal(UserDataChange change, boolean queue) {

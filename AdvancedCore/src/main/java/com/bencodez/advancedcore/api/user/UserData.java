@@ -564,19 +564,22 @@ public class UserData {
 			return false;
 		}
 		java.util.UUID uuid = java.util.UUID.fromString(user.getUUID());
+		Runnable mutation = () -> manager.withSharedSqlStorage(uuid, storage,
+				() -> applySharedMutation(manager, user.getCache(), change, queue, async));
 		if (manager.mustDeferSharedStorageAccess()) {
 			// Publish read-after-write state synchronously, then defer only persistence.
-			// Population was queued by getCache() first and its version fences preserve
-			// this pending value when the older storage snapshot arrives.
+			// An unbound placeholder or retiring cache defers the entire mutation so it
+			// can join the correct lifecycle generation on the storage worker.
 			UserDataCache cache = user.getCache();
-			cache.addChangeBeforeDeferredSharedFlush(change);
+			if (!cache.tryAddChangeBeforeDeferredSharedFlush(change)) {
+				return manager.deferSharedStorageWork(mutation);
+			}
 			if (queue) manager.dispatchSharedStorageNotification(() ->
 					user.getPlugin().getUserManager().onChange(user, change.getKey()));
 			else manager.deferSharedStorageWork(() -> cache.processChangesImmediately(false));
 			return true;
 		}
-		manager.withSharedSqlStorage(uuid, storage,
-				() -> applySharedMutation(manager, user.getCache(), change, queue, async));
+		mutation.run();
 		return true;
 	}
 
@@ -611,7 +614,9 @@ public class UserData {
 		});
 		if (manager.mustDeferSharedStorageAccess()) {
 			UserDataCache cache = user.getCache();
-			for (UserDataChange change : changes) cache.addChangeBeforeDeferredSharedFlush(change);
+			if (!cache.tryAddChangesBeforeDeferredSharedFlush(changes)) {
+				return manager.deferSharedStorageWork(mutation);
+			}
 			return manager.deferSharedStorageWork(() -> cache.processChangesImmediately(false));
 		}
 		mutation.run();
