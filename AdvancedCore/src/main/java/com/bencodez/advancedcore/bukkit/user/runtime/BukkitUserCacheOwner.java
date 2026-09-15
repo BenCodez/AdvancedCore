@@ -81,7 +81,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         try {
             manager.bindSharedCacheInitializer(cacheInitializer);
             manager.bindSharedCacheRemovalListener(cacheRemovalListener);
-            manager.bindSharedSqlBackend(backend, perUserGate, perUserExclusiveGate);
+            manager.bindSharedSqlBackend(backend, gate, perUserGate, perUserExclusiveGate);
             this.backend = backend;
             flushGate = gate;
             userGate = perUserGate;
@@ -106,7 +106,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         manager.bindSharedCacheRemovalListener(cacheRemovalListener);
         this.backend = backend;
         BiConsumer<UUID, Runnable> perUser = userGate;
-        if (perUser != null) manager.bindSharedSqlBackend(backend, perUser,
+        if (perUser != null) manager.bindSharedSqlBackend(backend, flushGate, perUser,
                 exclusiveUserGate == null ? perUser : exclusiveUserGate);
         else if (flushGate != null) manager.bindSharedSqlBackend(backend, flushGate);
     }
@@ -252,6 +252,8 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 	@Override public void dispatchAllNotifications() {
 		for (UUID uuid : Set.copyOf(pendingNotifications.keySet())) dispatchNotifications(uuid);
 	}
+
+	@Override public void discardAllNotifications() { pendingNotifications.clear(); }
 
     @Override public Set<UUID> cachedUsers() { return new HashSet<>(manager.getUserDataCache().keySet()); }
 

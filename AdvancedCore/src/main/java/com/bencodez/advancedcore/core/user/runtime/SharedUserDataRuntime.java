@@ -38,7 +38,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public SharedUserDataRuntime(SqlUserBackend backend, UserCacheOwner cacheOwner) {
         this.backend = Objects.requireNonNull(backend, "backend");
         this.cacheOwner = Objects.requireNonNull(cacheOwner, "cacheOwner");
-        Consumer<Runnable> lifecycleGate = batch -> access(() -> { batch.run(); return null; });
+        Consumer<Runnable> lifecycleGate = batch -> storageAccess(() -> { batch.run(); return null; });
         BiConsumer<UUID, Runnable> perUserGate = (uuid, batch) -> userAccess(uuid, () -> { batch.run(); return null; });
         BiConsumer<UUID, Runnable> exclusiveUserGate = (uuid, batch) -> userExclusiveAccess(uuid, () -> { batch.run(); return null; });
         cacheOwner.bindLifecycle(backend, lifecycleGate, perUserGate, exclusiveUserGate);
@@ -158,9 +158,15 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     private void flushAllInternal() { for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) flushInternal(uuid); }
 
     public void replaceBackend(SqlUserBackend replacement) {
+		replaceBackend(replacement, () -> {});
+	}
+
+	/** Replace the route and publish its platform owner before releasing lifecycle admission. */
+	public void replaceBackend(SqlUserBackend replacement, Runnable afterReplacement) {
         rejectReentrantTransition();
         cacheOwner.requireBlockingAllowed();
         Objects.requireNonNull(replacement, "replacement");
+		Objects.requireNonNull(afterReplacement, "afterReplacement");
         lifecycle.writeLock().lock();
         try {
             requireOpen();
@@ -172,12 +178,18 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 				flushAllInternal();
 				cacheOwner.clearAfterFlush();
 				SqlUserBackend previous = backend;
+				// Publish the native owner before its route. The cache owner captures the
+				// owner snapshot together with the new route, so public bulk APIs never
+				// combine a new route type with the old mutable provider fields.
+				afterReplacement.run();
 				cacheOwner.bindBackend(replacement);
 				backend = replacement;
 				try { previous.close(); }
 				catch (RuntimeException | Error failure) {
+					// The replacement is already published and owns the active route.
+					// Retain the old backend for a later close retry, but never report this
+					// as a failed replacement: callers must not tear down the live owner.
 					pendingBackendClose = previous;
-					throw failure;
 				}
 			} catch (RuntimeException | Error failure) {
 				cacheOwner.cancelRetirement();
@@ -219,6 +231,12 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public boolean isClosed() { return closed; }
     public boolean isRetiring() { return retiring.get(); }
 
+	/** Admit a native bulk operation for the life of its provider access. */
+	public <T> T withStorageReadAdmission(Supplier<T> operation) {
+		Objects.requireNonNull(operation, "operation");
+		return storageAccess(operation);
+	}
+
     public CompletionStage<Void> closeAsync(Executor executor) {
         Objects.requireNonNull(executor, "executor");
         rejectReentrantTransition();
@@ -231,6 +249,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         }
         try {
             executor.execute(() -> {
+				boolean terminallyClosed = false;
                 try {
                     cacheOwner.requireBlockingAllowed();
                     lifecycle.writeLock().lock();
@@ -243,10 +262,12 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 							retryPendingBackendClose();
 							backend.close();
                             closed = true;
+							terminallyClosed = true;
                         }
 					} finally {
 						lifecycle.writeLock().unlock();
-						cacheOwner.dispatchAllNotifications();
+						if (terminallyClosed) cacheOwner.discardAllNotifications();
+						else cacheOwner.dispatchAllNotifications();
 					}
                     result.complete(null);
                 } catch (Throwable failure) { result.completeExceptionally(failure); }

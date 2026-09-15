@@ -50,6 +50,9 @@ public class UserDataManager {
 	private volatile Consumer<UUID> sharedCacheRemovalListener;
 	private volatile SharedSqlRoute sharedSqlRoute;
 	private volatile SharedUserDataRuntime sharedRuntime;
+	/** A replacement is serialized with retirement so a native owner cannot be closed mid-flush. */
+	private volatile CompletionStage<Void> sharedRuntimeReplacement;
+	private volatile boolean sharedRuntimeReplacing;
 	/** True from retirement admission until its native-owner callback has finished. */
 	private volatile boolean sharedRuntimeRetiring;
 	/** The one in-flight retirement, retained so lifecycle callers can await it safely. */
@@ -80,10 +83,12 @@ public class UserDataManager {
 		finally { cacheMapLifecycle.readLock().unlock(); }
 	}
 
-	private record SharedSqlRoute(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate,
+	private record SharedSqlRoute(SqlUserBackend backend, AdvancedCorePlugin.UserStorageOwner nativeOwner,
+			Consumer<Runnable> lifecycleGate, BiConsumer<UUID, Runnable> gate,
 			BiConsumer<UUID, Runnable> exclusiveGate) {
 		SharedSqlRoute {
 			Objects.requireNonNull(backend, "backend");
+			Objects.requireNonNull(lifecycleGate, "lifecycleGate");
 			Objects.requireNonNull(gate, "gate");
 			Objects.requireNonNull(exclusiveGate, "exclusiveGate");
 		}
@@ -164,13 +169,25 @@ public class UserDataManager {
 	/** Publish the shared read and exclusive per-user lifecycle admissions together. */
 	public final synchronized void bindSharedSqlBackend(SqlUserBackend backend, BiConsumer<UUID, Runnable> gate,
 			BiConsumer<UUID, Runnable> exclusiveGate) {
-		sharedSqlRoute = new SharedSqlRoute(backend, gate, exclusiveGate);
+		bindSharedSqlBackend(backend, operation -> operation.run(), gate, exclusiveGate);
+	}
+
+	/** Publish native bulk admission with the per-user route in one immutable binding. */
+	public final synchronized void bindSharedSqlBackend(SqlUserBackend backend, Consumer<Runnable> lifecycleGate,
+			BiConsumer<UUID, Runnable> gate, BiConsumer<UUID, Runnable> exclusiveGate) {
+		Objects.requireNonNull(lifecycleGate, "lifecycleGate");
+		AdvancedCorePlugin.UserStorageOwner owner = plugin == null ? null : plugin.getNativeUserStorageOwner();
+		if (owner != null && owner.storageType() != backend.storageType()) {
+			throw new IllegalStateException("Native user storage owner does not match the shared backend");
+		}
+		sharedSqlRoute = new SharedSqlRoute(backend, owner, lifecycleGate, gate, exclusiveGate);
 	}
 
 	/** Compatibility overload for adapters that only need the global lifecycle gate. */
 	public final synchronized void bindSharedSqlBackend(SqlUserBackend backend, Consumer<Runnable> gate) {
 		Objects.requireNonNull(gate, "gate");
-		bindSharedSqlBackend(backend, (uuid, operation) -> gate.accept(operation));
+		bindSharedSqlBackend(backend, gate, (uuid, operation) -> gate.accept(operation),
+				(uuid, operation) -> gate.accept(operation));
 	}
 
 	public final synchronized void unbindSharedSqlBackend(SqlUserBackend expected) {
@@ -190,6 +207,44 @@ public class UserDataManager {
 	public final UserStorage effectiveStorageType(UserStorage configured) {
 		SharedSqlRoute route = sharedSqlRoute;
 		return route == null ? Objects.requireNonNull(configured, "configured") : route.backend().storageType();
+	}
+
+	/**
+	 * The native owner captured with the current shared route. Public bulk APIs
+	 * use this rather than separately reading a route type and mutable plugin
+	 * owner field during an asynchronous replacement.
+	 */
+	public final AdvancedCorePlugin.UserStorageOwner sharedNativeUserStorageOwner() {
+		SharedSqlRoute route = sharedSqlRoute;
+		return route == null ? null : route.nativeOwner();
+	}
+
+	/**
+	 * Resolve the native owner only after lifecycle read admission. A replacement
+	 * takes the matching write admission before it can publish a route or close
+	 * the previous provider. Main-thread callers fail instead of waiting on SQL.
+	 */
+	public final <T> T withSharedNativeUserStorage(
+			java.util.function.Function<AdvancedCorePlugin.UserStorageOwner, T> operation) {
+		Objects.requireNonNull(operation, "operation");
+		SharedSqlRoute admission = sharedSqlRoute;
+		if (admission == null || isStorageMaintenanceActive()) {
+			return operation.apply(admission == null
+					? (plugin == null ? null : plugin.getNativeUserStorageOwner()) : admission.nativeOwner());
+		}
+		if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+			throw new IllegalStateException("Shared user storage must run on a worker thread");
+		}
+		AtomicReference<T> result = new AtomicReference<>();
+		admission.lifecycleGate().accept(() -> {
+			SharedSqlRoute current = sharedSqlRoute;
+			if (current == null || current.lifecycleGate() != admission.lifecycleGate()) {
+				throw new IllegalStateException("Shared SQL lifecycle changed while waiting for bulk admission");
+			}
+			if (current.nativeOwner() == null) throw new IllegalStateException("Shared native user storage is unavailable");
+			result.set(operation.apply(current.nativeOwner()));
+		});
+		return result.get();
 	}
 
 	/**
@@ -269,6 +324,68 @@ public class UserDataManager {
 	}
 
 	/**
+	 * Replace the active shared backend on this manager's worker. The runtime
+	 * flushes and retires the old cache generation before publishing the new
+	 * route, so callers may safely prepare a replacement without blocking a
+	 * Bukkit thread. A concurrent shutdown wins safely: the replacement then
+	 * completes exceptionally rather than touching a retiring provider.
+	 */
+	public final CompletionStage<Void> replaceSharedSqlBackendAsync(SqlUserBackend replacement) {
+		return replaceSharedSqlBackendAsync(replacement, () -> {});
+	}
+
+	/**
+	 * Asynchronously replace the backend and publish native-owner state before
+	 * exposing completion to shutdown callers. The callback must be short and
+	 * non-blocking; it runs on this manager's worker while the replacement route
+	 * is still protected from a concurrent retirement admission.
+	 */
+	public final CompletionStage<Void> replaceSharedSqlBackendAsync(SqlUserBackend replacement, Runnable afterReplacement) {
+		Objects.requireNonNull(replacement, "replacement");
+		Objects.requireNonNull(afterReplacement, "afterReplacement");
+		SharedUserDataRuntime runtime;
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		synchronized (this) {
+			runtime = sharedRuntime;
+			if (runtime == null || sharedRuntimeRetiring) {
+				completion.completeExceptionally(new IllegalStateException(
+						"Shared user storage is retiring and cannot be reloaded"));
+				return completion;
+			}
+			if (sharedRuntimeReplacement != null && !sharedRuntimeReplacement.toCompletableFuture().isDone()) {
+				completion.completeExceptionally(new IllegalStateException("Shared user storage reload is already in progress"));
+				return completion;
+			}
+			sharedRuntimeReplacement = completion;
+			sharedRuntimeReplacing = true;
+		}
+		try {
+			timer.execute(() -> {
+				Throwable replacementFailure = null;
+				try {
+					runtime.replaceBackend(replacement, afterReplacement);
+				} catch (Throwable failure) {
+					replacementFailure = failure;
+				} finally {
+					synchronized (UserDataManager.this) {
+						if (sharedRuntimeReplacement == completion) sharedRuntimeReplacement = null;
+						sharedRuntimeReplacing = false;
+					}
+				}
+				if (replacementFailure == null) completion.complete(null);
+				else completion.completeExceptionally(replacementFailure);
+			});
+		} catch (RuntimeException | Error failure) {
+			completion.completeExceptionally(failure);
+			synchronized (this) {
+				if (sharedRuntimeReplacement == completion) sharedRuntimeReplacement = null;
+				sharedRuntimeReplacing = false;
+			}
+		}
+		return completion;
+	}
+
+	/**
 	 * A native storage replacement must not race the shared runtime's final flush
 	 * and owner cleanup. This remains true while asynchronous retirement is in
 	 * progress even though the runtime is no longer available for new work.
@@ -299,6 +416,10 @@ public class UserDataManager {
 		SharedUserDataRuntime runtime;
 		CompletableFuture<Void> completion;
 		synchronized (this) {
+			if (sharedRuntimeReplacing) {
+				CompletionStage<Void> replacement = sharedRuntimeReplacement;
+				return replacement.thenCompose(ignored -> closeSharedRuntimeAsyncCompletion(afterRetirement));
+			}
 			runtime = sharedRuntime;
 			// A second shutdown caller must not interpret an in-flight retirement as
 			// "no runtime" and close the native provider underneath its final flush.

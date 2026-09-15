@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserData;
 import com.bencodez.advancedcore.api.user.UserManager;
@@ -50,6 +51,44 @@ import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SharedCacheCleanupPrimaryThreadTest {
+	@Test
+	void uuidUserConstructionDefersNameLookupOnPrimaryThread() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		UserDataManager manager = new UserDataManager(plugin);
+		when(users.getDataManager()).thenReturn(manager);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		UUID uuid = UUID.randomUUID();
+		try (var bukkit = mockStatic(Bukkit.class); var players = mockStatic(PlayerManager.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false);
+			PlayerManager playerManager = mock(PlayerManager.class);
+			players.when(PlayerManager::getInstance).thenReturn(playerManager);
+			when(playerManager.getPlayerName(any(AdvancedCoreUser.class), eq(uuid.toString()), eq(false)))
+					.thenReturn("StoredName");
+
+			AdvancedCoreUser user = assertDoesNotThrow(() -> new AdvancedCoreUser(plugin, uuid));
+			assertEquals("", user.getPlayerName());
+			verify(playerManager, never()).getPlayerName(any(), any(), eq(false));
+			ArgumentCaptor<Runnable> storageTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(storageTask.capture());
+			storageTask.getValue().run();
+			ArgumentCaptor<Runnable> callback = ArgumentCaptor.forClass(Runnable.class);
+			verify(scheduler).runTask(eq(plugin), callback.capture());
+			callback.getValue().run();
+			assertEquals("StoredName", user.getPlayerName());
+		}
+	}
+
 	@Test
 	void primaryThreadPersistedBulkReadsRequireWorkerDeferral() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
@@ -226,6 +265,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void failedPrimaryThreadPopulationIsRetainedBeforeNotificationDelivery() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		when(plugin.getNativeUserStorageOwner()).thenReturn(null);
 		UserDataManager manager = new UserDataManager(plugin);
 		manager.getTimer().shutdownNow();
 		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
@@ -255,6 +295,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void synchronousPopulationRethrowsStorageFailure() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		when(plugin.getNativeUserStorageOwner()).thenReturn(null);
 		UserDataManager manager = new UserDataManager(plugin);
 		UUID uuid = UUID.randomUUID();
 		IllegalStateException failure = new IllegalStateException("storage unavailable");

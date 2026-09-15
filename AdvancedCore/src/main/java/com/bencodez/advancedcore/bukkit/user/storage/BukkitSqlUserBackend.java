@@ -26,15 +26,37 @@ import com.bencodez.simpleapi.sql.data.DataValueString;
 public final class BukkitSqlUserBackend implements SqlUserBackend {
     private final AdvancedCorePlugin plugin;
     private final UserStorage storageType;
+	private final MySQL mysql;
+	private final UserTable table;
     private final Object sqliteOperations = new Object();
     private final AtomicBoolean open = new AtomicBoolean(true);
 
     public BukkitSqlUserBackend(AdvancedCorePlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.storageType = Objects.requireNonNull(plugin.getStorageType(), "storageType");
-        if (storageType() == UserStorage.MYSQL) requireMysql();
-        else requireTable();
+		if (storageType() == UserStorage.MYSQL) {
+			this.mysql = plugin.getMysql();
+			this.table = null;
+			if (mysql == null) throw new IllegalStateException("Bukkit MySQL user storage is unavailable");
+		} else {
+			this.mysql = null;
+			this.table = plugin.getSQLiteUserTable();
+			if (table == null) throw new IllegalStateException("Bukkit SQLite user storage is unavailable");
+		}
     }
+
+	/**
+	 * Bind a replacement runtime to native storage prepared off-thread. The
+	 * backend deliberately retains these exact owners instead of resolving the
+	 * plugin's mutable fields on each operation, so a configuration reload cannot
+	 * redirect an old flush to a newly installed provider.
+	 */
+	public BukkitSqlUserBackend(AdvancedCorePlugin plugin, UserStorage storageType, MySQL mysql, UserTable table) {
+		this.plugin = Objects.requireNonNull(plugin, "plugin");
+		this.storageType = Objects.requireNonNull(storageType, "storageType");
+		this.mysql = storageType == UserStorage.MYSQL ? Objects.requireNonNull(mysql, "mysql") : null;
+		this.table = storageType == UserStorage.SQLITE ? Objects.requireNonNull(table, "table") : null;
+	}
 
     @Override public UserStorage storageType() { return storageType; }
 
@@ -140,15 +162,13 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
     private UserTable table() { return requireTable(); }
 
     private MySQL requireMysql() {
-        MySQL mysql = plugin.getMysql();
-        if (mysql == null) throw new IllegalStateException("Bukkit MySQL user storage is unavailable");
-        return mysql;
+		if (mysql == null) throw new IllegalStateException("Bukkit MySQL user storage is unavailable");
+		return mysql;
     }
 
     private UserTable requireTable() {
-        UserTable table = plugin.getSQLiteUserTable();
-        if (table == null) throw new IllegalStateException("Bukkit SQLite user storage is unavailable");
-        return table;
+		if (table == null) throw new IllegalStateException("Bukkit SQLite user storage is unavailable");
+		return table;
     }
 
     private void requireOpen() { if (!open.get()) throw new IllegalStateException("Bukkit SQL user backend is retired"); }

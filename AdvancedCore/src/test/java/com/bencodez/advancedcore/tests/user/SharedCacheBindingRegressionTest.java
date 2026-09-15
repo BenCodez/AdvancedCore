@@ -109,6 +109,7 @@ class SharedCacheBindingRegressionTest {
 
     @Test void legacyCachePopulationPublishesOnlyAfterSharedAdmission() throws Exception {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        when(plugin.getNativeUserStorageOwner()).thenReturn(null);
         UserDataManager manager = new UserDataManager(plugin);
         manager.getTimer().shutdownNow();
         UUID uuid = UUID.randomUUID();
@@ -144,6 +145,7 @@ class SharedCacheBindingRegressionTest {
 
     @Test void preBindingCachePopulationBlocksSharedTransitionAdmission() throws Exception {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        when(plugin.getNativeUserStorageOwner()).thenReturn(null);
         UserDataManager manager = new UserDataManager(plugin);
         manager.getTimer().shutdownNow();
         UUID uuid = UUID.randomUUID();
@@ -852,6 +854,7 @@ class SharedCacheBindingRegressionTest {
 
     @Test void failedManagerWideClearReopensEveryStillMappedCache() {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        when(plugin.getNativeUserStorageOwner()).thenReturn(null);
         UserDataManager manager = new UserDataManager(plugin);
         manager.getTimer().shutdownNow();
         try {
@@ -876,6 +879,7 @@ class SharedCacheBindingRegressionTest {
 
     @Test void failedPerUserRemovalReopensTheMappedCache() {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        when(plugin.getNativeUserStorageOwner()).thenReturn(null);
         UserDataManager manager = new UserDataManager(plugin);
         manager.getTimer().shutdownNow();
         try {
@@ -938,6 +942,7 @@ class SharedCacheBindingRegressionTest {
         final ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
 
         Fixture() throws Exception {
+            when(plugin.getNativeUserStorageOwner()).thenReturn(null);
             when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
             manager = spy(new UserDataManager(plugin));
             manager.getTimer().shutdownNow();

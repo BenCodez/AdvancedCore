@@ -1741,6 +1741,10 @@ public class Reward {
 	 */
 	public CompletionStage<Void> giveRewardUserAsync(AdvancedCoreUser user, HashMap<String, String> phs,
 			RewardOptions rewardOptions) {
+		// This public API may hand preparation to the player's scheduler. Preserve the
+		// caller's values before that boundary so a reused mutable map cannot alter a
+		// queued reward or its durable replay checkpoint.
+		HashMap<String, String> placeholders = phs == null ? new HashMap<>() : new HashMap<>(phs);
 		ReplayState replayState = replayStateFor(rewardOptions);
 		List<RewardInject> orderedRewards = orderedInjectedRewards();
 		String registryFingerprint = injectionRegistryFingerprint(orderedRewards);
@@ -1765,7 +1769,7 @@ public class Reward {
 		final String stableReplayKey = replayKey;
 		final String stableOccurrenceId = occurrenceId;
 		return requestOnServerThread(user,
-				() -> prepareAndGiveRewardUserAsync(user, phs, rewardOptions, replayState, stableReplayKey,
+				() -> prepareAndGiveRewardUserAsync(user, placeholders, rewardOptions, replayState, stableReplayKey,
 						stableOccurrenceId, registryFingerprint, !orderedRewards.isEmpty()));
 	}
 

@@ -51,6 +51,7 @@ import com.bencodez.advancedcore.api.user.UserStartup;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.bukkit.user.runtime.BukkitUserRuntimeBootstrap;
+import com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserBackend;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.command.CommandLoader;
@@ -190,6 +191,23 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	private CMIHandler cmiHandle;
 
 	private Database database;
+	/**
+	 * A coherent native-owner snapshot for callers which need both the selected
+	 * storage kind and its provider. Shared-runtime replacement publishes this
+	 * as one volatile value; callers must not combine a separately observed
+	 * storage type with the mutable provider fields.
+	 */
+	public record UserStorageOwner(UserStorage storageType, MySQL mysql, UserTable table) {
+		public UserStorageOwner {
+			if (storageType == null) throw new IllegalArgumentException("storageType");
+			if (storageType == UserStorage.MYSQL && mysql == null) throw new IllegalArgumentException("mysql");
+			if (storageType == UserStorage.SQLITE && table == null) throw new IllegalArgumentException("table");
+		}
+	}
+	private volatile UserStorageOwner nativeUserStorageOwner;
+	/** Coalesces public storage reload requests while a replacement is being prepared. */
+	private Object userStorageReloadLock = new Object();
+	private CompletionStage<Void> userStorageReload;
 
 	/**
 	 * Handler for full inventory management.
@@ -646,12 +664,33 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	/**
+	 * Returns the current native provider as one immutable observation. This is
+	 * intentionally separate from the legacy individual getters: user-facing
+	 * bulk APIs use this snapshot while a shared route is being replaced.
+	 */
+	public UserStorageOwner getNativeUserStorageOwner() {
+		UserStorageOwner owner = nativeUserStorageOwner;
+		if (owner != null) return owner;
+		UserStorage configured = getOptions().getStorageType();
+		if (configured == UserStorage.MYSQL && mysql != null) return new UserStorageOwner(configured, mysql, null);
+		if (configured == UserStorage.SQLITE && database != null) {
+			for (Table table : database.getTables()) {
+				if (table instanceof UserTable userTable) return new UserStorageOwner(configured, null, userTable);
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Gets the current storage type configuration.
 	 * 
 	 * @return the storage type
 	 */
 	public UserStorage getStorageType() {
-		return getOptions().getStorageType();
+		UserStorage configured = getOptions().getStorageType();
+		UserManager loadedUsers = getLoadedUserManager();
+		return loadedUsers == null ? configured
+				: loadedUsers.getDataManager().effectiveStorageType(configured);
 	}
 
 	/**
@@ -1074,6 +1113,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			UserTable table = new UserTable(this, "Users", columns, key);
 			database = new Database(this, "Users", table);
 			table.addCustomColumns();
+			nativeUserStorageOwner = new UserStorageOwner(UserStorage.SQLITE, null, table);
 		} else if (storageType.equals(UserStorage.MYSQL)) {
 			if (getOptions().getYmlConfig().getData().contains("Database")) {
 				setMysql(new MySQL(javaPlugin, javaPlugin.getName() + "_Users",
@@ -1257,33 +1297,209 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	/**
-	 * Reloads AdvancedCore configuration.
-	 * 
+	 * Starts an AdvancedCore configuration reload.
+	 *
+	 * <p>When {@code userStorage} is true and a shared runtime is active, this
+	 * method only starts the non-blocking reload; it returns before storage has
+	 * been flushed, replaced, or confirmed. It deliberately has no success
+	 * signal. Call {@link #reloadAdvancedCoreAsync(boolean)} when a caller must
+	 * continue, notify an administrator, or report status after completion.
+	 *
 	 * @param userStorage whether to reload user storage
 	 */
 	public void reloadAdvancedCore(boolean userStorage) {
+		if (userStorage && hasActiveSharedUserRuntime()) {
+			reloadAdvancedCoreAsync(true).whenComplete((ignored, failure) -> {
+				if (failure != null) {
+					getLogger().warning("User storage reload did not complete: " + failure.getMessage());
+					debug(failure);
+				}
+			});
+			return;
+		}
+		reloadAdvancedCoreNow(userStorage);
+	}
+
+	/**
+	 * Reload AdvancedCore without making a Bukkit thread wait for a shared user
+	 * storage flush or a database connection. Callers that need to report a
+	 * confirmed storage reload should await this stage rather than assuming that
+	 * the legacy void overload has completed synchronously.
+	 *
+	 * @param userStorage whether to reload user storage
+	 * @return completion of the reload, including the shared backend replacement
+	 */
+	public CompletionStage<Void> reloadAdvancedCoreAsync(boolean userStorage) {
+		if (!userStorage || !hasActiveSharedUserRuntime()) {
+			CompletableFuture<Void> completion = new CompletableFuture<>();
+			try {
+				reloadAdvancedCoreNow(userStorage);
+				completion.complete(null);
+			} catch (Throwable failure) { completion.completeExceptionally(failure); }
+			return completion;
+		}
+		synchronized (userStorageReloadLock()) {
+			if (userStorageReload != null && !userStorageReload.toCompletableFuture().isDone()) return userStorageReload;
+			CompletableFuture<Void> completion = new CompletableFuture<>();
+			userStorageReload = completion;
+			try {
+				getBukkitScheduler().runTask(this, () -> beginSharedUserStorageReload(completion));
+			} catch (RuntimeException | Error failure) {
+				completion.completeExceptionally(failure);
+				userStorageReload = null;
+			}
+			return completion;
+		}
+	}
+
+	private boolean hasActiveSharedUserRuntime() {
+		UserManager users = getLoadedUserManager();
+		return users != null && users.getDataManager().hasSharedRuntime();
+	}
+
+	private void beginSharedUserStorageReload(CompletableFuture<Void> completion) {
+		try {
+			getServerDataFile().reloadData();
+			rewardHandler.loadRewards();
+			getOptions().load(this);
+			getBukkitScheduler().runTaskAsynchronously(this, () -> replaceSharedUserStorage(completion));
+		} catch (Throwable failure) {
+			completion.completeExceptionally(failure);
+			clearSharedUserStorageReload(completion);
+		}
+	}
+
+	private void replaceSharedUserStorage(CompletableFuture<Void> completion) {
+		UserStorageReplacement replacement = null;
+		try {
+			replacement = prepareUserStorageReplacement(getOptions().getStorageType());
+			UserStorageReplacement prepared = replacement;
+			getUserManager().getDataManager().replaceSharedSqlBackendAsync(prepared.backend(),
+					() -> installUserStorageReplacement(prepared)).whenComplete((ignored, failure) -> {
+				if (failure != null) {
+					// SharedUserDataRuntime reports an exception here only before it
+					// publishes the replacement route. A post-publication old-owner close
+					// is retained there for retry and deliberately completes successfully.
+					prepared.closeUnpublished();
+					completion.completeExceptionally(failure);
+					clearSharedUserStorageReload(completion);
+					return;
+				}
+				try {
+					getBukkitScheduler().runTask(this, () -> completeSharedUserStorageReload(completion));
+				} catch (Throwable completionFailure) {
+					completion.completeExceptionally(completionFailure);
+					clearSharedUserStorageReload(completion);
+				}
+			});
+		} catch (Throwable failure) {
+			if (replacement != null) replacement.closeUnpublished();
+			completion.completeExceptionally(failure);
+			clearSharedUserStorageReload(completion);
+		}
+	}
+
+	private void completeSharedUserStorageReload(CompletableFuture<Void> completion) {
+		try {
+			finishReloadAdvancedCore();
+			completion.complete(null);
+		} catch (Throwable failure) { completion.completeExceptionally(failure); }
+		finally { clearSharedUserStorageReload(completion); }
+	}
+
+	private void clearSharedUserStorageReload(CompletableFuture<Void> completion) {
+		synchronized (userStorageReloadLock()) {
+			if (userStorageReload == completion) userStorageReload = null;
+		}
+	}
+
+	private Object userStorageReloadLock() {
+		Object lock = userStorageReloadLock;
+		if (lock != null) return lock;
+		synchronized (this) {
+			if (userStorageReloadLock == null) userStorageReloadLock = new Object();
+			return userStorageReloadLock;
+		}
+	}
+
+	private UserStorageReplacement prepareUserStorageReplacement(UserStorage storageType) {
+		if (storageType == null) throw new IllegalArgumentException("User storage must be SQLITE or MYSQL");
+		if (storageType == UserStorage.SQLITE) {
+			ArrayList<Column> columns = new ArrayList<>();
+			Column key = new Column("uuid", DataType.STRING);
+			columns.add(key);
+			UserTable table = new UserTable(this, "Users", columns, key);
+			Database replacementDatabase = new Database(this, "Users", table);
+			table.addCustomColumns();
+			return new UserStorageReplacement(storageType, replacementDatabase, null,
+					new BukkitSqlUserBackend(this, storageType, null, table));
+		}
+		ConfigurationSection section = getOptions().getYmlConfig().getData()
+				.getConfigurationSection(getOptions().getYmlConfig().getData().contains("Database") ? "Database" : "MySQL");
+		if (section == null) throw new IllegalStateException("MySQL user storage configuration is missing");
+		MySQL replacementMysql = new MySQL(javaPlugin, javaPlugin.getName() + "_Users", section);
+		return new UserStorageReplacement(storageType, null, replacementMysql,
+				new BukkitSqlUserBackend(this, storageType, replacementMysql, null));
+	}
+
+	private void installUserStorageReplacement(UserStorageReplacement replacement) {
+		MySQL previousMysql = mysql;
+		Database previousDatabase = database;
+		mysql = replacement.mysql();
+		database = replacement.database();
+		// Publish only after both legacy fields have been assigned. The shared route
+		// picks this exact snapshot up in the same lifecycle write admission.
+		nativeUserStorageOwner = replacement.owner();
+		if (previousMysql != null && previousMysql != mysql) {
+			try { previousMysql.close(); }
+			catch (RuntimeException | Error closeFailure) { debug(closeFailure); }
+		}
+		if (previousDatabase != null && previousDatabase != database) {
+			try { previousDatabase.getDB().closeConnection(); }
+			catch (RuntimeException | Error closeFailure) { debug(closeFailure); }
+		}
+	}
+
+	private void reloadAdvancedCoreNow(boolean userStorage) {
 		if (userStorage) requireUserStorageMaintenanceWindow();
 		getServerDataFile().reloadData();
 		rewardHandler.loadRewards();
 		loadConfig(userStorage);
-
 		if (userStorage) {
 			getUserManager().getDataManager().clearCache();
-			if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) {
-				getMysql().clearCacheBasic();
-			}
+			if (getStorageType().equals(UserStorage.MYSQL) && getMysql() != null) getMysql().clearCacheBasic();
 		}
+		finishReloadAdvancedCore();
+	}
+
+	private void finishReloadAdvancedCore() {
 		timeChecker.update();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 		getRewardHandler().checkSubRewards();
-
 		if (skullCacheHandler != null) {
 			if (!getOptions().getSkullProfileAPIURL().isEmpty()) {
 				debug("Setting API profile URL to " + getOptions().getSkullProfileAPIURL());
 				skullCacheHandler.changeApiProfileURL(getOptions().getSkullProfileAPIURL());
 			}
 			getSkullCacheHandler().setBedrockPrefix(getOptions().getBedrockPlayerPrefix());
+		}
+	}
+
+	private record UserStorageReplacement(UserStorage storageType, Database database, MySQL mysql,
+			BukkitSqlUserBackend backend) {
+		private UserStorageOwner owner() {
+			return new UserStorageOwner(storageType, mysql, database == null ? null : findUserTable(database));
+		}
+
+		private static UserTable findUserTable(Database database) {
+			for (Table table : database.getTables()) if (table instanceof UserTable userTable) return userTable;
+			throw new IllegalStateException("Replacement SQLite user table is unavailable");
+		}
+		private void closeUnpublished() {
+			backend.close();
+			if (mysql != null) mysql.close();
+			if (database != null) database.getDB().closeConnection();
 		}
 	}
 
@@ -1331,6 +1547,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			this.mysql = null;
 		}
 		this.mysql = mysql;
+		if (mysql != null) nativeUserStorageOwner = new UserStorageOwner(UserStorage.MYSQL, mysql, null);
 	}
 
 	/**

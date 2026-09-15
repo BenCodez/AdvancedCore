@@ -72,6 +72,7 @@ class SharedRouteReplacementRaceTest {
     @Test
     void detachedCacheWriterFollowsBackendReplacement() {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        when(plugin.getNativeUserStorageOwner()).thenReturn(null);
         UserDataManager manager = new UserDataManager(plugin);
         UUID uuid = UUID.randomUUID();
         BukkitUserCacheOwner owner = new BukkitUserCacheOwner(manager);

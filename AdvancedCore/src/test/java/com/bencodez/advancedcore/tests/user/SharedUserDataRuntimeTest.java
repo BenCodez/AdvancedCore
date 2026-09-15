@@ -1,10 +1,16 @@
 package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -110,6 +116,49 @@ class SharedUserDataRuntimeTest {
     }
 
 	@Test
+	void failedOldBackendCloseDoesNotTearDownThePublishedReplacement() {
+		SqlUserBackend old = mock(SqlUserBackend.class);
+		SqlUserBackend replacement = mock(SqlUserBackend.class);
+		SqlUserBackend laterReplacement = mock(SqlUserBackend.class);
+		when(old.isOpen()).thenReturn(true);
+		when(replacement.isOpen()).thenReturn(true);
+		when(laterReplacement.isOpen()).thenReturn(true);
+		when(old.storageType()).thenReturn(UserStorage.SQLITE);
+		when(replacement.storageType()).thenReturn(UserStorage.MYSQL);
+		when(laterReplacement.storageType()).thenReturn(UserStorage.SQLITE);
+		java.util.concurrent.atomic.AtomicBoolean firstClose = new java.util.concurrent.atomic.AtomicBoolean(true);
+		doAnswer(ignored -> {
+			if (firstClose.getAndSet(false)) throw new IllegalStateException("old close failed");
+			return null;
+		}).when(old).close();
+		SharedUserDataRuntime runtime = new SharedUserDataRuntime(old, new FakeCacheOwner());
+
+		assertDoesNotThrow(() -> runtime.replaceBackend(replacement));
+		assertSame(replacement, runtime.backend());
+		assertDoesNotThrow(() -> runtime.replaceBackend(laterReplacement));
+		assertSame(laterReplacement, runtime.backend());
+		verify(old, times(2)).close();
+	}
+
+	@Test
+	void successfulShutdownDiscardsFinalFlushNotifications() {
+		UUID uuid = UUID.randomUUID();
+		FakeBackend backend = new FakeBackend();
+		backend.put(uuid, "Points", new DataValueInt(1));
+		FakeCacheOwner cache = new FakeCacheOwner();
+		SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, cache);
+		runtime.queueChange(uuid, "Points", new DataValueInt(2));
+		boolean[] notified = { false };
+		cache.notifyAfterFlush(uuid, () -> notified[0] = true);
+
+		runtime.close();
+
+		assertEquals(2, backend.value(uuid, "Points").getInt());
+		assertFalse(notified[0]);
+		assertTrue(cache.notifications.isEmpty());
+	}
+
+	@Test
 	void failedFlushDoesNotDiscardQueueOrCloseBackend() {
         UUID uuid = UUID.randomUUID();
         FakeBackend backend = new FakeBackend();
@@ -212,6 +261,9 @@ class SharedUserDataRuntimeTest {
 		public void dispatchAllNotifications() {
 			for (UUID uuid : Set.copyOf(notifications.keySet())) dispatchNotifications(uuid);
 		}
+
+		@Override
+		public void discardAllNotifications() { notifications.clear(); }
 
         @Override
         public Set<UUID> cachedUsers() {

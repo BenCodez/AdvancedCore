@@ -62,6 +62,9 @@ public interface UserCacheOwner {
 	/** Deliver callbacks accumulated by a lifecycle-wide flush after all admission is released. */
 	default void dispatchAllNotifications() {}
 
+	/** Discard callbacks after terminal shutdown; unloaded consumers must not be invoked. */
+	default void discardAllNotifications() {}
+
     Set<UUID> cachedUsers();
 	/** Fence direct cache publishers before an exclusive delete begins. */
 	default void beginRemoval(UUID uuid) {}

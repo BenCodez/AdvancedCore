@@ -586,6 +586,44 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void asyncRewardSnapshotsCallerPlaceholdersBeforeOwnerSchedulerHandoff() {
+		Player player = mock(Player.class);
+		when(user.getPlayer()).thenReturn(player);
+		when(user.getPlayerName()).thenReturn("Queued");
+		when(user.getUUID()).thenReturn(UUID.randomUUID().toString());
+		when(player.getDisplayName()).thenReturn("Display");
+		ArrayList<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> {
+			queued.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		AtomicReference<String> observed = new AtomicReference<>();
+		handler.getInjectedRewards().add(new RewardInject("Async") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				observed.set(ignoredPlaceholders.get("custom"));
+				return CompletableFuture.completedFuture(null);
+			}
+		});
+		HashMap<String, String> callerPlaceholders = new HashMap<>();
+		callerPlaceholders.put("custom", "original");
+
+		CompletionStage<Void> delivery = reward.giveRewardUserAsync(user, callerPlaceholders, new RewardOptions());
+		callerPlaceholders.clear();
+		callerPlaceholders.put("custom", "mutated");
+		assertFalse(delivery.toCompletableFuture().isDone());
+		assertEquals(1, queued.size());
+
+		while (!delivery.toCompletableFuture().isDone() && !queued.isEmpty()) queued.remove(0).run();
+
+		delivery.toCompletableFuture().join();
+		assertEquals("original", observed.get());
+	}
+
+	@Test
 	void offlineRequeueRetainsReplayStateAndLegacyActionMarkers() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isProcessRewards()).thenReturn(true);

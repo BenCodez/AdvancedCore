@@ -153,7 +153,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
+				if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
 					for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
 						plugin.getMysql().alterColumnType(key.getKey(), key.getColumnType());
 					}

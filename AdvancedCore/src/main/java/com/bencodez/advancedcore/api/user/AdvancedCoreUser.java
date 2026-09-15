@@ -529,7 +529,7 @@ public class AdvancedCoreUser {
 		this.plugin = plugin;
 		this.uuid = uuid.toString();
 		loadData();
-		setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid, false));
+		loadPlayerNameWithoutBlocking(false);
 	}
 
 	/**
@@ -546,7 +546,7 @@ public class AdvancedCoreUser {
 		this.loadName = loadName;
 		loadData();
 		if (this.loadName) {
-			setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid));
+			loadPlayerNameWithoutBlocking(true);
 		}
 
 	}
@@ -568,9 +568,23 @@ public class AdvancedCoreUser {
 			loadData();
 		}
 		if (this.loadName) {
-			setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid));
+			loadPlayerNameWithoutBlocking(true);
 		}
 
+	}
+
+	/** Resolve a UUID-backed name without performing shared SQL on Bukkit's primary thread. */
+	private void loadPlayerNameWithoutBlocking(boolean useCache) {
+		String cached = com.bencodez.advancedcore.api.player.UuidLookup.getInstance().getCachedName(uuid);
+		if (!cached.isEmpty()) {
+			setPlayerName(cached);
+			return;
+		}
+		UserDataManager manager = plugin.getUserManager().getDataManager();
+		if (manager.deferSharedStorageResult(
+				() -> PlayerManager.getInstance().getPlayerName(this, uuid, useCache),
+				this::setPlayerName, plugin::debug)) return;
+		setPlayerName(PlayerManager.getInstance().getPlayerName(this, uuid, useCache));
 	}
 
 	/**
